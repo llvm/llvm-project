@@ -29,22 +29,12 @@
 // CHECK:         [[MEMREF:%.*]] = fir.convert %arg0 : (!fir.ref<!fir.array<4xcomplex<f32>>>) -> memref<4xcomplex<f32>>
 // CHECK:         [[IDX:%.*]] = arith.addi
 // CHECK:         [[COMP:%[0-9]+]] = fir.convert [[MEMREF]] : (memref<4xcomplex<f32>>) -> memref<4x2xf32>
-// CHECK:         %[[FWD_C_RE:.*]] = arith.constant 0 : index
-// CHECK:         %[[FWD_C_SZF32:.*]] = arith.constant 4 : index
-// CHECK:         %[[FWD_C_DIM0:.*]] = arith.constant 0 : index
-// CHECK:         [[BD:%[0-9]+]]:3 = fir.box_dims %2, %[[FWD_C_DIM0]] : (!fir.box<!fir.array<4xf32>>, index) -> (index, index, index)
-// CHECK:         [[STRIDE:%[0-9]+]] = arith.divsi [[BD]]#2, %[[FWD_C_SZF32]] : index
-// Reinterpret applies the embox descriptor layout onto the scalar view:
-//   sizes[0]   = box extent (section length in f32 slots)
-//   sizes[1]   = 2 for the (re, im) pair exposed by memref<4x2xf32>
-//   strides[0] = box_dims byte_stride / sizeof(f32) (not box_elesize)
-//   strides[1] = 1 between adjacent real/imag scalars
-// Without this, memref.load would use dense strides from fir.convert only.
-// CHECK:         %[[FWD_C_PAIR:.*]] = arith.constant 2 : index
-// CHECK:         %[[FWD_C_COMP_STRIDE:.*]] = arith.constant 1 : index
-// CHECK:         %[[FWD_C_OFF:.*]] = arith.constant 0 : index
-// CHECK:         [[VIEW:%.*]] = memref.reinterpret_cast [[COMP]] to offset: [%[[FWD_C_OFF]]], sizes: [[[BD]]#1, %[[FWD_C_PAIR]]], strides: [[[STRIDE]], %[[FWD_C_COMP_STRIDE]]] : memref<4x2xf32> to memref<?x?xf32, strided<
-// CHECK:         [[LOAD:%[0-9]+]] = memref.load [[VIEW]][[[IDX]], %[[FWD_C_RE]]] : memref<?x?xf32, strided<
+// Reinterpret applies the shape-derived layout onto the scalar view:
+//   sizes   = [shape extent, 2 (re/im pair)]
+//   strides = [2 (one complex == two scalar slots), 1]
+// CHECK-NOT:     fir.box_dims
+// CHECK:         [[VIEW:%.*]] = memref.reinterpret_cast [[COMP]] to offset: [%c0{{.*}}], sizes: [%c4{{.*}}, %c2{{.*}}], strides: [%c2{{.*}}, %c1{{.*}}] : memref<4x2xf32> to memref<?x?xf32, strided<
+// CHECK:         [[LOAD:%[0-9]+]] = memref.load [[VIEW]][[[IDX]], %c0{{.*}}] : memref<?x?xf32, strided<
 func.func @projected_slice_fwd(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -68,17 +58,10 @@ func.func @projected_slice_fwd(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
 // CHECK:         [[MEMREF:%.*]] = fir.convert %arg0 : (!fir.ref<!fir.array<4xcomplex<f32>>>) -> memref<4xcomplex<f32>>
 // CHECK:         [[IDX:%.*]] = arith.addi
 // CHECK:         [[COMP:%[0-9]+]] = fir.convert [[MEMREF]] : (memref<4xcomplex<f32>>) -> memref<4x2xf32>
-// CHECK:         %[[BWD_C_RE:.*]] = arith.constant 0 : index
-// CHECK:         %[[BWD_C_SZF32:.*]] = arith.constant 4 : index
-// CHECK:         %[[BWD_C_DIM0:.*]] = arith.constant 0 : index
-// CHECK:         [[BD:%[0-9]+]]:3 = fir.box_dims %2, %[[BWD_C_DIM0]] : (!fir.box<!fir.array<4xf32>>, index) -> (index, index, index)
-// CHECK:         [[STRIDE:%[0-9]+]] = arith.divsi [[BD]]#2, %[[BWD_C_SZF32]] : index
 // Same reinterpret as forward; slice triple only changes [[IDX]], not strides.
-// CHECK:         %[[BWD_C_PAIR:.*]] = arith.constant 2 : index
-// CHECK:         %[[BWD_C_COMP_STRIDE:.*]] = arith.constant 1 : index
-// CHECK:         %[[BWD_C_OFF:.*]] = arith.constant 0 : index
-// CHECK:         [[VIEW:%.*]] = memref.reinterpret_cast [[COMP]] to offset: [%[[BWD_C_OFF]]], sizes: [[[BD]]#1, %[[BWD_C_PAIR]]], strides: [[[STRIDE]], %[[BWD_C_COMP_STRIDE]]] : memref<4x2xf32> to memref<?x?xf32, strided<
-// CHECK:         [[LOAD:%[0-9]+]] = memref.load [[VIEW]][[[IDX]], %[[BWD_C_RE]]] : memref<?x?xf32, strided<
+// CHECK-NOT:     fir.box_dims
+// CHECK:         [[VIEW:%.*]] = memref.reinterpret_cast [[COMP]] to offset: [%c0{{.*}}], sizes: [%c4{{.*}}, %c2{{.*}}], strides: [%c2{{.*}}, %c1{{.*}}] : memref<4x2xf32> to memref<?x?xf32, strided<
+// CHECK:         [[LOAD:%[0-9]+]] = memref.load [[VIEW]][[[IDX]], %c0{{.*}}] : memref<?x?xf32, strided<
 func.func @projected_slice_bwd(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -103,17 +86,10 @@ func.func @projected_slice_bwd(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
 // CHECK:         [[MEMREF:%.*]] = fir.convert %arg0 : (!fir.ref<!fir.array<4xcomplex<f32>>>) -> memref<4xcomplex<f32>>
 // CHECK:         [[IDX:%.*]] = arith.addi
 // CHECK:         [[COMP:%[0-9]+]] = fir.convert [[MEMREF]] : (memref<4xcomplex<f32>>) -> memref<4x2xf32>
-// CHECK:         %[[IM_C_IM:.*]] = arith.constant 1 : index
-// CHECK:         %[[IM_C_SZF32:.*]] = arith.constant 4 : index
-// CHECK:         %[[IM_C_DIM0:.*]] = arith.constant 0 : index
-// CHECK:         [[BD:%[0-9]+]]:3 = fir.box_dims %2, %[[IM_C_DIM0]] : (!fir.box<!fir.array<4xf32>>, index) -> (index, index, index)
-// CHECK:         [[STRIDE:%[0-9]+]] = arith.divsi [[BD]]#2, %[[IM_C_SZF32]] : index
 // Same layout as %re; store uses component index 1 for imaginary.
-// CHECK:         %[[IM_C_PAIR:.*]] = arith.constant 2 : index
-// CHECK:         %[[IM_C_COMP_STRIDE:.*]] = arith.constant 1 : index
-// CHECK:         %[[IM_C_OFF:.*]] = arith.constant 0 : index
-// CHECK:         [[VIEW:%.*]] = memref.reinterpret_cast [[COMP]] to offset: [%[[IM_C_OFF]]], sizes: [[[BD]]#1, %[[IM_C_PAIR]]], strides: [[[STRIDE]], %[[IM_C_COMP_STRIDE]]] : memref<4x2xf32> to memref<?x?xf32, strided<
-// CHECK:         memref.store %arg1, [[VIEW]][[[IDX]], %[[IM_C_IM]]] : memref<?x?xf32, strided<
+// CHECK-NOT:     fir.box_dims
+// CHECK:         [[VIEW:%.*]] = memref.reinterpret_cast [[COMP]] to offset: [%c0{{.*}}], sizes: [%c4{{.*}}, %c2{{.*}}], strides: [%c2{{.*}}, %c1{{.*}}] : memref<4x2xf32> to memref<?x?xf32, strided<
+// CHECK:         memref.store %arg1, [[VIEW]][[[IDX]], %c1{{.*}}] : memref<?x?xf32, strided<
 func.func @projected_slice_store_im(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>,
                                     %arg1: f32) {
   %c1 = arith.constant 1 : index
@@ -152,21 +128,13 @@ func.func @projected_slice_store_im(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>,
 // CHECK:           [[IDX_I:%.*]] = arith.addi
 // CHECK:           [[IDX_J:%.*]] = arith.addi
 // CHECK:           [[COMP:%[0-9]+]] = fir.convert [[MEMREF]] : (memref<3x2xcomplex<f32>>) -> memref<3x2x2xf32>
-// CHECK:           %[[D2_C_RE:.*]] = arith.constant 0 : index
-// CHECK:           %[[D2_C_SZF32:.*]] = arith.constant 4 : index
-// CHECK:           %[[D2_C_DIM1:.*]] = arith.constant 1 : index
-// CHECK:           [[BD0:%[0-9]+]]:3 = fir.box_dims %2, %[[D2_C_DIM1]] : (!fir.box<!fir.array<2x3xf32>>, index) -> (index, index, index)
-// CHECK:           [[STR0:%[0-9]+]] = arith.divsi [[BD0]]#2, %[[D2_C_SZF32]] : index
-// CHECK:           %[[D2_C_DIM0:.*]] = arith.constant 0 : index
-// CHECK:           [[BD1:%[0-9]+]]:3 = fir.box_dims %2, %[[D2_C_DIM0]] : (!fir.box<!fir.array<2x3xf32>>, index) -> (index, index, index)
-// CHECK:           [[STR1:%[0-9]+]] = arith.divsi [[BD1]]#2, %[[D2_C_SZF32]] : index
-// 2-D embox: two box_dims strides (both / sizeof(f32)), plus pair dim (2, 1).
-// Row-major memref indices are [j, i, 0] after Fortran dim reversal.
-// CHECK:           %[[D2_C_PAIR:.*]] = arith.constant 2 : index
-// CHECK:           %[[D2_C_COMP_STRIDE:.*]] = arith.constant 1 : index
-// CHECK:           %[[D2_C_OFF:.*]] = arith.constant 0 : index
-// CHECK:           [[VIEW:%.*]] = memref.reinterpret_cast [[COMP]] to offset: [%[[D2_C_OFF]]], sizes: [[[BD0]]#1, [[BD1]]#1, %[[D2_C_PAIR]]], strides: [[[STR0]], [[STR1]], %[[D2_C_COMP_STRIDE]]] : memref<3x2x2xf32> to memref<?x?x?xf32, strided<
-// CHECK:           [[LOAD:%[0-9]+]] = memref.load [[VIEW]][[[IDX_J]], [[IDX_I]], %[[D2_C_RE]]] : memref<?x?x?xf32, strided<
+// 2-D shapeVec path: outer stride = inner_extent * 2 (pair slots), inner
+// stride = 2, pair stride = 1. Row-major memref indices are [j, i, 0] after
+// Fortran dim reversal.
+// CHECK-NOT:       fir.box_dims
+// CHECK:           [[STR0:%.*]] = arith.muli %c2{{.*}}, %c2{{.*}} : index
+// CHECK:           [[VIEW:%.*]] = memref.reinterpret_cast [[COMP]] to offset: [%c0{{.*}}], sizes: [%c3{{.*}}, %c2{{.*}}, %c2{{.*}}], strides: [[[STR0]], %c2{{.*}}, %c1{{.*}}] : memref<3x2x2xf32> to memref<?x?x?xf32, strided<
+// CHECK:           [[LOAD:%[0-9]+]] = memref.load [[VIEW]][[[IDX_J]], [[IDX_I]], %c0{{.*}}] : memref<?x?x?xf32, strided<
 func.func @projected_slice_2d(%arg0: !fir.ref<!fir.array<2x3xcomplex<f32>>>) {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -255,6 +223,52 @@ func.func @derived_component_not_projected(
   fir.do_loop %i = %c1 to %c4 step %c1 unordered {
     %coor = fir.array_coor %embox %i : (!fir.box<!fir.array<4xf64>>, index) -> !fir.ref<f64>
     fir.store %cst to %coor : !fir.ref<f64>
+  }
+  return
+}
+
+// ----------------------------------------------------------------------------
+// ref + fir.shape + projected %re/%im (0093_0105): shapeVec path, no box_dims.
+// ----------------------------------------------------------------------------
+
+// CHECK-LABEL: func.func @projected_slice_ref_shapevec_stride_store
+// CHECK:       fir.do_loop
+// CHECK:         [[COMP:%[0-9]+]] = fir.convert %{{.*}} : (memref<5xcomplex<f32>>) -> memref<5x2xf32>
+// CHECK-NOT:     fir.box_dims %arg0
+// CHECK:         memref.reinterpret_cast [[COMP]]{{.*}}strides: [%c2{{.*}}, %c1{{.*}}] : memref<5x2xf32> to memref<?x?xf32, strided<
+// CHECK-NEXT:    memref.store
+func.func @projected_slice_ref_shapevec_stride_store(
+    %arg0: !fir.ref<!fir.array<5xcomplex<f32>>>, %arg1: f32) {
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c0 = arith.constant 0 : index
+  %shape = fir.shape %c5 : (index) -> !fir.shape<1>
+  %slice = fir.slice %c1, %c5, %c1 path %c0 : (index, index, index, index) -> !fir.slice<1>
+  fir.do_loop %i = %c1 to %c5 step %c1 unordered {
+    %coor = fir.array_coor %arg0 (%shape) [%slice] %i
+        : (!fir.ref<!fir.array<5xcomplex<f32>>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<f32>
+    fir.store %arg1 to %coor : !fir.ref<f32>
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @projected_slice_ref_shapevec_stride_load_im
+// CHECK:       fir.do_loop
+// CHECK:         [[COMP:%[0-9]+]] = fir.convert %{{.*}} : (memref<4xcomplex<f64>>) -> memref<4x2xf64>
+// CHECK-NOT:     fir.box_dims
+// CHECK:         memref.reinterpret_cast [[COMP]]{{.*}}strides: [%c2{{.*}}, %c1{{.*}}] : memref<4x2xf64> to memref<?x?xf64, strided<
+// CHECK-NEXT:    memref.load
+func.func @projected_slice_ref_shapevec_stride_load_im(
+    %arg0: !fir.ref<!fir.array<4xcomplex<f64>>>) {
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c1_im = arith.constant 1 : index
+  %shape = fir.shape %c4 : (index) -> !fir.shape<1>
+  %slice = fir.slice %c1, %c4, %c1 path %c1_im : (index, index, index, index) -> !fir.slice<1>
+  fir.do_loop %i = %c1 to %c4 step %c1 unordered {
+    %coor = fir.array_coor %arg0 (%shape) [%slice] %i
+        : (!fir.ref<!fir.array<4xcomplex<f64>>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<f64>
+    %val = fir.load %coor : !fir.ref<f64>
   }
   return
 }

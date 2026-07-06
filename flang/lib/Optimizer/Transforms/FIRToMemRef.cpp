@@ -177,6 +177,13 @@ private:
 
   void populateShape(SmallVectorImpl<Value> &vec, fir::ShapeOp shape) const;
 
+  /// Recover per-dimension extent SSA values from a shape operand. Inserts
+  /// `fir.shape_extents` when the defining `fir.shape` or `fir.shapeshift` is
+  /// not visible (e.g. block argument from control-flow merge).
+  bool materializeShapeExtents(Value shapeVal, PatternRewriter &rewriter,
+                               Location loc,
+                               SmallVectorImpl<Value> &shapeVec) const;
+
   static fir::SliceOp getSliceOp(Value sliceVal) {
     return sliceVal ? sliceVal.getDefiningOp<fir::SliceOp>() : fir::SliceOp{};
   }
@@ -316,6 +323,32 @@ void FIRToMemRef::populateShape(SmallVectorImpl<Value> &vec,
   vec.append(shape.getExtents().begin(), shape.getExtents().end());
 }
 
+bool FIRToMemRef::materializeShapeExtents(
+    Value shapeVal, PatternRewriter &rewriter, Location loc,
+    SmallVectorImpl<Value> &shapeVec) const {
+  if (!shapeVal)
+    return false;
+
+  if (auto shapeOp = shapeVal.getDefiningOp<fir::ShapeOp>()) {
+    shapeVec.append(shapeOp.getExtents().begin(), shapeOp.getExtents().end());
+    return true;
+  }
+
+  if (auto ssOp = shapeVal.getDefiningOp<fir::ShapeShiftOp>()) {
+    shapeVec.append(ssOp.getExtents().begin(), ssOp.getExtents().end());
+    return true;
+  }
+
+  if (mlir::isa<fir::ShapeType, fir::ShapeShiftType>(shapeVal.getType())) {
+    auto extentsOp = fir::ShapeExtentsOp::create(rewriter, loc, shapeVal);
+    shapeVec.append(extentsOp.getExtents().begin(),
+                    extentsOp.getExtents().end());
+    return true;
+  }
+
+  return false;
+}
+
 template <typename OpTy>
 void FIRToMemRef::collectSliceInfoFrom(OpTy op, SliceInfo &info) const {
   if constexpr (std::is_same_v<OpTy, fir::ArrayCoorOp> ||
@@ -324,14 +357,15 @@ void FIRToMemRef::collectSliceInfoFrom(OpTy op, SliceInfo &info) const {
     Value shapeVal = op.getShape();
 
     if (shapeVal) {
-      Operation *shapeValOp = shapeVal.getDefiningOp();
-
-      if (auto shapeOp = dyn_cast<fir::ShapeOp>(shapeValOp)) {
-        populateShape(info.shapeVec, shapeOp);
-      } else if (auto shapeShiftOp = dyn_cast<fir::ShapeShiftOp>(shapeValOp)) {
-        populateShapeAndShift(info.shapeVec, info.shiftVec, shapeShiftOp);
-      } else if (auto shiftOp = dyn_cast<fir::ShiftOp>(shapeValOp)) {
-        populateShift(info.shiftVec, shiftOp);
+      if (Operation *shapeValOp = shapeVal.getDefiningOp()) {
+        if (auto shapeOp = dyn_cast<fir::ShapeOp>(shapeValOp)) {
+          populateShape(info.shapeVec, shapeOp);
+        } else if (auto shapeShiftOp =
+                       dyn_cast<fir::ShapeShiftOp>(shapeValOp)) {
+          populateShapeAndShift(info.shapeVec, info.shiftVec, shapeShiftOp);
+        } else if (auto shiftOp = dyn_cast<fir::ShiftOp>(shapeValOp)) {
+          populateShift(info.shiftVec, shiftOp);
+        }
       }
     }
 
@@ -642,6 +676,24 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
     rewriter.setInsertionPointAfter(arrayCoorOp);
   }
 
+  SliceInfo sliceInfo;
+  collectSliceInfoFrom(arrayCoorOp, sliceInfo);
+  if (auto embox = firMemref.getDefiningOp<fir::EmboxOp>())
+    collectSliceInfoFrom(embox, sliceInfo);
+  else if (auto rebox = firMemref.getDefiningOp<fir::ReboxOp>())
+    collectSliceInfoFrom(rebox, sliceInfo);
+
+  if (!sliceInfo.hasProjectedSlice && sliceInfo.shapeVec.empty()) {
+    auto shapeVal = arrayCoorOp.getShape();
+    if (shapeVal &&
+        mlir::isa<fir::ShapeType, fir::ShapeShiftType>(shapeVal.getType())) {
+      rewriter.setInsertionPoint(arrayCoorOp);
+      if (!materializeShapeExtents(shapeVal, rewriter, loc, sliceInfo.shapeVec))
+        return failure();
+      rewriter.setInsertionPointAfter(arrayCoorOp);
+    }
+  }
+
   Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
   FailureOr<SmallVector<Value>> failureOrIndices =
       getMemrefIndices(arrayCoorOp, memref, rewriter, *converted, one);
@@ -655,18 +707,13 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   Value convertedVal = *converted;
   MemRefType memRefTy = dyn_cast<MemRefType>(convertedVal.getType());
 
+  bool isRebox = firMemref.getDefiningOp<fir::ReboxOp>() != nullptr;
   bool isDescriptor = mlir::isa<fir::BaseBoxType>(firMemref.getType()) ||
                       firMemref.getDefiningOp<fir::BoxAddrOp>() != nullptr;
 
   // For complex projections, reinterpret memref<d0×...×complex<T>> as
   // memref<d0×...×2×T> and append the component index (0=re, 1=im) so that
   // each load/store touches exactly sizeof(T) bytes.
-  SliceInfo sliceInfo;
-  collectSliceInfoFrom(arrayCoorOp, sliceInfo);
-  if (auto embox = firMemref.getDefiningOp<fir::EmboxOp>())
-    collectSliceInfoFrom(embox, sliceInfo);
-  else if (auto rebox = firMemref.getDefiningOp<fir::ReboxOp>())
-    collectSliceInfoFrom(rebox, sliceInfo);
   auto srcTy = cast<MemRefType>((*converted).getType());
   std::optional<int64_t> complexPartIdx;
   if (sliceInfo.hasProjectedSlice) {
@@ -725,18 +772,16 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   //     matches CodeGen XArrayCoorOp's non-boxed branch.
   //
   //   box_dims path: query the descriptor at runtime. Required when:
-  //     (a) the slice is projected (physical layout is owned by the box);
-  //     (b) we have no shape information at all; or
-  //     (c) the array_coor base is a fir.box that is NOT a fir.embox result.
-  //         getFIRConvert materializes fir.box_addr(box) -- an opaque pointer
-  //         with no layout in its type -- so strides must come from the
-  //         descriptor. This matches CodeGen XArrayCoorOp's boxed branch
-  //         (getStrideFromBox); shape/shape_shift on array_coor is
-  //         informational only (lower bounds for index translation).
-  const bool descriptorOwnsLayout = sliceInfo.hasProjectedSlice ||
-                                    shapeVec.empty() ||
-                                    (firMemrefIsBox && !firMemrefIsEmbox);
+  //     (a) we have no shape information at all; or
+  //     (b) the array_coor base is a fir.box that is NOT a fir.embox result.
+  const bool descriptorOwnsLayout =
+      shapeVec.empty() || (firMemrefIsBox && !firMemrefIsEmbox);
   if (descriptorOwnsLayout) {
+    // Plain `!fir.ref` without recoverable shape extents cannot use fir.box_*.
+    if (shapeVec.empty() && !sliceInfo.hasProjectedSlice && !isDescriptor &&
+        !isRebox)
+      return failure();
+
     // Complex %re/%im: memref_stride = box_dims_byte_stride / sizeof(T),
     Value boxElementSize =
         complexPartIdx
@@ -776,13 +821,28 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
       Value stride = shapeVec[0];
       for (unsigned j = 1; j <= i - 1; ++j)
         stride = arith::MulIOp::create(rewriter, loc, shapeVec[j], stride);
+      if (complexPartIdx)
+        stride = arith::MulIOp::create(
+            rewriter, loc, stride,
+            arith::ConstantIndexOp::create(rewriter, loc, 2));
       strides.push_back(castTypeToIndexType(stride, rewriter));
     }
 
     sizes.push_back(castTypeToIndexType(shapeVec[0], rewriter));
-    strides.push_back(oneIdx);
+    // shapeVec strides count array elements (complexes).  After fir.convert to
+    // memref<...x2xT>, each step along an array dim must skip two scalars (re
+    // then im), so multiply by 2.  (Box path uses byte_stride / sizeof(T) for
+    // the same spacing; no /8 here because extents are already index units.)
+    if (complexPartIdx)
+      strides.push_back(arith::ConstantIndexOp::create(rewriter, loc, 2));
+    else
+      strides.push_back(oneIdx);
   }
 
+  // fir.convert above already made memref<...x2xT>; sizes/strides built so far
+  // cover only the array section (rank from array_coor).  Finish the
+  // reinterpret_cast layout with the pair dim that view already has: extent 2
+  // (re and im), stride 1 (contiguous scalars — index 0/1 from array_coor).
   if (complexPartIdx) {
     sizes.push_back(arith::ConstantIndexOp::create(rewriter, loc, 2));
     strides.push_back(arith::ConstantIndexOp::create(rewriter, loc, 1));

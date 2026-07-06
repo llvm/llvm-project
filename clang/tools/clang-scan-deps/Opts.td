@@ -22,6 +22,7 @@ defm module_files_dir : Eq<"module-files-dir",
 
 def optimize_args_EQ : CommaJoined<["-", "--"], "optimize-args=">, HelpText<"Which command-line arguments of modules to optimize">;
 def eager_load_pcm : F<"eager-load-pcm", "Load PCM files eagerly (instead of lazily on import)">;
+def cache_negative_stats : F<"cache-negative-stats", "Cache stat failures">;
 
 def j : Arg<"j", "Number of worker threads to use (default: use all concurrent threads)">;
 

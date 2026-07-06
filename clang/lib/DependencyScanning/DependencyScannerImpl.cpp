@@ -450,9 +450,14 @@ std::shared_ptr<CompilerInvocation> dependencies::createScanCompilerInvocation(
       true;
   ScanInvocation->getHeaderSearchOpts().ModulesForceValidateUserHeaders = false;
 
-  // Application extension only affects the handling of availability attributes,
-  // which cannot change the dependencies.
-  ScanInvocation->getLangOpts().AppExt = false;
+  // FIXME: Do this even with PCHs by marking the option as something like
+  // "preprocessor benign" in LangOptions.def so that it passes the
+  // compatibility checks in ASTReader.
+  if (ScanInvocation->getPreprocessorOpts().ImplicitPCHInclude.empty()) {
+    // Application extension only affects the handling of availability
+    // attributes, which cannot change the dependencies.
+    ScanInvocation->getLangOpts().AppExt = false;
+  }
 
   // Ensure that the scanner does not create new dependency collectors,
   // and thus won't write out the extra '.d' files to disk.
@@ -628,7 +633,7 @@ struct AsyncModuleCompile : PPCallbacks {
     // We should build the PCM.
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
         llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
-            Service.getSharedCache(), Service.getOpts().MakeVFS());
+            Service, Service.getOpts().MakeVFS());
     VFS = createVFSFromCompilerInvocation(CI.getInvocation(),
                                           CI.getDiagnostics(), std::move(VFS));
     auto DC = std::make_unique<DiagnosticConsumer>();
@@ -713,7 +718,11 @@ bool DependencyScanningAction::runInvocation(
     if (MDC)
       MDC->applyDiscoveredDependencies(*OriginalInvocation);
 
-    if (!Controller.finalize(ScanInstance, *OriginalInvocation))
+    bool Success = OriginalInvocation->withCowRef<bool>(
+        [&](CowCompilerInvocation &CowOriginalInvocation) {
+          return Controller.finalize(ScanInstance, CowOriginalInvocation);
+        });
+    if (!Success)
       return false;
 
     Consumer.handleBuildCommand(
@@ -791,7 +800,11 @@ bool DependencyScanningAction::runInvocation(
       MDC->applyDiscoveredDependencies(*OriginalInvocation);
     }
 
-    if (!Controller.finalize(ScanInstance, *OriginalInvocation))
+    bool Success = OriginalInvocation->withCowRef<bool>(
+        [&](CowCompilerInvocation &CowOriginalInvocation) {
+          return Controller.finalize(ScanInstance, CowOriginalInvocation);
+        });
+    if (!Success)
       return false;
 
     Consumer.handleBuildCommand(

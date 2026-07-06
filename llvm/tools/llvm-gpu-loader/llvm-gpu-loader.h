@@ -133,9 +133,10 @@ ol_result_t (*olGetSymbol)(ol_program_handle_t Program, const char *Name,
 
 ol_result_t (*olLaunchKernel)(
     ol_queue_handle_t Queue, ol_device_handle_t Device,
-    ol_symbol_handle_t Kernel, const void *ArgumentsData, size_t ArgumentsSize,
+    ol_symbol_handle_t Kernel,
     const ol_kernel_launch_size_args_t *LaunchSizeArgs,
-    const ol_kernel_launch_prop_t *Properties);
+    const ol_kernel_launch_prop_t *Properties, size_t NumArgs, void **ArgPtrs,
+    const size_t *ArgSizes);
 
 ol_result_t (*olCreateQueue)(ol_device_handle_t Device,
                              ol_queue_handle_t *Queue);

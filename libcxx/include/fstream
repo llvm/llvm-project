@@ -309,6 +309,25 @@ protected:
     return basic_streambuf<_CharT, _Traits>::xsputn(__str, __len);
   }
 
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL streamsize xsgetn(char_type* __str, streamsize __len) override {
+    if (__file_ && __always_noconv_) {
+      const streamsize __n = std::min(this->egptr() - this->gptr(), __len);
+      if (__n != 0) {
+        traits_type::copy(__str, this->gptr(), __n);
+        this->__gbump_ptrdiff(__n);
+      }
+      const streamsize __remainder    = __len - __n;
+      const streamsize __buffer_space = this->egptr() - this->eback();
+
+      if (__remainder >= __buffer_space)
+        return std::fread(__str + __n, sizeof(char_type), __remainder, __file_) + __n;
+      else if (__remainder > 0)
+        return basic_streambuf<_CharT, _Traits>::xsgetn(__str + __n, __remainder) + __n;
+      return __n;
+    }
+    return basic_streambuf<_CharT, _Traits>::xsgetn(__str, __len);
+  }
+
 private:
   char* __extbuf_;
   const char* __extbufnext_;
@@ -599,6 +618,17 @@ template <class _CharT, class _Traits>
 inline bool basic_filebuf<_CharT, _Traits>::is_open() const {
   return __file_ != nullptr;
 }
+
+// Configures the fopen close-on-exec mode character, if any. This string will
+// be appended to any mode string used by fstream for fopen/fdopen.
+//
+// Not all platforms support this, but it helps avoid fd-leaks on platforms that
+// do.
+#    if defined(__BIONIC__)
+#      define _LIBCPP_FOPEN_CLOEXEC_MODE "e"
+#    else
+#      define _LIBCPP_FOPEN_CLOEXEC_MODE
+#    endif
 
 template <class _CharT, class _Traits>
 const char* basic_filebuf<_CharT, _Traits>::__make_mdstring(ios_base::openmode __mode) _NOEXCEPT {
@@ -1624,7 +1654,7 @@ _LIBCPP_POP_MACROS
 
 #  endif // _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <atomic>
 #    include <concepts>
 #    include <cstdlib>
@@ -1636,7 +1666,7 @@ _LIBCPP_POP_MACROS
 #    include <type_traits>
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 23
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 23
 #    include <filesystem>
 #  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

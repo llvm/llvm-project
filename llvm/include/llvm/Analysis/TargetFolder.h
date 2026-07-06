@@ -191,12 +191,12 @@ public:
     return nullptr;
   }
 
-  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             FastMathFlags FMF) const override {
-    auto *C1 = dyn_cast<Constant>(LHS);
-    auto *C2 = dyn_cast<Constant>(RHS);
-    if (C1 && C2)
-      return ConstantFoldBinaryIntrinsic(ID, C1, C2, Ty);
+  Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
+                       FastMathFlags FMF = {},
+                       Function *CtxF = nullptr) const override {
+    if (all_of(Ops, IsaPred<Constant>))
+      return ConstantFoldIntrinsic(
+          ID, ArrayRef((Constant *const *)Ops.data(), Ops.size()), Ty);
     return nullptr;
   }
 

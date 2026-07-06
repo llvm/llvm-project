@@ -86,39 +86,11 @@ static cl::opt<unsigned>
 ///   %cttz_wide = call iN @llvm.cttz.iN(iN %val, i1 false)
 ///   %result = trunc iN %cttz_wide to i(N/2)
 /// Alive proof (for i64/i32):  https://alive2.llvm.org/ce/z/-s14-s
-static bool foldSelectSplitCTTZ(Instruction &I) {
-  Value *Cond, *TrueVal, *FalseVal;
-  if (!match(&I, m_Select(m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal))))
-    return false;
-
-  Type *HalfTy = I.getType();
-  if (!HalfTy->isIntegerTy())
-    return false;
+// TrueVal/FalseVal are pre-normalized by the caller to the EQ/NE cases.
+static bool foldSelectSplitCTTZ(Instruction &I, Value *LoTrunc, Value *HiResult,
+                                Value *LoResult, Type *HalfTy) {
   unsigned HalfWidth = HalfTy->getIntegerBitWidth();
-
-  // Bail out on very small types (i1, i2): the full-width cttz can return
-  // values not representable in the half type (e.g., cttz.i4 can return 4,
-  // which doesn't fit in i2).
-  if (HalfWidth <= 2)
-    return false;
-
   unsigned FullWidth = HalfWidth * 2;
-
-  // select (icmp eq (trunc SrcVal to i(N/2)), 0), HiResult, LoResult
-  // Or select (icmp ne ...), LoResult, HiResult
-  Value *LoTrunc;
-  Value *HiResult, *LoResult;
-  if (match(Cond,
-            m_SpecificICmp(CmpInst::ICMP_EQ, m_Value(LoTrunc), m_ZeroInt()))) {
-    HiResult = TrueVal;
-    LoResult = FalseVal;
-  } else if (match(Cond, m_SpecificICmp(CmpInst::ICMP_NE, m_Value(LoTrunc),
-                                        m_ZeroInt()))) {
-    HiResult = FalseVal;
-    LoResult = TrueVal;
-  } else {
-    return false;
-  }
 
   // LoTrunc: trunc iN SrcVal to i(N/2)
   Value *SrcVal;
@@ -171,51 +143,20 @@ static bool foldSelectSplitCTTZ(Instruction &I) {
 ///   %result = trunc iN %ctlz_wide to i(N/2)
 ///
 /// Alive proof (for i64/i32): https://alive2.llvm.org/ce/z/WfQepH
-static bool foldSelectSplitCTLZ(Instruction &I) {
-  Value *Cond, *TrueVal, *FalseVal;
-  if (!match(&I, m_Select(m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal))))
-    return false;
-
-  Type *HalfTy = I.getType();
-  if (!HalfTy->isIntegerTy())
-    return false;
+// TrueVal/FalseVal are pre-normalized by the caller to the EQ/NE cases.
+static bool foldSelectSplitCTLZ(Instruction &I, Value *HiPart, Value *LoResult,
+                                Value *HiResult, Type *HalfTy) {
   unsigned HalfWidth = HalfTy->getIntegerBitWidth();
-
-  // Bail out on very small types (i1, i2): the full-width ctlz can return
-  // values not representable in the half type (e.g., ctlz.i4 can return 4,
-  // which doesn't fit in i2).
-  if (HalfWidth <= 2)
-    return false;
-
   unsigned FullWidth = HalfWidth * 2;
-
-  // select (icmp eq HiPart, 0), LoResult, HiResult
-  // HiPart could be (trunc (lshr SrcVal, N/2) to i(N/2)) or (lshr SrcVal, N/2)
-  Value *HiPart;
-  Value *LoResult, *HiResult;
-  if (match(Cond,
-            m_SpecificICmp(CmpInst::ICMP_EQ, m_Value(HiPart), m_ZeroInt()))) {
-    LoResult = TrueVal;  // upper is zero: count in lower + N/2
-    HiResult = FalseVal; // upper non-zero: count in upper
-  } else if (match(Cond, m_SpecificICmp(CmpInst::ICMP_NE, m_Value(HiPart),
-                                        m_ZeroInt()))) {
-    LoResult = FalseVal;
-    HiResult = TrueVal;
-  } else {
-    return false;
-  }
 
   // Extract SrcVal from HiPart: either trunc(lshr(SrcVal, N/2)) or
   // lshr(SrcVal, N/2)
   Value *SrcVal;
-  if (match(HiPart,
-            m_Trunc(m_LShr(m_Value(SrcVal), m_SpecificInt(HalfWidth))))) {
-    // HiPart is trunc(lshr(SrcVal, N/2))
-  } else if (match(HiPart, m_LShr(m_Value(SrcVal), m_SpecificInt(HalfWidth)))) {
-    // HiPart is lshr(SrcVal, N/2)
-  } else {
+  if (match(HiPart, m_Trunc(m_Value(SrcVal))))
+    HiPart = SrcVal;
+
+  if (!match(HiPart, m_LShr(m_Value(SrcVal), m_SpecificInt(HalfWidth))))
     return false;
-  }
   if (!SrcVal->getType()->isIntegerTy(FullWidth))
     return false;
 
@@ -250,6 +191,38 @@ static bool foldSelectSplitCTLZ(Instruction &I) {
   I.replaceAllUsesWith(Trunc);
   ++NumSelectCTLZFolded;
   return true;
+}
+
+/// Common entry point for folding select-based split cttz/ctlz patterns.
+/// Performs the initial select and type matching shared by both transforms,
+/// then delegates to foldSelectSplitCTTZ and foldSelectSplitCTLZ.
+static bool foldSelectSplitCTLZCTTZ(Instruction &I) {
+  Value *Cond, *TrueVal, *FalseVal;
+  if (!match(&I, m_Select(m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal))))
+    return false;
+
+  Type *Ty = I.getType();
+  if (!Ty->isIntegerTy())
+    return false;
+
+  // Bail out on very small types (i1, i2): the full-width cttz/ctlz can return
+  // values not representable in the half type (e.g., cttz.i4 can return 4,
+  // which doesn't fit in i2).
+  if (Ty->getIntegerBitWidth() <= 2)
+    return false;
+
+  CmpPredicate Pred;
+  Value *CmpOp;
+  if (!match(Cond, m_ICmp(Pred, m_Value(CmpOp), m_ZeroInt())) ||
+      !ICmpInst::isEquality(Pred))
+    return false;
+
+  // Canonicalize select operands.
+  if (Pred == CmpInst::ICMP_NE)
+    std::swap(TrueVal, FalseVal);
+
+  return foldSelectSplitCTTZ(I, CmpOp, TrueVal, FalseVal, Ty) ||
+         foldSelectSplitCTLZ(I, CmpOp, TrueVal, FalseVal, Ty);
 }
 
 /// Match a pattern for a bitwise funnel/rotate operation that partially guards
@@ -579,7 +552,8 @@ static bool tryToRecognizePopCount(Instruction &I) {
     return false;
 
   unsigned Len = Ty->getScalarSizeInBits();
-  // FIXME: fix Len == 8 and other irregular type lengths.
+  // Len==8 is handled by tryToRecognizePopCount2n3.
+  // FIXME: other irregular type lengths.
   if (Len > 128 || Len <= 8 || Len % 8 != 0)
     return false;
 
@@ -753,45 +727,53 @@ static bool tryToRecognizePopCount2n3(Instruction &I) {
 
   unsigned Len = Ty->getScalarSizeInBits();
   Value *Add1;
-  const APInt *MaskRes;
-  if (!match(&I, m_And(m_Value(Add1), m_APInt(MaskRes))))
-    return false;
-
-  // Since `(trunc (and x, C))` might be canonicalized into `(and (trunc x), C)`
-  // we might loose the opportunity to recognize `(trunc (popcount y))`. The
-  // following block tries to capture such truncation, update `Len`, and append
-  // the truncation at the end of the emitting popcount, if there is any.
-  Value *TruncSrc;
-  if (match(Add1, m_OneUse(m_Trunc(m_Value(TruncSrc))))) {
-    Add1 = TruncSrc;
-    Len = Add1->getType()->getScalarSizeInBits();
-  }
-
-  if (Len > 64 || Len <= 8 || Len % 8 != 0)
-    return false;
-
-  // Len should be a power of 2 for the loop to work correctly
-  if (!isPowerOf2_32(Len))
-    return false;
-
-  // Number of bits needed to represent Len.
-  unsigned NumLenBits = Log2_32(Len) + 1;
-  // The "mask" here really only needs to fulfill two conditions:
-  // (1) All ones for the lower NumLenBits-bits
-  // (2) Zeros from bit 8 and onward.
-  // Condition (1) is straightforward. The reason behind condition
-  // (2) is that we don't care any 8-bit chunks but the first one
-  // in the original divide-and-conquer algorithm.
-  if (MaskRes->countTrailingOnes() < NumLenBits || MaskRes->getActiveBits() > 8)
-    return false;
-
-  for (unsigned I = Len; I >= 16; I = I / 2) {
-    Value *Add2;
-    // Matching "x = x + (x >> I/2)" for I-bit.
-    if (!match(Add1, m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(I / 2)),
-                             m_Deferred(Add2))))
+  if (Len == 8) {
+    // Special case for Len == 8, we only need to match the And at the end of
+    // matchPopCountBytes.
+    Add1 = &I;
+  } else {
+    const APInt *MaskRes;
+    if (!match(&I, m_And(m_Value(Add1), m_APInt(MaskRes))))
       return false;
-    Add1 = Add2;
+
+    // Since `(trunc (and x, C))` might be canonicalized into `(and (trunc x),
+    // C)` we might loose the opportunity to recognize `(trunc (popcount y))`.
+    // The following block tries to capture such truncation, update `Len`, and
+    // append the truncation at the end of the emitting popcount, if there is
+    // any.
+    Value *TruncSrc;
+    if (match(Add1, m_OneUse(m_Trunc(m_Value(TruncSrc))))) {
+      Add1 = TruncSrc;
+      Len = Add1->getType()->getScalarSizeInBits();
+    }
+
+    if (Len > 64 || Len <= 8 || Len % 8 != 0)
+      return false;
+
+    // Len should be a power of 2 for the loop to work correctly
+    if (!isPowerOf2_32(Len))
+      return false;
+
+    // Number of bits needed to represent Len.
+    unsigned NumLenBits = Log2_32(Len) + 1;
+    // The "mask" here really only needs to fulfill two conditions:
+    // (1) All ones for the lower NumLenBits-bits
+    // (2) Zeros from bit 8 and onward.
+    // Condition (1) is straightforward. The reason behind condition
+    // (2) is that we don't care any 8-bit chunks but the first one
+    // in the original divide-and-conquer algorithm.
+    if (MaskRes->countTrailingOnes() < NumLenBits ||
+        MaskRes->getActiveBits() > 8)
+      return false;
+
+    for (unsigned I = Len; I >= 16; I = I / 2) {
+      Value *Add2;
+      // Matching "x = x + (x >> I/2)" for I-bit.
+      if (!match(Add1, m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(I / 2)),
+                               m_Deferred(Add2))))
+        return false;
+      Add1 = Add2;
+    }
   }
 
   Value *Root = matchPopCountBytes(Add1, Len, I.getDataLayout());
@@ -1857,8 +1839,9 @@ bool StrNCmpInliner::optimizeStrNCmp() {
 
   // Cases where StrP has two or more dereferenceable bytes might be better
   // optimized elsewhere.
-  bool CanBeNull = false, CanBeFreed = false;
-  if (StrP->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed) > 1)
+  bool CanBeNull = false;
+  if (StrP->getPointerDereferenceableBytes(DL, CanBeNull,
+                                           /*CanBeFreed=*/nullptr) > 1)
     return false;
   inlineCompare(StrP, Str, N, HasStr1);
   return true;
@@ -1943,8 +1926,8 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
 
       Function *F = CI->getFunction();
       assert(F && "Instruction does not belong to a function!");
-      std::optional<Function::ProfileCount> EC = F->getEntryCount();
-      if (EC && EC->getCount() > 0)
+      std::optional<uint64_t> EC = F->getEntryCount();
+      if (EC && *EC > 0)
         setExplicitlyUnknownBranchWeights(*CondBrInst, DEBUG_TYPE);
     } else {
       B.CreateBr(BBNE);
@@ -2439,8 +2422,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
     for (Instruction &I : make_early_inc_range(llvm::reverse(BB))) {
       MadeChange |= foldAnyOrAllBitsSet(I);
       MadeChange |= foldGuardedFunnelShift(I, DT);
-      MadeChange |= foldSelectSplitCTTZ(I);
-      MadeChange |= foldSelectSplitCTLZ(I);
+      MadeChange |= foldSelectSplitCTLZCTTZ(I);
       MadeChange |= tryToRecognizePopCount(I);
       MadeChange |= tryToRecognizePopCount1(I);
       MadeChange |= tryToRecognizePopCount2n3(I);

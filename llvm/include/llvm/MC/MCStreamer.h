@@ -236,6 +236,9 @@ class LLVM_ABI MCStreamer {
   WinEH::FrameInfo *CurrentWinFrameInfo;
   size_t CurrentProcWinFrameInfoStartIndex;
 
+  /// Default unwind version for new WinCFI frames.
+  uint8_t DefaultWinCFIUnwindVersion = 1;
+
   /// This is stack of current and previous section values saved by
   /// pushSection.
   SmallVector<std::pair<MCSectionSubPair, MCSectionSubPair>, 4> SectionStack;
@@ -291,7 +294,7 @@ protected:
   virtual void emitRawTextImpl(StringRef String);
 
   /// Returns true if the .cv_loc directive is in the right section.
-  bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
+  bool checkCVLocSection(unsigned FuncId, SMLoc Loc);
 
   std::unique_ptr<MCLFIRewriter> LFIRewriter;
 
@@ -362,6 +365,13 @@ public:
   }
 
   bool isInEpilogCFI() const { return CurrentWinEpilog; }
+
+  /// Returns true if a WinCFI prolog has been completed (.seh_endprologue)
+  /// in the current frame.
+  bool isWinCFIPrologEnded() const {
+    return CurrentWinFrameInfo && !CurrentWinFrameInfo->End &&
+           CurrentWinFrameInfo->PrologEnd;
+  }
 
   /// \name Assembly File Formatting.
   /// @{
@@ -843,7 +853,7 @@ public:
   /// \param MaxBytesToEmit - The maximum numbers of bytes to emit, or 0. If
   /// the alignment cannot be reached in this many bytes, no bytes are
   /// emitted.
-  virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
+  virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                                  unsigned MaxBytesToEmit = 0);
 
   virtual void emitPrefAlign(Align A, const MCSymbol &End, bool EmitNops,
@@ -1065,6 +1075,8 @@ public:
   virtual void emitWinCFIFuncletOrFuncEnd(SMLoc Loc = SMLoc());
   virtual void emitWinCFISplitChained(SMLoc Loc = SMLoc());
   virtual void emitWinCFIPushReg(MCRegister Register, SMLoc Loc = SMLoc());
+  virtual void emitWinCFIPush2Regs(MCRegister Reg1, MCRegister Reg2,
+                                   SMLoc Loc = SMLoc());
   virtual void emitWinCFISetFrame(MCRegister Register, unsigned Offset,
                                   SMLoc Loc = SMLoc());
   virtual void emitWinCFIAllocStack(unsigned Size, SMLoc Loc = SMLoc());
@@ -1078,6 +1090,14 @@ public:
   virtual void emitWinCFIEndEpilogue(SMLoc Loc = SMLoc());
   virtual void emitWinCFIUnwindV2Start(SMLoc Loc = SMLoc());
   virtual void emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc = SMLoc());
+
+  /// Set the default unwind version for new WinCFI frames.
+  void setDefaultWinCFIUnwindVersion(uint8_t V) {
+    DefaultWinCFIUnwindVersion = V;
+  }
+  uint8_t getDefaultWinCFIUnwindVersion() const {
+    return DefaultWinCFIUnwindVersion;
+  }
   virtual void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                                 SMLoc Loc = SMLoc());
   virtual void emitWinEHHandlerData(SMLoc Loc = SMLoc());

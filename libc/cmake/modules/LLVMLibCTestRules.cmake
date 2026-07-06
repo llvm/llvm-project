@@ -19,6 +19,15 @@ function(_get_common_test_compile_options output_var c_test flags)
       ${config_flags}
       ${arch_flags})
 
+  # EXPECT_DEATH and ASSERT_DEATH might be quite slow.  LIBC_TEST_SKIP_DEATH_TESTS
+  # will make those tests no-op to reduce the overall test time.
+  if(LIBC_TEST_SKIP_DEATH_TESTS)
+    if(LIBC_CMAKE_VERBOSE_LOGGING)
+      message(STATUS "LIBC_TEST_SKIP_DEATH_TESTS is set.  EXPECT_DEATH/ASSERT_DEATH are no-op.")
+    endif()
+    list(APPEND compile_options "-DLIBC_TEST_SKIP_DEATH_TESTS")
+  endif()
+
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
 
@@ -72,8 +81,8 @@ function(_get_common_test_compile_options output_var c_test flags)
       list(APPEND compile_options "-Wthread-safety")
     endif()
 
-    if(LIBC_CC_SUPPORTS_NO_FENV_ACCESS)
-      list(APPEND compile_options "-Wno-fenv-access")
+    if(LIBC_COMPILER_HAS_STDC_FENV_ACCESS)
+      list(APPEND compile_options "-DLIBC_COMPILER_HAS_STDC_FENV_ACCESS")
     endif()
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)

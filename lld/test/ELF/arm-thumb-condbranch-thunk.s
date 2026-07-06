@@ -10,6 +10,7 @@
 // RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x580000 --stop-address=0x580006 | FileCheck --check-prefix=CHECK5 %s
 // RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x1000004 --stop-address=0x100000c | FileCheck --check-prefix=CHECK6 %s
 // RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x1100000 --stop-address=0x1100006 | FileCheck --check-prefix=CHECK7 %s
+// RUN: rm %t.o %t
 // Test Range extension Thunks for the Thumb conditional branch instruction.
 // This instruction only has a range of 1Mb whereas all the other Thumb wide
 // Branch instructions have 16Mb range. We still place our pre-created Thunk

@@ -143,13 +143,13 @@ For later versions of Visual Studio, no setup is required.
   </Type>
 
   <Type Name="llvm::SmallPtrSet&lt;*,*&gt;">
-    <DisplayString Condition="CurArray == SmallArray">{{ [Small Mode] size={NumNonEmpty}, capacity={CurArraySize} }}</DisplayString>
-    <DisplayString Condition="CurArray != SmallArray">{{ [Big Mode] size={NumNonEmpty}, capacity={CurArraySize} }}</DisplayString>
+    <DisplayString Condition="IsSmall">{{ [Small Mode] size={NumEntries}, capacity={CurArraySize} }}</DisplayString>
+    <DisplayString Condition="!IsSmall">{{ [Big Mode] size={NumEntries}, capacity={CurArraySize} }}</DisplayString>
     <Expand>
-      <Item Name="[size]">NumNonEmpty</Item>
+      <Item Name="[size]">NumEntries</Item>
       <Item Name="[capacity]">CurArraySize</Item>
       <ArrayItems>
-        <Size>NumNonEmpty</Size>
+        <Size>NumEntries</Size>
         <ValuePointer>($T1*)CurArray</ValuePointer>
       </ArrayItems>
     </Expand>

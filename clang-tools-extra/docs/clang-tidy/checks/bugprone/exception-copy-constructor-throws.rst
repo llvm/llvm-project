@@ -28,4 +28,4 @@ References
 
 This check corresponds to the CERT C++ Coding Standard rule
 `ERR60-CPP. Exception objects must be nothrow copy constructible
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/ERR60-CPP.+Exception+objects+must+be+nothrow+copy+constructible>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/exceptions-and-error-handling-err/err60-cpp/>`_.

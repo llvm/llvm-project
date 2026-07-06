@@ -414,7 +414,7 @@ ELFFile<ELFT>::decode_relrs(Elf_Relr_Range relrs) const {
 template <class ELFT>
 Expected<uint64_t>
 ELFFile<ELFT>::getCrelHeader(ArrayRef<uint8_t> Content) const {
-  DataExtractor Data(Content, isLE(), sizeof(typename ELFT::Addr));
+  DataExtractor Data(Content, isLE());
   Error Err = Error::success();
   uint64_t Hdr = 0;
   Hdr = Data.getULEB128(&Hdr, &Err);
@@ -475,7 +475,7 @@ ELFFile<ELFT>::android_relas(const Elf_Shdr &Sec) const {
   if (Content.size() < 4 || Content[0] != 'A' || Content[1] != 'P' ||
       Content[2] != 'S' || Content[3] != '2')
     return createError("invalid packed relocation header");
-  DataExtractor Data(Content, isLE(), ELFT::Is64Bits ? 8 : 4);
+  DataExtractor Data(Content, isLE());
   DataExtractor::Cursor Cur(/*Offset=*/4);
 
   uint64_t NumRelocs = Data.getSLEB128(Cur);
@@ -588,6 +588,16 @@ std::string ELFFile<ELFT>::getDynamicTagAsString(unsigned Arch,
 #undef RISCV_DYNAMIC_TAG
     }
     break;
+
+  case ELF::EM_SPARC:
+  case ELF::EM_SPARC32PLUS:
+  case ELF::EM_SPARCV9:
+    switch (Type) {
+#define SPARC_DYNAMIC_TAG(name, value) DYNAMIC_STRINGIFY_ENUM(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef SPARC_DYNAMIC_TAG
+    }
+    break;
   }
 #undef DYNAMIC_TAG
   switch (Type) {
@@ -598,6 +608,7 @@ std::string ELFFile<ELFT>::getDynamicTagAsString(unsigned Arch,
 #define PPC_DYNAMIC_TAG(name, value)
 #define PPC64_DYNAMIC_TAG(name, value)
 #define RISCV_DYNAMIC_TAG(name, value)
+#define SPARC_DYNAMIC_TAG(name, value)
 // Also ignore marker tags such as DT_HIOS (maps to DT_VERNEEDNUM), etc.
 #define DYNAMIC_TAG_MARKER(name, value)
 #define DYNAMIC_TAG(name, value) case value: return #name;
@@ -609,6 +620,7 @@ std::string ELFFile<ELFT>::getDynamicTagAsString(unsigned Arch,
 #undef PPC_DYNAMIC_TAG
 #undef PPC64_DYNAMIC_TAG
 #undef RISCV_DYNAMIC_TAG
+#undef SPARC_DYNAMIC_TAG
 #undef DYNAMIC_TAG_MARKER
 #undef DYNAMIC_STRINGIFY_ENUM
   default:

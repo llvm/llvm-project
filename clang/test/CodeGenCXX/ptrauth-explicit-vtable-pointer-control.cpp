@@ -78,9 +78,9 @@ struct authenticated(default_key, default_address_discrimination, custom_discrim
   virtual void g();
 };
 
-// CHECK: @_ZTVN5test19ConstEvalE = external unnamed_addr constant { [3 x ptr] }, align 8
+// CHECK: @_ZTVN5test19ConstEvalE = external constant { [3 x ptr] }, align 8
 // CHECK: @_ZN5test12ceE = global %{{.*}} { ptr ptrauth (ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN5test19ConstEvalE, i32 0, i32 0, i32 2), i32 2, i64 0, ptr @_ZN5test12ceE) }, align 8
-// CHECK: @_ZTVN5test116ConstEvalDerivedE = linkonce_odr unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTIN5test116ConstEvalDerivedE, ptr ptrauth (ptr @_ZN5test19ConstEval1fEv, i32 0, i64 26259, ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN5test116ConstEvalDerivedE, i32 0, i32 0, i32 2))] },{{.*}}align 8
+// CHECK: @_ZTVN5test116ConstEvalDerivedE = linkonce_odr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTIN5test116ConstEvalDerivedE, ptr ptrauth (ptr @_ZN5test19ConstEval1fEv, i32 0, i64 26259, ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN5test116ConstEvalDerivedE, i32 0, i32 0, i32 2))] },{{.*}}align 8
 // CHECK: @_ZN5test13cedE = global { ptr } { ptr ptrauth (ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN5test116ConstEvalDerivedE, i32 0, i32 0, i32 2), i32 2, i64 0, ptr @_ZN5test13cedE) }, align 8
 
 struct authenticated(default_key, address_discrimination, no_extra_discrimination) ConstEval {

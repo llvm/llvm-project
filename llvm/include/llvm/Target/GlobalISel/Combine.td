@@ -296,6 +296,46 @@ def combine_indexed_load_store : GICombineRule<
          [{ return Helper.matchCombineIndexedLoadStore(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineIndexedLoadStore(*${root}, ${matchinfo}); }])>;
 
+def memcpy_family_matchinfo : GIDefMatchData<"MemCpyFamilyLoweringInfo">;
+def combine_memcpy_inline : GICombineRule<
+  (defs root:$root, memcpy_family_matchinfo:$matchinfo),
+  (match (G_MEMCPY_INLINE $dst_addr, $src_addr, $size):$root,
+         [{ return Helper.matchCombineMemCpyFamily(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineMemCpyFamily(*${root}, ${matchinfo}); }])>;
+
+def combine_memset_inline : GICombineRule<
+  (defs root:$root, memcpy_family_matchinfo:$matchinfo),
+  (match (G_MEMSET_INLINE $dst_addr, $value, $size):$root,
+         [{ return Helper.matchCombineMemCpyFamily(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineMemCpyFamily(*${root}, ${matchinfo}); }])>;
+
+def combine_memcpy : GICombineRule<
+  (defs root:$root, memcpy_family_matchinfo:$matchinfo),
+  (match (G_MEMCPY $dst_addr, $src_addr, $size, $tailcall):$root,
+         [{ return Helper.matchCombineMemCpyFamily(*${root}, ${matchinfo},
+                                                   CInfo.EnableOpt ? 0 : 32); }]),
+  (apply [{ Helper.applyCombineMemCpyFamily(*${root}, ${matchinfo}); }])>;
+
+def combine_memmove : GICombineRule<
+  (defs root:$root, memcpy_family_matchinfo:$matchinfo),
+  (match (G_MEMMOVE $dst_addr, $src_addr, $size, $tailcall):$root,
+         [{ return Helper.matchCombineMemCpyFamily(*${root}, ${matchinfo},
+                                                   CInfo.EnableOpt ? 0 : 32); }]),
+  (apply [{ Helper.applyCombineMemCpyFamily(*${root}, ${matchinfo}); }])>;
+
+def combine_memset : GICombineRule<
+  (defs root:$root, memcpy_family_matchinfo:$matchinfo),
+  (match (G_MEMSET $dst_addr, $value, $size, $tailcall):$root,
+         [{ return Helper.matchCombineMemCpyFamily(*${root}, ${matchinfo},
+                                                   CInfo.EnableOpt ? 0 : 32); }]),
+  (apply [{ Helper.applyCombineMemCpyFamily(*${root}, ${matchinfo}); }])>;
+
+def memcpy_family_combines : GICombineGroup<[combine_memcpy_inline,
+                                             combine_memset_inline,
+                                             combine_memcpy,
+                                             combine_memmove,
+                                             combine_memset]>;
+
 def opt_brcond_by_inverting_cond_matchdata : GIDefMatchData<"MachineInstr *">;
 def opt_brcond_by_inverting_cond : GICombineRule<
   (defs root:$root, opt_brcond_by_inverting_cond_matchdata:$matchinfo),
@@ -531,6 +571,35 @@ def select_constant_cmp: GICombineRule<
   (match (wip_match_opcode G_SELECT):$root,
     [{ return Helper.matchConstantSelectCmp(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, ${matchinfo}); }])
+>;
+
+// select c, 0, x -> and (not c), x
+def select_zero_true: GICombineRule<
+  (defs root:$root),
+  (match (G_SELECT $dst, $c, 0, $x):$root,
+    [{ return MRI.getType(${c}.getReg()) == MRI.getType(${dst}.getReg()) &&
+              VT->computeNumSignBits(${c}.getReg()) == MRI.getType(${dst}.getReg()).getScalarSizeInBits(); }]),
+  (apply (G_XOR $xor, $c, -1),
+         (G_FREEZE $f, $x),
+         (G_AND $dst, $xor, $f))
+>;
+
+// select c, x, 0 -> and c, x
+def select_zero_false: GICombineRule<
+  (defs root:$root),
+  (match (G_SELECT $dst, $c, $x, 0):$root,
+    [{ return MRI.getType(${c}.getReg()) == MRI.getType(${dst}.getReg()) &&
+              VT->computeNumSignBits(${c}.getReg()) == MRI.getType(${dst}.getReg()).getScalarSizeInBits(); }]),
+  (apply (G_FREEZE $f, $x),
+         (G_AND $dst, $c, $f))
+>;
+
+// select (not c), x, y -> select c, y, x
+def select_not: GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $c, $src, -1),
+         (G_SELECT $dst, $c, $x, $y):$root),
+  (apply (G_SELECT $dst, $src, $y, $x))
 >;
 
 // Fold (C op x) -> (x op C)
@@ -1270,6 +1339,63 @@ def and_or_disjoint_mask : GICombineRule<
          [{ return Helper.matchAndOrDisjointMask(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${root}, ${info}); }])>;
 
+// (X&~Y)|Y --> X|Y
+def or_and_xor_to_or : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_AND $and, $x, $not),
+         (G_OR $root, $and, $y)),
+  (apply (G_OR $root, $x, $y))>;
+
+// (X&Y)|~Y --> X|~Y
+def or_and_xor_to_xor_or : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_AND $and, $x, $y),
+         (G_OR $root, $and, $not)),
+  (apply (G_XOR $xor, $y, -1),
+         (G_OR $root, $x, $xor))>;
+
+// (X|~Y)&Y --> X&Y
+def and_xor_or_to_and : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_OR $or, $x, $not),
+         (G_AND $root, $or, $y)),
+  (apply (G_AND $root, $x, $y))>;
+
+// (X|Y)&~Y --> X&~Y
+def and_xor_or_to_xor_and : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_OR $or, $x, $y),
+         (G_AND $root, $or, $not)),
+  (apply (G_XOR $xor, $y, -1),
+         (G_AND $root, $x, $xor))>;
+
+// fold or (xor x, y), (x or y) --> or x, y
+def or_xor_or : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $xor, $x, $y),
+         (G_OR $or, $x, $y),
+         (G_OR $root, $xor, $or)),
+  (apply (G_OR $root, $x, $y))>;
+
+// fold or (xor x, y), (x and y) --> or x, y
+def or_xor_and : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $xor, $x, $y),
+         (G_AND $and, $x, $y),
+         (G_OR $root, $xor, $and)),
+  (apply (G_OR $root, $x, $y))>;
+
+def or_and_xor_combines : GICombineGroup<[or_and_xor_to_or,
+                                          or_and_xor_to_xor_or,
+                                          and_xor_or_to_and,
+                                          and_xor_or_to_xor_and,
+                                          or_xor_or,
+                                          or_xor_and]>;
+
 def bitfield_extract_from_and : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (G_CONSTANT $mask, $imm2),
@@ -1634,6 +1760,11 @@ def bitcast_bitcast_fold : GICombineRule<
       [{ return MRI.getType(${src0}.getReg()) == MRI.getType(${dst}.getReg()); }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${op}, ${src0}.getReg()); }])>;
 
+def bitcast_bitcast_to_bitcast : GICombineRule<
+  (defs root:$dst),
+  (match (G_BITCAST $dst, $src1), (G_BITCAST $src1, $src0),
+      [{ return MRI.getType(${src0}.getReg()) != MRI.getType(${dst}.getReg()); }]),
+  (apply (G_BITCAST $dst, $src0))>;
 
 def fptrunc_fpext_fold : GICombineRule<
   (defs root:$dst),
@@ -2118,6 +2249,28 @@ def AMinusC1PlusC2: GICombineRule<
    [{ return Helper.matchFoldAMinusC1PlusC2(*${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
+// (sub 0, (max X, (sub 0, X))) --> (min X, (sub 0, X))
+def SubSmaxSub: GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub, 0, $A),
+          (G_SMAX $max, $A, $sub),
+          (G_SUB $root, 0, $max),
+          [{ return MRI.hasOneNonDBGUse(${sub}.getReg()) &&
+                    MRI.hasOneNonDBGUse(${max}.getReg()); }]),
+   (apply (G_SUB $sub1, 0, $A), 
+          (G_SMIN $root, $A, $sub1))>;
+
+// (sub 0, (max X, (sub 0, X))) --> (min X, (sub 0, X))
+def SubUmaxSub: GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub, 0, $A),
+          (G_UMAX $max, $A, $sub),
+          (G_SUB $root, 0, $max),
+          [{ return MRI.hasOneNonDBGUse(${sub}.getReg()) &&
+                    MRI.hasOneNonDBGUse(${max}.getReg()); }]),
+   (apply (G_SUB $sub1, 0, $A), 
+          (G_UMIN $root, $A, $sub1))>;
+   
 def integer_reassoc_combines: GICombineGroup<[
   APlusBMinusCMinusB,
   AMinusBMinusCMinusC,
@@ -2138,6 +2291,11 @@ def integer_reassoc_combines: GICombineGroup<[
   AMinusC1MinusC2,
   C1Minus2MinusC2,
   AMinusC1PlusC2
+]>;
+
+def max_min_combines: GICombineGroup<[
+  SubSmaxSub, 
+  SubUmaxSub
 ]>;
 
 // fold (A+(shl (0-B), C)) -> (A-(shl B, C))
@@ -2164,6 +2322,23 @@ def add_shift : GICombineRule<
   (match (add_shl_neg_frags $dst, $x, $y, $n)),
   (apply (G_SHL $new_shl, $y, $n),
          (G_SUB $dst, $x, $new_shl))>;
+
+// FIXME: Tablegen should be able to handle commutativity of G_AND and G_OR. 
+//        Remove once commutativity is handled automatically.
+def combine_or_of_and_frags : GICombinePatFrag<
+  (outs root: $dst), (ins $x, $y),
+  [
+    (pattern (G_AND $and, $x, $y), (G_OR $dst, $and, $x)),
+    (pattern (G_AND $and, $y, $x), (G_OR $dst, $and, $x)),
+    (pattern (G_AND $and, $x, $y), (G_OR $dst, $x, $and)),
+    (pattern (G_AND $and, $y, $x), (G_OR $dst, $x, $and))
+  ]>;
+
+// fold or (and x, y), x --> x
+def combine_or_of_and: GICombineRule<
+  (defs root:$dst),
+  (match (combine_or_of_and_frags $dst, $x, $y)),
+  (apply (GIReplaceReg $dst, $x))>;
 
 def freeze_of_non_undef_non_poison : GICombineRule<
    (defs root:$root),
@@ -2401,7 +2576,9 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         add_sub_reg, buildvector_identity_fold,
                                         trunc_buildvector_fold,
                                         trunc_lshr_buildvector_fold,
-                                        bitcast_bitcast_fold, fptrunc_fpext_fold,
+                                        bitcast_bitcast_fold,
+                                        bitcast_bitcast_to_bitcast,
+                                        fptrunc_fpext_fold,
                                         right_identity_neg_zero_fp, right_identity_neg_zero_fp_nsz,
                                         right_identity_neg_one_fp]>;
 
@@ -2452,7 +2629,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands, shifts_too_big,
     reassocs, ptr_add_immed_chain, cmp_combines,
     shl_ashr_to_sext_inreg, neg_and_one_to_sext_inreg, sext_inreg_of_load,
-    width_reduction_combines, select_combines,
+    width_reduction_combines, select_combines, select_zero_false, select_not,
     known_bits_simplifications, trunc_shift,
     not_cmp_fold, opt_brcond_by_inverting_cond,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
@@ -2465,13 +2642,13 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     intrem_combines, intdiv_combines, fdiv_repeated_divison,
     sub_add_reg, select_to_minmax,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
-    simplify_neg_minmax, combine_concat_vector,
+    or_and_xor_combines, simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines,
     truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub,
-    binop_with_neg, sub_minus_one, sub_of_mul_const,
+    binop_with_neg, sub_minus_one, sub_of_mul_const, max_min_combines,
     avgfloor_u_match, avgfloor_s_match,
-    avgceil_u_match, avgceil_s_match]>;
+    avgceil_u_match, avgceil_s_match, combine_or_of_and]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

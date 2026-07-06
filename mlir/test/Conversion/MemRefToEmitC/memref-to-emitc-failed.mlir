@@ -17,6 +17,53 @@ func.func @alloca_with_alignment() {
 
 // -----
 
+// Unsupported: memref.dealloc of a function argument. Function arguments do not
+// lower to the pointer-backed EmitC form expected by the current dealloc
+// lowering.
+func.func @alloc_and_dealloc_arg(%arg0: memref<999xi32>) {
+  // expected-error@+1 {{failed to legalize operation 'memref.dealloc'}}
+  memref.dealloc %arg0 : memref<999xi32>
+  return
+}
+
+// -----
+
+// Unsupported: memref.dealloc of stack storage. memref.alloca does not lower to
+// a heap pointer that can be passed to free().
+func.func @alloca_and_dealloc() {
+  %0 = memref.alloca() : memref<4xf32>
+  // expected-error@+1 {{failed to legalize operation 'memref.dealloc'}}
+  memref.dealloc %0 : memref<4xf32>
+  return
+}
+
+// -----
+
+memref.global "private" constant @g_dense : memref<4xf32> = dense<[0.0, 1.0, 2.0, 3.0]>
+
+// Unsupported: memref.dealloc of a dense-initialized global. memref.get_global
+// does not produce the pointer-backed EmitC form accepted by dealloc lowering.
+func.func @get_global_dense_and_dealloc() {
+  %0 = memref.get_global @g_dense : memref<4xf32>
+  // expected-error@+1 {{failed to legalize operation 'memref.dealloc'}}
+  memref.dealloc %0 : memref<4xf32>
+  return
+}
+
+// -----
+
+memref.global "private" @g_uninit : memref<4xf32> = uninitialized
+
+// Unsupported: memref.dealloc of an uninitialized global.
+func.func @get_global_uninit_and_dealloc() {
+  %0 = memref.get_global @g_uninit : memref<4xf32>
+  // expected-error@+1 {{failed to legalize operation 'memref.dealloc'}}
+  memref.dealloc %0 : memref<4xf32>
+  return
+}
+
+// -----
+
 func.func @non_identity_layout() {
   // expected-error@+1 {{failed to legalize operation 'memref.alloca'}}
   %0 = memref.alloca() : memref<4x3xf32, affine_map<(d0, d1) -> (d1, d0)>>

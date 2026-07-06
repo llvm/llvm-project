@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -60,7 +61,8 @@ struct JumpTableTy {
 } // anonymous namespace
 
 static std::optional<JumpTableTy> parseJumpTable(GetElementPtrInst *GEP,
-                                                 PointerType *PtrTy) {
+                                                 PointerType *PtrTy,
+                                                 FunctionType *CallFTy) {
   Constant *Ptr = dyn_cast<Constant>(GEP->getPointerOperand());
   if (!Ptr)
     return std::nullopt;
@@ -100,7 +102,7 @@ static std::optional<JumpTableTy> parseJumpTable(GetElementPtrInst *GEP,
     Constant *C =
         ConstantFoldLoadFromConst(GV->getInitializer(), PtrTy, Offset, DL);
     auto *Func = dyn_cast_or_null<Function>(C);
-    if (!Func || Func->isDeclaration() ||
+    if (!Func || Func->isDeclaration() || Func->getFunctionType() != CallFTy ||
         Func->getInstructionCount() > FunctionSizeThreshold)
       return std::nullopt;
     JumpTable.Funcs.push_back(Func);
@@ -214,9 +216,9 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
   PostDominatorTree *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool Changed = false;
-  auto FuncToGuid = [&](const Function &Fct) {
-    if (const auto MaybeGUID = Fct.getGUIDIfAssigned(); MaybeGUID)
-      return *MaybeGUID;
+  auto FuncToGuid = [InLTO = this->InLTO](const Function &Fct) {
+    if (Fct.getMetadata(AssignGUIDPass::GUIDMetadataName))
+      return AssignGUIDPass::getGUID(Fct);
 
     return Function::getGUIDAssumingExternalLinkage(
         getIRPGOFuncName(Fct, InLTO));
@@ -239,7 +241,8 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
           continue;
         auto *PtrTy = dyn_cast<PointerType>(L->getType());
         assert(PtrTy && "call operand must be a pointer");
-        std::optional<JumpTableTy> JumpTable = parseJumpTable(GEP, PtrTy);
+        std::optional<JumpTableTy> JumpTable =
+            parseJumpTable(GEP, PtrTy, Call->getFunctionType());
         if (!JumpTable)
           continue;
         SplittedOutTail =

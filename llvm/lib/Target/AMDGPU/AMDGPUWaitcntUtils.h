@@ -30,6 +30,7 @@ enum InstCounterType {
   KM_CNT,                            // gfx12+ only.
   X_CNT,                             // gfx1250.
   ASYNC_CNT,                         // gfx1250.
+  TENSOR_CNT,                        // gfx1250.
   NUM_EXTENDED_INST_CNTS,
   VA_VDST = NUM_EXTENDED_INST_CNTS, // gfx12+ expert mode only.
   VM_VSRC,                          // gfx12+ expert mode only.
@@ -44,6 +45,28 @@ StringLiteral getInstCounterName(InstCounterType T);
 // all counters).
 iota_range<InstCounterType>
 inst_counter_types(InstCounterType MaxCounter = NUM_INST_CNTS);
+
+/// Represents the hardware counter limits for different wait count types.
+struct HardwareLimits {
+  unsigned LoadcntMax; // Corresponds to Vmcnt prior to gfx12.
+  unsigned ExpcntMax;
+  unsigned DscntMax;     // Corresponds to LGKMcnt prior to gfx12.
+  unsigned StorecntMax;  // Corresponds to VScnt in gfx10/gfx11.
+  unsigned SamplecntMax; // gfx12+ only.
+  unsigned BvhcntMax;    // gfx12+ only.
+  unsigned KmcntMax;     // gfx12+ only.
+  unsigned XcntMax;      // gfx1250.
+  unsigned AsyncMax;     // gfx1250.
+  unsigned VaVdstMax;    // gfx12+ expert mode only.
+  unsigned VmVsrcMax;    // gfx12+ expert mode only.
+
+  HardwareLimits() = default;
+
+  /// Initializes hardware limits from ISA version.
+  HardwareLimits(const IsaVersion &IV);
+
+  unsigned get(InstCounterType T) const;
+};
 
 } // namespace AMDGPU
 
@@ -77,7 +100,8 @@ public:
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
           unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt,
-          unsigned AsyncCnt, unsigned VaVdst, unsigned VmVsrc)
+          unsigned AsyncCnt, unsigned TensorCnt, unsigned VaVdst,
+          unsigned VmVsrc)
       : Waitcnt() {
     Cnt[LOAD_CNT] = LoadCnt;
     Cnt[DS_CNT] = DsCnt;
@@ -88,6 +112,7 @@ public:
     Cnt[KM_CNT] = KmCnt;
     Cnt[X_CNT] = XCnt;
     Cnt[ASYNC_CNT] = AsyncCnt;
+    Cnt[TENSOR_CNT] = TensorCnt;
     Cnt[VA_VDST] = VaVdst;
     Cnt[VM_VSRC] = VmVsrc;
   }
@@ -105,6 +130,12 @@ public:
     }
     return false;
   }
+
+  void add(AMDGPU::InstCounterType T, unsigned Count) {
+    set(T, std::min(get(T), Count));
+  }
+
+  void clear(AMDGPU::InstCounterType T) { set(T, ~0u); }
 
   bool hasWaitStoreCnt() const { return Cnt[STORE_CNT] != ~0u; }
 
@@ -164,6 +195,10 @@ unsigned encodeLoadcntDscnt(const IsaVersion &Version, const Waitcnt &Decoded);
 /// immediate that can be used with S_WAIT_STORECNT_DSCNT for given isa
 /// \p Version.
 unsigned encodeStorecntDscnt(const IsaVersion &Version, const Waitcnt &Decoded);
+
+/// Determine if \p MI is a gfx12+ single-counter S_WAIT_*CNT instruction,
+/// and if so, which counter it is waiting on.
+std::optional<AMDGPU::InstCounterType> counterTypeForInstr(unsigned Opcode);
 
 } // namespace AMDGPU
 

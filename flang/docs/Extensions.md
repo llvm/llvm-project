@@ -203,6 +203,10 @@ end
 ## Extensions, deletions, and legacy features supported by default
 
 * Tabs in source
+* A bare carriage return (CR, 0x0d) in the interior of a source line -- e.g.
+  from a file with Windows line endings that has been mishandled -- is treated
+  as a blank, except within a character or Hollerith literal where it is
+  retained.
 * `<>` as synonym for `.NE.` and `/=`
 * `$` and `@` as legal characters in names
 * Initialization in type declaration statements using `/values/`
@@ -224,6 +228,16 @@ end
 * `BYTE` as synonym for `INTEGER(KIND=1)`; but not when spelled `TYPE(BYTE)`.
 * When kind-param is used for REAL literals, allow a matching exponent letter
 * Quad precision REAL literals with `Q`
+* The `ISO_C_BINDING` module exports the named constants `c_float128` and
+  `c_float128_complex` (both with the value 16), the kind parameter for
+  128-bit (quad precision) real and complex C interoperable types. These
+  extensions are gfortran-compatible.
+* The `ISO_C_BINDING` module exports the named constants `c_float16` and
+  `c_float16_complex` (both with the value 2), the kind parameter for
+  16-bit (half precision) real and complex C interoperable types,
+  corresponding to C `_Float16` (ISO/IEC TS 18661-3). `REAL(KIND=2)` and
+  `COMPLEX(KIND=2)` are accordingly accepted as interoperable types. These
+  extensions are gfortran-compatible.
 * `X` prefix/suffix as synonym for `Z` on hexadecimal literals
 * `B`, `O`, `Z`, and `X` accepted as suffixes as well as prefixes
 * Support for using bare `L` in FORMAT statement
@@ -238,6 +252,7 @@ end
 * `ASSIGN` statement, assigned `GO TO`, and assigned format
 * `PAUSE` statement
 * Hollerith literals and edit descriptors
+* Binary logical edit descriptor B (1/0 vs T/F)
 * `NAMELIST` allowed in the execution part
 * Omitted colons on type declaration statements with attributes
 * COMPLEX constructor expression, e.g. `(x+y,z)`
@@ -336,6 +351,10 @@ end
   expression, such as an array bound, in a scope with IMPLICIT NONE(TYPE)
   if the name of the variable would have caused it to be implicitly typed
   as default INTEGER if IMPLICIT NONE(TYPE) were absent.
+* A named constant defined by a `PARAMETER` statement is permitted to appear
+  before its explicit type declaration in a scope with IMPLICIT NONE(TYPE);
+  it acquires the type it would have had under implicit typing rules (F2023 8.7),
+  and a later explicit declaration must specify that same type (F2023 8.6.11 p2).
 * OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
   to ease porting from Sun Fortran.
 * Intrinsic subroutines EXIT([status]) and ABORT()
@@ -345,6 +364,19 @@ end
   with bounds remapping.
 * The `CONTIGUOUS` attribute can be redundantly applied to simply
   contiguous objects, including scalars, with a portability warning.
+* `IS_CONTIGUOUS` is always true when its argument is a named constant
+  (`PARAMETER`) or a subobject of a named constant, even when the standard's
+  rules in F2023 8.5.7 would otherwise classify the subobject as non-contiguous
+  (for example, a strided section like `a(::2)`).  This happens because Flang
+  constant-folds an array section of a named constant into a fresh constant array
+  containing only the selected elements, and that fresh array is trivially
+  contiguous.  When `-pedantic` is enabled, Flang emits the
+  `-Wconstant-is-contiguous` warning at each such call.  For example:
+```fortran
+integer, parameter :: a(5) = [1,2,3,4,5]
+print *, is_contiguous(a(::2))                   ! prints T in Flang
+```
+  Other compilers may report `a(::2)` as non-contiguous.
 * We support some combinations of specific procedures in generic
   interfaces that a strict reading of the standard would preclude
   when their calls must nonetheless be distinguishable.
@@ -437,6 +469,15 @@ end
 * A `NAMELIST` input group may omit its trailing `/` character if
   it is followed by another `NAMELIST` input group.
 * A `NAMELIST` input group may begin with either `&` or `$`.
+* In `NAMELIST` input, a `!` character is accepted as terminating the
+  current value and introducing a comment even when it is not preceded
+  by a value separator.  For example, `name=0.01!comment` is accepted
+  as if it had been written `name=0.01 !comment`.  F2023 13.11.3.6 p.1
+  requires a value separator (blank, comma, slash, or end of record)
+  before a `!` comment introducer in namelist input, but gfortran,
+  ifx, and classic nvfortran all accept this form as a widely-used
+  extension.  Inside a character literal constant the `!` is taken
+  literally as required by the standard.
 * A comma (or semicolon in `DECIMAL='COMMA'` or `DC` mode) in a
   fixed-width numeric input field terminates the field rather than
   signaling an invalid character error.
@@ -534,6 +575,8 @@ end program
   unexpected behavior. This is for compatibility with
   legacy code; legacy code should be updated to be correct.
   This could be removed at any time.
+  Use `-Wrelaxed-c-loc-checks` (alongside `-frelaxed-c-loc-checks`) to
+  enable a diagnostic warning for affected call sites.
   [-frelaxed-c-loc-checks]
 
 ### Extensions and legacy features deliberately not supported
