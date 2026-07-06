@@ -1393,8 +1393,7 @@ public:
   /// control-flow instructions (profile matching) and for instructions that
   /// begin/end a DWARF lexical scope (needed to translate scope ranges
   /// precisely; see DebugScopeBoundaryOffsets).
-  bool keepOffsetForInstruction(const MCInst &Inst,
-                                uint64_t Offset);
+  bool keepOffsetForInstruction(const MCInst &Inst, uint64_t Offset);
 
   /// Return the name of the section this function originated from.
   std::optional<StringRef> getOriginSectionName() const {

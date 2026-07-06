@@ -1983,8 +1983,7 @@ void BinaryContext::collectDebugScopeBoundaries() {
   auto processScopeDie = [&](const DWARFDie &Die) {
     const dwarf::Tag Tag = Die.getTag();
     if (Tag != dwarf::DW_TAG_inlined_subroutine &&
-        Tag != dwarf::DW_TAG_lexical_block &&
-        Tag != dwarf::DW_TAG_try_block &&
+        Tag != dwarf::DW_TAG_lexical_block && Tag != dwarf::DW_TAG_try_block &&
         Tag != dwarf::DW_TAG_catch_block)
       return;
     if (Expected<DWARFAddressRangesVector> Ranges = Die.getAddressRanges()) {
@@ -2001,8 +2000,8 @@ void BinaryContext::collectDebugScopeBoundaries() {
       continue;
 
     // Extract only the CU DIE (the .dwo's, for split DWARF). This is cheap (one
-    // DIE) and sets the unit's range/addr/str-offset bases that getAddressRanges
-    // needs, without materializing the full DIE array.
+    // DIE) and sets the unit's range/addr/str-offset bases that
+    // getAddressRanges needs, without materializing the full DIE array.
     DWARFDie CUDie = CU->getNonSkeletonUnitDIE(/*ExtractUnitDIEOnly=*/true);
     if (!CUDie)
       continue;
