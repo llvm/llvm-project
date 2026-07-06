@@ -554,11 +554,6 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   allowing it to be disabled independently with `-Wno-unused-but-set-global`.
   (#GH148361)
 
-- `-Wunused-template` is now part of `-Wunused` (which is enabled by `-Wall`).
-  It diagnoses unused function and variable templates with internal linkage,
-  which in a header is a latent ODR hazard. It can be disabled with
-  `-Wno-unused-template`. (#GH202945)
-
 - Added `-Wlifetime-safety` to enable lifetime safety analysis,
   a CFG-based intra-procedural analysis that detects use-after-free and related
   temporal safety bugs. See the
