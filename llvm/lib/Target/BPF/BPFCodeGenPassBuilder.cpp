@@ -43,7 +43,8 @@ public:
 
 void BPFCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   addFunctionPass(AtomicExpandPass(TM), PMW);
-  // TODO(boomanaiden154): Add BPFCheckAndAdjustIR when it has been ported.
+  flushFPMsToMPM(PMW);
+  addModulePass(BPFCheckAndAdjustIRPass(), PMW);
 
   Base::addIRPasses(PMW);
 }
