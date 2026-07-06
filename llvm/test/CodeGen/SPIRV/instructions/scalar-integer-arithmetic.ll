@@ -9,6 +9,8 @@
 ; CHECK-DAG: OpName [[SCALAR_ADD:%.+]] "scalar_add"
 ; CHECK-DAG: OpName [[SCALAR_SUB:%.+]] "scalar_sub"
 ; CHECK-DAG: OpName [[BOOL_MUL:%.+]] "bool_mul"
+; CHECK-DAG: OpName [[BOOL_MUL_NSW:%.+]] "bool_mul_nsw"
+; CHECK-DAG: OpName [[BOOL_MUL_NUW:%.+]] "bool_mul_nuw"
 ; CHECK-DAG: OpName [[SCALAR_MUL:%.+]] "scalar_mul"
 ; CHECK-DAG: OpName [[SCALAR_UDIV:%.+]] "scalar_udiv"
 ; CHECK-DAG: OpName [[SCALAR_SDIV:%.+]] "scalar_sdiv"
@@ -91,6 +93,32 @@ define i1 @bool_mul(i1 %a, i1 %b) {
 }
 
 ; CHECK:      [[BOOL_MUL]] = OpFunction [[BOOL]] None [[BOOL_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[BOOL]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[BOOL]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpLogicalAnd [[BOOL]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+define i1 @bool_mul_nsw(i1 %a, i1 %b) {
+    %c = mul nsw i1 %a, %b
+    ret i1 %c
+}
+
+; CHECK:      [[BOOL_MUL_NSW]] = OpFunction [[BOOL]] None [[BOOL_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[BOOL]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[BOOL]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpLogicalAnd [[BOOL]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+define i1 @bool_mul_nuw(i1 %a, i1 %b) {
+    %c = mul nuw i1 %a, %b
+    ret i1 %c
+}
+
+; CHECK:      [[BOOL_MUL_NUW]] = OpFunction [[BOOL]] None [[BOOL_FN]]
 ; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[BOOL]]
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[BOOL]]
 ; CHECK:      OpLabel
