@@ -76,16 +76,28 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: expand_tuple_set_kill_flag_on_last_copy
     ; CHECK: [[DEF:%[0-9]+]]:zpr4stridedorcontiguous = IMPLICIT_DEF
-    ; CHECK-NEXT: undef [[COPY_INTO_TRANSPOSED_TUPLE:%[0-9]+]].zsub0:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE [[DEF]].zsub0, 4
-    ; CHECK-NEXT: [[COPY_INTO_TRANSPOSED_TUPLE:%[0-9]+]].zsub1:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE [[DEF]].zsub1, 4
-    ; CHECK-NEXT: [[COPY_INTO_TRANSPOSED_TUPLE:%[0-9]+]].zsub2:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE [[DEF]].zsub2, 4
-    ; CHECK-NEXT: [[COPY_INTO_TRANSPOSED_TUPLE:%[0-9]+]].zsub3:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE killed [[DEF]].zsub3, 4
-    ; CHECK-NEXT: FAKE_USE implicit [[COPY_INTO_TRANSPOSED_TUPLE]]
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:zpr4stridedorcontiguous = IMPLICIT_DEF
+    ; CHECK-NEXT: undef %all_killed.zsub0:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE [[DEF]].zsub0, 4
+    ; CHECK-NEXT: %all_killed.zsub1:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE [[DEF]].zsub1, 4
+    ; CHECK-NEXT: %all_killed.zsub2:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE [[DEF]].zsub2, 4
+    ; CHECK-NEXT: %all_killed.zsub3:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE killed [[DEF]].zsub3, 4
+    ; CHECK-NEXT: undef %first_killed.zsub0:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE [[DEF1]].zsub0, 4
+    ; CHECK-NEXT: %first_killed.zsub1:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE [[DEF1]].zsub1, 4
+    ; CHECK-NEXT: %first_killed.zsub2:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE [[DEF1]].zsub2, 4
+    ; CHECK-NEXT: %first_killed.zsub3:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE killed [[DEF1]].zsub3, 4
+    ; CHECK-NEXT: FAKE_USE implicit %all_killed
     ; CHECK-NEXT: RET_ReallyLR
     %0:zpr4stridedorcontiguous = IMPLICIT_DEF
+    %1:zpr4stridedorcontiguous = IMPLICIT_DEF
 
-    ; Reuses %0 multiple times. Only the last copy in the expansion should have the "killed" flag.
-    %4:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO killed %0.zsub0, killed %0.zsub1, killed %0.zsub2, killed %0.zsub3
-    FAKE_USE implicit %4
+    ; Reuses %0 multiple times. All uses are marked as "killed".
+    ; Only the last copy in the expansion should have the "killed" flag.
+    %all_killed:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO killed %0.zsub0, killed %0.zsub1, killed %0.zsub2, killed %0.zsub3
+
+    ; Resues %1 multiple times. Only the first use is marked as "killed".
+    ; Only the last copy in the expansion should have the "killed" flag.
+    %first_killed:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO killed %1.zsub0, %1.zsub1, %1.zsub2, %1.zsub3
+
+    FAKE_USE implicit %all_killed
     RET_ReallyLR
 ...
