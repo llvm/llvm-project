@@ -37,7 +37,8 @@ namespace {
 ///
 /// Since .cfi_negate_ra_state is still sufficient for describing
 /// ptrauth-returns=pauth, we default to using the new CFI only for PAuth_LR, as
-/// it is a smaller encoding than DW_CFA_AARCH64_set_ra_state.
+/// DW_CFA_AARCH64_negate_ra_state has a smaller encoding than
+/// DW_CFA_AARCH64_set_ra_state.
 ///
 /// 1: https://github.com/ARM-software/abi-aa/pull/346
 /// 2: https://github.com/ARM-software/abi-aa/issues/327
