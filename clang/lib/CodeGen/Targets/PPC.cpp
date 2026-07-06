@@ -161,25 +161,13 @@ void AIXABIInfo::appendAttributeMangling(StringRef AttrStr,
   if (!Info.Features.empty()) {
     assert(Info.Features.size() == 1 && "one feature per version for now");
     StringRef Feature = Info.Features[0];
-    std::string MangledFeature;
+    assert(Feature.starts_with("+") || Feature.starts_with("-"));
 
-    // Handle negation prefix "no-" specially - convert to "no_"
-    if (Feature.starts_with("no-")) {
-      MangledFeature = "no_";
-      Feature = Feature.drop_front(3);
-    } else if (Feature.starts_with("+")) {
-      // Remove leading '+' for positive features
-      Feature = Feature.drop_front(1);
-    } else if (Feature.starts_with("-")) {
-      // Leading '-' means negation, convert to "no_"
-      MangledFeature = "no_";
-      Feature = Feature.drop_front(1);
-    }
+    // replace hyphens with underscores
+    std::string MangledName(Feature.drop_front(1));
+    std::replace(MangledName.begin(), MangledName.end(), '-', '_');
 
-    // Append the base feature name and replace hyphens with underscores
-    MangledFeature += Feature.str();
-    std::replace(MangledFeature.begin(), MangledFeature.end(), '-', '_');
-    Out << "." << MangledFeature;
+    Out << "." << (Feature.starts_with("-") ? "no_" : "") << MangledName;
     return;
   }
 
