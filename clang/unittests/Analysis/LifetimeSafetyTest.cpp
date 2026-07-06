@@ -213,9 +213,8 @@ public:
     std::vector<LoanID> EndLoanIDs = getLoansForVar(EndLoanVar);
 
     for (LoanID LID : EndLoanIDs) {
-      const llvm::SmallVector<OriginID> OriginFlowChain =
+      llvm::SmallVector<OriginID> OriginFlowChain =
           Runner.getAnalysis().getLoanPropagation().buildOriginFlowChain(
-              Runner.getAnalysis().getFactManager(),
               getProgramPoint(Annotation), *StartOriginID, LID);
       if (!OriginFlowChain.empty())
         return OriginFlowChain;
@@ -2026,6 +2025,8 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithMultiAssignInSameStmt) {
       Helper->buildOriginFlowChainInOneBlock("s", "tgt", "after_use");
 
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
+  EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("b")));
+  EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("c")));
 }
 
 TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithOverwritingAssignments) {
@@ -2045,6 +2046,8 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithOverwritingAssignments) {
       Helper->buildOriginFlowChainInOneBlock("s", "tgt1", "after_use");
 
   EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("a")));
+  EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("b")));
+  EXPECT_THAT(OriginFlowChain, Contains(*Helper->getOriginForDecl("c")));
 }
 
 TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithLifetimeBound) {

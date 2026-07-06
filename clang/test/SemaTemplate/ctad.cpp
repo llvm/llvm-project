@@ -124,3 +124,19 @@ namespace GH167513 {
   template <class T> using AA = A<T, T{}>;
   AA b{0};
 } // namespace GH167513
+
+#if __cplusplus >= 202002L
+namespace GH200418 {
+  template <template <class> class... Ts> struct S {
+    template <Ts... Vs> using X = decltype((Vs , ...));
+  };
+
+  template <class> struct A {
+    constexpr A(int) {}
+  };
+  A(int) -> A<int>;
+
+  using T = A<int>;
+  using T = S<A>::X<0>;
+} // namespace GH200418
+#endif

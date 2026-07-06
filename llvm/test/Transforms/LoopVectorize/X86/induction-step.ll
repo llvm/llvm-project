@@ -17,7 +17,7 @@ define i16 @wide_add_induction_step_live_in(ptr %dst, i64 %N, i16 %off) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i16 [[DOTCAST]], [[O_1]]
-; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = mul <4 x i16> splat (i16 4), [[TMP1]]
+; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shl <4 x i16> [[TMP1]], splat (i16 2)
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i16> <i16 0, i16 1, i16 2, i16 3>, [[TMP1]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -87,7 +87,7 @@ define i16 @wide_sub_induction_step_live_in(ptr %dst, i64 %N, i16 %off) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT8]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[N_VEC5]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i16 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i16> splat (i16 4), [[BROADCAST_SPLAT9]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i16> [[BROADCAST_SPLAT9]], splat (i16 2)
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <4 x i16> poison, i16 [[O_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT10]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i16> <i16 0, i16 1, i16 2, i16 3>, [[BROADCAST_SPLAT9]]

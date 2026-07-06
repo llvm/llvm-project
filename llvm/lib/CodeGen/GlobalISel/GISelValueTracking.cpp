@@ -870,6 +870,37 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     computeKnownBitsImpl(InVec, Known, DemandedSrcElts, Depth + 1);
     break;
   }
+  case TargetOpcode::G_INSERT_VECTOR_ELT: {
+    GInsertVectorElement &Insert = cast<GInsertVectorElement>(MI);
+    Register InVec = Insert.getVectorReg();
+    Register InVal = Insert.getElementReg();
+    Register EltNo = Insert.getIndexReg();
+    LLT VecVT = MRI.getType(InVec);
+
+    if (VecVT.isScalableVector())
+      break;
+
+    auto ConstEltNo = getIConstantVRegVal(EltNo, MRI);
+    unsigned NumElts = VecVT.getNumElements();
+
+    bool DemandedVal = true;
+    APInt DemandedVecElts = DemandedElts;
+    if (ConstEltNo && ConstEltNo->ult(NumElts)) {
+      unsigned EltIdx = ConstEltNo->getZExtValue();
+      DemandedVal = !!DemandedElts[EltIdx];
+      DemandedVecElts.clearBit(EltIdx);
+    }
+    Known.setAllConflict();
+    if (DemandedVal) {
+      computeKnownBitsImpl(InVal, Known2, APInt(1, 1), Depth + 1);
+      Known = Known.intersectWith(Known2.zextOrTrunc(BitWidth));
+    }
+    if (!!DemandedVecElts) {
+      computeKnownBitsImpl(InVec, Known2, DemandedVecElts, Depth + 1);
+      Known = Known.intersectWith(Known2);
+    }
+    break;
+  }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     APInt DemandedLHS, DemandedRHS;
     // Collect the known bits that are shared by every vector element referenced

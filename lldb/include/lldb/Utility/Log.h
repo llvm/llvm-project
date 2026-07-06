@@ -31,6 +31,9 @@
 
 namespace llvm {
 class raw_ostream;
+namespace json {
+class Object;
+}
 }
 // Logging Options
 #define LLDB_LOG_OPTION_VERBOSE (1u << 1)
@@ -41,6 +44,7 @@ class raw_ostream;
 #define LLDB_LOG_OPTION_BACKTRACE (1U << 7)
 #define LLDB_LOG_OPTION_APPEND (1U << 8)
 #define LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION (1U << 9)
+#define LLDB_LOG_OPTION_JSON (1U << 10)
 
 // Logging Functions
 namespace lldb_private {
@@ -288,7 +292,11 @@ private:
 
   void WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
                    llvm::StringRef function);
+  void WriteJSONHeader(llvm::json::Object &obj, llvm::StringRef file,
+                       llvm::StringRef function);
   void WriteMessage(llvm::StringRef message);
+  void EmitJSONMessage(llvm::StringRef file, llvm::StringRef function,
+                       llvm::StringRef message);
 
   void Format(llvm::StringRef file, llvm::StringRef function,
               const llvm::formatv_object_base &payload);

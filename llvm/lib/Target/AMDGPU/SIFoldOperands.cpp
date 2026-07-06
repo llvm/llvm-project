@@ -740,8 +740,20 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
   if (New->getReg().isPhysical()) {
     Old.substPhysReg(New->getReg(), *TRI);
   } else {
+    Register OldReg = Old.getReg();
     Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
     Old.setIsUndef(New->isUndef());
+
+    // If MI is in a BUNDLE, also update header's matching implicit use.
+    if (MI->isBundledWithPred()) {
+      MachineInstr &Header = *getBundleStart(MI->getIterator());
+      for (MachineOperand &MO : Header.operands()) {
+        if (MO.getReg() == OldReg) {
+          MO.setReg(New->getReg());
+          MO.setSubReg(New->getSubReg());
+        }
+      }
+    }
   }
   return true;
 }
@@ -1086,6 +1098,9 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
         TRI->getChannelFromSubReg(SubReg1))
       return {};
 
+    if (TRI->getSubRegIdxSize(SubReg0) != 32)
+      return {};
+
     int64_t MergedVal = Make_64(Op1->getImm(), Op0->getImm());
     if (I == 0)
       SplatVal64 = MergedVal;
@@ -1133,7 +1148,9 @@ bool SIFoldOperandsImpl::tryFoldRegSeqSplat(
       break;
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+    case AMDGPU::OPERAND_REG_IMM_V2FP64:
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+    case AMDGPU::OPERAND_REG_IMM_V2INT64:
       OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0_sub1);
       break;
     default:

@@ -56,9 +56,11 @@ void LocalDebugDelegate::OnUnloadDll(lldb::addr_t module_addr) {
     process->OnUnloadDll(module_addr);
 }
 
-void LocalDebugDelegate::OnDebugString(const std::string &string) {
+void LocalDebugDelegate::OnDebugString(lldb::addr_t debug_string_addr,
+                                       bool is_unicode,
+                                       uint16_t length_lower_word) {
   if (ProcessWindowsSP process = GetProcessPointer())
-    process->OnDebugString(string);
+    process->OnDebugString(debug_string_addr, is_unicode, length_lower_word);
 }
 
 void LocalDebugDelegate::OnDebuggerError(const Status &error, uint32_t type) {

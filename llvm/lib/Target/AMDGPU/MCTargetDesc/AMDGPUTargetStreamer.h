@@ -57,7 +57,7 @@ class AMDGPUTargetStreamer : public MCTargetStreamer {
 
 protected:
   // TODO: Move HSAMetadataStream to AMDGPUTargetStreamer.
-  std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> TargetID;
+  std::optional<AMDGPU::TargetID> TargetID;
   unsigned CodeObjectVersion;
 
   MCContext &getContext() const { return Streamer.getContext(); }
@@ -133,21 +133,13 @@ public:
   static StringRef getArchNameFromElfMach(unsigned ElfMach);
   static unsigned getElfMach(StringRef GPU);
 
-  const std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> &getTargetID() const {
+  const std::optional<AMDGPU::TargetID> &getTargetID() const {
     return TargetID;
   }
-  std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> &getTargetID() {
-    return TargetID;
-  }
-  void initializeTargetID(const MCSubtargetInfo &STI) {
-    assert(TargetID == std::nullopt && "TargetID can only be initialized once");
-    TargetID.emplace(STI);
-  }
+  std::optional<AMDGPU::TargetID> &getTargetID() { return TargetID; }
   void initializeTargetID(const MCSubtargetInfo &STI, StringRef FeatureString) {
-    initializeTargetID(STI);
-
-    assert(getTargetID() != std::nullopt && "TargetID is None");
-    getTargetID()->setTargetIDFromFeaturesString(FeatureString);
+    assert(TargetID == std::nullopt && "TargetID can only be initialized once");
+    TargetID = AMDGPU::createAMDGPUTargetID(STI, FeatureString);
   }
 };
 

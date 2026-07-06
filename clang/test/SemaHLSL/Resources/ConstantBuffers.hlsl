@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -finclude-default-header -fsyntax-only -verify %s
 
-struct S { // expected-note 3 {{candidate constructor}}
+struct S {
   float a;
   int b;
 };

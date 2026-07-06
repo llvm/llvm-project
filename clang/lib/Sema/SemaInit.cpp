@@ -2094,7 +2094,12 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
 static bool checkDestructorReference(QualType ElementType, SourceLocation Loc,
                                      Sema &SemaRef) {
   auto *CXXRD = ElementType->getAsCXXRecordDecl();
-  if (!CXXRD)
+  // Bail out on incomplete record types: a forward-declared class has no
+  // destructor to look up, and `LookupDestructor` (via `LookupSpecialMember`)
+  // asserts that the record is fully defined. Error recovery for init lists
+  // of incomplete element types reaches this point even after the parser has
+  // already diagnosed the incompleteness.
+  if (!CXXRD || !CXXRD->hasDefinition())
     return false;
 
   CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(CXXRD);
@@ -6933,7 +6938,11 @@ void InitializationSequence::InitializeFrom(Sema &S,
   assert(S.getLangOpts().CPlusPlus);
 
   //     - If the destination type is a (possibly cv-qualified) class type:
-  if (DestType->isRecordType()) {
+  //       (except for HLSL, where user-defined record types do not have
+  //        constructors or conversion functions)
+  if (DestType->isRecordType() &&
+      (!S.getLangOpts().HLSL ||
+       DestType->getAsCXXRecordDecl()->isHLSLBuiltinRecord())) {
     //     - If the initialization is direct-initialization, or if it is
     //       copy-initialization where the cv-unqualified version of the
     //       source type is the same class as, or a derived class of, the
@@ -7018,7 +7027,11 @@ void InitializationSequence::InitializeFrom(Sema &S,
 
   //    - Otherwise, if the source type is a (possibly cv-qualified) class
   //      type, conversion functions are considered.
-  if (!SourceType.isNull() && SourceType->isRecordType()) {
+  //      (except for HLSL, where user-defined record types do not have
+  //      constructors or conversion functions).
+  if (!SourceType.isNull() && SourceType->isRecordType() &&
+      (!S.getLangOpts().HLSL ||
+       SourceType->getAsCXXRecordDecl()->isHLSLBuiltinRecord())) {
     assert(Initializer && "Initializer must be non-null");
     // For a conversion to _Atomic(T) from either T or a class type derived
     // from T, initialize the T object then convert to _Atomic type.

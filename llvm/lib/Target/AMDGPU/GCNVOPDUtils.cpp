@@ -264,6 +264,96 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
       .has_value();
 }
 
+/// Collect all load (dependents if \p Forward else dependencies) that connect
+/// to the \p Head SU.
+/// \p Visited should allocate enough bits for the number of SUnits, but its
+/// value can otherwise be uninitialized.
+static void collectLoads(SmallPtrSet<SUnit *, 8> &Loads, BitVector &Visited,
+                         SUnit &Head, bool Forward, bool StopAtLoads) {
+  if (Head.isBoundaryNode())
+    return;
+
+  Visited.reset();
+
+  SmallVector<SUnit *> Stack;
+  Stack.push_back(&Head);
+  while (!Stack.empty()) {
+    SUnit *SU = Stack.pop_back_val();
+    const SmallVector<SDep, 4> &Deps = Forward ? SU->Succs : SU->Preds;
+    for (const SDep &Edge : Deps) {
+      if (StopAtLoads && Edge.getKind() != SDep::Data)
+        continue;
+      SUnit *Dep = Edge.getSUnit();
+      if (Dep->isBoundaryNode() || Visited.test(Dep->NodeNum))
+        continue;
+      Visited.set(Dep->NodeNum);
+
+      if (Dep->isInstr() && Dep->getInstr()->mayLoad()) {
+        Loads.insert(Dep);
+        if (StopAtLoads)
+          continue;
+      }
+      Stack.push_back(Dep);
+    }
+  }
+}
+
+/// Checks whether fusing SU \p I with SU \p J would force the loads preceding
+/// \p J to complete before loads depending on \p I.
+///
+/// \p ILoadSuccs should hold all first load successors of \p I (via
+/// collectLoads with StopAtLoads=true). For set bits in \p LoadPredsComputed,
+/// the corresponding set in \p LoadPredsCache should hold all transitive load
+/// dependencies (via collectLoads with StopAtLoads=false). The \p Scratch
+/// bitvector should allocate enough bits for the number of SUnits.
+static bool loadsMayOverlap(
+    [[maybe_unused]] SUnit &I, const SmallPtrSet<SUnit *, 8> &ILoadSuccs,
+    SUnit &J, BitVector &LoadPredsComputed,
+    SmallVector<SmallPtrSet<SUnit *, 8>> &LoadPredsCache, BitVector &Scratch) {
+
+  if (ILoadSuccs.empty())
+    return false;
+
+  SmallPtrSet<SUnit *, 8> &JLoadPreds = LoadPredsCache[J.NodeNum];
+  if (!LoadPredsComputed.test(J.NodeNum)) {
+    collectLoads(JLoadPreds, Scratch, J, /*Forward=*/false,
+                 /*StopAtLoads=*/true);
+    LoadPredsComputed.set(J.NodeNum);
+  }
+  if (JLoadPreds.empty())
+    return false;
+
+  for (SUnit *ILoad : ILoadSuccs) {
+    SmallPtrSet<SUnit *, 8> &ILoadDeps = LoadPredsCache[ILoad->NodeNum];
+    if (!LoadPredsComputed.test(ILoad->NodeNum)) {
+      collectLoads(ILoadDeps, Scratch, *ILoad, /*Forward=*/false,
+                   /*StopAtLoads=*/false);
+      LoadPredsComputed.set(ILoad->NodeNum);
+    }
+
+    for (SUnit *JLoad : JLoadPreds) {
+      if (ILoad == JLoad) {
+        LLVM_DEBUG(
+            dbgs() << "Will not pair SU(" << I.NodeNum << ") with SU("
+                   << J.NodeNum << ")\n"
+                   << "  Fusion would introduce a cyclic dependency with SU("
+                   << ILoad->NodeNum << ")\n");
+        return true;
+      }
+
+      if (!ILoadDeps.contains(JLoad)) {
+        LLVM_DEBUG(dbgs() << "Will not pair SU(" << I.NodeNum << ") with SU("
+                          << J.NodeNum << ")\n"
+                          << "  Fusion may force SU(" << JLoad->NodeNum
+                          << ") to complete its load before dispatching SU("
+                          << ILoad->NodeNum << ")\n");
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 namespace {
 /// Adapts design from MacroFusion
 /// Puts valid candidate instructions back-to-back so they can easily
@@ -284,23 +374,55 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
       return;
     }
 
-    std::vector<SUnit>::iterator ISUI, JSUI;
-    for (ISUI = DAG->SUnits.begin(); ISUI != DAG->SUnits.end(); ++ISUI) {
+    BitVector VOPDCapable(DAG->SUnits.size());
+    unsigned IIdx = 0;
+    // Pre-compute whether each individual instruction can be VOPD
+    for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;
+         ++ISUI, ++IIdx) {
       const MachineInstr *IMI = ISUI->getInstr();
-      if (!shouldScheduleAdjacent(TII, ST, nullptr, *IMI))
-        continue;
-      if (!hasLessThanNumFused(*ISUI, 2))
-        continue;
+      if (shouldScheduleAdjacent(TII, ST, nullptr, *IMI) &&
+          hasLessThanNumFused(*ISUI, 2))
+        VOPDCapable[IIdx] = true;
+    }
 
-      for (JSUI = ISUI + 1; JSUI != DAG->SUnits.end(); ++JSUI) {
-        if (JSUI->isBoundaryNode())
+    IIdx = 0;
+    SmallPtrSet<SUnit *, 8> ILoadSuccs;
+
+    // Cache collected load predecessors.
+    // For VOPDCapable nodes, this caches collectLoads with StopAtLoads=true
+    // For loads, this caches collectLoads with StopAtLoads=false
+    BitVector LoadPredsComputed(DAG->SUnits.size());
+    SmallVector<SmallPtrSet<SUnit *, 8>> LoadPredsCache(DAG->SUnits.size());
+
+    BitVector Scratch(DAG->SUnits.size());
+    for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;
+         ++ISUI, ++IIdx) {
+      if (!VOPDCapable[IIdx])
+        continue;
+      const MachineInstr *IMI = ISUI->getInstr();
+
+      ILoadSuccs.clear();
+      collectLoads(ILoadSuccs, Scratch, *ISUI, /*Forward=*/true,
+                   /*StopAtLoads=*/true);
+
+      unsigned JIdx = IIdx + 1;
+      for (auto JSUI = ISUI + 1; JSUI != E; ++JSUI, ++JIdx) {
+        if (!VOPDCapable[JIdx] || JSUI->isBoundaryNode())
           continue;
         const MachineInstr *JMI = JSUI->getInstr();
         if (!hasLessThanNumFused(*JSUI, 2) ||
             !shouldScheduleAdjacent(TII, ST, IMI, *JMI))
           continue;
-        if (fuseInstructionPair(*DAG, *ISUI, *JSUI))
+
+        if (loadsMayOverlap(*ISUI, ILoadSuccs, *JSUI, LoadPredsComputed,
+                            LoadPredsCache, Scratch))
+          continue;
+
+        if (fuseInstructionPair(*DAG, *ISUI, *JSUI)) {
+          // Clear to prevent future checks/fusing
+          VOPDCapable[JIdx] = false;
           break;
+        }
       }
     }
     LLVM_DEBUG(dbgs() << "Completed VOPDPairingMutation\n");

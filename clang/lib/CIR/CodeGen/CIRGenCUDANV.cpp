@@ -131,9 +131,9 @@ mlir::Value CIRGenNVCUDARuntime::prepareKernelArgs(CIRGenFunction &cgf,
 
   // Build void *args[] and populate with the addresses of kernel arguments.
   auto voidPtrArrayTy = cir::ArrayType::get(cgm.voidPtrTy, args.size());
-  mlir::Value kernelArgs = builder.createAlloca(
-      loc, cir::PointerType::get(voidPtrArrayTy), voidPtrArrayTy, "kernel_args",
-      CharUnits::fromQuantity(16));
+  mlir::Value kernelArgs =
+      builder.createAlloca(loc, cir::PointerType::get(voidPtrArrayTy),
+                           "kernel_args", CharUnits::fromQuantity(16));
 
   mlir::Value kernelArgsDecayed =
       builder.createCast(cir::CastKind::array_to_ptrdecay, kernelArgs,
@@ -223,17 +223,15 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
       cudaLaunchKernelFD->getParamDecl(5)->getType());
 
   mlir::Value gridDim =
-      builder.createAlloca(loc, cir::PointerType::get(dim3Ty), dim3Ty,
-                           "grid_dim", CharUnits::fromQuantity(8));
+      builder.createAlloca(loc, cir::PointerType::get(dim3Ty), "grid_dim",
+                           CharUnits::fromQuantity(8));
   mlir::Value blockDim =
-      builder.createAlloca(loc, cir::PointerType::get(dim3Ty), dim3Ty,
-                           "block_dim", CharUnits::fromQuantity(8));
-  mlir::Value sharedMem =
-      builder.createAlloca(loc, cir::PointerType::get(cgm.sizeTy), cgm.sizeTy,
-                           "shared_mem", cgm.getSizeAlign());
-  mlir::Value stream =
-      builder.createAlloca(loc, cir::PointerType::get(streamTy), streamTy,
-                           "stream", cgm.getPointerAlign());
+      builder.createAlloca(loc, cir::PointerType::get(dim3Ty), "block_dim",
+                           CharUnits::fromQuantity(8));
+  mlir::Value sharedMem = builder.createAlloca(
+      loc, cir::PointerType::get(cgm.sizeTy), "shared_mem", cgm.getSizeAlign());
+  mlir::Value stream = builder.createAlloca(
+      loc, cir::PointerType::get(streamTy), "stream", cgm.getPointerAlign());
 
   cir::FuncOp popConfig = cgm.createRuntimeFunction(
       cir::FuncType::get({gridDim.getType(), blockDim.getType(),

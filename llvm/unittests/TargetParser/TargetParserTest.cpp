@@ -1112,6 +1112,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("neoverse-v2", "armv9-a"),
                       AArch64CPUTestParams("neoverse-v3", "armv9.2-a"),
                       AArch64CPUTestParams("neoverse-v3ae", "armv9.2-a"),
+                      AArch64CPUTestParams("armagicpu", "armv9.2-a"),
                       AArch64CPUTestParams("cortex-r82", "armv8-r"),
                       AArch64CPUTestParams("cortex-r82ae", "armv8-r"),
                       AArch64CPUTestParams("cortex-x1", "armv8.2-a"),
@@ -1170,6 +1171,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("thunderxt83", "armv8-a"),
                       AArch64CPUTestParams("thunderxt88", "armv8-a"),
                       AArch64CPUTestParams("tsv110", "armv8.2-a"),
+                      AArch64CPUTestParams("hip12", "armv8.7-a"),
                       AArch64CPUTestParams("a64fx", "armv8.2-a"),
                       AArch64CPUTestParams("fujitsu-monaka", "armv9.3-a"),
                       AArch64CPUTestParams("carmel", "armv8.2-a"),
@@ -1225,7 +1227,7 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
   StringRef MainName = params.Aliases[0];
   const std::optional<AArch64::CpuInfo> Cpu = AArch64::parseCpu(MainName);
   const AArch64::ArchInfo &MainAI = Cpu->Arch;
-  AArch64::ExtensionBitset MainFlags = Cpu->getImpliedExtensions();
+  AArch64::ExtensionBitset MainFlags = Cpu->DefaultExtensions;
 
   for (size_t I = 1, E = params.Aliases.size(); I != E; ++I) {
     StringRef OtherName = params.Aliases[I];
@@ -1242,7 +1244,7 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
         << MainName << " vs " << OtherName;
     EXPECT_EQ(MainAI, OtherAI) << MainName << " vs " << OtherName;
 
-    AArch64::ExtensionBitset OtherFlags = OtherCpu->getImpliedExtensions();
+    AArch64::ExtensionBitset OtherFlags = OtherCpu->DefaultExtensions;
 
     EXPECT_EQ(MainFlags, OtherFlags) << MainName << " vs " << OtherName;
 
@@ -1271,7 +1273,7 @@ INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 98;
+static constexpr unsigned NumAArch64CPUArchs = 100;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -1317,7 +1319,7 @@ bool testAArch64Extension(StringRef CPUName, StringRef ArchExt) {
   if (!Extension)
     return false;
   std::optional<AArch64::CpuInfo> CpuInfo = AArch64::parseCpu(CPUName);
-  return CpuInfo->getImpliedExtensions().test(Extension->ID);
+  return CpuInfo->DefaultExtensions.test(Extension->ID);
 }
 
 bool testAArch64Extension(const AArch64::ArchInfo &AI, StringRef ArchExt) {

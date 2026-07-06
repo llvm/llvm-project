@@ -147,9 +147,9 @@ namespace std {
 _LIBCPP_PUSH_MACROS
 #    include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #    if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [syncstream.syncbuf.overview]/1
 //   Class template basic_syncbuf stores character data written to it,
@@ -511,9 +511,9 @@ using std::osyncstream;
 using std::wosyncstream;
 #      endif
 
-#    endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
-
 _LIBCPP_END_NAMESPACE_STD
+
+#    endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 
 _LIBCPP_POP_MACROS
 

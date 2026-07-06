@@ -14,6 +14,7 @@
 #include "src/__support/File/file.h"
 #include "src/__support/OSUtil/fcntl.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/lseek.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/alloc-checker.h"
 #include "src/__support/libc_errno.h" // For error macros
@@ -68,7 +69,7 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
     // return {nullptr, EINVAL};
     return Error(EINVAL);
   }
-  long open_flags = 0;
+  int open_flags = 0;
   if (modeflags & ModeFlags(File::OpenMode::APPEND)) {
     open_flags = O_CREAT | O_APPEND;
     if (modeflags & ModeFlags(File::OpenMode::PLUS))
@@ -89,21 +90,12 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
   }
 
   // File created will have 0666 permissions.
-  constexpr long OPEN_MODE =
+  constexpr mode_t OPEN_MODE =
       S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 
-#ifdef SYS_open
-  int fd =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path, open_flags, OPEN_MODE);
-#elif defined(SYS_openat)
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD, path,
-                                             open_flags, OPEN_MODE);
-#else
-#error "open and openat syscalls not available."
-#endif
-
-  if (fd < 0)
-    return Error(-fd);
+  ErrorOr<int> fd = linux_syscalls::open(path, open_flags, OPEN_MODE);
+  if (!fd)
+    return Error(fd.error());
 
   uint8_t *buffer;
   {
@@ -113,8 +105,8 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
       return Error(ENOMEM);
   }
   AllocChecker ac;
-  auto *file = new (ac)
-      LinuxFile(fd, buffer, File::DEFAULT_BUFFER_SIZE, _IOFBF, true, modeflags);
+  auto *file = new (ac) LinuxFile(fd.value(), buffer, File::DEFAULT_BUFFER_SIZE,
+                                  _IOFBF, true, modeflags);
   if (!ac)
     return Error(ENOMEM);
   File::add_file(file);

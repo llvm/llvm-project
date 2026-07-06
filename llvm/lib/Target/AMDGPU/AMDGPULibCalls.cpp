@@ -908,7 +908,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     replaceCall(FPOp, cnval);
     return true;
   }
-  if ((CF && CF->isExactlyValue(1.0)) || (CINT && ci_opr1 == 1)) {
+  if ((CF && CF->isOne()) || (CINT && ci_opr1 == 1)) {
     // pow/powr/pown(x, 1.0) = x
     LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << "\n");
     replaceCall(FPOp, opr0);
@@ -922,7 +922,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     replaceCall(FPOp, nval);
     return true;
   }
-  if ((CF && CF->isExactlyValue(-1.0)) || (CINT && ci_opr1 == -1)) {
+  if ((CF && CF->isMinusOne()) || (CINT && ci_opr1 == -1)) {
     // pow/powr/pown(x, -1.0) = 1.0/x
     LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1 / " << *opr0 << "\n");
     Constant *cnval = ConstantFP::get(eltType, 1.0);
@@ -1169,7 +1169,12 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
   Module *M = B.GetInsertBlock()->getModule();
 
   CallInst *CI = cast<CallInst>(FPOp);
-  if (ci_opr1 == 2 &&
+
+  // rootn and sqrt disagree on signed-zero / -Inf inputs (e.g. rootn(-0.0, 2)
+  // is +0.0, sqrt(-0.0) is -0.0), so require nsz/ninf.
+  bool FMFOkForSqrt = FPOp->hasNoSignedZeros() && FPOp->hasNoInfs();
+
+  if (ci_opr1 == 2 && FMFOkForSqrt &&
       shouldReplaceLibcallWithIntrinsic(CI,
                                         /*AllowMinSizeF32=*/true,
                                         /*AllowF64=*/true)) {
@@ -1208,7 +1213,7 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
     return true;
   }
 
-  if (ci_opr1 == -2 &&
+  if (ci_opr1 == -2 && FMFOkForSqrt &&
       shouldReplaceLibcallWithIntrinsic(CI,
                                         /*AllowMinSizeF32=*/true,
                                         /*AllowF64=*/true)) {

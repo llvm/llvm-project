@@ -1,4 +1,5 @@
-@ RUN: llvm-mc -triple=thumbv7k-apple-watchos2.0.0 -emit-compact-unwind-non-canonical=true -filetype=obj -o %t < %s && llvm-objdump --unwind-info %t | FileCheck %s
+@ RUN: llvm-mc -triple=thumbv7k-apple-watchos2.0.0 -emit-compact-unwind-non-canonical=true -filetype=obj -o %t < %s && llvm-objdump --unwind-info %t | FileCheck %s --check-prefixes=CHECK,COMPACT
+@ RUN: llvm-mc -triple=thumbv7k-apple-watchos2.0.0 --emit-dwarf-unwind dwarf-only -filetype=obj -o %t < %s && llvm-objdump --unwind-info %t | FileCheck %s --check-prefixes=CHECK,DWARF
 
 @ CHECK: Contents of __compact_unwind section:
 
@@ -6,8 +7,12 @@
         .align        2
         .code        16
 
+@ On armv7k, a compact unwind entry of 0x04000000 indicates
+@ "fall back on DWARF unwind"
+
 @ CHECK-LABEL: start: {{.*}} _test_r4_r5_r6
-@ CHECK: compact encoding: 0x01000007
+@ COMPACT: compact encoding: 0x01000007
+@ DWARF:   compact encoding: 0x04000000
         .thumb_func        _test_r4_r5_r6
 _test_r4_r5_r6:
         .cfi_startproc
@@ -24,7 +29,8 @@ _test_r4_r5_r6:
 
 
 @ CHECK-LABEL: start: {{.*}} _test_r4_r5_r10_r11
-@ CHECK: compact encoding: 0x01000063
+@ COMPACT: compact encoding: 0x01000063
+@ DWARF:   compact encoding: 0x04000000
         .thumb_func        _test_r4_r5_r10_r11
 _test_r4_r5_r10_r11:
         .cfi_startproc
@@ -42,7 +48,8 @@ _test_r4_r5_r10_r11:
 
 
 @ CHECK-LABEL: start: {{.*}} _test_d8
-@ CHECK: compact encoding: 0x02000000
+@ COMPACT: compact encoding: 0x02000000
+@ DWARF:   compact encoding: 0x04000000
         .thumb_func        _test_d8
 _test_d8:
         .cfi_startproc
@@ -57,7 +64,8 @@ _test_d8:
 
 
 @ CHECK-LABEL: start: {{.*}} _test_d8_d10_d12_d14
-@ CHECK: compact encoding: 0x02000300
+@ COMPACT: compact encoding: 0x02000300
+@ DWARF:   compact encoding: 0x04000000
         .thumb_func        _test_d8_d10_d12_d14
 _test_d8_d10_d12_d14:
         .cfi_startproc
@@ -77,7 +85,8 @@ _test_d8_d10_d12_d14:
         .cfi_endproc
 
 @ CHECK-LABEL: start: {{.*}} _test_varargs
-@ CHECK: compact encoding: 0x01c00001
+@ COMPACT: compact encoding: 0x01c00001
+@ DWARF:   compact encoding: 0x04000000
         .thumb_func        _test_varargs
 _test_varargs:
         .cfi_startproc
@@ -94,7 +103,8 @@ _test_varargs:
         .cfi_endproc
 
 @ CHECK-LABEL: start: {{.*}} _test_missing_lr
-@ CHECK: compact encoding: 0x04000000
+@ COMPACT: compact encoding: 0x04000000
+@ DWARF:   compact encoding: 0x04000000
         .thumb_func _test_missing_lr
 _test_missing_lr:
         .cfi_startproc
@@ -106,7 +116,8 @@ _test_missing_lr:
         .cfi_endproc
 
 @ CHECK-LABEL: start: {{.*}} _test_swapped_offsets
-@ CHECK: compact encoding: 0x04000000
+@ COMPACT: compact encoding: 0x04000000
+@ DWARF:   compact encoding: 0x04000000
         .thumb_func _test_swapped_offsets
 _test_swapped_offsets:
         .cfi_startproc

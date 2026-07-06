@@ -198,3 +198,23 @@ namespace InvalidUnaryOperator {
       ;
   }
 }
+
+namespace IncNonDereferencable {
+  struct S {};
+
+  void foo() {
+    S *s = (foo *)malloc(sizeof(*s)); // both-error {{expected expression}}
+    S *&sref = s;
+    for (int i = 0; i < 2; sref++)
+      ;
+  }
+}
+
+namespace InvalidVirtualCast {
+  struct X {};
+  struct Y : virtual X {};
+  struct Z {
+  } z;
+  static_assert((X *)(Y *)&z, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+}

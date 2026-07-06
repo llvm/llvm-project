@@ -43,7 +43,7 @@ subroutine test_unstructured2(a, b, c)
   integer :: i, j, k
   real :: a(:,:,:), b(:,:,:), c(:,:,:)
 
-  !$acc parallel loop
+  !$acc serial loop
   do i = 1, 10
     do j = 1, 10
       do k = 1, 10
@@ -53,12 +53,12 @@ subroutine test_unstructured2(a, b, c)
   end do
 
 ! CHECK-LABEL: func.func @_QPtest_unstructured2
-! CHECK: acc.parallel
-! CHECK: acc.loop combined(parallel) private(%{{.*}} : !fir.ref<i32>) {
+! CHECK: acc.serial
+! CHECK: acc.loop combined(serial) private(%{{.*}} : !fir.ref<i32>) {
 ! CHECK: fir.call @_FortranAStopStatementText
 ! CHECK: acc.yield
 ! CHECK: acc.yield
-! CHECK: } attributes {independent = [#acc.device_type<none>], unstructured}
+! CHECK: }
 ! CHECK: acc.yield
 
 end subroutine
@@ -142,7 +142,7 @@ end subroutine
 ! instead of an invalid cross-region branch.
 subroutine test_unstructured6(N, A, B)
   implicit real*8 (a-h, o-z)
-  !$acc routine gang
+  !$acc routine seq
   dimension A(*), B(*)
   !$acc loop gang vector
   do 100 i = 1, N
@@ -166,7 +166,7 @@ end subroutine
 ! target. A jump table (exit selector + dispatch) skips the intermediate code.
 subroutine test_unstructured7(A, B, C, N)
   implicit real*8 (a-h, o-z)
-  !$acc routine gang
+  !$acc routine seq
   dimension A(*), B(*), C(*)
   !$acc loop gang vector
   do 100 i = 1, N
@@ -223,7 +223,7 @@ end subroutine
 ! CHECK: arith.cmpi eq
 ! CHECK: cf.cond_br
 
-! Test that `acc parallel loop collapse(N)` whose body has an early-exit
+! Test that `acc serial loop collapse(N)` whose body has an early-exit
 ! (here, `if (cond) then ... cycle ... end if`) lowers cleanly. The
 ! corresponding acc.loop must privatize all N induction variables, carry
 ! both `collapse = [N]` and `unstructured` attributes, and emit the
@@ -233,7 +233,7 @@ subroutine test_unstructured_collapse_cycle(a)
   integer :: i, j, jdiag
   real(8) :: a(:,:)
   jdiag = 4
-  !$acc parallel loop collapse(2) copy(a)
+  !$acc serial loop collapse(2) copy(a)
   do j = 1, 8
     do i = 1, 8
       if (i == jdiag) then
@@ -243,16 +243,16 @@ subroutine test_unstructured_collapse_cycle(a)
       a(i, j) = real(i + j, 8)
     end do
   end do
-  !$acc end parallel loop
+  !$acc end serial loop
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_unstructured_collapse_cycle
-! CHECK: acc.parallel combined(loop)
+! CHECK: acc.serial combined(loop)
 ! Both induction variables (j and i) are privatized:
 ! CHECK: %[[PRIVJ:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "j"}
 ! CHECK: %[[PRIVI:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
 ! No control(...) on acc.loop — bounds are not on the op:
-! CHECK: acc.loop combined(parallel) private(%[[PRIVJ]], %[[PRIVI]] : !fir.ref<i32>, !fir.ref<i32>) {
+! CHECK: acc.loop combined(serial) private(%[[PRIVJ]], %[[PRIVI]] : !fir.ref<i32>, !fir.ref<i32>) {
 ! Outer loop trip-count test (j) emitted as cf:
 ! CHECK: arith.cmpi sgt
 ! CHECK: cf.cond_br
@@ -263,14 +263,14 @@ end subroutine
 ! CHECK: arith.cmpi eq
 ! CHECK: cf.cond_br
 ! CHECK: acc.yield
-! CHECK: } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>], unstructured}
+! CHECK: }
 
-! Test that `acc parallel loop collapse(N)` lowers cleanly when the early-exit
+! Test that `acc serial loop collapse(N)` lowers cleanly when the early-exit
 ! is a STOP (the form already covered for collapse=1 by test_unstructured2).
 subroutine test_unstructured_collapse_stop(a)
   integer :: i, j, k
   real :: a(:,:,:)
-  !$acc parallel loop collapse(3)
+  !$acc serial loop collapse(3)
   do i = 1, 10
     do j = 1, 10
       do k = 1, 10
@@ -285,9 +285,9 @@ end subroutine
 ! CHECK: acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
 ! CHECK: acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "j"}
 ! CHECK: acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "k"}
-! CHECK: acc.loop combined(parallel) private(%{{.*}}, %{{.*}}, %{{.*}} : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) {
+! CHECK: acc.loop combined(serial) private(%{{.*}}, %{{.*}}, %{{.*}} : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) {
 ! CHECK: fir.call @_FortranAStopStatementText
-! CHECK: } attributes {collapse = [3], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>], unstructured}
+! CHECK: }
 
 ! Test orphaned `acc loop collapse(N)`
 subroutine test_unstructured_collapse_loop_only(a)
@@ -310,3 +310,77 @@ end subroutine
 ! Standalone acc.loop (no `combined(...)`):
 ! CHECK: acc.loop private(%{{.*}}, %{{.*}} : !fir.ref<i32>, !fir.ref<i32>) {
 ! CHECK: } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>], unstructured}
+
+! Standalone `acc loop seq` with STOP in body (explicit `seq` clause).
+subroutine test_unstructured_loop_seq_stop(a)
+  integer :: i, j
+  real :: a(:,:,:)
+  !$acc loop seq
+  do i = 1, 10
+    do j = 1, 10
+      if (a(1,2,3) > 10.0) stop 'unstructured'
+    end do
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_unstructured_loop_seq_stop
+! CHECK: acc.loop private({{.*}})
+! CHECK: fir.call @_FortranAStopStatementText
+! CHECK: } attributes {{{.*}}seq = [#acc.device_type<none>], unstructured}
+
+! Standalone `acc loop auto` with STOP in body (explicit `auto` clause).
+subroutine test_unstructured_loop_auto_stop(a)
+  integer :: i, j
+  real :: a(:,:,:)
+  !$acc loop auto
+  do i = 1, 10
+    do j = 1, 10
+      if (a(1,2,3) > 10.0) stop 'unstructured'
+    end do
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_unstructured_loop_auto_stop
+! CHECK: acc.loop private({{.*}})
+! CHECK: fir.call @_FortranAStopStatementText
+! CHECK: } attributes {auto_ = [#acc.device_type<none>], {{.*}}unstructured}
+
+! Standalone `acc loop` inside `acc serial` with STOP in body (loop is `seq`
+! by default because parent compute construct is serial).
+subroutine test_unstructured_loop_in_serial_stop(a)
+  integer :: i, j
+  real :: a(:,:,:)
+  !$acc serial
+  !$acc loop
+  do i = 1, 10
+    do j = 1, 10
+      if (a(1,2,3) > 10.0) stop 'unstructured'
+    end do
+  end do
+  !$acc end serial
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_unstructured_loop_in_serial_stop
+! CHECK: acc.serial
+! CHECK: acc.loop private({{.*}})
+! CHECK: fir.call @_FortranAStopStatementText
+! CHECK: } attributes {{{.*}}seq = [#acc.device_type<none>], unstructured}
+
+! Orphan `acc loop` inside a `seq` acc routine: loop is `seq` by default.
+subroutine test_unstructured_orphan_loop_in_seq_routine(a)
+  integer :: i, j
+  real :: a(:,:,:)
+  !$acc routine seq
+  !$acc loop
+  do i = 1, 10
+    do j = 1, 10
+      if (a(1,2,3) > 10.0) stop 'unstructured'
+    end do
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_unstructured_orphan_loop_in_seq_routine
+! CHECK: acc.loop private({{.*}})
+! CHECK: fir.call @_FortranAStopStatementText
+! CHECK: } attributes {{{.*}}seq = [#acc.device_type<none>], unstructured}
+

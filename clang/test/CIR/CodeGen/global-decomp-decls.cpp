@@ -60,7 +60,7 @@ auto [dt1, dt2, dt3] = dt;
 // CIR:   %[[DTOR_PTR_CAST:.*]] = cir.cast bitcast %[[DTOR_PTR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_DtorType>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[SB_VOIDPTR:.*]] = cir.cast bitcast %[[SB]] : !cir.ptr<!rec_DtorType> -> !cir.ptr<!void>
 // CIR:   %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_atexit(%[[DTOR_PTR_CAST]], %[[SB_VOIDPTR]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+// CIR:   cir.call @__cxa_atexit(%[[DTOR_PTR_CAST]], %[[SB_VOIDPTR]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
 
 // LLVM: define internal void @__cxx_global_var_init{{.*}}()
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}@_ZDC3dt13dt23dt3E, ptr {{.*}}@dt, i64 12, i1 false)

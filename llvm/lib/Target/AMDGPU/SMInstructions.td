@@ -465,7 +465,7 @@ defm S_DCACHE_DISCARD    : SM_Pseudo_Discards;
 defm S_DCACHE_DISCARD_X2 : SM_Pseudo_Discards;
 }
 
-let SubtargetPredicate = isGFX12Plus in {
+let SubtargetPredicate = HasSmemPrefetchInsts in {
 def S_PREFETCH_INST        : SM_Prefetch_Pseudo <"s_prefetch_inst", SReg_64, 1>;
 def S_PREFETCH_INST_PC_REL : SM_Prefetch_Pseudo <"s_prefetch_inst_pc_rel", SReg_64, 0>;
 def S_PREFETCH_DATA        : SM_Prefetch_Pseudo <"s_prefetch_data", SReg_64, 1>;
@@ -473,7 +473,7 @@ def S_PREFETCH_DATA_PC_REL : SM_Prefetch_Pseudo <"s_prefetch_data_pc_rel", SReg_
 def S_BUFFER_PREFETCH_DATA : SM_Prefetch_Pseudo <"s_buffer_prefetch_data", SReg_128_XNULL, 1> {
   let is_buffer = 1;
 }
-} // end let SubtargetPredicate = isGFX12Plus
+} // end let SubtargetPredicate = HasSmemPrefetchInsts
 
 //===----------------------------------------------------------------------===//
 // Targets
@@ -1154,7 +1154,7 @@ defm : SMPrefetchPat<"INST", i32imm_zero>;
 let AddedComplexity = 12 in // Prefer scalar prefetch over global for r/o case.
 defm : SMPrefetchPat<"DATA", i32imm_one>;
 
-let SubtargetPredicate = isGFX12Plus in {
+let SubtargetPredicate = HasSmemPrefetchInsts in {
   def : GCNPat <
     (int_amdgcn_s_prefetch_data (SMRDImm i64:$sbase, i32:$offset), (i32 SReg_32:$len)),
     (S_PREFETCH_DATA $sbase, $offset, $len, 0)
@@ -1185,7 +1185,27 @@ let SubtargetPredicate = isGFX12Plus in {
     (SIsbuffer_prefetch v4i32:$sbase, (SMRDBufferImm i32:$offset), imm:$len),
     (S_BUFFER_PREFETCH_DATA SReg_128:$sbase, i32imm:$offset, (i32 SGPR_NULL), (as_i8timm $len))
   >;
-} // End let SubtargetPredicate = isGFX12Plus
+
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_inst (SMRDImm i64:$sbase, i32:$offset), (i32 SReg_32:$len)),
+    (S_PREFETCH_INST $sbase, $offset, $len, 0)
+  >;
+
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_inst (i64 SReg_64:$sbase), (i32 SReg_32:$len)),
+    (S_PREFETCH_INST $sbase, 0, $len, 0)
+  >;
+
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_inst (SMRDImm i64:$sbase, i32:$offset), imm:$len),
+    (S_PREFETCH_INST $sbase, $offset, (i32 SGPR_NULL), (as_i8timm $len))
+  >;
+
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_inst (i64 SReg_64:$sbase), imm:$len),
+    (S_PREFETCH_INST $sbase, 0, (i32 SGPR_NULL), (as_i8timm $len))
+  >;
+} // End let SubtargetPredicate = HasSmemPrefetchInsts
 
 //===----------------------------------------------------------------------===//
 // GFX10.

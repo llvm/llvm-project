@@ -42,4 +42,3 @@ class TestCase(PExpectTest):
         self.child.expect("Process .* exited")
         self.expect_prompt()
 
-        self.quit()

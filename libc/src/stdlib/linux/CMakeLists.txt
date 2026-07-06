@@ -23,3 +23,18 @@ add_entrypoint_object(
     libc.src.__support.macros.null_check
     libc.src.stdlib.environ_internal
 )
+
+add_entrypoint_object(
+  unsetenv
+  SRCS
+    unsetenv.cpp
+  HDRS
+    ../unsetenv.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.stdlib.environ_internal
+)

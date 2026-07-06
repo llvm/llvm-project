@@ -1148,7 +1148,6 @@ define amdgpu_cs_chain void @indirect(ptr inreg %callee, <3 x i32> inreg %sgpr, 
   ; GISEL-GFX11-NEXT: {{  $}}
   ; GISEL-GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; GISEL-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-  ; GISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GISEL-GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GISEL-GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; GISEL-GFX11-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr4
@@ -1156,20 +1155,26 @@ define amdgpu_cs_chain void @indirect(ptr inreg %callee, <3 x i32> inreg %sgpr, 
   ; GISEL-GFX11-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr9
   ; GISEL-GFX11-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr10
   ; GISEL-GFX11-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY $vgpr11
-  ; GISEL-GFX11-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
+  ; GISEL-GFX11-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GISEL-GFX11-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GISEL-GFX11-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
+  ; GISEL-GFX11-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GISEL-GFX11-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; GISEL-GFX11-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
-  ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; GISEL-GFX11-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; GISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
+  ; GISEL-GFX11-NEXT:   [[COPY11:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX11-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
+  ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
+  ; GISEL-GFX11-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; GISEL-GFX11-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
+  ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY13]], implicit $exec
+  ; GISEL-GFX11-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_3]]
+  ; GISEL-GFX11-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
+  ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY14]], implicit $exec
+  ; GISEL-GFX11-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_4]]
   ; GISEL-GFX11-NEXT:   $vgpr8 = COPY [[COPY5]]
   ; GISEL-GFX11-NEXT:   $vgpr9 = COPY [[COPY6]]
   ; GISEL-GFX11-NEXT:   $vgpr10 = COPY [[COPY7]]
   ; GISEL-GFX11-NEXT:   $vgpr11 = COPY [[COPY8]]
-  ; GISEL-GFX11-NEXT:   SI_CS_CHAIN_TC_W32 [[REG_SEQUENCE]], 0, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
+  ; GISEL-GFX11-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY11]], 0, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
   ;
   ; GISEL-GFX10-LABEL: name: indirect
   ; GISEL-GFX10: bb.1 (%ir-block.0):
@@ -1177,7 +1182,6 @@ define amdgpu_cs_chain void @indirect(ptr inreg %callee, <3 x i32> inreg %sgpr, 
   ; GISEL-GFX10-NEXT: {{  $}}
   ; GISEL-GFX10-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; GISEL-GFX10-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-  ; GISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GISEL-GFX10-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; GISEL-GFX10-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr4
@@ -1185,22 +1189,28 @@ define amdgpu_cs_chain void @indirect(ptr inreg %callee, <3 x i32> inreg %sgpr, 
   ; GISEL-GFX10-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr9
   ; GISEL-GFX10-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr10
   ; GISEL-GFX10-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY $vgpr11
-  ; GISEL-GFX10-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
+  ; GISEL-GFX10-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GISEL-GFX10-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GISEL-GFX10-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
+  ; GISEL-GFX10-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GISEL-GFX10-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; GISEL-GFX10-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
-  ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; GISEL-GFX10-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; GISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
+  ; GISEL-GFX10-NEXT:   [[COPY11:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX10-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
+  ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
+  ; GISEL-GFX10-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; GISEL-GFX10-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
+  ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY13]], implicit $exec
+  ; GISEL-GFX10-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_3]]
+  ; GISEL-GFX10-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
+  ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY14]], implicit $exec
+  ; GISEL-GFX10-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_4]]
   ; GISEL-GFX10-NEXT:   $vgpr8 = COPY [[COPY5]]
   ; GISEL-GFX10-NEXT:   $vgpr9 = COPY [[COPY6]]
   ; GISEL-GFX10-NEXT:   $vgpr10 = COPY [[COPY7]]
   ; GISEL-GFX10-NEXT:   $vgpr11 = COPY [[COPY8]]
-  ; GISEL-GFX10-NEXT:   [[COPY12:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GISEL-GFX10-NEXT:   $sgpr48_sgpr49_sgpr50_sgpr51 = COPY [[COPY12]]
-  ; GISEL-GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[REG_SEQUENCE]], 0, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+  ; GISEL-GFX10-NEXT:   [[COPY15:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
+  ; GISEL-GFX10-NEXT:   $sgpr48_sgpr49_sgpr50_sgpr51 = COPY [[COPY15]]
+  ; GISEL-GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY11]], 0, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr48_sgpr49_sgpr50_sgpr51
   ;
   ; DAGISEL-GFX11-LABEL: name: indirect
   ; DAGISEL-GFX11: bb.0 (%ir-block.0):
@@ -1287,15 +1297,17 @@ define amdgpu_cs_chain void @nonuniform_callee(ptr %callee, i32 inreg %sgpr, i32
   ; GISEL-GFX11-NEXT: {{  $}}
   ; GISEL-GFX11-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr8
   ; GISEL-GFX11-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr9
-  ; GISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GISEL-GFX11-NEXT:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
-  ; GISEL-GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GISEL-GFX11-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr10
-  ; GISEL-GFX11-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
-  ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
-  ; GISEL-GFX11-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GISEL-GFX11-NEXT:   $vgpr8 = COPY [[COPY4]]
-  ; GISEL-GFX11-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY2]], 0, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8
+  ; GISEL-GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; GISEL-GFX11-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr10
+  ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY1]], implicit $exec
+  ; GISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
+  ; GISEL-GFX11-NEXT:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX11-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
+  ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
+  ; GISEL-GFX11-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; GISEL-GFX11-NEXT:   $vgpr8 = COPY [[COPY3]]
+  ; GISEL-GFX11-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY4]], 0, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8
   ;
   ; GISEL-GFX10-LABEL: name: nonuniform_callee
   ; GISEL-GFX10: bb.1 (%ir-block.0):
@@ -1303,17 +1315,19 @@ define amdgpu_cs_chain void @nonuniform_callee(ptr %callee, i32 inreg %sgpr, i32
   ; GISEL-GFX10-NEXT: {{  $}}
   ; GISEL-GFX10-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr8
   ; GISEL-GFX10-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr9
-  ; GISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
-  ; GISEL-GFX10-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GISEL-GFX10-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr10
-  ; GISEL-GFX10-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
-  ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
-  ; GISEL-GFX10-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GISEL-GFX10-NEXT:   $vgpr8 = COPY [[COPY4]]
+  ; GISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; GISEL-GFX10-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr10
+  ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY1]], implicit $exec
+  ; GISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
+  ; GISEL-GFX10-NEXT:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX10-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
+  ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
+  ; GISEL-GFX10-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; GISEL-GFX10-NEXT:   $vgpr8 = COPY [[COPY3]]
   ; GISEL-GFX10-NEXT:   [[COPY6:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
   ; GISEL-GFX10-NEXT:   $sgpr48_sgpr49_sgpr50_sgpr51 = COPY [[COPY6]]
-  ; GISEL-GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY2]], 0, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+  ; GISEL-GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY4]], 0, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8, implicit $sgpr48_sgpr49_sgpr50_sgpr51
   ;
   ; DAGISEL-GFX11-LABEL: name: nonuniform_callee
   ; DAGISEL-GFX11: bb.0 (%ir-block.0):
@@ -1497,7 +1511,6 @@ define amdgpu_cs_chain void @indirect_with_non_imm_exec(ptr inreg %callee, i32 i
   ; GISEL-GFX11-NEXT: {{  $}}
   ; GISEL-GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; GISEL-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-  ; GISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GISEL-GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GISEL-GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; GISEL-GFX11-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr4
@@ -1506,20 +1519,26 @@ define amdgpu_cs_chain void @indirect_with_non_imm_exec(ptr inreg %callee, i32 i
   ; GISEL-GFX11-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr9
   ; GISEL-GFX11-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY $vgpr10
   ; GISEL-GFX11-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY $vgpr11
-  ; GISEL-GFX11-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
+  ; GISEL-GFX11-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GISEL-GFX11-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GISEL-GFX11-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
+  ; GISEL-GFX11-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; GISEL-GFX11-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; GISEL-GFX11-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
-  ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
-  ; GISEL-GFX11-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; GISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
+  ; GISEL-GFX11-NEXT:   [[COPY12:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX11-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
+  ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY13]], implicit $exec
+  ; GISEL-GFX11-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; GISEL-GFX11-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
+  ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY14]], implicit $exec
+  ; GISEL-GFX11-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_3]]
+  ; GISEL-GFX11-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
+  ; GISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY15]], implicit $exec
+  ; GISEL-GFX11-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_4]]
   ; GISEL-GFX11-NEXT:   $vgpr8 = COPY [[COPY6]]
   ; GISEL-GFX11-NEXT:   $vgpr9 = COPY [[COPY7]]
   ; GISEL-GFX11-NEXT:   $vgpr10 = COPY [[COPY8]]
   ; GISEL-GFX11-NEXT:   $vgpr11 = COPY [[COPY9]]
-  ; GISEL-GFX11-NEXT:   SI_CS_CHAIN_TC_W32 [[REG_SEQUENCE]], 0, 0, [[COPY2]], amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
+  ; GISEL-GFX11-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY12]], 0, 0, [[COPY2]], amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
   ;
   ; GISEL-GFX10-LABEL: name: indirect_with_non_imm_exec
   ; GISEL-GFX10: bb.1 (%ir-block.0):
@@ -1527,7 +1546,6 @@ define amdgpu_cs_chain void @indirect_with_non_imm_exec(ptr inreg %callee, i32 i
   ; GISEL-GFX10-NEXT: {{  $}}
   ; GISEL-GFX10-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; GISEL-GFX10-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-  ; GISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GISEL-GFX10-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; GISEL-GFX10-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr4
@@ -1536,22 +1554,28 @@ define amdgpu_cs_chain void @indirect_with_non_imm_exec(ptr inreg %callee, i32 i
   ; GISEL-GFX10-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr9
   ; GISEL-GFX10-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY $vgpr10
   ; GISEL-GFX10-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY $vgpr11
-  ; GISEL-GFX10-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
+  ; GISEL-GFX10-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GISEL-GFX10-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GISEL-GFX10-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
+  ; GISEL-GFX10-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; GISEL-GFX10-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; GISEL-GFX10-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
-  ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
-  ; GISEL-GFX10-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; GISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
+  ; GISEL-GFX10-NEXT:   [[COPY12:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX10-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
+  ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY13]], implicit $exec
+  ; GISEL-GFX10-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; GISEL-GFX10-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
+  ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY14]], implicit $exec
+  ; GISEL-GFX10-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_3]]
+  ; GISEL-GFX10-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
+  ; GISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY15]], implicit $exec
+  ; GISEL-GFX10-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_4]]
   ; GISEL-GFX10-NEXT:   $vgpr8 = COPY [[COPY6]]
   ; GISEL-GFX10-NEXT:   $vgpr9 = COPY [[COPY7]]
   ; GISEL-GFX10-NEXT:   $vgpr10 = COPY [[COPY8]]
   ; GISEL-GFX10-NEXT:   $vgpr11 = COPY [[COPY9]]
-  ; GISEL-GFX10-NEXT:   [[COPY13:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GISEL-GFX10-NEXT:   $sgpr48_sgpr49_sgpr50_sgpr51 = COPY [[COPY13]]
-  ; GISEL-GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[REG_SEQUENCE]], 0, 0, [[COPY2]], amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+  ; GISEL-GFX10-NEXT:   [[COPY16:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
+  ; GISEL-GFX10-NEXT:   $sgpr48_sgpr49_sgpr50_sgpr51 = COPY [[COPY16]]
+  ; GISEL-GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY12]], 0, 0, [[COPY2]], amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr48_sgpr49_sgpr50_sgpr51
   ;
   ; DAGISEL-GFX11-LABEL: name: indirect_with_non_imm_exec
   ; DAGISEL-GFX11: bb.0 (%ir-block.0):

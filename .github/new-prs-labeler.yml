@@ -698,11 +698,11 @@ clang:analysis:
 clang:ssaf:
   - changed-files:
     - any-glob-to-any-file:
-      - clang/docs/ScalableStaticAnalysisFramework/**
-      - clang/include/clang/ScalableStaticAnalysisFramework/**
-      - clang/lib/ScalableStaticAnalysisFramework/**
+      - clang/docs/ScalableStaticAnalysis/**
+      - clang/include/clang/ScalableStaticAnalysis/**
+      - clang/lib/ScalableStaticAnalysis/**
       - clang/test/Analysis/Scalable/**
-      - clang/unittests/ScalableStaticAnalysisFramework/**
+      - clang/unittests/ScalableStaticAnalysis/**
 
 clang:static analyzer:
   - changed-files:
@@ -1428,8 +1428,7 @@ clang:temporal-safety:
       - clang/include/clang/Analysis/Analyses/LifetimeSafety/**
       - clang/lib/Analysis/LifetimeSafety/**
       - clang/unittests/Analysis/LifetimeSafety*
-      - clang/test/Sema/*lifetime-safety*
-      - clang/test/Sema/*lifetime-analysis*
+      - clang/test/Sema/LifetimeSafety/**
       - clang/test/Analysis/LifetimeSafety/**
       - clang/docs/LifetimeSafety.rst
 

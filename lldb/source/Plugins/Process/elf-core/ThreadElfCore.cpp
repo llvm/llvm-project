@@ -503,7 +503,7 @@ ELFLinuxPrPsInfo::Populate(const lldb_private::ProcessInstanceInfo &info,
 
   constexpr size_t fname_len = std::extent_v<decltype(prpsinfo.pr_fname)>;
   static_assert(fname_len > 0, "This should always be non zero");
-  const llvm::StringRef fname = info.GetNameAsStringRef();
+  const llvm::StringRef fname = info.GetName();
   auto fname_begin = fname.begin();
   std::copy_n(fname_begin, std::min(fname_len, fname.size()),
               prpsinfo.pr_fname);

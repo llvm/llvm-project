@@ -486,10 +486,6 @@ static constexpr FeatureBitset XCVFeatureGroup = {
     RISCV::FeatureVendorXCValu,      RISCV::FeatureVendorXCVsimd,
     RISCV::FeatureVendorXCVbi};
 
-static constexpr FeatureBitset XRivosFeatureGroup = {
-    RISCV::FeatureVendorXRivosVizip,
-};
-
 static constexpr FeatureBitset XqciFeatureGroup = {
     RISCV::FeatureVendorXqcia,   RISCV::FeatureVendorXqciac,
     RISCV::FeatureVendorXqcibi,  RISCV::FeatureVendorXqcibm,
@@ -542,7 +538,6 @@ static constexpr FeatureBitset XAIFGroup = {RISCV::FeatureVendorXAIFET};
 static constexpr DecoderListEntry DecoderList32[]{
     // Vendor Extensions
     {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
-    {DecoderTableXRivos32, XRivosFeatureGroup, "Rivos"},
     {DecoderTableXqci32, XqciFeatureGroup, "Qualcomm uC Extensions"},
     {DecoderTableXVentana32,
      {RISCV::FeatureVendorXVentanaCondOps},

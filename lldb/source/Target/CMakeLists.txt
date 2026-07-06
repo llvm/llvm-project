@@ -32,6 +32,7 @@ add_lldb_library(lldbTarget
   PathMappingList.cpp
   Platform.cpp
   Process.cpp
+  ProcessIOHandler.cpp
   ProcessTrace.cpp
   Queue.cpp
   QueueItem.cpp

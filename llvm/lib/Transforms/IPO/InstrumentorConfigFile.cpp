@@ -165,7 +165,7 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
               BO->setString(IConf.SS.save(*V));
             } else {
               Ctx.diagnose(DiagnosticInfoInstrumentation(
-                  Twine("configuration key '") + ObjIt.first.str() +
+                  Twine("configuration key '") + StringRef(ObjIt.first) +
                       Twine("' expects a string, value ignored"),
                   DS_Warning));
             }
@@ -175,7 +175,7 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
               BO->setBool(*V);
             else {
               Ctx.diagnose(DiagnosticInfoInstrumentation(
-                  Twine("configuration key '") + ObjIt.first.str() +
+                  Twine("configuration key '") + StringRef(ObjIt.first) +
                       Twine("' expects a boolean, value ignored"),
                   DS_Warning));
             }
@@ -183,7 +183,7 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
           }
         } else if (!StringRef(ObjIt.first).ends_with(".description")) {
           Ctx.diagnose(DiagnosticInfoInstrumentation(
-              Twine("configuration key '") + ObjIt.first.str() +
+              Twine("configuration key '") + StringRef(ObjIt.first) +
                   Twine("' not found and ignored"),
               DS_Warning));
         }
@@ -205,7 +205,7 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
         Ctx.diagnose(DiagnosticInfoInstrumentation(
             Twine("malformed JSON configuration, expected an object matching "
                   "an instrumentor choice, got ") +
-                ObjIt.first.str(),
+                StringRef(ObjIt.first),
             DS_Warning));
         continue;
       }

@@ -2173,6 +2173,7 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
 
   // GNU typeof support.
   case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
     ParseTypeofSpecifier(DS);
     DS.Finish(Actions, Policy);
     return;

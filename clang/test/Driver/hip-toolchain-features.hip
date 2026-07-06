@@ -41,8 +41,8 @@
 // RUN:   -nogpuinc --offload-arch=gfx908:xnack-:sramecc- --no-offload-new-driver %s \
 // RUN:   2>&1 | FileCheck %s -check-prefix=NOALL3
 
-// ALL3: {{.*}}clang{{.*}}"-target-feature" "+sramecc" "-target-feature" "+xnack"
-// NOALL3: {{.*}}clang{{.*}}"-target-feature" "-sramecc" "-target-feature" "-xnack"
+// ALL3: {{.*}}clang{{.*}}"-target-feature" "+xnack" "-target-feature" "+sramecc"
+// NOALL3: {{.*}}clang{{.*}}"-target-feature" "-xnack" "-target-feature" "-sramecc"
 
 // RUN: %clang -### --target=x86_64-linux-gnu -fgpu-rdc -nogpulib \
 // RUN:   -nogpuinc --offload-arch=gfx1010 --no-offload-new-driver %s \

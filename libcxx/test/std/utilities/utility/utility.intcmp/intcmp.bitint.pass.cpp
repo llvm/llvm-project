@@ -36,7 +36,7 @@
 
 #include "test_macros.h"
 
-#if TEST_HAS_EXTENSION(bit_int)
+#if TEST_HAS_BITINT
 
 template <class T, class U>
 constexpr bool test_same_sign() {
@@ -157,15 +157,15 @@ constexpr bool test() {
   // Cross-type round-trip equality.
   static_assert(std::cmp_equal(_BitInt(13)(42), 42));
   static_assert(std::cmp_equal(42, _BitInt(13)(42)));
-  static_assert(std::cmp_equal(unsigned _BitInt(13)(42), 42u));
+  static_assert(std::cmp_equal(static_cast<unsigned _BitInt(13)>(42), 42u));
 
   return true;
 }
 
-#endif // TEST_HAS_EXTENSION(bit_int)
+#endif // TEST_HAS_BITINT
 
 int main(int, char**) {
-#if TEST_HAS_EXTENSION(bit_int)
+#if TEST_HAS_BITINT
   test();
   static_assert(test());
 #endif

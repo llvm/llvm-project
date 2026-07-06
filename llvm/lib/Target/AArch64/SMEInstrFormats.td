@@ -2558,7 +2558,7 @@ class sme2_cvt_vg2_single<string mnemonic, bits<5> op,
 multiclass sme2_cvt_vg2_single<string mnemonic, bits<5> op, ValueType out_vt,
                                ValueType in_vt, SDPatternOperator intrinsic> {
   def NAME :  sme2_cvt_vg2_single<mnemonic, op, ZPR16, ZZ_s_mul_r>;
-  def : SVE2p1_Cvt_VG2_Pat<NAME, intrinsic, out_vt, in_vt>;
+  def : SVE_Cvt_VG2_Pat<NAME, intrinsic, out_vt, in_vt>;
 }
 
 // SME2 multi-vec FP8 down convert two registers
@@ -3922,14 +3922,21 @@ multiclass sme2_luti4_vector_vg4_index<string mnemonic> {
 
 // 8-bit Look up table
 class sme2_lut_single<string asm>
-  : I<(outs ZPR8:$Zd), (ins ZTR:$ZTt, ZPRAny:$Zn),
-    asm, "\t$Zd, $ZTt, $Zn", "", []>, Sched<[]> {
+    : I<(outs ZPR8:$Zd), (ins ZTR:$ZTt, ZPRAny:$Zn),
+        asm, "\t$Zd, $ZTt, $Zn", "", []>, Sched<[]> {
   bits<0> ZTt;
   bits<5> Zd;
   bits<5> Zn;
   let Inst{31-10} = 0b1100000011001000010000;
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zd;
+}
+
+multiclass sme2_lut_single<string asm, SDPatternOperator intrinsic> {
+  def NAME : sme2_lut_single<asm>;
+
+  def : Pat<(nxv16i8 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn)),
+            (!cast<Instruction>(NAME) $zt, nxv16i8:$zn)>;
 }
 
 //===----------------------------------------------------------------------===//

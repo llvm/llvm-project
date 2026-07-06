@@ -32,9 +32,9 @@
 // CHECK-FULL-O0-NEXT: Running pass: AlwaysInlinerPass
 // CHECK-FULL-O0-NEXT: Running analysis: ProfileSummaryAnalysis
 // CHECK-FULL-O0-NEXT: Running pass: CoroConditionalWrapper
+// CHECK-FULL-O0-NEXT: Running pass: LowerCommentStringPass
 // CHECK-FULL-O0-NEXT: Running pass: CanonicalizeAliasesPass
 // CHECK-FULL-O0-NEXT: Running pass: NameAnonGlobalPass
-// CHECK-FULL-O0-NEXT: Running pass: AssignGUIDPass
 // CHECK-FULL-O0-NEXT: Running pass: AnnotationRemarksPass
 // CHECK-FULL-O0-NEXT: Running analysis: TargetLibraryAnalysis
 // CHECK-FULL-O0-NEXT: Running pass: VerifierPass
@@ -47,9 +47,9 @@
 // CHECK-THIN-O0-NEXT: Running pass: AlwaysInlinerPass
 // CHECK-THIN-O0-NEXT: Running analysis: ProfileSummaryAnalysis
 // CHECK-THIN-O0-NEXT: Running pass: CoroConditionalWrapper
+// CHECK-THIN-O0-NEXT: Running pass: LowerCommentStringPass
 // CHECK-THIN-O0-NEXT: Running pass: CanonicalizeAliasesPass
 // CHECK-THIN-O0-NEXT: Running pass: NameAnonGlobalPass
-// CHECK-THIN-O0-NEXT: Running pass: AssignGUIDPass
 // CHECK-THIN-O0-NEXT: Running pass: AnnotationRemarksPass
 // CHECK-THIN-O0-NEXT: Running analysis: TargetLibraryAnalysis
 // CHECK-THIN-O0-NEXT: Running pass: VerifierPass
@@ -66,7 +66,6 @@
 // CHECK-THIN-OPTIMIZED-NOT: Running pass: LoopVectorizePass
 // CHECK-THIN-OPTIMIZED: Running pass: CanonicalizeAliasesPass
 // CHECK-THIN-OPTIMIZED: Running pass: NameAnonGlobalPass
-// CHECK-THIN-OPTIMIZED: Running pass: AssignGUIDPass
 // CHECK-THIN-OPTIMIZED: Running pass: ThinLTOBitcodeWriterPass
 
 void Foo(void) {}

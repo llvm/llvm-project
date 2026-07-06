@@ -6,7 +6,7 @@
 module {
   cir.func @l1() {
     cir.scope {
-      %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+      %0 = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
       %1 = cir.const #cir.int<0> : !s32i
       cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
       cir.for : cond {
@@ -21,7 +21,7 @@ module {
     cir.return
   }
   // CHECK:      cir.func{{.*}} @l1
-  // CHECK-NEXT:   %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+  // CHECK-NEXT:   %[[I:.*]] = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
   // CHECK-NEXT:   cir.scope {
   // CHECK-NEXT:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
   // CHECK-NEXT:     cir.store %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
@@ -44,7 +44,7 @@ module {
         cir.condition(%0)
       } body {
         cir.scope {
-          %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+          %1 = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
           %2 = cir.const #cir.int<0> : !s32i
           cir.store %2, %1 : !s32i, !cir.ptr<!s32i>
         }
@@ -56,7 +56,7 @@ module {
     cir.return
   }
   // CHECK:      cir.func{{.*}} @l2
-  // CHECK-NEXT:   %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+  // CHECK-NEXT:   %[[I:.*]] = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
   // CHECK-NEXT:   cir.scope {
   // CHECK-NEXT:     cir.for : cond {
   // CHECK-NEXT:       %[[TRUE:.*]] = cir.const #true
@@ -81,7 +81,7 @@ module {
         cir.condition(%0)
       } body {
         cir.scope {
-          %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init, const] {alignment = 4 : i64}
+          %1 = cir.alloca "i" align(4) init const : !cir.ptr<!s32i>
           %2 = cir.const #cir.int<0> : !s32i
           cir.store %2, %1 : !s32i, !cir.ptr<!s32i>
         }
@@ -93,7 +93,7 @@ module {
     cir.return
   }
   // CHECK:      cir.func{{.*}} @l3
-  // CHECK-NEXT:   %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+  // CHECK-NEXT:   %[[I:.*]] = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
   // CHECK-NEXT:   cir.scope {
   // CHECK-NEXT:     cir.for : cond {
   // CHECK-NEXT:       %[[TRUE:.*]] = cir.const #true

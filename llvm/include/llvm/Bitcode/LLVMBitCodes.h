@@ -120,9 +120,6 @@ enum ModuleCodes {
 
   // IFUNC: [ifunc value type, addrspace, resolver val#, linkage, visibility]
   MODULE_CODE_IFUNC = 18,
-
-  // GUIDLIST: [n x i64]
-  MODULE_CODE_GUIDLIST = 19,
 };
 
 /// PARAMATTR blocks have code for defining a parameter attribute set.
@@ -823,6 +820,7 @@ enum AttributeKindCodes {
   ATTR_KIND_DENORMAL_FPENV = 106,
   ATTR_KIND_NOOUTLINE = 107,
   ATTR_KIND_FLATTEN = 108,
+  ATTR_KIND_NOIPA = 109,
 };
 
 enum ComdatSelectionKindCodes {

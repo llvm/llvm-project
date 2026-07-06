@@ -183,12 +183,14 @@ constexpr auto limitedSpecificationPart{inContext("specification part"_en_US,
         implicitPart, many(limitedDeclarationConstruct)))};
 
 // R508 specification-construct ->
-//        derived-type-def | enum-def | generic-stmt | interface-block |
-//        parameter-stmt | procedure-declaration-stmt |
+//        derived-type-def | enum-def |  enumeration-type-def | generic-stmt |
+//        interface-block | parameter-stmt | procedure-declaration-stmt |
 //        other-specification-stmt | type-declaration-stmt
 TYPE_CONTEXT_PARSER("specification construct"_en_US,
     first(construct<SpecificationConstruct>(indirect(Parser<DerivedTypeDef>{})),
         construct<SpecificationConstruct>(indirect(Parser<EnumDef>{})),
+        construct<SpecificationConstruct>(
+            indirect(Parser<EnumerationTypeDef>{})),
         construct<SpecificationConstruct>(
             statement(indirect(Parser<GenericStmt>{}))),
         construct<SpecificationConstruct>(indirect(interfaceBlock)),
@@ -292,6 +294,8 @@ TYPE_CONTEXT_PARSER("module subprogram part"_en_US,
 TYPE_PARSER(construct<ModuleSubprogram>(indirect(functionSubprogram)) ||
     construct<ModuleSubprogram>(indirect(subroutineSubprogram)) ||
     construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})) ||
+    construct<ModuleSubprogram>(indirect(skipStuffBeforeStatement >>
+        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine)) ||
     construct<ModuleSubprogram>(indirect(compilerDirective)))
 
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC

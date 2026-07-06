@@ -327,6 +327,11 @@ if(LIBOMP_STATS)
   set(LIBOMP_USE_STDCPPLIB TRUE)
 endif()
 
+# Thread cancellation via pthread_cancel.  Defaults to whether the symbol is
+# available, but can be overridden via -DLIBOMP_USE_CANCEL_THREADS=OFF.
+set(LIBOMP_USE_CANCEL_THREADS "${LIBOMP_HAVE_PTHREAD_CANCEL}" CACHE BOOL
+  "Enable thread cancellation via pthread_cancel?")
+
 # Shared library can be switched to a static library
 set(LIBOMP_ENABLE_SHARED TRUE CACHE BOOL
   "Shared library instead of static library?")

@@ -32,7 +32,6 @@
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <cstdint>
@@ -579,34 +578,10 @@ public:
   // Use global_size() to get the total number of global variables.
   // Use globals() to get the range of all global variables.
 
-  std::optional<GlobalValue::GUID> getGUID(const Value *V) const {
-    const auto It = ValueToGUIDMap.find(V);
-    if (It == ValueToGUIDMap.end())
-      return std::nullopt;
-
-    return It->getSecond();
-  }
-
-  void insertGUID(const Value *V, GlobalValue::GUID GUID) {
-    const auto [It, WasInserted] = ValueToGUIDMap.insert({V, GUID});
-
-    (void)It, (void)WasInserted;
-#ifndef NDEBUG
-    if (!WasInserted) {
-      assert((It->second == GUID) && "insertGUID called with different value");
-    }
-#endif
-  }
-
 private:
-  /// A mapping directly from Value to GUID. Populated from bitcode
-  /// (MODULE_CODE_GUIDLIST). Necessary for lazy-loading modules, where we
-  /// don't load metadata.
-  DenseMap<const Value *, GlobalValue::GUID> ValueToGUIDMap;
-
-  /// @}
-  /// @name Direct access to the globals list, functions list, and symbol table
-  /// @{
+/// @}
+/// @name Direct access to the globals list, functions list, and symbol table
+/// @{
 
   /// Get the Module's list of global variables (constant).
   const GlobalListType   &getGlobalList() const       { return GlobalList; }
@@ -1088,9 +1063,8 @@ public:
   /// Returns target-abi from MDString, null if target-abi is absent.
   StringRef getTargetABIFromMD();
 
-  /// Get how unwind v2 (epilog) information should be generated for x64
-  /// Windows.
-  WinX64EHUnwindV2Mode getWinX64EHUnwindV2Mode() const;
+  /// Get how unwind information should be generated for x64 Windows.
+  WinX64EHUnwindMode getWinX64EHUnwindMode() const;
 
   /// Gets the Control Flow Guard mode.
   ControlFlowGuardMode getControlFlowGuardMode() const;

@@ -1122,10 +1122,10 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     if (RC.RSI.isSimple())
       RegSize = RC.RSI.getSimple().RegSize;
     OS << "  { " << RCName << ", " << RCBitsName << ", "
-       << RegClassStrings.get(RC.getName()) << ", " << RC.getOrder().size()
-       << ", " << RCBitsSize << ", " << RC.getQualifiedIdName() << ", "
-       << RegSize << ", " << static_cast<unsigned>(RC.CopyCost) << ", "
-       << (RC.Allocatable ? "true" : "false") << ", "
+       << RegClassStrings.get(RC.getName()) << ", " << RegSize << ", "
+       << RC.getOrder().size() << ", " << RCBitsSize << ", "
+       << RC.getQualifiedIdName() << ", " << static_cast<unsigned>(RC.CopyCost)
+       << ", " << (RC.Allocatable ? "true" : "false") << ", "
        << (RC.getBaseClassOrder() ? "true" : "false") << " },\n";
   }
 
@@ -1264,7 +1264,7 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, raw_ostream &MainOS,
           "const override;\n";
   }
   if (!RegisterClasses.empty()) {
-    OS << "  const TargetRegisterClass *getDefaultMinimalPhysRegClass("
+    OS << "  const TargetRegisterClass *getMinimalPhysRegClass("
           "MCRegister Reg) const override;\n";
   }
 
@@ -1357,7 +1357,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   OS << "static const TargetRegisterInfo::SubRegCoveredBits " << TargetName
      << "SubRegIdxRangeTable[] = {\n";
   for (unsigned M = 0; M < NumModes; ++M) {
-    OS << "  { " << (uint16_t)-1 << ", " << (uint16_t)-1 << " },\n";
+    OS << "  { " << (uint32_t)-1 << ", " << (uint32_t)-1 << " },\n";
     for (const auto &Idx : SubRegIndices) {
       const SubRegRange &Range = Idx.Range.get(M);
       OS << "  { " << Range.Offset << ", " << Range.Size << " },\t// "
@@ -1514,6 +1514,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
       OS << ",\n    " << (unsigned)RC.AllocationPriority << ",\n    "
          << (RC.GlobalPriority ? "true" : "false") << ",\n    "
          << format("0x%02x", RC.TSFlags) << ", /* TSFlags */\n    "
+         << (unsigned)RC.SpillStackID << ", /* SpillStackID */\n    "
          << (RC.HasDisjunctSubRegs ? "true" : "false")
          << ", /* HasDisjunctSubRegs */\n    "
          << (RC.CoveredBySubRegs ? "true" : "false")
@@ -1728,7 +1729,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
 
     OS << "\n// Register to minimal register class mapping\n\n";
     OS << "const TargetRegisterClass *" << ClassName
-       << "::getDefaultMinimalPhysRegClass(MCRegister Reg)" << " const {\n";
+       << "::getMinimalPhysRegClass(MCRegister Reg)" << " const {\n";
     OS << "  static const uint16_t InvalidRegClassID = UINT16_MAX;\n\n";
     OS << "  static const uint16_t Mapping[" << Regs.size() + 1 << "] = {\n";
     OS << "    InvalidRegClassID,  // NoRegister\n";
