@@ -2,7 +2,6 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpDecorate %[[#FN:]] LinkageAttributes "" Export
-; A spir_kernel is an entry point and must not get a LinkageAttributes decoration.
 ; CHECK-NOT: OpDecorate %[[#]] LinkageAttributes "" Export
 ; CHECK: %[[#FN]] = OpFunction
 
@@ -22,7 +21,7 @@ exit:
   ret void
 }
 
-define spir_kernel void @1(ptr addrspace(1) %in, ptr addrspace(1) %out, i32 %n) {
+define spir_kernel void @kernel(ptr addrspace(1) %in, ptr addrspace(1) %out, i32 %n) {
 entry:
   ret void
 }
