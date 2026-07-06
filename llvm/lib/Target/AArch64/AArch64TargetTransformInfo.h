@@ -305,6 +305,15 @@ public:
         Ty->isIntegerTy(32) || Ty->isIntegerTy(64))
       return true;
 
+    // REVEC: Allow 64-bit and 128-bit vectors, as well as i1 vectors. We still
+    // avoid creating nxv1 types though, as codegen for those can be suboptimal.
+    if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
+      return (FVTy->getElementType()->isIntegerTy(1) ||
+              DL.getTypeSizeInBits(FVTy) == AArch64::SVEBitsPerBlock ||
+              DL.getTypeSizeInBits(FVTy) == AArch64::SVEBitsPerBlock / 2) &&
+             FVTy->getNumElements() > 1 &&
+             isElementTypeLegalForScalableVector(FVTy->getElementType());
+
     return false;
   }
 

@@ -153,6 +153,9 @@ bool VFSelectionContext::isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy,
 bool VFSelectionContext::isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy,
                                                 Align Alignment,
                                                 ElementCount VF) const {
+  // TODO-REVEC: Support non-contiguous accesses
+  if (ScalarTy->isVectorTy())
+    return false;
   Type *VectorTy = toVectorTy(ScalarTy, VF);
   return ForceTargetSupportsGatherScatterOps ||
          (IsLoad ? TTI.isLegalMaskedGather(VectorTy, Alignment)
@@ -277,7 +280,9 @@ ElementCount VFSelectionContext::getMaximizedVFForTarget(
   else
     MaxPermissibleVFWithoutMaxBW.FixedVF = MaxVF;
 
-  if (useMaxBandwidth(ComputeScalableMaxVF)) {
+  // REVEC: Avoid creating wider than expected scalable types by choosing
+  // VF > vscale x 1.
+  if (useMaxBandwidth(ComputeScalableMaxVF) && !Legal->LoopContainsVectors) {
     auto MaxVectorElementCountMaxBW = ElementCount::get(
         llvm::bit_floor(WidestRegister.getKnownMinValue() / SmallestType),
         ComputeScalableMaxVF);
@@ -355,6 +360,12 @@ bool VFSelectionContext::isScalableVectorizationAllowed() {
   // Disable scalable vectorization if the loop contains any instructions
   // with element types not supported for scalable vectors.
   if (any_of(ElementTypesInLoop, [&](Type *Ty) {
+        if (auto *FVTy = dyn_cast<FixedVectorType>(Ty)) {
+          if (!VectorizeVectorLoops)
+            return true;
+          Ty = FVTy->getElementType();
+        } else if (Ty->isVectorTy())
+          return true;
         return !Ty->isVoidTy() && !TTI.isElementTypeLegalForScalableVector(Ty);
       })) {
     reportVectorizationInfo("Scalable vectorization is not supported "
@@ -417,6 +428,11 @@ FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
   auto MaxSafeFixedVF = ElementCount::getFixed(MaxSafeElementsPowerOf2);
   auto MaxSafeScalableVF = getMaxLegalScalableVF(MaxSafeElementsPowerOf2);
 
+  // A vector loop can only be widened to a scalable vector loop for now.
+  // TODO-REVEC: Support fixed-length REVEC.
+  if (Legal->LoopContainsVectors)
+    MaxSafeFixedVF = ElementCount::getFixed(1);
+
   if (!Legal->isSafeForAnyVectorWidth())
     MaxSafeElements = MaxSafeElementsPowerOf2;
 
@@ -432,9 +448,13 @@ FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
 
     if (ElementCount::isKnownLE(UserVF, MaxSafeUserVF)) {
       // If `VF=vscale x N` is safe, then so is `VF=N`
-      if (UserVF.isScalable())
-        return FixedScalableVFPair(
-            ElementCount::getFixed(UserVF.getKnownMinValue()), UserVF);
+      // (unless it's wider than MaxSafeFixedVF).
+      if (UserVF.isScalable()) {
+        auto UserVFAsFixed = ElementCount::getFixed(UserVF.getKnownMinValue());
+        return ElementCount::isKnownLE(UserVFAsFixed, MaxSafeFixedVF)
+                   ? FixedScalableVFPair(UserVFAsFixed, UserVF)
+                   : FixedScalableVFPair(MaxSafeFixedVF, UserVF);
+      }
 
       return UserVF;
     }
@@ -530,10 +550,10 @@ VFSelectionContext::getSmallestAndWidestTypes() const {
     }
   } else {
     for (Type *T : ElementTypesInLoop) {
-      MinWidth = std::min<unsigned>(
-          MinWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
-      MaxWidth = std::max<unsigned>(
-          MaxWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
+      MinWidth =
+          std::min<unsigned>(MinWidth, DL.getTypeSizeInBits(T).getFixedValue());
+      MaxWidth =
+          std::max<unsigned>(MaxWidth, DL.getTypeSizeInBits(T).getFixedValue());
     }
   }
 
