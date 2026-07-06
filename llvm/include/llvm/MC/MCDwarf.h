@@ -601,10 +601,10 @@ public:
     /// or DW_AARCH64_RA_SIGNED_SP_PC).
     unsigned State;
     /// Symbol pointing to the signing instruction.
-    /// Precisely one of \p PACSym xor \p Offset should be non-zero.
+    /// Precisely one of \p PACSym xor \p Offset should be set.
     MCSymbol *PACSym;
     /// Factored offset to the signing instruction.
-    /// Precisely one of \p PACSym xor \p Offset should be non-zero.
+    /// Precisely one of \p PACSym xor \p Offset should be set.
     int64_t Offset;
   };
 
