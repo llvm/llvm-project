@@ -81,8 +81,8 @@ entry:
 ; CHECK-LABEL: @read_constant
 define amdgpu_kernel void @read_constant(ptr addrspace(4) %p) sanitize_thread {
 entry:
-; CHECK-NOT: call void @__tsan
-; CHECK: ret void
+; CHECK: addrspacecast ptr addrspace(4) %p to ptr
+; CHECK: call void @__tsan_read4(ptr %{{.*}})
   %0 = load i32, ptr addrspace(4) %p, align 4
   ret void
 }

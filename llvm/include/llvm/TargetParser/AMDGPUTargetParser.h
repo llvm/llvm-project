@@ -85,6 +85,21 @@ enum FeatureError : uint32_t {
   UNSUPPORTED_TARGET_FEATURE
 };
 
+/// An LLVM redefinition of the standard clang memory scopes.
+/// https://clang.llvm.org/docs/LanguageExtensions.html#scoped-atomic-builtins.
+enum class MemoryScope : uint32_t {
+  System = 0,
+  Agent = 1,
+  Workgroup = 2,
+  Wavefront = 3,
+  SingleThread = 4,
+  Cluster = 5,
+};
+
+/// Maps an AMDGPU sync scope name (e.g. "workgroup") to its canonical
+/// MemoryScope encoding.
+LLVM_ABI MemoryScope getMemoryScope(StringRef Name);
+
 LLVM_ABI StringRef getArchFamilyNameAMDGCN(GPUKind AK);
 
 LLVM_ABI StringRef getArchNameAMDGCN(GPUKind AK);

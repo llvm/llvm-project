@@ -24,7 +24,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -43,6 +42,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
@@ -103,28 +103,14 @@ STATISTIC(NumOmittedNonCaptured, "Number of accesses ignored due to capturing");
 const char kTsanModuleCtorName[] = "tsan.module_ctor";
 const char kTsanInitName[] = "__tsan_init";
 
-// The scope values are hard-coded here just like the atomic ordering.
-static ConstantInt *createScope(IRBuilder<> *IRB, const Triple &T,
-                                LLVMContext &Ctx, SyncScope::ID SSID) {
-  if (T.isAMDGPU()) {
-    auto Name = Ctx.getSyncScopeName(SSID);
-    if (!Name)
-      return IRB->getInt32(0);
-    uint32_t V = StringSwitch<uint32_t>(*Name)
-                     .Case("agent", 1)
-                     .Case("device", 1)
-                     .Case("workgroup", 2)
-                     .Case("wavefront", 3)
-                     .Case("singlethread", 4)
-                     .Case("cluster", 5)
-                     .Default(0);
-    return IRB->getInt32(V);
-  }
-  llvm_unreachable("unsupported GPU target for TSAN scope mapping");
-}
-
-static bool isAMDGPUTarget(const Module &M) {
-  return M.getTargetTriple().isAMDGPU();
+// Reconstruct the target memory scope from the sync scope name. The numeric
+// encoding is shared with the runtime.
+static ConstantInt *createScope(IRBuilder<> *IRB, LLVMContext &Ctx,
+                                SyncScope::ID SSID) {
+  std::optional<StringRef> Name = Ctx.getSyncScopeName(SSID);
+  auto Scope =
+      Name ? AMDGPU::getMemoryScope(*Name) : AMDGPU::MemoryScope::System;
+  return IRB->getInt32(static_cast<uint32_t>(Scope));
 }
 
 namespace {
@@ -172,7 +158,7 @@ private:
   int getMemoryAccessFuncIndex(Type *OrigTy, Value *Addr, const DataLayout &DL);
   void InsertRuntimeIgnores(Function &F);
 
-  bool IsAMDGPU = false;
+  bool HasMemoryScope = false;
   Type *IntptrTy;
   FunctionCallee TsanKernelEntry;
   FunctionCallee TsanFuncEntry;
@@ -226,7 +212,7 @@ PreservedAnalyses ModuleThreadSanitizerPass::run(Module &M,
   // Return early if nosanitize_thread module flag is present for the module.
   if (checkIfAlreadyInstrumented(M, "nosanitize_thread"))
     return PreservedAnalyses::all();
-  if (!isAMDGPUTarget(M))
+  if (!M.getTargetTriple().isAMDGPU())
     insertModuleCtor(M);
   return PreservedAnalyses::none();
 }
@@ -234,7 +220,7 @@ void ThreadSanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
   const DataLayout &DL = M.getDataLayout();
   LLVMContext &Ctx = M.getContext();
   IntptrTy = DL.getIntPtrType(Ctx);
-  IsAMDGPU = isAMDGPUTarget(M);
+  HasMemoryScope = M.getTargetTriple().isAMDGPU();
 
   IRBuilder<> IRB(Ctx);
   AttributeList Attr;
@@ -248,7 +234,7 @@ void ThreadSanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
                              Type *RetTy,
                              ArrayRef<Type *> ArgTys) -> FunctionCallee {
     SmallVector<Type *, 6> FinalArgs(ArgTys);
-    if (IsAMDGPU) {
+    if (HasMemoryScope) {
       FinalArgs.push_back(OrdTy);
       return M.getOrInsertFunction(
           Name, FunctionType::get(RetTy, FinalArgs, false), Attr);
@@ -428,9 +414,9 @@ static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
   // with them. On GPU targets, we accept flat, global, and local (LDS).
   Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
   unsigned AS = PtrTy->getPointerAddressSpace();
-  if (isAMDGPUTarget(*M)) {
-    if (AS != AMDGPUAS::FLAT_ADDRESS && AS != AMDGPUAS::GLOBAL_ADDRESS &&
-        AS != AMDGPUAS::LOCAL_ADDRESS)
+  if (M->getTargetTriple().isAMDGPU()) {
+    if (AS != AMDGPUAS::FLAT_ADDRESS && AS != AMDGPUAS::LOCAL_ADDRESS &&
+        !AMDGPU::isExtendedGlobalAddrSpace(AS))
       return false;
   } else {
     if (AS != 0)
@@ -635,7 +621,7 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   if ((Res || HasCalls) && ClInstrumentFuncEntryExit) {
     InstrumentationIRBuilder IRB(&F.getEntryBlock(),
                                  F.getEntryBlock().getFirstNonPHIIt());
-    if (IsAMDGPU && F.getCallingConv() == CallingConv::AMDGPU_KERNEL)
+    if (F.getCallingConv() == CallingConv::AMDGPU_KERNEL)
       IRB.CreateCall(TsanKernelEntry, {});
     auto ProgramAsPtrTy = PointerType::get(F.getParent()->getContext(),
                                            DL.getProgramAddressSpace());
@@ -784,7 +770,6 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
   InstrumentationIRBuilder IRB(I);
   Module *M = I->getModule();
   LLVMContext &Ctx = M->getContext();
-  const Triple &T = M->getTargetTriple();
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
     Value *Addr =
@@ -795,8 +780,8 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
       return false;
     SmallVector<Value *, 4> Args = {Addr,
                                     createOrdering(&IRB, LI->getOrdering())};
-    if (IsAMDGPU)
-      Args.push_back(createScope(&IRB, T, Ctx, LI->getSyncScopeID()));
+    if (HasMemoryScope)
+      Args.push_back(createScope(&IRB, Ctx, LI->getSyncScopeID()));
     Value *C = IRB.CreateCall(TsanAtomicLoad[Idx], Args);
     Value *Cast = IRB.CreateBitOrPointerCast(C, OrigTy);
     I->replaceAllUsesWith(Cast);
@@ -814,8 +799,8 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     SmallVector<Value *, 4> Args = {
         Addr, IRB.CreateBitOrPointerCast(SI->getValueOperand(), Ty),
         createOrdering(&IRB, SI->getOrdering())};
-    if (IsAMDGPU)
-      Args.push_back(createScope(&IRB, T, Ctx, SI->getSyncScopeID()));
+    if (HasMemoryScope)
+      Args.push_back(createScope(&IRB, Ctx, SI->getSyncScopeID()));
     IRB.CreateCall(TsanAtomicStore[Idx], Args);
     SI->eraseFromParent();
   } else if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I)) {
@@ -834,8 +819,8 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     Value *Val = RMWI->getValOperand();
     SmallVector<Value *, 4> Args = {Addr, IRB.CreateBitOrPointerCast(Val, Ty),
                                     createOrdering(&IRB, RMWI->getOrdering())};
-    if (IsAMDGPU)
-      Args.push_back(createScope(&IRB, T, Ctx, RMWI->getSyncScopeID()));
+    if (HasMemoryScope)
+      Args.push_back(createScope(&IRB, Ctx, RMWI->getSyncScopeID()));
     Value *C = IRB.CreateCall(F, Args);
     I->replaceAllUsesWith(IRB.CreateBitOrPointerCast(C, Val->getType()));
     I->eraseFromParent();
@@ -857,8 +842,8 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
         Addr, CmpOperand, NewOperand,
         createOrdering(&IRB, CASI->getSuccessOrdering()),
         createOrdering(&IRB, CASI->getFailureOrdering())};
-    if (IsAMDGPU)
-      Args.push_back(createScope(&IRB, T, Ctx, CASI->getSyncScopeID()));
+    if (HasMemoryScope)
+      Args.push_back(createScope(&IRB, Ctx, CASI->getSyncScopeID()));
     CallInst *C = IRB.CreateCall(TsanAtomicCAS[Idx], Args);
     Value *Success = IRB.CreateICmpEQ(C, CmpOperand);
     Value *OldVal = C;
@@ -875,8 +860,8 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     I->eraseFromParent();
   } else if (FenceInst *FI = dyn_cast<FenceInst>(I)) {
     SmallVector<Value *, 2> Args = {createOrdering(&IRB, FI->getOrdering())};
-    if (IsAMDGPU)
-      Args.push_back(createScope(&IRB, T, Ctx, FI->getSyncScopeID()));
+    if (HasMemoryScope)
+      Args.push_back(createScope(&IRB, Ctx, FI->getSyncScopeID()));
     FunctionCallee F = FI->getSyncScopeID() == SyncScope::SingleThread
                            ? TsanAtomicSignalFence
                            : TsanAtomicThreadFence;
