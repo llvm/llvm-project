@@ -279,6 +279,10 @@ private:
   std::unique_ptr<BinaryLoopInfo> BLI;
   std::unique_ptr<BinaryDominatorTree> BDT;
 
+  /// Epoch for basic block indices, bumped by updateBBIndices(). See
+  /// getBlockNumberEpoch().
+  unsigned BlockNumberEpoch = 0;
+
   /// All labels in the function that are referenced via relocations from
   /// data objects. Typically these are jump table destinations and computed
   /// goto labels.
@@ -827,6 +831,11 @@ public:
         BinaryBasicBlock &front()        { return *BasicBlocks.front(); }
   const BinaryBasicBlock & back() const  { return *BasicBlocks.back(); }
         BinaryBasicBlock & back()        { return *BasicBlocks.back(); }
+
+  /// Epoch bumped whenever basic block indices are reassigned by
+  /// updateBBIndices(), so number-indexed structures (LoopInfo, DominatorTree)
+  /// can detect stale block numbers. See BinaryBasicBlock::getIndex().
+  unsigned getBlockNumberEpoch() const { return BlockNumberEpoch; }
   inline iterator_range<iterator> blocks() {
     return iterator_range<iterator>(begin(), end());
   }
@@ -2646,6 +2655,12 @@ struct GraphTraits<bolt::BinaryFunction *>
     return nodes_iterator(F->end());
   }
   static size_t size(bolt::BinaryFunction *F) { return F->size(); }
+  static unsigned getMaxNumber(const bolt::BinaryFunction *F) {
+    return F->size();
+  }
+  static unsigned getNumberEpoch(const bolt::BinaryFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 
 template <>
@@ -2666,6 +2681,12 @@ struct GraphTraits<const bolt::BinaryFunction *>
     return nodes_iterator(F->end());
   }
   static size_t size(const bolt::BinaryFunction *F) { return F->size(); }
+  static unsigned getMaxNumber(const bolt::BinaryFunction *F) {
+    return F->size();
+  }
+  static unsigned getNumberEpoch(const bolt::BinaryFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 
 template <>
@@ -2674,6 +2695,12 @@ struct GraphTraits<Inverse<bolt::BinaryFunction *>>
   static NodeRef getEntryNode(Inverse<bolt::BinaryFunction *> G) {
     return G.Graph->getLayout().block_front();
   }
+  static unsigned getMaxNumber(const bolt::BinaryFunction *F) {
+    return F->size();
+  }
+  static unsigned getNumberEpoch(const bolt::BinaryFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 
 template <>
@@ -2681,6 +2708,12 @@ struct GraphTraits<Inverse<const bolt::BinaryFunction *>>
     : public GraphTraits<Inverse<const bolt::BinaryBasicBlock *>> {
   static NodeRef getEntryNode(Inverse<const bolt::BinaryFunction *> G) {
     return G.Graph->getLayout().block_front();
+  }
+  static unsigned getMaxNumber(const bolt::BinaryFunction *F) {
+    return F->size();
+  }
+  static unsigned getNumberEpoch(const bolt::BinaryFunction *F) {
+    return F->getBlockNumberEpoch();
   }
 };
 
