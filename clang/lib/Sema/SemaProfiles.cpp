@@ -1034,6 +1034,25 @@ void SemaProfiles::checkInitProfileRefToUninitBinding(SourceLocation Loc,
                               T->isReferenceType(), Src, D);
 }
 
+void SemaProfiles::checkInitProfileVariadicArgument(const Expr *Arg) {
+  // std::init / ref_to_uninit (paper §5): a variadic argument never reaches
+  // parameter copy-initialization, and a `...` parameter cannot carry
+  // [[ref_to_uninit]], so a pointer passed through it is checked as an
+  // unmarked target (paper §7.2: passing uninitialized memory needs an
+  // appropriately declared callee). Value reads of the promoted argument
+  // already funnel through the lvalue-to-rvalue chokepoint; the pointer
+  // binding is the only direction added here. Called from the two C++
+  // variadic promotion loops -- Sema::GatherArgumentsForCall and
+  // Sema::BuildCallToObjectOfClassType (functors, variadic lambdas) -- not
+  // from Sema::DefaultVariadicArgumentPromotion itself, whose other callers
+  // re-promote already-promoted arguments (the os_log builtin check) or
+  // promote during ObjC method matching, where a check would double-fire.
+  if (!getLangOpts().Profiles || !Arg || !Arg->getType()->isPointerType())
+    return;
+  checkInitProfileRefToUninit(Arg->getExprLoc(), /*TargetIsRefToUninit=*/false,
+                              /*IsReference=*/false, Arg);
+}
+
 void SemaProfiles::checkInitProfileRefCapture(SourceLocation Loc,
                                               const ValueDecl *Var) {
   if (!getLangOpts().Profiles)

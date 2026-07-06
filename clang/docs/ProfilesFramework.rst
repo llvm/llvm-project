@@ -1115,10 +1115,12 @@ recognizers symmetric.
   is intended), arguments supplied by a parameter's default argument
   (``Sema::GatherArgumentsForCall``, which reuses the pre-built expression
   rather than re-running copy-initialization), variadic (``...``) arguments
-  (also ``GatherArgumentsForCall``, at the promotion loop -- a ``...``
-  parameter cannot carry the marker, so a pointer argument is checked as an
-  unmarked target, paper §7.2, while a promoted *value* read stays the
-  read-through chokepoint's), return statements
+  (the promotion loops in ``GatherArgumentsForCall`` and
+  ``Sema::BuildCallToObjectOfClassType``, so variadic functors and variadic
+  lambdas are covered too -- a ``...`` parameter cannot carry the marker, so
+  a pointer argument is checked as an unmarked target, paper §7.2, while a
+  promoted *value* read stays the read-through chokepoint's), return
+  statements
   (``Sema::BuildReturnStmt``), and lambda captures -- an init-capture binds
   like a variable initialization when its variable is created
   (``Sema::createLambdaInitCaptureVarDecl``), and a plain by-reference capture

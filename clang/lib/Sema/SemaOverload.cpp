@@ -33,6 +33,7 @@
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaProfiles.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/DenseSet.h"
@@ -16777,6 +16778,10 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
       ExprResult Arg = DefaultVariadicArgumentPromotion(
           Args[i], VariadicCallType::Method, nullptr);
       IsError |= Arg.isInvalid();
+      // std::init / ref_to_uninit (paper §5): a `...` parameter cannot carry
+      // the marker, so a pointer argument is checked as an unmarked target.
+      if (!Arg.isInvalid())
+        Profiles().checkInitProfileVariadicArgument(Arg.get());
       MethodArgs.push_back(Arg.get());
     }
   }

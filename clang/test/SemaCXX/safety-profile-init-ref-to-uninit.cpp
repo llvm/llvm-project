@@ -360,6 +360,36 @@ void template_variadic_arg() {
 }
 template void template_variadic_arg<int>(); // expected-note {{in instantiation of function template specialization 'template_variadic_arg<int>' requested here}}
 
+// A call to an object of class type promotes its variadic arguments in its
+// own loop (Sema::BuildCallToObjectOfClassType), distinct from
+// GatherArgumentsForCall's; both are hooked, so variadic functors and
+// variadic lambdas are covered too.
+struct VariadicFunctor {
+  void operator()(int, ...);
+};
+
+void test_variadic_functor_arguments() {
+  VariadicFunctor f;
+  f(0, &g_init);   // OK
+  f(0, &g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  auto l = [](int, ...) {};
+  l(0, &g_init);   // OK
+  l(0, &g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
+// A surrogate call converts to a function pointer and calls through it, so
+// its named arguments are the no-declared-callee site's.
+struct Surrogate {
+  using FP = void (*)(int *);
+  operator FP();
+};
+
+void test_surrogate_call_arguments() {
+  Surrogate s;
+  s(&g_init);   // OK
+  s(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
 // An init-capture is a binding: a capture cannot carry [[ref_to_uninit]], so
 // capturing a pointer or reference to uninitialized memory is always the
 // unmarked-direction violation.

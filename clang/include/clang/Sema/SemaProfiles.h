@@ -256,6 +256,14 @@ public:
   /// (paper §4.5).
   void checkInitProfileSubobjectWrite(SourceLocation Loc, const Expr *LHS);
 
+  /// std::init / ref_to_uninit (paper §5): a pointer argument passed through
+  /// a variadic `...` parameter, which cannot carry [[ref_to_uninit]], is
+  /// checked as an unmarked target. Called with the promoted argument from
+  /// the C++ variadic promotion loops (Sema::GatherArgumentsForCall and
+  /// Sema::BuildCallToObjectOfClassType); a non-pointer argument is a no-op
+  /// (its value read is the lvalue-to-rvalue chokepoint's).
+  void checkInitProfileVariadicArgument(const Expr *Arg);
+
   /// std::init / ref_to_uninit (paper §4.3): a by-reference lambda capture of
   /// \p Var binds a reference to its storage, and a capture cannot carry
   /// [[ref_to_uninit]], so capturing an entity that denotes uninitialized
