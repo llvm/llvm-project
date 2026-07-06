@@ -161,7 +161,7 @@ static uint32_t convertCharsToWord(const StringRef &Str, unsigned i) {
     if (StrIndex < Str.size()) { // If it's within the string, get a real char.
       CharToAdd = Str[StrIndex];
     }
-    Word |= (CharToAdd << (WordIndex * 8));
+    Word |= (static_cast<uint32_t>(CharToAdd) << (WordIndex * 8));
   }
   return Word;
 }
