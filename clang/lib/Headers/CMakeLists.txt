@@ -308,6 +308,9 @@ set(gpu_files
   nvptxintrin.h
   amdgpuintrin.h
   spirvintrin.h
+  __clang_gpu_builtin_vars.h
+  __clang_gpu_device_functions.h
+  __clang_gpu_intrinsics.h
   )
 
 set(windows_only_files
