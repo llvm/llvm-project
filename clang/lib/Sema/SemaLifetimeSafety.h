@@ -296,7 +296,7 @@ public:
 
     auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(ParmToAnnotate);
 
-    S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
+    S.Diag(InsertionPoint, DiagID)
         << ParmToAnnotate->getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint, FixItText);
 
@@ -376,7 +376,7 @@ public:
     if (IsMacro || InsertionPoint.isInvalid())
       S.Diag(PVDDecl->getBeginLoc(), DiagID) << PVDDecl->getSourceRange();
     else
-      S.Diag(PVDDecl->getBeginLoc(), DiagID)
+      S.Diag(InsertionPoint, DiagID)
           << PVDDecl->getSourceRange()
           << FixItHint::CreateInsertion(InsertionPoint, FixItText);
 

@@ -25,10 +25,10 @@ define amdgpu_kernel void @signal_var_bar0() {
 ; CHECK-OBJ-SDAG-LABEL: signal_var_bar0:
 ; CHECK-OBJ-SDAG:       ; %bb.0:
 ; CHECK-OBJ-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; CHECK-OBJ-SDAG-NEXT:    s_lshr_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo, 4
+; CHECK-OBJ-SDAG-NEXT:    s_mov_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo
 ; CHECK-OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; CHECK-OBJ-SDAG-NEXT:    s_and_b32 s0, s0, 63
-; CHECK-OBJ-SDAG-NEXT:    s_or_b32 m0, 0x100000, s0
+; CHECK-OBJ-SDAG-NEXT:    s_bfe_u32 s0, s0, 0x60004
+; CHECK-OBJ-SDAG-NEXT:    s_or_b32 m0, s0, 0x100000
 ; CHECK-OBJ-SDAG-NEXT:    s_barrier_init m0
 ; CHECK-OBJ-SDAG-NEXT:    s_mov_b32 m0, s0
 ; CHECK-OBJ-SDAG-NEXT:    s_barrier_signal m0
@@ -66,10 +66,10 @@ define amdgpu_kernel void @signal_var_bar1() {
 ; CHECK-OBJ-SDAG-LABEL: signal_var_bar1:
 ; CHECK-OBJ-SDAG:       ; %bb.0:
 ; CHECK-OBJ-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; CHECK-OBJ-SDAG-NEXT:    s_lshr_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo+16, 4
+; CHECK-OBJ-SDAG-NEXT:    s_mov_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo+16
 ; CHECK-OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; CHECK-OBJ-SDAG-NEXT:    s_and_b32 s0, s0, 63
-; CHECK-OBJ-SDAG-NEXT:    s_or_b32 m0, 0x100000, s0
+; CHECK-OBJ-SDAG-NEXT:    s_bfe_u32 s0, s0, 0x60004
+; CHECK-OBJ-SDAG-NEXT:    s_or_b32 m0, s0, 0x100000
 ; CHECK-OBJ-SDAG-NEXT:    s_barrier_init m0
 ; CHECK-OBJ-SDAG-NEXT:    s_mov_b32 m0, s0
 ; CHECK-OBJ-SDAG-NEXT:    s_barrier_signal m0
@@ -114,10 +114,10 @@ define amdgpu_kernel void @signal_var_misaligned() {
 ; CHECK-OBJ-SDAG-LABEL: signal_var_misaligned:
 ; CHECK-OBJ-SDAG:       ; %bb.0:
 ; CHECK-OBJ-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; CHECK-OBJ-SDAG-NEXT:    s_lshr_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo+1, 4
+; CHECK-OBJ-SDAG-NEXT:    s_mov_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo+1
 ; CHECK-OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; CHECK-OBJ-SDAG-NEXT:    s_and_b32 s0, s0, 63
-; CHECK-OBJ-SDAG-NEXT:    s_or_b32 m0, 0x100000, s0
+; CHECK-OBJ-SDAG-NEXT:    s_bfe_u32 s0, s0, 0x60004
+; CHECK-OBJ-SDAG-NEXT:    s_or_b32 m0, s0, 0x100000
 ; CHECK-OBJ-SDAG-NEXT:    s_barrier_init m0
 ; CHECK-OBJ-SDAG-NEXT:    s_mov_b32 m0, s0
 ; CHECK-OBJ-SDAG-NEXT:    s_barrier_signal m0
@@ -157,10 +157,8 @@ define amdgpu_kernel void @signal_var_dynamic(i32 %idx) {
 ; CHECK-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-SDAG-NEXT:    s_lshl4_add_u32 s0, s0, 0x802010
 ; CHECK-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; CHECK-SDAG-NEXT:    s_lshr_b32 s0, s0, 4
-; CHECK-SDAG-NEXT:    s_and_b32 s0, s0, 63
-; CHECK-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-SDAG-NEXT:    s_or_b32 m0, 0x100000, s0
+; CHECK-SDAG-NEXT:    s_bfe_u32 s0, s0, 0x60004
+; CHECK-SDAG-NEXT:    s_or_b32 m0, s0, 0x100000
 ; CHECK-SDAG-NEXT:    s_barrier_init m0
 ; CHECK-SDAG-NEXT:    s_mov_b32 m0, s0
 ; CHECK-SDAG-NEXT:    s_barrier_signal m0
@@ -192,10 +190,8 @@ define amdgpu_kernel void @signal_var_dynamic(i32 %idx) {
 ; CHECK-OBJ-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-OBJ-SDAG-NEXT:    s_lshl4_add_u32 s0, s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo
 ; CHECK-OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; CHECK-OBJ-SDAG-NEXT:    s_lshr_b32 s0, s0, 4
-; CHECK-OBJ-SDAG-NEXT:    s_and_b32 s0, s0, 63
-; CHECK-OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-OBJ-SDAG-NEXT:    s_or_b32 m0, 0x100000, s0
+; CHECK-OBJ-SDAG-NEXT:    s_bfe_u32 s0, s0, 0x60004
+; CHECK-OBJ-SDAG-NEXT:    s_or_b32 m0, s0, 0x100000
 ; CHECK-OBJ-SDAG-NEXT:    s_barrier_init m0
 ; CHECK-OBJ-SDAG-NEXT:    s_mov_b32 m0, s0
 ; CHECK-OBJ-SDAG-NEXT:    s_barrier_signal m0
