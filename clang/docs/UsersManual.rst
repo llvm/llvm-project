@@ -40,7 +40,7 @@ specific section:
 -  :ref:`Objective-C Language <objc>`: ObjC 1, ObjC 2, ObjC 2.1, plus
    variants depending on base language.
 -  :ref:`C++ Language <cxx>`: C++98, C++03, C++11, C++14, C++17, C++20, C++23,
-   and C++26.
+   C++26, and C++29.
 -  :ref:`Objective C++ Language <objcxx>`
 -  :ref:`OpenCL Kernel Language <opencl>`: OpenCL C 1.0, 1.1, 1.2, 2.0, 3.0,
    and C++ for OpenCL 1.0 and 2021.
@@ -5188,7 +5188,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /showIncludes:user      Like /showIncludes but omit system headers
       /showIncludes           Print info about included files to stderr
       /source-charset:<value> Set source encoding, supports only UTF-8
-      /std:<value>            Set language version (c++14,c++17,c++20,c++23preview,c++latest,c11,c17)
+      /std:<value>            Set language version (c++14,c++17,c++20,c++23preview,c++26preview,c++latest,c11,c17)
       /TC                     Treat all source files as C
       /Tc <file>              Treat <file> as C source file
       /TP                     Treat all source files as C++

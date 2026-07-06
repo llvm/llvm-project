@@ -1571,6 +1571,42 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                           << FunctionName << DestinationStr << SourceStr);
 }
 
+void Sema::checkFortifiedLibcArgument(FunctionDecl *FD, CallExpr *TheCall) {
+  if (TheCall->isValueDependent() || TheCall->isTypeDependent())
+    return;
+
+  // Recognize the libc function by builtin identity rather than by name and
+  // system-header origin. umask is a LibBuiltin marked IgnoreSignature, so the
+  // builtin id is attached to any file-scope, C-linkage declaration of umask
+  // regardless of the libc's mode_t spelling -- including a hand-written
+  // forward declaration without <sys/stat.h>. A static/local lookalike or a
+  // C++ (non-extern-"C") declaration keeps a zero builtin id and is ignored.
+  if (FD->getBuiltinID() != Builtin::BIumask)
+    return;
+
+  // umask(mode_t): warn when the constant-evaluated argument has bits set
+  // outside the file-permission mask (0777). Those bits are ignored.
+  if (TheCall->getNumArgs() != 1)
+    return;
+  Expr *Arg = TheCall->getArg(0);
+  if (!Arg->getType()->isIntegerType())
+    return;
+  Expr::EvalResult R;
+  if (!Arg->EvaluateAsInt(R, getASTContext()))
+    return;
+  // Operate on the raw two's-complement bit pattern so that negative literals
+  // (which convert to large unsigned mode_t values) are caught.
+  llvm::APInt RawValue = R.Val.getInt();
+  llvm::APInt Mask(RawValue.getBitWidth(), 0777);
+  llvm::APInt Extra = RawValue & ~Mask;
+  if (Extra == 0)
+    return;
+  SmallString<16> ExtraStr;
+  Extra.toString(ExtraStr, /*Radix=*/8, /*Signed=*/false);
+  Diag(TheCall->getBeginLoc(), diag::warn_fortify_umask_unused_bits)
+      << ExtraStr;
+}
+
 static bool BuiltinSEHScopeCheck(Sema &SemaRef, CallExpr *TheCall,
                                  Scope::ScopeFlags NeededScopeFlags,
                                  unsigned DiagID) {
@@ -14362,6 +14398,11 @@ void Sema::DiagnoseAlwaysNonNullPointer(Expr *E,
   }
 
   QualType T = D->getType();
+  // A reference to a function is never null either; look through it.
+  const bool IsFunctionReference =
+      T->isReferenceType() && T->getPointeeType()->isFunctionType();
+  if (IsFunctionReference)
+    T = T->getPointeeType();
   const bool IsArray = T->isArrayType();
   const bool IsFunction = T->isFunctionType();
 
@@ -14397,7 +14438,8 @@ void Sema::DiagnoseAlwaysNonNullPointer(Expr *E,
   Diag(E->getExprLoc(), DiagID) << DiagType << S.str() << E->getSourceRange()
                                 << Range << IsEqual;
 
-  if (!IsFunction)
+  // The fix-it notes below only apply to a bare function name, not a reference.
+  if (!IsFunction || IsFunctionReference)
     return;
 
   // Suggest '&' to silence the function warning.
