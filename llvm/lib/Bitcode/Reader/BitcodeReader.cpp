@@ -581,7 +581,7 @@ public:
 class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   LLVMContext &Context;
   Module *TheModule = nullptr;
-  Triple BitcodeTargetTriple;
+  const Triple *BitcodeTargetTriple = nullptr;
   // Next offset to start scanning for lazy parsing of function bodies.
   uint64_t NextUnreadBit = 0;
   // Last function offset found in the VST.
@@ -705,8 +705,7 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
 
 public:
   BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
-                StringRef ProducerIdentification, LLVMContext &Context,
-                Triple BitcodeTargetTriple);
+                StringRef ProducerIdentification, LLVMContext &Context);
 
   Error materializeForwardReferencedFunctions();
 
@@ -717,7 +716,8 @@ public:
   /// Main interface to parsing a bitcode buffer.
   /// \returns true if an error occurred.
   Error parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
-                         bool IsImporting, ParserCallbacks Callbacks = {});
+                         bool IsImporting, const Triple &TTriple,
+                         ParserCallbacks Callbacks = {});
 
   static uint64_t decodeSignRotatedValue(uint64_t V);
 
@@ -762,6 +762,12 @@ private:
     if (i-1 < MAttributes.size())
       return MAttributes[i-1];
     return AttributeList();
+  }
+
+  bool isBitcodeTargetAArch64() const {
+    assert(BitcodeTargetTriple &&
+           "bitcode target triple is only available during module parsing");
+    return BitcodeTargetTriple->isAArch64();
   }
 
   /// Read a value/type pair out of the specified record from slot 'Slot'.
@@ -1064,9 +1070,8 @@ std::error_code llvm::errorToErrorCodeAndEmitErrors(LLVMContext &Ctx,
 
 BitcodeReader::BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
                              StringRef ProducerIdentification,
-                             LLVMContext &Context, Triple TTriple)
+                             LLVMContext &Context)
     : BitcodeReaderBase(std::move(Stream), Strtab), Context(Context),
-      BitcodeTargetTriple(TTriple),
       ValueList(this->Stream.SizeInBytes(),
                 [this](unsigned ValID, BasicBlock *InsertBB) {
                   return materializeValue(ValID, InsertBB);
@@ -2475,7 +2480,7 @@ Error BitcodeReader::parseAttributeGroupBlock() {
                         MemoryEffects::otherMemOnly(OtherMem);
               // Old versions dont have target memory location.
               // It was represented as Inaccessible memory for AArch64.
-              if (BitcodeTargetTriple.isAArch64())
+              if (isBitcodeTargetAArch64())
                 ME = ME.getWithModRef(IRMemLocation::TargetMem0,
                                       InaccessibleMem) |
                      ME.getWithModRef(IRMemLocation::TargetMem1,
@@ -2488,7 +2493,7 @@ Error BitcodeReader::parseAttributeGroupBlock() {
                   EncodedME & 0x00FFFFFFFFFFFFFFULL);
               // Only from Version=2 onwards target memory location exist.
               // It was represented as Inaccessible memory for AArch64.
-              if (Version == 1 && BitcodeTargetTriple.isAArch64())
+              if (Version == 1 && isBitcodeTargetAArch64())
                 ME = ME.getWithModRef(
                          IRMemLocation::TargetMem0,
                          ME.getModRef(IRMemLocation::InaccessibleMem)) |
@@ -4887,8 +4892,11 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
 
 Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
                                       bool IsImporting,
+                                      const Triple &TTriple,
                                       ParserCallbacks Callbacks) {
   TheModule = M;
+  assert(!BitcodeTargetTriple && "bitcode target triple already set");
+  BitcodeTargetTriple = &TTriple;
   MetadataLoaderCallbacks MDCallbacks;
   MDCallbacks.GetTypeByID = [&](unsigned ID) { return getTypeByID(ID); };
   MDCallbacks.GetContainedTypeID = [&](unsigned I, unsigned J) {
@@ -4897,7 +4905,9 @@ Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
   MDCallbacks.MDType = Callbacks.MDType;
   MDLoader = MetadataLoader(Stream, *M, ValueList, IsImporting, MDCallbacks);
   SkipDebugIntrinsicUpgrade = Callbacks.SkipDebugIntrinsicUpgrade;
-  return parseModule(0, ShouldLazyLoadMetadata, Callbacks);
+  Error Err = parseModule(0, ShouldLazyLoadMetadata, Callbacks);
+  BitcodeTargetTriple = nullptr;
+  return Err;
 }
 
 Error BitcodeReader::typeCheckLoadStoreInst(Type *ValType, Type *PtrType) {
@@ -8734,7 +8744,7 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
   if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
     return std::move(JumpFailed);
   auto *R = new BitcodeReader(std::move(Stream), Strtab, ProducerIdentification,
-                              Context, BitcodeTargetTriple);
+                              Context);
 
   std::unique_ptr<Module> M =
       std::make_unique<Module>(ModuleIdentifier, Context);
@@ -8742,7 +8752,8 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
 
   // Delay parsing Metadata if ShouldLazyLoadMetadata is true.
   if (Error Err = R->parseBitcodeInto(M.get(), ShouldLazyLoadMetadata,
-                                      IsImporting, Callbacks))
+                                      IsImporting, BitcodeTargetTriple,
+                                      Callbacks))
     return std::move(Err);
 
   if (MaterializeAll) {
