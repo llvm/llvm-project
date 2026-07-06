@@ -77,28 +77,20 @@ def MLGOAddReflectionMapPass : Pass<"mlgo-add-reflection-map", "ModuleOp"> {
 
     ```mlir
     emitc.class @MyClass {
-      emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
-      emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
-      emitc.func @execute() { ... }
+      emitc.field @field0 : !emitc.array<1xf32> {emitc.field_ref = ["feature0"]}
+      emitc.func @operator()() { ... }
     }
 
     Becomes:
 
     emitc.class @MyClass {
-      emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
-      emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
-      emitc.field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>"> = 
-        #emitc.opaque<"{ { \22another_feature\22, reinterpret_cast<char*>(&fieldName0) }, { \22some_feature\22, reinterpret_cast<char*>(&fieldName1) } }">
-      emitc.func @getBufferForName(%arg0: !emitc.opaque<"std::string">)
-          -> !emitc.ptr<!emitc.opaque<"char">> {
-        %0 = get_field @reflectionMap
-          : !emitc.opaque<"const std::map<std::string, char*>">
-        %1 = member_call_opaque %0 "at"(%arg0)
-          : !emitc.opaque<"const std::map<std::string, char*>">,
-            (!emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">>
-        return %1 : !emitc.ptr<!emitc.opaque<"char">>
+      emitc.field @field0 : !emitc.array<1xf32> {emitc.field_ref = ["feature0"]}
+      // reflectionMap maps the string "feature0" to the address of @field0
+      emitc.field @reflectionMap : const std::map<string, char*> = {{"feature0", &field0}}
+      emitc.func @getBufferForName(%name: string) -> char* {
+        return reflectionMap.at(%name)
       }
-      emitc.func @execute() { ... }
+      emitc.func @operator()() { ... }
     }
     ```
   }];

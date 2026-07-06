@@ -1,5 +1,5 @@
 // RUN: mlir-opt -split-input-file --mlgo-add-reflection-map="field-attr-name=emitc.field_ref \
-// RUN: excluded-field-attrs="emitc.other_field"" -verify-diagnostics %s | FileCheck %s
+// RUN: excluded-field-attrs="emitc.other_field"" %s | FileCheck %s
 
 /// Tests that a reflection map is created for fields with a certain attribute.
 
@@ -63,7 +63,6 @@ emitc.class @actionClassExcluded {
 /// Test that the pass leaves IR unchanged if fields don't have any attributes
 
 emitc.class @actionClassNoAttrs {
-  // expected-error @below {{FieldOp must have a dictionary attribute named 'emitc.field_ref' with an array containing a string attribute}}
   emitc.field @fieldName0 : !emitc.array<1xf32>
   emitc.func @"operator()"() {
     return
@@ -98,7 +97,6 @@ emitc.class @actionClassNoFields {
 /// Test that the pass returns with a match failure if the ClassOp doesn't have
 /// a FunctionOp named operator()
 
-// expected-error @below {{ClassOp must contain a function named 'operator()' to add reflection map}}
 emitc.class @actionClassNoOperator {
   emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
 }
@@ -113,7 +111,6 @@ emitc.class @actionClassNoOperator {
 /// dictionary attribute with an array containing a type other than string
 
 emitc.class @actionClassNonStringAttr {
-  // expected-error @below {{FieldOp must have a dictionary attribute named 'emitc.field_ref' with an array containing a string attribute}}
   emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = [1]}
   emitc.func @"operator()"() {
     return

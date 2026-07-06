@@ -113,9 +113,11 @@ public:
       if (shouldIgnore)
         return;
 
-      fieldOp.emitError() << "FieldOp must have a dictionary attribute named '"
-                          << fieldAttrName << "' "
-                          << "with an array containing a string attribute";
+      (void)rewriter.notifyMatchFailure(fieldOp, [&](Diagnostic &diag) {
+        diag << "FieldOp must have a dictionary attribute named '"
+             << fieldAttrName << "' "
+             << "with an array containing a string attribute";
+      });
       hasError = true;
     });
 
@@ -124,20 +126,23 @@ public:
 
     std::string reflectionMapContents;
     reflectionMapContents += "{ ";
-    for (size_t i = 0, numFields = fieldNames.size(); i < numFields; ++i) {
+    bool first = true;
+    for (const auto &[name, value] : fieldNames) {
+      if (!first)
+        reflectionMapContents += ", ";
+
+      first = false;
       reflectionMapContents += llvm::formatv(
-          "{ \"{0}\", reinterpret_cast<char*>(&{1}) }{2}", fieldNames[i].first,
-          fieldNames[i].second, (i < numFields - 1) ? ", " : "");
+          "{ \"{0}\", reinterpret_cast<char*>(&{1}) }", name, value);
     }
     reflectionMapContents += " }";
 
     if (FuncOp executeFunc = classOp.lookupSymbol<FuncOp>("operator()"))
       rewriter.setInsertionPoint(executeFunc);
     else {
-      classOp.emitError()
-          << "ClassOp must contain a function named 'operator()' "
-             "to add reflection map";
-      return failure();
+      return rewriter.notifyMatchFailure(
+          classOp, "ClassOp must contain a function named 'operator()' "
+                   "to add reflection map");
     }
 
     // To generate the following C++ code
