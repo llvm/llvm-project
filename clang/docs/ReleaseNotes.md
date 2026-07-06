@@ -686,6 +686,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   by the kernel, so setting them is almost always a typo (matching the
   bionic libc `diagnose_if` check).
 
+- Improved how Unicode characters are displayed in diagnostic messages.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
