@@ -386,6 +386,10 @@ void SampleProfileMatcher::runStaleProfileMatching(
       if (Prof == ProfileAnchors.end())
         continue;
       ProfAnchor = Prof->second;
+      FuncProfileMatchCache[{Callee, ProfAnchor}] = true;
+      FuncToProfileNameMap[Callee] = ProfAnchor;
+      LLVM_DEBUG(dbgs() << "Function:" << Callee->getName()
+                        << " matches profile:" << ProfAnchor << "\n");
     }
 
     // Conflicting profile previously matched
@@ -1034,12 +1038,8 @@ bool SampleProfileMatcher::functionMatchesProfile(Function &IRFunc,
     return false;
 
   bool Matched = functionMatchesProfileHelper(IRFunc, ProfFunc);
-  FuncProfileMatchCache[{&IRFunc, ProfFunc}] = Matched;
-  if (Matched) {
-    FuncToProfileNameMap.try_emplace(&IRFunc, ProfFunc);
-    LLVM_DEBUG(dbgs() << "Function:" << IRFunc.getName()
-                      << " matches profile:" << ProfFunc << "\n");
-  }
+  if (!Matched)
+    FuncProfileMatchCache[{&IRFunc, ProfFunc}] = Matched;
 
   return Matched;
 }

@@ -3,12 +3,25 @@
 ; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/stale-profile-lcs-anchor-overwrite.prof -o %t.prof
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.prof --salvage-stale-profile --salvage-unused-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl 2>&1 | FileCheck %s
 
-; CHECK: Function:_Z3barv matches profile:_Z3bari
+; CHECK: Function _Z6calleePv is not in profile or profile symbol list.
+; CHECK: Function _Z3barv is not in profile or profile symbol list.
+; CHECK: Function _Z3barPv is not in profile or profile symbol list.
+; CHECK: Function _Z3foov is not in profile or profile symbol list.
+; CHECK: Direct basename match: _Z6calleePv (IR) -> _Z6calleei (Profile) [basename: callee]
+; CHECK: Direct basename match: _Z3foov (IR) -> _Z3fooi (Profile) [basename: foo]
+; CHECK: Direct basename matching found 2 matches
+; CHECK: Run stale profile matching for _Z3foov
+; CHECK: The functions _Z3barv(IR) and _Z3bari(Profile) share the same base name: bar.
 ; CHECK: The functions _Z3barv(IR) and _Z3barl(Profile) share the same base name: bar.
-; CHECK: Function:_Z3barv matches profile:_Z3barl
 ; CHECK: The functions _Z3barPv(IR) and _Z3barl(Profile) share the same base name: bar.
+; CHECK: Function:_Z3barv matches profile:_Z3bari
 ; CHECK: Function:_Z3barPv matches profile:_Z3barl
-
+; CHECK: Location is matched from 1 to 1
+; CHECK: Location is matched from 2 to 2
+; CHECK: Callsite with callee:_Z3barv is matched from 3 to 6
+; CHECK: Location is rematched backwards from 2 to 5
+; CHECK: Callsite with callee:unknown.indirect.callee is matched from 4 to 349
+; CHECK: Callsite with callee:_Z3barPv is matched from 5 to 380
 ; CHECK: Run stale profile matching for _Z3barPv
 ; CHECK: The functions _Z6calleePv(IR) and _Z6calleei(Profile) share the same base name: callee.
 ; CHECK: Function:_Z6calleePv matches profile:_Z6calleei
