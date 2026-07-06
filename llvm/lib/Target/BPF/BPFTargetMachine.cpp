@@ -35,9 +35,8 @@
 #include <optional>
 using namespace llvm;
 
-static cl::
-opt<bool> DisableMIPeephole("disable-bpf-peephole", cl::Hidden,
-                            cl::desc("Disable machine peepholes for BPF"));
+cl::opt<bool> DisableMIPeephole("disable-bpf-peephole", cl::Hidden,
+                                cl::desc("Disable machine peepholes for BPF"));
 
 static cl::opt<bool>
     DisableCheckUnreachable("bpf-disable-trap-unreachable", cl::Hidden,
@@ -52,11 +51,11 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeBPFAsmPrinterPass(PR);
-  initializeBPFCheckAndAdjustIRPass(PR);
+  initializeBPFCheckAndAdjustIRLegacyPass(PR);
   initializeBPFMIPeepholePass(PR);
   initializeBPFMIPreEmitPeepholePass(PR);
   initializeBPFDAGToDAGISelLegacyPass(PR);
-  initializeBPFMISimplifyPatchablePass(PR);
+  initializeBPFMISimplifyPatchableLegacyPass(PR);
   initializeBPFMIPreEmitCheckingPass(PR);
 }
 
@@ -114,44 +113,9 @@ TargetPassConfig *BPFTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new BPFPassConfig(*this, PM);
 }
 
-static Expected<bool> parseBPFPreserveStaticOffsetOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "allow-partial",
-                                            "BPFPreserveStaticOffsetPass");
-}
-
-void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
-#define GET_PASS_REGISTRY "BPFPassRegistry.def"
-#include "llvm/Passes/TargetPassRegistry.inc"
-
-  PB.registerPipelineStartEPCallback(
-      [=](ModulePassManager &MPM, OptimizationLevel) {
-        FunctionPassManager FPM;
-        FPM.addPass(BPFPreserveStaticOffsetPass(true));
-        FPM.addPass(BPFAbstractMemberAccessPass(this));
-        FPM.addPass(BPFPreserveDITypePass());
-        FPM.addPass(BPFIRPeepholePass());
-        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-      });
-  PB.registerPeepholeEPCallback([=](FunctionPassManager &FPM,
-                                    OptimizationLevel Level) {
-    FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions().hoistCommonInsts(true)));
-    FPM.addPass(BPFASpaceCastSimplifyPass());
-  });
-  PB.registerScalarOptimizerLateEPCallback(
-      [=](FunctionPassManager &FPM, OptimizationLevel Level) {
-        // Run this after loop unrolling but before
-        // SimplifyCFGPass(... .sinkCommonInsts(true))
-        FPM.addPass(BPFPreserveStaticOffsetPass(false));
-      });
-  PB.registerPipelineEarlySimplificationEPCallback(
-      [=](ModulePassManager &MPM, OptimizationLevel, ThinOrFullLTOPhase) {
-        MPM.addPass(BPFAdjustOptPass());
-      });
-}
-
 void BPFPassConfig::addIRPasses() {
   addPass(createAtomicExpandLegacyPass());
-  addPass(createBPFCheckAndAdjustIR());
+  addPass(createBPFCheckAndAdjustIRLegacyPass());
 
   TargetPassConfig::addIRPasses();
 }
@@ -170,7 +134,7 @@ bool BPFPassConfig::addInstSelector() {
 }
 
 void BPFPassConfig::addMachineSSAOptimization() {
-  addPass(createBPFMISimplifyPatchablePass());
+  addPass(createBPFMISimplifyPatchableLegacyPass());
 
   // The default implementation must be called first as we want eBPF
   // Peephole ran at last.
