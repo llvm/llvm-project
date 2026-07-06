@@ -629,13 +629,11 @@ if(build_runtimes)
       endif()
     endforeach()
     # The offload unittests detect the GPU arch at configure time via
-    # -mcpu=native, which runs amdgpu-arch / nvptx-arch.
+    # -mcpu=native.
     if(LLVM_INCLUDE_TESTS)
-      foreach(dep amdgpu-arch nvptx-arch)
-        if(TARGET ${dep})
-          list(APPEND extra_deps ${dep})
-        endif()
-      endforeach()
+      if(TARGET offload-arch)
+        list(APPEND extra_deps offload-arch)
+      endif()
     endif()
   endif()
   if(LLVM_LIBC_GPU_BUILD)
