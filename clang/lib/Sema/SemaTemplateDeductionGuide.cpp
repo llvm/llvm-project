@@ -100,6 +100,25 @@ public:
 
   TypeSourceInfo *transform(TypeSourceInfo *TSI) { return TransformType(TSI); }
 
+  QualType TransformInjectedClassNameType(TypeLocBuilder &TLB,
+                                          InjectedClassNameTypeLoc TL) {
+    if (!OuterInstantiationArgs)
+      return Base::TransformInjectedClassNameType(TLB, TL);
+
+    ASTContext &Context = SemaRef.getASTContext();
+    const InjectedClassNameType *ICNT = TL.getTypePtr();
+
+    QualType TST =
+        ICNT->getDecl()->getCanonicalTemplateSpecializationType(Context);
+    QualType Result = SemaRef.SubstType(TST, *OuterInstantiationArgs,
+                                        TL.getNameLoc(), DeclarationName());
+    if (Result.isNull())
+      return QualType();
+
+    TLB.pushTrivial(Context, Result, TL.getNameLoc());
+    return Result;
+  }
+
   /// Returns true if it's safe to substitute \p Typedef with
   /// \p OuterInstantiationArgs.
   bool mightReferToOuterTemplateParameters(TypedefNameDecl *Typedef) {
