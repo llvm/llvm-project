@@ -11893,12 +11893,13 @@ class InstructionsCompatibilityAnalysis {
   /// elements.
   static bool isSupportedOpcode(const unsigned Opcode) {
     return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
-           Opcode == Instruction::Mul || Opcode == Instruction::LShr ||
-           Opcode == Instruction::Shl || Opcode == Instruction::SDiv ||
-           Opcode == Instruction::UDiv || Opcode == Instruction::And ||
-           Opcode == Instruction::Or || Opcode == Instruction::Xor ||
-           Opcode == Instruction::FAdd || Opcode == Instruction::FSub ||
-           Opcode == Instruction::FMul || Opcode == Instruction::FDiv;
+           Opcode == Instruction::Mul || Opcode == Instruction::AShr ||
+           Opcode == Instruction::LShr || Opcode == Instruction::Shl ||
+           Opcode == Instruction::SDiv || Opcode == Instruction::UDiv ||
+           Opcode == Instruction::And || Opcode == Instruction::Or ||
+           Opcode == Instruction::Xor || Opcode == Instruction::FAdd ||
+           Opcode == Instruction::FSub || Opcode == Instruction::FMul ||
+           Opcode == Instruction::FDiv;
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -12521,6 +12522,7 @@ public:
       case Instruction::Add:
       case Instruction::Sub:
       case Instruction::Mul:
+      case Instruction::AShr:
       case Instruction::LShr:
       case Instruction::Shl:
       case Instruction::SDiv:
@@ -27197,9 +27199,11 @@ bool BoUpSLP::collectValuesToDemote(
       return all_of(E.Scalars, [&](Value *V) {
         if (isa<PoisonValue>(V))
           return true;
+        unsigned ShiftedBits = OrigBitWidth - BitWidth;
+        if (E.isCopyableElement(V))
+          return ShiftedBits < ComputeNumSignBits(V, *DL, AC, nullptr, DT);
         auto *I = cast<Instruction>(V);
         KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
-        unsigned ShiftedBits = OrigBitWidth - BitWidth;
         return AmtKnownBits.getMaxValue().ult(BitWidth) &&
                ShiftedBits <
                    ComputeNumSignBits(I->getOperand(0), *DL, AC, nullptr, DT);
