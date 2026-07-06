@@ -15,20 +15,16 @@ define i32 @widget() !dbg !5 {
 ; CHECK-NEXT:    switch i32 0, label %[[BB2_JT0:.*]] [
 ; CHECK-NEXT:      i32 -2147467260, label %[[BB2_JT0]]
 ; CHECK-NEXT:    ], !dbg [[DBG9:![0-9]+]]
-; CHECK:       [[BB2:.*:]]
-; CHECK-NEXT:    br label %[[BB3:.*]], !dbg [[DBG10:![0-9]+]]
-; CHECK:       [[BB2_JT0]]:
-; CHECK-NEXT:    [[PHI_JT0:%.*]] = phi i32 [ 0, %[[BB1]] ], [ 0, %[[BB1]] ], !dbg [[DBG11:![0-9]+]]
-; CHECK-NEXT:    br label %[[BB3_JT0:.*]], !dbg [[DBG10]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    switch i32 undef, label %[[BB4:.*]] [
+; CHECK:       [[BB3:.*:]]
+; CHECK-NEXT:    switch i32 poison, label %[[BB4:.*]] [
 ; CHECK-NEXT:      i32 0, label %[[BB4]]
 ; CHECK-NEXT:      i32 4, label %[[BB4]]
-; CHECK-NEXT:    ], !dbg [[DBG12:![0-9]+]]
-; CHECK:       [[BB3_JT0]]:
-; CHECK-NEXT:    br label %[[BB4]], !dbg [[DBG12]]
+; CHECK-NEXT:    ], !dbg [[DBG10:![0-9]+]]
+; CHECK:       [[BB2_JT0]]:
+; CHECK-NEXT:    [[PHI_JT0:%.*]] = phi i32 [ 0, %[[BB1]] ], [ 0, %[[BB1]] ], !dbg [[DBG11:![0-9]+]]
+; CHECK-NEXT:    br label %[[BB4]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    br label %[[BB1]], !dbg [[DBG13:![0-9]+]]
+; CHECK-NEXT:    br label %[[BB1]], !dbg [[DBG12:![0-9]+]]
 ;
 bb:
   br label %bb1, !dbg !8
@@ -40,9 +36,6 @@ bb1:                                              ; preds = %bb4, %bb
 
 bb2:                                              ; preds = %bb1, %bb1
   %phi = phi i32 [ 0, %bb1 ], [ 0, %bb1 ], !dbg !10
-  br label %bb3, !dbg !11
-
-bb3:                                              ; preds = %bb2
   switch i32 %phi, label %bb4 [
   i32 0, label %bb4
   i32 4, label %bb4
@@ -78,8 +71,7 @@ bb4:                                              ; preds = %bb3, %bb3, %bb3
 ; CHECK: [[META7]] = !{}
 ; CHECK: [[DBG8]] = !DILocation(line: 1, column: 1, scope: [[DBG5]])
 ; CHECK: [[DBG9]] = !DILocation(line: 2, column: 1, scope: [[DBG5]])
-; CHECK: [[DBG10]] = !DILocation(line: 4, column: 1, scope: [[DBG5]])
+; CHECK: [[DBG10]] = !DILocation(line: 5, column: 1, scope: [[DBG5]])
 ; CHECK: [[DBG11]] = !DILocation(line: 3, column: 1, scope: [[DBG5]])
-; CHECK: [[DBG12]] = !DILocation(line: 5, column: 1, scope: [[DBG5]])
-; CHECK: [[DBG13]] = !DILocation(line: 6, column: 1, scope: [[DBG5]])
+; CHECK: [[DBG12]] = !DILocation(line: 6, column: 1, scope: [[DBG5]])
 ;.
