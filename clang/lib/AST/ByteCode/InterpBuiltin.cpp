@@ -4633,8 +4633,20 @@ static bool interp__builtin_ia32_bmac(InterpState &S, CodePtr OpPC,
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
-  if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
+  const ASTContext &ASTCtx = S.getASTContext();
+
+  // BuiltinID is the raw ID baked into the bytecode. The "is constant
+  // evaluated" gate needs the raw ID so that auxiliary-target IDs resolve into
+  // the correct (aux-target) builtin records.
+  if (!ASTCtx.BuiltinInfo.isConstantEvaluated(BuiltinID))
     return Invalid(S, OpPC);
+
+  // Convert an auxiliary x86 target builtin ID to its canonical X86::BI* value
+  // so the target-specific cases below (and the handlers they call) match. This
+  // is a cheap integer operation (a single comparison for the common,
+  // target-independent case); we deliberately avoid re-deriving the ID from the
+  // call expression, which is comparatively slow.
+  BuiltinID = ConvertBuiltinIDToX86BuiltinID(ASTCtx, BuiltinID);
 
   const InterpFrame *Frame = S.Current;
   switch (BuiltinID) {
@@ -6760,12 +6772,28 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       // When generating bytecode, we put all the index expressions as Sint64 on
       // the stack.
       int64_t Index = ArrayIndices[ArrayIndex];
+      if (Index < 0)
+        return Invalid(S, OpPC);
       const ArrayType *AT = S.getASTContext().getAsArrayType(CurrentType);
       if (!AT)
         return false;
       CurrentType = AT->getElementType();
       CharUnits ElementSize = S.getASTContext().getTypeSizeInChars(CurrentType);
-      Result += Index * ElementSize;
+      int64_t ElemSize = ElementSize.getQuantity();
+      if (Index != 0 && ElemSize > llvm::maxIntN(64) / Index) {
+        S.FFDiag(S.Current->getLocation(OpPC),
+                 diag::note_constexpr_offsetof_overflow)
+            << S.Current->getRange(OpPC);
+        return false;
+      }
+      int64_t Offset = Index * ElemSize;
+      if (Result.getQuantity() > llvm::maxIntN(64) - Offset) {
+        S.FFDiag(S.Current->getLocation(OpPC),
+                 diag::note_constexpr_offsetof_overflow)
+            << S.Current->getRange(OpPC);
+        return false;
+      }
+      Result += CharUnits::fromQuantity(Offset);
       ++ArrayIndex;
       break;
     }

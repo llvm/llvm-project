@@ -48,13 +48,14 @@ def ProcessorB : ProcessorModel<"processor-b", ModelB, []>;
 // CHECK: static_assert(sizeof(MyTargetSchedClassNameOffsets[0]) == 4);
 // CHECK: static_assert(sizeof(MyTargetSchedClassNameOffsets) / sizeof(MyTargetSchedClassNameOffsets[0]) == 3);
 
-// CHECK: static const llvm::MCSchedModel ModelA = {
+// CHECK: extern const llvm::MCSchedModel MyTargetSchedModels[] = {
+// CHECK: { // ModelA
 // CHECK:   MyTargetSchedClassPool,
 // CHECK:   DBGVAL_OR_NULLPTR(&MyTargetSchedClassNames), // SchedClassNames
 // CHECK-NEXT:   DBGVAL_OR_NULLPTR(MyTargetSchedClassNameOffsets), // SchedClassNameOffsets
 // CHECK:   ModelASchedClassIndices,
 
-// CHECK: static const llvm::MCSchedModel ModelB = {
+// CHECK: { // ModelB
 // CHECK:   MyTargetSchedClassPool,
 // CHECK:   DBGVAL_OR_NULLPTR(&MyTargetSchedClassNames), // SchedClassNames
 // CHECK-NEXT:   DBGVAL_OR_NULLPTR(MyTargetSchedClassNameOffsets), // SchedClassNameOffsets
