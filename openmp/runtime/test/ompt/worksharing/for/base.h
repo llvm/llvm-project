@@ -7,10 +7,14 @@
 #ifndef SCHED_OUTPUT
 #define SCHED_OUTPUT STR(SCHEDULE)
 #endif
+#ifndef DIST_OUTPUT
+#define DIST_OUTPUT STR(DIST)
+#endif
 
 int main() {
   unsigned int i;
   printf("0: Schedule: " SCHED_OUTPUT "\n");
+  printf("0: Dist-Flag: " DIST_OUTPUT "\n");
 
 #pragma omp parallel for num_threads(4) schedule(SCHEDULE)
   for (i = 0; i < 64; i++) {
@@ -46,6 +50,10 @@ int main() {
   // CHECK: {{^}}[[THREAD_ID]]: ompt_event_loop_[[SCHED]]_begin: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]], codeptr_ra=
   // CHECK: {{^}}[[THREAD_ID]]: ompt_event_loop_[[SCHED]]_end: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
   // CHECK: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end: parallel_id={{[0-f]+}}, task_id=[[IMPLICIT_TASK_ID]]
+
+
+  // CHECK-DIST: 0: Dist-Flag: [[DISTFLAG:[a-z_]+]]
+  // CHECK-DIST: {{^}}{{[0-9]+}}: ompt_event_[[DISTFLAG]]_begin: parallel_id={{[0-f]+}}, task_id={{[0-f]+}}
   // clang-format on
 
   return 0;
