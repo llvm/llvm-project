@@ -3,11 +3,11 @@ Test that we stop at runtime instrumentation locations (asan).
 """
 
 from lldbsuite.test.decorators import skipUnlessAddressSanitizer
-from lldbsuite.test.tools.lldb_dap import lldb_dap_testcase
 from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
 
 
-class TestDAP_asan(lldb_dap_testcase.DAPTestCaseBase):
+class TestDAP_asan(DAPTestCaseBase):
     @skipUnlessAddressSanitizer
     def test_asan(self):
         """
