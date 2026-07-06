@@ -6416,22 +6416,12 @@ bool Sema::BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
   if (OrigArg->isTypeDependent())
     return false;
 
-  // Usual Unary Conversions will convert half to float, which we want for
-  // machines that use fp16 conversion intrinsics. Else, we wnat to leave the
-  // type how it is, but do normal L->Rvalue conversions.
-  if (Context.getTargetInfo().useFP16ConversionIntrinsics()) {
-    ExprResult Res = UsualUnaryConversions(OrigArg);
+  // We want to leave the type how it is, but do normal L->Rvalue conversions.
+  ExprResult Res = DefaultFunctionArrayLvalueConversion(OrigArg);
+  if (!Res.isUsable())
+    return true;
+  OrigArg = Res.get();
 
-    if (!Res.isUsable())
-      return true;
-    OrigArg = Res.get();
-  } else {
-    ExprResult Res = DefaultFunctionArrayLvalueConversion(OrigArg);
-
-    if (!Res.isUsable())
-      return true;
-    OrigArg = Res.get();
-  }
   TheCall->setArg(FPArgNo, OrigArg);
 
   QualType VectorResultTy;
