@@ -614,24 +614,13 @@ bool AsmPrinter::doInitialization(Module &M) {
     OutStreamer->AddComment("Start of file scope inline assembly");
     OutStreamer->addBlankLine();
     for (const Module::GlobalAsmFragment &Frag : M.getModuleInlineAsm()) {
-      if (!Frag.Props.TargetFeatures.empty() || !Frag.Props.TargetCPU.empty()) {
-        std::unique_ptr<MCSubtargetInfo> AsmSTI(
-            TM.getTarget().createMCSubtargetInfo(TM.getTargetTriple(),
-                                                 Frag.Props.TargetCPU,
-                                                 Frag.Props.TargetFeatures));
-        bool DidPush = emitTargetFeaturePush(*AsmSTI);
-        emitInlineAsm(
-            Frag.Asm, *AsmSTI, TM.Options.MCOptions, nullptr,
-            InlineAsm::AsmDialect(TM.getMCAsmInfo().getAssemblerDialect()));
-        emitTargetFeaturePop(*AsmSTI, DidPush);
-      } else {
-        // If the module asm does not explicitly specify target features,
-        // fall back to default subtargetinfo.
-        emitInlineAsm(
-            Frag.Asm + "\n", TM.getMCSubtargetInfo(), TM.Options.MCOptions,
-            nullptr,
-            InlineAsm::AsmDialect(TM.getMCAsmInfo().getAssemblerDialect()));
-      }
+      const MCSubtargetInfo &AsmSTI = TM.getMCSubtargetInfo(
+          Frag.Props.TargetCPU, Frag.Props.TargetFeatures);
+      bool DidPush = emitTargetFeaturePush(AsmSTI);
+      emitInlineAsm(
+          Frag.Asm, AsmSTI, TM.Options.MCOptions, nullptr,
+          InlineAsm::AsmDialect(TM.getMCAsmInfo().getAssemblerDialect()));
+      emitTargetFeaturePop(AsmSTI, DidPush);
     }
     OutStreamer->AddComment("End of file scope inline assembly");
     OutStreamer->addBlankLine();
