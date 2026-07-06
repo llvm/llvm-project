@@ -1450,9 +1450,9 @@ static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
 
 bool CanBuildSplitSumExpressionTree(
     const Expr<SomeType> &lhs, const Expr<SomeType> &rhs) {
-  // The split rewrites a top-level addition chain. Subtraction would need to
-  // be carried as signed terms; division is safe here because it remains inside
-  // an individual term rather than changing the additive chain.
+  // The split only understands top-level Add nodes. Reject Subtract
+  // conservatively for now rather than trying to model signed terms in
+  // additive chains; this also rejects subtraction in subexpressions.
   return rhs.Rank() == 0 && lhs.Rank() == 0 && !HasVectorSubscript(rhs) &&
       !HasVectorSubscript(lhs) && !HasParentheses(rhs) && !HasSubtract(rhs) &&
       !HasProcedureRef(rhs) && !HasProcedureRef(lhs) &&
