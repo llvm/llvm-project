@@ -256,6 +256,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   operator()](https://cplusplus.github.io/CWG/issues/1780.html)
 - Clang now allows omitting `typename` before a template name in a
   conversion operator, implementing [CWG2413](https://wg21.link/cwg2413).
+- Member specializations can now be declared in class scope, according to the
+  resolution of [CWG727](https://wg21.link/cwg727). This is still not sufficient
+  to resolve that core issue.
 - Clang now uses non-reference types for structured bindings whose initializer
   returns a prvalue. This resolves [CWG3135](https://wg21.link/cwg3135).
 
