@@ -907,7 +907,6 @@ void OmpStructureChecker::Enter(const parser::OmpLoopModifier &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Apply &x) {
   EnterDirectiveNest(ApplyNest);
-  CheckAllowedClause(llvm::omp::Clause::OMPC_apply);
   OmpVerifyModifiers(
       x.v, llvm::omp::Clause::OMPC_apply, GetContext().clauseSource, context_);
 }
