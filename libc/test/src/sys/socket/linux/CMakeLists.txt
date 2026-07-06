@@ -41,6 +41,7 @@ add_libc_unittest(
     libc.include.sys_socket
     libc.hdr.netinet_in_macros
     libc.hdr.sys_socket_macros
+    libc.hdr.types.sa_family_t
     libc.hdr.types.struct_sockaddr_in
     libc.hdr.types.struct_sockaddr_in6
     libc.hdr.types.struct_sockaddr_un
@@ -67,7 +68,9 @@ add_libc_unittest(
     libc.include.sys_socket
     libc.hdr.fcntl_macros
     libc.hdr.sys_socket_macros
+    libc.hdr.types.sa_family_t
     libc.hdr.types.size_t
+    libc.hdr.types.socklen_t
     libc.hdr.types.struct_sockaddr_un
     libc.src.errno.errno
     libc.src.fcntl.fcntl
@@ -177,6 +180,8 @@ add_libc_unittest(
     .socket_test_support
     libc.include.sys_socket
     libc.hdr.sys_socket_macros
+    libc.hdr.types.sa_family_t
+    libc.hdr.types.socklen_t
     libc.hdr.types.struct_sockaddr_un
     libc.src.errno.errno
     libc.src.sys.socket.accept
@@ -303,6 +308,8 @@ add_libc_unittest(
     sockaddr_storage_test.cpp
     sockaddr_storage_helper.cpp
   DEPENDS
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.sa_family_t
     libc.hdr.types.struct_sockaddr_storage
     libc.hdr.types.struct_sockaddr_un
 )
