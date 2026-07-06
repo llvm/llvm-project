@@ -103,7 +103,7 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
   HasStdExtC = hasFeature(RISCV::FeatureStdExtC);
   HasStdExtZce = hasFeature(RISCV::FeatureStdExtZce);
 
-  TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
+  TargetABI = RISCVABI::computeTargetABI(*this, ABIName);
   RISCVFeatures::validate(TT, getFeatureBits());
   return *this;
 }

@@ -4950,6 +4950,30 @@ bool HexagonInstrInfo::isQFPInstr(MachineInstr *MI) const {
   return isQFP32Instr(MI) || isQFP16Instr(MI);
 }
 
+// Return true if the function contains any qf-generating instructions.
+bool HexagonInstrInfo::hasQFPInstrs(const MachineFunction &MF) const {
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      if (isQFPInstr(const_cast<MachineInstr *>(&MI)))
+        return true;
+  return false;
+}
+
+// Returns true if A appears before B within the same basic block.
+bool HexagonInstrInfo::isMIBefore(const MachineInstr *A,
+                                  const MachineInstr *B) const {
+  if (!A || !B || A->getParent() != B->getParent())
+    return false;
+
+  for (const MachineInstr &MI : *A->getParent()) {
+    if (&MI == A)
+      return true;
+    if (&MI == B)
+      return false;
+  }
+  return false;
+}
+
 // Addressing mode relations.
 short HexagonInstrInfo::changeAddrMode_abs_io(short Opc) const {
   return Opc >= 0 ? Hexagon::changeAddrMode_abs_io(Opc) : Opc;

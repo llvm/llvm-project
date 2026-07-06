@@ -979,14 +979,29 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
                                  /*IsLoopMemset=*/true);
 }
 
+/// Return true if \p I is a (simple, loop-invariant-valued) store of the same
+/// bytewise value \p SplatByte.
+static bool isSameByteValueStore(Instruction &I, Value *SplatByte, Loop *L,
+                                 const DataLayout &DL) {
+  assert(SplatByte && "expected a bytewise splat value to match against");
+  auto *SI = dyn_cast<StoreInst>(&I);
+  if (!SI || !SI->isSimple() || !L->isLoopInvariant(SI->getValueOperand()))
+    return false;
+  return isBytewiseValue(SI->getValueOperand(), DL) == SplatByte;
+}
+
 /// mayLoopAccessLocation - Return true if the specified loop might access the
 /// specified pointer location, which is a loop-strided access.  The 'Access'
 /// argument specifies what the verboten forms of access are (read or write).
-static bool
-mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
-                      const SCEV *BECount, const SCEV *StoreSizeSCEV,
-                      AliasAnalysis &AA,
-                      SmallPtrSetImpl<Instruction *> &IgnoredInsts) {
+///
+/// When the access size cannot be bounded, fall back to allow stores writing
+/// the same byte value \p SplatByte.
+static bool mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
+                                  const SCEV *BECount,
+                                  const SCEV *StoreSizeSCEV, AliasAnalysis &AA,
+                                  SmallPtrSetImpl<Instruction *> &IgnoredInsts,
+                                  Value *SplatByte = nullptr,
+                                  const DataLayout *DL = nullptr) {
   // Get the location that may be stored across the loop.  Since the access is
   // strided positively through memory, we say that the modified location starts
   // at the pointer and has infinite size.
@@ -1010,11 +1025,18 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
   // which will then no-alias a store to &A[100].
   MemoryLocation StoreLoc(Ptr, AccessSize);
 
+  // Only consult the same-byte-value fallback when the access size stayed
+  // infinite (non-constant trip count); with a precise size AA is accurate.
+  bool TrySameByteValue = !AccessSize.isPrecise() && SplatByte && DL;
+
   for (BasicBlock *B : L->blocks())
     for (Instruction &I : *B)
       if (!IgnoredInsts.contains(&I) &&
-          isModOrRefSet(AA.getModRefInfo(&I, StoreLoc) & Access))
+          isModOrRefSet(AA.getModRefInfo(&I, StoreLoc) & Access)) {
+        if (TrySameByteValue && isSameByteValueStore(I, SplatByte, L, *DL))
+          continue;
         return true;
+      }
   return false;
 }
 
@@ -1098,15 +1120,15 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   // the return value will read this comment, and leave them alone.
   Changed = true;
 
+  Value *SplatValue = isBytewiseValue(StoredVal, *DL);
   if (mayLoopAccessLocation(BasePtr, ModRefInfo::ModRef, CurLoop, BECount,
-                            StoreSizeSCEV, *AA, Stores))
+                            StoreSizeSCEV, *AA, Stores, SplatValue, DL))
     return Changed;
 
   if (avoidLIRForMultiBlockLoop(/*IsMemset=*/true, IsLoopMemset))
     return Changed;
 
   // Okay, everything looks good, insert the memset.
-  Value *SplatValue = isBytewiseValue(StoredVal, *DL);
   Constant *PatternValue = nullptr;
   if (!SplatValue)
     PatternValue = getMemSetPatternValue(StoredVal, DL);
@@ -1565,7 +1587,7 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   Type *CRCTy = Info.LHS->getType();
   unsigned CRCBW = CRCTy->getIntegerBitWidth();
   std::array<Constant *, 256> CRCConstants;
-  transform(HashRecognize::genSarwateTable(Info.RHS, Info.ByteOrderSwapped),
+  transform(HashRecognize::genSarwateTable(Info.RHS, Info.IsBigEndian),
             CRCConstants.begin(),
             [CRCTy](const APInt &E) { return ConstantInt::get(CRCTy, E); });
   Constant *ConstArray =
@@ -1653,17 +1675,16 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
       Value *IVBits = Builder.CreateZExtOrTrunc(
           Builder.CreateShl(IV, 3, "iv.bits"), DataTy, "iv.indexer");
       Value *DataIndexer =
-          Info.ByteOrderSwapped
-              ? Builder.CreateShl(Data, IVBits, "data.indexer")
-              : Builder.CreateLShr(Data, IVBits, "data.indexer");
+          Info.IsBigEndian ? Builder.CreateShl(Data, IVBits, "data.indexer")
+                           : Builder.CreateLShr(Data, IVBits, "data.indexer");
       Indexer = Builder.CreateXor(
           DataIndexer,
           Builder.CreateZExtOrTrunc(Indexer, DataTy, "crc.indexer.cast"),
           "crc.data.indexer");
     }
 
-    Indexer = Info.ByteOrderSwapped ? HiIdx(Builder, Indexer, "indexer.hi")
-                                    : LoByte(Builder, Indexer, "indexer.lo");
+    Indexer = Info.IsBigEndian ? HiIdx(Builder, Indexer, "indexer.hi")
+                               : LoByte(Builder, Indexer, "indexer.lo");
 
     // Always index into a GEP using the index type.
     Indexer = Builder.CreateZExt(
@@ -1679,7 +1700,7 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     // CRC-8.
     Value *CRCNext = CRCTableLd;
     if (CRCBW > 8) {
-      Value *CRCShift = Info.ByteOrderSwapped
+      Value *CRCShift = Info.IsBigEndian
                             ? Builder.CreateShl(CRC, 8, "crc.be.shift")
                             : Builder.CreateLShr(CRC, 8, "crc.le.shift");
       CRCNext = Builder.CreateXor(CRCShift, CRCTableLd, "crc.next");

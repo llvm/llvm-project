@@ -127,3 +127,61 @@ func.func @predicate_region_outside_compute_region() {
   }
   return
 }
+
+// -----
+
+func.func @gpu_shared_memory_mismatched_runtime_attrs() {
+  // expected-error@+1 {{dynamic_shared_memory_scaling_bytes and dynamic_shared_memory_fixed_bytes must both be present or both be absent}}
+  %sm = acc.gpu_shared_memory()
+      {num_copies = 1 : i64,
+       static_upper_bound_bytes = 512 : i64,
+       dynamic_shared_memory_scaling_bytes = 4 : i64}
+      : () -> memref<8xf32, #gpu.address_space<workgroup>>
+  return
+}
+
+// -----
+
+func.func @gpu_shared_memory_non_workgroup_memref() {
+  // expected-error@+1 {{result memref must use #gpu.address_space<workgroup>}}
+  %sm = acc.gpu_shared_memory()
+      {num_copies = 1 : i64, static_upper_bound_bytes = 512 : i64}
+      : () -> memref<8xf32>
+  return
+}
+
+// -----
+
+func.func @gpu_shared_memory_zero_num_copies() {
+  // expected-error@+1 {{num_copies must be positive}}
+  %sm = acc.gpu_shared_memory()
+      {num_copies = 0 : i64, static_upper_bound_bytes = 512 : i64}
+      : () -> memref<8xf32, #gpu.address_space<workgroup>>
+  return
+}
+
+// -----
+
+func.func @gpu_shared_memory_negative_scaling_bytes() {
+  // expected-error@+1 {{dynamic_shared_memory_scaling_bytes must be non-negative}}
+  %sm = acc.gpu_shared_memory()
+      {num_copies = 1 : i64,
+       static_upper_bound_bytes = 512 : i64,
+       dynamic_shared_memory_scaling_bytes = -1 : i64,
+       dynamic_shared_memory_fixed_bytes = 24 : i64}
+      : () -> memref<8xf32, #gpu.address_space<workgroup>>
+  return
+}
+
+// -----
+
+func.func @gpu_shared_memory_negative_fixed_bytes() {
+  // expected-error@+1 {{dynamic_shared_memory_fixed_bytes must be non-negative}}
+  %sm = acc.gpu_shared_memory()
+      {num_copies = 1 : i64,
+       static_upper_bound_bytes = 512 : i64,
+       dynamic_shared_memory_scaling_bytes = 12 : i64,
+       dynamic_shared_memory_fixed_bytes = -1 : i64}
+      : () -> memref<8xf32, #gpu.address_space<workgroup>>
+  return
+}

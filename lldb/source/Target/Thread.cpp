@@ -1558,7 +1558,7 @@ StackFrameListSP Thread::GetStackFrameList() {
     return m_curr_frames_sp;
 
   // The private state thread must see the raw unwinder frames, not the
-  // provider-augmented public view. Policy::PrivateState is pushed by
+  // provider-augmented public view. Policy::CreatePrivateState is pushed by
   // RunThreadPlan and RunPrivateStateThread.
   Policy policy = PolicyStack::Get().Current();
   if (policy.view == Policy::View::Private) {
