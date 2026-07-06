@@ -52,7 +52,7 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
       case Intrinsic::vector_reduce_fmin:
       case Intrinsic::vector_reduce_fmaximum:
       case Intrinsic::vector_reduce_fminimum: {
-        // Only expand if the target doesn't support this operation natively
+        // Only expand if the target doesn't support this operation natively.
         if (TTI->shouldExpandReduction(II))
           Worklist.push_back(II);
         break;
