@@ -38,6 +38,7 @@
 // CHECK-NOT: __riscv_smctr{{.*$}}
 // CHECK-NOT: __riscv_smdbltrp {{.*$}}
 // CHECK-NOT: __riscv_smepmp {{.*$}}
+// CHECK-NOT: __riscv_smpmpdeleg {{.*$}}
 // CHECK-NOT: __riscv_smmpm{{.*$}}
 // CHECK-NOT: __riscv_smnpm{{.*$}}
 // CHECK-NOT: __riscv_smpmpmt {{.*$}}
@@ -53,6 +54,8 @@
 // CHECK-NOT: __riscv_ssdbltrp {{.*$}}
 // CHECK-NOT: __riscv_ssnpm{{.*$}}
 // CHECK-NOT: __riscv_sspm{{.*$}}
+// CHECK-NOT: __riscv_sspmp {{.*$}}
+// CHECK-NOT: __riscv_sspmpen {{.*$}}
 // CHECK-NOT: __riscv_ssqosid{{.*$}}
 // CHECK-NOT: __riscv_ssstateen {{.*$}}
 // CHECK-NOT: __riscv_ssstrict {{.*$}}
@@ -1346,6 +1349,36 @@
 // RUN:   -march=rv64isscsrind1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSCSRIND-EXT %s
 // CHECK-SSCSRIND-EXT: __riscv_sscsrind  1000000{{$}}
+
+// RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32isspmp1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSPMP-EXT %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64isspmp1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSPMP-EXT %s
+// CHECK-SSPMP-EXT: __riscv_sscsrind  1000000{{$}}
+// CHECK-SSPMP-EXT: __riscv_sspmp  1000000{{$}}
+
+// RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32isspmpen1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSPMPEN-EXT %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64isspmpen1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSPMPEN-EXT %s
+// CHECK-SSPMPEN-EXT: __riscv_sscsrind  1000000{{$}}
+// CHECK-SSPMPEN-EXT: __riscv_sspmp  1000000{{$}}
+// CHECK-SSPMPEN-EXT: __riscv_sspmpen  1000000{{$}}
+
+// RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32ismpmpdeleg1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMPMPDELEG-EXT %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64ismpmpdeleg1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMPMPDELEG-EXT %s
+// CHECK-SMPMPDELEG-EXT: __riscv_smcsrind  1000000{{$}}
+// CHECK-SMPMPDELEG-EXT: __riscv_smpmpdeleg  1000000{{$}}
+// CHECK-SMPMPDELEG-EXT: __riscv_sscsrind  1000000{{$}}
+// CHECK-SMPMPDELEG-EXT: __riscv_sspmp  1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32ismdbltrp1p0 -E -dM %s \

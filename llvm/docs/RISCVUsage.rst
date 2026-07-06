@@ -139,6 +139,7 @@ on support follow.
      ``Smepmp``        Supported
      ``Smmpm``         Supported
      ``Smnpm``         Supported
+     ``Smpmpdeleg``    Support
      ``Smrnmi``        Supported
      ``Smstateen``     Assembly Support
      ``Ssaia``         Supported
@@ -151,6 +152,8 @@ on support follow.
      ``Ssdbltrp``      Supported
      ``Ssnpm``         Supported
      ``Sspm``          Supported
+     ``Sspmp``         Support
+     ``Sspmpen``       Support
      ``Ssqosid``       Assembly Support
      ``Ssstateen``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Ssstrict``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
