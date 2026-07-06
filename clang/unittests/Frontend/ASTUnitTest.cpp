@@ -38,7 +38,8 @@ protected:
   std::shared_ptr<CompilerInvocation> CInvok;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
 
-  std::unique_ptr<ASTUnit> createASTUnit(bool isVolatile, ArrayRef<const char *> ExtraArgs = {}) {
+  std::unique_ptr<ASTUnit>
+  createASTUnit(bool isVolatile, ArrayRef<const char *> ExtraArgs = {}) {
     EXPECT_FALSE(llvm::sys::fs::createTemporaryFile("ast-unit", "cpp", FD,
                                                     InputFileName));
     input_file = std::make_unique<ToolOutputFile>(InputFileName, FD);
