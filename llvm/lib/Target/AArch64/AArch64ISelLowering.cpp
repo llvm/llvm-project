@@ -32143,7 +32143,7 @@ AArch64TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
     const auto *Cmp = dyn_cast<ICmpInst>(V);
     if (!Cmp)
       return false;
-    for (const Value *Op : {Cmp->getOperand(0), Cmp->getOperand(1)}) {
+    for (const Value *Op : Cmp->operands()) {
       const Value *Stripped = Op;
       while (const auto *Cast = dyn_cast<CastInst>(Stripped))
         Stripped = Cast->getOperand(0);
