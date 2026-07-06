@@ -178,46 +178,54 @@ KnownBits llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
       SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo), Depth);
 }
 
-static bool haveNoCommonBitsSetSpecialCases(const Value *LHS, const Value *RHS,
-                                            const SimplifyQuery &SQ) {
+static NoCommonBitsSetResult
+haveNoCommonBitsSetSpecialCases(const Value *LHS, const Value *RHS,
+                                const SimplifyQuery &SQ) {
   // Look for an inverted mask: (X & ~M) op (Y & M).
   {
     Value *M;
     if (match(LHS, m_c_And(m_Not(m_Value(M)), m_Value())) &&
-        match(RHS, m_c_And(m_Specific(M), m_Value())) &&
-        isGuaranteedNotToBeUndef(M, SQ.AC, SQ.CxtI, SQ.DT))
-      return true;
+        match(RHS, m_c_And(m_Specific(M), m_Value())))
+      return isGuaranteedNotToBeUndef(M, SQ.AC, SQ.CxtI, SQ.DT)
+                 ? NoCommonBitsSetResult::Known
+                 : NoCommonBitsSetResult::OnlyIfUndefIgnored;
   }
 
   // X op (Y & ~X)
-  if (match(RHS, m_c_And(m_Not(m_Specific(LHS)), m_Value())) &&
-      isGuaranteedNotToBeUndef(LHS, SQ.AC, SQ.CxtI, SQ.DT))
-    return true;
+  if (match(RHS, m_c_And(m_Not(m_Specific(LHS)), m_Value())))
+    return isGuaranteedNotToBeUndef(LHS, SQ.AC, SQ.CxtI, SQ.DT)
+               ? NoCommonBitsSetResult::Known
+               : NoCommonBitsSetResult::OnlyIfUndefIgnored;
 
   // X op ((X & Y) ^ Y) -- this is the canonical form of the previous pattern
   // for constant Y.
   Value *Y;
   if (match(RHS,
-            m_c_Xor(m_c_And(m_Specific(LHS), m_Value(Y)), m_Deferred(Y))) &&
-      isGuaranteedNotToBeUndef(LHS, SQ.AC, SQ.CxtI, SQ.DT) &&
-      isGuaranteedNotToBeUndef(Y, SQ.AC, SQ.CxtI, SQ.DT))
-    return true;
+            m_c_Xor(m_c_And(m_Specific(LHS), m_Value(Y)), m_Deferred(Y)))) {
+    bool IsNoUndef = isGuaranteedNotToBeUndef(LHS, SQ.AC, SQ.CxtI, SQ.DT) &&
+                     isGuaranteedNotToBeUndef(Y, SQ.AC, SQ.CxtI, SQ.DT);
+    return IsNoUndef ? NoCommonBitsSetResult::Known
+                     : NoCommonBitsSetResult::OnlyIfUndefIgnored;
+  }
 
   // Peek through extends to find a 'not' of the other side:
   // (ext Y) op ext(~Y)
   if (match(LHS, m_ZExtOrSExt(m_Value(Y))) &&
-      match(RHS, m_ZExtOrSExt(m_Not(m_Specific(Y)))) &&
-      isGuaranteedNotToBeUndef(Y, SQ.AC, SQ.CxtI, SQ.DT))
-    return true;
+      match(RHS, m_ZExtOrSExt(m_Not(m_Specific(Y)))))
+    return isGuaranteedNotToBeUndef(Y, SQ.AC, SQ.CxtI, SQ.DT)
+               ? NoCommonBitsSetResult::Known
+               : NoCommonBitsSetResult::OnlyIfUndefIgnored;
 
   // Look for: (A & B) op ~(A | B)
   {
     Value *A, *B;
     if (match(LHS, m_And(m_Value(A), m_Value(B))) &&
-        match(RHS, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))) &&
-        isGuaranteedNotToBeUndef(A, SQ.AC, SQ.CxtI, SQ.DT) &&
-        isGuaranteedNotToBeUndef(B, SQ.AC, SQ.CxtI, SQ.DT))
-      return true;
+        match(RHS, m_Not(m_c_Or(m_Specific(A), m_Specific(B))))) {
+      bool IsNoUndef = isGuaranteedNotToBeUndef(A, SQ.AC, SQ.CxtI, SQ.DT) &&
+                       isGuaranteedNotToBeUndef(B, SQ.AC, SQ.CxtI, SQ.DT);
+      return IsNoUndef ? NoCommonBitsSetResult::Known
+                       : NoCommonBitsSetResult::OnlyIfUndefIgnored;
+    }
   }
 
   // Look for: (X << V) op (Y >> (BitWidth - V))
@@ -230,13 +238,14 @@ static bool haveNoCommonBitsSetSpecialCases(const Value *LHS, const Value *RHS,
          (match(RHS, m_LShr(m_Value(), m_Sub(m_APInt(R), m_Value(V)))) &&
           match(LHS, m_Shl(m_Value(), m_Specific(V))))) &&
         R->uge(LHS->getType()->getScalarSizeInBits()))
-      return true;
+      return NoCommonBitsSetResult::Known;
   }
 
-  return false;
+  return NoCommonBitsSetResult::Unknown;
 }
 
-bool llvm::haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
+NoCommonBitsSetResult
+llvm::getNoCommonBitsSetResult(const WithCache<const Value *> &LHSCache,
                                const WithCache<const Value *> &RHSCache,
                                const SimplifyQuery &SQ) {
   const Value *LHS = LHSCache.getValue();
@@ -247,12 +256,32 @@ bool llvm::haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
   assert(LHS->getType()->isIntOrIntVectorTy() &&
          "LHS and RHS should be integers");
 
-  if (haveNoCommonBitsSetSpecialCases(LHS, RHS, SQ) ||
-      haveNoCommonBitsSetSpecialCases(RHS, LHS, SQ))
-    return true;
+  NoCommonBitsSetResult Result = haveNoCommonBitsSetSpecialCases(LHS, RHS, SQ);
+  if (Result == NoCommonBitsSetResult::Known)
+    return NoCommonBitsSetResult::Known;
 
-  return KnownBits::haveNoCommonBitsSet(LHSCache.getKnownBits(SQ),
-                                        RHSCache.getKnownBits(SQ));
+  NoCommonBitsSetResult CommuteResult =
+      haveNoCommonBitsSetSpecialCases(RHS, LHS, SQ);
+  if (CommuteResult == NoCommonBitsSetResult::Known)
+    return NoCommonBitsSetResult::Known;
+
+  if (KnownBits::haveNoCommonBitsSet(LHSCache.getKnownBits(SQ),
+                                     RHSCache.getKnownBits(SQ)))
+    return NoCommonBitsSetResult::Known;
+
+  if (Result == NoCommonBitsSetResult::OnlyIfUndefIgnored ||
+      CommuteResult == NoCommonBitsSetResult::OnlyIfUndefIgnored)
+    return NoCommonBitsSetResult::OnlyIfUndefIgnored;
+
+  return NoCommonBitsSetResult::Unknown;
+}
+
+bool llvm::haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
+                               const WithCache<const Value *> &RHSCache,
+                               const SimplifyQuery &SQ) {
+  NoCommonBitsSetResult Result =
+      getNoCommonBitsSetResult(LHSCache, RHSCache, SQ);
+  return Result == NoCommonBitsSetResult::Known;
 }
 
 bool llvm::isOnlyUsedInZeroComparison(const Instruction *I) {
