@@ -343,12 +343,6 @@ static opt<std::string>
                      desc("File to use as the baseline for variable coverage "
                           "statistics (implies --show-variable-coverage)"),
                      value_desc("filename"), cat(DwarfDumpCategory));
-static opt<std::string>
-    BitcodeFile("variable-coverage-bitcode-file",
-                desc("File containing LLVM IR (bitcode or textual) used for "
-                     "calculating variable definedness in coverage statistics "
-                     "(implies --show-variable-coverage)"),
-                value_desc("filename"), cat(DwarfDumpCategory));
 static opt<bool> CombineInstances(
     "combine-inline-variable-instances",
     desc(
@@ -927,7 +921,7 @@ int main(int argc, char **argv) {
   if (DumpAll)
     DumpType = DIDT_All;
   if (DumpType == DIDT_Null && !ShowVariableCoverage &&
-      CoverageBaseline.empty() && BitcodeFile.empty()) {
+      CoverageBaseline.empty()) {
     if (Verbose || Verify)
       DumpType = DIDT_All;
     else
@@ -986,17 +980,17 @@ int main(int argc, char **argv) {
       auto showCoverage = [&](ObjectFile &Obj, DWARFContext &DICtx,
                               const Twine &Filename, raw_ostream &OS) {
         return showVariableCoverage(Obj, DICtx, &BaselineObj, &BaselineCtx,
-                                    BitcodeFile, CombineInstances, OS);
+                                    CombineInstances, OS);
       };
       for (StringRef Object : Objects)
         Success &= handleFile(Object, showCoverage, OutputFile.os());
       return true;
     };
     Success &= handleFile(CoverageBaseline, handleBaseline, OutputFile.os());
-  } else if (ShowVariableCoverage || !BitcodeFile.empty()) {
+  } else if (ShowVariableCoverage) {
     auto showCoverage = [&](ObjectFile &Obj, DWARFContext &DICtx,
                             const Twine &Filename, raw_ostream &OS) {
-      return showVariableCoverage(Obj, DICtx, nullptr, nullptr, BitcodeFile,
+      return showVariableCoverage(Obj, DICtx, nullptr, nullptr,
                                   CombineInstances, OS);
     };
     for (StringRef Object : Objects)
