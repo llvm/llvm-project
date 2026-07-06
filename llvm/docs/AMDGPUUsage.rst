@@ -3249,6 +3249,7 @@ if needed.
      0x1   ``FUNC_USES_VCC``           Function uses the VCC register
      0x2   ``FUNC_USES_FLAT_SCRATCH``  Function uses flat scratch addressing
      0x4   ``FUNC_HAS_DYN_STACK``      Function has dynamic stack allocation
+     0x8   ``FUNC_WGP_MODE``           Function uses WGP execution mode
      ===== =========================== ==========================================
 
   Symbol references (``INFO_FUNC``, ``INFO_USE``, ``INFO_CALL``) generate
