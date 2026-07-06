@@ -72,6 +72,17 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
     if (!Assume)
       continue;
 
+    // When DropArrayBounds is set, drop assumes with "llvm.array.bounds"
+    // metadata. These are array bounds assumes from Fortran/C/C++ that should
+    // be dropped before vectorization to prevent IR bloat.
+    if (DropArrayBounds && Assume->getMetadata("llvm.array.bounds")) {
+      Value *Cond = Assume->getArgOperand(0);
+      Assume->eraseFromParent();
+      RecursivelyDeleteTriviallyDeadInstructions(Cond);
+      Changed = true;
+      continue;
+    }
+
     if (Assume->hasOperandBundles()) {
       // Handle operand bundle assumptions.
       SmallVector<WeakTrackingVH> DeadBundleArgs;
