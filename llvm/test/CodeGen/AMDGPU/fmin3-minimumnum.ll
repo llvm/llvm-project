@@ -1239,12 +1239,9 @@ define <2 x half> @v_min3_v2f16_minimumnum_minimumnum__v_v_v_0(<2 x half> %a, <2
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX12-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_min_num_f16 v0, v0, v1
-; GFX12-NEXT:    v_pk_max_num_f16 v1, v2, v2
-; GFX12-NEXT:    v_pk_min_num_f16 v0, v0, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_pk_min_num_f16 v0, v0, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = call <2 x half> @llvm.minimumnum.v2f16(<2 x half> %a, <2 x half> %b)
   %min3 = call <2 x half> @llvm.minimumnum.v2f16(<2 x half> %tmp0, <2 x half> %c)
@@ -1411,18 +1408,11 @@ define <3 x half> @v_min3_v3f16_minimumnum_minimumnum__v_v_v_0(<3 x half> %a, <3
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_pk_max_num_f16 v2, v2, v2
-; GFX12-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX12-NEXT:    v_pk_max_num_f16 v3, v3, v3
-; GFX12-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_pk_min_num_f16 v0, v0, v2
-; GFX12-NEXT:    v_pk_max_num_f16 v2, v4, v4
-; GFX12-NEXT:    v_pk_max_num_f16 v4, v5, v5
 ; GFX12-NEXT:    v_pk_min_num_f16 v1, v1, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_pk_min_num_f16 v0, v0, v2
-; GFX12-NEXT:    v_pk_min_num_f16 v1, v1, v4
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_pk_min_num_f16 v0, v0, v4
+; GFX12-NEXT:    v_pk_min_num_f16 v1, v1, v5
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = call <3 x half> @llvm.minimumnum.v3f16(<3 x half> %a, <3 x half> %b)
   %min3 = call <3 x half> @llvm.minimumnum.v3f16(<3 x half> %tmp0, <3 x half> %c)
@@ -1621,18 +1611,11 @@ define <4 x half> @v_min3_v4f16_minimumnum_minimumnum__v_v_v_0(<4 x half> %a, <4
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_pk_max_num_f16 v2, v2, v2
-; GFX12-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX12-NEXT:    v_pk_max_num_f16 v3, v3, v3
-; GFX12-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_pk_min_num_f16 v0, v0, v2
-; GFX12-NEXT:    v_pk_max_num_f16 v2, v4, v4
-; GFX12-NEXT:    v_pk_max_num_f16 v4, v5, v5
 ; GFX12-NEXT:    v_pk_min_num_f16 v1, v1, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_pk_min_num_f16 v0, v0, v2
-; GFX12-NEXT:    v_pk_min_num_f16 v1, v1, v4
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_pk_min_num_f16 v0, v0, v4
+; GFX12-NEXT:    v_pk_min_num_f16 v1, v1, v5
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = call <4 x half> @llvm.minimumnum.v4f16(<4 x half> %a, <4 x half> %b)
   %min3 = call <4 x half> @llvm.minimumnum.v4f16(<4 x half> %tmp0, <4 x half> %c)
@@ -1718,11 +1701,8 @@ define double @v_min3_f64_minimumnum_minimumnum__v_v_v_0(double %a, double %b, d
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
-; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
-; GFX12-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[4:5]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[2:3]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[4:5]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = call double @llvm.minimumnum.f64(double %a, double %b)
@@ -3197,11 +3177,7 @@ define float @v_min3_f32_minimumnum_neg_minimumnum__v_v_v_0(float %a, float %b, 
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f32_e64 v1, -v1, -v1
-; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; GFX12-NEXT:    v_max_num_f32_e32 v2, v2, v2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_maxmin_num_f32 v0, v0, v1, v2
+; GFX12-NEXT:    v_maxmin_num_f32 v0, v0, -v1, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg float %a
   %tmp0 = call float @llvm.minimumnum.f32(float %neg.a, float %b)
@@ -3285,13 +3261,9 @@ define float @v_min3_f32_minimumnum_fabs_minimumnum__v_v_v_0(float %a, float %b,
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f32_e32 v1, v1, v1
-; GFX12-NEXT:    v_max_num_f32_e64 v0, -v0, -v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_min_num_f32 v0, v0, v1 :: v_dual_max_num_f32 v1, v2, v2
-; GFX12-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
+; GFX12-NEXT:    v_min_num_f32_e64 v0, -v0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_min_num_f32_e32 v0, v0, v1
+; GFX12-NEXT:    v_min_num_f32_e64 v0, |v0|, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg float %a
   %tmp0 = call float @llvm.minimumnum.f32(float %neg.a, float %b)
@@ -3375,13 +3347,9 @@ define float @v_min3_f32_minimumnum_fneg_fabs_minimumnum__v_v_v_0(float %a, floa
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f32_e32 v1, v1, v1
-; GFX12-NEXT:    v_max_num_f32_e64 v0, -v0, -v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_min_num_f32 v0, v0, v1 :: v_dual_max_num_f32 v1, v2, v2
-; GFX12-NEXT:    v_or_b32_e32 v0, 0x80000000, v0
+; GFX12-NEXT:    v_min_num_f32_e64 v0, -v0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_min_num_f32_e32 v0, v0, v1
+; GFX12-NEXT:    v_min_num_f32_e64 v0, -|v0|, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg float %a
   %tmp0 = call float @llvm.minimumnum.f32(float %neg.a, float %b)

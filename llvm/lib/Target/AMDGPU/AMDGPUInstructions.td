@@ -249,6 +249,8 @@ def umin_oneuse : HasOneUseBinOp<umin>;
 
 def fminnum_oneuse : HasOneUseBinOp<fminnum>;
 def fmaxnum_oneuse : HasOneUseBinOp<fmaxnum>;
+def fminimumnum_oneuse : HasOneUseBinOp<fminimumnum>;
+def fmaximumnum_oneuse : HasOneUseBinOp<fmaximumnum>;
 def fminimum_oneuse : HasOneUseBinOp<fminimum>;
 def fmaximum_oneuse : HasOneUseBinOp<fmaximum>;
 
@@ -847,13 +849,15 @@ class RcpPat<Instruction RcpInst, ValueType vt> : AMDGPUPat <
 // Instructions which select to the same v_min_f*
 def fminnum_like : PatFrags<(ops node:$src0, node:$src1),
   [(fminnum_ieee node:$src0, node:$src1),
-   (fminnum node:$src0, node:$src1)]
+   (fminnum node:$src0, node:$src1),
+   (fminimumnum node:$src0, node:$src1)]
 >;
 
 // Instructions which select to the same v_max_f*
 def fmaxnum_like : PatFrags<(ops node:$src0, node:$src1),
   [(fmaxnum_ieee node:$src0, node:$src1),
-   (fmaxnum node:$src0, node:$src1)]
+   (fmaxnum node:$src0, node:$src1),
+   (fmaximumnum node:$src0, node:$src1)]
 >;
 
 class NeverNaNPats<dag ops, list<dag> frags> : PatFrags<ops, frags> {
@@ -867,22 +871,26 @@ class NeverNaNPats<dag ops, list<dag> frags> : PatFrags<ops, frags> {
 
 def fminnum_like_nnan : NeverNaNPats<(ops node:$src0, node:$src1),
   [(fminnum_ieee node:$src0, node:$src1),
-   (fminnum node:$src0, node:$src1)]
+   (fminnum node:$src0, node:$src1),
+   (fminimumnum node:$src0, node:$src1)]
 >;
 
 def fmaxnum_like_nnan : NeverNaNPats<(ops node:$src0, node:$src1),
   [(fmaxnum_ieee node:$src0, node:$src1),
-   (fmaxnum node:$src0, node:$src1)]
+   (fmaxnum node:$src0, node:$src1),
+   (fmaximumnum node:$src0, node:$src1)]
 >;
 
 def fminnum_like_oneuse : PatFrags<(ops node:$src0, node:$src1),
   [(fminnum_ieee_oneuse node:$src0, node:$src1),
-   (fminnum_oneuse node:$src0, node:$src1)]
+   (fminnum_oneuse node:$src0, node:$src1),
+   (fminimumnum_oneuse node:$src0, node:$src1)]
 >;
 
 def fmaxnum_like_oneuse : PatFrags<(ops node:$src0, node:$src1),
   [(fmaxnum_ieee_oneuse node:$src0, node:$src1),
-   (fmaxnum_oneuse node:$src0, node:$src1)]
+   (fmaxnum_oneuse node:$src0, node:$src1),
+   (fmaximumnum_oneuse node:$src0, node:$src1)]
 >;
 
 def any_fmad : PatFrags<(ops node:$src0, node:$src1, node:$src2),
