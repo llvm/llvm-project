@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   )
 add_subdirectory(support)
+add_subdirectory(markdown)
 
 add_clang_library(clangDoc STATIC
   BitcodeReader.cpp
