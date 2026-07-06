@@ -460,3 +460,29 @@ spirv.func @ssign_vector(%arg0: vector<4xi32>) "None" {
   %0 = spirv.GL.SSign %arg0 : vector<4xi32>
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.FMix
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fmix_scalar
+spirv.func @fmix_scalar(%x: f32, %y: f32, %a: f32) "None" {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  // CHECK: %[[ONE_MINUS_A:.*]] = llvm.fsub %[[ONE]], %{{.*}} : f32
+  // CHECK: %[[LHS:.*]] = llvm.fmul %{{.*}}, %[[ONE_MINUS_A]] : f32
+  // CHECK: %[[RHS:.*]] = llvm.fmul %{{.*}}, %{{.*}} : f32
+  // CHECK: llvm.fadd %[[LHS]], %[[RHS]] : f32
+  %0 = spirv.GL.FMix %x : f32, %y : f32, %a : f32 -> f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @fmix_vector
+spirv.func @fmix_vector(%x: vector<4xf32>, %y: vector<4xf32>, %a: vector<4xf32>) "None" {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : vector<4xf32>
+  // CHECK: %[[ONE_MINUS_A:.*]] = llvm.fsub %[[ONE]], %{{.*}} : vector<4xf32>
+  // CHECK: %[[LHS:.*]] = llvm.fmul %{{.*}}, %[[ONE_MINUS_A]] : vector<4xf32>
+  // CHECK: %[[RHS:.*]] = llvm.fmul %{{.*}}, %{{.*}} : vector<4xf32>
+  // CHECK: llvm.fadd %[[LHS]], %[[RHS]] : vector<4xf32>
+  %0 = spirv.GL.FMix %x : vector<4xf32>, %y : vector<4xf32>, %a : vector<4xf32> -> vector<4xf32>
+  spirv.Return
+}
