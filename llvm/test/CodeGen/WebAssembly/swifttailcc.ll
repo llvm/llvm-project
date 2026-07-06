@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=wasm32-unknown-unknown -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+tail-call | FileCheck -DPTR=i32 %s
-; RUN: llc < %s -mtriple=wasm64-unknown-unknown -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+tail-call | FileCheck -DPTR=i64 %s
+; RUN: llc < %s -mtriple=wasm32-unknown-unknown -verify-machineinstrs -disable-wasm-fallthrough-return-opt -mattr=+tail-call | FileCheck -DPTR=i32 %s
+; RUN: llc < %s -mtriple=wasm64-unknown-unknown -verify-machineinstrs -disable-wasm-fallthrough-return-opt -mattr=+tail-call | FileCheck -DPTR=i64 %s
 
 ; Test swifttailcc (SwiftTail calling convention) support for WebAssembly.
 ; Requires the tail-call feature for return_call / return_call_indirect.
@@ -96,7 +96,8 @@ declare swifttailcc i32 @returns_i32_callee(ptr swiftasync)
 define swifttailcc void @return_type_mismatch(ptr swiftasync %ctx) {
 ; CHECK-LABEL: return_type_mismatch:
 ; CHECK-NOT:     return_call
-; CHECK:         call $drop=, returns_i32_callee
+; CHECK:         call returns_i32_callee
+; CHECK:         drop
   tail call swifttailcc i32 @returns_i32_callee(ptr swiftasync %ctx)
   ret void
 }
