@@ -57,8 +57,8 @@ class Module;
 /// |   return return loc.promo()                  |
 /// | }                                            |
 /// +----------------------------------------------+
-std::unique_ptr<Module> prepareForDynamicDebugging(Module *M,
-                                                   StringRef PromotionSuffix);
+LLVM_ABI std::unique_ptr<Module>
+prepareForDynamicDebugging(Module *M, StringRef PromotionSuffix);
 } // namespace llvm
 
 #endif
