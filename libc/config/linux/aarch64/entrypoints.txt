@@ -303,6 +303,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.socket.sendto
     libc.src.sys.socket.setsockopt
     libc.src.sys.socket.shutdown
+    libc.src.sys.socket.sockatmark
     libc.src.sys.socket.socket
     libc.src.sys.socket.socketpair
     # TODO: These functions are not compatible with 64-bit musl. They need to

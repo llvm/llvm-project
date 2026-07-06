@@ -12646,10 +12646,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                         DAG.getConstant(0x3F, DL, MVT::i32));
     // Member count should be put into M0[ShAmt:+6]
     // Barrier ID should be put into M0[5:0]
-    M0Val = DAG.getNode(ISD::AND, DL, MVT::i32, CntOp,
-                        DAG.getConstant(0x3F, DL, MVT::i32));
+    SDValue MemberCnt = DAG.getNode(ISD::AND, DL, MVT::i32, CntOp,
+                                    DAG.getConstant(0x3F, DL, MVT::i32));
     constexpr unsigned ShAmt = 16;
-    M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, CntOp,
+    M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, MemberCnt,
                         DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
 
     M0Val = DAG.getNode(ISD::OR, DL, MVT::i32, M0Val, BarID);
