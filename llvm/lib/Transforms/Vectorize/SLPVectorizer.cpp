@@ -10813,36 +10813,64 @@ static InstructionCost getVectorOpCost(Instruction *I, unsigned VF,
     SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(CI, ID, VF, 0, &TTI);
     auto [IntrCost, LibCost] =
         getVectorCallCosts(CI, VecTy, &TTI, &TLI, ArgTys);
-    return LibCost < IntrCost ? LibCost : IntrCost;
+    return std::min(IntrCost, LibCost);
   }
   return TTI.getArithmeticInstrCost(I->getOpcode(), VecTy, CostKind);
 }
 
+/// Packs a type's kind and scalar width into one key, so an opcode/intrinsic
+/// id reused across scalar widths (e.g. fdiv float vs. fdiv double) is cached
+/// per width instead of sharing one verdict.
+static unsigned getPoorThroughputTypeKey(Type *Ty) {
+  return (static_cast<unsigned>(Ty->getTypeID()) << 16) |
+         Ty->getScalarSizeInBits();
+}
+
 namespace {
-/// Caches the instruction kinds that isPoorThroughputOp already proved cheap
-/// (not poor-throughput) - the opcode for binary operators, or the intrinsic id
-/// / callee for calls - so the expensive cost-model query is skipped for the
-/// common case. Poor-throughput kinds are rare, so they are not cached and are
-/// re-checked per instruction, which also keeps that check element-type exact.
-/// ponytail: a cheap verdict is shared across element widths of one opcode /
-/// intrinsic id / callee. This only changes which standalone seeds are tried;
-/// the cost model still gates every transform.
+/// Memoizes opcode / intrinsic / callee kinds already ruled out as seeds.
 struct PoorThroughputOpCache {
-  // Binary-operator opcodes are a small dense range, so one bit per opcode
-  // marks it cheap, giving O(1) lookups with no hashing.
-  SmallBitVector CheapOpcodes = SmallBitVector(Instruction::OtherOpsEnd);
-  // Calls are sparse, so small hashed sets of the cheap intrinsic ids /
-  // callees.
-  SmallDenseSet<Intrinsic::ID> CheapIntrinsics;
+  SmallDenseSet<std::pair<unsigned, unsigned>> CheapOpcodes;
+  SmallDenseSet<std::pair<Intrinsic::ID, unsigned>> CheapIntrinsics;
+  // Keyed on the callee alone: a Function's signature is fixed, so its type
+  // never varies between calls.
   SmallDenseSet<const Function *> CheapCallees;
 };
+
+/// Groups poor-throughput seeds for tryToVectorizeSequence.
+struct SeedGroupKey {
+  unsigned Opcode = 0;
+  Intrinsic::ID IntrID = Intrinsic::not_intrinsic;
+  StringRef CalleeName;
+
+  bool operator==(const SeedGroupKey &O) const {
+    return Opcode == O.Opcode && IntrID == O.IntrID &&
+           CalleeName == O.CalleeName;
+  }
+  bool operator!=(const SeedGroupKey &O) const { return !(*this == O); }
+  bool less(const SeedGroupKey &O) const {
+    if (Opcode != O.Opcode)
+      return Opcode < O.Opcode;
+    if (IntrID != O.IntrID)
+      return IntrID < O.IntrID;
+    return CalleeName < O.CalleeName;
+  }
+};
+
+static SeedGroupKey getSeedGroupKey(const Instruction *I,
+                                    const TargetLibraryInfo &TLI) {
+  SeedGroupKey K;
+  K.Opcode = I->getOpcode();
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    K.IntrID = getVectorIntrinsicIDForCall(CI, &TLI);
+    if (const Function *F = CI->getCalledFunction())
+      K.CalleeName = F->getName();
+  }
+  return K;
+}
 } // namespace
 
-/// Returns true if \p I is an expensive, poor-throughput scalar operation
-/// (typically fdiv, frem or fsqrt) whose vector form is cheaper, so combining
-/// several of them into one vector op improves the block throughput they
-/// dominate. \p Cache remembers the cheap (not poor-throughput) opcodes /
-/// intrinsic ids / callees so the cost-model query is skipped on repeats.
+/// Returns true if \p I is an expensive scalar op whose vector form is cheaper
+/// per lane (e.g. fdiv, frem, fsqrt).
 static bool isPoorThroughputOp(Instruction *I, const TargetTransformInfo &TTI,
                                const TargetLibraryInfo &TLI,
                                PoorThroughputOpCache &Cache) {
@@ -10852,51 +10880,41 @@ static bool isPoorThroughputOp(Instruction *I, const TargetTransformInfo &TTI,
   if ((Ty->isVectorTy() && !SLPReVec) || Ty->isAggregateType() ||
       !isValidElementType(Ty))
     return false;
-  // The checks above are cheap and type-specific; the cost-model query below is
-  // the expensive part, skipped for kinds already known to be cheap.
   auto Analyze = [&]() {
     constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     InstructionCost ScalarCost = TTI.getInstructionCost(I, CostKind);
     if (ScalarCost < TTI::TCC_Expensive)
       return false;
-    // Only worth seeding when widening to the smallest vector saves throughput.
     constexpr unsigned MinVF = 2;
-    InstructionCost VecCost = getVectorOpCost(I, MinVF, TTI, TLI);
-    return VecCost < ScalarCost * MinVF;
+    return getVectorOpCost(I, MinVF, TTI, TLI) < ScalarCost * MinVF;
+  };
+  auto CheckCached = [&](bool IsCheap, llvm::function_ref<void()> MarkCheap) {
+    if (IsCheap)
+      return false;
+    if (Analyze())
+      return true;
+    MarkCheap();
+    return false;
   };
   if (auto *CI = dyn_cast<CallInst>(I)) {
-    // Reject calls with the non-valid argument element types.
     if (any_of(CI->args(), [](const Value *Arg) {
           return !isValidElementType(Arg->getType());
         }))
       return false;
-    // Calls map to a vectorizable intrinsic (keyed by id) or another direct
-    // call (keyed by callee); indirect calls have no cheap stable key.
     if (Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI)) {
-      if (Cache.CheapIntrinsics.contains(ID))
-        return false;
-      if (Analyze())
-        return true;
-      Cache.CheapIntrinsics.insert(ID);
-      return false;
+      auto Key = std::make_pair(ID, getPoorThroughputTypeKey(Ty));
+      return CheckCached(Cache.CheapIntrinsics.contains(Key),
+                         [&] { Cache.CheapIntrinsics.insert(Key); });
     }
     const Function *Callee = CI->getCalledFunction();
     if (!Callee)
       return Analyze();
-    if (Cache.CheapCallees.contains(Callee))
-      return false;
-    if (Analyze())
-      return true;
-    Cache.CheapCallees.insert(Callee);
-    return false;
+    return CheckCached(Cache.CheapCallees.contains(Callee),
+                       [&] { Cache.CheapCallees.insert(Callee); });
   }
-  unsigned Opcode = I->getOpcode();
-  if (Cache.CheapOpcodes.test(Opcode))
-    return false;
-  if (Analyze())
-    return true;
-  Cache.CheapOpcodes.set(Opcode);
-  return false;
+  auto Key = std::make_pair(I->getOpcode(), getPoorThroughputTypeKey(Ty));
+  return CheckCached(Cache.CheapOpcodes.contains(Key),
+                     [&] { Cache.CheapOpcodes.insert(Key); });
 }
 
 /// Find the innermost loop starting from \p L, for which at least a single
@@ -19927,29 +19945,23 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                                      ArrayRef<Value *> VectorizedVals,
                                      InstructionCost ReductionCost,
                                      Instruction *RdxRoot) {
-  // Bypass the instruction-count veto for poor-throughput ops (fdiv/frem/fsqrt)
-  // when the tree saves at least the throughput of widening one of them (the
-  // RootVF scalar instances removed, but 1 vector added) per iteration.
-  // TreeCost is already trip-count-scaled, so the condition is TreeCost <=
-  // -(RootVF - 1) * TCC_Expensive * TripCount.
+  // A poor-throughput entry's real vector-vs-scalar savings (fdiv/frem/fsqrt)
+  // are already folded into TreeCost like any other entry, including all
+  // shuffle/insert/extract overhead elsewhere in the tree. So bypassing the
+  // instruction-count veto below just has to trust that already-complete
+  // TreeCost instead of guessing at extra savings: heavy gather/shuffle
+  // overhead raises TreeCost too, and will still block the bypass.
   auto BypassesInstCountCheck = [&]() {
-    if (!VectorizePoorThroughput)
+    if (!VectorizePoorThroughput || TreeCost >= -SLPCostThreshold)
       return false;
-    uint64_t TripCount = 0;
-    PoorThroughputOpCache PoorThroughputCache;
-    for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
+    PoorThroughputOpCache Cache;
+    return any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &Ptr) {
       const TreeEntry &TE = *Ptr;
-      if (DeletedNodes.contains(&TE) || TE.isGather() ||
-          TransformedToGatherNodes.contains(&TE) ||
-          TE.State == TreeEntry::CombinedVectorize || !TE.hasState())
-        continue;
-      if (isPoorThroughputOp(TE.getMainOp(), *TTI, *TLI, PoorThroughputCache))
-        TripCount = std::max(TripCount, getScaleToLoopIterations(TE));
-    }
-    if (TripCount == 0)
-      return false;
-    int64_t RootVF = VectorizableTree.front()->getVectorFactor();
-    return TreeCost + (RootVF - 1) * TTI::TCC_Expensive * TripCount <= 0;
+      return TE.hasState() && !DeletedNodes.contains(&TE) && !TE.isGather() &&
+             !TransformedToGatherNodes.contains(&TE) &&
+             TE.State != TreeEntry::CombinedVectorize &&
+             isPoorThroughputOp(TE.getMainOp(), *TTI, *TLI, Cache);
+    });
   };
   // Reject vectorization if the vector code would produce more instructions
   // than the scalar code. The cost model may underestimate overhead from
@@ -28919,11 +28931,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   unsigned MaxVF = std::max<unsigned>(
       getFloorFullVectorNumberOfElements(*TTI, ScalarTy, VL.size()), MinVF);
   MaxVF = std::min(R.getMaximumVF(Sz, S.getOpcode()), MaxVF);
-  // For independent scalar seeds (e.g. the poor-throughput fdiv/frem/fsqrt
-  // fallback), widening past a single vector register requires gathering the
-  // scattered operands across multiple registers and is never profitable, yet
-  // each such factor still builds and costs a full tree. Cap the factor at one
-  // register to skip those wide, never-taken attempts and bound compile time.
+  // Standalone poor-throughput seeds only need one register worth of lanes.
   if (LimitToRegisterVF && Sz != 0)
     MaxVF = std::min(MaxVF, std::max(MinVF, R.getMaxVecRegSize() / Sz));
   if (MaxVF < 2) {
@@ -32828,12 +32836,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   // Stores are processed after all other instructions/roots.
   SmallSetVector<StoreInst *, 8> PostProcessStores;
   SmallSetVector<Instruction *, 8> FMACandidates;
-  // Poor-throughput instructions (fdiv/frem/fsqrt) that were not captured by
-  // any other root. They are tried as standalone seeds after everything else.
   SmallSetVector<Instruction *, 8> PoorThroughputSeeds;
-  // Memoizes the poor-throughput classification so the cost-model query runs at
-  // most once per opcode / intrinsic id / callee instead of once per
-  // instruction in this block.
   PoorThroughputOpCache PoorThroughputCache;
   auto VectorizeInsertsAndCmps = [&](bool AtTerminator) {
     bool Changed = vectorizeInserts(PostProcessInserts, BB, R, FMACandidates);
@@ -33037,28 +33040,23 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   assert(Empty.empty() &&
          "No new FMA candidates expected during AllowFMACandidates retry.");
 
-  // Final fallback: combine leftover poor-throughput instructions
-  // (fdiv/frem/fsqrt) into vector operations when no other seed captured them.
-  // The cost model still gates the actual transformation.
   if (PoorThroughputSeeds.size() >= 2) {
     SmallVector<Value *> Seeds;
-    for (Instruction *I : PoorThroughputSeeds)
-      if (!R.isDeleted(I) && isValidElementType(getValueType(I)))
-        Seeds.push_back(I);
-    // Group seeds that can actually be vectorized together - same type and
-    // opcode and, for calls, the same intrinsic id and callee - so each attempt
-    // sees a homogeneous bundle and incompatible seeds are never mixed.
-    auto SeedIntrinsicID = [this](const Value *V) {
-      const auto *CI = dyn_cast<CallInst>(V);
-      return CI ? getVectorIntrinsicIDForCall(CI, TLI)
-                : Intrinsic::not_intrinsic;
-    };
-    auto SeedCallee = [](const Value *V) -> StringRef {
-      if (const auto *CI = dyn_cast<CallInst>(V))
-        if (const Function *F = CI->getCalledFunction())
-          return F->getName();
-      return {};
-    };
+    SmallDenseMap<Value *, SeedGroupKey> SeedKeys;
+    for (Instruction *I : PoorThroughputSeeds) {
+      if (R.isDeleted(I) || !isValidElementType(getValueType(I)))
+        continue;
+      // Skip seeds a user already resolved: a deleted user was folded into
+      // some other vector by an earlier pass, and I's role there is already
+      // decided, so retrying I here is almost always a wasted attempt.
+      if (any_of(I->users(), [&](User *U) {
+            auto *UI = dyn_cast<Instruction>(U);
+            return UI && (R.isDeleted(UI) || R.isVectorized(UI));
+          }))
+        continue;
+      SeedKeys.try_emplace(I, getSeedGroupKey(I, *TLI));
+      Seeds.push_back(I);
+    }
     auto SeedSorter = [&](Value *V1, Value *V2) {
       if (V1 == V2)
         return false;
@@ -33070,25 +33068,18 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         return T1->getTypeID() < T2->getTypeID();
       if (T1->getScalarSizeInBits() != T2->getScalarSizeInBits())
         return T1->getScalarSizeInBits() < T2->getScalarSizeInBits();
-      if (I1->getOpcode() != I2->getOpcode())
-        return I1->getOpcode() < I2->getOpcode();
-      Intrinsic::ID ID1 = SeedIntrinsicID(V1);
-      Intrinsic::ID ID2 = SeedIntrinsicID(V2);
-      if (ID1 != ID2)
-        return ID1 < ID2;
-      if (int C = SeedCallee(V1).compare(SeedCallee(V2)))
-        return C < 0;
+      const SeedGroupKey &K1 = SeedKeys.at(V1);
+      const SeedGroupKey &K2 = SeedKeys.at(V2);
+      if (K1 != K2)
+        return K1.less(K2);
       return I1->comesBefore(I2);
     };
     auto AreCompatibleSeeds = [&](ArrayRef<Value *> VL, Value *V) {
       if (VL.empty() || VL.back() == V)
         return true;
-      auto *I1 = cast<Instruction>(VL.back());
-      auto *I2 = cast<Instruction>(V);
-      return I1->getType() == I2->getType() &&
-             I1->getOpcode() == I2->getOpcode() &&
-             SeedIntrinsicID(VL.back()) == SeedIntrinsicID(V) &&
-             SeedCallee(VL.back()) == SeedCallee(V);
+      return cast<Instruction>(VL.back())->getType() ==
+                 cast<Instruction>(V)->getType() &&
+             SeedKeys.at(VL.back()) == SeedKeys.at(V);
     };
     if (Seeds.size() >= 2)
       Changed |= tryToVectorizeSequence<Value>(

@@ -8,11 +8,17 @@ define void @prim(double %x, double %y, double %z, double %w, ptr %p0, ptr %p1) 
 ; CHECK-LABEL: define void @prim(
 ; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]], double [[Z:%.*]], double [[W:%.*]], ptr [[P0:%.*]], ptr [[P1:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[X1:%.*]] = fsub double [[X]], [[Z]]
-; CHECK-NEXT:    [[Y1:%.*]] = fadd double [[Y]], [[W]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fdiv double [[X1]], [[Z]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fdiv double [[Y1]], [[W]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[Y]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[Z]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[W]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP6]], [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i32 0
 ; CHECK-NEXT:    [[X3:%.*]] = fsub double [[TMP8]], [[Z]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP7]], i32 1
 ; CHECK-NEXT:    [[Y3:%.*]] = fadd double [[TMP9]], [[W]]
 ; CHECK-NEXT:    store double [[X3]], ptr [[P0]], align 8
 ; CHECK-NEXT:    store double [[Y3]], ptr [[P1]], align 8
