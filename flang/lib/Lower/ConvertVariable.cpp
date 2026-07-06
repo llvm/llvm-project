@@ -1283,9 +1283,9 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     fir::ExtendedValue exv =
         converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
     auto *sym = &var.getSymbol();
-    const Fortran::semantics::Scope &owner = sym->owner();
-    if (owner.kind() != Fortran::semantics::Scope::Kind::MainProgram &&
-        dataAttr.getValue() != cuf::DataAttribute::Shared) {
+    // Free the CUF storage, including in the main program: this is storage
+    // cleanup, not finalization, so it must not be skipped there.
+    if (dataAttr.getValue() != cuf::DataAttribute::Shared) {
       converter.getFctCtx().attachCleanup([builder, loc, exv, sym]() {
         cuf::DataAttributeAttr dataAttr =
             Fortran::lower::translateSymbolCUFDataAttribute(
