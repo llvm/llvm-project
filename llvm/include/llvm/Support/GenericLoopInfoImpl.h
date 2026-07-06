@@ -585,7 +585,7 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
   }
 
   // Visit dominator tree nodes in reverse preorder: like postorder, this
-  // guarantees a subloop is discovered before the super loop.
+  // guarantees a sub-loop is discovered before the outer loop.
   DomTree.updateDFSNumbers();
   SmallVector<const DomTreeNodeBase<BlockT> *, 32> PreorderNodes(
       DomRoot->getDFSNumOut());
