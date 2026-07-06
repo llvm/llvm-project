@@ -42,7 +42,7 @@ using namespace llvm::mcdxbc;
 static cl::opt<bool> ShaderHashDependsOnSource(
     "dx-Zss", cl::desc("Compute Shader Hash considering source information"));
 cl::opt<std::string> PdbDebugPath(
-    "dx-Fd",
+    "dx-pdb-path",
     cl::desc("Write debug information to the given file, or automatically "
              "named file in directory when ending in '/'"),
     cl::value_desc("filename"));

@@ -1,5 +1,5 @@
 ; RUN: opt %S/Inputs/SourceInfo.ll -dxil-embed -dxil-globals -S -o - | FileCheck %s
-; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj --dx-Fd=%t.pdb -o /dev/null
+; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj --dx-pdb-path=%t.pdb -o /dev/null
 ; RUN: llvm-pdbutil pdb2yaml --dxcontainer %t.pdb | FileCheck %s --check-prefix=DXC
 ; REQUIRES: zlib
 

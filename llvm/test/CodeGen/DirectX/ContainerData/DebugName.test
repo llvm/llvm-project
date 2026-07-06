@@ -1,6 +1,6 @@
 # Check that debug name and hashed are passed to DXContainerPDBPass, but
 # not emitted into output file (checked with --implicit-check-not arguments).
-RUN: opt %S/Inputs/SourceInfo.ll -dxil-embed -dxil-globals --dx-Fd=%t.pdb -S -o - \
+RUN: opt %S/Inputs/SourceInfo.ll -dxil-embed -dxil-globals --dx-pdb-path=%t.pdb -S -o - \
 RUN:   | FileCheck %s --check-prefix=BC
 BC:          @dx.pdb.name
 BC:          @dx.pdb.hash

@@ -1,5 +1,5 @@
 RUN: rm -rf %t && mkdir %t
-RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o - --dx-Fd=%t/ofile.pdb | obj2yaml | FileCheck %s
+RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o - --dx-pdb-path=%t/ofile.pdb | obj2yaml | FileCheck %s
 RUN: test -f %t/ofile.pdb
 
 CHECK:       - Name:            ILDN

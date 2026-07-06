@@ -1,6 +1,6 @@
 ; RUN: rm -f %t.pdb
 ; RUN: opt %s -dxil-embed -dxil-globals -S -o - | FileCheck %s
-; RUN: llc %s --filetype=obj --dx-embed-debug -o %t.bc --dx-Fd=%t.pdb
+; RUN: llc %s --filetype=obj --dx-embed-debug -o %t.bc --dx-pdb-path=%t.pdb
 ; RUN: obj2yaml %t.bc | FileCheck %s --check-prefix=YAML
 ; RUN: llvm-objcopy --dump-section=ILDB=%t.ildb %t.bc
 ; RUN: llvm-objcopy --dump-section=DXIL=%t.dxil %t.bc
