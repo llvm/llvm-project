@@ -16,7 +16,7 @@ class TestDAP_launch_environment_with_object(DAPTestCaseBase):
     def test(self):
         program = self.getBuildArtifact("a.out")
         expected_env = {
-            "NO_VALUE": "",
+            "NO_VALUE": None,
             "WITH_VALUE": "BAR",
             "EMPTY_VALUE": "",
             "SPACE": "Hello World",
@@ -28,15 +28,17 @@ class TestDAP_launch_environment_with_object(DAPTestCaseBase):
 
         # Now get the STDOUT and verify our arguments got passed correctly.
         output = session.get_stdout()
-        self.assertTrue(output and len(output) > 0, "expect program output")
-        lines = output.splitlines()
+        self.assertTrue(output, "expect program output")
+
         # Collect environment lines.
-        env_lines = [line for line in lines if line.startswith("env[")]
-        # Make sure each environment variable in "env" is actually set in the
-        # program environment that was printed to STDOUT.
-        for var in expected_env:
-            found_var = any(var in line for line in env_lines)
-            self.assertTrue(
-                found_var,
-                f'"{var}" must exist in program environment ({env_lines})',
+        env_output = "\n".join(l for l in output.splitlines() if l.startswith("env["))
+        # Make sure each environment variable in "expected_env" is actually set in the
+        # program environment and contains the right value.
+        for variable, value in expected_env.items():
+            expected_value = value or ""
+            expected_str = f'"{variable}={expected_value}"'
+            self.assertIn(
+                expected_str,
+                env_output,
+                f"\n{expected_str} must exist in program's environment \n{env_output}",
             )

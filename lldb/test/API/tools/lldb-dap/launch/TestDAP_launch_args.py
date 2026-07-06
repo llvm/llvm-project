@@ -18,17 +18,17 @@ class TestDAP_launch_args(DAPTestCaseBase):
         session.launch(LaunchArgs(program=program, args=args))
         session.verify_process_exited()
 
-        # Now get the STDOUT and verify our arguments got passed correctly.
         output = session.get_stdout()
         self.assertTrue(output and len(output) > 0, "expect program output")
         lines = output.splitlines()
-        # Skip the first argument that contains the program name
+        # Skip the first argument that contains the program name.
         lines.pop(0)
-        # Make sure arguments we specified are correct
-        for i, arg in enumerate(args):
-            quoted_arg = '"%s"' % (arg)
+        # Make sure arguments we specified are correct.
+        args_and_lines = zip(args, lines)
+        for i, (arg, line) in enumerate(args_and_lines, start=1):
+            quoted_arg = f'"{arg}"'
             self.assertIn(
                 quoted_arg,
-                lines[i],
-                'arg[%i] "%s" not in "%s"' % (i + 1, quoted_arg, lines[i]),
+                line,
+                f'arg[{i}] "{arg}" not in {line!r}',
             )
