@@ -419,6 +419,19 @@ macro(darwin_add_builtin_libraries)
 
   append_list_if(COMPILER_RT_HAS_ASM_LSE -DHAS_ASM_LSE CFLAGS)
 
+  # Add in the index store similar to how HandleLLVMOptions does.
+  # LLVM_ENABLE_INDEX_STORE won't be propagated for IDE generators, so that
+  # test can be skipped here.
+  if(LLVM_ENABLE_INDEX_STORE AND INDEX_DATA_STORE_PATH)
+    builtin_check_c_compiler_flag(
+      "-Werror -index-store-path ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/IndexStore"
+      COMPILER_RT_HAS_INDEX_STORE_FLAG)
+    if(COMPILER_RT_HAS_INDEX_STORE_FLAG)
+      list(APPEND CFLAGS "SHELL:-index-store-path \"${INDEX_DATA_STORE_PATH}\"")
+    endif()
+    # Note that builtins don't use CMAKE_CXX_FLAGS, but rather reuse CFLAGS for C++.
+  endif()
+
   set(PROFILE_SOURCES ../profile/InstrProfiling.c
                       ../profile/InstrProfilingBuffer.c
                       ../profile/InstrProfilingPlatformDarwin.c
@@ -548,6 +561,16 @@ macro(darwin_add_embedded_builtin_libraries)
     set(CMAKE_C_FLAGS "")
     set(CMAKE_CXX_FLAGS "")
     set(CMAKE_ASM_FLAGS "")
+
+    # Add in the index store like darwin_add_builtin_libraries above.
+    if(LLVM_ENABLE_INDEX_STORE AND INDEX_DATA_STORE_PATH)
+      builtin_check_c_compiler_flag(
+        "-Werror -index-store-path ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/IndexStore"
+        COMPILER_RT_HAS_INDEX_STORE_FLAG)
+      if(COMPILER_RT_HAS_INDEX_STORE_FLAG)
+        list(APPEND CFLAGS "SHELL:-index-store-path \"${INDEX_DATA_STORE_PATH}\"")
+      endif()
+    endif()
 
     set(SOFT_FLOAT_FLAG -mfloat-abi=soft)
     set(HARD_FLOAT_FLAG -mfloat-abi=hard)
