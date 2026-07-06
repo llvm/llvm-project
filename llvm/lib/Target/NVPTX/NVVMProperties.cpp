@@ -323,6 +323,10 @@ MaybeAlign getStackAlign(const CallBase &I, unsigned Index) {
           I.getAttributes().getAttributes(Index).getStackAlignment())
     return StackAlign;
 
+  if (auto *F = dyn_cast<Function>(I.getCalledOperand()->stripPointerCasts()))
+    if (MaybeAlign StackAlign = getStackAlign(*F, Index))
+      return StackAlign;
+
   // If that is missing, check the legacy nvvm metadata.
   if (MDNode *AlignNode = I.getMetadata("callalign")) {
     for (int I = 0, N = AlignNode->getNumOperands(); I < N; I++) {
