@@ -15760,7 +15760,7 @@ knows those logical layouts are lowered to the same physical layout:
     - `{ i32, i32, i32, i32 }`
     - `[ i32 x 4 ]`
 
-This means is is valid to lower the following code to either:
+This means it is valid to lower the following code to either:
 
 .. code-block:: llvm
 

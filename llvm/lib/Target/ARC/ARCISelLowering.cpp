@@ -236,6 +236,7 @@ SDValue ARCTargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ARCISD::GAWRAPPER, SDLoc(N), MVT::i32, GA);
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "ARCGenCallingConv.inc"
 
 //===----------------------------------------------------------------------===//

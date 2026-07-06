@@ -4644,7 +4644,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Function *CalledFunc = CI->getCalledFunction();
     auto PrintArgComment = [&](unsigned ArgNo) {
       const auto *ConstArg = dyn_cast<Constant>(CI->getArgOperand(ArgNo));
-      if (!ConstArg)
+      if (!ConstArg || !CalledFunc)
         return;
       std::string ArgComment;
       raw_string_ostream ArgCommentStream(ArgComment);
