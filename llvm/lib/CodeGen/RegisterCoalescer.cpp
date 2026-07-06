@@ -243,10 +243,10 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   /// Attempt to join these two intervals.  On failure, this
   /// returns false.  The output "SrcInt" will not have been modified, so we
   /// can use this information below to update aliases.
-  bool joinIntervals(CoalescerPair &CP);
+  bool joinIntervals(CoalescerPair &CP, bool &JoinSkippedHighCost);
 
   /// Attempt joining two virtual registers. Return true on success.
-  bool joinVirtRegs(CoalescerPair &CP);
+  bool joinVirtRegs(CoalescerPair &CP, bool &JoinSkippedHighCost);
 
   /// If a live interval has many valnos and is coalesced with other
   /// live intervals many times, we regard such live interval as having
@@ -2182,11 +2182,16 @@ bool RegisterCoalescer::joinCopy(
   ShrinkMask = LaneBitmask::getNone();
   ShrinkMainRange = false;
 
+  /// True if the last virtual-register join was rejected only because a live
+  /// interval crossed the high-cost threshold. Such copies should not be kept
+  /// for later retry unless another cheap transform can eliminate them now.
+  bool JoinSkippedHighCost = false;
+
   // Okay, attempt to join these two intervals.  On failure, this returns false.
   // Otherwise, if one of the intervals being joined is a physreg, this method
   // always canonicalizes DstInt to be it.  The output "SrcInt" will not have
   // been modified, so we can use this information below to update aliases.
-  if (!joinIntervals(CP)) {
+  if (!joinIntervals(CP, JoinSkippedHighCost)) {
     // Coalescing failed.
 
     // Try rematerializing the definition of the source if it is cheap.
@@ -2221,8 +2226,17 @@ bool RegisterCoalescer::joinCopy(
         return true;
 
     // Otherwise, we are unable to join the intervals.
-    LLVM_DEBUG(dbgs() << "\tInterference!\n");
-    Again = true; // May be possible to coalesce later.
+    LLVM_DEBUG(dbgs() << "\tInterference! ");
+    // A high-cost interval is already too expensive to retry.  Keeping the copy
+    // in WorkList would make every subsequent successful join rescan it again,
+    // which can dominate compile time.
+    if (JoinSkippedHighCost)
+      LLVM_DEBUG(
+          dbgs()
+          << " Not retrying because a high-cost live interval was reached.\n");
+    else
+      LLVM_DEBUG(dbgs() << " Will retry later.\n");
+    Again = !JoinSkippedHighCost; // May be possible to coalesce later.
     return false;
   }
 
@@ -3692,7 +3706,8 @@ bool RegisterCoalescer::isHighCostLiveInterval(LiveInterval &LI) {
   return true;
 }
 
-bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
+bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP,
+                                     bool &JoinSkippedHighCost) {
   SmallVector<VNInfo *, 16> NewVNInfo;
   LiveInterval &RHS = LIS->getInterval(CP.getSrcReg());
   LiveInterval &LHS = LIS->getInterval(CP.getDstReg());
@@ -3704,8 +3719,14 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
 
   LLVM_DEBUG(dbgs() << "\t\tRHS = " << RHS << "\n\t\tLHS = " << LHS << '\n');
 
-  if (isHighCostLiveInterval(LHS) || isHighCostLiveInterval(RHS))
+  if (isHighCostLiveInterval(LHS) || isHighCostLiveInterval(RHS)) {
+    JoinSkippedHighCost = true;
+    LLVM_DEBUG(dbgs() << "\t\tHigh-cost live interval: RHS valnos="
+                      << RHS.valnos.size() << ", segments=" << RHS.size()
+                      << "; LHS valnos=" << LHS.valnos.size()
+                      << ", segments=" << LHS.size() << '\n');
     return false;
+  }
 
   // First compute NewVNInfo and the simple value mappings.
   // Detect impossible conflicts early.
@@ -3872,8 +3893,10 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
   return true;
 }
 
-bool RegisterCoalescer::joinIntervals(CoalescerPair &CP) {
-  return CP.isPhys() ? joinReservedPhysReg(CP) : joinVirtRegs(CP);
+bool RegisterCoalescer::joinIntervals(CoalescerPair &CP,
+                                      bool &JoinSkippedHighCost) {
+  return CP.isPhys() ? joinReservedPhysReg(CP)
+                     : joinVirtRegs(CP, JoinSkippedHighCost);
 }
 
 void RegisterCoalescer::buildVRegToDbgValueMap(MachineFunction &MF) {
