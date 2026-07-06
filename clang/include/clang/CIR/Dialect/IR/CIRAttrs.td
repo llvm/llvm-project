@@ -1305,21 +1305,28 @@ def CIR_CXXSpecialMemberAttr : AnyAttrOf<[
 def CIR_FuncInfoAttr : CIR_Attr<"FuncInfo", "func_info"> {
   let summary = "Holds the source level identity of a function";
   let description = [{
-    Carries facts about the source declaration a function was emitted from,
-    precomputed during CIRGen while the AST is available. Passes that want
-    to reason about what the source calls read this attribute instead of
-    the AST.
+    Describes the source level entity a function represents, so that
+    transformations can recognize calls to well known library functions
+    without decoding mangled symbol names.
 
-    The `name` parameter holds the plain function name as written in the
-    source, without mangling, qualification, or template arguments.
-    Functions without a plain identifier, for example overloaded operators
-    and constructors, carry no attribute, and neither do static member
-    functions, so a free function and a static member with the same name
-    stay apart. The `in_std_namespace` parameter is true when the function
-    is declared directly in the `std` namespace, looking through inline
-    namespaces. For a member function the enclosing record decides. The
-    `instance_method` parameter is true for a member function that is not
-    static.
+    The `name` parameter holds the function name as written in the source,
+    without qualification, template arguments, or mangling.
+
+    The `in_std_namespace` parameter is true when the function belongs to
+    the `std` namespace. Membership follows the declaration rather than
+    the spelling at any use site. Inline namespaces, such as the
+    versioning namespace of libc++, are looked through, so a function
+    declared in `std::__1` counts as a member of `std`. Using declarations
+    and namespace aliases do not move a declaration, so they do not affect
+    the value either. For a member function the enclosing record decides.
+
+    The `instance_method` parameter is true for a member function that is
+    not static.
+
+    Functions without a plain identifier, such as overloaded operators and
+    constructors, carry no attribute, and neither do static member
+    functions, which keeps a static member apart from a free function of
+    the same name.
 
     Example:
     ```
