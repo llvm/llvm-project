@@ -183,6 +183,7 @@
 #include "llvm/CodeGen/StackFrameLayoutAnalysisPass.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/StackSlotColoring.h"
+#include "llvm/CodeGen/StaticDataAnnotator.h"
 #include "llvm/CodeGen/StaticDataSplitter.h"
 #include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
