@@ -1586,6 +1586,12 @@ void Sema::ActOnEndOfTranslationUnit() {
       Diag(Exported.NameLoc, diag::warn_failed_to_resolve_pragma) << "export";
   }
 
+  // Visit all pending #pragma map.
+  for (const PendingPragmaMapInfo &Mapped : PendingMappedNames.values()) {
+    if (!Mapped.Used)
+      Diag(Mapped.NameLoc, diag::warn_failed_to_resolve_pragma) << "map";
+  }
+
   if (LangOpts.HLSL)
     HLSL().ActOnEndOfTranslationUnit(getASTContext().getTranslationUnitDecl());
   if (LangOpts.OpenACC)

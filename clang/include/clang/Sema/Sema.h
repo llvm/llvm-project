@@ -2403,11 +2403,21 @@ public:
     bool Used;
   };
 
+  struct PendingPragmaMapInfo : public PendingPragmaInfo {
+    AsmLabelAttr *Attr; // The attribute to attach.
+  };
+
   llvm::DenseMap<IdentifierInfo *, PendingPragmaInfo> PendingExportedNames;
+
+  llvm::DenseMap<IdentifierInfo *, PendingPragmaMapInfo> PendingMappedNames;
 
   /// ActonPragmaExport - called on well-formed '\#pragma export'.
   void ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation ExportNameLoc,
                          Scope *curScope);
+
+  /// ActOnPragmaMap - called on well-formed '\#pragma map'.
+  void ActOnPragmaMap(IdentifierInfo *IdentId, SourceLocation NameLoc,
+                      Scope *curScope, const StringRef MappedName);
 
   /// Only called on function definitions; if there is a pragma in scope
   /// with the effect of a range-based optnone, consider marking the function
@@ -4034,6 +4044,7 @@ public:
   void warnOnCTypeHiddenInCPlusPlus(const NamedDecl *D);
 
   void ProcessPragmaExport(DeclaratorDecl *newDecl);
+  void ProcessPragmaMap(DeclaratorDecl *NewDecl);
 
   Decl *ActOnDeclarator(Scope *S, Declarator &D);
 

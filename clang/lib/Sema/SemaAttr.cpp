@@ -19,6 +19,8 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
+#include "llvm/Support/ConvertEBCDIC.h"
+
 #include <optional>
 using namespace clang;
 
@@ -1456,6 +1458,68 @@ void Sema::ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation NameLoc,
   }
   mergeVisibilityType(PrevDecl->getCanonicalDecl(), NameLoc,
                       VisibilityAttr::Default);
+}
+
+void Sema::ActOnPragmaMap(IdentifierInfo *IdentId, SourceLocation NameLoc,
+                          Scope *curScope, const StringRef MappedName) {
+  assert(!MappedName.empty());
+
+  // All identifiers must be in UTF-8.
+  // TODO Is this the right place for the conversion?.
+  llvm::SmallString<16> MappedNameUTF;
+  llvm::ConverterEBCDIC::convertToUTF8(MappedName, MappedNameUTF);
+
+  AttributeCommonInfo AttrInfo(IdentId, NameLoc,
+                               AttributeCommonInfo::Form::Pragma());
+  AsmLabelAttr *Attr =
+      AsmLabelAttr::CreateImplicit(Context, MappedNameUTF.str(), AttrInfo);
+
+  PendingPragmaMapInfo Info;
+  Info.NameLoc = NameLoc;
+  Info.Attr = Attr;
+  Info.Used = false;
+
+  NamedDecl *PrevDecl =
+      lookupExternCFunctionOrVariable(IdentId, NameLoc, curScope);
+  if (!PrevDecl) {
+    auto PendingName = PendingMappedNames.find(IdentId);
+    if (PendingName != PendingMappedNames.end()) {
+      auto &Info = PendingName->second;
+      if (!Info.Attr->isEquivalent(Attr)) {
+        Diag(NameLoc, diag::warn_pragma_different_asm_label) << IdentId;
+        return;
+      }
+    }
+    PendingMappedNames[IdentId] = Info;
+    return;
+  }
+
+  if (auto *FD = dyn_cast<FunctionDecl>(PrevDecl->getCanonicalDecl())) {
+    if (FD->hasBody()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied_to_used_symbol)
+          << "map" << PrevDecl;
+      return;
+    }
+  }
+
+  if (!PrevDecl->hasExternalFormalLinkage()) {
+    Diag(NameLoc, diag::warn_pragma_not_applied) << "map" << PrevDecl;
+    return;
+  }
+
+  if (AsmLabelAttr *PrevAsmLabel = PrevDecl->getAttr<AsmLabelAttr>()) {
+    if (!PrevAsmLabel->isEquivalent(Attr))
+      Diag(NameLoc, diag::warn_pragma_different_asm_label) << PrevDecl;
+    return;
+  }
+
+  if (PrevDecl->isUsed()) {
+    Diag(NameLoc, diag::warn_pragma_not_applied_to_used_symbol)
+        << "map" << PrevDecl;
+    return;
+  }
+
+  PrevDecl->addAttr(Attr);
 }
 
 typedef std::vector<std::pair<unsigned, SourceLocation> > VisStack;

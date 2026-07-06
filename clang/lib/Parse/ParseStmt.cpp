@@ -537,6 +537,11 @@ Retry:
     ProhibitAttributes(GNUAttrs);
     HandlePragmaExport();
     return StmtEmpty();
+  case tok::annot_pragma_map:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
+    HandlePragmaMap();
+    return StmtEmpty();
   }
 
   // If we reached this code, the statement must end in a semicolon.
@@ -1075,6 +1080,9 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
       break;
     case tok::annot_pragma_export:
       HandlePragmaExport();
+      break;
+    case tok::annot_pragma_map:
+      HandlePragmaMap();
       break;
     default:
       checkForPragmas = false;
