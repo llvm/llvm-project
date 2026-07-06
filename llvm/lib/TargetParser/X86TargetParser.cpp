@@ -245,7 +245,7 @@ static constexpr FeatureBitset FeaturesZNVER5 =
 
 static constexpr FeatureBitset FeaturesZNVER6 =
     FeaturesZNVER5 | FeatureAVXVNNIINT8 | FeatureAVX512FP16 | FeatureAVXIFMA |
-    FeatureAVXNECONVERT;
+    FeatureAVXNECONVERT | FeatureAVX512BMM;
 
 // Hygon architecture processors.
 constexpr FeatureBitset FeaturesC86_4G_M4 =
@@ -268,6 +268,9 @@ static constexpr FeatureBitset FeaturesC86_4G_M7 =
     FeatureAVX512VL | FeatureAVX512VNNI | FeatureAVX512VPOPCNTDQ | FeatureCLWB |
     FeatureCMOV | FeatureGFNI | FeatureVAES | FeatureVPCLMULQDQ |
     FeatureWBNOINVD;
+
+static constexpr FeatureBitset FeaturesC86_4G_M8 =
+    FeaturesC86_4G_M7 | FeatureSHSTK;
 
 // D151696 tranplanted Mangling and OnlyForCPUDispatchSpecific from
 // X86TargetParser.def to here. They are assigned by following ways:
@@ -459,6 +462,7 @@ constexpr EnumStringDef<ProcInfo> ProcessorDefs[] = {
   { {"c86-4g-m4"}, {CK_C86_4G_M4, FEATURE_AVX2, FeaturesC86_4G_M4 , '\0', false} },
   { {"c86-4g-m6"}, {CK_C86_4G_M6, FEATURE_AVX2, FeaturesC86_4G_M6 , '\0', false} },
   { {"c86-4g-m7"}, {CK_C86_4G_M7, FEATURE_AVX512VBMI2, FeaturesC86_4G_M7 , '\0', false} },
+  { {"c86-4g-m8"}, {CK_C86_4G_M8, FEATURE_AVX512VBMI2, FeaturesC86_4G_M8 , '\0', false} },
   // Generic 64-bit processor.
   { {"x86-64"}, {CK_x86_64, FEATURE_SSE2 , FeaturesX86_64, '\0', false} },
   { {"x86-64-v2"}, {CK_x86_64_v2, FEATURE_SSE4_2 , FeaturesX86_64_V2, '\0', false} },
@@ -612,6 +616,7 @@ constexpr FeatureBitset ImpliedFeaturesAVX512VL = FeatureAVX512F;
 
 constexpr FeatureBitset ImpliedFeaturesAVX512BF16 = FeatureAVX512BW;
 constexpr FeatureBitset ImpliedFeaturesAVX512BITALG = FeatureAVX512BW;
+constexpr FeatureBitset ImpliedFeaturesAVX512BMM = FeatureAVX512BW;
 constexpr FeatureBitset ImpliedFeaturesAVX512IFMA = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512VNNI = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512VPOPCNTDQ = FeatureAVX512F;

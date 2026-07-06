@@ -1,6 +1,5 @@
 // RUN: llvm-tblgen -gen-searchable-tables -I %p/../../include %s | FileCheck %s
 // RUN: not llvm-tblgen -gen-searchable-tables -I %p/../../include -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
-// XFAIL: vg_leak
 
 include "llvm/TableGen/SearchableTable.td"
 
@@ -237,4 +236,85 @@ def EEntryOddTable : GenericTable {
   let Fields = ["Value"];
   let PrimaryKey = ["Value"];
   let PrimaryKeyName = "lookupEEntryOddTableByValue";
+}
+
+// Test direct sparse lookup.
+
+// CHECK-LABEL: GET_FTable_DECL
+// CHECK: const FEntry *lookupFTableByKey(uint8_t Key);
+
+// CHECK-LABEL: GET_FTable_IMPL
+// CHECK: constexpr FEntry FTable[] = {
+// CHECK:   { 0x1, {} }, // 0
+// CHECK:   { 0x0, {} }, // 1
+// CHECK:   { 0x2, 0x14 }, // 2
+// CHECK:   { 0x0, {} }, // 3
+// CHECK:   { 0x0, {} }, // 4
+// CHECK:   { 0x5, 0x32 }, // 5
+// CHECK:   { 0x0, {} }, // 6
+// CHECK:   { 0x0, {} }, // 7
+// CHECK:   { 0x0, {} }, // 8
+// CHECK:   { 0x0, {} }, // 9
+// CHECK:   { 0x0, {} }, // 10
+// CHECK:   { 0x0, {} }, // 11
+// CHECK:   { 0x0, {} }, // 12
+// CHECK:   { 0x0, {} }, // 13
+// CHECK:   { 0x0, {} }, // 14
+// CHECK:   { 0x0, {} }, // 15
+// CHECK: };
+
+// CHECK: const FEntry *lookupFTableByKey(uint8_t Key) {
+// CHECK:   if (Key >= 16)
+// CHECK:     return nullptr;
+// CHECK:   const auto *Entry = &FTable[Key];
+// CHECK:   return Entry->Key == Key ? Entry : nullptr;
+// CHECK: }
+
+class FEntry<int key, int val> {
+  bits<4> Key = key;
+  bits<8> Val = val;
+}
+
+def FEntry2 : FEntry<2, 20>;
+def FEntry5 : FEntry<5, 50>;
+
+def FTable : GenericTable {
+  let FilterClass = "FEntry";
+  let Fields = ["Key", "Val"];
+  let PrimaryKey = ["Key"];
+  let PrimaryKeyName = "lookupFTableByKey";
+  let DisallowSparseTable = false;
+}
+
+// Check TableGen fallbacks to binary search when DisallowSparseTable = false
+// and a secondary search index is used.
+
+// CHECK-LABEL: GET_GTable_IMPL
+// CHECK: constexpr GEntry GTable[] = {
+// CHECK:   { 0x2, 0x14 }, // 0
+// CHECK:   { 0x5, 0x32 }, // 1
+// CHECK: };
+
+// CHECK: const GEntry *lookupGTableByKey(uint8_t Key) {
+// CHECK:   auto Idx = std::lower_bound(
+
+class GEntry<int key, int val> {
+  bits<4> Key = key;
+  bits<8> Val = val;
+}
+
+def GEntry2 : GEntry<2, 20>;
+def GEntry5 : GEntry<5, 50>;
+
+def GTable : GenericTable {
+  let FilterClass = "GEntry";
+  let Fields = ["Key", "Val"];
+  let PrimaryKey = ["Key"];
+  let PrimaryKeyName = "lookupGTableByKey";
+  let DisallowSparseTable = false;
+}
+
+def lookupGTableByVal : SearchIndex {
+  let Table = GTable;
+  let Key = ["Val"];
 }

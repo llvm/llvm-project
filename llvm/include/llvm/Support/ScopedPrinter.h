@@ -25,22 +25,6 @@
 
 namespace llvm {
 
-template <typename T> struct EnumEntry {
-  StringRef Name;
-  // While Name suffices in most of the cases, in certain cases
-  // GNU style and LLVM style of ELFDumper do not
-  // display same string for same enum. The AltName if initialized appropriately
-  // will hold the string that GNU style emits.
-  // Example:
-  // "EM_X86_64" string on LLVM style for Elf_Ehdr->e_machine corresponds to
-  // "Advanced Micro Devices X86-64" on GNU style
-  StringRef AltName;
-  T Value;
-  constexpr EnumEntry(StringRef N, StringRef A, T V)
-      : Name(N), AltName(A), Value(V) {}
-  constexpr EnumEntry(StringRef N, T V) : Name(N), AltName(N), Value(V) {}
-};
-
 struct HexNumber {
   // To avoid sign-extension we have to explicitly cast to the appropriate
   // unsigned type. The overloads are here so that every type that is implicitly
@@ -100,25 +84,6 @@ template <class T> std::string to_string(const T &Value) {
   return number;
 }
 
-template <typename T, typename TEnum>
-std::string enumToString(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
-  for (const EnumEntry<TEnum> &EnumItem : EnumValues)
-    if (EnumItem.Value == Value)
-      return std::string(EnumItem.AltName);
-  return utohexstr(Value, true);
-}
-
-/// Retrieves the Value's enum name.
-///
-/// Returns an empty StringRef when an invalid value is provided.
-template <typename T, typename TEnum>
-StringRef enumToStringRef(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
-  for (const EnumEntry<TEnum> &EnumItem : EnumValues)
-    if (EnumItem.Value == Value)
-      return EnumItem.AltName;
-  return "";
-}
-
 class LLVM_ABI ScopedPrinter {
 public:
   enum class ScopedPrinterKind {
@@ -169,25 +134,6 @@ public:
       printHex(Label, Value);
   }
 
-  template <typename T, typename TEnum>
-  void printEnum(StringRef Label, T Value,
-                 ArrayRef<EnumEntry<TEnum>> EnumValues) {
-    StringRef Name;
-    bool Found = false;
-    for (const auto &EnumItem : EnumValues) {
-      if (EnumItem.Value == Value) {
-        Name = EnumItem.Name;
-        Found = true;
-        break;
-      }
-    }
-
-    if (Found)
-      printHex(Label, Name, Value);
-    else
-      printHex(Label, Value);
-  }
-
   template <typename T, typename TFlag, unsigned NumStrs>
   void printFlags(StringRef Label, T Value, EnumStrings<TFlag, NumStrs> Flags,
                   TFlag EnumMask1 = {}, TFlag EnumMask2 = {},
@@ -209,34 +155,6 @@ public:
       if ((!IsEnum && (Value & Flag.value()) == Flag.value()) ||
           (IsEnum && (Value & EnumMask) == Flag.value())) {
         SetFlags.emplace_back(Flag.name(), Flag.value());
-      }
-    }
-
-    llvm::sort(SetFlags, &flagName);
-    printFlagsImpl(Label, hex(Value), SetFlags);
-  }
-
-  template <typename T, typename TFlag>
-  void printFlags(StringRef Label, T Value, ArrayRef<EnumEntry<TFlag>> Flags,
-                  TFlag EnumMask1 = {}, TFlag EnumMask2 = {},
-                  TFlag EnumMask3 = {}, ArrayRef<FlagEntry> ExtraFlags = {}) {
-    SmallVector<FlagEntry, 10> SetFlags(ExtraFlags);
-
-    for (const auto &Flag : Flags) {
-      if (Flag.Value == TFlag{})
-        continue;
-
-      TFlag EnumMask{};
-      if ((Flag.Value & EnumMask1) != TFlag{})
-        EnumMask = EnumMask1;
-      else if ((Flag.Value & EnumMask2) != TFlag{})
-        EnumMask = EnumMask2;
-      else if ((Flag.Value & EnumMask3) != TFlag{})
-        EnumMask = EnumMask3;
-      bool IsEnum = (Flag.Value & EnumMask) != TFlag{};
-      if ((!IsEnum && (Value & Flag.Value) == Flag.Value) ||
-          (IsEnum && (Value & EnumMask) == Flag.Value)) {
-        SetFlags.emplace_back(Flag.Name, Flag.Value);
       }
     }
 

@@ -2243,10 +2243,6 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Reverse, MVT::v8f16, {1, 2, 1, 2}}, // pshufb
       {TTI::SK_Reverse, MVT::v16i8, {1, 2, 1, 2}}, // pshufb
 
-      {TTI::SK_Select, MVT::v8i16, {3, 3, 3, 3}}, // 2*pshufb + por
-      {TTI::SK_Select, MVT::v8f16, {3, 3, 3, 3}}, // 2*pshufb + por
-      {TTI::SK_Select, MVT::v16i8, {3, 3, 3, 3}}, // 2*pshufb + por
-
       {TTI::SK_Splice, MVT::v4i32, {1, 1, 1, 1}}, // palignr
       {TTI::SK_Splice, MVT::v4f32, {1, 1, 1, 1}}, // palignr
       {TTI::SK_Splice, MVT::v8i16, {1, 1, 1, 1}}, // palignr
@@ -2286,9 +2282,9 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Select, MVT::v2i64, {1, 1, 1, 1}}, // movsd
       {TTI::SK_Select, MVT::v2f64, {1, 1, 1, 1}}, // movsd
       {TTI::SK_Select, MVT::v4i32, {2, 2, 2, 2}}, // 2*shufps
-      {TTI::SK_Select, MVT::v8i16, {3, 3, 3, 3}}, // pand + pandn + por
-      {TTI::SK_Select, MVT::v8f16, {3, 3, 3, 3}}, // pand + pandn + por
-      {TTI::SK_Select, MVT::v16i8, {3, 3, 3, 3}}, // pand + pandn + por
+      {TTI::SK_Select, MVT::v8i16, {2, 2, 3, 3}}, // pand + pandn + por
+      {TTI::SK_Select, MVT::v8f16, {2, 2, 3, 3}}, // pand + pandn + por
+      {TTI::SK_Select, MVT::v16i8, {2, 2, 3, 3}}, // pand + pandn + por
 
       {TTI::SK_Splice, MVT::v2i64, {1, 1, 1, 1}}, // shufpd
       {TTI::SK_Splice, MVT::v2f64, {1, 1, 1, 1}}, // shufpd

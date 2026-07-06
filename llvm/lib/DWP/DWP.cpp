@@ -17,12 +17,14 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DWP/DWPError.h"
 #include "llvm/DWP/ELFWriter.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include <limits>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -39,19 +41,29 @@ static uint64_t debugStrOffsetsHeaderSize(DataExtractor StrOffsetsData,
   return 8;    // unit length: 4 bytes, version: 2 bytes, padding: 2 bytes.
 }
 
-static uint64_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
+static Expected<uint64_t> getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
   uint64_t Offset = 0;
   DataExtractor AbbrevData(Abbrev, true);
-  while (AbbrevData.getULEB128(&Offset) != AbbrCode) {
+  while (AbbrevData.isValidOffset(Offset)) {
+    uint64_t Code = AbbrevData.getULEB128(&Offset);
+    if (Code == AbbrCode)
+      return Offset;
+    // A zero abbreviation code marks the end of the abbreviation table.
+    if (Code == 0)
+      break;
     // Tag
     AbbrevData.getULEB128(&Offset);
     // DW_CHILDREN
     AbbrevData.getU8(&Offset);
-    // Attributes
-    while (AbbrevData.getULEB128(&Offset) | AbbrevData.getULEB128(&Offset))
+    // Attribute specifications, terminated by a (0, 0) pair.
+    dwarf::Attribute Name;
+    dwarf::Form Form;
+    std::optional<int64_t> ImplicitConst;
+    while (readAbbrevAttribute(AbbrevData, &Offset, Name, Form, ImplicitConst))
       ;
   }
-  return Offset;
+  return make_error<DWPError>("abbrev code " + utostr(AbbrCode) +
+                              " not found in abbrev section");
 }
 
 static Expected<const char *>
@@ -107,18 +119,20 @@ getCUIdentifiers(InfoSectionUnitHeader &Header, StringRef Abbrev,
 
   uint32_t AbbrCode = InfoData.getULEB128(&Offset);
   DataExtractor AbbrevData(Abbrev, true);
-  uint64_t AbbrevOffset = getCUAbbrev(Abbrev, AbbrCode);
+  Expected<uint64_t> AbbrevOffsetOrErr = getCUAbbrev(Abbrev, AbbrCode);
+  if (!AbbrevOffsetOrErr)
+    return AbbrevOffsetOrErr.takeError();
+  uint64_t AbbrevOffset = *AbbrevOffsetOrErr;
   auto Tag = static_cast<dwarf::Tag>(AbbrevData.getULEB128(&AbbrevOffset));
   if (Tag != dwarf::DW_TAG_compile_unit)
     return make_error<DWPError>("top level DIE is not a compile unit");
   // DW_CHILDREN
   AbbrevData.getU8(&AbbrevOffset);
-  uint32_t Name;
+  dwarf::Attribute Name;
   dwarf::Form Form;
-  while ((Name = AbbrevData.getULEB128(&AbbrevOffset)) |
-             (Form = static_cast<dwarf::Form>(
-                  AbbrevData.getULEB128(&AbbrevOffset))) &&
-         (Name != 0 || Form != 0)) {
+  std::optional<int64_t> ImplicitConst;
+  while (readAbbrevAttribute(AbbrevData, &AbbrevOffset, Name, Form,
+                             ImplicitConst)) {
     switch (Name) {
     case dwarf::DW_AT_name: {
       Expected<const char *> EName = getIndexedString(
@@ -138,7 +152,8 @@ getCUIdentifiers(InfoSectionUnitHeader &Header, StringRef Abbrev,
       break;
     }
     case dwarf::DW_AT_GNU_dwo_id:
-      Header.Signature = InfoData.getU64(&Offset);
+      Header.Signature = ImplicitConst ? static_cast<uint64_t>(*ImplicitConst)
+                                       : InfoData.getU64(&Offset);
       break;
     default:
       DWARFFormValue::skipValue(
