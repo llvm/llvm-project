@@ -1766,6 +1766,11 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   if (Opts.XCOFFReadOnlyPointers)
     GenerateArg(Consumer, OPT_mxcoff_roptr);
 
+  if (Opts.getZOSPPA1Name() == CodeGenOptions::ZOSPPA1NameKind::Emit)
+    GenerateArg(Consumer, OPT_mzos_ppa1_name);
+  else if (Opts.getZOSPPA1Name() == CodeGenOptions::ZOSPPA1NameKind::NoEmit)
+    GenerateArg(Consumer, OPT_mno_zos_ppa1_name);
+
   if (!Opts.OptRecordPasses.empty())
     GenerateArg(Consumer, OPT_opt_record_passes, Opts.OptRecordPasses);
 
@@ -2191,6 +2196,16 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     if (!T.isOSAIX() || T.isPPC32())
       Diags.Report(diag::err_drv_unsupported_opt_for_target)
         << A->getSpelling() << T.str();
+  }
+
+  if (T.isOSzOS()) {
+    if (const Arg *A =
+            Args.getLastArg(OPT_mzos_ppa1_name, OPT_mno_zos_ppa1_name)) {
+      if (A->getOption().matches(OPT_mzos_ppa1_name))
+        Opts.setZOSPPA1Name(CodeGenOptions::ZOSPPA1NameKind::Emit);
+      else
+        Opts.setZOSPPA1Name(CodeGenOptions::ZOSPPA1NameKind::NoEmit);
+    }
   }
 
   bool NeedLocTracking = false;
@@ -3822,11 +3837,6 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   if (Opts.IgnoreXCOFFVisibility)
     GenerateArg(Consumer, OPT_mignore_xcoff_visibility);
 
-  if (Opts.getZOSPPA1Name() == LangOptions::ZOSPPA1NameKind::Emit)
-    GenerateArg(Consumer, OPT_mzos_ppa1_name);
-  else if (Opts.getZOSPPA1Name() == LangOptions::ZOSPPA1NameKind::NoEmit)
-    GenerateArg(Consumer, OPT_mno_zos_ppa1_name);
-
   if (Opts.SignedOverflowBehavior == LangOptions::SOB_Trapping) {
     GenerateArg(Consumer, OPT_ftrapv);
     GenerateArg(Consumer, OPT_ftrapv_handler, Opts.OverflowHandler);
@@ -4245,16 +4255,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   if (T.isOSAIX() && (Args.hasArg(OPT_mignore_xcoff_visibility)))
     Opts.IgnoreXCOFFVisibility = 1;
-
-  if (T.isOSzOS()) {
-    if (const Arg *A =
-            Args.getLastArg(OPT_mzos_ppa1_name, OPT_mno_zos_ppa1_name)) {
-      if (A->getOption().matches(OPT_mzos_ppa1_name))
-        Opts.setZOSPPA1Name(LangOptions::ZOSPPA1NameKind::Emit);
-      else
-        Opts.setZOSPPA1Name(LangOptions::ZOSPPA1NameKind::NoEmit);
-    }
-  }
 
   if (Args.hasArg(OPT_ftrapv)) {
     Opts.setSignedOverflowBehavior(LangOptions::SOB_Trapping);

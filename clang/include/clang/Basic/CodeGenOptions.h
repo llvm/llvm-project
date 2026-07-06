@@ -240,6 +240,13 @@ public:
     NonStrictDefault = NonZero
   };
 
+  enum class ZOSPPA1NameKind {
+    Default, /// Optimization for size level decides whether to
+             /// emit the function name in PPA1 on z/OS.
+    Emit,    /// Emit the function name in PPA1 on z/OS.
+    NoEmit,  /// Do not emit the function name in PPA1 on z/OS.
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 

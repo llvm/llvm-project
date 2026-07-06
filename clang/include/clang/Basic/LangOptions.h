@@ -451,16 +451,6 @@ public:
     Microsoft = 2,
   };
 
-  enum class ZOSPPA1NameKind {
-    /// Optimization for size level decides whether to emit the function name
-    /// in PPA1 on z/OS.
-    Default,
-    /// Emit the function name in PPA1 on z/OS.
-    Emit,
-    /// Do not emit the function name in PPA1 on z/OS.
-    NoEmit,
-  };
-
   // Define simple language options (with no accessors).
 #define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
   unsigned Name : Bits;
