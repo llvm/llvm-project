@@ -370,10 +370,7 @@ bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
       }
 
       if (VPBlockUtils::isLatch(VPBB, VPDT)) {
-        auto BranchTerminator =
-            m_CombineOr(m_BranchOnCond(),
-                        m_CombineOr(m_BranchOnCount(), m_BranchOnTwoConds()));
-        if (!match(VPBB->getTerminator(), BranchTerminator)) {
+        if (!match(VPBB->getTerminator(), m_Branch())) {
           errs() << "Latch block must have a branch terminator!\n";
           return false;
         }
@@ -506,9 +503,7 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   }
 
   auto *LastInst = dyn_cast<VPInstruction>(std::prev(Exiting->end()));
-  if (!match(LastInst, m_CombineOr(m_BranchOnCond(),
-                                   m_CombineOr(m_BranchOnCount(),
-                                               m_BranchOnTwoConds())))) {
+  if (!match(LastInst, m_Branch())) {
     errs() << "VPlan vector loop exit must end with BranchOnCount, "
               "BranchOnCond, or BranchOnTwoConds VPInstruction\n";
     return false;
