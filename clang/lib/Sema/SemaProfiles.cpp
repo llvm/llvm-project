@@ -730,20 +730,35 @@ enum class UninitStorage { Initialized, Uninitialized, Unknown };
 // DropTopLevelUninit: a *directly named* [[uninit]] entity does not count as
 // uninitialized. A value access of such an entity is the flow-based passes'
 // responsibility (the CFG uninit_read pass and the ctor-body pass credit
-// assignments), so the read-through check must not second-guess them. The
-// flag is cleared at the first subobject step (member access, array element),
-// where no flow pass tracks the storage; only indirection through a
-// [[ref_to_uninit]] pointer/reference and below-top-level markers still count.
+// assignments), so the read-through check must not second-guess them -- and
+// for a store, writing the whole named entity IS its initialization (paper
+// §4.5: for a built-in type, a write is its initialization). The flag is
+// cleared at the first subobject step (member access, array element), where
+// no flow pass tracks the storage and only whole-object construct_at could
+// re-initialize (paper §5.4).
+//
+// TrustRefToUninit: [[ref_to_uninit]] markers are ignored -- the storage
+// reached through a marked pointer/reference (or returned by a marked
+// function) classifies as Unknown rather than Uninitialized. Stores use this:
+// a scalar write through the marker is the pointee's initialization (paper
+// §4.5), and verifying class-type writes (construct_at) is a deferred slice,
+// so a store through the marker must be neither banned nor endorsed.
 struct UninitAccessOpts {
   bool DropTopLevelUninit = false;
+  bool TrustRefToUninit = false;
 
-  UninitAccessOpts withoutTopLevelDrop() const { return {}; }
+  UninitAccessOpts withoutTopLevelDrop() const {
+    return {false, TrustRefToUninit};
+  }
 };
 
-// Presets: a binding source (markers count everywhere) and a value read (the
-// top-level drop applies).
+// Presets: a binding source (markers count everywhere), a value read (the
+// top-level drop applies), and a scalar store (additionally, storage reached
+// through [[ref_to_uninit]] is trusted).
 constexpr UninitAccessOpts UninitBindAccess{};
 constexpr UninitAccessOpts UninitReadAccess{/*DropTopLevelUninit=*/true};
+constexpr UninitAccessOpts UninitWriteAccess{/*DropTopLevelUninit=*/true,
+                                             /*TrustRefToUninit=*/true};
 
 // Combine the arms of a conditional: Uninitialized dominates (either arm may be
 // taken), then Unknown, else Initialized.
@@ -795,13 +810,18 @@ classifyUninitPassThrough(const Expr *E, UninitStorage EmptyListState,
 }
 
 // A call to a [[ref_to_uninit]]-returning function yields uninitialized
-// storage (the pointed-to memory, or the returned referent). An unmarked
-// direct callee is trusted Initialized (paper §4.3); a call with no direct
-// callee (through a function pointer) is Unknown. Shared by both recognizers.
-static UninitStorage classifyRefToUninitCallee(const CallExpr *CE) {
-  if (const FunctionDecl *FD = CE->getDirectCallee())
-    return FD->hasAttr<RefToUninitAttr>() ? UninitStorage::Uninitialized
-                                          : UninitStorage::Initialized;
+// storage (the pointed-to memory, or the returned referent) -- deferred to
+// Unknown when the marker is trusted (a store). An unmarked direct callee is
+// trusted Initialized (paper §4.3); a call with no direct callee (through a
+// function pointer) is Unknown. Shared by both recognizers.
+static UninitStorage classifyRefToUninitCallee(const CallExpr *CE,
+                                               UninitAccessOpts Opts) {
+  if (const FunctionDecl *FD = CE->getDirectCallee()) {
+    if (!FD->hasAttr<RefToUninitAttr>())
+      return UninitStorage::Initialized;
+    return Opts.TrustRefToUninit ? UninitStorage::Unknown
+                                 : UninitStorage::Uninitialized;
+  }
   return UninitStorage::Unknown;
 }
 
@@ -835,13 +855,17 @@ pointerRefersToUninitStorage(ASTContext &Ctx, const Expr *E,
     if (UO->getOpcode() == UO_AddrOf)
       return glvalueDenotesUninitStorage(Ctx, UO->getSubExpr(), Opts);
 
-  // A value of a [[ref_to_uninit]] pointer is Uninitialized; an unmarked
-  // named pointer is a trusted Initialized pointer (paper §4.3).
-  if (const ValueDecl *VD = SemaProfiles::getDirectlyNamedDecl(E))
-    return VD->hasAttr<RefToUninitAttr>() ? UninitStorage::Uninitialized
-                                          : UninitStorage::Initialized;
+  // A value of a [[ref_to_uninit]] pointer is Uninitialized (Unknown when the
+  // marker is trusted); an unmarked named pointer is a trusted Initialized
+  // pointer (paper §4.3).
+  if (const ValueDecl *VD = SemaProfiles::getDirectlyNamedDecl(E)) {
+    if (!VD->hasAttr<RefToUninitAttr>())
+      return UninitStorage::Initialized;
+    return Opts.TrustRefToUninit ? UninitStorage::Unknown
+                                 : UninitStorage::Uninitialized;
+  }
   if (const auto *CE = dyn_cast<CallExpr>(E))
-    return classifyRefToUninitCallee(CE);
+    return classifyRefToUninitCallee(CE, Opts);
 
   // A default-initialized new-expression (none init style: no initializer
   // written) whose allocated type's default-initialization leaves a scalar
@@ -898,7 +922,8 @@ static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E,
   // counts.
   auto DeclDenotesUninit = [&](const ValueDecl *VD) {
     return (!Opts.DropTopLevelUninit && VD->hasAttr<UninitAttr>()) ||
-           (VD->getType()->isReferenceType() && VD->hasAttr<RefToUninitAttr>());
+           (!Opts.TrustRefToUninit && VD->getType()->isReferenceType() &&
+            VD->hasAttr<RefToUninitAttr>());
   };
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
     return DeclDenotesUninit(DRE->getDecl()) ? UninitStorage::Uninitialized
@@ -924,7 +949,7 @@ static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E,
   // A call to a [[ref_to_uninit]]-returning reference function: the referent
   // it returns is uninitialized.
   if (const auto *CE = dyn_cast<CallExpr>(E))
-    return classifyRefToUninitCallee(CE);
+    return classifyRefToUninitCallee(CE, Opts);
   if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
     return pointerRefersToUninitStorage(Ctx, ASE->getBase(), Opts);
 
