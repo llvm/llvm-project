@@ -511,9 +511,9 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
 }
 
 // Encourage placing FORM_TRANSPOSED_REG immediately before the instruction that
-// uses/consumes it. This ensures it has a short live range, which means we're
-// more likely to allocate registers its operands first (which works best for
-// the hints in AArch64RegisterInfo::getRegAllocationHints).
+// uses/consumes it. This ensures its def has a short live range, which means
+// we're more likely to allocate registers its operands first (which works best
+// for the hints in AArch64RegisterInfo::getRegAllocationHints).
 static bool scheduleFormTransposedTupleAdjacentToUsers(
     const TargetInstrInfo &TII, const TargetSubtargetInfo &TSI,
     const MachineInstr *FirstMI, const MachineInstr &SecondMI) {
