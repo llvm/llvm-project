@@ -517,7 +517,8 @@ TEST(DynamicDebugging, DiscardableGlobal) {
   GlobalVariable *DiscardableUsed = M->getGlobalVariable("discardable_used");
   ASSERT_TRUE(DiscardableUsed);
 
-  // Expect to see @llvm.compiler.used = appending global [1 x ptr] [ptr @discardable_used].
+  // Expect to see:
+  // @llvm.compiler.used = appending global [1 x ptr] [ptr @discardable_used].
   EXPECT_EQ(CompilerUsedArr->getNumOperands(), 1u);
   EXPECT_TRUE(llvm::find(CompilerUsedArr->operands(), DiscardableUsed));
 }
