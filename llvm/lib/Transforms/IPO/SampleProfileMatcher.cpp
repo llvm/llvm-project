@@ -386,10 +386,12 @@ void SampleProfileMatcher::runStaleProfileMatching(
       if (ProfAnchor == ProfileAnchors.end())
         continue;
       ProfId = ProfAnchor->second;
-      FuncProfileMatchCache[{IRFunc, ProfId}] = true;
-      FuncToProfileNameMap[Callee] = ProfId;
-      LLVM_DEBUG(dbgs() << "Function:" << IRFunc->getName()
-                        << " matches profile:" << ProfId << "\n");
+      if (IRFunc->getName() != ProfId.stringRef()) {
+        FuncProfileMatchCache[{IRFunc, ProfId}] = true;
+        FuncToProfileNameMap[Callee] = ProfId;
+        LLVM_DEBUG(dbgs() << "Function:" << IRFunc->getName()
+                          << " matches profile:" << ProfId << "\n");
+      }
     }
 
     // Conflicting profile previously matched
@@ -416,7 +418,13 @@ void SampleProfileMatcher::runStaleProfileMatching(
       FunctionSamples &NewFS = FlattenedProfiles.create(NewProfId);
       NewFS.merge(*FSForMatching);
       FuncToProfileNameMap[IRFunc] = NewProfId;
+      FuncProfileMatchCache[{IRFunc, ProfId}] = false;
       FuncProfileMatchCache[{IRFunc, NewProfId}] = true;
+
+      LLVM_DEBUG(dbgs() << "Function:" << Callee->getName()
+                        << " encounters conflicting profile matchings, "
+                           "remapping to new profile:"
+                        << NewAnchor << "\n");
 
       // Update profile in the sample profile reader
       SampleProfileMap &Profiles = Reader.getProfiles();
@@ -685,7 +693,7 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
   }
 
   // Count profile mismatches for profile staleness report.
-  for (const auto &F : M) {
+  for (auto &F : M) {
     if (skipProfileForFunction(F))
       continue;
     // As the stats will be merged by linker, skip reporting the metrics for
