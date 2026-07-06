@@ -47,4 +47,38 @@ exit:
   ret void
 }
 
+; Classic trivial unswitch: a convergent op runs in the header BEFORE a
+; loop-invariant *exit* branch. Hoisting the branch to the preheader would skip
+; the header (and the convergent op) whenever the invariant condition exits, so
+; @conv would run 0 times instead of once. This case predates the latch-redirect
+; form above; the branch must stay in the loop.
+
+define void @classic_exit_branch_convergent(i1 %cond, i32 %n) {
+; CHECK-LABEL: define void @classic_exit_branch_convergent(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label %header
+; CHECK:       header:
+; CHECK:         call i32 @conv(
+; CHECK:         br i1 %cond, label %exit, label %body
+; CHECK-NOT:     .split
+entry:
+  br label %header
+
+header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
+  %c = call i32 @conv(i32 %iv)
+  br i1 %cond, label %exit, label %body
+
+body:
+  br label %latch
+
+latch:
+  %iv.next = add i32 %iv, 1
+  %done = icmp eq i32 %iv.next, %n
+  br i1 %done, label %exit, label %header
+
+exit:
+  ret void
+}
+
 attributes #0 = { convergent nounwind willreturn memory(none) }

@@ -549,16 +549,31 @@ static Loop *getTopMostExitingLoop(const BasicBlock *ExitBB,
   return TopMost;
 }
 
-/// Check if a loop contains convergent or token operations.
-static bool loopContainsConvergentOrTokenOp(const Loop &L) {
-  for (const auto *BB : L.blocks())
-    for (const auto &I : *BB) {
-      if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
-        return true;
+/// Check whether any instruction that dominates \p BI within the loop is
+/// convergent. Trivially unswitching \p BI hoists it to the preheader, so on
+/// the unswitched-out path those instructions no longer execute. Since this is
+/// only called on trivial unswitch candidates, we can expect the path from
+/// header to branch to be a straight-line chain, thus walking the dominator
+/// tree is sufficient.
+static bool hasConvergentOpBeforeBranch(const Loop &L, const Instruction &BI,
+                                        const DominatorTree &DT) {
+  const BasicBlock *Header = L.getHeader();
+  const BasicBlock *BB = BI.getParent();
+  while (true) {
+    for (const Instruction &I : *BB) {
+      if (&I == &BI)
+        break;
       if (const auto *CB = dyn_cast<CallBase>(&I))
         if (CB->isConvergent())
           return true;
     }
+    if (BB == Header)
+      break;
+    auto *Node = DT.getNode(BB);
+    if (!Node || !Node->getIDom())
+      break;
+    BB = Node->getIDom()->getBlock();
+  }
   return false;
 }
 
@@ -605,6 +620,15 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
     }
   }
 
+  // Any instruction that currently executes before the branch is skipped on the
+  // unswitched-out path. Bail if such an instruction is convergent, as that
+  // would change whether it executes.
+  if (hasConvergentOpBeforeBranch(L, BI, DT)) {
+    LLVM_DEBUG(
+        dbgs() << "   Convergent/token op before branch; can't unswitch!\n");
+    return false;
+  }
+
   std::optional<int> LatchIdx = std::nullopt;
   auto *LoopLatch = L.getLoopLatch();
   auto *ULExit = L.getUniqueLatchExitBlock();
@@ -616,14 +640,16 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   }
 
   bool ModifiedBranch = false;
-  // we can't redirect the branch to the exit block if the loop latch has side
-  // effects or if the loop exit PHIs are not loop invariant. We also can't
-  // redirect the branch to the exit block if the loop contains convergent or
-  // token operations, as this would violate the semantics of those operations.
+  // Redirecting the latch edge to the exit block will cause us to skip latch
+  // instructions. This can only be done if the latch instructions don't have
+  // side effects and don't have any convergent instructions.
   if (LatchIdx && areLoopExitPHIsLoopInvariant(L, *LoopLatch, *ULExit) &&
-      !llvm::any_of(*LoopLatch,
-                    [](Instruction &I) { return I.mayHaveSideEffects(); }) &&
-      !loopContainsConvergentOrTokenOp(L)) {
+      !llvm::any_of(*LoopLatch, [](Instruction &I) {
+        if (const auto *CB = dyn_cast<CallBase>(&I))
+          if (CB->isConvergent())
+            return true;
+        return I.mayHaveSideEffects();
+      })) {
 
     // We need to prove the loop is finite, otherwise this change will convert
     // it to a finite loop. This conservative check is good enough as we are
@@ -3404,8 +3430,16 @@ static bool collectUnswitchCandidatesWithInjections(
 static bool isSafeForNoNTrivialUnswitching(Loop &L, LoopInfo &LI) {
   if (!L.isSafeToClone())
     return false;
-  if (loopContainsConvergentOrTokenOp(L))
-    return false;
+  for (auto *BB : L.blocks())
+    for (auto &I : *BB) {
+      if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
+        return false;
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        assert(!CB->cannotDuplicate() && "Checked by L.isSafeToClone().");
+        if (CB->isConvergent())
+          return false;
+      }
+    }
 
   // Check if there are irreducible CFG cycles in this loop. If so, we cannot
   // easily unswitch non-trivial edges out of the loop. Doing so might turn the
