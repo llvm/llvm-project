@@ -77,12 +77,12 @@ public:
     if (!fir::isBoxAddress(lhs.getType()))
       return rewriter.notifyMatchFailure(assign, "LHS is not a box address");
 
-    // If the LHS allocatable is pinned, its (re)allocation must go through the
+    // If the LHS allocatable is non-default, its (re)allocation must go through the
     // flang runtime so the allocator recorded in the descriptor is honored.
     if (mlir::Operation *lhsDef = assign.getLhs().getDefiningOp())
-      if (cuf::hasDataAttr(lhsDef, cuf::DataAttribute::Pinned))
+      if (cuf::getDataAttr(lhsDef))
         return rewriter.notifyMatchFailure(
-            assign, "LHS uses a pinned allocator; keep runtime realloc");
+            assign, "LHS uses a non-default allocator; keep runtime realloc");
 
     mlir::Location loc = assign->getLoc();
     fir::FirOpBuilder builder(rewriter, assign.getOperation());
