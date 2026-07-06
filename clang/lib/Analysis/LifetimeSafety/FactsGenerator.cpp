@@ -399,6 +399,17 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
     killAndFlowOrigin(*UO, *SubExpr);
     return;
   }
+  case UO_Plus: {
+    // Unary plus on a pointer is the identity (`+p == p`), so the prvalue
+    // result carries the operand's loans. Flow the operand's rvalue origins
+    // (peeling storage only when the operand is itself a glvalue).
+    if (!UO->getType()->isPointerType())
+      return;
+    const Expr *SubExpr = UO->getSubExpr();
+    flow(getOriginsList(*UO),
+         getRValueOrigins(SubExpr, getOriginsList(*SubExpr)), /*Kill=*/true);
+    return;
+  }
   case UO_PreInc:
   case UO_PostInc:
   case UO_PreDec:

@@ -14282,6 +14282,10 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
     bool operator ==(SDValue OtherVec) { return Vec == OtherVec; }
   };
 
+  auto IsNeonSized = [](EVT VT) {
+    return VT.is128BitVector() || VT.is64BitVector();
+  };
+
   // First gather all vectors used as an immediate source for this BUILD_VECTOR
   // node.
   SmallVector<ShuffleSourceInfo, 2> Sources;
@@ -14291,11 +14295,11 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
       continue;
     else if (V.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
              !isa<ConstantSDNode>(V.getOperand(1)) ||
-             V.getOperand(0).getValueType().isScalableVector()) {
+             !IsNeonSized(V->getOperand(0).getValueType())) {
       LLVM_DEBUG(
           dbgs() << "Reshuffle failed: "
                     "a shuffle can only come from building a vector from "
-                    "various elements of other fixed-width vectors, provided "
+                    "various elements of other NEON-sized vectors, provided "
                     "their indices are constant\n");
       return SDValue();
     }
@@ -21971,6 +21975,62 @@ performExtractLastActiveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                      Vec);
 }
 
+static bool hasSVEMultiVectorOps(const AArch64Subtarget *Subtarget) {
+  return (Subtarget->isSVEorStreamingSVEAvailable() &&
+          Subtarget->hasSVE2p1()) ||
+         (Subtarget->isStreaming() && Subtarget->hasSME2());
+}
+
+static auto m_PredicateAsCounterWhile() {
+  using namespace llvm::SDPatternMatch;
+  return m_AnyOf(m_SpecificOpc(AArch64ISD::WHILEGE_PRED_COUNTER),
+                 m_SpecificOpc(AArch64ISD::WHILEGT_PRED_COUNTER),
+                 m_SpecificOpc(AArch64ISD::WHILELT_PRED_COUNTER),
+                 m_SpecificOpc(AArch64ISD::WHILELE_PRED_COUNTER),
+                 m_SpecificOpc(AArch64ISD::WHILEHS_PRED_COUNTER),
+                 m_SpecificOpc(AArch64ISD::WHILEHI_PRED_COUNTER),
+                 m_SpecificOpc(AArch64ISD::WHILELO_PRED_COUNTER),
+                 m_SpecificOpc(AArch64ISD::WHILELS_PRED_COUNTER));
+}
+
+/// Folds extracting the first lane from the first segment of a
+/// predicate-as-counter while to a conditional set (CSET) based on the
+/// "FIRST_ACTIVE" status flag from the while.
+///
+///   %while, %flags = WHILE_*_PRED_COUNTER .. ; predicate-as-counter while
+///   %first.segment = pext(%while, 0) ; predicate extract of segment 0
+///   %first.active = extract_elt(%first.segment, 0) ; extract first lane
+///
+///   ->
+///
+///   %while, %flags = WHILE_*_PRED_COUNTER .. ; predicate-as-counter while
+///   %first.active = cset(%flags, FIRST_ACTIVE)
+static SDValue
+perfomPextFirstTrueVectorCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const AArch64Subtarget *Subtarget) {
+  using namespace llvm::SDPatternMatch;
+  assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT);
+  if (DCI.isBeforeLegalize() || !hasSVEMultiVectorOps(Subtarget))
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N0.getValueType();
+
+  if (!VT.isScalableVectorOf(MVT::i1) || !isNullConstant(N->getOperand(1)))
+    return SDValue();
+
+  if (!sd_match(N0, m_IntrinsicWOChain<Intrinsic::aarch64_sve_pext>(
+                        m_PredicateAsCounterWhile(), m_Zero())))
+    return SDValue();
+
+  // Fold: extract_elt(pext(WHILE_*_PRED_COUNTER:0, 0), 0)
+  // to cset(WHILE_*_PRED_COUNTER:1, FIRST_ACTIVE).
+  SDValue WhilePredCounter = N0->getOperand(1);
+  SDValue Flags = SDValue(WhilePredCounter.getNode(), 1);
+  return getSETCC(AArch64CC::CondCode::FIRST_ACTIVE, Flags, SDLoc(N), DCI.DAG);
+}
+
 static SDValue
 performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                const AArch64Subtarget *Subtarget) {
@@ -21980,6 +22040,8 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (SDValue Res = performLastTrueTestVectorCombine(N, DCI, Subtarget))
     return Res;
   if (SDValue Res = performExtractLastActiveCombine(N, DCI, Subtarget))
+    return Res;
+  if (SDValue Res = perfomPextFirstTrueVectorCombine(N, DCI, Subtarget))
     return Res;
 
   SelectionDAG &DAG = DCI.DAG;
@@ -25940,6 +26002,12 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   SDValue Op1 = N->getOperand(1);
   EVT ResVT = N->getValueType(0);
 
+  // UZP is used to lower insert_subvector quite early. When later DAG combines
+  // run, it's possible to actually end up with an insert of UNDEF into UNDEF,
+  // i.e. UZP1 UNDEF, UNDEF.
+  if (Op0.isUndef() && Op1.isUndef())
+    return DAG.getUNDEF(ResVT);
+
   // uzp(extract_lo(x), extract_hi(x)) -> extract_lo(uzp x, x)
   if (Op0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       Op1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
@@ -29171,11 +29239,17 @@ static SDValue performDUPCombine(SDNode *N,
 
 /// Get rid of unnecessary NVCASTs (that don't change the type).
 static SDValue performNVCASTCombine(SDNode *N, SelectionDAG &DAG) {
-  if (N->getValueType(0) == N->getOperand(0).getValueType())
-    return N->getOperand(0);
-  if (N->getOperand(0).getOpcode() == AArch64ISD::NVCAST)
-    return DAG.getNode(AArch64ISD::NVCAST, SDLoc(N), N->getValueType(0),
-                       N->getOperand(0).getOperand(0));
+  EVT VT = N->getValueType(0);
+  SDValue Op = N->getOperand(0);
+
+  if (VT == Op.getValueType())
+    return Op;
+
+  if (Op.isUndef())
+    return DAG.getUNDEF(VT);
+
+  if (Op.getOpcode() == AArch64ISD::NVCAST)
+    return DAG.getNode(AArch64ISD::NVCAST, SDLoc(N), VT, Op.getOperand(0));
 
   return SDValue();
 }
@@ -32041,8 +32115,9 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
     Value *LoHi =
         Builder.CreateIntrinsic(Int, Addr, /*FMFSource=*/nullptr, "lohi");
 
-    Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
-    Value *Hi = Builder.CreateExtractValue(LoHi, 1, "hi");
+    unsigned LoPos = Subtarget->isLittleEndian() ? 0 : 1;
+    Value *Lo = Builder.CreateExtractValue(LoHi, LoPos, "lo");
+    Value *Hi = Builder.CreateExtractValue(LoHi, 1 - LoPos, "hi");
 
     auto *Int128Ty = Type::getInt128Ty(Builder.getContext());
     Lo = Builder.CreateZExt(Lo, Int128Ty, "lo64");
@@ -32093,7 +32168,10 @@ Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
     Value *Lo = Builder.CreateTrunc(CastVal, Int64Ty, "lo");
     Value *Hi =
         Builder.CreateTrunc(Builder.CreateLShr(CastVal, 64), Int64Ty, "hi");
-    return Builder.CreateCall(Stxr, {Lo, Hi, Addr});
+    if (Subtarget->isLittleEndian())
+      return Builder.CreateCall(Stxr, {Lo, Hi, Addr});
+    else
+      return Builder.CreateCall(Stxr, {Hi, Lo, Addr});
   }
 
   Intrinsic::ID Int =
