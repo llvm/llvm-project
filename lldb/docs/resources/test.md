@@ -476,7 +476,7 @@ An overview of all LLDB builders can be found here:
 [https://lab.llvm.org/buildbot/#/builders?tags=lldb](https://lab.llvm.org/buildbot/#/builders?tags=lldb)
 
 Building and testing for macOS uses a different platform called GreenDragon. It
-has a dedicated tab for LLDB: [https://green.lab.llvm.org/job/llvm.org/view/LLDB/](https://green.lab.llvm.org/job/llvm.org/view/LLDB/)
+has a dedicated tab for LLDB: [https://ci.swift.org/view/all/job/llvm.org/view/LLDB/](https://ci.swift.org/view/all/job/llvm.org/view/LLDB/)
 
 ## Running The Tests
 
