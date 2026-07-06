@@ -6916,8 +6916,7 @@ struct DefaultedFunctionFPFeaturesRAII {
   DefaultedFunctionFPFeaturesRAII(Sema &S, FunctionDecl *FD)
       : SavedFPFeatures(S) {
     auto *Info = FD->getDefaultedOrDeletedInfo();
-    FPOptionsOverride FPO =
-        Info ? Info->getFPFeatures() : FPOptionsOverride();
+    FPOptionsOverride FPO = Info ? Info->getFPFeatures() : FPOptionsOverride();
     S.CurFPFeatures = FPO.applyOverrides(S.LangOpts);
     S.FpPragmaStack.CurrentValue = FPO;
   }
