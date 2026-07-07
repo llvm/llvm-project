@@ -13219,11 +13219,11 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
     // (legal) vector one by one, or concat_vectors with additional
     // operands to pad to legal type. The first way seems to lead to
     // worse codegen primarily because we don't run DAGCombiner to
-    // simplify stuffs before some of the insert_subvector got
-    // lower into vslideup/down prematurely.
+    // simplify stuff before some of the insert_subvector get
+    // lowered into vslideup/down prematurely.
     EVT ConcatVecEVT = EVT(VecVT).changeVectorElementCount(
         *DAG.getContext(), OrigEC.multiplyCoefficientBy(Factor));
-    SmallVector<SDValue, 8> ConcatOps(Op->op_begin(), Op->op_end());
+    SmallVector<SDValue, 8> ConcatOps(Op->ops());
     MVT ConcatVecVT;
     if (!isTypeLegal(ConcatVecEVT)) {
       // SplitVector should already be handled above.
@@ -13257,7 +13257,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
     for (unsigned i = 0U; i < Factor; ++i) {
       ElementCount Idx = ContainerEC.multiplyCoefficientBy(i);
       // Index might be out-of-bound. This usually happens on large
-      // VLEN where a single or a few VR registers is enough to caputre
+      // VLEN where a single or a few VR registers is enough to capture
       // the entire concat vector. In this case we can just use poison
       // on other VECTOR_DEINTERLEAVE operands -- semantically
       // VECTOR_DEINTERLEAVE will just concat them back together later
