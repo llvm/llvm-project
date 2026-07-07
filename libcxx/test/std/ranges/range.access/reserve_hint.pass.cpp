@@ -39,7 +39,7 @@ struct HasSizeMember {
 };
 
 struct HasSizeFunction {
-  friend constexpr std::size_t size(HasSizeFunction _) { return 42; }
+  friend constexpr std::size_t size(HasSizeFunction) { return 42; }
 };
 
 struct HasReserveHintMember {
@@ -47,7 +47,7 @@ struct HasReserveHintMember {
 };
 
 struct HasReserveHintFunction {
-  friend constexpr std::size_t reserve_hint(HasReserveHintFunction _) { return 42; }
+  friend constexpr std::size_t reserve_hint(HasReserveHintFunction) { return 42; }
 };
 
 struct HasReserveHintMemberBool {
@@ -86,12 +86,12 @@ ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(HasReserveHintFunction{})), 
 struct HasSizeAndReserveHint {
   constexpr std::size_t size() { return 42; }
   constexpr std::size_t reserve_hint() { return 0; }
-  friend constexpr std::size_t reserve_hint(HasSizeAndReserveHint _) { return 0; }
+  friend constexpr std::size_t reserve_hint(HasSizeAndReserveHint) { return 0; }
 };
 
 struct HasReserveHintMemberAndFunction {
   constexpr std::size_t reserve_hint() { return 42; }
-  friend constexpr std::size_t reserve_hint(HasReserveHintMemberAndFunction _) { return 0; }
+  friend constexpr std::size_t reserve_hint(HasReserveHintMemberAndFunction) { return 0; }
 };
 
 static_assert(std::ranges::reserve_hint(HasSizeAndReserveHint{}) == 42);
