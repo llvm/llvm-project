@@ -132,8 +132,8 @@ define amdgpu_kernel void @test_uniform_indirect_call_from_kernel(ptr %fptr) {
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr(p4) = COPY [[COPY6]]
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:sgpr(p4) = COPY [[COPY5]]
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p4) = nuw inbounds G_PTR_ADD [[COPY7]], [[C]](s64)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 8
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p4) = nuw inbounds G_PTR_ADD [[COPY7]], [[C]](i64)
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:sgpr(s64) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sgpr(s32) = COPY [[COPY3]]
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sgpr(s32) = COPY [[COPY2]]

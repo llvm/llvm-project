@@ -33,8 +33,8 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; GCN-NEXT:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GCN-NEXT:   [[COPY12:%[0-9]+]]:_(p4) = COPY [[COPY9]](p4)
-  ; GCN-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; GCN-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p4) = nuw inbounds G_PTR_ADD [[COPY12]], [[C3]](s64)
+  ; GCN-NEXT:   [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+  ; GCN-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p4) = nuw inbounds G_PTR_ADD [[COPY12]], [[C3]](i64)
   ; GCN-NEXT:   [[COPY13:%[0-9]+]]:_(s64) = COPY [[COPY6]]
   ; GCN-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]

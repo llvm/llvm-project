@@ -2,8 +2,8 @@
 ; UNSUPPORTED: true
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,GFX6 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri < %s | FileCheck -check-prefixes=GCN,GFX7 %s
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,GFX8 %s
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,GFX8 %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
 define i8 @atomic_load_global_monotonic_i8(ptr addrspace(1) %ptr) {
 ; GFX6-LABEL: atomic_load_global_monotonic_i8:

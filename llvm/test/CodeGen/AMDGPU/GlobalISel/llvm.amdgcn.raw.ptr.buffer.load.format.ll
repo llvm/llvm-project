@@ -107,8 +107,8 @@ define amdgpu_ps float @raw_ptr_buffer_load_format_f32__vgpr_rsrc__sgpr_voffset_
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr(i32) = COPY $sgpr2
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr4
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32(i32) = COPY [[COPY4]](i32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; CHECK-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec

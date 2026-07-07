@@ -23,8 +23,8 @@ define amdgpu_kernel void @kernel_call_no_workitem_ids() {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(p4) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY6]](p4)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw inbounds G_PTR_ADD [[COPY9]], [[C]](s64)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw inbounds G_PTR_ADD [[COPY9]], [[C]](i64)
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(s64) = COPY [[COPY3]]
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[COPY1]]
@@ -64,8 +64,8 @@ define amdgpu_kernel void @kernel_call_no_workgroup_ids() {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(p4) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY6]](p4)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw inbounds G_PTR_ADD [[COPY9]], [[C]](s64)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw inbounds G_PTR_ADD [[COPY9]], [[C]](i64)
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(s64) = COPY [[COPY3]]
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
@@ -104,8 +104,8 @@ define amdgpu_kernel void @kernel_call_no_other_sgprs() {
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @extern
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(p4) = COPY [[COPY3]](p4)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw inbounds G_PTR_ADD [[COPY4]], [[C]](s64)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw inbounds G_PTR_ADD [[COPY4]], [[C]](i64)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)

@@ -38,8 +38,8 @@ define <2 x i16> @vop3p_add_v2i16(<2 x i16> %arg0) #0 {
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[ADD]](i16)
   ; CHECK-NEXT:   [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[ADD1]](i16)
   ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-  ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[OR]](s32)
+  ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[OR]](i32)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BITCAST2]](<2 x i16>)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %add = add <2 x i16> %arg0, %arg0
@@ -77,8 +77,8 @@ define <2 x i16> @halfinsts_add_v2i16(<2 x i16> %arg0) #1 {
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C1]]
   ; CHECK-NEXT:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[ADD1]], [[C1]]
   ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
-  ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
-  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[OR]](s32)
+  ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[AND]], [[SHL]]
+  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[OR]](i32)
   ; CHECK-NEXT:   [[BITCAST4:%[0-9]+]]:_(i32) = G_BITCAST [[BITCAST3]](<2 x i16>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BITCAST4]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
