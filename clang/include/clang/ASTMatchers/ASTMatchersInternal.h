@@ -1993,16 +1993,12 @@ getTemplateArgsWritten(const OverloadExpr &OE) {
 
 inline unsigned
 getNumTemplateArgsWritten(const ClassTemplateSpecializationDecl &D) {
-  if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
-    return Args->getNumTemplateArgs();
-  return 0;
+  return getTemplateArgsWritten(D).size();
 }
 
 inline unsigned
 getNumTemplateArgsWritten(const VarTemplateSpecializationDecl &D) {
-  if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
-    return Args->getNumTemplateArgs();
-  return 0;
+  return getTemplateArgsWritten(D).size();
 }
 
 inline unsigned getNumTemplateArgsWritten(const FunctionDecl &FD) {
