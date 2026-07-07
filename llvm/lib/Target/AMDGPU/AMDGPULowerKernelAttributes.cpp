@@ -418,12 +418,20 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
           Inst = cast<Instruction>(*Inst->user_begin());
 
         using namespace llvm::PatternMatch;
-        if (!match(
-                Inst,
-                m_UDiv(m_ZExtOrSelf(m_Load(m_GEP(
-                           m_Intrinsic<Intrinsic::amdgcn_dispatch_ptr>(),
-                           m_SpecificInt(GRID_SIZE_X + I * sizeof(uint32_t))))),
-                       m_Value())))
+        Value *GridSizeLoad = nullptr;
+        if (!match(Inst,
+                   m_UDiv(m_ZExtOrSelf(m_CombineAnd(
+                              m_Load(m_GEP(
+                                  m_Intrinsic<Intrinsic::amdgcn_dispatch_ptr>(),
+                                  m_SpecificInt(GRID_SIZE_X +
+                                                I * sizeof(uint32_t)))),
+                              m_Value(GridSizeLoad))),
+                          m_Value())))
+          continue;
+
+        // Do not replace volatile or atomic loads -- they have observable
+        // side effects that must not be silently dropped.
+        if (!cast<LoadInst>(GridSizeLoad)->isSimple())
           continue;
 
         IRBuilder<> Builder(Inst);
