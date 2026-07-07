@@ -3824,6 +3824,38 @@ static void RenderSCPOptions(const ToolChain &TC, const ArgList &Args,
                     options::OPT_fno_stack_clash_protection);
 }
 
+static void RenderStackLimitVariableOptions(const Driver &D,
+                                            const ArgList &Args,
+                                            ArgStringList &CmdArgs) {
+  // -fstack-limit-variable=<var> names the global holding the stack limit that
+  // the stack-limit check prologue reads. Backends that do not implement the
+  // check reject the resulting function attribute at codegen time. The value
+  // must be a legal symbol name.
+  //
+  // -fstack-limit-trap-number=<n> sets the trap immediate emitted on overflow
+  // and is only meaningful together with -fstack-limit-variable.
+  Arg *Var = Args.getLastArg(options::OPT_fstack_limit_variable_EQ);
+  Arg *Trap = Args.getLastArg(options::OPT_fstack_limit_trap_number_EQ);
+
+  if (Trap && !Var) {
+    D.Diag(diag::err_drv_argument_only_allowed_with)
+        << Trap->getOption().getName() << "-fstack-limit-variable=";
+    return;
+  }
+
+  if (Var) {
+    if (!isValidSymbolName(Var->getValue())) {
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << Var->getOption().getName() << "legal symbol name";
+      return;
+    }
+    Var->render(Args, CmdArgs);
+  }
+
+  if (Trap)
+    Trap->render(Args, CmdArgs);
+}
+
 static void RenderTrivialAutoVarInitOptions(const Driver &D,
                                             const ToolChain &TC,
                                             const ArgList &Args,
@@ -7314,6 +7346,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   RenderSSPOptions(D, TC, Args, CmdArgs, KernelOrKext);
   RenderSCPOptions(TC, Args, CmdArgs);
+  RenderStackLimitVariableOptions(D, Args, CmdArgs);
   RenderTrivialAutoVarInitOptions(D, TC, Args, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_fswift_async_fp_EQ);

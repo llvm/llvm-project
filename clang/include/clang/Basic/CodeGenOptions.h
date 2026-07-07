@@ -526,6 +526,11 @@ public:
   /// Specify a symbol to be the guard value.
   std::string StackProtectorGuardSymbol;
 
+  /// Name of the global variable holding the stack limit for the ARM
+  /// -fstack-limit-variable=<var> stack-limit check prologue. Empty when the
+  /// feature is disabled.
+  std::string StackLimitVariable;
+
   /// Path to ignorelist file specifying which objects
   /// (files, functions) listed for instrumentation by sanitizer
   /// coverage pass should actually not be instrumented.

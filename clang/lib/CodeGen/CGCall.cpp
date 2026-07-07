@@ -2316,6 +2316,12 @@ static void getTrivialDefaultFunctionAttributes(
       FuncAttrs.addAttribute("backchain");
     if (CodeGenOpts.EnableSegmentedStacks)
       FuncAttrs.addAttribute("split-stack");
+    if (!CodeGenOpts.StackLimitVariable.empty()) {
+      FuncAttrs.addAttribute("stack-limit-variable",
+                             CodeGenOpts.StackLimitVariable);
+      FuncAttrs.addAttribute("stack-limit-trap-number",
+                             llvm::utostr(CodeGenOpts.StackLimitTrapNumber));
+    }
 
     if (CodeGenOpts.SpeculativeLoadHardening)
       FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);

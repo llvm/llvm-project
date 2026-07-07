@@ -921,6 +921,10 @@ public:
   /// Should we be emitting segmented stack stuff for the function
   bool shouldSplitStack() const;
 
+  /// Does this function request a prologue stack-limit check, i.e. carry the
+  /// "stack-limit-variable" attribute (see -fstack-limit-variable)?
+  bool hasStackLimitCheck() const;
+
   /// getNumBlockIDs - Return the number of MBB ID's allocated.
   unsigned getNumBlockIDs() const { return (unsigned)MBBNumbering.size(); }
 

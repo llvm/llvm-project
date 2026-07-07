@@ -1202,6 +1202,14 @@ void PEIImpl::insertPrologEpilogCode(MachineFunction &MF) {
   if (MF.getFunction().getCallingConv() == CallingConv::HiPE)
     for (MachineBasicBlock *SaveBlock : SaveBlocks)
       TFI.adjustForHiPEPrologue(MF, *SaveBlock);
+
+  // Prepend a stack-limit check to the entry prologue when the function
+  // requests one via -fstack-limit-variable. Like segmented stacks this adds a
+  // conditional check ahead of the normal prologue, but it traps instead of
+  // growing the stack. (Naked functions never reach this point, so they are
+  // left uninstrumented.)
+  if (MF.hasStackLimitCheck())
+    TFI.adjustForStackLimitCheck(MF);
 }
 
 /// insertZeroCallUsedRegs - Zero out call used registers.

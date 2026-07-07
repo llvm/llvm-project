@@ -254,6 +254,15 @@ public:
   virtual void adjustForHiPEPrologue(MachineFunction &MF,
                                      MachineBasicBlock &PrologueMBB) const {}
 
+  /// Prepend a stack-limit check to the prologue of functions that carry the
+  /// "stack-limit-variable" attribute (see -fstack-limit-variable). The check
+  /// traps when the incoming stack pointer leaves too little room for this
+  /// function's frame. Targets that implement the feature override this
+  /// method. The default implementation rejects the request with an
+  /// unsupported-feature diagnostic, so the check is never silently dropped
+  /// on targets that do not implement it.
+  virtual void adjustForStackLimitCheck(MachineFunction &MF) const;
+
   /// spillCalleeSavedRegisters - Issues instruction(s) to spill all callee
   /// saved registers and returns true if it isn't possible / profitable to do
   /// so by issuing a series of store instructions via

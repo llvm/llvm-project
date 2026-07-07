@@ -4466,6 +4466,21 @@ defm stack_clash_protection : BoolFOption<"stack-clash-protection",
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
   BothFlags<[], [ClangOption], " stack clash protection">>,
   DocBrief<"Instrument stack allocation to prevent stack clash attacks">;
+def fstack_limit_variable_EQ : Joined<["-"], "fstack-limit-variable=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Emit a function prologue that traps when the free stack space "
+           "(SP - <var>) is smaller than the frame this function needs. "
+           "<var> is a global variable holding the stack limit">,
+  MarshallingInfoString<CodeGenOpts<"StackLimitVariable">>,
+  DocBrief<"Emit a function prologue that compares free stack space against the "
+           "global named by <var> and executes a trap instruction on "
+           "insufficient space">;
+def fstack_limit_trap_number_EQ : Joined<["-"], "fstack-limit-trap-number=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Set the immediate operand of the trap instruction emitted by "
+           "-fstack-limit-variable on stack overflow (e.g. 'svc #<n>' on ARM). "
+           "Defaults to 255. Requires -fstack-limit-variable">,
+  MarshallingInfoInt<CodeGenOpts<"StackLimitTrapNumber">, "255">;
 def fstack_protector_strong : Flag<["-"], "fstack-protector-strong">, Group<f_Group>,
   HelpText<"Enable stack protectors for some functions vulnerable to stack smashing. "
            "Compared to -fstack-protector, this uses a stronger heuristic "
