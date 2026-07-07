@@ -9082,9 +9082,9 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
     // sext(LHS), or binary ops that do not wrap in signed sense.
     auto CmpLHSOrSExt =
         m_CombineOr(m_Specific(CmpLHS), m_SExt(m_Specific(CmpLHS)));
-    auto MaybeSExtOrMulCmpLHS = m_CombineOr(
-        CmpLHSOrSExt, m_CombineOr(m_NSWMul(CmpLHSOrSExt, m_StrictlyPositive()),
-                                  m_NSWShl(CmpLHSOrSExt, m_Value())));
+    auto MaybeSExtOrMulCmpLHS =
+        m_CombineOr(CmpLHSOrSExt, m_NSWMul(CmpLHSOrSExt, m_StrictlyPositive()),
+                    m_NSWShl(CmpLHSOrSExt, m_Value()));
     auto ZeroOrAllOnes = m_CombineOr(m_ZeroInt(), m_AllOnes());
     auto ZeroOrOne = m_CombineOr(m_ZeroInt(), m_One());
     if (match(TrueVal, MaybeSExtOrMulCmpLHS)) {
@@ -9108,8 +9108,7 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
       // (-X <s 0) ? -X : X or (-X <s 1) ? -X : X --> NABS(X)
       if (Pred == ICmpInst::ICMP_SLT && match(CmpRHS, ZeroOrOne))
         return {SPF_NABS, SPNB_NA, false};
-    }
-    else if (match(FalseVal, MaybeSExtOrMulCmpLHS)) {
+    } else if (match(FalseVal, MaybeSExtOrMulCmpLHS)) {
       // Set the return values. If the compare uses the negated value (-X >s 0),
       // swap the return values because the negated value is always 'RHS'.
       LHS = FalseVal;
