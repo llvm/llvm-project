@@ -249,8 +249,8 @@ public:
   /// `group_segment_size` and propagated to the device via the
   /// `hidden_dynamic_lds_size` kernarg) and is *not* included here, so the
   /// returned value is a lower bound on the total LDS the kernel may
-  /// touch. Callers that need to flag potential overflow of A0's 16-bit M0
-  /// limit (DEGFXMI400-12025) can use this as a "definitely exceeds"
+  /// touch. Callers that need to flag potential overflow of gfx1250 A0's
+  /// 16-bit M0 limit can use this as a "definitely exceeds"
   /// check; "static fits, dynamic pushes over" cannot be detected
   /// statically. See AMDGPUUsage "Code Object V3 Kernel Descriptor"
   /// (GROUP_SEGMENT_FIXED_SIZE).
@@ -721,6 +721,13 @@ llvm::SmallVector<uint8_t> buildKernelEntryTrampoline(uint64_t StubVAddr,
 /// buildKernelEntryTrampoline, used to keep the rewrite idempotent.
 bool isKernelEntryTrampoline(llvm::ArrayRef<uint8_t> Bytes,
                              const LLVMState &LS);
+
+/// Cheap raw-byte prefilter for the entry stubs produced by
+/// buildKernelEntryTrampoline. This is intentionally weaker than
+/// isKernelEntryTrampoline and exists to avoid running the disassembler over
+/// arbitrary original kernel entry bytes during idempotency checks.
+bool hasKernelEntryTrampolinePrefix(llvm::ArrayRef<uint8_t> Bytes,
+                                    const LLVMState &LS);
 
 /// Compute the trailing readable guard needed after an appended kernel-entry
 /// stub pool so CP instruction prefetches from the last stub cannot run past

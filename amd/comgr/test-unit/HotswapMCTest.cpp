@@ -455,6 +455,81 @@ TEST(BuildKernelEntryTrampoline, BuildsRecognizedPcRelativeStub) {
   expectInstMatchesAsm(Decoded[5].Inst, "s_set_pc_i64 s[8:9]", S);
 }
 
+TEST(BuildKernelEntryTrampoline, PrefixPrefiltersNonStubBytes) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> Stub =
+      buildKernelEntryTrampoline(/*StubVAddr=*/0x200000,
+                                 /*EntryVAddr=*/0x10100,
+                                 /*ScratchSgpr=*/8, S);
+  ASSERT_EQ(Stub.size(), KernelEntryStubStride);
+  EXPECT_TRUE(hasKernelEntryTrampolinePrefix(Stub, S));
+
+  llvm::SmallVector<uint8_t> NonStub;
+  ASSERT_TRUE(appendSingleInstBytes(NonStub, "s_endpgm", S));
+  while (NonStub.size() < KernelEntryStubStride)
+    NonStub.append(S.SNopBytes.begin(), S.SNopBytes.end());
+  ASSERT_EQ(NonStub.size(), KernelEntryStubStride);
+
+  EXPECT_FALSE(hasKernelEntryTrampolinePrefix(NonStub, S));
+  EXPECT_FALSE(isKernelEntryTrampoline(NonStub, S));
+
+  llvm::ArrayRef<uint8_t> ShortCandidate(Stub.data(), MinInstSize);
+  EXPECT_FALSE(hasKernelEntryTrampolinePrefix(ShortCandidate, S));
+}
+
+TEST(BuildKernelEntryTrampoline, PrefixPrefiltersHipblasltSmokeEntryBytes) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  // Reduced from the gfx1250 hipBLASLt MXF8/BF16 smoke kernel entry. The
+  // idempotency path should reject this by raw prefix before classifying it as
+  // a possible appended entry stub.
+  const uint8_t EntryBytes[] = {
+      0x1a, 0x08, 0x80, 0xb9, 0x02, 0x00, 0x00, 0x00,
+      0x1a, 0x08, 0x80, 0xb9, 0x02, 0x00, 0x00, 0x00,
+      0xff, 0x02, 0x3f, 0x8b, 0xff, 0xff, 0xff, 0x3f,
+      0x02, 0x9e, 0x40, 0x85, 0x03, 0x00, 0xc1, 0xbe,
+  };
+
+  llvm::SmallVector<uint8_t> Candidate;
+  Candidate.append(EntryBytes, EntryBytes + sizeof(EntryBytes));
+  while (Candidate.size() < KernelEntryStubStride)
+    Candidate.append(S.SNopBytes.begin(), S.SNopBytes.end());
+  ASSERT_EQ(Candidate.size(), KernelEntryStubStride);
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Candidate.data(), sizeof(EntryBytes), S,
+                                Decoded));
+  ASSERT_GE(Decoded.size(), 5u);
+  EXPECT_EQ(Decoded[0].Mnemonic, "s_setreg_imm32_b32");
+  EXPECT_EQ(Decoded[1].Mnemonic, "s_setreg_imm32_b32");
+  EXPECT_EQ(Decoded[2].Mnemonic, "s_and_b32");
+  EXPECT_FALSE(hasKernelEntryTrampolinePrefix(Candidate, S));
+  EXPECT_FALSE(isKernelEntryTrampoline(Candidate, S));
+}
+
+TEST(BuildKernelEntryTrampoline, PrefixPrefiltersUnknownDecodeBytes) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  const uint8_t UnknownInst[] = {0xff, 0xff, 0xff, 0xff};
+
+  llvm::SmallVector<uint8_t> Candidate;
+  Candidate.append(UnknownInst, UnknownInst + sizeof(UnknownInst));
+  while (Candidate.size() < KernelEntryStubStride)
+    Candidate.append(S.SNopBytes.begin(), S.SNopBytes.end());
+  ASSERT_EQ(Candidate.size(), KernelEntryStubStride);
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Candidate.data(), MinInstSize, S, Decoded));
+  ASSERT_EQ(Decoded.size(), 1u);
+  EXPECT_EQ(Decoded[0].Mnemonic, "<unknown>");
+  EXPECT_FALSE(hasKernelEntryTrampolinePrefix(Candidate, S));
+  EXPECT_FALSE(isKernelEntryTrampoline(Candidate, S));
+}
+
 TEST(BuildKernelEntryTrampoline, MatcherRejectsNonStubBytes) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
@@ -484,6 +559,7 @@ TEST(BuildKernelEntryTrampoline, MatcherRejectsWrongOperandShape) {
     Bytes.append(CodeEnd.begin(), CodeEnd.end());
   ASSERT_EQ(Bytes.size(), KernelEntryStubStride);
 
+  EXPECT_TRUE(hasKernelEntryTrampolinePrefix(Bytes, S));
   EXPECT_FALSE(isKernelEntryTrampoline(Bytes, S));
 }
 
@@ -835,11 +911,11 @@ TEST(HotswapPatchVTable, ProcessSingletonIdentityAndEagerInstall) {
 
 // -- DS ADDTID trampoline support ---------------------------------------------
 //
-// Tests for the ds_load_addtid_b32 / ds_store_addtid_b32 trampoline patch
-// (DEGFXMI400-12025). Coverage is bottom-up: first that the encode/decode
-// of ADDTID instructions exposes the expected MCInst operand layout, then
-// that buildTrampoline assembles and decodes a full ADDTID replacement body
-// plus its branch-back tail.
+// Tests for the ds_load_addtid_b32 / ds_store_addtid_b32 gfx1250 trampoline
+// patch. Coverage is bottom-up: first that the encode/decode of ADDTID
+// instructions exposes the expected MCInst operand layout, then that
+// buildTrampoline assembles and decodes a full ADDTID replacement body plus
+// its branch-back tail.
 
 namespace {
 

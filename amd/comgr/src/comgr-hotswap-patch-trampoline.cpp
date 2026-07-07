@@ -18,9 +18,9 @@
 ///   - tensor_load_to_lds     : prepend s_pack_hh_b32_b16 to clear multicast
 ///     routing bits in the group descriptor's base SGPR
 ///   - ds_*_addtid_b32        : compute the LDS address through the ALU and
-///     issue a regular ds_*_b32, bypassing the A0 16-bit M0 truncation
-///     (DEGFXMI400-12025). On B0 the DS unit reads 20 bits of M0; on A0 it
-///     reads only 16, silently dropping bits [19:16].
+///     issue a regular ds_*_b32, bypassing the gfx1250 A0 16-bit M0
+///     truncation. On B0 the DS unit reads 20 bits of M0; on A0 it reads only
+///     16, silently dropping bits [19:16].
 ///
 //===----------------------------------------------------------------------===//
 
@@ -806,8 +806,8 @@ bool patchDsAddtid(PatchContext &Ctx, size_t Idx) {
       std::optional<uint32_t> LdsSize =
           Ctx.Elf.getKernelStaticLdsSize(KernelName);
       // Trampoline could not be applied: the original ds_*_addtid_b32 stays
-      // in the code object and will silently truncate M0 to 16 bits on A0
-      // (DEGFXMI400-12025) whenever the runtime LDS layout exceeds 64 KiB.
+      // in the code object and will silently truncate M0 to 16 bits on gfx1250
+      // A0 whenever the runtime LDS layout exceeds 64 KiB.
       // Static LDS is visible in the kernel descriptor; dynamic LDS added
       // by the host at dispatch (hidden_dynamic_lds_size kernarg or a
       // dynamic_shared_pointer user arg) is not. The warning therefore

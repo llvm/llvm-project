@@ -1,11 +1,11 @@
 // COM: Test HotSwap trampoline patch: ds_*_addtid_b32 expansion.
 // COM:
-// COM: On A0 the DS unit truncates M0 to 16 bits, so ADDTID address
+// COM: On gfx1250 A0 the DS unit truncates M0 to 16 bits, so ADDTID address
 // COM: encodings (M0 + lane_id*4 + offset) silently wrap above 64KB
-// COM: (DEGFXMI400-12025). The trampoline materialises the lane-id math
-// COM: in the ALU using M0 masked to 20 bits (matching B0's DS-unit M0
-// COM: read width) and issues a regular ds_load_b32 / ds_store_b32,
-// COM: bypassing the buggy address path.
+// COM: on gfx1250. The trampoline materialises the lane-id math in the ALU
+// COM: using M0 masked to 20 bits (matching B0's DS-unit M0 read width) and
+// COM: issues a regular ds_load_b32 / ds_store_b32, bypassing the buggy
+// COM: address path.
 // COM:
 // COM: Coverage:
 // COM:   test_addtid_load        : ds_load_addtid_b32 + offset (NOP sled)

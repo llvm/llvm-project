@@ -253,9 +253,24 @@ decodeEntryStubTargetVAddr(ArrayRef<InternalDecodedInst> Decoded,
 }
 
 bool isKernelEntryTrampoline(ArrayRef<uint8_t> Bytes, const LLVMState &LS) {
+  if (!hasKernelEntryTrampolinePrefix(Bytes, LS))
+    return false;
+
   std::vector<InternalDecodedInst> Decoded;
   return decodeKernelEntryStub(Bytes, LS, Decoded, "isKernelEntryTrampoline") &&
          hasEntryStubOperandShape(Decoded, LS);
+}
+
+bool hasKernelEntryTrampolinePrefix(ArrayRef<uint8_t> Bytes,
+                                    const LLVMState &LS) {
+  SmallVector<uint8_t> Prefix;
+  if (!appendAsm(Prefix, "global_wb", LS))
+    return false;
+  if (!appendAsm(Prefix, "v_nop", LS))
+    return false;
+
+  return Bytes.size() >= Prefix.size() &&
+         std::equal(Prefix.begin(), Prefix.end(), Bytes.begin());
 }
 
 static std::optional<uint64_t>
@@ -307,10 +322,18 @@ descriptorAlreadyTargetsEntryStub(const ElfView &Elf,
       KernelEntryStubStride > Elf.textSize() - TextOffset)
     return false;
 
+  ArrayRef<uint8_t> Candidate(Elf.textData() + TextOffset,
+                              KernelEntryStubStride);
+  // The full idempotency matcher uses LLVM's AMDGPU disassembler. Avoid
+  // running it over arbitrary original kernel entry bytes; real code objects
+  // can contain byte streams that are valid executable code but still trip
+  // decoder corner cases before COMGR can finish rewriting.
+  if (!hasKernelEntryTrampolinePrefix(Candidate, LS))
+    return false;
+
   std::vector<InternalDecodedInst> Decoded;
-  if (!decodeKernelEntryStub(
-          ArrayRef<uint8_t>(Elf.textData() + TextOffset, KernelEntryStubStride),
-          LS, Decoded, "entry trampoline idempotency matcher"))
+  if (!decodeKernelEntryStub(Candidate, LS, Decoded,
+                             "entry trampoline idempotency matcher"))
     return false;
   if (!hasEntryStubOperandShape(Decoded, LS))
     return false;

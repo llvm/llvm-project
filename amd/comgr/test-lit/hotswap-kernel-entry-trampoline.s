@@ -11,6 +11,10 @@
 // RUN: %llvm-objdump -d %t.default.elf | %FileCheck --check-prefix=NO-TRAMP %s
 // NO-TRAMP-LABEL: <entry_tramp_kernel>:
 // NO-TRAMP: s_endpgm
+// NO-TRAMP-LABEL: <hipblaslt_entry_kernel>:
+// NO-TRAMP: s_setreg_imm32_b32
+// NO-TRAMP-LABEL: <decoder_trip_kernel>:
+// NO-TRAMP: .long 0xffffffff
 // NO-TRAMP-NOT: global_wb
 
 // RUN: hotswap-rewrite %t.elf \
@@ -24,6 +28,10 @@
 
 // DISASM-LABEL: <entry_tramp_kernel>:
 // DISASM: s_endpgm
+// DISASM-LABEL: <hipblaslt_entry_kernel>:
+// DISASM: s_setreg_imm32_b32
+// DISASM-LABEL: <decoder_trip_kernel>:
+// DISASM: .long 0xffffffff
 // DISASM: global_wb
 // DISASM-NEXT: v_nop
 // DISASM-NEXT: s_get_pc_i64 s[8:9]
@@ -63,12 +71,51 @@ entry_tramp_kernel:
 .Lentry_tramp_kernel_end:
 .size entry_tramp_kernel, .Lentry_tramp_kernel_end-entry_tramp_kernel
 
+.globl hipblaslt_entry_kernel
+.p2align 8
+.type hipblaslt_entry_kernel,@function
+hipblaslt_entry_kernel:
+  // Reduced from the gfx1250 hipBLASLt MXF8/BF16 smoke kernel entry. This is
+  // real original kernel code, not an appended hotswap entry stub.
+  s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 2
+  s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 2
+  s_and_b32 s63, 0x3fffffff, s2
+  s_lshr_b32 s64, s2, 30
+  s_mov_b32 s65, s3
+  s_cmp_eq_u32 s64, 3
+  s_cbranch_scc1 .Lhipblaslt_entry_done
+  s_cmp_eq_u32 s64, 0
+  s_cbranch_scc0 .Lhipblaslt_entry_done
+.Lhipblaslt_entry_done:
+  s_endpgm
+.Lhipblaslt_entry_kernel_end:
+.size hipblaslt_entry_kernel, .Lhipblaslt_entry_kernel_end-hipblaslt_entry_kernel
+
+.globl decoder_trip_kernel
+.p2align 8
+.type decoder_trip_kernel,@function
+decoder_trip_kernel:
+  .long 0xffffffff
+  s_endpgm
+.Ldecoder_trip_kernel_end:
+.size decoder_trip_kernel, .Ldecoder_trip_kernel_end-decoder_trip_kernel
+
 .rodata
 .p2align 8
 .amdhsa_kernel entry_tramp_kernel
   .amdhsa_next_free_vgpr 1
   .amdhsa_next_free_sgpr 1
   .amdhsa_inst_pref_size 7
+.end_amdhsa_kernel
+
+.amdhsa_kernel hipblaslt_entry_kernel
+  .amdhsa_next_free_vgpr 1
+  .amdhsa_next_free_sgpr 66
+.end_amdhsa_kernel
+
+.amdhsa_kernel decoder_trip_kernel
+  .amdhsa_next_free_vgpr 1
+  .amdhsa_next_free_sgpr 1
 .end_amdhsa_kernel
 
 .amdgpu_metadata
@@ -78,6 +125,26 @@ entry_tramp_kernel:
   amdhsa.kernels:
     - .name: entry_tramp_kernel
       .symbol: entry_tramp_kernel.kd
+      .sgpr_count: 8
+      .vgpr_count: 1
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 64
+      .max_flat_workgroup_size: 256
+    - .name: hipblaslt_entry_kernel
+      .symbol: hipblaslt_entry_kernel.kd
+      .sgpr_count: 66
+      .vgpr_count: 1
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 64
+      .max_flat_workgroup_size: 256
+    - .name: decoder_trip_kernel
+      .symbol: decoder_trip_kernel.kd
       .sgpr_count: 8
       .vgpr_count: 1
       .kernarg_segment_size: 0
