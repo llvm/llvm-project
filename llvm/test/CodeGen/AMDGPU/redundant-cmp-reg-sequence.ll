@@ -4,12 +4,12 @@ define amdgpu_ps i64 @ordertest(i64 inreg %val0) {
 ; CHECK-LABEL: ordertest:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_lshr_b32 s0, s1, 2
-; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
-; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v2, s[0:1]
-; CHECK-NEXT:    v_xor_b32_e32 v0, v2, v0
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
+; CHECK-NEXT:    s_cselect_b64 s[2:3], 1, 0
+; CHECK-NEXT:    s_lshr_b64 s[0:1], s[0:1], s4
+; CHECK-NEXT:    s_xor_b64 s[0:1], s[2:3], s[0:1]
+; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    ; return to shader part epilog
   %shl = lshr i64 %val0, 34
   %result = and i64 %shl, 4294967295

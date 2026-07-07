@@ -5,8 +5,8 @@ define i32 @cmp_strength_reduce(i64 inreg %val0) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_lg_u32 s17, 42
-; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %result2 = lshr i64 %val0, 32
   %cmp = icmp ne i64 %result2, 42
@@ -19,8 +19,8 @@ define i32 @cmp_strength_reduce_low32(i64 inreg %val0) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_lg_u32 s16, 42
-; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %result2 = and i64 %val0, 4294967295
   %cmp = icmp ne i64 %result2, 42
@@ -34,8 +34,8 @@ define i32 @cmp_strength_reduce_low31(i64 inreg %val0) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_bitset0_b32 s16, 31
 ; CHECK-NEXT:    s_cmp_lg_u32 s16, 42
-; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %result2 = and i64 %val0, 2147483647
   %cmp = icmp ne i64 %result2, 42
@@ -48,8 +48,8 @@ define i32 @cmp_strength_reduce_high32(i64 inreg %val0) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_lg_u32 s17, 0xf82f7dff
-; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %result2 = and i64 %val0, 18446744069414584320
   %cmp = icmp ne i64 %result2, 17883651179481661440

@@ -1115,7 +1115,7 @@ define void @memset_pattern_i64_as7_dynlen_unaligned_uniform_len(ptr addrspace(7
 ; GFX942-SDAG-NEXT:    v_add_u32_e32 v1, 32, v1
 ; GFX942-SDAG-NEXT:    s_cbranch_vccnz .LBB15_2
 ; GFX942-SDAG-NEXT:  .LBB15_3: ; %memset.pattern-expansion-residual-cond
-; GFX942-SDAG-NEXT:    s_cmp_eq_u64 s[4:5], 0
+; GFX942-SDAG-NEXT:    s_cmp_eq_u32 s4, 0
 ; GFX942-SDAG-NEXT:    s_cbranch_scc1 .LBB15_6
 ; GFX942-SDAG-NEXT:  ; %bb.4: ; %memset.pattern-expansion-residual-body.preheader
 ; GFX942-SDAG-NEXT:    s_lshl_b32 s6, s17, 3
