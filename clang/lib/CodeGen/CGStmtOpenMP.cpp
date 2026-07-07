@@ -7397,7 +7397,7 @@ static void emitCommonOMPTeamsDirective(CodeGenFunction &CGF,
           CGF.getContext(), One,
           CGF.getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
           SourceLocation());
-      // the thread_limit clause is unaffected by the if clause
+      // The thread_limit clause is unaffected by the if clause.
       const auto *TL = S.getSingleClause<OMPThreadLimitClause>();
       const Expr *ThreadLimit = TL ? TL->getThreadLimit().front() : nullptr;
       CGF.CGM.getOpenMPRuntime().emitNumTeamsClause(CGF, &NumTeams, ThreadLimit,
