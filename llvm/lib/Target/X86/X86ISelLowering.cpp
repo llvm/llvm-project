@@ -57313,6 +57313,53 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
   return Res;
 }
 
+static SDValue combineZextSetccEqZeroToShift(SDNode *N, SelectionDAG &DAG,
+                                             const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasBMI2() || !Subtarget.is64Bit() ||
+      N->getOpcode() != ISD::ZERO_EXTEND)
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  if (N0.getOpcode() != ISD::SETCC || !N0.hasOneUse())
+    return SDValue();
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+  if (CC != ISD::SETEQ)
+    return SDValue();
+
+  SDValue X = N0.getOperand(0);
+  SDValue Y = N0.getOperand(1);
+  if (isNullConstant(X))
+    std::swap(X, Y);
+  else if (!isNullConstant(Y))
+    return SDValue();
+
+  EVT ShiftVT = X.getValueType();
+  EVT VT = N->getValueType(0);
+  if (!ShiftVT.isSimple() || !ShiftVT.isScalarInteger() ||
+      !VT.isSimple() || !VT.isScalarInteger())
+    return SDValue();
+
+  MVT ShiftMVT = ShiftVT.getSimpleVT();
+  if (ShiftMVT != MVT::i32 && ShiftMVT != MVT::i64)
+    return SDValue();
+  MVT ResultMVT = VT.getSimpleVT();
+  if (ResultMVT != MVT::i32 && ResultMVT != MVT::i64)
+    return SDValue();
+
+  unsigned BitWidth = ShiftMVT.getScalarSizeInBits();
+  if (!DAG.computeKnownBits(X).getMaxValue().ult(BitWidth))
+    return SDValue();
+
+  // SHRX masks its shift count, so this is only equivalent to zext(X == 0)
+  // when the shift amount is known to be in range. Under that condition,
+  // (1 >> X) produces 1 iff X is zero and 0 otherwise.
+  SDLoc DL(N);
+  SDValue One = DAG.getConstant(1, DL, ShiftMVT);
+  SDValue Shift = DAG.getNode(ISD::SRL, DL, ShiftMVT, One, X);
+  return DAG.getZExtOrTrunc(Shift, DL, VT);
+}
+
 static SDValue combineSext(SDNode *N, SelectionDAG &DAG,
                            TargetLowering::DAGCombinerInfo &DCI,
                            const X86Subtarget &Subtarget) {
@@ -57642,6 +57689,9 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalizeOps())
     if (SDValue V = combineExtSetcc(N, DAG, Subtarget))
       return V;
+
+  if (SDValue V = combineZextSetccEqZeroToShift(N, DAG, Subtarget))
+    return V;
 
   if (SDValue V = combineToExtendBoolVectorInReg(N->getOpcode(), dl, VT, N0,
                                                  DAG, DCI, Subtarget))
