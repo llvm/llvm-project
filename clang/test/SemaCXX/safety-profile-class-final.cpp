@@ -154,14 +154,30 @@ void test_local_class() {
 }
 
 // Function-level suppress silences a local class defined in its body via
-// the parse-time ProfileSuppressStack (not via the lexical-parent walk;
-// the walk goes through the *Decl* chain, not statement context).
+// the decl-aware walk (the local class's lexical DeclContext is the
+// attributed function) and, equivalently, via the dominion-checked
+// parse-time stack -- the class's tokens are within the function's.
 // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
 [[profiles::suppress(test::class_final)]]
 void test_local_class_suppressed_via_fn() {
   struct LocalInSuppressedFn { int m; };
   LocalInSuppressedFn x;
   (void)x;
+}
+
+// A *statement-level* suppress reaches a local class defined inside its
+// dominion too: that suppression exists only on the parse-time stack (no
+// Decl carries the attribute), and the class's tokens are covered.
+void test_local_class_suppressed_via_stmt() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::class_final)]] {
+    struct LocalInSuppressedStmt { int m; };
+    LocalInSuppressedStmt x;
+    (void)x;
+  }
+  struct LocalAfterStmt { int m; }; // expected-error {{test profile fired on completion of class 'LocalAfterStmt' under profile 'test::class_final'}}
+  LocalAfterStmt y;
+  (void)y;
 }
 
 // Local classes inside a lambda *body* still fire. Only the closure type

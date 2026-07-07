@@ -25,7 +25,6 @@
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
-#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 
@@ -333,13 +332,13 @@ bool SemaProfiles::shouldEmitProfileViolation(StringRef ProfileName,
   // not depend on a parse-time scope still being active, so finalization checks
   // that run after the parse scope is torn down still respect suppression.
   //
-  // Finalization callbacks skip the parse-time stack: they can fire while an
-  // unrelated entity's instantiation ProfileSuppressScope is still active, and
-  // that scope does not lexically enclose the finalized declaration (token-
-  // based dominion, P3589R2 s2.4p3). Their decl-aware walk already covers a
-  // suppression on the declaration or a lexical parent.
-  if ((!InProfileFinalizationCheck &&
-       isProfileSuppressed(ProfileName, RuleName, Loc)) ||
+  // The stack consult is dominion-checked against Loc: a check that fires
+  // while an unrelated construct's ProfileSuppressScope is live -- a
+  // synchronously instantiated pattern, or a class finalized as a side effect
+  // of one -- matches only entries whose construct's tokens cover Loc
+  // (P3589R2 s2.4p3), so no explicit finalization or instantiation guard is
+  // needed here.
+  if (isProfileSuppressed(ProfileName, RuleName, Loc) ||
       isProfileSuppressed(ProfileName, RuleName, D))
     return false;
   // P3589R2 Section 1.1: "its static semantic effects are as-if applied only
@@ -1318,12 +1317,12 @@ void dispatchFinalizationProfiles(Sema &S, Node *D,
   if (!S.Profiles().anyProfileEnforced(Table))
     return;
   // Finalization can run nested in an unrelated instantiation whose
-  // [[profiles::suppress]] scope is still on the parse-time stack; the
-  // callbacks
-  // must resolve suppression only from D and its lexical parents, not that
-  // transient stack (P3589R2 s2.4p3).
-  llvm::SaveAndRestore<bool> InFinalization(
-      S.Profiles().InProfileFinalizationCheck, true);
+  // [[profiles::suppress]] scope is still on the parse-time stack. No guard
+  // is needed: the stack consult is dominion-checked, so such an entry
+  // matches only if its construct's tokens cover the finalized declaration.
+  // FIXME: a pattern forward-declared before but *defined after* the
+  // suppressed construct is wrongly matched while the scope is live (scope
+  // liveness over-approximates the dominion's end).
   for (const auto &E : Table)
     if (S.Profiles().isProfileEnforced(E.Name))
       E.Callback(S, D);

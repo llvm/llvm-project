@@ -58,14 +58,6 @@ public:
   };
   SmallVector<ProfileSuppressEntry, 4> ProfileSuppressStack;
 
-  /// True while a class/constructor finalization profile callback runs.
-  /// Finalization can fire as a side effect of instantiating an unrelated
-  /// entity whose ProfileSuppressScope is still on ProfileSuppressStack, so
-  /// during finalization that transient stack is ignored and suppression is
-  /// resolved only from the finalized declaration and its lexical parents
-  /// (token-based dominion, P3589R2 s2.4p3).
-  bool InProfileFinalizationCheck = false;
-
   bool isProfileEnforced(StringRef ProfileName) const;
 
   /// True if any entry of \p Entries names an enforced profile. \p Entries is
