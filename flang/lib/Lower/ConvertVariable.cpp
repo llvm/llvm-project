@@ -705,7 +705,7 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
     const auto *details =
         sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
     if (details && details->init())
-      TODO(loc, "coarray: default initialization.");
+      TODO(loc, "coarray: initialization");
   }
 
   if (var.isModuleOrSubmoduleVariable()) {
