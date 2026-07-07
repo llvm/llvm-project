@@ -5,10 +5,10 @@ add_entrypoint_object(
   HDRS
     ../remove.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fcntl_macros
     libc.include.unistd
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.unlinkat
     libc.src.errno.errno
 )
 

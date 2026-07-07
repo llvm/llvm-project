@@ -13,8 +13,11 @@ add_object_library(
     libc.include.sys_stat
     libc.src.__support.CPP.new
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
     libc.src.__support.OSUtil.linux.syscall_wrappers.lseek
     libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.OSUtil.linux.syscall_wrappers.read
+    libc.src.__support.OSUtil.linux.syscall_wrappers.write
     libc.src.__support.error_or
     libc.src.__support.File.file
     libc.src.errno.errno
@@ -31,6 +34,7 @@ add_object_library(
     libc.hdr.sys_stat_macros
     libc.src.__support.OSUtil.linux.stat.kernel_statx_types
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
     libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.__support.OSUtil.linux.syscall_wrappers.statx
     libc.src.__support.OSUtil.linux.syscall_wrappers.fcntl
