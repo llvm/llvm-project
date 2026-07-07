@@ -8068,10 +8068,10 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
         continue;
       unsigned LaneStride = Trial / BaseSizeInBits;
       bool AllMatch = true;
-      for (unsigned k = 1; k < NumElems && AllMatch; ++k) {
-        AllMatch = ByteOffsets[k] == 0 &&
+      for (unsigned K = 1; K < NumElems && AllMatch; ++K) {
+        AllMatch = ByteOffsets[K] == 0 &&
                    DAG.areNonVolatileConsecutiveLoads(
-                       Loads[k], LDBase, BaseSizeInBytes, k * LaneStride);
+                       Loads[K], LDBase, BaseSizeInBytes, K * LaneStride);
       }
       if (AllMatch) {
         WideEltBits = Trial;
@@ -8105,16 +8105,15 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
         auto MMOFlags = LDBase->getMemOperand()->getFlags();
         SDValue BasePtr = LDBase->getBasePtr();
         SmallVector<SDValue, 8> Pieces;
-        Pieces.reserve(NumWideLoads);
-        for (unsigned k = 0; k < NumWideLoads; ++k) {
-          unsigned Offset = k * BytesPerWideLoad;
-          SDValue Ptr = k == 0 ? BasePtr
+        for (unsigned K = 0; K != NumWideLoads; ++K) {
+          unsigned Offset = K * BytesPerWideLoad;
+          SDValue Ptr = K == 0 ? BasePtr
                                : DAG.getMemBasePlusOffset(
                                      BasePtr, TypeSize::getFixed(Offset), DL);
           SDValue Ld =
               DAG.getLoad(WideVT, DL, LDBase->getChain(), Ptr,
                           LDBase->getPointerInfo().getWithOffset(Offset),
-                          k == 0 ? LDBase->getBaseAlign() : Align(1), MMOFlags);
+                          K == 0 ? LDBase->getBaseAlign() : Align(1), MMOFlags);
           for (auto *LD : Loads)
             if (LD)
               DAG.makeEquivalentMemoryOrdering(LD, Ld);
@@ -8127,27 +8126,26 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
           while (Pieces.size() > 1 && GoodLanes < TruncDstLanes) {
             SmallVector<SDValue, 8> Next;
             SmallVector<int, 16> Mask(TruncDstLanes, -1);
-            for (unsigned i = 0; i < GoodLanes; ++i) {
-              Mask[i] = i;
-              Mask[GoodLanes + i] = TruncDstLanes + i;
+            for (unsigned I = 0; I != GoodLanes; ++I) {
+              Mask[I] = I;
+              Mask[GoodLanes + I] = TruncDstLanes + I;
             }
-            for (unsigned j = 0; j + 1 < Pieces.size(); j += 2)
-              Next.push_back(DAG.getVectorShuffle(TruncDstVT, DL, Pieces[j],
-                                                  Pieces[j + 1], Mask));
+            for (unsigned J = 0, E = Pieces.size() - 1; J < E; J += 2)
+              Next.push_back(DAG.getVectorShuffle(TruncDstVT, DL, Pieces[J],
+                                                  Pieces[J + 1], Mask));
             Pieces = std::move(Next);
             GoodLanes *= 2;
           }
         }
-        SDValue Result;
-        if (Pieces.size() == 1) {
-          Result = Pieces[0];
-        } else {
-          MVT ConcatVT =
-              MVT::getVectorVT(SrcEltVT, Pieces.size() * TruncDstLanes);
-          if (!TLI.isTypeLegal(ConcatVT))
-            continue;
-          Result = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Pieces);
-        }
+        if (Pieces.size() == 1)
+          return DAG.getBitcast(VT, Pieces[0]);
+
+        MVT ConcatVT =
+            MVT::getVectorVT(SrcEltVT, Pieces.size() * TruncDstLanes);
+        if (!TLI.isTypeLegal(ConcatVT))
+          continue;
+
+        SDValue Result = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Pieces);
         return DAG.getBitcast(VT, Result);
       }
     }
