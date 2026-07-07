@@ -296,6 +296,9 @@ def FeatureAMXAVX512 : SubtargetFeature<"amx-avx512",
                                         "HasAMXAVX512", "true",
                                         "Support AMX-AVX512 instructions",
                                         [FeatureAMXTILE]>;
+def FeatureACEV1 : SubtargetFeature<"acev1", "HasACEV1", "true",
+                                    "Support ACEV1 (AI Compute Extensions v1) instructions",
+                                    [FeatureAMXAVX512]>;
 def FeatureCMPCCXADD : SubtargetFeature<"cmpccxadd", "HasCMPCCXADD", "true",
                                         "Support CMPCCXADD instructions">;
 def FeatureRAOINT : SubtargetFeature<"raoint", "HasRAOINT", "true",

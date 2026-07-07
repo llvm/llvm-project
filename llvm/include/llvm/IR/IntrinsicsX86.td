@@ -5679,6 +5679,204 @@ let TargetPrefix = "x86" in {
 }
 
 //===----------------------------------------------------------------------===//
+// ACE (AI Compute Extensions) Intrinsics
+//===----------------------------------------------------------------------===//
+let TargetPrefix = "x86" in {
+  // BSRINIT - Initialize Block Scale Register
+  def int_x86_bsrinit : ClangBuiltin<"__builtin_ia32_bsrinit">,
+              Intrinsic<[], [], []>;
+
+  // BSRMOVF - Move Full to BSR
+  // Takes two ZMM registers as input (doubleword integers), writes to BSR (implicit)
+  def int_x86_bsrmovf : ClangBuiltin<"__builtin_ia32_bsrmovf">,
+              Intrinsic<[], [llvm_v16i32_ty, llvm_v16i32_ty], []>;
+
+  // BSRMOVH - Move Half to/from BSR
+  // Load variant: read from ZMM (doubleword integers), update BSR
+  def int_x86_bsrmovh_set : ClangBuiltin<"__builtin_ia32_bsrmovh_set">,
+              Intrinsic<[], [llvm_v16i32_ty], []>;
+  // Store variant: read from BSR, return ZMM (doubleword integers)
+  def int_x86_bsrmovh_get : ClangBuiltin<"__builtin_ia32_bsrmovh_get">,
+              Intrinsic<[llvm_v16i32_ty], [], []>;
+
+  // BSRMOVL - Move Low to/from BSR
+  // Load variant: read from ZMM (doubleword integers), write to BSR
+  def int_x86_bsrmovl_set : ClangBuiltin<"__builtin_ia32_bsrmovl_set">,
+              Intrinsic<[], [llvm_v16i32_ty], []>;
+  // Store variant: read from BSR, return ZMM (doubleword integers)
+  def int_x86_bsrmovl_get : ClangBuiltin<"__builtin_ia32_bsrmovl_get">,
+              Intrinsic<[llvm_v16i32_ty], [], []>;
+
+  // TILEMOVCOL - Move Column from Vector to Tile
+  // Single intrinsic handles both immediate and register index forms.
+  // Lowering checks if index is constant and selects appropriate instruction.
+  def int_x86_tilesetcol : ClangBuiltin<"__builtin_ia32_tilesetcol">,
+              Intrinsic<[], [llvm_i8_ty, llvm_v16i32_ty, llvm_i32_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+
+  // ACE TILEMOVROW - Move Row from Vector TO Tile (extends AMX TILEMOVROW)
+  // Note: AMX has int_x86_tilemovrow which reads FROM tile to vector
+  // ACE adds the reverse direction: writing TO tile from vector
+  // Single intrinsic handles both immediate and register index forms.
+  // Lowering checks if index is constant and selects appropriate instruction.
+  def int_x86_tilesetrow : ClangBuiltin<"__builtin_ia32_tilesetrow">,
+              Intrinsic<[], [llvm_i8_ty, llvm_v16i32_ty, llvm_i32_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+
+  // TOP2BF16PS - Outer Product BF16 to Single Precision
+  def int_x86_top2bf16ps : ClangBuiltin<"__builtin_ia32_top2bf16ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+                         ImmArg<ArgIndex<2>>]>;
+
+  // TOP4 - Tile Outer Product (4x4 block operations)
+  // TOP4BUUD - Unsigned/Unsigned
+  def int_x86_top4buud : ClangBuiltin<"__builtin_ia32_top4buud">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+                         ImmArg<ArgIndex<2>>]>;
+
+  // TOP4BUSD - Unsigned/Signed
+  def int_x86_top4busd : ClangBuiltin<"__builtin_ia32_top4busd">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+                         ImmArg<ArgIndex<2>>]>;
+
+  // TOP4BSSD - Signed/Signed
+  def int_x86_top4bssd : ClangBuiltin<"__builtin_ia32_top4bssd">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+                         ImmArg<ArgIndex<2>>]>;
+
+  // TOP4BSUD - Signed/Unsigned
+  def int_x86_top4bsud : ClangBuiltin<"__builtin_ia32_top4bsud">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+                         ImmArg<ArgIndex<2>>]>;
+
+  // TOP4MX - Mixed Precision Outer Products
+  // TOP4MXHFBPS - FP16/BF16 to FP32
+  def int_x86_top4mxhf8ps : ClangBuiltin<"__builtin_ia32_top4mxhf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+                         ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+
+  // TOP4MXBHFBPS - BF16/FP16 to FP32
+  def int_x86_top4mxbhf8ps : ClangBuiltin<"__builtin_ia32_top4mxbhf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+                         ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+
+  // TOP4MXHBFBPS - FP16/BF16/BF16 to FP32
+  def int_x86_top4mxhbf8ps : ClangBuiltin<"__builtin_ia32_top4mxhbf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+                         ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+
+  // TOP4MXBF8PS - MX FP8 BF8xBF8 to FP32
+  def int_x86_top4mxbf8ps : ClangBuiltin<"__builtin_ia32_top4mxbf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+                         ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+
+  // TOP4MXBSSPS - MX INT8 SxS to FP32 (BSR scaled)
+  def int_x86_top4mxbssps : ClangBuiltin<"__builtin_ia32_top4mxbssps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+                         ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+
+  // ACE - internal intrinsics (for IR-level optimization)
+  // These take tile/ZMM values directly instead of immediate tile IDs
+
+  // TILEMOVCOL internal - takes dimensions and returns tile
+  def int_x86_tilesetcol_internal :
+              ClangBuiltin<"__builtin_ia32_tilesetcol_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_v16i32_ty, llvm_i32_ty],
+                        []>;
+
+  // ACE TILEMOVROW internal - takes dimensions, vector, index and returns tile
+  // Note: AMX has int_x86_tilemovrow_internal which extracts from tile to vector
+  // ACE adds the reverse: write vector to tile row
+  def int_x86_tilesetrow_internal :
+              ClangBuiltin<"__builtin_ia32_tilesetrow_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_v16i32_ty, llvm_i32_ty],
+                        []>;
+
+  // TOP2BF16PS internal - operates on BF16 data (32 BF16 elements per ZMM)
+  def int_x86_top2bf16ps_internal :
+              ClangBuiltin<"__builtin_ia32_top2bf16ps_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                         llvm_x86amx_ty, llvm_v32bf16_ty, llvm_v32bf16_ty], []>;
+
+  // TOP4BUUD internal - unsigned bytes (64 elements per ZMM)
+  def int_x86_top4buud_internal :
+              ClangBuiltin<"__builtin_ia32_top4buud_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                         llvm_x86amx_ty, llvm_v64i8_ty, llvm_v64i8_ty], []>;
+
+  // TOP4BUSD internal - unsigned/signed bytes (64 elements per ZMM)
+  def int_x86_top4busd_internal :
+              ClangBuiltin<"__builtin_ia32_top4busd_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                         llvm_x86amx_ty, llvm_v64i8_ty, llvm_v64i8_ty], []>;
+
+  // TOP4BSSD internal - signed bytes (64 elements per ZMM)
+  def int_x86_top4bssd_internal :
+              ClangBuiltin<"__builtin_ia32_top4bssd_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                         llvm_x86amx_ty, llvm_v64i8_ty, llvm_v64i8_ty], []>;
+
+  // TOP4BSUD internal - signed/unsigned bytes (64 elements per ZMM)
+  def int_x86_top4bsud_internal :
+              ClangBuiltin<"__builtin_ia32_top4bsud_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                         llvm_x86amx_ty, llvm_v64i8_ty, llvm_v64i8_ty], []>;
+
+  // TOP4MXHFBPS internal - 4th arg is BSR index (i8 immediate)
+  // FP8 data packed in dwords (16 dwords per ZMM)
+  def int_x86_top4mxhf8ps_internal :
+              ClangBuiltin<"__builtin_ia32_top4mxhf8ps_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
+                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty], [ImmArg<ArgIndex<3>>]>;
+
+  // TOP4MXBHFBPS internal - FP8 data packed in dwords
+  def int_x86_top4mxbhf8ps_internal :
+              ClangBuiltin<"__builtin_ia32_top4mxbhf8ps_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
+                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty], [ImmArg<ArgIndex<3>>]>;
+
+  // TOP4MXHBFBPS internal - FP8 data packed in dwords
+  def int_x86_top4mxhbf8ps_internal :
+              ClangBuiltin<"__builtin_ia32_top4mxhbf8ps_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
+                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty], [ImmArg<ArgIndex<3>>]>;
+
+  // TOP4MXBF8PS internal - MX FP8 BF8xBF8 data packed in dwords
+  def int_x86_top4mxbf8ps_internal :
+              ClangBuiltin<"__builtin_ia32_top4mxbf8ps_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
+                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty], [ImmArg<ArgIndex<3>>]>;
+
+  // TOP4MXBSSPS internal - MX INT8 SxS to FP32 (BSR scaled)
+  def int_x86_top4mxbssps_internal :
+              ClangBuiltin<"__builtin_ia32_top4mxbssps_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
+                         llvm_x86amx_ty, llvm_v16i32_ty, llvm_v16i32_ty], [ImmArg<ArgIndex<3>>]>;
+}
+
+//===----------------------------------------------------------------------===//
 let TargetPrefix = "x86" in {
 // CMPCCXADD
 def int_x86_cmpccxadd32

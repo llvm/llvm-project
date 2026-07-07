@@ -78,8 +78,9 @@ static bool tileConfig(MachineFunction &MF,
                        llvm::function_ref<LiveIntervals *()> GetLIs,
                        llvm::function_ref<VirtRegMap *()> GetVRM) {
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
-  // Early exit in the common case of non-AMX code.
-  if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
+  // Early exit in the common case of non-AMX/ACE code.
+  if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA &&
+      X86FI->getACEProgModel() != ACEProgModelEnum::ACE_ManagedRA)
     return false;
 
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
@@ -137,6 +138,11 @@ static bool tileConfig(MachineFunction &MF,
   }
 
   // Fill in the shape of each tile physical register.
+  // ACE Palette 2 uses fixed tile dimensions (16x64), so skip writing
+  // shapes - bytes 1-63 must remain zero for ACE.
+  if (ST.hasACEV1())
+    return true;
+
   for (unsigned I = 0; I < AMXRegNum; ++I) {
     if (!Phys2Virt[I])
       continue;
