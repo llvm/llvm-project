@@ -69,32 +69,29 @@ TEST_F(CIRCallOpTest, ResolveCallee) {
   module->walk([&](cir::CallOp op) { calls.push_back(op); });
   ASSERT_EQ(calls.size(), 3u);
 
+  SymbolTableCollection symbolTable;
+
   // A direct call resolves to its callee, and the caller can then read the
   // facts recorded on it, such as the func_info attribute.
-  cir::FuncOp marked = calls[0].resolveCallee();
+  cir::FuncOp marked = calls[0].resolveCalleeInTable(symbolTable);
   ASSERT_TRUE(marked);
   auto ctor = dyn_cast_or_null<cir::CXXCtorAttr>(marked.getFuncInfoAttr());
   ASSERT_TRUE(ctor);
   EXPECT_EQ(ctor.getCtorKind(), cir::CtorKind::Default);
 
-  // The resolution through a symbol table collection finds the same function.
-  SymbolTableCollection symbolTable;
-  EXPECT_EQ(calls[0].resolveCalleeInTable(&symbolTable), marked);
-
   // A callee without func_info still resolves, and the attribute reads null.
-  cir::FuncOp plain = calls[1].resolveCallee();
+  cir::FuncOp plain = calls[1].resolveCalleeInTable(symbolTable);
   ASSERT_TRUE(plain);
   EXPECT_FALSE(plain.getFuncInfoAttr());
 
   // An indirect call has no callee symbol to resolve.
-  EXPECT_FALSE(calls[2].resolveCallee());
+  EXPECT_FALSE(calls[2].resolveCalleeInTable(symbolTable));
 
   // cir.try_call resolves through the same implementation.
   SmallVector<cir::TryCallOp> tryCalls;
   module->walk([&](cir::TryCallOp op) { tryCalls.push_back(op); });
   ASSERT_EQ(tryCalls.size(), 1u);
-  EXPECT_EQ(tryCalls[0].resolveCallee(), marked);
-  EXPECT_EQ(tryCalls[0].resolveCalleeInTable(&symbolTable), marked);
+  EXPECT_EQ(tryCalls[0].resolveCalleeInTable(symbolTable), marked);
 }
 
 } // namespace
