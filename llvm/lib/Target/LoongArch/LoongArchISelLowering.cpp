@@ -4047,10 +4047,7 @@ static SDValue convertRMEncoding(SelectionDAG &DAG, const SDLoc &DL,
                                              DAG.getConstant(1, DL, GRLenVT)),
                                  DAG.getConstant(1, DL, GRLenVT));
 
-  SDValue Converted = DAG.getNode(ISD::XOR, DL, GRLenVT, RMValue, SwapMask);
-
-  return DAG.getNode(ISD::AND, DL, GRLenVT, Converted,
-                     DAG.getConstant(0x3, DL, GRLenVT));
+  return DAG.getNode(ISD::XOR, DL, GRLenVT, RMValue, SwapMask);
 }
 
 SDValue LoongArchTargetLowering::lowerSET_ROUNDING(SDValue Op,
@@ -4073,7 +4070,7 @@ SDValue LoongArchTargetLowering::lowerSET_ROUNDING(SDValue Op,
     }
   }
 
-  RMValue = DAG.getNode(ISD::ZERO_EXTEND, DL, GRLenVT, RMValue);
+  RMValue = DAG.getNode(ISD::ANY_EXTEND, DL, GRLenVT, RMValue);
   RMValue = convertRMEncoding(DAG, DL, GRLenVT, RMValue);
 
   // The RM field in FCSR is at bits [9:8]. Shift the rounding mode value

@@ -11,7 +11,6 @@ define i32 @test_get_rounding() nounwind {
 ; LA32-NEXT:    srli.w $a1, $a1, 1
 ; LA32-NEXT:    andi $a1, $a1, 1
 ; LA32-NEXT:    xor $a0, $a0, $a1
-; LA32-NEXT:    andi $a0, $a0, 3
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_get_rounding:
@@ -21,7 +20,6 @@ define i32 @test_get_rounding() nounwind {
 ; LA64-NEXT:    nor $a1, $a0, $zero
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 1, 1
 ; LA64-NEXT:    xor $a0, $a0, $a1
-; LA64-NEXT:    andi $a0, $a0, 3
 ; LA64-NEXT:    ret
   %rm = call i32 @llvm.get.rounding()
   ret i32 %rm
@@ -40,7 +38,6 @@ define i1 @test_get_rounding_sideeffect() nounwind {
 ; LA32-NEXT:    srli.w $a1, $a1, 1
 ; LA32-NEXT:    andi $a1, $a1, 1
 ; LA32-NEXT:    xor $a0, $a0, $a1
-; LA32-NEXT:    andi $a0, $a0, 3
 ; LA32-NEXT:    beq $a0, $zero, .LBB1_2
 ; LA32-NEXT:  # %bb.1:
 ; LA32-NEXT:    move $a0, $zero
@@ -54,7 +51,6 @@ define i1 @test_get_rounding_sideeffect() nounwind {
 ; LA32-NEXT:    srli.w $a1, $a1, 1
 ; LA32-NEXT:    andi $a1, $a1, 1
 ; LA32-NEXT:    xor $a0, $a0, $a1
-; LA32-NEXT:    andi $a0, $a0, 3
 ; LA32-NEXT:    addi.w $a0, $a0, -1
 ; LA32-NEXT:    sltui $a0, $a0, 1
 ; LA32-NEXT:  .LBB1_3: # %return
@@ -74,7 +70,7 @@ define i1 @test_get_rounding_sideeffect() nounwind {
 ; LA64-NEXT:    nor $a1, $a0, $zero
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 1, 1
 ; LA64-NEXT:    xor $a0, $a0, $a1
-; LA64-NEXT:    andi $a0, $a0, 3
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    beqz $a0, .LBB1_2
 ; LA64-NEXT:  # %bb.1:
 ; LA64-NEXT:    move $a0, $zero
@@ -88,7 +84,7 @@ define i1 @test_get_rounding_sideeffect() nounwind {
 ; LA64-NEXT:    nor $a1, $a0, $zero
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 1, 1
 ; LA64-NEXT:    xor $a0, $a0, $a1
-; LA64-NEXT:    andi $a0, $a0, 3
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    addi.d $a0, $a0, -1
 ; LA64-NEXT:    sltui $a0, $a0, 1
 ; LA64-NEXT:  .LBB1_3: # %return
