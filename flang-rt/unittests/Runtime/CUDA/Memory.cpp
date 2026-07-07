@@ -31,6 +31,7 @@ TEST(MemoryCUFTest, SimpleAllocTramsferFree) {
   host = 0;
   RTNAME(CUFDataTransferPtrPtr)
   ((void *)&host, (void *)dev, sizeof(int), kDeviceToHost, __FILE__, __LINE__);
+  RTNAME(CUFStreamSynchronizeNull)();
   EXPECT_EQ(42, host);
   RTNAME(CUFMemFree)((void *)dev, kMemTypeDevice, __FILE__, __LINE__);
 }
@@ -138,7 +139,7 @@ TEST(MemoryCUFTest, CUFDataTransferDescDescStrided) {
   std::int32_t result[elements * stride]{};
   RTNAME(CUFDataTransferPtrPtr)
   (result, devStorage, sizeof(result), kDeviceToHost, __FILE__, __LINE__);
-
+  RTNAME(CUFStreamSynchronizeNull)();
   std::int32_t recvStorage[elements * stride]{};
   for (int i{0}; i < elements * stride; ++i) {
     recvStorage[i] = -2;
@@ -150,7 +151,7 @@ TEST(MemoryCUFTest, CUFDataTransferDescDescStrided) {
   recvDesc.GetDimension(0).SetByteStride(stride * sizeof(std::int32_t));
   RTNAME(CUFDataTransferDescDesc)
   (&recvDesc, &devDesc, kDeviceToHost, __FILE__, __LINE__);
-
+  RTNAME(CUFStreamSynchronizeNull)();
   RTNAME(CUFMemFree)(devStorage, kMemTypeDevice, __FILE__, __LINE__);
 
   for (int i{0}; i < elements; ++i) {
@@ -201,6 +202,7 @@ TEST(MemoryCUFTest, CUFDataTransferDescDescLeadingSliceRank2) {
   RTNAME(CUFDataTransferPtrPtr)
   (result, devStorage, sizeof(result), kDeviceToHost, __FILE__, __LINE__);
 
+  RTNAME(CUFStreamSynchronizeNull)();
   std::int32_t recvStorage[elements]{};
   for (int i{0}; i < elements; ++i) {
     recvStorage[i] = -2;
@@ -216,6 +218,7 @@ TEST(MemoryCUFTest, CUFDataTransferDescDescLeadingSliceRank2) {
 
   RTNAME(CUFMemFree)(devStorage, kMemTypeDevice, __FILE__, __LINE__);
 
+  RTNAME(CUFStreamSynchronizeNull)();
   for (int j{0}; j < ny; ++j) {
     EXPECT_EQ(result[nx * j], -1);
     EXPECT_EQ(result[nx - 1 + nx * j], -1);
@@ -273,7 +276,7 @@ TEST(MemoryCUFTest, CUFDataTransferDescDescLeadingSlice) {
   std::int32_t result[elements]{};
   RTNAME(CUFDataTransferPtrPtr)
   (result, devStorage, sizeof(result), kDeviceToHost, __FILE__, __LINE__);
-
+  RTNAME(CUFStreamSynchronizeNull)();
   std::int32_t recvStorage[elements]{};
   for (int i{0}; i < elements; ++i) {
     recvStorage[i] = -2;
@@ -287,7 +290,7 @@ TEST(MemoryCUFTest, CUFDataTransferDescDescLeadingSlice) {
   recvDesc.GetDimension(2).SetByteStride(nx * ny * sizeof(std::int32_t));
   RTNAME(CUFDataTransferDescDesc)
   (&recvDesc, &devDesc, kDeviceToHost, __FILE__, __LINE__);
-
+  RTNAME(CUFStreamSynchronizeNull)();
   RTNAME(CUFMemFree)(devStorage, kMemTypeDevice, __FILE__, __LINE__);
 
   for (int k{0}; k < nz; ++k) {
