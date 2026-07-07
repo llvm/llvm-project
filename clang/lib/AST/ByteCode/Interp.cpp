@@ -1719,7 +1719,7 @@ static bool diagnoseOutOfLifetimeDestroy(InterpState &S, CodePtr OpPC,
   return false;
 }
 
-bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+bool checkDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Destroy))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr.block(), AK_Destroy))
@@ -1920,7 +1920,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
 
     if (Func->isConstructor() && !checkConstructor(S, OpPC, Func, ThisPtr))
       return false;
-    if (Func->isDestructor() && !CheckDestructor(S, OpPC, ThisPtr))
+    if (Func->isDestructor() && !checkDestructor(S, OpPC, ThisPtr))
       return false;
 
     InstancePtrTracked = (Func->isConstructor() || Func->isDestructor());
@@ -2448,11 +2448,10 @@ bool EndLifetime(InterpState &S, CodePtr OpPC) {
 }
 
 /// Ends the lifetime of the pop'd pointer.
-bool EndLifetimePop(InterpState &S, CodePtr OpPC) {
+bool PseudoDtor(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
+  if (!checkDestructor(S, OpPC, Ptr))
     return false;
-
   setLifeStateRecurse(Ptr.view().narrow(), Lifetime::Ended);
   return true;
 }
