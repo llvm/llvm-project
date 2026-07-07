@@ -2,7 +2,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=gnu++11 -triple spirv64 -Wno-unused-value %s
 
 // __spirv_event_t is an opaque type: it cannot be initialized from, converted
-// to, or cast from other types, nor used in arithmetic.
+// to, or cast from other types, nor used in arithmetic. It cannot be used in
+// constant evaluation.
 void foo() {
   int n = 100;
   __spirv_event_t v = 0; // expected-error {{cannot initialize a variable of type '__spirv_event_t' with an rvalue of type 'int'}}
@@ -12,10 +13,14 @@ void foo() {
   int x(v); // expected-error {{cannot initialize a variable of type 'int' with an lvalue of type '__spirv_event_t'}}
   __spirv_event_t k;
   int *ip = (int *)k; // expected-error {{cannot cast from type '__spirv_event_t' to pointer type 'int *'}}
+  constexpr __spirv_event_t e; // expected-error {{constexpr variable cannot have non-literal type 'const __spirv_event_t'}}
 }
+
+template <__spirv_event_t V> void baz(); // expected-error {{a non-type template parameter cannot have type '__spirv_event_t'}}
 
 // __spirv_event_t can be used as a function parameter, a template argument, and
 // a struct field.
 template <class T> void bar(T);
 void use(__spirv_event_t r) { bar(r); }
 struct S { __spirv_event_t r; int a; };
+

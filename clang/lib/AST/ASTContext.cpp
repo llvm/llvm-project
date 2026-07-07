@@ -2445,8 +2445,8 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Width = Target->getPointerWidth(LangAS::Default);
       Align = Target->getPointerAlign(LangAS::Default);
       break;
-#define SPIRV_OPAQUE_TYPE(NAME, MANGLEDNAME, ID, SINGLETONID)                  \
-  case BuiltinType::ID:                                                        \
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
     Width = Target->getPointerWidth(LangAS::Default);                          \
     Align = Target->getPointerAlign(LangAS::Default);                          \
     break;

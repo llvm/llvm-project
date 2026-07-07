@@ -617,7 +617,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 #include "clang/Basic/HLSLIntangibleTypes.def"
       ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
       break;
-#define SPIRV_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)                  \
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case BuiltinType::Id:                                                        \
     return llvm::TargetExtType::get(getLLVMContext(), "spirv.Event");
 #include "clang/Basic/SPIRVTypes.def"
