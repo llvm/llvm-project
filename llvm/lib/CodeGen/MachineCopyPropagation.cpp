@@ -1263,17 +1263,313 @@ void MachineCopyPropagation::backwardCopyPropagateBlock(
   Tracker.clear();
 }
 
-[[maybe_unused]] static void printSpillReloadChain(
-    DenseMap<MachineInstr *, SmallVector<MachineInstr *>> &SpillChain,
-    DenseMap<MachineInstr *, SmallVector<MachineInstr *>> &ReloadChain,
-    MachineInstr *Leader) {
-  auto &SC = SpillChain[Leader];
-  auto &RC = ReloadChain[Leader];
-  for (auto I = SC.rbegin(), E = SC.rend(); I != E; ++I)
-    (*I)->dump();
-  for (MachineInstr *MI : RC)
-    MI->dump();
-}
+struct SpillReloadPair {
+  MachineInstr *Spill = nullptr;
+  MachineInstr *Reload = nullptr;
+};
+
+struct SpillReloadChain {
+  SmallVector<SpillReloadPair> Pairs;
+
+  SpillReloadChain(MachineInstr *Spill, MachineInstr *Reload) {
+    append(Spill, Reload);
+  }
+
+  bool contains(const MachineInstr *MI) {
+    return any_of(Pairs, [MI](const SpillReloadPair &Pair) {
+      return Pair.Spill == MI || Pair.Reload == MI;
+    });
+  }
+  bool containsReload(const MachineInstr *MI) {
+    return any_of(Pairs, [MI](const SpillReloadPair &Pair) {
+      return Pair.Reload == MI;
+    });
+  }
+  void append(MachineInstr *Spill, MachineInstr *Reload) {
+    Pairs.push_back({Spill, Reload});
+  }
+};
+
+class SpillageCopyEliminator {
+  const TargetRegisterInfo &TRI;
+  const TargetInstrInfo &TII;
+  CopyTracker &Tracker;
+  bool UseCopyInstr;
+  // Maps the innermost reload COPY of a spill-reload chain to the COPYs that
+  // form the chain.
+  SmallVector<SpillReloadChain> Chains;
+  // If a COPY's source has a use or def before the next COPY defines that
+  // source, record it here to preserve property#2.
+  DenseSet<const MachineInstr *> CopySourceInvalid;
+
+  std::optional<DestSourcePair> getFoldableCopy(const MachineInstr &MI) const {
+    if (MI.getNumImplicitOperands() > 0)
+      return std::nullopt;
+    std::optional<DestSourcePair> CopyOperands =
+        isCopyInstr(MI, TII, UseCopyInstr);
+    if (!CopyOperands)
+      return std::nullopt;
+    auto [Dst, Src] = getDstSrcMCRegs(*CopyOperands);
+    if (Src && Dst && !TRI.regsOverlap(Src, Dst) &&
+        CopyOperands->Source->isRenamable() &&
+        CopyOperands->Destination->isRenamable())
+      return CopyOperands;
+
+    return std::nullopt;
+  }
+
+  bool isSpillReloadPair(const MachineInstr &Spill,
+                         const MachineInstr &Reload) const {
+    std::optional<DestSourcePair> FoldableSpillCopy = getFoldableCopy(Spill);
+    if (!FoldableSpillCopy)
+      return false;
+    std::optional<DestSourcePair> FoldableReloadCopy = getFoldableCopy(Reload);
+    if (!FoldableReloadCopy)
+      return false;
+    return FoldableSpillCopy->Source->getReg() ==
+               FoldableReloadCopy->Destination->getReg() &&
+           FoldableSpillCopy->Destination->getReg() ==
+               FoldableReloadCopy->Source->getReg();
+  }
+
+  bool isChainedCopy(const MachineInstr &Prev,
+                     const MachineInstr &Current) const {
+    std::optional<DestSourcePair> FoldablePrevCopy = getFoldableCopy(Prev);
+    if (!FoldablePrevCopy)
+      return false;
+    std::optional<DestSourcePair> FoldableCurrentCopy =
+        getFoldableCopy(Current);
+    if (!FoldableCurrentCopy)
+      return false;
+    return FoldablePrevCopy->Source->getReg() ==
+           FoldableCurrentCopy->Destination->getReg();
+  }
+
+  std::optional<SpillReloadChain *> findChainContainingReload(const MachineInstr *MI) {
+    for (SpillReloadChain &Chain : Chains) {
+      if (Chain.containsReload(MI))
+        return &Chain;
+    }
+    return std::nullopt;
+  }
+
+  bool isInAnyChain(MachineInstr *MI) {
+    return any_of(Chains, [MI](SpillReloadChain &Chain) {
+      return Chain.contains(MI);
+    });
+  }
+
+  bool canRewriteChainEndpoints(const DestSourcePair &InnerMostSpillCopy,
+                                const DestSourcePair &OuterMostSpillCopy,
+                                const DestSourcePair &InnerMostReloadCopy,
+                                const DestSourcePair &OuterMostReloadCopy) {
+    return TRI.getCommonMinimalPhysRegClass(getSrcMCReg(OuterMostSpillCopy),
+                                            getSrcMCReg(InnerMostSpillCopy)) &&
+           TRI.getCommonMinimalPhysRegClass(getDstMCReg(InnerMostReloadCopy),
+                                            getDstMCReg(OuterMostReloadCopy));
+  }
+
+  static void rewriteRegisterOperand(MachineInstr *MI,
+                                     const MachineOperand *Old,
+                                     const MachineOperand *New) {
+    for (MachineOperand &MO : MI->operands()) {
+      if (&MO == Old)
+        MO.setReg(New->getReg());
+    }
+  }
+
+  [[maybe_unused]] void printSpillReloadChain(SpillReloadChain *Chain) {
+    for (SpillReloadPair &Pair : Chain->Pairs) {
+      Pair.Spill->dump();
+      Pair.Reload->dump();
+    }
+  }
+
+  void tryFoldChain(SmallVector<SpillReloadPair> &Pairs) {
+
+    assert(any_of(Pairs, [](const SpillReloadPair &Pair) {
+      return Pair.Spill != nullptr && Pair.Reload != nullptr;
+    }) && "Spill-reload should be paired");
+
+    // We need at least 3 pairs of copies for the transformation to apply,
+    // because the first outermost pair cannot be removed since we don't
+    // recolor outside of the chain and that we need at least one temporary
+    // spill slot to shorten the chain. If we only have a chain of two
+    // pairs, we already have the shortest sequence this code can handle:
+    // the outermost pair for the temporary spill slot, and the pair that
+    // use that temporary spill slot for the other end of the chain.
+    // TODO: We might be able to simplify to one spill-reload pair if collecting
+    // more infomation about the outermost COPY.
+    if (Pairs.size() <= 2)
+      return;
+
+    // If violate property#2, we don't fold the chain.
+    for (SpillReloadPair &Pair : drop_begin(Pairs)) {
+      if (CopySourceInvalid.count(Pair.Spill))
+        return;
+    }
+    for (SpillReloadPair &Pair : drop_end(Pairs)) {
+      if (CopySourceInvalid.count(Pair.Reload))
+        return;
+    }
+
+    DestSourcePair InnerMostSpillCopy = *isCopyInstr(*Pairs.front().Spill, TII, UseCopyInstr);
+    DestSourcePair OuterMostSpillCopy =
+        *isCopyInstr(*Pairs.back().Spill, TII, UseCopyInstr);
+    DestSourcePair InnerMostReloadCopy =
+        *isCopyInstr(*Pairs.front().Reload, TII, UseCopyInstr);
+    DestSourcePair OuterMostReloadCopy =
+        *isCopyInstr(*Pairs.back().Reload, TII, UseCopyInstr);
+    if (!canRewriteChainEndpoints(InnerMostSpillCopy, OuterMostSpillCopy,
+                                  InnerMostReloadCopy, OuterMostReloadCopy))
+      return;
+
+    SpillageChainsLength += Pairs.size() * 2;
+    NumSpillageChains += 1;
+    rewriteRegisterOperand(Pairs.front().Spill, InnerMostSpillCopy.Destination,
+                           OuterMostSpillCopy.Source);
+    rewriteRegisterOperand(Pairs.front().Reload, InnerMostReloadCopy.Source,
+                           OuterMostReloadCopy.Destination);
+
+    for (size_t I = 1; I < Pairs.size() - 1; ++I) {
+      Pairs[I].Spill->eraseFromParent();
+      Pairs[I].Reload->eraseFromParent();
+      NumDeletes += 2;
+    }
+  }
+
+  void processNonCopy(MachineInstr &MI) {
+    SmallSet<Register, 8> RegsToClobber;
+    for (const MachineOperand &MO : MI.operands()) {
+      if (MO.isRegMask()) {
+        BitVector &PreservedRegUnits = Tracker.getPreservedRegUnits(MO, TRI);
+        Tracker.clobberNonPreservedRegs(PreservedRegUnits, TRI, TII);
+        continue;
+      }
+      if (!MO.isReg())
+        continue;
+      Register Reg = MO.getReg();
+      if (!Reg)
+        continue;
+      MachineInstr *LastUseCopy =
+          Tracker.findLastSeenUseInCopy(Reg.asMCReg(), TRI);
+      if (LastUseCopy) {
+        LLVM_DEBUG(dbgs() << "MCP: Copy source of\n");
+        LLVM_DEBUG(LastUseCopy->dump());
+        LLVM_DEBUG(dbgs() << "might be invalidated by\n");
+        LLVM_DEBUG(MI.dump());
+        CopySourceInvalid.insert(LastUseCopy);
+      }
+      // Must be noted Tracker.clobberRegister(Reg, ...) removes tracking of
+      // Reg, i.e, COPY that defines Reg is removed from the mapping as well
+      // as marking COPYs that uses Reg unavailable.
+      // We don't invoke CopyTracker::clobberRegister(Reg, ...) if Reg is not
+      // defined by a previous COPY, since we don't want to make COPYs uses
+      // Reg unavailable.
+      if (Tracker.findLastSeenDefInCopy(MI, Reg.asMCReg(), TRI, TII,
+                                        UseCopyInstr))
+        // Thus we can keep the property#1.
+        RegsToClobber.insert(Reg);
+    }
+    for (Register Reg : RegsToClobber) {
+      Tracker.clobberRegister(Reg, TRI, TII, UseCopyInstr);
+      LLVM_DEBUG(dbgs() << "MCP: Removed tracking of " << printReg(Reg, &TRI)
+                        << "\n");
+    }
+  }
+
+  SpillReloadChain *getReloadChain(MachineInstr *Reload, MCRegister Dst) {
+    // We found a spill-reload pair:
+    //   L2: r2 = COPY r3
+    //   L5: r3 = COPY r2
+    // Look for a valid COPY before L5 which uses r3.
+    MachineInstr *MaybePrevReload = Tracker.findLastSeenUseInCopy(Dst, TRI);
+    std::optional<SpillReloadChain *> Chain = findChainContainingReload(MaybePrevReload);
+    if (!Chain.has_value() ||
+        (MaybePrevReload && !isChainedCopy(*MaybePrevReload, *Reload)))
+      return nullptr;
+
+    assert(MaybePrevReload &&
+           "Found a valid leader through nullptr should not happend");
+    assert(Chain.value()->Pairs.size() > 0 &&
+           "Existing chain's length should be larger than zero");
+    return Chain.value();
+  }
+
+  void addSpillReloadPairToChain(MachineInstr *Reload, MachineInstr *Spill,
+                                 MCRegister Dst) {
+    LLVM_DEBUG(dbgs() << "MCP: Found spill: ");
+    LLVM_DEBUG(Spill->dump());
+
+    SpillReloadChain *Chain = getReloadChain(Reload, Dst);
+    if (!Chain) {
+      SpillReloadChain NewChain = {Spill, Reload};
+      Chains.push_back(NewChain);
+      Chain = &Chains.back();
+    } else {
+      Chain->Pairs.push_back({Spill, Reload});
+    }
+    LLVM_DEBUG(dbgs() << "MCP: Chain " << Chain->Pairs.front().Reload << " now is:\n");
+    LLVM_DEBUG(printSpillReloadChain(Chain));
+  }
+
+  void processCopy(MachineInstr &MI, const DestSourcePair &CopyOperands) {
+    auto [Dst, Src] = getDstSrcMCRegs(CopyOperands);
+    // Check if we can find a pair spill-reload copy.
+    LLVM_DEBUG(dbgs() << "MCP: Searching paired spill for reload: ");
+    LLVM_DEBUG(MI.dump());
+    MachineInstr *MaybeSpill =
+        Tracker.findAvailCopy(MI, Src, TRI, TII, UseCopyInstr);
+    bool MaybeSpillIsChained = isInAnyChain(MaybeSpill);
+    if (!MaybeSpillIsChained && MaybeSpill &&
+        isSpillReloadPair(*MaybeSpill, MI)) {
+      addSpillReloadPairToChain(&MI, MaybeSpill, Dst);
+    } else if (MaybeSpill && !MaybeSpillIsChained) {
+      // MaybeSpill is unable to pair with MI. That's to say adding MI makes
+      // the chain invalid.
+      // The COPY defines Src is no longer considered as a candidate of a
+      // valid chain. Since we expect the Dst of a spill copy isn't used by
+      // any COPY instruction until a reload copy. For example:
+      // L1: r1 = COPY r2
+      // L2: r3 = COPY r1
+      // If we later have
+      // L1: r1 = COPY r2
+      // L2: r3 = COPY r1
+      // L3: r2 = COPY r1
+      // L1 and L3 can't be a valid spill-reload pair.
+      // Thus we keep the property#1.
+      LLVM_DEBUG(dbgs() << "MCP: Not paired spill-reload:\n");
+      LLVM_DEBUG(MaybeSpill->dump());
+      LLVM_DEBUG(MI.dump());
+      Tracker.clobberRegister(Src, TRI, TII, UseCopyInstr);
+      LLVM_DEBUG(dbgs() << "MCP: Removed tracking of " << printReg(Src, &TRI)
+                        << "\n");
+    }
+  }
+
+public:
+  SpillageCopyEliminator(const TargetRegisterInfo &TRI,
+                         const TargetInstrInfo &TII, CopyTracker &Tracker,
+                         bool UseCopyInstr)
+      : TRI(TRI), TII(TII), Tracker(Tracker), UseCopyInstr(UseCopyInstr) {}
+
+  void run(MachineBasicBlock &MBB) {
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+      std::optional<DestSourcePair> CopyOperands =
+          isCopyInstr(MI, TII, UseCopyInstr);
+      if (!CopyOperands) {
+        processNonCopy(MI);
+        continue;
+      }
+
+      processCopy(MI, *CopyOperands);
+      Tracker.trackCopy(&MI, TRI, TII, UseCopyInstr);
+    }
+
+    for (auto &Chain : Chains)
+      tryFoldChain(Chain.Pairs);
+  }
+};
 
 // Remove spill-reload like copy chains. For example
 // r0 = COPY r1
@@ -1326,272 +1622,7 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
   if (CopyCount < 6)
     return;
 
-  // ChainLeader maps MI inside a spill-reload chain to its innermost reload COPY.
-  // Thus we can track if a MI belongs to an existing spill-reload chain.
-  DenseMap<MachineInstr *, MachineInstr *> ChainLeader;
-  // SpillChain maps innermost reload COPY of a spill-reload chain to a sequence
-  // of COPYs that forms spills of a spill-reload chain.
-  // ReloadChain maps innermost reload COPY of a spill-reload chain to a
-  // sequence of COPYs that forms reloads of a spill-reload chain.
-  DenseMap<MachineInstr *, SmallVector<MachineInstr *>> SpillChain, ReloadChain;
-  // If a COPY's Source has use or def until next COPY defines the Source,
-  // we put the COPY in this set to keep property#2.
-  DenseSet<const MachineInstr *> CopySourceInvalid;
-
-  auto TryFoldSpillageCopies =
-      [&, this](const SmallVectorImpl<MachineInstr *> &SC,
-                const SmallVectorImpl<MachineInstr *> &RC) {
-        assert(SC.size() == RC.size() && "Spill-reload should be paired");
-
-        // We need at least 3 pairs of copies for the transformation to apply,
-        // because the first outermost pair cannot be removed since we don't
-        // recolor outside of the chain and that we need at least one temporary
-        // spill slot to shorten the chain. If we only have a chain of two
-        // pairs, we already have the shortest sequence this code can handle:
-        // the outermost pair for the temporary spill slot, and the pair that
-        // use that temporary spill slot for the other end of the chain.
-        // TODO: We might be able to simplify to one spill-reload pair if collecting
-        // more infomation about the outermost COPY.
-        if (SC.size() <= 2)
-          return;
-
-        // If violate property#2, we don't fold the chain.
-        for (const MachineInstr *Spill : drop_begin(SC))
-          if (CopySourceInvalid.count(Spill))
-            return;
-
-        for (const MachineInstr *Reload : drop_end(RC))
-          if (CopySourceInvalid.count(Reload))
-            return;
-
-        auto CheckCopyConstraint = [this](Register Dst, Register Src) {
-          return TRI->getCommonMinimalPhysRegClass(Dst, Src);
-        };
-
-        auto UpdateReg = [](MachineInstr *MI, const MachineOperand *Old,
-                            const MachineOperand *New) {
-          for (MachineOperand &MO : MI->operands()) {
-            if (&MO == Old)
-              MO.setReg(New->getReg());
-          }
-        };
-
-        DestSourcePair InnerMostSpillCopy =
-            *isCopyInstr(*SC[0], *TII, UseCopyInstr);
-        DestSourcePair OuterMostSpillCopy =
-            *isCopyInstr(*SC.back(), *TII, UseCopyInstr);
-        DestSourcePair InnerMostReloadCopy =
-            *isCopyInstr(*RC[0], *TII, UseCopyInstr);
-        DestSourcePair OuterMostReloadCopy =
-            *isCopyInstr(*RC.back(), *TII, UseCopyInstr);
-        if (!CheckCopyConstraint(getSrcMCReg(OuterMostSpillCopy),
-                                 getSrcMCReg(InnerMostSpillCopy)) ||
-            !CheckCopyConstraint(getDstMCReg(InnerMostReloadCopy),
-                                 getDstMCReg(OuterMostReloadCopy)))
-          return;
-
-        SpillageChainsLength += SC.size() + RC.size();
-        NumSpillageChains += 1;
-        UpdateReg(SC[0], InnerMostSpillCopy.Destination,
-                  OuterMostSpillCopy.Source);
-        UpdateReg(RC[0], InnerMostReloadCopy.Source,
-                  OuterMostReloadCopy.Destination);
-
-        for (size_t I = 1; I < SC.size() - 1; ++I) {
-          SC[I]->eraseFromParent();
-          RC[I]->eraseFromParent();
-          NumDeletes += 2;
-        }
-      };
-
-  auto GetFoldableCopy =
-      [this](const MachineInstr &MaybeCopy) -> std::optional<DestSourcePair> {
-    if (MaybeCopy.getNumImplicitOperands() > 0)
-      return std::nullopt;
-    std::optional<DestSourcePair> CopyOperands =
-        isCopyInstr(MaybeCopy, *TII, UseCopyInstr);
-    if (!CopyOperands)
-      return std::nullopt;
-    auto [Dst, Src] = getDstSrcMCRegs(*CopyOperands);
-    if (Src && Dst && !TRI->regsOverlap(Src, Dst) &&
-        CopyOperands->Source->isRenamable() &&
-        CopyOperands->Destination->isRenamable())
-      return CopyOperands;
-
-    return std::nullopt;
-  };
-
-  auto IsSpillReloadPair = [&](const MachineInstr &Spill,
-                               const MachineInstr &Reload) {
-    std::optional<DestSourcePair> FoldableSpillCopy = GetFoldableCopy(Spill);
-    if (!FoldableSpillCopy)
-      return false;
-    std::optional<DestSourcePair> FoldableReloadCopy = GetFoldableCopy(Reload);
-    if (!FoldableReloadCopy)
-      return false;
-    return FoldableSpillCopy->Source->getReg() ==
-               FoldableReloadCopy->Destination->getReg() &&
-           FoldableSpillCopy->Destination->getReg() ==
-               FoldableReloadCopy->Source->getReg();
-  };
-
-  auto IsChainedCopy = [&](const MachineInstr &Prev,
-                           const MachineInstr &Current) {
-    std::optional<DestSourcePair> FoldablePrevCopy = GetFoldableCopy(Prev);
-    if (!FoldablePrevCopy)
-      return false;
-    std::optional<DestSourcePair> FoldableCurrentCopy =
-        GetFoldableCopy(Current);
-    if (!FoldableCurrentCopy)
-      return false;
-    return FoldablePrevCopy->Source->getReg() ==
-           FoldableCurrentCopy->Destination->getReg();
-  };
-
-  for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
-    std::optional<DestSourcePair> CopyOperands =
-        isCopyInstr(MI, *TII, UseCopyInstr);
-
-    // Update track information via non-copy instruction.
-    SmallSet<Register, 8> RegsToClobber;
-    if (!CopyOperands) {
-      for (const MachineOperand &MO : MI.operands()) {
-        if (MO.isRegMask()) {
-          BitVector &PreservedRegUnits = Tracker.getPreservedRegUnits(MO, *TRI);
-          Tracker.clobberNonPreservedRegs(PreservedRegUnits, *TRI, *TII);
-          continue;
-        }
-        if (!MO.isReg())
-          continue;
-        Register Reg = MO.getReg();
-        if (!Reg)
-          continue;
-        MachineInstr *LastUseCopy =
-            Tracker.findLastSeenUseInCopy(Reg.asMCReg(), *TRI);
-        if (LastUseCopy) {
-          LLVM_DEBUG(dbgs() << "MCP: Copy source of\n");
-          LLVM_DEBUG(LastUseCopy->dump());
-          LLVM_DEBUG(dbgs() << "might be invalidated by\n");
-          LLVM_DEBUG(MI.dump());
-          CopySourceInvalid.insert(LastUseCopy);
-        }
-        // Must be noted Tracker.clobberRegister(Reg, ...) removes tracking of
-        // Reg, i.e, COPY that defines Reg is removed from the mapping as well
-        // as marking COPYs that uses Reg unavailable.
-        // We don't invoke CopyTracker::clobberRegister(Reg, ...) if Reg is not
-        // defined by a previous COPY, since we don't want to make COPYs uses
-        // Reg unavailable.
-        if (Tracker.findLastSeenDefInCopy(MI, Reg.asMCReg(), *TRI, *TII,
-                                    UseCopyInstr))
-          // Thus we can keep the property#1.
-          RegsToClobber.insert(Reg);
-      }
-      for (Register Reg : RegsToClobber) {
-        Tracker.clobberRegister(Reg, *TRI, *TII, UseCopyInstr);
-        LLVM_DEBUG(dbgs() << "MCP: Removed tracking of " << printReg(Reg, TRI)
-                          << "\n");
-      }
-      continue;
-    }
-
-    auto [Dst, Src] = getDstSrcMCRegs(*CopyOperands);
-    // Check if we can find a pair spill-reload copy.
-    LLVM_DEBUG(dbgs() << "MCP: Searching paired spill for reload: ");
-    LLVM_DEBUG(MI.dump());
-    MachineInstr *MaybeSpill =
-        Tracker.findAvailCopy(MI, Src, *TRI, *TII, UseCopyInstr);
-    bool MaybeSpillIsChained = ChainLeader.count(MaybeSpill);
-    if (!MaybeSpillIsChained && MaybeSpill &&
-        IsSpillReloadPair(*MaybeSpill, MI)) {
-      // Check if we already have an existing chain. Now we have a
-      // spill-reload pair.
-      // L2: r2 = COPY r3
-      // L5: r3 = COPY r2
-      // Looking for a valid COPY before L5 which uses r3.
-      // This can be serverial cases.
-      // Case #1:
-      // No COPY is found, which can be r3 is def-use between (L2, L5), we
-      // create a new chain for L2 and L5.
-      // Case #2:
-      // L2: r2 = COPY r3
-      // L5: r3 = COPY r2
-      // Such COPY is found and is L2, we create a new chain for L2 and L5.
-      // Case #3:
-      // L2: r2 = COPY r3
-      // L3: r1 = COPY r3
-      // L5: r3 = COPY r2
-      // we create a new chain for L2 and L5.
-      // Case #4:
-      // L2: r2 = COPY r3
-      // L3: r1 = COPY r3
-      // L4: r3 = COPY r1
-      // L5: r3 = COPY r2
-      // Such COPY won't be found since L4 defines r3. we create a new chain
-      // for L2 and L5.
-      // Case #5:
-      // L2: r2 = COPY r3
-      // L3: r3 = COPY r1
-      // L4: r1 = COPY r3
-      // L5: r3 = COPY r2
-      // COPY is found and is L4 which belongs to an existing chain, we add
-      // L2 and L5 to this chain.
-      LLVM_DEBUG(dbgs() << "MCP: Found spill: ");
-      LLVM_DEBUG(MaybeSpill->dump());
-      MachineInstr *MaybePrevReload = Tracker.findLastSeenUseInCopy(Dst, *TRI);
-      auto Leader = ChainLeader.find(MaybePrevReload);
-      MachineInstr *L = nullptr;
-      if (Leader == ChainLeader.end() ||
-          (MaybePrevReload && !IsChainedCopy(*MaybePrevReload, MI))) {
-        L = &MI;
-        assert(!SpillChain.count(L) &&
-               "SpillChain should not have contained newly found chain");
-      } else {
-        assert(MaybePrevReload &&
-               "Found a valid leader through nullptr should not happend");
-        L = Leader->second;
-        assert(SpillChain[L].size() > 0 &&
-               "Existing chain's length should be larger than zero");
-      }
-      assert(!ChainLeader.count(&MI) && !ChainLeader.count(MaybeSpill) &&
-             "Newly found paired spill-reload should not belong to any chain "
-             "at this point");
-      ChainLeader.insert({MaybeSpill, L});
-      ChainLeader.insert({&MI, L});
-      SpillChain[L].push_back(MaybeSpill);
-      ReloadChain[L].push_back(&MI);
-      LLVM_DEBUG(dbgs() << "MCP: Chain " << L << " now is:\n");
-      LLVM_DEBUG(printSpillReloadChain(SpillChain, ReloadChain, L));
-    } else if (MaybeSpill && !MaybeSpillIsChained) {
-      // MaybeSpill is unable to pair with MI. That's to say adding MI makes
-      // the chain invalid.
-      // The COPY defines Src is no longer considered as a candidate of a
-      // valid chain. Since we expect the Dst of a spill copy isn't used by
-      // any COPY instruction until a reload copy. For example:
-      // L1: r1 = COPY r2
-      // L2: r3 = COPY r1
-      // If we later have
-      // L1: r1 = COPY r2
-      // L2: r3 = COPY r1
-      // L3: r2 = COPY r1
-      // L1 and L3 can't be a valid spill-reload pair.
-      // Thus we keep the property#1.
-      LLVM_DEBUG(dbgs() << "MCP: Not paired spill-reload:\n");
-      LLVM_DEBUG(MaybeSpill->dump());
-      LLVM_DEBUG(MI.dump());
-      Tracker.clobberRegister(Src, *TRI, *TII, UseCopyInstr);
-      LLVM_DEBUG(dbgs() << "MCP: Removed tracking of " << printReg(Src, TRI)
-                        << "\n");
-    }
-    Tracker.trackCopy(&MI, *TRI, *TII, UseCopyInstr);
-  }
-
-  for (auto I = SpillChain.begin(), E = SpillChain.end(); I != E; ++I) {
-    auto &SC = I->second;
-    assert(ReloadChain.count(I->first) &&
-           "Reload chain of the same leader should exist");
-    auto &RC = ReloadChain[I->first];
-    TryFoldSpillageCopies(SC, RC);
-  }
+  SpillageCopyEliminator(*TRI, *TII, Tracker, UseCopyInstr).run(MBB);
 
   MaybeDeadCopies.clear();
   CopyDbgUsers.clear();
