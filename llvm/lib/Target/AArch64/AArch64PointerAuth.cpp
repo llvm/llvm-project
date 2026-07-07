@@ -110,10 +110,18 @@ static void emitEpiloguePACSymOffsetIntoReg(const TargetInstrInfo &TII,
       .setMIFlag(MachineInstr::FrameDestroy);
 }
 
-static void emitPACCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                       bool EmitCFI, MCSymbol *PACSym) {
-  if (!EmitCFI)
+// Wrap a given PAC instruction in CFI that describes it.
+// Depending on the type of CFI required, we may need to emit the directive
+// either before or after the instruction, so that unwinders can correctly
+// interpret the location of the signing instruction.
+template <typename BuildPACMIFn>
+static void decoratePACWithCFI(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MBBI, bool EmitCFI,
+                               BuildPACMIFn BuildPACMI) {
+  if (!EmitCFI) {
+    BuildPACMI();
     return;
+  }
 
   auto &MF = *MBB.getParent();
   auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
@@ -123,21 +131,36 @@ static void emitPACCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
   if (MFnI.branchProtectionPAuthLR()) {
     switch (CFILLVMSetRASignStateMode) {
     case SetRAStateMode::Never:
+      // .cfi_negate_ra_state_with_pc always comes before the paci[ab]sppc,
+      // since the unwinder uses the location of the CFI itself to derive the
+      // address of the signing instruction.
       CFIBuilder.buildNegateRAStateWithPC();
+      BuildPACMI();
       break;
     case SetRAStateMode::PAuthLR:
-    case SetRAStateMode::Always:
+    case SetRAStateMode::Always: {
+      MCSymbol *PACSym = MFnI.getSigningInstrLabel();
       assert(PACSym && "No PAC instruction to refer to");
       CFIBuilder.buildSetRAState(2, PACSym);
+      BuildPACMI();
       break;
     }
-  } else if (!TT.isOSBinFormatMachO()) {
+    }
+  } else {
     switch (CFILLVMSetRASignStateMode) {
     case SetRAStateMode::Never:
     case SetRAStateMode::PAuthLR:
-      CFIBuilder.buildNegateRAState();
+      // .cfi_negate_ra_state always comes after the paci[ab]sp, following the
+      // normal conventions for DWARF CFI opcodes, which describe how to
+      // recover the current register state, given the PC of an instruction
+      // that has not yet retired.
+      BuildPACMI();
+      if (!TT.isOSBinFormatMachO()) {
+        CFIBuilder.buildNegateRAState();
+      }
       break;
     case SetRAStateMode::Always:
+      BuildPACMI();
       CFIBuilder.buildSetRAState(1, nullptr);
       break;
     }
@@ -236,23 +259,23 @@ void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
   // No SEH opcode for this one; it doesn't materialize into an
   // instruction on Windows.
   if (MFnI.branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
-    emitPACCFI(MBB, MBBI, EmitCFI, MFnI.getSigningInstrLabel());
-    BuildMI(MBB, MBBI, DL,
-            TII->get(UseBKey ? AArch64::PACIBSPPC : AArch64::PACIASPPC))
-        .setMIFlag(MachineInstr::FrameSetup)
-        ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
+    decoratePACWithCFI(MBB, MBBI, EmitCFI, [&](){
+      BuildMI(MBB, MBBI, DL,
+              TII->get(UseBKey ? AArch64::PACIBSPPC : AArch64::PACIASPPC))
+          .setMIFlag(MachineInstr::FrameSetup)
+          ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
+    });
   } else {
     if (MFnI.branchProtectionPAuthLR()) {
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
           .setMIFlag(MachineInstr::FrameSetup);
-      emitPACCFI(MBB, MBBI, EmitCFI, MFnI.getSigningInstrLabel());
     }
-    BuildMI(MBB, MBBI, DL,
-            TII->get(UseBKey ? AArch64::PACIBSP : AArch64::PACIASP))
-        .setMIFlag(MachineInstr::FrameSetup)
-        ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
-    if (!MFnI.branchProtectionPAuthLR())
-      emitPACCFI(MBB, MBBI, EmitCFI, nullptr);
+    decoratePACWithCFI(MBB, MBBI, EmitCFI, [&](){
+      BuildMI(MBB, MBBI, DL,
+              TII->get(UseBKey ? AArch64::PACIBSP : AArch64::PACIASP))
+          .setMIFlag(MachineInstr::FrameSetup)
+          ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
+    });
   }
 
   if (!EmitCFI && NeedsWinCFI) {
