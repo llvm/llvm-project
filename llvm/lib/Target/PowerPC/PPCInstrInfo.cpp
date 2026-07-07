@@ -5494,7 +5494,7 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   // PPC::GRCRegClass or PPC::GPRC_and_GPRC_NOR0RegClass, we need to promote
   // the operand to PPC::G8CRegClass or PPC::G8RC_and_G8RC_NOR0RegClass,
   // respectively.
-  DenseMap<unsigned, Register> PromoteRegs;
+  SmallVector<Register> PromoteRegs(MI->getNumOperands());
   for (unsigned i = 1; i < MI->getNumOperands(); i++) {
     MachineOperand &Operand = MI->getOperand(i);
     if (!Operand.isReg())
@@ -5528,8 +5528,8 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   --Iter;
   MachineInstrBuilder MIBuilder(*Iter->getMF(), Iter);
   for (unsigned i = 1; i < MI->getNumOperands(); i++) {
-    if (auto It = PromoteRegs.find(i); It != PromoteRegs.end())
-      MIBuilder.addReg(It->second, RegState::Kill);
+    if (PromoteRegs[i])
+      MIBuilder.addReg(PromoteRegs[i], RegState::Kill);
     else
       Iter->addOperand(MI->getOperand(i));
   }
