@@ -2550,24 +2550,6 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   state.addAttribute(callConvNameAttr,
                      cir::CallingConvAttr::get(parser.getContext(), callConv));
 
-  if (parser.parseOptionalKeyword("func_info").succeeded()) {
-    if (parser.parseLess().failed())
-      return failure();
-
-    llvm::SMLoc attrLoc = parser.getCurrentLocation();
-    mlir::Attribute attr;
-    if (parser.parseAttribute(attr).failed())
-      return failure();
-    if (!mlir::isa<cir::CXXCtorAttr, cir::CXXDtorAttr, cir::CXXAssignAttr>(
-            attr))
-      return parser.emitError(attrLoc, "expected a function info attribute, got ")
-             << attr;
-    state.addAttribute(funcInfoNameAttr, attr);
-
-    if (parser.parseGreater().failed())
-      return failure();
-  }
-
   auto parseGlobalDtorCtor =
       [&](StringRef keyword,
           llvm::function_ref<void(std::optional<int> prio)> createAttr)
@@ -2588,6 +2570,26 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     }
     return success();
   };
+
+  // Parse the func_info attribute
+  if (parser.parseOptionalKeyword("func_info").succeeded()) {
+    if (parser.parseLess().failed())
+      return failure();
+
+    llvm::SMLoc attrLoc = parser.getCurrentLocation();
+    mlir::Attribute attr;
+    if (parser.parseAttribute(attr).failed())
+      return failure();
+    if (!mlir::isa<cir::CXXCtorAttr, cir::CXXDtorAttr, cir::CXXAssignAttr>(
+            attr))
+      return parser.emitError(attrLoc,
+                              "expected a function info attribute, got ")
+             << attr;
+    state.addAttribute(funcInfoNameAttr, attr);
+
+    if (parser.parseGreater().failed())
+      return failure();
+  }
 
   if (parseGlobalDtorCtor("global_ctor", [&](std::optional<int> priority) {
         mlir::IntegerAttr globalCtorPriorityAttr =
