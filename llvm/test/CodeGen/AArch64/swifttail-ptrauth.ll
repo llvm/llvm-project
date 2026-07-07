@@ -20,18 +20,18 @@ define swifttailcc void @caller_to0_from0() "branch-protection-pauth-lr" "sign-r
 ; CHECK:       // %bb.0:
 
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_set_ra_state 2, .Ltmp0
 ; COMPAT-NEXT: .Ltmp0:
 ; COMPAT-NEXT:   hint #25
+; COMPAT-NEXT:   .cfi_set_ra_state 2, .Ltmp0
 
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp0
 ; V83A-NEXT:   .Ltmp0:
 ; V83A-NEXT:     paciasp
+; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp0
 
-; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp0
 ; V9A-NEXT:    .Ltmp0:
 ; V9A-NEXT:      paciasppc
+; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp0
 
 ; PAUTH-NEXT:    paciasp
 ; PAUTH-NEXT:    .cfi_negate_ra_state
@@ -83,18 +83,18 @@ define swifttailcc void @caller_to0_from8([8 x i64], i64) "branch-protection-pau
 ; CHECK:       // %bb.0:
 
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_set_ra_state 2, .Ltmp1
 ; COMPAT-NEXT: .Ltmp1:
 ; COMPAT-NEXT:   hint #25
+; COMPAT-NEXT:   .cfi_set_ra_state 2, .Ltmp1
 
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp1
 ; V83A-NEXT:   .Ltmp1:
 ; V83A-NEXT:     paciasp
+; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp1
 
-; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp1
 ; V9A-NEXT:    .Ltmp1:
 ; V9A-NEXT:      paciasppc
+; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp1
 
 ; PAUTH-NEXT:    paciasp
 ; PAUTH-NEXT:    .cfi_negate_ra_state
@@ -143,18 +143,18 @@ define swifttailcc void @caller_to8_from0() "branch-protection-pauth-lr" "sign-r
 ; CHECK:       // %bb.0:
 
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_set_ra_state 2, .Ltmp2
 ; COMPAT-NEXT: .Ltmp2:
 ; COMPAT-NEXT:   hint #25
+; COMPAT-NEXT:   .cfi_set_ra_state 2, .Ltmp2
 
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp2
 ; V83A-NEXT:   .Ltmp2:
 ; V83A-NEXT:     paciasp
+; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp2
 
-; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp2
 ; V9A-NEXT:    .Ltmp2:
 ; V9A-NEXT:      paciasppc
+; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp2
 
 ; PAUTH-NEXT:    paciasp
 ; PAUTH-NEXT:    .cfi_negate_ra_state

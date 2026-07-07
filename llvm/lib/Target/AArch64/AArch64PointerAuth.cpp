@@ -111,9 +111,17 @@ static void emitEpiloguePACSymOffsetIntoReg(const TargetInstrInfo &TII,
 }
 
 // Wrap a given PAC instruction in CFI that describes it.
+//
 // Depending on the type of CFI required, we may need to emit the directive
 // either before or after the instruction, so that unwinders can correctly
 // interpret the location of the signing instruction.
+//
+// As a general rule, CFI opcodes describe the actions needed to recover the
+// register state leading up to a not-yet-retired instruction, with one
+// exception: .cfi_negate_ra_state_with_pc always comes before the paci[ab]sppc,
+// since the unwinder uses the location of the CFI itself to derive the address
+// of the signing instruction [1].
+// 1: https://github.com/llvm/llvm-project/pull/137795#issuecomment-2838779129
 template <typename BuildPACMIFn>
 static void decoratePACWithCFI(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MBBI, bool EmitCFI,
@@ -131,18 +139,15 @@ static void decoratePACWithCFI(MachineBasicBlock &MBB,
   if (MFnI.branchProtectionPAuthLR()) {
     switch (CFILLVMSetRASignStateMode) {
     case SetRAStateMode::Never:
-      // .cfi_negate_ra_state_with_pc always comes before the paci[ab]sppc,
-      // since the unwinder uses the location of the CFI itself to derive the
-      // address of the signing instruction.
       CFIBuilder.buildNegateRAStateWithPC();
       BuildPACMI();
       break;
     case SetRAStateMode::PAuthLR:
     case SetRAStateMode::Always: {
+      BuildPACMI();
       MCSymbol *PACSym = MFnI.getSigningInstrLabel();
       assert(PACSym && "No PAC instruction to refer to");
       CFIBuilder.buildSetRAState(2, PACSym);
-      BuildPACMI();
       break;
     }
     }
@@ -150,10 +155,6 @@ static void decoratePACWithCFI(MachineBasicBlock &MBB,
     switch (CFILLVMSetRASignStateMode) {
     case SetRAStateMode::Never:
     case SetRAStateMode::PAuthLR:
-      // .cfi_negate_ra_state always comes after the paci[ab]sp, following the
-      // normal conventions for DWARF CFI opcodes, which describe how to
-      // recover the current register state, given the PC of an instruction
-      // that has not yet retired.
       BuildPACMI();
       if (!TT.isOSBinFormatMachO()) {
         CFIBuilder.buildNegateRAState();

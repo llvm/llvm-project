@@ -51,8 +51,8 @@ LBB1:
   ret
 
 LBB0:
-  .cfi_set_ra_state 2, 0
   pacibsppc
+  .cfi_set_ra_state 2, LBB0
 
   stp x29, x30, [sp, #-16]!
   .cfi_def_cfa_offset 16
@@ -125,9 +125,9 @@ LBB0:
 # CHECK-NEXT:     DW_CFA_restore: reg30
 # CHECK-NEXT:     DW_CFA_advance_loc: 8 to 0xb8
 # CHECK-NEXT:     DW_CFA_AARCH64_set_ra_state: 0 16
-# CHECK-NEXT:     DW_CFA_advance_loc: 12 to 0xc4
-# CHECK-NEXT:     DW_CFA_AARCH64_set_ra_state: 2 0
-# CHECK-NEXT:     DW_CFA_advance_loc: 8 to 0xcc
+# CHECK-NEXT:     DW_CFA_advance_loc: 16 to 0xc8
+# CHECK-NEXT:     DW_CFA_AARCH64_set_ra_state: 2 -4
+# CHECK-NEXT:     DW_CFA_advance_loc: 4 to 0xcc
 # CHECK-NEXT:     DW_CFA_def_cfa_offset: +16
 # CHECK-NEXT:     DW_CFA_offset: reg29 -16
 # CHECK-NEXT:     DW_CFA_offset: reg30 -8
@@ -138,5 +138,5 @@ LBB0:
 # CHECK-NEXT:     0xa0: CFA=reg31
 # CHECK-NEXT:     0xb0: CFA=reg31
 # CHECK-NEXT:     0xb8: CFA=reg31: reg34=0
-# CHECK-NEXT:     0xc4: CFA=reg31: reg34=2
+# CHECK-NEXT:     0xc8: CFA=reg31: reg34=2
 # CHECK-NEXT:     0xcc: CFA=reg31+16: reg29=[CFA-16], reg30=[CFA-8], reg34=2
