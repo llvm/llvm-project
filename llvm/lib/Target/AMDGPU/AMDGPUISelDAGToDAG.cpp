@@ -263,6 +263,12 @@ void AMDGPUDAGToDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool AMDGPUDAGToDAGISel::matchLoadD16FromBuildVector(SDNode *N) const {
   assert(Subtarget->d16PreservesUnusedBits());
+  // In true16 mode the two 16-bit halves of a packed vector live in
+  // independent VGPR_16 registers, so building a vector from a pair of 16-bit
+  // loads is done with plain t16 loads and subregister inserts rather than the
+  // packed d16_hi/d16_lo loads.
+  if (Subtarget->useRealTrue16Insts())
+    return false;
   MVT VT = N->getValueType(0).getSimpleVT();
   if (VT != MVT::v2i16 && VT != MVT::v2f16)
     return false;

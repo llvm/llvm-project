@@ -318,8 +318,9 @@ define amdgpu_kernel void @ptr1_v2i8_preload_arg(ptr addrspace(1) inreg %out, <2
 ; GFX1250-NEXT:    global_wb
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
-; GFX1250-NEXT:    global_store_b16 v0, v1, s[2:3]
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s4
+; GFX1250-NEXT:    global_store_b16 v1, v0, s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   store <2 x i8> %in, ptr addrspace(1) %out
   ret void
@@ -553,11 +554,11 @@ define amdgpu_kernel void @v3i16_preload_arg(ptr addrspace(1) nocapture inreg %o
 ; GFX1250-NEXT:    global_wb
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s5
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s4
+; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s4
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s5
 ; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b16 v0, v1, s[2:3] offset:4
-; GFX1250-NEXT:    global_store_b32 v0, v2, s[2:3]
+; GFX1250-NEXT:    global_store_b32 v1, v2, s[2:3]
+; GFX1250-NEXT:    global_store_b16 v1, v0, s[2:3] offset:4
 ; GFX1250-NEXT:    s_endpgm
   store <3 x i16> %in, ptr addrspace(1) %out, align 4
   ret void
@@ -708,13 +709,13 @@ define amdgpu_kernel void @v5i8_preload_arg(ptr addrspace(1) nocapture inreg %ou
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_pack_lh_b32_b16 s0, 0, s4
 ; GFX1250-NEXT:    s_and_b32 s1, s4, 0xffff
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s5
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s5
 ; GFX1250-NEXT:    s_or_b32 s0, s1, s0
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
 ; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b8 v0, v1, s[2:3] offset:4
-; GFX1250-NEXT:    global_store_b32 v0, v2, s[2:3]
+; GFX1250-NEXT:    global_store_b8 v1, v0, s[2:3] offset:4
+; GFX1250-NEXT:    global_store_b32 v1, v2, s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   store <5 x i8> %in, ptr addrspace(1) %out, align 4
   ret void
@@ -993,8 +994,9 @@ define amdgpu_kernel void @half_kernel_preload_arg(ptr addrspace(1) inreg %out, 
 ; GFX1250-NEXT:    global_wb
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
-; GFX1250-NEXT:    global_store_b16 v0, v1, s[2:3]
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s4
+; GFX1250-NEXT:    global_store_b16 v1, v0, s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   store half %in, ptr addrspace(1) %out
   ret void
@@ -1034,8 +1036,9 @@ define amdgpu_kernel void @bfloat_kernel_preload_arg(ptr addrspace(1) inreg %out
 ; GFX1250-NEXT:    global_wb
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
-; GFX1250-NEXT:    global_store_b16 v0, v1, s[2:3]
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s4
+; GFX1250-NEXT:    global_store_b16 v1, v0, s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   store bfloat %in, ptr addrspace(1) %out
   ret void
@@ -1119,11 +1122,11 @@ define amdgpu_kernel void @v3bfloat_kernel_preload_arg(ptr addrspace(1) inreg %o
 ; GFX1250-NEXT:    global_wb
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s5
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s4
+; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s4
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s5
 ; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b16 v0, v1, s[2:3] offset:4
-; GFX1250-NEXT:    global_store_b32 v0, v2, s[2:3]
+; GFX1250-NEXT:    global_store_b32 v1, v2, s[2:3]
+; GFX1250-NEXT:    global_store_b16 v1, v0, s[2:3] offset:4
 ; GFX1250-NEXT:    s_endpgm
   store <3 x bfloat> %in, ptr addrspace(1) %out
   ret void
@@ -1222,13 +1225,14 @@ define amdgpu_kernel void @half_v7bfloat_kernel_preload_arg(ptr addrspace(1) inr
 ; GFX1250-NEXT:    global_wb
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v4, s4
-; GFX1250-NEXT:    v_dual_mov_b32 v5, s9 :: v_dual_mov_b32 v2, s8
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
+; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v4, s8
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s4
+; GFX1250-NEXT:    v_mov_b16_e32 v0.h, s9
+; GFX1250-NEXT:    v_dual_mov_b32 v2, s6 :: v_dual_mov_b32 v3, s7
 ; GFX1250-NEXT:    s_clause 0x2
-; GFX1250-NEXT:    global_store_b16 v3, v4, s[2:3]
-; GFX1250-NEXT:    global_store_b16 v3, v5, s[10:11] offset:12
-; GFX1250-NEXT:    global_store_b96 v3, v[0:2], s[10:11]
+; GFX1250-NEXT:    global_store_b16 v1, v0, s[2:3]
+; GFX1250-NEXT:    global_store_d16_hi_b16 v1, v0, s[10:11] offset:12
+; GFX1250-NEXT:    global_store_b96 v1, v[2:4], s[10:11]
 ; GFX1250-NEXT:    s_endpgm
   store half %in, ptr addrspace(1) %out
   store <7 x bfloat> %in2, ptr addrspace(1) %out2
@@ -1272,9 +1276,9 @@ define amdgpu_kernel void @i1_kernel_preload_arg(ptr addrspace(1) inreg %out, i1
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_and_b32 s0, s4, 1
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
-; GFX1250-NEXT:    global_store_b8 v0, v1, s[2:3]
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX1250-NEXT:    global_store_b8 v1, v0, s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   store i1 %in, ptr addrspace(1) %out
   ret void
@@ -1384,14 +1388,14 @@ define amdgpu_kernel void @v7i8_kernel_preload_arg(ptr addrspace(1) inreg %out, 
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_pack_lh_b32_b16 s0, 0, s4
 ; GFX1250-NEXT:    s_and_b32 s1, s4, 0xffff
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s5
+; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s5
 ; GFX1250-NEXT:    s_or_b32 s0, s1, s0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s5
+; GFX1250-NEXT:    v_mov_b32_e32 v3, s0
 ; GFX1250-NEXT:    s_clause 0x2
-; GFX1250-NEXT:    global_store_d16_hi_b8 v0, v1, s[2:3] offset:6
-; GFX1250-NEXT:    global_store_b16 v0, v1, s[2:3] offset:4
-; GFX1250-NEXT:    global_store_b32 v0, v2, s[2:3]
+; GFX1250-NEXT:    global_store_d16_hi_b8 v1, v2, s[2:3] offset:6
+; GFX1250-NEXT:    global_store_b16 v1, v0, s[2:3] offset:4
+; GFX1250-NEXT:    global_store_b32 v1, v3, s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   store <7 x i8> %in, ptr addrspace(1) %out
   ret void
@@ -1439,12 +1443,12 @@ define amdgpu_kernel void @v7half_kernel_preload_arg(ptr addrspace(1) inreg %out
 ; GFX1250-NEXT:    global_wb
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v4, s9
-; GFX1250-NEXT:    v_dual_mov_b32 v2, s8 :: v_dual_mov_b32 v0, s6
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s7
+; GFX1250-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v2, s8
+; GFX1250-NEXT:    v_mov_b16_e32 v3.l, s9
+; GFX1250-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
 ; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b16 v3, v4, s[2:3] offset:12
-; GFX1250-NEXT:    global_store_b96 v3, v[0:2], s[2:3]
+; GFX1250-NEXT:    global_store_b16 v4, v3, s[2:3] offset:12
+; GFX1250-NEXT:    global_store_b96 v4, v[0:2], s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   store <7 x half> %in, ptr addrspace(1) %out
   ret void
@@ -1488,11 +1492,11 @@ define amdgpu_kernel void @i16_i32_kernel_preload_arg(ptr addrspace(1) inreg %ou
 ; GFX1250-NEXT:    global_wb
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s5
+; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s5
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s4
 ; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b16 v0, v1, s[2:3]
-; GFX1250-NEXT:    global_store_b32 v0, v2, s[6:7]
+; GFX1250-NEXT:    global_store_b16 v1, v0, s[2:3]
+; GFX1250-NEXT:    global_store_b32 v1, v2, s[6:7]
 ; GFX1250-NEXT:    s_endpgm
   store i16 %in, ptr addrspace(1) %out
   store i32 %in2, ptr addrspace(1) %out2
@@ -1542,12 +1546,12 @@ define amdgpu_kernel void @i16_v3i32_kernel_preload_arg(ptr addrspace(1) inreg %
 ; GFX1250-NEXT:    global_wb
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v4, s4
+; GFX1250-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v2, s8
+; GFX1250-NEXT:    v_mov_b16_e32 v3.l, s4
 ; GFX1250-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b16 v3, v4, s[2:3]
-; GFX1250-NEXT:    global_store_b96 v3, v[0:2], s[10:11]
+; GFX1250-NEXT:    global_store_b16 v4, v3, s[2:3]
+; GFX1250-NEXT:    global_store_b96 v4, v[0:2], s[10:11]
 ; GFX1250-NEXT:    s_endpgm
   store i16 %in, ptr addrspace(1) %out
   store <3 x i32> %in2, ptr addrspace(1) %out2
@@ -1590,10 +1594,11 @@ define amdgpu_kernel void @i16_i16_kernel_preload_arg(ptr addrspace(1) inreg %ou
 ; GFX1250-NEXT:    global_wb
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
+; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s4
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s4
 ; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b16 v0, v1, s[2:3]
-; GFX1250-NEXT:    global_store_d16_hi_b16 v0, v1, s[6:7]
+; GFX1250-NEXT:    global_store_b16 v1, v0, s[2:3]
+; GFX1250-NEXT:    global_store_d16_hi_b16 v1, v2, s[6:7]
 ; GFX1250-NEXT:    s_endpgm
   store i16 %in, ptr addrspace(1) %out
   store i16 %in2, ptr addrspace(1) %out2
@@ -1646,10 +1651,11 @@ define amdgpu_kernel void @i16_v2i8_kernel_preload_arg(ptr addrspace(1) inreg %o
 ; GFX1250-NEXT:    global_wb
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
+; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s4
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s4
 ; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b16 v0, v1, s[2:3]
-; GFX1250-NEXT:    global_store_d16_hi_b16 v0, v1, s[6:7]
+; GFX1250-NEXT:    global_store_b16 v1, v0, s[2:3]
+; GFX1250-NEXT:    global_store_d16_hi_b16 v1, v2, s[6:7]
 ; GFX1250-NEXT:    s_endpgm
   store i16 %in, ptr addrspace(1) %out
   store <2 x i8> %in2, ptr addrspace(1) %out2

@@ -88,14 +88,16 @@ body: |
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX11-NEXT: SCRATCH_STORE_SHORT [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16), addrspace 5)
+    ; GFX11-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
+    ; GFX11-NEXT: SCRATCH_STORE_SHORT_t16 [[COPY2]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16), addrspace 5)
     ;
     ; GFX12-LABEL: name: function_store_private_s32_to_2
     ; GFX12: liveins: $vgpr0, $vgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX12-NEXT: SCRATCH_STORE_SHORT [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16), addrspace 5)
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
+    ; GFX12-NEXT: SCRATCH_STORE_SHORT_t16 [[COPY2]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16), addrspace 5)
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(p5) = COPY $vgpr1
     G_STORE %0, %1 :: (store (s16), align 2, addrspace 5)
@@ -136,14 +138,16 @@ body: |
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX11-NEXT: SCRATCH_STORE_BYTE [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX11-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
+    ; GFX11-NEXT: SCRATCH_STORE_BYTE_t16 [[COPY2]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     ;
     ; GFX12-LABEL: name: function_store_private_s32_to_1
     ; GFX12: liveins: $vgpr0, $vgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX12-NEXT: SCRATCH_STORE_BYTE [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
+    ; GFX12-NEXT: SCRATCH_STORE_BYTE_t16 [[COPY2]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(p5) = COPY $vgpr1
     G_STORE %0, %1 :: (store (s8), align 1, addrspace 5)
@@ -320,11 +324,13 @@ body: |
     ;
     ; GFX11-LABEL: name: function_store_private_s32_to_1_fi_offset_4095
     ; GFX11: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX11-NEXT: SCRATCH_STORE_BYTE_SADDR [[V_MOV_B32_e32_]], %stack.0, 4095, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[V_MOV_B32_e32_]].lo16
+    ; GFX11-NEXT: SCRATCH_STORE_BYTE_SADDR_t16 [[COPY]], %stack.0, 4095, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     ;
     ; GFX12-LABEL: name: function_store_private_s32_to_1_fi_offset_4095
     ; GFX12: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX12-NEXT: SCRATCH_STORE_BYTE_SADDR [[V_MOV_B32_e32_]], %stack.0, 4095, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[V_MOV_B32_e32_]].lo16
+    ; GFX12-NEXT: SCRATCH_STORE_BYTE_SADDR_t16 [[COPY]], %stack.0, 4095, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     %0:vgpr(p5) = G_FRAME_INDEX %stack.0
     %1:vgpr(s32) = G_CONSTANT i32 4095
     %2:vgpr(p5) = G_PTR_ADD %0, %1
@@ -360,12 +366,14 @@ body: |
     ; GFX11-LABEL: name: function_store_private_s32_to_1_constant_4095
     ; GFX11: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4095, implicit $exec
     ; GFX11-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX11-NEXT: SCRATCH_STORE_BYTE [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[V_MOV_B32_e32_1]].lo16
+    ; GFX11-NEXT: SCRATCH_STORE_BYTE_t16 [[COPY]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     ;
     ; GFX12-LABEL: name: function_store_private_s32_to_1_constant_4095
     ; GFX12: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4095, implicit $exec
     ; GFX12-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX12-NEXT: SCRATCH_STORE_BYTE [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[V_MOV_B32_e32_1]].lo16
+    ; GFX12-NEXT: SCRATCH_STORE_BYTE_t16 [[COPY]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     %0:vgpr(p5) = G_CONSTANT i32 4095
     %1:vgpr(s32) = G_CONSTANT i32 0
     G_STORE %1, %0 :: (store (s8), align 1, addrspace 5)
@@ -401,12 +409,14 @@ body: |
     ; GFX11-LABEL: name: function_store_private_s32_to_1_constant_4096
     ; GFX11: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4096, implicit $exec
     ; GFX11-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX11-NEXT: SCRATCH_STORE_BYTE [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[V_MOV_B32_e32_1]].lo16
+    ; GFX11-NEXT: SCRATCH_STORE_BYTE_t16 [[COPY]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     ;
     ; GFX12-LABEL: name: function_store_private_s32_to_1_constant_4096
     ; GFX12: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4096, implicit $exec
     ; GFX12-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX12-NEXT: SCRATCH_STORE_BYTE [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[V_MOV_B32_e32_1]].lo16
+    ; GFX12-NEXT: SCRATCH_STORE_BYTE_t16 [[COPY]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     %0:vgpr(p5) = G_CONSTANT i32 4096
     %1:vgpr(s32) = G_CONSTANT i32 0
     G_STORE %1, %0 :: (store (s8), align 1, addrspace 5)
@@ -493,14 +503,16 @@ body: |
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX11-NEXT: SCRATCH_STORE_SHORT [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16), addrspace 5)
+    ; GFX11-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
+    ; GFX11-NEXT: SCRATCH_STORE_SHORT_t16 [[COPY2]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16), addrspace 5)
     ;
     ; GFX12-LABEL: name: kernel_store_private_s32_to_2
     ; GFX12: liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX12-NEXT: SCRATCH_STORE_SHORT [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16), addrspace 5)
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
+    ; GFX12-NEXT: SCRATCH_STORE_SHORT_t16 [[COPY2]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16), addrspace 5)
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(p5) = COPY $vgpr1
     G_STORE %0, %1 :: (store (s16), align 2, addrspace 5)
@@ -540,14 +552,16 @@ body: |
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX11-NEXT: SCRATCH_STORE_BYTE [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX11-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
+    ; GFX11-NEXT: SCRATCH_STORE_BYTE_t16 [[COPY2]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     ;
     ; GFX12-LABEL: name: kernel_store_private_s32_to_1
     ; GFX12: liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX12-NEXT: SCRATCH_STORE_BYTE [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
+    ; GFX12-NEXT: SCRATCH_STORE_BYTE_t16 [[COPY2]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(p5) = COPY $vgpr1
     G_STORE %0, %1 :: (store (s8), align 1, addrspace 5)
@@ -728,13 +742,15 @@ body: |
     ; GFX11: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX11-NEXT: SCRATCH_STORE_BYTE_SADDR [[V_MOV_B32_e32_]], %stack.0, 4095, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[V_MOV_B32_e32_]].lo16
+    ; GFX11-NEXT: SCRATCH_STORE_BYTE_SADDR_t16 [[COPY]], %stack.0, 4095, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     ;
     ; GFX12-LABEL: name: kernel_store_private_s32_to_1_fi_offset_4095
     ; GFX12: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX12-NEXT: SCRATCH_STORE_BYTE_SADDR [[V_MOV_B32_e32_]], %stack.0, 4095, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[V_MOV_B32_e32_]].lo16
+    ; GFX12-NEXT: SCRATCH_STORE_BYTE_SADDR_t16 [[COPY]], %stack.0, 4095, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     %0:vgpr(p5) = G_FRAME_INDEX %stack.0
     %1:vgpr(s32) = G_CONSTANT i32 4095
     %2:vgpr(p5) = G_PTR_ADD %0, %1
@@ -776,14 +792,16 @@ body: |
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4095, implicit $exec
     ; GFX11-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX11-NEXT: SCRATCH_STORE_BYTE [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[V_MOV_B32_e32_1]].lo16
+    ; GFX11-NEXT: SCRATCH_STORE_BYTE_t16 [[COPY]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     ;
     ; GFX12-LABEL: name: kernel_store_private_s32_to_1_constant_4095
     ; GFX12: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4095, implicit $exec
     ; GFX12-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX12-NEXT: SCRATCH_STORE_BYTE [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[V_MOV_B32_e32_1]].lo16
+    ; GFX12-NEXT: SCRATCH_STORE_BYTE_t16 [[COPY]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     %0:vgpr(p5) = G_CONSTANT i32 4095
     %1:vgpr(s32) = G_CONSTANT i32 0
     G_STORE %1, %0 :: (store (s8), align 1, addrspace 5)
@@ -825,14 +843,16 @@ body: |
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4096, implicit $exec
     ; GFX11-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX11-NEXT: SCRATCH_STORE_BYTE [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[V_MOV_B32_e32_1]].lo16
+    ; GFX11-NEXT: SCRATCH_STORE_BYTE_t16 [[COPY]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     ;
     ; GFX12-LABEL: name: kernel_store_private_s32_to_1_constant_4096
     ; GFX12: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4096, implicit $exec
     ; GFX12-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX12-NEXT: SCRATCH_STORE_BYTE [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[V_MOV_B32_e32_1]].lo16
+    ; GFX12-NEXT: SCRATCH_STORE_BYTE_t16 [[COPY]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8), addrspace 5)
     %0:vgpr(p5) = G_CONSTANT i32 4096
     %1:vgpr(s32) = G_CONSTANT i32 0
     G_STORE %1, %0 :: (store (s8), align 1, addrspace 5)

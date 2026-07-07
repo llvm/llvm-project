@@ -3177,6 +3177,29 @@ void AMDGPUInstructionSelector::initM0(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectG_LOAD_STORE_ATOMICRMW(
   MachineInstr &I) const {
   initM0(I);
+
+  // In true16 mode, a i8/i16 truncating store whose data operand is a
+  // 32-bit VGPR should feed the _t16 store pseudos, which take a 16-bit data
+  // operand. GISel cannot import the tablegen patterns that extract the low 16
+  // bits of a 32-bit source operand (they use EXTRACT_SUBREG on an input, which
+  // the pattern importer rejects), so copy the low half into a VGPR_16 here and
+  // let the imported i16 store patterns select the _t16 pseudo.
+  if (I.getOpcode() == AMDGPU::G_STORE && Subtarget->useRealTrue16Insts()) {
+    const MachineMemOperand *MMO = *I.memoperands_begin();
+    const LLT MemTy = MMO->getMemoryType();
+    Register DataReg = I.getOperand(0).getReg();
+    const RegisterBank *DataRB = RBI.getRegBank(DataReg, *MRI, TRI);
+    if (!MMO->isAtomic() && MemTy.isScalar() && MemTy.getSizeInBits() < 32 &&
+        RBI.getSizeInBits(DataReg, *MRI, TRI) == 32 && DataRB &&
+        DataRB->getID() == AMDGPU::VGPRRegBankID) {
+      Register Lo16 = MRI->createGenericVirtualRegister(LLT::scalar(16));
+      MRI->setRegBank(Lo16, RBI.getRegBank(AMDGPU::VGPRRegBankID));
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AMDGPU::COPY), Lo16)
+          .addReg(DataReg, {}, AMDGPU::lo16);
+      I.getOperand(0).setReg(Lo16);
+    }
+  }
+
   return selectImpl(I, *CoverageInfo);
 }
 

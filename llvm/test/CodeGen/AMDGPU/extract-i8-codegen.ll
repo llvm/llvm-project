@@ -129,10 +129,11 @@ define void @extract_multiple_v4i8(ptr addrspace(1) %out) {
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NEXT:    ds_load_b32 v2, v2
+; GFX12-NEXT:    ds_load_b32 v3, v2
 ; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    v_mov_b16_e32 v2.l, v3.l
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    global_store_d16_hi_b8 v[0:1], v2, off offset:2
+; GFX12-NEXT:    global_store_d16_hi_b8 v[0:1], v3, off offset:2
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_set_pc_i64 s[30:31]
   %ptr = getelementptr inbounds i8, ptr addrspace(3) @lds, i32 0

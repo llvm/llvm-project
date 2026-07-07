@@ -52,9 +52,9 @@ define <2 x half> @chain_hi_to_lo_private() {
 ; GFX11-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 2
+; GFX11-TRUE16-NEXT:    s_mov_b32 s1, 0
 ; GFX11-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s0
-; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX11-TRUE16-NEXT:    scratch_load_d16_hi_b16 v0, off, s0
+; GFX11-TRUE16-NEXT:    scratch_load_d16_hi_b16 v0, off, s1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -179,10 +179,9 @@ define <2 x half> @chain_hi_to_lo_arithmatic(ptr addrspace(5) %base, half %in) {
 ; GFX11-TRUE16-LABEL: chain_hi_to_lo_arithmatic:
 ; GFX11-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_add_f16_e32 v1.l, 1.0, v1.l
-; GFX11-TRUE16-NEXT:    scratch_load_d16_hi_b16 v1, v0, off
+; GFX11-TRUE16-NEXT:    scratch_load_d16_hi_b16 v0, v0, off
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v1.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: chain_hi_to_lo_arithmatic:
@@ -228,9 +227,8 @@ define <2 x half> @chain_hi_to_lo_group() {
 ; GFX11-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-TRUE16-NEXT:    ds_load_u16_d16 v0, v1 offset:2
-; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    ds_load_u16_d16_hi v0, v1
+; GFX11-TRUE16-NEXT:    ds_load_u16_d16 v0, v1 offset:2
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -277,7 +275,6 @@ define <2 x half> @chain_hi_to_lo_group_different_bases(ptr addrspace(3) %base_l
 ; GFX11-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    ds_load_u16_d16 v0, v0
-; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    ds_load_u16_d16_hi v0, v1
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -329,10 +326,9 @@ define <2 x half> @chain_hi_to_lo_global() {
 ; GFX11-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, 2 :: v_dual_mov_b32 v1, 0
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v3, 0
 ; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v[1:2], off
+; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v[2:3], off
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -460,12 +456,10 @@ define <2 x half> @chain_hi_to_lo_flat(ptr inreg %ptr) {
 ; GFX11-TRUE16-LABEL: chain_hi_to_lo_flat:
 ; GFX11-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, 0
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s1
 ; GFX11-TRUE16-NEXT:    flat_load_d16_b16 v0, v[0:1] offset:2
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    flat_load_d16_hi_b16 v0, v[1:2]
+; GFX11-TRUE16-NEXT:    flat_load_d16_hi_b16 v0, v[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -514,7 +508,6 @@ define <2 x half> @chain_hi_to_lo_flat_different_bases(ptr %base_lo, ptr %base_h
 ; GFX11-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    flat_load_d16_b16 v0, v[0:1]
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    flat_load_d16_hi_b16 v0, v[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -679,11 +672,11 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    scratch_store_b16 off, v0, off offset:4 dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    scratch_load_b32 v0, off, off
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
 ; GFX11-TRUE16-NEXT:    scratch_load_d16_hi_b16 v1, off, off offset:4
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
 ; GFX11-TRUE16-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -757,16 +750,28 @@ define <2 x i16> @chain_hi_to_lo_group_other_dep(ptr addrspace(3) %ptr) {
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: chain_hi_to_lo_group_other_dep:
-; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    ds_load_u16_d16_hi v1, v0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_pk_add_u16 v1, v1, 12 op_sel_hi:[1,0]
-; GFX11-NEXT:    ds_load_u16_d16 v1, v0 offset:2
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, v1
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: chain_hi_to_lo_group_other_dep:
+; GFX11-TRUE16:       ; %bb.0: ; %bb
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    ds_load_u16_d16_hi v1, v0
+; GFX11-TRUE16-NEXT:    ds_load_u16_d16 v0, v0 offset:2
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX11-TRUE16-NEXT:    v_pk_add_u16 v1, v1, 12 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.h
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: chain_hi_to_lo_group_other_dep:
+; GFX11-FAKE16:       ; %bb.0: ; %bb
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    ds_load_u16_d16_hi v1, v0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_pk_add_u16 v1, v1, 12 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    ds_load_u16_d16 v1, v0 offset:2
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %gep_lo = getelementptr inbounds i16, ptr addrspace(3) %ptr, i64 1
   %load_lo = load i16, ptr addrspace(3) %gep_lo
@@ -888,16 +893,29 @@ define <2 x i16> @chain_hi_to_lo_private_other_dep(ptr addrspace(5) %ptr) {
 ; FLATSCR_GFX10-NEXT:    v_mov_b32_e32 v0, v1
 ; FLATSCR_GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: chain_hi_to_lo_private_other_dep:
-; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    scratch_load_d16_hi_b16 v1, v0, off
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_pk_add_u16 v1, v1, 12 op_sel_hi:[1,0]
-; GFX11-NEXT:    scratch_load_d16_b16 v1, v0, off offset:2
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, v1
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: chain_hi_to_lo_private_other_dep:
+; GFX11-TRUE16:       ; %bb.0: ; %bb
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_clause 0x1
+; GFX11-TRUE16-NEXT:    scratch_load_d16_hi_b16 v1, v0, off
+; GFX11-TRUE16-NEXT:    scratch_load_d16_b16 v0, v0, off offset:2
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-TRUE16-NEXT:    v_pk_add_u16 v1, v1, 12 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.h
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: chain_hi_to_lo_private_other_dep:
+; GFX11-FAKE16:       ; %bb.0: ; %bb
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    scratch_load_d16_hi_b16 v1, v0, off
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    v_pk_add_u16 v1, v1, 12 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    scratch_load_d16_b16 v1, v0, off offset:2
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %gep_lo = getelementptr inbounds i16, ptr addrspace(5) %ptr, i64 1
   %load_lo = load i16, ptr addrspace(5) %gep_lo
@@ -1119,3 +1137,5 @@ bb:
   %result = insertelement <2 x i16> %to.hi, i16 %load_lo, i32 0
   ret <2 x i16> %result
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX11: {{.*}}
