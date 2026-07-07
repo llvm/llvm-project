@@ -18,8 +18,12 @@ extern void a(const char *);
 // CHECK: = icmp eq i32 [[LOAD]], 1
 TEST_CPU_IS(intel, "intel")
 
-// CHECK: = icmp eq i32 {{.*}}, 2
+// CHECK-LABEL: define{{.*}} void @test_amd(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr @__cpu_model
+// CHECK: = icmp eq i32 [[LOAD]], 2
 TEST_CPU_IS(amd, "amd")
 
-// CHECK: = icmp eq i32 {{.*}}, 4
+// CHECK-LABEL: define{{.*}} void @test_other(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr @__cpu_model
+// CHECK: = icmp eq i32 [[LOAD]], 5
 TEST_CPU_IS(other, "other")

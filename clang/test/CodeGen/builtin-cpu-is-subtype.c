@@ -17,143 +17,239 @@ extern void a(const char *);
 // CHECK: = icmp eq i32 [[LOAD]], 1
 TEST_CPU_IS(nehalem, "nehalem")
 
-// CHECK: = icmp eq i32 {{.*}}, 2
+// CHECK-LABEL: define{{.*}} void @test_westmere(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 2
 TEST_CPU_IS(westmere, "westmere")
 
-// CHECK: = icmp eq i32 {{.*}}, 3
+// CHECK-LABEL: define{{.*}} void @test_sandybridge(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 3
 TEST_CPU_IS(sandybridge, "sandybridge")
 
-// CHECK: = icmp eq i32 {{.*}}, 4
+// CHECK-LABEL: define{{.*}} void @test_barcelona(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 4
 TEST_CPU_IS(barcelona, "barcelona")
 
-// CHECK: = icmp eq i32 {{.*}}, 5
+// CHECK-LABEL: define{{.*}} void @test_shanghai(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 5
 TEST_CPU_IS(shanghai, "shanghai")
 
-// CHECK: = icmp eq i32 {{.*}}, 6
+// CHECK-LABEL: define{{.*}} void @test_istanbul(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 6
 TEST_CPU_IS(istanbul, "istanbul")
 
-// CHECK: = icmp eq i32 {{.*}}, 7
+// CHECK-LABEL: define{{.*}} void @test_bdver1(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 7
 TEST_CPU_IS(bdver1, "bdver1")
 
-// CHECK: = icmp eq i32 {{.*}}, 8
+// CHECK-LABEL: define{{.*}} void @test_bdver2(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 8
 TEST_CPU_IS(bdver2, "bdver2")
 
-// CHECK: = icmp eq i32 {{.*}}, 9
+// CHECK-LABEL: define{{.*}} void @test_bdver3(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 9
 TEST_CPU_IS(bdver3, "bdver3")
 
-// CHECK: = icmp eq i32 {{.*}}, 10
+// CHECK-LABEL: define{{.*}} void @test_bdver4(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 10
 TEST_CPU_IS(bdver4, "bdver4")
 
-// CHECK: = icmp eq i32 {{.*}}, 11
+// CHECK-LABEL: define{{.*}} void @test_znver1(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 11
 TEST_CPU_IS(znver1, "znver1")
 
-// CHECK: = icmp eq i32 {{.*}}, 12
+// CHECK-LABEL: define{{.*}} void @test_ivybridge(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 12
 TEST_CPU_IS(ivybridge, "ivybridge")
 
-// CHECK: = icmp eq i32 {{.*}}, 13
+// CHECK-LABEL: define{{.*}} void @test_haswell(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 13
 TEST_CPU_IS(haswell, "haswell")
 
-// CHECK: = icmp eq i32 {{.*}}, 14
+// CHECK-LABEL: define{{.*}} void @test_broadwell(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 14
 TEST_CPU_IS(broadwell, "broadwell")
 
-// CHECK: = icmp eq i32 {{.*}}, 15
+// CHECK-LABEL: define{{.*}} void @test_skylake(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 15
 TEST_CPU_IS(skylake, "skylake")
 
-// CHECK: = icmp eq i32 {{.*}}, 16
+// CHECK-LABEL: define{{.*}} void @test_skylake_avx512(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 16
 TEST_CPU_IS(skylake_avx512, "skylake-avx512")
 
-// CHECK: = icmp eq i32 {{.*}}, 17
+// CHECK-LABEL: define{{.*}} void @test_cannonlake(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 17
 TEST_CPU_IS(cannonlake, "cannonlake")
 
-// CHECK: = icmp eq i32 {{.*}}, 18
+// CHECK-LABEL: define{{.*}} void @test_icelake_client(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 18
 TEST_CPU_IS(icelake_client, "icelake-client")
 
-// CHECK: = icmp eq i32 {{.*}}, 19
+// CHECK-LABEL: define{{.*}} void @test_icelake_server(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 19
 TEST_CPU_IS(icelake_server, "icelake-server")
 
-// CHECK: = icmp eq i32 {{.*}}, 20
+// CHECK-LABEL: define{{.*}} void @test_znver2(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 20
 TEST_CPU_IS(znver2, "znver2")
 
-// CHECK: = icmp eq i32 {{.*}}, 21
+// CHECK-LABEL: define{{.*}} void @test_cascadelake(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 21
 TEST_CPU_IS(cascadelake, "cascadelake")
 
-// CHECK: = icmp eq i32 {{.*}}, 22
+// CHECK-LABEL: define{{.*}} void @test_tigerlake(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 22
 TEST_CPU_IS(tigerlake, "tigerlake")
 
-// CHECK: = icmp eq i32 {{.*}}, 23
+// CHECK-LABEL: define{{.*}} void @test_cooperlake(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 23
 TEST_CPU_IS(cooperlake, "cooperlake")
 
-// CHECK: = icmp eq i32 {{.*}}, 24
+// CHECK-LABEL: define{{.*}} void @test_sapphirerapids(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 24
 TEST_CPU_IS(sapphirerapids, "sapphirerapids")
 
-// CHECK: = icmp eq i32 {{.*}}, 25
+// CHECK-LABEL: define{{.*}} void @test_alderlake(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 25
 TEST_CPU_IS(alderlake, "alderlake")
 
-// CHECK: = icmp eq i32 {{.*}}, 26
+// CHECK-LABEL: define{{.*}} void @test_znver3(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 26
 TEST_CPU_IS(znver3, "znver3")
 
-// CHECK: = icmp eq i32 {{.*}}, 27
+// CHECK-LABEL: define{{.*}} void @test_rocketlake(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 27
 TEST_CPU_IS(rocketlake, "rocketlake")
 
-// CHECK: = icmp eq i32 {{.*}}, 28
+// CHECK-LABEL: define{{.*}} void @test_zhaoxin_fam7h_lujiazui(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 28
 TEST_CPU_IS(zhaoxin_fam7h_lujiazui, "zhaoxin_fam7h_lujiazui")
 
-// CHECK: = icmp eq i32 {{.*}}, 29
+// CHECK-LABEL: define{{.*}} void @test_znver4(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 29
 TEST_CPU_IS(znver4, "znver4")
 
-// CHECK: = icmp eq i32 {{.*}}, 30
+// CHECK-LABEL: define{{.*}} void @test_graniterapids(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 30
 TEST_CPU_IS(graniterapids, "graniterapids")
 
-// CHECK: = icmp eq i32 {{.*}}, 31
+// CHECK-LABEL: define{{.*}} void @test_graniterapids_d(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 31
 TEST_CPU_IS(graniterapids_d, "graniterapids-d")
 
-// CHECK: = icmp eq i32 {{.*}}, 32
+// CHECK-LABEL: define{{.*}} void @test_arrowlake(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 32
 TEST_CPU_IS(arrowlake, "arrowlake")
 
-// CHECK: = icmp eq i32 {{.*}}, 33
+// CHECK-LABEL: define{{.*}} void @test_arrowlake_s(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 33
 TEST_CPU_IS(arrowlake_s, "arrowlake-s")
 
-// CHECK: = icmp eq i32 {{.*}}, 34
+// CHECK-LABEL: define{{.*}} void @test_pantherlake(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 34
 TEST_CPU_IS(pantherlake, "pantherlake")
 
-// CHECK: = icmp eq i32 {{.*}}, 36
+// CHECK-LABEL: define{{.*}} void @test_znver5(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 36
 TEST_CPU_IS(znver5, "znver5")
 
-// CHECK: = icmp eq i32 {{.*}}, 38
+// CHECK-LABEL: define{{.*}} void @test_diamondrapids(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 38
 TEST_CPU_IS(diamondrapids, "diamondrapids")
 
-// CHECK: = icmp eq i32 {{.*}}, 39
+// CHECK-LABEL: define{{.*}} void @test_novalake(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 39
 TEST_CPU_IS(novalake, "novalake")
 
-// CHECK: = icmp eq i32 {{.*}}, 40
+// CHECK-LABEL: define{{.*}} void @test_znver6(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 40
 TEST_CPU_IS(znver6, "znver6")
 
-// CHECK: = icmp eq i32 {{.*}}, 41
+// CHECK-LABEL: define{{.*}} void @test_c86_4g_m4(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 41
 TEST_CPU_IS(c86_4g_m4, "c86-4g-m4")
 
-// CHECK: = icmp eq i32 {{.*}}, 42
+// CHECK-LABEL: define{{.*}} void @test_c86_4g_m6(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 42
 TEST_CPU_IS(c86_4g_m6, "c86-4g-m6")
 
-// CHECK: = icmp eq i32 {{.*}}, 43
+// CHECK-LABEL: define{{.*}} void @test_c86_4g_m7(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 43
 TEST_CPU_IS(c86_4g_m7, "c86-4g-m7")
 
-// CHECK: = icmp eq i32 {{.*}}, 44
+// CHECK-LABEL: define{{.*}} void @test_c86_4g_m8(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 44
 TEST_CPU_IS(c86_4g_m8, "c86-4g-m8")
 
-// CHECK: = icmp eq i32 {{.*}}, 25
-TEST_CPU_IS(raptorlake, "raptorlake")
+// Aliases
 
-// CHECK: = icmp eq i32 {{.*}}, 25
-TEST_CPU_IS(meteorlake, "meteorlake")
-
-// CHECK: = icmp eq i32 {{.*}}, 24
+// CHECK-LABEL: define{{.*}} void @test_emeraldrapids(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 24
 TEST_CPU_IS(emeraldrapids, "emeraldrapids")
 
-// CHECK: = icmp eq i32 {{.*}}, 33
-TEST_CPU_IS(lunarlake, "lunarlake")
+// CHECK-LABEL: define{{.*}} void @test_raptorlake(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 25
+TEST_CPU_IS(raptorlake, "raptorlake")
 
-// CHECK: = icmp eq i32 {{.*}}, 25
+// CHECK-LABEL: define{{.*}} void @test_meteorlake(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 25
+TEST_CPU_IS(meteorlake, "meteorlake")
+
+// CHECK-LABEL: define{{.*}} void @test_gracemont(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 25
 TEST_CPU_IS(gracemont, "gracemont")
 
-// CHECK: = icmp eq i32 {{.*}}, 34
+// CHECK-LABEL: define{{.*}} void @test_lunarlake(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 33
+TEST_CPU_IS(lunarlake, "lunarlake")
+
+// CHECK-LABEL: define{{.*}} void @test_wildcatlake(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_model, i64 8)
+// CHECK: = icmp eq i32 [[LOAD]], 34
 TEST_CPU_IS(wildcatlake, "wildcatlake")

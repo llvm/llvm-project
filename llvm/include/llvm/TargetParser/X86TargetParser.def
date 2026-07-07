@@ -20,7 +20,7 @@
 #endif
 X86_VENDOR(VENDOR_INTEL, "intel", 1)
 X86_VENDOR(VENDOR_AMD,   "amd",   2)
-X86_VENDOR(VENDOR_OTHER, "other", 4)
+X86_VENDOR(VENDOR_OTHER, "other", 5)
 #undef X86_VENDOR
 
 #ifndef X86_CPU_TYPE
@@ -56,8 +56,8 @@ X86_CPU_TYPE(HYGONFAM18H,            "hygonfam18h",      21)
 X86_CPU_TYPE(ATOM,                   "atom",             1)
 X86_CPU_TYPE(AMDFAM10,               "amdfam10",         4)
 X86_CPU_TYPE(AMDFAM15,               "amdfam15",         5)
-X86_CPU_TYPE(AMDFAM1A,               "amdfam1a",         20)
 X86_CPU_TYPE(SLM,                    "slm",              6)
+X86_CPU_TYPE(AMDFAM1A,               "amdfam1a",         20)
 
 #undef X86_CPU_TYPE
 
@@ -112,11 +112,11 @@ X86_CPU_SUBTYPE(HYGONFAM18H_C86_4G_M7,       "c86-4g-m7",              43)
 X86_CPU_SUBTYPE(HYGONFAM18H_C86_4G_M8,       "c86-4g-m8",              44)
 
 // Aliases
+X86_CPU_SUBTYPE(INTEL_COREI7_EMERALRAPIDS,   "emeraldrapids",          24)
 X86_CPU_SUBTYPE(INTEL_COREI7_RAPTORLAKE,     "raptorlake",             25)
 X86_CPU_SUBTYPE(INTEL_COREI7_METEORLAKE,     "meteorlake",             25)
-X86_CPU_SUBTYPE(INTEL_COREI7_EMERALRAPIDS,   "emeraldrapids",          24)
-X86_CPU_SUBTYPE(INTEL_COREI7_LUNARLAKE,      "lunarlake",              33)
 X86_CPU_SUBTYPE(INTEL_COREI7_GRACEMONT,      "gracemont",              25)
+X86_CPU_SUBTYPE(INTEL_COREI7_LUNARLAKE,      "lunarlake",              33)
 X86_CPU_SUBTYPE(INTEL_COREI7_WILDCATLAKE,    "wildcatlake",            34)
 
 #undef X86_CPU_SUBTYPE
