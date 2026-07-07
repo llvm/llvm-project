@@ -60,58 +60,134 @@ to specify the target triple.
    compatibility.
 
 .. table:: AMDGPU Architectures
-     :name: amdgpu-architecture-table
+   :name: amdgpu-architecture-table
 
-     ============ ==============================================================
-     Architecture Description
-     ============ ==============================================================
-     ``r600``     AMD GPUs HD2XXX-HD6XXX for graphics and compute shaders.
-     ``amdgpu``   AMD GPUs GCN GFX6 onwards for graphics and compute shaders.
-     ``amdgcn``   Legacy alias for ``amdgpu``.
-     ============ ==============================================================
+   ============ ==============================================================
+   Architecture Description
+   ============ ==============================================================
+   ``r600``     AMD GPUs HD2XXX-HD6XXX for graphics and compute shaders.
+   ``amdgpu``   AMD GPUs GCN GFX6 onwards for graphics and compute shaders.
+   ``amdgcn``   Legacy alias for ``amdgpu``.
+   ============ ==============================================================
 
-  .. table:: AMDGPU Vendors
-     :name: amdgpu-vendor-table
+The following table lists each major subarch and the minor subarches it
+covers. The *Default Processor* column gives the generic processor that a
+major subarch selects by default for code generation; this is the
+corresponding generic processor for families that have one (see
+:ref:`amdgpu-generic-processor-table`). Major subarches listed as *(none)*
+are placeholders for families that do not yet have a generic target. See
+:ref:`amdgpu-subarch-compatibility` for how subarches are matched.
 
-     ============ ==============================================================
-     Vendor       Description
-     ============ ==============================================================
-     ``amd``      Can be used for all AMD GPU usage.
-     ``mesa``     Can be used if the OS is ``mesa3d``.
-     ============ ==============================================================
+.. list-table:: AMDGPU Subarchitectures
+   :name: amdgpu-major-subarch-table
+   :header-rows: 1
 
-  .. table:: AMDGPU Operating Systems
-     :name: amdgpu-os
+   * - Major Subarch
+     - Default Processor
+     - Covered Subarches (Processor)
+   * - ``amdgpu6``
+     - *(none)*
+     - ``amdgpu6.00`` (``gfx600``), ``amdgpu6.01`` (``gfx601``),
+       ``amdgpu6.02`` (``gfx602``)
+   * - ``amdgpu7``
+     - *(none)*
+     - ``amdgpu7.00`` (``gfx700``), ``amdgpu7.01`` (``gfx701``),
+       ``amdgpu7.02`` (``gfx702``), ``amdgpu7.03`` (``gfx703``),
+       ``amdgpu7.04`` (``gfx704``), ``amdgpu7.05`` (``gfx705``)
+   * - ``amdgpu8``
+     - *(none)*
+     - ``amdgpu8.01`` (``gfx801``), ``amdgpu8.02`` (``gfx802``),
+       ``amdgpu8.03`` (``gfx803``), ``amdgpu8.05`` (``gfx805``)
+   * - ``amdgpu8.10``
+     - *(none)*
+     - ``amdgpu8.10`` (``gfx810``)
+   * - ``amdgpu9``
+     - ``gfx9-generic``
+     - ``amdgpu9.00`` (``gfx900``), ``amdgpu9.02`` (``gfx902``),
+       ``amdgpu9.04`` (``gfx904``), ``amdgpu9.06`` (``gfx906``),
+       ``amdgpu9.09`` (``gfx909``), ``amdgpu9.0c`` (``gfx90c``)
+   * - ``amdgpu9.08``
+     - *(none)*
+     - ``amdgpu9.08`` (``gfx908``)
+   * - ``amdgpu9.0a``
+     - *(none)*
+     - ``amdgpu9.0a`` (``gfx90a``)
+   * - ``amdgpu9.4``
+     - ``gfx9-4-generic``
+     - ``amdgpu9.42`` (``gfx942``), ``amdgpu9.50`` (``gfx950``)
+   * - ``amdgpu10.1``
+     - ``gfx10-1-generic``
+     - ``amdgpu10.10`` (``gfx1010``), ``amdgpu10.11`` (``gfx1011``),
+       ``amdgpu10.12`` (``gfx1012``), ``amdgpu10.13`` (``gfx1013``)
+   * - ``amdgpu10.3``
+     - ``gfx10-3-generic``
+     - ``amdgpu10.30`` (``gfx1030``), ``amdgpu10.31`` (``gfx1031``),
+       ``amdgpu10.32`` (``gfx1032``), ``amdgpu10.33`` (``gfx1033``),
+       ``amdgpu10.34`` (``gfx1034``), ``amdgpu10.35`` (``gfx1035``),
+       ``amdgpu10.36`` (``gfx1036``)
+   * - ``amdgpu11``
+     - ``gfx11-generic``
+     - ``amdgpu11.00`` (``gfx1100``), ``amdgpu11.01`` (``gfx1101``),
+       ``amdgpu11.02`` (``gfx1102``), ``amdgpu11.03`` (``gfx1103``),
+       ``amdgpu11.50`` (``gfx1150``), ``amdgpu11.51`` (``gfx1151``),
+       ``amdgpu11.52`` (``gfx1152``), ``amdgpu11.53`` (``gfx1153``)
+       ``amdgpu11.54`` (``gfx1154``)
+   * - ``amdgpu11.7``
+     - ``gfx11-7-generic``
+     - ``amdgpu11.70`` (``gfx1170``), ``amdgpu11.71`` (``gfx1171``),
+       ``amdgpu11.72`` (``gfx1172``)
+   * - ``amdgpu12``
+     - ``gfx12-generic``
+     - ``amdgpu12.00`` (``gfx1200``), ``amdgpu12.01`` (``gfx1201``)
+   * - ``amdgpu12.5``
+     - ``gfx12-5-generic``
+     - ``amdgpu12.50`` (``gfx1250``), ``amdgpu12.51`` (``gfx1251``)
+   * - ``amdgpu13``
+     - ``gfx13-generic``
+     - ``amdgpu13.10`` (``gfx1310``)
 
-     ============== ============================================================
-     OS             Description
-     ============== ============================================================
-     *<empty>*      Defaults to the *unknown* OS.
-     ``amdhsa``     Compute kernels executed on HSA [HSA]_ compatible runtimes
-                    such as:
+.. table:: AMDGPU Vendors
+   :name: amdgpu-vendor-table
 
-                    - AMD's ROCm™ runtime [AMD-ROCm]_ using the *rocm-amdhsa*
-                      loader on Linux. See *AMD ROCm Platform Release Notes*
-                      [AMD-ROCm-Release-Notes]_ for supported hardware and
-                      software.
-                    - AMD's PAL runtime using the *pal-amdhsa* loader on
-                      Windows.
+   ============ ==============================================================
+   Vendor       Description
+   ============ ==============================================================
+   ``amd``      Can be used for all AMD GPU usage.
+   ``mesa``     Can be used if the OS is ``mesa3d``.
+   ============ ==============================================================
 
-     ``amdpal``     Graphic shaders and compute kernels executed on AMD's PAL
-                    runtime using the *pal-amdpal* loader on Windows and Linux
-                    Pro.
-     ``mesa3d``     Graphic shaders and compute kernels executed on AMD's Mesa
-                    3D runtime using the *mesa-mesa3d* loader on Linux.
-     ============== ============================================================
+.. table:: AMDGPU Operating Systems
+   :name: amdgpu-os
 
-  .. table:: AMDGPU Environments
-     :name: amdgpu-environment-table
+   ============== ============================================================
+   OS             Description
+   ============== ============================================================
+   *<empty>*      Defaults to the *unknown* OS.
+   ``amdhsa``     Compute kernels executed on HSA [HSA]_ compatible runtimes
+                  such as:
 
-     ============ ==============================================================
-     Environment  Description
-     ============ ==============================================================
-     *<empty>*    Default.
-     ============ ==============================================================
+                  - AMD's ROCm™ runtime [AMD-ROCm]_ using the *rocm-amdhsa*
+                    loader on Linux. See *AMD ROCm Platform Release Notes*
+                    [AMD-ROCm-Release-Notes]_ for supported hardware and
+                    software.
+                  - AMD's PAL runtime using the *pal-amdhsa* loader on
+                    Windows.
+
+   ``amdpal``     Graphic shaders and compute kernels executed on AMD's PAL
+                  runtime using the *pal-amdpal* loader on Windows and Linux
+                  Pro.
+   ``mesa3d``     Graphic shaders and compute kernels executed on AMD's Mesa
+                  3D runtime using the *mesa-mesa3d* loader on Linux.
+   ============== ============================================================
+
+.. table:: AMDGPU Environments
+   :name: amdgpu-environment-table
+
+   ============ ==============================================================
+   Environment  Description
+   ============ ==============================================================
+   *<empty>*    Default.
+   ============ ==============================================================
 
 .. _amdgpu-subarch-compatibility:
 
@@ -145,81 +221,6 @@ triple with no subarch (``amdgpu``) is treated as compatible with
 anything, as a backwards-compatibility allowance. When linking modules
 with compatible-but-unequal subarches, the more specific (minor)
 subarch is selected for the merged module.
-
-The following table lists each major subarch and the minor subarches it covers.
-The *Default Processor* column gives the generic processor that a major
-subarch selects by default for code generation; this is the corresponding
-generic processor for families that have one (see
-:ref:`amdgpu-generic-processor-table`). Major subarches listed as *(none)* are
-placeholders for families that do not yet have a generic target.
-
-  .. list-table:: AMDGPU Major SubArchitecture Coverage
-     :name: amdgpu-major-subarch-table
-     :header-rows: 1
-
-     * - Major SubArch
-       - Default Processor
-       - Covered SubArches (Processor)
-     * - ``amdgpu6``
-       - *(none)*
-       - ``amdgpu6.00`` (``gfx600``), ``amdgpu6.01`` (``gfx601``),
-         ``amdgpu6.02`` (``gfx602``)
-     * - ``amdgpu7``
-       - *(none)*
-       - ``amdgpu7.00`` (``gfx700``), ``amdgpu7.01`` (``gfx701``),
-         ``amdgpu7.02`` (``gfx702``), ``amdgpu7.03`` (``gfx703``),
-         ``amdgpu7.04`` (``gfx704``), ``amdgpu7.05`` (``gfx705``)
-     * - ``amdgpu8``
-       - *(none)*
-       - ``amdgpu8.01`` (``gfx801``), ``amdgpu8.02`` (``gfx802``),
-         ``amdgpu8.03`` (``gfx803``), ``amdgpu8.05`` (``gfx805``)
-     * - ``amdgpu8.10``
-       - *(none)*
-       - ``amdgpu8.10`` (``gfx810``)
-     * - ``amdgpu9``
-       - ``gfx9-generic``
-       - ``amdgpu9.00`` (``gfx900``), ``amdgpu9.02`` (``gfx902``),
-         ``amdgpu9.04`` (``gfx904``), ``amdgpu9.06`` (``gfx906``),
-         ``amdgpu9.09`` (``gfx909``), ``amdgpu9.0c`` (``gfx90c``)
-     * - ``amdgpu9.08``
-       - *(none)*
-       - ``amdgpu9.08`` (``gfx908``)
-     * - ``amdgpu9.0a``
-       - *(none)*
-       - ``amdgpu9.0a`` (``gfx90a``)
-     * - ``amdgpu9.4``
-       - ``gfx9-4-generic``
-       - ``amdgpu9.42`` (``gfx942``), ``amdgpu9.50`` (``gfx950``)
-     * - ``amdgpu10.1``
-       - ``gfx10-1-generic``
-       - ``amdgpu10.10`` (``gfx1010``), ``amdgpu10.11`` (``gfx1011``),
-         ``amdgpu10.12`` (``gfx1012``), ``amdgpu10.13`` (``gfx1013``)
-     * - ``amdgpu10.3``
-       - ``gfx10-3-generic``
-       - ``amdgpu10.30`` (``gfx1030``), ``amdgpu10.31`` (``gfx1031``),
-         ``amdgpu10.32`` (``gfx1032``), ``amdgpu10.33`` (``gfx1033``),
-         ``amdgpu10.34`` (``gfx1034``), ``amdgpu10.35`` (``gfx1035``),
-         ``amdgpu10.36`` (``gfx1036``)
-     * - ``amdgpu11``
-       - ``gfx11-generic``
-       - ``amdgpu11.00`` (``gfx1100``), ``amdgpu11.01`` (``gfx1101``),
-         ``amdgpu11.02`` (``gfx1102``), ``amdgpu11.03`` (``gfx1103``),
-         ``amdgpu11.50`` (``gfx1150``), ``amdgpu11.51`` (``gfx1151``),
-         ``amdgpu11.52`` (``gfx1152``), ``amdgpu11.53`` (``gfx1153``)
-         ``amdgpu11.54`` (``gfx1154``)
-     * - ``amdgpu11.7``
-       - ``gfx11-7-generic``
-       - ``amdgpu11.70`` (``gfx1170``), ``amdgpu11.71`` (``gfx1171``),
-         ``amdgpu11.72`` (``gfx1172``)
-     * - ``amdgpu12``
-       - ``gfx12-generic``
-       - ``amdgpu12.00`` (``gfx1200``), ``amdgpu12.01`` (``gfx1201``)
-     * - ``amdgpu12.5``
-       - ``gfx12-5-generic``
-       - ``amdgpu12.50`` (``gfx1250``), ``amdgpu12.51`` (``gfx1251``)
-     * - ``amdgpu13``
-       - ``gfx13-generic``
-       - ``amdgpu13.10`` (``gfx1310``)
 
 .. _amdgpu-processors:
 
