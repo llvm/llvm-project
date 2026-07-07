@@ -596,7 +596,20 @@ static uint8_t getBaserelType(const coff_relocation &rel,
       return IMAGE_REL_BASED_DIR64;
     return IMAGE_REL_BASED_ABSOLUTE;
   case Triple::mipsel:
-    return IMAGE_REL_BASED_ABSOLUTE;
+    switch (rel.Type) {
+    case IMAGE_REL_MIPS_REFHALF:
+      return IMAGE_REL_BASED_HIGH;
+    case IMAGE_REL_MIPS_REFWORD:
+      return IMAGE_REL_BASED_HIGHLOW;
+    case IMAGE_REL_MIPS_REFHI:
+      return IMAGE_REL_BASED_HIGHADJ;
+    case IMAGE_REL_MIPS_REFLO:
+      return IMAGE_REL_BASED_LOW;
+    case IMAGE_REL_MIPS_JMPADDR:
+      return IMAGE_REL_BASED_MIPS_JMPADDR;
+    default:
+      return IMAGE_REL_BASED_ABSOLUTE;
+    }
   default:
     llvm_unreachable("unknown machine type");
   }

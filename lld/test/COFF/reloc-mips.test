@@ -1,8 +1,8 @@
 # REQUIRES: mips
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-windows %s -o %t.obj
-# RUN: lld-link %t.obj /out:%t.exe /subsystem:console,4 /entry:_start /base:0x30000 && llvm-objdump -sS %t.exe | FileCheck %s --check-prefix=CHECK-LOW
-# RUN: lld-link %t.obj /out:%t.exe /subsystem:console,4 /entry:_start /base:0x10000000 && llvm-objdump -sS %t.exe | FileCheck %s --check-prefix=CHECK-HIGH
+# RUN: lld-link %t.obj /out:%t.exe /subsystem:console,4 /entry:_start /base:0x30000 /fixed:no && llvm-objdump -sS %t.exe | FileCheck %s --check-prefix=CHECK-LOW
+# RUN: lld-link %t.obj /out:%t.exe /subsystem:console,4 /entry:_start /base:0x10000000 /fixed:no && llvm-objdump -sS %t.exe | FileCheck %s --check-prefix=CHECK-HIGH
 
 # CHECK-LOW: Contents of section .text:
 # CHECK-LOW:  31000 00000000 00000000 00000000 02c40008  ................
@@ -11,6 +11,10 @@
 # CHECK-LOW:  32000 00000000 04200300 01000000 0000      ..... ........
 # CHECK-LOW: Contents of section text_ref:
 # CHECK-LOW:  33000 0300013c 002020ac                    ...<.  .
+# CHECK-LOW: Contents of section .reloc:
+# CHECK-LOW:  34000 00100000 0c000000 0c500000 00200000  .........P... ..
+# CHECK-LOW:  34010 0c000000 04300000 00300000 0c000000  .....0...0......
+# CHECK-LOW:  34020 00400420                             .@.
 
 # CHECK-LOW: Disassembly of section .text:
 # CHECK-LOW: 3100c: 02 c4 00 08  	j	0x31008 <.text+0x8>
@@ -25,6 +29,10 @@
 # CHECK-HIGH:  10002000 00000000 04200010 01000000 0000      ..... ........
 # CHECK-HIGH: Contents of section text_ref:
 # CHECK-HIGH:  10003000 0010013c 002020ac                    ...<.  .
+# CHECK-HIGH: Contents of section .reloc:
+# CHECK-HIGH:  10004000 00100000 0c000000 0c500000 00200000  .........P... ..
+# CHECK-HIGH:  10004010 0c000000 04300000 00300000 0c000000  .....0...0......
+# CHECK-HIGH:  10004020 00400420                             .@.
 
 # CHECK-HIGH: Disassembly of section .text:
 # CHECK-HIGH: 1000100c: 02 04 00 08  	j	0x1008 <.text+0x8>
