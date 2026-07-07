@@ -421,6 +421,8 @@ def KPAIRS : RegisterTuples<[sub_mask_0, sub_mask_1],
 let PositionOrder = 3 in {
 // Tile config registers.
 def TMMCFG: X86Reg<"tmmcfg", 0>;
+// Block Scale Register (ACE)
+def BSR0 : X86Reg<"bsr0", 0>;
 // Tile "registers".
 def TMM0:  X86Reg<"tmm0",   0>;
 def TMM1:  X86Reg<"tmm1",   1>;
@@ -856,6 +858,13 @@ def VK64WM  : RegisterClass<"X86", [v64i1], 64, (add VK32WM)> {let Size = 64;}
 let CopyCost = -1 in // Don't allow copying of tile registers
 def TILE : RegisterClass<"X86", [x86amx], 8192,
                          (sequence "TMM%u", 0, 7)> {let Size = 8192;}
+
+// Block Scale Registers (ACE)
+let CopyCost = -1 in // Don't allow copying of BSR register
+def BSR : RegisterClass<"X86", [untyped], 0, (add BSR0)> {
+  let Size = 1024;
+  let isAllocatable = 0;
+}
 
 //===----------------------------------------------------------------------===//
 // Register categories.

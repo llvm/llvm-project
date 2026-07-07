@@ -46,7 +46,8 @@ void X86IntelInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   if (MI->getOpcode() == X86::DATA16_PREFIX &&
       STI.hasFeature(X86::Is16Bit)) {
     OS << "\tdata32";
-  } else if (!printAliasInstr(MI, Address, OS) && !printVecCompareInstr(MI, OS))
+  } else if (!printAliasInstr(MI, Address, OS) && !printBSRInstr(MI, OS) &&
+             !printVecCompareInstr(MI, OS))
     printInstruction(MI, Address, OS);
 
   // Next always print the annotation.
@@ -361,6 +362,91 @@ bool X86IntelInstPrinter::printVecCompareInstr(const MCInst *MI, raw_ostream &OS
   }
 
   return false;
+}
+
+bool X86IntelInstPrinter::printBSRInstr(const MCInst *MI, raw_ostream &OS) {
+  // ACE BSR instructions: Print with explicit bsr0 operand as per spec.
+  // BSR is implicit in the encoding, but the spec requires explicit syntax.
+  if (!MI)
+    return false;
+  unsigned Opcode = MI->getOpcode();
+
+  switch (Opcode) {
+  default:
+    return false;
+
+  case X86::BSRINIT:
+    OS << "\tbsrinit\tbsr0";
+    return true;
+
+  case X86::BSRMOVFrr:
+    // Intel Syntax: bsrmovf bsr0, zmm1, zmm2
+    OS << "\tbsrmovf\tbsr0, ";
+    printOperand(MI, 0, OS); // src1
+    OS << ", ";
+    printOperand(MI, 1, OS); // src2
+    return true;
+
+  case X86::BSRMOVFrm:
+    // Intel Syntax: bsrmovf bsr0, zmm1, zmmword ptr [mem]
+    OS << "\tbsrmovf\tbsr0, ";
+    printOperand(MI, 0, OS); // src1
+    OS << ", ";
+    printzmmwordmem(MI, 1, OS); // src2 (memory)
+    return true;
+
+  case X86::BSRMOVHrr_set:
+    // Intel Syntax: bsrmovh bsr0, zmm1 (set BSR high from zmm)
+    OS << "\tbsrmovh\tbsr0, ";
+    printOperand(MI, 0, OS); // src
+    return true;
+
+  case X86::BSRMOVHrm_set:
+    // Intel Syntax: bsrmovh bsr0, zmmword ptr [mem] (set BSR high from memory)
+    OS << "\tbsrmovh\tbsr0, ";
+    printzmmwordmem(MI, 0, OS); // src (memory)
+    return true;
+
+  case X86::BSRMOVHrr_get:
+    // Intel Syntax: bsrmovh zmm1, bsr0 (get BSR high to zmm)
+    OS << "\tbsrmovh\t";
+    printOperand(MI, 0, OS); // dst
+    OS << ", bsr0";
+    return true;
+
+  case X86::BSRMOVHmr_get:
+    // Intel Syntax: bsrmovh zmmword ptr [mem], bsr0
+    OS << "\tbsrmovh\t";
+    printzmmwordmem(MI, 0, OS); // dst (memory)
+    OS << ", bsr0";
+    return true;
+
+  case X86::BSRMOVLrr_set:
+    // Intel Syntax: bsrmovl bsr0, zmm2 (set BSR low from zmm)
+    OS << "\tbsrmovl\tbsr0, ";
+    printOperand(MI, 0, OS); // src
+    return true;
+
+  case X86::BSRMOVLrm_set:
+    // Intel Syntax: bsrmovl bsr0, zmmword ptr [mem]
+    OS << "\tbsrmovl\tbsr0, ";
+    printzmmwordmem(MI, 0, OS); // src (memory)
+    return true;
+
+  case X86::BSRMOVLrr_get:
+    // Intel Syntax: bsrmovl zmm3, bsr0 (get BSR low to zmm)
+    OS << "\tbsrmovl\t";
+    printOperand(MI, 0, OS); // dst
+    OS << ", bsr0";
+    return true;
+
+  case X86::BSRMOVLmr_get:
+    // Intel Syntax: bsrmovl zmmword ptr [mem], bsr0
+    OS << "\tbsrmovl\t";
+    printzmmwordmem(MI, 0, OS); // dst (memory)
+    OS << ", bsr0";
+    return true;
+  }
 }
 
 void X86IntelInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,

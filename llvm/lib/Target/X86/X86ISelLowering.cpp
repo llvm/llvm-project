@@ -2701,7 +2701,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  if (!Subtarget.useSoftFloat() && Subtarget.hasAMXTILE()) {
+  if (!Subtarget.useSoftFloat() &&
+      (Subtarget.hasAMXTILE() || Subtarget.hasACEV1())) {
     addRegisterClass(MVT::x86amx, &X86::TILERegClass);
   }
 
@@ -28656,6 +28657,42 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       Chain = LockArith.getValue(1);
       return DAG.getMergeValues({getSETCC(CC, LockArith, DL, DAG), Chain}, DL);
     }
+    // ACE Tile Movement Intrinsics - handle both immediate and register index
+    // forms using a single intrinsic. Check if index is constant to select
+    // the appropriate instruction form.
+    case Intrinsic::x86_tilesetrow:
+    case Intrinsic::x86_tilesetcol: {
+      SDLoc DL(Op);
+      SDValue Chain = Op.getOperand(0);
+      unsigned TileID = Op.getConstantOperandVal(2);
+      SDValue Src = Op.getOperand(3);
+      SDValue Idx = Op.getOperand(4);
+
+      unsigned PseudoImm, PseudoReg;
+      if (IntNo == Intrinsic::x86_tilesetrow) {
+        PseudoImm = X86::PTILEMOVROW;
+        PseudoReg = X86::PTILEMOVROW_REG;
+      } else {
+        PseudoImm = X86::PTILEMOVCOL;
+        PseudoReg = X86::PTILEMOVCOL_REG;
+      }
+
+      MachineSDNode *Node;
+      // Check if index is a compile-time constant
+      if (auto *CIdx = dyn_cast<ConstantSDNode>(Idx)) {
+        // Use immediate form
+        Node = DAG.getMachineNode(
+            PseudoImm, DL, MVT::Other,
+            {DAG.getTargetConstant(TileID, DL, MVT::i8), Src,
+             DAG.getTargetConstant(CIdx->getZExtValue(), DL, MVT::i8), Chain});
+      } else {
+        // Use register form
+        Node = DAG.getMachineNode(
+            PseudoReg, DL, MVT::Other,
+            {DAG.getTargetConstant(TileID, DL, MVT::i8), Src, Idx, Chain});
+      }
+      return SDValue(Node, 0);
+    }
     }
     return SDValue();
   }
@@ -38742,12 +38779,116 @@ X86TargetLowering::emitPatchableEventCall(MachineInstr &MI,
   return BB;
 }
 
+// Helper enum and table for centralized tile program model handling
+namespace {
+enum class TileProgModelType {
+  None,          // Not a tile instruction
+  ACE_DirectReg, // ACE-only, always ACE_DirectReg
+  ACE_ManagedRA, // ACE-only, always ACE_ManagedRA
+  AMX_DirectReg, // AMX/ACE, DirectReg (checks subtarget)
+  AMX_ManagedRA, // AMX/ACE, ManagedRA (checks subtarget)
+};
+
+struct TileOpcodeModelEntry {
+  unsigned Opcode;
+  TileProgModelType ModelType;
+};
+
+// Centralized table mapping tile opcodes to their program model type
+static const TileOpcodeModelEntry TileOpcodeModels[] = {
+    // AMX/ACE DirectReg (macro API) - checks subtarget for ACE vs AMX
+    {X86::PTILEZERO, TileProgModelType::AMX_DirectReg},
+    {X86::PTCVTROWPS2BF16Hrti, TileProgModelType::AMX_DirectReg},
+    {X86::PTCVTROWPS2BF16Lrti, TileProgModelType::AMX_DirectReg},
+    {X86::PTCVTROWPS2PHHrti, TileProgModelType::AMX_DirectReg},
+    {X86::PTCVTROWPS2PHLrti, TileProgModelType::AMX_DirectReg},
+    {X86::PTCVTROWD2PSrti, TileProgModelType::AMX_DirectReg},
+    {X86::PTILEMOVROWrti, TileProgModelType::AMX_DirectReg},
+    {X86::PTCVTROWPS2BF16Hrte, TileProgModelType::AMX_DirectReg},
+    {X86::PTCVTROWPS2BF16Lrte, TileProgModelType::AMX_DirectReg},
+    {X86::PTCVTROWPS2PHHrte, TileProgModelType::AMX_DirectReg},
+    {X86::PTCVTROWPS2PHLrte, TileProgModelType::AMX_DirectReg},
+    {X86::PTCVTROWD2PSrte, TileProgModelType::AMX_DirectReg},
+    {X86::PTILEMOVROWrte, TileProgModelType::AMX_DirectReg},
+
+    // AMX/ACE ManagedRA (struct API) - checks subtarget for ACE vs AMX
+    {X86::PTILEZEROV, TileProgModelType::AMX_ManagedRA},
+
+    // ACE-only DirectReg (macro API)
+    {X86::PTILEMOVCOL, TileProgModelType::ACE_DirectReg},
+    {X86::PTILEMOVCOL_REG, TileProgModelType::ACE_DirectReg},
+    {X86::PTILEMOVROW, TileProgModelType::ACE_DirectReg},
+    {X86::PTILEMOVROW_REG, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP2BF16PS, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4BUUD, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4BUSD, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4BSSD, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4BSUD, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4MXHF8PS, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4MXBHF8PS, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4MXHBF8PS, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4MXBF8PS, TileProgModelType::ACE_DirectReg},
+    {X86::PTOP4MXBSSPS, TileProgModelType::ACE_DirectReg},
+
+    // ACE-only ManagedRA (struct API)
+    {X86::PTILEMOVCOLV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTILEMOVROWV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP2BF16PSV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4BUUDV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4BUSDV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4BSSDV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4BSUDV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4MXHF8PSV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4MXBHF8PSV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4MXHBF8PSV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4MXBF8PSV, TileProgModelType::ACE_ManagedRA},
+    {X86::PTOP4MXBSSPSV, TileProgModelType::ACE_ManagedRA},
+};
+
+// Set tile program model based on opcode. Returns true if model was set.
+static bool setTileProgModelForOpcode(unsigned Opcode,
+                                      X86MachineFunctionInfo *MFI,
+                                      const X86Subtarget &Subtarget) {
+  for (const auto &Entry : TileOpcodeModels) {
+    if (Entry.Opcode == Opcode) {
+      switch (Entry.ModelType) {
+      case TileProgModelType::None:
+        return false;
+      case TileProgModelType::ACE_DirectReg:
+        MFI->setACEProgModel(ACEProgModelEnum::ACE_DirectReg);
+        return true;
+      case TileProgModelType::ACE_ManagedRA:
+        MFI->setACEProgModel(ACEProgModelEnum::ACE_ManagedRA);
+        return true;
+      case TileProgModelType::AMX_DirectReg:
+        if (Subtarget.hasACEV1())
+          MFI->setACEProgModel(ACEProgModelEnum::ACE_DirectReg);
+        else
+          MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
+        return true;
+      case TileProgModelType::AMX_ManagedRA:
+        if (Subtarget.hasACEV1())
+          MFI->setACEProgModel(ACEProgModelEnum::ACE_ManagedRA);
+        else
+          MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+} // anonymous namespace
+
 MachineBasicBlock *
 X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   const MIMetadata MIMD(MI);
+
+  // Centralized tile program model handling
+  auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
+  setTileProgModelForOpcode(MI.getOpcode(), MFI, Subtarget);
 
   auto TMMImmToTMMReg = [](unsigned Imm) {
     assert (Imm < 8 && "Illegal tmm index");
@@ -39164,16 +39305,23 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTILEZERO: {
     unsigned Imm = MI.getOperand(0).getImm();
     BuildMI(*BB, MI, MIMD, TII->get(X86::TILEZERO), TMMImmToTMMReg(Imm));
-    MI.eraseFromParent(); // The pseudo is gone now.
-    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
-    MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
+    MI.eraseFromParent();
     return BB;
   }
-  case X86::PTILEZEROV: {
-    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
-    MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
+  case X86::PTILEZEROV:
+  case X86::PTILEMOVCOLV:
+  case X86::PTILEMOVROWV:
+  case X86::PTOP2BF16PSV:
+  case X86::PTOP4BUUDV:
+  case X86::PTOP4BUSDV:
+  case X86::PTOP4BSSDV:
+  case X86::PTOP4BSUDV:
+  case X86::PTOP4MXHF8PSV:
+  case X86::PTOP4MXBHF8PSV:
+  case X86::PTOP4MXHBF8PSV:
+  case X86::PTOP4MXBF8PSV:
+  case X86::PTOP4MXBSSPSV:
     return BB;
-  }
   case X86::PTILELOADDRS:
   case X86::PTILELOADDRST1:
   case X86::PTILELOADD:
@@ -39294,6 +39442,132 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MIB.add(MI.getOperand(2));
 
     MI.eraseFromParent(); // The pseudo is gone now.
+    return BB;
+  }
+  // ACE pseudo instruction expansion
+  case X86::PBSRINIT: {
+    BuildMI(*BB, MI, MIMD, TII->get(X86::BSRINIT));
+    MI.eraseFromParent();
+    return BB;
+  }
+  // Note: BSRMOVF, BSRMOVH, BSRMOVL are handled directly by patterns on real
+  // instructions
+  case X86::PTILEMOVCOL: {
+    unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
+    Register SrcReg = MI.getOperand(1).getReg();
+    unsigned Idx = MI.getOperand(2).getImm();
+    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVCOLri), DstReg)
+        .addReg(SrcReg)
+        .addImm(Idx);
+    MI.eraseFromParent();
+    return BB;
+  }
+  case X86::PTILEMOVCOL_REG: {
+    unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
+    Register SrcReg = MI.getOperand(1).getReg();
+    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVCOLrr), DstReg)
+        .addReg(SrcReg)
+        .addReg(MI.getOperand(2).getReg());
+    MI.eraseFromParent();
+    return BB;
+  }
+  case X86::PTILEMOVROW: {
+    unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
+    Register SrcReg = MI.getOperand(1).getReg();
+    unsigned Idx = MI.getOperand(2).getImm();
+    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVROWri), DstReg)
+        .addReg(SrcReg)
+        .addImm(Idx);
+    MI.eraseFromParent();
+    return BB;
+  }
+  case X86::PTILEMOVROW_REG: {
+    unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
+    Register SrcReg = MI.getOperand(1).getReg();
+    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVROWrr), DstReg)
+        .addReg(SrcReg)
+        .addReg(MI.getOperand(2).getReg());
+    MI.eraseFromParent();
+    return BB;
+  }
+  case X86::PTOP2BF16PS:
+  case X86::PTOP4BUUD:
+  case X86::PTOP4BUSD:
+  case X86::PTOP4BSSD:
+  case X86::PTOP4BSUD: {
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected opcode!");
+    case X86::PTOP2BF16PS:
+      Opc = X86::TOP2BF16PSrrr;
+      break;
+    case X86::PTOP4BUUD:
+      Opc = X86::TOP4BUUDrrr;
+      break;
+    case X86::PTOP4BUSD:
+      Opc = X86::TOP4BUSDrrr;
+      break;
+    case X86::PTOP4BSSD:
+      Opc = X86::TOP4BSSDrrr;
+      break;
+    case X86::PTOP4BSUD:
+      Opc = X86::TOP4BSUDrrr;
+      break;
+    }
+    // These instructions: TILE dst (rw), ZMM src1, ZMM src2
+    // The pseudo has: u8imm dst, u8imm src1, u8imm src2
+    // src1 and src2 are ZMM register indices (0-31)
+    unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
+    unsigned Src1Imm = MI.getOperand(1).getImm();
+    unsigned Src2Imm = MI.getOperand(2).getImm();
+    assert(Src1Imm < 32 && "Illegal ZMM register index");
+    assert(Src2Imm < 32 && "Illegal ZMM register index");
+    BuildMI(*BB, MI, MIMD, TII->get(Opc), DstReg)
+        .addReg(DstReg, RegState::Undef)
+        .addReg(X86::ZMM0 + Src1Imm)
+        .addReg(X86::ZMM0 + Src2Imm);
+    MI.eraseFromParent();
+    return BB;
+  }
+  case X86::PTOP4MXHF8PS:
+  case X86::PTOP4MXBHF8PS:
+  case X86::PTOP4MXHBF8PS:
+  case X86::PTOP4MXBF8PS:
+  case X86::PTOP4MXBSSPS: {
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected opcode!");
+    case X86::PTOP4MXHF8PS:
+      Opc = X86::TOP4MXHF8PSrrri;
+      break;
+    case X86::PTOP4MXBHF8PS:
+      Opc = X86::TOP4MXBHF8PSrrri;
+      break;
+    case X86::PTOP4MXHBF8PS:
+      Opc = X86::TOP4MXHBF8PSrrri;
+      break;
+    case X86::PTOP4MXBF8PS:
+      Opc = X86::TOP4MXBF8PSrrri;
+      break;
+    case X86::PTOP4MXBSSPS:
+      Opc = X86::TOP4MXBSSPSrrri;
+      break;
+    }
+    // These instructions: TILE dst (rw), ZMM src1, ZMM src2, imm8
+    unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
+    unsigned Src1Imm = MI.getOperand(1).getImm();
+    unsigned Src2Imm = MI.getOperand(2).getImm();
+    unsigned Imm = MI.getOperand(3).getImm();
+    assert(Src1Imm < 32 && "Illegal ZMM register index");
+    assert(Src2Imm < 32 && "Illegal ZMM register index");
+    BuildMI(*BB, MI, MIMD, TII->get(Opc), DstReg)
+        .addReg(DstReg, RegState::Undef)
+        .addReg(X86::ZMM0 + Src1Imm)
+        .addReg(X86::ZMM0 + Src2Imm)
+        .addImm(Imm);
+    MI.eraseFromParent();
     return BB;
   }
   }

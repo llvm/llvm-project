@@ -354,6 +354,10 @@ static const X86FoldTableEntry Table2Addr[] = {
 };
 
 static const X86FoldTableEntry Table0[] = {
+  {X86::BSRMOVHrr_get, X86::BSRMOVHmr_get, TB_FOLDED_STORE},
+  {X86::BSRMOVHrr_set, X86::BSRMOVHrm_set, TB_FOLDED_LOAD},
+  {X86::BSRMOVLrr_get, X86::BSRMOVLmr_get, TB_FOLDED_STORE},
+  {X86::BSRMOVLrr_set, X86::BSRMOVLrm_set, TB_FOLDED_LOAD},
   {X86::BT16ri8, X86::BT16mi8, TB_FOLDED_LOAD},
   {X86::BT32ri8, X86::BT32mi8, TB_FOLDED_LOAD},
   {X86::BT64ri8, X86::BT64mi8, TB_FOLDED_LOAD},
@@ -684,6 +688,7 @@ static const X86FoldTableEntry Table1[] = {
   {X86::BLSR64rr, X86::BLSR64rm, 0},
   {X86::BLSR64rr_EVEX, X86::BLSR64rm_EVEX, 0},
   {X86::BLSR64rr_NF, X86::BLSR64rm_NF, 0},
+  {X86::BSRMOVFrr, X86::BSRMOVFrm, 0},
   {X86::BZHI32rr, X86::BZHI32rm, 0},
   {X86::BZHI32rr_EVEX, X86::BZHI32rm_EVEX, 0},
   {X86::BZHI32rr_NF, X86::BZHI32rm_NF, 0},
