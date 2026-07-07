@@ -54089,6 +54089,103 @@ static int getOneTrueElt(SDValue V) {
   return TrueIndex;
 }
 
+static std::optional<unsigned>
+getPow2PrefixMaskNumElts(ArrayRef<uint8_t> MaskBits) {
+  unsigned ActiveElts = 0;
+  while (ActiveElts != MaskBits.size() && MaskBits[ActiveElts])
+    ++ActiveElts;
+
+  for (unsigned I = ActiveElts, E = MaskBits.size(); I != E; ++I)
+    if (MaskBits[I])
+      return std::nullopt;
+
+  // The one-active-lane case is handled by the scalar masked load/store
+  // combines. This fold is for a narrower vector memory operation.
+  if (ActiveElts <= 1 || ActiveElts == MaskBits.size() ||
+      !isPowerOf2_32(ActiveElts))
+    return std::nullopt;
+
+  return ActiveElts;
+}
+
+/// Return the active lane count for a constant boolean mask with a true prefix
+/// of power-of-two length and false tail lanes. Return std::nullopt otherwise.
+static std::optional<unsigned> getPow2PrefixMaskNumElts(SDValue V) {
+  EVT VT = V.getValueType();
+  if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i1)
+    return std::nullopt;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  SmallVector<uint8_t, 64> MaskBits;
+
+  if (auto *BV = dyn_cast<BuildVectorSDNode>(V)) {
+    MaskBits.reserve(NumElts);
+    for (unsigned I = 0; I != NumElts; ++I) {
+      SDValue Op = BV->getOperand(I);
+      if (Op.isUndef())
+        return std::nullopt;
+      auto *C = dyn_cast<ConstantSDNode>(Op);
+      if (!C)
+        return std::nullopt;
+      MaskBits.push_back(!C->isZero());
+    }
+    return getPow2PrefixMaskNumElts(MaskBits);
+  }
+
+  // Legalization may turn a boolean vector mask into a bitcast from an integer
+  // constant, for example v8i1 bitcast(i8 15).
+  if (V.getOpcode() != ISD::BITCAST)
+    return std::nullopt;
+
+  auto *C = dyn_cast<ConstantSDNode>(V.getOperand(0));
+  if (!C)
+    return std::nullopt;
+
+  const APInt &RawMask = C->getAPIntValue();
+  if (RawMask.getBitWidth() < NumElts)
+    return std::nullopt;
+
+  MaskBits.reserve(NumElts);
+  for (unsigned I = 0; I != NumElts; ++I)
+    MaskBits.push_back(RawMask[I]);
+
+  return getPow2PrefixMaskNumElts(MaskBits);
+}
+
+static std::optional<MVT>
+getLegalMaskedMemCopyVT(EVT EltVT, unsigned ActiveElts,
+                        const TargetLowering &TLI) {
+  if (!EltVT.isSimple())
+    return std::nullopt;
+
+  MVT EltMVT = EltVT.getSimpleVT();
+  if (EltMVT == MVT::i1 ||
+      EltMVT.getStoreSizeInBits() != EltMVT.getSizeInBits())
+    return std::nullopt;
+
+  unsigned ActiveBits = ActiveElts * EltMVT.getStoreSizeInBits();
+  if (ActiveBits != 128 && ActiveBits != 256 && ActiveBits != 512)
+    return std::nullopt;
+
+  MVT SameEltVT = MVT::getVectorVT(EltMVT, ActiveElts);
+  if (TLI.isTypeLegal(SameEltVT))
+    return SameEltVT;
+
+  // For a masked-load-to-masked-store copy, the loaded vector value is not
+  // otherwise observed. If the same element type is not legal, use any legal
+  // integer vector type with the same byte width.
+  for (MVT IntVT : {MVT::i32, MVT::i64, MVT::i8, MVT::i16}) {
+    unsigned EltBits = IntVT.getSizeInBits();
+    if (ActiveBits % EltBits != 0)
+      continue;
+    MVT VecVT = MVT::getVectorVT(IntVT, ActiveBits / EltBits);
+    if (TLI.isTypeLegal(VecVT))
+      return VecVT;
+  }
+
+  return std::nullopt;
+}
+
 /// Given a masked memory load/store operation, return true if it has one mask
 /// bit set. If it has one mask bit set, then also return the memory address of
 /// the scalar element to load/store, the vector index to insert/extract that
@@ -54309,12 +54406,73 @@ static SDValue reduceMaskedStoreToScalarStore(MaskedStoreSDNode *MS,
                       Alignment, MS->getMemOperand()->getFlags());
 }
 
+static SDValue combinePrefixMaskedLoadStore(MaskedStoreSDNode *MS,
+                                            SelectionDAG &DAG,
+                                            const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasAVX512() || !MS->isUnindexed() || !MS->isSimple() ||
+      MS->isTruncatingStore() || MS->isCompressingStore() ||
+      MS->isNonTemporal())
+    return SDValue();
+
+  SDValue StoredVal = MS->getValue();
+  if (StoredVal.getOpcode() != ISD::MLOAD || !StoredVal.hasOneUse())
+    return SDValue();
+
+  auto *ML = cast<MaskedLoadSDNode>(StoredVal);
+  if (!ML->isUnindexed() || !ML->isSimple() || ML->isExpandingLoad() ||
+      ML->getExtensionType() != ISD::NON_EXTLOAD || ML->isNonTemporal() ||
+      !ML->getPassThru().isUndef())
+    return SDValue();
+
+  // Keep the first patch intentionally narrow: the store must be chained
+  // directly after the load, and the load result must only feed this store.
+  SDValue LoadChain(ML, 1);
+  if (MS->getChain() != LoadChain || !LoadChain.hasOneUse())
+    return SDValue();
+
+  SDValue Mask = MS->getMask();
+  if (ML->getMask() != Mask)
+    return SDValue();
+
+  std::optional<unsigned> ActiveElts = getPow2PrefixMaskNumElts(Mask);
+  if (!ActiveElts)
+    return SDValue();
+
+  EVT MemVT = ML->getMemoryVT();
+  EVT VT = StoredVal.getValueType();
+  if (!VT.isFixedLengthVector() || !MemVT.isFixedLengthVector() ||
+      MS->getMemoryVT() != MemVT ||
+      MemVT.getVectorElementType() != VT.getVectorElementType() ||
+      MemVT.getVectorNumElements() < *ActiveElts)
+    return SDValue();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  std::optional<MVT> NarrowVT =
+      getLegalMaskedMemCopyVT(MemVT.getVectorElementType(), *ActiveElts, TLI);
+  if (!NarrowVT)
+    return SDValue();
+
+  SDLoc DL(MS);
+  SDValue NarrowLoad =
+      DAG.getLoad(*NarrowVT, DL, ML->getChain(), ML->getBasePtr(),
+                  ML->getPointerInfo(), ML->getBaseAlign(),
+                  ML->getMemOperand()->getFlags(), ML->getAAInfo(),
+                  ML->getRanges());
+
+  return DAG.getStore(NarrowLoad.getValue(1), DL, NarrowLoad, MS->getBasePtr(),
+                      MS->getPointerInfo(), MS->getBaseAlign(),
+                      MS->getMemOperand()->getFlags(), MS->getAAInfo());
+}
+
 static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
                                   TargetLowering::DAGCombinerInfo &DCI,
                                   const X86Subtarget &Subtarget) {
   MaskedStoreSDNode *Mst = cast<MaskedStoreSDNode>(N);
   if (Mst->isCompressingStore())
     return SDValue();
+
+  if (SDValue NarrowStore = combinePrefixMaskedLoadStore(Mst, DAG, Subtarget))
+    return NarrowStore;
 
   if (SDValue ScalarStore = reduceMaskedStoreToScalarStore(Mst, DAG, Subtarget))
     return ScalarStore;
