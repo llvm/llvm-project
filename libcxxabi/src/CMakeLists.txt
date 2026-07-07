@@ -196,7 +196,11 @@ if (LIBCXXABI_SUPPORTS_SHARED_LIBRARY)
   # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
   target_add_compile_flags_if_supported(cxxabi_shared_objects PRIVATE -fsized-deallocation)
   if (NOT WIN32)
-    # We use dllexport on Windows, and that is mutually exclusive with visibility attributes.
+    # Building libcxxabi with -fvisibility=hidden on Windows, if dllexport is
+    # used, can trigger a Clang error (if Clang is built with asserts enabled),
+    # https://github.com/llvm/llvm-project/issues/207963
+    # Once fixed, we could consider allowing -fvisibility=hidden on
+    # Windows too (as it can be beneficial for static libraries).
     target_add_compile_flags_if_supported(cxxabi_shared_objects PRIVATE -fvisibility=hidden)
   endif()
 
@@ -290,7 +294,11 @@ target_compile_options(cxxabi_static_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COM
 # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
 target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fsized-deallocation)
 if (NOT WIN32)
-  # We use dllexport on Windows, and that is mutually exclusive with visibility attributes.
+  # Building libcxxabi with -fvisibility=hidden on Windows, if dllexport is
+  # used, can trigger a Clang error (if Clang is built with asserts enabled),
+  # https://github.com/llvm/llvm-project/issues/207963
+  # Once fixed, we could consider allowing -fvisibility=hidden on
+  # Windows too (as it can be beneficial for static libraries).
   target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility=hidden)
 endif()
 
