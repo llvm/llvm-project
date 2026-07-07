@@ -262,16 +262,22 @@ bool SemaProfiles::isProfileSuppressed(StringRef ProfileName,
     if (!profileSuppressMatches(E.ProfileName, E.RuleName, ProfileName,
                                 RuleName))
       continue;
-    // The entry's dominion starts at its construct's begin location, so a
-    // violation at an earlier token -- e.g. in a template pattern
-    // instantiated synchronously while the scope is live -- is outside it
-    // (P3589R2 s2.4p3). Fail open on an invalid location on either side
+    // The entry's dominion is its construct's token range (P3589R2 s2.4p3):
+    // a violation before the recorded begin -- e.g. in a template pattern
+    // instantiated synchronously while the scope is live -- is outside it,
+    // as is one past the recorded end -- e.g. in a pattern first declared
+    // *after* the suppressed construct. The end is recorded only for a
+    // construct fully parsed at push time; when it is invalid the scope's
+    // lifetime bounds the dominion, which is exact mid-parse (later tokens
+    // are unparsed and instantiation of undefined templates is deferred).
+    // Fail open on an invalid location on either side
     // (isBeforeInTranslationUnit rejects invalid locations), preserving
     // plain-liveness behavior for synthesized code. Locations are compared
     // in raw TU token order: expansion-loc normalization would collapse all
     // tokens of one macro expansion onto the invocation and over-suppress.
     if (Loc.isInvalid() || E.Begin.isInvalid() ||
-        !SM.isBeforeInTranslationUnit(Loc, E.Begin))
+        (!SM.isBeforeInTranslationUnit(Loc, E.Begin) &&
+         (E.End.isInvalid() || !SM.isBeforeInTranslationUnit(E.End, Loc))))
       return true;
   }
   return false;
@@ -1358,11 +1364,10 @@ void dispatchFinalizationProfiles(Sema &S, Node *D,
     return;
   // Finalization can run nested in an unrelated instantiation whose
   // [[profiles::suppress]] scope is still on the parse-time stack. No guard
-  // is needed: the stack consult is dominion-checked, so such an entry
-  // matches only if its construct's tokens cover the finalized declaration.
-  // FIXME: a pattern forward-declared before but *defined after* the
-  // suppressed construct is wrongly matched while the scope is live (scope
-  // liveness over-approximates the dominion's end).
+  // is needed: the stack consult is dominion-checked against the entry's
+  // recorded construct range, so such an entry matches only if its
+  // construct's tokens cover the finalized declaration -- including when the
+  // finalized pattern is first declared after the suppressed construct.
   for (const auto &E : Table)
     if (S.Profiles().isProfileEnforced(E.Name))
       E.Callback(S, D);
