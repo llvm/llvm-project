@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: no-wide-characters
 
-// Missing fwprintf, fwscanf, swscanf, vfwprintf, vfwscanf, vswprintf, vswscanf, wcsftime, vwscanf, wscanf
+// Missing wchar string formatting functions.
 // XFAIL: LLVM-LIBC-FIXME
 
 // <wchar.h>
