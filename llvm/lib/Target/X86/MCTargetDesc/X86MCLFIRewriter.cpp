@@ -66,7 +66,7 @@ static bool readsRegister(const MCInst &Inst, const MCInstrDesc &Desc,
 // Return true if Reg is absent or a 64-bit general-purpose register.
 static bool isGR64OrNone(MCRegister Reg) {
   return Reg == X86::NoRegister ||
-         X86MCRegisterClasses[X86::GR64RegClassID].contains(Reg);
+         getX86MCRegisterClass(X86::GR64RegClassID).contains(Reg);
 }
 
 // syscall
@@ -173,7 +173,7 @@ void X86::X86MCLFIRewriter::rewriteFSAccess(const MCInst &Inst, MCStreamer &Out,
   if (MemIdx > 0 && Inst.getOperand(0).isReg()) {
     MCRegister DestReg = Inst.getOperand(0).getReg();
     if (Desc.getNumDefs() > 0 &&
-        X86MCRegisterClasses[X86::GR64RegClassID].contains(DestReg) &&
+        getX86MCRegisterClass(X86::GR64RegClassID).contains(DestReg) &&
         !readsRegister(Inst, Desc, DestReg, *RegInfo))
       TPDest = DestReg;
   }
