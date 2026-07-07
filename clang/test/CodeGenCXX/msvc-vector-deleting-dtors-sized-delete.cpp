@@ -50,5 +50,5 @@ void test() {
 // X86-NEXT:  %[[ARRSZ1:.*]] = mul i32 12, %[[HOWMANY]]
 // X64-NEXT:  %[[TOTALSZ1:.*]] = add i64 %[[ARRSZ1]], 8
 // X86-NEXT:  %[[TOTALSZ1:.*]] = add i32 %[[ARRSZ1]], 4
-// X64-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ1]])
-// X86-NEXT:   call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ1]])
+// X64-NEXT:   call void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ1]])
+// X86-NEXT:   call void @"?__global_delete@@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ1]])
