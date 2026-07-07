@@ -94,7 +94,7 @@ body:             |
     ; Only the last copy in the expansion should have the "killed" flag.
     %all_killed:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO killed %0.zsub0, killed %0.zsub1, killed %0.zsub2, killed %0.zsub3
 
-    ; Resues %1 multiple times. Only the first use is marked as "killed".
+    ; Reuses %1 multiple times. Only the first use is marked as "killed".
     ; Only the last copy in the expansion should have the "killed" flag.
     %first_killed:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO killed %1.zsub0, %1.zsub1, %1.zsub2, %1.zsub3
 

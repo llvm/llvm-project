@@ -1310,8 +1310,8 @@ bool AArch64RegisterInfo::getRegAllocationHints(
       bool IsMulZPR = TupleID == AArch64::ZPR2Mul2RegClassID ||
                       TupleID == AArch64::ZPR4Mul4RegClassID;
 
-      auto Copies = MRI.def_instructions(Use.getOperand(0).getReg());
-      auto CopyWithAssignedSrc =
+      iterator_range Copies = MRI.def_instructions(Use.getOperand(0).getReg());
+      MachineRegisterInfo::def_instr_iterator CopyWithAssignedSrc =
           llvm::find_if(Copies, [&](const MachineInstr &Def) {
             auto &Src = Def.getOperand(1);
             return Def.getOpcode() == Use.getOpcode() &&
