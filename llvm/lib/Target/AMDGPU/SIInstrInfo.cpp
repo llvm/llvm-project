@@ -132,7 +132,6 @@ static bool canRemat(const MachineInstr &MI) {
 static std::tuple<unsigned, unsigned, unsigned>
 splitGlobalAddressRelocFlags(const GCNSubtarget &ST,
                              const MachineOperand &SrcOp) {
-  const GlobalValue *GV = SrcOp.getGlobal();
   unsigned SrcFlags = SrcOp.getTargetFlags();
 
   // Infer the relocation type from the existing flags on the global operand.
