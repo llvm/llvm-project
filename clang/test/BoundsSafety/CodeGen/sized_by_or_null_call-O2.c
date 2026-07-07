@@ -27,28 +27,116 @@ void caller_2() {
 }
 
 // rdar://118117905
+// CHECK-LABEL: define dso_local void @caller_3(
+// CHECK-SAME: ptr noundef [[P:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ne ptr [[P]], null, !annotation [[META6:![0-9]+]]
+// CHECK-NEXT:    [[CMP_NOT79:%.*]] = icmp slt i32 [[LEN]], 0
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = and i1 [[DOTNOT]], [[CMP_NOT79]], !annotation [[META7:![0-9]+]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label [[TRAP:%.*]], label [[CONT:%.*]], !annotation [[META7]]
+// CHECK:       trap:
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6:[0-9]+]], !annotation [[META7]]
+// CHECK-NEXT:    unreachable, !annotation [[META7]]
+// CHECK:       cont:
+// CHECK-NEXT:    tail call void @foo(ptr noundef [[P]], i32 noundef [[LEN]]) #[[ATTR5]]
+// CHECK-NEXT:    ret void
+//
 void caller_3(int *__sized_by_or_null(len) p, int len) {
   foo(p, len);
 }
 
+// CHECK-LABEL: define dso_local void @caller_4(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], !annotation [[META7]]
+// CHECK-NEXT:    unreachable, !annotation [[META7]]
+//
 void caller_4() {
     int i = 0;
     foo(&i, -1);
 }
 
+// CHECK-LABEL: define dso_local void @caller_5(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[I]]) #[[ATTR5]]
+// CHECK-NEXT:    store i32 0, ptr [[I]], align 4, !tbaa [[TBAA8:![0-9]+]]
+// CHECK-NEXT:    call void @foo(ptr noundef nonnull [[I]], i32 noundef 2) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[I]]) #[[ATTR5]]
+// CHECK-NEXT:    ret void
+//
 void caller_5() {
     int i = 0;
     foo(&i, 2);
 }
 
+// CHECK-LABEL: define dso_local void @caller_6(
+// CHECK-SAME: ptr noundef [[P:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[LEN]], 0, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label [[TRAP:%.*]], label [[LAND_RHS:%.*]], !annotation [[META7]]
+// CHECK:       land.rhs:
+// CHECK-NEXT:    tail call void @foo(ptr noundef [[P]], i32 noundef [[LEN]]) #[[ATTR5]]
+// CHECK-NEXT:    ret void
+// CHECK:       trap:
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], !annotation [[META7]]
+// CHECK-NEXT:    unreachable, !annotation [[META7]]
+//
 void caller_6(int *__sized_by(len) p, int len) {
   foo(p, len);
 }
 
+// CHECK-LABEL: define dso_local void @caller_7(
+// CHECK-SAME: ptr nofree noundef readonly align 8 captures(none) dead_on_return [[P:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
+// CHECK-NEXT:    [[AGG_TEMP_SROA_9_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
+// CHECK-NEXT:    [[AGG_TEMP_SROA_9_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_9_0_P_SROA_IDX]], align 8
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], [[AGG_TEMP_SROA_9_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label [[TRAP:%.*]], label [[LAND_LHS_TRUE:%.*]], !annotation [[META7]]
+// CHECK:       land.lhs.true:
+// CHECK-NEXT:    [[AGG_TEMP_SROA_17_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
+// CHECK-NEXT:    [[AGG_TEMP_SROA_17_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_17_0_P_SROA_IDX]], align 8, !tbaa [[TBAA9:![0-9]+]]
+// CHECK-NEXT:    [[CMP27_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP_SROA_17_0_COPYLOAD]], [[AGG_TEMP_SROA_0_0_COPYLOAD]], !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[CMP27_NOT]], label [[TRAP]], label [[LAND_RHS:%.*]], !annotation [[META7]]
+// CHECK:       land.rhs:
+// CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], null, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[CONT:%.*]], label [[LOR_RHS:%.*]], !annotation [[META7]]
+// CHECK:       lor.rhs:
+// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[LEN]] to i64, !annotation [[META7]]
+// CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP_SROA_9_0_COPYLOAD]] to i64, !annotation [[META7]]
+// CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]] to i64, !annotation [[META7]]
+// CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !annotation [[META12:![0-9]+]]
+// CHECK-NEXT:    [[CMP65:%.*]] = icmp sge i64 [[SUB_PTR_SUB]], [[CONV]], !annotation [[META7]]
+// CHECK-NEXT:    [[CMP68:%.*]] = icmp sgt i32 [[LEN]], -1, !annotation [[META7]]
+// CHECK-NEXT:    [[SPEC_SELECT:%.*]] = and i1 [[CMP68]], [[CMP65]]
+// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label [[CONT]], label [[TRAP]], {{!prof ![0-9]+}}, !annotation [[META7]]
+// CHECK:       trap:
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], !annotation [[META7]]
+// CHECK-NEXT:    unreachable, !annotation [[META7]]
+// CHECK:       cont:
+// CHECK-NEXT:    tail call void @foo(ptr noundef [[AGG_TEMP_SROA_0_0_COPYLOAD]], i32 noundef [[LEN]]) #[[ATTR5]]
+// CHECK-NEXT:    ret void
+//
 void caller_7(int *__bidi_indexable p, int len) {
   foo(p, len);
 }
 
+// CHECK-LABEL: define dso_local void @caller_8(
+// CHECK-SAME: ptr noundef [[P:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[P]], null, !annotation [[META7]]
+// CHECK-NEXT:    [[SPEC_SELECT:%.*]] = icmp ult i32 [[LEN]], 5
+// CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[TOBOOL_NOT]], [[SPEC_SELECT]], !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!prof ![0-9]+}}, !annotation [[META7]]
+// CHECK:       trap:
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], !annotation [[META7]]
+// CHECK-NEXT:    unreachable, !annotation [[META7]]
+// CHECK:       cont:
+// CHECK-NEXT:    tail call void @foo(ptr noundef [[P]], i32 noundef [[LEN]]) #[[ATTR5]]
+// CHECK-NEXT:    ret void
+//
 void caller_8(int *__single p, int len) {
   foo(p, len);
 }
@@ -65,6 +153,37 @@ void caller_9(int *__sized_by(*len) *out, int *len){
     bar(out, len);
 }
 
+// CHECK-LABEL: define dso_local ptr @caller_10(
+// CHECK-SAME: i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[COUNT:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[P:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[COUNT]]) #[[ATTR5]]
+// CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 4, !annotation [[META16:![0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[P]]) #[[ATTR5]]
+// CHECK-NEXT:    store ptr null, ptr [[P]], align 8, !annotation [[META16]]
+// CHECK-NEXT:    call void @bar(ptr noundef nonnull [[P]], ptr noundef nonnull [[COUNT]]) #[[ATTR5]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ne ptr [[TMP0]], null, !annotation [[META6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[COUNT]], align 4
+// CHECK-NEXT:    [[CMP_NOT174:%.*]] = icmp slt i32 [[TMP1]], 0, !annotation [[META7]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = select i1 [[DOTNOT]], i1 [[CMP_NOT174]], i1 false, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label [[TRAP:%.*]], label [[LAND_RHS:%.*]], !annotation [[META7]]
+// CHECK:       trap:
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR6]], !annotation [[META17:![0-9]+]]
+// CHECK-NEXT:    unreachable, !annotation [[META17]]
+// CHECK:       land.rhs:
+// CHECK-NEXT:    br i1 [[DOTNOT]], label [[LOR_RHS:%.*]], label [[CONT148:%.*]], !annotation [[META7]]
+// CHECK:       lor.rhs:
+// CHECK-NEXT:    [[CMP65:%.*]] = icmp sge i32 [[TMP1]], [[LEN]], !annotation [[META7]]
+// CHECK-NEXT:    [[CMP68:%.*]] = icmp sgt i32 [[LEN]], -1, !annotation [[META7]]
+// CHECK-NEXT:    [[SPEC_SELECT:%.*]] = and i1 [[CMP68]], [[CMP65]]
+// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label [[CONT148]], label [[TRAP]], {{!prof ![0-9]+}}, !annotation [[META7]]
+// CHECK:       cont148:
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[P]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[COUNT]]) #[[ATTR5]]
+// CHECK-NEXT:    ret ptr [[TMP0]]
+//
 int *__sized_by_or_null(len) caller_10(int len) {
     int count;
     int *__sized_by_or_null(count) p;
@@ -74,3 +193,18 @@ int *__sized_by_or_null(len) caller_10(int len) {
     return p;
 }
 
+//.
+// CHECK: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[META6]] = !{!"bounds-safety-check-ptr-neq-null"}
+// CHECK: [[META7]] = !{!"bounds-safety-generic"}
+// CHECK: [[TBAA8]] = !{[[META3]], [[META3]], i64 0}
+// CHECK: [[TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
+// CHECK: [[META10]] = !{!"p1 int", [[META11:![0-9]+]], i64 0}
+// CHECK: [[META11]] = !{!"any pointer", [[META4]], i64 0}
+// CHECK: [[META12]] = !{!"bounds-safety-generic", [[META13:![0-9]+]]}
+// CHECK: [[META13]] = !{!"bounds-safety-missed-optimization-nsw", !"Check can not be removed because the arithmetic operation might wrap in the signed sense. Optimize the check by adding conditions to check for overflow before doing the operation"}
+// CHECK: [[META16]] = !{!"bounds-safety-zero-init"}
+// CHECK: [[META17]] = !{!"bounds-safety-check-ptr-le-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound", !"bounds-safety-generic"}
+//.

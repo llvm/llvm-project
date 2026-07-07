@@ -24,16 +24,53 @@ void success() {
   f_inout_count(arr, &len);
 }
 
+// CHECK-LABEL: define dso_local void @fail(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5:[0-9]+]], !annotation [[META6:![0-9]+]]
+// CHECK-NEXT:    unreachable, !annotation [[META6]]
+//
 void fail() {
   int arr[10];
   int len = 11;
   f_inout_count(arr, &len);
 }
 
+// CHECK-LABEL: define dso_local void @pass_out_len(
+// CHECK-SAME: ptr nofree noundef readnone captures(none) [[ARR:%.*]], ptr nofree noundef readonly captures(none) [[OUT_LEN:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[OUT_LEN]], align 4, !tbaa [[INT_TBAA7:![0-9]+]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[TMP0]], 0, !annotation [[META8:![0-9]+]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation [[META8]]
+// CHECK:       [[TRAP]]:
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META8]]
+// CHECK-NEXT:    unreachable, !annotation [[META8]]
+// CHECK:       [[CONT]]:
+// CHECK-NEXT:    ret void
+//
 void pass_out_len(int *__counted_by(*out_len) arr, int *out_len) {
   f_inout_count(arr, out_len);
 }
 
+// CHECK-LABEL: define dso_local void @pass_addr_of_len(
+// CHECK-SAME: ptr nofree noundef readnone captures(none) [[ARR:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[LEN]], 0, !annotation [[META8]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META8]]
+// CHECK:       [[TRAP]]:
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META6]]
+// CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK:       [[BOUNDSCHECK_NULL]]:
+// CHECK-NEXT:    ret void
+//
 void pass_addr_of_len(int *__counted_by(len) arr, int len) {
   f_inout_count(arr, &len);
 }
+//.
+// CHECK: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[META6]] = !{!"bounds-safety-check-ptr-le-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound", !"bounds-safety-generic"}
+// CHECK: [[INT_TBAA7]] = !{[[META3]], [[META3]], i64 0}
+// CHECK: [[META8]] = !{!"bounds-safety-generic"}
+//.

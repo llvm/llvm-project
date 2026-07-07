@@ -11,6 +11,85 @@ struct S {
     long i;
 };
 
+// O2-LABEL: define dso_local void @foo(
+// O2-SAME: ptr nofree noundef readnone captures(none) [[A:%.*]], i64 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// O2-NEXT:  [[ENTRY:.*:]]
+// O2-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 8
+// O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S]]) #[[ATTR3:[0-9]+]]
+// O2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 16
+// O2-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i64 24
+// O2-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP1]], [[TMP0]], !annotation [[META6:![0-9]+]]
+// O2-NEXT:    br i1 [[DOTNOT]], label %[[TRAP:.*]], label %[[CONT9:.*]], {{!prof ![0-9]+}}, !annotation [[META6]]
+// O2:       [[TRAP]]:
+// O2-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4:[0-9]+]], !annotation [[META8:![0-9]+]]
+// O2-NEXT:    unreachable, !annotation [[META8]]
+// O2:       [[CONT9]]:
+// O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S]]) #[[ATTR3]]
+// O2-NEXT:    ret void
+//
+// O0-LABEL: define dso_local void @foo(
+// O0-SAME: ptr noundef [[A:%.*]], i64 noundef [[I:%.*]]) #[[ATTR0:[0-9]+]] {
+// O0-NEXT:  [[ENTRY:.*:]]
+// O0-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
+// O0-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
+// O0-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 8
+// O0-NEXT:    [[SP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
+// O0-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
+// O0-NEXT:    [[AGG_TEMP2:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
+// O0-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
+// O0-NEXT:    store i64 [[I]], ptr [[I_ADDR]], align 8
+// O0-NEXT:    [[P:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 0
+// O0-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// O0-NEXT:    store ptr [[TMP0]], ptr [[P]], align 8
+// O0-NEXT:    [[I1:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 1
+// O0-NEXT:    [[TMP1:%.*]] = load i64, ptr [[I_ADDR]], align 8
+// O0-NEXT:    store i64 [[TMP1]], ptr [[I1]], align 8
+// O0-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 1
+// O0-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 1
+// O0-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP]], i32 0, i32 0
+// O0-NEXT:    store ptr [[TMP2]], ptr [[TMP4]], align 8
+// O0-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP]], i32 0, i32 1
+// O0-NEXT:    store ptr [[TMP3]], ptr [[TMP5]], align 8
+// O0-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP]], i32 0, i32 2
+// O0-NEXT:    store ptr [[TMP2]], ptr [[TMP6]], align 8
+// O0-NEXT:    [[WIDE_PTR_PTR_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP]], i32 0, i32 0
+// O0-NEXT:    [[WIDE_PTR_PTR:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR]], align 8
+// O0-NEXT:    [[WIDE_PTR_UB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP]], i32 0, i32 1
+// O0-NEXT:    [[WIDE_PTR_UB:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR]], align 8
+// O0-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP]], i32 0, i32 2
+// O0-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
+// O0-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[SP]], i32 0, i32 0
+// O0-NEXT:    store ptr [[WIDE_PTR_PTR]], ptr [[TMP7]], align 8
+// O0-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[SP]], i32 0, i32 1
+// O0-NEXT:    store ptr [[WIDE_PTR_UB]], ptr [[TMP8]], align 8
+// O0-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[SP]], i32 0, i32 2
+// O0-NEXT:    store ptr [[WIDE_PTR_LB]], ptr [[TMP9]], align 8
+// O0-NEXT:    br label %[[BINGO:.*]]
+// O0:       [[BINGO]]:
+// O0-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP2]], ptr align 8 [[SP]], i64 24, i1 false)
+// O0-NEXT:    [[WIDE_PTR_PTR_ADDR3:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP2]], i32 0, i32 0
+// O0-NEXT:    [[WIDE_PTR_PTR4:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR3]], align 8
+// O0-NEXT:    [[WIDE_PTR_UB_ADDR5:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP2]], i32 0, i32 1
+// O0-NEXT:    [[WIDE_PTR_UB6:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR5]], align 8
+// O0-NEXT:    [[WIDE_PTR_LB_ADDR7:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP2]], i32 0, i32 2
+// O0-NEXT:    [[WIDE_PTR_LB8:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR7]], align 8
+// O0-NEXT:    [[TMP10:%.*]] = getelementptr [[STRUCT_S]], ptr [[WIDE_PTR_PTR4]], i64 1
+// O0-NEXT:    [[TMP11:%.*]] = icmp ule ptr [[TMP10]], [[WIDE_PTR_UB6]], !annotation [[META1:![0-9]+]]
+// O0-NEXT:    br i1 [[TMP11]], label %[[CONT:.*]], label %[[TRAP:.*]], {{!prof ![0-9]+}}, !annotation [[META1]]
+// O0:       [[TRAP]]:
+// O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META1]]
+// O0-NEXT:    unreachable, !annotation [[META1]]
+// O0:       [[CONT]]:
+// O0-NEXT:    [[TMP12:%.*]] = icmp ule ptr [[WIDE_PTR_LB8]], [[WIDE_PTR_PTR4]], !annotation [[META3:![0-9]+]]
+// O0-NEXT:    br i1 [[TMP12]], label %[[CONT10:.*]], label %[[TRAP9:.*]], {{!prof ![0-9]+}}, !annotation [[META3]]
+// O0:       [[TRAP9]]:
+// O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META3]]
+// O0-NEXT:    unreachable, !annotation [[META3]]
+// O0:       [[CONT10]]:
+// O0-NEXT:    [[I11:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[WIDE_PTR_PTR4]], i32 0, i32 1
+// O0-NEXT:    store i64 3, ptr [[I11]], align 8
+// O0-NEXT:    ret void
+//
 void foo(int * a, long i) {
     struct S s = {a, i};
     struct S *sp = &s.i; // bad cast but we don't check
@@ -18,6 +97,10 @@ bingo:;
     sp->i = 3; // run-time trap : oob
 }
 
-//// NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-// O0: {{.*}}
-// O2: {{.*}}
+//.
+// O2: [[META6]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
+// O2: [[META8]] = !{!"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound"}
+//.
+// O0: [[META1]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
+// O0: [[META3]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
+//.

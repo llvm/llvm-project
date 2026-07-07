@@ -58,7 +58,14 @@ fi
 # TESTS=( \
 #   BoundsSafety/CodeGen/constant-forge-ptr-expr.c \
 # )
-TESTS=( BoundsSafety/CodeGen/bounds-attributed-return-O0.c \ 
+TESTS=( \
+  BoundsSafety/CodeGen/compound-literal-counted_by-O2.c \
+  BoundsSafety/CodeGen/compound-literal-ended_by-O2.c \
+  BoundsSafety/CodeGen/compound-literal-sized_by-O2.c \
+  BoundsSafety/CodeGen/counted_by_or_null_call-O2.c \
+  BoundsSafety/CodeGen/sized_by_or_null_call-O2.c \
+  BoundsSafety/CodeGen/nested-struct-member-count-O2.c \
+  BoundsSafety/CodeGen/dynamic-inout-count-calls-O2.c \
 )
 
 for t in "${TESTS[@]}"; do
