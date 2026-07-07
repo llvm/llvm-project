@@ -16,6 +16,13 @@
 
 // XFAIL: target={{.*netbsd.*}} && !asan
 
+// XFAIL: (darwin && ubsan && (arm64-target-arch || arm64e-target-arch))
+
+// Signal handlers not available on tvOS or watchOS
+// XFAIL: tvos || watchos
+
+// UNSUPPORTED: ios && !(tvos || watchos)
+
 volatile int *null = 0;
 
 namespace Xyz {

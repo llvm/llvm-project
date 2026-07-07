@@ -1,4 +1,10 @@
 // UNSUPPORTED: darwin-remote
+
+// The test process is usually arm64, but /usr/lib/dyld is arm64e, so when
+// asan_symbolize calls otool/llvm-symbolizer for arm64, it fails.
+// rdar://181532154
+// XFAIL: darwin && arm64-target-arch
+
 // FIXME(dliew): We currently have to use module map for this test due to the atos
 // symbolizer changing the module name from an absolute path to just the file name.
 // rdar://problem/49784442

@@ -3,6 +3,10 @@
 // UNSUPPORTED: android
 // UNSUPPORTED: darwin-remote
 
+// The test process is usually arm64, but /usr/lib/dyld is arm64e, so when
+// asan_symbolize calls otool/llvm-symbolizer for arm64, it fails.
+// XFAIL: darwin && arm64-target-arch
+
 // RUN: %clangxx_asan -O0 -g %s -o %t
 // RUN: %env_asan_opts=symbolize=0 not %run %t DUMMY_ARG > %t.asan_report 2>&1
 // RUN: %asan_symbolize --log-level debug --log-dest %t_debug_log_output.txt -l %t.asan_report --plugins %S/plugin_wrong_frame_number_bug.py > %t.asan_report_sym

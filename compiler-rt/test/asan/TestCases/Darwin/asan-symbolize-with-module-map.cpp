@@ -1,4 +1,9 @@
 // UNSUPPORTED: darwin-remote
+
+// The test process is usually arm64, but /usr/lib/dyld is arm64e, so when
+// asan_symbolize calls otool/llvm-symbolizer for arm64, it fails.
+// XFAIL: darwin && arm64-target-arch
+
 // RUN: %clangxx_asan -O0 -g %s -o %t.executable
 
 // Deliberately don't produce the module map and then check that offline symbolization fails

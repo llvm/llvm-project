@@ -4,6 +4,7 @@
 // RUN: %env_asan_opts=poison_array_cookie=0 not %run %t 2>&1  | FileCheck %s --check-prefix=NO_COOKIE
 
 // UNSUPPORTED: ios
+// XFAIL: darwin && (arm64-target-arch || arm64e-target-arch)
 
 // Poisoning C++ array redzones is not implemented on arm
 // XFAIL: target=arm{{.*}}

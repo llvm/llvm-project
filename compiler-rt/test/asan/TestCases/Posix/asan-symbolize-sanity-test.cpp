@@ -1,6 +1,10 @@
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
 // XFAIL: android
 //
+// The test process is usually arm64, but /usr/lib/dyld is arm64e, so when
+// asan_symbolize calls otool/llvm-symbolizer for arm64, it fails.
+// XFAIL: darwin && arm64-target-arch
+//
 // Check that asan_symbolize.py script works (for binaries, ASan RTL and
 // shared object files.
 

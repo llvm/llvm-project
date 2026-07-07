@@ -1,4 +1,9 @@
 // UNSUPPORTED: ios, android
+
+// The test process is usually arm64, but /usr/lib/dyld is arm64e, so when
+// asan_symbolize calls otool/llvm-symbolizer for arm64, it fails.
+// XFAIL: darwin && arm64-target-arch
+
 // Check plugin command line args get parsed and that plugin functions get called as expected.
 
 // RUN: %clangxx_asan -O0 -g %s -o %t.executable
