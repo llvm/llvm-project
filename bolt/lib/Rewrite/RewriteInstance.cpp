@@ -2084,24 +2084,17 @@ bool isCFIBoundedTailPredecessor(const BinaryFunction &BF,
   return FDEI->second->getAddressRange() == BF.getSize();
 }
 
-bool hasDataMarkerAt(DenseMap<uint64_t, MarkerSymType> &MarkerSyms,
-                     uint64_t Address) {
-  auto It = MarkerSyms.find(Address);
-  return It != MarkerSyms.end() && It->second == MarkerSymType::DATA;
-}
-
 /// AArch64 padding / filler instructions that may appear in slack but are not
 /// standalone callable functions.
-static bool isAArch64TailPaddingInst(const BinaryContext &BC,
-                                     const MCInst &Inst) {
+bool isAArch64TailPaddingInst(const BinaryContext &BC, const MCInst &Inst) {
   if (BC.MIB->isNoop(Inst) || BC.MIB->isTrap(Inst))
     return true;
   return false;
 }
 
 /// True if the decoded tail looks like real callable code, not padding.
-static bool isValidAArch64UnmarkedTail(const BinaryContext &BC,
-                                       ArrayRef<MCInst> Insts) {
+bool isValidAArch64UnmarkedTail(const BinaryContext &BC,
+                                ArrayRef<MCInst> Insts) {
   if (Insts.empty())
     return false;
 
@@ -2120,10 +2113,15 @@ static bool isValidAArch64UnmarkedTail(const BinaryContext &BC,
 /// Disassemble a prefix of [TailStart, TailStart + TrailingExtent) and return
 /// its length. Any remaining bytes in the range must be zero padding.
 /// Returns 0 if the region is not valid unmarked code.
-static uint64_t
+uint64_t
 measureAArch64UnmarkedTail(BinaryContext &BC, const BinaryFunction &Pred,
                            DenseMap<uint64_t, MarkerSymType> &MarkerSyms,
                            uint64_t TailStart, uint64_t TrailingExtent) {
+  auto hasDataMarkerAt = [&MarkerSyms](uint64_t Address) {
+    auto It = MarkerSyms.find(Address);
+    return It != MarkerSyms.end() && It->second == MarkerSymType::DATA;
+  };
+
   // Pred was registered from an executable section during symbol/FDE discovery.
   BinarySection &Section = *Pred.getOriginSection();
 
@@ -2140,7 +2138,7 @@ measureAArch64UnmarkedTail(BinaryContext &BC, const BinaryFunction &Pred,
   SmallVector<MCInst, 4> Insts;
   uint64_t CodeLen = 0;
   while (CodeLen < TrailingExtent) {
-    if (hasDataMarkerAt(MarkerSyms, TailStart + CodeLen))
+    if (hasDataMarkerAt(TailStart + CodeLen))
       return 0;
     if (Pred.isInConstantIsland(TailStart + CodeLen))
       return 0;

@@ -8,13 +8,23 @@
 # RUN: %clang %cflags %t.o -pie -Wl,-q -o %t.exe
 # RUN: llvm-bolt %t.exe -o %t.bolt --print-disasm -v=1 2>&1 | FileCheck %s
 
-# CHECK: Binary Function "{{(__BOLT_FDE_FUNC.*|\.text/[0-9]+)}}" after disassembly
+## Scenario 1a: FDE-only predecessor at the section start (named after .text).
+# CHECK: Binary Function ".text/{{[0-9]+}}" after disassembly
 # CHECK: Size        : 0x14
 # CHECK: MaxSize     : 0x14
 # CHECK: Binary Function "{{.*}}__BOLT_UNMARKED_TAIL{{.*}}" after disassembly
 # CHECK: Size        : 0x8
 # CHECK: MaxSize     : 0x8
 
+## Scenario 1b: FDE-only predecessor discovered from the FDE alone.
+# CHECK: Binary Function "__BOLT_FDE_FUNC{{.*}}" after disassembly
+# CHECK: Size        : 0x14
+# CHECK: MaxSize     : 0x14
+# CHECK: Binary Function "{{.*}}__BOLT_UNMARKED_TAIL{{.*}}" after disassembly
+# CHECK: Size        : 0x8
+# CHECK: MaxSize     : 0x8
+
+## Scenario 2: named predecessor (FDE address range matches .size).
 # CHECK: Binary Function "named_sub" after disassembly
 # CHECK: Size        : 0x14
 # CHECK: MaxSize     : 0x14
@@ -22,11 +32,11 @@
 # CHECK: Size        : 0x10
 # CHECK: MaxSize     : 0x10
 
-# CHECK-COUNT-2: bl	__BOLT_UNMARKED_TAILat{{.*}}
+# CHECK-COUNT-3: bl	__BOLT_UNMARKED_TAILat{{.*}}
 
 	.section	.text.fdeonly,"ax",@progbits
 
-## Scenario 1: FDE-only predecessor (no symbol table entry).
+## Scenario 1a: FDE-only predecessor at the section start (no symbol table entry).
 .Lfde_sub:
 	.cfi_startproc
 	stp	x29, x30, [sp, #-16]!
@@ -37,6 +47,20 @@
 	.cfi_endproc
 
 .Ltail_after_fde:
+	nop
+	ret
+
+## Scenario 1b: identical FDE-only region, not at the section start.
+.Lfde_sub2:
+	.cfi_startproc
+	stp	x29, x30, [sp, #-16]!
+	mov	x29, sp
+	mov	w0, #42
+	ldp	x29, x30, [sp], #16
+	ret
+	.cfi_endproc
+
+.Ltail_after_fde2:
 	nop
 	ret
 
@@ -70,6 +94,7 @@ _start:
 	stp	x29, x30, [sp, #-16]!
 	mov	x29, sp
 	bl	.Ltail_after_fde
+	bl	.Ltail_after_fde2
 	bl	.Ltail_after_named
 	ldp	x29, x30, [sp], #16
 	mov	w0, #0
