@@ -1407,8 +1407,6 @@ bool PeepholeOptimizer::optimizeRegSequenceUses(
     unsigned SrcSubReg = It->SubReg;
 
     // Determine the register class for the COPY destination.
-    // We want to use the REG_SEQUENCE's subregister class, but constrain it
-    // to what the use instruction requires if needed.
     const TargetRegisterClass *DefRC = MRI->getRegClass(DstReg);
     const TargetRegisterClass *DefSubRC =
         TRI->getSubRegisterClass(DefRC, UseSubReg);
@@ -1425,7 +1423,7 @@ bool PeepholeOptimizer::optimizeRegSequenceUses(
       const TargetRegisterClass *CommonRC =
           TRI->getCommonSubClass(DefSubRC, UseRC);
       if (!CommonRC)
-        continue; // Incompatible
+        continue;
       CopyRC = CommonRC;
     }
 
@@ -1438,13 +1436,10 @@ bool PeepholeOptimizer::optimizeRegSequenceUses(
         continue;
     }
 
-    // Check if what the source provides is compatible with what we need.
     if (!TRI->getCommonSubClass(SrcProvides, CopyRC))
       continue;
 
     // Create a COPY after the REG_SEQUENCE.
-    // This placement ensures the COPY dominates all uses (including PHIs)
-    // since the REG_SEQUENCE must dominate its uses.
     Register NewReg = MRI->createVirtualRegister(CopyRC);
     MachineInstr *NewCopy =
         BuildMI(*MI.getParent(), std::next(MachineBasicBlock::iterator(MI)),
@@ -1452,8 +1447,6 @@ bool PeepholeOptimizer::optimizeRegSequenceUses(
             .addReg(SrcReg, {}, SrcSubReg);
     LocalMIs.insert(NewCopy);
 
-    // Clear kill flags on the source register since we're extending its
-    // lifetime.
     MRI->clearKillFlags(SrcReg);
 
     UseMO.setReg(NewReg);
@@ -1465,7 +1458,6 @@ bool PeepholeOptimizer::optimizeRegSequenceUses(
     ++NumRegSequenceCopies;
   }
 
-  // If REG_SEQUENCE has no remaining uses, delete it.
   if (Changed && MRI->use_nodbg_empty(DstReg)) {
     MRI->markUsesInDebugValueAsUndef(DstReg);
     LLVM_DEBUG(dbgs() << "Deleting dead REG_SEQUENCE: " << MI);
