@@ -697,12 +697,6 @@ public:
     /// to be overrided by a target gives more flexiblity on certain cases.
     /// By default, MaxUpperBound uses UnrollMaxUpperBound which value is 8.
     unsigned MaxUpperBound;
-    /// Set a separate, lower maximum trip-count upper bound for loops whose
-    /// exact trip count is unknown but a small conservative maximum is known
-    /// (such as loops that exit at a runtime-determined iteration). Defaults to
-    /// 0, which disables this limit and leaves such loops on the normal
-    /// MaxUpperBound path; a target opts in by setting a small value.
-    unsigned MaxUpperBoundUnknownTripCount;
     /// Set the maximum unrolling factor for full unrolling. Like MaxCount, but
     /// applies even if full unrolling is selected. This allows a target to fall
     /// back to Partial unrolling if full unrolling is above FullUnrollMaxCount.
