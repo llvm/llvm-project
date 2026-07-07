@@ -2844,8 +2844,10 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
       // We don't care about the lanes when joining subregister ranges.
       V.WriteLanes = V.ValidLanes = LaneBitmask::getLane(0);
       if (DefMI->isImplicitDef()) {
-        V.ValidLanes = LaneBitmask::getNone();
-        V.ErasableImplicitDef = true;
+        if (DefMI->getOperand(0).getSubReg() == 0) {
+          V.ValidLanes = LaneBitmask::getNone();
+          V.ErasableImplicitDef = true;
+        }
       }
     } else {
       bool Redef = false;
@@ -2884,7 +2886,9 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
         //
         // Clearing the valid lanes is deferred until it is sure this can be
         // erased.
-        V.ErasableImplicitDef = true;
+        //
+        if (DefMI->getOperand(0).getSubReg() == 0)
+          V.ErasableImplicitDef = true;
       }
     }
   }
@@ -2983,7 +2987,10 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
     return CR_Replace;
 
   // Check for simple erasable conflicts.
-  if (DefMI->isImplicitDef())
+  //
+  // (WIP) A sub-register IMPLICIT_DEF that materializes a real undef lane consumed later
+  // should not be erased here ?
+  if (DefMI->isImplicitDef() && DefMI->getOperand(0).getSubReg() == 0)
     return CR_Erase;
 
   // Include the non-conflict where DefMI is a coalescable copy that kills

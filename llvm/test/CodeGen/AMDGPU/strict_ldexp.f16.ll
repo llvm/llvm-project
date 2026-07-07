@@ -243,6 +243,7 @@ define <3 x half> @test_ldexp_v3f16_v3i32(ptr addrspace(1) %out, <3 x half> %a, 
 ; GFX11-SDAG-TRUE16-NEXT:    v_med3_i32 v0, v4, s0, 0x7fff
 ; GFX11-SDAG-TRUE16-NEXT:    v_med3_i32 v1, v5, s0, 0x7fff
 ; GFX11-SDAG-TRUE16-NEXT:    v_med3_i32 v4, v6, s0, 0x7fff
+; GFX11-SDAG-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
 ; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v0.l, v2.l, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-SDAG-TRUE16-NEXT:    v_ldexp_f16_e32 v0.h, v2.h, v1.l

@@ -20,7 +20,7 @@ define amdgpu_kernel void @memoryIntrinstic(ptr addrspace(3) %inptr, i1 %cond, p
 ; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    s_mov_b64 s[4:5], -1
-; CHECK-NEXT:    ; implicit-def: $vgpr1
+; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:  .LBB0_3: ; %Flow
 ; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; CHECK-NEXT:    s_cselect_b32 s1, 1, 0
@@ -80,7 +80,7 @@ define amdgpu_kernel void @badIntrinsicUse(ptr addrspace(3) %inptr, i1 %cond, pt
 ; CHECK-NEXT:    s_branch .LBB1_3
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    s_mov_b64 s[0:1], -1
-; CHECK-NEXT:    ; implicit-def: $vgpr1
+; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:  .LBB1_3: ; %Flow
 ; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; CHECK-NEXT:    s_cselect_b32 s0, 1, 0
@@ -142,7 +142,7 @@ define amdgpu_kernel void @badIntrinsicUse2(ptr addrspace(3) %inptr, i1 %cond, p
 ; CHECK-NEXT:    s_branch .LBB2_3
 ; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    s_mov_b64 s[0:1], -1
-; CHECK-NEXT:    ; implicit-def: $vgpr1
+; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:  .LBB2_3: ; %Flow
 ; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; CHECK-NEXT:    s_cselect_b32 s0, 1, 0

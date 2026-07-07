@@ -1014,17 +1014,34 @@ define void @void_func_v3i8(<3 x i8> %arg0) #0 {
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: void_func_v3i8:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_perm_b32 v0, v0, v1, 0xc0c0004
-; GFX11-NEXT:    s_mov_b64 s[0:1], 2
-; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    buffer_store_b8 v2, off, s[0:3], 0
-; GFX11-NEXT:    s_mov_b64 s[0:1], 0
-; GFX11-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: void_func_v3i8:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v1.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v0.l
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr3_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr4_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    s_mov_b64 s[0:1], 2
+; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v4, v3, 0xc0c0004
+; GFX11-TRUE16-NEXT:    buffer_store_b8 v2, off, s[0:3], 0
+; GFX11-TRUE16-NEXT:    s_mov_b64 s[0:1], 0
+; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: void_func_v3i8:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v0, v1, 0xc0c0004
+; GFX11-FAKE16-NEXT:    s_mov_b64 s[0:1], 2
+; GFX11-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-FAKE16-NEXT:    s_mov_b32 s2, -1
+; GFX11-FAKE16-NEXT:    buffer_store_b8 v2, off, s[0:3], 0
+; GFX11-FAKE16-NEXT:    s_mov_b64 s[0:1], 0
+; GFX11-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   store <3 x i8> %arg0, ptr addrspace(1) null
   ret void
 }
@@ -1078,18 +1095,37 @@ define void @void_func_v4i8(<4 x i8> %arg0) #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: void_func_v4i8:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_perm_b32 v0, v0, v1, 0xc0c0004
-; GFX11-NEXT:    v_perm_b32 v1, v2, v3, 0xc0c0004
-; GFX11-NEXT:    s_mov_b64 s[0:1], 0
-; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
-; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: void_func_v4i8:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v1.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v3.l
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr4_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr2_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    s_mov_b64 s[0:1], 0
+; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
+; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v0, v4, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v1, v2, v1, 0xc0c0004
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: void_func_v4i8:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v0, v1, 0xc0c0004
+; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v2, v3, 0xc0c0004
+; GFX11-FAKE16-NEXT:    s_mov_b64 s[0:1], 0
+; GFX11-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-FAKE16-NEXT:    s_mov_b32 s2, -1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   store <4 x i8> %arg0, ptr addrspace(1) null
   ret void
 }
@@ -1149,20 +1185,38 @@ define void @void_func_v5i8(<5 x i8> %arg0) #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: void_func_v5i8:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_perm_b32 v0, v0, v1, 0xc0c0004
-; GFX11-NEXT:    v_perm_b32 v1, v2, v3, 0xc0c0004
-; GFX11-NEXT:    s_mov_b64 s[0:1], 4
-; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
-; GFX11-NEXT:    buffer_store_b8 v4, off, s[0:3], 0
-; GFX11-NEXT:    s_mov_b64 s[0:1], 0
-; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: void_func_v5i8:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr3_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr2_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_mov_b64 s[0:1], 4
+; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v0, v1, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v1, v2, v3, 0xc0c0004
+; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
+; GFX11-TRUE16-NEXT:    buffer_store_b8 v4, off, s[0:3], 0
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-TRUE16-NEXT:    s_mov_b64 s[0:1], 0
+; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: void_func_v5i8:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v0, v1, 0xc0c0004
+; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v2, v3, 0xc0c0004
+; GFX11-FAKE16-NEXT:    s_mov_b64 s[0:1], 4
+; GFX11-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-FAKE16-NEXT:    s_mov_b32 s2, -1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-FAKE16-NEXT:    buffer_store_b8 v4, off, s[0:3], 0
+; GFX11-FAKE16-NEXT:    s_mov_b64 s[0:1], 0
+; GFX11-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   store <5 x i8> %arg0, ptr addrspace(1) null
   ret void
 }
@@ -1232,20 +1286,44 @@ define void @void_func_v8i8(<8 x i8> %arg0) #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: void_func_v8i8:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_perm_b32 v4, v4, v5, 0xc0c0004
-; GFX11-NEXT:    v_perm_b32 v5, v6, v7, 0xc0c0004
-; GFX11-NEXT:    v_perm_b32 v0, v0, v1, 0xc0c0004
-; GFX11-NEXT:    v_perm_b32 v2, v2, v3, 0xc0c0004
-; GFX11-NEXT:    s_mov_b64 s[0:1], 0
-; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX11-NEXT:    v_lshl_or_b32 v1, v5, 16, v4
-; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
-; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: void_func_v8i8:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr5_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr4_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr2_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr7_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr6_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr3_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_mov_b64 s[0:1], 0
+; GFX11-TRUE16-NEXT:    v_perm_b32 v4, v4, v5, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v5, v6, v7, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v0, v1, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v2, v2, v3, 0xc0c0004
+; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v1, v5, 16, v4
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX11-TRUE16-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: void_func_v8i8:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v4, v4, v5, 0xc0c0004
+; GFX11-FAKE16-NEXT:    v_perm_b32 v5, v6, v7, 0xc0c0004
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v0, v1, 0xc0c0004
+; GFX11-FAKE16-NEXT:    v_perm_b32 v2, v2, v3, 0xc0c0004
+; GFX11-FAKE16-NEXT:    s_mov_b64 s[0:1], 0
+; GFX11-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v1, v5, 16, v4
+; GFX11-FAKE16-NEXT:    s_mov_b32 s2, -1
+; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX11-FAKE16-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   store <8 x i8> %arg0, ptr addrspace(1) null
   ret void
 }
@@ -1349,7 +1427,23 @@ define void @void_func_v16i8(<16 x i8> %arg0) #0 {
 ;
 ; GFX11-TRUE16-LABEL: void_func_v16i8:
 ; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr8_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr9_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr13_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr12_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr5_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr4_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr6_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr15_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr14_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr10_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr7_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr3_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr2_hi16 killed $sgpr0 killed $exec
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX11-TRUE16-NEXT:    v_perm_b32 v8, v8, v9, 0xc0c0004
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v9.l, v11.l
 ; GFX11-TRUE16-NEXT:    v_perm_b32 v12, v12, v13, 0xc0c0004
@@ -1362,9 +1456,8 @@ define void @void_func_v16i8(<16 x i8> %arg0) #0 {
 ; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v3, v13, 16, v12
 ; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v1, v5, 16, v4
 ; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v2, v9, 16, v8
-; GFX11-TRUE16-NEXT:    s_mov_b64 s[0:1], 0
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v6, 16, v0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v6, 16, v0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
 ; GFX11-TRUE16-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -1570,35 +1663,97 @@ define void @void_func_v32i8(<32 x i8> %arg0) #0 {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    scratch_load_u8 v31, off, s32
-; GFX11-TRUE16-NEXT:    v_perm_b32 v12, v12, v13, 0xc0c0004
-; GFX11-TRUE16-NEXT:    v_perm_b32 v13, v14, v15, 0xc0c0004
-; GFX11-TRUE16-NEXT:    v_perm_b32 v8, v8, v9, 0xc0c0004
-; GFX11-TRUE16-NEXT:    v_perm_b32 v9, v10, v11, 0xc0c0004
-; GFX11-TRUE16-NEXT:    v_perm_b32 v10, v4, v5, 0xc0c0004
-; GFX11-TRUE16-NEXT:    v_perm_b32 v11, v6, v7, 0xc0c0004
-; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v0, v1, 0xc0c0004
-; GFX11-TRUE16-NEXT:    v_perm_b32 v14, v2, v3, 0xc0c0004
-; GFX11-TRUE16-NEXT:    v_perm_b32 v1, v24, v25, 0xc0c0004
-; GFX11-TRUE16-NEXT:    v_perm_b32 v4, v26, v27, 0xc0c0004
-; GFX11-TRUE16-NEXT:    v_perm_b32 v5, v20, v21, 0xc0c0004
-; GFX11-TRUE16-NEXT:    v_perm_b32 v7, v22, v23, 0xc0c0004
-; GFX11-TRUE16-NEXT:    v_perm_b32 v15, v16, v17, 0xc0c0004
-; GFX11-TRUE16-NEXT:    v_perm_b32 v16, v18, v19, 0xc0c0004
-; GFX11-TRUE16-NEXT:    v_perm_b32 v17, v28, v29, 0xc0c0004
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v3, v13, 16, v12
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v6, v4, 16, v1
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v5, v7, 16, v5
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v4, v16, 16, v15
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v2, v9, 16, v8
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v1, v11, 16, v10
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v14, 16, v0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v32.l, v13.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v33.l, v12.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v34.l, v15.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v35.l, v14.l
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr32_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr33_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr34_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr35_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v36.l, v9.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v37.l, v8.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v38.l, v11.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v39.l, v10.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v52.l, v1.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v53.l, v0.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v64.l, v25.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v65.l, v24.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v66.l, v27.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v67.l, v26.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v68.l, v21.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v69.l, v20.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v70.l, v23.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v71.l, v22.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v80.l, v17.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v81.l, v16.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v82.l, v19.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v83.l, v18.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v84.l, v29.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v85.l, v28.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v86.l, v30.l
+; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v33, v32, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v1, v35, v34, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v48.l, v5.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v49.l, v4.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v50.l, v7.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v51.l, v6.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v54.l, v3.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v55.l, v2.l
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr36_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr37_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr38_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr39_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr64_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr65_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr66_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr67_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr68_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr69_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr70_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr71_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr80_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr81_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr82_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr83_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr84_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr85_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr86_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    v_perm_b32 v2, v37, v36, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v4, v39, v38, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v5, v65, v64, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v6, v67, v66, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v7, v69, v68, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v12, v71, v70, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v13, v81, v80, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v14, v83, v82, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v15, v85, v84, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v3, v1, 16, v0
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr48_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr49_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr50_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr51_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr52_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr53_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr54_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr55_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    v_perm_b32 v8, v49, v48, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v9, v51, v50, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v10, v53, v52, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v11, v55, v54, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v2, v4, 16, v2
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v6, v6, 16, v5
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v5, v12, 16, v7
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v4, v14, 16, v13
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v1, v9, 16, v8
 ; GFX11-TRUE16-NEXT:    s_mov_b64 s[0:1], 16
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_perm_b32 v12, v30, v31, 0xc0c0004
+; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v86, v31, 0xc0c0004
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v7, v12, 16, v17
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v7, v0, 16, v15
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v11, 16, v10
 ; GFX11-TRUE16-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX11-TRUE16-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0

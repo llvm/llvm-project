@@ -585,6 +585,7 @@ define amdgpu_kernel void @fadd_v2_v_v_splat(ptr addrspace(1) %a) {
 ; PACKED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; PACKED-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; PACKED-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; PACKED-SDAG-NEXT:    ; kill: def $vgpr1 killed $sgpr0 killed $exec
 ; PACKED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-SDAG-NEXT:    global_load_dwordx2 v[2:3], v4, s[0:1]
 ; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -610,6 +611,7 @@ define amdgpu_kernel void @fadd_v2_v_v_splat(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-SDAG-NEXT:    ; kill: def $vgpr1 killed $sgpr0 killed $exec
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_load_b64 v[2:3], v0, s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -1948,6 +1950,7 @@ define amdgpu_kernel void @fmul_v2_v_v_splat(ptr addrspace(1) %a) {
 ; PACKED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; PACKED-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; PACKED-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; PACKED-SDAG-NEXT:    ; kill: def $vgpr1 killed $sgpr0 killed $exec
 ; PACKED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-SDAG-NEXT:    global_load_dwordx2 v[2:3], v4, s[0:1]
 ; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -1973,6 +1976,7 @@ define amdgpu_kernel void @fmul_v2_v_v_splat(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-SDAG-NEXT:    ; kill: def $vgpr1 killed $sgpr0 killed $exec
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_load_b64 v[2:3], v0, s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -2824,6 +2828,7 @@ define amdgpu_kernel void @fma_v2_v_v_splat(ptr addrspace(1) %a) {
 ; PACKED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; PACKED-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; PACKED-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; PACKED-SDAG-NEXT:    ; kill: def $vgpr1 killed $sgpr0 killed $exec
 ; PACKED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-SDAG-NEXT:    global_load_dwordx2 v[2:3], v4, s[0:1]
 ; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -2849,6 +2854,7 @@ define amdgpu_kernel void @fma_v2_v_v_splat(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-SDAG-NEXT:    ; kill: def $vgpr1 killed $sgpr0 killed $exec
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_load_b64 v[2:3], v0, s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0

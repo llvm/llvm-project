@@ -12,6 +12,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   dead [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
   ; CHECK-NEXT:   undef [[PseudoVMV_V_I_M1_:%[0-9]+]].sub_vrm1_2:vrn8m1 = PseudoVMV_V_I_M1 undef [[PseudoVMV_V_I_M1_]].sub_vrm1_2, 0, -1 /* vl=VLMAX */, 3 /* e8 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[PseudoVMV_V_I_M1_:%[0-9]+]].sub_vrm1_5:vrn8m1 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[PseudoVMV_V_I_M1_:%[0-9]+]].sub_vrm1_6:vrn8m1 = COPY undef [[PseudoVMV_V_I_M1_]].sub_vrm1_2
   ; CHECK-NEXT:   BNE undef [[DEF]], $x0, %bb.3
   ; CHECK-NEXT:   PseudoBR %bb.1

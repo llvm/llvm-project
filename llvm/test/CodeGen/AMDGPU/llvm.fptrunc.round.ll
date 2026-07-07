@@ -181,6 +181,7 @@ define amdgpu_gs <2 x half> @v_fptrunc_round_poison_to_v2f16_towardzero(float %a
 ; GFX11-SDAG-LABEL: v_fptrunc_round_poison_to_v2f16_towardzero:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, v0, s0
+; GFX11-SDAG-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-GISEL-LABEL: v_fptrunc_round_poison_to_v2f16_towardzero:
@@ -198,6 +199,7 @@ define amdgpu_gs <2 x half> @v_fptrunc_round_poison_to_v2f16_towardzero(float %a
 ; GFX12-SDAG-LABEL: v_fptrunc_round_poison_to_v2f16_towardzero:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, v0, s0
+; GFX12-SDAG-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: v_fptrunc_round_poison_to_v2f16_towardzero:
@@ -1293,11 +1295,12 @@ define amdgpu_gs <3 x half> @v_fptrunc_round_v3f32_to_v3f16_upward(<3 x float> %
 ; GFX11-SDAG-LABEL: v_fptrunc_round_v3f32_to_v3f16_upward:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
-; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.h, v1
-; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.l, v0
-; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.l, v2
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, v3
+; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.h, v1
+; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.l, v0
+; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.l, v2
+; GFX11-SDAG-NEXT:    ; kill: def $vgpr3_hi16 killed $sgpr0 killed $exec
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v3
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-GISEL-LABEL: v_fptrunc_round_v3f32_to_v3f16_upward:
@@ -1322,11 +1325,12 @@ define amdgpu_gs <3 x half> @v_fptrunc_round_v3f32_to_v3f16_upward(<3 x float> %
 ; GFX12-SDAG-LABEL: v_fptrunc_round_v3f32_to_v3f16_upward:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
-; GFX12-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.h, v1
-; GFX12-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.l, v0
-; GFX12-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.l, v2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, v3
+; GFX12-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.h, v1
+; GFX12-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.l, v0
+; GFX12-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.l, v2
+; GFX12-SDAG-NEXT:    ; kill: def $vgpr3_hi16 killed $sgpr0 killed $exec
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v3
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: v_fptrunc_round_v3f32_to_v3f16_upward:
@@ -1353,11 +1357,12 @@ define amdgpu_gs <3 x half> @v_fptrunc_round_v3f32_to_v3f16_downward(<3 x float>
 ; GFX11-SDAG-LABEL: v_fptrunc_round_v3f32_to_v3f16_downward:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
-; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.h, v1
-; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.l, v0
-; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.l, v2
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, v3
+; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.h, v1
+; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.l, v0
+; GFX11-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.l, v2
+; GFX11-SDAG-NEXT:    ; kill: def $vgpr3_hi16 killed $sgpr0 killed $exec
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v3
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-GISEL-LABEL: v_fptrunc_round_v3f32_to_v3f16_downward:
@@ -1382,11 +1387,12 @@ define amdgpu_gs <3 x half> @v_fptrunc_round_v3f32_to_v3f16_downward(<3 x float>
 ; GFX12-SDAG-LABEL: v_fptrunc_round_v3f32_to_v3f16_downward:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 1
-; GFX12-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.h, v1
-; GFX12-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.l, v0
-; GFX12-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.l, v2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, v3
+; GFX12-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.h, v1
+; GFX12-SDAG-NEXT:    v_cvt_f16_f32_e64 v1.l, v0
+; GFX12-SDAG-NEXT:    v_cvt_f16_f32_e64 v3.l, v2
+; GFX12-SDAG-NEXT:    ; kill: def $vgpr3_hi16 killed $sgpr0 killed $exec
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v3
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: v_fptrunc_round_v3f32_to_v3f16_downward:

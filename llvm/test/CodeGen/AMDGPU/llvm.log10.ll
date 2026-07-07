@@ -7843,11 +7843,12 @@ define <3 x half> @v_log10_v3f16(<3 x half> %in) {
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f32_e32 v2, v2
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f32_e32 v3, v0
 ; GFX1100-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_3)
-; GFX1100-SDAG-TRUE16-NEXT:    v_log_f32_e32 v1, v1
+; GFX1100-SDAG-TRUE16-NEXT:    v_log_f32_e32 v4, v1
+; GFX1100-SDAG-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
 ; GFX1100-SDAG-TRUE16-NEXT:    v_fma_mixlo_f16 v0, v2, s0, 0
 ; GFX1100-SDAG-TRUE16-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-SDAG-TRUE16-NEXT:    v_fma_mixhi_f16 v0, v3, s0, 0
-; GFX1100-SDAG-TRUE16-NEXT:    v_fma_mixlo_f16 v1, v1, s0, 0
+; GFX1100-SDAG-TRUE16-NEXT:    v_fma_mixlo_f16 v1, v4, s0, 0
 ; GFX1100-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-SDAG-FAKE16-LABEL: v_log10_v3f16:
@@ -7990,6 +7991,7 @@ define <3 x half> @v_log10_v3f16_fast(<3 x half> %in) {
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.l, v0.l
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.h, v0.h
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v1.l, v1.l
+; GFX1100-SDAG-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
 ; GFX1100-SDAG-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_3)
 ; GFX1100-SDAG-TRUE16-NEXT:    v_mul_f16_e32 v0.l, 0x34d1, v0.l
 ; GFX1100-SDAG-TRUE16-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)

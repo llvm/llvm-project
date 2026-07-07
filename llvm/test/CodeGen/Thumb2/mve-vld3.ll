@@ -989,33 +989,19 @@ entry:
 ; f32
 
 define void @vld3_v2f32(ptr %src, ptr %dst) {
-; CHECK-LV-LABEL: vld3_v2f32:
-; CHECK-LV:       @ %bb.0: @ %entry
-; CHECK-LV-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-LV-NEXT:    vldr s1, [r0, #16]
-; CHECK-LV-NEXT:    vldr s5, [r0, #20]
-; CHECK-LV-NEXT:    vmov.f32 s12, s8
-; CHECK-LV-NEXT:    vmov.f32 s13, s11
-; CHECK-LV-NEXT:    vmov.f32 s0, s9
-; CHECK-LV-NEXT:    vadd.f32 q0, q3, q0
-; CHECK-LV-NEXT:    vmov.f32 s4, s10
-; CHECK-LV-NEXT:    vadd.f32 q0, q0, q1
-; CHECK-LV-NEXT:    vstmia r1, {s0, s1}
-; CHECK-LV-NEXT:    bx lr
-;
-; CHECK-LIS-LABEL: vld3_v2f32:
-; CHECK-LIS:       @ %bb.0: @ %entry
-; CHECK-LIS-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-LIS-NEXT:    vldr s5, [r0, #16]
-; CHECK-LIS-NEXT:    vldr s1, [r0, #20]
-; CHECK-LIS-NEXT:    vmov.f32 s12, s8
-; CHECK-LIS-NEXT:    vmov.f32 s13, s11
-; CHECK-LIS-NEXT:    vmov.f32 s4, s9
-; CHECK-LIS-NEXT:    vadd.f32 q1, q3, q1
-; CHECK-LIS-NEXT:    vmov.f32 s0, s10
-; CHECK-LIS-NEXT:    vadd.f32 q0, q1, q0
-; CHECK-LIS-NEXT:    vstmia r1, {s0, s1}
-; CHECK-LIS-NEXT:    bx lr
+; CHECK-LABEL: vld3_v2f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q2, [r0]
+; CHECK-NEXT:    vldr s5, [r0, #16]
+; CHECK-NEXT:    vldr s1, [r0, #20]
+; CHECK-NEXT:    vmov.f32 s12, s8
+; CHECK-NEXT:    vmov.f32 s13, s11
+; CHECK-NEXT:    vmov.f32 s4, s9
+; CHECK-NEXT:    vadd.f32 q1, q3, q1
+; CHECK-NEXT:    vmov.f32 s0, s10
+; CHECK-NEXT:    vadd.f32 q0, q1, q0
+; CHECK-NEXT:    vstmia r1, {s0, s1}
+; CHECK-NEXT:    bx lr
 
 entry:
   %l1 = load <6 x float>, ptr %src, align 4

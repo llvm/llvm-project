@@ -554,6 +554,7 @@ define <3 x half> @v_constained_fsub_v3f16_fpexcept_strict(<3 x half> %x, <3 x h
 ; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.h, v0.h, v2.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.l, v0.l, v2.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v1.l, v1.l, v3.l
+; GFX11-SDAG-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: v_constained_fsub_v3f16_fpexcept_strict:
@@ -593,6 +594,7 @@ define <3 x half> @v_constained_fsub_v3f16_fpexcept_strict(<3 x half> %x, <3 x h
 ; GFX12-SDAG-NEXT:    v_sub_f16_e32 v0.h, v0.h, v2.h
 ; GFX12-SDAG-NEXT:    v_sub_f16_e32 v0.l, v0.l, v2.l
 ; GFX12-SDAG-NEXT:    v_sub_f16_e32 v1.l, v1.l, v3.l
+; GFX12-SDAG-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: v_constained_fsub_v3f16_fpexcept_strict:

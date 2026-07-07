@@ -1278,6 +1278,7 @@ define i1 @test_unsigned_i1_f16(half %f) nounwind {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cvt_u16_f16_e32 v0.l, v0.l
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX11-TRUE16-NEXT:    v_min_u16 v0.l, v0.l, 1
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1300,6 +1301,7 @@ define i1 @test_unsigned_i1_f16(half %f) nounwind {
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_cvt_u16_f16_e32 v0.l, v0.l
+; GFX12-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX12-TRUE16-NEXT:    v_min_u16 v0.l, v0.l, 1
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

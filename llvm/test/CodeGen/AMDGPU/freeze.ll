@@ -16934,9 +16934,10 @@ define double @freeze_fabs_double(float %a, double %b, double %c) {
 ; GFX6-SDAG-LABEL: freeze_fabs_double:
 ; GFX6-SDAG:       ; %bb.0:
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    v_mov_b32_e32 v5, v0
-; GFX6-SDAG-NEXT:    v_add_f64 v[0:1], |v[4:5]|, v[1:2]
-; GFX6-SDAG-NEXT:    v_add_f64 v[2:3], |v[4:5]|, v[3:4]
+; GFX6-SDAG-NEXT:    v_mov_b32_e32 v6, v0
+; GFX6-SDAG-NEXT:    ; kill: def $vgpr5 killed $sgpr4 killed $exec
+; GFX6-SDAG-NEXT:    v_add_f64 v[0:1], |v[5:6]|, v[1:2]
+; GFX6-SDAG-NEXT:    v_add_f64 v[2:3], |v[5:6]|, v[3:4]
 ; GFX6-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -16952,9 +16953,10 @@ define double @freeze_fabs_double(float %a, double %b, double %c) {
 ; GFX7-SDAG-LABEL: freeze_fabs_double:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_mov_b32_e32 v5, v0
-; GFX7-SDAG-NEXT:    v_add_f64 v[0:1], |v[4:5]|, v[1:2]
-; GFX7-SDAG-NEXT:    v_add_f64 v[2:3], |v[4:5]|, v[3:4]
+; GFX7-SDAG-NEXT:    v_mov_b32_e32 v6, v0
+; GFX7-SDAG-NEXT:    ; kill: def $vgpr5 killed $sgpr4 killed $exec
+; GFX7-SDAG-NEXT:    v_add_f64 v[0:1], |v[5:6]|, v[1:2]
+; GFX7-SDAG-NEXT:    v_add_f64 v[2:3], |v[5:6]|, v[3:4]
 ; GFX7-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -16970,9 +16972,10 @@ define double @freeze_fabs_double(float %a, double %b, double %c) {
 ; GFX8-SDAG-LABEL: freeze_fabs_double:
 ; GFX8-SDAG:       ; %bb.0:
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-SDAG-NEXT:    v_mov_b32_e32 v5, v0
-; GFX8-SDAG-NEXT:    v_add_f64 v[0:1], |v[4:5]|, v[1:2]
-; GFX8-SDAG-NEXT:    v_add_f64 v[2:3], |v[4:5]|, v[3:4]
+; GFX8-SDAG-NEXT:    v_mov_b32_e32 v6, v0
+; GFX8-SDAG-NEXT:    ; kill: def $vgpr5 killed $sgpr4 killed $exec
+; GFX8-SDAG-NEXT:    v_add_f64 v[0:1], |v[5:6]|, v[1:2]
+; GFX8-SDAG-NEXT:    v_add_f64 v[2:3], |v[5:6]|, v[3:4]
 ; GFX8-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -16997,9 +17000,10 @@ define double @freeze_fabs_double(float %a, double %b, double %c) {
 ; GFX10-SDAG-LABEL: freeze_fabs_double:
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_mov_b32_e32 v5, v0
-; GFX10-SDAG-NEXT:    v_add_f64 v[0:1], |v[4:5]|, v[1:2]
-; GFX10-SDAG-NEXT:    v_add_f64 v[2:3], |v[4:5]|, v[3:4]
+; GFX10-SDAG-NEXT:    v_mov_b32_e32 v6, v0
+; GFX10-SDAG-NEXT:    ; kill: def $vgpr5 killed $sgpr4 killed $exec
+; GFX10-SDAG-NEXT:    v_add_f64 v[0:1], |v[5:6]|, v[1:2]
+; GFX10-SDAG-NEXT:    v_add_f64 v[2:3], |v[5:6]|, v[3:4]
 ; GFX10-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -17015,9 +17019,10 @@ define double @freeze_fabs_double(float %a, double %b, double %c) {
 ; GFX11-SDAG-LABEL: freeze_fabs_double:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-SDAG-NEXT:    v_add_f64 v[0:1], |v[4:5]|, v[1:2]
-; GFX11-SDAG-NEXT:    v_add_f64 v[2:3], |v[4:5]|, v[3:4]
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v6, v0
+; GFX11-SDAG-NEXT:    ; kill: def $vgpr5 killed $sgpr0 killed $exec
+; GFX11-SDAG-NEXT:    v_add_f64 v[0:1], |v[5:6]|, v[1:2]
+; GFX11-SDAG-NEXT:    v_add_f64 v[2:3], |v[5:6]|, v[3:4]
 ; GFX11-SDAG-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;

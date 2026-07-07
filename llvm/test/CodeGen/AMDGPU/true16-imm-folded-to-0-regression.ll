@@ -7,10 +7,13 @@ define i32 @mov16_bfi_fold_regression(half %arg, i32 %arg1) {
 ; CHECK-LABEL: mov16_bfi_fold_regression:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b16_e32 v2.l, 0x3c00
+; CHECK-NEXT:    v_mov_b16_e32 v3.l, 0x3c00
+; CHECK-NEXT:    v_mov_b16_e32 v2.l, v0.l
+; CHECK-NEXT:    ; kill: def $vgpr2_hi16 killed $sgpr0 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr3_hi16 killed $sgpr0 killed $exec
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v1
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    v_bfi_b32 v0, 0x7fff, v2, v0
+; CHECK-NEXT:    v_bfi_b32 v0, 0x7fff, v3, v2
 ; CHECK-NEXT:    v_cndmask_b16 v0.l, 0x3c00, v0.l, vcc_lo
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_cvt_u32_u16_e32 v0, v0.l

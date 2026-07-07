@@ -1974,6 +1974,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_bf16_negA(<16 x bfloat> %A, <32 
 ; GFX1250-LABEL: test_swmmac_f32_16x16x64_bf16_negA:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    ; kill: def $vgpr32_hi16 killed $sgpr0 killed $exec
 ; GFX1250-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GFX1250-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1250-NEXT:    s_clause 0x1
@@ -1984,6 +1985,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_bf16_negA(<16 x bfloat> %A, <32 
 ; GISEL-LABEL: test_swmmac_f32_16x16x64_bf16_negA:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-NEXT:    ; kill: def $vgpr32_hi16 killed $sgpr0 killed $exec
 ; GISEL-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GISEL-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GISEL-NEXT:    s_clause 0x1
@@ -2000,6 +2002,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_bf16_negB(<16 x bfloat> %A, <32 
 ; GFX1250-LABEL: test_swmmac_f32_16x16x64_bf16_negB:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    ; kill: def $vgpr32_hi16 killed $sgpr0 killed $exec
 ; GFX1250-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX1250-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1250-NEXT:    s_clause 0x1
@@ -2010,6 +2013,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_bf16_negB(<16 x bfloat> %A, <32 
 ; GISEL-LABEL: test_swmmac_f32_16x16x64_bf16_negB:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-NEXT:    ; kill: def $vgpr32_hi16 killed $sgpr0 killed $exec
 ; GISEL-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GISEL-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GISEL-NEXT:    s_clause 0x1
@@ -2026,6 +2030,7 @@ define amdgpu_ps void @test_swmmac_bf16_16x16x64_bf16_negA(<16 x bfloat> %A, <32
 ; GFX1250-LABEL: test_swmmac_bf16_16x16x64_bf16_negA:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    ; kill: def $vgpr28_hi16 killed $sgpr0 killed $exec
 ; GFX1250-NEXT:    v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], v28 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GFX1250-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1250-NEXT:    global_store_b128 v[30:31], v[24:27], off
@@ -2034,6 +2039,7 @@ define amdgpu_ps void @test_swmmac_bf16_16x16x64_bf16_negA(<16 x bfloat> %A, <32
 ; GISEL-LABEL: test_swmmac_bf16_16x16x64_bf16_negA:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-NEXT:    ; kill: def $vgpr28_hi16 killed $sgpr0 killed $exec
 ; GISEL-NEXT:    v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], v28 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GISEL-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GISEL-NEXT:    global_store_b128 v[30:31], v[24:27], off
@@ -2048,6 +2054,7 @@ define amdgpu_ps void @test_swmmac_bf16_16x16x64_bf16_negB(<16 x bfloat> %A, <32
 ; GFX1250-LABEL: test_swmmac_bf16_16x16x64_bf16_negB:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    ; kill: def $vgpr28_hi16 killed $sgpr0 killed $exec
 ; GFX1250-NEXT:    v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], v28 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX1250-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1250-NEXT:    global_store_b128 v[30:31], v[24:27], off
@@ -2056,6 +2063,7 @@ define amdgpu_ps void @test_swmmac_bf16_16x16x64_bf16_negB(<16 x bfloat> %A, <32
 ; GISEL-LABEL: test_swmmac_bf16_16x16x64_bf16_negB:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-NEXT:    ; kill: def $vgpr28_hi16 killed $sgpr0 killed $exec
 ; GISEL-NEXT:    v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], v28 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GISEL-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GISEL-NEXT:    global_store_b128 v[30:31], v[24:27], off
@@ -2070,6 +2078,7 @@ define amdgpu_ps void @test_swmmac_bf16f32_16x16x64_bf16_negA(<16 x bfloat> %A, 
 ; GFX1250-LABEL: test_swmmac_bf16f32_16x16x64_bf16_negA:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    ; kill: def $vgpr32_hi16 killed $sgpr0 killed $exec
 ; GFX1250-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GFX1250-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1250-NEXT:    s_clause 0x1
@@ -2080,6 +2089,7 @@ define amdgpu_ps void @test_swmmac_bf16f32_16x16x64_bf16_negA(<16 x bfloat> %A, 
 ; GISEL-LABEL: test_swmmac_bf16f32_16x16x64_bf16_negA:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-NEXT:    ; kill: def $vgpr32_hi16 killed $sgpr0 killed $exec
 ; GISEL-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GISEL-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GISEL-NEXT:    s_clause 0x1
@@ -2096,6 +2106,7 @@ define amdgpu_ps void @test_swmmac_bf16f32_16x16x64_bf16_negB(<16 x bfloat> %A, 
 ; GFX1250-LABEL: test_swmmac_bf16f32_16x16x64_bf16_negB:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    ; kill: def $vgpr32_hi16 killed $sgpr0 killed $exec
 ; GFX1250-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX1250-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1250-NEXT:    s_clause 0x1
@@ -2106,6 +2117,7 @@ define amdgpu_ps void @test_swmmac_bf16f32_16x16x64_bf16_negB(<16 x bfloat> %A, 
 ; GISEL-LABEL: test_swmmac_bf16f32_16x16x64_bf16_negB:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-NEXT:    ; kill: def $vgpr32_hi16 killed $sgpr0 killed $exec
 ; GISEL-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GISEL-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GISEL-NEXT:    s_clause 0x1
@@ -2170,6 +2182,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_f16_negA(<16 x half> %A, <32 x h
 ; GFX1250-LABEL: test_swmmac_f32_16x16x64_f16_negA:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    ; kill: def $vgpr32_hi16 killed $sgpr0 killed $exec
 ; GFX1250-NEXT:    v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], v32 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GFX1250-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1250-NEXT:    s_clause 0x1
@@ -2196,6 +2209,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_f16_negB(<16 x half> %A, <32 x h
 ; GFX1250-LABEL: test_swmmac_f32_16x16x64_f16_negB:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    ; kill: def $vgpr32_hi16 killed $sgpr0 killed $exec
 ; GFX1250-NEXT:    v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX1250-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1250-NEXT:    s_clause 0x1
@@ -2222,6 +2236,7 @@ define amdgpu_ps void @test_swmmac_f16_16x16x64_f16_negA(<16 x half> %A, <32 x h
 ; GFX1250-LABEL: test_swmmac_f16_16x16x64_f16_negA:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    ; kill: def $vgpr28_hi16 killed $sgpr0 killed $exec
 ; GFX1250-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GFX1250-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1250-NEXT:    global_store_b128 v[30:31], v[24:27], off
@@ -2244,6 +2259,7 @@ define amdgpu_ps void @test_swmmac_f16_16x16x64_f16_negB(<16 x half> %A, <32 x h
 ; GFX1250-LABEL: test_swmmac_f16_16x16x64_f16_negB:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    ; kill: def $vgpr28_hi16 killed $sgpr0 killed $exec
 ; GFX1250-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX1250-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1250-NEXT:    global_store_b128 v[30:31], v[24:27], off

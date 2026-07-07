@@ -13,6 +13,21 @@ define void @no_introduce_vreg_1024() #0 {
 ; CHECK-NEXT:    ; def v[0:7]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v0
+; CHECK-NEXT:    ; kill: def $vgpr0 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr1 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr2 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr3 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr4 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr5 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr6 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr7 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr8 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr10 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr11 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr12 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr13 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr14 killed $sgpr4 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr15 killed $sgpr4 killed $exec
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use v[0:15]
 ; CHECK-NEXT:    ;;#ASMEND

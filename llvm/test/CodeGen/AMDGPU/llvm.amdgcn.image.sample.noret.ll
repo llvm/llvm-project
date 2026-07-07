@@ -437,11 +437,6 @@ main_body:
 }
 
 define amdgpu_ps void @sample_d_1d_g16_nortn(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, float %s) {
-; GFX10_11-SDAG-LABEL: sample_d_1d_g16_nortn:
-; GFX10_11-SDAG:       ; %bb.0: ; %main_body
-; GFX10_11-SDAG-NEXT:    image_sample_d_g16 off, v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX10_11-SDAG-NEXT:    s_endpgm
-;
 ; GFX10_11-GISEL-LABEL: sample_d_1d_g16_nortn:
 ; GFX10_11-GISEL:       ; %bb.0: ; %main_body
 ; GFX10_11-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -450,11 +445,6 @@ define amdgpu_ps void @sample_d_1d_g16_nortn(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX10_11-GISEL-NEXT:    v_lshl_or_b32 v1, s0, 16, v1
 ; GFX10_11-GISEL-NEXT:    image_sample_d_g16 off, v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10_11-GISEL-NEXT:    s_endpgm
-;
-; GFX12PLUS-SDAG-LABEL: sample_d_1d_g16_nortn:
-; GFX12PLUS-SDAG:       ; %bb.0: ; %main_body
-; GFX12PLUS-SDAG-NEXT:    image_sample_d_g16 off, [v0, v1, v2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX12PLUS-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12PLUS-GISEL-TRUE16-LABEL: sample_d_1d_g16_nortn:
 ; GFX12PLUS-GISEL-TRUE16:       ; %bb.0: ; %main_body

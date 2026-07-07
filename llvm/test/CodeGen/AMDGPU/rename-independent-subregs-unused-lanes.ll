@@ -9,53 +9,67 @@ define <7 x i32> @multiple_predecessor_unused_lanes(<7 x i32> %ha, i32 %h.sel) {
 ; CHECK-LABEL: multiple_predecessor_unused_lanes:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v16, v6
-; CHECK-NEXT:    v_and_b32_e32 v6, 3, v7
+; CHECK-NEXT:    v_and_b32_e32 v14, 3, v7
 ; CHECK-NEXT:    s_mov_b32 s0, exec_lo
+; CHECK-NEXT:    ; implicit-def: $vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_cmpx_lt_i32_e32 0, v6
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 0, v14
 ; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_6
 ; CHECK-NEXT:  ; %bb.1: ; %LeafBlock
 ; CHECK-NEXT:    s_mov_b32 s1, exec_lo
-; CHECK-NEXT:    v_cmpx_ne_u32_e32 1, v6
+; CHECK-NEXT:    ; implicit-def: $vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13
+; CHECK-NEXT:    v_cmpx_ne_u32_e32 1, v14
 ; CHECK-NEXT:    s_xor_b32 s1, exec_lo, s1
 ; CHECK-NEXT:  ; %bb.2: ; %h.default
 ; CHECK-NEXT:    v_xor_b32_e32 v5, 1, v5
-; CHECK-NEXT:    v_mov_b32_e32 v22, v6
-; CHECK-NEXT:    v_dual_mov_b32 v20, v4 :: v_dual_mov_b32 v19, v3
-; CHECK-NEXT:    v_dual_mov_b32 v18, v2 :: v_dual_mov_b32 v17, v1
+; CHECK-NEXT:    ; kill: def $vgpr1 killed $sgpr0 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr6 killed $sgpr0 killed $exec
+; CHECK-NEXT:    v_mov_b32_e32 v13, v6
+; CHECK-NEXT:    v_dual_mov_b32 v11, v4 :: v_dual_mov_b32 v10, v3
+; CHECK-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v8, v1
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; CHECK-NEXT:    v_dual_mov_b32 v21, v5 :: v_dual_mov_b32 v16, v0
-; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+; CHECK-NEXT:    v_dual_mov_b32 v12, v5 :: v_dual_mov_b32 v7, v0
+; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6
 ; CHECK-NEXT:  ; %bb.3: ; %Flow
 ; CHECK-NEXT:    s_and_not1_saveexec_b32 s1, s1
+; CHECK-NEXT:    s_cbranch_execz .LBB0_5
 ; CHECK-NEXT:  ; %bb.4: ; %h.shuffle
-; CHECK-NEXT:    v_mov_b32_e32 v17, v0
-; CHECK-NEXT:    v_mov_b32_e32 v18, v0
-; CHECK-NEXT:    v_mov_b32_e32 v20, v0
-; CHECK-NEXT:  ; %bb.5: ; %Flow1
+; CHECK-NEXT:    v_mov_b32_e32 v7, v0
+; CHECK-NEXT:    v_mov_b32_e32 v8, v0
+; CHECK-NEXT:    ; kill: def $vgpr9 killed $sgpr0 killed $exec
+; CHECK-NEXT:    v_mov_b32_e32 v10, v0
+; CHECK-NEXT:    ; kill: def $vgpr11 killed $sgpr0 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr12 killed $sgpr0 killed $exec
+; CHECK-NEXT:    v_mov_b32_e32 v13, v12
+; CHECK-NEXT:    v_mov_b32_e32 v12, v11
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; CHECK-NEXT:    v_mov_b32_e32 v11, v10
+; CHECK-NEXT:    v_mov_b32_e32 v10, v9
+; CHECK-NEXT:    v_mov_b32_e32 v9, v8
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    v_mov_b32_e32 v7, v6
+; CHECK-NEXT:  .LBB0_5: ; %Flow1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-; CHECK-NEXT:    ; implicit-def: $vgpr1
+; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6
 ; CHECK-NEXT:  .LBB0_6: ; %Flow2
 ; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_8
 ; CHECK-NEXT:  ; %bb.7: ; %h.add
-; CHECK-NEXT:    v_or_b32_e32 v22, 1, v16
-; CHECK-NEXT:    v_or_b32_e32 v21, 1, v5
-; CHECK-NEXT:    v_or_b32_e32 v20, 1, v4
-; CHECK-NEXT:    v_or_b32_e32 v19, 1, v3
-; CHECK-NEXT:    v_or_b32_e32 v18, 1, v2
-; CHECK-NEXT:    v_or_b32_e32 v17, 1, v1
-; CHECK-NEXT:    v_or_b32_e32 v16, 1, v0
+; CHECK-NEXT:    v_or_b32_e32 v13, 1, v6
+; CHECK-NEXT:    v_or_b32_e32 v12, 1, v5
+; CHECK-NEXT:    v_or_b32_e32 v11, 1, v4
+; CHECK-NEXT:    v_or_b32_e32 v10, 1, v3
+; CHECK-NEXT:    v_or_b32_e32 v9, 1, v2
+; CHECK-NEXT:    v_or_b32_e32 v8, 1, v1
+; CHECK-NEXT:    v_or_b32_e32 v7, 1, v0
 ; CHECK-NEXT:  .LBB0_8: ; %UnifiedReturnBlock
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_dual_mov_b32 v0, v16 :: v_dual_mov_b32 v1, v17
-; CHECK-NEXT:    v_dual_mov_b32 v2, v18 :: v_dual_mov_b32 v3, v19
-; CHECK-NEXT:    v_dual_mov_b32 v4, v20 :: v_dual_mov_b32 v5, v21
-; CHECK-NEXT:    v_mov_b32_e32 v6, v22
+; CHECK-NEXT:    v_dual_mov_b32 v0, v7 :: v_dual_mov_b32 v1, v8
+; CHECK-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v10
+; CHECK-NEXT:    v_dual_mov_b32 v4, v11 :: v_dual_mov_b32 v5, v12
+; CHECK-NEXT:    v_mov_b32_e32 v6, v13
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %h.case = and i32 %h.sel, 3

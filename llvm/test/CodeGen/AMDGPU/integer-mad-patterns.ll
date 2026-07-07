@@ -407,6 +407,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX11-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -469,6 +470,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
 ; GFX1200-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
+; GFX1200-SDAG-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX1200-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX1200-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -571,6 +573,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
+; GFX1250-SDAG-REAL16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX1250-SDAG-REAL16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -5694,6 +5697,7 @@ define signext i8 @clpeak_imad_pat_i8(i8 signext %x, i8 signext %y) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX11-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -5756,6 +5760,7 @@ define signext i8 @clpeak_imad_pat_i8(i8 signext %x, i8 signext %y) {
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
 ; GFX1200-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
+; GFX1200-SDAG-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX1200-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GFX1200-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -5858,6 +5863,7 @@ define signext i8 @clpeak_imad_pat_i8(i8 signext %x, i8 signext %y) {
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
+; GFX1250-SDAG-REAL16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX1250-SDAG-REAL16-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -10020,6 +10026,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX11-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -10114,6 +10121,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
 ; GFX1200-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
+; GFX1200-SDAG-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX1200-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX1200-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -10264,6 +10272,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
+; GFX1250-SDAG-REAL16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX1250-SDAG-REAL16-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ;

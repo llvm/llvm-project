@@ -1822,13 +1822,14 @@ define <3 x i16> @v_fshr_v3i16(<3 x i16> %src0, <3 x i16> %src1, <3 x i16> %src2
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v2.h, v4.h, v2.h
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, v1.h, v0.h
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v1.l, v3.h, v1.l
-; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v1.h, v4.l, v2.l
+; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v1.h, v5.l, v3.l
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, v5.h, v0.l
-; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v2.l, v5.l, v3.l
+; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v2.l, v4.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v0.h, v2.h
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.h
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, v1.l, v2.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, v1.l, v1.h
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
+; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v2.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_fshr_v3i16:
@@ -1874,13 +1875,14 @@ define <3 x i16> @v_fshr_v3i16(<3 x i16> %src0, <3 x i16> %src1, <3 x i16> %src2
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b16 v2.h, v4.h, v2.h
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.h, v1.h, v0.h
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v1.l, v3.h, v1.l
-; GFX12-TRUE16-NEXT:    v_lshrrev_b16 v1.h, v4.l, v2.l
+; GFX12-TRUE16-NEXT:    v_lshrrev_b16 v1.h, v5.l, v3.l
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.l, v5.h, v0.l
-; GFX12-TRUE16-NEXT:    v_lshrrev_b16 v2.l, v5.l, v3.l
+; GFX12-TRUE16-NEXT:    v_lshrrev_b16 v2.l, v4.l, v2.l
 ; GFX12-TRUE16-NEXT:    v_or_b16 v0.h, v0.h, v2.h
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.h
-; GFX12-TRUE16-NEXT:    v_or_b16 v1.l, v1.l, v2.l
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-TRUE16-NEXT:    v_or_b16 v1.l, v1.l, v1.h
+; GFX12-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
+; GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v2.l
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: v_fshr_v3i16:

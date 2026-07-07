@@ -1034,6 +1034,7 @@ define i16 @test_vector_reduce_or_v2i16(<2 x i16> %v) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
+; GFX11-SDAG-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $vgpr0_lo16 killed $exec
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -1062,6 +1063,7 @@ define i16 @test_vector_reduce_or_v2i16(<2 x i16> %v) {
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
+; GFX12-SDAG-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $vgpr0_lo16 killed $exec
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-TRUE16-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX12-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]

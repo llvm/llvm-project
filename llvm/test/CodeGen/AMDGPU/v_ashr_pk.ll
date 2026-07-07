@@ -30,6 +30,7 @@ define amdgpu_kernel void @v_ashr_pk_i8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1250-TRUE16-NEXT:    v_ashr_pk_i8_i32 v0.l, s0, s1, v0
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX1250-TRUE16-NEXT:    global_store_b16 v1, v0, s[6:7]
 ; GFX1250-TRUE16-NEXT:    s_endpgm
 ;
@@ -59,6 +60,7 @@ define amdgpu_kernel void @v_ashr_pk_i8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ; GFX1300-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1300-TRUE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1300-TRUE16-NEXT:    v_ashr_pk_i8_i32 v0.l, s0, s1, v0
+; GFX1300-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX1300-TRUE16-NEXT:    global_store_b16 v1, v0, s[4:5]
 ; GFX1300-TRUE16-NEXT:    s_endpgm
 ;
@@ -115,6 +117,7 @@ define amdgpu_kernel void @v_ashr_pk_u8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1250-TRUE16-NEXT:    v_ashr_pk_u8_i32 v0.l, s0, s1, v0
+; GFX1250-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX1250-TRUE16-NEXT:    global_store_b16 v1, v0, s[6:7]
 ; GFX1250-TRUE16-NEXT:    s_endpgm
 ;
@@ -144,6 +147,7 @@ define amdgpu_kernel void @v_ashr_pk_u8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ; GFX1300-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1300-TRUE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1300-TRUE16-NEXT:    v_ashr_pk_u8_i32 v0.l, s0, s1, v0
+; GFX1300-TRUE16-NEXT:    ; kill: def $vgpr0_hi16 killed $sgpr0 killed $exec
 ; GFX1300-TRUE16-NEXT:    global_store_b16 v1, v0, s[4:5]
 ; GFX1300-TRUE16-NEXT:    s_endpgm
 ;

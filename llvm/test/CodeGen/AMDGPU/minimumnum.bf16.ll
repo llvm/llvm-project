@@ -1318,6 +1318,7 @@ define <3 x bfloat> @v_minimumnum_v3bf16(<3 x bfloat> %x, <3 x bfloat> %y) #1 {
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v5.l
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u16_e64 s1, 0x8000, v0.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v3.l
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v8.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
@@ -1450,6 +1451,7 @@ define <3 x bfloat> @v_minimumnum_v3bf16(<3 x bfloat> %x, <3 x bfloat> %y) #1 {
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v5.l
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u16_e64 s1, 0x8000, v0.l
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v3.l
+; GFX12-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v8.l, v2.l
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
@@ -1732,6 +1734,7 @@ define <3 x bfloat> @v_minimumnum_v3bf16_nnan(<3 x bfloat> %x, <3 x bfloat> %y) 
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v3.l
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u16_e64 s1, 0x8000, v0.h
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v2.l
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v4.l
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
@@ -1815,6 +1818,7 @@ define <3 x bfloat> @v_minimumnum_v3bf16_nnan(<3 x bfloat> %x, <3 x bfloat> %y) 
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v3.l
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u16_e64 s1, 0x8000, v0.h
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v2.l
+; GFX12-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v4.l
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
@@ -13694,6 +13698,7 @@ define <3 x bfloat> @v_minimumnum_v3bf16_no_ieee(<3 x bfloat> %x, <3 x bfloat> %
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v5.l
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u16_e64 s1, 0x8000, v0.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v3.l
+; GFX11-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v8.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
@@ -13826,6 +13831,7 @@ define <3 x bfloat> @v_minimumnum_v3bf16_no_ieee(<3 x bfloat> %x, <3 x bfloat> %
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v5.l
 ; GFX12-TRUE16-NEXT:    v_cmp_eq_u16_e64 s1, 0x8000, v0.l
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v3.l
+; GFX12-TRUE16-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v8.l, v2.l
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
