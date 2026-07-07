@@ -14,33 +14,28 @@ using namespace lldb_private;
 
 void MemoryRegionInfoCache::Clear() {
   std::lock_guard<std::mutex> guard(m_mutex);
-  m_region_infos.Clear();
-  m_is_sorted = true;
+  m_region_infos.clear();
 }
 
 size_t MemoryRegionInfoCache::GetSize() {
   std::lock_guard<std::mutex> guard(m_mutex);
-  return m_region_infos.GetSize();
+  return m_region_infos.size();
 }
 
 std::optional<MemoryRegionInfo>
 MemoryRegionInfoCache::GetMemoryRegion(addr_t load_addr) {
   std::lock_guard<std::mutex> guard(m_mutex);
-  if (!m_is_sorted) {
-    m_region_infos.Sort();
-    m_is_sorted = true;
-  }
-  uint32_t index = m_region_infos.FindEntryIndexThatContains(load_addr);
-  if (index != UINT32_MAX)
-    return m_region_infos.GetEntryAtIndex(index)->data;
+  auto it = m_region_infos.upper_bound(load_addr);
+  if (it == m_region_infos.begin())
+    return std::nullopt;
+  --it;
+  if (load_addr < it->second.GetRange().GetRangeEnd())
+    return it->second;
 
   return std::nullopt;
 }
 
 void MemoryRegionInfoCache::AddRegion(const MemoryRegionInfo &ri) {
   std::lock_guard<std::mutex> guard(m_mutex);
-  InfoMap::Entry new_entry(ri.GetRange().GetRangeBase(),
-                           ri.GetRange().GetByteSize(), ri);
-  m_region_infos.Append(new_entry);
-  m_is_sorted = false;
+  m_region_infos.insert_or_assign(ri.GetRange().GetRangeBase(), ri);
 }

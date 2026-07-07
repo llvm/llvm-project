@@ -195,6 +195,8 @@ copy("Headers") {
     "avx2intrin.h",
     "avx512bf16intrin.h",
     "avx512bitalgintrin.h",
+    "avx512bmmintrin.h",
+    "avx512bmmvlintrin.h",
     "avx512bwintrin.h",
     "avx512cdintrin.h",
     "avx512dqintrin.h",
@@ -394,6 +396,13 @@ copy("Headers") {
     "xtestintrin.h",
     "yvals_core.h",
     "zos_wrappers/builtins.h",
+    "zos_wrappers/grp.h",
+    "zos_wrappers/locale.h",
+    "zos_wrappers/math.h",
+    "zos_wrappers/poll.h",
+    "zos_wrappers/string.h",
+    "zos_wrappers/time.h",
+    "zos_wrappers/variant.h",
   ]
   outputs = [ "$clang_resource_dir/include/{{source_target_relative}}" ]
 }

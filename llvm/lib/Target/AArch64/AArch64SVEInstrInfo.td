@@ -532,6 +532,28 @@ def AArch64bic : PatFrags<(ops node:$op1, node:$op2),
                            (and node:$op1, (xor node:$op2, (SVEAllActive))),
                            (AArch64bic_node node:$op1, node:$op2)]>;
 
+def AArch64and_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                             [(int_aarch64_sve_and_z node:$pg, node:$op1, node:$op2),
+                              (and node:$pg, (and node:$op1, node:$op2))]>;
+def AArch64bic_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                             [(int_aarch64_sve_bic_z node:$pg, node:$op1, node:$op2),
+                              (and node:$pg, (AArch64bic node:$op1, node:$op2))]>;
+def AArch64eor_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                             [(int_aarch64_sve_eor_z node:$pg, node:$op1, node:$op2),
+                              (and node:$pg, (xor node:$op1, node:$op2))]>;
+def AArch64nand_z : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                             [(int_aarch64_sve_nand_z node:$pg, node:$op1, node:$op2),
+                              (and node:$pg, (xor (and node:$op1, node:$op2), immAllOnesV))]>;
+def AArch64nor_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                             [(int_aarch64_sve_nor_z node:$pg, node:$op1, node:$op2),
+                              (and node:$pg, (xor (or node:$op1, node:$op2), immAllOnesV))]>;
+def AArch64orn_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                             [(int_aarch64_sve_orn_z node:$pg, node:$op1, node:$op2),
+                              (and node:$pg, (or node:$op1, (xor node:$op2, immAllOnesV)))]>;
+def AArch64orr_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                             [(int_aarch64_sve_orr_z node:$pg, node:$op1, node:$op2),
+                              (and node:$pg, (or node:$op1, node:$op2))]>;
+
 def AArch64subr : PatFrag<(ops node:$op1, node:$op2),
                           (sub node:$op2, node:$op1)>;
 
@@ -1164,17 +1186,17 @@ let Predicates = [HasSVE_or_SME] in {
   defm PFIRST   : sve_int_pfirst<0b00000, "pfirst", int_aarch64_sve_pfirst>;
   defm PNEXT    : sve_int_pnext<0b00110, "pnext", int_aarch64_sve_pnext>;
 
-  defm AND_PPzPP   : sve_int_pred_log_v2<0b0000, "and", int_aarch64_sve_and_z, and>;
-  defm BIC_PPzPP   : sve_int_pred_log_v2<0b0001, "bic", int_aarch64_sve_bic_z, AArch64bic>;
-  defm EOR_PPzPP   : sve_int_pred_log<0b0010, "eor", int_aarch64_sve_eor_z, xor>;
+  defm AND_PPzPP   : sve_int_pred_log_v2<0b0000, "and", AArch64and_z, and>;
+  defm BIC_PPzPP   : sve_int_pred_log_v2<0b0001, "bic", AArch64bic_z, AArch64bic>;
+  defm EOR_PPzPP   : sve_int_pred_log<0b0010, "eor", AArch64eor_z, xor>;
   defm SEL_PPPP    : sve_int_pred_log_v2<0b0011, "sel", vselect, or>;
   defm ANDS_PPzPP  : sve_int_pred_log<0b0100, "ands", null_frag>;
   defm BICS_PPzPP  : sve_int_pred_log<0b0101, "bics", null_frag>;
   defm EORS_PPzPP  : sve_int_pred_log<0b0110, "eors", null_frag>;
-  defm ORR_PPzPP   : sve_int_pred_log<0b1000, "orr", int_aarch64_sve_orr_z>;
-  defm ORN_PPzPP   : sve_int_pred_log<0b1001, "orn", int_aarch64_sve_orn_z>;
-  defm NOR_PPzPP   : sve_int_pred_log<0b1010, "nor", int_aarch64_sve_nor_z>;
-  defm NAND_PPzPP  : sve_int_pred_log<0b1011, "nand", int_aarch64_sve_nand_z>;
+  defm ORR_PPzPP   : sve_int_pred_log<0b1000, "orr", AArch64orr_z>;
+  defm ORN_PPzPP   : sve_int_pred_log<0b1001, "orn", AArch64orn_z>;
+  defm NOR_PPzPP   : sve_int_pred_log<0b1010, "nor", AArch64nor_z>;
+  defm NAND_PPzPP  : sve_int_pred_log<0b1011, "nand", AArch64nand_z>;
   defm ORRS_PPzPP  : sve_int_pred_log<0b1100, "orrs", null_frag>;
   defm ORNS_PPzPP  : sve_int_pred_log<0b1101, "orns", null_frag>;
   defm NORS_PPzPP  : sve_int_pred_log<0b1110, "nors", null_frag>;
@@ -3051,18 +3073,6 @@ let Predicates = [HasSVE_or_SME] in {
   foreach VT = [ nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16 ] in
     foreach VT2 = [ nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16 ] in
       def : Pat<(VT (AArch64NvCast (VT2 ZPR:$src))), (VT ZPR:$src)>;
-
-  def : Pat<(nxv16i1 (and PPR:$Ps1, PPR:$Ps2)),
-            (AND_PPzPP (PTRUE_B 31), PPR:$Ps1, PPR:$Ps2)>;
-  def : Pat<(nxv8i1 (and PPR:$Ps1, PPR:$Ps2)),
-            (AND_PPzPP (PTRUE_H 31), PPR:$Ps1, PPR:$Ps2)>;
-  def : Pat<(nxv4i1 (and PPR:$Ps1, PPR:$Ps2)),
-            (AND_PPzPP (PTRUE_S 31), PPR:$Ps1, PPR:$Ps2)>;
-  def : Pat<(nxv2i1 (and PPR:$Ps1, PPR:$Ps2)),
-            (AND_PPzPP (PTRUE_D 31), PPR:$Ps1, PPR:$Ps2)>;
-  // Emulate .Q operation using a PTRUE_D when the other lanes don't matter.
-  def : Pat<(nxv1i1 (and PPR:$Ps1, PPR:$Ps2)),
-            (AND_PPzPP (PTRUE_D 31), PPR:$Ps1, PPR:$Ps2)>;
 
   // Add more complex addressing modes here as required
   multiclass pred_load<ValueType Ty, ValueType PredTy, SDPatternOperator Load,

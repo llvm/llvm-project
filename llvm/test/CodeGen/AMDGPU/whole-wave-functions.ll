@@ -779,7 +779,7 @@ define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) #0 {
 ; DAGISEL-NEXT:    s_add_co_i32 s33, s32, 0x3ff
 ; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_and_b32 s33, s33, 0xfffffc00
-; DAGISEL-NEXT:    s_xor_saveexec_b32 s0, -1
+; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; DAGISEL-NEXT:    s_mov_b32 s2, s34
 ; DAGISEL-NEXT:    s_mov_b32 s34, s32
 ; DAGISEL-NEXT:    s_addk_co_i32 s32, 0x800
@@ -805,7 +805,7 @@ define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) #0 {
 ; GISEL-NEXT:    s_add_co_i32 s33, s32, 0x3ff
 ; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_and_b32 s33, s33, 0xfffffc00
-; GISEL-NEXT:    s_xor_saveexec_b32 s0, -1
+; GISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GISEL-NEXT:    s_mov_b32 s2, s34
 ; GISEL-NEXT:    s_mov_b32 s34, s32
 ; GISEL-NEXT:    s_addk_co_i32 s32, 0x800
@@ -831,7 +831,7 @@ define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) #0 {
 ; DAGISEL64-NEXT:    s_add_co_i32 s33, s32, 0x3ff
 ; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    s_and_b32 s33, s33, 0xfffffc00
-; DAGISEL64-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; DAGISEL64-NEXT:    s_mov_b64 exec, -1
 ; DAGISEL64-NEXT:    s_mov_b32 s3, s34
 ; DAGISEL64-NEXT:    s_mov_b32 s34, s32
 ; DAGISEL64-NEXT:    s_addk_co_i32 s32, 0x800
@@ -857,7 +857,7 @@ define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) #0 {
 ; GISEL64-NEXT:    s_add_co_i32 s33, s32, 0x3ff
 ; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    s_and_b32 s33, s33, 0xfffffc00
-; GISEL64-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; GISEL64-NEXT:    s_mov_b64 exec, -1
 ; GISEL64-NEXT:    s_mov_b32 s3, s34
 ; GISEL64-NEXT:    s_mov_b32 s34, s32
 ; GISEL64-NEXT:    s_addk_co_i32 s32, 0x800
@@ -880,7 +880,7 @@ define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) #0 {
 ; GFX1250-DAGISEL-NEXT:    s_add_co_i32 s33, s32, 0x3ff
 ; GFX1250-DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-DAGISEL-NEXT:    s_and_b32 s33, s33, 0xfffffc00
-; GFX1250-DAGISEL-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 s2, s34
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 s34, s32
 ; GFX1250-DAGISEL-NEXT:    s_addk_co_i32 s32, 0x800
