@@ -11851,6 +11851,38 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
   }
+  case Intrinsic::riscv_pmerge: {
+    EVT VT = Op.getValueType();
+    auto buildMerge = [&](SDValue Rs1, SDValue Rs2, SDValue Mask,
+                          EVT ResultVT) {
+      MVT IntVT = MVT::getIntegerVT(ResultVT.getSizeInBits());
+      SDValue Res =
+          DAG.getNode(RISCVISD::MERGE, DL, IntVT, DAG.getBitcast(IntVT, Mask),
+                      DAG.getBitcast(IntVT, Rs1), DAG.getBitcast(IntVT, Rs2));
+      return DAG.getBitcast(ResultVT, Res);
+    };
+
+    // 64-bit packed types on RV32: split into two 32-bit halves. v2i32 has no
+    // legal 32-bit vector half, so bitcast it to v4i16 (same 64 bits) first;
+    // the merge result is identical.
+    if (!Subtarget.is64Bit() &&
+        (VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32)) {
+      EVT WorkVT = VT == MVT::v2i32 ? EVT(MVT::v4i16) : VT;
+      SDValue Rs1 = DAG.getBitcast(WorkVT, Op.getOperand(1));
+      SDValue Rs2 = DAG.getBitcast(WorkVT, Op.getOperand(2));
+      SDValue Mask = DAG.getBitcast(WorkVT, Op.getOperand(3));
+      MVT HalfVT = WorkVT == MVT::v8i8 ? MVT::v4i8 : MVT::v2i16;
+      auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL, HalfVT, HalfVT);
+      auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL, HalfVT, HalfVT);
+      auto [MaskLo, MaskHi] = DAG.SplitVector(Mask, DL, HalfVT, HalfVT);
+      SDValue ResLo = buildMerge(Rs1Lo, Rs2Lo, MaskLo, HalfVT);
+      SDValue ResHi = buildMerge(Rs1Hi, Rs2Hi, MaskHi, HalfVT);
+      SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, WorkVT, ResLo, ResHi);
+      return DAG.getBitcast(VT, Res);
+    }
+
+    return buildMerge(Op.getOperand(1), Op.getOperand(2), Op.getOperand(3), VT);
+  }
   case Intrinsic::experimental_get_vector_length:
     return lowerGetVectorLength(Op.getNode(), DAG, Subtarget);
   case Intrinsic::riscv_vmv_x_s: {
@@ -15766,7 +15798,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_psas:
     case Intrinsic::riscv_pssa:
     case Intrinsic::riscv_paas:
-    case Intrinsic::riscv_pasa: {
+    case Intrinsic::riscv_pasa:
+    case Intrinsic::riscv_pmerge: {
       EVT VT = N->getValueType(0);
       if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
         return;
@@ -15792,6 +15825,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Opc = ISD::ABDU;
         break;
       default:
+        // pas/psa/psas/pssa/paas/pasa and pmerge: re-emit at the widened type
+        // rather than lowering to a generic node.
         Opc = ISD::INTRINSIC_WO_CHAIN;
         break;
       }
@@ -15803,10 +15838,18 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Op1 =
           DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(2), Undef);
       SDValue Res;
-      if (Opc == ISD::INTRINSIC_WO_CHAIN)
-        Res = DAG.getNode(Opc, DL, WideVT, N->getOperand(0), Op0, Op1);
-      else
+      if (Opc == ISD::INTRINSIC_WO_CHAIN) {
+        SmallVector<SDValue, 5> Ops;
+        Ops.push_back(N->getOperand(0));
+        Ops.push_back(Op0);
+        Ops.push_back(Op1);
+        if (N->getNumOperands() > 3)
+          Ops.push_back(DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT,
+                                    N->getOperand(3), Undef));
+        Res = DAG.getNode(Opc, DL, WideVT, Ops);
+      } else {
         Res = DAG.getNode(Opc, DL, WideVT, Op0, Op1);
+      }
       Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
                                     DAG.getVectorIdxConstant(0, DL)));
       return;
@@ -19709,6 +19752,9 @@ static auto m_ReverseEVL = [](auto X, auto EVL) {
                  m_Node(ISD::EXPERIMENTAL_VP_REVERSE, X, m_Value(), EVL));
 };
 
+// TODO: A vlse.v is not necessarily faster than a vrgather.vv on all uarchs.
+// Remove once a cost model driven transform is implemented in the loop
+// vectorizer.
 static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
                                         const RISCVSubtarget &Subtarget) {
   // Fold:
@@ -19717,16 +19763,35 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
   //
   // splice.right(reverse(vp.load(ADDR, REVMASK, EVL)), poison, EVL)
   // -> vp.strided.load(ADDR, -1, MASK, EVL)
-
-  // Check if its first operand is a vp.load.
+  //
+  // vp.reverse(binop(vp.load(ADDR, REVMASK, EVL), splat), EVL)
+  // -> binop(vp.strided.load(ADDR, -1, MASK, EVL), splat)
   using namespace SDPatternMatch;
   SDValue Op, EVL;
-  if (!sd_match(N,
-                m_ReverseEVL(m_OneUse(m_Value(Op, m_SpecificOpc(ISD::VP_LOAD))),
-                             m_Value(EVL))))
+  if (!sd_match(N, m_ReverseEVL(m_Value(Op), m_Value(EVL))))
     return SDValue();
 
-  auto *VPLoad = cast<VPLoadSDNode>(Op);
+  VPLoadSDNode *VPLoad = nullptr;
+  // Find the single vp_load and check all other leaves are splats.
+  SmallVector<SDValue> Worklist = {Op};
+  while (!Worklist.empty()) {
+    SDValue X = Worklist.pop_back_val();
+    if (!X.hasOneUser())
+      return SDValue();
+    if (auto *VPL = dyn_cast<VPLoadSDNode>(X)) {
+      if (VPLoad && VPLoad != VPL)
+        return SDValue();
+      VPLoad = VPL;
+    } else if (DAG.isSplatValue(X))
+      continue;
+    else if (DAG.getTargetLoweringInfo().isBinOp(X.getOpcode()) &&
+             X->getNumValues() == 1)
+      append_range(Worklist, X->op_values());
+    else
+      return SDValue();
+  }
+  if (!VPLoad)
+    return SDValue();
 
   EVT LoadVT = VPLoad->getValueType(0);
   // We do not have a strided_load version for masks, and the evl of vp.reverse
@@ -19769,9 +19834,11 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
       LoadVT, DL, VPLoad->getChain(), Base, Stride, LoadMask,
       VPLoad->getVectorLength(), MMO, VPLoad->isExpandingLoad());
 
-  DAG.ReplaceAllUsesOfValueWith(SDValue(VPLoad, 1), Ret.getValue(1));
+  DAG.ReplaceAllUsesWith(VPLoad, Ret.getNode());
 
-  return Ret;
+  // Remove the top level reverse.
+  (void)sd_match(N, m_ReverseEVL(m_Value(Op), m_Value()));
+  return Op;
 }
 
 // Fold (i32 (bitcast (v4i8/v2i16 const_splat))) to a scalar i32 constant

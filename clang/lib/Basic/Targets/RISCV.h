@@ -117,10 +117,6 @@ public:
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
 
-  bool useFP16ConversionIntrinsics() const override {
-    return false;
-  }
-
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool isValidTuneCPUName(StringRef Name) const override;

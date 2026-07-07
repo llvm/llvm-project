@@ -88,6 +88,16 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_dirent
+  HDRS
+    struct_dirent.h
+  DEPENDS
+    libc.hdr.dirent_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_dirent
+)
+
+add_proxy_header_library(
   struct_epoll_event
   HDRS
     struct_epoll_event.h
@@ -344,6 +354,16 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  DIR
+  HDRS
+    DIR.h
+  DEPENDS
+    libc.hdr.dirent_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.DIR
+)
+
+add_proxy_header_library(
   off_t
   HDRS
     off_t.h
@@ -497,6 +517,15 @@ add_proxy_header_library(
     struct_ip_opts.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_ip_opts
+    libc.include.netinet_in
+)
+
+add_proxy_header_library(
+  struct_ipv6_mreq
+  HDRS
+    struct_ipv6_mreq.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_ipv6_mreq
     libc.include.netinet_in
 )
 
