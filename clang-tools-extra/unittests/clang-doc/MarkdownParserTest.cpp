@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "markdown/MarkdownParser.h"
 #include "markdown/Markdown.h"
 #include "gtest/gtest.h"
 
@@ -113,6 +114,99 @@ TEST(MarkdownNodeTest, UnorderedListWithItems) {
   List.addItem(Item);
   EXPECT_FALSE(List.items().empty());
   EXPECT_EQ(firstChildText(List.items().front().children()), "item text");
+}
+
+/// Returns the single block child of Doc, asserting there is exactly one.
+static const BlockNode &onlyBlock(const DocumentNode &Doc) {
+  EXPECT_EQ(std::distance(Doc.children().begin(), Doc.children().end()), 1);
+  return Doc.children().front();
+}
+
+TEST(MarkdownParserTest, EmptyInput) {
+  ASTContext Ctx;
+  DocumentNode *Doc = parseMarkdown("", Ctx);
+  EXPECT_TRUE(Doc->children().empty());
+}
+
+TEST(MarkdownParserTest, BlankLinesOnly) {
+  ASTContext Ctx;
+  DocumentNode *Doc = parseMarkdown("\n\n   \n", Ctx);
+  EXPECT_TRUE(Doc->children().empty());
+}
+
+TEST(MarkdownParserTest, PlainParagraph) {
+  ASTContext Ctx;
+  DocumentNode *Doc = parseMarkdown("hello world", Ctx);
+  const auto &Para = llvm::cast<ParagraphNode>(onlyBlock(*Doc));
+  EXPECT_EQ(firstChildText(Para.children()), "hello world");
+}
+
+TEST(MarkdownParserTest, ParagraphJoinsLines) {
+  ASTContext Ctx;
+  DocumentNode *Doc = parseMarkdown("line one\nline two", Ctx);
+  const auto &Para = llvm::cast<ParagraphNode>(onlyBlock(*Doc));
+  EXPECT_EQ(firstChildText(Para.children()), "line one line two");
+}
+
+TEST(MarkdownParserTest, Heading) {
+  ASTContext Ctx;
+  DocumentNode *Doc = parseMarkdown("### Title", Ctx);
+  const auto &Heading = llvm::cast<HeadingNode>(onlyBlock(*Doc));
+  EXPECT_EQ(Heading.getLevel(), 3u);
+  EXPECT_EQ(firstChildText(Heading.children()), "Title");
+}
+
+TEST(MarkdownParserTest, HeadingTooManyHashesIsParagraph) {
+  ASTContext Ctx;
+  DocumentNode *Doc = parseMarkdown("####### not a heading", Ctx);
+  EXPECT_TRUE(llvm::isa<ParagraphNode>(onlyBlock(*Doc)));
+}
+
+TEST(MarkdownParserTest, FencedCode) {
+  ASTContext Ctx;
+  DocumentNode *Doc = parseMarkdown("```cpp\nint x = 0;\n```", Ctx);
+  const auto &Code = llvm::cast<FencedCodeNode>(onlyBlock(*Doc));
+  EXPECT_EQ(Code.getLang(), "cpp");
+  EXPECT_EQ(Code.getCode(), "int x = 0;");
+}
+
+TEST(MarkdownParserTest, FencedCodePreservesInteriorBlankLines) {
+  ASTContext Ctx;
+  DocumentNode *Doc = parseMarkdown("```\na\n\nb\n```", Ctx);
+  const auto &Code = llvm::cast<FencedCodeNode>(onlyBlock(*Doc));
+  EXPECT_EQ(Code.getCode(), "a\n\nb");
+}
+
+TEST(MarkdownParserTest, ThematicBreak) {
+  ASTContext Ctx;
+  DocumentNode *Doc = parseMarkdown("---", Ctx);
+  EXPECT_TRUE(llvm::isa<ThematicBreakNode>(onlyBlock(*Doc)));
+}
+
+TEST(MarkdownParserTest, SpacedThematicBreak) {
+  ASTContext Ctx;
+  DocumentNode *Doc = parseMarkdown("- - -", Ctx);
+  EXPECT_TRUE(llvm::isa<ThematicBreakNode>(onlyBlock(*Doc)));
+}
+
+TEST(MarkdownParserTest, UnorderedList) {
+  ASTContext Ctx;
+  DocumentNode *Doc = parseMarkdown("- one\n- two\n- three", Ctx);
+  const auto &List = llvm::cast<UnorderedListNode>(onlyBlock(*Doc));
+  EXPECT_EQ(std::distance(List.items().begin(), List.items().end()), 3);
+  EXPECT_EQ(firstChildText(List.items().front().children()), "one");
+}
+
+TEST(MarkdownParserTest, MultipleBlocks) {
+  ASTContext Ctx;
+  DocumentNode *Doc = parseMarkdown("# Heading\n\nA paragraph.\n\n- item", Ctx);
+  llvm::SmallVector<NodeKind> Kinds;
+  for (const BlockNode &B : Doc->children())
+    Kinds.push_back(B.getKind());
+  ASSERT_EQ(Kinds.size(), 3u);
+  EXPECT_EQ(Kinds[0], NodeKind::NK_Heading);
+  EXPECT_EQ(Kinds[1], NodeKind::NK_Paragraph);
+  EXPECT_EQ(Kinds[2], NodeKind::NK_UnorderedList);
 }
 
 } // namespace
