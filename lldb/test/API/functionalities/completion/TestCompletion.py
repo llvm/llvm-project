@@ -12,6 +12,7 @@ from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # driver cannot launch a Wasm inferior
 class CommandLineCompletionTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

@@ -174,7 +174,8 @@ private:
   bool vectorizeStores(
       ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R,
       DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
-          &Visited);
+          &Visited,
+      bool AllowMaskedStores = true);
 
   /// The store instructions in a basic block organized by base pointer.
   StoreListMap Stores;

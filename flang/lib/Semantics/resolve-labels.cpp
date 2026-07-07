@@ -559,6 +559,14 @@ public:
     PopDisposableMap();
   }
 
+  // F2023 C7115
+  void Post(const parser::EnumerationTypeDef &enumTypeDef) {
+    CheckOptionalName<parser::EnumerationTypeStmt>(
+        "enumeration type definition", enumTypeDef,
+        std::get<parser::Statement<parser::EndEnumerationTypeStmt>>(
+            enumTypeDef.t));
+  }
+
   void Post(const parser::LabelDoStmt &labelDoStmt) {
     AddLabelReferenceFromDoStmt(std::get<parser::Label>(labelDoStmt.t));
   }

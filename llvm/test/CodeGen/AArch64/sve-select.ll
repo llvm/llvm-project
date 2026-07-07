@@ -266,90 +266,182 @@ define <vscale x 1 x i1> @select_nxv1i1(i1 %cond, <vscale x 1 x i1> %a, <vscale 
   ret <vscale x 1 x i1> %res
 }
 
+; Predicate vector select
+
+define <vscale x 16 x i1> @sel_nxv16i1(<vscale x 16 x i1> %cond, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
+; CHECK-LABEL: sel_nxv16i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sel p0.b, p0, p1.b, p2.b
+; CHECK-NEXT:    ret
+  %res = select <vscale x 16 x i1> %cond, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b
+  ret <vscale x 16 x i1> %res;
+}
+
+define <vscale x 8 x i1> @sel_nxv8i1(<vscale x 8 x i1> %cond, <vscale x 8 x i1> %a, <vscale x 8 x i1> %b) {
+; CHECK-LABEL: sel_nxv8i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sel p0.b, p0, p1.b, p2.b
+; CHECK-NEXT:    ret
+  %res = select <vscale x 8 x i1> %cond, <vscale x 8 x i1> %a, <vscale x 8 x i1> %b
+  ret <vscale x 8 x i1> %res;
+}
+
+define <vscale x 4 x i1> @sel_nxv4i1(<vscale x 4 x i1> %cond, <vscale x 4 x i1> %a, <vscale x 4 x i1> %b) {
+; CHECK-LABEL: sel_nxv4i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sel p0.b, p0, p1.b, p2.b
+; CHECK-NEXT:    ret
+  %res = select <vscale x 4 x i1> %cond, <vscale x 4 x i1> %a, <vscale x 4 x i1> %b
+  ret <vscale x 4 x i1> %res;
+}
+
+define <vscale x 2 x i1> @sel_nxv2i1(<vscale x 2 x i1> %cond, <vscale x 2 x i1> %a, <vscale x 2 x i1> %b) {
+; CHECK-LABEL: sel_nxv2i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sel p0.b, p0, p1.b, p2.b
+; CHECK-NEXT:    ret
+  %res = select <vscale x 2 x i1> %cond, <vscale x 2 x i1> %a, <vscale x 2 x i1> %b
+  ret <vscale x 2 x i1> %res;
+}
+
+define <vscale x 1 x i1> @sel_nxv1i1(<vscale x 1 x i1> %cond, <vscale x 1 x i1> %a, <vscale x 1 x i1> %b) {
+; CHECK-LABEL: sel_nxv1i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sel p0.b, p0, p1.b, p2.b
+; CHECK-NEXT:    ret
+  %res = select <vscale x 1 x i1> %cond, <vscale x 1 x i1> %a, <vscale x 1 x i1> %b
+  ret <vscale x 1 x i1> %res;
+}
+
 ; Integer vector select
 
-define <vscale x 16 x i8> @sel_nxv16i8(<vscale x 16 x i1> %p, <vscale x 16 x i8> %dst, <vscale x 16 x i8> %a) {
+define <vscale x 16 x i8> @sel_nxv16i8(<vscale x 16 x i1> %cond, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: sel_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.b, p0/m, z1.b
+; CHECK-NEXT:    sel z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %sel = select <vscale x 16 x i1> %p, <vscale x 16 x i8> %a, <vscale x 16 x i8> %dst
+  %sel = select <vscale x 16 x i1> %cond, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b
   ret <vscale x 16 x i8> %sel
 }
 
-define <vscale x 8 x i16> @sel_nxv8i16(<vscale x 8 x i1> %p, <vscale x 8 x i16> %dst, <vscale x 8 x i16> %a) {
+define <vscale x 8 x i16> @sel_nxv8i16(<vscale x 8 x i1> %cond, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: sel_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %sel = select <vscale x 8 x i1> %p, <vscale x 8 x i16> %a, <vscale x 8 x i16> %dst
+  %sel = select <vscale x 8 x i1> %cond, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b
   ret <vscale x 8 x i16> %sel
 }
 
-define <vscale x 4 x i32> @sel_nxv4i32(<vscale x 4 x i1> %p, <vscale x 4 x i32> %dst, <vscale x 4 x i32> %a) {
+define <vscale x 4 x i32> @sel_nxv4i32(<vscale x 4 x i1> %cond, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: sel_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %sel = select <vscale x 4 x i1> %p, <vscale x 4 x i32> %a, <vscale x 4 x i32> %dst
+  %sel = select <vscale x 4 x i1> %cond, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b
   ret <vscale x 4 x i32> %sel
 }
 
-define <vscale x 1 x i64> @sel_nxv1i64(<vscale x 1 x i1> %p, <vscale x 1 x i64> %dst, <vscale x 1 x i64> %a) {
+define <vscale x 1 x i64> @sel_nxv1i64(<vscale x 1 x i1> %cond, <vscale x 1 x i64> %a, <vscale x 1 x i64> %b) {
 ; CHECK-LABEL: sel_nxv1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uzp1 p0.d, p0.d, p0.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %sel = select <vscale x 1 x i1> %p, <vscale x 1 x i64> %a, <vscale x 1 x i64> %dst
+  %sel = select <vscale x 1 x i1> %cond, <vscale x 1 x i64> %a, <vscale x 1 x i64> %b
   ret <vscale x 1 x i64> %sel
 }
 
-define <vscale x 2 x i64> @sel_nxv2i64(<vscale x 2 x i1> %p, <vscale x 2 x i64> %dst, <vscale x 2 x i64> %a) {
+define <vscale x 2 x i64> @sel_nxv2i64(<vscale x 2 x i1> %cond, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: sel_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %sel = select <vscale x 2 x i1> %p, <vscale x 2 x i64> %a, <vscale x 2 x i64> %dst
+  %sel = select <vscale x 2 x i1> %cond, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b
   ret <vscale x 2 x i64> %sel
 }
 
 ; Floating point vector select
 
-define <vscale x 8 x half> @sel_nxv8f16(<vscale x 8 x i1> %p, <vscale x 8 x half> %dst, <vscale x 8 x half> %a) {
+define <vscale x 8 x half> @sel_nxv8f16(<vscale x 8 x i1> %cond, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: sel_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %sel = select <vscale x 8 x i1> %p, <vscale x 8 x half> %a, <vscale x 8 x half> %dst
+  %sel = select <vscale x 8 x i1> %cond, <vscale x 8 x half> %a, <vscale x 8 x half> %b
   ret <vscale x 8 x half> %sel
 }
 
-define <vscale x 4 x float> @sel_nxv4f32(<vscale x 4 x i1> %p, <vscale x 4 x float> %dst, <vscale x 4 x float> %a) {
+define <vscale x 4 x half> @sel_nxv4f16(<vscale x 4 x i1> %cond, <vscale x 4 x half> %a, <vscale x 4 x half> %b) {
+; CHECK-LABEL: sel_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %sel = select <vscale x 4 x i1> %cond, <vscale x 4 x half> %a, <vscale x 4 x half> %b
+  ret <vscale x 4 x half> %sel
+}
+
+define <vscale x 2 x half> @sel_nxv2f16(<vscale x 2 x i1> %cond, <vscale x 2 x half> %a, <vscale x 2 x half> %b) {
+; CHECK-LABEL: sel_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %sel = select <vscale x 2 x i1> %cond, <vscale x 2 x half> %a, <vscale x 2 x half> %b
+  ret <vscale x 2 x half> %sel
+}
+
+define <vscale x 4 x float> @sel_nxv4f32(<vscale x 4 x i1> %cond, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: sel_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %sel = select <vscale x 4 x i1> %p, <vscale x 4 x float> %a, <vscale x 4 x float> %dst
+  %sel = select <vscale x 4 x i1> %cond, <vscale x 4 x float> %a, <vscale x 4 x float> %b
   ret <vscale x 4 x float> %sel
 }
 
-define <vscale x 2 x float> @sel_nxv2f32(<vscale x 2 x i1> %p, <vscale x 2 x float> %dst, <vscale x 2 x float> %a) {
+define <vscale x 2 x float> @sel_nxv2f32(<vscale x 2 x i1> %cond, <vscale x 2 x float> %a, <vscale x 2 x float> %b) {
 ; CHECK-LABEL: sel_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %sel = select <vscale x 2 x i1> %p, <vscale x 2 x float> %a, <vscale x 2 x float> %dst
+  %sel = select <vscale x 2 x i1> %cond, <vscale x 2 x float> %a, <vscale x 2 x float> %b
   ret <vscale x 2 x float> %sel
 }
 
-define <vscale x 2 x double> @sel_nxv8f64(<vscale x 2 x i1> %p, <vscale x 2 x double> %dst, <vscale x 2 x double> %a) {
-; CHECK-LABEL: sel_nxv8f64:
+define <vscale x 2 x double> @sel_nxv2f64(<vscale x 2 x i1> %cond, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: sel_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %sel = select <vscale x 2 x i1> %p, <vscale x 2 x double> %a, <vscale x 2 x double> %dst
+  %sel = select <vscale x 2 x i1> %cond, <vscale x 2 x double> %a, <vscale x 2 x double> %b
   ret <vscale x 2 x double> %sel
+}
+
+define <vscale x 8 x bfloat> @sel_nxv8bf16(<vscale x 8 x i1> %cond, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; CHECK-LABEL: sel_nxv8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %sel = select <vscale x 8 x i1> %cond, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b
+  ret <vscale x 8 x bfloat> %sel
+}
+
+define <vscale x 4 x bfloat> @sel_nxv4bf16(<vscale x 4 x i1> %cond, <vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
+; CHECK-LABEL: sel_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %sel = select <vscale x 4 x i1> %cond, <vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b
+  ret <vscale x 4 x bfloat> %sel
+}
+
+define <vscale x 2 x bfloat> @sel_nxv2bf16(<vscale x 2 x i1> %cond, <vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) {
+; CHECK-LABEL: sel_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %sel = select <vscale x 2 x i1> %cond, <vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b
+  ret <vscale x 2 x bfloat> %sel
 }
 
 ; Check icmp+select

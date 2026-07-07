@@ -9,8 +9,8 @@
 # RUN: llvm-bolt --no-threads %t.exe --icf=safe -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
 
 # ICFCHECK:      ICF iteration 1
-# ICFCHECK-NEXT: folding Derived3Destructor into Derived2Destructor
 # ICFCHECK-NEXT: folding Derived3Func into Derived2Func
+# ICFCHECK-NEXT: folding Derived3Destructor into Derived2Destructor
 
 # SAFEICFCHECK: skipping function with reference taken Derived3Func
 # SAFEICFCHECK-NEXT: ICF iteration 1
