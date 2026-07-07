@@ -1,6 +1,7 @@
 // DEFINE: %{compile} =  mlir-opt %s \
 // DEFINE:    -transform-interpreter -test-transform-dialect-erase-schedule \
-// DEFINE:    -canonicalize -test-lower-to-arm-sme -test-lower-to-llvm
+// DEFINE:    -canonicalize -test-lower-to-arm-sme -convert-vector-to-llvm="enable-arm-sve" \
+// DEFINE:    -test-lower-to-llvm
 // DEFINE: %{entry_point} = main
 // DEFINE: %{run} = %mcr_aarch64_cmd -e %{entry_point} -entry-point-result=void --march=aarch64 --mattr="+sve,+sme"\
 // DEFINE:    -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib
@@ -211,30 +212,6 @@ func.func private @unpack_acc(%C_packed: tensor<1x?x8x?xf32>) -> tensor<7x13xf32
 }
 
 //===----------------------------------------------------------------------===//
-//  Helper methods for printing
-//===----------------------------------------------------------------------===//
-func.func private @print_pack_A(%A_pack : tensor<1x16x8x1xf32>) -> () {
-  %A_pack_cast = tensor.cast %A_pack : tensor<1x16x8x1xf32> to tensor<*xf32>
-  call @printMemrefF32(%A_pack_cast) : (tensor<*xf32>) -> ()
-
-  return
-}
-
-func.func private @print_pack_B(%B_pack : tensor<?x16x?x1xf32>) -> () {
-  %B_pack_cast = tensor.cast %B_pack : tensor<?x16x?x1xf32> to tensor<*xf32>
-  call @printMemrefF32(%B_pack_cast) : (tensor<*xf32>) -> ()
-
-  return
-}
-
-func.func private @print_pack_C(%C_pack : tensor<1x?x8x?xf32>) -> () {
-  %C_pack_cast = tensor.cast %C_pack : tensor<1x?x8x?xf32> to tensor<*xf32>
-  call @printMemrefF32(%C_pack_cast) : (tensor<*xf32>) -> ()
-
-  return
-}
-
-//===----------------------------------------------------------------------===//
 // @matmul_via_mmt4d
 //
 // Implements matrix-multiplication via linalg.mmt4d
@@ -244,12 +221,6 @@ func.func private @matmul_via_mmt4d(%A: tensor<7x16xf32>, %B: tensor<16x13xf32>,
   %A_pack = func.call @pack_lhs(%A): (tensor<7x16xf32>) -> tensor<1x16x8x1xf32>
   %B_pack = func.call @pack_rhs(%B): (tensor<16x13xf32>) -> tensor<?x16x?x1xf32>
   %C_pack = func.call @pack_acc(%C): (tensor<7x13xf32>) -> tensor<1x?x8x?xf32>
-
-  // Print the packed matrices (this is the only _visible_ part that changes
-  // when adjusting the SVE vector size).
-  func.call @print_pack_A(%A_pack) : (tensor<1x16x8x1xf32>) -> ()
-  func.call @print_pack_B(%B_pack) : (tensor<?x16x?x1xf32>) -> ()
-  func.call @print_pack_C(%C_pack) : (tensor<1x?x8x?xf32>) -> ()
 
   // MMT4D
   %mmt4d = linalg.mmt4d ins(%A_pack, %B_pack : tensor<1x16x8x1xf32>, tensor<?x16x?x1xf32>) outs(%C_pack : tensor<1x?x8x?xf32>) -> tensor<1x?x8x?xf32>
