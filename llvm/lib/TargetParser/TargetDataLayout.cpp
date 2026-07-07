@@ -457,22 +457,28 @@ static std::string computeX86DataLayout(const Triple &TT) {
 
 static std::string computeNVPTXDataLayout(const Triple &T, StringRef ABIName) {
   const bool Is32Bit = T.getArch() == Triple::nvptx;
+  const bool IsShortPtr = ABIName == "shortptr";
   std::string Ret = "e";
 
   if (Is32Bit) {
     Ret += "-p:32:32";
   } else {
+    // Keep the pointer specifications sorted by address space.
+    //
     // In shortptr mode, specify the following address spaces as 32-bits:
     // - shared (addrspace:3)
     // - constant (addrspace:4)
     // - local (addrspace:5)
     // - shared cluster (addrspace:7)
     // - entry parameter (addrspace:101)
-    if (ABIName == "shortptr")
-      Ret += "-p3:32:32-p4:32:32-p5:32:32-p7:32:32-p101:32:32";
+    if (IsShortPtr)
+      Ret += "-p3:32:32-p4:32:32-p5:32:32";
 
     // Tensor Memory (addrspace:6) is always 32-bits.
     Ret += "-p6:32:32";
+
+    if (IsShortPtr)
+      Ret += "-p7:32:32-p101:32:32";
   }
 
   Ret += "-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64";
