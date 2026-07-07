@@ -85,6 +85,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         *ctx);
     fir::SliceOp::attachInterface<OutlineRematerializationModel<fir::SliceOp>>(
         *ctx);
+    fir::DummyScopeOp::attachInterface<
+        OutlineRematerializationModel<fir::DummyScopeOp>>(*ctx);
   });
 
   // Register HLFIR operation interfaces
