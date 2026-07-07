@@ -8313,7 +8313,7 @@ StmtResult
 TreeTransform<Derived>::TransformAttributedStmt(AttributedStmt *S,
                                                 StmtDiscardKind SDK) {
   SemaProfiles::ProfileSuppressScope ProfileSuppressGuard(
-      getSema(), S->getAttrs(), S->getBeginLoc());
+      getSema(), S->getAttrs(), S->getBeginLoc(), S->getEndLoc());
 
   StmtResult SubStmt = getDerived().TransformStmt(S->getSubStmt(), SDK);
 

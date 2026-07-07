@@ -52,9 +52,17 @@ public:
     StringRef RuleName;
     /// Begin location of the construct the suppression appertains to (the
     /// declaration or statement, not the attribute). The entry's dominion
-    /// starts here; its end is bounded by the ProfileSuppressScope's
-    /// lifetime (P3589R2 s2.4p3).
+    /// starts here (P3589R2 s2.4p3).
     SourceLocation Begin;
+    /// End location of the construct, recorded only when the construct was
+    /// fully parsed at push time; invalid otherwise, leaving the dominion's
+    /// end bounded by the ProfileSuppressScope's lifetime. That fallback is
+    /// exact for a construct still being parsed -- its later tokens do not
+    /// exist yet, and instantiation of a not-yet-defined template is
+    /// deferred past the scope's death -- while a completed construct's
+    /// recorded end keeps a live scope from covering a pattern first
+    /// declared after it.
+    SourceLocation End;
   };
   SmallVector<ProfileSuppressEntry, 4> ProfileSuppressStack;
 
@@ -314,7 +322,8 @@ public:
     Sema &S;
     unsigned Count = 0;
 
-    void push(StringRef ProfileName, StringRef RuleName, SourceLocation Begin);
+    void push(StringRef ProfileName, StringRef RuleName, SourceLocation Begin,
+              SourceLocation End);
     void addFromDecl(const Decl *D);
 
   public:
@@ -322,7 +331,7 @@ public:
     ProfileSuppressScope(Sema &S, const Decl *D,
                          bool WalkLexicalParents = false);
     ProfileSuppressScope(Sema &S, ArrayRef<const Attr *> Attrs,
-                         SourceLocation Begin);
+                         SourceLocation Begin, SourceLocation End);
     ~ProfileSuppressScope();
   };
 };

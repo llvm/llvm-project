@@ -392,8 +392,10 @@ bool SemaProfiles::checkProfileViolation(StringRef ProfileName,
 
 void SemaProfiles::ProfileSuppressScope::push(StringRef ProfileName,
                                       StringRef RuleName,
-                                      SourceLocation Begin) {
-  S.Profiles().ProfileSuppressStack.push_back({ProfileName, RuleName, Begin});
+                                      SourceLocation Begin,
+                                      SourceLocation End) {
+  S.Profiles().ProfileSuppressStack.push_back(
+      {ProfileName, RuleName, Begin, End});
   ++Count;
 }
 
@@ -407,18 +409,55 @@ SemaProfiles::ProfileSuppressScope::ProfileSuppressScope(
       continue;
     const auto &Args = AL.getProfileSuppressArgs();
     // These are the prefix attributes of a statement or declaration about to
-    // be parsed, so the attribute's own location is the construct's begin.
+    // be parsed, so the attribute's own location is the construct's begin and
+    // no end is known yet (the scope's lifetime bounds it).
     if (!Args.Name.empty())
-      push(Args.Name, Args.Rule, AL.getLoc());
+      push(Args.Name, Args.Rule, AL.getLoc(), SourceLocation());
   }
+}
+
+/// The end location of \p D's construct if it is fully parsed, invalid
+/// otherwise. A partially parsed construct's end location is usually *valid
+/// but early* -- a mid-parse class collapses to its name token (the brace
+/// range is set only by ActOnTagFinishDefinition, after even the late-parsed
+/// members), a body-pending function ends at its declarator, an
+/// uninitialized variable at its declarator -- so each arm gates on the
+/// marker that the construct's real end has been seen. Returning invalid
+/// falls back to scope-lifetime bounding, which is exact mid-parse.
+static SourceLocation getCompletedConstructEnd(const Decl *D) {
+  if (const auto *TD = dyn_cast<TagDecl>(D))
+    return TD->getBraceRange().getEnd();
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    // isLateTemplateParsed makes doesThisDeclarationHaveABody true while the
+    // body is merely token-cached and the range still ends at the declarator.
+    if (FD->doesThisDeclarationHaveABody() && !FD->isLateTemplateParsed())
+      return FD->getSourceRange().getEnd();
+    return SourceLocation();
+  }
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (VD->hasInit())
+      return VD->getSourceRange().getEnd();
+    return SourceLocation();
+  }
+  if (const auto *FD = dyn_cast<FieldDecl>(D)) {
+    // The in-class initializer expression is null while its late parse is
+    // still pending.
+    if (FD->hasNonNullInClassInitializer())
+      return FD->getInClassInitializer()->getEndLoc();
+    return SourceLocation();
+  }
+  if (const auto *ND = dyn_cast<NamespaceDecl>(D))
+    return ND->getRBraceLoc();
+  return SourceLocation();
 }
 
 void SemaProfiles::ProfileSuppressScope::addFromDecl(const Decl *D) {
   SourceLocation Begin = D->getBeginLoc();
   if (Begin.isInvalid())
     Begin = D->getLocation();
+  SourceLocation End = getCompletedConstructEnd(D);
   for (const auto *A : D->specific_attrs<ProfilesSuppressAttr>())
-    push(A->getProfileName(), A->getRule(), Begin);
+    push(A->getProfileName(), A->getRule(), Begin, End);
 }
 
 SemaProfiles::ProfileSuppressScope::ProfileSuppressScope(Sema &S, const Decl *D,
@@ -437,13 +476,14 @@ SemaProfiles::ProfileSuppressScope::ProfileSuppressScope(Sema &S, const Decl *D,
 
 SemaProfiles::ProfileSuppressScope::ProfileSuppressScope(Sema &S,
                                                   ArrayRef<const Attr *> Attrs,
-                                                  SourceLocation Begin)
+                                                  SourceLocation Begin,
+                                                  SourceLocation End)
     : S(S) {
   if (!S.getLangOpts().Profiles)
     return;
   for (const auto *A : Attrs)
     if (const auto *PSA = dyn_cast<ProfilesSuppressAttr>(A))
-      push(PSA->getProfileName(), PSA->getRule(), Begin);
+      push(PSA->getProfileName(), PSA->getRule(), Begin, End);
 }
 
 SemaProfiles::ProfileSuppressScope::~ProfileSuppressScope() {
