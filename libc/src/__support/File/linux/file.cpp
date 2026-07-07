@@ -139,7 +139,7 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
       !(fd_flags & O_APPEND)) {
     do_seek = true;
     if (!linux_syscalls::fcntl(fd, F_SETFL,
-                         reinterpret_cast<void *>(fd_flags | O_APPEND))
+                               reinterpret_cast<void *>(fd_flags | O_APPEND))
              .has_value()) {
       return Error(EBADF);
     }
