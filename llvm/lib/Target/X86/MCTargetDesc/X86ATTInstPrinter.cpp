@@ -84,8 +84,9 @@ void X86ATTInstPrinter::printInst(const MCInst *MI, uint64_t Address,
            STI.hasFeature(X86::Is16Bit)) {
     OS << "\tdata32";
   }
-  // Try to print any aliases first.
-  else if (!printAliasInstr(MI, Address, OS) && !printVecCompareInstr(MI, OS))
+  // Try to print any aliases first, then BSR instructions, then compare instrs.
+  else if (!printAliasInstr(MI, Address, OS) && !printBSRInstr(MI, OS) &&
+           !printVecCompareInstr(MI, OS))
     printInstruction(MI, Address, OS);
 
   // Next always print the annotation.
@@ -400,6 +401,93 @@ bool X86ATTInstPrinter::printVecCompareInstr(const MCInst *MI,
   }
 
   return false;
+}
+
+bool X86ATTInstPrinter::printBSRInstr(const MCInst *MI, raw_ostream &OS) {
+  // ACE BSR instructions: Print with explicit %bsr0 operand as per spec.
+  // BSR is implicit in the encoding, but the spec requires explicit syntax.
+  if (!MI)
+    return false;
+  unsigned Opcode = MI->getOpcode();
+
+  switch (Opcode) {
+  default:
+    return false;
+
+  case X86::BSRINIT:
+    OS << "\tbsrinit\t%bsr0";
+    return true;
+
+  case X86::BSRMOVFrr:
+    // Syntax: bsrmovf %zmm2, %zmm1, %bsr0
+    OS << "\tbsrmovf\t";
+    printOperand(MI, 1, OS); // src2
+    OS << ", ";
+    printOperand(MI, 0, OS); // src1
+    OS << ", %bsr0";
+    return true;
+
+  case X86::BSRMOVFrm:
+    // Syntax: bsrmovf mem, %zmm1, %bsr0
+    OS << "\tbsrmovf\t";
+    printMemReference(MI, 1, OS); // src2 (memory)
+    OS << ", ";
+    printOperand(MI, 0, OS); // src1
+    OS << ", %bsr0";
+    return true;
+
+  case X86::BSRMOVHrr_set:
+    // Syntax: bsrmovh %zmm1, %bsr0 (set BSR high from zmm)
+    OS << "\tbsrmovh\t";
+    printOperand(MI, 0, OS); // src
+    OS << ", %bsr0";
+    return true;
+
+  case X86::BSRMOVHrm_set:
+    // Syntax: bsrmovh mem, %bsr0 (set BSR high from memory)
+    OS << "\tbsrmovh\t";
+    printMemReference(MI, 0, OS); // src (memory)
+    OS << ", %bsr0";
+    return true;
+
+  case X86::BSRMOVHrr_get:
+    // Syntax: bsrmovh %bsr0, %zmm1 (get BSR high to zmm)
+    OS << "\tbsrmovh\t%bsr0, ";
+    printOperand(MI, 0, OS); // dst
+    return true;
+
+  case X86::BSRMOVHmr_get:
+    // Syntax: bsrmovh %bsr0, mem
+    OS << "\tbsrmovh\t%bsr0, ";
+    printMemReference(MI, 0, OS); // dst (memory)
+    return true;
+
+  case X86::BSRMOVLrr_set:
+    // Syntax: bsrmovl %zmm2, %bsr0 (set BSR low from zmm)
+    OS << "\tbsrmovl\t";
+    printOperand(MI, 0, OS); // src
+    OS << ", %bsr0";
+    return true;
+
+  case X86::BSRMOVLrm_set:
+    // Syntax: bsrmovl mem, %bsr0
+    OS << "\tbsrmovl\t";
+    printMemReference(MI, 0, OS); // src (memory)
+    OS << ", %bsr0";
+    return true;
+
+  case X86::BSRMOVLrr_get:
+    // Syntax: bsrmovl %bsr0, %zmm3 (get BSR low to zmm)
+    OS << "\tbsrmovl\t%bsr0, ";
+    printOperand(MI, 0, OS); // dst
+    return true;
+
+  case X86::BSRMOVLmr_get:
+    // Syntax: bsrmovl %bsr0, mem
+    OS << "\tbsrmovl\t%bsr0, ";
+    printMemReference(MI, 0, OS); // dst (memory)
+    return true;
+  }
 }
 
 void X86ATTInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,

@@ -14,8 +14,9 @@
 //===----------------------------------------------------------------------===//
 // AMX instructions
 
-multiclass AMX_TILE_COMMON<string Suffix, Predicate HasEGPR> {
-let Predicates = [HasAMXTILE, HasEGPR, In64BitMode] in {
+// Tile configuration instructions - shared between AMX-TILE and ACE v1
+multiclass AMX_TILE_CONFIG<string Suffix, Predicate HasEGPR> {
+let Predicates = [HasAMXTILE_Or_ACEV1, HasEGPR, In64BitMode] in {
   let hasSideEffects = 1,
       Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
   def LDTILECFG#Suffix : I<0x49, MRM0m, (outs), (ins opaquemem:$src),
@@ -27,6 +28,12 @@ let Predicates = [HasAMXTILE, HasEGPR, In64BitMode] in {
                            "sttilecfg\t$src",
                            [(int_x86_sttilecfg addr:$src)]>,
                          T8, PD;
+}
+}
+
+// Tile load/store instructions - AMX-TILE only (not available in ACE v1)
+multiclass AMX_TILE_LOADSTORE<string Suffix, Predicate HasEGPR> {
+let Predicates = [HasAMXTILE, HasEGPR, In64BitMode] in {
   let mayLoad = 1 in
   def TILELOADD#Suffix : I<0x4b, MRMSrcMemFSIB, (outs TILE:$dst),
                            (ins sibmem:$src),
@@ -46,10 +53,16 @@ let Predicates = [HasAMXTILE, HasEGPR, In64BitMode] in {
 }
 
 let SchedRW = [WriteSystem] in {
-  defm "" : AMX_TILE_COMMON<"", NoEGPR>, VEX;
-  defm "" : AMX_TILE_COMMON<"_EVEX", HasEGPR>, EVEX, NoCD8;
+  // Tile configuration instructions - shared between AMX-TILE and ACE v1
+  defm "" : AMX_TILE_CONFIG<"", NoEGPR>, VEX;
+  defm "" : AMX_TILE_CONFIG<"_EVEX", HasEGPR>, EVEX, NoCD8;
 
-  let Predicates = [HasAMXTILE, In64BitMode] in {
+  // Tile load/store instructions - AMX-TILE only
+  defm "" : AMX_TILE_LOADSTORE<"", NoEGPR>, VEX;
+  defm "" : AMX_TILE_LOADSTORE<"_EVEX", HasEGPR>, EVEX, NoCD8;
+
+  // TILERELEASE and TILEZERO - shared between AMX-TILE and ACE v1
+  let Predicates = [HasAMXTILE_Or_ACEV1, In64BitMode] in {
     let Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
     def TILERELEASE : I<0x49, MRM_C0, (outs), (ins),
                         "tilerelease", [(int_x86_tilerelease)]>, VEX, T8, PS;
@@ -57,10 +70,26 @@ let SchedRW = [WriteSystem] in {
                      "tilezero\t$dst", []>,
                      VEX, T8, XD;
 
-    // Pseduo instruction for RA.
+    // Pseudo instructions for RA - shared between AMX-TILE and ACE v1
     let isPseudo = true, mayLoad = 1, hasSideEffects = 1,
         Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
     def PLDTILECFGV : PseudoI<(outs), (ins opaquemem:$src), []>;
+
+    let isPseudo = true, isReMaterializable = 1, isAsCheapAsAMove = 1,
+        canFoldAsLoad = 1, usesCustomInserter = 1 in
+      def PTILEZEROV : PseudoI<(outs TILE:$dst), (ins GR16:$src1, GR16:$src2),
+                                [(set TILE:$dst, (int_x86_tilezero_internal
+                                  GR16:$src1, GR16:$src2))]>;
+
+    let usesCustomInserter = 1 in {
+      // Pseudo instruction for TILEZERO with immediate
+      def PTILEZERO : PseudoI<(outs), (ins u8imm:$src),
+                              [(int_x86_tilezero timm:$src)]>;
+    }
+  } // Predicates - shared
+
+  // Tile load/store pseudo instructions - AMX-TILE only
+  let Predicates = [HasAMXTILE, In64BitMode] in {
     let isPseudo = true, mayLoad = 1 in
     def PTILELOADDV : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
                                                      GR16:$src2,
@@ -73,15 +102,9 @@ let SchedRW = [WriteSystem] in {
     def PTILESTOREDV : PseudoI<(outs), (ins GR16:$src1,
                                             GR16:$src2, opaquemem:$src3,
                                             TILE:$src4), []>;
-    let isPseudo = true, isReMaterializable = 1, isAsCheapAsAMove = 1,
-        canFoldAsLoad = 1, usesCustomInserter = 1 in
-      def PTILEZEROV : PseudoI<(outs TILE:$dst), (ins GR16:$src1, GR16:$src2),
-                                [(set TILE:$dst, (int_x86_tilezero_internal
-                                  GR16:$src1, GR16:$src2))]>;
 
     let usesCustomInserter = 1 in {
-      // Pseudo instructions, using immediates instead of tile registers.
-      // To be translated to the actual instructions in X86ISelLowering.cpp
+      // Pseudo instructions for tile load/store with immediates
       let mayLoad = 1 in
       def PTILELOADD : PseudoI<(outs), (ins u8imm:$src1, sibmem:$src2), []>;
       let mayLoad = 1 in
@@ -89,10 +112,8 @@ let SchedRW = [WriteSystem] in {
                                           sibmem:$src2), []>;
       let mayStore = 1 in
       def PTILESTORED : PseudoI<(outs), (ins i8mem:$dst, u8imm:$src), []>;
-      def PTILEZERO : PseudoI<(outs), (ins u8imm:$src),
-                              [(int_x86_tilezero timm:$src)]>;
     }
-  } // Predicates
+  } // Predicates - AMX-TILE only
 } // SchedRW
 
 let Predicates = [HasAMXINT8, In64BitMode] in {
@@ -368,7 +389,7 @@ let Predicates = [HasAMXMOVRS, In64BitMode], SchedRW = [WriteSystem] in {
 } // HasAMXMOVRS, In64BitMode
 
 multiclass m_tcvtrowd2ps {
-  let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode] in {
+  let Predicates = [HasAMXAVX512_Or_ACEV1, In64BitMode] in {
     let SchedRW = [WriteSystem] in {
       def rti : Ii8<0x7, MRMSrcReg, (outs VR512:$dst),
                     (ins TILE:$src1, i32u8imm:$src2),
@@ -379,12 +400,12 @@ multiclass m_tcvtrowd2ps {
                   "tcvtrowd2ps\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                   []>, T8,XS, EVEX, VVVV, EVEX_V512;
     }
-  } // HasAMXAVX512, HasAVX10_2, In64BitMode
+  } // HasAMXAVX512_Or_ACEV1, In64BitMode
 }
 
 defm TCVTROWD2PS : m_tcvtrowd2ps;
 
-let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode] in {
+let Predicates = [HasAMXAVX512_Or_ACEV1, In64BitMode] in {
   let SchedRW = [WriteSystem] in {
     let  usesCustomInserter = 1 in {
       def PTCVTROWD2PSrti : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, i32u8imm:$src2),
@@ -448,7 +469,7 @@ let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode] in {
 
 multiclass AMXAVX512_BASE<bits<8> Opcode1, bits<8> Opcode2, string Opstr,
                                 Prefix P1, Prefix P2> {
-  let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode], SchedRW = [WriteSystem] in {
+  let Predicates = [HasAMXAVX512_Or_ACEV1, In64BitMode], SchedRW = [WriteSystem] in {
     let OpPrefix = P1 in
       def rte : I<Opcode1, MRMSrcReg4VOp3, (outs VR512:$dst),
                   (ins TILE:$src1, GR32:$src2),
@@ -476,7 +497,7 @@ defm TCVTROWPS2BF16H : AMXAVX512_BASE<0x6d, 0x07, "tcvtrowps2bf16h", XD, XD>;
 defm TCVTROWPS2BF16L : AMXAVX512_BASE<0x6d, 0x77, "tcvtrowps2bf16l", XS, XS>;
 
 multiclass AMXAVX512_TILEMOVE<bits<8> Opcode1, bits<8> Opcode2, string Opstr> {
-  let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode] in {
+  let Predicates = [HasAMXAVX512_Or_ACEV1, In64BitMode] in {
     let SchedRW = [WriteSystem] in {
       def rti : Ii8<Opcode1, MRMSrcReg, (outs VR512:$dst),
                     (ins TILE:$src1, u8imm:$src2),
@@ -487,12 +508,12 @@ multiclass AMXAVX512_TILEMOVE<bits<8> Opcode1, bits<8> Opcode2, string Opstr> {
                   !strconcat(Opstr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                   []>, T8, PD, EVEX, VVVV, EVEX_V512;
     }
-  } // HasAMXAVX512, HasAVX10_2, In64BitMode
+  } // HasAMXAVX512_Or_ACEV1, In64BitMode
 }
 
 defm TILEMOVROW : AMXAVX512_TILEMOVE<0x07, 0x4A, "tilemovrow">;
 
-let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode] in {
+let Predicates = [HasAMXAVX512_Or_ACEV1, In64BitMode] in {
   let SchedRW = [WriteSystem] in {
     let  usesCustomInserter = 1 in {
       def PTILEMOVROWrti : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, i32u8imm:$src2),
