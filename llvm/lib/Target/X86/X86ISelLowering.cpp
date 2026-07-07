@@ -57315,23 +57315,14 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineZextSetccEqZeroToShift(SDNode *N, SelectionDAG &DAG,
                                              const X86Subtarget &Subtarget) {
-  if (!Subtarget.hasBMI2() || !Subtarget.is64Bit() ||
-      N->getOpcode() != ISD::ZERO_EXTEND)
+  if (!Subtarget.hasBMI2() || N->getOpcode() != ISD::ZERO_EXTEND)
     return SDValue();
 
-  SDValue N0 = N->getOperand(0);
-  if (N0.getOpcode() != ISD::SETCC || !N0.hasOneUse())
-    return SDValue();
-
-  ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
-  if (CC != ISD::SETEQ)
-    return SDValue();
-
-  SDValue X = N0.getOperand(0);
-  SDValue Y = N0.getOperand(1);
-  if (isNullConstant(X))
-    std::swap(X, Y);
-  else if (!isNullConstant(Y))
+  using namespace SDPatternMatch;
+  SDValue X;
+  if (!sd_match(N->getOperand(0),
+                m_OneUse(m_c_SetCC(m_Value(X), m_Zero(),
+                                    m_SpecificCondCode(ISD::SETEQ)))))
     return SDValue();
 
   EVT ShiftVT = X.getValueType();
