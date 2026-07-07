@@ -232,18 +232,6 @@ class TypeAndTypeListTestCase(TestBase):
             frame0.EvaluateExpression("task_head").GetType()
         )
 
-        # Check FindDirectNestedType on dynamic values
-        polymorphic = frame0.FindVariable("polymorphic").GetDynamicValue(
-            lldb.eDynamicDontRunTarget
-        )
-        self.DebugSBValue(polymorphic)
-        polymorphic_type = polymorphic.GetType().GetPointeeType()
-        self.DebugSBType(polymorphic_type)
-        self.assertFalse(polymorphic_type.FindDirectNestedType("Nested", False))
-        nested = polymorphic_type.FindDirectNestedType("Nested", True)
-        self.DebugSBType(nested)
-        self.assertEqual(nested.GetName(), "PolymorphicDerived::Nested")
-
         # We'll now get the child member 'id' from 'task_head'.
         id = task_head.GetChildMemberWithName("id")
         self.DebugSBValue(id)
@@ -311,6 +299,25 @@ class TypeAndTypeListTestCase(TestBase):
         the_typedef = with_nested_typedef.FindDirectNestedType("TheTypedef")
         self.assertTrue(the_typedef)
         self.assertEqual(the_typedef.GetTypedefedType().GetName(), "int")
+
+    @expectedFailureWindows  # Dynamic type resolution not implemented
+    def test_dynamic_values(self):
+        """Test FindDirectNestedType on dynamic values"""
+
+        self.build()
+        lldbutil.run_to_line_breakpoint(self, lldb.SBFileSpec(self.source), self.line)
+        polymorphic = (
+            self.frame()
+            .FindVariable("polymorphic")
+            .GetDynamicValue(lldb.eDynamicDontRunTarget)
+        )
+        self.DebugSBValue(polymorphic)
+        polymorphic_type = polymorphic.GetType().GetPointeeType()
+        self.DebugSBType(polymorphic_type)
+        self.assertFalse(polymorphic_type.FindDirectNestedType("Nested", False))
+        nested = polymorphic_type.FindDirectNestedType("Nested", True)
+        self.DebugSBType(nested)
+        self.assertEqual(nested.GetName(), "PolymorphicDerived::Nested")
 
     def test_GetByteAlign(self):
         """Exercise SBType::GetByteAlign"""
