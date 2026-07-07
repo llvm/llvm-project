@@ -145,6 +145,12 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
 - Fixed incorrect struct return when single large vector (256/512-bit) used on
   x86-64 targets. (#GH203760) The bug was introduced since Clang 21. (#GH120670)
+- Clang now applies MSVC's MD5 shortening to over-long Microsoft C++ RTTI type
+  descriptor name strings, matching the behavior already used for the RTTI
+  symbol names. Previously the full name string was always emitted, so deeply
+  nested template types (for example, ones containing local lambdas) could
+  produce very large writable `.data` sections. Emitted RTTI name strings
+  change only for types whose name exceeds the length limit. (#GH206313)
 
 ### AST Dumping Potentially Breaking Changes
 
@@ -256,6 +262,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   operator()](https://cplusplus.github.io/CWG/issues/1780.html)
 - Clang now allows omitting `typename` before a template name in a
   conversion operator, implementing [CWG2413](https://wg21.link/cwg2413).
+- Member specializations can now be declared in class scope, according to the
+  resolution of [CWG727](https://wg21.link/cwg727). This is still not sufficient
+  to resolve that core issue.
 - Clang now uses non-reference types for structured bindings whose initializer
   returns a prvalue. This resolves [CWG3135](https://wg21.link/cwg3135).
 
@@ -675,9 +684,6 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Clang now rejects inline asm constraints and clobbers that contain an
   embedded null character, instead of silently truncating them. (#GH173900)
 
-- Added `-Wstringop-overread` to warn when `memcpy`, `memmove`, `memcmp`,
-  and related builtins read more bytes than the source buffer size (#GH83728).
-
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
@@ -685,6 +691,14 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   `umask` has bits set outside `0777`. Those bits are silently discarded
   by the kernel, so setting them is almost always a typo (matching the
   bionic libc `diagnose_if` check).
+
+- Improved how Unicode characters are displayed in diagnostic messages.
+
+- `-Wtautological-pointer-compare` and `-Wpointer-bool-conversion` now
+  diagnose a reference to a function (e.g. of type `void (&)()`) compared
+  against or converted to a null pointer, the same as a bare function name.
+  (#GH46362)
+
 
 ### Improvements to Clang's time-trace
 
@@ -796,6 +810,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed an alias template CTAD crash.
 - Correctly diagnose uses of `co_await` / `co_yield` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+- Fixed clang incorrectly rejecting several cases of out-of-line definitions. (#GH101330)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed crash instantiating class member specializations.
@@ -962,6 +977,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - When targeting Windows x64 with EGPR (`-mapx-features=egpr`), Clang now
   automatically enables V3 unwind info (`-fwinx64-eh-unwind=v3`) if no
   explicit unwind version was specified.
+
+- Clang now supports `-std:c++26preview` for compatibility with MSVC. This enables C++26 features.
 
 #### LoongArch Support
 

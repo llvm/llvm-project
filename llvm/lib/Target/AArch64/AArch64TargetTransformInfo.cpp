@@ -2142,9 +2142,43 @@ static std::optional<Instruction *> instCombineSVEDupX(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, Splat);
 }
 
+// xor(cmpne(%pg, %lhs, %rhs), %pg)
+// -> cmpeq(%pg, %lhs, %rhs)
+static std::optional<Instruction *> instCombineXorSVECmpNE(InstCombiner &IC,
+                                                           IntrinsicInst &II) {
+  if (!II.hasOneUse())
+    return std::nullopt;
+  auto *User = cast<Instruction>(*II.user_begin());
+  if (!match(User, m_c_Xor(m_Specific(&II), m_Specific(II.getOperand(0)))))
+    return std::nullopt;
+
+  Intrinsic::ID IID;
+  switch (II.getIntrinsicID()) {
+  case Intrinsic::aarch64_sve_cmpne:
+    IID = Intrinsic::aarch64_sve_cmpeq;
+    break;
+  case Intrinsic::aarch64_sve_cmpne_wide:
+    IID = Intrinsic::aarch64_sve_cmpeq_wide;
+    break;
+  default:
+    return std::nullopt;
+  }
+
+  IC.Builder.SetInsertPoint(User);
+  Value *CMPEQ = IC.Builder.CreateIntrinsic(
+      IID, II.getOperand(1)->getType(),
+      {II.getOperand(0), II.getOperand(1), II.getOperand(2)});
+  IC.replaceInstUsesWith(*User, CMPEQ);
+  IC.eraseInstFromFunction(*User);
+  return &II;
+}
+
 static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
                                                         IntrinsicInst &II) {
   LLVMContext &Ctx = II.getContext();
+
+  if (auto Res = instCombineXorSVECmpNE(IC, II))
+    return Res;
 
   if (!isAllActivePredicate(II.getArgOperand(0)))
     return std::nullopt;
@@ -4535,6 +4569,17 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::SUB:
     return LT.first; // Also works for i128
   case ISD::MUL:
+    // i128 multiply is umulh + 2*madd + mul and grows ~O(Bitwidth^2). For
+    // scalable vectors the cost of LT.first will be invalid, leading to an
+    // invalid cost overall.
+    if (Ty->getScalarSizeInBits() > 64) {
+      unsigned NumLanes = isa<FixedVectorType>(Ty)
+                              ? cast<FixedVectorType>(Ty)->getNumElements()
+                              : 1;
+      InstructionCost CostPerLane = LT.first / NumLanes;
+      return CostPerLane * CostPerLane * NumLanes;
+    }
+
     if (LT.second == MVT::v2i64) {
       // When SVE is available, then we can lower the v2i64 operation using
       // the SVE mul instruction, which has a lower cost.
