@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// NOTE: temporary CI trigger for a do-not-merge draft PR; this line will not
+// be merged.
+
 #include "kmp.h"
 #include "kmp_i18n.h"
 #include "kmp_str.h"
