@@ -1344,8 +1344,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_EXTRACT_SUBVECTOR)
       .legalFor({{v8s8, v16s8}, {v4s16, v8s16}, {v2s32, v4s32}})
       .widenScalarOrEltToNextPow2(0)
-      //.immIdx(0) // Inform verifier imm idx 0 is handled.
-      .lower();
+      .lower()
+      .immIdx(0); // Inform verifier imm idx 0 is handled.
 
   // TODO: {nxv16s8, s8}, {nxv8s16, s16}
   getActionDefinitionsBuilder(G_SPLAT_VECTOR)
