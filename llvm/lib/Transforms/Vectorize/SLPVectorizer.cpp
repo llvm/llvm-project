@@ -2649,34 +2649,36 @@ public:
     // tree entry node in the different lane.
 
     /// Loads from consecutive memory addresses, e.g. load(A[i]), load(A[i+1]).
-    static const int ScoreConsecutiveLoads = 4;
+    static constexpr int ScoreConsecutiveLoads = 40;
     /// The same load multiple times. This should have a better score than
     /// `ScoreSplat` because it in x86 for a 2-lane vector we can represent it
     /// with `movddup (%reg), xmm0` which has a throughput of 0.5 versus 0.5 for
     /// a vector load and 1.0 for a broadcast.
-    static const int ScoreSplatLoads = 3;
+    static constexpr int ScoreSplatLoads = 30;
     /// Loads from reversed memory addresses, e.g. load(A[i+1]), load(A[i]).
-    static const int ScoreReversedLoads = 3;
+    static constexpr int ScoreReversedLoads = 30;
     /// A load candidate for masked gather.
-    static const int ScoreMaskedGatherCandidate = 1;
+    static constexpr int ScoreMaskedGatherCandidate = 10;
     /// ExtractElementInst from same vector and consecutive indexes.
-    static const int ScoreConsecutiveExtracts = 4;
+    static constexpr int ScoreConsecutiveExtracts = 40;
     /// ExtractElementInst from same vector and reversed indices.
-    static const int ScoreReversedExtracts = 3;
+    static constexpr int ScoreReversedExtracts = 30;
     /// Constants.
-    static const int ScoreConstants = 2;
+    static constexpr int ScoreConstants = 15;
+    /// Same constants.
+    static constexpr int ScoreSameConstants = 17;
     /// Instructions with the same opcode.
-    static const int ScoreSameOpcode = 2;
+    static constexpr int ScoreSameOpcode = 20;
     /// Instructions with alt opcodes (e.g, add + sub).
-    static const int ScoreAltOpcodes = 1;
+    static constexpr int ScoreAltOpcodes = 10;
     /// Identical instructions (a.k.a. splat or broadcast).
-    static const int ScoreSplat = 1;
+    static constexpr int ScoreSplat = 10;
     /// Matching with an undef is preferable to failing.
-    static const int ScoreUndef = 1;
+    static constexpr int ScoreUndef = 10;
     /// Score for failing to find a decent match.
-    static const int ScoreFail = 0;
+    static constexpr int ScoreFail = 0;
     /// Score if all users are vectorized.
-    static const int ScoreAllUserVectorized = 1;
+    static constexpr int ScoreAllUserVectorized = 10;
 
     /// \returns the score of placing \p V1 and \p V2 in consecutive lanes.
     /// \p U1 and \p U2 are the users of \p V1 and \p V2.
@@ -2710,6 +2712,10 @@ public:
                AllUsersAreInternal(V1, V2)))
             return LookAheadHeuristics::ScoreSplatLoads;
         }
+        if (isa<UndefValue>(V1))
+          return LookAheadHeuristics::ScoreUndef;
+        if (isConstant(V1))
+          return LookAheadHeuristics::ScoreSameConstants;
         return LookAheadHeuristics::ScoreSplat;
       }
 
@@ -2761,7 +2767,7 @@ public:
       // Consider constants and buildvector compatible.
       if ((C1 && isa<InsertElementInst>(V2)) ||
           (C2 && isa<InsertElementInst>(V1)))
-        return LookAheadHeuristics::ScoreConstants;
+        return LookAheadHeuristics::ScoreSameOpcode;
 
       // Extracts from consecutive indexes of the same vector better score as
       // the extracts could be optimized away.
@@ -3112,7 +3118,9 @@ public:
     /// Score scaling factor for fully compatible instructions but with
     /// different number of external uses. Allows better selection of the
     /// instructions with less external uses.
-    static const int ScoreScaleFactor = 10;
+    static constexpr int ScoreScaleFactor = 10;
+    /// Scale factor for constants only.
+    static constexpr int ScoreConstantScaleFactor = 6;
 
     /// \Returns the look-ahead score, which tells us how much the sub-trees
     /// rooted at \p LHS and \p RHS match, the more they match the higher the
@@ -3130,7 +3138,8 @@ public:
           LookAhead.getScoreAtLevelRec(LHS, RHS, /*U1=*/nullptr, /*U2=*/nullptr,
                                        /*CurrLevel=*/1, MainAltOps);
       if (Score) {
-        int SplatScore = getSplatScore(Lane, OpIdx, Idx, UsedLanes);
+        int SplatScore =
+            getSplatScore(Lane, OpIdx, Idx, UsedLanes) * ScoreScaleFactor;
         if (Score <= -SplatScore) {
           // Failed score.
           Score = 0;
@@ -3141,7 +3150,10 @@ public:
           // uses. It does not affect actual selection of the best
           // compatible operand in general, just allows to select the
           // operand with all vectorized uses.
-          Score *= ScoreScaleFactor;
+          const int SF = (LHS == RHS && isConstant(LHS))
+                             ? ScoreConstantScaleFactor
+                             : ScoreScaleFactor;
+          Score *= SF;
           Score += getExternalUseScore(Lane, OpIdx, Idx);
           IsUsed = true;
         }
@@ -13189,6 +13201,13 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     // Last chance to try to vectorize alternate node.
     if (S.isAltShuffle() && ReuseShuffleIndices.empty() && TrySplitNode(S))
       return;
+    // Last chance to try to vectorize copyable node.
+    if (S.areInstructionsWithCopyableElements() &&
+        ReuseShuffleIndices.empty()) {
+      InstructionsState AltS = getSameOpcode(VL, *TLI);
+      if (AltS && AltS.isAltShuffle() && TrySplitNode(AltS))
+        return;
+    }
     newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     NonScheduledFirst.insert(VL.front());
     if (S.getOpcode() == Instruction::Load &&
