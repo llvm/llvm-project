@@ -7792,11 +7792,15 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
       unsigned EltBits = N1.getValueType().getScalarSizeInBits();
       APInt Acc = APInt::getZero(EltBits);
       for (SDValue Elt : N1->op_values()) {
+        if (Elt.getOpcode() == ISD::POISON)
+          return getPOISON(VT);
         if (Elt.isUndef() || cast<ConstantSDNode>(Elt)->isOpaque())
           return SDValue();
         Acc += cast<ConstantSDNode>(Elt)->getAPIntValue().trunc(EltBits);
       }
-      return getConstant(Acc.zextOrTrunc(VT.getSizeInBits()), DL, VT);
+      EVT EltVT = N1.getValueType().getScalarType();
+      SDValue Result = getConstant(Acc, DL, EltVT);
+      return getAnyExtOrTrunc(Result, DL, VT);
     }
   }
 
