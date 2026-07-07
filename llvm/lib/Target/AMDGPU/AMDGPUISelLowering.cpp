@@ -4417,6 +4417,12 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   }
 
   SDValue Lo = DAG.getNode(ISD::TRUNCATE, SL, TargetType, LHS);
+
+  // Unroll illegal vector truncate: This is normally done by the legalizer,
+  // but we might reintroduce the illegal pattern here.
+  if (DCI.isAfterLegalizeDAG() && TargetType.isVector())
+    Lo = DAG.UnrollVectorOp(Lo.getNode());
+
   SDValue NewShift =
       DAG.getNode(ISD::SHL, SL, TargetType, Lo, ShiftAmt, N->getFlags());
 
@@ -4737,14 +4743,6 @@ SDValue AMDGPUTargetLowering::performTruncateCombine(
         return DAG.getNode(ISD::TRUNCATE, SL, VT, ShrunkShift);
       }
     }
-  }
-
-  // Unroll illegal vector truncate: This is normally done by the legalizer,
-  // however patterns introduced by the dag combiner may reintroduce the illegal
-  // pattern.
-  if (DCI.isAfterLegalizeDAG() && VT.isVector() &&
-      isOperationExpand(ISD::TRUNCATE, VT)) {
-    return DAG.UnrollVectorOp(N);
   }
 
   return SDValue();
