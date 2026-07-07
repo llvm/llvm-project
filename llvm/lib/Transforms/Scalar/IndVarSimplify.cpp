@@ -152,6 +152,7 @@ class IndVarSimplify {
   bool canonicalizeExitCondition(Loop *L);
   /// Try to eliminate loop exits based on analyzeable exit counts
   bool optimizeLoopExits(Loop *L, SCEVExpander &Rewriter);
+  void forgetLoopExitConditionValues(Loop *L);
   /// Try to form loop invariant tests for loop exits by changing how many
   /// iterations of the loop run when that is unobservable.
   bool predicateLoopExits(Loop *L, SCEVExpander &Rewriter);
@@ -1654,6 +1655,34 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
   return Changed;
 }
 
+void IndVarSimplify::forgetLoopExitConditionValues(Loop *L) {
+  SE->forgetLoop(L);
+
+  SmallVector<BasicBlock *, 16> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  for (BasicBlock *ExitingBB : ExitingBlocks) {
+    auto *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
+    if (!BI)
+      continue;
+
+    SmallVector<Value *, 8> Worklist({BI->getCondition()});
+    SmallPtrSet<Value *, 8> Visited;
+    while (!Worklist.empty()) {
+      Value *V = Worklist.pop_back_val();
+      if (!Visited.insert(V).second)
+        continue;
+
+      auto *I = dyn_cast<Instruction>(V);
+      if (!I || !L->contains(I))
+        continue;
+
+      SE->forgetValue(I);
+      for (Value *Op : I->operands())
+        Worklist.push_back(Op);
+    }
+  }
+}
+
 bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   SmallVector<BasicBlock*, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
@@ -2066,6 +2095,11 @@ bool IndVarSimplify::run(Loop *L) {
   //  - LFTR relies on having a single backedge.
   if (!L->isLoopSimplifyForm())
     return false;
+
+  // The loop may have been changed by earlier loop passes in the same adaptor
+  // run. Make sure this pass does not reason about exit conditions using stale
+  // cached exit counts or value expressions.
+  forgetLoopExitConditionValues(L);
 
   bool Changed = false;
   // If there are any floating-point recurrences, attempt to
