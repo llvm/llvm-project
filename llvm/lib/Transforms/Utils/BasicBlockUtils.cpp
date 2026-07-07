@@ -734,6 +734,9 @@ BasicBlock *llvm::SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ,
   assert(SuccIdx < CallBr->getNumSuccessors() &&
          Succ == CallBr->getSuccessor(SuccIdx) && "invalid successor index");
 
+  if (UpdatedLI)
+    *UpdatedLI = false;
+
   bool ReusesCallBrTarget = CallBrTarget;
   // Create a new block between callbr and the specified successor.
   // splitBlockBefore cannot be re-used here since it cannot split if the split
@@ -756,25 +759,20 @@ BasicBlock *llvm::SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ,
       assert(BBIdx != -1 && "expected incoming value form callbr block");
       PN.setIncomingBlock(BBIdx, CallBrTarget);
     }
-  } else {
-    for (PHINode &PN : Succ->phis()) {
-      PN.removeIncomingValue(CallBrBlock, false);
-    }
-  }
-  // Rewire control flow from callbr to the new target block.
-  CallBr->setSuccessor(SuccIdx, CallBrTarget);
 
-  if (UpdatedLI)
-    *UpdatedLI = false;
-  if (!LI || !LI->getLoopFor(CallBrTarget)) {
     bool Updated = updateCycleLoopInfo<LoopInfo, Loop>(LI, CallBrBlock,
                                                        CallBrTarget, Succ);
     if (UpdatedLI)
       *UpdatedLI = Updated;
-  }
-  if (!CI || !CI->getCycle(CallBrTarget)) {
     updateCycleLoopInfo<CycleInfo, Cycle>(CI, CallBrBlock, CallBrTarget, Succ);
+  } else {
+    for (PHINode &PN : Succ->phis())
+      PN.removeIncomingValue(CallBrBlock, false);
   }
+
+  // Rewire control flow from callbr to the new target block.
+  CallBr->setSuccessor(SuccIdx, CallBrTarget);
+
   if (DTU) {
     DTU->applyUpdates({{DominatorTree::Insert, CallBrBlock, CallBrTarget}});
     if (DTU->getDomTree().dominates(CallBrBlock, Succ)) {

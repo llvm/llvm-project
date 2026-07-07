@@ -95,3 +95,50 @@ exit:
   %phi.external = phi i32 [ 2, %loop.next ], [ 2, %loop.next ]
   ret void
 }
+
+define i32 @multiedge_restore_ssa_callbr() {
+; CHECK-LABEL: define i32 @multiedge_restore_ssa_callbr() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[HEADER:.*]]
+; CHECK:       [[HEADER]]:
+; CHECK-NEXT:    [[VAL:%.*]] = add i32 0, 0
+; CHECK-NEXT:    callbr void asm "", "r,!i,!i"(i1 false)
+; CHECK-NEXT:            to label %[[HEADER_TARGET_EXIT1:.*]] [label %[[HEADER_TARGET_COMMON_RET:.*]], label %[[SECOND_EXITING:.*]]]
+; CHECK:       [[SECOND_EXITING]]:
+; CHECK-NEXT:    callbr void asm "", "r,!i,!i"(i1 false)
+; CHECK-NEXT:            to label %[[HEADER]] [label %[[SECOND_EXITING_TARGET_EXIT1:.*]], label %[[SECOND_EXITING_TARGET_COMMON_RET:.*]]]
+; CHECK:       [[COMMON_RET:.*]]:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       [[EXIT1:.*]]:
+; CHECK-NEXT:    [[USE1:%.*]] = or i32 [[VAL_MOVED:%.*]], 0
+; CHECK-NEXT:    ret i32 0
+; CHECK:       [[HEADER_TARGET_EXIT1]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD:.*]]
+; CHECK:       [[HEADER_TARGET_COMMON_RET]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD]]
+; CHECK:       [[SECOND_EXITING_TARGET_EXIT1]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD]]
+; CHECK:       [[SECOND_EXITING_TARGET_COMMON_RET]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD]]
+; CHECK:       [[LOOP_EXIT_GUARD]]:
+; CHECK-NEXT:    [[VAL_MOVED]] = phi i32 [ [[VAL]], %[[HEADER_TARGET_EXIT1]] ], [ [[VAL]], %[[SECOND_EXITING_TARGET_EXIT1]] ], [ [[VAL]], %[[HEADER_TARGET_COMMON_RET]] ], [ [[VAL]], %[[SECOND_EXITING_TARGET_COMMON_RET]] ]
+; CHECK-NEXT:    [[GUARD_EXIT1:%.*]] = phi i1 [ true, %[[HEADER_TARGET_EXIT1]] ], [ false, %[[HEADER_TARGET_COMMON_RET]] ], [ true, %[[SECOND_EXITING_TARGET_EXIT1]] ], [ false, %[[SECOND_EXITING_TARGET_COMMON_RET]] ]
+; CHECK-NEXT:    br i1 [[GUARD_EXIT1]], label %[[EXIT1]], label %[[COMMON_RET]]
+;
+entry:
+  br label %header
+
+header:                                           ; preds = %second_exiting, %entry
+  %val = add i32 0, 0
+  callbr void asm "", "r,!i,!i"(i1 false) to label %exit1 [label %common.ret, label %second_exiting]
+
+second_exiting:                                   ; preds = %header
+  callbr void asm "", "r,!i,!i"(i1 false) to label %header [label %exit1, label %common.ret]
+
+common.ret:                                       ; preds = %second_exiting, %header
+  ret i32 0
+
+exit1:                                            ; preds = %second_exiting, %header
+  %use1 = or i32 %val, 0
+  ret i32 0
+}

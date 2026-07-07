@@ -319,9 +319,8 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
                           << printBasicBlock(NewSucc) << " -> "
                           << printBasicBlock(Succ) << '\n');
       }
-      if (NewSucc) {
+      if (NewSucc)
         CHub.addBranch(NewSucc, Header);
-      }
     } else {
       reportFatalUsageError("unsupported block terminator: fix-irreducible "
                             "only supports br and callbr instructions");

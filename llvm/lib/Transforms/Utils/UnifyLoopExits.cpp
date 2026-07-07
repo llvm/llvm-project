@@ -166,7 +166,8 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   ControlFlowHub CHub;
   bool Changed = false;
 
-  for (unsigned I = 0; I < ExitingBlocks.size(); ++I) {
+  unsigned NumExitingBlocks = ExitingBlocks.size();
+  for (unsigned I = 0; I < NumExitingBlocks; ++I) {
     BasicBlock *BB = ExitingBlocks[I];
     if (UncondBrInst *Branch = dyn_cast<UncondBrInst>(BB->getTerminator())) {
       BasicBlock *Succ0 = Branch->getSuccessor(0);
@@ -213,8 +214,13 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
           // that the blocks used for phi nodes in the guard blocks match the
           // predecessors of the guard blocks, which, in the case of callbr, are
           // the new intermediate target blocks instead of the callbr blocks
-          // themselves.
-          ExitingBlocks[I] = NewSucc;
+          // themselves. If only one exiting block is generated, the callbr
+          // block itself is overwritten, while further blocks are appended as
+          // additional exiting blocks.
+          if (CallBrTargets.empty())
+            ExitingBlocks[I] = NewSucc;
+          else
+            ExitingBlocks.push_back(NewSucc);
           CHub.addBranch(NewSucc, Succ);
           CallBrTargets[Succ] = NewSucc;
         }
