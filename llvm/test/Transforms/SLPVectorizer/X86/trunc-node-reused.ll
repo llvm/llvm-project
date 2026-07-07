@@ -4,18 +4,7 @@
 define i16 @test() {
 ; CHECK-LABEL: define i16 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = or <4 x i1> zeroinitializer, zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i1> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr <4 x i1> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i1> zeroinitializer, [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i1> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <4 x i1> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i1> zeroinitializer, [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP6]], <4 x i1> zeroinitializer, <4 x i1> [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i16>
-; CHECK-NEXT:    [[TMP10:%.*]] = call i16 @llvm.vector.reduce.and.v4i16(<4 x i16> [[TMP9]])
-; CHECK-NEXT:    ret i16 [[TMP10]]
+; CHECK-NEXT:    ret i16 0
 ;
 entry:
   %conv73 = xor i64 0, 0

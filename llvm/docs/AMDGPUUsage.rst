@@ -876,11 +876,14 @@ consumed by the AMDGPU backend during code generation.
          semantics. This is an alias of **strict** that is allowed to link
          with any other module. Code generation is identical to **strict**.
        - ``1``: **relaxed**. The backend may merge misaligned buffer
-         accesses for performance, even if that changes OOB behaviour.
+         accesses for performance, even if that changes OOB behaviour, and will
+         not split vector accesses that may produce unexpected OOB accesses.
        - ``2``: **strict**. The backend preserves per-byte OOB guarantees
          by preventing merging of misaligned buffer accesses that could
          straddle an OOB boundary (e.g. as required by Vulkan
-         ``robustBufferAccess2``).
+         ``robustBufferAccess2``) and by splitting vector accesses to buffer
+         fat pointers that may produce incorrect results under a robust buffer
+         access scheme. See :ref:`amdgpu-fat-buffer-oob-handling` for details.
 
    * - ``amdgpu.tbuffer.oob.mode``
      - ``i32``
@@ -1355,6 +1358,51 @@ instruction with ``one-as`` sync scope is specified via
     ``singlethread-one-as`` Same as ``singlethread`` but only synchronizes with
                             other operations within the same address space.
     ======================= ===================================================
+
+.. _amdgpu-fat-buffer-oob-handling:
+
+Buffer Fat Pointer out of bounds (OOB) handling
+-----------------------------------------------
+
+Instructions that load from or store to buffer resources (and thus, by extension
+buffer fat pointers and buffer strided pointers) generally implement handling for
+out of bounds (OOB) memory accesses, including those that are partially OOB,
+if the buffer resource resource has the required flags set. How ordinary
+``load`` and ``store`` instructions are lowered to buffer operations is partly
+controlled by the ``amdgpu.buffer.oob.mode`` (see :ref:`amdgpu-module-flags`). If
+that flag is set to ``1`` (relaxed), no handling to improve the expected behavior
+of OOB accesses is performed, while if it is set to ``0`` (any) or ``2`` (strict),
+operations may be split to ensure correctness under stronger models of how
+out-of-bounds accesses should behave.
+
+When operating on more than 32 bits of data, the ``voffset`` used for the access
+will be range-checked for each 32-bit word independently. This check uses saturating
+arithmetic and interprets the offset as an unsigned value.
+
+The behavior described above conflicts with the ABI requirements of certain graphics
+APIs that require out of bounds accesses to be handled strictly so that accessed
+that begin out of bounds but then access in-bounds elements (such as loading a
+``<4 x i32>`` beginning at offset ``-4``) still load the three in-bounds integers
+(producing ``<0, v0, v1, v2>`` and not ``<0, 0, 0, 0>``. So, under strict OOB
+handling, such an access will be split into four ``i32`` accesses. Note this this
+can only happen for underaligned loads - such wraparound isn't possible for
+loads that are alligned to their natural size.
+
+Similarly, buffer fat pointers permit operating on types such as ``<8 x i8>`` which
+must be accessed (and bounds-checked) 4 bytes at a time. Non-word-aligned
+accesses to such types from near the end of a buffer resource (such as starting
+a load of an ``<8 x i8>`` from an offset of ``6`` on an 8-byte buffer) will treat
+the initial two bytes to be loaded/stored as out of bounds, even though, under
+a strict interpretation of the bounds-checking semantics, they would be in bounds.
+Under strict OOB handling, such a load will be split into a sequence of ``<2 x i16>``
+loads.
+
+.. note::
+
+  No attempt will be made to shrink buffer intrinsic calls (calling
+  ``llvm.amdgcn.raw.ptr.buffer.*`` directly) in order to cause them to meet the
+  requirements of strict OOB mode. However, in strict OOB mode, those intrinsics
+  will not be combined in a way that would violate the guarantees of that mode.
 
 Target Types
 ------------
@@ -2399,6 +2447,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-no-completion-action"                    Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
                                                       kernel argument that holds the completion action pointer. If this
                                                       attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
+
+     "amdgpu-tg-split"                                Enable threadgroup split execution mode for the function. This must be
+                                                      consistently set (or unset) for all reachable functions. This is only
+                                                      relevant on targets with the `tgsplit-support` feature.
 
      "amdgpu-lds-size"="min[,max]"                    Min is the minimum number of bytes that will be allocated in the Local
                                                       Data Store at address zero. Variables are allocated within this frame

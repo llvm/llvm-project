@@ -783,8 +783,8 @@ define amdgpu_kernel void @uniform_value_float(ptr addrspace(1) %out, float %in)
 ; GFX8GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8GISEL-NEXT:    v_mul_f32_e64 v0, -s2, v0
 ; GFX8GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX8GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8GISEL-NEXT:    s_endpgm
@@ -3378,9 +3378,9 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %id.x) #0 {
 ; GFX8DAGISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX8DAGISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX8DAGISEL-NEXT:    s_ff1_i32_b64 s10, s[4:5]
-; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX8DAGISEL-NEXT:    v_readlane_b32 s8, v2, s10
 ; GFX8DAGISEL-NEXT:    v_readlane_b32 s9, v3, s10
+; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX8DAGISEL-NEXT:    v_add_f64 v[4:5], -s[8:9], v[4:5]
 ; GFX8DAGISEL-NEXT:    s_bitset0_b64 s[4:5], s10
@@ -3402,9 +3402,9 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %id.x) #0 {
 ; GFX8GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX8GISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX8GISEL-NEXT:    s_ff1_i32_b64 s10, s[4:5]
-; GFX8GISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX8GISEL-NEXT:    v_readlane_b32 s8, v2, s10
 ; GFX8GISEL-NEXT:    v_readlane_b32 s9, v3, s10
+; GFX8GISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX8GISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX8GISEL-NEXT:    v_add_f64 v[4:5], -s[8:9], v[4:5]
 ; GFX8GISEL-NEXT:    s_bitset0_b64 s[4:5], s10
@@ -3426,9 +3426,9 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %id.x) #0 {
 ; GFX9DAGISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9DAGISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9DAGISEL-NEXT:    s_ff1_i32_b64 s10, s[4:5]
-; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX9DAGISEL-NEXT:    v_readlane_b32 s8, v2, s10
 ; GFX9DAGISEL-NEXT:    v_readlane_b32 s9, v3, s10
+; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX9DAGISEL-NEXT:    v_add_f64 v[4:5], -s[8:9], v[4:5]
 ; GFX9DAGISEL-NEXT:    s_bitset0_b64 s[4:5], s10
@@ -3450,9 +3450,9 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %id.x) #0 {
 ; GFX9GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9GISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9GISEL-NEXT:    s_ff1_i32_b64 s10, s[4:5]
-; GFX9GISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX9GISEL-NEXT:    v_readlane_b32 s8, v2, s10
 ; GFX9GISEL-NEXT:    v_readlane_b32 s9, v3, s10
+; GFX9GISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX9GISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX9GISEL-NEXT:    v_add_f64 v[4:5], -s[8:9], v[4:5]
 ; GFX9GISEL-NEXT:    s_bitset0_b64 s[4:5], s10
