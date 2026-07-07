@@ -2255,11 +2255,9 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           splitGlobalAddressRelocFlags(ST, SrcOp);
 
       BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstLo)
-          .addGlobalAddress(GV, Offset, BaseFlags | LoReloc)
-          .addReg(Dst, RegState::Implicit | RegState::Define);
+          .addGlobalAddress(GV, Offset, BaseFlags | LoReloc);
       BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstHi)
-          .addGlobalAddress(GV, Offset, BaseFlags | HiReloc)
-          .addReg(Dst, RegState::Implicit | RegState::Define);
+          .addGlobalAddress(GV, Offset, BaseFlags | HiReloc);
     } else if (SrcOp.isImm()) {
       APInt Imm(64, SrcOp.getImm());
       APInt Lo(32, Imm.getLoBits(32).getZExtValue());
@@ -2333,11 +2331,9 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           splitGlobalAddressRelocFlags(ST, SrcOp);
 
       BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), DstLo)
-          .addGlobalAddress(GV, Offset, BaseFlags | LoReloc)
-          .addReg(Dst, RegState::Implicit | RegState::Define);
+          .addGlobalAddress(GV, Offset, BaseFlags | LoReloc);
       BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), DstHi)
-          .addGlobalAddress(GV, Offset, BaseFlags | HiReloc)
-          .addReg(Dst, RegState::Implicit | RegState::Define);
+          .addGlobalAddress(GV, Offset, BaseFlags | HiReloc);
       MI.eraseFromParent();
       break;
     }

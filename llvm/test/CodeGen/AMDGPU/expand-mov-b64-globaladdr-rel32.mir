@@ -19,8 +19,8 @@ body: |
     liveins: $exec
 
     ; CHECK-LABEL: name: v_mov_b64_pseudo_globaladdr_rel32
-    ; CHECK: $vgpr0 = V_MOV_B32_e32 target-flags(amdgpu-rel32-lo) @gv, implicit $exec, implicit-def $vgpr0_vgpr1
-    ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 target-flags(amdgpu-rel32-hi) @gv, implicit $exec, implicit-def $vgpr0_vgpr1
+    ; CHECK: $vgpr0 = V_MOV_B32_e32 target-flags(amdgpu-rel32-lo) @gv, implicit $exec
+    ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 target-flags(amdgpu-rel32-hi) @gv, implicit $exec
 
     $vgpr0_vgpr1 = V_MOV_B64_PSEUDO target-flags(amdgpu-rel32-lo) @gv, implicit $exec
 ...
