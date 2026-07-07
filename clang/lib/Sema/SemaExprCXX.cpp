@@ -906,16 +906,11 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
     if (Res.isInvalid())
       return ExprError();
 
-    // std::init / ref_to_uninit (paper §5): a thrown pointer copy-initializes
-    // the exception object, which cannot carry [[ref_to_uninit]], so throwing
-    // a pointer to uninitialized memory is always the unmarked-direction
-    // violation. (Reads like `throw *p` funnel through the read-through check
-    // instead.) Dependent operands are outside this block; the Decl-less
-    // wrapper defers on a template pattern.
-    if (ExceptionObjectTy->isPointerType())
-      Profiles().checkInitProfileRefToUninit(Ex->getExprLoc(),
-                                             /*TargetIsRefToUninit=*/false,
-                                             /*IsReference=*/false, Ex);
+    // std::init / ref_to_uninit (paper §5): throwing a pointer to
+    // uninitialized memory. Dependent operands are outside this block; the
+    // Decl-less wrapper defers on a template pattern.
+    if (getLangOpts().Profiles)
+      Profiles().checkInitProfileThrowOperand(Ex);
 
     Ex = Res.get();
   }
@@ -2620,17 +2615,12 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     Initializer = FullInit.get();
 
     // std::init / ref_to_uninit (paper §5): a written initializer for an
-    // allocated pointer binds it like a variable initialization -- but a heap
-    // pointer object cannot carry [[ref_to_uninit]], so binding it to
-    // uninitialized memory is always the unmarked-direction violation. A
-    // braced `new T*{&x}` presents the InitListExpr, which the recognizer's
-    // single-element pass-through looks through. Dependent operands are
-    // outside this block; BuildCXXNew re-runs at instantiation, and the
-    // Decl-less wrapper defers on a template pattern.
-    if (AllocType->isPointerType() && Exprs.size() == 1)
-      Profiles().checkInitProfileRefToUninit(Exprs[0]->getExprLoc(),
-                                             /*TargetIsRefToUninit=*/false,
-                                             /*IsReference=*/false, Exprs[0]);
+    // allocated pointer binds it like a variable initialization. Dependent
+    // operands are outside this block; the Decl-less wrapper defers on a
+    // template pattern.
+    if (getLangOpts().Profiles)
+      Profiles().checkInitProfileNewInitializer(
+          AllocType, Exprs.size() == 1 ? Exprs[0] : nullptr);
 
     // FIXME: If we have a KnownArraySize, check that the array bound of the
     // initializer is no greater than that constant value.

@@ -14414,17 +14414,9 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   // the shared funnel for simple and every compound assignment, so the check
   // fires exactly once per built-in assignment; class-typed operator= never
   // reaches it.
-  if (getLangOpts().Profiles) {
-    // A compound assignment reads the old value but builds no
-    // lvalue-to-rvalue node for it, so the DefaultLvalueConversion
-    // read-through chokepoint never sees the load; check it here. The shift
-    // forms are the exception: CheckShiftOperands promotes their LHS through
-    // DefaultLvalueConversion, which has already fired for them.
-    if (!CompoundType.isNull() && Opc != BO_ShlAssign && Opc != BO_ShrAssign)
-      Profiles().checkInitProfileReadThrough(LHSExpr->getExprLoc(), LHSExpr,
-                                             LHSExpr->getType());
-    Profiles().checkInitProfileSubobjectWrite(Loc, LHSExpr);
-  }
+  if (getLangOpts().Profiles)
+    Profiles().checkInitProfileAssignmentOperands(
+        Opc, LHSExpr, /*IsCompound=*/!CompoundType.isNull(), Loc);
 
   QualType LHSType = LHSExpr->getType();
   QualType RHSType = CompoundType.isNull() ? RHS.get()->getType() :
@@ -15525,18 +15517,10 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
       DiagnoseSelfMove(LHS.get(), RHS.get(), OpLoc);
 
       // std::init / ref_to_uninit (paper §5): assigning a pointer must respect
-      // the [[ref_to_uninit]] marking of the assigned-to pointer. References
-      // cannot be reseated, so only pointer assignment applies. The marker is
-      // read when the LHS directly names a pointer entity; any other lvalue
-      // (e.g. *pp, arr[i]) cannot carry a local marker, so it is the default
-      // unmarked pointer (paper §4.3) and must not be bound to uninitialized
-      // memory.
-      if (getLangOpts().Profiles && LHS.get()->getType()->isPointerType()) {
-        const ValueDecl *VD = SemaProfiles::getDirectlyNamedDecl(LHS.get());
-        Profiles().checkInitProfileRefToUninit(
-            OpLoc, VD && VD->hasAttr<RefToUninitAttr>(),
-                             /*IsReference=*/false, RHS.get());
-      }
+      // the [[ref_to_uninit]] marking of the assigned-to pointer.
+      if (getLangOpts().Profiles)
+        Profiles().checkInitProfilePointerAssignment(LHS.get(), RHS.get(),
+                                                     OpLoc);
 
       // Avoid copying a block to the heap if the block is assigned to a local
       // auto variable that is declared in the same scope as the block. This
@@ -16211,14 +16195,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       // than in CheckIncrementDecrementOperand, which self-recurses on
       // placeholder operands and would fire twice; overloaded class ++/--
       // never reaches CreateBuiltinUnaryOp.
-      if (getLangOpts().Profiles && !resultType.isNull()) {
-        // ++/-- reads the old value with no lvalue-to-rvalue node (unlike -x
-        // or !x); check the load here.
-        Profiles().checkInitProfileReadThrough(Input.get()->getExprLoc(),
-                                               Input.get(),
-                                               Input.get()->getType());
-        Profiles().checkInitProfileSubobjectWrite(OpLoc, Input.get());
-      }
+      if (getLangOpts().Profiles && !resultType.isNull())
+        Profiles().checkInitProfileIncDec(Input.get(), OpLoc);
       break;
     case UO_AddrOf:
       resultType = CheckAddressOfOperand(Input, OpLoc);

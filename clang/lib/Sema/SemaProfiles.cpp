@@ -1224,6 +1224,71 @@ void SemaProfiles::checkInitProfileSubobjectWrite(SourceLocation Loc,
       << "std::init" << !isa<MemberExpr>(LHS->IgnoreParenImpCasts());
 }
 
+void SemaProfiles::checkInitProfilePointerAssignment(Expr *LHS, Expr *RHS,
+                                                     SourceLocation OpLoc) {
+  // References cannot be reseated, so only pointer assignment applies. The
+  // marker is read when the LHS directly names a pointer entity; any other
+  // lvalue (e.g. *pp, arr[i]) cannot carry a local marker, so it is the
+  // default unmarked pointer (paper §4.3) and must not be bound to
+  // uninitialized memory.
+  if (!LHS->getType()->isPointerType())
+    return;
+  const ValueDecl *VD = getDirectlyNamedDecl(LHS);
+  checkInitProfileRefToUninit(OpLoc, VD && VD->hasAttr<RefToUninitAttr>(),
+                              /*IsReference=*/false, RHS);
+}
+
+void SemaProfiles::checkInitProfileAssignmentOperands(BinaryOperatorKind Opc,
+                                                      Expr *LHSExpr,
+                                                      bool IsCompound,
+                                                      SourceLocation OpLoc) {
+  // A compound assignment reads the old value but builds no lvalue-to-rvalue
+  // node for it, so the DefaultLvalueConversion read-through chokepoint never
+  // sees the load; check it here. The shift forms are the exception:
+  // CheckShiftOperands promotes their LHS through DefaultLvalueConversion,
+  // which has already fired for them.
+  if (IsCompound && Opc != BO_ShlAssign && Opc != BO_ShrAssign)
+    checkInitProfileReadThrough(LHSExpr->getExprLoc(), LHSExpr,
+                                LHSExpr->getType());
+  checkInitProfileSubobjectWrite(OpLoc, LHSExpr);
+}
+
+void SemaProfiles::checkInitProfileIncDec(Expr *Operand, SourceLocation OpLoc) {
+  // ++/-- reads the old value with no lvalue-to-rvalue node (unlike -x or
+  // !x), then stores to its operand like an assignment does to its LHS.
+  checkInitProfileReadThrough(Operand->getExprLoc(), Operand,
+                              Operand->getType());
+  checkInitProfileSubobjectWrite(OpLoc, Operand);
+}
+
+void SemaProfiles::checkInitProfileThrowOperand(const Expr *Operand) {
+  // A thrown pointer copy-initializes the exception object, which cannot
+  // carry [[ref_to_uninit]], so throwing a pointer to uninitialized memory is
+  // always the unmarked-direction violation. (Reads like `throw *p` funnel
+  // through the read-through check instead.)
+  QualType ExceptionObjectTy =
+      getASTContext().getExceptionObjectType(Operand->getType());
+  if (!ExceptionObjectTy->isPointerType())
+    return;
+  checkInitProfileRefToUninit(Operand->getExprLoc(),
+                              /*TargetIsRefToUninit=*/false,
+                              /*IsReference=*/false, Operand);
+}
+
+void SemaProfiles::checkInitProfileNewInitializer(QualType AllocType,
+                                                  Expr *Init) {
+  // A written initializer for an allocated pointer binds it like a variable
+  // initialization -- but a heap pointer object cannot carry
+  // [[ref_to_uninit]], so binding it to uninitialized memory is always the
+  // unmarked-direction violation. A braced `new T*{&x}` presents the
+  // InitListExpr, which the recognizer's single-element pass-through looks
+  // through.
+  if (!AllocType->isPointerType() || !Init)
+    return;
+  checkInitProfileRefToUninit(Init->getExprLoc(),
+                              /*TargetIsRefToUninit=*/false,
+                              /*IsReference=*/false, Init);
+}
 
 namespace {
 // Row for the unified finalization dispatch shared by class-finalization

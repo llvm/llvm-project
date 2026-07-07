@@ -288,6 +288,45 @@ public:
   /// instantiation.
   void checkInitProfileRefCapture(SourceLocation Loc, const ValueDecl *Var);
 
+  /// std::init / ref_to_uninit (paper §4.3): assigning to a pointer must
+  /// respect the assigned-to pointer's [[ref_to_uninit]] marking; a no-op for
+  /// a non-pointer LHS. Hosts the cluster from Sema::CreateBuiltinBinOp's
+  /// BO_Assign arm; also run on a reused assignment by recheckReusedExpr.
+  void checkInitProfilePointerAssignment(Expr *LHS, Expr *RHS,
+                                         SourceLocation OpLoc);
+
+  /// std::init: the check pair every built-in assignment hosts (paper
+  /// §5.4-§5.6): the compound-assignment old-value load (read-through --
+  /// excluding the shifts, whose LHS promotion already loads through the
+  /// lvalue-to-rvalue chokepoint) and the subobject-write check. Hosts the
+  /// cluster from Sema::CheckAssignmentOperands; also run on a reused
+  /// assignment by recheckReusedExpr. \p IsCompound distinguishes `op=`
+  /// from `=` (host site: !CompoundType.isNull(); reused node:
+  /// isa<CompoundAssignOperator>).
+  void checkInitProfileAssignmentOperands(BinaryOperatorKind Opc,
+                                          Expr *LHSExpr, bool IsCompound,
+                                          SourceLocation OpLoc);
+
+  /// std::init: the check pair a built-in ++/-- hosts -- the old-value load
+  /// (read-through) and the store (subobject-write). Hosts the cluster from
+  /// Sema::CreateBuiltinUnaryOp's increment/decrement arm; also run on a
+  /// reused operator by recheckReusedExpr.
+  void checkInitProfileIncDec(Expr *Operand, SourceLocation OpLoc);
+
+  /// std::init / ref_to_uninit (paper §5): a thrown pointer copy-initializes
+  /// the exception object, which cannot carry [[ref_to_uninit]]; a no-op for
+  /// a non-pointer exception object. Hosts the cluster from
+  /// Sema::BuildCXXThrow; also run on a reused throw by recheckReusedExpr.
+  void checkInitProfileThrowOperand(const Expr *Operand);
+
+  /// std::init / ref_to_uninit (paper §5): a written initializer for an
+  /// allocated pointer binds it like a variable initialization, and a heap
+  /// pointer object cannot carry [[ref_to_uninit]]. \p Init is the single
+  /// written initializer expression, or null when there is none (a no-op).
+  /// Hosts the cluster from Sema::BuildCXXNew; also run on a reused
+  /// new-expression by recheckReusedExpr.
+  void checkInitProfileNewInitializer(QualType AllocType, Expr *Init);
+
   /// std::init / pointer_marker + union_marker (paper §4.1, §5.6): diagnose
   /// [[uninit]] placed on a pointer, a union variable, or a union member.
   /// \p D must already carry the UninitAttr (the marker location is taken
