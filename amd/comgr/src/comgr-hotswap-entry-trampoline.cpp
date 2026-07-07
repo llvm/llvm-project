@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/CheckedArithmetic.h"
 
 #include <algorithm>
 #include <limits>
@@ -45,16 +44,6 @@ static SmallVector<uint8_t> getCodeEndBytes(const LLVMState &LS) {
     log() << "hotswap: error: failed to assemble s_code_end for entry-stub "
           << "padding.\n";
   return CodeEnd;
-}
-
-static std::optional<uint64_t> checkedAdd(uint64_t LHS, uint64_t RHS,
-                                          StringRef Context) {
-  std::optional<uint64_t> Result = checkedAddUnsigned(LHS, RHS);
-  if (Result)
-    return Result;
-
-  log() << "hotswap: error: " << Context << " overflows uint64_t.\n";
-  return std::nullopt;
 }
 
 SmallVector<uint8_t> buildKernelEntryTrampoline(uint64_t StubVAddr,
@@ -87,8 +76,8 @@ SmallVector<uint8_t> buildKernelEntryTrampoline(uint64_t StubVAddr,
   // Materialize the original entry with a 64-bit PC-relative add so the code
   // object can be rewritten before ROCR knows final device addresses.
   std::optional<uint64_t> PcBase =
-      checkedAdd(StubVAddr, static_cast<uint64_t>(Bytes.size()),
-                 "kernel-entry stub PC base");
+      checkedAddUint64(StubVAddr, static_cast<uint64_t>(Bytes.size()),
+                       "kernel-entry stub PC base");
   if (!PcBase)
     return {};
   // Unsigned subtraction is intentional: the immediate pair materializes the
@@ -235,12 +224,12 @@ static std::optional<uint64_t>
 decodeEntryStubTargetVAddr(ArrayRef<InternalDecodedInst> Decoded,
                            uint64_t StubVAddr) {
   std::optional<uint64_t> PcBaseOffset =
-      checkedAdd(Decoded[2].Offset, Decoded[2].Size,
-                 "decoded kernel-entry stub PC-base offset");
+      checkedAddUint64(Decoded[2].Offset, Decoded[2].Size,
+                       "decoded kernel-entry stub PC-base offset");
   if (!PcBaseOffset)
     return std::nullopt;
-  std::optional<uint64_t> PcBase =
-      checkedAdd(StubVAddr, *PcBaseOffset, "decoded kernel-entry stub PC base");
+  std::optional<uint64_t> PcBase = checkedAddUint64(
+      StubVAddr, *PcBaseOffset, "decoded kernel-entry stub PC base");
   if (!PcBase)
     return std::nullopt;
 
@@ -281,12 +270,12 @@ checkedAlignTo(uint64_t Value, uint64_t Alignment, StringRef Context) {
   uint64_t Remainder = Value % Alignment;
   if (Remainder == 0)
     return Value;
-  return checkedAdd(Value, Alignment - Remainder, Context);
+  return checkedAddUint64(Value, Alignment - Remainder, Context);
 }
 
 static std::optional<uint64_t> entryVAddr(const KernelDescriptorInfo &KD) {
   if (KD.EntryOffset >= 0)
-    return checkedAdd(
+    return checkedAddUint64(
         KD.VAddr, static_cast<uint64_t>(KD.EntryOffset),
         (Twine("kernel entry vaddr for '") + KD.KernelName + "'").str());
 
@@ -302,18 +291,16 @@ static std::optional<uint64_t> entryVAddr(const KernelDescriptorInfo &KD) {
   return KD.VAddr - Magnitude;
 }
 
-static std::optional<bool>
-descriptorAlreadyTargetsEntryStub(const ElfView &Elf,
-                                  const KernelDescriptorInfo &KD,
-                                  const LLVMState &LS) {
+static std::optional<bool> descriptorAlreadyTargetsEntryStub(
+    const ElfView &Elf, const KernelDescriptorInfo &KD, const LLVMState &LS) {
   std::optional<uint64_t> Entry = entryVAddr(KD);
   if (!Entry)
     return std::nullopt;
   if (*Entry < Elf.textAddr())
     return false;
 
-  std::optional<uint64_t> TextEnd =
-      checkedAdd(Elf.textAddr(), Elf.textSize(), "entry trampoline text end");
+  std::optional<uint64_t> TextEnd = checkedAddUint64(
+      Elf.textAddr(), Elf.textSize(), "entry trampoline text end");
   if (!TextEnd)
     return std::nullopt;
 
@@ -350,8 +337,8 @@ totalTrampolineBytes(ArrayRef<Trampoline> Trampolines) {
   uint64_t Total = 0;
   for (const Trampoline &T : Trampolines) {
     std::optional<uint64_t> NewTotal =
-        checkedAdd(Total, static_cast<uint64_t>(T.Bytes.size()),
-                   "existing trampoline byte count");
+        checkedAddUint64(Total, static_cast<uint64_t>(T.Bytes.size()),
+                         "existing trampoline byte count");
     if (!NewTotal)
       return std::nullopt;
     Total = *NewTotal;
@@ -468,12 +455,12 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
   if (!ExistingGrowthBytes)
     return std::nullopt;
   uint64_t AppendOffset = *ExistingGrowthBytes;
-  std::optional<uint64_t> TextEndVAddr =
-      checkedAdd(Elf.textAddr(), Elf.textSize(), "entry trampoline text end");
+  std::optional<uint64_t> TextEndVAddr = checkedAddUint64(
+      Elf.textAddr(), Elf.textSize(), "entry trampoline text end");
   if (!TextEndVAddr)
     return std::nullopt;
-  std::optional<uint64_t> StubPoolBaseVAddr =
-      checkedAdd(*TextEndVAddr, AppendOffset, "entry trampoline stub-pool base");
+  std::optional<uint64_t> StubPoolBaseVAddr = checkedAddUint64(
+      *TextEndVAddr, AppendOffset, "entry trampoline stub-pool base");
   if (!StubPoolBaseVAddr)
     return std::nullopt;
   std::optional<uint64_t> AlignedStubPoolBaseVAddr =
@@ -490,13 +477,13 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
   AppendOffset = StubStart;
 
   for (const KernelDescriptorInfo &KD : Work) {
-    std::optional<uint64_t> StubTextEnd = checkedAdd(
+    std::optional<uint64_t> StubTextEnd = checkedAddUint64(
         Elf.textSize(), AppendOffset,
         (Twine("entry trampoline append offset for '") + KD.KernelName + "'")
             .str());
     if (!StubTextEnd)
       return std::nullopt;
-    std::optional<uint64_t> StubVAddr = checkedAdd(
+    std::optional<uint64_t> StubVAddr = checkedAddUint64(
         Elf.textAddr(), *StubTextEnd,
         (Twine("entry trampoline vaddr for '") + KD.KernelName + "'").str());
     if (!StubVAddr)
@@ -521,7 +508,7 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
     T.Bytes.assign(Stub.begin(), Stub.end());
     LocalGrowth.push_back(std::move(T));
     LocalFixups.push_back({KD.KernelName, AppendOffset, *ScratchSgpr + 2});
-    std::optional<uint64_t> NewAppendOffset = checkedAdd(
+    std::optional<uint64_t> NewAppendOffset = checkedAddUint64(
         AppendOffset, KernelEntryStubStride,
         (Twine("entry trampoline append offset after '") + KD.KernelName + "'")
             .str());
@@ -583,7 +570,7 @@ bool rewriteKernelEntryDescriptorOffsets(
       Ok = false;
       continue;
     }
-    std::optional<uint64_t> StubTextOffset = checkedAdd(
+    std::optional<uint64_t> StubTextOffset = checkedAddUint64(
         OldTextSize, Fixup.StubTextOffset,
         (Twine("entry trampoline text offset for '") + Fixup.KernelName + "'")
             .str());
@@ -591,7 +578,7 @@ bool rewriteKernelEntryDescriptorOffsets(
       Ok = false;
       continue;
     }
-    std::optional<uint64_t> StubVAddr = checkedAdd(
+    std::optional<uint64_t> StubVAddr = checkedAddUint64(
         OutElf.textAddr(), *StubTextOffset,
         (Twine("entry trampoline vaddr for '") + Fixup.KernelName + "'").str());
     if (!StubVAddr) {

@@ -52,6 +52,7 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -71,6 +72,16 @@ namespace hotswap {
 
 inline llvm::raw_ostream &log() {
   return COMGR::env::shouldEmitVerboseLogs() ? llvm::errs() : llvm::nulls();
+}
+
+inline std::optional<uint64_t> checkedAddUint64(uint64_t LHS, uint64_t RHS,
+                                                llvm::StringRef Context) {
+  std::optional<uint64_t> Result = llvm::checkedAddUnsigned(LHS, RHS);
+  if (Result)
+    return Result;
+
+  log() << "hotswap: error: " << Context << " overflows uint64_t.\n";
+  return std::nullopt;
 }
 
 // -- Trampoline and NOP sled --------------------------------------------------
@@ -557,7 +568,7 @@ struct VgprAllocator {
 };
 
 /// Allocates scratch SGPRs for a patch point. Unlike VGPRs (which have full
-/// dataflow liveness), SGPRs have no liveness analysis — we always allocate
+/// dataflow liveness), SGPRs have no liveness analysis, so we always allocate
 /// above the kernel descriptor's reported SGPR count. This is conservative
 /// but safe: no SGPR currently in use by the kernel can be clobbered.
 struct SgprAllocator {

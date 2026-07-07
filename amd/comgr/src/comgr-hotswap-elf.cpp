@@ -18,7 +18,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
-#include "llvm/Support/CheckedArithmetic.h"
 
 #include <algorithm>
 #include <limits>
@@ -42,16 +41,6 @@ enum class MetadataSgprUpdateStatus {
   Error,
 };
 
-static std::optional<uint64_t> checkedAdd(uint64_t LHS, uint64_t RHS,
-                                          StringRef Context) {
-  std::optional<uint64_t> Result = checkedAddUnsigned(LHS, RHS);
-  if (Result)
-    return Result;
-
-  log() << "hotswap: error: " << Context << " overflows uint64_t.\n";
-  return std::nullopt;
-}
-
 static std::optional<size_t>
 checkedAlignToSize(size_t Value, uint64_t Alignment, StringRef Context) {
   if (Alignment <= 1)
@@ -61,7 +50,7 @@ checkedAlignToSize(size_t Value, uint64_t Alignment, StringRef Context) {
   if (Remainder == 0)
     return Value;
   std::optional<uint64_t> Aligned =
-      checkedAdd(Value64, Alignment - Remainder, Context);
+      checkedAddUint64(Value64, Alignment - Remainder, Context);
   if (!Aligned)
     return std::nullopt;
   if (*Aligned > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
@@ -84,8 +73,8 @@ static std::optional<uint64_t> checkedSectionFileOffset(const ELFT::Shdr &Sec,
   }
 
   uint64_t Delta = VAddr - Sec.sh_addr;
-  std::optional<uint64_t> FileOffset =
-      checkedAdd(Sec.sh_offset, Delta, (Twine(Context) + " file offset").str());
+  std::optional<uint64_t> FileOffset = checkedAddUint64(
+      Sec.sh_offset, Delta, (Twine(Context) + " file offset").str());
   if (!FileOffset)
     return std::nullopt;
 
@@ -868,7 +857,7 @@ static bool adjustSectionHeaders(uint8_t *Elf, size_t ElfSize,
     return true;
 
   std::optional<uint64_t> TextEnd =
-      checkedAdd(TextOffset, TextSize, "section header .text end");
+      checkedAddUint64(TextOffset, TextSize, "section header .text end");
   if (!TextEnd)
     return false;
   uint64_t Shoff;
@@ -882,7 +871,7 @@ static bool adjustSectionHeaders(uint8_t *Elf, size_t ElfSize,
 
   if (Shoff >= *TextEnd) {
     std::optional<uint64_t> NewShoff =
-        checkedAdd(Shoff, TrampTotal, "section header table offset");
+        checkedAddUint64(Shoff, TrampTotal, "section header table offset");
     if (!NewShoff)
       return false;
     uint64_t NewShoffValue = *NewShoff;
@@ -894,7 +883,7 @@ static bool adjustSectionHeaders(uint8_t *Elf, size_t ElfSize,
   for (uint16_t I = 0; I < Shnum; ++I) {
     uint64_t ShTableDelta = static_cast<uint64_t>(I) * Shentsize;
     std::optional<uint64_t> ShPos =
-        checkedAdd(Shoff, ShTableDelta, "section header entry offset");
+        checkedAddUint64(Shoff, ShTableDelta, "section header entry offset");
     if (!ShPos)
       return false;
     if (*ShPos > ElfSize || sizeof(Shdr) > ElfSize - *ShPos)
@@ -905,7 +894,7 @@ static bool adjustSectionHeaders(uint8_t *Elf, size_t ElfSize,
 
     if (ShOffset == TextOffset) {
       std::optional<uint64_t> NewTextSize =
-          checkedAdd(TextSize, TrampTotal, ".text section size");
+          checkedAddUint64(TextSize, TrampTotal, ".text section size");
       if (!NewTextSize)
         return false;
       uint64_t NewTextSizeValue = *NewTextSize;
@@ -913,7 +902,7 @@ static bool adjustSectionHeaders(uint8_t *Elf, size_t ElfSize,
                   sizeof(NewTextSizeValue));
     } else if (ShOffset > TextOffset) {
       std::optional<uint64_t> NewOffset =
-          checkedAdd(ShOffset, TrampTotal, "post-.text section offset");
+          checkedAddUint64(ShOffset, TrampTotal, "post-.text section offset");
       if (!NewOffset)
         return false;
       uint64_t NewOffsetValue = *NewOffset;
@@ -925,7 +914,7 @@ static bool adjustSectionHeaders(uint8_t *Elf, size_t ElfSize,
         uint64_t ShAddr;
         std::memcpy(&ShAddr, Sh + offsetof(Shdr, sh_addr), sizeof(ShAddr));
         std::optional<uint64_t> NewAddr =
-            checkedAdd(ShAddr, TrampTotal, "post-.text section address");
+            checkedAddUint64(ShAddr, TrampTotal, "post-.text section address");
         if (!NewAddr)
           return false;
         ShAddr = *NewAddr;
@@ -943,7 +932,7 @@ static bool adjustProgramHeaders(uint8_t *Elf, size_t ElfSize,
     return true;
 
   std::optional<uint64_t> TextEnd =
-      checkedAdd(TextOffset, TextSize, "program header .text end");
+      checkedAddUint64(TextOffset, TextSize, "program header .text end");
   if (!TextEnd)
     return false;
   uint64_t Phoff;
@@ -958,7 +947,7 @@ static bool adjustProgramHeaders(uint8_t *Elf, size_t ElfSize,
   for (uint16_t I = 0; I < Phnum; ++I) {
     uint64_t PhTableDelta = static_cast<uint64_t>(I) * Phentsize;
     std::optional<uint64_t> PhPos =
-        checkedAdd(Phoff, PhTableDelta, "program header entry offset");
+        checkedAddUint64(Phoff, PhTableDelta, "program header entry offset");
     if (!PhPos)
       return false;
     if (*PhPos > ElfSize || sizeof(Phdr) > ElfSize - *PhPos)
@@ -972,14 +961,14 @@ static bool adjustProgramHeaders(uint8_t *Elf, size_t ElfSize,
     std::memcpy(&PMemsz, Ph + offsetof(Phdr, p_memsz), sizeof(PMemsz));
 
     std::optional<uint64_t> PEnd =
-        checkedAdd(POffset, PFilesz, "program header file end");
+        checkedAddUint64(POffset, PFilesz, "program header file end");
     if (!PEnd)
       return false;
     if (POffset <= TextOffset && *PEnd >= *TextEnd) {
       std::optional<uint64_t> NewPFilesz =
-          checkedAdd(PFilesz, TrampTotal, "program header file size");
+          checkedAddUint64(PFilesz, TrampTotal, "program header file size");
       std::optional<uint64_t> NewPMemsz =
-          checkedAdd(PMemsz, TrampTotal, "program header memory size");
+          checkedAddUint64(PMemsz, TrampTotal, "program header memory size");
       if (!NewPFilesz || !NewPMemsz)
         return false;
       PFilesz = *NewPFilesz;
@@ -988,7 +977,7 @@ static bool adjustProgramHeaders(uint8_t *Elf, size_t ElfSize,
       std::memcpy(Ph + offsetof(Phdr, p_memsz), &PMemsz, sizeof(PMemsz));
     } else if (POffset > TextOffset) {
       std::optional<uint64_t> NewPOffset =
-          checkedAdd(POffset, TrampTotal, "post-.text program offset");
+          checkedAddUint64(POffset, TrampTotal, "post-.text program offset");
       if (!NewPOffset)
         return false;
       POffset = *NewPOffset;
@@ -996,7 +985,7 @@ static bool adjustProgramHeaders(uint8_t *Elf, size_t ElfSize,
       uint64_t PVaddr;
       std::memcpy(&PVaddr, Ph + offsetof(Phdr, p_vaddr), sizeof(PVaddr));
       std::optional<uint64_t> NewPVaddr =
-          checkedAdd(PVaddr, TrampTotal, "post-.text program vaddr");
+          checkedAddUint64(PVaddr, TrampTotal, "post-.text program vaddr");
       if (!NewPVaddr)
         return false;
       PVaddr = *NewPVaddr;
@@ -1004,7 +993,7 @@ static bool adjustProgramHeaders(uint8_t *Elf, size_t ElfSize,
       uint64_t PPaddr;
       std::memcpy(&PPaddr, Ph + offsetof(Phdr, p_paddr), sizeof(PPaddr));
       std::optional<uint64_t> NewPPaddr =
-          checkedAdd(PPaddr, TrampTotal, "post-.text program paddr");
+          checkedAddUint64(PPaddr, TrampTotal, "post-.text program paddr");
       if (!NewPPaddr)
         return false;
       PPaddr = *NewPPaddr;
@@ -1081,7 +1070,7 @@ static bool adjustSymbolValues(uint8_t *Elf, size_t ElfSize,
 
       uint64_t SymOffset = SymBytes - File.base();
       std::optional<uint64_t> Value =
-          checkedAdd(Sym.st_value, TrampTotal, "post-.text symbol value");
+          checkedAddUint64(Sym.st_value, TrampTotal, "post-.text symbol value");
       if (!Value)
         return false;
       uint64_t Value64 = *Value;
@@ -1122,8 +1111,8 @@ ElfView::growWithTrampolines(ArrayRef<Trampoline> Trampolines,
     return nullptr;
   }
 
-  std::optional<uint64_t> TextEnd =
-      checkedAdd(textOffset(), textSize(), "growWithTrampolines .text end");
+  std::optional<uint64_t> TextEnd = checkedAddUint64(
+      textOffset(), textSize(), "growWithTrampolines .text end");
   if (!TextEnd || *TextEnd > InputSize) {
     log() << "hotswap: error: growWithTrampolines: .text range exceeds input "
           << "ELF size.\n";

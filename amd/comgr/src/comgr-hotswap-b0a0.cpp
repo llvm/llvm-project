@@ -605,6 +605,22 @@ static void runScratchVerification(WritableMemoryBuffer &OutBuf,
           << "scratch conflicts\n";
 }
 
+static std::unique_ptr<WritableMemoryBuffer>
+copyOutputBuffer(const void *Data, size_t Size, StringRef CopyKind) {
+  std::unique_ptr<WritableMemoryBuffer> Result =
+      WritableMemoryBuffer::getNewUninitMemBuffer(Size);
+  if (!Result) {
+    log() << "hotswap: error: retargetCodeObject: "
+          << "getNewUninitMemBuffer(" << Size
+          << ") failed (out of memory) for the " << CopyKind
+          << " output copy.\n";
+    return nullptr;
+  }
+
+  std::memcpy(Result->getBufferStart(), Data, Size);
+  return Result;
+}
+
 // -- retargetCodeObject -------------------------------------------------------
 
 amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
@@ -618,14 +634,9 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
 
   if (!Options.RunB0A0Patches && !Options.RunEntryTrampolines) {
     std::unique_ptr<WritableMemoryBuffer> Result =
-        WritableMemoryBuffer::getNewUninitMemBuffer(ElfSize);
-    if (!Result) {
-      log() << "hotswap: error: retargetCodeObject: "
-            << "getNewUninitMemBuffer(" << ElfSize
-            << ") failed (out of memory) for the no-op output copy.\n";
+        copyOutputBuffer(ElfData, ElfSize, "no-op");
+    if (!Result)
       return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
-    }
-    std::memcpy(Result->getBufferStart(), ElfData, ElfSize);
     Out = std::move(Result);
     return AMD_COMGR_STATUS_SUCCESS;
   }
@@ -739,14 +750,9 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
                                              EntryFixups))
       return AMD_COMGR_STATUS_ERROR;
   } else {
-    Result = WritableMemoryBuffer::getNewUninitMemBuffer(ElfSize);
-    if (!Result) {
-      log() << "hotswap: error: retargetCodeObject: "
-            << "getNewUninitMemBuffer(" << ElfSize
-            << ") failed (out of memory) for the patched output copy.\n";
+    Result = copyOutputBuffer(Buf.data(), ElfSize, "patched");
+    if (!Result)
       return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
-    }
-    std::memcpy(Result->getBufferStart(), Buf.data(), ElfSize);
   }
 
   if (!ScratchPatches.empty())
