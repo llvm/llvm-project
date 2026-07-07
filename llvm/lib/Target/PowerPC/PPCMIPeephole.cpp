@@ -889,6 +889,8 @@ bool PPCMIPeephole::simplifyCode() {
             LLVM_DEBUG(dbgs() << "Changing splat immediate from " << SplatImm
                               << " to " << NewElem << " in instruction: ");
             LLVM_DEBUG(MI.dump());
+            if (!MRI->constrainRegClass(ShiftOp1, &PPC::VRRCRegClass))
+              llvm_unreachable("vrrc is subset of vsrc");
             addRegToUpdate(MI.getOperand(OpNo).getReg());
             addRegToUpdate(ShiftOp1);
             MI.getOperand(OpNo).setReg(ShiftOp1);
