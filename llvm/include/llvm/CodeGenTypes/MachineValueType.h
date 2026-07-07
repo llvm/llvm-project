@@ -278,11 +278,12 @@ namespace llvm {
       assert(BaseTy.isInteger() && "Not an integer or vector of integer MVT!");
       assert((BaseTy != MVT::LAST_INTEGER_VALUETYPE) &&
              "Widening of this Integer type not supported !");
-
-      MVT ResTy =
-          changeElementType(getIntegerVT(BaseTy.getScalarSizeInBits() * 2));
-      assert(ResTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
-             "Failed to widened to a valid MVT!");
+      MVT SclTy = getIntegerVT(BaseTy.getScalarSizeInBits() * 2);
+      assert((SclTy != MVT::INVALID_SIMPLE_VALUE_TYPE) &&
+             "Failed to widen to a valid scalar MVT!");
+      MVT ResTy = changeElementType(SclTy);
+      assert((ResTy != MVT::INVALID_SIMPLE_VALUE_TYPE) &&
+             "Failed to widen to a valid vector MVT!");
       return ResTy;
     }
 
