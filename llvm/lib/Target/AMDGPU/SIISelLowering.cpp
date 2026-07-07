@@ -1023,7 +1023,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::MUL, MVT::i1, Promote);
 
   if (Subtarget->hasBF16ConversionInsts()) {
-    setOperationAction(ISD::FP_ROUND, {MVT::bf16, MVT::v2bf16}, Custom);
+    setOperationAction({ISD::FP_ROUND, ISD::STRICT_FP_ROUND},
+                       {MVT::bf16, MVT::v2bf16}, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
@@ -8651,7 +8652,8 @@ SDValue SITargetLowering::splitFP_ROUNDVectorOp(SDValue Op,
 }
 
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
-  SDValue Src = Op.getOperand(0);
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Op.getValueType();
 
@@ -8662,8 +8664,15 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     return SrcVT == MVT::v2f32 ? Op : splitFP_ROUNDVectorOp(Op, DAG);
   }
 
-  if (SrcVT.getScalarType() != MVT::f64)
+  if (SrcVT.getScalarType() != MVT::f64) {
+    if (IsStrict && DstVT.getScalarType() == MVT::bf16) {
+      SDLoc DL(Op);
+      SDValue Result = DAG.getNode(ISD::FP_ROUND, DL, DstVT, Src,
+                                   DAG.getTargetConstant(0, DL, MVT::i32));
+      return DAG.getMergeValues({Result, Op.getOperand(0)}, DL);
+    }
     return Op;
+  }
 
   SDLoc DL(Op);
   if (DstVT == MVT::f16) {
@@ -8694,8 +8703,11 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   // hardware f32 -> bf16 instruction.
   EVT F32VT = SrcVT.changeElementType(*DAG.getContext(), MVT::f32);
   SDValue Rod = expandRoundInexactToOdd(F32VT, Src, DL, DAG);
-  return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Rod,
-                     DAG.getTargetConstant(0, DL, MVT::i32));
+  SDValue Result = DAG.getNode(ISD::FP_ROUND, DL, DstVT, Rod,
+                               DAG.getTargetConstant(0, DL, MVT::i32));
+  if (IsStrict)
+    return DAG.getMergeValues({Result, Op.getOperand(0)}, DL);
+  return Result;
 }
 
 SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
