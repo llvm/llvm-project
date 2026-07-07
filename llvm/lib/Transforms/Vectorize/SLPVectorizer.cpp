@@ -27731,7 +27731,13 @@ void BoUpSLP::computeMinimumValueSizes() {
   // modify.
   // Add reduction ops sizes, if any.
   if (UserIgnoreList &&
-      isa<IntegerType>(VectorizableTree.front()->Scalars.front()->getType())) {
+      isa<IntegerType>(VectorizableTree.front()->Scalars.front()->getType()) &&
+      all_of(*UserIgnoreList, [](Value *V) {
+        if (isa<PoisonValue>(V))
+          return true;
+        Type *Ty = V->getType();
+        return Ty->isSized() && isa<IntegerType>(Ty->getScalarType());
+      })) {
     // Convert vector_reduce_add(ZExt(<n x i1>)) to ZExtOrTrunc(ctpop(bitcast <n
     // x i1> to in)).
     if (all_of(*UserIgnoreList,

@@ -222,3 +222,49 @@ entry:
   store float %v4, ptr %p4, align 4
   ret float %old
 }
+
+define i32 @mixed_ext(ptr %p, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) {
+; CHECK-LABEL: define i32 @mixed_ext(
+; CHECK: ret i32
+entry:
+  %v0 = zext i8 %a0 to i32
+  %v1 = sext i8 %a1 to i32
+  %v2 = zext i8 %a2 to i32
+  %v3 = sext i8 %a3 to i32
+  %v4 = zext i8 %a4 to i32
+  %v5 = sext i8 %a5 to i32
+  %v6 = zext i8 %a6 to i32
+  %v7 = sext i8 %a7 to i32
+  store i32 %v0, ptr %p, align 4
+  %p1 = getelementptr inbounds i32, ptr %p, i64 1
+  store i32 %v1, ptr %p1, align 4
+  %p2 = getelementptr inbounds i32, ptr %p, i64 2
+  store i32 %v2, ptr %p2, align 4
+  %p3 = getelementptr inbounds i32, ptr %p, i64 3
+  %b0 = insertelement <4 x i32> poison, i32 %v3, i32 0
+  %b1 = insertelement <4 x i32> %b0, i32 %v4, i32 1
+  %b2 = insertelement <4 x i32> %b1, i32 %v5, i32 2
+  %b3 = insertelement <4 x i32> %b2, i32 %v6, i32 3
+  store <4 x i32> %b3, ptr %p3, align 4
+  %p7 = getelementptr inbounds i32, ptr %p, i64 7
+  store i32 %v7, ptr %p7, align 4
+  %l0 = load i32, ptr %p, align 4
+  %l1 = load i32, ptr %p1, align 4
+  %s1 = add i32 %l0, %l1
+  %l2 = load i32, ptr %p2, align 4
+  %s2 = add i32 %s1, %l2
+  %l3 = load i32, ptr %p3, align 4
+  %s3 = add i32 %s2, %l3
+  %l4p = getelementptr inbounds i32, ptr %p, i64 4
+  %l4 = load i32, ptr %l4p, align 4
+  %s4 = add i32 %s3, %l4
+  %l5p = getelementptr inbounds i32, ptr %p, i64 5
+  %l5 = load i32, ptr %l5p, align 4
+  %s5 = add i32 %s4, %l5
+  %l6p = getelementptr inbounds i32, ptr %p, i64 6
+  %l6 = load i32, ptr %l6p, align 4
+  %s6 = add i32 %s5, %l6
+  %l7 = load i32, ptr %p7, align 4
+  %s7 = add i32 %s6, %l7
+  ret i32 %s7
+}
