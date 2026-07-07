@@ -578,3 +578,31 @@ define dso_local i128 @load_atomic_i128_unaligned_seq_cst_const(ptr readonly %pt
     %r = load atomic i128, ptr %ptr seq_cst, align 1
     ret i128 %r
 }
+
+define dso_local fp128 @load_atomic_fp128_aligned_seq_cst(ptr %ptr) {
+; -O0-LABEL: load_atomic_fp128_aligned_seq_cst:
+; -O0:    ldar x8, [x0]
+; -O0:    ldp x9, x8, [x0]
+; -O0:    dmb ish
+;
+; -O1-LABEL: load_atomic_fp128_aligned_seq_cst:
+; -O1:    ldar xzr, [x0]
+; -O1:    ldp x8, x9, [x0]
+; -O1:    dmb ish
+    %r = load atomic fp128, ptr %ptr seq_cst, align 16
+    ret fp128 %r
+}
+
+define dso_local fp128 @load_atomic_fp128_aligned_seq_cst_const(ptr readonly %ptr) {
+; -O0-LABEL: load_atomic_fp128_aligned_seq_cst_const:
+; -O0:    ldar x8, [x0]
+; -O0:    ldp x9, x8, [x0]
+; -O0:    dmb ish
+;
+; -O1-LABEL: load_atomic_fp128_aligned_seq_cst_const:
+; -O1:    ldar xzr, [x0]
+; -O1:    ldp x8, x9, [x0]
+; -O1:    dmb ish
+    %r = load atomic fp128, ptr %ptr seq_cst, align 16
+    ret fp128 %r
+}
