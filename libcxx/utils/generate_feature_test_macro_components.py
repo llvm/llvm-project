@@ -1223,8 +1223,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_reference_from_temporary",
             "values": {"c++23": 202202},
-            "headers": ["type_traits"],
-            "unimplemented": True,
+            "headers": ["type_traits"]
         },
         {
             "name": "__cpp_lib_reference_wrapper",
