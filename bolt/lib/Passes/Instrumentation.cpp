@@ -14,6 +14,7 @@
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "bolt/Utils/NameResolver.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
@@ -674,7 +675,12 @@ Error Instrumentation::runOnFunctions(BinaryContext &BC) {
     if (HasInstrumentFuncsFilter) {
       bool Found = false;
       for (const StringRef Name : BF.getNames()) {
-        if (InstrumentFuncsSet.contains(Name)) {
+        // instrument-funcs-file could specify original mangled function names
+        // and BOLT will append a "/<id>" (or "/<file>/<id2>") suffix to a local
+        // function name. Match against restored (suffix-stripped) name too, so
+        // local functions specified in the file won't be silently skipped.
+        if (InstrumentFuncsSet.contains(Name) ||
+            InstrumentFuncsSet.contains(NameResolver::restore(Name))) {
           Found = true;
           break;
         }
