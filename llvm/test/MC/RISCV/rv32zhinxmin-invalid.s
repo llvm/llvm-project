@@ -6,7 +6,7 @@ fcvt.h.s fa0, fa1 # CHECK: :[[@LINE]]:1: error: instruction requires the followi
 
 # Invalid instructions
 fsw a5, 12(sp) # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
-fmv.x.h s0, s1 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
+fmv.x.h s0, s1 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
 # Invalid register names
 fcvt.h.s a100, a1 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction

@@ -26,6 +26,7 @@
 
 using namespace llvm;
 
+#define GET_CALLING_CONV_IMPL
 #include "R600GenCallingConv.inc"
 
 R600TargetLowering::R600TargetLowering(const TargetMachine &TM,

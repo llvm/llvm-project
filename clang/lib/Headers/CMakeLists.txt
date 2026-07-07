@@ -193,6 +193,8 @@ set(x86_files
   avx2intrin.h
   avx512bf16intrin.h
   avx512bitalgintrin.h
+  avx512bmmintrin.h
+  avx512bmmvlintrin.h
   avx512bwintrin.h
   avx512cdintrin.h
   avx512dqintrin.h
@@ -306,6 +308,9 @@ set(gpu_files
   nvptxintrin.h
   amdgpuintrin.h
   spirvintrin.h
+  __clang_gpu_builtin_vars.h
+  __clang_gpu_device_functions.h
+  __clang_gpu_intrinsics.h
   )
 
 set(windows_only_files
@@ -407,6 +412,13 @@ set(llvm_libc_wrapper_files
 
 set(zos_wrapper_files
   zos_wrappers/builtins.h
+  zos_wrappers/grp.h
+  zos_wrappers/locale.h
+  zos_wrappers/math.h
+  zos_wrappers/poll.h
+  zos_wrappers/string.h
+  zos_wrappers/time.h
+  zos_wrappers/variant.h
 )
 
 include(GetClangResourceDir)
@@ -445,7 +457,7 @@ endfunction(copy_header_to_output_dir)
 
 function(clang_generate_header td_option td_file out_file)
   clang_tablegen(${out_file} ${td_option}
-  -I ${CLANG_SOURCE_DIR}/include/clang/Basic/
+  EXTRA_INCLUDES ${CLANG_SOURCE_DIR}/include/clang/Basic/
   SOURCE ${CLANG_SOURCE_DIR}/include/clang/Basic/${td_file})
 
   copy_header_to_output_dir(${CMAKE_CURRENT_BINARY_DIR} ${out_file})

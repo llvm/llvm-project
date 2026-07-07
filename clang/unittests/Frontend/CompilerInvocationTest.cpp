@@ -212,12 +212,14 @@ TEST(CompilerInvocationTest, CopyOnWriteVisitPaths) {
 
   const HeaderSearchOptions *HSOpts = &B.getHeaderSearchOpts();
   const LangOptions *LangOpts = &B.getLangOpts();
-  B.visitMutPaths([](std::string &Path) {
+  B.visitMutPaths([](StringRef Path, std::string &NewPath) {
+    CowCompilerInvocation::VisitMutResult Res;
     if (Path == "mcp") {
-      Path = "pcm";
-      return true;
+      NewPath = "pcm";
+      Res.Replace = true;
+      Res.Terminate = true;
     }
-    return false;
+    return Res;
   });
 
   // Modifying a path copies and modifies only one instance of the invocation.
@@ -227,9 +229,8 @@ TEST(CompilerInvocationTest, CopyOnWriteVisitPaths) {
   EXPECT_EQ(HSOpts, &A.getHeaderSearchOpts());
   EXPECT_EQ(A.getHeaderSearchOpts().ModuleCachePath, "mcp");
 
-  // FIXME: Make this work: Unmodified options are not copied.
-  // EXPECT_EQ(LangOpts, &B.getLangOpts());
-  (void)LangOpts;
+  // Unmodified options are not copied.
+  EXPECT_EQ(LangOpts, &B.getLangOpts());
 }
 
 // Boolean option with a keypath that defaults to true.

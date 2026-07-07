@@ -2131,34 +2131,6 @@ private:
   /// the DeclaratorDecl base class.
   DeclarationNameLoc DNLoc;
 
-  /// Specify that this function declaration is actually a function
-  /// template specialization.
-  ///
-  /// \param C the ASTContext.
-  ///
-  /// \param Template the function template that this function template
-  /// specialization specializes.
-  ///
-  /// \param TemplateArgs the template arguments that produced this
-  /// function template specialization from the template.
-  ///
-  /// \param InsertPos If non-NULL, the position in the function template
-  /// specialization set where the function template specialization data will
-  /// be inserted.
-  ///
-  /// \param TSK the kind of template specialization this is.
-  ///
-  /// \param TemplateArgsAsWritten location info of template arguments.
-  ///
-  /// \param PointOfInstantiation point at which the function template
-  /// specialization was first instantiated.
-  void setFunctionTemplateSpecialization(
-      ASTContext &C, FunctionTemplateDecl *Template,
-      TemplateArgumentList *TemplateArgs, void *InsertPos,
-      TemplateSpecializationKind TSK,
-      const TemplateArgumentListInfo *TemplateArgsAsWritten,
-      SourceLocation PointOfInstantiation);
-
   /// Specify that this record is an instantiation of the
   /// member function FD.
   void setInstantiationOfMemberFunction(ASTContext &C, FunctionDecl *FD,
@@ -2253,6 +2225,8 @@ public:
       return FPT->getEllipsisLoc();
     return SourceLocation();
   }
+
+  SourceLocation getFunctionLocStart() const;
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
@@ -2599,6 +2573,7 @@ public:
 
   /// Determines whether this function is one of the replaceable
   /// global allocation functions:
+  /// \code
   ///    void *operator new(size_t);
   ///    void *operator new(size_t, const std::nothrow_t &) noexcept;
   ///    void *operator new[](size_t);
@@ -2609,6 +2584,7 @@ public:
   ///    void operator delete[](void *) noexcept;
   ///    void operator delete[](void *, std::size_t) noexcept;    [C++1y]
   ///    void operator delete[](void *, const std::nothrow_t &) noexcept;
+  /// \endcode
   /// These functions have special behavior under C++1y [expr.new]:
   ///    An implementation is allowed to omit a call to a replaceable global
   ///    allocation function. [...]
@@ -2632,6 +2608,7 @@ public:
   /// or is a function that may be treated as such during constant evaluation.
   /// This adds support for potentially templated type aware global allocation
   /// functions of the form:
+  /// \code
   ///    void *operator new(type-identity, std::size_t, std::align_val_t)
   ///    void *operator new(type-identity, std::size_t, std::align_val_t,
   ///                       const std::nothrow_t &) noexcept;
@@ -2646,6 +2623,7 @@ public:
   ///                         std::align_val_t) noexcept;
   ///    void operator delete[](type-identity, void*, std::size_t,
   ///                         std::align_val_t, const std::nothrow_t&) noexcept;
+  /// \endcode
   /// Where `type-identity` is a specialization of std::type_identity. If the
   /// declaration is a templated function, it may not include a parameter pack
   /// in the argument list, the type-identity parameter is required to be
@@ -3079,8 +3057,13 @@ public:
   const ASTTemplateArgumentListInfo*
   getTemplateSpecializationArgsAsWritten() const;
 
+  /// Returns the template parameter list for an explicit specialization.
+  const TemplateParameterList *getTemplateSpecializationParameters() const;
+
   /// Specify that this function declaration is actually a function
   /// template specialization.
+  ///
+  /// \param C the ASTContext.
   ///
   /// \param Template the function template that this function template
   /// specialization specializes.
@@ -3094,25 +3077,30 @@ public:
   ///
   /// \param TSK the kind of template specialization this is.
   ///
+  /// \param TemplateParams the template parameters if this is an explicit
+  /// specialization.
+  ///
   /// \param TemplateArgsAsWritten location info of template arguments.
   ///
   /// \param PointOfInstantiation point at which the function template
   /// specialization was first instantiated.
+  ///
+  /// \param AddSpecialization whether to add this specialization to the
+  /// template's specialization set.
+  ///
   void setFunctionTemplateSpecialization(
-      FunctionTemplateDecl *Template, TemplateArgumentList *TemplateArgs,
-      void *InsertPos,
-      TemplateSpecializationKind TSK = TSK_ImplicitInstantiation,
-      TemplateArgumentListInfo *TemplateArgsAsWritten = nullptr,
-      SourceLocation PointOfInstantiation = SourceLocation()) {
-    setFunctionTemplateSpecialization(getASTContext(), Template, TemplateArgs,
-                                      InsertPos, TSK, TemplateArgsAsWritten,
-                                      PointOfInstantiation);
-  }
+      ASTContext &C, FunctionTemplateDecl *Template,
+      TemplateArgumentList *TemplateArgs, void *InsertPos,
+      TemplateSpecializationKind TSK,
+      const TemplateParameterList *TemplateParams,
+      const TemplateArgumentListInfo *TemplateArgsAsWritten,
+      SourceLocation PointOfInstantiation, bool AddSpecialization);
 
   /// Specifies that this function declaration is actually a
   /// dependent function template specialization.
   void setDependentTemplateSpecialization(
       ASTContext &Context, const UnresolvedSetImpl &Templates,
+      const TemplateParameterList *TemplateParams,
       const TemplateArgumentListInfo *TemplateArgs);
 
   DependentFunctionTemplateSpecializationInfo *

@@ -107,9 +107,20 @@ else:
     if config.target_os == "Haiku":
         config.substitutions.append(("%librt ", base_lib + " -lroot "))
     else:
-        config.substitutions.append(
-            ("%librt ", "-lm -Wl,--start-group " + base_lib + " -lc -Wl,--end-group ")
+        linker_supports_start_group = get_required_attr(
+            config, "linker_supports_start_group"
         )
+        # Check if the linker supports --start-group and --end-group
+        # For nvptx64 target, it falls back to the default.
+        if linker_supports_start_group and "nvptx" not in config.target_arch:
+            config.substitutions.append(
+                (
+                    "%librt ",
+                    "-lm -Wl,--start-group " + base_lib + " -lc -Wl,--end-group ",
+                )
+            )
+        else:
+            config.substitutions.append(("%librt ", "-lm " + base_lib + " -lc "))
 
 builtins_test_crt = get_required_attr(config, "builtins_test_crt")
 if builtins_test_crt:

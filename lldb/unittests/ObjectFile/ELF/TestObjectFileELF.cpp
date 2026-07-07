@@ -17,8 +17,10 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
@@ -94,11 +96,11 @@ Symbols:
   SectionList *list = module_sp->GetSectionList();
   ASSERT_NE(nullptr, list);
 
-  auto bss_sp = list->FindSectionByName(ConstString(".bss"));
+  auto bss_sp = list->FindSectionByName(".bss");
   ASSERT_NE(nullptr, bss_sp);
-  auto data_sp = list->FindSectionByName(ConstString(".data"));
+  auto data_sp = list->FindSectionByName(".data");
   ASSERT_NE(nullptr, data_sp);
-  auto text_sp = list->FindSectionByName(ConstString(".text"));
+  auto text_sp = list->FindSectionByName(".text");
   ASSERT_NE(nullptr, text_sp);
 
   const Symbol *X = module_sp->FindFirstSymbolWithNameAndType(ConstString("X"),
@@ -190,6 +192,132 @@ TEST_F(ObjectFileELFTest, GetModuleSpecifications_OffsetSizeWithOffsetFile) {
   EXPECT_EQ(Spec.GetObjectSize(), 3600UL);
   EXPECT_EQ(FileSystem::Instance().GetByteSize(FileSpec(SO)), 4640UL);
 }
+
+// Verify an AMDGPU ELF header decodes to its exact GPU model.
+// An AMDGPU object with no decodable model resolves to the generic "unknown"
+// catch-all.
+TEST_F(ObjectFileELFTest, GPUArchitectureUnknownAMDGPUModel) {
+  // No model byte is parsed unless the OS ABI is AMDGPU HSA.
+  {
+    auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_NONE
+  Type:            ET_DYN
+  Machine:         EM_AMDGPU
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000000020
+    Size:            0x0000000000000040
+...
+)");
+    ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+    auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+    const ArchSpec &arch = module_sp->GetArchitecture();
+    ASSERT_TRUE(arch.IsValid());
+    EXPECT_EQ(ArchSpec::eCore_amd_gpu_unknown, arch.GetCore());
+  }
+
+  // HSA code-object v2 (ABIVersion 0) carries no model byte, so even a
+  // populated mach flag is ignored.
+  {
+    auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_AMDGPU_HSA
+  ABIVersion:      0x0
+  Type:            ET_DYN
+  Machine:         EM_AMDGPU
+  Flags:           [ EF_AMDGPU_MACH_AMDGCN_GFX942 ]
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000000020
+    Size:            0x0000000000000040
+...
+)");
+    ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+    auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+    const ArchSpec &arch = module_sp->GetArchitecture();
+    ASSERT_TRUE(arch.IsValid());
+    EXPECT_EQ(ArchSpec::eCore_amd_gpu_unknown, arch.GetCore());
+  }
+}
+
+namespace {
+struct AMDGPUModel {
+  uint32_t mach;    // EF_AMDGPU_MACH value.
+  const char *flag; // ELF flag name used in the YAML "Flags" field.
+  const char *name; // Canonical model name, e.g. "gfx942".
+};
+
+// Every AMD GPU model, taken from llvm's AMDGPU_MACH_LIST so the tests track
+// the authoritative list instead of duplicating it.
+const AMDGPUModel kAMDGPUModels[] = {
+#define AMDGPU_MODEL(NUM, ENUM, NAME) {NUM, #ENUM, NAME},
+    AMDGPU_MACH_LIST(AMDGPU_MODEL)
+#undef AMDGPU_MODEL
+};
+
+std::string AMDGPUModelName(const testing::TestParamInfo<AMDGPUModel> &info) {
+  // Test names allow only [A-Za-z0-9_]; the generic models contain dashes.
+  std::string name = info.param.name;
+  for (char &c : name)
+    if (c == '-')
+      c = '_';
+  return name;
+}
+} // namespace
+
+class ObjectFileELFAMDGPUTest
+    : public ObjectFileELFTest,
+      public ::testing::WithParamInterface<AMDGPUModel> {};
+
+// Every AMD GPU model must decode from an ELF header (built from YAML) to the
+// right arch and core. The model is the EF_AMDGPU_MACH value in e_flags.
+TEST_P(ObjectFileELFAMDGPUTest, DecodesAMDGPUModel) {
+  const AMDGPUModel &model = GetParam();
+  const char *yaml_template = R"(--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_AMDGPU_HSA
+  ABIVersion:      0x1
+  Type:            ET_DYN
+  Machine:         EM_AMDGPU
+  Flags:           [ {0} ]
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000000020
+    Size:            0x0000000000000040
+...
+)";
+  std::string yaml = llvm::formatv(yaml_template, model.flag).str();
+  auto ExpectedFile = TestFile::fromYaml(yaml);
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+  const ArchSpec &arch = module_sp->GetArchitecture();
+  ASSERT_TRUE(arch.IsValid());
+  EXPECT_NE(ArchSpec::eCore_amd_gpu_unknown, arch.GetCore());
+  EXPECT_EQ(model.name, arch.GetClangTargetCPU());
+  bool is_gcn = llvm::StringRef(model.name).starts_with("gfx");
+  EXPECT_EQ(is_gcn ? llvm::Triple::amdgcn : llvm::Triple::r600,
+            arch.GetTriple().getArch());
+  EXPECT_EQ(llvm::Triple::AMD, arch.GetTriple().getVendor());
+  EXPECT_EQ(llvm::Triple::AMDHSA, arch.GetTriple().getOS());
+}
+
+INSTANTIATE_TEST_SUITE_P(AMDGPUModels, ObjectFileELFAMDGPUTest,
+                         ::testing::ValuesIn(kAMDGPUModels), AMDGPUModelName);
 
 TEST_F(ObjectFileELFTest, GetSymtab_SynthesizedEntryPointSymbol) {
   auto ExpectedFile = TestFile::fromYaml(R"(

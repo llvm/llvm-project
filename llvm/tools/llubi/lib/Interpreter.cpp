@@ -130,6 +130,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
           AnyValue::getPoisonValue(Ctx, C->getType()));
       return UnsupportedConstantValues.back();
     }
+    if (isa<MetadataAsValue>(V))
+      return None;
     return CurrentFrame->ValueMap.at(V);
   }
 
@@ -763,12 +765,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     }
 
     MutableArrayRef<Byte> DstBytes = DstMO->getBytes().slice(DstOffset, Len);
-    if (SrcMO->getState() == MemoryObjectState::Dead) {
-      fill(DstBytes, Byte::poison());
-    } else {
-      ArrayRef<Byte> SrcBytes = SrcMO->getBytes().slice(SrcOffset, Len);
-      std::memmove(DstBytes.data(), SrcBytes.data(), Len * sizeof(Byte));
-    }
+    ArrayRef<Byte> SrcBytes = SrcMO->getBytes().slice(SrcOffset, Len);
+    std::memmove(DstBytes.data(), SrcBytes.data(), Len * sizeof(Byte));
     return AnyValue();
   }
 
@@ -809,6 +807,104 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
                         ? Byte::poison()
                         : Byte::concrete(Val.asInteger().getZExtValue());
     fill(DstMO->getBytes().slice(DstOffset, Len), FillByte);
+    return AnyValue();
+  }
+
+  static BooleanKind getMaskLane(const AnyValue &Mask, size_t I) {
+    return Mask.asAggregate()[I].asBoolean();
+  }
+
+  AnyValue callExperimentalVectorHistogramIntrinsic(CallBase &CB,
+                                                    ArrayRef<AnyValue> Args,
+                                                    Intrinsic::ID IID) {
+    struct LaneUpdate {
+      MemoryObject *MO;
+      uint64_t Offset;
+      uint64_t Count;
+      AnyValue Old;
+      AnyValue New;
+    };
+
+    const auto &Ptrs = Args[0].asAggregate();
+    const AnyValue &Update = Args[1];
+    const AnyValue &Mask = Args[2];
+    Type *ElemTy = CB.getArgOperand(1)->getType();
+    const uint64_t AccessSize = Ctx.getEffectiveTypeStoreSize(ElemTy);
+
+    SmallVector<LaneUpdate, 8> Lanes;
+    Lanes.reserve(Ptrs.size());
+    for (size_t I = 0, E = Ptrs.size(); I != E; ++I) {
+      switch (getMaskLane(Mask, I)) {
+      case BooleanKind::False:
+        continue;
+      case BooleanKind::Poison:
+        reportImmediateUB()
+            << "Poison mask lane in experimental vector histogram intrinsic.";
+        return AnyValue();
+      case BooleanKind::True:
+        break;
+      }
+
+      if (Ptrs[I].isPoison()) {
+        reportImmediateUB() << "Poison pointer lane in experimental vector "
+                               "histogram intrinsic.";
+        return AnyValue();
+      }
+
+      auto [MO, Offset] =
+          verifyMemAccess(Ptrs[I].asPointer(), AccessSize, Align(1),
+                          /*IsStore=*/true);
+      if (!MO)
+        return AnyValue();
+
+      Lanes.push_back({MO, Offset, 0, AnyValue(), AnyValue()});
+    }
+
+    for (LaneUpdate &Lane : Lanes) {
+      Lane.Count = count_if(Lanes, [&](const LaneUpdate &Other) {
+        return Other.MO == Lane.MO && Other.Offset == Lane.Offset;
+      });
+      Lane.Old = Ctx.load(*Lane.MO, Lane.Offset, ElemTy);
+    }
+
+    for (LaneUpdate &Lane : Lanes) {
+      const AnyValue &Old = Lane.Old;
+      AnyValue &New = Lane.New;
+
+      if (Old.isPoison() || Update.isPoison()) {
+        New = AnyValue::poison();
+      } else {
+        const APInt &OldInt = Old.asInteger();
+        const APInt &UpdateInt = Update.asInteger();
+
+        switch (IID) {
+        case Intrinsic::experimental_vector_histogram_add:
+          New = OldInt + UpdateInt * APInt(UpdateInt.getBitWidth(), Lane.Count,
+                                           /*isSigned=*/false,
+                                           /*implicitTrunc=*/true);
+          break;
+        case Intrinsic::experimental_vector_histogram_uadd_sat: {
+          APInt Acc = OldInt;
+          for (uint64_t I = 0; I != Lane.Count; ++I)
+            Acc = Acc.uadd_sat(UpdateInt);
+          New = Acc;
+          break;
+        }
+        case Intrinsic::experimental_vector_histogram_umax:
+          New = APIntOps::umax(OldInt, UpdateInt);
+          break;
+        case Intrinsic::experimental_vector_histogram_umin:
+          New = APIntOps::umin(OldInt, UpdateInt);
+          break;
+        default:
+          llvm_unreachable("Unexpected histogram intrinsic ID");
+        }
+      }
+    }
+
+    for (const LaneUpdate &Lane : Lanes)
+      Ctx.store(*Lane.MO, Lane.Offset, Lane.New, ElemTy);
+
     return AnyValue();
   }
 
@@ -1018,6 +1114,7 @@ public:
         MO->setState(MemoryObjectState::Alive);
         fill(MO->getBytes(), Byte::undef());
       } else {
+        fill(MO->getBytes(), Byte::poison());
         MO->setState(MemoryObjectState::Dead);
       }
       return AnyValue();
@@ -1627,6 +1724,158 @@ public:
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
       return callMemSetIntrinsic(CB, Args);
+    case Intrinsic::experimental_noalias_scope_decl:
+      // FIXME: Not implemented yet. Currently it acts as a noop.
+      return AnyValue();
+    case Intrinsic::experimental_cttz_elts: {
+      auto *IsZeroPoisonC = cast<ConstantInt>(CB.getArgOperand(1));
+      const bool IsZeroPoison = IsZeroPoisonC->isOne();
+
+      const auto &Vec = Args[0].asAggregate();
+      const unsigned RetBW = RetTy->getIntegerBitWidth();
+
+      if (!isUIntN(RetBW, Vec.size()))
+        return AnyValue::poison();
+
+      uint64_t Count = 0;
+      for (const AnyValue &V : Vec) {
+        if (V.isPoison())
+          return AnyValue::poison();
+        if (!V.asInteger().isZero())
+          break;
+        ++Count;
+      }
+
+      if (Count == Vec.size() && IsZeroPoison)
+        return AnyValue::poison();
+      return APInt(RetBW, Count);
+    }
+    case Intrinsic::experimental_get_vector_length: {
+      auto *VFC = cast<ConstantInt>(CB.getArgOperand(1));
+      auto *ScalableC = cast<ConstantInt>(CB.getArgOperand(2));
+
+      if (Args[0].isPoison())
+        return AnyValue::poison();
+
+      const APInt &Cnt = Args[0].asInteger();
+      const uint64_t VF = VFC->getZExtValue();
+      const bool Scalable = ScalableC->isOne();
+
+      const uint64_t MaxLanes = Ctx.getEVL(ElementCount::get(VF, Scalable));
+
+      uint64_t Res = 0;
+      if (!Cnt.isZero()) {
+        if (Cnt.getActiveBits() <= 64 && Cnt.getZExtValue() <= MaxLanes) {
+          Res = Cnt.getZExtValue();
+        } else {
+          APInt Max(Cnt.getBitWidth(), MaxLanes);
+          APInt NumIters =
+              APIntOps::RoundingUDiv(Cnt, Max, APInt::Rounding::UP);
+          uint64_t Lower =
+              APIntOps::RoundingUDiv(Cnt, NumIters, APInt::Rounding::UP)
+                  .getZExtValue();
+          uint64_t Range = MaxLanes - Lower + 1;
+          Res = Lower + Ctx.getRandomUInt64() % Range;
+        }
+      }
+
+      if (isIntN(32, Res))
+        return APInt(32, Res);
+      return AnyValue::poison();
+    }
+
+    case Intrinsic::experimental_vector_extract_last_active: {
+      const auto &Data = Args[0].asAggregate();
+      const AnyValue &Mask = Args[1];
+
+      for (size_t I = Data.size(); I != 0; --I) {
+        switch (getMaskLane(Mask, I - 1)) {
+        case BooleanKind::True:
+          return Data[I - 1];
+        case BooleanKind::False:
+          break;
+        case BooleanKind::Poison:
+          return AnyValue::poison();
+        }
+      }
+
+      return Args[2];
+    }
+
+    case Intrinsic::experimental_vector_compress: {
+      const auto &Val = Args[0].asAggregate();
+      const AnyValue &Mask = Args[1];
+      const auto &Passthru = Args[2].asAggregate();
+
+      std::vector<AnyValue> Res;
+      Res.reserve(Val.size());
+
+      for (size_t I = 0, E = Val.size(); I != E; ++I) {
+        switch (getMaskLane(Mask, I)) {
+        case BooleanKind::True:
+          Res.push_back(Val[I]);
+          break;
+        case BooleanKind::False:
+          break;
+        case BooleanKind::Poison:
+          return AnyValue::getPoisonValue(Ctx, RetTy);
+        }
+      }
+
+      for (size_t I = Res.size(), E = Val.size(); I != E; ++I)
+        Res.push_back(Passthru[I]);
+      return std::move(Res);
+    }
+
+    case Intrinsic::experimental_vector_match: {
+      const auto &Search = Args[0].asAggregate();
+      const auto &Needles = Args[1].asAggregate();
+      const auto &Mask = Args[2].asAggregate();
+
+      std::vector<AnyValue> Res;
+      Res.reserve(Search.size());
+
+      for (size_t I = 0, E = Search.size(); I != E; ++I) {
+        switch (Mask[I].asBoolean()) {
+        case BooleanKind::False:
+          Res.push_back(AnyValue::boolean(false));
+          continue;
+        case BooleanKind::Poison:
+          Res.push_back(AnyValue::poison());
+          continue;
+        case BooleanKind::True:
+          break;
+        }
+
+        if (Search[I].isPoison()) {
+          Res.push_back(AnyValue::poison());
+          continue;
+        }
+
+        bool Found = false;
+        bool SawPoison = false;
+        for (const AnyValue &Needle : Needles) {
+          if (Needle.isPoison()) {
+            SawPoison = true;
+            break;
+          }
+          if (Search[I].asInteger() == Needle.asInteger())
+            Found = true;
+        }
+
+        if (SawPoison)
+          Res.push_back(AnyValue::poison());
+        else
+          Res.push_back(AnyValue::boolean(Found));
+      }
+
+      return std::move(Res);
+    }
+    case Intrinsic::experimental_vector_histogram_add:
+    case Intrinsic::experimental_vector_histogram_uadd_sat:
+    case Intrinsic::experimental_vector_histogram_umax:
+    case Intrinsic::experimental_vector_histogram_umin:
+      return callExperimentalVectorHistogramIntrinsic(CB, Args, IID);
     default:
       Handler.onUnrecognizedInstruction(CB);
       setFailed();
@@ -2577,6 +2826,7 @@ public:
 
         Instruction &I = *Top.PC;
         visit(&I);
+        Ctx.resetNoncacheableConstantBuffer();
         if (hasProgramExited())
           break;
 

@@ -1325,8 +1325,10 @@ OverloadKind Sema::CheckOverload(Scope *S, FunctionDecl *New,
       !New->getType()->isDependentType()) {
     LookupResult TemplateSpecResult(LookupResult::Temporary, Old);
     TemplateSpecResult.addAllDecls(Old);
-    if (CheckFunctionTemplateSpecialization(New, nullptr, TemplateSpecResult,
-                                            /*QualifiedFriend*/true)) {
+    if (CheckFunctionTemplateSpecialization(New, /*TemplateParams=*/nullptr,
+                                            /*ExplicitTemplateArgs=*/nullptr,
+                                            TemplateSpecResult,
+                                            /*QualifiedFriend*/ true)) {
       New->setInvalidDecl();
       return OverloadKind::Overload;
     }
@@ -6270,6 +6272,14 @@ ExprResult Sema::PerformImplicitObjectArgumentInitialization(
     CXXMethodDecl *Method) {
   QualType FromRecordType, DestType;
   QualType ImplicitParamRecordType = Method->getFunctionObjectParameterType();
+
+  if (getLangOpts().HLSL &&
+      From->getType().getAddressSpace() == LangAS::hlsl_constant) {
+    QualType CastType = From->getType().getLocalUnqualifiedType().withConst();
+    From = ImplicitCastExpr::Create(Context, CastType, CK_LValueToRValue, From,
+                                    /*BasePath=*/nullptr, VK_PRValue,
+                                    FPOptionsOverride());
+  }
 
   Expr::Classification FromClassification;
   if (const PointerType *PT = From->getType()->getAs<PointerType>()) {

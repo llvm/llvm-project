@@ -310,19 +310,19 @@ bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
               // If a segment was eliminated for the in-memory image,
               // don't map it into lldb's target section load list.
               if (info.segments[i].vmsize == 0) {
-                LLDB_LOGF(log, "%s: Omitting zero-size segment %s",
-                          info.file_spec.GetFilename().AsCString(""),
-                          info.segments[i].name.AsCString(""));
+                LLDB_LOG(log, "{0}: Omitting zero-size segment {1}",
+                         info.file_spec.GetFilename(),
+                         info.segments[i].name.AsCString(""));
                 continue;
               }
 
               if (info.segments[i].vmsize != section_sp->GetByteSize())
-                LLDB_LOGF(log,
-                          "%s: In-memory segment size for %s is 0x%" PRIx64
-                          " but file segment size is 0x%" PRIx64,
-                          info.file_spec.GetFilename().AsCString(""),
-                          info.segments[i].name.AsCString(""),
-                          info.segments[i].vmsize, section_sp->GetByteSize());
+                LLDB_LOG(log,
+                         "{0}: In-memory segment size for {1} is {2:x}"
+                         " but file segment size is {3:x}",
+                         info.file_spec.GetFilename(),
+                         info.segments[i].name.AsCString(""),
+                         info.segments[i].vmsize, section_sp->GetByteSize());
 
               changed = m_process->GetTarget().SetSectionLoadAddress(
                   section_sp, new_section_load_addr, warn_multiple);
@@ -763,13 +763,13 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
       if (objfile) {
         SectionList *sections = objfile->GetSectionList();
         if (sections) {
-          ConstString commpage_dbstr("__commpage");
+          llvm::StringRef commpage_sect_name("__commpage");
           Section *commpage_section =
-              sections->FindSectionByName(commpage_dbstr).get();
+              sections->FindSectionByName(commpage_sect_name).get();
           if (commpage_section) {
             ModuleSpec module_spec(objfile->GetFileSpec(),
                                    image_info.GetArchitecture());
-            module_spec.GetObjectName() = commpage_dbstr;
+            module_spec.GetObjectName() = ConstString(commpage_sect_name);
             ModuleSP commpage_image_module_sp(
                 target_images.FindFirstModule(module_spec));
             if (!commpage_image_module_sp) {

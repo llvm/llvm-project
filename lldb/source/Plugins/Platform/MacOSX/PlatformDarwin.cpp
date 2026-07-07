@@ -209,12 +209,11 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
 
   llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs;
   const FileSpec original_module_spec = module_spec;
-  while (module_spec.GetFilename()) {
+  while (!module_spec.GetFilename().empty()) {
     ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
         target.GetDebugger()
             .GetScriptInterpreter()
-            ->GetSanitizedScriptingModuleName(
-                module_spec.GetFilename().GetStringRef());
+            ->GetSanitizedScriptingModuleName(module_spec.GetFilename());
 
     StreamString path_string;
     StreamString original_path_string;
@@ -222,11 +221,10 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     // .dSYM/Contents/Resources/DWARF/<basename> let us go to
     // .dSYM/Contents/Resources/Python/<basename>.py and see if the
     // file exists
-    path_string.Format("{0}/../Python/{1}.py",
-                       symfile_spec.GetDirectory().GetStringRef(),
+    path_string.Format("{0}/../Python/{1}.py", symfile_spec.GetDirectory(),
                        sanitized_name.GetSanitizedName());
     original_path_string.Format("{0}/../Python/{1}.py",
-                                symfile_spec.GetDirectory().GetStringRef(),
+                                symfile_spec.GetDirectory(),
                                 sanitized_name.GetOriginalName());
 
     FileSpec script_fspec(path_string.GetString());
@@ -973,7 +971,7 @@ StructuredData::ArraySP
 PlatformDarwin::ExtractCrashInfoAnnotations(Process &process) {
   Log *log = GetLog(LLDBLog::Process);
 
-  ConstString section_name("__crash_info");
+  llvm::StringRef section_name("__crash_info");
   Target &target = process.GetTarget();
   StructuredData::ArraySP array_sp = std::make_shared<StructuredData::Array>();
 
@@ -1465,7 +1463,7 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
         llvm::formatv("No symbol file available for module '{0}'",
-                      module.GetFileSpec().GetFilename().AsCString("")));
+                      module.GetFileSpec().GetFilename()));
 
   if (sym_file->GetNumCompileUnits() == 0)
     return llvm::createStringError(
