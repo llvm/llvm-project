@@ -4291,16 +4291,16 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
     return mlir::emitSilenceableFailure(target->getLoc())
            << "only elementwise flattening is supported";
 
-  // If rank <= 1, do nothing
-  if (target.getNumLoops() <= 1) {
-    results.push_back(target);
-    return DiagnosedSilenceableFailure::success();
-  }
-
-  // Bail out on linalgs with broadcasting semantics
   if (!llvm::all_of(target.getIndexingMapsArray(), [](AffineMap m) {
         return m.isProjectedPermutation(/*allowZeroInResults=*/false);
       })) {
+    results.push_back(target);
+    return mlir::emitSilenceableFailure(target->getLoc())
+           << "operators with broadcasting semantics are not supported";
+  }
+
+  // If rank <= 1, do nothing
+  if (target.getNumLoops() <= 1) {
     results.push_back(target);
     return DiagnosedSilenceableFailure::success();
   }
