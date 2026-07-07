@@ -20,7 +20,7 @@ def note_constexpr_invalid_cast_ptrtoint : Note<
   "%select{reinterpret_cast||"
   "%select{this conversion|cast that performs the conversions of a reinterpret_cast}1|"
   "}0 is not allowed in a constant expression">;
-def note_constexpr_has_lvalue : Note<"constant expression contains l-value">;
+def note_constexpr_has_lvalue : Note<"converting the address of an object to an integer is not allowed">;
 def note_constexpr_invalid_void_star_cast : Note<
   "cast from %0 is not allowed in a constant expression "
   "%select{in C++ standards before C++2c|because the pointed object "

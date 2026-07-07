@@ -6708,7 +6708,6 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
   SmallVector<PartialDiagnosticAt, 8> Notes;
   Expr::EvalResult Eval;
   Eval.Diag = &Notes;
-  Eval.IsConvertedExpr = true;
 
   assert(CCE != CCEKind::TempArgStrict && "unnexpected CCE Kind");
 

@@ -2442,8 +2442,7 @@ static bool CheckLiteralType(EvalInfo &Info, const Expr *E,
 static void CheckMicrosoftRelaxations(EvalInfo &Info,
                                       const SourceLocation &Loc) {
   auto *Diag = Info.EvalStatus.Diag;
-  if (Diag && Diag->empty() && Info.EvalStatus.SeenCastOrNull &&
-      !Info.EvalStatus.IsConvertedExpr)
+  if (Diag && Diag->empty() && Info.EvalStatus.SeenCastOrNull)
     Info.report(Loc, diag::warn_relaxed_constant_fold);
 }
 
