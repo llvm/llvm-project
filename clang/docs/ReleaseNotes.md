@@ -299,6 +299,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Clang now recognizes the C23 `H`, `D`, and `DD` length modifiers in
   format strings and diagnoses their use because Clang does not yet support
   the corresponding decimal floating-point types, `_Decimal32`, `_Decimal64`, and `_Decimal128`. (#GH116962)
+- Fixed a bug with deducing qualified inferred types with `auto`. `auto` can now
+  be combined with `restrict` or `_Atomic` to form a properly-qualified type. (#GH207466)
+
 
 ### Objective-C Language Changes
 
