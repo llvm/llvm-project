@@ -202,7 +202,8 @@ void RTDEF(CUFMemFree)(
     return;
   if (type == kMemTypeDevice || type == kMemTypeManaged ||
       type == kMemTypeUnified) {
-    CUDA_REPORT_IF_ERROR_LOC(cudaFree(ptr), sourceFile, sourceLine);
+    CUDA_REPORT_IF_ERROR_ALLOW_TEARDOWN_LOC(
+        cudaFree(ptr), sourceFile, sourceLine);
   } else if (type == kMemTypePinned) {
     CUDA_REPORT_IF_ERROR_LOC(cudaFreeHost(ptr), sourceFile, sourceLine);
   } else {

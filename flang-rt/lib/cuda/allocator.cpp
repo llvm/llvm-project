@@ -198,9 +198,9 @@ void CUFFreeDevice(void *p) {
   if (pos >= 0) {
     cudaStream_t stream = deviceAllocations[pos].stream;
     eraseAllocation(pos);
-    CUDA_REPORT_IF_ERROR(cudaFreeAsync(p, stream));
+    CUDA_REPORT_IF_ERROR_ALLOW_TEARDOWN(cudaFreeAsync(p, stream));
   } else {
-    CUDA_REPORT_IF_ERROR(cudaFree(p));
+    CUDA_REPORT_IF_ERROR_ALLOW_TEARDOWN(cudaFree(p));
   }
 }
 
@@ -213,7 +213,9 @@ void *CUFAllocManaged(std::size_t sizeInBytes,
   return reinterpret_cast<void *>(p);
 }
 
-void CUFFreeManaged(void *p) { CUDA_REPORT_IF_ERROR(cudaFree(p)); }
+void CUFFreeManaged(void *p) {
+  CUDA_REPORT_IF_ERROR_ALLOW_TEARDOWN(cudaFree(p));
+}
 
 void *CUFAllocUnified(std::size_t sizeInBytes,
     [[maybe_unused]] std::size_t alignment,

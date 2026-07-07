@@ -3797,7 +3797,8 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
         if (callOp.getCallee() &&
             (*callOp.getCallee()).starts_with("__tgt_acc_get_deviceptr")) {
           // The device pointer descriptor is allocated in managed memory, so
-          // new storage must be allocated the same way.
+          // new storage must be allocated the same way. A CUFAllocDescriptor
+          // source is handled below if the load is used by a GPU launch.
           auto mod = load->getParentOfType<mlir::ModuleOp>();
           newBoxStorage =
               genCUFAllocDescriptor(loc, rewriter, mod, boxTy, lowerTy());
