@@ -639,6 +639,7 @@ constexpr FeatureBitset ImpliedFeaturesAMX_FP8 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_MOVRS = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_AVX512 =
     FeatureAMX_TILE | FeatureAVX10_2;
+constexpr FeatureBitset ImpliedFeaturesACEV1 = FeatureAMX_AVX512;
 constexpr FeatureBitset ImpliedFeaturesHRESET = {};
 
 constexpr FeatureBitset ImpliedFeaturesPREFETCHI = {};
