@@ -48,9 +48,6 @@ DeclContext *Sema::computeDeclContext(QualType T) {
 
 DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
                                       bool EnteringContext) {
-  if (!SS.isSet() || SS.isInvalid())
-    return nullptr;
-
   NestedNameSpecifier NNS = SS.getScopeRep();
   if (NNS.isDependent()) {
     // If this nested-name-specifier refers to the current
@@ -143,7 +140,7 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
     return NNS.getAsMicrosoftSuper();
 
   case NestedNameSpecifier::Kind::Null:
-    llvm_unreachable("unexpected null nested name specifier");
+    return nullptr;
   }
 
   llvm_unreachable("Invalid NestedNameSpecifier::Kind!");
