@@ -1,4 +1,22 @@
+import groovy.transform.Field
 import hudson.model.Result
+
+// Load aocc-devops shared library for PipelineUtils.
+String devopsLibPin = 'ffe541d'
+Object devopsLib = library(
+    changelog: false,
+    identifier: 'aoccDevopsUtils@' + devopsLibPin,
+    retriever: modernSCM(
+        scm: [
+            $class: 'GitSCMSource',
+            remote: 'git@github.amd.com:cpu-compilers/aocc-devops.git',
+            credentialsId: 'Jenkins-AOCC-nonER-SSH'
+        ],
+        libraryPath: 'groovy_lib'
+    )
+)
+@Field Object putils
+putils = devopsLib.com.aocc.pipeline.PipelineUtils.new(this)
 
 /* groovylint-disable-next-line CompileStatic */
 String actualTarget = env.CHANGE_TARGET ?: env.BRANCH_NAME
@@ -498,7 +516,7 @@ try {
                     assert gitVars.GIT_COMMIT
                     // Record the llvm-project commit in the build description
                     // once the clone completes.
-                    addCommitToBuildDescr(gitVars.GIT_URL, gitVars.GIT_COMMIT, llvmProj)
+                    putils.addCommitToBuildDescr(gitVars.GIT_URL, gitVars.GIT_COMMIT, llvmProj)
                     if (isPrBranch) {
                         prLatestCommit = gitVars.GIT_COMMIT
                         withEnv([gitPathEnv]) {
@@ -671,7 +689,7 @@ try {
                         currentBuild.result = successResultStr
                     }
                 } finally {
-                    String cmakeBuildDir = findBuildDir()
+                    String cmakeBuildDir = putils.findBuildDir()
                     def compilerZips // groovylint-disable-line NoDef,VariableTypeRequired
                     if (cmakeBuildDir) {
                         compilerZips = findFiles(
@@ -724,57 +742,57 @@ try {
             // run concurrently instead of the suites blocking the SPEC stages.
             Map downstreamParallel = [:]
             if (compilerTar) {
-            downstreamParallel['TestSuites'] = {
-            stage('downstream-tasks') {
-                Map allTasks = [
-                    failFast: false,
-                ]
-                String fujitsuSuiteName = 'Fujitsu'
-                String gfortranSuiteName = 'GFortran'
-                List<String> downstreamSuites = [
-                    gfortranSuiteName, 'NAGLLVM', fujitsuSuiteName, 'Polyhedron'
-                ]
-                for (suite in downstreamSuites) {
-                    String suiteName = suite
-                    List suiteParams = [
-                        string(
-                            name: 'CUT',
-                            value: env.BUILD_URL + 'artifact/' + compilerTar
-                        ),
-                        string(name: 'BRANCH_CONTEXT', value: actualTarget),
-                        string(name: 'CHANGE_ID', value: env.CHANGE_ID ?: ''),
-                        string(name: gitCommitEnv, value: gitVars.GIT_COMMIT ?: '')
-                    ]
-                    if (suite == gfortranSuiteName) {
-                        String sBr = mainBranchName
-                        if (actualTarget == 'aocc_llvm21') {
-                            /*
-                             * Thirumalai notes
-                             * "21.x had some issues with tests.py (LLVM-LIT), so I switched to 22.x,
-                             * and there were no issues there with LIT."
-                             */
-                            sBr = 'release/22.x'
+                downstreamParallel['TestSuites'] = {
+                    stage('downstream-tasks') {
+                        Map allTasks = [
+                            failFast: false,
+                        ]
+                        String fujitsuSuiteName = 'Fujitsu'
+                        String gfortranSuiteName = 'GFortran'
+                        List<String> downstreamSuites = [
+                            gfortranSuiteName, 'NAGLLVM', fujitsuSuiteName, 'Polyhedron'
+                        ]
+                        for (suite in downstreamSuites) {
+                            String suiteName = suite
+                            List suiteParams = [
+                                string(
+                                    name: 'CUT',
+                                    value: env.BUILD_URL + 'artifact/' + compilerTar
+                                ),
+                                string(name: 'BRANCH_CONTEXT', value: actualTarget),
+                                string(name: 'CHANGE_ID', value: env.CHANGE_ID ?: ''),
+                                string(name: gitCommitEnv, value: gitVars.GIT_COMMIT ?: '')
+                            ]
+                            if (suite == gfortranSuiteName) {
+                                String sBr = mainBranchName
+                                if (actualTarget == 'aocc_llvm21') {
+                                    /*
+                                     * Thirumalai notes
+                                     * "21.x had some issues with tests.py (LLVM-LIT), so I switched to 22.x,
+                                     * and there were no issues there with LIT."
+                                     */
+                                    sBr = 'release/22.x'
+                                }
+                                suiteParams += string(
+                                    name: 'SUITE_BRANCH',
+                                    value: sBr
+                                )
+                            }
+                            allTasks[suiteName] = {
+                                stage('downstream-suite-' + suiteName) {
+                                    def result = build( // groovylint-disable-line NoDef,VariableTypeRequired
+                                        propagate: false,
+                                        wait: true,
+                                        job: 'AOCC-Workloads/TestSuites/' + suiteName,
+                                        parameters: suiteParams
+                                    )
+                                    putils.handleBuildResult(result, suiteName != fujitsuSuiteName)
+                                }
+                            }
                         }
-                        suiteParams += string(
-                            name: 'SUITE_BRANCH',
-                            value: sBr
-                        )
+                        parallel(allTasks)
                     }
-                    allTasks[suiteName] = {
-                        stage('downstream-suite-' + suiteName) {
-                            def result = build( // groovylint-disable-line NoDef,VariableTypeRequired
-                                propagate: false,
-                                wait: true,
-                                job: 'AOCC-Workloads/TestSuites/' + suiteName,
-                                parameters: suiteParams
-                            )
-                            handleBuildResult(result, suiteName != fujitsuSuiteName)
-                        }
-                    }
-                }
-                parallel(allTasks)
-            }
-            } // end downstreamParallel['TestSuites'] closure
+                } // end downstreamParallel['TestSuites'] closure
             } // end if (compilerTar) for non-SPEC downstream test suites
 
             // ================================================================
@@ -785,75 +803,75 @@ try {
             Boolean canRunSpec = (compilerTar != null) || params.USE_PREBUILT_CUT || params.FORCE_SPEC
             if (canRunSpec) {
                 downstreamParallel['SPEC'] = {
-                Boolean stage1Passed = true
-                Boolean stageBuildPassed = false
-                String prebuiltExesEnvPrefix = 'STAGE_BUILD_'
-                String stage1Copies = (params.STAGE1_SPEC_COPIES?.trim() ?: '1')
-                String stage2Copies = (params.STAGE2_SPEC_COPIES?.trim() ?: '512')
-                String stage1Validation = (params.STAGE1_SPEC_VALIDATION?.trim() ?: 'functional')
-                String stage2Validation = (params.STAGE2_SPEC_VALIDATION?.trim() ?: 'performance')
-                String resolvedGitCommit = (gitVars?.GIT_COMMIT ?: '')
-                String effectiveZnver = (params.ZNVER?.trim() ?: '5_512c')
+                    Boolean stage1Passed = true
+                    Boolean stageBuildPassed = false
+                    String prebuiltExesEnvPrefix = 'STAGE_BUILD_'
+                    String stage1Copies = (params.STAGE1_SPEC_COPIES?.trim() ?: '1')
+                    String stage2Copies = (params.STAGE2_SPEC_COPIES?.trim() ?: '512')
+                    String stage1Validation = (params.STAGE1_SPEC_VALIDATION?.trim() ?: 'functional')
+                    String stage2Validation = (params.STAGE2_SPEC_VALIDATION?.trim() ?: 'performance')
+                    String resolvedGitCommit = (gitVars?.GIT_COMMIT ?: '')
+                    String effectiveZnver = (params.ZNVER?.trim() ?: '5_512c')
 
-                stage('Stage Build: Parallel SPEC Build') {
-                    if (!params.ENABLE_STAGE_BUILD) {
-                        echo 'Skipping Stage Build: ENABLE_STAGE_BUILD=false (Stage 1/2 will build+run)'
-                        return
-                    }
-                    if (!params.ENABLE_CPU2017 && !params.ENABLE_CPU2026) {
-                        echo 'Skipping Stage Build: both ENABLE_CPU2017 and ENABLE_CPU2026 are false'
-                        return
-                    }
-                    echo 'Running Stage Build (CPU2017 + CPU2026 build-only pass; csg_specslurm --build_only)'
-                    stageBuildPassed = runParallelSpecTesting(
-                        'Stage Build', prebuiltExesEnvPrefix, '1', 'functional',
-                        resolvedGitCommit, effectiveZnver, compilerTar,
-                        actualTarget, 'build', prebuiltExesEnvPrefix
-                    )
-                    echo "Stage Build result: ${stageBuildPassed ? 'PASSED' : 'FAILED'}"
-                    ['CPU2017_BASE', 'CPU2017_LATEST', 'CPU2017_SINGLE',
-                     'CPU2026_BASE', 'CPU2026_LATEST', 'CPU2026_SINGLE'].each { suffix ->
-                        String key = "${prebuiltExesEnvPrefix}${suffix}_EXES_URL"
-                        if (env."${key}") {
-                            echo "  ${key}=${env."${key}"}"
+                    stage('Stage Build: Parallel SPEC Build') {
+                        if (!params.ENABLE_STAGE_BUILD) {
+                            echo 'Skipping Stage Build: ENABLE_STAGE_BUILD=false (Stage 1/2 will build+run)'
+                            return
+                        }
+                        if (!params.ENABLE_CPU2017 && !params.ENABLE_CPU2026) {
+                            echo 'Skipping Stage Build: both ENABLE_CPU2017 and ENABLE_CPU2026 are false'
+                            return
+                        }
+                        echo 'Running Stage Build (CPU2017 + CPU2026 build-only pass; csg_specslurm --build_only)'
+                        stageBuildPassed = runParallelSpecTesting(
+                            'Stage Build', prebuiltExesEnvPrefix, '1', 'functional',
+                            resolvedGitCommit, effectiveZnver, compilerTar,
+                            actualTarget, 'build', prebuiltExesEnvPrefix
+                        )
+                        echo "Stage Build result: ${stageBuildPassed ? 'PASSED' : 'FAILED'}"
+                        ['CPU2017_BASE', 'CPU2017_LATEST', 'CPU2017_SINGLE',
+                         'CPU2026_BASE', 'CPU2026_LATEST', 'CPU2026_SINGLE'].each { suffix ->
+                            String key = "${prebuiltExesEnvPrefix}${suffix}_EXES_URL"
+                            if (env."${key}") {
+                                echo "  ${key}=${env."${key}"}"
+                            }
                         }
                     }
-                }
 
-                Boolean useStageBuildExes = params.ENABLE_STAGE_BUILD && stageBuildPassed
-                String runStagesMode = useStageBuildExes ? 'run' : 'both'
-                String runStagesPrefix = useStageBuildExes ? prebuiltExesEnvPrefix : ''
-                if (params.ENABLE_STAGE_BUILD && !stageBuildPassed) {
-                    echo 'WARNING: Stage Build did not pass; Stage 1 / Stage 2 will fall back to legacy build+run.'
-                }
-
-                stage('Stage 1: Parallel SPEC Testing (Basic Validation)') {
-                    echo "Running Stage 1 with SPEC_COPIES=${stage1Copies}, SPEC_VALIDATION=${stage1Validation}, SPEC_BUILD_OR_RUN=${runStagesMode}"
-                    stage1Passed = runParallelSpecTesting(
-                        'Stage 1', '', stage1Copies, stage1Validation,
-                        resolvedGitCommit, effectiveZnver, compilerTar,
-                        actualTarget, runStagesMode, runStagesPrefix
-                    )
-                    echo "Stage 1 result: ${stage1Passed ? 'PASSED' : 'FAILED'}"
-                }
-
-                stage('Stage 2: Parallel SPEC Testing (Full Validation)') {
-                    if (!params.ENABLE_STAGE2) {
-                        echo 'Skipping Stage 2: ENABLE_STAGE2=false'
-                        return
+                    Boolean useStageBuildExes = params.ENABLE_STAGE_BUILD && stageBuildPassed
+                    String runStagesMode = useStageBuildExes ? 'run' : 'both'
+                    String runStagesPrefix = useStageBuildExes ? prebuiltExesEnvPrefix : ''
+                    if (params.ENABLE_STAGE_BUILD && !stageBuildPassed) {
+                        echo 'WARNING: Stage Build did not pass; Stage 1 / Stage 2 will fall back to legacy build+run.'
                     }
-                    if (!stage1Passed) {
-                        echo 'Skipping Stage 2: Stage 1 had failures (gated on Stage 1 passing)'
-                        return
+
+                    stage('Stage 1: Parallel SPEC Testing (Basic Validation)') {
+                        echo "Running Stage 1 with SPEC_COPIES=${stage1Copies}, SPEC_VALIDATION=${stage1Validation}, SPEC_BUILD_OR_RUN=${runStagesMode}"
+                        stage1Passed = runParallelSpecTesting(
+                            'Stage 1', '', stage1Copies, stage1Validation,
+                            resolvedGitCommit, effectiveZnver, compilerTar,
+                            actualTarget, runStagesMode, runStagesPrefix
+                        )
+                        echo "Stage 1 result: ${stage1Passed ? 'PASSED' : 'FAILED'}"
                     }
-                    echo "Running Stage 2 with SPEC_COPIES=${stage2Copies}, SPEC_VALIDATION=${stage2Validation}, SPEC_BUILD_OR_RUN=${runStagesMode}"
-                    Boolean stage2Passed = runParallelSpecTesting(
-                        'Stage 2', 'STAGE2_', stage2Copies, stage2Validation,
-                        resolvedGitCommit, effectiveZnver, compilerTar,
-                        actualTarget, runStagesMode, runStagesPrefix
-                    )
-                    echo "Stage 2 result: ${stage2Passed ? 'PASSED' : 'FAILED'}"
-                }
+
+                    stage('Stage 2: Parallel SPEC Testing (Full Validation)') {
+                        if (!params.ENABLE_STAGE2) {
+                            echo 'Skipping Stage 2: ENABLE_STAGE2=false'
+                            return
+                        }
+                        if (!stage1Passed) {
+                            echo 'Skipping Stage 2: Stage 1 had failures (gated on Stage 1 passing)'
+                            return
+                        }
+                        echo "Running Stage 2 with SPEC_COPIES=${stage2Copies}, SPEC_VALIDATION=${stage2Validation}, SPEC_BUILD_OR_RUN=${runStagesMode}"
+                        Boolean stage2Passed = runParallelSpecTesting(
+                            'Stage 2', 'STAGE2_', stage2Copies, stage2Validation,
+                            resolvedGitCommit, effectiveZnver, compilerTar,
+                            actualTarget, runStagesMode, runStagesPrefix
+                        )
+                        echo "Stage 2 result: ${stage2Passed ? 'PASSED' : 'FAILED'}"
+                    }
                 } // end downstreamParallel['SPEC'] closure
             } else {
                 echo 'Skipping Parallel SPEC Testing: no compiler tar and USE_PREBUILT_CUT/FORCE_SPEC not set.'
@@ -882,103 +900,6 @@ try {
 } catch (Exception e) {
     currentBuild.result = failureResultStr
     throw e
-}
-
-/*
- * Append a line to the build description (HTML, <br>-separated), matching the
- * convention used by aocc-essentials CommitCheck.
- */
-void appendDescription(String text) {
-    if (currentBuild.description) {
-        currentBuild.description += '<br>' + text
-    } else {
-        currentBuild.description = text
-    }
-}
-
-/*
- * Record a repo's GIT_COMMIT in the build description as a clickable link:
- *   GIT_COMMIT (<repo>): <a href='<url>/commit/<full-sha>'><short-sha></a>
- */
-void addCommitToBuildDescr(String gitUrl, String gitCommit, String gitRepo) {
-    String ourUrl = gitUrl
-    if (ourUrl.endsWith('.git')) {
-        ourUrl = ourUrl[0..ourUrl.length() - 5]
-    }
-    String commitDescrip = (
-        'GIT_COMMIT (' + gitRepo + "): <a href='" +
-            ourUrl + '/commit/' + gitCommit + "'>" +
-            gitCommit[0..7] + '</a>'
-    )
-    appendDescription(commitDescrip)
-}
-
-/*
- * Using build(propagate: false, ...) and the following function
- * supplies better information back to GitHub Checks than if
- * we leave it to 'propagate: true'.
- * Code smell: this method is also in the main AOCC CommitCheck class.
- */
-void handleBuildResult(Object result, Boolean blocking) {
-    // groovylint-disable DuplicateStringLiteral,UnnecessaryGetter
-    String squote = "'", space = ' ', dot = '.'
-    String closeAnchor = '</a>', closeChevron = '>', closeTag = closeChevron
-    String downUrl = (
-        "Downstream job <a href='" +
-            result.getAbsoluteUrl() +
-            'console' + squote + closeTag +
-            result.getFullDisplayName() + closeAnchor
-    )
-    String downMsg = 'Downstream job ' + result.getFullDisplayName()
-    String resultStr = result.result
-    switch (resultStr) {
-        case 'SUCCESS':
-            break
-        case 'UNSTABLE':
-            // Code smell: might want to downgrade currentBuild result here?
-            break
-        case 'ABORTED':
-            // No whitelisted way to throw FlowInterruptedException explicitly:
-            String theStat = 'aborted.'
-            catchError(
-                buildResult: resultStr,
-                stageResult: resultStr,
-                message: downMsg + space + theStat
-            ) {
-                error(downUrl + space + theStat)
-            }
-        case 'FAILURE':
-            String theStat = 'failed'
-            if (blocking) {
-                catchError(
-                    buildResult: resultStr,
-                    stageResult: resultStr,
-                    message: downMsg + space + theStat
-                ) {
-                    error(downUrl + space + theStat + dot)
-                }
-            } else {
-                echo(downUrl + space + theStat + ' but non-blocking was requested.')
-            }
-            break
-        default:
-            throw new RuntimeException('Unexpected downstream result: ' + resultStr)  // groovylint-disable-line LineLength,ThrowRuntimeException
-    }
-}
-
-/*
- * Code smell: this method is also in the main AOCC Build class.
- */
-String findBuildDir() {
-    Integer zero = 0 // groovylint-disable DuplicateNumberLiteral
-    List<String> buildDirs = findFiles()
-        .findAll { f -> f.directory && f.name ==~ /.*_build$/ }*.name.sort()
-    echo("Found out-of-tree build dirs: ${buildDirs}")
-    if (buildDirs) {
-        assert buildDirs.size() == 1
-        return buildDirs[zero]
-    }
-    return null
 }
 
 /**
@@ -1124,7 +1045,7 @@ void cloneSpecConfigs(String repoUrl, String branch, String credentialsId, Strin
     // Record the spec-configs commit in the build description once the clone
     // completes.
     if (specScmVars?.GIT_COMMIT) {
-        addCommitToBuildDescr(specScmVars.GIT_URL ?: repoUrl, specScmVars.GIT_COMMIT, 'spec-configs')
+        putils.addCommitToBuildDescr(specScmVars.GIT_URL ?: repoUrl, specScmVars.GIT_COMMIT, 'spec-configs')
     }
     sh(label: 'spec-configs-summary',
        script: '''set -e
@@ -1263,7 +1184,7 @@ String getSpecCfgDirValue() {
             return autoUrl
         }
         echo 'WARNING: USE_SPEC_CONFIGS_REPO=true but SPEC_CONFIGS_ARTIFACT_URL is unset; ' +
-             'falling back to params.SPECCPU_CFGDIR.'
+            'falling back to params.SPECCPU_CFGDIR.'
     }
     String cfgDir = params.SPECCPU_CFGDIR?.trim() ?: ''
     if (!cfgDir) {
@@ -1574,13 +1495,13 @@ Boolean runParallelSpecTesting(String stageLabel, String envPrefix, String specC
     parallel(
         'SPEC2017': {
             branchPassed['SPEC2017'] = runCpu2017Stage(stageLabel, envPrefix, specCopies,
-                                                      specValidation, gitCommitValue, znverValue,
-                                                      compilerTar, branchContext, specBuildOrRun, prebuiltExesEnvPrefix)
+                                                       specValidation, gitCommitValue, znverValue,
+                                                       compilerTar, branchContext, specBuildOrRun, prebuiltExesEnvPrefix)
         },
         'SPEC-CPU2026': {
             branchPassed['SPEC-CPU2026'] = runCpu2026Stage(stageLabel, envPrefix, specCopies,
-                                                          specValidation, gitCommitValue, znverValue,
-                                                          compilerTar, branchContext, specBuildOrRun, prebuiltExesEnvPrefix)
+                                                           specValidation, gitCommitValue, znverValue,
+                                                           compilerTar, branchContext, specBuildOrRun, prebuiltExesEnvPrefix)
         }
     )
     return branchPassed.values().every { it }
