@@ -42,6 +42,9 @@
 // 5. Runtime Ops (erased):
 //    acc.init, acc.shutdown, acc.set, acc.wait
 //
+// 6. acc.on_device (folded):
+//    acc.on_device with constant device type is folded to a boolean constant.
+//
 // Scope of Application:
 // ---------------------
 // - For functions with `acc.specialized_routine` attribute: patterns are
@@ -57,6 +60,7 @@
 
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/Transforms/ACCSpecializePatterns.h"
@@ -74,6 +78,42 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
+
+// acc_device_t values used by acc_on_device. The numeric values match the
+// openacc.h convention.
+enum AccDeviceType {
+  ACC_DEVICE_HOST = 2,
+  ACC_DEVICE_NOT_HOST = 3,
+};
+
+/// Fold acc.on_device with a constant device type in device code.
+class FoldAccOnDeviceOpConversion : public OpRewritePattern<acc::OnDeviceOp> {
+  using OpRewritePattern<acc::OnDeviceOp>::OpRewritePattern;
+
+public:
+  LogicalResult matchAndRewrite(acc::OnDeviceOp op,
+                                PatternRewriter &rewriter) const override {
+    APInt constVal;
+    if (!matchPattern(op.getDeviceType(), m_ConstantInt(&constVal)))
+      return failure();
+
+    bool result;
+    switch (constVal.getSExtValue()) {
+    case ACC_DEVICE_HOST:
+      result = false;
+      break;
+    case ACC_DEVICE_NOT_HOST:
+      result = true;
+      break;
+    default:
+      return failure();
+    }
+
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+        op, rewriter.getI1Type(), rewriter.getBoolAttr(result));
+    return success();
+  }
+};
 
 class ACCSpecializeForDevice
     : public acc::impl::ACCSpecializeForDeviceBase<ACCSpecializeForDevice> {
@@ -174,4 +214,8 @@ void mlir::acc::populateACCSpecializeForDevicePatterns(
       ACCOpEraseConversion<acc::InitOp>, ACCOpEraseConversion<acc::ShutdownOp>,
       ACCOpEraseConversion<acc::SetOp>, ACCOpEraseConversion<acc::WaitOp>>(
       context);
+
+  // Fold acc.on_device calls so dead-code elimination can remove host-only
+  // code paths in device code.
+  patterns.insert<FoldAccOnDeviceOpConversion>(context);
 }

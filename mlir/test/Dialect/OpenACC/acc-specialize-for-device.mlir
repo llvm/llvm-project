@@ -230,3 +230,52 @@ func.func @dev_routine_declare() attributes {acc.specialized_routine = #acc.spec
   acc.declare_exit token(%t) dataOperands(%c : memref<f32>)
   return
 }
+
+//===----------------------------------------------------------------------===//
+// acc.on_device folding
+//===----------------------------------------------------------------------===//
+
+acc.routine @acc_routine_on_device_host func(@fold_on_device_host) seq
+// CHECK-LABEL: func.func @fold_on_device_host
+// CHECK-NOT:   acc.on_device
+// CHECK:       arith.constant false
+func.func @fold_on_device_host() attributes {acc.specialized_routine = #acc.specialized_routine<@acc_routine_on_device_host, <seq>, "fold_on_device_host">} {
+  %host = arith.constant 2 : i32
+  %on_host = acc.on_device %host : i32 -> i1
+  return
+}
+
+acc.routine @acc_routine_on_device_not_host func(@fold_on_device_not_host) seq
+// CHECK-LABEL: func.func @fold_on_device_not_host
+// CHECK-NOT:   acc.on_device
+// CHECK:       arith.constant true
+func.func @fold_on_device_not_host() attributes {acc.specialized_routine = #acc.specialized_routine<@acc_routine_on_device_not_host, <seq>, "fold_on_device_not_host">} {
+  %not_host = arith.constant 3 : i32
+  %on_not_host = acc.on_device %not_host : i32 -> i1
+  return
+}
+
+// CHECK-LABEL: func.func @fold_on_device_inside_parallel
+// CHECK:       acc.parallel
+// CHECK-NOT:   acc.on_device
+// CHECK:       arith.constant false
+func.func @fold_on_device_inside_parallel() {
+  %host = arith.constant 2 : i32
+  acc.parallel {
+    %on_host = acc.on_device %host : i32 -> i1
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @on_device_outside_parallel
+// CHECK:       acc.on_device
+// CHECK:       acc.parallel
+func.func @on_device_outside_parallel() {
+  %host = arith.constant 2 : i32
+  %on_host = acc.on_device %host : i32 -> i1
+  acc.parallel {
+    acc.yield
+  }
+  return
+}
