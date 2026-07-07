@@ -234,13 +234,6 @@ static llvm::cl::opt<bool> enableCUDAInit("fcuda-init",
                                           llvm::cl::desc("enable CUDA Init"),
                                           llvm::cl::init(false));
 
-static llvm::cl::opt<bool> doConcurrentCleanNestedLoops(
-    "fdo-concurrent-clean-nested-loops",
-    llvm::cl::desc(
-        "lower plain DO loops nested in DO CONCURRENT bodies without "
-        "the secondary-induction iter_arg"),
-    llvm::cl::init(false));
-
 static llvm::cl::opt<bool>
     enableDoConcurrentOffload("fdoconcurrent-offload",
                               llvm::cl::desc("enable do concurrent offload"),
@@ -513,7 +506,6 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setRepackArrays(repackArrays);
   loweringOptions.setRepackArraysWhole(repackArraysWhole);
   loweringOptions.setSkipExternalRttiDefinition(skipExternalRttiDefinition);
-  loweringOptions.setDoConcurrentCleanNestedLoops(doConcurrentCleanNestedLoops);
   if (enableCUDA)
     loweringOptions.setCUDARuntimeCheck(true);
   if (complexRange == "improved" || complexRange == "basic")

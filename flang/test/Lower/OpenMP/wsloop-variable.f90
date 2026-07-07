@@ -138,8 +138,8 @@ subroutine wsloop_variable_sub
 !CHECK:               %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (i32) -> index
 !CHECK:               %[[VAL_33:.*]] = fir.load %[[VAL_15]]#0 : !fir.ref<i32>
 !CHECK:               %[[VAL_34:.*]] = fir.convert %[[VAL_33]] : (i32) -> index
-!CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_30]] : (index) -> i64
-!CHECK:               %[[VAL_36:.*]] = fir.do_loop %[[VAL_37:.*]] = %[[VAL_30]] to %[[VAL_32]] step %[[VAL_34]] iter_args(%[[VAL_38:.*]] = %[[VAL_35]]) -> (i64) {
+!CHECK:               fir.do_loop %[[VAL_37:.*]] = %[[VAL_30]] to %[[VAL_32]] step %[[VAL_34]] {
+!CHECK:                 %[[VAL_38:.*]] = fir.convert %[[VAL_37]] : (index) -> i64
 !CHECK:                 fir.store %[[VAL_38]] to %[[VAL_17]]#0 : !fir.ref<i64>
 !CHECK:                 %[[VAL_39:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i16>
 !CHECK:                 %[[VAL_40:.*]] = fir.convert %[[VAL_39]] : (i16) -> i64
@@ -147,12 +147,19 @@ subroutine wsloop_variable_sub
 !CHECK:                 %[[VAL_42:.*]] = arith.addi %[[VAL_40]], %[[VAL_41]] : i64
 !CHECK:                 %[[VAL_43:.*]] = fir.convert %[[VAL_42]] : (i64) -> f32
 !CHECK:                 hlfir.assign %[[VAL_43]] to %[[VAL_21]]#0 : f32, !fir.ref<f32>
-!CHECK:                 %[[VAL_45:.*]] = fir.convert %[[VAL_34]] : (index) -> i64
-!CHECK:                 %[[VAL_46:.*]] = fir.load %[[VAL_17]]#0 : !fir.ref<i64>
-!CHECK:                 %[[VAL_47:.*]] = arith.addi %[[VAL_46]], %[[VAL_45]] overflow<nsw> : i64
-!CHECK:                 fir.result %[[VAL_47]] : i64
 !CHECK:               }
-!CHECK:               fir.store %[[VAL_48:.*]] to %[[VAL_17]]#0 : !fir.ref<i64>
+!CHECK:               %[[VAL_LB:.*]] = fir.convert %[[VAL_30]] : (index) -> i64
+!CHECK:               %[[VAL_UB:.*]] = fir.convert %[[VAL_32]] : (index) -> i64
+!CHECK:               %[[VAL_ST:.*]] = fir.convert %[[VAL_34]] : (index) -> i64
+!CHECK:               %[[VAL_C0:.*]] = arith.constant 0 : i64
+!CHECK:               %[[VAL_DIFF:.*]] = arith.subi %[[VAL_UB]], %[[VAL_LB]] overflow<nsw> : i64
+!CHECK:               %[[VAL_ADD:.*]] = arith.addi %[[VAL_DIFF]], %[[VAL_ST]] overflow<nsw> : i64
+!CHECK:               %[[VAL_TRIP:.*]] = arith.divsi %[[VAL_ADD]], %[[VAL_ST]] : i64
+!CHECK:               %[[VAL_CMP:.*]] = arith.cmpi slt, %[[VAL_TRIP]], %[[VAL_C0]] : i64
+!CHECK:               %[[VAL_SEL:.*]] = arith.select %[[VAL_CMP]], %[[VAL_C0]], %[[VAL_TRIP]] : i64
+!CHECK:               %[[VAL_MUL:.*]] = arith.muli %[[VAL_SEL]], %[[VAL_ST]] overflow<nsw> : i64
+!CHECK:               %[[VAL_48:.*]] = arith.addi %[[VAL_LB]], %[[VAL_MUL]] overflow<nsw> : i64
+!CHECK:               fir.store %[[VAL_48]] to %[[VAL_17]]#0 : !fir.ref<i64>
 !CHECK:               omp.yield
 !CHECK:             }
 !CHECK:           }

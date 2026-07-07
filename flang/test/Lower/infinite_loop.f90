@@ -96,17 +96,22 @@ end subroutine
 ! CHECK: ^[[BODY2:.*]]:
 ! CHECK:  %[[C1_INDEX:.*]] = fir.convert %[[C1]] : (i32) -> index
 ! CHECK:  %[[C10_INDEX:.*]] = fir.convert %[[C10]] : (i32) -> index
-! CHECK:  %[[J_LB:.*]] = fir.convert %[[C1_INDEX]] : (index) -> i32
-! CHECK:  %[[J_FINAL:.*]] = fir.do_loop %[[J:[^ ]*]] =
-! CHECK-SAME: %[[C1_INDEX]] to %[[C10_INDEX]] step %[[C1_1]]
-! CHECK-SAME: iter_args(%[[J_IV:.*]] = %[[J_LB]]) -> (i32) {
+! CHECK:  fir.do_loop %[[J:[^ ]*]] =
+! CHECK-SAME: %[[C1_INDEX]] to %[[C10_INDEX]] step %[[C1_1]] {
+! CHECK:    %[[J_IV:.*]] = fir.convert %[[J]] : (index) -> i32
 ! CHECK:    fir.store %[[J_IV]] to %[[J_DECL]] : !fir.ref<i32>
-! CHECK:    %[[J_STEPCAST:.*]] = fir.convert %[[C1_1]] : (index) -> i32
-! CHECK:    %[[J_IVLOAD:.*]] = fir.load %[[J_DECL]] : !fir.ref<i32>
-! CHECK:    %[[J_IVINC:.*]] = arith.addi %[[J_IVLOAD]], %[[J_STEPCAST]] overflow<nsw> : i32
-! CHECK:    fir.result %[[J_IVINC]] : i32
 ! CHECK:  }
-! CHECK:  fir.store %[[J_FINAL]] to %[[J_DECL]] : !fir.ref<i32>
+! CHECK:  %[[J_LB:.*]] = fir.convert %[[C1_INDEX]] : (index) -> i32
+! CHECK:  %[[J_UB:.*]] = fir.convert %[[C10_INDEX]] : (index) -> i32
+! CHECK:  %[[J_STEP:.*]] = fir.convert %[[C1_1]] : (index) -> i32
+! CHECK:  %[[J_DIFF:.*]] = arith.subi %[[J_UB]], %[[J_LB]] overflow<nsw> : i32
+! CHECK:  %[[J_ADD:.*]] = arith.addi %[[J_DIFF]], %[[J_STEP]] overflow<nsw> : i32
+! CHECK:  %[[J_TRIP:.*]] = arith.divsi %[[J_ADD]], %[[J_STEP]] : i32
+! CHECK:  %[[J_CMP:.*]] = arith.cmpi slt, %[[J_TRIP]], %{{.*}} : i32
+! CHECK:  %[[J_SEL:.*]] = arith.select %[[J_CMP]], %{{.*}}, %[[J_TRIP]] : i32
+! CHECK:  %[[J_MUL:.*]] = arith.muli %[[J_SEL]], %[[J_STEP]] overflow<nsw> : i32
+! CHECK:  %[[J_LAST:.*]] = arith.addi %[[J_LB]], %[[J_MUL]] overflow<nsw> : i32
+! CHECK:  fir.store %[[J_LAST]] to %[[J_DECL]] : !fir.ref<i32>
 ! CHECK:  cf.br ^[[BODY1]]
 ! CHECK: ^[[RETURN]]:
 ! CHECK:   return

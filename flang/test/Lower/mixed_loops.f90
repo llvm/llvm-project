@@ -74,19 +74,31 @@ subroutine do_inside_while_loop
     do while (j .lt. 21)
       ! CHECK: ^[[BODY1]]:  // pred: ^[[HDR1]]
 
-      ! CHECK:   %{{.*}} = fir.do_loop %{{.*}} = {{.*}} to {{.*}} step {{.*}} iter_args(%[[I_IV:.*]] = {{.*}}) -> (i32) {
-      ! CHECK:     fir.store %[[I_IV]] to %[[I]]#0 : !fir.ref<i32>
-      ! CHECK:     %[[C2:.*]] = arith.constant 2 : i32
-      ! CHECK:     %[[J2VAL:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
-      ! CHECK:     %[[JINC:.*]] = arith.muli %[[C2]], %[[J2VAL]] : i32
-      ! CHECK:     hlfir.assign %[[JINC]] to %[[J]]#0 : i32, !fir.ref<i32>
-      ! CHECK:     %[[I_IVLOAD:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
-      ! CHECK:     %[[I_IVINC:.*]] = arith.addi %[[I_IVLOAD]], {{.*}} overflow<nsw> : i32
-      ! CHECK:     fir.result %[[I_IVINC]] : i32
+      ! CHECK-DAG: %[[C8:.*]] = arith.constant 8 : i32
+      ! CHECK-DAG: %[[C13:.*]] = arith.constant 13 : i32
+      ! CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+      ! CHECK: fir.do_loop %[[LI:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+        ! CHECK: %[[IV:.*]] = fir.convert %[[LI]] : (index) -> i32
+        ! CHECK: fir.store %[[IV]] to %[[I]]#0 : !fir.ref<i32>
+        ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
+        ! CHECK: %[[J2VAL:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
+        ! CHECK: %[[JINC:.*]] = arith.muli %[[C2]], %[[J2VAL]] : i32
+        ! CHECK: hlfir.assign %[[JINC]] to %[[J]]#0 : i32, !fir.ref<i32>
       do i=8,13
         j=j*2
 
-      ! CHECK:   fir.store %{{.*}} to %[[I]]#0 : !fir.ref<i32>
+      ! CHECK: %[[LB:.*]] = fir.convert %{{.*}} : (index) -> i32
+      ! CHECK: %[[UB:.*]] = fir.convert %{{.*}} : (index) -> i32
+      ! CHECK: %[[STEP:.*]] = fir.convert %{{.*}} : (index) -> i32
+      ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
+      ! CHECK: %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] overflow<nsw> : i32
+      ! CHECK: %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEP]] overflow<nsw> : i32
+      ! CHECK: %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEP]] : i32
+      ! CHECK: %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : i32
+      ! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : i32
+      ! CHECK: %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] overflow<nsw> : i32
+      ! CHECK: %[[LAST:.*]] = arith.addi %[[LB]], %[[MUL]] overflow<nsw> : i32
+      ! CHECK: fir.store %[[LAST]] to %[[I]]#0 : !fir.ref<i32>
       end do
 
     ! CHECK:   cf.br ^[[HDR1]]

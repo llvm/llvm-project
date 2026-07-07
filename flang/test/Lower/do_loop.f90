@@ -2,8 +2,9 @@
 ! RUN: %flang_fc1 -emit-hlfir -fwrapv -o - %s | FileCheck %s --check-prefix=NO-NSW
 
 ! Simple tests for structured ordered loops with loop-control.
-! Tests the structure of the loop, storage to index variable and return and
-! storage of the final value of the index variable.
+! The DO variable is recomputed from the induction variable inside the loop
+! body (no secondary-induction iter_arg), and its Fortran post-loop value is
+! materialized after the loop.
 
 ! NO-NSW-NOT: overflow<nsw>
 
@@ -19,19 +20,24 @@ subroutine simple_loop
   ! CHECK: %[[C5:.*]] = arith.constant 5 : i32
   ! CHECK: %[[C5_CVT:.*]] = fir.convert %[[C5]] : (i32) -> index
   ! CHECK: %[[C1_STEP:.*]] = arith.constant 1 : index
-  ! CHECK: %[[LB:.*]] = fir.convert %[[C1_CVT]] : (index) -> i32
-  ! CHECK: %[[LI_RES:.*]] = fir.do_loop %[[LI:[^ ]*]] =
-  ! CHECK-SAME: %[[C1_CVT]] to %[[C5_CVT]] step %[[C1_STEP]]
-  ! CHECK-SAME: iter_args(%[[IV:.*]] = %[[LB]]) -> (i32) {
+  ! CHECK: fir.do_loop %[[LI:[^ ]*]] = %[[C1_CVT]] to %[[C5_CVT]] step %[[C1_STEP]] {
   do i=1,5
+  ! CHECK:   %[[IV:.*]] = fir.convert %[[LI]] : (index) -> i32
   ! CHECK:   fir.store %[[IV]] to %[[I_DECL]]#0 : !fir.ref<i32>
-  ! CHECK:   %[[STEPCAST:.*]] = fir.convert %[[C1_STEP]] : (index) -> i32
-  ! CHECK:   %[[IVLOAD:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i32>
-  ! CHECK:   %[[IVINC:.*]] = arith.addi %[[IVLOAD]], %[[STEPCAST]] overflow<nsw> : i32
-  ! CHECK:  fir.result %[[IVINC]] : i32
   ! CHECK: }
   end do
-  ! CHECK: fir.store %[[LI_RES]] to %[[I_DECL]]#0 : !fir.ref<i32>
+  ! CHECK: %[[LB:.*]] = fir.convert %[[C1_CVT]] : (index) -> i32
+  ! CHECK: %[[UB:.*]] = fir.convert %[[C5_CVT]] : (index) -> i32
+  ! CHECK: %[[STEP:.*]] = fir.convert %[[C1_STEP]] : (index) -> i32
+  ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
+  ! CHECK: %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] overflow<nsw> : i32
+  ! CHECK: %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEP]] overflow<nsw> : i32
+  ! CHECK: %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEP]] : i32
+  ! CHECK: %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : i32
+  ! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : i32
+  ! CHECK: %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] overflow<nsw> : i32
+  ! CHECK: %[[LAST:.*]] = arith.addi %[[LB]], %[[MUL]] overflow<nsw> : i32
+  ! CHECK: fir.store %[[LAST]] to %[[I_DECL]]#0 : !fir.ref<i32>
   ! CHECK: %[[I:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i32>
   ! CHECK: %{{.*}} = fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[I]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
   print *, i
@@ -56,22 +62,18 @@ subroutine nested_loop
   ! CHECK: %[[E_I:.*]] = arith.constant 5 : i32
   ! CHECK: %[[E_I_CVT:.*]] = fir.convert %[[E_I]] : (i32) -> index
   ! CHECK: %[[ST_I:.*]] = arith.constant 1 : index
-  ! CHECK: %[[I_LB:.*]] = fir.convert %[[S_I_CVT]] : (index) -> i32
-  ! CHECK: %[[I_RES:.*]] = fir.do_loop %[[LI:[^ ]*]] =
-  ! CHECK-SAME: %[[S_I_CVT]] to %[[E_I_CVT]] step %[[ST_I]]
-  ! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (i32) {
+  ! CHECK: fir.do_loop %[[LI:[^ ]*]] = %[[S_I_CVT]] to %[[E_I_CVT]] step %[[ST_I]] {
   do i=1,5
+    ! CHECK: %[[I_IV:.*]] = fir.convert %[[LI]] : (index) -> i32
     ! CHECK: fir.store %[[I_IV]] to %[[I_DECL]]#0 : !fir.ref<i32>
     ! CHECK: %[[S_J:.*]] = arith.constant 1 : i32
     ! CHECK: %[[S_J_CVT:.*]] = fir.convert %[[S_J]] : (i32) -> index
     ! CHECK: %[[E_J:.*]] = arith.constant 5 : i32
     ! CHECK: %[[E_J_CVT:.*]] = fir.convert %[[E_J]] : (i32) -> index
     ! CHECK: %[[ST_J:.*]] = arith.constant 1 : index
-    ! CHECK: %[[J_LB:.*]] = fir.convert %[[S_J_CVT]] : (index) -> i32
-    ! CHECK: %[[J_RES:.*]] = fir.do_loop %[[LJ:[^ ]*]] =
-    ! CHECK-SAME: %[[S_J_CVT]] to %[[E_J_CVT]] step %[[ST_J]]
-    ! CHECK-SAME: iter_args(%[[J_IV:.*]] = %[[J_LB]]) -> (i32) {
+    ! CHECK: fir.do_loop %[[LJ:[^ ]*]] = %[[S_J_CVT]] to %[[E_J_CVT]] step %[[ST_J]] {
     do j=1,5
+      ! CHECK: %[[J_IV:.*]] = fir.convert %[[LJ]] : (index) -> i32
       ! CHECK: fir.store %[[J_IV]] to %[[J_DECL]]#0 : !fir.ref<i32>
       ! CHECK: %[[ASUM:.*]] = fir.load %[[ASUM_DECL]]#0 : !fir.ref<i32>
       ! CHECK: %[[I:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i32>
@@ -83,20 +85,34 @@ subroutine nested_loop
       ! CHECK: %[[ASUM_NEW:.*]] = arith.addi %[[ASUM]], %[[ARR_VAL]] : i32
       ! CHECK: hlfir.assign %[[ASUM_NEW]] to %[[ASUM_DECL]]#0 : i32, !fir.ref<i32>
       asum = asum + arr(i,j)
-      ! CHECK: %[[J_STEPCAST:.*]] = fir.convert %[[ST_J]] : (index) -> i32
-      ! CHECK: %[[J_IVLOAD:.*]] = fir.load %[[J_DECL]]#0 : !fir.ref<i32>
-      ! CHECK: %[[J_IVINC:.*]] = arith.addi %[[J_IVLOAD]], %[[J_STEPCAST]] overflow<nsw> : i32
-      ! CHECK: fir.result %[[J_IVINC]] : i32
     ! CHECK: }
     end do
-    ! CHECK: fir.store %[[J_RES]] to %[[J_DECL]]#0 : !fir.ref<i32>
-    ! CHECK: %[[I_STEPCAST:.*]] = fir.convert %[[ST_I]] : (index) -> i32
-    ! CHECK: %[[I_IVLOAD:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i32>
-    ! CHECK: %[[I_IVINC:.*]] = arith.addi %[[I_IVLOAD]], %[[I_STEPCAST]] overflow<nsw> : i32
-    ! CHECK: fir.result %[[I_IVINC]] : i32
+    ! CHECK: %[[J_LB:.*]] = fir.convert %[[S_J_CVT]] : (index) -> i32
+    ! CHECK: %[[J_UB:.*]] = fir.convert %[[E_J_CVT]] : (index) -> i32
+    ! CHECK: %[[J_STEP:.*]] = fir.convert %[[ST_J]] : (index) -> i32
+    ! CHECK: %[[J_C0:.*]] = arith.constant 0 : i32
+    ! CHECK: %[[J_DIFF:.*]] = arith.subi %[[J_UB]], %[[J_LB]] overflow<nsw> : i32
+    ! CHECK: %[[J_ADD:.*]] = arith.addi %[[J_DIFF]], %[[J_STEP]] overflow<nsw> : i32
+    ! CHECK: %[[J_TRIP:.*]] = arith.divsi %[[J_ADD]], %[[J_STEP]] : i32
+    ! CHECK: %[[J_CMP:.*]] = arith.cmpi slt, %[[J_TRIP]], %[[J_C0]] : i32
+    ! CHECK: %[[J_SEL:.*]] = arith.select %[[J_CMP]], %[[J_C0]], %[[J_TRIP]] : i32
+    ! CHECK: %[[J_MUL:.*]] = arith.muli %[[J_SEL]], %[[J_STEP]] overflow<nsw> : i32
+    ! CHECK: %[[J_LAST:.*]] = arith.addi %[[J_LB]], %[[J_MUL]] overflow<nsw> : i32
+    ! CHECK: fir.store %[[J_LAST]] to %[[J_DECL]]#0 : !fir.ref<i32>
   ! CHECK: }
   end do
-  ! CHECK: fir.store %[[I_RES]] to %[[I_DECL]]#0 : !fir.ref<i32>
+  ! CHECK: %[[I_LB:.*]] = fir.convert %[[S_I_CVT]] : (index) -> i32
+  ! CHECK: %[[I_UB:.*]] = fir.convert %[[E_I_CVT]] : (index) -> i32
+  ! CHECK: %[[I_STEP:.*]] = fir.convert %[[ST_I]] : (index) -> i32
+  ! CHECK: %[[I_C0:.*]] = arith.constant 0 : i32
+  ! CHECK: %[[I_DIFF:.*]] = arith.subi %[[I_UB]], %[[I_LB]] overflow<nsw> : i32
+  ! CHECK: %[[I_ADD:.*]] = arith.addi %[[I_DIFF]], %[[I_STEP]] overflow<nsw> : i32
+  ! CHECK: %[[I_TRIP:.*]] = arith.divsi %[[I_ADD]], %[[I_STEP]] : i32
+  ! CHECK: %[[I_CMP:.*]] = arith.cmpi slt, %[[I_TRIP]], %[[I_C0]] : i32
+  ! CHECK: %[[I_SEL:.*]] = arith.select %[[I_CMP]], %[[I_C0]], %[[I_TRIP]] : i32
+  ! CHECK: %[[I_MUL:.*]] = arith.muli %[[I_SEL]], %[[I_STEP]] overflow<nsw> : i32
+  ! CHECK: %[[I_LAST:.*]] = arith.addi %[[I_LB]], %[[I_MUL]] overflow<nsw> : i32
+  ! CHECK: fir.store %[[I_LAST]] to %[[I_DECL]]#0 : !fir.ref<i32>
 end subroutine
 
 ! Test a downcounting loop
@@ -112,19 +128,24 @@ subroutine down_counting_loop()
   ! CHECK: %[[C1_CVT:.*]] = fir.convert %[[C1]] : (i32) -> index
   ! CHECK: %[[CMINUS1:.*]] = arith.constant -1 : i32
   ! CHECK: %[[CMINUS1_STEP_CVT:.*]] = fir.convert %[[CMINUS1]] : (i32) -> index
-  ! CHECK: %[[I_LB:.*]] = fir.convert %[[C5_CVT]] : (index) -> i32
-  ! CHECK: %[[I_RES:.*]] = fir.do_loop %[[LI:[^ ]*]] =
-  ! CHECK-SAME: %[[C5_CVT]] to %[[C1_CVT]] step %[[CMINUS1_STEP_CVT]]
-  ! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (i32) {
+  ! CHECK: fir.do_loop %[[LI:[^ ]*]] = %[[C5_CVT]] to %[[C1_CVT]] step %[[CMINUS1_STEP_CVT]] {
   do i=5,1,-1
+  ! CHECK: %[[I_IV:.*]] = fir.convert %[[LI]] : (index) -> i32
   ! CHECK: fir.store %[[I_IV]] to %[[I_DECL]]#0 : !fir.ref<i32>
-  ! CHECK: %[[I_STEPCAST:.*]] = fir.convert %[[CMINUS1_STEP_CVT]] : (index) -> i32
-  ! CHECK: %[[I_IVLOAD:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i32>
-  ! CHECK: %[[I_IVINC:.*]] = arith.addi %[[I_IVLOAD]], %[[I_STEPCAST]] overflow<nsw> : i32
-  ! CHECK: fir.result %[[I_IVINC]] : i32
   ! CHECK: }
   end do
-  ! CHECK: fir.store %[[I_RES]] to %[[I_DECL]]#0 : !fir.ref<i32>
+  ! CHECK: %[[LB:.*]] = fir.convert %[[C5_CVT]] : (index) -> i32
+  ! CHECK: %[[UB:.*]] = fir.convert %[[C1_CVT]] : (index) -> i32
+  ! CHECK: %[[STEP:.*]] = fir.convert %[[CMINUS1_STEP_CVT]] : (index) -> i32
+  ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
+  ! CHECK: %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] overflow<nsw> : i32
+  ! CHECK: %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEP]] overflow<nsw> : i32
+  ! CHECK: %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEP]] : i32
+  ! CHECK: %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : i32
+  ! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : i32
+  ! CHECK: %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] overflow<nsw> : i32
+  ! CHECK: %[[LAST:.*]] = arith.addi %[[LB]], %[[MUL]] overflow<nsw> : i32
+  ! CHECK: fir.store %[[LAST]] to %[[I_DECL]]#0 : !fir.ref<i32>
 end subroutine
 
 ! Test a general loop with a variable step
@@ -143,19 +164,24 @@ subroutine loop_with_variable_step(s,e,st)
   ! CHECK: %[[E_CVT:.*]] = fir.convert %[[E]] : (i32) -> index
   ! CHECK: %[[ST:.*]] = fir.load %[[ST_DECL]]#0 : !fir.ref<i32>
   ! CHECK: %[[ST_CVT:.*]] = fir.convert %[[ST]] : (i32) -> index
-  ! CHECK: %[[I_LB:.*]] = fir.convert %[[S_CVT]] : (index) -> i32
-  ! CHECK: %[[I_RES:.*]] = fir.do_loop %[[LI:[^ ]*]] =
-  ! CHECK-SAME: %[[S_CVT]] to %[[E_CVT]] step %[[ST_CVT]]
-  ! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (i32) {
+  ! CHECK: fir.do_loop %[[LI:[^ ]*]] = %[[S_CVT]] to %[[E_CVT]] step %[[ST_CVT]] {
   do i=s,e,st
+  ! CHECK:  %[[I_IV:.*]] = fir.convert %[[LI]] : (index) -> i32
   ! CHECK:  fir.store %[[I_IV]] to %[[I_DECL]]#0 : !fir.ref<i32>
-  ! CHECK: %[[I_STEPCAST:.*]] = fir.convert %[[ST_CVT]] : (index) -> i32
-  ! CHECK: %[[I_IVLOAD:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i32>
-  ! CHECK: %[[I_IVINC:.*]] = arith.addi %[[I_IVLOAD]], %[[I_STEPCAST]] overflow<nsw> : i32
-  ! CHECK:  fir.result %[[I_IVINC]] : i32
   ! CHECK: }
   end do
-  ! CHECK: fir.store %[[I_RES]] to %[[I_DECL]]#0 : !fir.ref<i32>
+  ! CHECK: %[[LB:.*]] = fir.convert %[[S_CVT]] : (index) -> i32
+  ! CHECK: %[[UB:.*]] = fir.convert %[[E_CVT]] : (index) -> i32
+  ! CHECK: %[[STEP:.*]] = fir.convert %[[ST_CVT]] : (index) -> i32
+  ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
+  ! CHECK: %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] overflow<nsw> : i32
+  ! CHECK: %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEP]] overflow<nsw> : i32
+  ! CHECK: %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEP]] : i32
+  ! CHECK: %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : i32
+  ! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : i32
+  ! CHECK: %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] overflow<nsw> : i32
+  ! CHECK: %[[LAST:.*]] = arith.addi %[[LB]], %[[MUL]] overflow<nsw> : i32
+  ! CHECK: fir.store %[[LAST]] to %[[I_DECL]]#0 : !fir.ref<i32>
 end subroutine
 
 ! Test usage of pointer variables as index, start, end and step variables
@@ -197,19 +223,24 @@ subroutine loop_with_pointer_variables(s,e,st)
 ! CHECK:  %[[ST_PTR:.*]] = fir.box_addr %[[ST_BOX]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK:  %[[ST:.*]] = fir.load %[[ST_PTR]] : !fir.ptr<i32>
 ! CHECK:  %[[ST_CVT:.*]] = fir.convert %[[ST]] : (i32) -> index
-! CHECK:  %[[I_LB:.*]] = fir.convert %[[S_CVT]] : (index) -> i32
-! CHECK:  %[[I_RES:.*]] = fir.do_loop %[[LI:[^ ]*]] =
-! CHECK-SAME: %[[S_CVT]] to %[[E_CVT]] step %[[ST_CVT]]
-! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (i32) {
+! CHECK:  fir.do_loop %[[LI:[^ ]*]] = %[[S_CVT]] to %[[E_CVT]] step %[[ST_CVT]] {
   do iptr=sptr,eptr,stptr
+! CHECK:    %[[I_IV:.*]] = fir.convert %[[LI]] : (index) -> i32
 ! CHECK:    fir.store %[[I_IV]] to %[[I_PTR]] : !fir.ptr<i32>
-! CHECK:    %[[I_STEPCAST:.*]] = fir.convert %[[ST_CVT]] : (index) -> i32
-! CHECK:    %[[I_IVLOAD:.*]] = fir.load %[[I_PTR]] : !fir.ptr<i32>
-! CHECK:    %[[I_IVINC:.*]] = arith.addi %[[I_IVLOAD]], %[[I_STEPCAST]] overflow<nsw> : i32
-! CHECK:    fir.result %[[I_IVINC]] : i32
-  end do
 ! CHECK:  }
-! CHECK:  fir.store %[[I_RES]] to %[[I_PTR]] : !fir.ptr<i32>
+  end do
+! CHECK:  %[[LB:.*]] = fir.convert %[[S_CVT]] : (index) -> i32
+! CHECK:  %[[UB:.*]] = fir.convert %[[E_CVT]] : (index) -> i32
+! CHECK:  %[[STEP:.*]] = fir.convert %[[ST_CVT]] : (index) -> i32
+! CHECK:  %[[C0:.*]] = arith.constant 0 : i32
+! CHECK:  %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] overflow<nsw> : i32
+! CHECK:  %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEP]] overflow<nsw> : i32
+! CHECK:  %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEP]] : i32
+! CHECK:  %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : i32
+! CHECK:  %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : i32
+! CHECK:  %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] overflow<nsw> : i32
+! CHECK:  %[[LAST:.*]] = arith.addi %[[LB]], %[[MUL]] overflow<nsw> : i32
+! CHECK:  fir.store %[[LAST]] to %[[I_PTR]] : !fir.ptr<i32>
 end subroutine
 
 ! Test usage of non-default integer kind for loop control and loop index variable
@@ -230,19 +261,24 @@ subroutine loop_with_non_default_integer(s,e,st)
   ! CHECK: %[[ST_CVT:.*]] = fir.convert %[[ST]] : (i64) -> index
   integer(kind=8) :: s, e, st
 
-  ! CHECK: %[[I_LB:.*]] = fir.convert %[[S_CVT]] : (index) -> i64
-  ! CHECK: %[[I_RES:.*]] = fir.do_loop %[[LI:[^ ]*]] =
-  ! CHECK-SAME: %[[S_CVT]] to %[[E_CVT]] step %[[ST_CVT]]
-  ! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (i64) {
+  ! CHECK: fir.do_loop %[[LI:[^ ]*]] = %[[S_CVT]] to %[[E_CVT]] step %[[ST_CVT]] {
   do i=s,e,st
+    ! CHECK: %[[I_IV:.*]] = fir.convert %[[LI]] : (index) -> i64
     ! CHECK: fir.store %[[I_IV]] to %[[I_DECL]]#0 : !fir.ref<i64>
-    ! CHECK: %[[I_STEPCAST:.*]] = fir.convert %[[ST_CVT]] : (index) -> i64
-    ! CHECK: %[[I_IVLOAD:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i64>
-    ! CHECK: %[[I_IVINC:.*]] = arith.addi %[[I_IVLOAD]], %[[I_STEPCAST]] overflow<nsw> : i64
-    ! CHECK: fir.result %[[I_IVINC]] : i64
-  end do
   ! CHECK: }
-  ! CHECK: fir.store %[[I_RES]] to %[[I_DECL]]#0 : !fir.ref<i64>
+  end do
+  ! CHECK: %[[LB:.*]] = fir.convert %[[S_CVT]] : (index) -> i64
+  ! CHECK: %[[UB:.*]] = fir.convert %[[E_CVT]] : (index) -> i64
+  ! CHECK: %[[STEP:.*]] = fir.convert %[[ST_CVT]] : (index) -> i64
+  ! CHECK: %[[C0:.*]] = arith.constant 0 : i64
+  ! CHECK: %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] overflow<nsw> : i64
+  ! CHECK: %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEP]] overflow<nsw> : i64
+  ! CHECK: %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEP]] : i64
+  ! CHECK: %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : i64
+  ! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : i64
+  ! CHECK: %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] overflow<nsw> : i64
+  ! CHECK: %[[LAST:.*]] = arith.addi %[[LB]], %[[MUL]] overflow<nsw> : i64
+  ! CHECK: fir.store %[[LAST]] to %[[I_DECL]]#0 : !fir.ref<i64>
 end subroutine
 
 ! Test real loop control.

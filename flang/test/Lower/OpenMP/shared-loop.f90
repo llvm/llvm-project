@@ -9,14 +9,23 @@
 ! CHECK:    omp.parallel {
 ! CHECK:      omp.sections {
 ! CHECK:        omp.section {
-! CHECK:          %[[RES:.*]] = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] =
-! CHECK:            fir.store %[[ARG1]] to %[[DECL_I]]#0
+! CHECK:          fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+! CHECK:            %[[IV:.*]] = fir.convert %[[ARG0]] : (index) -> i32
+! CHECK:            fir.store %[[IV]] to %[[DECL_I]]#0
 ! CHECK:            hlfir.assign
-! CHECK:            %[[LOAD_I:.*]] = fir.load %[[DECL_I]]#0
-! CHECK:            %[[RES_I:.*]] = arith.addi %[[LOAD_I]], %{{.*}}
-! CHECK:            fir.result %[[RES_I]]
 ! CHECK:          }
-! CHECK:          fir.store %[[RES]] to %[[DECL_I]]#0
+! CHECK:          %[[LB:.*]] = fir.convert %{{.*}} : (index) -> i32
+! CHECK:          %[[UB:.*]] = fir.convert %{{.*}} : (index) -> i32
+! CHECK:          %[[STEP:.*]] = fir.convert %{{.*}} : (index) -> i32
+! CHECK:          %[[C0:.*]] = arith.constant 0 : i32
+! CHECK:          %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] overflow<nsw> : i32
+! CHECK:          %[[ADDT:.*]] = arith.addi %[[DIFF]], %[[STEP]] overflow<nsw> : i32
+! CHECK:          %[[TRIP:.*]] = arith.divsi %[[ADDT]], %[[STEP]] : i32
+! CHECK:          %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : i32
+! CHECK:          %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : i32
+! CHECK:          %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] overflow<nsw> : i32
+! CHECK:          %[[LAST:.*]] = arith.addi %[[LB]], %[[MUL]] overflow<nsw> : i32
+! CHECK:          fir.store %[[LAST]] to %[[DECL_I]]#0
 ! CHECK:          omp.terminator
 ! CHECK:        }
 ! CHECK:        omp.terminator
@@ -47,15 +56,24 @@ end subroutine
 ! CHECK:      %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[ALLOC_PRIV_I]]
 ! CHECK:      omp.sections {
 ! CHECK:        omp.section {
-! CHECK:          %[[RES:.*]] = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] =
-! CHECK-NOT:            fir.store %[[ARG1]] to %[[DECL_I]]#1
-! CHECK:            fir.store %[[ARG1]] to %[[DECL_PRIV_I]]#0
+! CHECK:          fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+! CHECK:            %[[IV:.*]] = fir.convert %[[ARG0]] : (index) -> i32
+! CHECK-NOT:            fir.store %{{.*}} to %[[DECL_I]]#1
+! CHECK:            fir.store %[[IV]] to %[[DECL_PRIV_I]]#0
 ! CHECK:            hlfir.assign
-! CHECK:            %[[LOAD_I:.*]] = fir.load %[[DECL_PRIV_I]]#0
-! CHECK:            %[[RES_I:.*]] = arith.addi %[[LOAD_I]], %{{.*}}
-! CHECK:            fir.result %[[RES_I]]
 ! CHECK:          }
-! CHECK:          fir.store %[[RES]] to %[[DECL_PRIV_I]]#0
+! CHECK:          %[[LB:.*]] = fir.convert %{{.*}} : (index) -> i32
+! CHECK:          %[[UB:.*]] = fir.convert %{{.*}} : (index) -> i32
+! CHECK:          %[[STEP:.*]] = fir.convert %{{.*}} : (index) -> i32
+! CHECK:          %[[C0:.*]] = arith.constant 0 : i32
+! CHECK:          %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] overflow<nsw> : i32
+! CHECK:          %[[ADDT:.*]] = arith.addi %[[DIFF]], %[[STEP]] overflow<nsw> : i32
+! CHECK:          %[[TRIP:.*]] = arith.divsi %[[ADDT]], %[[STEP]] : i32
+! CHECK:          %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : i32
+! CHECK:          %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : i32
+! CHECK:          %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] overflow<nsw> : i32
+! CHECK:          %[[LAST:.*]] = arith.addi %[[LB]], %[[MUL]] overflow<nsw> : i32
+! CHECK:          fir.store %[[LAST]] to %[[DECL_PRIV_I]]#0
 ! CHECK:          omp.terminator
 ! CHECK:        }
 ! CHECK:        omp.terminator
@@ -87,15 +105,24 @@ end subroutine
 ! CHECK:      %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[ALLOC_PRIV_I]]
 ! CHECK:      omp.sections {
 ! CHECK:        omp.section {
-! CHECK:          %[[RES:.*]] = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] =
-! CHECK-NOT:            fir.store %[[ARG1]] to %[[DECL_I]]#1
-! CHECK:            fir.store %[[ARG1]] to %[[DECL_PRIV_I]]#0
+! CHECK:          fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+! CHECK:            %[[IV:.*]] = fir.convert %[[ARG0]] : (index) -> i32
+! CHECK-NOT:            fir.store %{{.*}} to %[[DECL_I]]#1
+! CHECK:            fir.store %[[IV]] to %[[DECL_PRIV_I]]#0
 ! CHECK:            hlfir.assign
-! CHECK:            %[[LOAD_I:.*]] = fir.load %[[DECL_PRIV_I]]#0
-! CHECK:            %[[RES_I:.*]] = arith.addi %[[LOAD_I]], %{{.*}}
-! CHECK:            fir.result %[[RES_I]]
 ! CHECK:          }
-! CHECK:          fir.store %[[RES]] to %[[DECL_PRIV_I]]#0
+! CHECK:          %[[LB:.*]] = fir.convert %{{.*}} : (index) -> i32
+! CHECK:          %[[UB:.*]] = fir.convert %{{.*}} : (index) -> i32
+! CHECK:          %[[STEP:.*]] = fir.convert %{{.*}} : (index) -> i32
+! CHECK:          %[[C0:.*]] = arith.constant 0 : i32
+! CHECK:          %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] overflow<nsw> : i32
+! CHECK:          %[[ADDT:.*]] = arith.addi %[[DIFF]], %[[STEP]] overflow<nsw> : i32
+! CHECK:          %[[TRIP:.*]] = arith.divsi %[[ADDT]], %[[STEP]] : i32
+! CHECK:          %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : i32
+! CHECK:          %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : i32
+! CHECK:          %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] overflow<nsw> : i32
+! CHECK:          %[[LAST:.*]] = arith.addi %[[LB]], %[[MUL]] overflow<nsw> : i32
+! CHECK:          fir.store %[[LAST]] to %[[DECL_PRIV_I]]#0
 ! CHECK:          omp.terminator
 ! CHECK:        }
 ! CHECK:        omp.terminator

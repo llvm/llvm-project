@@ -58,20 +58,25 @@
 ! CHECK:               %[[VAL_9:.*]] = fir.load %[[GAMA_DECL]]#0 : !fir.ref<i32>
 ! CHECK:               %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i32) -> index
 ! CHECK:               %[[VAL_11:.*]] = arith.constant 1 : index
-! CHECK:               %[[LB:.*]] = fir.convert %[[VAL_8]] : (index) -> i32
-! CHECK:               %[[VAL_12:.*]] = fir.do_loop %[[VAL_13:[^ ]*]] =
-! CHECK-SAME:              %[[VAL_8]] to %[[VAL_10]] step %[[VAL_11]]
-! CHECK-SAME:              iter_args(%[[IV:.*]] = %[[LB]]) -> (i32) {
+! CHECK:               fir.do_loop %[[VAL_13:[^ ]*]] = %[[VAL_8]] to %[[VAL_10]] step %[[VAL_11]] {
+! CHECK:                 %[[IV:.*]] = fir.convert %[[VAL_13]] : (index) -> i32
 ! CHECK:                 fir.store %[[IV]] to %[[PRIV_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[LOAD:.*]] = fir.load %[[PRIV_I_DECL]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_15:.*]] = fir.load %[[PRIV_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_16:.*]] = arith.addi %[[LOAD]], %[[VAL_15]] : i32
 ! CHECK:                 hlfir.assign %[[VAL_16]] to %[[PRIV_X_DECL]]#0 : i32, !fir.ref<i32>
-! CHECK:                 %[[STEPCAST:.*]] = fir.convert %[[VAL_11]] : (index) -> i32
-! CHECK:                 %[[IVLOAD:.*]] = fir.load %[[PRIV_J_DECL]]#0 : !fir.ref<i32>
-! CHECK:                 %[[IVINC:.*]] = arith.addi %[[IVLOAD]], %[[STEPCAST]] overflow<nsw> :
-! CHECK:                 fir.result %[[IVINC]] : i32
 ! CHECK:               }
+! CHECK:               %[[LB:.*]] = fir.convert %[[VAL_8]] : (index) -> i32
+! CHECK:               %[[UB:.*]] = fir.convert %[[VAL_10]] : (index) -> i32
+! CHECK:               %[[STEP:.*]] = fir.convert %[[VAL_11]] : (index) -> i32
+! CHECK:               %[[C0:.*]] = arith.constant 0 : i32
+! CHECK:               %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] overflow<nsw> : i32
+! CHECK:               %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEP]] overflow<nsw> : i32
+! CHECK:               %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEP]] : i32
+! CHECK:               %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : i32
+! CHECK:               %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : i32
+! CHECK:               %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] overflow<nsw> : i32
+! CHECK:               %[[VAL_12:.*]] = arith.addi %[[LB]], %[[MUL]] overflow<nsw> : i32
 ! CHECK:               fir.store %[[VAL_12]] to %[[PRIV_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:               omp.yield
 ! CHECK:             }
