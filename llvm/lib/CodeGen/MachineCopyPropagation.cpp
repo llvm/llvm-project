@@ -1337,9 +1337,23 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
   // If a COPY's Source has use or def until next COPY defines the Source,
   // we put the COPY in this set to keep property#2.
   DenseSet<const MachineInstr *> CopySourceInvalid;
-  // Track uses of a register as a source for a previous COPY
+  // Track uses of a register as a source for a previous COPY. This avoids
+  // situations where COPY's outside of the chain use an original value that
+  // gets lost when eliminating the chain.
   DenseMap<const MachineInstr *, SmallVector<const MachineInstr *>>
       CopySourceDefCopies;
+
+  auto HasUnexpectedCopySourceDef = [&](const MachineInstr *Copy,
+                                        const MachineInstr *ExpectedDef) {
+    auto CopySouceDefPair = CopySourceDefCopies.find(Copy);
+    if (CopySouceDefPair == CopySourceDefCopies.end())
+      return false;
+
+    for (const MachineInstr *DefCopy : CopySouceDefPair->second)
+      if (DefCopy != ExpectedDef)
+        return true;
+    return false;
+  };
 
   auto TryFoldSpillageCopies =
       [&, this](const SmallVectorImpl<MachineInstr *> &SC,
@@ -1379,24 +1393,13 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
           }
         };
 
-        auto HasUnexpectedCopySourceDef = [&](const MachineInstr *Copy,
-                                              const MachineInstr *ExpectedDef) {
-          auto CopySouceDefPair = CopySourceDefCopies.find(Copy);
-          if (CopySouceDefPair == CopySourceDefCopies.end())
-            return false;
-
-          for (const MachineInstr *DefCopy : CopySouceDefPair->second)
-            if (DefCopy != ExpectedDef)
-              return true;
-          return false;
-        };
         // Do not fold across an unexpected COPY def of a chains copy's source.
         // The paired reload may be needed to restore the original source value.
         // More info: https://github.com/llvm/llvm-project/issues/206839
         for (size_t I = 1; I < SC.size(); ++I) {
           if (HasUnexpectedCopySourceDef(SC[I], SC[I - 1]))
             return;
-          if (I + 1 > SC.size() && HasUnexpectedCopySourceDef(RC[I], RC[I + 1]))
+          if (I + 1 < SC.size() && HasUnexpectedCopySourceDef(RC[I], RC[I + 1]))
             return;
         }
 
