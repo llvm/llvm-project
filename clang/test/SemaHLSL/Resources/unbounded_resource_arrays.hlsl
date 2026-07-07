@@ -2,7 +2,7 @@
 
 // unbounded resource array parameter whose resource type has not been used earlier
 // expected-error@+1 {{incomplete resource array in a function parameter}}
-void no_prior_use(RWByteAddressBuffer bf[]) {}
+void no_prior_use(RWByteAddressBuffer array_arg[]) {}
 
 // unbounded resource array at a global scope
 RWBuffer<float> unbounded_array[]; // no error
@@ -11,8 +11,8 @@ RWBuffer<float> unbounded_array[]; // no error
 void foo(RWBuffer<float> array_arg[]) {}
 
 // a non-resource incomplete-array parameter should not error
-struct Fwd;
-void non_resource(Fwd a[]); // no error
+struct S;
+void non_resource(S array_arg[]); // no error
 
 RWBuffer<float> A, B;
 

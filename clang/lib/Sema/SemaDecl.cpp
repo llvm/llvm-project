@@ -11046,6 +11046,24 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
     if (NewFD->hasAttr<HLSLShaderAttr>())
       HLSL().CheckEntryPoint(NewFD);
+
+    // Resources cannot be passed to functions that are not inlined.
+    if (const NoInlineAttr *NoInline = NewFD->getAttr<NoInlineAttr>()) {
+      for (const ParmVarDecl *PVD : NewFD->parameters()) {
+        QualType ParamTy = PVD->getType().getNonReferenceType();
+        QualType EltTy = Context.getBaseElementType(ParamTy);
+        // `isCompleteType` forces completion of the element type so the
+        // resource parameter check is valid.
+        if (!EltTy->isDependentType() &&
+            isCompleteType(PVD->getLocation(), EltTy) &&
+            ParamTy->isHLSLIntangibleType()) {
+          Diag(PVD->getLocation(),
+               diag::err_hlsl_resource_param_in_noinline_function)
+              << ParamTy;
+          Diag(NoInline->getLocation(), diag::note_attribute);
+        }
+      }
+    }
   }
 
   // If this is the first declaration of a library builtin function, add
@@ -15771,16 +15789,12 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
 
   // Incomplete resource arrays are not allowed as function parameters in HLSL
   if (getLangOpts().HLSL && parmDeclType->isIncompleteArrayType()) {
-    // The `isHLSLResourceRecordArray` check uses the record's fields to
-    // determine whether the element is a resource, so the element type must be
-    // complete first. We use `isCompleteType` to force its completion in case
-    // this parameter is the first use of the resource type in the translation
-    // unit.
     QualType EltTy = Context.getBaseElementType(parmDeclType);
-    if (!EltTy->isDependentType())
-      isCompleteType(D.getIdentifierLoc(), EltTy);
-
-    if (parmDeclType->isHLSLResourceRecordArray()) {
+    // `isCompleteType` forces completion of the element type so the resource
+    // check is valid.
+    if (!EltTy->isDependentType() &&
+        isCompleteType(D.getIdentifierLoc(), EltTy) &&
+        parmDeclType->isHLSLResourceRecordArray()) {
       Diag(D.getIdentifierLoc(),
            diag::err_hlsl_incomplete_resource_array_in_function_param);
       D.setInvalidType(true);
