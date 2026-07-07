@@ -7824,8 +7824,11 @@ static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
   // in the default block, we can make some nice simplifications to the
   // switch.
   BasicBlock *Default = SI->getDefaultDest();
-  const Instruction *CxtI = Default->getTerminator();
-  const KnownBits Known = computeKnownBits(SI->getCondition(), DL, AC, CxtI);
+  const Instruction *CxtI = &*Default->getFirstNonPHIIt();
+  DominatorTree *DT = DTU ? &DTU->getDomTree() : nullptr;
+  const KnownBits Known =
+      computeKnownBits(SI->getCondition(),
+                       SimplifyQuery(DL, DT, AC, CxtI).allowEphemerals(true));
   if (!Known.isConstant())
     return false;
 
