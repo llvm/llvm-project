@@ -303,7 +303,7 @@ public:
           llvm::cast<mlir::omp::OffloadModuleInterface>(*module)
               .getIsTargetDevice();
 
-      mlir::omp::TargetOperands targetClauseOps;
+      mlir::omp::TargetExtOperands targetClauseOps;
       genLoopNestClauseOps(doLoop.getLoc(), rewriter, loop, loopNestClauseOps,
                            isTargetDevice ? nullptr : &targetClauseOps);
 
@@ -321,17 +321,23 @@ public:
             {liveIn, TargetDeclareShapeCreationInfo(liveIn)});
       }
 
+      targetClauseOps.kernelType = mlir::omp::TargetExecModeAttr::get(
+          rewriter.getContext(), mlir::omp::TargetExecMode::spmd);
       targetOp =
           genTargetOp(doLoop.getLoc(), rewriter, mapper, loopNestLiveIns,
                       targetClauseOps, loopNestClauseOps, liveInShapeInfoMap);
-      genTeamsOp(rewriter, loop, mapper);
+      auto teamsOp = genTeamsOp(rewriter, loop, mapper);
+      targetOp.setCombined(true);
+      teamsOp.setCombined(true);
     }
 
     mlir::omp::ParallelOp parallelOp =
         genParallelOp(rewriter, loop, ivInfos, mapper);
 
-    // Only set as composite when part of `distribute parallel do`.
+    // Only set as composite when part of `distribute parallel do`, and only set
+    // as combined when part of `parallel do`.
     parallelOp.setComposite(mapToDevice);
+    parallelOp.setCombined(!mapToDevice);
 
     if (!mapToDevice)
       genLoopNestClauseOps(doLoop.getLoc(), rewriter, loop, loopNestClauseOps);
@@ -418,7 +424,7 @@ private:
     mlir::Location loc = loop.getLoc();
     auto parallelOp = mlir::omp::ParallelOp::create(rewriter, loc, parallelOps);
     Fortran::common::openmp::EntryBlockArgs parallelArgs;
-    parallelArgs.priv.vars = parallelOps.privateVars;
+    parallelArgs.privVars = parallelOps.privateVars;
     Fortran::common::openmp::genEntryBlock(rewriter, parallelArgs,
                                            parallelOp.getRegion());
     rewriter.setInsertionPoint(mlir::omp::TerminatorOp::create(rewriter, loc));
@@ -459,7 +465,7 @@ private:
       mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
       fir::DoConcurrentLoopOp loop,
       mlir::omp::LoopNestOperands &loopNestClauseOps,
-      mlir::omp::TargetOperands *targetClauseOps = nullptr) const {
+      mlir::omp::TargetExtOperands *targetClauseOps = nullptr) const {
     assert(loopNestClauseOps.loopLowerBounds.empty() &&
            "Loop nest bounds were already emitted!");
 
@@ -506,8 +512,8 @@ private:
     wsloopOp.setComposite(isComposite);
 
     Fortran::common::openmp::EntryBlockArgs wsloopArgs;
-    wsloopArgs.priv.vars = wsloopClauseOps.privateVars;
-    wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
+    wsloopArgs.privVars = wsloopClauseOps.privateVars;
+    wsloopArgs.reductionVars = wsloopClauseOps.reductionVars;
     Fortran::common::openmp::genEntryBlock(rewriter, wsloopArgs,
                                            wsloopOp.getRegion());
 
@@ -632,7 +638,7 @@ private:
   mlir::omp::TargetOp
   genTargetOp(mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
               mlir::IRMapping &mapper, llvm::ArrayRef<mlir::Value> mappedVars,
-              mlir::omp::TargetOperands &clauseOps,
+              mlir::omp::TargetExtOperands &clauseOps,
               mlir::omp::LoopNestOperands &loopNestClauseOps,
               const LiveInShapeInfoMap &liveInShapeInfoMap) const {
     auto targetOp = mlir::omp::TargetOp::create(rewriter, loc, clauseOps);
@@ -781,7 +787,7 @@ private:
     mlir::Location loc = loop.getLoc();
     auto teamsOp = mlir::omp::TeamsOp::create(rewriter, loc, teamsOps);
     Fortran::common::openmp::EntryBlockArgs teamsArgs;
-    teamsArgs.reduction.vars = teamsOps.reductionVars;
+    teamsArgs.reductionVars = teamsOps.reductionVars;
     Fortran::common::openmp::genEntryBlock(rewriter, teamsArgs,
                                            teamsOp.getRegion());
 

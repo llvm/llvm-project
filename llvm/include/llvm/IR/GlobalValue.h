@@ -165,6 +165,10 @@ private:
   /// attribute.
   LLVM_ABI bool isNobuiltinFnDef() const;
 
+  /// Returns true if the global is a function definition with the noipa
+  /// attribute.
+  LLVM_ABI bool isNoipaFnDef() const;
+
 protected:
   /// The intrinsic ID for this subclass (which must be a Function).
   ///
@@ -506,8 +510,12 @@ public:
   /// Return true if this global's definition can be substituted with an
   /// *arbitrary* definition at link time or load time. We cannot do any IPO or
   /// inlining across interposable call edges, since the callee can be
-  /// replaced with something arbitrary.
-  LLVM_ABI bool isInterposable() const;
+  /// replaced with something arbitrary. For most IPO passes, the `noipa`
+  /// attribute on a function definition is also treated as if it were
+  /// interposable (and thus blocking interprocedural analysis). Passes
+  /// which already have their own distinct control attributes (e.g. inlining)
+  /// may set `CheckNoIPA = false` when calling this.
+  LLVM_ABI bool isInterposable(bool CheckNoIPA = true) const;
   LLVM_ABI bool canBenefitFromLocalAlias() const;
 
   bool hasExternalLinkage() const { return isExternalLinkage(getLinkage()); }

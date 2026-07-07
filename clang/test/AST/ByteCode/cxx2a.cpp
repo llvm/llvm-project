@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -fsyntax-only -fcxx-exceptions -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++2a -fsyntax-only -fcxx-exceptions -verify=ref,both      %s
 // RUN: %clang_cc1 -std=c++2a -fsyntax-only -fcxx-exceptions -verify=expected,both %s -fexperimental-new-constant-interpreter
 
 
@@ -210,7 +210,8 @@ namespace PureVirtual {
 namespace Dtor {
   constexpr bool pseudo(bool read, bool recreate) {
     using T = bool;
-    bool b = false; // both-note {{lifetime has already ended}}
+    bool b = false; // both-note {{lifetime has already ended}} \
+                    // both-note {{declared here}}
     // This evaluates the store to 'b'...
     (b = true).~T();
     // ... and ends the lifetime of the object.
@@ -252,4 +253,19 @@ namespace DependentRequiresExpr {
   };
 
   template <class T> using P = p<T>::type; // both-note {{while checking a default template argument}}
+}
+
+namespace PseudoDtorOnGlobal {
+  struct A {
+    int m;
+    mutable int n;
+    constexpr int f() const { return m; }
+    constexpr int g() const { return n; }
+  };
+
+  constexpr A a = {1, 2};
+  using T = int;
+  constexpr void destroy2() { // both-error {{never produces a constant expression}}
+    a.m.~T(); // both-note {{cannot modify an object that is visible outside}}
+  }
 }

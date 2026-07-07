@@ -308,3 +308,25 @@ entry:
   call void @llvm.amdgcn.cluster.load.async.to.lds.b64(ptr addrspace(1) %gep, ptr addrspace(3) %laddr, i32 16, i32 1, i32 %mask)
   ret void
 }
+
+define amdgpu_ps void @cluster_load_async_to_lds_b32_saddr_sladdr(ptr addrspace(1) inreg %gaddr, ptr addrspace(3) inreg %laddr, i32 inreg %mask) {
+; GFX1250-SDAG-LABEL: cluster_load_async_to_lds_b32_saddr_sladdr:
+; GFX1250-SDAG:       ; %bb.0: ; %entry
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, 32 :: v_dual_mov_b32 v1, s2
+; GFX1250-SDAG-NEXT:    s_mov_b32 m0, s3
+; GFX1250-SDAG-NEXT:    cluster_load_async_to_lds_b32 v1, v0, s[0:1] offset:16
+; GFX1250-SDAG-NEXT:    s_endpgm
+;
+; GFX1250-GISEL-LABEL: cluster_load_async_to_lds_b32_saddr_sladdr:
+; GFX1250-GISEL:       ; %bb.0: ; %entry
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, 32
+; GFX1250-GISEL-NEXT:    s_mov_b32 m0, s3
+; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b32 v0, v1, s[0:1] offset:16
+; GFX1250-GISEL-NEXT:    s_endpgm
+entry:
+  %gep = getelementptr i64, ptr addrspace(1) %gaddr, i32 4
+  call void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1) %gep, ptr addrspace(3) %laddr, i32 16, i32 0, i32 %mask)
+  ret void
+}

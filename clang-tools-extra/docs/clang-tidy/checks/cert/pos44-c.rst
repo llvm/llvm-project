@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-pos44-c
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/bad-signal-to-kill-thread.html
 
 cert-pos44-c
 ============

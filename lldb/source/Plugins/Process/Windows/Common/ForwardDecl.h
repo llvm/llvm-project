@@ -24,6 +24,16 @@ enum class ExceptionResult {
                     // no debugger attached.
 };
 
+// DllEventAction is returned by the debug delegate's DLL load/unload handlers
+// to tell the DebuggerThread what to do with its debug loop.
+enum class DllEventAction : bool {
+  // Keep the debug loop running: no stop was reported to the client.
+  ContinueDebugLoop = false,
+  // A stop was reported to the client. Park the debug loop until the client
+  // resumes the process.
+  ParkDebugLoop = true,
+};
+
 namespace lldb_private {
 
 class ProcessWindows;
@@ -32,10 +42,10 @@ class IDebugDelegate;
 class DebuggerThread;
 class ExceptionRecord;
 
-typedef std::shared_ptr<IDebugDelegate> DebugDelegateSP;
-typedef std::shared_ptr<DebuggerThread> DebuggerThreadSP;
-typedef std::shared_ptr<ExceptionRecord> ExceptionRecordSP;
-typedef std::unique_ptr<ExceptionRecord> ExceptionRecordUP;
+using DebugDelegateSP = std::shared_ptr<IDebugDelegate>;
+using DebuggerThreadSP = std::shared_ptr<DebuggerThread>;
+using ExceptionRecordSP = std::shared_ptr<ExceptionRecord>;
+using ExceptionRecordUP = std::unique_ptr<ExceptionRecord>;
 }
 
 #endif

@@ -680,7 +680,7 @@ optMain(int argc, char **argv,
     TuneCPUStr = codegen::getTuneCPUStr();
     FeaturesStr = codegen::getFeaturesStr();
     Expected<std::unique_ptr<TargetMachine>> ExpectedTM =
-        codegen::createTargetMachineForTriple(ModuleTriple.str(),
+        codegen::createTargetMachineForTriple(ModuleTriple,
                                               GetCodeGenOptLevel());
     if (auto E = ExpectedTM.takeError()) {
       errs() << argv[0] << ": WARNING: failed to create target machine for '"
@@ -973,6 +973,11 @@ optMain(int argc, char **argv,
 
   if (DebugifyEach && !DebugifyExport.empty())
     exportDebugifyStats(DebugifyExport, Passes.getDebugifyStatsMap());
+
+  // If a pass reported an error via LLVMContext::emitError, fail without
+  // writing the output module.
+  if (Context.getDiagHandlerPtr()->HasErrors)
+    return 1;
 
   // Declare success.
   if (!NoOutput)

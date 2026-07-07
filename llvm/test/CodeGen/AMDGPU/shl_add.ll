@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx900 | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1010 | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 | FileCheck -check-prefix=GFX10 %s
+; RUN: llc -O0 < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx900 | FileCheck -check-prefix=GFX9-O0 %s
 
 ; ===================================================================================
 ; V_LSHL_ADD_U32
@@ -24,6 +25,11 @@ define amdgpu_ps float @shl_add(i32 %a, i32 %b, i32 %c) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_add_u32 v0, v0, v1, v2
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX9-O0-LABEL: shl_add:
+; GFX9-O0:       ; %bb.0:
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, v1, v2
+; GFX9-O0-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, %b
   %result = add i32 %x, %c
   %bc = bitcast i32 %result to float
@@ -48,6 +54,12 @@ define amdgpu_ps float @shl_add_vgpr_a(i32 %a, i32 inreg %b, i32 inreg %c) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_add_u32 v0, v0, s2, s3
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX9-O0-LABEL: shl_add_vgpr_a:
+; GFX9-O0:       ; %bb.0:
+; GFX9-O0-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
+; GFX9-O0-NEXT:    v_add_u32_e64 v0, v0, s3
+; GFX9-O0-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, %b
   %result = add i32 %x, %c
   %bc = bitcast i32 %result to float
@@ -70,6 +82,11 @@ define amdgpu_ps float @shl_add_vgpr_all(i32 %a, i32 %b, i32 %c) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_add_u32 v0, v0, v1, v2
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX9-O0-LABEL: shl_add_vgpr_all:
+; GFX9-O0:       ; %bb.0:
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, v1, v2
+; GFX9-O0-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, %b
   %result = add i32 %x, %c
   %bc = bitcast i32 %result to float
@@ -92,6 +109,11 @@ define amdgpu_ps float @shl_add_vgpr_ab(i32 %a, i32 %b, i32 inreg %c) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_add_u32 v0, v0, v1, s2
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX9-O0-LABEL: shl_add_vgpr_ab:
+; GFX9-O0:       ; %bb.0:
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, v1, s2
+; GFX9-O0-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, %b
   %result = add i32 %x, %c
   %bc = bitcast i32 %result to float
@@ -114,8 +136,219 @@ define amdgpu_ps float @shl_add_vgpr_const(i32 %a, i32 %b) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 3, v1
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX9-O0-LABEL: shl_add_vgpr_const:
+; GFX9-O0:       ; %bb.0:
+; GFX9-O0-NEXT:    s_mov_b32 s0, 3
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s0, v1
+; GFX9-O0-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, 3
   %result = add i32 %x, %b
   %bc = bitcast i32 %result to float
   ret float %bc
+}
+
+; ===================================================================================
+; Divergent shlN_add chains at -O0 must fall through to V_LSHL_ADD_U32 rather
+; than selecting the SALU s_lshl[1-4]_add_u32 patterns.
+; ===================================================================================
+
+define i32 @v_shl1_add_chain(i32 %src) {
+; VI-LABEL: v_shl1_add_chain:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 5, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 0x9b3e1f00, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_shl1_add_chain:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x9b3e1f00
+; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 5, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_shl1_add_chain:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 5, 0x9b3e1f00
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-O0-LABEL: v_shl1_add_chain:
+; GFX9-O0:       ; %bb.0:
+; GFX9-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-O0-NEXT:    s_mov_b32 s5, 0x5020100
+; GFX9-O0-NEXT:    s_mov_b32 s4, 1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    s_setpc_b64 s[30:31]
+  %s1 = shl i32 %src, 1
+  %a1 = add i32 %s1, 84017408
+  %s2 = shl i32 %a1, 1
+  %a2 = add i32 %s2, 84017408
+  %s3 = shl i32 %a2, 1
+  %a3 = add i32 %s3, 84017408
+  %s4 = shl i32 %a3, 1
+  %a4 = add i32 %s4, 84017408
+  %s5 = shl i32 %a4, 1
+  %a5 = add i32 %s5, 84017408
+  ret i32 %a5
+}
+
+define i32 @v_shl2_add_chain(i32 %src) {
+; VI-LABEL: v_shl2_add_chain:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 10, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 0xabab5500, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_shl2_add_chain:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0xabab5500
+; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 10, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_shl2_add_chain:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 10, 0xabab5500
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-O0-LABEL: v_shl2_add_chain:
+; GFX9-O0:       ; %bb.0:
+; GFX9-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-O0-NEXT:    s_mov_b32 s5, 0x5020100
+; GFX9-O0-NEXT:    s_mov_b32 s4, 2
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    s_setpc_b64 s[30:31]
+  %s1 = shl i32 %src, 2
+  %a1 = add i32 %s1, 84017408
+  %s2 = shl i32 %a1, 2
+  %a2 = add i32 %s2, 84017408
+  %s3 = shl i32 %a2, 2
+  %a3 = add i32 %s3, 84017408
+  %s4 = shl i32 %a3, 2
+  %a4 = add i32 %s4, 84017408
+  %s5 = shl i32 %a4, 2
+  %a5 = add i32 %s5, 84017408
+  ret i32 %a5
+}
+
+define i32 @v_shl3_add_chain(i32 %src) {
+; VI-LABEL: v_shl3_add_chain:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 15, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 0x91a44900, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_shl3_add_chain:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x91a44900
+; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 15, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_shl3_add_chain:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 15, 0x91a44900
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-O0-LABEL: v_shl3_add_chain:
+; GFX9-O0:       ; %bb.0:
+; GFX9-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-O0-NEXT:    s_mov_b32 s5, 0x5020100
+; GFX9-O0-NEXT:    s_mov_b32 s4, 3
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    s_setpc_b64 s[30:31]
+  %s1 = shl i32 %src, 3
+  %a1 = add i32 %s1, 84017408
+  %s2 = shl i32 %a1, 3
+  %a2 = add i32 %s2, 84017408
+  %s3 = shl i32 %a2, 3
+  %a3 = add i32 %s3, 84017408
+  %s4 = shl i32 %a3, 3
+  %a4 = add i32 %s4, 84017408
+  %s5 = shl i32 %a4, 3
+  %a5 = add i32 %s5, 84017408
+  ret i32 %a5
+}
+
+define i32 @v_shl4_add_chain(i32 %src) {
+; VI-LABEL: v_shl4_add_chain:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 20, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 0x78331100, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_shl4_add_chain:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x78331100
+; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 20, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_shl4_add_chain:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 20, 0x78331100
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-O0-LABEL: v_shl4_add_chain:
+; GFX9-O0:       ; %bb.0:
+; GFX9-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-O0-NEXT:    s_mov_b32 s5, 0x5020100
+; GFX9-O0-NEXT:    s_mov_b32 s4, 4
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, v0, s4, v1
+; GFX9-O0-NEXT:    s_setpc_b64 s[30:31]
+  %s1 = shl i32 %src, 4
+  %a1 = add i32 %s1, 84017408
+  %s2 = shl i32 %a1, 4
+  %a2 = add i32 %s2, 84017408
+  %s3 = shl i32 %a2, 4
+  %a3 = add i32 %s3, 84017408
+  %s4 = shl i32 %a3, 4
+  %a4 = add i32 %s4, 84017408
+  %s5 = shl i32 %a4, 4
+  %a5 = add i32 %s5, 84017408
+  ret i32 %a5
 }

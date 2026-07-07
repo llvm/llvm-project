@@ -421,6 +421,88 @@ TEST_F(InterpreterTest, Value) {
   EXPECT_STREQ(prettyPrint.c_str(), "(D) (One) : unsigned int 1\n");
 }
 
+// Regression: Value::setRawBits's NBytes parameter must be interpreted as a
+// byte count end-to-end. Before this was fixed, the parameter was named
+// NBits and the memcpy divided by 8, so a caller passing sizeof(T) (the
+// natural byte count) ended up copying only sizeof(T)/8 bytes -- leaving
+// the upper bytes uninitialised. The only in-tree caller compensated by
+// multiplying by 8, hiding the bug.
+TEST_F(InterpreterTest, ValueSetRawBitsCopiesByteCount) {
+  std::vector<const char *> Args;
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
+
+  // Explicit byte count: writing sizeof(long long) bytes must round-trip
+  // every byte. Pre-fix this copied 1 byte (8 / 8) and left the upper 7
+  // bytes stale.
+  Value V;
+  llvm::cantFail(Interp->ParseAndExecute("long long x = 0; x", &V));
+  ASSERT_EQ(V.getKind(), Value::K_LongLong);
+  long long Src = 0x0123456789ABCDEFLL;
+  V.setRawBits(&Src, sizeof(Src));
+  EXPECT_EQ(V.getLongLong(), Src);
+
+  // Default NBytes argument copies sizeof(Storage). Pre-fix this copied
+  // sizeof(Storage) / 8 bytes, dropping the high half of an 8-byte payload.
+  Value V2;
+  llvm::cantFail(Interp->ParseAndExecute("long long y = 0; y", &V2));
+  ASSERT_EQ(V2.getKind(), Value::K_LongLong);
+  unsigned char Buf[sizeof(long double)] = {};
+  std::memcpy(Buf, &Src, sizeof(Src));
+  V2.setRawBits(Buf);
+  EXPECT_EQ(V2.getLongLong(), Src);
+}
+
+// Regression: Value's move ctor and move-assign must transfer ownership of
+// the manually-allocated storage without changing the storage refcount.
+// Earlier the move ctor called Release() on the just-moved-into storage,
+// double-releasing on the next read.
+TEST_F(InterpreterTest, ValueMoveSemantics) {
+  std::vector<const char *> Args = {"-fno-sized-deallocation"};
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
+
+  llvm::cantFail(
+      Interp->ParseAndExecute("struct MoveT { int v = 7; ~MoveT() {} };"));
+
+  // Move-construct: source becomes empty, destination owns the storage.
+  Value Src;
+  llvm::cantFail(Interp->ParseAndExecute("MoveT{}", &Src));
+  ASSERT_EQ(Src.getKind(), Value::K_PtrOrObj);
+  ASSERT_TRUE(Src.isManuallyAlloc());
+  void *Payload = Src.getPtr();
+
+  Value Moved(std::move(Src));
+  EXPECT_EQ(Moved.getKind(), Value::K_PtrOrObj);
+  EXPECT_TRUE(Moved.isManuallyAlloc());
+  EXPECT_EQ(Moved.getPtr(), Payload);
+  EXPECT_EQ(Src.getKind(), Value::K_Unspecified);
+  EXPECT_FALSE(Src.isManuallyAlloc());
+
+  // Move-assign over a populated Value: previous storage released, new
+  // storage adopted with refcount unchanged.
+  Value Other;
+  llvm::cantFail(Interp->ParseAndExecute("MoveT{}", &Other));
+  Other = std::move(Moved);
+  EXPECT_EQ(Other.getKind(), Value::K_PtrOrObj);
+  EXPECT_EQ(Other.getPtr(), Payload);
+  EXPECT_EQ(Moved.getKind(), Value::K_Unspecified);
+
+  // Copy-construct still works (Retain bumps refcount; both share storage).
+  Value Copy(Other);
+  EXPECT_EQ(Copy.getKind(), Value::K_PtrOrObj);
+  EXPECT_EQ(Copy.getPtr(), Payload);
+  EXPECT_EQ(Other.getPtr(), Payload);
+
+  // Force destruction order Copy -> Other -> Interp inside the test body so
+  // any latent corruption from a buggy move surfaces here. Pre-fix the move
+  // ctor leaves Other holding a dangling pointer; the subsequent Release in
+  // ~Copy / ~Other reads or asserts on freed memory. Without explicit
+  // teardown the abort happened during global cleanup, after gtest already
+  // recorded the test as OK.
+  Copy.clear();
+  Other.clear();
+  Interp.reset();
+}
+
 TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
   std::vector<const char *> Args;
   std::unique_ptr<Interpreter> Interp = createInterpreter(Args);

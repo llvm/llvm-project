@@ -447,9 +447,11 @@ define amdgpu_kernel void @ds_usub_cond_no_rtn_u32(ptr addrspace(3) %addr, i32 %
 ; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, -16
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-GISEL-NEXT:    ds_read_b32 v1, v0
+; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-GISEL-NEXT:  .LBB4_1: ; %atomicrmw.start
 ; GFX9-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_subrev_u32_e32 v2, s1, v1
 ; GFX9-GISEL-NEXT:    v_cmp_le_u32_e32 vcc, s1, v1
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v2, v1, v2, vcc
@@ -527,9 +529,11 @@ define amdgpu_kernel void @ds_usub_cond_rtn_u32(ptr addrspace(3) %addr, i32 %in,
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-GISEL-NEXT:    ds_read_b32 v1, v0 offset:16
+; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-GISEL-NEXT:  .LBB5_1: ; %atomicrmw.start
 ; GFX9-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX9-GISEL-NEXT:    v_subrev_u32_e32 v1, s1, v2
 ; GFX9-GISEL-NEXT:    v_cmp_le_u32_e32 vcc, s1, v2

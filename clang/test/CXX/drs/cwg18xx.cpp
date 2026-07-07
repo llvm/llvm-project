@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,cxx98
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx98-14,cxx11-17,since-cxx11
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx98-14,cxx11-17,since-cxx11,cxx11
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,since-cxx14,cxx98-14,cxx11-17,since-cxx11,since-cxx14
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,since-cxx14,since-cxx17,cxx11-17,since-cxx11,since-cxx14,cxx17
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14
@@ -283,16 +283,20 @@ auto e = [] {
 namespace cwg1821 { // cwg1821: 2.9
 struct A {
   template <typename> struct B {
-    void f();
+    void f(); // #cwg1821-B-f
   };
   template <typename T> void B<T>::f(){};
   // expected-error@-1 {{non-friend class member 'f' cannot have a qualified name}}
+  // expected-error@-2 {{class member cannot be redeclared}}
+  //   expected-note@#cwg1821-B-f {{previous declaration is here}}
 
   struct C {
-    void f();
+    void f(); // #cwg1821-C-f
   };
   void C::f() {}
   // expected-error@-1 {{non-friend class member 'f' cannot have a qualified name}}
+  // expected-error@-2 {{class member cannot be redeclared}}
+  //   expected-note@#cwg1821-C-f {{previous declaration is here}}
 };
 } // namespace cwg1821
 
@@ -466,6 +470,17 @@ T A<T>::i() { (void)c.private_int; }
 template<int U>
 int A<int>::i() { (void)c.private_int; }
 } // namespace cwg1862
+
+namespace cwg1870 { // cwg1870: 2.7
+#if __cplusplus >= 201103L
+struct S {
+  // FIXME: why C++11 has its own diagnostic message?
+  template<class T> operator auto() { return 42; }
+  // cxx11-error@-1 {{'auto' not allowed in conversion function type}}
+  // since-cxx14-error@-2 {{'auto' not allowed in declaration of conversion function template}}
+};
+#endif
+} // namespace cwg1870
 
 namespace cwg1872 { // cwg1872: 9
 #if __cplusplus >= 201103L

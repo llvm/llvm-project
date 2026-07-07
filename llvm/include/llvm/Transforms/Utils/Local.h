@@ -206,6 +206,7 @@ LLVM_ABI bool foldBranchToCommonDest(CondBrInst *BI,
                                      llvm::DomTreeUpdater *DTU = nullptr,
                                      MemorySSAUpdater *MSSAU = nullptr,
                                      const TargetTransformInfo *TTI = nullptr,
+                                     AssumptionCache *AC = nullptr,
                                      unsigned BonusInstThreshold = 1);
 
 /// This function takes a virtual register computed by an Instruction and

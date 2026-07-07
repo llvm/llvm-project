@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-oop54-cpp
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/unhandled-self-assignment.html
 
 cert-oop54-cpp
 ==============

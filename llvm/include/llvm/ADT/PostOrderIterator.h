@@ -72,10 +72,20 @@ class PostOrderTraversalBase {
   using NodeRef = typename GraphTraits::NodeRef;
   using ChildItTy = typename GraphTraits::ChildIteratorType;
 
-  /// Used to maintain the ordering.
-  /// First element is basic block pointer, second is iterator for the next
-  /// child to visit, third is the end iterator.
-  SmallVector<std::tuple<NodeRef, ChildItTy, ChildItTy>, 8> VisitStack;
+  struct StackEntry {
+    NodeRef Node;  ///< Node.
+    ChildItTy It;  ///< Iterator for next child.
+    ChildItTy End; ///< End iterator for children.
+
+    // This constructor is carefully designed so that there is no store between
+    // the calls to child_begin() and child_end(). LLVM IR successors() is a
+    // pure function called for begin and end, but the second call can't be
+    // removed if there's a potentially visible store (here: store to the
+    // member It in the VisitStack) in between.
+    StackEntry(NodeRef Node, iterator_range<ChildItTy> Children)
+        : Node(Node), It(Children.begin()), End(Children.end()) {}
+  };
+  SmallVector<StackEntry, 8> VisitStack;
 
 public:
   class iterator {
@@ -125,8 +135,8 @@ protected:
   /// Initialize post-order traversal at given start node.
   void init(NodeRef Start) {
     if (derived()->insertEdge(std::optional<NodeRef>(), Start)) {
-      VisitStack.emplace_back(Start, GraphTraits::child_begin(Start),
-                              GraphTraits::child_end(Start));
+      VisitStack.emplace_back(Start, make_range(GraphTraits::child_begin(Start),
+                                                GraphTraits::child_end(Start)));
       traverseChild();
     }
   }
@@ -135,31 +145,30 @@ private:
   void traverseChild() {
     while (true) {
       auto &Entry = VisitStack.back();
-      if (std::get<1>(Entry) == std::get<2>(Entry))
+      if (Entry.It == Entry.End)
         break;
-      NodeRef BB = *std::get<1>(Entry)++;
-      if (derived()->insertEdge(std::optional<NodeRef>(std::get<0>(Entry)),
-                                BB)) {
-        // If the block is not visited...
-        VisitStack.emplace_back(BB, GraphTraits::child_begin(BB),
-                                GraphTraits::child_end(BB));
-      }
+      NodeRef BB = *Entry.It++;
+      // If the block is not visited...
+      if (derived()->insertEdge(std::optional<NodeRef>(Entry.Node), BB))
+        VisitStack.emplace_back(BB, make_range(GraphTraits::child_begin(BB),
+                                               GraphTraits::child_end(BB)));
     }
   }
 
   NodeRef next() {
-    derived()->finishPostorder(std::get<0>(VisitStack.back()));
+    derived()->finishPostorder(VisitStack.back().Node);
     VisitStack.pop_back();
-    if (!VisitStack.empty())
-      traverseChild();
-    return !VisitStack.empty() ? std::get<0>(VisitStack.back()) : nullptr;
+    if (VisitStack.empty())
+      return nullptr;
+    traverseChild();
+    return VisitStack.back().Node;
   }
 
 public:
   iterator begin() {
     if (VisitStack.empty())
       return iterator(); // We don't even want to see the start node.
-    return iterator(*derived(), std::get<0>(VisitStack.back()));
+    return iterator(*derived(), VisitStack.back().Node);
   }
   iterator end() { return iterator(); }
 

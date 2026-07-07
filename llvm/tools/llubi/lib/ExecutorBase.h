@@ -15,7 +15,10 @@
 
 #include "Context.h"
 #include "Value.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <string>
+#include <utility>
 
 namespace llvm::ubi {
 
@@ -61,6 +64,9 @@ struct Frame {
   // Reserved for in-flight subroutines.
   Function *ResolvedCallee = nullptr;
   SmallVector<AnyValue> CalleeArgs;
+  // Temporary memory objects created via pointer arguments with byval.
+  // They belong to the caller.
+  SmallVector<IntrusiveRefCntPtr<MemoryObject>> CalleeByValArgs;
   AnyValue CalleeRetVal;
 
   Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
@@ -68,7 +74,16 @@ struct Frame {
         const TargetLibraryInfoImpl &TLIImpl);
 };
 
+enum class DiagnosticKind {
+  ImmediateUB,
+  Error,
+};
+
+class DiagnosticReporter;
+
 class ExecutorBase {
+  friend class DiagnosticReporter;
+
 protected:
   Context &Ctx;
   EventHandler &Handler;
@@ -79,18 +94,23 @@ protected:
       : Ctx(C), Handler(H), ExitInfo(std::nullopt) {}
   ~ExecutorBase() = default;
 
+private:
+  void reportImmediateUBString(StringRef Msg);
+  void reportErrorString(StringRef Msg);
+
 public:
-  void reportImmediateUB(StringRef Msg);
-  void reportError(StringRef Msg);
+  DiagnosticReporter reportImmediateUB();
+  DiagnosticReporter reportError();
 
-  /// Check if the upcoming memory access is valid. Returns the offset relative
-  /// to the underlying object if it is valid.
-  std::optional<uint64_t> verifyMemAccess(const MemoryObject &MO,
-                                          const APInt &Address,
-                                          uint64_t AccessSize, Align Alignment,
-                                          bool IsStore);
+  /// Check if the upcoming memory access is valid. Returns the resolved memory
+  /// object and offset if it is valid.
+  std::pair<MemoryObject *, uint64_t> verifyMemAccess(const Pointer &Ptr,
+                                                      uint64_t AccessSize,
+                                                      Align Alignment,
+                                                      bool IsStore);
 
-  AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy);
+  AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
+                bool NoUndef);
   void store(const AnyValue &Ptr, Align Alignment, const AnyValue &Val,
              Type *ValTy);
 
@@ -102,6 +122,41 @@ public:
   std::optional<ProgramExitInfo> getExitInfo() const;
 
   unsigned getIntSize() const;
+
+  void dumpStackTrace() const;
+};
+
+class DiagnosticReporter {
+  ExecutorBase &Executor;
+  std::string Buf;
+  raw_string_ostream OS;
+  DiagnosticKind Kind;
+
+public:
+  DiagnosticReporter(ExecutorBase &E, DiagnosticKind K)
+      : Executor(E), OS(Buf), Kind(K) {}
+
+  DiagnosticReporter(const DiagnosticReporter &) = delete;
+  DiagnosticReporter(DiagnosticReporter &&) noexcept = delete;
+
+  DiagnosticReporter &operator=(const DiagnosticReporter &) = delete;
+  DiagnosticReporter &operator=(DiagnosticReporter &&) noexcept = delete;
+
+  ~DiagnosticReporter() {
+    switch (Kind) {
+    case DiagnosticKind::ImmediateUB:
+      Executor.reportImmediateUBString(Buf);
+      break;
+    case DiagnosticKind::Error:
+      Executor.reportErrorString(Buf);
+      break;
+    }
+  }
+
+  template <typename T> DiagnosticReporter &operator<<(const T &Val) {
+    OS << Val;
+    return *this;
+  }
 };
 
 } // namespace llvm::ubi

@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// These compilers don't support __builtin_is_implicit_lifetime yet.
-// UNSUPPORTED: apple-clang-17
-
 // <type_traits>
 
 // template<class T> struct is_implicit_lifetime;

@@ -56,6 +56,7 @@
 #include "OnDiskCommon.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CAS/OnDiskCASLogger.h"
+#include "llvm/Support/Errno.h"
 
 #if LLVM_ON_UNIX
 #include <sys/stat.h>
@@ -240,7 +241,13 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
 
   // If the size is smaller than capacity, we need to resize the file.
   if (FileSize->Size < Capacity) {
-    assert(MainFile->Locked == sys::fs::LockKind::Exclusive);
+    // Acquire the exclusive lock before resizing the file. In the rare case
+    // when opening a large CAS using a small requested size, a shared lock
+    // needs to switch to an exclusive lock here.
+    if (MainFile->Locked != sys::fs::LockKind::Exclusive) {
+      if (Error E = MainFile->switchLock(sys::fs::LockKind::Exclusive))
+        return std::move(E);
+    }
     if (std::error_code EC =
             sys::fs::resize_file_sparse(MainFile->FD, Capacity))
       return createFileError(Result.Path, EC);
@@ -419,7 +426,7 @@ Expected<int64_t> MappedFileRegionArena::allocateOffset(uint64_t AllocSize) {
 ErrorOr<FileSizeInfo> FileSizeInfo::get(sys::fs::file_t File) {
 #if LLVM_ON_UNIX && defined(MAPPED_FILE_BSIZE)
   struct stat Status;
-  int StatRet = ::fstat(File, &Status);
+  int StatRet = sys::RetryAfterSignal(-1, ::fstat, File, &Status);
   if (StatRet)
     return errnoAsErrorCode();
   uint64_t AllocatedSize = uint64_t(Status.st_blksize) * MAPPED_FILE_BSIZE;

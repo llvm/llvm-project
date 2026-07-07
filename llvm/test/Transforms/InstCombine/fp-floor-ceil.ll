@@ -382,3 +382,29 @@ define i1 @x_ceil_false_neg(float %x) {
   %ret = fcmp false float %x, %ceil
   ret i1 %ret
 }
+
+define float @x_floor_more_one_use_neg(float %x) {
+; CHECK-LABEL: @x_floor_more_one_use_neg(
+; CHECK-NEXT:    [[FLOOR:%.*]] = call float @llvm.floor.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[FLOOR]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], float 0.000000e+00, float [[FLOOR]]
+; CHECK-NEXT:    ret float [[RET]]
+;
+  %floor = call float @llvm.floor.f32(float %x)
+  %cmp = fcmp oeq float %floor, %x
+  %ret = select i1 %cmp, float 0.0, float %floor
+  ret float %ret
+}
+
+define float @x_ceil_more_one_use_neg(float %x) {
+; CHECK-LABEL: @x_ceil_more_one_use_neg(
+; CHECK-NEXT:    [[CEIL:%.*]] = call float @llvm.ceil.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[CEIL]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], float [[CEIL]], float 0.000000e+00
+; CHECK-NEXT:    ret float [[RET]]
+;
+  %ceil = call float @llvm.ceil.f32(float %x)
+  %cmp = fcmp une float %ceil, %x
+  %ret = select i1 %cmp, float %ceil, float 0.0
+  ret float %ret
+}

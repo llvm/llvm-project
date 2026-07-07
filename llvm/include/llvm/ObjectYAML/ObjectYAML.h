@@ -42,7 +42,7 @@ struct YamlObjectFile {
 };
 
 template <> struct MappingTraits<YamlObjectFile> {
-  static void mapping(IO &IO, YamlObjectFile &ObjectFile);
+  LLVM_ABI static void mapping(IO &IO, YamlObjectFile &ObjectFile);
 };
 
 } // end namespace yaml

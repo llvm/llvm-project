@@ -369,8 +369,7 @@ void DebugHandlerBase::beginInstruction(const MachineInstr *MI) {
   CurMI = MI;
 
   // Insert labels where requested.
-  DenseMap<const MachineInstr *, MCSymbol *>::iterator I =
-      LabelsBeforeInsn.find(MI);
+  auto I = LabelsBeforeInsn.find(MI);
 
   // No label needed.
   if (I == LabelsBeforeInsn.end())
@@ -399,8 +398,7 @@ void DebugHandlerBase::endInstruction() {
     PrevInstBB = CurMI->getParent();
   }
 
-  DenseMap<const MachineInstr *, MCSymbol *>::iterator I =
-      LabelsAfterInsn.find(CurMI);
+  auto I = LabelsAfterInsn.find(CurMI);
 
   // No label needed or label already assigned.
   if (I == LabelsAfterInsn.end() || I->second) {

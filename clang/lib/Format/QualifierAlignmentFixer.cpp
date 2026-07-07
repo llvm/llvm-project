@@ -169,6 +169,12 @@ static bool isQualifier(const FormatToken *const Tok) {
   case tok::kw_constexpr:
   case tok::kw_restrict:
   case tok::kw_friend:
+  case tok::kw__Nonnull:
+  case tok::kw__Nullable:
+  case tok::kw__Null_unspecified:
+  case tok::kw___ptr32:
+  case tok::kw___ptr64:
+  case tok::kw___funcref:
     return true;
   default:
     return false;

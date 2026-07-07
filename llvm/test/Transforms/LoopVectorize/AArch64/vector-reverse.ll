@@ -6,8 +6,8 @@
 ;  for (int i = N-1; i >= 0; --i)
 ;    a[i] = b[i] + 1.0;
 
-; RUN: opt -passes=loop-vectorize,dce  -mtriple aarch64-linux-gnu -S \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize  -mtriple aarch64-linux-gnu -S \
+; RUN:   -tail-folding-policy=dont-fold-tail < %s | FileCheck %s
 
 define void @vector_reverse_f64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: define void @vector_reverse_f64(
@@ -22,7 +22,8 @@ define void @vector_reverse_f64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[B1]], [[A2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 64
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 63
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
@@ -83,7 +84,8 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[B1]], [[A2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 64
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 63
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
@@ -136,15 +138,14 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ITER_CHECK:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 5
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP3]], 5
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP5]]
@@ -170,14 +171,13 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub nuw nsw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = sub i64 0, [[TMP10]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i16, ptr [[TMP9]], i64 [[TMP20]]
-; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 0, [[TMP4]]
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP20]], [[TMP14]]
+; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP20]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i16, ptr [[TMP9]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 -2, [[TMP4]]
-; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[TMP20]], [[TMP16]]
+; CHECK-NEXT:    [[TMP25:%.*]] = sub i64 [[TMP16]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i16, ptr [[TMP9]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = mul i64 -3, [[TMP4]]
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP20]], [[TMP21]]
+; CHECK-NEXT:    [[TMP15:%.*]] = sub i64 [[TMP21]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i16, ptr [[TMP9]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 8 x i16> @llvm.vector.reverse.nxv8i16(<vscale x 8 x i16> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[REVERSE]], ptr [[TMP23]], align 2

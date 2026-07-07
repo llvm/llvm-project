@@ -17,6 +17,7 @@ static_library("Object") {
   sources = [
     "Archive.cpp",
     "ArchiveWriter.cpp",
+    "BBAddrMap.cpp",
     "Binary.cpp",
     "BuildID.cpp",
     "COFFImportFile.cpp",

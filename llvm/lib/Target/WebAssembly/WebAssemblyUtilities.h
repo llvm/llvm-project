@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WEBASSEMBLYUTILITIES_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WEBASSEMBLYUTILITIES_H
 
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace llvm {
@@ -24,9 +25,13 @@ class MachineInstr;
 class MachineOperand;
 class MCContext;
 class MCSymbolWasm;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class WebAssemblyFunctionInfo;
 class WebAssemblySubtarget;
+class MachineSDNode;
+class SDLoc;
+class SelectionDAG;
 
 namespace WebAssembly {
 
@@ -72,6 +77,13 @@ bool canLowerMultivalueReturn(const WebAssemblySubtarget *Subtarget);
 /// i.e., not indirectly via a pointer parameter that points to the value in
 /// memory.
 bool canLowerReturn(size_t ResultSize, const WebAssemblySubtarget *Subtarget);
+
+// Get the TLS base value for the current target
+// If using libcall thread context, calls
+// __wasm_get_tls_base, otherwise, global.get __tls_base
+MachineSDNode *getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
+                          const WebAssemblySubtarget *Subtarget,
+                          const SDValue Chain = SDValue());
 
 } // end namespace WebAssembly
 

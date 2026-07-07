@@ -2,12 +2,12 @@
 // RUN: FileCheck --input-file=%t.cir %s
 
 !s32i = !cir.int<s, 32>
-!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
+!rec_SomeClass = !cir.struct<"SomeClass" {!s32i}>
 
 // Test that a cleanup scope with break that branches through cleanup is
 // properly flattened with a destination slot and switch dispatch.
 cir.func @test_multi_exit_with_break() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.while {
     %true = cir.const #cir.bool<true> : !cir.bool
     cir.condition(%true)
@@ -30,8 +30,8 @@ cir.func @test_multi_exit_with_break() {
 }
 
 // CHECK-LABEL: cir.func @test_multi_exit_with_break()
-// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
 // CHECK:       ^[[LOOP_COND]]:
 // CHECK:         %[[TRUE:.*]] = cir.const #true
@@ -77,7 +77,7 @@ cir.func private @shouldBreak() -> !cir.bool
 // Test that a cleanup scope with continue that branches through cleanup is
 // properly flattened.
 cir.func @test_multi_exit_with_continue() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.while {
     %true = cir.const #cir.bool<true> : !cir.bool
     cir.condition(%true)
@@ -100,8 +100,8 @@ cir.func @test_multi_exit_with_continue() {
 }
 
 // CHECK-LABEL: cir.func @test_multi_exit_with_continue()
-// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
 // CHECK:       ^[[LOOP_COND]]:
 // CHECK:         %[[TRUE:.*]] = cir.const #true
@@ -144,7 +144,7 @@ cir.func private @shouldContinue() -> !cir.bool
 
 // Test continue inside a switch that's inside a cleanup scope.
 cir.func @test_continue_in_switch() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.while {
     %true = cir.const #cir.bool<true> : !cir.bool
     cir.condition(%true)
@@ -172,8 +172,8 @@ cir.func @test_continue_in_switch() {
 }
 
 // CHECK-LABEL: cir.func @test_continue_in_switch()
-// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
 // CHECK:       ^[[LOOP_COND]]:
 // CHECK:         %[[TRUE:.*]] = cir.const #true
@@ -221,7 +221,7 @@ cir.func @test_continue_in_switch() {
 
 // Test return inside a loop inside a switch inside a cleanup scope.
 cir.func @test_return_in_loop_in_switch() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.while {
     %true = cir.const #cir.bool<true> : !cir.bool
     cir.condition(%true)
@@ -258,8 +258,8 @@ cir.func @test_return_in_loop_in_switch() {
 }
 
 // CHECK-LABEL: cir.func @test_return_in_loop_in_switch()
-// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
 // CHECK:       ^[[LOOP_COND]]:
 // CHECK:         %[[TRUE:.*]] = cir.const #true
@@ -318,8 +318,8 @@ cir.func private @shouldReturn() -> !cir.bool
 
 // Test return inside nested cleanup scopes - both need multi-exit handling.
 cir.func @test_return_in_nested_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
-  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c1" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c2" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -343,9 +343,9 @@ cir.func @test_return_in_nested_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_return_in_nested_cleanup()
-// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
-// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1"
-// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2"
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca "c1" {{.*}} : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca "c2" {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
 // CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
 // CHECK:       ^[[OUTER_BODY]]:
@@ -403,8 +403,8 @@ cir.func @test_return_in_nested_cleanup() {
 
 // Test return inside nested cleanup scopes.
 cir.func @test_return_constant_in_nested_cleanup() -> !s32i {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
-  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c1" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c2" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -430,9 +430,9 @@ cir.func @test_return_constant_in_nested_cleanup() -> !s32i {
 }
 
 // CHECK-LABEL: cir.func @test_return_constant_in_nested_cleanup()
-// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
-// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init]
-// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca "c1" {{.*}} init : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca "c2" {{.*}} init : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
 // CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
 // CHECK:       ^[[OUTER_BODY]]:
@@ -492,8 +492,8 @@ cir.func @test_return_constant_in_nested_cleanup() -> !s32i {
 
 // Test return with computed value.
 cir.func @test_return_computed_value(%arg0: !s32i) -> !s32i {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
-  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c1" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c2" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -520,10 +520,10 @@ cir.func @test_return_computed_value(%arg0: !s32i) -> !s32i {
 
 // CHECK-LABEL: cir.func @test_return_computed_value
 // CHECK-SAME: (%[[ARG0:.*]]: !s32i)
-// CHECK:         %[[RET_TMP:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__ret_operand_tmp"]
-// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
-// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init]
-// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
+// CHECK:         %[[RET_TMP:.*]] = cir.alloca "__ret_operand_tmp" {{.*}} : !cir.ptr<!s32i>
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca "c1" {{.*}} init : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca "c2" {{.*}} init : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
 // CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
 // CHECK:       ^[[OUTER_BODY]]:
@@ -585,8 +585,8 @@ cir.func @test_return_computed_value(%arg0: !s32i) -> !s32i {
 
 // Test return with of a function parameter value.
 cir.func @test_return_param_value(%arg0: !s32i) -> !s32i {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
-  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c1" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c2" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -612,10 +612,10 @@ cir.func @test_return_param_value(%arg0: !s32i) -> !s32i {
 
 // CHECK-LABEL: cir.func @test_return_param_value
 // CHECK-SAME: (%[[ARG0:.*]]: !s32i)
-// CHECK:         %[[RET_TMP:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__ret_operand_tmp"]
-// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
-// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init]
-// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
+// CHECK:         %[[RET_TMP:.*]] = cir.alloca "__ret_operand_tmp" {{.*}} : !cir.ptr<!s32i>
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca "c1" {{.*}} init : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca "c2" {{.*}} init : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
 // CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
 // CHECK:       ^[[OUTER_BODY]]:
@@ -676,8 +676,8 @@ cir.func @test_return_param_value(%arg0: !s32i) -> !s32i {
 
 // Test return of a block argument value.
 cir.func @test_return_blockarg_value(%arg0: !s32i) -> !s32i {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
-  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c1" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c2" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -705,10 +705,10 @@ cir.func @test_return_blockarg_value(%arg0: !s32i) -> !s32i {
 
 // CHECK-LABEL: cir.func @test_return_blockarg_value
 // CHECK-SAME: (%[[ARG0:.*]]: !s32i)
-// CHECK:         %[[RET_TMP:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__ret_operand_tmp"]
-// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
-// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init]
-// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
+// CHECK:         %[[RET_TMP:.*]] = cir.alloca "__ret_operand_tmp" {{.*}} : !cir.ptr<!s32i>
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca "c1" {{.*}} init : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca "c2" {{.*}} init : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
 // CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
 // CHECK:       ^[[OUTER_BODY]]:
@@ -771,8 +771,8 @@ cir.func @test_return_blockarg_value(%arg0: !s32i) -> !s32i {
 
 // Test break inside nested cleanup scopes within a loop.
 cir.func @test_break_in_nested_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
-  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c1" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c2" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.while {
     %true = cir.const #cir.bool<true> : !cir.bool
     cir.condition(%true)
@@ -802,9 +802,9 @@ cir.func @test_break_in_nested_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_break_in_nested_cleanup()
-// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
-// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1"
-// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2"
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca "c1" {{.*}} : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca "c2" {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
 // CHECK:       ^[[LOOP_COND]]:
 // CHECK:         %[[TRUE:.*]] = cir.const #true
@@ -869,8 +869,8 @@ cir.func @test_break_in_nested_cleanup() {
 
 // Test continue inside nested cleanup scopes within a loop.
 cir.func @test_continue_in_nested_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
-  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c1" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c2" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.while {
     %true = cir.const #cir.bool<true> : !cir.bool
     cir.condition(%true)
@@ -900,9 +900,9 @@ cir.func @test_continue_in_nested_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_continue_in_nested_cleanup()
-// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
-// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1"
-// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2"
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca "c1" {{.*}} : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca "c2" {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
 // CHECK:       ^[[LOOP_COND]]:
 // CHECK:         %[[TRUE:.*]] = cir.const #true
@@ -967,9 +967,9 @@ cir.func @test_continue_in_nested_cleanup() {
 
 // Test continue inside nested cleanup in switch.
 cir.func @test_continue_in_nested_cleanup_in_switch() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
-  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
-  %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c1" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c2" align(4) init : !cir.ptr<!rec_SomeClass>
+  %2 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
   cir.while {
     %true = cir.const #cir.bool<true> : !cir.bool
     cir.condition(%true)
@@ -1001,10 +1001,10 @@ cir.func @test_continue_in_nested_cleanup_in_switch() {
 }
 
 // CHECK-LABEL: cir.func @test_continue_in_nested_cleanup_in_switch()
-// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
-// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1"
-// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2"
-// CHECK:         %[[ALLOCA_X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x"
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca "c1" {{.*}} : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca "c2" {{.*}} : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[ALLOCA_X:.*]] = cir.alloca  "x" {{.*}} : !cir.ptr<!s32i>
 // CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
 // CHECK:       ^[[LOOP_COND]]:
 // CHECK:         %[[TRUE:.*]] = cir.const #true
@@ -1057,7 +1057,7 @@ cir.func @test_continue_in_nested_cleanup_in_switch() {
 
 // Test return inside loop inside cleanup scope.
 cir.func @test_return_in_loop_in_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.while {
@@ -1080,8 +1080,8 @@ cir.func @test_return_in_loop_in_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_return_in_loop_in_cleanup()
-// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA]])
 // CHECK:         cir.br ^[[CLEANUP_BODY:bb[0-9]+]]
 // CHECK:       ^[[CLEANUP_BODY]]:
@@ -1118,4 +1118,165 @@ cir.func @test_return_in_loop_in_cleanup() {
 // CHECK:       ^[[DEFAULT]]:
 // CHECK:         cir.unreachable
 // CHECK:       ^[[FINAL_RET]]:
+// CHECK:         cir.return
+
+cir.func private @shouldGoto() -> !cir.bool
+
+// Test that a goto out of a cleanup scope shares the cleanup dispatch with
+// a yield exit. The original goto is replaced by a store of its destination
+// id and a branch to the cleanup entry; after the cleanup runs, the dispatch
+// switch routes the goto's destination id to a block containing a new
+// cir.goto to the same label.
+cir.func @test_multi_exit_with_goto() {
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    %cond = cir.call @shouldGoto() : () -> !cir.bool
+    cir.brcond %cond ^bb_goto, ^bb_normal
+  ^bb_goto:
+    cir.goto "exit"   // Goto through cleanup
+  ^bb_normal:
+    cir.yield         // Normal exit through cleanup
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.br ^bb_end
+^bb_end:
+  cir.label "exit"
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_multi_exit_with_goto()
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:       ^[[BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldGoto()
+// CHECK:         cir.brcond %[[COND]] ^[[GOTO_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
+// CHECK:       ^[[GOTO_PATH]]:
+// CHECK:         %[[GOTO_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[GOTO_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[YIELD_PATH]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[CLEANUP]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[DISPATCH]]:
+// CHECK:         %[[SLOT_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[SLOT_VAL]] : !s32i, ^[[DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[GOTO_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[YIELD_DEST]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+// CHECK:       ^[[GOTO_DEST]]:
+// CHECK:         cir.goto "exit"
+// CHECK:       ^[[DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.br ^[[LABEL_BB:bb[0-9]+]]
+// CHECK:       ^[[LABEL_BB]]:
+// CHECK:         cir.label "exit"
+// CHECK:         cir.return
+
+// Test a goto inside nested cleanup scopes whose target label is outside both
+// scopes. The goto must branch through both cleanups before reaching its
+// target. Each cleanup re-emits the goto via its dispatch destination block.
+cir.func @test_goto_in_nested_cleanup() {
+  %0 = cir.alloca "c1" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c2" align(4) init : !cir.ptr<!rec_SomeClass>
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      %cond = cir.call @shouldGoto() : () -> !cir.bool
+      cir.brcond %cond ^bb_goto, ^bb_normal
+    ^bb_goto:
+      cir.goto "target"   // Goto through BOTH cleanups
+    ^bb_normal:
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.br ^bb_end
+^bb_goto_target:
+  cir.label "target"
+  cir.br ^bb_end
+^bb_end:
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_goto_in_nested_cleanup()
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+// CHECK:         %[[ALLOCA_C1:.*]] = cir.alloca "c1" {{.*}} : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[ALLOCA_C2:.*]] = cir.alloca "c2" {{.*}} : !cir.ptr<!rec_SomeClass>
+// CHECK:         cir.call @ctor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.call @ctor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         %[[COND:.*]] = cir.call @shouldGoto()
+// CHECK:         cir.brcond %[[COND]] ^[[GOTO_PATH:bb[0-9]+]], ^[[YIELD_PATH:bb[0-9]+]]
+// CHECK:       ^[[GOTO_PATH]]:
+// CHECK:         %[[GOTO_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[GOTO_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[YIELD_PATH]]:
+// CHECK:         %[[YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[INNER_CLEANUP]]
+// CHECK:       ^[[INNER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C2]])
+// CHECK:         cir.br ^[[INNER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[INNER_DISPATCH]]:
+// CHECK:         %[[INNER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[INNER_VAL]] : !s32i, ^[[INNER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[INNER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[INNER_GOTO_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[INNER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[OUTER_YIELD_STORE:bb[0-9]+]]
+// CHECK:       ^[[INNER_GOTO_DEST]]:
+// CHECK:         %[[OUTER_GOTO_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[OUTER_GOTO_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[INNER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[OUTER_YIELD_STORE]]:
+// CHECK:         %[[OUTER_YIELD_ID:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.store %[[OUTER_YIELD_ID]], %[[DEST_SLOT]]
+// CHECK:         cir.br ^[[OUTER_CLEANUP]]
+// CHECK:       ^[[OUTER_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA_C1]])
+// CHECK:         cir.br ^[[OUTER_DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[OUTER_DISPATCH]]:
+// CHECK:         %[[OUTER_VAL:.*]] = cir.load %[[DEST_SLOT]]
+// CHECK:         cir.switch.flat %[[OUTER_VAL]] : !s32i, ^[[OUTER_DEFAULT:bb[0-9]+]] [
+// CHECK:           0: ^[[OUTER_YIELD_DEST:bb[0-9]+]],
+// CHECK:           1: ^[[OUTER_GOTO_DEST:bb[0-9]+]]
+// CHECK:         ]
+// CHECK:       ^[[OUTER_YIELD_DEST]]:
+// CHECK:         cir.br ^[[AFTER_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[OUTER_GOTO_DEST]]:
+// CHECK:         cir.goto "target"
+// CHECK:       ^[[OUTER_DEFAULT]]:
+// CHECK:         cir.unreachable
+// CHECK:       ^[[AFTER_CLEANUP]]:
+// CHECK:         cir.br ^[[END:bb[0-9]+]]
+// CHECK:       ^[[LABEL_BB:bb[0-9]+]]:
+// CHECK:         cir.label "target"
+// CHECK:         cir.br ^[[END]]
+// CHECK:       ^[[END]]:
 // CHECK:         cir.return

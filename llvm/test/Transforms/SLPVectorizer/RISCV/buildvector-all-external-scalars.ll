@@ -206,7 +206,7 @@ define void @test(ptr %__last.addr.011.i.i, ptr %call3) {
 ; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_31:%.*]] = getelementptr inbounds i8, ptr [[INCDEC_PTR2_I_I_20]], i32 -4
 ; CHECK-NEXT:    [[TMP52:%.*]] = insertelement <2 x ptr> poison, ptr [[__LAST_ADDR_0_I_I_20]], i32 0
 ; CHECK-NEXT:    [[TMP53:%.*]] = insertelement <2 x ptr> [[TMP52]], ptr [[INCDEC_PTR2_I_I_20]], i32 1
-; CHECK-NEXT:    [[TMP92:%.*]] = getelementptr i8, <2 x ptr> [[TMP53]], <2 x i32> <i32 4, i32 -4>
+; CHECK-NEXT:    [[TMP92:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP53]], <2 x i32> <i32 4, i32 -4>
 ; CHECK-NEXT:    [[INCDEC_PTR2_I_I_31:%.*]] = getelementptr inbounds nuw i8, ptr [[__LAST_ADDR_0_I_I_20]], i32 4
 ; CHECK-NEXT:    [[CMP1_I_I_31:%.*]] = icmp ult ptr [[INCDEC_PTR2_I_I_31]], [[__LAST_ADDR_0_I_I_31]]
 ; CHECK-NEXT:    [[TMP76]] = shufflevector <2 x ptr> [[TMP92]], <2 x ptr> poison, <2 x i32> <i32 1, i32 0>
@@ -351,7 +351,7 @@ define void @test(ptr %__last.addr.011.i.i, ptr %call3) {
 ; EXP-NEXT:    [[__LAST_ADDR_0_I_I_20:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_19]], i32 -4
 ; EXP-NEXT:    [[TMP47:%.*]] = insertelement <2 x ptr> poison, ptr [[INCDEC_PTR2_I_I_19]], i32 0
 ; EXP-NEXT:    [[TMP48:%.*]] = insertelement <2 x ptr> [[TMP47]], ptr [[__LAST_ADDR_0_I_I_19]], i32 1
-; EXP-NEXT:    [[TMP49:%.*]] = getelementptr i8, <2 x ptr> [[TMP48]], <2 x i32> <i32 4, i32 -4>
+; EXP-NEXT:    [[TMP49:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP48]], <2 x i32> <i32 4, i32 -4>
 ; EXP-NEXT:    [[INCDEC_PTR2_I_I_20:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_19]], i32 4
 ; EXP-NEXT:    [[TMP50:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_20]], align 4
 ; EXP-NEXT:    [[TMP51:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_20]], align 4
@@ -359,89 +359,89 @@ define void @test(ptr %__last.addr.011.i.i, ptr %call3) {
 ; EXP-NEXT:    store float [[TMP50]], ptr [[__LAST_ADDR_0_I_I_20]], align 4
 ; EXP-NEXT:    [[TMP52:%.*]] = insertelement <2 x ptr> poison, ptr [[__LAST_ADDR_0_I_I_20]], i32 0
 ; EXP-NEXT:    [[TMP53:%.*]] = insertelement <2 x ptr> [[TMP52]], ptr [[INCDEC_PTR2_I_I_20]], i32 1
-; EXP-NEXT:    [[TMP54:%.*]] = getelementptr i8, <2 x ptr> [[TMP53]], <2 x i32> <i32 -4, i32 4>
+; EXP-NEXT:    [[TMP54:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP53]], <2 x i32> <i32 -4, i32 4>
 ; EXP-NEXT:    [[__LAST_ADDR_0_I_I_21:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_20]], i32 -4
-; EXP-NEXT:    [[TMP55:%.*]] = getelementptr i8, <2 x ptr> [[TMP49]], <2 x i32> <i32 4, i32 -4>
+; EXP-NEXT:    [[TMP55:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP49]], <2 x i32> <i32 4, i32 -4>
 ; EXP-NEXT:    [[INCDEC_PTR2_I_I_21:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_20]], i32 4
 ; EXP-NEXT:    [[TMP56:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_21]], align 4
 ; EXP-NEXT:    [[TMP57:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_21]], align 4
 ; EXP-NEXT:    store float [[TMP57]], ptr [[INCDEC_PTR2_I_I_21]], align 4
 ; EXP-NEXT:    store float [[TMP56]], ptr [[__LAST_ADDR_0_I_I_21]], align 4
-; EXP-NEXT:    [[TMP58:%.*]] = getelementptr i8, <2 x ptr> [[TMP54]], <2 x i32> <i32 -4, i32 4>
+; EXP-NEXT:    [[TMP58:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP54]], <2 x i32> <i32 -4, i32 4>
 ; EXP-NEXT:    [[__LAST_ADDR_0_I_I_22:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_21]], i32 -4
-; EXP-NEXT:    [[TMP59:%.*]] = getelementptr i8, <2 x ptr> [[TMP55]], <2 x i32> <i32 4, i32 -4>
+; EXP-NEXT:    [[TMP59:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP55]], <2 x i32> <i32 4, i32 -4>
 ; EXP-NEXT:    [[INCDEC_PTR2_I_I_22:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_21]], i32 4
 ; EXP-NEXT:    [[TMP60:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_22]], align 4
 ; EXP-NEXT:    [[TMP61:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_22]], align 4
 ; EXP-NEXT:    store float [[TMP61]], ptr [[INCDEC_PTR2_I_I_22]], align 4
 ; EXP-NEXT:    store float [[TMP60]], ptr [[__LAST_ADDR_0_I_I_22]], align 4
-; EXP-NEXT:    [[TMP62:%.*]] = getelementptr i8, <2 x ptr> [[TMP58]], <2 x i32> <i32 -4, i32 4>
+; EXP-NEXT:    [[TMP62:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP58]], <2 x i32> <i32 -4, i32 4>
 ; EXP-NEXT:    [[__LAST_ADDR_0_I_I_23:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_22]], i32 -4
-; EXP-NEXT:    [[TMP63:%.*]] = getelementptr i8, <2 x ptr> [[TMP59]], <2 x i32> <i32 4, i32 -4>
+; EXP-NEXT:    [[TMP63:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP59]], <2 x i32> <i32 4, i32 -4>
 ; EXP-NEXT:    [[INCDEC_PTR2_I_I_23:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_22]], i32 4
 ; EXP-NEXT:    [[TMP64:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_23]], align 4
 ; EXP-NEXT:    [[TMP65:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_23]], align 4
 ; EXP-NEXT:    store float [[TMP65]], ptr [[INCDEC_PTR2_I_I_23]], align 4
 ; EXP-NEXT:    store float [[TMP64]], ptr [[__LAST_ADDR_0_I_I_23]], align 4
-; EXP-NEXT:    [[TMP66:%.*]] = getelementptr i8, <2 x ptr> [[TMP62]], <2 x i32> <i32 -4, i32 4>
+; EXP-NEXT:    [[TMP66:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP62]], <2 x i32> <i32 -4, i32 4>
 ; EXP-NEXT:    [[__LAST_ADDR_0_I_I_24:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_23]], i32 -4
-; EXP-NEXT:    [[TMP67:%.*]] = getelementptr i8, <2 x ptr> [[TMP63]], <2 x i32> <i32 4, i32 -4>
+; EXP-NEXT:    [[TMP67:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP63]], <2 x i32> <i32 4, i32 -4>
 ; EXP-NEXT:    [[INCDEC_PTR2_I_I_24:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_23]], i32 4
 ; EXP-NEXT:    [[TMP68:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_24]], align 4
 ; EXP-NEXT:    [[TMP69:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_24]], align 4
 ; EXP-NEXT:    store float [[TMP69]], ptr [[INCDEC_PTR2_I_I_24]], align 4
 ; EXP-NEXT:    store float [[TMP68]], ptr [[__LAST_ADDR_0_I_I_24]], align 4
-; EXP-NEXT:    [[TMP70:%.*]] = getelementptr i8, <2 x ptr> [[TMP66]], <2 x i32> <i32 -4, i32 4>
+; EXP-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP66]], <2 x i32> <i32 -4, i32 4>
 ; EXP-NEXT:    [[__LAST_ADDR_0_I_I_25:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_24]], i32 -4
-; EXP-NEXT:    [[TMP71:%.*]] = getelementptr i8, <2 x ptr> [[TMP67]], <2 x i32> <i32 4, i32 -4>
+; EXP-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP67]], <2 x i32> <i32 4, i32 -4>
 ; EXP-NEXT:    [[INCDEC_PTR2_I_I_25:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_24]], i32 4
 ; EXP-NEXT:    [[TMP72:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_25]], align 4
 ; EXP-NEXT:    [[TMP73:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_25]], align 4
 ; EXP-NEXT:    store float [[TMP73]], ptr [[INCDEC_PTR2_I_I_25]], align 4
 ; EXP-NEXT:    store float [[TMP72]], ptr [[__LAST_ADDR_0_I_I_25]], align 4
-; EXP-NEXT:    [[TMP74:%.*]] = getelementptr i8, <2 x ptr> [[TMP70]], <2 x i32> <i32 -4, i32 4>
+; EXP-NEXT:    [[TMP74:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP70]], <2 x i32> <i32 -4, i32 4>
 ; EXP-NEXT:    [[__LAST_ADDR_0_I_I_26:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_25]], i32 -4
-; EXP-NEXT:    [[TMP75:%.*]] = getelementptr i8, <2 x ptr> [[TMP71]], <2 x i32> <i32 4, i32 -4>
+; EXP-NEXT:    [[TMP75:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP71]], <2 x i32> <i32 4, i32 -4>
 ; EXP-NEXT:    [[INCDEC_PTR2_I_I_26:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_25]], i32 4
 ; EXP-NEXT:    [[TMP76:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_26]], align 4
 ; EXP-NEXT:    [[TMP77:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_26]], align 4
 ; EXP-NEXT:    store float [[TMP77]], ptr [[INCDEC_PTR2_I_I_26]], align 4
 ; EXP-NEXT:    store float [[TMP76]], ptr [[__LAST_ADDR_0_I_I_26]], align 4
-; EXP-NEXT:    [[TMP78:%.*]] = getelementptr i8, <2 x ptr> [[TMP74]], <2 x i32> <i32 -4, i32 4>
+; EXP-NEXT:    [[TMP78:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP74]], <2 x i32> <i32 -4, i32 4>
 ; EXP-NEXT:    [[__LAST_ADDR_0_I_I_27:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_26]], i32 -4
-; EXP-NEXT:    [[TMP79:%.*]] = getelementptr i8, <2 x ptr> [[TMP75]], <2 x i32> <i32 4, i32 -4>
+; EXP-NEXT:    [[TMP79:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP75]], <2 x i32> <i32 4, i32 -4>
 ; EXP-NEXT:    [[INCDEC_PTR2_I_I_27:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_26]], i32 4
 ; EXP-NEXT:    [[TMP80:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_27]], align 4
 ; EXP-NEXT:    [[TMP81:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_27]], align 4
 ; EXP-NEXT:    store float [[TMP81]], ptr [[INCDEC_PTR2_I_I_27]], align 4
 ; EXP-NEXT:    store float [[TMP80]], ptr [[__LAST_ADDR_0_I_I_27]], align 4
-; EXP-NEXT:    [[TMP82:%.*]] = getelementptr i8, <2 x ptr> [[TMP78]], <2 x i32> <i32 -4, i32 4>
+; EXP-NEXT:    [[TMP82:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP78]], <2 x i32> <i32 -4, i32 4>
 ; EXP-NEXT:    [[__LAST_ADDR_0_I_I_28:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_27]], i32 -4
-; EXP-NEXT:    [[TMP83:%.*]] = getelementptr i8, <2 x ptr> [[TMP79]], <2 x i32> <i32 4, i32 -4>
+; EXP-NEXT:    [[TMP83:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP79]], <2 x i32> <i32 4, i32 -4>
 ; EXP-NEXT:    [[INCDEC_PTR2_I_I_28:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_27]], i32 4
 ; EXP-NEXT:    [[TMP84:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_28]], align 4
 ; EXP-NEXT:    [[TMP85:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_28]], align 4
 ; EXP-NEXT:    store float [[TMP85]], ptr [[INCDEC_PTR2_I_I_28]], align 4
 ; EXP-NEXT:    store float [[TMP84]], ptr [[__LAST_ADDR_0_I_I_28]], align 4
-; EXP-NEXT:    [[TMP86:%.*]] = getelementptr i8, <2 x ptr> [[TMP82]], <2 x i32> <i32 -4, i32 4>
+; EXP-NEXT:    [[TMP86:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP82]], <2 x i32> <i32 -4, i32 4>
 ; EXP-NEXT:    [[__LAST_ADDR_0_I_I_29:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_28]], i32 -4
-; EXP-NEXT:    [[TMP87:%.*]] = getelementptr i8, <2 x ptr> [[TMP83]], <2 x i32> <i32 4, i32 -4>
+; EXP-NEXT:    [[TMP87:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP83]], <2 x i32> <i32 4, i32 -4>
 ; EXP-NEXT:    [[INCDEC_PTR2_I_I_29:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_28]], i32 4
 ; EXP-NEXT:    [[TMP88:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_29]], align 4
 ; EXP-NEXT:    [[TMP89:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_29]], align 4
 ; EXP-NEXT:    store float [[TMP89]], ptr [[INCDEC_PTR2_I_I_29]], align 4
 ; EXP-NEXT:    store float [[TMP88]], ptr [[__LAST_ADDR_0_I_I_29]], align 4
-; EXP-NEXT:    [[TMP90:%.*]] = getelementptr i8, <2 x ptr> [[TMP86]], <2 x i32> <i32 -4, i32 4>
+; EXP-NEXT:    [[TMP90:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP86]], <2 x i32> <i32 -4, i32 4>
 ; EXP-NEXT:    [[__LAST_ADDR_0_I_I_30:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_29]], i32 -4
-; EXP-NEXT:    [[TMP91:%.*]] = getelementptr i8, <2 x ptr> [[TMP87]], <2 x i32> <i32 4, i32 -4>
+; EXP-NEXT:    [[TMP91:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP87]], <2 x i32> <i32 4, i32 -4>
 ; EXP-NEXT:    [[INCDEC_PTR2_I_I_30:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_29]], i32 4
 ; EXP-NEXT:    [[TMP92:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_30]], align 4
 ; EXP-NEXT:    [[TMP93:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_30]], align 4
 ; EXP-NEXT:    store float [[TMP93]], ptr [[INCDEC_PTR2_I_I_30]], align 4
 ; EXP-NEXT:    store float [[TMP92]], ptr [[__LAST_ADDR_0_I_I_30]], align 4
-; EXP-NEXT:    [[TMP94]] = getelementptr i8, <2 x ptr> [[TMP90]], <2 x i32> <i32 -4, i32 4>
+; EXP-NEXT:    [[TMP94]] = getelementptr inbounds i8, <2 x ptr> [[TMP90]], <2 x i32> <i32 -4, i32 4>
 ; EXP-NEXT:    [[__LAST_ADDR_0_I_I_31:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_30]], i32 -4
-; EXP-NEXT:    [[TMP95:%.*]] = getelementptr i8, <2 x ptr> [[TMP91]], <2 x i32> <i32 4, i32 -4>
+; EXP-NEXT:    [[TMP95:%.*]] = getelementptr inbounds i8, <2 x ptr> [[TMP91]], <2 x i32> <i32 4, i32 -4>
 ; EXP-NEXT:    [[INCDEC_PTR2_I_I_31:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_30]], i32 4
 ; EXP-NEXT:    [[CMP1_I_I_31:%.*]] = icmp ult ptr [[INCDEC_PTR2_I_I_31]], [[__LAST_ADDR_0_I_I_31]]
 ; EXP-NEXT:    br i1 [[CMP1_I_I_31]], label %[[WHILE_BODY_I_I]], label %[[INVOKE_CONT21_EXITSTUB:.*]]

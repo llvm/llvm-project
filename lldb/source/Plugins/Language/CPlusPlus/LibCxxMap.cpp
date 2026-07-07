@@ -8,8 +8,6 @@
 
 #include "LibCxx.h"
 
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -350,14 +348,14 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
   // all items named __value_
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  auto potential_child_sp = key_val_sp->Clone(ConstString(name.GetString()));
+  auto potential_child_sp = key_val_sp->Clone(name.GetString());
   if (potential_child_sp) {
     switch (potential_child_sp->GetNumChildrenIgnoringErrors()) {
     case 1: {
       auto child0_sp = potential_child_sp->GetChildAtIndex(0);
       if (child0_sp &&
           (child0_sp->GetName() == g_cc_ || child0_sp->GetName() == g_cc))
-        potential_child_sp = child0_sp->Clone(ConstString(name.GetString()));
+        potential_child_sp = child0_sp->Clone(name.GetString());
       break;
     }
     case 2: {
@@ -366,7 +364,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
       if (child0_sp &&
           (child0_sp->GetName() == g_cc_ || child0_sp->GetName() == g_cc) &&
           child1_sp && child1_sp->GetName() == g_nc)
-        potential_child_sp = child0_sp->Clone(ConstString(name.GetString()));
+        potential_child_sp = child0_sp->Clone(name.GetString());
       break;
     }
     }
@@ -453,12 +451,12 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
   //
   // std::map stores the actual key/value pair in value_type::__cc_ (or
   // previously __cc).
-  key_value_sp = key_value_sp->Clone(ConstString("pair"));
+  key_value_sp = key_value_sp->Clone("pair");
   if (key_value_sp->GetNumChildrenIgnoringErrors() == 1) {
     auto child0_sp = key_value_sp->GetChildAtIndex(0);
     if (child0_sp &&
         (child0_sp->GetName() == "__cc_" || child0_sp->GetName() == "__cc"))
-      key_value_sp = child0_sp->Clone(ConstString("pair"));
+      key_value_sp = child0_sp->Clone("pair");
   }
 
   m_pair_sp = key_value_sp;

@@ -17,12 +17,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_PDBSYMUID_H
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_PDBSYMUID_H
 
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/DebugInfo/PDB/PDBTypes.h"
-#include "llvm/Support/Compiler.h"
-
-#include "lldb/Utility/LLDBAssert.h"
-#include "lldb/lldb-types.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
+#include "llvm/Support/FormatAdapters.h"
 
 namespace lldb_private {
 namespace npdb {
@@ -121,5 +118,19 @@ struct SymbolAndUid {
 };
 } // namespace npdb
 } // namespace lldb_private
+
+namespace llvm {
+
+template <> struct format_provider<lldb_private::npdb::PdbCompilandSymId> {
+  static void format(const lldb_private::npdb::PdbCompilandSymId &V,
+                     raw_ostream &Stream, StringRef Style);
+};
+
+template <> struct format_provider<lldb_private::npdb::PdbGlobalSymId> {
+  static void format(const lldb_private::npdb::PdbGlobalSymId &V,
+                     raw_ostream &Stream, StringRef Style);
+};
+
+} // namespace llvm
 
 #endif

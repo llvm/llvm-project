@@ -14,7 +14,7 @@
 #include "AMDGPU.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -89,6 +89,8 @@ void BaseSPIRVTargetInfo::getTargetDefines(const LangOptions &Opts,
   DefineStd(Builder, "SPIRV", Opts);
   if (Opts.HLSL)
     DefineStd(Builder, "spirv", Opts);
+  if (getTriple().isVulkanOS())
+    Builder.defineMacro("__VULKAN__");
 }
 
 void SPIRVTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -108,7 +110,10 @@ void SPIRV64TargetInfo::getTargetDefines(const LangOptions &Opts,
   DefineStd(Builder, "SPIRV64", Opts);
 }
 
-static const AMDGPUTargetInfo AMDGPUTI(llvm::Triple("amdgcn-amd-amdhsa"), {});
+static const AMDGPUTargetInfo
+    AMDGPUTI(llvm::Triple(llvm::Triple::amdgcn, llvm::Triple::NoSubArch,
+                          llvm::Triple::AMD, llvm::Triple::AMDHSA),
+             {});
 
 ArrayRef<const char *> SPIRV64AMDGCNTargetInfo::getGCCRegNames() const {
   return AMDGPUTI.getGCCRegNames();
@@ -145,6 +150,9 @@ void SPIRV64AMDGCNTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__AMD__");
   Builder.defineMacro("__AMDGPU__");
   Builder.defineMacro("__AMDGCN__");
+
+  if (Opts.AtomicIgnoreDenormalMode)
+    Builder.defineMacro("__AMDGCN_UNSAFE_FP_ATOMICS__");
 }
 
 void SPIRV64AMDGCNTargetInfo::setAuxTarget(const TargetInfo *Aux) {

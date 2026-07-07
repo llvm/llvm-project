@@ -4,7 +4,7 @@
 define float @test_tdo_scalar_f32_acos() {
 ; CHECK-LABEL: define float @test_tdo_scalar_f32_acos() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret float 0x3FF921FB60000000
+; CHECK-NEXT:    ret float f0x3FC90FDB
 ;
 entry:
   %c = call float @_Z4acosf(float 0.000000e+00)
@@ -14,7 +14,7 @@ entry:
 define <4 x float> @test_tdo_v2_f32_acos() {
 ; CHECK-LABEL: define <4 x float> @test_tdo_v2_f32_acos() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <4 x float> <float 0x3FF921FB60000000, float 0x3FF921FB60000000, float 0.000000e+00, float 0x400921FB60000000>
+; CHECK-NEXT:    ret <4 x float> <float f0x3FC90FDB, float f0x3FC90FDB, float 0.000000e+00, float f0x40490FDB>
 ;
 entry:
   %c = call <4 x float> @_Z4acosDv4_f(<4 x float> <float 0.000000e+00, float -0.000000e+00, float 1.000000e+00, float -1.000000e+00>)
@@ -24,7 +24,7 @@ entry:
 define half @test_tdo_scalar_f16_acos() {
 ; CHECK-LABEL: define half @test_tdo_scalar_f16_acos() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret half 0xH3E48
+; CHECK-NEXT:    ret half 1.570310e+00
 ;
 entry:
   %c = call half @_Z4acosDh(half 0.000000e+00)
@@ -34,7 +34,7 @@ entry:
 define <4 x half> @test_tdo_v2_f16_acos() {
 ; CHECK-LABEL: define <4 x half> @test_tdo_v2_f16_acos() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <4 x half> <half 0xH3E48, half 0xH3E48, half 0xH0000, half 0xH4248>
+; CHECK-NEXT:    ret <4 x half> <half 1.570310e+00, half 1.570310e+00, half 0.000000e+00, half 3.140630e+00>
 ;
 entry:
   %c = call <4 x half> @_Z4acosDv4_Dh(<4 x half> <half 0.000000e+00, half -0.000000e+00, half 1.000000e+00, half -1.000000e+00>)
@@ -44,7 +44,7 @@ entry:
 define double @test_tdo_scalar_f64_acos() {
 ; CHECK-LABEL: define double @test_tdo_scalar_f64_acos() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret double 0x3FF921FB54442D18
+; CHECK-NEXT:    ret double f0x3FF921FB54442D18
 ;
 entry:
   %c = call double @_Z4acosd(double 0.000000e+00)
@@ -54,7 +54,7 @@ entry:
 define <4 x double> @test_tdo_v2_f64_acos() {
 ; CHECK-LABEL: define <4 x double> @test_tdo_v2_f64_acos() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <4 x double> <double 0x3FF921FB54442D18, double 0x3FF921FB54442D18, double 0.000000e+00, double 0x400921FB54442D18>
+; CHECK-NEXT:    ret <4 x double> <double f0x3FF921FB54442D18, double f0x3FF921FB54442D18, double 0.000000e+00, double f0x400921FB54442D18>
 ;
 entry:
   %c = call <4 x double> @_Z4acosDv4_d(<4 x double> <double 0.000000e+00, double -0.000000e+00, double 1.000000e+00, double -1.000000e+00>)

@@ -284,7 +284,7 @@ entry:
 define double @test_fabs_select1(double %a) {
 ; CHECK-LABEL: @test_fabs_select1(
 ; CHECK-NEXT:    [[COND:%.*]] = fcmp uno double [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], double 0x7FF8000000000000, double [[A]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], double +qnan, double [[A]]
 ; CHECK-NEXT:    ret double [[SEL1]]
 ;
   %cond = fcmp uno double %a, 0.000000e+00
@@ -297,7 +297,7 @@ define double @test_fabs_select1(double %a) {
 define <2 x double> @test_fabs_select1_vec(<2 x double> %a) {
 ; CHECK-LABEL: @test_fabs_select1_vec(
 ; CHECK-NEXT:    [[COND:%.*]] = fcmp uno <2 x double> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[COND]], <2 x double> splat (double 0x7FF8000000000000), <2 x double> [[A]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[COND]], <2 x double> splat (double +qnan), <2 x double> [[A]]
 ; CHECK-NEXT:    ret <2 x double> [[SEL2]]
 ;
   %cond = fcmp uno <2 x double> %a, zeroinitializer
@@ -310,7 +310,7 @@ define <2 x double> @test_fabs_select1_vec(<2 x double> %a) {
 define double @test_fabs_select2(double %a) {
 ; CHECK-LABEL: @test_fabs_select2(
 ; CHECK-NEXT:    [[ABS1:%.*]] = call double @llvm.fabs.f64(double [[A:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[ABS1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[ABS1]], +inf
 ; CHECK-NEXT:    [[ABS2:%.*]] = select i1 [[CMP]], double 0.000000e+00, double [[ABS1]]
 ; CHECK-NEXT:    ret double [[ABS2]]
 ;
@@ -347,7 +347,7 @@ define double @test_fabs_select_fmf2(i1 %cond, double %a) {
 
 define float @test_fabs_select_multiuse(i1 %cond, float %x) {
 ; CHECK-LABEL: @test_fabs_select_multiuse(
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float [[X:%.*]], float 0x7FF0000000000000
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float [[X:%.*]], float +inf
 ; CHECK-NEXT:    call void @usef32(float [[SELECT]])
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[FABS]]

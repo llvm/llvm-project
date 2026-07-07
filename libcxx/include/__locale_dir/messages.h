@@ -33,6 +33,7 @@
 #  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_EXPORTED_FROM_ABI messages_base {
 public:
@@ -49,11 +50,12 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit messages(size_t __refs = 0) : locale::facet(__refs) {}
 
-  _LIBCPP_HIDE_FROM_ABI catalog open(const basic_string<char>& __nm, const locale& __loc) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI catalog open(const basic_string<char>& __nm, const locale& __loc) const {
     return do_open(__nm, __loc);
   }
 
-  _LIBCPP_HIDE_FROM_ABI string_type get(catalog __c, int __set, int __msgid, const string_type& __dflt) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type
+  get(catalog __c, int __set, int __msgid, const string_type& __dflt) const {
     return do_get(__c, __set, __msgid, __dflt);
   }
 
@@ -136,6 +138,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<wchar_t>;
 #  endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_LOCALIZATION

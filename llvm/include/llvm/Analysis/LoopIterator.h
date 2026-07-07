@@ -120,7 +120,7 @@ public:
   Loop *getLoop() const { return L; }
 
   /// Traverse the loop blocks and store the DFS result.
-  void perform(const LoopInfo *LI);
+  LLVM_ABI void perform(const LoopInfo *LI);
 
   /// Return true if postorder numbers are assigned to all loop blocks.
   bool isComplete() const { return PostBlocks.size() == L->getNumBlocks(); }
@@ -144,13 +144,13 @@ public:
 
   /// Return true if this block has a postorder number.
   bool hasPostorder(BasicBlock *BB) const {
-    DenseMap<BasicBlock*, unsigned>::const_iterator I = PostNumbers.find(BB);
+    auto I = PostNumbers.find(BB);
     return I != PostNumbers.end() && I->second;
   }
 
   /// Get a block's postorder number.
   unsigned getPostorder(BasicBlock *BB) const {
-    DenseMap<BasicBlock*, unsigned>::const_iterator I = PostNumbers.find(BB);
+    auto I = PostNumbers.find(BB);
     assert(I != PostNumbers.end() && "block not visited by DFS");
     assert(I->second && "block not finished by DFS");
     return I->second;

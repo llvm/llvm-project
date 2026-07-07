@@ -2,7 +2,7 @@
 ; RUN: not llc -o /dev/null %s 2>&1 | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: error: couldn't allocate input reg for constraint 'r'
+; CHECK: error: could not allocate input reg for constraint 'r'
 define i32 @f2() #0 {
 entry:
   %retval = alloca i32, align 4

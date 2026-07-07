@@ -12,10 +12,10 @@ define void @test(ptr nocapture noundef readonly %kernel, i32 noundef %kw, float
 ; CHECK-NEXT:    ands x11, x8, x9
 ; CHECK-NEXT:    b.eq .LBB0_6
 ; CHECK-NEXT:  // %bb.2: // %for.body.us.preheader
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    add x11, x2, x11, lsl #1
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    mov x9, xzr
 ; CHECK-NEXT:    mov w10, wzr
 ; CHECK-NEXT:    mov x12, #4 // =0x4
@@ -41,49 +41,49 @@ define void @test(ptr nocapture noundef readonly %kernel, i32 noundef %kw, float
 ; CHECK-NEXT:  .LBB0_4: // %for.cond.i.preheader.us
 ; CHECK-NEXT:    // Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    // => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    ld1b { z4.b }, p1/z, [x16, x14]
+; CHECK-NEXT:    ld1b { z4.b }, p0/z, [x16, x14]
 ; CHECK-NEXT:    ldr z5, [x16]
 ; CHECK-NEXT:    add x17, x16, x15
 ; CHECK-NEXT:    add x18, x16, x14
 ; CHECK-NEXT:    add x3, x17, #8
 ; CHECK-NEXT:    add x4, x17, #16
-; CHECK-NEXT:    fmad z4.h, p0/m, z0.h, z5.h
-; CHECK-NEXT:    ld1b { z5.b }, p1/z, [x16, x15]
-; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z1.h
-; CHECK-NEXT:    ld1h { z5.h }, p0/z, [x17, x12, lsl #1]
-; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z2.h
-; CHECK-NEXT:    ld1h { z5.h }, p0/z, [x17, x13, lsl #1]
-; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z3.h
+; CHECK-NEXT:    fmad z4.h, p1/m, z0.h, z5.h
+; CHECK-NEXT:    ld1b { z5.b }, p0/z, [x16, x15]
+; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z1.h
+; CHECK-NEXT:    ld1h { z5.h }, p1/z, [x17, x12, lsl #1]
+; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z2.h
+; CHECK-NEXT:    ld1h { z5.h }, p1/z, [x17, x13, lsl #1]
+; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z3.h
 ; CHECK-NEXT:    ldr z5, [x16, #1, mul vl]
 ; CHECK-NEXT:    str z4, [x16]
 ; CHECK-NEXT:    ldr z4, [x18, #1, mul vl]
-; CHECK-NEXT:    fmad z4.h, p0/m, z0.h, z5.h
+; CHECK-NEXT:    fmad z4.h, p1/m, z0.h, z5.h
 ; CHECK-NEXT:    ldr z5, [x17, #1, mul vl]
-; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z1.h
+; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z1.h
 ; CHECK-NEXT:    ldr z5, [x3, #1, mul vl]
-; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z2.h
+; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z2.h
 ; CHECK-NEXT:    ldr z5, [x4, #1, mul vl]
-; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z3.h
+; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z3.h
 ; CHECK-NEXT:    ldr z5, [x16, #2, mul vl]
 ; CHECK-NEXT:    str z4, [x16, #1, mul vl]
 ; CHECK-NEXT:    ldr z4, [x18, #2, mul vl]
-; CHECK-NEXT:    fmad z4.h, p0/m, z0.h, z5.h
+; CHECK-NEXT:    fmad z4.h, p1/m, z0.h, z5.h
 ; CHECK-NEXT:    ldr z5, [x17, #2, mul vl]
-; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z1.h
+; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z1.h
 ; CHECK-NEXT:    ldr z5, [x3, #2, mul vl]
-; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z2.h
+; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z2.h
 ; CHECK-NEXT:    ldr z5, [x4, #2, mul vl]
-; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z3.h
+; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z3.h
 ; CHECK-NEXT:    ldr z5, [x16, #3, mul vl]
 ; CHECK-NEXT:    str z4, [x16, #2, mul vl]
 ; CHECK-NEXT:    ldr z4, [x18, #3, mul vl]
-; CHECK-NEXT:    fmad z4.h, p0/m, z0.h, z5.h
+; CHECK-NEXT:    fmad z4.h, p1/m, z0.h, z5.h
 ; CHECK-NEXT:    ldr z5, [x17, #3, mul vl]
-; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z1.h
+; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z1.h
 ; CHECK-NEXT:    ldr z5, [x3, #3, mul vl]
-; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z2.h
+; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z2.h
 ; CHECK-NEXT:    ldr z5, [x4, #3, mul vl]
-; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z3.h
+; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z3.h
 ; CHECK-NEXT:    str z4, [x16, #3, mul vl]
 ; CHECK-NEXT:    incb x16, all, mul #4
 ; CHECK-NEXT:    cmp x16, x11
@@ -104,7 +104,6 @@ entry:
   br i1 %cmp139, label %for.body.lr.ph, label %exit78
 
 for.body.lr.ph:                                   ; preds = %entry
-  %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %vscale = tail call i64 @llvm.vscale.i64()
   %mul5.i = shl nuw nsw i64 %vscale, 5
   %sub.not.i = sub nsw i64 0, %mul5.i
@@ -165,58 +164,58 @@ for.cond.i.preheader.us:                          ; preds = %for.body.us, %for.c
   %s4.0.i134.us = phi ptr [ %add.ptr27.us, %for.body.us ], [ %add.ptr19.i.us, %for.cond.i.preheader.us ]
   %16 = load <vscale x 8 x half>, ptr %s1.0.i137.us, align 16
   %17 = load <vscale x 8 x half>, ptr %vdst.0.i138.us, align 16
-  %18 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %17, <vscale x 8 x half> %16, <vscale x 8 x half> %6)
+  %18 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %17, <vscale x 8 x half> %16, <vscale x 8 x half> %6)
   %19 = load <vscale x 8 x half>, ptr %s2.0.i136.us, align 16
-  %20 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %18, <vscale x 8 x half> %19, <vscale x 8 x half> %9)
+  %20 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %18, <vscale x 8 x half> %19, <vscale x 8 x half> %9)
   %21 = load <vscale x 8 x half>, ptr %s3.0.i135.us, align 16
-  %22 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %20, <vscale x 8 x half> %21, <vscale x 8 x half> %12)
+  %22 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %20, <vscale x 8 x half> %21, <vscale x 8 x half> %12)
   %23 = load <vscale x 8 x half>, ptr %s4.0.i134.us, align 16
-  %24 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %22, <vscale x 8 x half> %23, <vscale x 8 x half> %15)
+  %24 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %22, <vscale x 8 x half> %23, <vscale x 8 x half> %15)
   store <vscale x 8 x half> %24, ptr %vdst.0.i138.us, align 16
   %25 = getelementptr i8, ptr %s1.0.i137.us, i64 %vs2
   %26 = load <vscale x 8 x half>, ptr %25, align 16
   %27 = getelementptr i8, ptr %vdst.0.i138.us, i64 %vs2
   %28 = load <vscale x 8 x half>, ptr %27, align 16
-  %29 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %28, <vscale x 8 x half> %26, <vscale x 8 x half> %6)
+  %29 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %28, <vscale x 8 x half> %26, <vscale x 8 x half> %6)
   %30 = getelementptr i8, ptr %s2.0.i136.us, i64 %vs2
   %31 = load <vscale x 8 x half>, ptr %30, align 16
-  %32 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %29, <vscale x 8 x half> %31, <vscale x 8 x half> %9)
+  %32 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %29, <vscale x 8 x half> %31, <vscale x 8 x half> %9)
   %33 = getelementptr i8, ptr %s3.0.i135.us, i64 %vs2
   %34 = load <vscale x 8 x half>, ptr %33, align 16
-  %35 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %32, <vscale x 8 x half> %34, <vscale x 8 x half> %12)
+  %35 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %32, <vscale x 8 x half> %34, <vscale x 8 x half> %12)
   %36 = getelementptr i8, ptr %s4.0.i134.us, i64 %vs2
   %37 = load <vscale x 8 x half>, ptr %36, align 16
-  %38 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %35, <vscale x 8 x half> %37, <vscale x 8 x half> %15)
+  %38 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %35, <vscale x 8 x half> %37, <vscale x 8 x half> %15)
   store <vscale x 8 x half> %38, ptr %27, align 16
   %39 = getelementptr i8, ptr %s1.0.i137.us, i64 %.idx.i.us.2
   %40 = load <vscale x 8 x half>, ptr %39, align 16
   %41 = getelementptr i8, ptr %vdst.0.i138.us, i64 %.idx.i.us.2
   %42 = load <vscale x 8 x half>, ptr %41, align 16
-  %43 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %42, <vscale x 8 x half> %40, <vscale x 8 x half> %6)
+  %43 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %42, <vscale x 8 x half> %40, <vscale x 8 x half> %6)
   %44 = getelementptr i8, ptr %s2.0.i136.us, i64 %.idx.i.us.2
   %45 = load <vscale x 8 x half>, ptr %44, align 16
-  %46 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %43, <vscale x 8 x half> %45, <vscale x 8 x half> %9)
+  %46 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %43, <vscale x 8 x half> %45, <vscale x 8 x half> %9)
   %47 = getelementptr i8, ptr %s3.0.i135.us, i64 %.idx.i.us.2
   %48 = load <vscale x 8 x half>, ptr %47, align 16
-  %49 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %46, <vscale x 8 x half> %48, <vscale x 8 x half> %12)
+  %49 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %46, <vscale x 8 x half> %48, <vscale x 8 x half> %12)
   %50 = getelementptr i8, ptr %s4.0.i134.us, i64 %.idx.i.us.2
   %51 = load <vscale x 8 x half>, ptr %50, align 16
-  %52 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %49, <vscale x 8 x half> %51, <vscale x 8 x half> %15)
+  %52 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %49, <vscale x 8 x half> %51, <vscale x 8 x half> %15)
   store <vscale x 8 x half> %52, ptr %41, align 16
   %53 = getelementptr i8, ptr %s1.0.i137.us, i64 %.idx.i.us.3
   %54 = load <vscale x 8 x half>, ptr %53, align 16
   %55 = getelementptr i8, ptr %vdst.0.i138.us, i64 %.idx.i.us.3
   %56 = load <vscale x 8 x half>, ptr %55, align 16
-  %57 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %56, <vscale x 8 x half> %54, <vscale x 8 x half> %6)
+  %57 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %56, <vscale x 8 x half> %54, <vscale x 8 x half> %6)
   %58 = getelementptr i8, ptr %s2.0.i136.us, i64 %.idx.i.us.3
   %59 = load <vscale x 8 x half>, ptr %58, align 16
-  %60 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %57, <vscale x 8 x half> %59, <vscale x 8 x half> %9)
+  %60 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %57, <vscale x 8 x half> %59, <vscale x 8 x half> %9)
   %61 = getelementptr i8, ptr %s3.0.i135.us, i64 %.idx.i.us.3
   %62 = load <vscale x 8 x half>, ptr %61, align 16
-  %63 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %60, <vscale x 8 x half> %62, <vscale x 8 x half> %12)
+  %63 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %60, <vscale x 8 x half> %62, <vscale x 8 x half> %12)
   %64 = getelementptr i8, ptr %s4.0.i134.us, i64 %.idx.i.us.3
   %65 = load <vscale x 8 x half>, ptr %64, align 16
-  %66 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> %0, <vscale x 8 x half> %63, <vscale x 8 x half> %65, <vscale x 8 x half> %15)
+  %66 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x half> %63, <vscale x 8 x half> %65, <vscale x 8 x half> %15)
   store <vscale x 8 x half> %66, ptr %55, align 16
   %add.ptr15.i.us = getelementptr inbounds half, ptr %vdst.0.i138.us, i64 %mul5.i
   %add.ptr16.i.us = getelementptr inbounds half, ptr %s1.0.i137.us, i64 %mul5.i

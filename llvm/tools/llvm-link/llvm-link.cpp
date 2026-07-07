@@ -516,7 +516,6 @@ int main(int argc, char **argv) {
 
   if (Verbose)
     errs() << "Writing bitcode...\n";
-  Composite->removeDebugIntrinsicDeclarations();
   if (OutputAssembly) {
     Composite->print(Out.os(), nullptr, /* ShouldPreserveUseListOrder */ false);
   } else if (Force || !CheckBitcodeOutputToConsole(Out.os())) {

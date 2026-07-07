@@ -49,7 +49,10 @@ llvm::StringRef BreakpointIDHelpTextCallback() {
          "major "
          "number, or the major number followed by a dot and the location "
          "number (e.g. "
-         "3 or 3.2 could both be valid breakpoint IDs.)";
+         "3 or 3.2 could both be valid breakpoint IDs.)\n"
+         "\n"
+         "You can use . to refer to the breakpoint location(s) at which the "
+         "current thread is stopped.";
 }
 
 llvm::StringRef BreakpointIDRangeHelpTextCallback() {

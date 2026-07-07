@@ -99,6 +99,33 @@ func.func @int32_vector_addui_extended(%lhs: vector<4xi32>, %rhs: vector<4xi32>)
   return %sum, %overflow : vector<4xi32>, vector<4xi1>
 }
 
+// Check integer subtract-with-borrow conversions.
+// CHECK-LABEL: @int32_scalar_subui_extended
+// CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
+func.func @int32_scalar_subui_extended(%lhs: i32, %rhs: i32) -> (i32, i1) {
+  // CHECK-NEXT: %[[ISB:.+]] = spirv.ISubBorrow %[[LHS]], %[[RHS]] : !spirv.struct<(i32, i32)>
+  // CHECK-DAG:  %[[DIFF:.+]] = spirv.CompositeExtract %[[ISB]][0 : i32] : !spirv.struct<(i32, i32)>
+  // CHECK-DAG:  %[[B0:.+]]   = spirv.CompositeExtract %[[ISB]][1 : i32] : !spirv.struct<(i32, i32)>
+  // CHECK-DAG:  %[[ONE:.+]]  = spirv.Constant 1 : i32
+  // CHECK-NEXT: %[[B1:.+]]   = spirv.IEqual %[[B0]], %[[ONE]] : i32
+  // CHECK-NEXT: return %[[DIFF]], %[[B1]] : i32, i1
+  %diff, %borrow = arith.subui_extended %lhs, %rhs: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @int32_vector_subui_extended
+// CHECK-SAME: (%[[LHS:.+]]: vector<4xi32>, %[[RHS:.+]]: vector<4xi32>)
+func.func @int32_vector_subui_extended(%lhs: vector<4xi32>, %rhs: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+  // CHECK-NEXT: %[[ISB:.+]] = spirv.ISubBorrow %[[LHS]], %[[RHS]] : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
+  // CHECK-DAG:  %[[DIFF:.+]] = spirv.CompositeExtract %[[ISB]][0 : i32] : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
+  // CHECK-DAG:  %[[B0:.+]]   = spirv.CompositeExtract %[[ISB]][1 : i32] : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
+  // CHECK-DAG:  %[[ONE:.+]]  = spirv.Constant dense<1> : vector<4xi32>
+  // CHECK-NEXT: %[[B1:.+]]   = spirv.IEqual %[[B0]], %[[ONE]] : vector<4xi32>
+  // CHECK-NEXT: return %[[DIFF]], %[[B1]] : vector<4xi32>, vector<4xi1>
+  %diff, %borrow = arith.subui_extended %lhs, %rhs: vector<4xi32>, vector<4xi1>
+  return %diff, %borrow : vector<4xi32>, vector<4xi1>
+}
+
 // Check extended signed integer multiplication conversions.
 // CHECK-LABEL: @int32_scalar_mulsi_extended
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)

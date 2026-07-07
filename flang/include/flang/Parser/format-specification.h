@@ -30,13 +30,13 @@ namespace Fortran::format {
 // R1307 data-edit-desc (part 1 of 2) ->
 //         I w [. m] | B w [. m] | O w [. m] | Z w [. m] | F w . d |
 //         E w . d [E e] | EN w . d [E e] | ES w . d [E e] | EX w . d [E e] |
-//         G w [. d [E e]] | L w | A [w] | D w . d
+//         G w [. d [E e]] | L w | A [w] | AT | D w . d
 // R1308 w -> digit-string
 // R1309 m -> digit-string
 // R1310 d -> digit-string
 // R1311 e -> digit-string
 struct IntrinsicTypeDataEditDesc {
-  enum class Kind { I, B, O, Z, F, E, EN, ES, EX, G, L, A, D };
+  enum class Kind { I, B, O, Z, F, E, EN, ES, EX, G, L, A, AT, D };
   IntrinsicTypeDataEditDesc() = delete;
   IntrinsicTypeDataEditDesc(IntrinsicTypeDataEditDesc &&) = default;
   IntrinsicTypeDataEditDesc &operator=(IntrinsicTypeDataEditDesc &&) = default;

@@ -43,7 +43,7 @@ struct Invalid {
 //CHECK: {{^}}[[Blue]]|     |-[[RESET]][[Blue]]HTMLEndTagComment[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]col:13[[RESET]], [[Yellow]]col:16[[RESET]]> Name="a"{{$}}
 //CHECK: {{^}}[[Blue]]|     |-[[RESET]][[Blue]]TextComment[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:5:4[[RESET]]> Text=" "{{$}}
 //CHECK: {{^}}[[Blue]]|     `-[[RESET]][[Blue]]HTMLStartTagComment[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]col:5[[RESET]], [[Yellow]]col:8[[RESET]]> Name="br" SelfClosing{{$}}
-//CHECK: {{^}}[[Blue]]|-[[RESET]][[GREEN]]FunctionDecl[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:9:1[[RESET]], [[Yellow]]line:16:1[[RESET]]> [[Yellow]]line:9:6[[RESET]][[CYAN]] TestAttributedStmt[[RESET]] [[Green]]'void ()'[[RESET]]{{$}}
+//CHECK: {{^}}[[Blue]]|-[[RESET]][[GREEN]]FunctionDecl[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:9:1[[RESET]], [[Yellow]]line:16:1[[RESET]]> [[Yellow]]line:9:6[[RESET]][[CYAN]] TestAttributedStmt[[RESET]] [[Green]]'void ()'[[RESET]] external-linkage{{$}}
 //CHECK: {{^}}[[Blue]]| |-[[RESET]][[MAGENTA:.\[0;1;35m]]CompoundStmt[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]col:27[[RESET]], [[Yellow]]line:16:1[[RESET]]>{{$}}
 //CHECK: {{^}}[[Blue]]| | `-[[RESET]][[MAGENTA]]SwitchStmt[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:10:3[[RESET]], [[Yellow]]line:15:3[[RESET]]>{{$}}
 //CHECK: {{^}}[[Blue]]| |   |-[[RESET]][[MAGENTA]]IntegerLiteral[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:10:11[[RESET]]> [[Green]]'int'[[RESET]][[Cyan:.\[0;36m]][[RESET]][[Cyan]][[RESET]][[CYAN]] 1[[RESET]]{{$}}
@@ -63,7 +63,7 @@ struct Invalid {
 //CHECK: {{^}}[[Blue]]| `-[[RESET]][[Blue]]FullComment[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:8:4[[RESET]], [[Yellow]]col:11[[RESET]]>{{$}}
 //CHECK: {{^}}[[Blue]]|   `-[[RESET]][[Blue]]ParagraphComment[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]col:4[[RESET]], [[Yellow]]col:11[[RESET]]>{{$}}
 //CHECK: {{^}}[[Blue]]|     `-[[RESET]][[Blue]]TextComment[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]col:4[[RESET]], [[Yellow]]col:11[[RESET]]> Text=" Comment"{{$}}
-//CHECK: {{^}}[[Blue]]|-[[RESET]][[GREEN]]CXXRecordDecl[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:18:1[[RESET]], [[Yellow]]line:25:1[[RESET]]> [[Yellow]]line:18:33[[RESET]] class[[CYAN]] Mutex[[RESET]] definition{{$}}
+//CHECK: {{^}}[[Blue]]|-[[RESET]][[GREEN]]CXXRecordDecl[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:18:1[[RESET]], [[Yellow]]line:25:1[[RESET]]> [[Yellow]]line:18:33[[RESET]] class[[CYAN]] Mutex[[RESET]] definition external-linkage{{$}}
 //CHECK: {{^}}[[Blue]]| |-[[RESET]][[BLUE]]CapabilityAttr[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]col:22[[RESET]]> capability "mutex"{{$}}
 //CHECK: {{^}}[[Blue]]| |-[[RESET]][[GREEN]]CXXRecordDecl[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]col:1[[RESET]], [[Yellow]]col:33[[RESET]]> [[Yellow]]col:33[[RESET]] implicit class[[CYAN]] Mutex[[RESET]]{{$}}
 //CHECK: {{^}}[[Blue]]| |-[[RESET]][[GREEN]]FieldDecl[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:20:3[[RESET]], [[Yellow]]col:7[[RESET]]> [[Yellow]]col:7[[RESET]][[CYAN]] var1[[RESET]] [[Green]]'int'[[RESET]]{{$}}

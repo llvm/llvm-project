@@ -89,6 +89,13 @@ func.func @test_matmul(%arg0: tensor<1x14x19xf32>, %arg1: tensor<1x19x28xf32>, %
 }
 
 // -----
+func.func @test_matmul_t(%arg0: tensor<1x14x19xf32>, %arg1: tensor<1x28x19xf32>, %arg2: tensor<1xf32>) -> tensor<1x14x28xf32> {
+  // expected-error@+1 {{'tosa.matmul_t' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
+  %0 = tosa.matmul_t %arg0, %arg1, %arg2, %arg2: (tensor<1x14x19xf32>, tensor<1x28x19xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x14x28xf32>
+  return %0 : tensor<1x14x28xf32>
+}
+
+// -----
 func.func @test_sigmoid(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
   // expected-error@+1 {{'tosa.sigmoid' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
   %0 = tosa.sigmoid %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>

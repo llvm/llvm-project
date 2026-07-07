@@ -128,7 +128,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
   std::string OutputFile;
   std::unique_ptr<raw_pwrite_stream> OS =
-      CreateOutputFile(CI, InFile, /*ref*/ OutputFile);
+      CreateOutputFile(CI, InFile, /*ref*/ OutputFile, SetOnlyIfDifferent);
   if (!OS)
     return nullptr;
 
@@ -162,10 +162,13 @@ bool GeneratePCHAction::ComputeASTConsumerArguments(CompilerInstance &CI,
 
 std::unique_ptr<llvm::raw_pwrite_stream>
 GeneratePCHAction::CreateOutputFile(CompilerInstance &CI, StringRef InFile,
-                                    std::string &OutputFile) {
+                                    std::string &OutputFile,
+                                    bool SetOnlyIfDifferent) {
   // Because this is exposed via libclang we must disable RemoveFileOnSignal.
   std::unique_ptr<raw_pwrite_stream> OS = CI.createDefaultOutputFile(
-      /*Binary=*/true, InFile, /*Extension=*/"", /*RemoveFileOnSignal=*/false);
+      /*Binary=*/true, InFile, /*Extension=*/"", /*RemoveFileOnSignal=*/false,
+      /*CreateMissingDirectories=*/false, /*ForceUseTemporary=*/false,
+      SetOnlyIfDifferent);
   if (!OS)
     return nullptr;
 
@@ -258,7 +261,8 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
   return CI.createDefaultOutputFile(/*Binary=*/true, InFile, /*Extension=*/"",
                                     /*RemoveFileOnSignal=*/false,
                                     /*CreateMissingDirectories=*/true,
-                                    /*ForceUseTemporary=*/true);
+                                    /*ForceUseTemporary=*/true,
+                                    /*SetOnlyIfDifferent=*/SetOnlyIfDifferent);
 }
 
 bool GenerateModuleInterfaceAction::PrepareToExecuteAction(
@@ -450,8 +454,6 @@ private:
       return "ConstraintsCheck";
     case CodeSynthesisContext::ConstraintSubstitution:
       return "ConstraintSubstitution";
-    case CodeSynthesisContext::ConstraintNormalization:
-      return "ConstraintNormalization";
     case CodeSynthesisContext::RequirementParameterInstantiation:
       return "RequirementParameterInstantiation";
     case CodeSynthesisContext::ParameterMappingSubstitution:
@@ -698,7 +700,8 @@ namespace {
       Out.indent(2) << "Diagnostic options:\n";
 #define DIAGOPT(Name, Bits, Default) DUMP_BOOLEAN(DiagOpts.Name, #Name);
 #define ENUM_DIAGOPT(Name, Type, Bits, Default)                              \
-    Out.indent(4) << #Name << ": " << DiagOpts.get##Name() << "\n";
+    Out.indent(4) << #Name << ": "                                             \
+                  << static_cast<unsigned>(DiagOpts.get##Name()) << "\n";
 #define VALUE_DIAGOPT(Name, Bits, Default)                                   \
     Out.indent(4) << #Name << ": " << DiagOpts.Name << "\n";
 #include "clang/Basic/DiagnosticOptions.def"
@@ -960,18 +963,18 @@ void DumpModuleInfoAction::ExecuteAction() {
     if (Primary) {
       if (!Primary->submodules().empty())
         Out << "   Sub Modules:\n";
-      for (auto *MI : Primary->submodules()) {
+      for (Module *MI : Primary->submodules()) {
         PrintSubMapEntry(MI->Name, MI->Kind);
       }
       if (!Primary->Imports.empty())
         Out << "   Imports:\n";
-      for (auto *IMP : Primary->Imports) {
+      for (Module *IMP : Primary->Imports) {
         PrintSubMapEntry(IMP->Name, IMP->Kind);
       }
       if (!Primary->Exports.empty())
         Out << "   Exports:\n";
       for (unsigned MN = 0, N = Primary->Exports.size(); MN != N; ++MN) {
-        if (Module *M = Primary->Exports[MN].getPointer()) {
+        if (Module *M = Primary->Exports[MN].first) {
           PrintSubMapEntry(M->Name, M->Kind);
         }
       }

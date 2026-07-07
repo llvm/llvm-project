@@ -99,6 +99,47 @@ void f_ios26_unavailable(void) __attribute__((availability(ios, introduced=26.0)
   macos-note{{'f_ios26_unavailable' has been explicitly marked unavailable here}} \
   driverkit-note{{'f_ios26_unavailable' has been explicitly marked unavailable here}}
 
+// Conflicting anyAppleOS attributes are diagnosed the same as any other
+// conflicting availability attributes.
+void f_conflict_26_27(void) __attribute__((availability(anyAppleOS, introduced=26.0), availability(anyAppleOS, introduced=27.0))); // \
+  macos-warning{{availability does not match previous declaration}} \
+  macos-note{{previous attribute is here}} \
+  ios-warning{{availability does not match previous declaration}} \
+  ios-note{{previous attribute is here}} \
+  tvos-warning{{availability does not match previous declaration}} \
+  tvos-note{{previous attribute is here}} \
+  watchos-warning{{availability does not match previous declaration}} \
+  watchos-note{{previous attribute is here}} \
+  xros-warning{{availability does not match previous declaration}} \
+  xros-note{{previous attribute is here}} \
+  maccatalyst-warning{{availability does not match previous declaration}} \
+  maccatalyst-note{{previous attribute is here}} \
+  driverkit-warning{{availability does not match previous declaration}} \
+  driverkit-note{{previous attribute is here}}
+
+// Conflicting anyAppleOS attributes are still diagnosed even when a
+// platform-specific attribute is also present.
+void f_conflict_26_27_ios28(void) __attribute__((availability(anyAppleOS, introduced=26.0), availability(anyAppleOS, introduced=27.0), availability(iOS, introduced=28.0))); // \
+  macos-warning{{availability does not match previous declaration}} \
+  macos-note{{previous attribute is here}} \
+  ios-warning{{availability does not match previous declaration}} \
+  ios-note{{previous attribute is here}} \
+  tvos-warning{{availability does not match previous declaration}} \
+  tvos-note{{previous attribute is here}} \
+  watchos-warning{{availability does not match previous declaration}} \
+  watchos-note{{previous attribute is here}} \
+  xros-warning{{availability does not match previous declaration}} \
+  xros-note{{previous attribute is here}} \
+  maccatalyst-warning{{availability does not match previous declaration}} \
+  maccatalyst-note{{previous attribute is here}} \
+  driverkit-warning{{availability does not match previous declaration}} \
+  driverkit-note{{previous attribute is here}} \
+  ios-note{{'f_conflict_26_27_ios28' has been marked as being introduced in iOS 28.0 here, but the deployment target is iOS 27.0}} \
+  tvos-note{{'f_conflict_26_27_ios28' has been marked as being introduced in tvOS 28.0 here, but the deployment target is tvOS 27.0}} \
+  watchos-note{{'f_conflict_26_27_ios28' has been marked as being introduced in watchOS 28.0 here, but the deployment target is watchOS 27.0}} \
+  xros-note{{'f_conflict_26_27_ios28' has been explicitly marked unavailable here}} \
+  maccatalyst-note{{'f_conflict_26_27_ios28' has been marked as being introduced in macCatalyst 28.0 here, but the deployment target is macCatalyst 27.0}}
+
 void test(void) {
   f_introduced_26();
 
@@ -200,4 +241,19 @@ void test(void) {
   f_ios26_unavailable(); // \
     macos-error{{'f_ios26_unavailable' is unavailable: not available on macOS}} \
     driverkit-error{{'f_ios26_unavailable' is unavailable: not available on DriverKit}}
+
+  f_conflict_26_27();
+  // xros gets an error (rather than a warning) because ios=28.0 is inferred to
+  // xros, but the XROS26.0.sdk can't map iOS 28.0 to a visionOS version and
+  // falls back to marking the symbol unavailable.
+  f_conflict_26_27_ios28(); // \
+    ios-warning{{'f_conflict_26_27_ios28' is only available on iOS 28.0 or newer}} \
+    ios-note{{enclose 'f_conflict_26_27_ios28' in a __builtin_available check to silence this warning}} \
+    tvos-warning{{'f_conflict_26_27_ios28' is only available on tvOS 28.0 or newer}} \
+    tvos-note{{enclose 'f_conflict_26_27_ios28' in a __builtin_available check to silence this warning}} \
+    watchos-warning{{'f_conflict_26_27_ios28' is only available on watchOS 28.0 or newer}} \
+    watchos-note{{enclose 'f_conflict_26_27_ios28' in a __builtin_available check to silence this warning}} \
+    xros-error{{'f_conflict_26_27_ios28' is unavailable: not available on visionOS}} \
+    maccatalyst-warning{{'f_conflict_26_27_ios28' is only available on macCatalyst 28.0 or newer}} \
+    maccatalyst-note{{enclose 'f_conflict_26_27_ios28' in a __builtin_available check to silence this warning}}
 }

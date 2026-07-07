@@ -32,6 +32,8 @@ exit2.bb:
 }
 
 !llvm.dbg.cu = !{!0}
+!10 = !{null}
+!11 = !DISubroutineType(types: !10)
 !llvm.module.flags = !{!3, !4}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !2)
@@ -39,7 +41,7 @@ exit2.bb:
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !1, file: !1, line: 1, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+!5 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !1, file: !1, line: 1, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, type: !11, unit: !0, retainedNodes: !2)
 !6 = !DILocation(line: 2, column: 0, scope: !5)
 !7 = !DILocation(line: 3, column: 0, scope: !5)
 !8 = !DILocation(line: 4, column: 0, scope: !5)

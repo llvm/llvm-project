@@ -30,9 +30,9 @@ class Function;
 /// We do this as a separate pass so that during normal optimization all
 /// invariant operations can be held outside the loop body to simplify
 /// fundamental analyses and transforms of the loop.
-class LoopSinkPass : public PassInfoMixin<LoopSinkPass> {
+class LoopSinkPass : public OptionalPassInfoMixin<LoopSinkPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 }
 

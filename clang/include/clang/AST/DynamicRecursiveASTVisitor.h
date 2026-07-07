@@ -213,6 +213,11 @@ public:
     return true;
   }
 
+  /// Recursively visit a single component of an __builtin_offsetof
+  /// designator (a field, identifier, base-class, or array-index node).
+  virtual bool TraverseOffsetOfNode(const OffsetOfNode *Node);
+  virtual bool VisitOffsetOfNode(const OffsetOfNode *Node) { return true; }
+
   /// Visit a node.
   virtual bool VisitAttr(MaybeConst<Attr> *A) { return true; }
   virtual bool VisitDecl(MaybeConst<Decl> *D) { return true; }

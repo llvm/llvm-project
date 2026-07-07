@@ -237,11 +237,6 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
   // Such cases are suggested to be clearly documented and explained
   // instead of being silently skipped
   auto isException = [&](const Fortran::semantics::Symbol *sym) -> bool {
-    // `OmpPreDetermined` symbols cannot be exceptions since
-    // their privatized symbols are heavily used in FIR.
-    if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
-      return false;
-
     // The handling of linear clause is deferred to the OpenMP
     // IRBuilder which is responsible for all its aspects,
     // including privatization. Privatizing linear variables at this point would
@@ -422,7 +417,6 @@ static parser::CharBlock getSource(const semantics::SemanticsContext &semaCtx,
         return parser::omp::GetOmpDirectiveName(x).source;
       },
       [&](const parser::OpenMPDeclarativeConstruct &x) { return x.source; },
-      [&](const parser::OmpEndLoopDirective &x) { return x.source; },
       [&](const auto &x) { return parser::CharBlock{}; },
   });
 }
@@ -498,6 +492,17 @@ void DataSharingProcessor::collectPrivatizedSymbols(
   }
 
   auto shouldCollectSymbol = [&](const semantics::Symbol *sym) {
+    // Linear symbols are privatized by OpenMP IRBuilder, except when they are
+    // enclosed within TARGET.
+    mlir::Operation *currentOp =
+        firOpBuilder.getInsertionBlock()->getParentOp();
+    bool inTarget =
+        currentOp && (mlir::isa<mlir::omp::TargetOp>(currentOp) ||
+                      currentOp->getParentOfType<mlir::omp::TargetOp>());
+
+    if (sym->test(semantics::Symbol::Flag::OmpLinear) && !inTarget)
+      return false;
+
     if (collectImplicit) {
       // If we're a combined construct with a target region, implicit
       // firstprivate captures, should only belong to the target region
@@ -705,7 +710,8 @@ void DataSharingProcessor::privatizeSymbol(
   Fortran::lower::privatizeSymbol<mlir::omp::PrivateClauseOp,
                                   mlir::omp::PrivateClauseOps>(
       converter, firOpBuilder, symTable, allPrivatizedSymbols,
-      mightHaveReadHostSym, symToPrivatize, clauseOps, dir);
+      mightHaveReadHostSym, symToPrivatize, clauseOps, dir,
+      forceHeapAllocationForPrivateDynamicArrays);
 }
 } // namespace omp
 } // namespace lower
