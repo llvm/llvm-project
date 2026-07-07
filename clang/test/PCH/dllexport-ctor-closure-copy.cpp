@@ -9,7 +9,7 @@
 //
 // Test with pch.
 // #207949: this cannot check for ??_ODefault copy-ctor closure:
-// ASTContext::CopyConstructorForExceptionObject is serialized into the PCH.
+// ASTContext::CopyConstructorForExceptionObject is not serialized into the PCH.
 // RUN: %clang_cc1 -fcxx-exceptions -fms-extensions -triple i386-pc-win32 -std=c++20 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fcxx-exceptions -fms-extensions -triple i386-pc-win32 -std=c++20 -include-pch %t -emit-llvm -o - %s | FileCheck %s
 
