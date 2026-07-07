@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 
 namespace mlir {
 namespace func {
@@ -31,14 +32,40 @@ struct WrapFuncInModulePass
       funcOps.push_back(funcOp);
     }
 
+    SymbolTable parentSymbolTable(parentModule);
+
     for (func::FuncOp funcOp : funcOps) {
       OpBuilder builder(funcOp);
       ModuleOp nestedModule = ModuleOp::create(builder, funcOp.getLoc());
+      nestedModule.setSymName(funcOp.getName());
 
       // Move the funcOp into the body of the nestedModule.
       funcOp->moveBefore(nestedModule.getBody(), nestedModule.getBody()->end());
+
+      // Move referenced global memrefs into the nested module.
+      SymbolTable nestedSymbolTable(nestedModule);
+      funcOp.walk([&](memref::GetGlobalOp getGlobalOp) {
+        if (auto globalOp = parentSymbolTable.lookup<memref::GlobalOp>(getGlobalOp.getName())) {
+          if (!nestedSymbolTable.lookup(globalOp.getSymName())) {
+            // Clone the global into the nested module.
+            Operation *cloned = globalOp->clone();
+            nestedSymbolTable.insert(cloned);
+            cloned->moveBefore(&nestedModule.getBody()->front());
+          }
+        }
+      });
+    }
+
+    // Erase the original globals from the parent module.
+    SmallVector<memref::GlobalOp> globalsToErase;
+    for (auto globalOp : parentModule.getOps<memref::GlobalOp>()) {
+      globalsToErase.push_back(globalOp);
+    }
+    for (auto globalOp : globalsToErase) {
+      globalOp.erase();
     }
   }
 };
 } // namespace
 } // namespace mlir
+
