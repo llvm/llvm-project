@@ -53,16 +53,7 @@ define i32 @test_nonconst(<4 x i32> %v) {
 define i32 @test_poison() {
 ; CHECK-LABEL: test_poison:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, zero
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vadd.vi v9, v9, 1
-; CHECK-NEXT:    vredsum.vs v8, v9, v8
-; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> <i32 1, i32 2, i32 poison, i32 4>)
   ret i32 %r
 }
-
-declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
