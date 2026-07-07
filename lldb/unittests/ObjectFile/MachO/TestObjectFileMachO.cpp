@@ -112,7 +112,7 @@ TEST_F(ObjectFileMachOTest, IndirectSymbolsInTheSharedCache) {
 }
 #endif
 
-// Regression fixture: a Mach-O whose MH_DYLIB_IN_CACHE flag is set but which
+// A Mach-O whose MH_DYLIB_IN_CACHE flag is set but which
 // has no __LINKEDIT segment.
 TEST_F(ObjectFileMachOTest, ParseSymtabSharedCacheMissingLinkedit) {
   // Minimal little-endian x86_64 Mach-O flagged MH_DYLIB_IN_CACHE, containing
