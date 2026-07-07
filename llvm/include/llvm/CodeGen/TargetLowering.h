@@ -4421,12 +4421,6 @@ public:
                                                 const MachineRegisterInfo &MRI,
                                                 unsigned Depth = 0) const;
 
-  /// Determine which of the bits of FrameIndex \p FIOp are known to be 0.
-  /// Default implementation computes low bits based on alignment
-  /// information. This should preserve known bits passed into it.
-  void computeKnownBitsForFrameIndex(int FIOp, KnownBits &Known,
-                                     const MachineFunction &MF) const;
-
   /// Determine known bits of a pointer to a known valid stack object.
   /// The default implementation computes low bits based on alignment.
   virtual void computeKnownBitsForStackObjectPointer(KnownBits &Known,

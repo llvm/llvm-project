@@ -3981,12 +3981,6 @@ void TargetLowering::computeKnownFPClassForTargetInstr(
   Known.resetAll();
 }
 
-void TargetLowering::computeKnownBitsForFrameIndex(
-  const int FrameIdx, KnownBits &Known, const MachineFunction &MF) const {
-  computeKnownBitsForStackObjectPointer(
-      Known, MF, MF.getFrameInfo().getObjectAlign(FrameIdx));
-}
-
 void TargetLowering::computeKnownBitsForStackObjectPointer(
     KnownBits &Known, const MachineFunction &, Align Alignment) const {
   // The low bits are known zero if the pointer is aligned.
