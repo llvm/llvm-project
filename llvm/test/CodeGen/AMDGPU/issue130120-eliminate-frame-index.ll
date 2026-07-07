@@ -40,10 +40,10 @@ define amdgpu_gfx [13 x i32] @issue130120() {
 ; CHECK-NEXT:    s_mov_b32 s50, s48
 ; CHECK-NEXT:    s_cselect_b32 s51, 0, s1
 ; CHECK-NEXT:    s_cselect_b32 s55, 0, s35
-; CHECK-NEXT:    v_dual_mov_b32 v2, s48 :: v_dual_mov_b32 v3, s49
 ; CHECK-NEXT:    s_cselect_b32 s52, 0, s2
 ; CHECK-NEXT:    s_cselect_b32 s56, 0, s36
 ; CHECK-NEXT:    s_cselect_b32 vcc_lo, 0, s43
+; CHECK-NEXT:    v_dual_mov_b32 v2, s48 :: v_dual_mov_b32 v3, s49
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s50
 ; CHECK-NEXT:    s_cselect_b32 s47, s45, 0xf0
 ; CHECK-NEXT:    s_cselect_b32 s53, 0, s3

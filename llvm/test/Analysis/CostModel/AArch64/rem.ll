@@ -345,7 +345,7 @@ define void @srem_const() {
 
 define void @urem_const() {
 ; CHECK-LABEL: 'urem_const'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = urem i128 undef, 7
+; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = urem i128 undef, 7
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:47 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 6, i64 7>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:94 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
@@ -462,7 +462,7 @@ define void @srem_uniformconst() {
 
 define void @urem_uniformconst() {
 ; CHECK-LABEL: 'urem_uniformconst'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = urem i128 undef, 7
+; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = urem i128 undef, 7
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, 7
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:47 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 7)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:94 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 7)
@@ -810,7 +810,7 @@ define void @srem_constnegpow2() {
 
 define void @urem_constnegpow2() {
 ; CHECK-LABEL: 'urem_constnegpow2'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = urem i128 undef, -16
+; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = urem i128 undef, -16
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:47 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, <i64 -8, i64 -16>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:94 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
@@ -926,7 +926,7 @@ define void @srem_uniformconstnegpow2() {
 
 define void @urem_uniformconstnegpow2() {
 ; CHECK-LABEL: 'urem_uniformconstnegpow2'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = urem i128 undef, -16
+; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = urem i128 undef, -16
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:4 SizeLat:4 for: %I64 = urem i64 undef, -16
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:47 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = urem <2 x i64> undef, splat (i64 -16)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:94 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = urem <4 x i64> undef, splat (i64 -16)

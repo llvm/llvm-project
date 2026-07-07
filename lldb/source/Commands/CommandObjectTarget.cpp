@@ -2991,11 +2991,10 @@ protected:
                   const char *sect_name = args.GetArgumentAtIndex(i);
                   const char *load_addr_cstr = args.GetArgumentAtIndex(i + 1);
                   if (sect_name && load_addr_cstr) {
-                    ConstString const_sect_name(sect_name);
                     addr_t load_addr;
                     if (llvm::to_integer(load_addr_cstr, load_addr)) {
                       SectionSP section_sp(
-                          section_list->FindSectionByName(const_sect_name));
+                          section_list->FindSectionByName(sect_name));
                       if (section_sp) {
                         if (section_sp->IsThreadSpecific()) {
                           result.AppendErrorWithFormat(

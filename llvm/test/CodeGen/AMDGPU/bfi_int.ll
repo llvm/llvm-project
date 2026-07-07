@@ -815,8 +815,8 @@ define amdgpu_ps <2 x float> @s_s_v_bitselect_i64_pat_0(i64 inreg %a, i64 inreg 
 ; GFX10-GISEL-NEXT:    s_not_b64 s[4:5], s[0:1]
 ; GFX10-GISEL-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, s4
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v3, s5
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX10-GISEL-NEXT:    v_and_or_b32 v1, v3, v1, v5
 ; GFX10-GISEL-NEXT:    v_and_or_b32 v0, v2, v0, v4
@@ -1346,8 +1346,8 @@ define amdgpu_ps <2 x float> @s_v_s_bfi_sha256_ma_i64(i64 inreg %x, i64 %y, i64 
 ; GFX10-GISEL-NEXT:    s_or_b64 s[4:5], s[0:1], s[2:3]
 ; GFX10-GISEL-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, s4
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v3, s5
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX10-GISEL-NEXT:    v_and_or_b32 v1, v1, v3, v5
 ; GFX10-GISEL-NEXT:    v_and_or_b32 v0, v0, v2, v4

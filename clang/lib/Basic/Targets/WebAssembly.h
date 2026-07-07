@@ -120,7 +120,6 @@ public:
 
   StringRef getABI() const override;
   bool setABI(const std::string &Name) override;
-  bool useFP16ConversionIntrinsics() const override { return !HasFP16; }
 
 protected:
   void getTargetDefines(const LangOptions &Opts,

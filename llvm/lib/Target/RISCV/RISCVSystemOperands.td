@@ -133,6 +133,8 @@ def : SysReg<"sstatus", 0x100>;
 def : SysReg<"sie", 0x104>;
 def : SysReg<"stvec", 0x105>;
 def : SysReg<"scounteren", 0x106>;
+let isRV32Only = 1 in
+def : SysReg<"sieh", 0x114>;
 
 //===----------------------------------------------------------------------===//
 // Supervisor Configuration
@@ -157,7 +159,25 @@ def : SysReg<"stval", 0x143>;
 let isDeprecatedName = 1 in
 def : SysReg<"sbadaddr", 0x143>;
 def : SysReg<"sip", 0x144>;
+let isRV32Only = 1 in
+def : SysReg<"siph", 0x154>;
+def : SysReg<"stopei", 0x15C>;
 def : SysReg<"scountovf", 0xDA0>;
+def : SysReg<"stopi", 0xDB0>;
+
+//===----------------------------------------------------------------------===//
+// Supervisor Indirect
+//===----------------------------------------------------------------------===//
+
+// Supervisor-level CSRs
+def : SysReg<"siselect", 0x150>;
+def : SysReg<"sireg", 0x151>;
+foreach i = 2...3 in {
+  def : SysReg<"sireg"#i, !add(0x150, i)>;
+}
+foreach i = 4...6 in {
+  def : SysReg<"sireg"#i, !add(0x151, i)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Supervisor Protection and Translation
@@ -196,6 +216,14 @@ foreach i = 0...3 in {
 }
 
 //===----------------------------------------------------------------------===//
+// Supervisor Control Transfer Records Configuration
+//===----------------------------------------------------------------------===//
+
+def : SysReg<"sctrctl", 0x14e>;
+def : SysReg<"sctrstatus", 0x14f>;
+def : SysReg<"sctrdepth", 0x15f>;
+
+//===----------------------------------------------------------------------===//
 // Hypervisor Trap Setup
 //===----------------------------------------------------------------------===//
 
@@ -205,8 +233,19 @@ def : SysReg<"hideleg", 0x603>;
 def : SysReg<"hie", 0x604>;
 def : SysReg<"hcounteren", 0x606>;
 def : SysReg<"hgeie", 0x607>;
-let isRV32Only = 1 in
+def : SysReg<"hvien", 0x608>;
+def : SysReg<"hvictl", 0x609>;
+let isRV32Only = 1 in {
 def : SysReg<"hedelegh", 0x612>;
+def : SysReg<"hidelegh", 0x613>;
+def : SysReg<"hvienh", 0x618>;
+}
+def : SysReg<"hviprio1", 0x646>;
+def : SysReg<"hviprio2", 0x647>;
+let isRV32Only = 1 in {
+def : SysReg<"hviprio1h", 0x656>;
+def : SysReg<"hviprio2h", 0x657>;
+}
 
 //===----------------------------------------------------------------------===//
 // Hypervisor Trap Handling
@@ -216,6 +255,8 @@ def : SysReg<"htval", 0x643>;
 def : SysReg<"hip", 0x644>;
 def : SysReg<"hvip", 0x645>;
 def : SysReg<"htinst", 0x64A>;
+let isRV32Only = 1 in
+def : SysReg<"hviph", 0x655>;
 def : SysReg<"hgeip", 0xE12>;
 
 //===----------------------------------------------------------------------===//
@@ -263,12 +304,31 @@ foreach i = 0...3 in {
 def : SysReg<"vsstatus", 0x200>;
 def : SysReg<"vsie", 0x204>;
 def : SysReg<"vstvec", 0x205>;
+let isRV32Only = 1 in
+def : SysReg<"vsieh", 0x214>;
 def : SysReg<"vsscratch", 0x240>;
 def : SysReg<"vsepc", 0x241>;
 def : SysReg<"vscause", 0x242>;
 def : SysReg<"vstval", 0x243>;
 def : SysReg<"vsip", 0x244>;
+let isRV32Only = 1 in
+def : SysReg<"vsiph", 0x254>;
+def : SysReg<"vstopei", 0x25C>;
 def : SysReg<"vsatp", 0x280>;
+def : SysReg<"vstopi", 0xEB0>;
+
+//===----------------------------------------------------------------------===//
+// Virtual Supervisor Indirect
+//===----------------------------------------------------------------------===//
+
+def : SysReg<"vsiselect", 0x250>;
+def : SysReg<"vsireg", 0x251>;
+foreach i = 2...3 in {
+  def : SysReg<"vsireg"#i, !add(0x250, i)>;
+}
+foreach i = 4...6 in {
+  def : SysReg<"vsireg"#i, !add(0x251, i)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Virtual Supervisor Timer Compare
@@ -277,6 +337,12 @@ def : SysReg<"vsatp", 0x280>;
 def : SysReg<"vstimecmp", 0x24D>;
 let isRV32Only = 1 in
 def : SysReg<"vstimecmph", 0x25D>;
+
+//===----------------------------------------------------------------------===//
+// Virtual Supervisor Control Transfer Recrods Configuration
+//===----------------------------------------------------------------------===//
+
+def : SysReg<"vsctrctl", 0x24e>;
 
 //===----------------------------------------------------------------------===//
 // Machine Information Registers
@@ -299,14 +365,21 @@ def : SysReg<"mideleg", 0x303>;
 def : SysReg<"mie", 0x304>;
 def : SysReg<"mtvec", 0x305>;
 def : SysReg<"mcounteren", 0x306>;
+def : SysReg<"mvien", 0x308>;
+def : SysReg<"mvip", 0x309>;
 let isRV32Only = 1 in {
 def : SysReg<"mstatush", 0x310>;
 def : SysReg<"medelegh", 0x312>;
+def : SysReg<"midelegh", 0x313>;
+def : SysReg<"mieh", 0x314>;
+def : SysReg<"mvienh", 0x318>;
+def : SysReg<"mviph", 0x319>;
 } // isRV32Only
 
 //===----------------------------------------------------------------------===//
 // Machine Trap Handling
 //===----------------------------------------------------------------------===//
+
 def : SysReg<"mscratch", 0x340>;
 def : SysReg<"mepc", 0x341>;
 def : SysReg<"mcause", 0x342>;
@@ -316,6 +389,24 @@ def : SysReg<"mbadaddr", 0x343>;
 def : SysReg<"mip", 0x344>;
 def : SysReg<"mtinst", 0x34A>;
 def : SysReg<"mtval2", 0x34B>;
+let isRV32Only = 1 in
+def : SysReg<"miph", 0x354>;
+def : SysReg<"mtopei", 0x35C>;
+def : SysReg<"mtopi", 0xFB0>;
+
+//===----------------------------------------------------------------------===//
+// Machine Indirect
+//===----------------------------------------------------------------------===//
+
+// Machine-level CSRs
+def : SysReg<"miselect", 0x350>;
+def : SysReg<"mireg", 0x351>;
+foreach i = 2...3 in {
+  def : SysReg<"mireg"#i, !add(0x350, i)>;
+}
+foreach i = 4...6 in {
+  def : SysReg<"mireg"#i, !add(0x351, i)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Machine Configuration
@@ -329,7 +420,7 @@ let isRV32Only = 1 in
 def : SysReg<"mseccfgh", 0x757>;
 
 //===----------------------------------------------------------------------===//
-// Machine Protection and Translation
+// Machine Memory Protection
 //===----------------------------------------------------------------------===//
 
 // pmpcfg0-pmpcfg15 at 0x3A0-0x3AF. Odd-numbered registers are RV32-only.
@@ -353,15 +444,16 @@ foreach i = 0...3 in {
 }
 
 //===-----------------------------------------------
-// Resumable Non-Maskable Interrupts(Smrnmi) CSRs
+// Machine Non-Maskable Interrupt Handling
 //===-----------------------------------------------
+
 def : SysReg<"mnscratch", 0x740>;
 def : SysReg<"mnepc", 0x741>;
 def : SysReg<"mncause", 0x742>;
 def : SysReg<"mnstatus", 0x744>;
 
 //===----------------------------------------------------------------------===//
-// Machine Counter and Timers
+// Machine Counter/Timers
 //===----------------------------------------------------------------------===//
 
 def : SysReg<"mcycle", 0xB00>;
@@ -385,10 +477,17 @@ foreach i = 3...31 in
 //===----------------------------------------------------------------------===//
 
 def : SysReg<"mcountinhibit", 0x320>;
+def : SysReg<"mcyclecfg", 0x321>;
+def : SysReg<"minstretcfg", 0x322>;
 
 // mhpmevent3-mhpmevent31 at 0x323-0x33F.
 foreach i = 3...31 in
   def : SysReg<"mhpmevent"#i, !add(0x323, !sub(i, 3))>;
+
+let isRV32Only = 1 in {
+def : SysReg<"mcyclecfgh", 0x721>;
+def : SysReg<"minstretcfgh", 0x722>;
+} // isRV32Only
 
 // mhpmevent3h-mhpmevent31h at 0x723-0x73F
 foreach i = 3...31 in {
@@ -397,7 +496,13 @@ foreach i = 3...31 in {
 }
 
 //===----------------------------------------------------------------------===//
-// Debug/ Trace Registers (shared with Debug Mode)
+// Machine Control Transfer Records Configuration
+//===----------------------------------------------------------------------===//
+
+def : SysReg<"mctrctl", 0x34e>;
+
+//===----------------------------------------------------------------------===//
+// Debug/Trace Registers (shared with Debug Mode)
 //===----------------------------------------------------------------------===//
 
 def : SysReg<"tselect", 0x7A0>;
@@ -434,91 +539,6 @@ def : SysReg<"dscratch0", 0x7B2>;
 let isAltName = 1 in
 def : SysReg<"dscratch", 0x7B2>;
 def : SysReg<"dscratch1", 0x7B3>;
-
-//===-----------------------------------------------
-// Advanced Interrupt Architecture
-//===-----------------------------------------------
-
-// Machine-level CSRs
-def : SysReg<"miselect", 0x350>;
-def : SysReg<"mireg", 0x351>;
-foreach i = 2...3 in {
-  def : SysReg<"mireg"#i, !add(0x350, i)>;
-}
-foreach i = 4...6 in {
-  def : SysReg<"mireg"#i, !add(0x351, i)>;
-}
-def : SysReg<"mtopei", 0x35C>;
-def : SysReg<"mtopi", 0xFB0>;
-def : SysReg<"mvien", 0x308>;
-def : SysReg<"mvip", 0x309>;
-let isRV32Only = 1 in {
-def : SysReg<"midelegh", 0x313>;
-def : SysReg<"mieh", 0x314>;
-def : SysReg<"mvienh", 0x318>;
-def : SysReg<"mviph", 0x319>;
-def : SysReg<"miph", 0x354>;
-} // isRV32Only
-
-// Supervisor-level CSRs
-def : SysReg<"siselect", 0x150>;
-def : SysReg<"sireg", 0x151>;
-foreach i = 2...3 in {
-  def : SysReg<"sireg"#i, !add(0x150, i)>;
-}
-foreach i = 4...6 in {
-  def : SysReg<"sireg"#i, !add(0x151, i)>;
-}
-def : SysReg<"stopei", 0x15C>;
-def : SysReg<"stopi", 0xDB0>;
-let isRV32Only = 1 in {
-def : SysReg<"sieh", 0x114>;
-def : SysReg<"siph", 0x154>;
-} // isRV32Only
-
-// Hypervisor and VS CSRs
-def : SysReg<"hvien", 0x608>;
-def : SysReg<"hvictl", 0x609>;
-def : SysReg<"hviprio1", 0x646>;
-def : SysReg<"hviprio2", 0x647>;
-def : SysReg<"vsiselect", 0x250>;
-def : SysReg<"vsireg", 0x251>;
-foreach i = 2...3 in {
-  def : SysReg<"vsireg"#i, !add(0x250, i)>;
-}
-foreach i = 4...6 in {
-  def : SysReg<"vsireg"#i, !add(0x251, i)>;
-}
-def : SysReg<"vstopei", 0x25C>;
-def : SysReg<"vstopi", 0xEB0>;
-let isRV32Only = 1 in {
-def : SysReg<"hidelegh", 0x613>;
-def : SysReg<"hvienh", 0x618>;
-def : SysReg<"hviph", 0x655>;
-def : SysReg<"hviprio1h", 0x656>;
-def : SysReg<"hviprio2h", 0x657>;
-def : SysReg<"vsieh", 0x214>;
-def : SysReg<"vsiph", 0x254>;
-} // isRV32Only
-
-//===-----------------------------------------------
-// Control Transfer Records CSRs
-//===-----------------------------------------------
-def : SysReg<"sctrctl", 0x14e>;
-def : SysReg<"sctrstatus", 0x14f>;
-def : SysReg<"sctrdepth", 0x15f>;
-def : SysReg<"vsctrctl", 0x24e>;
-def : SysReg<"mctrctl", 0x34e>;
-
-//===-----------------------------------------------
-// Cycle and Instret Privilege Mode Filtering (Smcntrpmf)
-//===-----------------------------------------------
-def : SysReg<"mcyclecfg", 0x321>;
-def : SysReg<"minstretcfg", 0x322>;
-let isRV32Only = 1 in {
-def : SysReg<"mcyclecfgh", 0x721>;
-def : SysReg<"minstretcfgh", 0x722>;
-} // isRV32Only
 
 //===-----------------------------------------------
 // Vendor CSRs

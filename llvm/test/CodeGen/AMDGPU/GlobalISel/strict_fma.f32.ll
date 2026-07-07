@@ -278,10 +278,9 @@ define void @v_constained_fma_v3f32_fpexcept_strict_uni(<3 x float> inreg %x, <3
 ; GFX942-NEXT:    v_pk_fma_f32 v[2:3], s[2:3], v[2:3], v[4:5]
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_mov_b32_e32 v4, s2
 ; GFX942-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX942-NEXT:    v_mov_b32_e32 v2, s0
+; GFX942-NEXT:    v_mov_b32_e32 v4, s2
 ; GFX942-NEXT:    global_store_dwordx3 v[0:1], v[2:4], off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -439,9 +438,9 @@ define void @v_constained_fma_v4f32_fpexcept_strict_uni(<4 x float> inreg %x, <4
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX942-NEXT:    v_readfirstlane_b32 s3, v3
-; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX942-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]

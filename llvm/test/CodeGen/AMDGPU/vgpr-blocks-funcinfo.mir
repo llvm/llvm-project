@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+block-vgpr-csr -start-before=si-lower-sgpr-spills -stop-after=prologepilog -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+block-vgpr-csr -start-before=si-lower-sgpr-spills -stop-after=prolog-epilog -verify-machineinstrs -o - %s | FileCheck %s
 
 # The spill slot for the VGPR block needs to hold v40 and v43, so it needs to be
 # 16 bytes large.

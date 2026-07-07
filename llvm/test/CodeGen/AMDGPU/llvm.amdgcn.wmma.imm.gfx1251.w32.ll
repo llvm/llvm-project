@@ -57,14 +57,14 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_non_splat(<2 x double> %A, <2 x
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    s_mov_b64 s[0:1], 1.0
 ; GISEL-NEXT:    s_mov_b64 s[4:5], 2.0
-; GISEL-NEXT:    s_mov_b64 s[14:15], s[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[8:9], s[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[10:11], s[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[12:13], s[0:1]
-; GISEL-NEXT:    v_mov_b64_e32 v[24:25], s[14:15]
+; GISEL-NEXT:    s_mov_b64 s[14:15], s[0:1]
 ; GISEL-NEXT:    v_mov_b64_e32 v[22:23], s[12:13]
+; GISEL-NEXT:    v_mov_b64_e32 v[24:25], s[14:15]
 ; GISEL-NEXT:    v_mov_b64_e32 v[20:21], s[10:11]
 ; GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[8:9]
 ; GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[6:7]
@@ -112,15 +112,15 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_non_inlineable(<2 x double> %A,
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    s_mov_b64 s[0:1], 0x4008000000000000
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GISEL-NEXT:    s_mov_b64 s[14:15], s[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[8:9], s[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[10:11], s[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[12:13], s[0:1]
-; GISEL-NEXT:    v_mov_b64_e32 v[24:25], s[14:15]
+; GISEL-NEXT:    s_mov_b64 s[14:15], s[0:1]
 ; GISEL-NEXT:    v_mov_b64_e32 v[22:23], s[12:13]
+; GISEL-NEXT:    v_mov_b64_e32 v[24:25], s[14:15]
 ; GISEL-NEXT:    v_mov_b64_e32 v[20:21], s[10:11]
 ; GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[8:9]
 ; GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[6:7]

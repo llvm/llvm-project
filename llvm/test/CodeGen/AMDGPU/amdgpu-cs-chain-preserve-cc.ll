@@ -62,10 +62,10 @@ define amdgpu_cs void @cs_to_chain_preserve(<3 x i32> inreg %a, <3 x i32> %b) #0
 ; GISEL-GFX10-NEXT:    ;;#ASMSTART
 ; GISEL-GFX10-NEXT:    s_nop
 ; GISEL-GFX10-NEXT:    ;;#ASMEND
-; GISEL-GFX10-NEXT:    s_addc_u32 s101, s101, 0
 ; GISEL-GFX10-NEXT:    v_mov_b32_e32 v8, v3
-; GISEL-GFX10-NEXT:    s_mov_b64 s[48:49], s[100:101]
+; GISEL-GFX10-NEXT:    s_addc_u32 s101, s101, 0
 ; GISEL-GFX10-NEXT:    s_mov_b32 s0, s3
+; GISEL-GFX10-NEXT:    s_mov_b64 s[48:49], s[100:101]
 ; GISEL-GFX10-NEXT:    s_mov_b64 s[50:51], s[102:103]
 ; GISEL-GFX10-NEXT:    s_mov_b32 exec_lo, -1
 ; GISEL-GFX10-NEXT:    s_setpc_b64 s[4:5]
@@ -104,10 +104,10 @@ define amdgpu_cs void @cs_to_chain_preserve(<3 x i32> inreg %a, <3 x i32> %b) #0
 ; DAGISEL-GFX10-NEXT:    ;;#ASMSTART
 ; DAGISEL-GFX10-NEXT:    s_nop
 ; DAGISEL-GFX10-NEXT:    ;;#ASMEND
-; DAGISEL-GFX10-NEXT:    s_addc_u32 s101, s101, 0
 ; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v8, v3
-; DAGISEL-GFX10-NEXT:    s_mov_b64 s[48:49], s[100:101]
+; DAGISEL-GFX10-NEXT:    s_addc_u32 s101, s101, 0
 ; DAGISEL-GFX10-NEXT:    s_mov_b64 s[50:51], s[102:103]
+; DAGISEL-GFX10-NEXT:    s_mov_b64 s[48:49], s[100:101]
 ; DAGISEL-GFX10-NEXT:    s_mov_b32 s0, s3
 ; DAGISEL-GFX10-NEXT:    s_mov_b32 exec_lo, -1
 ; DAGISEL-GFX10-NEXT:    s_setpc_b64 s[4:5]

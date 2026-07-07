@@ -74,7 +74,7 @@ GetFreeBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
     process_info.GetExecutableFile().SetFile(cstr, FileSpec::Style::native);
 
   if (!(match_info_ptr == NULL ||
-        NameMatches(process_info.GetExecutableFile().GetFilename().GetCString(),
+        NameMatches(process_info.GetExecutableFile().GetFilename(),
                     match_info_ptr->GetNameMatchType(),
                     match_info_ptr->GetProcessInfo().GetName())))
     return false;

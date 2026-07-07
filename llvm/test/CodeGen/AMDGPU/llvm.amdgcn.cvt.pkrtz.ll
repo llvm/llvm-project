@@ -231,8 +231,8 @@ define amdgpu_kernel void @s_cvt_pkrtz_undef_undef(ptr addrspace(1) %out) #0 {
 ; VI-GISEL:       ; %bb.0:
 ; VI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32 v2, s0, s0
+; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; VI-GISEL-NEXT:    s_endpgm

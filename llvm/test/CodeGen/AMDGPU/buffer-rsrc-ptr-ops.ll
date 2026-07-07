@@ -11,10 +11,10 @@ define amdgpu_kernel void @buffer_ptr_vector_ops(ptr addrspace(1) %somewhere) {
 ; GISEL-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; GISEL-NEXT:    v_mov_b32_e32 v5, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v6, s6
 ; GISEL-NEXT:    v_mov_b32_e32 v7, s7
@@ -68,9 +68,9 @@ define amdgpu_kernel void @buffer_structs(%fat_buffer_struct %arg, ptr addrspace
 ; GISEL-NEXT:    s_ashr_i32 s7, s6, 31
 ; GISEL-NEXT:    s_lshl_b64 s[4:5], s[6:7], 5
 ; GISEL-NEXT:    s_add_u32 s4, s8, s4
-; GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GISEL-NEXT:    s_addc_u32 s5, s9, s5
+; GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GISEL-NEXT:    v_mov_b32_e32 v3, s3

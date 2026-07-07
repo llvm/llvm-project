@@ -5,7 +5,6 @@ namespace MemberSpecialization {
   struct A {
     template<bool B>
     void f() noexcept(B);
-    // FIXME expected-note@-1 {{previous declaration is here}}
 
     template<bool B>
     void g() noexcept(B); // expected-note {{previous declaration is here}}
@@ -14,7 +13,6 @@ namespace MemberSpecialization {
   template<>
   template<bool B>
   void A<int>::f() noexcept(B);
-  // FIXME expected-error@-1 {{exception specification in declaration does not match previous declaration}}
 
   template<>
   template<bool B>

@@ -651,8 +651,8 @@ define amdgpu_kernel void @s_and_multi_use_constant_i64(ptr addrspace(1) %out, i
 ; GFX6-NEXT:    s_mov_b32 s0, 0x80000
 ; GFX6-NEXT:    s_movk_i32 s1, 0x80
 ; GFX6-NEXT:    s_and_b64 s[2:3], s[2:3], s[0:1]
-; GFX6-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX6-NEXT:    s_and_b64 s[0:1], s[8:9], s[0:1]
+; GFX6-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX6-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -674,8 +674,8 @@ define amdgpu_kernel void @s_and_multi_use_constant_i64(ptr addrspace(1) %out, i
 ; GFX8-NEXT:    s_mov_b32 s0, 0x80000
 ; GFX8-NEXT:    s_movk_i32 s1, 0x80
 ; GFX8-NEXT:    s_and_b64 s[2:3], s[2:3], s[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    s_and_b64 s[0:1], s[8:9], s[0:1]
+; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
@@ -738,10 +738,10 @@ define amdgpu_kernel void @s_and_multi_use_inline_imm_i64(ptr addrspace(1) %out,
 ; GFX6-NEXT:    s_and_b32 s8, s7, 62
 ; GFX6-NEXT:    s_add_u32 s6, s6, s4
 ; GFX6-NEXT:    s_addc_u32 s7, 0, s5
-; GFX6-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX6-NEXT:    s_add_u32 s4, s8, s4
-; GFX6-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX6-NEXT:    s_addc_u32 s5, 0, s5
+; GFX6-NEXT:    v_mov_b32_e32 v0, s6
+; GFX6-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX6-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
@@ -765,10 +765,10 @@ define amdgpu_kernel void @s_and_multi_use_inline_imm_i64(ptr addrspace(1) %out,
 ; GFX8-NEXT:    s_and_b32 s8, s7, 62
 ; GFX8-NEXT:    s_add_u32 s6, s6, s4
 ; GFX8-NEXT:    s_addc_u32 s7, 0, s5
-; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    s_add_u32 s4, s8, s4
-; GFX8-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX8-NEXT:    s_addc_u32 s5, 0, s5
+; GFX8-NEXT:    v_mov_b32_e32 v0, s6
+; GFX8-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX8-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4

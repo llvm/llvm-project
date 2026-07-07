@@ -1024,10 +1024,10 @@ define void @ds_write2_b64_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; GCN-NEXT:    v_accvgpr_write_b32 a21, v31 ; Reload Reuse
-; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
-; GCN-NEXT:    v_accvgpr_read_b32 v4, a4
 ; GCN-NEXT:    v_accvgpr_read_b32 v0, a0
+; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
+; GCN-NEXT:    v_accvgpr_read_b32 v4, a4
 ; GCN-NEXT:    v_accvgpr_read_b32 v5, a5
 ; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:10 offset1:24
 ; GCN-NEXT:    v_accvgpr_write_b32 a31, v21 ; Reload Reuse

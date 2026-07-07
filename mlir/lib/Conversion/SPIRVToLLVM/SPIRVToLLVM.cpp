@@ -1048,6 +1048,18 @@ public:
   }
 };
 
+class UnreachablePattern : public SPIRVToLLVMConversion<spirv::UnreachableOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::UnreachableOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::UnreachableOp unreachableOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<LLVM::UnreachableOp>(unreachableOp);
+    return success();
+  }
+};
+
 static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
                                               StringRef name,
                                               ArrayRef<Type> paramTypes,
@@ -2100,6 +2112,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
 
       // Return ops
       ReturnPattern, ReturnValuePattern,
+
+      // Unreachable op
+      UnreachablePattern,
 
       // Barrier ops
       ControlBarrierPattern<spirv::ControlBarrierOp>,

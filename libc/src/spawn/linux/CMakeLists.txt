@@ -11,6 +11,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.include.signal
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.dup2
     libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.spawn.file_actions
     libc.src.signal.linux.signal_utils

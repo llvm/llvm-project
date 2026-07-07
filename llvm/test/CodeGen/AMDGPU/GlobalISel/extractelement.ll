@@ -2434,31 +2434,31 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v_bitcast(<14 x float> inreg %userD
 ; GCN-LABEL: dyn_extract_v7f64_s_v_bitcast:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_mov_b32_e32 v1, s2
-; GCN-NEXT:    v_mov_b32_e32 v3, s4
 ; GCN-NEXT:    v_mov_b32_e32 v2, s3
+; GCN-NEXT:    v_mov_b32_e32 v3, s4
 ; GCN-NEXT:    v_mov_b32_e32 v4, s5
-; GCN-NEXT:    v_mov_b32_e32 v5, s6
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_mov_b32_e32 v5, s6
 ; GCN-NEXT:    v_mov_b32_e32 v6, s7
-; GCN-NEXT:    v_mov_b32_e32 v7, s8
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v0
+; GCN-NEXT:    v_mov_b32_e32 v7, s8
 ; GCN-NEXT:    v_mov_b32_e32 v8, s9
-; GCN-NEXT:    v_mov_b32_e32 v9, s10
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v2, v6, vcc
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v0
+; GCN-NEXT:    v_mov_b32_e32 v9, s10
 ; GCN-NEXT:    v_mov_b32_e32 v10, s11
-; GCN-NEXT:    v_mov_b32_e32 v11, s12
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v7, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v2, v8, vcc
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v0
+; GCN-NEXT:    v_mov_b32_e32 v11, s12
 ; GCN-NEXT:    v_mov_b32_e32 v12, s13
-; GCN-NEXT:    v_mov_b32_e32 v13, s14
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v9, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v2, v10, vcc
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v0
+; GCN-NEXT:    v_mov_b32_e32 v13, s14
 ; GCN-NEXT:    v_mov_b32_e32 v14, s15
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v11, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v2, v12, vcc
@@ -2475,8 +2475,8 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v_bitcast(<14 x float> inreg %userD
 ; GFX10-LABEL: dyn_extract_v7f64_s_v_bitcast:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; GFX10-NEXT:    v_mov_b32_e32 v3, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s3
+; GFX10-NEXT:    v_mov_b32_e32 v3, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v4, s5
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v5, s6
@@ -2995,8 +2995,8 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(ptr addrspace(1) %out, i32 %sel
 ; MOVREL-NEXT:    s_mov_b64 s[6:7], 2.0
 ; MOVREL-NEXT:    s_movrels_b64 s[2:3], s[4:5]
 ; MOVREL-NEXT:    v_mov_b32_e32 v0, s2
-; MOVREL-NEXT:    v_mov_b32_e32 v3, s1
 ; MOVREL-NEXT:    v_mov_b32_e32 v1, s3
+; MOVREL-NEXT:    v_mov_b32_e32 v3, s1
 ; MOVREL-NEXT:    v_mov_b32_e32 v2, s0
 ; MOVREL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; MOVREL-NEXT:    s_endpgm
@@ -3991,10 +3991,10 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(ptr addrspace(1) %out, i32 %s
 ; MOVREL-NEXT:    s_mov_b32 m0, s6
 ; MOVREL-NEXT:    s_mov_b32 s1, 2.0
 ; MOVREL-NEXT:    s_movrels_b32 s0, s0
-; MOVREL-NEXT:    v_mov_b32_e32 v0, s4
 ; MOVREL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; MOVREL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; MOVREL-NEXT:    v_mov_b32_e32 v2, s0
+; MOVREL-NEXT:    v_mov_b32_e32 v0, s4
 ; MOVREL-NEXT:    v_mov_b32_e32 v1, s5
 ; MOVREL-NEXT:    flat_store_dword v[0:1], v2
 ; MOVREL-NEXT:    s_endpgm
@@ -4334,19 +4334,19 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(ptr addrspace(1) %out, i32 %s
 ; MOVREL-NEXT:    s_load_dwordx2 s[10:11], s[8:9], 0x0
 ; MOVREL-NEXT:    s_load_dword s8, s[8:9], 0x8
 ; MOVREL-NEXT:    s_mov_b64 s[0:1], 1.0
+; MOVREL-NEXT:    s_add_i32 s12, s12, s17
 ; MOVREL-NEXT:    s_mov_b64 s[6:7], 4.0
 ; MOVREL-NEXT:    s_mov_b32 s4, 0
-; MOVREL-NEXT:    s_mov_b32 s5, 0x40080000
 ; MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
 ; MOVREL-NEXT:    s_mov_b32 m0, s8
+; MOVREL-NEXT:    s_mov_b32 s5, 0x40080000
 ; MOVREL-NEXT:    s_mov_b64 s[2:3], 2.0
 ; MOVREL-NEXT:    s_movrels_b64 s[0:1], s[0:1]
-; MOVREL-NEXT:    s_add_i32 s12, s12, s17
-; MOVREL-NEXT:    v_mov_b32_e32 v0, s0
-; MOVREL-NEXT:    v_mov_b32_e32 v2, s10
 ; MOVREL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; MOVREL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; MOVREL-NEXT:    v_mov_b32_e32 v0, s0
 ; MOVREL-NEXT:    v_mov_b32_e32 v1, s1
+; MOVREL-NEXT:    v_mov_b32_e32 v2, s10
 ; MOVREL-NEXT:    v_mov_b32_e32 v3, s11
 ; MOVREL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; MOVREL-NEXT:    s_endpgm

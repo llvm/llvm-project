@@ -1690,28 +1690,17 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   bool OBWrapInvolved =
       (DstOBT && DstOBT->isWrapKind()) || (SrcOBT && SrcOBT->isWrapKind());
 
-  // Cast from half through float if half isn't a native type.
-  if (SrcType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
-    // Cast to FP using the intrinsic if the half type itself isn't supported.
-    if (DstTy->isFloatingPointTy()) {
-      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
-        Value *BitCast = Builder.CreateBitCast(Src, CGF.CGM.HalfTy);
-        return Builder.CreateFPExt(BitCast, DstTy, "conv");
-      }
-    } else {
-      // Cast to other types through float, using either the intrinsic or FPExt,
-      // depending on whether the half type itself is supported
-      // (as opposed to operations on half, available with NativeHalfType).
+  // If half isn't a native type, cast to float for evaluation.
+  if (SrcType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType &&
+      SrcTy == CGF.CGM.HalfTy && DstTy != CGF.CGM.HalfTy) {
+    if (DstTy->isFloatingPointTy())
+      return Builder.CreateFPExt(Src, DstTy, "conv");
 
-      if (Src->getType() != CGF.CGM.HalfTy) {
-        assert(CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics());
-        Src = Builder.CreateBitCast(Src, CGF.CGM.HalfTy);
-      }
-
-      Src = Builder.CreateFPExt(Src, CGF.CGM.FloatTy, "conv");
-      SrcType = CGF.getContext().FloatTy;
-      SrcTy = CGF.FloatTy;
-    }
+    // Cast to other types through float (as opposed to operations on half,
+    // available with NativeHalfType).
+    Src = Builder.CreateFPExt(Src, CGF.CGM.FloatTy, "conv");
+    SrcType = CGF.getContext().FloatTy;
+    SrcTy = CGF.FloatTy;
   }
 
   // Ignore conversions like int -> uint.
@@ -1816,23 +1805,13 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
     EmitFloatConversionCheck(OrigSrc, OrigSrcType, Src, SrcType, DstType, DstTy,
                              Loc);
 
-  // Cast to half through float if half isn't a native type.
-  if (DstType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
+  // Cast to half from float if half isn't a native type. When __fp16 isn't
+  // native, arithmetic is evaluated as float.
+  if (DstType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType &&
+      DstTy == CGF.CGM.HalfTy) {
     // Make sure we cast in a single step if from another FP type.
-    if (SrcTy->isFloatingPointTy()) {
-      // Handle the case where the half type is represented as an integer (as
-      // opposed to operations on half, available with NativeHalfType).
-
-      // If the half type is supported, just use an fptrunc.
-      Value *Res = Builder.CreateFPTrunc(Src, CGF.CGM.HalfTy, "conv");
-      if (DstTy == CGF.CGM.HalfTy)
-        return Res;
-
-      assert(DstTy->isIntegerTy(16) &&
-             CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics() &&
-             "Only half FP requires extra conversion");
-      return Builder.CreateBitCast(Res, DstTy);
-    }
+    if (SrcTy->isFloatingPointTy())
+      return Builder.CreateFPTrunc(Src, CGF.CGM.HalfTy, "conv");
 
     DstTy = CGF.FloatTy;
   }
@@ -1844,7 +1823,6 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
 
     if (ResTy != CGF.CGM.HalfTy) {
       assert(ResTy->isIntegerTy(16) &&
-             CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics() &&
              "Only half FP requires extra conversion");
       Res = Builder.CreateBitCast(Res, ResTy);
     }

@@ -64,8 +64,8 @@ define amdgpu_kernel void @sgpr_isnan_f32(ptr addrspace(1) %out, float %x) {
 ; GFX8GLISEL-NEXT:    v_cmp_class_f32_e64 s[2:3], s2, 3
 ; GFX8GLISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX8GLISEL-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX8GLISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8GLISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8GLISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8GLISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8GLISEL-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8GLISEL-NEXT:    s_endpgm

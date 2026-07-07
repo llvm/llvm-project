@@ -806,8 +806,8 @@ define amdgpu_kernel void @v_test_fmed3_r_i_i_f64(ptr addrspace(1) %out, ptr add
 ; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v4
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-GISEL-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-GISEL-NEXT:    v_add_u32_e32 v2, vcc, v2, v4
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)

@@ -889,8 +889,8 @@ define amdgpu_kernel void @s_log_v2f32(ptr addrspace(1) %out, <2 x float> %in) {
 ; VI-GISEL-NEXT:    s_cmp_lg_u32 s5, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, 0x41b17218, 0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-GISEL-NEXT:    v_sub_f32_e32 v1, s2, v1
+; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-GISEL-NEXT:    s_endpgm
@@ -1486,9 +1486,9 @@ define amdgpu_kernel void @s_log_v3f32(ptr addrspace(1) %out, <3 x float> %in) {
 ; VI-GISEL-NEXT:    s_cmp_lg_u32 s5, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, 0x41b17218, 0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; VI-GISEL-NEXT:    v_sub_f32_e32 v2, s2, v2
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v4, s1
-; VI-GISEL-NEXT:    v_sub_f32_e32 v2, s2, v2
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s0
 ; VI-GISEL-NEXT:    flat_store_dwordx3 v[3:4], v[0:2]
 ; VI-GISEL-NEXT:    s_endpgm
@@ -2281,9 +2281,9 @@ define amdgpu_kernel void @s_log_v4f32(ptr addrspace(1) %out, <4 x float> %in) {
 ; VI-GISEL-NEXT:    s_cmp_lg_u32 s5, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, 0x41b17218, 0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; VI-GISEL-NEXT:    v_sub_f32_e32 v3, s2, v3
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v5, s1
-; VI-GISEL-NEXT:    v_sub_f32_e32 v3, s2, v3
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v4, s0
 ; VI-GISEL-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-GISEL-NEXT:    s_endpgm

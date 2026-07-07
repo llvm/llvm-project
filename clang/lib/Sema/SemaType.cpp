@@ -1608,14 +1608,6 @@ static std::string getPrintableNameForEntity(DeclarationName Entity) {
   return "type name";
 }
 
-static bool isDependentOrGNUAutoType(QualType T) {
-  if (T->isDependentType())
-    return true;
-
-  const auto *AT = dyn_cast<AutoType>(T);
-  return AT && AT->isGNUAutoType();
-}
-
 QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
                                   Qualifiers Qs, const DeclSpec *DS) {
   if (T.isNull())
@@ -1646,10 +1638,9 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
       if (!EltTy->isIncompleteOrObjectType())
         DiagID = diag::err_typecheck_invalid_restrict_invalid_pointee;
 
-    } else if (!isDependentOrGNUAutoType(T)) {
-      // For an __auto_type variable, we may not have seen the initializer yet
-      // and so have no idea whether the underlying type is a pointer type or
-      // not.
+    } else if (!T->isDependentType() && !isa<AutoType>(T)) {
+      // For an inferred type, we may not have seen the initializer yet and so
+      // have no idea whether the underlying type is a pointer type or not.
       DiagID = diag::err_typecheck_invalid_restrict_not_pointer;
       EltTy = T;
     }
@@ -10394,7 +10385,7 @@ QualType Sema::BuildUnaryTransformType(QualType BaseType, UTTKind UKind,
 }
 
 QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
-  if (!isDependentOrGNUAutoType(T)) {
+  if (!T->isDependentType() && !isa<AutoType>(T)) {
     // FIXME: It isn't entirely clear whether incomplete atomic types
     // are allowed or not; for simplicity, ban them for the moment.
     if (RequireCompleteType(Loc, T, diag::err_atomic_specifier_bad_type, 0))

@@ -1764,6 +1764,28 @@ def: Pat<(mul I32:$Rs, n8_0ImmPred:$n8),
 def: Pat<(v2i32 (mulnsw (sext V2I16:$Rs), (sext V2I16:$Rt))),
          (M2_vmpy2s_s0 V2I16:$Rs, V2I16:$Rt)>;
 
+// PatFrag matching assertsext of a v2i32 from i16, produced when a scalar
+// sext i16 is splatted into a v2i32 vector and the splat is hoisted out of
+// the loop into an earlier block, arriving as a live-in v2i32 register.
+def assertsext_v2i32_i16 : PatFrag<(ops node:$Rs),
+                                    (assertsext node:$Rs), [{
+  auto *T = cast<VTSDNode>(N->getOperand(1));
+  return N->getValueType(0) == MVT::v2i32 && T->getVT() == MVT::i16;
+}]>;
+
+// Handle sext v2i16 multiplied by a splatted scalar sext i16, where the
+// splat was hoisted and arrives as assertsext v2i32. Recover the v2i16
+// by combining the low halfwords of both elements.
+def: Pat<(v2i32 (mulnsw (sext V2I16:$Rs),
+                         (assertsext_v2i32_i16 V2I32:$Rt))),
+         (M2_vmpy2s_s0 V2I16:$Rs,
+                       (A2_combine_ll (HiReg $Rt), (LoReg $Rt)))>;
+
+def: Pat<(v2i32 (mulnsw (assertsext_v2i32_i16 V2I32:$Rs),
+                         (sext V2I16:$Rt))),
+         (M2_vmpy2s_s0 (A2_combine_ll (HiReg $Rs), (LoReg $Rs)),
+                       V2I16:$Rt)>;
+
 def: Pat<(add Sext64:$Rs, I64:$Rt),
          (A2_addsp (LoReg Sext64:$Rs), I64:$Rt)>;
 

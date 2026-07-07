@@ -93,3 +93,16 @@ namespace MissingInitalizer {
   constexpr auto &x = items[0].ti; // both-error {{must be initialized by a constant expression}} \
                                    // both-note {{initializer of 'items' is unknown}}
 }
+
+namespace TypeIdInOtherStruct {
+  struct X {
+    virtual constexpr ~X() {}
+  };
+  struct Y : X {};
+  struct Z {
+    mutable Y y;
+  };
+  constexpr Z z;
+  auto &zti = typeid(z.y);
+  static_assert(&zti == &typeid(Y));
+}

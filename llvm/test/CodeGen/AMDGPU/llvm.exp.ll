@@ -76,9 +76,9 @@ define amdgpu_kernel void @s_exp_f32(ptr addrspace(1) %out, float %in) {
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, 0, s3
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s2, 0x7f800000, s3
+; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; VI-GISEL-NEXT:    s_endpgm
@@ -391,8 +391,8 @@ define amdgpu_kernel void @s_exp_v2f32(ptr addrspace(1) %out, <2 x float> %in) {
 ; VI-SDAG-NEXT:    v_cmp_nlt_f32_e32 vcc, s2, v2
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; VI-SDAG-NEXT:    v_cmp_ngt_f32_e32 vcc, s2, v3
-; VI-SDAG-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
+; VI-SDAG-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-SDAG-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    s_endpgm
@@ -450,8 +450,8 @@ define amdgpu_kernel void @s_exp_v2f32(ptr addrspace(1) %out, <2 x float> %in) {
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, 0x7f800000, s4
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-GISEL-NEXT:    s_endpgm
@@ -946,8 +946,8 @@ define amdgpu_kernel void @s_exp_v3f32(ptr addrspace(1) %out, <3 x float> %in) {
 ; VI-SDAG-NEXT:    v_cmp_nlt_f32_e32 vcc, s0, v3
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; VI-SDAG-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v5
-; VI-SDAG-NEXT:    v_mov_b32_e32 v3, s4
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, v8, v0, vcc
+; VI-SDAG-NEXT:    v_mov_b32_e32 v3, s4
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v4, s5
 ; VI-SDAG-NEXT:    flat_store_dwordx3 v[3:4], v[0:2]
 ; VI-SDAG-NEXT:    s_endpgm
@@ -1028,9 +1028,9 @@ define amdgpu_kernel void @s_exp_v3f32(ptr addrspace(1) %out, <3 x float> %in) {
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s2, 0x7f800000, s3
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s4
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s4
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v4, s5
 ; VI-GISEL-NEXT:    flat_store_dwordx3 v[3:4], v[0:2]
 ; VI-GISEL-NEXT:    s_endpgm
@@ -1263,8 +1263,8 @@ define amdgpu_kernel void @s_exp_v3f32(ptr addrspace(1) %out, <3 x float> %in) {
 ; SI-GISEL-NEXT:    v_cmp_gt_f32_e32 vcc, s2, v2
 ; SI-GISEL-NEXT:    s_cselect_b32 s6, 0, s3
 ; SI-GISEL-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; SI-GISEL-NEXT:    s_cselect_b32 s2, 0x7f800000, s6
+; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; SI-GISEL-NEXT:    s_mov_b32 s6, -1
 ; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
@@ -1734,8 +1734,8 @@ define amdgpu_kernel void @s_exp_v4f32(ptr addrspace(1) %out, <4 x float> %in) {
 ; VI-SDAG-NEXT:    v_cmp_nlt_f32_e32 vcc, s0, v5
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; VI-SDAG-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v6
-; VI-SDAG-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, v8, v0, vcc
+; VI-SDAG-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-SDAG-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-SDAG-NEXT:    s_endpgm
@@ -1838,10 +1838,10 @@ define amdgpu_kernel void @s_exp_v4f32(ptr addrspace(1) %out, <4 x float> %in) {
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, 0x7f800000, s6
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; VI-GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-GISEL-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-GISEL-NEXT:    s_endpgm

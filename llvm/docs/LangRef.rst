@@ -8660,6 +8660,37 @@ the irreducible loop) of 100:
 
 Irreducible loop header weights are typically based on profile data.
 
+.. _md_invariant.load:
+
+'``invariant.load``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``invariant.load`` metadata may be attached to load operations or to intrinsic
+calls that only read memory (though it is possible this may be extended in the future
+if the need arises).
+
+If an ``invariant.load``-tagged operation is executed, every memory location
+read by that operation must contain the same value at all points in the program
+where that memory is dereferenceable; otherwise, the behavior is undefined.
+
+An ``invariant.load`` tag may be placed on operations that read inaccessible
+memory or non-memory values (such as registers). These load-like operations must
+be invariant throughout the lifetime of the state being read.
+
+.. code-block:: llvm
+
+   ;; Invariant load of a pointer.
+   load i32, ptr %ptr, !invariant.load !0
+
+   ;; Invariant masked vector load.
+   call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %p, <4 x i1> %mask, <4 x i32> zeroinitializer), !invariant.load !0
+
+   ;; Invariant "load" from a register.
+   call i32 @llvm.read_register.i32(metadata !1), !invariant.load !0
+   !0 = !{}
+   !1 = !{!"reg"}
+
+
 .. _md_invariant.group:
 
 '``invariant.group``' Metadata
@@ -8757,7 +8788,7 @@ computed as follows:
   -  Reinterpret the first 8 bytes of the hash as a little-endian 64-bit integer.
 
 To avoid mismatched pointer types, generalizations are applied.
-Pointers in return and argument types are treated as equivalent as long as the qualifiers for the 
+Pointers in return and argument types are treated as equivalent as long as the qualifiers for the
 type they point to match. For example, ``char*``, ``char**``, and ``int*`` are considered equivalent
 types. However, ``char*`` and ``const char*`` are considered distinct types.
 
@@ -12176,11 +12207,7 @@ as the ``MOVNT`` instruction on x86.
 
 The optional ``!invariant.load`` metadata must reference a single
 metadata name ``<empty_node>`` corresponding to a metadata node with no
-entries. If a load instruction tagged with the ``!invariant.load``
-metadata is executed, the memory location referenced by the load has
-to contain the same value at all points in the program where the
-memory location is dereferenceable; otherwise, the behavior is
-undefined.
+entries. See :ref:`invariant.load  <md_invariant.load>` metadata.
 
 The optional ``!invariant.group`` metadata must reference a single metadata name
  ``<empty_node>`` corresponding to a metadata node with no entries.

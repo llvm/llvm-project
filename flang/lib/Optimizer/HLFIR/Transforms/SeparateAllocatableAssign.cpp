@@ -25,6 +25,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
@@ -75,6 +76,13 @@ public:
 
     if (!fir::isBoxAddress(lhs.getType()))
       return rewriter.notifyMatchFailure(assign, "LHS is not a box address");
+
+    // If the LHS allocatable is non-default, its (re)allocation must go through
+    // the flang runtime so the allocator recorded in the descriptor is honored.
+    if (mlir::Operation *lhsDef = assign.getLhs().getDefiningOp())
+      if (cuf::getDataAttr(lhsDef))
+        return rewriter.notifyMatchFailure(
+            assign, "LHS uses a non-default allocator; keep runtime realloc");
 
     mlir::Location loc = assign->getLoc();
     fir::FirOpBuilder builder(rewriter, assign.getOperation());

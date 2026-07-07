@@ -444,15 +444,26 @@ define i64 @bitcast_combine_scalar_to_vector_v4i16(i16 %arg) {
 ; SI-NEXT:    v_or_b32_e32 v1, v2, v3
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX89-LABEL: bitcast_combine_scalar_to_vector_v4i16:
-; GFX89:       ; %bb.0:
-; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_and_b32_e32 v1, 0xffffff00, v0
-; GFX89-NEXT:    v_or_b32_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; GFX89-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
-; GFX89-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX89-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX89-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: bitcast_combine_scalar_to_vector_v4i16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_and_b32_e32 v1, 0xffffff00, v0
+; VI-NEXT:    v_or_b32_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
+; VI-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: bitcast_combine_scalar_to_vector_v4i16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_and_b32_e32 v1, 0xffffff00, v0
+; GFX9-NEXT:    v_or_b32_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
+; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v2
+; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
+; GFX9-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: bitcast_combine_scalar_to_vector_v4i16:
 ; GFX11:       ; %bb.0:

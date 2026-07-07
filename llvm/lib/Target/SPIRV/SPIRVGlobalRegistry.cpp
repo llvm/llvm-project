@@ -995,7 +995,7 @@ SPIRVTypeInst
 SPIRVGlobalRegistry::getOpTypeOpaque(const StructType *Ty,
                                      MachineIRBuilder &MIRBuilder) {
   assert(Ty->hasName());
-  const StringRef Name = Ty->hasName() ? Ty->getName() : "";
+  StringRef Name = Ty->hasName() ? Ty->getName() : "";
   Register ResVReg = createTypeVReg(MIRBuilder);
   return createConstOrTypeAtFunctionEntry(
       MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
@@ -2282,7 +2282,7 @@ void SPIRVGlobalRegistry::addStructOffsetDecorations(
 
 void SPIRVGlobalRegistry::addArrayStrideDecorations(
     Register Reg, Type *ElementType, MachineIRBuilder &MIRBuilder) {
-  uint32_t SizeInBytes = DL.getTypeSizeInBits(ElementType) / 8;
+  uint32_t SizeInBytes = DL.getTypeAllocSize(ElementType);
   buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::ArrayStride,
                   {SizeInBytes});
 }

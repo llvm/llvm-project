@@ -134,9 +134,9 @@ define amdgpu_kernel void @test2(ptr %p, i32 %x) {
 ; GFX11-GISEL-NEXT:    s_cbranch_scc0 .LBB2_2
 ; GFX11-GISEL-NEXT:  ; %bb.1: ; %else
 ; GFX11-GISEL-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v1, s3
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-GISEL-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-GISEL-NEXT:    s_endpgm
 ; GFX11-GISEL-NEXT:  .LBB2_2: ; %then

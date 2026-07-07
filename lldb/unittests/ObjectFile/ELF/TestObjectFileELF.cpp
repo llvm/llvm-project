@@ -96,11 +96,11 @@ Symbols:
   SectionList *list = module_sp->GetSectionList();
   ASSERT_NE(nullptr, list);
 
-  auto bss_sp = list->FindSectionByName(ConstString(".bss"));
+  auto bss_sp = list->FindSectionByName(".bss");
   ASSERT_NE(nullptr, bss_sp);
-  auto data_sp = list->FindSectionByName(ConstString(".data"));
+  auto data_sp = list->FindSectionByName(".data");
   ASSERT_NE(nullptr, data_sp);
-  auto text_sp = list->FindSectionByName(ConstString(".text"));
+  auto text_sp = list->FindSectionByName(".text");
   ASSERT_NE(nullptr, text_sp);
 
   const Symbol *X = module_sp->FindFirstSymbolWithNameAndType(ConstString("X"),

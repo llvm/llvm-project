@@ -10,6 +10,7 @@
 
 #include <detail/device_impl.hpp>
 #include <detail/event_impl.hpp>
+#include <detail/global_objects.hpp>
 #include <detail/program_manager.hpp>
 
 #include <algorithm>
@@ -64,27 +65,34 @@ QueueImpl::~QueueImpl() {
 
 backend QueueImpl::getBackend() const noexcept { return MDevice.getBackend(); }
 
+static ol_device_handle_t getHostOLDevice() {
+  static ol_device_handle_t HostDevice =
+      *(getOffloadTopologies()[OL_PLATFORM_BACKEND_HOST].getDevices(0).begin());
+  return HostDevice;
+}
+
 void QueueImpl::wait() { callAndThrow(olSyncQueue, MOffloadQueue); }
 
-static bool checkEventsPlatformMatch(std::vector<EventImplPtr> &Events,
+static void checkEventsPlatformMatch(const std::vector<EventImplPtr> &Events,
                                      const PlatformImpl &QueuePlatform) {
   // liboffload limitation to olWaitEvents. We can't do any extra handling for
   // cross context/platform events without host task support now.
   //   "The input events can be from any queue on any device provided by the
   //   same platform as `Queue`."
-  return std::all_of(Events.cbegin(), Events.cend(),
-                     [&QueuePlatform](const EventImplPtr &Event) {
-                       return &Event->getPlatformImpl() == &QueuePlatform;
-                     });
+  if (!std::all_of(Events.cbegin(), Events.cend(),
+                   [&QueuePlatform](const EventImplPtr &Event) {
+                     return &Event->getPlatformImpl() == &QueuePlatform;
+                   })) {
+    throw sycl::exception(
+        sycl::make_error_code(sycl::errc::feature_not_supported),
+        "libsycl doesn't support cross-context/platform event dependencies "
+        "yet.");
+  }
 }
 
 void QueueImpl::setKernelParameters(std::vector<EventImplPtr> &&Events,
                                     const detail::UnifiedRangeView &Range) {
-  if (!checkEventsPlatformMatch(Events, MDevice.getPlatformImpl()))
-    throw sycl::exception(
-        sycl::make_error_code(sycl::errc::feature_not_supported),
-        "libsycl doesn't support cross-context/platform event dependencies "
-        "now.");
+  checkEventsPlatformMatch(Events, MDevice.getPlatformImpl());
 
   // TODO: this conversion and storing of only offload events is possible only
   // while we don't have host tasks (or features based on host tasks, like
@@ -93,11 +101,7 @@ void QueueImpl::setKernelParameters(std::vector<EventImplPtr> &&Events,
   // implemented on offload level (no data now).
   assert(MCurrentSubmitInfo.DepEvents.empty() &&
          "Kernel submission must clean up dependencies.");
-  MCurrentSubmitInfo.DepEvents.reserve(Events.size());
-  for (auto &Event : Events) {
-    assert(Event && "Event impl object can't be nullptr");
-    MCurrentSubmitInfo.DepEvents.push_back(Event->getHandle());
-  }
+  MCurrentSubmitInfo.DepEvents = getSyclObjHandles(Events);
   setKernelLaunchArgs(Range, MCurrentSubmitInfo.Range);
 }
 
@@ -108,17 +112,7 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
           KernelInfo, MDevice);
   assert(Kernel);
 
-  // TODO: liboffload supports only in-order queues and no cross context waiting
-  // is available now that means that this code is excessive but correct. I
-  // don't want to skip it and rely on default liboffload behaviour that is
-  // applicable for in-order queue only. Once OOO queues are added this waiting
-  // must be disabled for in-order queues. Once host tasks are added - cross
-  // context dependencies should be enabled and checked as well.
-  if (!MCurrentSubmitInfo.DepEvents.empty()) {
-    callAndThrow(olWaitEvents, MOffloadQueue,
-                 MCurrentSubmitInfo.DepEvents.data(),
-                 MCurrentSubmitInfo.DepEvents.size());
-  }
+  handleEventDependencies(MCurrentSubmitInfo.DepEvents);
 
   assert(ArgData && "At least one argument must exist");
   assert(ArgSize && "Arguments size must be greater than 0");
@@ -138,13 +132,77 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
                               KernelInfo.getName().data() + ") failed with " +
                               formatCodeString(Result));
 
+  MCurrentSubmitInfo.LastEvent = createEvent();
+}
+
+// Returns the {DeviceHandle, IsHostDevice} pair associated with the ptr.
+static std::pair<ol_device_handle_t, bool> getAllocDevice(const void *ptr) {
+  // TODO: consider caching this information to avoid querying it every time.
+  ol_device_handle_t Device{};
+  [[maybe_unused]] ol_result_t Result =
+      callNoCheck(olGetMemInfo, ptr, OL_MEM_INFO_DEVICE,
+                  sizeof(ol_device_handle_t), &Device);
+  if (detail::isFailed(Result)) {
+    // If liboffload could not find the allocation, assume it is a host one.
+    if (Result->Code == OL_ERRC_NOT_FOUND) {
+      return {getHostOLDevice(), true};
+    }
+    checkAndThrow(Result);
+  }
+
+  assert(Device);
+  return {Device, false};
+}
+
+std::shared_ptr<EventImpl>
+QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
+                  const std::vector<EventImplPtr> &DepEvents) {
+  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
+  auto EventHandles = getSyclObjHandles(DepEvents);
+  if (NumBytes == 0) {
+    handleEventDependencies(EventHandles);
+    return createEvent();
+  }
+
+  if (!Dest || !Src) {
+    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+                          "Nullptr argument in memcpy operation");
+  }
+
+  auto [DestOLDevice, IsDestOLDeviceHost] = getAllocDevice(Dest);
+  auto [SrcOLDevice, IsSrcOLDeviceHost] = getAllocDevice(Src);
+
+  // TODO: Currently, liboffload does not let us specify a queue for
+  // host-to-host cases, which means that the operation would be synchronous and
+  // any implicit dependencies wouldn't be respected for an in-order queue.
+  if (IsDestOLDeviceHost && IsSrcOLDeviceHost)
+    throw sycl::exception(
+        sycl::make_error_code(sycl::errc::feature_not_supported),
+        "Host-to-host copy is not implemented yet");
+
+  handleEventDependencies(EventHandles);
+  callAndThrow(olMemcpy, MOffloadQueue, Dest, DestOLDevice, Src, SrcOLDevice,
+               NumBytes);
+  return createEvent();
+}
+
+void QueueImpl::handleEventDependencies(std::vector<ol_event_handle_t> &Deps) {
+  // TODO: liboffload supports only in-order queues and no cross context waiting
+  // is available now that means that this code is excessive but correct. I
+  // don't want to skip it and rely on default liboffload behaviour that is
+  // applicable for in-order queue only. Once OOO queues are added this waiting
+  // must be disabled for in-order queues. Once host tasks are added - cross
+  // context dependencies should be enabled and checked as well.
+  if (!Deps.empty()) {
+    callAndThrow(olWaitEvents, MOffloadQueue, Deps.data(), Deps.size());
+  }
+}
+
+EventImplPtr QueueImpl::createEvent() {
   ol_event_handle_t NewEvent{};
   ol_event_flags_t Flags{};
   callAndThrow(olCreateEvent, MOffloadQueue, Flags, &NewEvent);
-
-  MCurrentSubmitInfo.LastEvent =
-      EventImpl::createEventWithHandle(NewEvent, MDevice.getPlatformImpl());
+  return EventImpl::createEventWithHandle(NewEvent, MDevice.getPlatformImpl());
 }
-
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL

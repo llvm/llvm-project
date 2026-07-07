@@ -111,15 +111,15 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_5
 ; CHECK-NEXT:  ; %bb.8: ; %.preheader1856.preheader.i.i.i3325
 ; CHECK-NEXT:    ; in Loop: Header=BB0_6 Depth=2
-; CHECK-NEXT:    v_accvgpr_write_b32 a2, v28
 ; CHECK-NEXT:    s_mov_b64 s[24:25], 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a2, v28
 ; CHECK-NEXT:    v_accvgpr_write_b32 a3, v29
 ; CHECK-NEXT:    s_mov_b64 s[6:7], 0
 ; CHECK-NEXT:    s_branch .LBB0_5
 ; CHECK-NEXT:  .LBB0_9: ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    v_mov_b64_e32 v[24:25], s[12:13]
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v24
 ; CHECK-NEXT:    s_mov_b64 s[22:23], 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v24
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, v25
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[20:21]
 ; CHECK-NEXT:    s_branch .LBB0_15
@@ -134,23 +134,22 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:  ; %bb.12: ; %._crit_edge2105.i.i.i2330.loopexit
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    v_cmp_nlg_f64_e64 s[6:7], 0, v[26:27]
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v24
 ; CHECK-NEXT:    v_cndmask_b32_e64 v23, v23, 0, s[14:15]
+; CHECK-NEXT:    v_cndmask_b32_e64 v22, v22, 0, s[14:15]
 ; CHECK-NEXT:    v_cndmask_b32_e64 v26, 0, 1, s[6:7]
 ; CHECK-NEXT:    v_mov_b32_e32 v27, v26
 ; CHECK-NEXT:    s_and_b64 s[6:7], exec, s[14:15]
-; CHECK-NEXT:    v_cndmask_b32_e64 v22, v22, 0, s[14:15]
 ; CHECK-NEXT:    global_store_dwordx2 v0, v[26:27], s[8:9]
 ; CHECK-NEXT:    s_cselect_b32 s23, s23, 0
 ; CHECK-NEXT:    s_cselect_b32 s22, s22, 0
 ; CHECK-NEXT:    s_mov_b64 s[6:7], -1
 ; CHECK-NEXT:    s_branch .LBB0_14
 ; CHECK-NEXT:  .LBB0_13: ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v24
 ; CHECK-NEXT:    s_mov_b64 s[6:7], 0
 ; CHECK-NEXT:    v_mov_b64_e32 v[22:23], 0
 ; CHECK-NEXT:  .LBB0_14: ; %Flow6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v24
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, v25
 ; CHECK-NEXT:  .LBB0_15: ; %Flow6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1

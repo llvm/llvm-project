@@ -801,7 +801,7 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
   if (A.isFunctionPointer() && B.isFunctionPointer())
     return true;
   if (A.isTypeidPointer() && B.isTypeidPointer())
-    return true;
+    return A.asTypeidPointer().TypePtr == B.asTypeidPointer().TypePtr;
 
   if (A.StorageKind != B.StorageKind)
     return false;

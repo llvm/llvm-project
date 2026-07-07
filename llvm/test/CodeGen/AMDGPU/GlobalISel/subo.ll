@@ -712,8 +712,8 @@ define amdgpu_ps i64 @s_ssubo_i64(i64 inreg %a, i64 inreg %b) {
 ;
 ; GFX8-LABEL: s_ssubo_i64:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    s_sub_u32 s4, s0, s2
+; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    v_cmp_lt_i64_e32 vcc, s[0:1], v[0:1]
 ; GFX8-NEXT:    s_subb_u32 s5, s1, s3
@@ -731,8 +731,8 @@ define amdgpu_ps i64 @s_ssubo_i64(i64 inreg %a, i64 inreg %b) {
 ;
 ; GFX9-LABEL: s_ssubo_i64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    s_sub_u32 s4, s0, s2
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[0:1], v[0:1]
 ; GFX9-NEXT:    s_subb_u32 s5, s1, s3

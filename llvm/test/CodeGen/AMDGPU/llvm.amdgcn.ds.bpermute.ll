@@ -75,8 +75,8 @@ define amdgpu_kernel void @ds_bpermute_imm_index(ptr addrspace(1) %out, i32 %bas
 ; CHECK-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-SDAG-NEXT:    ds_bpermute_b32 v2, v0, v1 offset:64
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; CHECK-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-SDAG-NEXT:    flat_store_dword v[0:1], v2
@@ -92,8 +92,8 @@ define amdgpu_kernel void @ds_bpermute_imm_index(ptr addrspace(1) %out, i32 %bas
 ; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-GISEL-NEXT:    ds_bpermute_b32 v2, v0, v1
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-GISEL-NEXT:    flat_store_dword v[0:1], v2

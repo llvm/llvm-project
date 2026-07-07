@@ -539,6 +539,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_ifreq
+  HDRS
+    struct_ifreq.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_ifreq
+    libc.include.net_if
+)
+
+add_proxy_header_library(
   struct_sockaddr
   HDRS
     struct_sockaddr.h

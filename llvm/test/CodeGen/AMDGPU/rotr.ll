@@ -122,9 +122,9 @@ define amdgpu_kernel void @rotr_v2i32(ptr addrspace(1) %in, <2 x i32> %x, <2 x i
 ; GFX8-NEXT:    s_mov_b32 s1, s0
 ; GFX8-NEXT:    s_lshr_b64 s[2:3], s[6:7], s3
 ; GFX8-NEXT:    s_lshr_b64 s[0:1], s[0:1], s8
-; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s2
+; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX8-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_endpgm
@@ -237,11 +237,11 @@ define amdgpu_kernel void @rotr_v4i32(ptr addrspace(1) %in, <4 x i32> %x, <4 x i
 ; GFX8-NEXT:    s_mov_b32 s9, s8
 ; GFX8-NEXT:    s_lshr_b64 s[4:5], s[10:11], s5
 ; GFX8-NEXT:    s_lshr_b64 s[8:9], s[8:9], s3
-; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s2
+; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX8-NEXT:    s_endpgm
@@ -414,10 +414,10 @@ define amdgpu_kernel void @rotr_v8i32(ptr addrspace(1) %in, <8 x i32> %x, <8 x i
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s10
 ; GFX8-NEXT:    s_add_u32 s10, s0, 16
 ; GFX8-NEXT:    s_addc_u32 s11, s1, 0
-; GFX8-NEXT:    v_mov_b32_e32 v4, s10
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s16
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s14
+; GFX8-NEXT:    v_mov_b32_e32 v4, s10
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s11
 ; GFX8-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s1

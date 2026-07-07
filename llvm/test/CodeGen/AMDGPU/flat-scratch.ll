@@ -22,8 +22,8 @@ define amdgpu_kernel void @zero_init_kernel() {
 ; GFX9-NEXT:    s_mov_b32 s1, s0
 ; GFX9-NEXT:    s_mov_b32 s2, s0
 ; GFX9-NEXT:    s_mov_b32 s3, s0
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s3
@@ -97,8 +97,8 @@ define amdgpu_kernel void @zero_init_kernel() {
 ; GFX9-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-PAL-NEXT:    s_and_b32 s13, s13, 0xffff
 ; GFX9-PAL-NEXT:    s_add_u32 flat_scratch_lo, s12, s11
-; GFX9-PAL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-PAL-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
+; GFX9-PAL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-PAL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-PAL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX9-PAL-NEXT:    v_mov_b32_e32 v3, s3

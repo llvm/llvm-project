@@ -70,7 +70,6 @@ public:
     resetDataLayout();
     TheCXXABI.set(TargetCXXABI::GenericItanium);
   }
-  bool useFP16ConversionIntrinsics() const override { return false; }
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 

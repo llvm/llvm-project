@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=arm64-apple-ios -run-pass=prologepilog -run-pass=machine-outliner -verify-machineinstrs  %s -o - | FileCheck %s
+# RUN: llc -mtriple=arm64-apple-ios -run-pass=prolog-epilog -run-pass=machine-outliner -verify-machineinstrs  %s -o - | FileCheck %s
 
 # Noreturn functions conservatively need to save and restore lr.
 # When there is no available register, the stack is used at call site.

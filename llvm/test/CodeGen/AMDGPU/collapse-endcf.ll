@@ -1181,10 +1181,13 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-O0-NEXT:    s_mov_b32 s8, 0
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7
 ; GCN-O0-NEXT:    s_mov_b32 s5, s8
-; GCN-O0-NEXT:    s_waitcnt expcnt(1)
+; GCN-O0-NEXT:    s_waitcnt expcnt(4)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-O0-NEXT:    s_waitcnt expcnt(3)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s5
+; GCN-O0-NEXT:    s_waitcnt expcnt(2)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, s6
+; GCN-O0-NEXT:    s_waitcnt expcnt(1)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, s7
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill

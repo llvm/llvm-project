@@ -2215,8 +2215,7 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   if (m_gnu_debug_data_object_file != nullptr)
     return m_gnu_debug_data_object_file;
 
-  SectionSP section =
-      GetSectionList()->FindSectionByName(ConstString(".gnu_debugdata"));
+  SectionSP section = GetSectionList()->FindSectionByName(".gnu_debugdata");
   if (!section)
     return nullptr;
 
@@ -3265,8 +3264,7 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
   // section, nomatter if .symtab was already parsed or not. This is because
   // minidebuginfo normally removes the .symtab symbols which have their
   // matching .dynsym counterparts.
-  if (!symtab ||
-      GetSectionList()->FindSectionByName(ConstString(".gnu_debugdata"))) {
+  if (!symtab || GetSectionList()->FindSectionByName(".gnu_debugdata")) {
     Section *dynsym =
         section_list->FindSectionByType(eSectionTypeELFDynamicSymbols, true)
             .get();
@@ -3950,7 +3948,7 @@ ObjectFile::Strata ObjectFileELF::CalculateStrata() {
     {
       SectionList *section_list = GetSectionList();
       if (section_list) {
-        static ConstString loader_section_name(".interp");
+        llvm::StringRef loader_section_name(".interp");
         SectionSP loader_section =
             section_list->FindSectionByName(loader_section_name);
         if (loader_section) {

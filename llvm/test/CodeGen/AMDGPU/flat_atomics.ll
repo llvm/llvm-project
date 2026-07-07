@@ -5603,8 +5603,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_offset(ptr %out, i32 %in, i32 %old
 ; GCN1-NEXT:    s_add_u32 s0, s0, 16
 ; GCN1-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN1-NEXT:    v_mov_b32_e32 v0, s0
-; GCN1-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN1-NEXT:    v_mov_b32_e32 v1, s1
+; GCN1-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN1-NEXT:    v_mov_b32_e32 v3, s3
 ; GCN1-NEXT:    flat_atomic_cmpswap v[0:1], v[2:3]
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5618,8 +5618,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_offset(ptr %out, i32 %in, i32 %old
 ; GCN2-NEXT:    s_add_u32 s0, s0, 16
 ; GCN2-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s0
-; GCN2-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s1
+; GCN2-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN2-NEXT:    v_mov_b32_e32 v3, s3
 ; GCN2-NEXT:    flat_atomic_cmpswap v[0:1], v[2:3]
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5631,8 +5631,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_offset(ptr %out, i32 %in, i32 %old
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v0, s0
-; GCN3-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN3-NEXT:    v_mov_b32_e32 v1, s1
+; GCN3-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s3
 ; GCN3-NEXT:    flat_atomic_cmpswap v[0:1], v[2:3] offset:16
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5666,8 +5666,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret_offset(ptr %out, ptr %out2, i3
 ; GCN1-NEXT:    s_add_u32 s0, s0, 16
 ; GCN1-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN1-NEXT:    v_mov_b32_e32 v0, s0
-; GCN1-NEXT:    v_mov_b32_e32 v2, s4
 ; GCN1-NEXT:    v_mov_b32_e32 v1, s1
+; GCN1-NEXT:    v_mov_b32_e32 v2, s4
 ; GCN1-NEXT:    v_mov_b32_e32 v3, s5
 ; GCN1-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5685,8 +5685,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret_offset(ptr %out, ptr %out2, i3
 ; GCN2-NEXT:    s_add_u32 s0, s0, 16
 ; GCN2-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s0
-; GCN2-NEXT:    v_mov_b32_e32 v2, s4
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s1
+; GCN2-NEXT:    v_mov_b32_e32 v2, s4
 ; GCN2-NEXT:    v_mov_b32_e32 v3, s5
 ; GCN2-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5702,8 +5702,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret_offset(ptr %out, ptr %out2, i3
 ; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v0, s0
-; GCN3-NEXT:    v_mov_b32_e32 v2, s6
 ; GCN3-NEXT:    v_mov_b32_e32 v1, s1
+; GCN3-NEXT:    v_mov_b32_e32 v2, s6
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s7
 ; GCN3-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 glc
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5750,8 +5750,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_addr64_offset(ptr %out, i32 %in, i
 ; GCN1-NEXT:    s_addc_u32 s1, s3, s1
 ; GCN1-NEXT:    s_add_u32 s0, s0, 16
 ; GCN1-NEXT:    s_addc_u32 s1, s1, 0
-; GCN1-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN1-NEXT:    v_mov_b32_e32 v1, s4
+; GCN1-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN1-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN1-NEXT:    flat_atomic_cmpswap v[2:3], v[0:1]
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5771,8 +5771,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_addr64_offset(ptr %out, i32 %in, i
 ; GCN2-NEXT:    s_addc_u32 s1, s3, s1
 ; GCN2-NEXT:    s_add_u32 s0, s0, 16
 ; GCN2-NEXT:    s_addc_u32 s1, s1, 0
-; GCN2-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s4
+; GCN2-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN2-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN2-NEXT:    flat_atomic_cmpswap v[2:3], v[0:1]
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5790,8 +5790,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_addr64_offset(ptr %out, i32 %in, i
 ; GCN3-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN3-NEXT:    s_add_u32 s0, s2, s0
 ; GCN3-NEXT:    s_addc_u32 s1, s3, s1
-; GCN3-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN3-NEXT:    v_mov_b32_e32 v1, s7
+; GCN3-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN3-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN3-NEXT:    flat_atomic_cmpswap v[2:3], v[0:1] offset:16
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5839,8 +5839,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret_addr64_offset(ptr %out, ptr %o
 ; GCN1-NEXT:    s_addc_u32 s1, s1, s5
 ; GCN1-NEXT:    s_add_u32 s0, s0, 16
 ; GCN1-NEXT:    s_addc_u32 s1, s1, 0
-; GCN1-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN1-NEXT:    v_mov_b32_e32 v1, s9
+; GCN1-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN1-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN1-NEXT:    flat_atomic_cmpswap v2, v[2:3], v[0:1] glc
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5863,8 +5863,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret_addr64_offset(ptr %out, ptr %o
 ; GCN2-NEXT:    s_addc_u32 s1, s1, s5
 ; GCN2-NEXT:    s_add_u32 s0, s0, 16
 ; GCN2-NEXT:    s_addc_u32 s1, s1, 0
-; GCN2-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s9
+; GCN2-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN2-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN2-NEXT:    flat_atomic_cmpswap v2, v[2:3], v[0:1] glc
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5885,8 +5885,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret_addr64_offset(ptr %out, ptr %o
 ; GCN3-NEXT:    v_mov_b32_e32 v0, s8
 ; GCN3-NEXT:    s_add_u32 s0, s0, s4
 ; GCN3-NEXT:    s_addc_u32 s1, s1, s5
-; GCN3-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN3-NEXT:    v_mov_b32_e32 v1, s9
+; GCN3-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN3-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN3-NEXT:    flat_atomic_cmpswap v2, v[2:3], v[0:1] offset:16 glc
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5932,8 +5932,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32(ptr %out, i32 %in, i32 %old) {
 ; GCN1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v0, s0
-; GCN1-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN1-NEXT:    v_mov_b32_e32 v1, s1
+; GCN1-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN1-NEXT:    v_mov_b32_e32 v3, s3
 ; GCN1-NEXT:    flat_atomic_cmpswap v[0:1], v[2:3]
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5945,8 +5945,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32(ptr %out, i32 %in, i32 %old) {
 ; GCN2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s0
-; GCN2-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s1
+; GCN2-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN2-NEXT:    v_mov_b32_e32 v3, s3
 ; GCN2-NEXT:    flat_atomic_cmpswap v[0:1], v[2:3]
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5958,8 +5958,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32(ptr %out, i32 %in, i32 %old) {
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v0, s0
-; GCN3-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN3-NEXT:    v_mov_b32_e32 v1, s1
+; GCN3-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s3
 ; GCN3-NEXT:    flat_atomic_cmpswap v[0:1], v[2:3]
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5990,8 +5990,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret(ptr %out, ptr %out2, i32 %in, 
 ; GCN1-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
 ; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v0, s0
-; GCN1-NEXT:    v_mov_b32_e32 v2, s4
 ; GCN1-NEXT:    v_mov_b32_e32 v1, s1
+; GCN1-NEXT:    v_mov_b32_e32 v2, s4
 ; GCN1-NEXT:    v_mov_b32_e32 v3, s5
 ; GCN1-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -6007,8 +6007,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret(ptr %out, ptr %out2, i32 %in, 
 ; GCN2-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
 ; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s0
-; GCN2-NEXT:    v_mov_b32_e32 v2, s4
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s1
+; GCN2-NEXT:    v_mov_b32_e32 v2, s4
 ; GCN2-NEXT:    v_mov_b32_e32 v3, s5
 ; GCN2-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -6024,8 +6024,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret(ptr %out, ptr %out2, i32 %in, 
 ; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v0, s0
-; GCN3-NEXT:    v_mov_b32_e32 v2, s6
 ; GCN3-NEXT:    v_mov_b32_e32 v1, s1
+; GCN3-NEXT:    v_mov_b32_e32 v2, s6
 ; GCN3-NEXT:    v_mov_b32_e32 v3, s7
 ; GCN3-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -6069,8 +6069,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_addr64(ptr %out, i32 %in, i64 %ind
 ; GCN1-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN1-NEXT:    s_add_u32 s0, s2, s0
 ; GCN1-NEXT:    s_addc_u32 s1, s3, s1
-; GCN1-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN1-NEXT:    v_mov_b32_e32 v1, s4
+; GCN1-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN1-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN1-NEXT:    flat_atomic_cmpswap v[2:3], v[0:1]
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -6088,8 +6088,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_addr64(ptr %out, i32 %in, i64 %ind
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN2-NEXT:    s_add_u32 s0, s2, s0
 ; GCN2-NEXT:    s_addc_u32 s1, s3, s1
-; GCN2-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s4
+; GCN2-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN2-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN2-NEXT:    flat_atomic_cmpswap v[2:3], v[0:1]
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -6107,8 +6107,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_addr64(ptr %out, i32 %in, i64 %ind
 ; GCN3-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN3-NEXT:    s_add_u32 s0, s2, s0
 ; GCN3-NEXT:    s_addc_u32 s1, s3, s1
-; GCN3-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN3-NEXT:    v_mov_b32_e32 v1, s7
+; GCN3-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN3-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN3-NEXT:    flat_atomic_cmpswap v[2:3], v[0:1]
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -6153,8 +6153,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret_addr64(ptr %out, ptr %out2, i3
 ; GCN1-NEXT:    v_mov_b32_e32 v0, s8
 ; GCN1-NEXT:    s_add_u32 s0, s0, s4
 ; GCN1-NEXT:    s_addc_u32 s1, s1, s5
-; GCN1-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN1-NEXT:    v_mov_b32_e32 v1, s9
+; GCN1-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN1-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN1-NEXT:    flat_atomic_cmpswap v2, v[2:3], v[0:1] glc
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -6175,8 +6175,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret_addr64(ptr %out, ptr %out2, i3
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s8
 ; GCN2-NEXT:    s_add_u32 s0, s0, s4
 ; GCN2-NEXT:    s_addc_u32 s1, s1, s5
-; GCN2-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s9
+; GCN2-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN2-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN2-NEXT:    flat_atomic_cmpswap v2, v[2:3], v[0:1] glc
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -6197,8 +6197,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_ret_addr64(ptr %out, ptr %out2, i3
 ; GCN3-NEXT:    v_mov_b32_e32 v0, s8
 ; GCN3-NEXT:    s_add_u32 s0, s0, s4
 ; GCN3-NEXT:    s_addc_u32 s1, s1, s5
-; GCN3-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN3-NEXT:    v_mov_b32_e32 v1, s9
+; GCN3-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN3-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN3-NEXT:    flat_atomic_cmpswap v2, v[2:3], v[0:1] glc
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -8797,7 +8797,7 @@ define amdgpu_kernel void @atomic_store_i16_addr64_offset(i16 %in, ptr %out, i64
 ; GFX11-TRUE16-NEXT:    s_add_u32 s0, s0, s2
 ; GFX11-TRUE16-NEXT:    s_addc_u32 s1, s1, s3
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_mov_b32 v2, s1
 ; GFX11-TRUE16-NEXT:    flat_store_b16 v[1:2], v0 offset:16
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;

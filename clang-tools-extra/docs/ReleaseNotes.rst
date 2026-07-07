@@ -202,6 +202,9 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy` ``-store-check-profile`` by generating valid
   JSON when the source file path contains characters that require JSON escaping.
 
+- Improved :program:`clang-tidy` by preserving literal backslash characters in
+  POSIX source paths.
+
 - Ensured that :program:`clang-tidy` and the clang compiler uses the same logic
   for the suppression of compiler diagnostics in system headers and expansions
   of macros defined in system headers. Previously the default setting of tidy

@@ -103,6 +103,15 @@ llvm.func @fabs_test(%arg0: f32, %arg1: vector<8xf32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @arithmetic_fence_test
+llvm.func @arithmetic_fence_test(%arg0: f32, %arg1: vector<8xf32>) {
+  // CHECK: call float @llvm.arithmetic.fence.f32
+  "llvm.intr.arithmetic.fence"(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.arithmetic.fence.v8f32
+  "llvm.intr.arithmetic.fence"(%arg1) : (vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
 // CHECK-LABEL: @sqrt_test
 llvm.func @sqrt_test(%arg0: f32, %arg1: vector<8xf32>) {
   // CHECK: call float @llvm.sqrt.f32

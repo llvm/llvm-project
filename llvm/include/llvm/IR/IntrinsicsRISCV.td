@@ -2084,6 +2084,17 @@ class RVPBinaryIntrinsic
                              LLVMMatchType<0>],
                             [IntrNoMem, IntrSpeculatable]>;
   def int_riscv_pmerge : RVPTernaryIntrinsic;
+
+  // Packed Absolute Difference Sum.
+  def int_riscv_pabdsumu
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [llvm_anyvector_ty, LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pabdsumau
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_anyvector_ty,
+                               LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//

@@ -213,21 +213,21 @@ define amdgpu_ps void @test_cvt_scale_pk8_f32_fp8_ss(<2 x i32> inreg %src, i32 i
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[0:1]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_cvt_scale_pk8_f32_fp8 v[2:9], v[10:11], s2 scale_sel:8
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v6
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
 ; GFX1250-GISEL-NEXT:    s_clause 0x1
 ; GFX1250-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-GISEL-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
@@ -280,21 +280,21 @@ define amdgpu_ps void @test_cvt_scale_pk8_f32_bf8_ss(<2 x i32> inreg %src, i32 i
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[0:1]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_cvt_scale_pk8_f32_bf8 v[2:9], v[10:11], s2
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v6
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
 ; GFX1250-GISEL-NEXT:    s_clause 0x1
 ; GFX1250-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-GISEL-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
@@ -345,21 +345,21 @@ define amdgpu_ps void @test_cvt_scale_pk8_f32_fp4_ss(i32 inreg %src, i32 inreg %
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_cvt_scale_pk8_f32_fp4 v[2:9], v2, s1 scale_sel:1
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v6
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
 ; GFX1250-GISEL-NEXT:    s_clause 0x1
 ; GFX1250-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-GISEL-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
@@ -412,21 +412,21 @@ define amdgpu_ps void @test_cvt_scale_pk16_f16_fp6_ss(<3 x i32> inreg %src, i32 
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v10, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_cvt_scale_pk16_f16_fp6 v[2:9], v[10:12], s3
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v6
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
 ; GFX1250-GISEL-NEXT:    s_clause 0x1
 ; GFX1250-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-GISEL-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
@@ -456,21 +456,21 @@ define amdgpu_ps void @test_cvt_scale_pk16_f16_fp6_sl(<3 x i32> inreg %src, ptr 
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v10, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_cvt_scale_pk16_f16_fp6 v[2:9], v[10:12], 0x64 scale_sel:1
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v6
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
 ; GFX1250-GISEL-NEXT:    s_clause 0x1
 ; GFX1250-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-GISEL-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
@@ -554,21 +554,21 @@ define amdgpu_ps void @test_cvt_scale_pk16_f16_bf6_ss(<3 x i32> inreg %src, i32 
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v10, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_cvt_scale_pk16_f16_bf6 v[2:9], v[10:12], s3 scale_sel:4
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v6
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
 ; GFX1250-GISEL-NEXT:    s_clause 0x1
 ; GFX1250-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-GISEL-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
@@ -598,21 +598,21 @@ define amdgpu_ps void @test_cvt_scale_pk16_f16_bf6_sl(<3 x i32> inreg %src, ptr 
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v10, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_cvt_scale_pk16_f16_bf6 v[2:9], v[10:12], 0x64 scale_sel:5
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v6
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
 ; GFX1250-GISEL-NEXT:    s_clause 0x1
 ; GFX1250-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-GISEL-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
@@ -702,24 +702,24 @@ define amdgpu_ps void @test_cvt_scale_pk16_f32_fp6_ss(<3 x i32> inreg %src, i32 
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v18, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_cvt_scale_pk16_f32_fp6 v[2:17], v[18:20], s3 scale_sel:5
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v6
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s10, v12
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s11, v13
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s8, v10
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s9, v11
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s14, v16
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s15, v17
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s10, v12
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s11, v13
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s12, v14
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s13, v15
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s14, v16
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s15, v17
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]
@@ -788,24 +788,24 @@ define amdgpu_ps void @test_cvt_scale_pk16_f32_bf6_ss(<3 x i32> inreg %src, i32 
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v18, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_cvt_scale_pk16_f32_bf6 v[2:17], v[18:20], s3 scale_sel:6
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v6
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s10, v12
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s11, v13
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s8, v10
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s9, v11
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s14, v16
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s15, v17
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s10, v12
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s11, v13
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s12, v14
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s13, v15
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s14, v16
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s15, v17
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[6:7]

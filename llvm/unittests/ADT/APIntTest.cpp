@@ -3132,6 +3132,7 @@ TEST(APIntTest, concat) {
 
   APInt I65(65, 0x3ULL);
   APInt I0 = APInt::getZeroWidth();
+  EXPECT_EQ(I64, I0.concat(I64));
   EXPECT_EQ(I65, I65.concat(I0));
   EXPECT_EQ(I65, I0.concat(I65));
 }

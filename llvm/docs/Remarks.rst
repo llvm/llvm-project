@@ -442,12 +442,12 @@ Output statistics about the optimization remarks in the input set.
         Top 10 remarks by pass:
           inline                         33%
           asm-printer                    33%
-          prologepilog                   33%
+          prolog-epilog                  33%
 
         Top 10 remarks:
           asm-printer/InstructionCount   33%
           inline/NoDefinition            33%
-          prologepilog/StackSize         33%
+          prolog-epilog/StackSize        33%
 
 opt-diff.py
 -----------

@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=arm-- -run-pass prologepilog | FileCheck %s
+# RUN: llc -o - %s -mtriple=arm-- -run-pass prolog-epilog | FileCheck %s
 --- |
   define swiftcc ptr @need_emergency_slot(ptr swiftself %v) {
     ; Just a dummy to add a swiftself bit. The real code is in the MI below.

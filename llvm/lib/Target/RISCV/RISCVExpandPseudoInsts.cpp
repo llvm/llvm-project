@@ -382,22 +382,22 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
     CMovImmOpcode = RISCV::QC_MVGEUI;
     break;
   case RISCV::QC_BEQI:
-    CMovImmOpcode = RISCV::QC_MVEQI;
-    break;
-  case RISCV::QC_BNEI:
     CMovImmOpcode = RISCV::QC_MVNEI;
     break;
-  case RISCV::QC_BLTI:
-    CMovImmOpcode = RISCV::QC_MVLTI;
+  case RISCV::QC_BNEI:
+    CMovImmOpcode = RISCV::QC_MVEQI;
     break;
-  case RISCV::QC_BGEI:
+  case RISCV::QC_BLTI:
     CMovImmOpcode = RISCV::QC_MVGEI;
     break;
+  case RISCV::QC_BGEI:
+    CMovImmOpcode = RISCV::QC_MVLTI;
+    break;
   case RISCV::QC_BLTUI:
-    CMovImmOpcode = RISCV::QC_MVLTUI;
+    CMovImmOpcode = RISCV::QC_MVGEUI;
     break;
   case RISCV::QC_BGEUI:
-    CMovImmOpcode = RISCV::QC_MVGEUI;
+    CMovImmOpcode = RISCV::QC_MVLTUI;
     break;
   }
 

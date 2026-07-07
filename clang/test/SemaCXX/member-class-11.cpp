@@ -3,9 +3,10 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
 
 struct rdar9677163 {
-  struct Y { ~Y(); };
+  struct Y { ~Y(); }; // expected-note {{previous declaration is here}}
   struct Z { ~Z(); };
   Y::~Y() { } // expected-error{{non-friend class member '~Y' cannot have a qualified name}}
+              // expected-error@-1 {{destructor cannot be redeclared}}
   ~Z(); // expected-error{{expected the class name after '~' to name the enclosing class}}
 };
 
@@ -79,3 +80,20 @@ struct Z2 {
 };
 
 }
+
+namespace GH202109 {
+  struct C {
+    template <class> struct S {
+      template <class> struct I;
+    };
+
+    template <class X> template <class Y> struct S<X>::I {
+      void f(X, Y); // expected-note {{previous declaration is here}}
+    };
+    // expected-error@-3 {{non-friend class member 'I' cannot have a qualified name}}
+
+    template <class X> template <class Y> void S<X>::I<Y>::f(X, Y) {}
+    // expected-error@-1 {{non-friend class member 'f' cannot have a qualified name}}
+    // expected-error@-2 {{class member cannot be redeclared}}
+  };
+} // namespace GH202109

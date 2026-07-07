@@ -4,23 +4,23 @@
 c.ld t1, 4(sp)
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK: :[[@LINE-2]]:6: note: register must be a GPR from x8 to x15
-# CHECK: :[[@LINE-3]]:6: note: invalid operand for instruction
+# CHECK: :[[@LINE-3]]:6: note: register pair must start with x8, x10, x12, or x14
 
 c.sd s2, 4(sp)
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK: :[[@LINE-2]]:6: note: register must be a GPR from x8 to x15
-# CHECK: :[[@LINE-3]]:6: note: invalid operand for instruction
+# CHECK: :[[@LINE-3]]:6: note: register pair must start with x8, x10, x12, or x14
 
 ## GPRPairNoX0
 c.ldsp  x0, 4(sp)
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK: :[[@LINE-2]]:9: note: register must be a GPR excluding zero (x0)
-# CHECK: :[[@LINE-3]]:9: note: invalid operand for instruction
+# CHECK: :[[@LINE-3]]:9: note: register pair must start with an even GPR other than x0
 
 c.ldsp  zero, 4(sp)
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK: :[[@LINE-2]]:9: note: register must be a GPR excluding zero (x0)
-# CHECK: :[[@LINE-3]]:9: note: invalid operand for instruction
+# CHECK: :[[@LINE-3]]:9: note: register pair must start with an even GPR other than x0
 
 ## uimm9_lsb000
 c.ldsp t1, 512(sp) # CHECK: :[[@LINE]]:12: error: immediate must be a multiple of 8 bytes in the range [0, 504]

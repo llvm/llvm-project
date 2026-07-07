@@ -424,16 +424,16 @@ define i64 @load64le_nop_shift_disjoint(ptr %arg) {
 define void @PR39538(ptr %t0, ptr %t1) {
 ; CHECK-LABEL: @PR39538(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr [[T0:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <4 x i32> <i32 1, i32 4, i32 9, i32 12>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <4 x i32> <i32 0, i32 5, i32 8, i32 13>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i8> [[TMP6]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <4 x i8> [[TMP8]] to <4 x i32>
-; CHECK-NEXT:    [[TMP10:%.*]] = shl nuw <4 x i32> [[TMP3]], <i32 16, i32 24, i32 16, i32 24>
-; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw <4 x i32> [[TMP5]], <i32 24, i32 16, i32 24, i32 16>
+; CHECK-NEXT:    [[TMP10:%.*]] = shl nuw <4 x i32> [[TMP3]], splat (i32 24)
+; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw nsw <4 x i32> [[TMP5]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP12:%.*]] = shl nuw nsw <4 x i32> [[TMP7]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP13:%.*]] = or <4 x i32> [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = or <4 x i32> [[TMP13]], [[TMP12]]

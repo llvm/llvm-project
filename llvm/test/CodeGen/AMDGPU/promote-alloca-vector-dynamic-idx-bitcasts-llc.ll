@@ -6,9 +6,9 @@
 define amdgpu_kernel void @test_bitcast_llc_v128i8_v16i8(ptr addrspace(1) %out, i32 %idx) {
 ; GFX9-LABEL: test_bitcast_llc_v128i8_v16i8:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_lshl_b32 s0, s0, 8
 ; GFX9-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x0
 ; GFX9-NEXT:    s_load_dword s33, s[4:5], 0x8
+; GFX9-NEXT:    s_lshl_b32 s0, s0, 8
 ; GFX9-NEXT:    s_and_b32 s1, s0, 0xff
 ; GFX9-NEXT:    s_or_b32 s0, s1, s0
 ; GFX9-NEXT:    s_and_b32 s1, s0, 0xffff
