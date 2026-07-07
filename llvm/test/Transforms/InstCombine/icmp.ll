@@ -4560,6 +4560,95 @@ define <8 x i1> @bitreverse_vec_ne(<8 x i16> %x, <8 x i16> %y) {
   ret <8 x i1> %cmp
 }
 
+declare i64 @llvm.ctpop.i64(i64)
+declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)
+
+define i1 @or_ctpop_x_ne_zero(i64 %x) {
+; CHECK-LABEL: define i1 @or_ctpop_x_ne_zero(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %pop = call i64 @llvm.ctpop.i64(i64 %x)
+  %or = or i64 %pop, %x
+  %cmp = icmp ne i64 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @or_ctpop_x_eq_zero(i64 %x) {
+; CHECK-LABEL: define i1 @or_ctpop_x_eq_zero(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %pop = call i64 @llvm.ctpop.i64(i64 %x)
+  %or = or i64 %pop, %x
+  %cmp = icmp eq i64 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @or_ctpop_x_ne_zero_commuted(i64 %x) {
+; CHECK-LABEL: define i1 @or_ctpop_x_ne_zero_commuted(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %pop = call i64 @llvm.ctpop.i64(i64 %x)
+  %or = or i64 %x, %pop
+  %cmp = icmp ne i64 %or, 0
+  ret i1 %cmp
+}
+
+define <2 x i1> @or_ctpop_x_ne_zero_vec(<2 x i32> %x) {
+; CHECK-LABEL: define <2 x i1> @or_ctpop_x_ne_zero_vec(
+; CHECK-SAME: <2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %pop = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %x)
+  %or = or <2 x i32> %pop, %x
+  %cmp = icmp ne <2 x i32> %or, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define i1 @or_bitreverse_x_ne_zero(i64 %x) {
+; CHECK-LABEL: define i1 @or_bitreverse_x_ne_zero(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %rev = call i64 @llvm.bitreverse.i64(i64 %x)
+  %or = or i64 %rev, %x
+  %cmp = icmp ne i64 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @or_bswap_x_eq_zero(i32 %x) {
+; CHECK-LABEL: define i1 @or_bswap_x_eq_zero(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %swap = call i32 @llvm.bswap.i32(i32 %x)
+  %or = or i32 %swap, %x
+  %cmp = icmp eq i32 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @or_ctpop_y_x_ne_zero(i64 %x, i64 %y) {
+; CHECK-LABEL: define i1 @or_ctpop_y_x_ne_zero(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    [[POP:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[Y]])
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[POP]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %pop = call i64 @llvm.ctpop.i64(i64 %y)
+  %or = or i64 %pop, %x
+  %cmp = icmp ne i64 %or, 0
+  ret i1 %cmp
+}
+
 ; These perform a comparison of a value known to be between 4 and 5 with a value between 5 and 7.
 ; They should all simplify to equality compares.
 define i1 @knownbits1(i8 %a, i8 %b) {

@@ -10742,6 +10742,22 @@ void llvm::findValuesAffectedByCondition(
 }
 
 const Value *llvm::stripNullTest(const Value *V) {
+  auto IsZeroIffZeroIntrinsicOf = [](const Value *V,
+                                     const Value *X) -> bool {
+    const auto *II = dyn_cast<IntrinsicInst>(V);
+    if (!II || II->arg_size() != 1 || II->getArgOperand(0) != X)
+      return false;
+
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::bswap:
+    case Intrinsic::bitreverse:
+    case Intrinsic::ctpop:
+      return true;
+    default:
+      return false;
+    }
+  };
+
   // (X >> C) or/add (X & mask(C) != 0)
   if (const auto *BO = dyn_cast<BinaryOperator>(V)) {
     if (BO->getOpcode() == Instruction::Add ||
@@ -10755,6 +10771,15 @@ const Value *llvm::stripNullTest(const Value *V) {
                                   m_Zero())))) &&
           C2->popcount() == C1->getZExtValue())
         return X;
+    }
+
+    if (BO->getOpcode() == Instruction::Or) {
+      const Value *A = BO->getOperand(0);
+      const Value *B = BO->getOperand(1);
+      if (IsZeroIffZeroIntrinsicOf(A, B))
+        return B;
+      if (IsZeroIffZeroIntrinsicOf(B, A))
+        return A;
     }
   }
   return nullptr;
