@@ -477,10 +477,10 @@ define amdgpu_kernel void @ctpop_i64_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    s_bcnt1_i32_b64 s4, s[6:7]
 ; SI-NEXT:    s_mov_b32 s5, 0
 ; SI-NEXT:  .LBB7_5: ; %endif
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    v_mov_b32_e32 v1, s5
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -510,10 +510,10 @@ define amdgpu_kernel void @ctpop_i64_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    s_bcnt1_i32_b64 s4, s[6:7]
 ; VI-NEXT:    s_mov_b32 s5, 0
 ; VI-NEXT:  .LBB7_5: ; %endif
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm

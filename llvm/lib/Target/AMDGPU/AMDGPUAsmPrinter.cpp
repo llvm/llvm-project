@@ -1280,7 +1280,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
 
   ProgInfo.AccumOffset = computeAccumOffset(ProgInfo.NumArchVGPR, Ctx);
-  ProgInfo.TgSplit = STM.isTgSplitEnabled();
+  ProgInfo.TgSplit =
+      STM.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(MF.getFunction());
   ProgInfo.NumSGPR = GetSymRefExpr(RIK::RIK_NumSGPR);
   ProgInfo.ScratchSize = GetSymRefExpr(RIK::RIK_PrivateSegSize);
   ProgInfo.VCCUsed = GetSymRefExpr(RIK::RIK_UsesVCC);

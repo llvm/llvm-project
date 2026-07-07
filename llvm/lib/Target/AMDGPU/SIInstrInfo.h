@@ -735,7 +735,7 @@ public:
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
 
   /// \returns true for FLAT instructions that can access LDS.
-  bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
+  bool mayAccessLDSThroughFlat(const MachineInstr &MI, bool TgSplit) const;
 
   static bool isBlockLoadStore(uint32_t Opcode) {
     switch (Opcode) {

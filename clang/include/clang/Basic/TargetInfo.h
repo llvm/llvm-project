@@ -1017,16 +1017,6 @@ public:
     return ComplexLongDoubleUsesFP2Ret;
   }
 
-  /// Check whether conversions to and from __fp16 should go through an integer
-  /// bitcast with i16.
-  ///
-  /// FIXME: This function should be removed. The intrinsics / no longer exist,
-  /// and are emulated with bitcast + fp cast. This only exists because of
-  /// misuse in ABI determining contexts.
-  virtual bool useFP16ConversionIntrinsics() const {
-    return true;
-  }
-
   /// Specify if mangling based on address space map should be used or
   /// not for language specific address spaces
   bool useAddressSpaceMapMangling() const {
