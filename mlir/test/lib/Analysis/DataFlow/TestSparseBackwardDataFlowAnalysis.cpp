@@ -102,9 +102,13 @@ private:
 LogicalResult
 WrittenToAnalysis::visitOperation(Operation *op, ArrayRef<WrittenTo *> operands,
                                   ArrayRef<const WrittenTo *> results) {
-  if (auto store = dyn_cast<memref::StoreOp>(op)) {
+  if (isa<memref::StoreOp>(op)) {
     SetVector<StringAttr> newWrites;
-    newWrites.insert(op->getAttrOfType<StringAttr>("tag_name"));
+    StringAttr name = op->getAttrOfType<StringAttr>("tag_name");
+    if (!name) {
+      name = StringAttr::get(op->getContext(), op->getName().getStringRef());
+    }
+    newWrites.insert(name);
     propagateIfChanged(operands[0],
                        operands[0]->getValue().addWrites(newWrites));
     return success();
