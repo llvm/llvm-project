@@ -1580,6 +1580,73 @@ std::optional<MemoryBufferRef> COFFObjectFile::findHybridObjectSection() const {
   return std::nullopt;
 }
 
+std::unique_ptr<MemoryBuffer> COFFObjectFile::stripHybridSection() const {
+  if (getDOSHeader() || getMachine() != COFF::IMAGE_FILE_MACHINE_ARM64)
+    return nullptr;
+
+  for (SectionRef S : sections()) {
+    Expected<StringRef> Name = S.getName();
+    if (errorToBool(Name.takeError()) || *Name != kArm64ECSectionName)
+      continue;
+
+    const coff_section *HybridSec = getCOFFSection(S);
+    if (!HybridSec->SizeOfRawData)
+      continue;
+
+    // Copy the original buffer, skipping the hybrid section content.
+    // The section itself is still present in the COFF headers, so section
+    // indices are not affected by the change, but its size is reduced
+    // to 0.
+    std::unique_ptr<WritableMemoryBuffer> NativeView =
+        WritableMemoryBuffer::getNewUninitMemBuffer(Data.getBufferSize() -
+                                                    HybridSec->SizeOfRawData);
+    uint32_t HybridEnd = HybridSec->PointerToRawData + HybridSec->SizeOfRawData;
+    memcpy(NativeView->getBufferStart(), Data.getBufferStart(),
+           HybridSec->PointerToRawData);
+    memcpy(NativeView->getBufferStart() + HybridSec->PointerToRawData,
+           Data.getBufferStart() + HybridEnd, Data.getBufferSize() - HybridEnd);
+
+    auto getTargetPtr = [&](const void *Ptr) {
+      return NativeView->getBufferStart() +
+             (reinterpret_cast<const char *>(Ptr) - Data.getBufferStart());
+    };
+
+    // Adjust the COFF header, if necessary.
+    if (COFFHeader) {
+      auto Header =
+          reinterpret_cast<coff_file_header *>(getTargetPtr(COFFHeader));
+      if (Header->PointerToSymbolTable >= HybridEnd)
+        Header->PointerToSymbolTable -= HybridSec->SizeOfRawData;
+    } else {
+      auto Header = reinterpret_cast<coff_bigobj_file_header *>(
+          getTargetPtr(COFFBigObjHeader));
+      if (Header->PointerToSymbolTable >= HybridEnd)
+        Header->PointerToSymbolTable -= HybridSec->SizeOfRawData;
+    }
+
+    // Adjust section headers.
+    auto COFFSec = reinterpret_cast<coff_section *>(getTargetPtr(HybridSec));
+    COFFSec->VirtualSize = 0;
+    COFFSec->PointerToRawData = 0;
+    COFFSec->SizeOfRawData = 0;
+
+    for (SectionRef Sec : sections()) {
+      COFFSec =
+          reinterpret_cast<coff_section *>(getTargetPtr(getCOFFSection(Sec)));
+      if (COFFSec->PointerToRawData >= HybridEnd)
+        COFFSec->PointerToRawData -= HybridSec->SizeOfRawData;
+      if (COFFSec->PointerToRelocations >= HybridEnd)
+        COFFSec->PointerToRelocations -= HybridSec->SizeOfRawData;
+      if (COFFSec->PointerToLinenumbers >= HybridEnd)
+        COFFSec->PointerToLinenumbers -= HybridSec->SizeOfRawData;
+    }
+
+    return NativeView;
+  }
+
+  return nullptr;
+}
+
 bool ImportDirectoryEntryRef::
 operator==(const ImportDirectoryEntryRef &Other) const {
   return ImportTable == Other.ImportTable && Index == Other.Index;

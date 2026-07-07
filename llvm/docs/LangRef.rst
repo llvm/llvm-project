@@ -2302,8 +2302,9 @@ For example:
     - ``errnomem``: This refers to accesses to the ``errno`` variable.
     - ``target_mem#`` : These refer to target specific state that cannot be
       accessed by any other means. # is a number between 0 and 1 inclusive.
-      Note: The target_mem locations are experimental and intended for internal
-      testing only. They must not be used in production code.
+      Note: The following target_mem locations are implemented in AArch64.
+      target_mem0 represents SME ZT0 state, target_mem1 represents SME ZA
+      state.
 
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
@@ -3357,18 +3358,33 @@ Module-Level Inline Assembly
 ----------------------------
 
 Modules may contain "module-level inline asm" blocks, which corresponds
-to the GCC "file scope inline asm" blocks. These blocks are internally
-concatenated by LLVM and treated as a single unit, but may be separated
-in the ``.ll`` file if desired. The syntax is very simple:
+to the GCC "file scope inline asm" blocks:
 
 .. code-block:: llvm
 
-    module asm "inline asm code goes here"
-    module asm "more can go here"
+    module asm
+        "inline asm code goes here"
+        "more can go here"
 
-The strings can contain any character by escaping non-printable
+The sequence of string literals is internally concatenated using newlines as
+separators. The strings can contain any character by escaping non-printable
 characters. The escape sequence used is simply "\\xx" where "xx" is the
 two digit hex code for the number.
+
+Additionally, module-level inline assembly can specify an optional list of
+properties:
+
+.. code-block:: llvm
+
+    module asm(target_features: "+foo", target_cpu: "bar")
+        "inline asm code goes here"
+        "more can go here"
+
+Currently, the only supported properties are ``target_features`` and
+``target_cpu``, with the same meaning as the ``"target-features"`` and
+``"target-cpu"`` function attributes.
+
+Consecutive blocks with identical properties will be concatenated into one.
 
 Note that the assembly string *must* be parseable by LLVM's integrated assembler
 (unless it is disabled), even when emitting a ``.s`` file.
@@ -15744,7 +15760,7 @@ knows those logical layouts are lowered to the same physical layout:
     - `{ i32, i32, i32, i32 }`
     - `[ i32 x 4 ]`
 
-This means is is valid to lower the following code to either:
+This means it is valid to lower the following code to either:
 
 .. code-block:: llvm
 

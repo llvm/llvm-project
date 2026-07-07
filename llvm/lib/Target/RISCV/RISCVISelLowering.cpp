@@ -19752,6 +19752,9 @@ static auto m_ReverseEVL = [](auto X, auto EVL) {
                  m_Node(ISD::EXPERIMENTAL_VP_REVERSE, X, m_Value(), EVL));
 };
 
+// TODO: A vlse.v is not necessarily faster than a vrgather.vv on all uarchs.
+// Remove once a cost model driven transform is implemented in the loop
+// vectorizer.
 static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
                                         const RISCVSubtarget &Subtarget) {
   // Fold:
@@ -19760,16 +19763,35 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
   //
   // splice.right(reverse(vp.load(ADDR, REVMASK, EVL)), poison, EVL)
   // -> vp.strided.load(ADDR, -1, MASK, EVL)
-
-  // Check if its first operand is a vp.load.
+  //
+  // vp.reverse(binop(vp.load(ADDR, REVMASK, EVL), splat), EVL)
+  // -> binop(vp.strided.load(ADDR, -1, MASK, EVL), splat)
   using namespace SDPatternMatch;
   SDValue Op, EVL;
-  if (!sd_match(N,
-                m_ReverseEVL(m_OneUse(m_Value(Op, m_SpecificOpc(ISD::VP_LOAD))),
-                             m_Value(EVL))))
+  if (!sd_match(N, m_ReverseEVL(m_Value(Op), m_Value(EVL))))
     return SDValue();
 
-  auto *VPLoad = cast<VPLoadSDNode>(Op);
+  VPLoadSDNode *VPLoad = nullptr;
+  // Find the single vp_load and check all other leaves are splats.
+  SmallVector<SDValue> Worklist = {Op};
+  while (!Worklist.empty()) {
+    SDValue X = Worklist.pop_back_val();
+    if (!X.hasOneUser())
+      return SDValue();
+    if (auto *VPL = dyn_cast<VPLoadSDNode>(X)) {
+      if (VPLoad && VPLoad != VPL)
+        return SDValue();
+      VPLoad = VPL;
+    } else if (DAG.isSplatValue(X))
+      continue;
+    else if (DAG.getTargetLoweringInfo().isBinOp(X.getOpcode()) &&
+             X->getNumValues() == 1)
+      append_range(Worklist, X->op_values());
+    else
+      return SDValue();
+  }
+  if (!VPLoad)
+    return SDValue();
 
   EVT LoadVT = VPLoad->getValueType(0);
   // We do not have a strided_load version for masks, and the evl of vp.reverse
@@ -19812,9 +19834,11 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
       LoadVT, DL, VPLoad->getChain(), Base, Stride, LoadMask,
       VPLoad->getVectorLength(), MMO, VPLoad->isExpandingLoad());
 
-  DAG.ReplaceAllUsesOfValueWith(SDValue(VPLoad, 1), Ret.getValue(1));
+  DAG.ReplaceAllUsesWith(VPLoad, Ret.getNode());
 
-  return Ret;
+  // Remove the top level reverse.
+  (void)sd_match(N, m_ReverseEVL(m_Value(Op), m_Value()));
+  return Op;
 }
 
 // Fold (i32 (bitcast (v4i8/v2i16 const_splat))) to a scalar i32 constant

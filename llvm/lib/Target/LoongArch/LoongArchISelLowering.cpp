@@ -464,8 +464,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     for (MVT VT : {MVT::v16i16, MVT::v8i32, MVT::v4i64})
       setOperationAction(ISD::BSWAP, VT, Legal);
     for (MVT VT : {MVT::v8i32, MVT::v4i32, MVT::v4i64}) {
-      setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, VT, Legal);
       setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
+      setOperationAction(ISD::SINT_TO_FP, VT, Legal);
+      setOperationAction(ISD::UINT_TO_FP, VT, Custom);
     }
     for (MVT VT : {MVT::v8f32, MVT::v4f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
@@ -4177,6 +4178,12 @@ SDValue LoongArchTargetLowering::lowerUINT_TO_FP(SDValue Op,
   SDValue Op0 = Op.getOperand(0);
   EVT VT = Op.getValueType();
   EVT Op0VT = Op0.getValueType();
+
+  if (VT.isVector()) {
+    if (VT.getScalarSizeInBits() != Op0VT.getScalarSizeInBits())
+      return SDValue();
+    return Op;
+  }
 
   if ((DAG.SignBitIsZero(Op0) || Op->getFlags().hasNonNeg()) &&
       !isOperationLegal(ISD::UINT_TO_FP, Op0VT) &&
@@ -8151,15 +8158,91 @@ static SDValue ExtendSrcToDst(SDNode *N, SelectionDAG &DAG, unsigned ExtendOp) {
   return DAG.getNode(N->getOpcode(), DL, VT, Extend);
 }
 
+// Merge two 64 to 32 convert instructions into one,
+// e.g.
+//   vffint.s.l $vr0, $vr1, $vr2
+// will convert 4 si64 into 4 float at once.
+// or
+//   vftintrz.w.d $vr0, $vr1, $vr2
+// which will convert 4 double into 4 si32 at once.
+// also deal with their 256-bits LASX version.
+static SDValue MergeBlocksConvert(SDNode *N, SelectionDAG &DAG, unsigned Opcode,
+                                  unsigned BlockBits) {
+  SDLoc DL(N);
+  MVT DstVT = N->getSimpleValueType(0);
+  SDValue Src = N->getOperand(0);
+  MVT SrcVT = Src.getSimpleValueType();
+  unsigned SrcBits = SrcVT.getSizeInBits();
+
+  SmallVector<SDValue, 4> Blocks;
+  unsigned BlockNumElts = BlockBits / SrcVT.getScalarSizeInBits();
+  MVT BlockVT = MVT::getVectorVT(SrcVT.getScalarType(), BlockNumElts);
+  if (Src.getOpcode() == ISD::CONCAT_VECTORS &&
+      Src.getOperand(0).getValueType() == BlockVT) {
+    for (unsigned i = 0; i < Src.getNumOperands(); ++i)
+      Blocks.push_back(Src.getOperand(i));
+  } else if (SrcBits > BlockBits) {
+    // Wider than one register: extract each BlockBits-wide sub-vector.
+    for (unsigned i = 0; i < SrcBits / BlockBits; ++i)
+      Blocks.push_back(
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, BlockVT, Src,
+                      DAG.getVectorIdxConstant(i * BlockNumElts, DL)));
+  } else {
+    BlockBits = SrcBits;
+    Blocks.push_back(Src);
+  }
+
+  MVT NativeVecVT = MVT::getVectorVT(DstVT.getScalarType(),
+                                     BlockBits / DstVT.getScalarSizeInBits());
+  SmallVector<SDValue, 4> Parts;
+  for (unsigned i = 0; i < Blocks.size(); i += 2) {
+    SDValue Lo = Blocks[i];
+    SDValue Hi = Blocks.size() > 1 ? Blocks[i + 1] : Lo;
+    SDValue Res = DAG.getNode(Opcode, DL, NativeVecVT, Hi, Lo);
+
+    if (BlockBits == 256) {
+      SDValue Undef = DAG.getUNDEF(NativeVecVT);
+      SmallVector<int, 8> Mask = {0, 1, 4, 5, 2, 3, 6, 7};
+      Res = DAG.getVectorShuffle(NativeVecVT, DL, Res, Undef, Mask);
+      Res = DAG.getBitcast(NativeVecVT, Res);
+    }
+
+    Parts.push_back(Res);
+  }
+
+  if (Blocks.size() == 1)
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, DstVT, Parts[0],
+                       DAG.getVectorIdxConstant(0, DL));
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Parts);
+}
+
 static SDValue performSINT_TO_FPCombine(SDNode *N, SelectionDAG &DAG,
                                         TargetLowering::DAGCombinerInfo &DCI,
                                         const LoongArchSubtarget &Subtarget) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
 
-  // Sign-extend src to avoid scalarization.
-  if (VT.isVector())
-    return ExtendSrcToDst(N, DAG, ISD::SIGN_EXTEND);
+  if (VT.isVector()) {
+    unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
+    unsigned DstEltBits = VT.getScalarSizeInBits();
+    unsigned NumElts = VT.getVectorNumElements();
+    unsigned BlockBits = Subtarget.hasExtLASX() ? 256 : 128;
+
+    // Sign-extend src to avoid scalarization.
+    if (SrcEltBits <= DstEltBits)
+      return ExtendSrcToDst(N, DAG, ISD::SIGN_EXTEND);
+
+    if (SrcEltBits != 64 || DstEltBits != 32 || !isPowerOf2_32(NumElts))
+      return SDValue();
+
+    if (!SrcVT.isSimple() || !VT.isSimple())
+      return SDValue();
+
+    // Combine [x]vffint.s.l for vector si64 to float conversion.
+    return MergeBlocksConvert(N, DAG, LoongArchISD::VFFINT, BlockBits);
+  }
 
   if (VT != MVT::f32 && VT != MVT::f64)
     return SDValue();
@@ -8172,7 +8255,6 @@ static SDValue performSINT_TO_FPCombine(SDNode *N, SelectionDAG &DAG,
   if (VT.getSizeInBits() != N->getOperand(0).getValueSizeInBits())
     return SDValue();
 
-  SDValue Src = N->getOperand(0);
   // If the result of an integer load is only used by an integer-to-float
   // conversion, use a fp load instead. This eliminates an integer-to-float-move
   // (movgr2fr) instruction.
@@ -8257,45 +8339,7 @@ static SDValue performFP_TO_INTCombine(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Tmp);
   }
 
-  SmallVector<SDValue, 8> Blocks;
-  unsigned BlockNumElts = BlockBits / 64;
-  MVT BlockVT = MVT::getVectorVT(MVT::f64, BlockNumElts);
-  if (Src.getOpcode() == ISD::CONCAT_VECTORS &&
-      Src.getOperand(0).getValueType() == BlockVT) {
-    for (unsigned i = 0; i < Src.getNumOperands(); i++)
-      Blocks.push_back(Src.getOperand(i));
-  } else if (SrcBits > BlockBits) {
-    // Wider than one register: extract each BlockBits-wide sub-vector.
-    for (unsigned i = 0; i < SrcBits / BlockBits; i++)
-      Blocks.push_back(
-          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, BlockVT, Src,
-                      DAG.getVectorIdxConstant(i * BlockNumElts, DL)));
-  } else {
-    BlockBits = SrcBits;
-    Blocks.push_back(Src);
-  }
-
-  MVT NativeVT = BlockBits == 256 ? MVT::v8i32 : MVT::v4i32;
-  SmallVector<SDValue, 4> Parts;
-  for (unsigned i = 0; i < Blocks.size(); i += 2) {
-    SDValue Lo = Blocks[i];
-    SDValue Hi = Blocks.size() > 1 ? Blocks[i + 1] : Lo;
-    SDValue Res = DAG.getNode(LoongArchISD::VFTINTRZ, DL, NativeVT, Hi, Lo);
-
-    if (BlockBits == 256) {
-      SDValue Undef = DAG.getUNDEF(Res.getValueType());
-      SmallVector<int, 8> Mask = {0, 1, 4, 5, 2, 3, 6, 7};
-      Res = DAG.getVectorShuffle(Res.getValueType(), DL, Res, Undef, Mask);
-      Res = DAG.getBitcast(NativeVT, Res);
-    }
-
-    Parts.push_back(Res);
-  }
-
-  if (Blocks.size() == 1)
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, DstVT, Parts[0],
-                       DAG.getVectorIdxConstant(0, DL));
-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Parts);
+  return MergeBlocksConvert(N, DAG, LoongArchISD::VFTINTRZ, BlockBits);
 }
 
 // Try to widen AND, OR and XOR nodes to VT in order to remove casts around

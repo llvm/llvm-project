@@ -3914,6 +3914,15 @@ let Predicates = [HasAVX512] in {
             (VMOVPQI2QIZmr addr:$dst, VR128X:$src)>;
 }
 
+//===---------------------------------------------------------------------===//
+// If the upper 32 bits of v2i64 elements are zero, we can use (v)movd instead.
+let AddedComplexity = 10 in {
+  let Predicates = [HasAVX512] in {
+    def : Pat<(i64 (extractelt (X86upperzero<v2i64, VR128X>:$src), (iPTR 0))),
+              (SUBREG_TO_REG (VMOVPDI2DIZrr VR128:$src), sub_32bit)>;
+  }
+}
+
 // Move Scalar Single to Double Int
 //
 let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {
