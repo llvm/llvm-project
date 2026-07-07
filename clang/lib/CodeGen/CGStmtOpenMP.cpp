@@ -7393,7 +7393,7 @@ static void emitCommonOMPTeamsDirective(CodeGenFunction &CGF,
       // When an if clause is present on a teams construct and the if clause
       // expression evaluates to false, the number of formed teams is one.
       const llvm::APInt One(32, 1);
-      auto NumTeams = IntegerLiteral(
+      IntegerLiteral NumTeams(
           CGF.getContext(), One,
           CGF.getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
           SourceLocation());
