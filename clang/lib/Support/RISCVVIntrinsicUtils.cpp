@@ -774,6 +774,12 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
     Scale = LMUL.getScale(ElementBitwidth);
     ElementBitwidth = 1;
     break;
+  case VectorTypeModifier::DoubleLMULMaskVector:
+    ScalarType = ScalarTypeKind::Boolean;
+    LMUL.MulLog2LMUL(1);
+    Scale = LMUL.getScale(ElementBitwidth);
+    ElementBitwidth = 1;
+    break;
   case VectorTypeModifier::Log2EEW3:
     applyLog2EEW(3);
     break;
@@ -1301,6 +1307,8 @@ raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
   OS << "/*HasTailPolicy=*/" << (int)Record.HasTailPolicy << ", ";
   OS << "/*HasMaskPolicy=*/" << (int)Record.HasMaskPolicy << ", ";
   OS << "/*HasFRMRoundModeOp=*/" << (int)Record.HasFRMRoundModeOp << ", ";
+  OS << "/*MaskedPrototypeHasResultMask=*/"
+     << (int)Record.MaskedPrototypeHasResultMask << ", ";
   OS << "/*AltFmt=*/" << (int)Record.AltFmt << ",";
   OS << "/*IsTuple=*/" << (int)Record.IsTuple << ", ";
   OS << "/*UnMaskedPolicyScheme=*/" << (PolicyScheme)Record.UnMaskedPolicyScheme

@@ -368,7 +368,7 @@ The primary goal of experimental support is to assist in the process of ratifica
   LLVM implements the `0.7 draft specification <https://github.com/riscv/integer-vector-absolute-difference/releases/tag/v0.7>`__.
 
 ``experimental-zvzip``
-  LLVM implements the `0.1 draft specification <https://github.com/ved-rivos/riscv-isa-manual/blob/zvzip/src/zvzip.adoc>`__.
+  LLVM implements the `0.2 draft specification <https://github.com/riscv/riscv-isa-manual/pull/3233>`__.
 
 ``experimental-zvvfmm``
   LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-71c48b9-2026-05-17>`__.

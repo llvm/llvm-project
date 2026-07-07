@@ -2149,15 +2149,27 @@ let RequiredFeatures = ["zvdot4a8i"] in {
 let UnMaskedPolicyScheme = HasPassthruOperand in {
   let RequiredFeatures = ["zvzip"] in {
     // Signed and floating type
-    defm vzip : RVVOutOp0BuiltinSet<"vzip", "csilxfdy", [["vv", "d", "dvv"]]>;
-    defm vunzipe : RVVOutOp0BuiltinSet<"vunzipe", "csilxfdy", [["v", "v", "vd"]]>;
-    defm vunzipo : RVVOutOp0BuiltinSet<"vunzipo", "csilxfdy", [["v", "v", "vd"]]>;
+    let MaskedPrototypeHasResultMask = true in
+      defm vzip : RVVOutOp0BuiltinSet<"vzip", "csilxfdy",
+                                      [["vv", "d", "dvv"]]>;
+    let HasMasked = false in {
+      defm vunzipe : RVVOutOp0BuiltinSet<"vunzipe", "csilxfdy",
+                                         [["v", "v", "vd"]]>;
+      defm vunzipo : RVVOutOp0BuiltinSet<"vunzipo", "csilxfdy",
+                                         [["v", "v", "vd"]]>;
+    }
     defm vpaire : RVVOutBuiltinSet<"vpaire", "csilxfdy", [["vv", "v", "vvv"]]>;
     defm vpairo : RVVOutBuiltinSet<"vpairo", "csilxfdy", [["vv", "v", "vvv"]]>;
     // Unsigned
-    defm vzip : RVVOutOp0BuiltinSet<"vzip", "csil", [["vv", "Ud", "UdUvUv"]]>;
-    defm vunzipe : RVVOutOp0BuiltinSet<"vunzipe", "csil", [["v", "Uv", "UvUd"]]>;
-    defm vunzipo : RVVOutOp0BuiltinSet<"vunzipo", "csil", [["v", "Uv", "UvUd"]]>;
+    let MaskedPrototypeHasResultMask = true in
+      defm vzip : RVVOutOp0BuiltinSet<"vzip", "csil",
+                                      [["vv", "Ud", "UdUvUv"]]>;
+    let HasMasked = false in {
+      defm vunzipe : RVVOutOp0BuiltinSet<"vunzipe", "csil",
+                                         [["v", "Uv", "UvUd"]]>;
+      defm vunzipo : RVVOutOp0BuiltinSet<"vunzipo", "csil",
+                                         [["v", "Uv", "UvUd"]]>;
+    }
     defm vpaire : RVVOutBuiltinSet<"vpaire", "csil", [["vv", "Uv", "UvUvUv"]]>;
     defm vpairo : RVVOutBuiltinSet<"vpairo", "csil", [["vv", "Uv", "UvUvUv"]]>;
   }
