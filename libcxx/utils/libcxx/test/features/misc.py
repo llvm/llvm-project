@@ -84,13 +84,13 @@ features = [
         name="verify-support",
         when=lambda cfg: hasCompileFlag(cfg, "-Xclang -verify-ignore-unexpected"),
     ),
-    Feature(
-        name="add-latomic-workaround",  # https://llvm.org/PR73361
-        when=lambda cfg: sourceBuilds(
-            cfg, "int main(int, char**) { return 0; }", ["-latomic"]
-        ),
-        actions=[AddLinkFlag("-latomic")],
-    ),
+    # Feature(
+    #     name="add-latomic-workaround",  # https://llvm.org/PR73361
+    #     when=lambda cfg: sourceBuilds(
+    #         cfg, "int main(int, char**) { return 0; }", ["-latomic"]
+    #     ),
+    #     actions=[AddLinkFlag("-latomic")],
+    # ),
     *(
         Feature(
             name=f"has-{n}-bit-atomics",
