@@ -266,6 +266,33 @@ template <typename T>
 }
 template void nested_leak_user<int>(); // expected-note {{in instantiation of function template specialization 'nested_leak_user<int>' requested here}}
 
+// The dominion's end is bounded by the construct's recorded end: a pattern
+// *first declared after* the suppressed construct (reached here via a
+// dependent name) is outside its dominion even while the scope is live.
+template <typename T>
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::class_final)]] void fwd_final_user() {
+  typename T::type v; // expected-note {{in instantiation of template class 'FwdFinalVictim<int>' requested here}}
+  (void)v;
+}
+template <typename U> struct FwdFinalVictim { U m; }; // expected-error {{test profile fired on completion of class 'FwdFinalVictim<int>' under profile 'test::class_final'}}
+struct FwdFinalHolder { using type = FwdFinalVictim<int>; }; // expected-error {{test profile fired on completion of class 'FwdFinalHolder' under profile 'test::class_final'}}
+template void fwd_final_user<FwdFinalHolder>(); // expected-note {{in instantiation of function template specialization 'fwd_final_user<FwdFinalHolder>' requested here}}
+
+// Contrast: with a plain forward declaration *before* the suppressed
+// pattern, the specialization's location is the forward declaration's name
+// loc -- before the dominion begins -- so this fired even without
+// end-bounding.
+template <typename T> struct FwdVictim; // expected-error {{test profile fired on completion of class 'FwdVictim<int>' under profile 'test::class_final'}}
+template <typename T>
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::class_final)]] void fwd_victim_user() {
+  FwdVictim<T> v; // expected-note {{in instantiation of template class 'FwdVictim<int>' requested here}}
+  (void)v;
+}
+template <typename T> struct FwdVictim { T m; };
+template void fwd_victim_user<int>(); // expected-note {{in instantiation of function template specialization 'fwd_victim_user<int>' requested here}}
+
 // Without `-fprofiles`, the enforce attribute is `warn_attribute_ignored`
 // and the diagnostic never fires. This is exercised by the no-profiles RUN
 // line, which expects only the two attribute-ignored warnings above.

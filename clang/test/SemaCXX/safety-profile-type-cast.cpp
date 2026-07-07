@@ -802,3 +802,73 @@ template <typename T>
 auto leak_macro_fn() { return EMIT_CAST(T, &instantiation_leak_target); } // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
 // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
 [[profiles::suppress(test::type_cast)]] int *leak_macro_use = leak_macro_fn<int>(); // expected-note {{in instantiation of function template specialization 'leak_macro_fn<int>' requested here}}
+
+// The dominion's end is bounded by the construct's recorded end location: a
+// live suppress scope does not cover a pattern first declared or defined
+// *after* the suppressed construct, even though those tokens compare after
+// the dominion's begin.
+
+// Fwd-declared class template defined after the suppressed pattern.
+template <typename T> struct FwdLeak;
+template <typename T>
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::type_cast)]] void fwd_leak_user() {
+  FwdLeak<T> v; // expected-note {{in evaluation of exception specification for 'FwdLeak<int>::FwdLeak' needed here}}
+  (void)v;
+}
+template <typename T>
+struct FwdLeak { // #FwdLeak
+  T *p = reinterpret_cast<T*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}} \
+                                  // expected-note@#FwdLeak {{in instantiation of default member initializer 'FwdLeak<int>::p' requested here}}
+};
+template void fwd_leak_user<int>(); // expected-note {{in instantiation of function template specialization 'fwd_leak_user<int>' requested here}}
+
+// Statement-entry variant: the suppressed block's recorded end excludes the
+// later-defined pattern.
+template <typename T> struct FwdLeak2;
+template <typename T> void fwd_gap_user() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]] {
+    FwdLeak2<T> v; // expected-note {{in evaluation of exception specification for 'FwdLeak2<int>::FwdLeak2' needed here}}
+    (void)v;
+  }
+}
+template <typename T>
+struct FwdLeak2 { // #FwdLeak2
+  T *p = reinterpret_cast<T*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}} \
+                                  // expected-note@#FwdLeak2 {{in instantiation of default member initializer 'FwdLeak2<int>::p' requested here}}
+};
+template void fwd_gap_user<int>(); // expected-note {{in instantiation of function template specialization 'fwd_gap_user<int>' requested here}}
+
+// TagDecl arm: the suppressed class template's brace range bounds its parent
+// entry, excluding the later-defined pattern its member instantiates.
+template <typename T> struct FwdLeak3;
+template <typename T>
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(test::type_cast)]] FwdSupClass {
+  static void m() {
+    FwdLeak3<T> v; // expected-note {{in evaluation of exception specification for 'FwdLeak3<int>::FwdLeak3' needed here}}
+    (void)v;
+  }
+};
+template <typename T>
+struct FwdLeak3 { // #FwdLeak3
+  T *p = reinterpret_cast<T*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}} \
+                                  // expected-note@#FwdLeak3 {{in instantiation of default member initializer 'FwdLeak3<int>::p' requested here}}
+};
+void fwd_sup_use() { FwdSupClass<int>::m(); } // expected-note {{in instantiation of member function 'FwdSupClass<int>::m' requested here}}
+
+// A construct still being parsed records no end -- the scope's lifetime
+// bounds the dominion, which is exact mid-parse. A class-level suppress
+// therefore still covers members instantiated from a static member's
+// in-class initializer, both synchronously mid-parse (the generic lambda's
+// call operator) and deferred (the member function template).
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(test::type_cast)]] MidParseSync {
+  static inline int *x = [](auto t) { return reinterpret_cast<int*>(t); }(0);
+};
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(test::type_cast)]] MidParseDeferred {
+  template <typename T> static T *f() { return reinterpret_cast<T*>(0); }
+  static inline int *x = f<int>();
+};
