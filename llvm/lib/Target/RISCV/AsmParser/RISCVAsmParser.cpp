@@ -1715,11 +1715,11 @@ void RISCVAsmParser::FilterNearMisses(
 
       // When the matcher finds surplus operands, it records them as
       // NearMissOperand with InvalidMatchClass. We detect this and report
-      // "too many operands" instead of "invalid operand".
+      // "unexpected extra operand" instead of "invalid operand".
       if (I.getOperandClass() == InvalidMatchClass) {
         if (!ReportedTooManyOperands) {
-          NearMissesOut.emplace_back(
-              NearMissMessage{OperandLoc, "too many operands for instruction"});
+          NearMissesOut.emplace_back(NearMissMessage{
+              OperandLoc, "unexpected extra operand for instruction"});
           ReportedTooManyOperands = true;
         }
         break;
