@@ -376,9 +376,9 @@ define amdgpu_kernel void @s_fneg_v2f16_nonload(ptr addrspace(1) %out) #0 {
 ; CIVI-NEXT:    ;;#ASMEND
 ; CIVI-NEXT:    s_xor_b32 s2, s2, 0x80008000
 ; CIVI-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; CIVI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CIVI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CIVI-NEXT:    v_mov_b32_e32 v0, s0
-; CIVI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CIVI-NEXT:    v_mov_b32_e32 v1, s1
 ; CIVI-NEXT:    v_mov_b32_e32 v2, s2
 ; CIVI-NEXT:    flat_store_dword v[0:1], v2

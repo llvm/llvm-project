@@ -2435,6 +2435,7 @@ stack.
     > this is being used. Or are there other attributes that need to state they
     > pass an object?
 
+
 (undefined-location-description-operations)=
 ####### A.2.5.4.4.2 Undefined Location Description Operations
 
@@ -2659,6 +2660,7 @@ type.
     The action is the same as for `DW_OP_breg<N>`, except that R is used as the
     register number and B is used as the byte displacement.
 
+
 (register-location-description-operations)=
 ####### A.2.5.4.4.4 Register Location Description Operations
 
@@ -2710,6 +2712,7 @@ register starting at the specified bit offset.
 register, it is necessary to use `DW_OP_regval_type`, use one of the
 `DW_OP_breg*` register-based addressing operations, or use `DW_OP_deref*` on a
 register location description.</i>
+
 
 (implicit-location-description-operations)=
 ####### A.2.5.4.4.5 Implicit Location Description Operations
