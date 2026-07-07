@@ -176,7 +176,6 @@ set(x86_files
   amxfp8intrin.h
   amxintrin.h
   amxmovrsintrin.h
-  amxtf32intrin.h
   avx10_2_512bf16intrin.h
   avx10_2_512convertintrin.h
   avx10_2_512minmaxintrin.h

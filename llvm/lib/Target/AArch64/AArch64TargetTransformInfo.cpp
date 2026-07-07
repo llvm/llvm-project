@@ -4569,6 +4569,17 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::SUB:
     return LT.first; // Also works for i128
   case ISD::MUL:
+    // i128 multiply is umulh + 2*madd + mul and grows ~O(Bitwidth^2). For
+    // scalable vectors the cost of LT.first will be invalid, leading to an
+    // invalid cost overall.
+    if (Ty->getScalarSizeInBits() > 64) {
+      unsigned NumLanes = isa<FixedVectorType>(Ty)
+                              ? cast<FixedVectorType>(Ty)->getNumElements()
+                              : 1;
+      InstructionCost CostPerLane = LT.first / NumLanes;
+      return CostPerLane * CostPerLane * NumLanes;
+    }
+
     if (LT.second == MVT::v2i64) {
       // When SVE is available, then we can lower the v2i64 operation using
       // the SVE mul instruction, which has a lower cost.
