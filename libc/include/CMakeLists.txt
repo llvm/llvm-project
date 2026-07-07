@@ -539,6 +539,7 @@ add_header_macro(
   elf.h
   DEPENDS
     .llvm-libc-macros.elf_macros
+    .llvm-libc-macros.sys_auxv_macros
     .llvm-libc-types.Elf32_Addr
     .llvm-libc-types.Elf32_Chdr
     .llvm-libc-types.Elf32_Dyn

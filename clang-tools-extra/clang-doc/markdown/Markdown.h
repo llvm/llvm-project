@@ -15,8 +15,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_MARKDOWN_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_MARKDOWN_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_MARKDOWN_MARKDOWN_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_MARKDOWN_MARKDOWN_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/simple_ilist.h"
@@ -312,4 +312,4 @@ private:
 
 } // namespace clang::doc::markdown
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_MARKDOWN_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_MARKDOWN_MARKDOWN_H
