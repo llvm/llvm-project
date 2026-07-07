@@ -5507,10 +5507,34 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         } else {
           ShiftBits = C1.countr_zero();
         }
+        APInt RangeWidth = NewC;
         NewC.lshrInPlace(ShiftBits);
         if (ShiftBits && NewC.getSignificantBits() <= 64 &&
             isLegalICmpImmediate(NewC.getSExtValue()) &&
             !shouldAvoidTransformToShift(ShValTy, ShiftBits)) {
+          // If this is an offset range check, try to move the offset after the
+          // shift to avoid preserving the pre-shift add with a mask.
+          if (N0.hasOneUse() && N0.getOpcode() == ISD::ADD) {
+            if (auto *AddC = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
+              const APInt &AddVal = AddC->getAPIntValue();
+              if (AddVal.countr_zero() >= ShiftBits) {
+                APInt RangeLower = -AddVal;
+                bool Overflow;
+                RangeLower.uadd_ov(RangeWidth, Overflow);
+                if (!RangeWidth.isZero() && !Overflow) {
+                  SDValue Shift = DAG.getNode(
+                      ISD::SRL, dl, ShValTy, N0.getOperand(0),
+                      DAG.getShiftAmountConstant(ShiftBits, ShValTy, dl));
+                  APInt Offset = -RangeLower.lshr(ShiftBits);
+                  SDValue ShiftedAdd =
+                      DAG.getNode(ISD::ADD, dl, ShValTy, Shift,
+                                  DAG.getConstant(Offset, dl, ShValTy));
+                  SDValue CmpRHS = DAG.getConstant(NewC, dl, ShValTy);
+                  return DAG.getSetCC(dl, VT, ShiftedAdd, CmpRHS, NewCond);
+                }
+              }
+            }
+          }
           SDValue Shift =
               DAG.getNode(ISD::SRL, dl, ShValTy, N0,
                           DAG.getShiftAmountConstant(ShiftBits, ShValTy, dl));
