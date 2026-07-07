@@ -2144,7 +2144,7 @@ static std::optional<Instruction *> instCombineSVEDupX(InstCombiner &IC,
 
 // xor(cmpne(%pg, %lhs, %rhs), %pg)
 // -> cmpeq(%pg, %lhs, %rhs)
-static std::optional<Instruction *> instCombineXorSVECmpNE(InstCombiner &IC,
+static std::optional<Instruction *> instCombineXorSVECmpCC(InstCombiner &IC,
                                                            IntrinsicInst &II) {
   if (!II.hasOneUse())
     return std::nullopt;
@@ -2160,15 +2160,21 @@ static std::optional<Instruction *> instCombineXorSVECmpNE(InstCombiner &IC,
   case Intrinsic::aarch64_sve_cmpne_wide:
     IID = Intrinsic::aarch64_sve_cmpeq_wide;
     break;
+  case Intrinsic::aarch64_sve_cmpeq:
+    IID = Intrinsic::aarch64_sve_cmpne;
+    break;
+  case Intrinsic::aarch64_sve_cmpeq_wide:
+    IID = Intrinsic::aarch64_sve_cmpne_wide;
+    break;
   default:
     return std::nullopt;
   }
 
   IC.Builder.SetInsertPoint(User);
-  Value *CMPEQ = IC.Builder.CreateIntrinsic(
+  Value *CMPCC = IC.Builder.CreateIntrinsic(
       IID, II.getOperand(1)->getType(),
       {II.getOperand(0), II.getOperand(1), II.getOperand(2)});
-  IC.replaceInstUsesWith(*User, CMPEQ);
+  IC.replaceInstUsesWith(*User, CMPCC);
   IC.eraseInstFromFunction(*User);
   return &II;
 }
@@ -2177,7 +2183,7 @@ static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
                                                         IntrinsicInst &II) {
   LLVMContext &Ctx = II.getContext();
 
-  if (auto Res = instCombineXorSVECmpNE(IC, II))
+  if (auto Res = instCombineXorSVECmpCC(IC, II))
     return Res;
 
   if (!isAllActivePredicate(II.getArgOperand(0)))
@@ -3182,6 +3188,9 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEDup(IC, II);
   case Intrinsic::aarch64_sve_dup_x:
     return instCombineSVEDupX(IC, II);
+  case Intrinsic::aarch64_sve_cmpeq:
+  case Intrinsic::aarch64_sve_cmpeq_wide:
+    return instCombineXorSVECmpCC(IC, II);
   case Intrinsic::aarch64_sve_cmpne:
   case Intrinsic::aarch64_sve_cmpne_wide:
     return instCombineSVECmpNE(IC, II);
