@@ -743,13 +743,25 @@ void privatizeSymbol(
 
   // fir.array<> cannot be converted to any single llvm type and fir helpers
   // are not available in openmp to llvmir translation so we cannot generate
-  // an alloca for a fir.array type there. Get around this by boxing all
-  // arrays.
-  if (mlir::isa<fir::SequenceType>(allocType)) {
-    hlfir::Entity entity{hsb.getAddr()};
-    entity = genVariableBox(symLoc, firOpBuilder, entity);
-    privVal = entity.getBase();
-    allocType = privVal.getType();
+  // an alloca for a fir.array type there. Get around this by boxing arrays.
+  //
+  // Exception: a constant-shape array of trivial intrinsic elements (e.g.
+  // real(8)::xx(3) -> !fir.array<3xf64>) maps to a fixed-size LLVM array type
+  // that the translation can allocate directly on the stack, so it is left
+  // unboxed. This avoids a per-thread heap allocation in the private init
+  // region and lets alias analysis prove the private does not alias dummy
+  // arguments. Firstprivate, dynamic-extent, unknown-shape, character and
+  // derived-type arrays keep being boxed.
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(allocType)) {
+    bool requiresBox = emitCopyRegion || seqTy.hasUnknownShape() ||
+                       seqTy.hasDynamicExtents() ||
+                       !fir::isa_trivial(seqTy.getEleTy());
+    if (requiresBox) {
+      hlfir::Entity entity{hsb.getAddr()};
+      entity = genVariableBox(symLoc, firOpBuilder, entity);
+      privVal = entity.getBase();
+      allocType = privVal.getType();
+    }
   }
 
   if (mlir::isa<fir::BaseBoxType>(privVal.getType())) {
