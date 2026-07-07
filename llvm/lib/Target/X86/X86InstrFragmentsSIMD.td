@@ -1377,6 +1377,15 @@ def bc_v8i64 : PatFrag<(ops node:$in), (v8i64 (bitconvert node:$in))>;
 def bc_v8f64 : PatFrag<(ops node:$in), (v8f64 (bitconvert node:$in))>;
 def bc_v16f32 : PatFrag<(ops node:$in), (v16f32 (bitconvert node:$in))>;
 
+// Match node if each vector elements' upper half bits are zero.
+class X86upperzero <ValueType vt, RegisterClass rc> : PatLeaf<(vt rc:$src), [{
+  unsigned EltBits = Op.getScalarValueSizeInBits();
+  APInt UpperMask = APInt::getHighBitsSet(EltBits, EltBits / 2);
+  return CurDAG->MaskedValueIsZero(Op, UpperMask);
+}]> {
+  let GISelPredicateCode = [{return false;}]; // TODO
+}
+
 // Match node that has known zeros in every element except the lowest.
 class X86vzelts <ValueType vt, RegisterClass rc> : PatLeaf<(vt rc:$src), [{
   unsigned NumElts = Op.getValueType().getVectorNumElements();

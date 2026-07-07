@@ -197,10 +197,6 @@ latex_documents = [
 # If false, no module index is generated.
 # latex_domain_indices = True
 
-# If true, figures, tables and code-blocks are automatically numbered if they
-# have a caption. 
-numfig = True
-
 # -- Options for manual page output --------------------------------------------
 
 # One entry per manual page. List of tuples

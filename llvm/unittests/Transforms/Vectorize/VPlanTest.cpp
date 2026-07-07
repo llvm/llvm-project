@@ -1894,6 +1894,32 @@ TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
       vputils::isUniformAcrossVFsAndUFs(FirstActiveLaneNonUniform.get()));
 }
 
+TEST_F(VPBasicBlockTest, VPRegionValueClonePropagatesMaterialized) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Preheader = Plan.getEntry();
+  VPBasicBlock *Header = Plan.createVPBasicBlock("header");
+  VPBasicBlock *Latch = Plan.createVPBasicBlock("latch");
+  VPRegionBlock *Region = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                                "loop", Header, Latch);
+  VPBlockUtils::connectBlocks(Header, Latch);
+  VPBlockUtils::connectBlocks(Preheader, Region);
+  VPBlockUtils::connectBlocks(Region, Plan.getScalarHeader());
+
+  VPRegionValue *CanIV = Region->getCanonicalIV();
+  EXPECT_TRUE(isa<VPSymbolicValue>(CanIV));
+  EXPECT_FALSE(CanIV->isMaterialized());
+
+  // Materialize the canonical IV by replacing all uses, then verify clone
+  // propagates the materialized state.
+  CanIV->replaceAllUsesWith(Plan.getConstantInt(32, 0));
+  EXPECT_TRUE(CanIV->isMaterialized());
+
+  std::unique_ptr<VPlan> Clone(Plan.duplicate());
+  VPRegionValue *ClonedCanIV = Clone->getVectorLoopRegion()->getCanonicalIV();
+  EXPECT_NE(CanIV, ClonedCanIV);
+  EXPECT_TRUE(ClonedCanIV->isMaterialized());
+}
+
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
 TEST_F(VPInstructionTest, VPSymbolicValueConstructUserAfterMaterialization) {
   VPlan &Plan = getPlan();

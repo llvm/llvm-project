@@ -113,6 +113,8 @@ public:
   evaluate::TargetCharacteristics &targetCharacteristics() {
     return targetCharacteristics_;
   }
+  const std::string &targetTriple() const { return targetTriple_; }
+  const std::string &targetFeatures() const { return targetFeatures_; }
   Scope &globalScope() { return globalScope_; }
   Scope &intrinsicModulesScope() { return intrinsicModulesScope_; }
   Scope *currentHermeticModuleFileScope() {
@@ -174,6 +176,14 @@ public:
   SemanticsContext &set_openAccDefaultNoneScalarsStrictDisableOption(
       std::string x) {
     openAccDefaultNoneScalarsStrictDisableOption_ = std::move(x);
+    return *this;
+  }
+  SemanticsContext &set_targetTriple(const std::string &x) {
+    targetTriple_ = x;
+    return *this;
+  }
+  SemanticsContext &set_targetFeatures(const std::string &x) {
+    targetFeatures_ = x;
     return *this;
   }
 
@@ -383,6 +393,8 @@ private:
   std::vector<std::string> intrinsicModuleDirectories_;
   std::string moduleDirectory_{"."s};
   std::string moduleFileSuffix_{".mod"};
+  std::string targetTriple_;
+  std::string targetFeatures_;
   bool underscoring_{true};
   bool warnOnNonstandardUsage_{false};
   bool warningsAreErrors_{false};

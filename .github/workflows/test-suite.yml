@@ -61,7 +61,7 @@ jobs:
       - permission-check
     env:
       # llvm-nm/llvm-ar/llvm-ranlib are needed for the microbenchmarks
-      NINJA_TARGETS: clang lld llvm-nm llvm-ar llvm-ranlib
+      NINJA_TARGETS: clang lld llvm-size llvm-nm llvm-ar llvm-ranlib
     steps:
       - name: Get pull request
         id: get-pr

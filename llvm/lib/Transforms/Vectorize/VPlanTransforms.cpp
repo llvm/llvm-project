@@ -3468,8 +3468,10 @@ void VPlanTransforms::addExplicitVectorLength(
 
   // Replace all uses of the canonical IV with VPCurrentIterationPHIRecipe
   // except for the canonical IV increment.
-  CanonicalIV->replaceAllUsesWith(CurrentIteration);
-  CanonicalIVIncrement->setOperand(0, CanonicalIV);
+  CanonicalIV->replaceUsesWithIf(CurrentIteration,
+                                 [CanonicalIVIncrement](VPUser &U, unsigned) {
+                                   return &U != CanonicalIVIncrement;
+                                 });
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
 }
