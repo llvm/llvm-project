@@ -53,7 +53,7 @@ struct TCPPObject
 // CHECK: [[CALL:%.*]] = call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN10TCPPObjectaSERKS_(ptr noundef nonnull align {{[0-9]+}} dereferenceable(256) [[TWO]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[THREE]])
 // CHECK:  ret void
 
-// CHECK: define internal void @"\01-[MyDocument setMyProperty:]"(ptr noundef %[[SELF:.*]], ptr noundef %{{.*}}, ptr noundef %[[MYPROPERTY:.*]])
+// CHECK: define internal void @"\01-[MyDocument setMyProperty:]"(ptr noundef %[[SELF:.*]], ptr noundef %{{.*}}, ptr noundef align {{[0-9]+}} %[[MYPROPERTY:.*]])
 // CHECK: %[[SELF_ADDR:.*]] = alloca ptr, align 8
 // CHECK: %[[MYPROPERTY_INDIRECT:.*]]_addr = alloca ptr, align 8
 // CHECK: store ptr %[[SELF]], ptr %[[SELF_ADDR]], align 8
