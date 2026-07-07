@@ -42,20 +42,20 @@ int __attribute__((target_clones("cpu=pwr9,default"))) redef3(void) { return 1; 
 int __attribute__((target_clones("cpu=pwr9,cpu=power9", "cpu=power9, default")))
 dupes(void) { return 1; }
 
-// expected-warning@+1 {{unknown '' in the 'target_clones' attribute string;}}
+// expected-warning@+1 {{unsupported '' in the 'target_clones' attribute string;}}
 void __attribute__((target_clones("")))
 empty_target_1(void);
-// expected-warning@+1 {{unknown '' in the 'target_clones' attribute string;}}
+// expected-warning@+1 {{unsupported '' in the 'target_clones' attribute string;}}
 void __attribute__((target_clones(",default")))
 empty_target_2(void);
-// expected-warning@+1 {{unknown '' in the 'target_clones' attribute string;}}
+// expected-warning@+1 {{unsupported '' in the 'target_clones' attribute string;}}
 void __attribute__((target_clones("default,")))
 empty_target_3(void);
-// expected-warning@+1 {{unknown '' in the 'target_clones' attribute string;}}
+// expected-warning@+1 {{unsupported '' in the 'target_clones' attribute string;}}
 void __attribute__((target_clones("default, ,cpu=pwr7")))
 empty_target_4(void);
 
-// expected-warning@+1 {{unknown '' in the 'target_clones' attribute string;}}
+// expected-warning@+1 {{unsupported '' in the 'target_clones' attribute string;}}
 void __attribute__((target_clones("default,cpu=pwr7", "")))
 empty_target_5(void);
 
