@@ -28,11 +28,11 @@ public:
   vector &operator=(vector &&other);
   vector &operator=(initializer_list<T>);
 
-  void push_back(const T &value);
-  void push_back(T &&value);
+  void push_back(const T &value) {}
+  void push_back(T &&value) {}
 
   template <typename... Args>
-  void emplace_back(Args &&...args);
+  void emplace_back(Args &&...args) {}
 
   template <typename... Args>
   iterator emplace(const_iterator pos, Args &&...args);

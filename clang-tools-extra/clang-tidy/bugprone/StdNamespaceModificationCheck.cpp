@@ -117,6 +117,10 @@ void clang::tidy::bugprone::StdNamespaceModificationCheck::check(
   if (!D || !NS)
     return;
 
+  // Skip compiler-generated implicit declarations (e.g. std::align_val_t).
+  if (D->isImplicit())
+    return;
+
   diag(D->getLocation(),
        "modification of %0 namespace can result in undefined behavior")
       << NS;

@@ -115,6 +115,7 @@ LLVM_ABI void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                                       ScalarEvolution *SE, DominatorTree *DT,
                                       AssumptionCache *AC,
                                       const TargetTransformInfo *TTI,
+                                      ArrayRef<BasicBlock *> Blocks,
                                       AAResults *AA = nullptr);
 
 LLVM_ABI MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
@@ -124,19 +125,15 @@ LLVM_ABI MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
 // returned.
 LLVM_ABI MDNode *getUnrollMetadataForLoop(const Loop *L, StringRef Name);
 
-// Returns true if the loop has an unroll(full) pragma.
-LLVM_ABI bool hasUnrollFullPragma(const Loop *L);
-
-// Returns true if the loop has an unroll(enable) pragma. This metadata is used
-// for both "#pragma unroll" and "#pragma clang loop unroll(enable)" directives.
-LLVM_ABI bool hasUnrollEnablePragma(const Loop *L);
-
-// Returns true if the loop has an runtime unroll(disable) pragma.
-LLVM_ABI bool hasRuntimeUnrollDisablePragma(const Loop *L);
-
-// If loop has an unroll_count pragma return the (necessarily
-// positive) value from the pragma.  Otherwise return 0.
-LLVM_ABI unsigned unrollCountPragmaValue(const Loop *L);
+struct UnrollPragmaInfo {
+  LLVM_ABI UnrollPragmaInfo(const Loop *L);
+  const bool UserUnrollCount;
+  const bool PragmaFullUnroll;
+  const unsigned PragmaCount;
+  const bool PragmaEnableUnroll;
+  const bool PragmaRuntimeUnrollDisable;
+  const bool ExplicitUnroll;
+};
 
 LLVM_ABI TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
@@ -160,12 +157,18 @@ public:
   ConvergenceKind Convergence;
   bool ConvergenceAllowsRuntime;
 
+  /// \param TripCountIsUniform If true, all threads in a convergent execution
+  /// agree on the trip count, so runtime unrolling with a remainder is safe
+  /// even for loops with uncontrolled convergent operations.
   LLVM_ABI UnrollCostEstimator(const Loop *L, const TargetTransformInfo &TTI,
                                const SmallPtrSetImpl<const Value *> &EphValues,
-                               unsigned BEInsns);
+                               unsigned BEInsns,
+                               bool TripCountIsUniform = false);
 
-  /// Whether it is legal to unroll this loop.
-  LLVM_ABI bool canUnroll() const;
+  /// Whether it is legal to unroll this loop. If \p ORE and \p L are provided,
+  /// emit an optimization remark on failure.
+  LLVM_ABI bool canUnroll(OptimizationRemarkEmitter *ORE = nullptr,
+                          const Loop *L = nullptr) const;
 
   uint64_t getRolledLoopSize() const { return LoopSize.getValue(); }
 
@@ -176,7 +179,7 @@ public:
                       unsigned CountOverwrite = 0) const;
 };
 
-LLVM_ABI bool
+LLVM_ABI void
 computeUnrollCount(Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT,
                    LoopInfo *LI, AssumptionCache *AC, ScalarEvolution &SE,
                    const SmallPtrSetImpl<const Value *> &EphValues,

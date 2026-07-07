@@ -1,4 +1,5 @@
 add_mlir_unittest(MLIROpenACCTests
+  OpenACCCGOpsTest.cpp
   OpenACCOpsTest.cpp
   OpenACCOpsInterfacesTest.cpp
   OpenACCTypeInterfacesTest.cpp
@@ -15,6 +16,7 @@ mlir_target_link_libraries(MLIROpenACCTests
   MLIRDLTIDialect
   MLIRFuncDialect
   MLIRGPUDialect
+  MLIRLLVMDialect
   MLIRMemRefDialect
   MLIRArithDialect
   MLIROpenACCDialect

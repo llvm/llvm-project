@@ -1329,7 +1329,9 @@ if (!attr && {2}) {{
              "Properties.";
   return ::mlir::failure();
 }
-if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
+if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, [&]() {{
+      return emitError() << "for `{1}`: ";
+    })))
   return ::mlir::failure();
 )decl";
 
@@ -2887,6 +2889,25 @@ OpFormatParser::verifyAttributes(SMLoc loc,
     if (var->constraint.isVariadicOfVariadic()) {
       fmt.inferredAttributes.insert(
           var->constraint.getVariadicOfVariadicSegmentSizeAttr());
+    }
+  }
+
+  // Check that optional attributes are not used directly (i.e. outside of an
+  // optional group or oilist). Printing an absent optional attribute passes a
+  // null Attribute to the printer, which leads to crashes in alias
+  // initialisation. OIList elements require optional attributes by design, so
+  // attributes nested inside them are not checked here.
+  for (FormatElement *element : elements) {
+    if (auto *attrVar = dyn_cast<AttributeVariable>(element)) {
+      const NamedAttribute *var = attrVar->getVar();
+      if (var->attr.isOptional()) {
+        return emitErrorAndNote(
+            loc,
+            "optional attribute '" + var->name +
+                "' cannot be used outside of an optional group",
+            "to conditionally print the attribute, use '($" + var->name +
+                "^)?'");
+      }
     }
   }
 

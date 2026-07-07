@@ -9,6 +9,7 @@
 #include "Watchpoint.h"
 #include "DAP.h"
 #include "Protocol/ProtocolTypes.h"
+#include "ProtocolUtils.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringExtras.h"
@@ -45,7 +46,7 @@ protocol::Breakpoint Watchpoint::ToProtocolBreakpoint() {
       breakpoint.message = m_error.GetCString();
   } else {
     breakpoint.verified = true;
-    breakpoint.id = m_wp.GetID();
+    breakpoint.id = ApplyWatchpointMask(m_wp.GetID());
   }
 
   return breakpoint;

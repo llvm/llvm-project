@@ -162,6 +162,35 @@ bool SystemZFrameLowering::hasReservedCallFrame(
   return true;
 }
 
+void SystemZFrameLowering::emitIncrement(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator &MBBI,
+                                         const DebugLoc &DL, Register Reg,
+                                         int64_t NumBytes,
+                                         const TargetInstrInfo *TII) const {
+  while (NumBytes) {
+    unsigned Opcode;
+    int64_t ThisVal = NumBytes;
+    if (isInt<16>(NumBytes))
+      Opcode = SystemZ::AGHI;
+    else {
+      Opcode = SystemZ::AGFI;
+      // Make sure we maintain stack alignment.
+      int64_t MinVal = -uint64_t(1) << 31;
+      int64_t MaxVal = (int64_t(1) << 31) - getStackAlignment();
+      if (ThisVal < MinVal)
+        ThisVal = MinVal;
+      else if (ThisVal > MaxVal)
+        ThisVal = MaxVal;
+    }
+    MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII->get(Opcode), Reg)
+                           .addReg(Reg)
+                           .addImm(ThisVal);
+    // The CC implicit def is dead.
+    MI->getOperand(3).setIsDead();
+    NumBytes -= ThisVal;
+  }
+}
+
 bool SystemZELFFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI) const {
@@ -472,34 +501,6 @@ void SystemZELFFrameLowering::processFunctionBeforeFrameFinalized(
       ZFI->getRestoreGPRRegs().LowGPR != SystemZ::R6D)
     for (auto &MO : MRI->use_nodbg_operands(SystemZ::R6D))
       MO.setIsKill(false);
-}
-
-// Emit instructions before MBBI (in MBB) to add NumBytes to Reg.
-static void emitIncrement(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator &MBBI, const DebugLoc &DL,
-                          Register Reg, int64_t NumBytes,
-                          const TargetInstrInfo *TII) {
-  while (NumBytes) {
-    unsigned Opcode;
-    int64_t ThisVal = NumBytes;
-    if (isInt<16>(NumBytes))
-      Opcode = SystemZ::AGHI;
-    else {
-      Opcode = SystemZ::AGFI;
-      // Make sure we maintain 8-byte stack alignment.
-      int64_t MinVal = -uint64_t(1) << 31;
-      int64_t MaxVal = (int64_t(1) << 31) - 8;
-      if (ThisVal < MinVal)
-        ThisVal = MinVal;
-      else if (ThisVal > MaxVal)
-        ThisVal = MaxVal;
-    }
-    MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII->get(Opcode), Reg)
-      .addReg(Reg).addImm(ThisVal);
-    // The CC implicit def is dead.
-    MI->getOperand(3).setIsDead();
-    NumBytes -= ThisVal;
-  }
 }
 
 // Add CFI for the new CFA offset.

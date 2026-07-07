@@ -309,7 +309,7 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
   llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
 
   if (CurBB) {
-    assert(!CurBB->getTerminator() && "Unexpected terminated block.");
+    assert(!CurBB->hasTerminator() && "Unexpected terminated block.");
 
     // We have a valid insert point, reuse it if it is empty or there are no
     // explicit jumps to the return block.
@@ -326,10 +326,9 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
   // branch then we can just put the code in that block instead. This
   // cleans up functions which started with a unified return block.
   if (ReturnBlock.getBlock()->hasOneUse()) {
-    llvm::BranchInst *BI =
-      dyn_cast<llvm::BranchInst>(*ReturnBlock.getBlock()->user_begin());
-    if (BI && BI->isUnconditional() &&
-        BI->getSuccessor(0) == ReturnBlock.getBlock()) {
+    auto *BI =
+        dyn_cast<llvm::UncondBrInst>(*ReturnBlock.getBlock()->user_begin());
+    if (BI && BI->getSuccessor(0) == ReturnBlock.getBlock()) {
       // Record/return the DebugLoc of the simple 'return' expression to be used
       // later by the actual 'ret' instruction.
       llvm::DebugLoc Loc = BI->getDebugLoc();
@@ -1034,9 +1033,11 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   }
 
   // If we are checking function types, emit a function type signature as
-  // prologue data.
+  // prologue data. Kernel functions have strict alignment requirements and
+  // cannot be call indirectly so we do not instrument them.
   if (FD && SanOpts.has(SanitizerKind::Function) &&
-      !FD->getType()->isCFIUncheckedCalleeFunctionType()) {
+      !FD->getType()->isCFIUncheckedCalleeFunctionType() &&
+      llvm::isCallableCC(Fn->getCallingConv())) {
     if (llvm::Constant *PrologueSig = getPrologueSignature(CGM, FD)) {
       llvm::LLVMContext &Ctx = Fn->getContext();
       llvm::MDBuilder MDB(Ctx);

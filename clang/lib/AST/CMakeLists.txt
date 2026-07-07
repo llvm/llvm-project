@@ -16,7 +16,7 @@ clang_tablegen(Opcodes.inc
   TARGET Opcodes)
 
 clang_tablegen(AttrDocTable.inc -gen-clang-attr-doc-table
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../include/
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../include/
   SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/../../include/clang/Basic/Attr.td
   TARGET ClangAttrDocTable)
 
@@ -95,6 +95,7 @@ add_clang_library(clangAST
   ByteCode/State.cpp
   ByteCode/MemberPointer.cpp
   ByteCode/InterpShared.cpp
+  HLSLResource.cpp
   ItaniumCXXABI.cpp
   ItaniumMangle.cpp
   JSONNodeDumper.cpp

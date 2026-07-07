@@ -10,8 +10,6 @@
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.zh_CN.UTF-8
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // <locale>
 
 // class time_get_byname<charT, InputIterator>
@@ -69,7 +67,11 @@ int main(int, char**)
     }
     {
         const my_facet f(LOCALE_zh_CN_UTF_8, 1);
+#if defined(__APPLE__) || defined(__FreeBSD__)
+        const char in[] = "6\xE6\x9C\x88";
+#else
         const char in[] = "\xE5\x85\xAD\xE6\x9C\x88";
+#endif
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_monthname(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);

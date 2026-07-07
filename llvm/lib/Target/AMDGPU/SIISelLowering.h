@@ -77,7 +77,7 @@ private:
                             EVT VT,
                             AMDGPUFunctionArgInfo::PreloadedValue) const;
 
-  SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
+  SDValue LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
   SDValue LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;
 
@@ -168,6 +168,7 @@ private:
   SDValue lowerFMINIMUM_FMAXIMUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const;
   SDValue promoteUniformOpToI32(SDValue Op, DAGCombinerInfo &DCI) const;
+  SDValue promoteUniformUnaryOpToI32(SDValue Op, DAGCombinerInfo &DCI) const;
   SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMULO(SDValue Op, SelectionDAG &DAG) const;
@@ -189,6 +190,7 @@ private:
   SDValue lowerTrapHsaQueuePtr(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerTrapHsa(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
 
   SDNode *adjustWritemask(MachineSDNode *&N, SelectionDAG &DAG) const;
 
@@ -240,7 +242,6 @@ private:
 
   SDValue performAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performPtrAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue performAddCarrySubCarryCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;

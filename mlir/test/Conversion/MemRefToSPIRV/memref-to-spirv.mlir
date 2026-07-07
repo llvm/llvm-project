@@ -185,6 +185,37 @@ func.func @load_store_f16_physical(%arg0: memref<f16, #spirv.storage_class<Physi
   return
 }
 
+// CHECK-LABEL: @load_store_vec4f16_physical
+func.func @load_store_vec4f16_physical(%arg0: memref<5xvector<4xf16>, #spirv.storage_class<PhysicalStorageBuffer>>, %i: index) {
+  // Alignment = 4 elements * 2 bytes = 8 bytes
+  //     CHECK: spirv.Load "PhysicalStorageBuffer" %{{.+}} ["Aligned", 8] : vector<4xf16>
+  //     CHECK: spirv.Store "PhysicalStorageBuffer" %{{.+}}, %{{.+}} ["Aligned", 8] : vector<4xf16>
+  %0 = memref.load %arg0[%i] : memref<5xvector<4xf16>, #spirv.storage_class<PhysicalStorageBuffer>>
+  memref.store %0, %arg0[%i] : memref<5xvector<4xf16>, #spirv.storage_class<PhysicalStorageBuffer>>
+  return
+}
+
+// CHECK-LABEL: @load_store_vec4f32_physical
+func.func @load_store_vec4f32_physical(%arg0: memref<8xvector<4xf32>, #spirv.storage_class<PhysicalStorageBuffer>>, %i: index) {
+  // Alignment = 4 elements * 4 bytes = 16 bytes
+  //     CHECK: spirv.Load "PhysicalStorageBuffer" %{{.+}} ["Aligned", 16] : vector<4xf32>
+  //     CHECK: spirv.Store "PhysicalStorageBuffer" %{{.+}}, %{{.+}} ["Aligned", 16] : vector<4xf32>
+  %0 = memref.load %arg0[%i] : memref<8xvector<4xf32>, #spirv.storage_class<PhysicalStorageBuffer>>
+  memref.store %0, %arg0[%i] : memref<8xvector<4xf32>, #spirv.storage_class<PhysicalStorageBuffer>>
+  return
+}
+
+// CHECK-LABEL: @load_store_vec4f32_dynamic_physical
+//  CHECK-SAME: (%[[ARG0:.+]]: memref<?xvector<4xf32>, #spirv.storage_class<PhysicalStorageBuffer>>,
+func.func @load_store_vec4f32_dynamic_physical(%arg0: memref<?xvector<4xf32>, #spirv.storage_class<PhysicalStorageBuffer>>, %i: index) {
+  //     CHECK: builtin.unrealized_conversion_cast %[[ARG0]] {{.*}} to !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16>
+  //     CHECK: spirv.Load "PhysicalStorageBuffer" %{{.+}} ["Aligned", 16] : vector<4xf32>
+  //     CHECK: spirv.Store "PhysicalStorageBuffer" %{{.+}}, %{{.+}} ["Aligned", 16] : vector<4xf32>
+  %0 = memref.load %arg0[%i] : memref<?xvector<4xf32>, #spirv.storage_class<PhysicalStorageBuffer>>
+  memref.store %0, %arg0[%i] : memref<?xvector<4xf32>, #spirv.storage_class<PhysicalStorageBuffer>>
+  return
+}
+
 } // end module
 
 // -----

@@ -156,8 +156,21 @@ struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
     fir::FirOpBuilder builder(rewriter, module);
     if (asExpr.isMove()) {
       // Move variable storage for the hlfir.expr buffer.
-      mlir::Value bufferizedExpr = packageBufferizedExpr(
-          loc, builder, hlfir::Entity{adaptor.getVar()}, adaptor.getMustFree());
+      hlfir::Entity storage{adaptor.getVar()};
+      // An hlfir.expr has lower bounds of one. When the moved storage is a
+      // descriptor that may carry non-default lower bounds (e.g. an allocatable
+      // or pointer function result used in a structure constructor), rebox it
+      // to lower bounds of one so they are not propagated to the users of the
+      // expression. This does not copy the data.
+      if (storage.isArray() && mlir::isa<fir::BaseBoxType>(storage.getType()) &&
+          storage.mayHaveNonDefaultLowerBounds()) {
+        // A rebox without a shape operand resets the lower bounds to one.
+        storage = hlfir::Entity{fir::ReboxOp::create(
+            builder, loc, storage.getType(), storage, /*shape=*/mlir::Value{},
+            /*slice=*/mlir::Value{})};
+      }
+      mlir::Value bufferizedExpr =
+          packageBufferizedExpr(loc, builder, storage, adaptor.getMustFree());
       rewriter.replaceOp(asExpr, bufferizedExpr);
       return mlir::success();
     }
@@ -382,11 +395,12 @@ static bool allOtherUsesAreSafeForAssociate(mlir::Value value,
         if (!endAssociate)
           continue;
         // If useOp dominates the endAssociate, then it is definitely safe.
-        if (useOp->getBlock() != endAssociate->getBlock())
+        if (useOp->getBlock() != endAssociate->getBlock()) {
           if (mlir::DominanceInfo{}.dominates(useOp, endAssociate))
             continue;
-        if (useOp->isBeforeInBlock(endAssociate))
+        } else if (useOp->isBeforeInBlock(endAssociate)) {
           continue;
+        }
       }
       return false;
     }

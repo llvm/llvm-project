@@ -175,8 +175,7 @@ BasicBlock::~BasicBlock() {
   // is no indirect branch).  Handle these cases by zapping the BlockAddress
   // nodes.  There are no other possible uses at this point.
   if (hasAddressTaken()) {
-    assert(!use_empty() && "There should be at least one blockaddress!");
-    BlockAddress *BA = cast<BlockAddress>(user_back());
+    BlockAddress *BA = BlockAddress::lookup(this);
 
     Constant *Replacement = ConstantInt::get(Type::getInt32Ty(getContext()), 1);
     BA->replaceAllUsesWith(
@@ -199,33 +198,6 @@ void BasicBlock::setParent(Function *parent) {
   if (Parent != parent)
     Number = parent ? parent->NextBlockNum++ : -1u;
   InstList.setSymTabObject(&Parent, parent);
-}
-
-iterator_range<filter_iterator<BasicBlock::const_iterator,
-                               std::function<bool(const Instruction &)>>>
-BasicBlock::instructionsWithoutDebug(bool SkipPseudoOp) const {
-  std::function<bool(const Instruction &)> Fn = [=](const Instruction &I) {
-    return !isa<DbgInfoIntrinsic>(I) &&
-           !(SkipPseudoOp && isa<PseudoProbeInst>(I));
-  };
-  return make_filter_range(*this, Fn);
-}
-
-iterator_range<
-    filter_iterator<BasicBlock::iterator, std::function<bool(Instruction &)>>>
-BasicBlock::instructionsWithoutDebug(bool SkipPseudoOp) {
-  std::function<bool(Instruction &)> Fn = [=](Instruction &I) {
-    return !isa<DbgInfoIntrinsic>(I) &&
-           !(SkipPseudoOp && isa<PseudoProbeInst>(I));
-  };
-  return make_filter_range(*this, Fn);
-}
-
-filter_iterator<BasicBlock::const_iterator,
-                std::function<bool(const Instruction &)>>::difference_type
-BasicBlock::sizeWithoutDebug() const {
-  return std::distance(instructionsWithoutDebug().begin(),
-                       instructionsWithoutDebug().end());
 }
 
 void BasicBlock::removeFromParent() {
@@ -267,14 +239,6 @@ const CallInst *BasicBlock::getTerminatingMustTailCall() const {
   if (Value *RV = RI->getReturnValue()) {
     if (RV != Prev)
       return nullptr;
-
-    // Look through the optional bitcast.
-    if (auto *BI = dyn_cast<BitCastInst>(Prev)) {
-      RV = BI->getOperand(0);
-      Prev = BI->getPrevNode();
-      if (!Prev || RV != Prev)
-        return nullptr;
-    }
   }
 
   if (auto *CI = dyn_cast<CallInst>(Prev)) {
@@ -641,7 +605,7 @@ void BasicBlock::replacePhiUsesWith(BasicBlock *Old, BasicBlock *New) {
 
 void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *Old,
                                               BasicBlock *New) {
-  Instruction *TI = getTerminator();
+  Instruction *TI = getTerminatorOrNull();
   if (!TI)
     // Cope with being called on a BasicBlock that doesn't have a terminator
     // yet. Clang's CodeGenFunction::EmitReturnBlock() likes to do this.
@@ -703,7 +667,7 @@ void BasicBlock::flushTerminatorDbgRecords() {
   // DbgRecords in front of the terminator.
 
   // If there's no terminator, there's nothing to do.
-  Instruction *Term = getTerminator();
+  Instruction *Term = getTerminatorOrNull();
   if (!Term)
     return;
 

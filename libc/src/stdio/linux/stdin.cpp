@@ -9,6 +9,9 @@
 #include "src/stdio/stdin.h"
 
 #include "hdr/types/FILE.h"
+
+#ifdef LIBC_FULL_BUILD
+
 #include "src/__support/File/linux/file.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -23,3 +26,9 @@ static LinuxFile StdIn(0, stdin_buffer, STDIN_BUFFER_SIZE, _IOFBF, false,
 LLVM_LIBC_VARIABLE(FILE *, stdin) = reinterpret_cast<FILE *>(&StdIn);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#else // overlay mode
+
+extern "C" FILE *stderr;
+
+#endif // LIBC_FULL_BUILD

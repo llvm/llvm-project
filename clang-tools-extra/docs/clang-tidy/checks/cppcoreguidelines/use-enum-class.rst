@@ -33,3 +33,8 @@ Options
 
    When `true`, ignores unscoped ``enum`` declarations in classes.
    Default is `false`.
+
+.. option:: IgnoreMacros
+
+   When `true`, ignores unscoped ``enum`` declarations within macros.
+   Default is `false`.

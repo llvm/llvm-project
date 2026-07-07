@@ -45,8 +45,8 @@ define i64 @test1(i64 %y) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i64> splat (i64 3), [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i64 77, i64 [[TMP3]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.body:

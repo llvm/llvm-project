@@ -1,4 +1,4 @@
-!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=61 -Werror
+!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=61 -Werror -Wno-experimental-option
 
 subroutine f00(x)
   integer, pointer :: x

@@ -35,7 +35,7 @@ with worker.run(
                 "-DCMAKE_CXX_STANDARD=17",
                 "-DLIBOMPTARGET_PLUGINS_TO_BUILD=amdgpu;host",
                 "-DRUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES=compiler-rt;openmp",
-                f"-DRUNTIMES_amdgcn-amd-amdhsa_CACHE_FILES={w.in_llvmsrc('compiler-rt')}/cmake/caches/GPU.cmake\;{w.in_llvmsrc('libcxx')}/cmake/caches/AMDGPU.cmake CACHE STRING '')",
+                f"-DRUNTIMES_amdgcn-amd-amdhsa_CACHE_FILES={w.in_llvmsrc('compiler-rt')}/cmake/caches/AMDGPU.cmake\;{w.in_llvmsrc('libcxx')}/cmake/caches/AMDGPU.cmake CACHE STRING '')",
             ]
         )
 

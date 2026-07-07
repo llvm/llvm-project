@@ -143,6 +143,8 @@ Expr<ImpliedDoIndex::Result> FoldOperation(
 template <typename T>
 Expr<T> FoldOperation(FoldingContext &, ArrayConstructor<T> &&);
 Expr<SomeDerived> FoldOperation(FoldingContext &, StructureConstructor &&);
+template <typename T>
+Expr<T> FoldOperation(FoldingContext &, ConditionalExpr<T> &&);
 
 template <typename T>
 std::optional<Constant<T>> Folder<T>::GetNamedConstant(const Symbol &symbol0) {
@@ -2016,6 +2018,25 @@ Expr<T> FoldOperation(FoldingContext &context, Add<T> &&x) {
       }
       return Expr<T>{Constant<T>{sum.value}};
     }
+  } else if constexpr (T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Unsigned) {
+    if (auto c{GetScalarConstantValue<T>(x.right())}) {
+      if (c->IsZero() && x.left().Rank() == 0) {
+        if (IsVariable(x.left())) {
+          return FoldOperation(context, Parentheses<T>{std::move(x.left())});
+        } else {
+          return std::move(x.left());
+        }
+      }
+    } else if (auto c{GetScalarConstantValue<T>(x.left())}) {
+      if (c->IsZero() && x.right().Rank() == 0) {
+        if (IsVariable(x.right())) {
+          return FoldOperation(context, Parentheses<T>{std::move(x.right())});
+        } else {
+          return std::move(x.right());
+        }
+      }
+    }
   }
   return Expr<T>{std::move(x)};
 }
@@ -2044,6 +2065,17 @@ Expr<T> FoldOperation(FoldingContext &context, Subtract<T> &&x) {
         difference.value = difference.value.FlushSubnormalToZero();
       }
       return Expr<T>{Constant<T>{difference.value}};
+    }
+  } else if constexpr (T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Unsigned) {
+    if (auto c{GetScalarConstantValue<T>(x.right())}) {
+      if (c->IsZero() && x.left().Rank() == 0) {
+        if (IsVariable(x.left())) {
+          return FoldOperation(context, Parentheses<T>{std::move(x.left())});
+        } else {
+          return std::move(x.left());
+        }
+      }
     }
   }
   return Expr<T>{std::move(x)};
@@ -2209,6 +2241,17 @@ Expr<T> FoldOperation(FoldingContext &context, RealToIntPower<T> &&x) {
         }
       },
       x.right().u);
+}
+
+template <typename T>
+Expr<T> FoldOperation(FoldingContext &context, ConditionalExpr<T> &&x) {
+  x.condition() = Fold(context, std::move(x.condition()));
+  // If the condition is a scalar logical constant, select the branch.
+  if (auto cst{GetScalarConstantValue<LogicalResult>(x.condition())}) {
+    return cst->IsTrue() ? Fold(context, std::move(x.thenValue()))
+                         : Fold(context, std::move(x.elseValue()));
+  }
+  return Expr<T>{std::move(x)};
 }
 
 template <typename T>

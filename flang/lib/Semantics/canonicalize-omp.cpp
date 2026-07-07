@@ -15,12 +15,9 @@
 // After Loop Canonicalization, rewrite OpenMP parse tree to make OpenMP
 // Constructs more structured which provide explicit scopes for later
 // structural checks and semantic analysis.
-//   1. move structured DoConstruct and OmpEndLoopDirective into
-//      OpenMPLoopConstruct. Compilation will not proceed in case of errors
-//      after this pass.
-//   2. Associate declarative OMP allocation directives with their
+//   1. Associate declarative OMP allocation directives with their
 //      respective executable allocation directive
-//   3. TBD
+//   2. TBD
 namespace Fortran::semantics {
 
 using namespace parser::literals;
@@ -281,7 +278,7 @@ private:
         // Got OpenMPDeclarativeConstruct. If it's not a utility construct
         // then stop.
         auto &odc = std::get<OpenMPDeclarativeConstruct>(sc.u).value();
-        if (!std::holds_alternative<parser::OpenMPUtilityConstruct>(odc.u)) {
+        if (!std::holds_alternative<parser::OmpUtilityDirective>(odc.u)) {
           return rit;
         }
       }
@@ -294,7 +291,7 @@ private:
           using OpenMPDeclarativeConstruct =
               common::Indirection<parser::OpenMPDeclarativeConstruct>;
           auto &oc = std::get<OpenMPDeclarativeConstruct>(sc.u).value();
-          auto &ut = std::get<parser::OpenMPUtilityConstruct>(oc.u);
+          auto &ut = std::get<parser::OmpUtilityDirective>(oc.u);
 
           return parser::ExecutionPartConstruct(parser::ExecutableConstruct(
               common::Indirection(parser::OpenMPConstruct(std::move(ut)))));
@@ -312,7 +309,7 @@ private:
     std::list<OpenMPDeclarativeConstruct>::reverse_iterator rlast = [&]() {
       for (auto rit = omps.rbegin(), rend = omps.rend(); rit != rend; ++rit) {
         OpenMPDeclarativeConstruct &dc = *rit;
-        if (!std::holds_alternative<parser::OpenMPUtilityConstruct>(dc.u)) {
+        if (!std::holds_alternative<parser::OmpUtilityDirective>(dc.u)) {
           return rit;
         }
       }
@@ -321,7 +318,7 @@ private:
 
     std::transform(omps.rbegin(), rlast, std::front_inserter(block),
         [](parser::OpenMPDeclarativeConstruct &dc) {
-          auto &ut = std::get<parser::OpenMPUtilityConstruct>(dc.u);
+          auto &ut = std::get<parser::OmpUtilityDirective>(dc.u);
           return parser::ExecutionPartConstruct(parser::ExecutableConstruct(
               common::Indirection(parser::OpenMPConstruct(std::move(ut)))));
         });

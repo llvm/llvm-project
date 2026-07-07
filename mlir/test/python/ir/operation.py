@@ -86,7 +86,7 @@ def testTraverseOpRegionBlockIterators():
     # CHECK:           OP 1: func.return
     walk_operations("", op)
 
-    # CHECK:    Region iter: <mlir.{{.+}}.RegionIterator
+    # CHECK:    Region iter: <iterator
     # CHECK:     Block iter: <mlir.{{.+}}.BlockIterator
     # CHECK: Operation iter: <mlir.{{.+}}.OperationIterator
     print("   Region iter:", iter(op.regions))
@@ -108,6 +108,17 @@ def testTraverseOpRegionBlockIterators():
     except IndexError as e:
         # CHECK: attempt to access out of bounds operation
         print(e)
+
+    # Verify that iterating a sliced region list yields the correct
+    # number of elements (i.e. respects length and step).
+    with Location.unknown(ctx):
+        op4 = Operation.create("custom.op", regions=4)
+        r = op4.regions
+        assert len(list(r[:])) == 4
+        assert len(list(r[1:])) == 3
+        assert len(list(r[::2])) == 2
+        assert len(list(r[1:3])) == 2
+        assert len(list(r[::-1])) == 4
 
 
 # Verify index based traversal of the op/region/block hierarchy.

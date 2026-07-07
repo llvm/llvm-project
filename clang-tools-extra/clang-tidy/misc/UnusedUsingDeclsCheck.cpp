@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnusedUsingDeclsCheck.h"
+#include "../utils/FileExtensionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -47,13 +48,12 @@ static bool shouldCheckDecl(const Decl *TargetDecl) {
 
 UnusedUsingDeclsCheck::UnusedUsingDeclsCheck(StringRef Name,
                                              ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
+    : ClangTidyCheck(Name, Context) {}
 
 void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   // We don't emit warnings on unused-using-decls from headers, so bail out if
   // the main file is a header.
-  if (utils::isFileExtension(getCurrentMainFile(), HeaderFileExtensions))
+  if (utils::isFileExtension(getCurrentMainFile(), getHeaderFileExtensions()))
     return;
   Finder->addMatcher(usingDecl(isExpansionInMainFile()).bind("using"), this);
   auto DeclMatcher = hasDeclaration(namedDecl().bind("used"));

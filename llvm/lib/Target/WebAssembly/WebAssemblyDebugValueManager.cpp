@@ -27,20 +27,35 @@ WebAssemblyDebugValueManager::WebAssemblyDebugValueManager(MachineInstr *Def)
     return;
 
   // This code differs from MachineInstr::collectDebugValues in that it scans
-  // the whole BB, not just contiguous DBG_VALUEs, until another definition to
-  // the same register is encountered.
+  // all users in the BB, not just contiguous DBG_VALUEs, until another
+  // definition to the same register is encountered.
   if (!Def->getOperand(0).isReg())
     return;
   CurrentReg = Def->getOperand(0).getReg();
 
+  // Collect all the uses of this def.
+  MachineRegisterInfo &MRI = Def->getMF()->getRegInfo();
+  SmallVector<MachineInstr *, 2> Candidates;
+  for (MachineInstr &MI : MRI.use_instructions(CurrentReg)) {
+    if (MI.isDebugValue() && MI.getParent() == Def->getParent())
+      Candidates.push_back(&MI);
+  }
+  if (Candidates.empty())
+    return;
+
+  // To preserve the order of DBG_VALUEs and correctly handle non-SSA cases,
+  // we scan the BB as far as needed to find all candidates.
   for (MachineBasicBlock::iterator MI = std::next(Def->getIterator()),
                                    ME = Def->getParent()->end();
        MI != ME; ++MI) {
     // If another definition appears, stop
     if (MI->definesRegister(CurrentReg, /*TRI=*/nullptr))
       break;
-    if (MI->isDebugValue() && MI->hasDebugOperandForReg(CurrentReg))
+    if (MI->isDebugValue() && MI->hasDebugOperandForReg(CurrentReg)) {
       DbgValues.push_back(&*MI);
+      if (DbgValues.size() == Candidates.size())
+        break;
+    }
   }
 }
 

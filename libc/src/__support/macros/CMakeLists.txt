@@ -39,3 +39,18 @@ add_header_library(
     .config
     .optimization
 )
+
+add_header_library(
+  macro_utils
+  HDRS
+    macro-utils.h
+)
+
+add_header_library(
+  is_defined
+  HDRS
+    is_defined.h
+  DEPENDS
+    .macro_utils
+    libc.src.__support.CPP.string_view
+)

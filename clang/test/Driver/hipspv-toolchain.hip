@@ -38,6 +38,7 @@
 // NEW-SAME: "--image=file=[[OBJ_DEV]],triple=[[TRIPLE]],arch=generic,kind=hip"
 
 // NEW: {{".*clang-linker-wrapper"}} "--device-compiler=[[TRIPLE]]=--hip-path=[[HIP_PATH]]"
+// NEW-SAME: "--device-compiler=[[TRIPLE]]=-flto=full"
 // NEW-SAME: "--emit-fatbin-only" "-o" "[[BUNDLE:.*hipfb]]"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" {{".*"}} "-aux-triple" "[[TRIPLE]]"
@@ -103,6 +104,13 @@
 //      CHIPSTAR-SUBARCH: {{".*llvm-spirv"}}
 // CHIPSTAR-SUBARCH-SAME: "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups"
 // CHIPSTAR-SUBARCH-SAME: [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
+
+// Check unknown linker options are ignored - such as ones that are targeted at
+// spirv-link. HIPSPV toolchain does linking via llvm-link.
+// RUN: %clang -### --no-default-config -o %t.dummy.img \
+// RUN:   --target=spirv64-unknown-chipstar %t.dummy.o \
+// RUN:   --hip-path="%S/Inputs/hipspv" -Xlinker foobar \
+// RUN: 2>&1 | FileCheck %s --check-prefix=CHIPSTAR -DHIP_PATH=%S/Inputs/hipspv
 
 //-----------------------------------------------------------------------------
 // Check llvm-spirv-<LLVM_VERSION_MAJOR> is used if it is found in PATH.

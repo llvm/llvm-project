@@ -156,7 +156,7 @@ bool AMDGPUSetWavePriority::run(MachineFunction &MF) {
         MaxNumVALUInstsInMiddle =
             std::max(MaxNumVALUInstsInMiddle, NumVALUInstsAtEnd);
         NumVALUInstsAtEnd = 0;
-      } else if (SIInstrInfo::isVALU(MI)) {
+      } else if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true)) {
         if (AtStart)
           ++MBBInfos[MBB].NumVALUInstsAtStart;
         ++NumVALUInstsAtEnd;
@@ -189,7 +189,8 @@ bool AMDGPUSetWavePriority::run(MachineFunction &MF) {
 
   // Raise the priority at the beginning of the shader.
   MachineBasicBlock::iterator I = Entry.begin(), E = Entry.end();
-  while (I != E && !SIInstrInfo::isVALU(*I) && !I->isTerminator())
+  while (I != E && !SIInstrInfo::isVALU(*I, /*AllowLDSDMA=*/true) &&
+         !I->isTerminator())
     ++I;
   BuildSetprioMI(Entry, I, HighPriority);
 

@@ -25,15 +25,14 @@ entry:
   %fat = addrspacecast ptr addrspace(8) %rsrc to ptr addrspace(7)
   br label %loop
 
-loop:                                                ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %ptr = getelementptr i32, ptr addrspace(7) %fat, i32 0
   %iv.next = add i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv, %v
   br i1 %exitcond.not, label %exit, label %loop
 
-exit:                             ; preds = %exit
+exit:
   ret void
 }
 
-declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) readnone, i16, i64, i32)

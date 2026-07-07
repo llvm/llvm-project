@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../misc/AnonymousNamespaceInHeaderCheck.h"
+#include "../misc/ExplicitConstructorCheck.h"
 #include "../modernize/AvoidCStyleCastCheck.h"
 #include "../readability/BracesAroundStatementsCheck.h"
 #include "../readability/FunctionSizeCheck.h"
@@ -17,7 +18,6 @@
 #include "AvoidThrowingObjCExceptionCheck.h"
 #include "AvoidUnderscoreInGoogletestNameCheck.h"
 #include "DefaultArgumentsCheck.h"
-#include "ExplicitConstructorCheck.h"
 #include "ExplicitMakePairCheck.h"
 #include "FloatTypesCheck.h"
 #include "FunctionNamingCheck.h"
@@ -46,7 +46,7 @@ public:
         "google-build-using-namespace");
     CheckFactories.registerCheck<DefaultArgumentsCheck>(
         "google-default-arguments");
-    CheckFactories.registerCheck<ExplicitConstructorCheck>(
+    CheckFactories.registerCheck<misc::ExplicitConstructorCheck>(
         "google-explicit-constructor");
     CheckFactories.registerCheck<readability::GlobalNamesInHeadersCheck>(
         "google-global-names-in-headers");

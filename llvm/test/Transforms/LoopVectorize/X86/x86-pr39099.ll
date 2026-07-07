@@ -27,11 +27,11 @@ target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 ;CHECK-NEXT:  %[[VECIND:.+]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ;CHECK-NEXT:  %[[VMASK:.+]] = icmp ugt <8 x i32> %[[VECIND]], %{{broadcast.splat*}}
 ;CHECK-NEXT:  %{{.*}} = shl nuw nsw <8 x i32> %[[VECIND]], splat (i32 1)
-;CHECK-NEXT:  %[[M:.+]] = extractelement <8 x i1> %[[VMASK]], i32 0
+;CHECK-NEXT:  %[[M:.+]] = extractelement <8 x i1> %[[VMASK]], i64 0
 ;CHECK-NEXT:  br i1 %[[M]], label %pred.store.if, label %pred.store.continue
 ;CHECK-NOT:   %{{.+}} = load <16 x i8>, ptr %{{.*}}, align 1
 
-define dso_local void @masked_strided(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr {
+define void @masked_strided(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) {
 entry:
   %conv = zext i8 %guard to i32
   br label %for.body

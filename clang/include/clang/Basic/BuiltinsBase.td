@@ -75,6 +75,10 @@ def ConstIgnoringExceptions : Attribute<"g">;
 // This function requires a specific header or an explicit declaration.
 def RequireDeclaration : Attribute<"h">;
 
+// This is a runtime library implemented function without the
+// '__builtin_' prefix. It will be implemented in compiler-rt or libgcc.
+def RuntimeLibraryFunction : Attribute<"i">;
+
 // FIXME: Why is this not simply the min_vector_width attribute?
 // Vector has to be at least N bits wide.
 class RequiredVectorWidth<int N> : IndexedAttribute<"V", N>;

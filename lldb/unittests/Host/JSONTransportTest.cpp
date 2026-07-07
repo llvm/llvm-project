@@ -479,6 +479,15 @@ TEST_F(HTTPDelimitedJSONTransportTest, ReadWithEOF) {
   ASSERT_THAT_ERROR(Run(), Succeeded());
 }
 
+TEST_F(HTTPDelimitedJSONTransportTest, ReadWithEOFDestroyTransportOnClose) {
+  input.CloseWriteFileDescriptor();
+  EXPECT_CALL(message_handler, OnClosed()).WillOnce([this]() {
+    transport.reset();
+    loop.RequestTermination();
+  });
+  ASSERT_THAT_ERROR(loop.Run().takeError(), Succeeded());
+}
+
 TEST_F(HTTPDelimitedJSONTransportTest, ReaderWithUnhandledData) {
   std::string json = R"json({"str": "foo"})json";
   std::string message =
@@ -586,6 +595,15 @@ TEST_F(JSONRPCTransportTest, ReadPartialMessage) {
 
 TEST_F(JSONRPCTransportTest, ReadWithEOF) {
   ASSERT_THAT_ERROR(Run(), Succeeded());
+}
+
+TEST_F(JSONRPCTransportTest, ReadWithEOFDestroyTransportOnClose) {
+  input.CloseWriteFileDescriptor();
+  EXPECT_CALL(message_handler, OnClosed()).WillOnce([this]() {
+    transport.reset();
+    loop.RequestTermination();
+  });
+  ASSERT_THAT_ERROR(loop.Run().takeError(), Succeeded());
 }
 
 TEST_F(JSONRPCTransportTest, ReaderWithUnhandledData) {

@@ -28,14 +28,26 @@ public:
 
   virtual ~Service();
 
-  /// The onDetach method will be called if the controller disconnects from the
-  /// session without shutting the session down.
+  /// Called when controller access becomes permanently unavailable.
   ///
-  /// Since no further requests to the Service will be made, the Service may
-  /// discard any book-keeping data-structures that are only needed to serve
-  /// ongoing requests. E.g. a JIT memory manager may discard its free-list,
-  /// since no further JIT'd allocations will happen.
-  virtual void onDetach(OnCompleteFn OnComplete) = 0;
+  /// This is guaranteed to be called exactly once before onShutdown,
+  /// regardless of how the Session reaches that state. It is called when:
+  ///   - The controller explicitly disconnects.
+  ///   - The Session::detach() method is called.
+  ///   - The Session shuts down (even if no controller was ever attached).
+  ///
+  /// After onDetach is called no further requests will be made to the Service
+  /// by the controller. Note that JIT'd code may continue to make requests to
+  /// the service concurrent with a call to onDetach.
+  ///
+  /// If ShutdownRequested is true then a Session shutdown is already pending,
+  /// and will proceed after all Services have been notified of the detach.
+  ///
+  /// onDetach provides an opportunity for Services to release any resources
+  /// that are only required while the Session is attached to the controller.
+  /// It is expected that many Services will implement this operation as a
+  /// no-op.
+  virtual void onDetach(OnCompleteFn OnComplete, bool ShutdownRequested) = 0;
 
   /// The onShutdown operation will be called at the end of the session.
   ///

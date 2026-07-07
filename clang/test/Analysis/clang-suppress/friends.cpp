@@ -153,8 +153,7 @@ extern void b3_suppressed(T);
 struct [[clang::suppress]] B3_Suppressed {
   template <typename T>
   friend void b3_suppressed(T) {
-    // FIXME: This should be suppressed.
-    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
+    clang_analyzer_warnIfReached(); // no-warning
   }
 };
 template <typename T>
@@ -280,8 +279,7 @@ template <typename T> void e3_multi_redecl(T);
 struct [[clang::suppress]] E3_Suppressed {
   template <typename T>
   friend void e3_multi_redecl(T) {
-    // FIXME: This should be suppressed.
-    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
+    clang_analyzer_warnIfReached(); // no-warning
   }
 };
 void test_E3() {
@@ -325,8 +323,7 @@ template <typename U>
 struct [[clang::suppress]] E6_SuppressedTmpl {
   template <typename T>
   friend void e6_combined(T) {
-    // FIXME: This should be suppressed.
-    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
+    clang_analyzer_warnIfReached(); // no-warning
   }
 };
 void test_E6() {
@@ -356,8 +353,7 @@ template <typename T> void e8_fwd_multi(T);
 struct [[clang::suppress]] E8_Suppressed {
   template <typename T>
   friend void e8_fwd_multi(T) {
-    // FIXME: This should be suppressed.
-    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
+    clang_analyzer_warnIfReached(); // no-warning
   }
 };
 void test_E8() {

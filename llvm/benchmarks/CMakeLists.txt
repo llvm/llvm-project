@@ -14,6 +14,8 @@ add_benchmark(SandboxIRBench SandboxIRBench.cpp PARTIAL_SOURCES_INTENDED)
 add_benchmark(MustacheBench Mustache.cpp PARTIAL_SOURCES_INTENDED)
 add_benchmark(SpecialCaseListBM SpecialCaseListBM.cpp PARTIAL_SOURCES_INTENDED)
 add_benchmark(DWARFVerifierBM DWARFVerifierBM.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(PointerUnionBM PointerUnionBM.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(ImmutableSetIteratorBM ImmutableSetIteratorBM.cpp PARTIAL_SOURCES_INTENDED)
 
 add_benchmark(RuntimeLibcallsBench RuntimeLibcalls.cpp PARTIAL_SOURCES_INTENDED)
 

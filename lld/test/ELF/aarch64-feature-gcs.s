@@ -44,6 +44,7 @@
 # RUN: ld.lld f1-s.o f2.o f3-s.o -z gcs-report=warning 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
 # RUN: ld.lld f1-s.o f2.o f3-s.o -z gcs-report=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
 # RUN: ld.lld f1-s.o f2.o f3-s.o -z gcs-report=warning -z gcs=never 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
+# RUN: ld.lld f1-s.o f2.o f3-s.o -z gcs-report=none -z gcs=always 2>&1 | count 0
 # RUN: not ld.lld f2-s.o f3.o --shared -z gcs-report=error 2>&1 | FileCheck --check-prefix=REPORT-ERROR %s
 # RUN: ld.lld f1-s.o f2-s.o f3-s.o -z gcs-report=warning -z gcs=always 2>&1 | count 0
 

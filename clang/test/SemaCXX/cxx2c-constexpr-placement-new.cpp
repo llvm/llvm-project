@@ -26,7 +26,7 @@ consteval int conversion() {
 }
 
 consteval int indeterminate() {
-    int * indeterminate;
+    int * indeterminate; // expected-note {{declared here}}
     new (indeterminate) int(0);
     // expected-note@-1 {{read of uninitialized object is not allowed in a constant expression}}
     return 0;
@@ -105,7 +105,7 @@ static_assert(blah()); // expected-error {{not an integral constant expression}}
                        // expected-note {{in call to 'blah()'}}
 
 constexpr int *get_indeterminate() {
-  int *evil;
+  int *evil; // expected-note {{declared here}}
   return evil; // expected-note {{read of uninitialized object is not allowed in a constant expression}}
 }
 
@@ -153,4 +153,14 @@ namespace ModifyMutableMember {
     return s.a;
   }
   static_assert(modify_mutable_member() == 12);
+}
+
+namespace NewDuringInit {
+  // Make sure an InitListExpr can overwrite an array initialized by
+  // placement new.
+  constexpr int f() {
+    struct X { int a, b[5]; } x = {(new(&x.b) int[5])[1]=12,15};
+    return x.b[1];
+  }
+  static_assert(f() == 0);
 }

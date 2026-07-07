@@ -15,6 +15,8 @@
 
 #include "orc-rt/SimpleNativeMemoryMap.h"
 #include "orc-rt/Session.h"
+
+#include <optional>
 #include <sstream>
 
 #if defined(__APPLE__) || defined(__linux__)
@@ -200,7 +202,8 @@ void SimpleNativeMemoryMap::deinitializeMultiple(
                    Error::success());
 }
 
-void SimpleNativeMemoryMap::onDetach(Service::OnCompleteFn OnComplete) {
+void SimpleNativeMemoryMap::onDetach(Service::OnCompleteFn OnComplete,
+                                     bool ShutdownRequested) {
   // Detach is a noop for now: we just retain all actions to run at shutdown
   // time.
   OnComplete();

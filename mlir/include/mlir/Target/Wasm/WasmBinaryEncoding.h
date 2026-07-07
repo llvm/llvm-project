@@ -115,6 +115,7 @@ struct WasmBinaryEncoding {
     static constexpr std::byte ceilF32{0x8D};
     static constexpr std::byte floorF32{0x8E};
     static constexpr std::byte truncF32{0x8F};
+    static constexpr std::byte nearestF32{0x90};
     static constexpr std::byte sqrtF32{0x91};
     static constexpr std::byte addF32{0x92};
     static constexpr std::byte subF32{0x93};
@@ -128,6 +129,7 @@ struct WasmBinaryEncoding {
     static constexpr std::byte ceilF64{0x9B};
     static constexpr std::byte floorF64{0x9C};
     static constexpr std::byte truncF64{0x9D};
+    static constexpr std::byte nearestF64{0x9E};
     static constexpr std::byte sqrtF64{0x9F};
     static constexpr std::byte addF64{0xA0};
     static constexpr std::byte subF64{0xA1};
@@ -139,8 +141,16 @@ struct WasmBinaryEncoding {
     static constexpr std::byte wrap{0xA7};
 
     // Conversion operations
+    static constexpr std::byte truncSI32F32{0xA8};
+    static constexpr std::byte truncUI32F32{0xA9};
+    static constexpr std::byte truncSI32F64{0xAA};
+    static constexpr std::byte truncUI32F64{0xAB};
     static constexpr std::byte extendS{0xAC};
     static constexpr std::byte extendU{0xAD};
+    static constexpr std::byte truncSI64F32{0xAE};
+    static constexpr std::byte truncUI64F32{0xAF};
+    static constexpr std::byte truncSI64F64{0xB0};
+    static constexpr std::byte truncUI64F64{0xB1};
     static constexpr std::byte convertSI32F32{0xB2};
     static constexpr std::byte convertUI32F32{0xB3};
     static constexpr std::byte convertSI64F32{0xB4};

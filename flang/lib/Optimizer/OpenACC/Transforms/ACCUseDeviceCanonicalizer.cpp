@@ -284,9 +284,14 @@ private:
     for (mlir::Operation *user : usersToUpdate)
       user->replaceUsesOfWith(useDeviceOp.getResult(), newMemLoc);
 
-    assert(useDeviceOp.getResult().use_empty() &&
-           "expected all uses of use_device to be replaced");
-    rewriter.eraseOp(useDeviceOp);
+    // Remove the use_device operation if it is no longer needed.
+    if (useDeviceOp.getResult().use_empty()) {
+      LLVM_DEBUG(
+          llvm::dbgs()
+          << "ACCUseDeviceCanonicalizer: Removing dead use_device operation: "
+          << *useDeviceOp << "\n");
+      rewriter.eraseOp(useDeviceOp);
+    }
     return true;
   }
 

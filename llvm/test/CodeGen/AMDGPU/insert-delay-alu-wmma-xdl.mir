@@ -61,7 +61,7 @@ body: |
     ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
     ; CHECK-NEXT: v_add_nc_u32_e32 v13, v13, v8
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12, $vgpr13
-    $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr 8, $vgpr0_vgpr1, 8, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, -1, 0, 0, implicit $exec
+    $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, -1, 0, 0, implicit $exec
     $vgpr12 = V_EXP_F32_e32 $vgpr12, implicit $exec, implicit $mode
     $vgpr13 = V_ADD_U32_e32 $vgpr13, $vgpr8, implicit $exec
 ...

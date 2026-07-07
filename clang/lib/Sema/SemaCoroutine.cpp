@@ -21,6 +21,7 @@
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
@@ -693,6 +694,13 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
 
   if (!checkCoroutineContext(*this, KWLoc, Keyword))
     return false;
+
+  // Support for coroutines is not stable on 32 bits windows
+  // Warn about it.
+  if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+      Context.getTargetInfo().getTriple().isX86_32())
+    Diag(KWLoc, diag::warn_coroutines_x86_windows);
+
   auto *ScopeInfo = getCurFunction();
   assert(ScopeInfo->CoroutinePromise);
 

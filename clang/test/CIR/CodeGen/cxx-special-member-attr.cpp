@@ -30,21 +30,22 @@ struct Foo {
   ~Foo();
 };
 
+// Trivial copy/move assignment operator definitions appear at module level.
+// CIR: @_ZN4FlubaSERKS_(%arg0: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}})) -> (!cir.ptr<!rec_Flub>{{.*}}) special_member<#cir.cxx_assign<!rec_Flub, copy, trivial true>>
+// CIR: @_ZN4FlubaSEOS_(%arg0: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}})) -> (!cir.ptr<!rec_Flub>{{.*}}) special_member<#cir.cxx_assign<!rec_Flub, move, trivial true>>
+
 void trivial_func() {
   Flub f1{};
 
   Flub f2 = f1;
-  // Trivial copy constructors/assignments are replaced with cir.copy
+  // Trivial copy/move constructors are inlined as cir.copy
   // CIR: cir.copy {{.*}} : !cir.ptr<!rec_Flub>
 
   Flub f3 = static_cast<Flub&&>(f1);
-  // CIR: @_ZN4FlubC1EOS_(%arg0: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}})) special_member<#cir.cxx_ctor<!rec_Flub, move, trivial true>
+  // CIR: cir.copy {{.*}} : !cir.ptr<!rec_Flub>
 
   f2 = f1;
-  // CIR: @_ZN4FlubaSERKS_(%arg0: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}})) -> (!cir.ptr<!rec_Flub>{{.*}}) special_member<#cir.cxx_assign<!rec_Flub, copy, trivial true>>
-
   f1 = static_cast<Flub&&>(f3);
-  // CIR: @_ZN4FlubaSEOS_(%arg0: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}})) -> (!cir.ptr<!rec_Flub>{{.*}}) special_member<#cir.cxx_assign<!rec_Flub, move, trivial true>>
 }
 
 void non_trivial_func() {

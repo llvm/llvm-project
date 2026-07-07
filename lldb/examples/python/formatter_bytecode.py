@@ -19,6 +19,7 @@ import re
 import io
 import ast
 import enum
+import shlex
 import textwrap
 from copy import copy
 from dataclasses import dataclass
@@ -93,7 +94,8 @@ sig_init = 1
 sig_get_num_children = 2
 sig_get_child_index = 3
 sig_get_child_at_index = 4
-sig_update = 5
+sig_get_value = 5
+sig_update = 6
 
 SIGNATURES = {
     "summary": sig_summary,
@@ -101,6 +103,7 @@ SIGNATURES = {
     "get_num_children": sig_get_num_children,
     "get_child_index": sig_get_child_index,
     "get_child_at_index": sig_get_child_at_index,
+    "get_value": sig_get_value,
     "update": sig_update,
 }
 
@@ -125,6 +128,7 @@ define_selector(0x11, "get_child_at_index")
 define_selector(0x12, "get_child_with_name")
 define_selector(0x13, "get_child_index")
 define_selector(0x15, "get_type")
+define_selector(0x14, "get_parent")
 define_selector(0x16, "get_template_argument_type")
 define_selector(0x17, "cast")
 define_selector(0x18, "get_synthetic_value")
@@ -133,6 +137,7 @@ define_selector(0x20, "get_value")
 define_selector(0x21, "get_value_as_unsigned")
 define_selector(0x22, "get_value_as_signed")
 define_selector(0x23, "get_value_as_address")
+define_selector(0x24, "clone")
 
 define_selector(0x40, "read_memory_byte")
 define_selector(0x41, "read_memory_uint32")
@@ -292,11 +297,6 @@ class BytecodeSection:
             builder.emit_uleb(len(bc), "program size")
             builder.emit_bytes(bc, "program")
 
-    @property
-    def _var_name(self):
-        var_name = re.sub(r"\W", "_", self.type_name)
-        return f"_{var_name}_formatter"
-
     def write_c(self, output: TextIO) -> None:
         self.validate()
 
@@ -319,7 +319,8 @@ class BytecodeSection:
             "__attribute__((used, section(FORMATTER_SECTION)))",
             file=output,
         )
-        print(f"unsigned char {self._var_name}[] =", file=output)
+        var_name = re.sub(r"\W", "_", self.type_name)
+        print(f"unsigned char _{var_name}_formatter[] =", file=output)
         indent = "    "
         for string, comment in builder.entries:
             print(f"{indent}// {comment}", file=output)
@@ -335,7 +336,8 @@ class BytecodeSection:
         print(
             textwrap.dedent(
                 """\
-                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
+                #if swift(>=6.3) && !objectFormat(Wasm)
+                #if objectFormat(MachO)
                 @section("__DATA_CONST,__lldbformatters")
                 #else
                 @section(".lldbformatters")
@@ -345,7 +347,7 @@ class BytecodeSection:
             file=output,
         )
         print(
-            f"let {self._var_name}: {builder.type_decl} = (",
+            f"let `{self.type_name} formatter`: {builder.type_decl} = (",
             file=output,
         )
         indent = "    "
@@ -354,6 +356,7 @@ class BytecodeSection:
             byte_list = ", ".join(f"0x{b:02x}" for b in bs)
             print(f"{indent}{byte_list},", file=output)
         print(")", file=output)
+        print("#endif", file=output)  # swift(>=6.3)
 
 
 def assemble_file(type_name: str, input: TextIO) -> BytecodeSection:
@@ -693,6 +696,9 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 data.append(valobj.GetIndexOfChildWithName(name))
             elif sel == sel_get_type:
                 data.append(data.pop().GetType())
+            elif sel == sel_get_parent:
+                valobj = data.pop()
+                data.append(valobj.GetParent())
             elif sel == sel_get_template_argument_type:
                 n = data.pop()
                 valobj = data.pop()
@@ -713,6 +719,10 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 sbtype = data.pop()
                 valobj = data.pop()
                 data.append(valobj.Cast(sbtype))
+            elif sel == sel_clone:
+                new_name = data.pop()
+                valobj = data.pop()
+                data.append(valobj.Clone(new_name))
             elif sel == sel_strlen:
                 s = data.pop()
                 data.append(len(s) if s else 0)
@@ -735,12 +745,20 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
 
 _BUILTINS = {
     "Cast": "@cast",
+    "Clone": "@clone",
     "GetChildAtIndex": "@get_child_at_index",
     "GetChildMemberWithName": "@get_child_with_name",
+    "GetIndexOfChildWithName": "@get_child_index",
+    "GetNonSyntheticValue": "@get_non_synthetic_value",
+    "GetNumChildren": "@get_num_children",
+    "GetParent": "@get_parent",
     "GetSummary": "@summary",
     "GetSyntheticValue": "@get_synthetic_value",
     "GetTemplateArgumentType": "@get_template_argument_type",
     "GetType": "@get_type",
+    "GetValue": "@get_value",
+    "GetValueAsAddress": "@get_value_as_address",
+    "GetValueAsSigned": "@get_value_as_signed",
     "GetValueAsUnsigned": "@get_value_as_unsigned",
 }
 
@@ -844,10 +862,6 @@ class Compiler(ast.NodeVisitor):
     # methods are compiled.
     attrs: list[str]
 
-    # Temporaries currently on the stack above the locals/attrs frame.
-    # Always 0 at statement boundaries.
-    num_temps: int
-
     # Bytecode signature of the method being compiled, or None for top-level
     # functions.
     current_sig: Optional[str]
@@ -857,7 +871,6 @@ class Compiler(ast.NodeVisitor):
     def __init__(self) -> None:
         self.locals = []
         self.attrs = []
-        self.num_temps = 0
         self.current_sig = None
         self.buffer = io.StringIO()
 
@@ -891,7 +904,13 @@ class Compiler(ast.NodeVisitor):
 
     def _compile_method(self, node: ast.FunctionDef) -> None:
         self.current_sig = _METHOD_SIGS[node.name]
-        self.num_temps = 0
+
+        return_type = node.returns.id if isinstance(node.returns, ast.Name) else None
+        if node.name == "update" and return_type != "bool":
+            raise CompilerError(
+                "update must be declared to return bool: def update(self) -> bool:",
+                node,
+            )
 
         # Strip 'self' (and 'internal_dict' for __init__) from the arg list;
         # the remaining args become the initial locals.
@@ -930,18 +949,13 @@ class Compiler(ast.NodeVisitor):
         # XXX: Does not handle multiple comparisons, ex: `0 < x < 10`
         self.visit(node.comparators[0])
         self._output(_COMPS[type(node.ops[0])])
-        # The comparison consumes two values and produces one.
-        self.num_temps -= 1
 
     def visit_If(self, node: ast.If) -> None:
         self.visit(node.test)
-        # `if`/`ifelse` consumes the condition.
-        self.num_temps = 0
 
         self._output("{")
         self._visit_each(node.body)
         if node.orelse:
-            self.num_temps = 0
             self._output("} {")
             self._visit_each(node.orelse)
             self._output("} ifelse")
@@ -949,7 +963,6 @@ class Compiler(ast.NodeVisitor):
             self._output("} if")
 
     def visit_Return(self, node: ast.Return) -> None:
-        self.num_temps = 0
         if node.value:
             self.visit(node.value)
         self._output("return")
@@ -961,7 +974,6 @@ class Compiler(ast.NodeVisitor):
             self._output(int(node.value))
         else:
             self._output(node.value)
-        self.num_temps += 1
 
     def visit_Call(self, node: ast.Call) -> None:
         func = node.func
@@ -978,8 +990,6 @@ class Compiler(ast.NodeVisitor):
                 self.visit(receiver)
                 self._visit_each(node.args)
                 self._output(f"{selector} call")
-                # `call` pops the receiver and all args, and pushes one result.
-                self.num_temps -= len(node.args)
                 return
             raise CompilerError(f"unsupported method: {method}", node)
 
@@ -989,8 +999,6 @@ class Compiler(ast.NodeVisitor):
         raise CompilerError("unsupported function call expression", node)
 
     def visit_Assign(self, node: ast.Assign) -> None:
-        self.num_temps = 0
-
         target = node.targets[0]
 
         # Handle self.attr = expr (attribute assignment).
@@ -1057,17 +1065,14 @@ class Compiler(ast.NodeVisitor):
             raise CompilerError(
                 "unsupported attribute access (only self.attr is supported)", node
             )
-        attr_idx = self._attr_index(node.attr, node)
-        pick_idx = self.num_temps + attr_idx
-        self._output(f"{pick_idx} pick")  # "# self.{node.attr}"
-        self.num_temps += 1
+        pick_idx = self._attr_index(node.attr, node)
+        self._output(f"{pick_idx}u pick")  # "# self.{node.attr}"
 
     def visit_Name(self, node: ast.Name) -> None:
-        idx = self._stack_index(node)
+        idx = self._local_index(node)
         if idx is None:
             raise CompilerError(f"unknown local variable: {node.id}", node)
-        self._output(f"{idx} pick")  # "# {node.id}"
-        self.num_temps += 1
+        self._output(f"{idx}u pick")  # "# {node.id}"
 
     def _visit_each(self, nodes: Sequence[ast.AST]) -> None:
         for child in nodes:
@@ -1081,16 +1086,11 @@ class Compiler(ast.NodeVisitor):
         except ValueError:
             raise CompilerError(f"unknown attribute: {name}", node)
 
-    def _stack_index(self, name: ast.Name) -> Optional[int]:
-        # Offset past all attrs and any in-flight temporaries.
-        idx = self._local_index(name)
-        if idx is None:
-            return None
-        return len(self.attrs) + idx + self.num_temps
-
     def _local_index(self, name: ast.Name) -> Optional[int]:
         try:
-            return self.locals.index(name.id)
+            idx = self.locals.index(name.id)
+            # Offset past all attrs.
+            return len(self.attrs) + idx
         except ValueError:
             return None
 
@@ -1175,6 +1175,9 @@ def _main():
         help="output file (required for --assemble)",
     )
     parser.add_argument(
+        "--append", action="store_true", help="append to existing output file"
+    )
+    parser.add_argument(
         "-f",
         "--format",
         choices=("binary", "c", "swift"),
@@ -1184,6 +1187,10 @@ def _main():
     parser.add_argument("-t", "--test", action="store_true", help="run unit tests")
 
     args = parser.parse_args()
+
+    if args.append and not args.compile:
+        parser.error("--append is valid only with --compile")
+
     if args.compile:
         if not args.type_name:
             parser.error("--type-name is required with --compile")
@@ -1201,7 +1208,8 @@ def _main():
             with open(args.output, "wb") as output:
                 section.write_binary(output)
         else:
-            with open(args.output, "w") as output:
+            mode = "a" if args.append else "w"
+            with open(args.output, mode) as output:
                 section.write_source(output, language=args.format)
     elif args.assemble:
         if not args.type_name:

@@ -314,6 +314,35 @@ define ptr @function_that_might_autorelease() {
   ret ptr %autoreleased
 }
 
+; Cross-function: callee has its own inner pool containing an autorelease.
+; The caller's pool should be optimizable since the callee's autorelease
+; is contained within the callee's own pool.
+define void @test_cross_function_inner_pool_caller() {
+; CHECK-LABEL: define void @test_cross_function_inner_pool_caller() {
+; CHECK-NEXT:    call void @test_cross_function_inner_pool_callee()
+; CHECK-NEXT:    ret void
+;
+  %pool = call ptr @llvm.objc.autoreleasePoolPush()
+  call void @test_cross_function_inner_pool_callee()
+  call void @llvm.objc.autoreleasePoolPop(ptr %pool)
+  ret void
+}
+
+define void @test_cross_function_inner_pool_callee() {
+; CHECK-LABEL: define void @test_cross_function_inner_pool_callee() {
+; CHECK-NEXT:    [[INNER_POOL:%.*]] = call ptr @llvm.objc.autoreleasePoolPush() #[[ATTR0]]
+; CHECK-NEXT:    [[OBJ:%.*]] = call ptr @create_object()
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
+; CHECK-NEXT:    call void @llvm.objc.autoreleasePoolPop(ptr [[INNER_POOL]]) #[[ATTR0]]
+; CHECK-NEXT:    ret void
+;
+  %inner_pool = call ptr @llvm.objc.autoreleasePoolPush()
+  %obj = call ptr @create_object()
+  %ar = call ptr @llvm.objc.autorelease(ptr %obj)
+  call void @llvm.objc.autoreleasePoolPop(ptr %inner_pool)
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = !{}
 ;.

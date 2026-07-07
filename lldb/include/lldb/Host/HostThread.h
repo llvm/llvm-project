@@ -12,6 +12,7 @@
 #include "lldb/Host/HostNativeThreadForward.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
+#include "llvm/ADT/DenseMapInfo.h"
 
 #include <memory>
 
@@ -50,5 +51,13 @@ private:
   std::shared_ptr<HostNativeThreadBase> m_native_thread;
 };
 }
+
+namespace llvm {
+template <> struct DenseMapInfo<lldb_private::HostThread> {
+  static unsigned getHashValue(const lldb_private::HostThread &val);
+  static bool isEqual(const lldb_private::HostThread &lhs,
+                      const lldb_private::HostThread &rhs);
+};
+} // namespace llvm
 
 #endif

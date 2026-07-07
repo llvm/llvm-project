@@ -64,6 +64,16 @@ Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
             }
             return std::nullopt;
           },
+          [](const ConditionalExpr<Result> &x) -> T {
+            if (auto tlen{x.thenValue().LEN()}) {
+              if (auto elen{x.elseValue().LEN()}) {
+                if (*tlen == *elen) {
+                  return tlen;
+                }
+              }
+            }
+            return std::nullopt;
+          },
           [](const Designator<Result> &dr) { return dr.LEN(); },
           [](const FunctionRef<Result> &fr) { return fr.LEN(); },
           [](const SetLength<KIND> &x) -> T { return x.right(); },
@@ -139,6 +149,12 @@ template <typename A> LLVM_DUMP_METHOD void ExpressionBase<A>::dump() const {
 
 template <typename A> bool Extremum<A>::operator==(const Extremum &that) const {
   return ordering == that.ordering && Base::operator==(that);
+}
+
+template <typename A>
+bool ConditionalExpr<A>::operator==(const ConditionalExpr &that) const {
+  return condition_ == that.condition_ && thenValue_ == that.thenValue_ &&
+      elseValue_ == that.elseValue_;
 }
 
 template <int KIND>

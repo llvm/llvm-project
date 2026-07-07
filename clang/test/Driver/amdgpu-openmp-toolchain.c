@@ -7,9 +7,9 @@
 
 // verify the tools invocations
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-llvm-bc"{{.*}}"-x" "c"
-// CHECK: "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-target-cpu" "gfx906"
+// CHECK: "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-flto=full" "-flto-unit"{{.*}}"-target-cpu" "gfx906"
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-obj"
-// CHECK: clang-linker-wrapper{{.*}} "-o" "a.out"
+// CHECK: clang-linker-wrapper{{.*}}"--device-compiler=amdgcn-amd-amdhsa=-flto=full"{{.*}} "-o" "a.out"
 
 // RUN:   %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PHASES %s
@@ -20,8 +20,8 @@
 // CHECK-PHASES: 4: preprocessor, {3}, cpp-output, (device-openmp, gfx906)
 // CHECK-PHASES: 5: compiler, {4}, ir, (device-openmp, gfx906)
 // CHECK-PHASES: 6: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (amdgcn-amd-amdhsa:gfx906)" {5}, ir
-// CHECK-PHASES: 7: backend, {6}, ir, (device-openmp, gfx906)
-// CHECK-PHASES: 8: offload, "device-openmp (amdgcn-amd-amdhsa:gfx906)" {7}, ir
+// CHECK-PHASES: 7: backend, {6}, lto-bc, (device-openmp, gfx906)
+// CHECK-PHASES: 8: offload, "device-openmp (amdgcn-amd-amdhsa:gfx906)" {7}, lto-bc
 // CHECK-PHASES: 9: llvm-offload-binary, {8}, image, (device-openmp)
 // CHECK-PHASES: 10: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (x86_64-unknown-linux-gnu)" {9}, ir
 // CHECK-PHASES: 11: backend, {10}, assembler, (host-openmp)
@@ -63,7 +63,7 @@
 
 // RUN: %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a:sramecc-:xnack+ \
 // RUN:   -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET-ID
-// CHECK-TARGET-ID: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a" "-target-feature" "-sramecc" "-target-feature" "+xnack"
+// CHECK-TARGET-ID: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a" "-target-feature" "+xnack" "-target-feature" "-sramecc"
 // CHECK-TARGET-ID: llvm-offload-binary{{.*}}arch=gfx90a:sramecc-:xnack+,kind=openmp
 
 // RUN: not %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a,gfx90a:xnack+ \

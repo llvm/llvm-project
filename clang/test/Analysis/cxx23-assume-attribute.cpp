@@ -50,24 +50,23 @@ int ternary_in_assume(int a, int b) {
 int assume_and_fallthrough_at_the_same_attrstmt(int a, int b) {
   [[assume(a == 2)]];
   clang_analyzer_dump(a); // expected-warning {{2 S32b}}
-  // expected-warning-re@-1 {{reg_${{[0-9]+}}<int a>}} FIXME: We shouldn't have this dump.
   switch (a) {
     case 2:
       [[fallthrough, assume(b == 30)]];
     case 4: {
       clang_analyzer_dump(b); // expected-warning {{30 S32b}}
-      // expected-warning-re@-1 {{reg_${{[0-9]+}}<int b>}} FIXME: We shouldn't have this dump.
       return b;
     }
   }
 
   // This code should be unreachable.
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  clang_analyzer_warnIfReached(); // no-warning
+  return 0;
+}
 
+void assume_false() {
   [[assume(false)]]; // This should definitely make it so.
   clang_analyzer_warnIfReached(); // no-warning
-
-  return 0;
 }
 
 void assume_opaque_gh151854_no_crash() {
@@ -75,3 +74,26 @@ void assume_opaque_gh151854_no_crash() {
   [[assume(opaque())]]; // no-crash
   // expected-warning@-1 {{assumption is ignored because it contains (potential) side-effects}}
 }
+
+int multiple_assumptions(int a, int b) {
+  [[assume(a == 2), assume(b == 3)]];
+  clang_analyzer_dump(a); // expected-warning {{2 S32b}}
+  clang_analyzer_dump(b); // expected-warning {{3 S32b}}
+  clang_analyzer_dump(a+b); // expected-warning {{5 S32b}}
+  return a + b;
+}
+
+int trivial_assumption(int a) {
+  [[assume(a == 2)]];
+  clang_analyzer_dump(a); // expected-warning {{2 S32b}}
+  return a;
+}
+
+int undefined_assumption() {
+  // Theoretically the analyzer should report that the assumption expression of
+  // the [[assume]] attribute has an undefined value; currently these
+  // attributes are ignored by the analyzer.
+  int a;
+  [[assume(a)]];
+  return a; // expected-warning {{Undefined or garbage value returned to caller}}
+  }

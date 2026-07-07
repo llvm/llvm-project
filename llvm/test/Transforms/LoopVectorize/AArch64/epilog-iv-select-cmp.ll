@@ -24,7 +24,7 @@ define i8 @select_icmp_var_start(ptr %a, i8 %n, i8 %start) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <16 x i8> [ <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i8> [ splat (i8 -128), %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <16 x i8> [ splat (i8 -128), %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <16 x i8> [[VEC_IND]], splat (i8 16)
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw nsw <16 x i8> [[VEC_IND]], splat (i8 16)
 ; CHECK-NEXT:    [[INDEX4:%.*]] = trunc i32 [[INDEX]] to i8
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A]], i8 [[INDEX4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 16
@@ -234,6 +234,5 @@ exit:
   ret i32 %red.next
 }
 
-declare void @llvm.assume(i1 noundef)
 
 attributes #0 = { "target-cpu"="apple-m1" }

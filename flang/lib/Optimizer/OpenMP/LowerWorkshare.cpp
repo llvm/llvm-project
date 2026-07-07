@@ -236,19 +236,25 @@ static bool isSafeToParallelize(Operation *op) {
 
   // Thread-local variables allocated in the OpenMP parallel region or coming
   // from privatizing clauses are private to each thread and thus safe (and
-  // sometimes required) to parallelize. If the compiler wraps such load/stores
-  // in an omp.single block, only one thread updates its local copy, while
-  // all other threads read uninitialized data (see issue #143330).
-  // Use MemoryEffectOpInterface to check all memory effects generically.
-  // This also handles hlfir.assign which is present when the pass runs before
-  // HLFIR lowering.
+  // sometimes required) to parallelize. If the compiler wraps stores to
+  // thread-local variables in an omp.single block, only one thread updates
+  // its local copy, while all other threads read uninitialized data (see
+  // issue #143330).
+  //
+  // Only WRITE effects to thread-local memory are considered safe here, not
+  // reads. If reads were also safe, the cascading effect in moveToSingle
+  // could cause entire SingleRegions to become fully parallelized (all ops
+  // safe), eliminating the omp.single and its implicit barrier. This removes
+  // synchronization points needed to keep threads coordinated inside
+  // sequential loops that contain workshared operations.
   if (auto memEffects = dyn_cast<MemoryEffectOpInterface>(op)) {
     SmallVector<MemoryEffects::EffectInstance> effects;
     memEffects.getEffects(effects);
     if (!effects.empty() &&
         llvm::all_of(effects, [&](const MemoryEffects::EffectInstance &effect) {
           Value val = effect.getValue();
-          return val && isOpenMPThreadLocalMemory(op, val);
+          return val && isa<MemoryEffects::Write>(effect.getEffect()) &&
+                 isOpenMPThreadLocalMemory(op, val);
         }))
       return true;
   }
@@ -606,6 +612,13 @@ LogicalResult lowerWorkshare(mlir::omp::WorkshareOp wsOp, DominanceInfo &di) {
     term->erase();
     newOp->erase();
     wsOp->erase();
+
+    // If this was part of a combined construct (e.g. 'parallel workshare'), the
+    // changes we just made to the region can be incompatible with a combined
+    // construct, such as containing multiple block-associated constructs in it.
+    if (auto parentOp =
+            dyn_cast<omp::ComposableOpInterface>(parentBlock->getParentOp()))
+      parentOp.setCombined(false);
   } else {
     // Otherwise just change the operation to an omp.single.
 

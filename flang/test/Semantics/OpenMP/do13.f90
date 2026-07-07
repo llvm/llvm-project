@@ -9,6 +9,7 @@ program omp
   !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp do  collapse(3)
   do i = 0, 10
+    !BECAUSE: The nest contains code that prevents it from being canonical at this nesting level
     !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
     cycle
     do j = 0, 10
@@ -24,6 +25,7 @@ program omp
   !$omp do  collapse(3)
   do i = 0, 10
     do j = 0, 10
+      !BECAUSE: The nest contains code that prevents it from being canonical at this nesting level
       !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
       cycle
       do k  = 0, 10
@@ -37,6 +39,7 @@ program omp
   !BECAUSE: COLLAPSE clause was specified with argument 2
   !$omp do  collapse(2)
   do i = 0, 10
+    !BECAUSE: The nest contains code that prevents it from being canonical at this nesting level
     !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
     cycle
     do j = 0, 10
@@ -52,6 +55,7 @@ program omp
   !BECAUSE: COLLAPSE clause was specified with argument 2
   !$omp do  collapse(2)
   foo: do i = 0, 10
+    !BECAUSE: The nest contains code that prevents it from being canonical at this nesting level
     !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
     cycle foo
     do j = 0, 10
@@ -68,6 +72,7 @@ program omp
   !$omp do collapse(3)
   do 60 i=1,10
     do j=1,10
+      !BECAUSE: The nest contains code that prevents it from being canonical at this nesting level
       !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
       cycle
       do k=1,10
@@ -185,7 +190,7 @@ program omp
       !$omp end parallel
     end do foo1
   end do foo
-!$omp end parallel do
-!$omp end parallel
+  !$omp end parallel do
+  !$omp end parallel
 
 end program omp

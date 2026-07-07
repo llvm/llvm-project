@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpCapability Kernel
 ; CHECK-DAG: OpCapability FunctionPointersINTEL
@@ -45,8 +45,8 @@
 ; CHECK-DAG: %[[#f1Cast_1:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f1Pfn]]
 ; CHECK-DAG: %[[#f2Cast_1:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f2Pfn]]
 
-; CHECK-DAG: %[[#fnptrTy:]] = OpConstantComposite %[[#ArrayOfPfnTy]] %[[#f0Cast_0]] %[[#f1Cast_0]] %[[#f2Cast_0]]
-; CHECK-DAG: %[[#fnstructTy:]] = OpConstantComposite %[[#StructWithPfnTy]] %[[#f0Cast_1]] %[[#f1Cast_1]] %[[#f2Cast_1]]
+; CHECK-DAG: %[[#fnptrTy:]] = OpSpecConstantComposite %[[#ArrayOfPfnTy]] %[[#f0Cast_0]] %[[#f1Cast_0]] %[[#f2Cast_0]]
+; CHECK-DAG: %[[#fnstructTy:]] = OpSpecConstantComposite %[[#StructWithPfnTy]] %[[#f0Cast_1]] %[[#f1Cast_1]] %[[#f2Cast_1]]
 
 ; CHECK-DAG: %[[#fnptr:]] = OpVariable %[[#GlobalArrOfPfnPtrTy]] CrossWorkgroup %[[#fnptrTy]]
 ; CHECK-DAG: %[[#fnstruct:]] = OpVariable %[[#GlobalStructWithPfnPtrTy:]] CrossWorkgroup %[[#fnstructTy]]

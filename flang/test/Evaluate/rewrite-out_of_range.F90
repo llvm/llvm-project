@@ -178,14 +178,14 @@ end
 !CHECK:   PRINT *, " real", 2_4, "real", 8_4, .false._4
 !CHECK:   PRINT *, " real", 2_4, "real", 10_4, .false._4
 !CHECK-KIND16:   PRINT *, " real", 2_4, "real", 16_4, .false._4
-!CHECK:   PRINT *, " real", 3_4, "real", 2_4, blt(int(transfer(abs(x)-6.5536e4_3,0_2),kind=8)-1_8,32639_2)
+!CHECK:   PRINT *, " real", 3_4, "real", 2_4, blt(__builtin_int(transfer(abs(x)-6.5536e4_3,0_2),kind=8)-1_8,32639_2)
 !CHECK:   PRINT *, " real", 3_4, "real", 3_4, .false._4
 !CHECK:   PRINT *, " real", 3_4, "real", 4_4, .false._4
 !CHECK:   PRINT *, " real", 3_4, "real", 8_4, .false._4
 !CHECK:   PRINT *, " real", 3_4, "real", 10_4, .false._4
 !CHECK-KIND16:   PRINT *, " real", 3_4, "real", 16_4, .false._4
-!CHECK:   PRINT *, " real", 4_4, "real", 2_4, blt(int(transfer(abs(x)-6.5504e4_4,0_4),kind=8)-1_8,2139095039_4)
-!CHECK:   PRINT *, " real", 4_4, "real", 3_4, blt(int(transfer(abs(x)-3.3895313892515354759047080037148786688e38_4,0_4),kind=8)-1_8,2139095039_4)
+!CHECK:   PRINT *, " real", 4_4, "real", 2_4, blt(__builtin_int(transfer(abs(x)-6.5504e4_4,0_4),kind=8)-1_8,2139095039_4)
+!CHECK:   PRINT *, " real", 4_4, "real", 3_4, blt(__builtin_int(transfer(abs(x)-3.3895313892515354759047080037148786688e38_4,0_4),kind=8)-1_8,2139095039_4)
 !CHECK:   PRINT *, " real", 4_4, "real", 4_4, .false._4
 !CHECK:   PRINT *, " real", 4_4, "real", 8_4, .false._4
 !CHECK:   PRINT *, " real", 4_4, "real", 10_4, .false._4

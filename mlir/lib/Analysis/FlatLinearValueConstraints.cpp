@@ -835,7 +835,9 @@ LogicalResult FlatLinearConstraints::addBound(
 
   // Add one (in)equality for each result.
   for (const auto &flatExpr : flatExprs) {
-    SmallVector<int64_t> ineq(getNumCols(), 0);
+    // Inline size chosen empirically based on compilation profiling.
+    // Profiled: 7.1M calls, avg=5.3+-3.0. N=8 covers 82% of cases inline.
+    SmallVector<int64_t, 8> ineq(getNumCols(), 0);
     // Dims and symbols.
     for (unsigned j = 0, e = boundMap.getNumInputs(); j < e; j++) {
       ineq[j] = lower ? -flatExpr[j] : flatExpr[j];

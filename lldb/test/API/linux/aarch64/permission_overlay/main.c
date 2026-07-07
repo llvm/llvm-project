@@ -13,13 +13,13 @@
 // However, POE and therefore protection keys are new to AArch64 so we need to
 // be able to build with a libc without support for it.
 
-static uint64_t por_read(void) {
+static uint64_t por_el0_read(void) {
   uint64_t por;
   __asm__ volatile("mrs %0, S3_3_C10_C2_4" /*POR_EL0*/ : "=r"(por));
   return por;
 }
 
-static void por_write(uint64_t por) {
+static void por_el0_write(uint64_t por) {
   __asm__ volatile("msr S3_3_C10_C2_4, %0\n" /*POR_EL0*/
                    "isb" ::"r"(por)
                    : "memory");
@@ -62,7 +62,7 @@ static inline uint64_t set_perm(uint64_t por, int pkey, uint8_t perm) {
 static void cause_write_fault(char *buffer) { buffer[0] = '?'; }
 
 int expr_function() {
-  por_write(set_perm(por_read(), 1, 0));
+  por_el0_write(set_perm(por_el0_read(), 1, 0));
   return 1;
 }
 
@@ -76,10 +76,16 @@ int main(void) {
   // Which leaves 7 keys available for programs to allocate.
 
   const size_t page_size = (size_t)sysconf(_SC_PAGESIZE);
-  // pkeys can only subtract from the set of permissions in the page table,
-  // so we set the page table to allow everything.
-  const int prot = PROT_READ | PROT_WRITE | PROT_EXEC;
+  // pkeys can only subtract from the set of permissions in the page table.
+  // So we leave out execute here to check later that an overlay does not
+  // enable execution.
+  const int prot = PROT_READ | PROT_WRITE;
   const int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+
+  // This page will have the default key 0.
+  char *key_zero_page = mmap(NULL, page_size, prot, flags, -1, 0);
+  if (key_zero_page == MAP_FAILED)
+    exit(2);
 
   // Later we will use this to cause a protection key fault.
   char *read_only_page = NULL;
@@ -107,7 +113,7 @@ int main(void) {
     // pkey 0 is already set to read+write+execute, we will set all other
     // valid encodings. 0 is no access and 7 is read+write_execute.
     uint8_t perm = NUM_KEYS - i;
-    por_write(set_perm(por_read(), i, perm));
+    por_el0_write(set_perm(por_el0_read(), i, perm));
   }
 
   // This page should allow reads.

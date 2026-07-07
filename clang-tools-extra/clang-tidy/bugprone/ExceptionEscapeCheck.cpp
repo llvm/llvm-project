@@ -155,11 +155,19 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   const utils::ExceptionAnalyzer::CallStack &Stack = ThrowInfo.Stack;
-  diag(ThrowInfo.Loc,
-       "frame #0: unhandled exception of type %0 may be thrown in function %1 "
-       "here",
-       DiagnosticIDs::Note)
-      << QualType(ThrowType, 0U) << Stack.back().first;
+  if (ThrowType) {
+    diag(ThrowInfo.Loc,
+         "frame #0: unhandled exception of type %0 may be thrown in function "
+         "%1 here",
+         DiagnosticIDs::Note)
+        << QualType(ThrowType, 0U) << Stack.back().first;
+  } else {
+    diag(ThrowInfo.Loc,
+         "frame #0: an exception of unknown type may be thrown in function %0 "
+         "here",
+         DiagnosticIDs::Note)
+        << Stack.back().first;
+  }
 
   size_t FrameNo = 1;
   for (auto CurrIt = ++Stack.rbegin(), PrevIt = Stack.rbegin();
