@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/spawn/posix_spawn.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
@@ -39,7 +40,7 @@ pid_t fork() {
 #endif
 }
 
-void close(int fd) { LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd); }
+void close(int fd) { linux_syscalls::close(fd); }
 
 // We use dup3 if dup2 is not available, similar to our implementation of dup2
 bool dup2(int fd, int newfd) {

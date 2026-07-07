@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/sys_mman_macros.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/getrandom.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/macros/config.h"
@@ -57,11 +58,11 @@ void init_tls(TLSDescriptor &tls_descriptor) {
   // Setting the stack guard to a random value.
   // We cannot call the get_random function here as the function sets errno on
   // failure. Since errno is implemented via a thread local variable, we cannot
-  // use errno before TLS is setup.
-  long stack_guard_retval =
-      syscall_impl(SYS_getrandom, reinterpret_cast<long>(stack_guard_addr),
-                   sizeof(uint64_t), 0);
-  if (stack_guard_retval < 0)
+  // use errno before TLS is setup. The linux_syscalls wrapper is safe as it
+  // reports errors via ErrorOr instead of errno.
+  ErrorOr<ssize_t> stack_guard_retval =
+      linux_syscalls::getrandom(stack_guard_addr, sizeof(uint64_t), 0);
+  if (!stack_guard_retval.has_value())
     syscall_impl(SYS_exit, 1);
 
   tls_descriptor = {tls_size_with_addr, reinterpret_cast<uintptr_t>(tls_addr),
