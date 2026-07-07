@@ -277,15 +277,19 @@ void ChainedASTReaderListener::readModuleFileExtension(
 ASTReaderListener::~ASTReaderListener() = default;
 
 static LLVM_ATTRIBUTE_NOINLINE void diagnoseLanguageOptionFlagMismatch(
-    DiagnosticsEngine &Diags, StringRef Description, bool SerializedValue,
+    DiagnosticsEngine *Diags, StringRef Description, bool SerializedValue,
     bool CurrentValue, StringRef ModuleFilename) {
-  Diags.Report(diag::err_ast_file_langopt_mismatch)
+  if (!Diags)
+    return;
+  Diags->Report(diag::err_ast_file_langopt_mismatch)
       << Description << SerializedValue << CurrentValue << ModuleFilename;
 }
 
 static LLVM_ATTRIBUTE_NOINLINE void diagnoseLanguageOptionValueMismatch(
-    DiagnosticsEngine &Diags, StringRef Description, StringRef ModuleFilename) {
-  Diags.Report(diag::err_ast_file_langopt_value_mismatch)
+    DiagnosticsEngine *Diags, StringRef Description, StringRef ModuleFilename) {
+  if (!Diags)
+    return;
+  Diags->Report(diag::err_ast_file_langopt_value_mismatch)
       << Description << ModuleFilename;
 }
 
@@ -311,15 +315,13 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
         (CK::Compatibility == CK::Compatible &&                                \
          !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.Name != LangOpts.Name) {                            \
-        if (Diags) {                                                           \
-          if (Bits == 1)                                                       \
-            diagnoseLanguageOptionFlagMismatch(                                \
-                *Diags, Description, LangOpts.Name, ExistingLangOpts.Name,     \
-                ModuleFilename);                                               \
-          else                                                                 \
-            diagnoseLanguageOptionValueMismatch(*Diags, Description,           \
-                                                ModuleFilename);               \
-        }                                                                      \
+        if (Bits == 1)                                                         \
+          diagnoseLanguageOptionFlagMismatch(                                  \
+              Diags, Description, LangOpts.Name, ExistingLangOpts.Name,        \
+              ModuleFilename);                                                 \
+        else                                                                   \
+          diagnoseLanguageOptionValueMismatch(Diags, Description,              \
+                                              ModuleFilename);                 \
         return true;                                                           \
       }                                                                        \
     }                                                                          \
@@ -331,9 +333,8 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
         (CK::Compatibility == CK::Compatible &&                                \
          !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.Name != LangOpts.Name) {                            \
-        if (Diags)                                                             \
-          diagnoseLanguageOptionValueMismatch(*Diags, Description,             \
-                                              ModuleFilename);                 \
+        diagnoseLanguageOptionValueMismatch(Diags, Description,                \
+                                            ModuleFilename);                   \
         return true;                                                           \
       }                                                                        \
     }                                                                          \
@@ -345,9 +346,8 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
         (CK::Compatibility == CK::Compatible &&                                \
          !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.get##Name() != LangOpts.get##Name()) {              \
-        if (Diags)                                                             \
-          diagnoseLanguageOptionValueMismatch(*Diags, Description,             \
-                                              ModuleFilename);                 \
+        diagnoseLanguageOptionValueMismatch(Diags, Description,                \
+                                            ModuleFilename);                   \
         return true;                                                           \
       }                                                                        \
     }                                                                          \
@@ -356,24 +356,21 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
 #include "clang/Basic/LangOptions.def"
 
   if (ExistingLangOpts.ModuleFeatures != LangOpts.ModuleFeatures) {
-    if (Diags)
-      diagnoseLanguageOptionValueMismatch(*Diags, "module features",
-                                          ModuleFilename);
+    diagnoseLanguageOptionValueMismatch(Diags, "module features",
+                                        ModuleFilename);
     return true;
   }
 
   if (ExistingLangOpts.ObjCRuntime != LangOpts.ObjCRuntime) {
-    if (Diags)
-      diagnoseLanguageOptionValueMismatch(*Diags, "target Objective-C runtime",
-                                          ModuleFilename);
+    diagnoseLanguageOptionValueMismatch(Diags, "target Objective-C runtime",
+                                        ModuleFilename);
     return true;
   }
 
   if (ExistingLangOpts.CommentOpts.BlockCommandNames !=
       LangOpts.CommentOpts.BlockCommandNames) {
-    if (Diags)
-      diagnoseLanguageOptionValueMismatch(*Diags, "block command names",
-                                          ModuleFilename);
+    diagnoseLanguageOptionValueMismatch(Diags, "block command names",
+                                        ModuleFilename);
     return true;
   }
 
