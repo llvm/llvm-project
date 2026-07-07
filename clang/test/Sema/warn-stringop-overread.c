@@ -151,6 +151,29 @@ void test_memmove_chk_overread(void) {
 }
 
 #ifdef __cplusplus
+
+// Mimic how <cstring> brings C library memory functions into the std namespace
+// via using-declarations. -Wstringop-overread should fire on them too. Skipped
+// under USE_BUILTINS, where these names are function-like macros.
+#ifndef USE_BUILTINS
+namespace std {
+using ::memcpy;
+using ::memmove;
+}
+
+void test_std_memcpy_overread() {
+  char dst[100];
+  char src[4];
+  std::memcpy(dst, src, 8); // expected-warning {{'memcpy' reading 8 bytes from a region of size 4}}
+}
+
+void test_std_memmove_overread() {
+  char dst[100];
+  char src[4];
+  std::memmove(dst, src, 8);  // expected-warning {{'memmove' reading 8 bytes from a region of size 4}}
+}
+#endif
+
 template <int N>
 void test_memcpy_dependent_dest() {
   char dst[N];
