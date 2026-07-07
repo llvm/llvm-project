@@ -325,14 +325,13 @@ This pattern needs two pieces, both colocated with the dispatcher.
    overload, which walks the declaration and its lexical parents for a
    matching ``[[profiles::suppress]]``, so suppression on the class or any
    enclosing lexical ``Decl`` works without the dispatcher establishing a
-   suppress scope.  For the duration of the callbacks the dispatcher sets
-   ``Sema::InProfileFinalizationCheck``, which makes
-   ``shouldEmitProfileViolation`` ignore the transient parse-time
-   ``ProfileSuppressStack``: finalization can run as a side effect of an
-   *unrelated* template instantiation whose ``[[profiles::suppress]]`` scope is
-   still on that stack, and that scope does not lexically enclose the finalized
-   class (see :ref:`profiles-token-dominion`).  Suppression is therefore
-   resolved only from the declaration and its lexical parents.
+   suppress scope.  Finalization can run as a side effect of an *unrelated*
+   template instantiation whose ``[[profiles::suppress]]`` scope is still on
+   the transient parse-time ``ProfileSuppressStack``; because stack entries
+   are matched against the violation's location (see
+   :ref:`profiles-token-dominion`), such a scope -- whose construct's tokens
+   do not cover the finalized class -- does not suppress the callback's
+   diagnostics.
 
 2. **Emit diagnostics from the callback via**
    ``SemaProfiles::shouldEmitProfileViolation``.  Each callback decides where on
@@ -401,16 +400,15 @@ table ``ConstructorFinalizationProfiles`` of the same
 passes the ``CXXConstructorDecl`` to the decl-aware
 ``shouldEmitProfileViolation`` overload; that overload walks the declaration
 and its lexical parents, so ``[[profiles::suppress]]`` on the constructor,
-the class, or an enclosing lexical ``Decl`` works.  As for pattern 3, the
-shared ``dispatchFinalizationProfiles`` dispatcher runs these callbacks under
-the ``Sema::InProfileFinalizationCheck`` guard, so they resolve suppression
-only from that decl-aware walk and ignore the transient parse-time
-``ProfileSuppressStack`` (see :ref:`profiles-token-dominion`).  A constructor
-body is normally instantiated lazily -- outside any unrelated suppress scope --
-so here the guard is defensive; the scenario it actually prevents arises in
-pattern 3, where a class completes synchronously inside an enclosing
-instantiation.  A callback that should only apply to user-written constructors
-checks ``Ctor->isUserProvided()``.
+the class, or an enclosing lexical ``Decl`` works.  As for pattern 3, a
+transient parse-time suppress scope belonging to an unrelated construct does
+not reach these callbacks, because stack entries only match violations whose
+tokens their construct covers (see :ref:`profiles-token-dominion`).  A
+constructor body is normally instantiated lazily -- outside any unrelated
+suppress scope -- so for pattern 4 this matters rarely; the scenario it
+actually handles arises in pattern 3, where a class completes synchronously
+inside an enclosing instantiation.  A callback that should only apply to
+user-written constructors checks ``Ctor->isUserProvided()``.
 
 
 .. _profiles-token-dominion:
@@ -433,17 +431,23 @@ marker.
 This applies identically to the parse-time suppression stack and the
 post-parse Stmt-tree walker described in pattern 2.
 
-Token-based dominion is also why the class- and constructor-finalization
-dispatch (patterns 3 and 4) deliberately ignores the parse-time
-``ProfileSuppressStack``.  A finalization callback can run while an
-*unrelated* entity is being instantiated -- for example, completing a class
-template used inside a ``[[profiles::suppress(P)]]``-annotated function
-template that is itself being instantiated.  That instantiation's suppress
-scope is on the stack, but its tokens do not enclose the finalized class, so
-honoring it would suppress a violation outside its dominion.  Finalization
-therefore resolves suppression only from the finalized declaration and its
-lexical parents (via the ``Sema::InProfileFinalizationCheck`` guard on
-``dispatchFinalizationProfiles``).
+The parse-time stack enforces the dominion positionally: each entry records
+the begin location of the construct its attribute appertains to, a violation
+matches an entry only if its location is at or after that begin (in
+translation-unit token order), and the entry's ``ProfileSuppressScope``
+lifetime bounds the dominion's end.  This is what keeps a live suppress scope
+from leaking into code whose tokens it does not cover.  A check can fire
+under an *unrelated* construct's scope in two ways: a template pattern
+instantiated synchronously while the scope is live (the pattern's tokens --
+which instantiated code retains as its source locations -- precede the
+suppressed construct), and a class or constructor finalized as a side effect
+of such an instantiation (patterns 3 and 4).  In both cases the entry's
+begin location is after the violation's, so the suppression correctly does
+not apply; conversely, a local class or lambda *defined inside* the
+suppressed construct is covered, whichever path re-enters it.  One known
+over-approximation: scope liveness bounds the dominion's end, so a pattern
+forward-declared before but *defined after* the suppressed construct is
+wrongly treated as covered while the scope is live.
 
 
 .. _profiles-internals:
@@ -460,9 +464,11 @@ benefit from understanding, even though they do not interact with them directly.
 An RAII guard that pushes suppression entries onto ``Sema::ProfileSuppressStack``
 and pops them on destruction.  It is used by the parser and template
 instantiation machinery to make ``[[profiles::suppress]]`` attributes active
-during the appropriate region.  ``checkProfileViolation`` consults
-``ProfileSuppressStack`` directly, so profile implementers never need to create
-``ProfileSuppressScope`` objects.
+during the appropriate region.  Each entry records the begin location of the
+construct its attribute appertains to, and matches only violations located at
+or after it (see :ref:`profiles-token-dominion`).  ``checkProfileViolation``
+consults ``ProfileSuppressStack`` directly, so profile implementers never need
+to create ``ProfileSuppressScope`` objects.
 
 Stmt-Tree Suppression Walker
 ----------------------------
@@ -488,6 +494,14 @@ applies to instantiated code.  This is done via ``ProfileSuppressScope`` with
 - ``SemaTemplateInstantiate.cpp`` -- default member initializer instantiation.
 - ``TreeTransform.h`` -- ``TransformAttributedStmt`` (suppress on statements)
   and ``TransformDeclStmt`` (suppress on declarations within a ``DeclStmt``).
+
+The reverse direction is *not* propagated: a suppress scope live at the
+*point of instantiation* (for example on the declaration whose initializer
+triggers it) covers the trigger's tokens, not the pattern's.  Instantiated
+code retains the pattern's source locations, so the dominion check on stack
+entries (see :ref:`profiles-token-dominion`) keeps such a scope from
+suppressing checks that fire inside a synchronously instantiated body, NSDMI,
+default argument, or instantiated marker re-check.
 
 Module Enforcement
 ------------------
