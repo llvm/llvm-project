@@ -154,7 +154,7 @@ StringRef getOriginalAsmConstraints(const CallBase &CB) {
 // 32-bit integer operands with the correct format, and unpack them if necessary
 // when making string comparisons in compiler passes.
 // SPIR-V requires null-terminated UTF-8 strings padded to 32-bit alignment.
-static uint32_t convertCharsToWord(const StringRef &Str, unsigned i) {
+static uint32_t convertCharsToWord(StringRef Str, unsigned i) {
   uint32_t Word = 0u; // Padding/null bytes are zero-initialized.
   unsigned Count = std::min(static_cast<size_t>(4), Str.size() - i);
   std::memcpy(&Word, Str.data() + i, Count);
@@ -162,11 +162,9 @@ static uint32_t convertCharsToWord(const StringRef &Str, unsigned i) {
 }
 
 // Get length including padding and null terminator.
-static size_t getPaddedLen(const StringRef &Str) {
-  return alignTo(Str.size() + 1, 4);
-}
+static size_t getPaddedLen(StringRef Str) { return alignTo(Str.size() + 1, 4); }
 
-void addStringImm(const StringRef &Str, MCInst &Inst) {
+void addStringImm(StringRef Str, MCInst &Inst) {
   const size_t PaddedLen = getPaddedLen(Str);
   for (unsigned i = 0; i < PaddedLen; i += 4) {
     // Add an operand for the 32-bits of chars or padding.
@@ -174,7 +172,7 @@ void addStringImm(const StringRef &Str, MCInst &Inst) {
   }
 }
 
-void addStringImm(const StringRef &Str, MachineInstrBuilder &MIB) {
+void addStringImm(StringRef Str, MachineInstrBuilder &MIB) {
   const size_t PaddedLen = getPaddedLen(Str);
   for (unsigned i = 0; i < PaddedLen; i += 4) {
     // Add an operand for the 32-bits of chars or padding.
@@ -225,7 +223,7 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
   }
 }
 
-void buildOpName(Register Target, const StringRef &Name,
+void buildOpName(Register Target, StringRef Name,
                  MachineIRBuilder &MIRBuilder) {
   if (!Name.empty()) {
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpName).addUse(Target);
@@ -233,7 +231,7 @@ void buildOpName(Register Target, const StringRef &Name,
   }
 }
 
-void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+void buildOpName(Register Target, StringRef Name, MachineInstr &I,
                  const SPIRVInstrInfo &TII) {
   if (!Name.empty()) {
     auto MIB =
@@ -522,14 +520,14 @@ Type *getMDOperandAsType(const MDNode *N, unsigned I) {
   return toTypedPointer(ElementTy);
 }
 
-static bool isEnqueueKernelBI(const StringRef MangledName) {
+static bool isEnqueueKernelBI(StringRef MangledName) {
   return MangledName == "__enqueue_kernel_basic" ||
          MangledName == "__enqueue_kernel_basic_events" ||
          MangledName == "__enqueue_kernel_varargs" ||
          MangledName == "__enqueue_kernel_events_varargs";
 }
 
-static bool isKernelQueryBI(const StringRef MangledName) {
+static bool isKernelQueryBI(StringRef MangledName) {
   return MangledName == "__get_kernel_work_group_size_impl" ||
          MangledName == "__get_kernel_sub_group_count_for_ndrange_impl" ||
          MangledName == "__get_kernel_max_sub_group_size_for_ndrange_impl" ||

@@ -175,8 +175,8 @@ StringRef getOriginalAsmConstraints(const CallBase &CB);
 // Add the given string as a series of integer operand, inserting null
 // terminators and padding to make sure the operands all have 32-bit
 // little-endian words.
-void addStringImm(const StringRef &Str, MCInst &Inst);
-void addStringImm(const StringRef &Str, MachineInstrBuilder &MIB);
+void addStringImm(StringRef Str, MCInst &Inst);
+void addStringImm(StringRef Str, MachineInstrBuilder &MIB);
 
 // Read the series of integer operands back as a null-terminated string using
 // the reverse of the logic in addStringImm.
@@ -190,9 +190,8 @@ std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI);
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 
 // Add an OpName instruction for the given target register.
-void buildOpName(Register Target, const StringRef &Name,
-                 MachineIRBuilder &MIRBuilder);
-void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+void buildOpName(Register Target, StringRef Name, MachineIRBuilder &MIRBuilder);
+void buildOpName(Register Target, StringRef Name, MachineInstr &I,
                  const SPIRVInstrInfo &TII);
 
 // Add an OpDecorate instruction for the given Reg.
