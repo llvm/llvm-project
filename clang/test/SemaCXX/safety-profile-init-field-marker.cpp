@@ -128,3 +128,14 @@ void test_invalid_subjects(int p [[uninit]]) { // expected-error {{'uninit' attr
                                        // no-profiles-error {{'uninit' attribute cannot be applied to a structured binding}}
   (void)p; (void)lr; (void)a; (void)b;
 }
+
+// The marker re-check on the instantiated field is not suppressed by a
+// [[profiles::suppress(std::init)]] live at the point of instantiation --
+// the pattern's tokens are outside that dominion (P3589R2 s2.4p3).
+template <typename T>
+struct LeakMarker {
+  T p [[uninit]]; // #leak-marker-field
+};
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(std::init)]] LeakMarker<int *> leak_marker_use{nullptr}; // expected-note {{in instantiation of template class 'LeakMarker<int *>' requested here}}
+// expected-error@#leak-marker-field {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}

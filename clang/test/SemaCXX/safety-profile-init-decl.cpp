@@ -165,3 +165,26 @@ void template_ptr_marker() {
 }
 template void template_ptr_marker<int *>(); // expected-note {{in instantiation of function template specialization 'template_ptr_marker<int *>' requested here}}
 // expected-error@#template-ptr-marker {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
+
+// A [[profiles::suppress(std::init)]] live at the point of instantiation
+// covers the trigger's tokens, not the pattern's (P3589R2 s2.4p3): rules
+// inside a synchronously instantiated pattern must still fire.
+template <typename T>
+auto instantiation_leak_use() {
+  T t; // expected-error {{variable 't' must be initialized or marked '[[uninit]]' under profile 'std::init'}}
+  (void)t;
+  return 0;
+}
+void instantiation_leak_trigger() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] int leaked = instantiation_leak_use<int>(); // expected-note {{in instantiation of function template specialization 'instantiation_leak_use<int>' requested here}}
+  (void)leaked;
+}
+
+// A declarator-position suppress covers a diagnostic located at the declared
+// name: entries anchor to the construct's begin, not the attribute's.
+void declarator_position_suppress() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  int c [[profiles::suppress(std::init, rule: "uninit_decl")]];
+  (void)c;
+}

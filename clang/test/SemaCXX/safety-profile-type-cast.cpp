@@ -712,3 +712,93 @@ struct DeepOuter {
     };
   };
 };
+
+// A [[profiles::suppress]] live at the point of instantiation covers the
+// trigger's tokens, not the pattern's (P3589R2 s2.4p3, token-based dominion):
+// parse-time checks in synchronously instantiated code must not be
+// suppressed by the caller's scope.
+
+int instantiation_leak_target = 0;
+
+// Function-template body instantiated from a suppressed initializer.
+template <typename T>
+auto instantiation_leak_fn() {
+  return reinterpret_cast<T*>(&instantiation_leak_target); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::type_cast)]] auto *leak_fn_use = instantiation_leak_fn<int>(); // expected-note {{in instantiation of function template specialization 'instantiation_leak_fn<int>' requested here}}
+
+// NSDMI of an unrelated class template instantiated from a suppressed
+// declaration.
+template <typename T>
+struct LeakNSDMI { // #LeakNSDMI
+  T *p = reinterpret_cast<T*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}} \
+                                  // expected-note@#LeakNSDMI {{in instantiation of default member initializer 'LeakNSDMI<int>::p' requested here}}
+};
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::type_cast)]] LeakNSDMI<int> leak_nsdmi_use; // expected-note {{in evaluation of exception specification for 'LeakNSDMI<int>::LeakNSDMI' needed here}}
+
+// Variable-template initializer.
+template <typename T>
+auto *leak_vt = reinterpret_cast<T*>(&instantiation_leak_target); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::type_cast)]] int *leak_vt_use = leak_vt<int>; // expected-note {{in instantiation of variable template specialization 'leak_vt' requested here}}
+
+// Default argument instantiated at a suppressed call site.
+template <typename T>
+int *leak_def(T *q = reinterpret_cast<T*>(&instantiation_leak_target)) { return q; } // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::type_cast)]] int *leak_def_use = leak_def<int>(); // expected-note {{in instantiation of default function argument expression for 'leak_def<int>' required here}}
+
+// A closure created during the instantiation must not absorb the caller's
+// suppress either.
+template <typename T>
+auto leak_lambda() {
+  auto l = [](auto x) { return reinterpret_cast<T*>(x); }; // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+  return l(0L); // expected-note {{in instantiation of function template specialization 'leak_lambda()::(lambda)::operator()<long>' requested here}}
+}
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::type_cast)]] auto *leak_lambda_use = leak_lambda<int>(); // expected-note {{in instantiation of function template specialization 'leak_lambda<int>' requested here}}
+
+// A suppressed *statement* inside a pattern does not reach a lexically
+// unrelated pattern instantiated under it: GapLeaked's tokens precede the
+// suppressed block, so its NSDMI check still fires.
+template <typename T>
+struct GapLeaked { // #GapLeaked
+  T *p = reinterpret_cast<T*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}} \
+                                  // expected-note@#GapLeaked {{in instantiation of default member initializer 'GapLeaked<int>::p' requested here}}
+};
+template <typename T>
+void gap_user() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]] {
+    GapLeaked<T> v; // expected-note {{in evaluation of exception specification for 'GapLeaked<int>::GapLeaked' needed here}}
+    (void)v;
+  }
+}
+template void gap_user<int>(); // expected-note {{in instantiation of function template specialization 'gap_user<int>' requested here}}
+
+// Contrast: a local class *defined inside* the suppressed block is within the
+// dominion, so its NSDMI stays suppressed when instantiated under it.
+template <typename T>
+void local_class_in_suppressed_block() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]] {
+    struct Local { T *p = reinterpret_cast<T*>(0); };
+    Local v;
+    (void)v;
+  }
+}
+template void local_class_in_suppressed_block<int>();
+
+// Dominion matching compares raw TU token order, so macro-emitted code
+// behaves by its expansion position: a violation spelled in a macro argument
+// of the suppressed declaration is within the dominion; a pattern's
+// macro-emitted violation stays outside it.
+#define EMIT_CAST(ty, x) reinterpret_cast<ty*>(x)
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::type_cast)]] int *macro_arg_suppressed = EMIT_CAST(int, &instantiation_leak_target);
+template <typename T>
+auto leak_macro_fn() { return EMIT_CAST(T, &instantiation_leak_target); } // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::type_cast)]] int *leak_macro_use = leak_macro_fn<int>(); // expected-note {{in instantiation of function template specialization 'leak_macro_fn<int>' requested here}}
