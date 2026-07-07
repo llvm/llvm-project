@@ -1,7 +1,7 @@
 // clang-format off
 // RUN: %libomptarget-compilexx-generic -fopenmp-target-jit
 // RUN: rm -rf %t.testdir
-// RUN: mkdir -p %t.testdir %t.testdir/jit/
+// RUN: mkdir -p %t.testdir
 // RUN: env LIBOMPTARGET_RECORD=1 LIBOMPTARGET_RECORD_MEMSIZE=536870912 LIBOMPTARGET_RECORD_DIR=%t.testdir %libomptarget-run-generic 2>&1 | %fcheck-generic
 // RUN: ls -t %t.testdir/*.bc | grep .
 // RUN: ls -t %t.testdir/*.json | sed -n '1p' | grep . | xargs %omp-kernel-replay --load-bitcode --verify
