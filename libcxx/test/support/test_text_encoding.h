@@ -295,7 +295,6 @@ constexpr inline enc_data all_encoding_data[] = {
     {3, "csASCII"},
     {3, "iso-ir-6"},
     {3, "us"},
-    {3, "ASCII"}, // extension to match libstdc++
     {4, "ISO-8859-1"},
     {4, "ISO_8859-1:1987"},
     {4, "CP819"},
