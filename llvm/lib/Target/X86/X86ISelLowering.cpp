@@ -24980,15 +24980,60 @@ static SDValue EmitAVX512Test(SDValue Op0, SDValue Op1, ISD::CondCode CC,
                               SDValue &X86CC) {
   assert((CC == ISD::SETEQ || CC == ISD::SETNE) && "Unsupported ISD::CondCode");
 
+  auto IsLegalTestVT = [&](MVT VT) {
+    return (Subtarget.hasAVX512() && VT == MVT::v16i1) ||
+           (Subtarget.hasDQI() && VT == MVT::v8i1) ||
+           (Subtarget.hasBWI() && (VT == MVT::v32i1 || VT == MVT::v64i1));
+  };
+
+  auto IsKTestableVT = [&](MVT VT) {
+    return (Subtarget.hasDQI() && (VT == MVT::v8i1 || VT == MVT::v16i1)) ||
+           (Subtarget.hasBWI() && (VT == MVT::v32i1 || VT == MVT::v64i1));
+  };
+
+  // Match scalar tests of a bitcasted mask:
+  //   (and (bitcast vXi1 X), Y) == 0
+  // as KTEST/KORTEST so the vXi1 mask does not have to be copied to a GPR.
+  if (isNullConstant(Op1) && Op0.getOpcode() == ISD::AND && Op0.hasOneUse()) {
+    auto MatchScalarAnd = [&](SDValue Mask, SDValue ScalarMask) -> SDValue {
+      if (Mask.getOpcode() != ISD::BITCAST || !Mask.hasOneUse() ||
+          !ScalarMask.getValueType().isScalarInteger())
+        return SDValue();
+
+      // Keep one-use immediate masks on the scalar TEST path unless we know
+      // materializing them in a k-register is profitable.
+      if (isa<ConstantSDNode>(ScalarMask))
+        return SDValue();
+
+      SDValue MaskOp = Mask.getOperand(0);
+      MVT VT = MaskOp.getSimpleValueType();
+      if (!VT.isVectorOf(MVT::i1) || !IsLegalTestVT(VT))
+        return SDValue();
+
+      EVT IntVT = EVT::getIntegerVT(*DAG.getContext(),
+                                    VT.getVectorNumElements());
+      ScalarMask = DAG.getZExtOrTrunc(ScalarMask, dl, IntVT);
+      ScalarMask = DAG.getBitcast(VT, ScalarMask);
+
+      X86::CondCode X86Cond = CC == ISD::SETEQ ? X86::COND_E : X86::COND_NE;
+      X86CC = DAG.getTargetConstant(X86Cond, dl, MVT::i8);
+      SDValue And = DAG.getNode(ISD::AND, dl, VT, MaskOp, ScalarMask);
+      return DAG.getNode(X86ISD::KORTEST, dl, MVT::i32, And, And);
+    };
+
+    if (SDValue Test = MatchScalarAnd(Op0.getOperand(0), Op0.getOperand(1)))
+      return Test;
+    if (SDValue Test = MatchScalarAnd(Op0.getOperand(1), Op0.getOperand(0)))
+      return Test;
+  }
+
   // Must be a bitcast from vXi1.
   if (Op0.getOpcode() != ISD::BITCAST)
     return SDValue();
 
   Op0 = Op0.getOperand(0);
   MVT VT = Op0.getSimpleValueType();
-  if (!(Subtarget.hasAVX512() && VT == MVT::v16i1) &&
-      !(Subtarget.hasDQI() && VT == MVT::v8i1) &&
-      !(Subtarget.hasBWI() && (VT == MVT::v32i1 || VT == MVT::v64i1)))
+  if (!IsLegalTestVT(VT))
     return SDValue();
 
   X86::CondCode X86Cond;
@@ -25002,9 +25047,7 @@ static SDValue EmitAVX512Test(SDValue Op0, SDValue Op1, ISD::CondCode CC,
 
   // If the input is an AND, we can combine it's operands into the KTEST.
   bool KTestable = false;
-  if (Subtarget.hasDQI() && (VT == MVT::v8i1 || VT == MVT::v16i1))
-    KTestable = true;
-  if (Subtarget.hasBWI() && (VT == MVT::v32i1 || VT == MVT::v64i1))
+  if (IsKTestableVT(VT))
     KTestable = true;
   if (!isNullConstant(Op1))
     KTestable = false;
