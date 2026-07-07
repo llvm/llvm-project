@@ -11355,7 +11355,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       return false;
 
     if (!RegSequence.second) // Lower 32 bits nonzero
-      if ((uint64_t)CmpValue > UINT32_MAX + 1UL) {
+      if ((uint64_t)CmpValue > (uint64_t)UINT32_MAX + 1) {
         // Hard-code EQ ? 0 : 1
         CmpInstr.setDesc(get(AMDGPU::S_CMP_EQ_U32));
         CmpInstr.getOperand(0).ChangeToImmediate(0);
@@ -11370,7 +11370,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         SrcReg = RegSequence.first->getOperand(0).getReg();
       }
     else // Upper 32 bits nonzero
-      if ((uint64_t)CmpValue % (UINT32_MAX + 1UL)) {
+      if ((uint64_t)CmpValue % ((uint64_t)UINT32_MAX + 1UL)) {
         // Hard-code EQ ? 0 : 1
         CmpInstr.setDesc(get(AMDGPU::S_CMP_EQ_U32));
         CmpInstr.getOperand(0).ChangeToImmediate(0);
