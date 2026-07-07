@@ -313,11 +313,19 @@ def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">, Group<f_Group>,
 defm real_sum_reassociation
     : BoolOptionWithoutMarshalling<
           "f", "real-sum-reassociation",
-          PosFlag<SetTrue, [HelpHidden], [],
+          PosFlag<SetTrue, [], [],
                   "Enable Fortran-standard compliant reassociation within "
-                  "individual REAL sum expressions">,
-          NegFlag<SetFalse, [HelpHidden], [],
-                  "Disable reassociation within individual REAL sum expressions">>;
+                  "individual REAL sum expressions. This may change exact "
+                  "floating-point results">,
+          NegFlag<SetFalse, [], [],
+                  "Disable reassociation within individual REAL sum "
+                  "expressions">>,
+      DocBrief<[{
+        Enable Fortran-standard compliant reassociation within individual
+        ``REAL`` sum expressions. This can improve optimization opportunities
+        and may change exact floating-point results while preserving
+        standard-conforming Fortran semantics.
+      }]>;
 
 defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",
   PosFlag<SetTrue, [], [], "Zero initialize globals without default initialization (default)">,
