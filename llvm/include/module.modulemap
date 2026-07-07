@@ -357,6 +357,12 @@ module LLVM_Transforms {
   // Requires DEBUG_TYPE to be defined by including file.
   exclude header "llvm/Transforms/Utils/InstructionWorklist.h"
 
+  // Not a normal C++ API header: it is read as a string at build time and
+  // embedded into the instrumentor runtime. It includes C standard headers
+  // inside an `extern "C"` block, which is invalid when those headers are
+  // modularized.
+  exclude header "llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"
+
   textual header "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerIRValues.def"
 }
 
