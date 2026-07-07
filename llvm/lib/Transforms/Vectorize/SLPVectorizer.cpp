@@ -23478,6 +23478,20 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           });
         }))
       I->setHasNoSignedWrap(/*b=*/false);
+    // mul nsw X, INT_MIN is not equivalent to shl nsw X, BW-1, because shl nsw
+    // poisons when the sign bit is shifted out of a positive value. When a mul
+    // lane is converted to shl with shift amount BW-1, nsw must be dropped.
+    if (!MinBWs.contains(E) && Opcode == Instruction::Shl &&
+        any_of(UniqueInsts, [&](Value *V) {
+          auto *SI = cast<Instruction>(V);
+          if (SI->getOpcode() != Instruction::Mul)
+            return false;
+          return any_of(SI->operands(), [](Value *Op) {
+            const auto *CI = dyn_cast<ConstantInt>(Op);
+            return CI && CI->getValue().isMinSignedValue();
+          });
+        }))
+      I->setHasNoSignedWrap(/*b=*/false);
     if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end())
       ICmp->setSameSign(/*B=*/false);
     return I;
