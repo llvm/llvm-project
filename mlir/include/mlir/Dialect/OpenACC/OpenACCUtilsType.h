@@ -41,9 +41,9 @@ using TypeSizeAndAlignment = std::pair<llvm::TypeSize, llvm::TypeSize>;
 ///
 /// Returns std::nullopt when the size is not statically computable or the type
 /// is not supported.
-std::optional<TypeSizeAndAlignment> getTypeSizeAndAlignment(
-    Type ty, ModuleOp module, const DataLayout &dl,
-    OpenACCSupport *support = nullptr);
+std::optional<TypeSizeAndAlignment>
+getTypeSizeAndAlignment(Type ty, ModuleOp module, const DataLayout &dl,
+                        OpenACCSupport *support = nullptr);
 
 /// Same as above, obtaining \p dl from \p module via getDataLayout.
 std::optional<TypeSizeAndAlignment>

@@ -54,7 +54,7 @@ public:
 
   std::optional<mlir::acc::TypeSizeAndAlignment>
   getTypeSizeAndAlignment(mlir::Type ty, mlir::ModuleOp module,
-                            mlir::acc::OpenACCSupport &support);
+                          mlir::acc::OpenACCSupport &support);
 };
 
 } // namespace acc
