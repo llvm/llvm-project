@@ -3620,8 +3620,38 @@ bool ARMTargetLowering::isReadOnly(const GlobalValue *GV) const {
   if (const GlobalAlias *GA = dyn_cast<GlobalAlias>(GV))
     if (!(GV = GA->getAliaseeObject()))
       return false;
-  if (const auto *V = dyn_cast<GlobalVariable>(GV))
-    return V->isConstant();
+  if (const auto *V = dyn_cast<GlobalVariable>(GV)) {
+    if (!V->isConstant())
+      return false;
+    // Under ROPI-RWPI (both flags set -- exactly the combined model), a
+    // `const` whose initializer needs a dynamic relocation (e.g. a dyn
+    // vtable or any const holding a pointer to another symbol) is placed in
+    // a writable, relocation-bearing section (.data.rel.ro) by
+    // getKindForGlobal so a loader can fix it up after placement is known.
+    // Such a datum lives in the r9-addressed RW image, so it must NOT be
+    // treated as read-only here or its address would be formed PC-relative
+    // (pointing at where text expects rodata, not where the datum actually
+    // is). Report it as non-read-only so LowerGlobalAddressELF takes the
+    // SB-relative (r9) arm, matching the section placement.
+    //
+    // The gate mirrors the placement decision exactly: same model (only
+    // ROPI_RWPI -- under plain RWPI the RO region is link-time fixed, stock
+    // placement AND addressing are already correct, and SB-addressing a
+    // .rodata datum would break), same predicate
+    // (needsDynamicRelocation(), matching getKindForGlobal and
+    // promoteToConstantPool; the wider needsRelocation() would also fire on
+    // link-time-final relative pointers, which placement keeps in .rodata --
+    // addressing those via r9 would recreate the very
+    // addressing-vs-placement mismatch this hook exists to prevent), and
+    // same explicit-section carve-out (a user-pinned section keeps stock
+    // placement in getKindForGlobal, so it must keep stock PC-relative
+    // addressing here; linker scripts route pinned sections by name, and
+    // those names conventionally live in the RO region).
+    if (Subtarget->isROPI() && Subtarget->isRWPI() && !V->hasSection() &&
+        V->hasInitializer() && V->getInitializer()->needsDynamicRelocation())
+      return false;
+    return true;
+  }
   return isa<Function>(GV);
 }
 
