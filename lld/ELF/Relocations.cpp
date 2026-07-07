@@ -1362,23 +1362,22 @@ void elf::postScanRelocations(Ctx &ctx) {
     if (flags & NEEDS_TLSGD) {
       got->addDynTlsEntry(sym);
       uint64_t off = got->getGlobalDynOffset(sym);
-      if (sym.isPreemptible)
+      uint64_t offsetOff = off + ctx.arg.wordsize;
+      if (sym.isPreemptible) {
         ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsModuleIndexRel, *got, off,
                                        sym);
-      else if (ctx.arg.shared)
-        ctx.in.relaDyn->addReloc({ctx.target->tlsModuleIndexRel, got, off});
-      else
-        // Write one to the GOT slot.
-        got->addConstant({R_ADDEND, ctx.target->symbolicRel, off, 1, &sym});
-
-      // If the symbol is preemptible we need the dynamic linker to write
-      // the offset too.
-      uint64_t offsetOff = off + ctx.arg.wordsize;
-      if (sym.isPreemptible)
+        // If the symbol is preemptible we need the dynamic linker to write
+        // the offset too.
         ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsOffsetRel, *got,
                                        offsetOff, sym);
-      else
+      } else {
+        if (ctx.arg.shared)
+          ctx.in.relaDyn->addReloc({ctx.target->tlsModuleIndexRel, got, off});
+        else
+          // Write one to the GOT slot.
+          got->addConstant({R_ADDEND, ctx.target->symbolicRel, off, 1, &sym});
         got->addConstant({R_ABS, ctx.target->tlsOffsetRel, offsetOff, 0, &sym});
+      }
     }
     if (flags & NEEDS_GOT_DTPREL) {
       got->addEntry(sym);
