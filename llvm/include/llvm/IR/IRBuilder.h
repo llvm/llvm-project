@@ -1919,9 +1919,7 @@ public:
   LoadInst *CreateLoad(Type *Ty, Value *Ptr,
                        const LoadStoreInstProperties &Props,
                        const Twine &Name = "") {
-    return Insert(new LoadInst(Ty, Ptr, Twine(), Props.IsVolatile,
-                               Props.Alignment, Props.Ordering, Props.SSID),
-                  Name);
+    return Insert(new LoadInst(Ty, Ptr, Twine(), Props), Name);
   }
 
   StoreInst *CreateStore(Value *Val, Value *Ptr, bool isVolatile = false) {
@@ -1930,8 +1928,7 @@ public:
 
   StoreInst *CreateStore(Value *Val, Value *Ptr,
                          const LoadStoreInstProperties &Props) {
-    return Insert(new StoreInst(Val, Ptr, Props.IsVolatile, Props.Alignment,
-                                Props.Ordering, Props.SSID));
+    return Insert(new StoreInst(Val, Ptr, Props));
   }
 
   LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, MaybeAlign Align,

@@ -178,10 +178,10 @@ private:
 
 /// A structure representing the properties of a load or store instruction.
 struct LoadStoreInstProperties {
-  bool IsVolatile = false;
+  bool IsVolatile;
   Align Alignment;
-  AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
-  SyncScope::ID SSID = SyncScope::System;
+  AtomicOrdering Ordering;
+  SyncScope::ID SSID;
 };
 
 /// An instruction for reading from memory. This uses the SubclassData field in
@@ -212,6 +212,9 @@ public:
   LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
                     Align Align, AtomicOrdering Order,
                     SyncScope::ID SSID = SyncScope::System,
+                    InsertPosition InsertBefore = nullptr);
+  LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr,
+                    const LoadStoreInstProperties &Props,
                     InsertPosition InsertBefore = nullptr);
 
   /// Return true if this is a load from a volatile memory location.
@@ -342,6 +345,9 @@ public:
   LLVM_ABI StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
                      AtomicOrdering Order,
                      SyncScope::ID SSID = SyncScope::System,
+                     InsertPosition InsertBefore = nullptr);
+  LLVM_ABI StoreInst(Value *Val, Value *Ptr,
+                     const LoadStoreInstProperties &Props,
                      InsertPosition InsertBefore = nullptr);
 
   // allocate space for exactly two operands

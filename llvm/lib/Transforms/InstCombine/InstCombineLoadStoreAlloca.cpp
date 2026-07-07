@@ -412,9 +412,7 @@ void PointerReplacer::replace(Instruction *I) {
   if (auto *LT = dyn_cast<LoadInst>(I)) {
     auto *V = getReplacement(LT->getPointerOperand());
     assert(V && "Operand not replaced");
-    auto *NewI = new LoadInst(LT->getType(), V, "", LT->isVolatile(),
-                              LT->getAlign(), LT->getOrdering(),
-                              LT->getSyncScopeID());
+    auto *NewI = new LoadInst(LT->getType(), V, "", LT->getProperties());
     NewI->takeName(LT);
     NewI->copyMetadata(*LT);
 
@@ -1727,8 +1725,7 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   // Advance to a place where it is safe to insert the new store and insert it.
   BBI = DestBB->getFirstInsertionPt();
   StoreInst *NewSI =
-      new StoreInst(MergedVal, SI.getOperand(1), SI.isVolatile(), SI.getAlign(),
-                    SI.getOrdering(), SI.getSyncScopeID());
+      new StoreInst(MergedVal, SI.getOperand(1), SI.getProperties());
   InsertNewInstBefore(NewSI, BBI);
   NewSI->setDebugLoc(MergedLoc);
   NewSI->mergeDIAssignID({&SI, OtherStore});
