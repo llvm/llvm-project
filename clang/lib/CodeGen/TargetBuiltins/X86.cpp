@@ -20,6 +20,7 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
 
+// TODO: Implement this for MSVC CIR support
 static std::optional<CodeGenFunction::MSVCIntrin>
 translateX86ToMsvcIntrin(unsigned BuiltinID) {
   using MSVCIntrin = CodeGenFunction::MSVCIntrin;
@@ -780,7 +781,7 @@ Value *CodeGenFunction::EmitX86CpuInit() {
   return Builder.CreateCall(Func);
 }
 
-
+// TODO: Implement this for MSVC CIR codegen
 Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                            const CallExpr *E) {
   if (BuiltinID == Builtin::BI__builtin_cpu_is)
