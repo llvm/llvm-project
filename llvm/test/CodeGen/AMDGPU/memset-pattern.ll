@@ -37,10 +37,10 @@ define void @memset_pattern_i128_len1(ptr addrspace(1) align 16 %a) {
 ; GFX942-GISEL-LABEL: memset_pattern_i128_len1:
 ; GFX942-GISEL:       ; %bb.0: ; %memset.pattern-expansion-residual-body
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    s_mov_b32 s2, 0xbbbbbbbb
-; GFX942-GISEL-NEXT:    s_mov_b32 s3, 0xaaaaaaaa
 ; GFX942-GISEL-NEXT:    s_mov_b32 s0, 0xdddddddd
 ; GFX942-GISEL-NEXT:    s_mov_b32 s1, 0xcccccccc
+; GFX942-GISEL-NEXT:    s_mov_b32 s2, 0xbbbbbbbb
+; GFX942-GISEL-NEXT:    s_mov_b32 s3, 0xaaaaaaaa
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX942-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
@@ -54,12 +54,12 @@ define void @memset_pattern_i128_constlen_mainloop_and_residual_taken(ptr addrsp
 ; GFX942-SDAG-LABEL: memset_pattern_i128_constlen_mainloop_and_residual_taken:
 ; GFX942-SDAG:       ; %bb.0:
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-SDAG-NEXT:    s_mov_b32 s5, 0xcccccccc
-; GFX942-SDAG-NEXT:    s_mov_b32 s4, 0xdddddddd
 ; GFX942-SDAG-NEXT:    s_mov_b32 s7, 0xaaaaaaaa
 ; GFX942-SDAG-NEXT:    s_mov_b32 s6, 0xbbbbbbbb
-; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
+; GFX942-SDAG-NEXT:    s_mov_b32 s5, 0xcccccccc
+; GFX942-SDAG-NEXT:    s_mov_b32 s4, 0xdddddddd
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
 ; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[2:3], 0x1000
 ; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
@@ -114,8 +114,8 @@ define void @memset_pattern_i128_constlen_mainloop_and_residual_taken(ptr addrsp
 ; GFX942-GISEL-NEXT:    s_mov_b32 s5, 0xcccccccc
 ; GFX942-GISEL-NEXT:    s_mov_b32 s6, 0xbbbbbbbb
 ; GFX942-GISEL-NEXT:    s_mov_b32 s7, 0xaaaaaaaa
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
 ; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[6:7]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], v[0:1]
 ; GFX942-GISEL-NEXT:  .LBB3_1: ; %memset.pattern-expansion-main-body
@@ -150,11 +150,11 @@ define void @memset_pattern_i128_constlen_mainloop_and_residual_taken(ptr addrsp
 ; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v4, vcc, 0x100, v0
 ; GFX942-GISEL-NEXT:    s_mov_b32 s4, 0xdddddddd
 ; GFX942-GISEL-NEXT:    s_mov_b32 s5, 0xcccccccc
-; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GFX942-GISEL-NEXT:    s_mov_b32 s6, 0xbbbbbbbb
 ; GFX942-GISEL-NEXT:    s_mov_b32 s7, 0xaaaaaaaa
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GFX942-GISEL-NEXT:    s_mov_b32 s0, 1
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[6:7]
 ; GFX942-GISEL-NEXT:    s_mov_b32 s1, 0
 ; GFX942-GISEL-NEXT:  .LBB3_3: ; %memset.pattern-expansion-residual-body
@@ -190,10 +190,10 @@ define void @memset_pattern_i128_len1_lds(ptr addrspace(3) align 16 %a) {
 ; GFX942-GISEL-LABEL: memset_pattern_i128_len1_lds:
 ; GFX942-GISEL:       ; %bb.0: ; %memset.pattern-expansion-residual-body
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    s_mov_b32 s2, 0xbbbbbbbb
-; GFX942-GISEL-NEXT:    s_mov_b32 s3, 0xaaaaaaaa
 ; GFX942-GISEL-NEXT:    s_mov_b32 s0, 0xdddddddd
 ; GFX942-GISEL-NEXT:    s_mov_b32 s1, 0xcccccccc
+; GFX942-GISEL-NEXT:    s_mov_b32 s2, 0xbbbbbbbb
+; GFX942-GISEL-NEXT:    s_mov_b32 s3, 0xaaaaaaaa
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX942-GISEL-NEXT:    ds_write_b128 v0, v[2:5]
@@ -218,10 +218,10 @@ define void @memset_pattern_i128_len1_no_align(ptr addrspace(1) %a) {
 ; GFX942-GISEL-LABEL: memset_pattern_i128_len1_no_align:
 ; GFX942-GISEL:       ; %bb.0: ; %memset.pattern-expansion-residual-body
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    s_mov_b32 s2, 0xbbbbbbbb
-; GFX942-GISEL-NEXT:    s_mov_b32 s3, 0xaaaaaaaa
 ; GFX942-GISEL-NEXT:    s_mov_b32 s0, 0xdddddddd
 ; GFX942-GISEL-NEXT:    s_mov_b32 s1, 0xcccccccc
+; GFX942-GISEL-NEXT:    s_mov_b32 s2, 0xbbbbbbbb
+; GFX942-GISEL-NEXT:    s_mov_b32 s3, 0xaaaaaaaa
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX942-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
@@ -235,12 +235,12 @@ define void @memset_pattern_i128_len16(ptr addrspace(1) align 16 %a) {
 ; GFX942-SDAG-LABEL: memset_pattern_i128_len16:
 ; GFX942-SDAG:       ; %bb.0:
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-SDAG-NEXT:    s_mov_b32 s5, 0xcccccccc
-; GFX942-SDAG-NEXT:    s_mov_b32 s4, 0xdddddddd
 ; GFX942-SDAG-NEXT:    s_mov_b32 s7, 0xaaaaaaaa
 ; GFX942-SDAG-NEXT:    s_mov_b32 s6, 0xbbbbbbbb
-; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
+; GFX942-SDAG-NEXT:    s_mov_b32 s5, 0xcccccccc
+; GFX942-SDAG-NEXT:    s_mov_b32 s4, 0xdddddddd
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
 ; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[6:7]
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[2:3], 0x1000
 ; GFX942-SDAG-NEXT:  .LBB6_1: ; %memset.pattern-expansion-main-body
@@ -278,8 +278,8 @@ define void @memset_pattern_i128_len16(ptr addrspace(1) align 16 %a) {
 ; GFX942-GISEL-NEXT:    s_mov_b32 s5, 0xcccccccc
 ; GFX942-GISEL-NEXT:    s_mov_b32 s6, 0xbbbbbbbb
 ; GFX942-GISEL-NEXT:    s_mov_b32 s7, 0xaaaaaaaa
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
 ; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[6:7]
 ; GFX942-GISEL-NEXT:  .LBB6_1: ; %memset.pattern-expansion-main-body
 ; GFX942-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -814,8 +814,8 @@ define void @memset_pattern_i64_as7_dynlen(ptr addrspace(7) inreg align 16 %a, i
 ; GFX942-GISEL-NEXT:    s_mov_b32 s8, 0xccccdddd
 ; GFX942-GISEL-NEXT:    s_mov_b32 s9, 0xaaaabbbb
 ; GFX942-GISEL-NEXT:    s_mov_b64 s[10:11], s[8:9]
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[8:9]
 ; GFX942-GISEL-NEXT:    v_add_u32_e32 v1, s16, v0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[8:9]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[10:11]
 ; GFX942-GISEL-NEXT:    s_mov_b64 s[8:9], 0
 ; GFX942-GISEL-NEXT:  .LBB12_2: ; %memset.pattern-expansion-main-body
