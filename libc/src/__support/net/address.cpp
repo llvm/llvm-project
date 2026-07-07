@@ -128,6 +128,8 @@ size_t ipv6_to_str_unchecked(const struct in6_addr &src, cpp::span<char> dst) {
   size_t pos = 0;
   auto append_word = [&](unsigned i) {
     uint16_t word = Endian::from_big_endian(src.s6_addr16[i]);
+    // This isn't using int_to_b36_char because it's large intermediate
+    // representation prevents append_word from being inlined.
     static constexpr char DIGITS[] = "0123456789abcdef";
     if (word >= 0x1000) {
       dst[pos] = DIGITS[word >> 12];
