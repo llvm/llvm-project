@@ -1214,6 +1214,9 @@ static llvm::Error Evaluate_DW_OP_convert(EvalContext &eval_ctx,
     if (!bit_size)
       return llvm::createStringError("unspecified architecture");
   } else {
+    if (!eval_ctx.dwarf_cu)
+      return llvm::createStringError(
+          "DW_OP_convert with a DIE offset requires a DWARF unit");
     auto bit_size_sign_or_err =
         eval_ctx.dwarf_cu->GetDIEBitSizeAndSign(relative_die_offset);
     if (!bit_size_sign_or_err)

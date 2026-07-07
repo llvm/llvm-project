@@ -398,12 +398,33 @@ attributes #1 = { "target-cpu"="neoverse-v2" }
 define void @round_scalar_pred_divisor(ptr %dst, double %x) {
 ; CHECK-LABEL: define void @round_scalar_pred_divisor(
 ; CHECK-SAME: ptr [[DST:%.*]], double [[X:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
 ; CHECK-NEXT:    [[C:%.*]] = fcmp une double [[X]], 0.000000e+00
-; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[LOOP]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[LOOP]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[STEP_ADD]], splat (i32 4)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp <4 x i32> [[STEP_ADD]] to <4 x double>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x double> @llvm.sin.v4f64(<4 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = fptrunc <4 x double> [[TMP3]] to <4 x float>
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <4 x float> [[TMP4]], <4 x float> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[PREDPHI]], i64 3
+; CHECK-NEXT:    store float [[TMP5]], ptr [[DST]], align 4
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1024, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[C1:%.*]] = fcmp une double [[X]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[C1]], label %[[IF:.*]], label %[[LATCH]]
 ; CHECK:       [[IF]]:
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[IV]] to i32
 ; CHECK-NEXT:    [[UITOFP:%.*]] = uitofp i32 [[TRUNC]] to double
@@ -411,11 +432,11 @@ define void @round_scalar_pred_divisor(ptr %dst, double %x) {
 ; CHECK-NEXT:    [[FPTRUNC:%.*]] = fptrunc double [[SIN]] to float
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi float [ [[FPTRUNC]], %[[IF]] ], [ 0.000000e+00, %[[LOOP]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi float [ [[FPTRUNC]], %[[IF]] ], [ 0.000000e+00, %[[LOOP1]] ]
 ; CHECK-NEXT:    store float [[PHI]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 1024
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP1]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -456,9 +477,9 @@ define void @getPredBlockCostDivisor_truncate(i32 %0, i1 %c1, i1 %c2, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[TMP0]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; CHECK-NEXT:    br i1 [[C1]], label %[[IF_1:.*]], label %[[LATCH]], !prof [[PROF15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C1]], label %[[IF_1:.*]], label %[[LATCH]], !prof [[PROF17:![0-9]+]]
 ; CHECK:       [[IF_1]]:
-; CHECK-NEXT:    br i1 [[C2]], label %[[IF_2:.*]], label %[[LATCH]], !prof [[PROF15]]
+; CHECK-NEXT:    br i1 [[C2]], label %[[IF_2:.*]], label %[[LATCH]], !prof [[PROF17]]
 ; CHECK:       [[IF_2]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
 ; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
@@ -512,5 +533,7 @@ exit:
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META9]], [[META10]]}
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META10]], [[META11]]}
 ; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META11]], [[META10]]}
-; CHECK: [[PROF15]] = !{!"branch_weights", i32 0, i32 1}
+; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META10]], [[META11]]}
+; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META11]], [[META10]]}
+; CHECK: [[PROF17]] = !{!"branch_weights", i32 0, i32 1}
 ;.

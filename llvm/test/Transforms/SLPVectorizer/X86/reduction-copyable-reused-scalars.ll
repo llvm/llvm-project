@@ -46,7 +46,7 @@ define fastcc i32 @func_nno0tw_28(ptr %v1) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP11]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 4, i32 5, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <16 x i32> [[TMP12]], <16 x i32> [[TMP8]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 12, i32 13, i32 31>
-; CHECK-NEXT:    [[TMP14:%.*]] = mul <16 x i32> [[TMP13]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 7, i32 1>
+; CHECK-NEXT:    [[TMP14:%.*]] = mul <16 x i32> [[TMP13]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 7, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP14]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[OP_RDX5:%.*]] = add i32 [[TMP16]], [[REASS_SUB]]

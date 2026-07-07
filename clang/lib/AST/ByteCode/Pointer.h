@@ -61,6 +61,10 @@ struct PtrView {
     return Base == Pointee->getDescriptor()->getMetadataSize();
   }
 
+  bool isConst() const {
+    return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
+  }
+
   InlineDescriptor *getInlineDesc() const {
     assert(Base != sizeof(GlobalInlineDescriptor));
     assert(Base <= Pointee->getSize());
@@ -135,6 +139,13 @@ struct PtrView {
     if (!Desc->IsArray)
       return *this;
     return PtrView{Pointee, Next, Offset};
+  }
+
+  [[nodiscard]] PtrView stripBaseCasts() const {
+    PtrView V = *this;
+    while (V.isBaseClass())
+      V = V.getBase();
+    return V;
   }
 
   [[nodiscard]] PtrView getArray() const {
@@ -758,7 +769,7 @@ public:
   bool isConst() const {
     if (isIntegralPointer())
       return true;
-    return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
+    return view().isConst();
   }
   bool isConstInMutable() const {
     if (!isBlockPointer())
@@ -985,10 +996,7 @@ public:
   /// The result is either a root pointer or something
   /// that isn't a base class anymore.
   [[nodiscard]] Pointer stripBaseCasts() const {
-    PtrView V = view();
-    while (V.isBaseClass())
-      V = V.getBase();
-    return Pointer(V);
+    return Pointer(view().stripBaseCasts());
   }
 
   /// Compare two pointers.
@@ -1035,6 +1043,9 @@ public:
   /// regarding the AST record layout.
   std::optional<size_t>
   computeOffsetForComparison(const ASTContext &ASTCtx) const;
+  /// Compute the pointer offset as given by the ASTRecordLayout.
+  /// Returns the result in bytes.
+  std::optional<size_t> computeLayoutOffset(const ASTContext &ASTCtx) const;
 
 private:
   friend class Block;

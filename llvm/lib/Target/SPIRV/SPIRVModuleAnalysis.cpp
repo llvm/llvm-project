@@ -939,8 +939,10 @@ void SPIRV::RequirementHandler::addAvailableCaps(const CapabilityList &ToAdd) {
 void SPIRV::RequirementHandler::removeCapabilityIf(
     const Capability::Capability ToRemove,
     const Capability::Capability IfPresent) {
-  if (AllCaps.contains(IfPresent))
+  if (AllCaps.contains(IfPresent)) {
     AllCaps.erase(ToRemove);
+    llvm::erase(MinimalCaps, ToRemove);
+  }
 }
 
 namespace llvm {
@@ -1735,6 +1737,7 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpAtomicStore:
   case SPIRV::OpAtomicExchange:
   case SPIRV::OpAtomicCompareExchange:
+  case SPIRV::OpAtomicCompareExchangeWeak:
   case SPIRV::OpAtomicIIncrement:
   case SPIRV::OpAtomicIDecrement:
   case SPIRV::OpAtomicIAdd:
