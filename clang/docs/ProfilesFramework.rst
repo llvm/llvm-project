@@ -432,22 +432,30 @@ This applies identically to the parse-time suppression stack and the
 post-parse Stmt-tree walker described in pattern 2.
 
 The parse-time stack enforces the dominion positionally: each entry records
-the begin location of the construct its attribute appertains to, a violation
-matches an entry only if its location is at or after that begin (in
-translation-unit token order), and the entry's ``ProfileSuppressScope``
-lifetime bounds the dominion's end.  This is what keeps a live suppress scope
+the token range of the construct its attribute appertains to, and a
+violation matches an entry only if its location falls within that range (in
+translation-unit token order).  This is what keeps a live suppress scope
 from leaking into code whose tokens it does not cover.  A check can fire
 under an *unrelated* construct's scope in two ways: a template pattern
-instantiated synchronously while the scope is live (the pattern's tokens --
-which instantiated code retains as its source locations -- precede the
-suppressed construct), and a class or constructor finalized as a side effect
-of such an instantiation (patterns 3 and 4).  In both cases the entry's
-begin location is after the violation's, so the suppression correctly does
-not apply; conversely, a local class or lambda *defined inside* the
-suppressed construct is covered, whichever path re-enters it.  One known
-over-approximation: scope liveness bounds the dominion's end, so a pattern
-forward-declared before but *defined after* the suppressed construct is
-wrongly treated as covered while the scope is live.
+instantiated synchronously while the scope is live (instantiated code
+retains the pattern's source locations, which lie outside the suppressed
+construct wherever the pattern is declared -- before it, or first declared
+after it), and a class or constructor finalized as a side effect of such an
+instantiation (patterns 3 and 4).  In both cases the violation's location is
+outside the entry's range, so the suppression correctly does not apply;
+conversely, a local class or lambda *defined inside* the suppressed
+construct is covered, whichever path re-enters it.
+
+The range's end is recorded only when the construct was already fully
+parsed when the entry was pushed -- a completed pattern or lexical parent at
+an instantiation site, or a transformed ``AttributedStmt``.  For a construct
+still being parsed no end is recorded (its end location would be
+misleadingly early: a mid-parse class collapses to its name token, a
+body-pending function to its declarator) and the entry's
+``ProfileSuppressScope`` lifetime bounds the dominion instead.  That
+fallback is exact mid-parse: the construct's later tokens do not exist yet,
+and instantiation of a template that has no definition yet is deferred past
+the scope's death.
 
 
 .. _profiles-internals:
@@ -464,11 +472,12 @@ benefit from understanding, even though they do not interact with them directly.
 An RAII guard that pushes suppression entries onto ``Sema::ProfileSuppressStack``
 and pops them on destruction.  It is used by the parser and template
 instantiation machinery to make ``[[profiles::suppress]]`` attributes active
-during the appropriate region.  Each entry records the begin location of the
-construct its attribute appertains to, and matches only violations located at
-or after it (see :ref:`profiles-token-dominion`).  ``checkProfileViolation``
-consults ``ProfileSuppressStack`` directly, so profile implementers never need
-to create ``ProfileSuppressScope`` objects.
+during the appropriate region.  Each entry records the token range of the
+construct its attribute appertains to (the end only once the construct is
+fully parsed) and matches only violations located within it (see
+:ref:`profiles-token-dominion`).  ``checkProfileViolation`` consults
+``ProfileSuppressStack`` directly, so profile implementers never need to
+create ``ProfileSuppressScope`` objects.
 
 Stmt-Tree Suppression Walker
 ----------------------------
