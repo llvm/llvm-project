@@ -60,8 +60,8 @@ Align llvm::getDeviceByValParamAlign(const Function *F, Type *ArgTy,
                   getByValParamAlignFloor(F));
 }
 
-Align getDeviceByValParamAlign(const CallBase *CB, Type *ArgTy,
-                               unsigned AttrIdx, const DataLayout &DL) {
+Align llvm::getDeviceByValParamAlign(const CallBase *CB, Type *ArgTy,
+                                     unsigned AttrIdx, const DataLayout &DL) {
   Align ParamAlign = getPTXParamAlign(CB, ArgTy, AttrIdx, DL);
 
   // For an indirect call getPTXParamAlign can't see the call's own byval
