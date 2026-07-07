@@ -3,21 +3,26 @@
 // Check that a cleanup attribute on an invalid declaration doesn't crash,
 // and that we diagnose duplicate cleanup attributes.
 
-#define C(x) __attribute__((cleanup(x)))
-void foo(double *x U) {} // expected-error {{expected ')'}} expected-note {{to match this '('}}
-void bar() {
-  C(foo) C(foo) baz8; // expected-error {{type specifier missing, defaults to 'int'}} \
-                         expected-warning 2 {{passing 4-byte aligned argument to 8-byte aligned parameter}} \
-                         expected-warning {{declaration has multiple 'cleanup' attributes; all but the last one will be ignored}} \
-                         expected-error {{'cleanup' function 'foo' parameter has type 'double *' which is incompatible with type 'int *'}}
+void f1(unsigned *x) {}
+void b1() {
+  __attribute__((cleanup(f1))) // expected-warning {{declaration has multiple 'cleanup' attributes; all but the last one will be ignored}}
+  __attribute__((cleanup(f1))) // expected-error {{'cleanup' function 'f1' parameter has type 'unsigned int *' which is incompatible with type 'int *'}}
+  baz8; // expected-error {{type specifier missing, defaults to 'int'}}
+
 }
 
-void f1(double *x);
+void b2() {
+  __attribute__((cleanup(f1))) // expected-warning {{declaration has multiple 'cleanup' attributes; all but the last one will be ignored}}
+  __attribute__((cleanup(f1))) // expected-error {{'cleanup' function 'f1' parameter has type 'unsigned int *' which is incompatible with type 'int *'}}
+  int baz8;
+}
+
 void f2(double *x);
 void f3(double *x);
-void bar2() {
-  C(f1) // expected-warning {{declaration has multiple 'cleanup' attributes; all but the last one will be ignored}}
-  C(f2) // expected-warning {{declaration has multiple 'cleanup' attributes; all but the last one will be ignored}}
-  C(f3)
+void f4(double *x);
+void b3() {
+  __attribute__((cleanup(f2))) // expected-warning {{declaration has multiple 'cleanup' attributes; all but the last one will be ignored}}
+  __attribute__((cleanup(f3))) // expected-warning {{declaration has multiple 'cleanup' attributes; all but the last one will be ignored}}
+  __attribute__((cleanup(f4)))
   double x;
 }
