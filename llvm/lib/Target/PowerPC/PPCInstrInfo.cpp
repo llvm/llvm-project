@@ -5497,6 +5497,13 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
     if (!OperandReg.isVirtual())
       continue;
 
+    // An operand that reads the sub_32 subregister of a 64-bit register already
+    // holds the value in a full 64-bit register.
+    if (Operand.getSubReg() == PPC::sub_32) {
+      PromoteRegs[i] = OperandReg;
+      continue;
+    }
+
     const TargetRegisterClass *NewUsedRegRC =
         RI.getRegClass(MCID.operands()[i].RegClass);
     const TargetRegisterClass *OrgRC = MRI->getRegClass(OperandReg);

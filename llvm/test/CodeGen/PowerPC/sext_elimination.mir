@@ -7,7 +7,12 @@
   entry:
     ret ptr %a
   }
-  
+
+  define void @elim_extsw_subreg_src() {
+  entry:
+    ret void
+  }
+
 ...
 ---
 name:            func
@@ -69,5 +74,40 @@ body:             |
     %12:g8rc = IMPLICIT_DEF
     %13:g8rc = INSERT_SUBREG %12:g8rc, %1:gprc, %subreg.sub_32
     %14:g8rc = RLDICL %13:g8rc, 0, 32
+
+...
+
+# Make sure the verifier does not fail if there is an existing
+# subregister use. When EXTSW_32_64 is eliminated because its source
+# register is already sign-extended, the full %0 value should be used
+# instead of re-extending the subregister, and incorrectly preserving
+# the original subregister.
+---
+name:            elim_extsw_subreg_src
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x3', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    liveins: $x3
+
+    ; CHECK-LABEL: name: elim_extsw_subreg_src
+    ; CHECK: liveins: $x3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:g8rc = COPY killed $x3
+    ; CHECK-NEXT: [[SRAWI8_:%[0-9]+]]:g8rc = SRAWI8 [[COPY]], 31, implicit-def $carry, implicit-def dead $carry
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gprc = COPY killed [[SRAWI8_]].sub_32
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_32
+    ; CHECK-NEXT: [[XORI8_:%[0-9]+]]:g8rc = XORI8 killed [[INSERT_SUBREG]], 32767
+    ; CHECK-NEXT: $x3 = COPY killed [[XORI8_]]
+    ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit killed $x3
+
+    %0:g8rc = COPY $x3
+    %2:gprc = SRAWI %0.sub_32, 31, implicit-def dead $carry
+    %3:g8rc = EXTSW_32_64 killed %2
+    %4:g8rc = XORI8 killed %3, 32767
+    $x3 = COPY %4
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
 
 ...
