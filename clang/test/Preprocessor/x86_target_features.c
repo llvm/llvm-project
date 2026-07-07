@@ -547,6 +547,13 @@
 
 // NO-AMX-AVX512-NOT: #define __AMX_AVX512__ 1
 
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -macev1 -x c \
+// RUN: -E -dM -o - %s | FileCheck  -check-prefix=ACEV1 %s
+// ACEV1: #define __ACEV1__ 1
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mno-acev1 -x c \
+// RUN: -E -dM -o - %s | FileCheck  -check-prefix=NO-ACEV1 %s
+// NO-ACEV1-NOT: #define __ACEV1__ 1
+
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavxvnni -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVXVNNI %s
 
 // AVXVNNI: #define __AVX2__ 1

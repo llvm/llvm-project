@@ -24,6 +24,7 @@
 namespace llvm {
 
 enum AMXProgModelEnum { None = 0, DirectReg = 1, ManagedRA = 2 };
+enum ACEProgModelEnum { ACE_None = 0, ACE_DirectReg = 1, ACE_ManagedRA = 2 };
 
 class X86MachineFunctionInfo;
 
@@ -36,8 +37,17 @@ template <> struct ScalarEnumerationTraits<AMXProgModelEnum> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<ACEProgModelEnum> {
+  static void enumeration(IO &YamlIO, ACEProgModelEnum &Value) {
+    YamlIO.enumCase(Value, "None", ACEProgModelEnum::ACE_None);
+    YamlIO.enumCase(Value, "DirectReg", ACEProgModelEnum::ACE_DirectReg);
+    YamlIO.enumCase(Value, "ManagedRA", ACEProgModelEnum::ACE_ManagedRA);
+  }
+};
+
 struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
   AMXProgModelEnum AMXProgModel;
+  ACEProgModelEnum ACEProgModel;
 
   X86MachineFunctionInfo() = default;
   X86MachineFunctionInfo(const llvm::X86MachineFunctionInfo &MFI);
@@ -49,6 +59,7 @@ struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
 template <> struct MappingTraits<X86MachineFunctionInfo> {
   static void mapping(IO &YamlIO, X86MachineFunctionInfo &MFI) {
     YamlIO.mapOptional("amxProgModel", MFI.AMXProgModel);
+    YamlIO.mapOptional("aceProgModel", MFI.ACEProgModel);
   }
 };
 } // end namespace yaml
@@ -130,6 +141,9 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
 
   /// The AMX programing model used in the function.
   AMXProgModelEnum AMXProgModel = AMXProgModelEnum::None;
+
+  /// The ACE programming model used in the function.
+  ACEProgModelEnum ACEProgModel = ACEProgModelEnum::ACE_None;
 
   /// True if this function has a subset of CSRs that is handled explicitly via
   /// copies.
@@ -258,6 +272,14 @@ public:
     assert((AMXProgModel == AMXProgModelEnum::None || AMXProgModel == Model) &&
            "mixed model is not supported");
     AMXProgModel = Model;
+  }
+
+  ACEProgModelEnum getACEProgModel() const { return ACEProgModel; }
+  void setACEProgModel(ACEProgModelEnum Model) {
+    assert(
+        (ACEProgModel == ACEProgModelEnum::ACE_None || ACEProgModel == Model) &&
+        "mixed ACE model is not supported");
+    ACEProgModel = Model;
   }
 
   SmallVectorImpl<ForwardedRegister> &getForwardedMustTailRegParms() {
