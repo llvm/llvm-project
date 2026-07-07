@@ -358,8 +358,9 @@
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE inline
 #endif
 
-/// LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG - Like LLVM_ATTRIBUTE_ALWAYS_INLINE
-/// but disabled in debug builds to avoid stack overflow with deep recursion.
+/// LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG - Like
+/// LLVM_ATTRIBUTE_ALWAYS_INLINE but disabled in debug builds to avoid stack
+/// overflow with deep recursion.
 #if defined(NDEBUG)
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG LLVM_ATTRIBUTE_ALWAYS_INLINE
 #else
