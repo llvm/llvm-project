@@ -3,12 +3,18 @@
 
 ; Check propagation of amdgpu-flat-work-group-size attribute.
 
+; External call to avoid inferring argument attributes. This makes the
+; final attribute groups easier to read.
+declare void @dummy()
+
 ; Called from a single kernel with 1,8
 define internal void @default_to_1_8_a() {
 ; CHECK-LABEL: define internal void @default_to_1_8_a
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
@@ -16,9 +22,11 @@ define amdgpu_kernel void @kernel_1_8() #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_1_8
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    call void @default_to_1_8_a()
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   call void @default_to_1_8_a()
+  call void @dummy()
   ret void
 }
 
@@ -26,8 +34,10 @@ define amdgpu_kernel void @kernel_1_8() #0 {
 define internal void @default_to_1_2() {
 ; CHECK-LABEL: define internal void @default_to_1_2
 ; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
@@ -38,12 +48,14 @@ define amdgpu_kernel void @kernel_1_2() #1 {
 ; CHECK-NEXT:    call void @flat_group_1_1()
 ; CHECK-NEXT:    call void @default_to_1_8_b()
 ; CHECK-NEXT:    call void @flat_group_2_8()
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   call void @default_to_1_2()
   call void @flat_group_1_1()
   call void @default_to_1_8_b()
   call void @flat_group_2_8()
+  call void @dummy()
   ret void
 }
 
@@ -51,8 +63,10 @@ define amdgpu_kernel void @kernel_1_2() #1 {
 define internal void @default_to_1_4() {
 ; CHECK-LABEL: define internal void @default_to_1_4
 ; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
@@ -60,9 +74,11 @@ define amdgpu_kernel void @kernel_1_4() #2 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_1_4
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:    call void @default_to_1_4()
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   call void @default_to_1_4()
+  call void @dummy()
   ret void
 }
 
@@ -70,8 +86,10 @@ define amdgpu_kernel void @kernel_1_4() #2 {
 define internal void @default_to_2_9() {
 ; CHECK-LABEL: define internal void @default_to_2_9
 ; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
@@ -80,8 +98,10 @@ define internal void @default_to_2_9() {
 define internal void @flat_group_1_1() #3 {
 ; CHECK-LABEL: define internal void @flat_group_1_1
 ; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
@@ -89,8 +109,10 @@ define internal void @flat_group_1_1() #3 {
 define internal void @flat_group_2_8() #4 {
 ; CHECK-LABEL: define internal void @flat_group_2_8
 ; CHECK-SAME: () #[[ATTR5:[0-9]+]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
@@ -98,8 +120,10 @@ define internal void @flat_group_2_8() #4 {
 define internal void @flat_group_9_10() #5 {
 ; CHECK-LABEL: define internal void @flat_group_9_10
 ; CHECK-SAME: () #[[ATTR6:[0-9]+]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
@@ -108,10 +132,12 @@ define amdgpu_kernel void @kernel_2_9() #6 {
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    call void @default_to_2_9()
 ; CHECK-NEXT:    call void @flat_group_1_1()
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   call void @default_to_2_9()
   call void @flat_group_1_1()
+  call void @dummy()
   ret void
 }
 
@@ -120,10 +146,12 @@ define amdgpu_kernel void @kernel_9_9() #7 {
 ; CHECK-SAME: () #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    call void @default_to_2_9()
 ; CHECK-NEXT:    call void @flat_group_9_10()
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   call void @default_to_2_9()
   call void @flat_group_9_10()
+  call void @dummy()
   ret void
 }
 
@@ -131,8 +159,10 @@ define amdgpu_kernel void @kernel_9_9() #7 {
 define internal void @default_to_1_8_b() {
 ; CHECK-LABEL: define internal void @default_to_1_8_b
 ; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
@@ -143,10 +173,12 @@ define amdgpu_kernel void @kernel_2_8() #4 {
 ; CHECK-SAME: () #[[ATTR5]] {
 ; CHECK-NEXT:    call void @default_to_1_8_a()
 ; CHECK-NEXT:    call void @default_to_1_8_b()
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   call void @default_to_1_8_a()
   call void @default_to_1_8_b()
+  call void @dummy()
   ret void
 }
 
@@ -155,9 +187,11 @@ define internal void @merge_cycle_0() #1 {
 ; CHECK-LABEL: define internal void @merge_cycle_0
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    call void @merge_cycle_1()
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   call void @merge_cycle_1()
+  call void @dummy()
   ret void
 }
 
@@ -167,9 +201,11 @@ define internal void @merge_cycle_1() #4 {
 ; CHECK-LABEL: define internal void @merge_cycle_1
 ; CHECK-SAME: () #[[ATTR5]] {
 ; CHECK-NEXT:    call void @merge_cycle_0()
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   call void @merge_cycle_0()
+  call void @dummy()
   ret void
 }
 
@@ -180,30 +216,34 @@ define amdgpu_kernel void @kernel_3_8() #8 {
 ; CHECK-NEXT:    call void @default_captured_address()
 ; CHECK-NEXT:    call void @externally_visible_default()
 ; CHECK-NEXT:    [[F32:%.*]] = call float @bitcasted_function()
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   call void @merge_cycle_0()
   call void @default_captured_address()
   call void @externally_visible_default()
   %f32 = call float @bitcasted_function()
+  call void @dummy()
   ret void
 }
 
 define internal void @default_captured_address() {
-; CHECK-LABEL: define internal void @default_captured_address
-; CHECK-SAME: () #[[ATTR9:[0-9]+]] {
+; CHECK-LABEL: define internal void @default_captured_address() {
 ; CHECK-NEXT:    store volatile ptr @default_captured_address, ptr poison, align 8
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   store volatile ptr @default_captured_address, ptr poison, align 8
+  call void @dummy()
   ret void
 }
 
 define void @externally_visible_default() {
-; CHECK-LABEL: define void @externally_visible_default
-; CHECK-SAME: () #[[ATTR9]] {
+; CHECK-LABEL: define void @externally_visible_default() {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
@@ -211,24 +251,30 @@ define void @externally_visible_default() {
 define internal i32 @bitcasted_function() {
 ; CHECK-LABEL: define internal i32 @bitcasted_function
 ; CHECK-SAME: () #[[ATTR8]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret i32 0
 ;
+  call void @dummy()
   ret i32 0
 }
 
 define internal void @called_from_invalid_bounds_0() {
 ; CHECK-LABEL: define internal void @called_from_invalid_bounds_0
 ; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
 define internal void @called_from_invalid_bounds_1() {
 ; CHECK-LABEL: define internal void @called_from_invalid_bounds_1
-; CHECK-SAME: () #[[ATTR10:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR9:[0-9]+]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
@@ -237,20 +283,24 @@ define amdgpu_kernel void @kernel_invalid_bounds_0_8() #9 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_invalid_bounds_0_8
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    call void @called_from_invalid_bounds_0()
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   call void @called_from_invalid_bounds_0()
+  call void @dummy()
   ret void
 }
 
 ; Invalid range for amdgpu-waves-per-eu
 define amdgpu_kernel void @kernel_invalid_bounds_1_123() #10 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_invalid_bounds_1_123
-; CHECK-SAME: () #[[ATTR11:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR10:[0-9]+]] {
 ; CHECK-NEXT:    call void @called_from_invalid_bounds_1()
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   call void @called_from_invalid_bounds_1()
+  call void @dummy()
   ret void
 }
 
@@ -260,100 +310,119 @@ define amdgpu_kernel void @kernel_invalid_bounds_1_123() #10 {
 ; -> 2,10
 define void @larger_group_size_implies_lower_minimum() #11 {
 ; CHECK-LABEL: define void @larger_group_size_implies_lower_minimum
-; CHECK-SAME: () #[[ATTR12:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR11:[0-9]+]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
 define amdgpu_kernel void @kernel_3_6() #12 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_3_6
-; CHECK-SAME: () #[[ATTR13:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR12:[0-9]+]] {
 ; CHECK-NEXT:    call void @larger_group_size_implies_lower_minimum()
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   call void @larger_group_size_implies_lower_minimum()
+  call void @dummy()
   ret void
 }
 
 ; 3,6 -> 6,9
 define internal void @refine_upper_func_3_6() #13 {
 ; CHECK-LABEL: define internal void @refine_upper_func_3_6
-; CHECK-SAME: () #[[ATTR14:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR13:[0-9]+]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
 ; 4,8 -> 6,8
 define internal void @refine_lower_func_4_8() #14 {
 ; CHECK-LABEL: define internal void @refine_lower_func_4_8
-; CHECK-SAME: () #[[ATTR15:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR14:[0-9]+]] {
 ; CHECK-NEXT:    call void @refine_upper_func_3_6()
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   call void @refine_upper_func_3_6()
+  call void @dummy()
   ret void
 }
 
 define amdgpu_kernel void @kernel_foo_6_8() #15 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_foo_6_8
-; CHECK-SAME: () #[[ATTR16:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR15:[0-9]+]] {
 ; CHECK-NEXT:    call void @refine_upper_func_3_6()
 ; CHECK-NEXT:    call void @refine_lower_func_4_8()
 ; CHECK-NEXT:    call void @func_9_10_a()
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   call void @refine_upper_func_3_6()
   call void @refine_lower_func_4_8()
   call void @func_9_10_a()
+  call void @dummy()
   ret void
 }
 
 ; 5,5 -> 5,5
 define internal void @func_5_5() #16 {
 ; CHECK-LABEL: define internal void @func_5_5
-; CHECK-SAME: () #[[ATTR17:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR16:[0-9]+]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
 ; 5,8 -> 8,8
 define internal void @func_5_8() #17 {
 ; CHECK-LABEL: define internal void @func_5_8
-; CHECK-SAME: () #[[ATTR18:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR17:[0-9]+]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
 ; 9,10 -> 9,10
 define internal void @func_9_10_a() #18 {
 ; CHECK-LABEL: define internal void @func_9_10_a
-; CHECK-SAME: () #[[ATTR19:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR18:[0-9]+]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
 ; 9,10 -> 9,9
 define internal void @func_9_10_b() #18 {
 ; CHECK-LABEL: define internal void @func_9_10_b
-; CHECK-SAME: () #[[ATTR19]] {
+; CHECK-SAME: () #[[ATTR18]] {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
 define amdgpu_kernel void @kernel_bar_8_9() #19 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_bar_8_9
-; CHECK-SAME: () #[[ATTR20:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR19:[0-9]+]] {
 ; CHECK-NEXT:    call void @refine_upper_func_3_6()
 ; CHECK-NEXT:    call void @func_5_5()
 ; CHECK-NEXT:    call void @func_9_10_b()
 ; CHECK-NEXT:    call void @func_5_8()
 ; CHECK-NEXT:    call void @externally_visible()
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   call void @refine_upper_func_3_6()
@@ -361,16 +430,18 @@ define amdgpu_kernel void @kernel_bar_8_9() #19 {
   call void @func_9_10_b()
   call void @func_5_8()
   call void @externally_visible()
+  call void @dummy()
   ret void
 }
 
 ; This is an optimization hint based on users, so it's not strictly
 ; required that all callers be visible.
 define void @externally_visible() {
-; CHECK-LABEL: define void @externally_visible
-; CHECK-SAME: () #[[ATTR9]] {
+; CHECK-LABEL: define void @externally_visible() {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
   ret void
 }
 
@@ -399,25 +470,24 @@ attributes #17 = { "amdgpu-waves-per-eu"="5,8" }
 attributes #18 = { "amdgpu-waves-per-eu"="9,10" }
 attributes #19 = { "amdgpu-waves-per-eu"="8,9" }
 ;.
-; CHECK: attributes #[[ATTR0]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="1,8" }
-; CHECK: attributes #[[ATTR1]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="1,2" }
-; CHECK: attributes #[[ATTR2]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="1,4" }
-; CHECK: attributes #[[ATTR3]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="2,9" }
-; CHECK: attributes #[[ATTR4]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="1,1" }
-; CHECK: attributes #[[ATTR5]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="2,8" }
-; CHECK: attributes #[[ATTR6]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="9,10" }
-; CHECK: attributes #[[ATTR7]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="9,9" }
-; CHECK: attributes #[[ATTR8]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="3,8" }
-; CHECK: attributes #[[ATTR9]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR10]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR11]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="1,123" }
-; CHECK: attributes #[[ATTR12]] = { "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR13]] = { "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="3,6" }
-; CHECK: attributes #[[ATTR14]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="3,6" }
-; CHECK: attributes #[[ATTR15]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="4,8" }
-; CHECK: attributes #[[ATTR16]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="6,8" }
-; CHECK: attributes #[[ATTR17]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="5,5" }
-; CHECK: attributes #[[ATTR18]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="5,8" }
-; CHECK: attributes #[[ATTR19]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="9,10" }
-; CHECK: attributes #[[ATTR20]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="8,9" }
+; CHECK: attributes #[[ATTR0]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,8" }
+; CHECK: attributes #[[ATTR1]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,2" }
+; CHECK: attributes #[[ATTR2]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,4" }
+; CHECK: attributes #[[ATTR3]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="2,9" }
+; CHECK: attributes #[[ATTR4]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,1" }
+; CHECK: attributes #[[ATTR5]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="2,8" }
+; CHECK: attributes #[[ATTR6]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="9,10" }
+; CHECK: attributes #[[ATTR7]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="9,9" }
+; CHECK: attributes #[[ATTR8]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="3,8" }
+; CHECK: attributes #[[ATTR9]] = { "amdgpu-flat-work-group-size"="1,64" }
+; CHECK: attributes #[[ATTR10]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,123" }
+; CHECK: attributes #[[ATTR11]] = { "amdgpu-flat-work-group-size"="1,512" }
+; CHECK: attributes #[[ATTR12]] = { "amdgpu-flat-work-group-size"="1,512" "amdgpu-waves-per-eu"="3,6" }
+; CHECK: attributes #[[ATTR13]] = { "amdgpu-waves-per-eu"="3,6" }
+; CHECK: attributes #[[ATTR14]] = { "amdgpu-waves-per-eu"="4,8" }
+; CHECK: attributes #[[ATTR15]] = { "amdgpu-waves-per-eu"="6,8" }
+; CHECK: attributes #[[ATTR16]] = { "amdgpu-waves-per-eu"="5,5" }
+; CHECK: attributes #[[ATTR17]] = { "amdgpu-waves-per-eu"="5,8" }
+; CHECK: attributes #[[ATTR18]] = { "amdgpu-waves-per-eu"="9,10" }
+; CHECK: attributes #[[ATTR19]] = { "amdgpu-waves-per-eu"="8,9" }
 ;.
