@@ -6189,7 +6189,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       return this->discard(Base);
     if (!this->visit(Base))
       return false;
-    return this->emitEndLifetimePop(E);
+    return this->emitPseudoDtor(E);
   } else if (!FuncDecl) {
     const Expr *Callee = E->getCallee();
     CalleeOffset =
