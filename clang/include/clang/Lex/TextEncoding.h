@@ -11,14 +11,17 @@
 
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/TextEncoding.h"
+
+namespace llvm {
+class TextEncodingConverter;
+} // namespace llvm
 
 namespace clang {
 enum ConversionAction { CA_NoConversion, CA_ToLiteralEncoding };
 
 class TextEncoding {
   llvm::StringRef LiteralEncoding;
-  llvm::TextEncodingConverter *ToLiteralEncodingConverter = nullptr;
+  std::unique_ptr<llvm::TextEncodingConverter> ToLiteralEncodingConverter;
 
 public:
   llvm::TextEncodingConverter *getConverter(ConversionAction Action) const;

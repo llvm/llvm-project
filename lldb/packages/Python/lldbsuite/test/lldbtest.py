@@ -259,6 +259,46 @@ def which(program):
     return None
 
 
+def _truncate_for_log(text: str, max_characters: int = 32 * 1024) -> str:
+    """
+    Returns ``text`` unchanged if it fits in ``max_characters``, otherwise
+    returns a truncated copy with a trailing note describing how many
+    characters were dropped.
+    """
+    if len(text) <= max_characters:
+        return text
+    dropped = len(text) - max_characters
+    return (
+        f"{text[:max_characters]}\n"
+        f"... (output truncated: {dropped} of {len(text)} characters omitted)"
+    )
+
+
+def dump_value_obj(val: lldb.SBValue, max_children: int = 10000) -> str:
+    """
+    Returns a string representation of an SBValue suitable for use in
+    diagnostic messages. If the value has more than ``max_children``
+    direct or indirect children, a short placeholder is returned instead
+    of ``str(val)`` to avoid bloating the test log size.
+    """
+    to_visit = [val]
+    total = 0
+    while to_visit:
+        current = to_visit.pop()
+        n = current.GetNumChildren()
+        if n == 0:
+            continue
+        total += n
+        if total > max_children:
+            return (
+                f"<SBValue '{val.GetName()}' with more than {max_children} "
+                f"direct/indirect children (dump skipped)>"
+            )
+        for i in range(n):
+            to_visit.append(current.GetChildAtIndex(i))
+    return str(val)
+
+
 class ValueCheck:
     def __init__(
         self,
@@ -303,7 +343,7 @@ class ValueCheck:
         """
 
         this_error_msg = error_msg if error_msg else ""
-        this_error_msg += "\nChecking SBValue: " + str(val)
+        this_error_msg += "\nChecking SBValue: " + dump_value_obj(val)
 
         test_base.assertSuccess(val.GetError())
 
@@ -346,7 +386,7 @@ class ValueCheck:
         """
 
         this_error_msg = error_msg if error_msg else ""
-        this_error_msg += "\nChecking SBValue: " + str(val)
+        this_error_msg += "\nChecking SBValue: " + dump_value_obj(val)
 
         test_base.assertEqual(len(self.children), val.GetNumChildren(), this_error_msg)
 
@@ -1711,7 +1751,8 @@ class Base(unittest.TestCase):
                 "EXE": exe_name,
                 "CFLAGS_EXTRAS": "%s %s %s" % (stdflag, stdlibflag, defines),
                 "FRAMEWORK_INCLUDES": "-F%s" % self.framework_dir,
-                "LD_EXTRAS": "%s -Wl,-rpath,%s" % (self.lib_lldb, self.framework_dir),
+                "LD_EXTRAS": "%s -Wl,-rpath,%s -Wl,-rpath,%s"
+                % (self.lib_lldb, self.framework_dir, lib_dir),
             }
         elif sys.platform.startswith("win"):
             d = {
@@ -2862,7 +2903,7 @@ FileCheck output:
         ]
         if exe:
             # Newline before output to make large strings more readable
-            log_lines.append("Got output:\n{}".format(output))
+            log_lines.append(f"Got output:\n{_truncate_for_log(output)}")
 
         # Assume that we start matched if we want a match
         # Meaning if you have no conditions, matching or

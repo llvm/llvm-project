@@ -58,7 +58,8 @@ template <typename T> class SmallVectorImpl;
 class SmallBitVector;
 class StringRef;
 class TargetInstrInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 //===----------------------------------------------------------------------===//
