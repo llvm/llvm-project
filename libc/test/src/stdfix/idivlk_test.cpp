@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IdivTest.h"
+#include "IdivFxTest.h"
 
 #include "llvm-libc-macros/stdfix-macros.h" // long accum
 #include "src/stdfix/idivlk.h"
 
-LIST_IDIV_TESTS(lk, long accum, long int, LIBC_NAMESPACE::idivlk);
+LIST_IDIVFX_TESTS(lk, long accum, long int, LIBC_NAMESPACE::idivlk);

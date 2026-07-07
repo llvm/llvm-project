@@ -100,6 +100,13 @@ def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure],
                    I1Attr:$is_int_min_poison);
 }
 
+// Do not use LLVM_UnaryIntrOpF here: arithmetic.fence operates on floating
+// types, but the fence itself should not carry fastmath flags.
+def LLVM_ArithmeticFenceOp
+    : LLVM_UnaryIntrOpBase<"arithmetic.fence", LLVM_AnyFloat> {
+  let arguments = commonArgs;
+}
+
 def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
   /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
   /*immArgPositions=*/[1], /*immArgAttrNames=*/["bit"]> {
