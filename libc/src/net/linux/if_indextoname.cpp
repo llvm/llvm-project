@@ -45,7 +45,10 @@ LLVM_LIBC_FUNCTION(char *, if_indextoname,
 
   ErrorOr<int> ioctl_res = linux_syscalls::ioctl(*fd, SIOCGIFNAME, &ifr);
 
-  linux_syscalls::close(*fd);
+  if (ErrorOr<int> res = linux_syscalls::close(*fd); !res.has_value()) {
+    libc_errno = res.error();
+    return nullptr;
+  }
 
   if (!ioctl_res.has_value()) {
     // Map kernel ENODEV to POSIX-mandated ENXIO.

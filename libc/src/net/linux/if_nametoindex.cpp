@@ -49,7 +49,10 @@ LLVM_LIBC_FUNCTION(unsigned int, if_nametoindex, (const char *ifname)) {
 
   ErrorOr<int> ioctl_res = linux_syscalls::ioctl(*fd, SIOCGIFINDEX, &ifr);
 
-  linux_syscalls::close(*fd);
+  if (ErrorOr<int> res = linux_syscalls::close(*fd); !res.has_value()) {
+    libc_errno = res.error();
+    return 0;
+  }
 
   if (!ioctl_res.has_value()) {
     libc_errno = ioctl_res.error();
