@@ -279,18 +279,6 @@ void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
   finishBuildOpDecorate(MIB, DecArgs, StrImm);
 }
 
-void buildOpMemberDecorate(Register Reg, MachineInstr &I,
-                           const SPIRVInstrInfo &TII,
-                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
-  MachineBasicBlock &MBB = *I.getParent();
-  auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemberDecorate))
-                 .addUse(Reg)
-                 .addImm(Member)
-                 .addImm(static_cast<uint32_t>(Dec));
-  finishBuildOpDecorate(MIB, DecArgs, StrImm);
-}
-
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD, const SPIRVSubtarget &ST) {
   for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
@@ -575,10 +563,10 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     DemangledNameLenStart = NameSpaceStart + 11;
   }
   Start = Name.find_first_not_of("0123456789", DemangledNameLenStart);
-  [[maybe_unused]] bool Error =
-      Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
-          .getAsInteger(10, Len);
-  assert(!Error && "Failed to parse demangled name length");
+  bool Error = Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
+                   .getAsInteger(10, Len);
+  if (Error)
+    return std::string();
   return Name.substr(Start, Len).str();
 }
 
@@ -894,7 +882,7 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg) {
   return MaybeDef;
 }
 
-bool getVacantFunctionName(Module &M, std::string &Name) {
+static bool getVacantFunctionName(Module &M, std::string &Name) {
   // It's a bit of paranoia, but still we don't want to have even a chance that
   // the loop will work for too long.
   constexpr unsigned MaxIters = 1024;

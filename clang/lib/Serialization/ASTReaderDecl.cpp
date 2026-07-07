@@ -2345,7 +2345,7 @@ void ASTDeclReader::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
     CXXDefaultArgExpr **Args =
         new (Reader.getContext()) CXXDefaultArgExpr *[NumArgs];
     for (unsigned I = 0; I != NumArgs; I++)
-      Args[I] = cast<CXXDefaultArgExpr>(Record.readStmt());
+      Args[I] = cast_or_null<CXXDefaultArgExpr>(Record.readStmt());
     D->setCtorClosureDefaultArgs(ArrayRef(Args, NumArgs));
   }
 

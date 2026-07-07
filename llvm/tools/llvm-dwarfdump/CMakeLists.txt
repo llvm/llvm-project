@@ -5,6 +5,8 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsInfos
   BinaryFormat
+  Core
+  IRReader
   MC
   Object
   Support
