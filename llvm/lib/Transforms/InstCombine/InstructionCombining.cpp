@@ -2321,8 +2321,23 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
 Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
   auto TryFoldOperand = [&](unsigned OpIdx,
                             bool IsOtherParamConst) -> Instruction * {
-    if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(OpIdx)))
-      return FoldOpIntoSelect(I, Sel, false, !IsOtherParamConst);
+    if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(OpIdx))) {
+      // Fold binop(select(c, C, x), C2) => select(c, C3, binop(x, C2))
+      // when one arm and the other operand are both constants, even if
+      // the select has multiple uses. Also allow the non-constant arm
+      // to be a both-constant select when the binop feeds a cast.
+      bool MultiUse = false;
+      if (IsOtherParamConst && !Sel->hasOneUser()) {
+        if (match(Sel, m_Select(m_Value(), m_Constant(), m_Constant())))
+          MultiUse = true;
+        else if (I.hasOneUse() && isa<CastInst>(*I.user_begin()))
+          MultiUse = match(
+              Sel, m_c_Select(m_Constant(),
+                              m_Select(m_Value(), m_Constant(), m_Constant())));
+      }
+      return FoldOpIntoSelect(I, Sel, /*FoldWithMultiUse=*/MultiUse,
+                              !IsOtherParamConst);
+    }
     if (auto *PN = dyn_cast<PHINode>(I.getOperand(OpIdx)))
       return foldOpIntoPhi(I, PN);
     return nullptr;
