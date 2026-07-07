@@ -17,6 +17,7 @@
 #include "DwarfLinkerForBinary.h"
 #include "LinkUtils.h"
 #include "MachOUtils.h"
+#include "PseudoProbeLinker.h"
 #include "Reproducer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -948,6 +949,10 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
           DwarfLinkerForBinary Linker(*Stream, BinHolder, Options.LinkOpts,
                                       ErrorHandlerMutex, &ThreadPool);
           AllOK.fetch_and(Linker.link(*Map));
+
+          PseudoProbeLinker ProbeLinker(BinHolder, Options.LinkOpts);
+          AllOK.fetch_and(ProbeLinker.link(*Map));
+
           Stream->flush();
           if (flagIsSet(Options.Verify, DWARFVerify::Output) ||
               (flagIsSet(Options.Verify, DWARFVerify::OutputOnValidInput) &&
