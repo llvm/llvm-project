@@ -7731,6 +7731,16 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                           "LowerTypeTests pass before code generation");
     return;
 
+  case Intrinsic::type_checked_load:
+  case Intrinsic::type_checked_load_relative:
+    // This likely indicates a misconfiguration where LowerTypeTests did not
+    // run but should have, for instance when devirtualization is enabled
+    // but LTO does not actually run.
+    reportFatalUsageError(
+        "llvm.type.checked.load intrinsic must be lowered by the "
+        "LowerTypeTests pass before code generation");
+    return;
+
   case Intrinsic::assume:
   case Intrinsic::experimental_noalias_scope_decl:
   case Intrinsic::var_annotation:
