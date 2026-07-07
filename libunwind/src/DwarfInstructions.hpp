@@ -302,7 +302,8 @@ int DwarfInstructions<A, R>::stepWithDwarf(
       // TODO: unify logic for both cases, see
       // https://github.com/llvm/llvm-project/issues/160110
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
-      if (isReturnAddressSignedWithPC(addressSpace, registers, cfa, prolog)) {
+      if (getReturnAddressSignStatus(addressSpace, registers, cfa, prolog) ==
+          RASignedWithPC) {
         newRegisters.setIPPAuthLR(returnAddress, prolog.ptrAuthDiversifier);
       } else {
         newRegisters.setIP(returnAddress);
