@@ -261,10 +261,14 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 2
-      - name: Install Ninja and CMake
+      - name: Install Ninja, CMake, and sccache
         run: |
           brew install ninja cmake
+          command -v sccache >/dev/null || brew install sccache
       - name: Build and Test
+        env:
+          SCCACHE_BUCKET: sccache-bucket
+          SCCACHE_REGION: us-west-2
         run: |
           git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py > /tmp/env_vars.sh
           source /tmp/env_vars.sh
@@ -280,6 +284,10 @@ jobs:
             exit 0
           fi
 
+          export SCCACHE_IDLE_TIMEOUT=0
+          mkdir -p artifacts
+          SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server
+
           xcrun cmake -G Ninja \
                 -B build \
                 -S llvm \
@@ -288,5 +296,9 @@ jobs:
                 -DCMAKE_BUILD_TYPE=Release \
                 -DLLDB_INCLUDE_TESTS=OFF \
                 -DLLVM_ENABLE_ASSERTIONS=ON \
+                -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+                -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
           ninja -C build ${project_check_targets}
+
+          sccache --show-stats
