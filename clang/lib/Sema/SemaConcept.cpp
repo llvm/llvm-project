@@ -491,6 +491,7 @@ public:
 class ConstraintSatisfactionChecker {
   Sema &S;
   const NamedDecl *Template;
+  const ConceptReference *TopLevelConceptId;
   SourceLocation TemplateNameLoc;
   UnsignedOrNone PackSubstitutionIndex;
   ConstraintSatisfaction &Satisfaction;
@@ -549,11 +550,13 @@ private:
 
 public:
   ConstraintSatisfactionChecker(Sema &SemaRef, const NamedDecl *Template,
+                                const ConceptReference *TopLevelConceptId,
                                 SourceLocation TemplateNameLoc,
                                 UnsignedOrNone PackSubstitutionIndex,
                                 ConstraintSatisfaction &Satisfaction,
                                 bool BuildExpression)
-      : S(SemaRef), Template(Template), TemplateNameLoc(TemplateNameLoc),
+      : S(SemaRef), Template(Template), TopLevelConceptId(TopLevelConceptId),
+        TemplateNameLoc(TemplateNameLoc),
         PackSubstitutionIndex(PackSubstitutionIndex),
         Satisfaction(Satisfaction), BuildExpression(BuildExpression) {}
 
@@ -681,9 +684,11 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
   llvm::SaveAndRestore PushTemplateArgsCache(S.CurrentCachedTemplateArgs,
                                              &CachedTemplateArgs);
 
+  // We don't want the template argument substitution into parameter
+  // mappings to preserve the outer depths.
   if (S.SubstTemplateArgumentsInParameterMapping(
           Constraint.getParameterMapping(), Constraint.getBeginLoc(), MLTAL,
-          SubstArgs)) {
+          /*TransformLambdaConstraint=*/true, SubstArgs)) {
     Satisfaction.IsSatisfied = false;
     return std::nullopt;
   }
@@ -906,8 +911,9 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     Satisfaction.IsSatisfied = false;
     Satisfaction.ContainsErrors = false;
     ExprResult Expr =
-        ConstraintSatisfactionChecker(S, Template, TemplateNameLoc,
-                                      UnsignedOrNone(I), Satisfaction,
+        ConstraintSatisfactionChecker(S, Template, TopLevelConceptId,
+                                      TemplateNameLoc, UnsignedOrNone(I),
+                                      Satisfaction,
                                       /*BuildExpression=*/false)
             .Evaluate(Constraint.getNormalizedPattern(), *SubstitutedArgs);
     if (BuildExpression) {
@@ -993,8 +999,13 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
       const_cast<NamedDecl *>(Template), Constraint.getSourceRange());
 
   TemplateArgumentListInfo OutArgs(Ori->LAngleLoc, Ori->RAngleLoc);
-  if (S.SubstTemplateArguments(Ori->arguments(), *SubstitutedArgs, OutArgs) ||
-      Trap.hasErrorOccurred()) {
+
+  if (ConceptId == TopLevelConceptId) {
+    for (auto &A : Ori->arguments())
+      OutArgs.addArgument(A);
+  } else if (S.SubstTemplateArguments(Ori->arguments(), *SubstitutedArgs,
+                                      OutArgs) ||
+             Trap.hasErrorOccurred()) {
     Satisfaction.IsSatisfied = false;
     if (!Trap.hasErrorOccurred())
       return ExprError();
@@ -1232,11 +1243,12 @@ static bool CheckConstraintSatisfaction(
                                     Template, /*CSE=*/nullptr,
                                     S.ArgPackSubstIndex);
 
-  ExprResult Res = ConstraintSatisfactionChecker(
-                       S, Template, TemplateIDRange.getBegin(),
-                       S.ArgPackSubstIndex, Satisfaction,
-                       /*BuildExpression=*/ConvertedExpr != nullptr)
-                       .Evaluate(*C, TemplateArgsLists);
+  ExprResult Res =
+      ConstraintSatisfactionChecker(
+          S, Template, TopLevelConceptId, TemplateIDRange.getBegin(),
+          S.ArgPackSubstIndex, Satisfaction,
+          /*BuildExpression=*/ConvertedExpr != nullptr)
+          .Evaluate(*C, TemplateArgsLists);
 
   if (Res.isInvalid())
     return true;
@@ -2192,7 +2204,8 @@ bool SubstituteParameterMappings::substitute(
   llvm::SaveAndRestore<decltype(SemaRef.CurrentCachedTemplateArgs)>
       DoNotCacheDependentArgs(SemaRef.CurrentCachedTemplateArgs, nullptr);
   if (SemaRef.SubstTemplateArgumentsInParameterMapping(
-          N.getParameterMapping(), N.getBeginLoc(), *MLTAL, SubstArgs))
+          N.getParameterMapping(), N.getBeginLoc(), *MLTAL,
+          /*TransformLambdaConstraint=*/false, SubstArgs))
     return true;
   Sema::CheckTemplateArgumentInfo CTAI;
   auto *TD =
@@ -2264,7 +2277,8 @@ bool SubstituteParameterMappings::substitute(ConceptIdConstraint &CC) {
   const ASTTemplateArgumentListInfo *ArgsAsWritten =
       CSE->getTemplateArgsAsWritten();
   if (SemaRef.SubstTemplateArgumentsInParameterMapping(
-          ArgsAsWritten->arguments(), CC.getBeginLoc(), *MLTAL, Out))
+          ArgsAsWritten->arguments(), CC.getBeginLoc(), *MLTAL,
+          /*TransformLambdaConstraint=*/false, Out))
     return true;
   Sema::CheckTemplateArgumentInfo CTAI;
   if (SemaRef.CheckTemplateArgumentList(CSE->getNamedConcept(),

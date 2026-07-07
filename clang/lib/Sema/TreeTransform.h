@@ -837,7 +837,7 @@ public:
         LSI->Lambda->getLambdaDependencyKind());
   }
 
-  ExprResult TransformConstraint(Expr *AC) { return AC; }
+  ExprResult TransformLambdaConstraint(Expr *AC) { return AC; }
 
   QualType TransformReferenceType(TypeLocBuilder &TLB, ReferenceTypeLoc TL);
 
@@ -16098,7 +16098,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
   AssociatedConstraint TRC = E->getCallOperator()->getTrailingRequiresClause();
   if (TRC) {
-    ExprResult E = getDerived().TransformConstraint(
+    ExprResult E = getDerived().TransformLambdaConstraint(
         const_cast<Expr *>(TRC.ConstraintExpr));
     if (E.isInvalid())
       return E;

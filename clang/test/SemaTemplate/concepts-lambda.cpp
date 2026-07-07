@@ -160,13 +160,10 @@ static_assert(E<int>);  // previously Asserted.
 namespace DIsFalse {
 template<auto Q> concept C = requires { Q.template operator()<float>(); }; // #GH60642-C
 template<class> concept D = false;
-// FIXME: Crashes because it produces a template type parameter with invalid depth
-#if 0
 static_assert(C<[]<D>{}>);
 // expected-error@-1{{static assertion failed}}
 // expected-note@-2{{does not satisfy 'C'}}
 // expected-note@-5{{because 'Q.template operator()<float>()' would be invalid: no matching member function for call to 'operator()'}}
-#endif
 template<class> concept E = C<[]<D>{}>;
 static_assert(E<int>);
 // expected-error@-1{{static assertion failed}}
@@ -404,6 +401,40 @@ void f()
 void test() {
     f<42>();
 }
+}
+
+namespace GH199209 {
+
+template <class T> auto declval() -> T &&;
+struct Id {
+  template <class T> using f = T;
+};
+template <class... Ts> concept Ok = (__is_same(Ts, Ts) && ...);
+template <bool> struct I;
+template <class F, class... Ts>
+using minvoke = I<Ok<Ts...>>::template f<F>::template f<Ts...>;
+template <> struct I<true> {
+  template <template <class...> class F, class... Ts>
+  using g = F<Ts...>;
+  template <class F> using f = F;
+};
+template <template <class...> class F> struct Q {
+  template <class... Ts> using f = I<Ok<Ts...>>::template g<F, Ts...>;
+};
+template <class S> concept has_env = requires { declval<S>().get_env(); };
+struct Desc {
+  template <class F> using f = minvoke<F, int>;
+};
+template <class... C> auto captures(C...) {
+  return []<class Cv>(Cv) -> int requires Ok<minvoke<Cv, C>...> {};
+}
+template <class D> using captures_t = decltype(captures(declval<D>));
+template <class D> struct Sexpr {
+  minvoke<D, Q<captures_t>> impl;
+  auto get_env() -> decltype(impl(Id()));
+};
+static_assert(has_env<Sexpr<Desc>>);
+
 }
 
 namespace GH193944 {

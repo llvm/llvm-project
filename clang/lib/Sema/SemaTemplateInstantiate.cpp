@@ -1308,6 +1308,7 @@ namespace {
     DeclarationName Entity;
     // Whether to evaluate the C++20 constraints or simply substitute into them.
     bool EvaluateConstraints = true;
+    bool EvaluateLambdaConstraint = false;
     // Whether Substitution was Incomplete, that is, we tried to substitute in
     // any user provided template arguments which were null.
     bool IsIncomplete = false;
@@ -1346,10 +1347,14 @@ namespace {
     inline static struct ForParameterMappingSubstitution_t {
     } ForParameterMappingSubstitution;
 
+    inline static struct ForConstraintSubstitution_t {
+    } ForConstraintSubstitution;
+
     TemplateInstantiator(ForParameterMappingSubstitution_t, Sema &SemaRef,
-                         SourceLocation Loc,
+                         SourceLocation Loc, bool TransformLambdaConstraint,
                          const MultiLevelTemplateArgumentList &TemplateArgs)
         : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
+          EvaluateLambdaConstraint(TransformLambdaConstraint),
           BailOutOnIncomplete(false) {
       if (!SemaRef.CurrentCachedTemplateArgs)
         return;
@@ -1358,6 +1363,13 @@ namespace {
         for (auto &Arg : Level.Args)
           Arg.Profile(V, SemaRef.Context);
     }
+
+    TemplateInstantiator(ForConstraintSubstitution_t, Sema &SemaRef,
+                         const MultiLevelTemplateArgumentList &TemplateArgs,
+                         SourceLocation Loc, DeclarationName Entity,
+                         bool BailOutOnIncomplete = false)
+        : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
+          EvaluateLambdaConstraint(true), BailOutOnIncomplete(false) {}
 
     /// Determine whether the given type \p T has already been
     /// transformed.
@@ -1762,10 +1774,8 @@ namespace {
       return inherited::ComputeLambdaDependency(LSI);
     }
 
-    ExprResult TransformConstraint(Expr *AC) {
-      // We don't want the template argument substitution into parameter
-      // mappings to preserve the outer depths.
-      if (AC && SemaRef.inConstraintSubstitution())
+    ExprResult TransformLambdaConstraint(Expr *AC) {
+      if (AC && EvaluateLambdaConstraint)
         return TransformExpr(const_cast<Expr *>(AC));
 
       return AC;
@@ -1885,8 +1895,7 @@ namespace {
       // We need to preserve the lambda depth in parameter mapping.
       // Otherwise the template argument deduction would fail, if we reduced the
       // depth too early.
-      if (SemaRef.inParameterMappingSubstitution() &&
-          OrigTPL->getDepth() >= TemplateArgs.getNumSubstitutedLevels())
+      if (SemaRef.inParameterMappingSubstitution())
         OldMLTAL = ForgetSubstitution();
 
       DeclContext *Owner = OrigTPL->getParam(0)->getDeclContext();
@@ -4442,10 +4451,10 @@ bool Sema::SubstTemplateArguments(
 bool Sema::SubstTemplateArgumentsInParameterMapping(
     ArrayRef<TemplateArgumentLoc> Args, SourceLocation BaseLoc,
     const MultiLevelTemplateArgumentList &TemplateArgs,
-    TemplateArgumentListInfo &Out) {
+    bool TransformLambdaConstraint, TemplateArgumentListInfo &Out) {
   TemplateInstantiator Instantiator(
       TemplateInstantiator::ForParameterMappingSubstitution, *this, BaseLoc,
-      TemplateArgs);
+      TransformLambdaConstraint, TemplateArgs);
   return Instantiator.TransformTemplateArguments(Args.begin(), Args.end(), Out);
 }
 
@@ -4474,9 +4483,13 @@ Sema::SubstCXXIdExpr(Expr *E,
 ExprResult
 Sema::SubstConstraintExpr(Expr *E,
                           const MultiLevelTemplateArgumentList &TemplateArgs) {
-  // FIXME: should call SubstExpr directly if this function is equivalent or
-  //        should it be different?
-  return SubstExpr(E, TemplateArgs);
+  if (!E)
+    return E;
+
+  TemplateInstantiator Instantiator(
+      TemplateInstantiator::ForConstraintSubstitution, *this, TemplateArgs,
+      SourceLocation(), DeclarationName());
+  return Instantiator.TransformExpr(E);
 }
 
 ExprResult Sema::SubstConstraintExprWithoutSatisfaction(
