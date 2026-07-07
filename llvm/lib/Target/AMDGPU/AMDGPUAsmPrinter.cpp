@@ -1420,27 +1420,12 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   // Make clamp modifier on NaN input returns 0.
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
-
-  unsigned LDSGranularityBytes;
-  switch (getLdsDwGranularity(STM)) {
-  case 512:
-  case 320:
-    LDSGranularityBytes = 2048;
-    break;
-  case 128:
-    LDSGranularityBytes = 512;
-    break;
-  case 64:
-    LDSGranularityBytes = 256;
-    break;
-  default:
-    llvm_unreachable("invald LDS block size");
-  }
-
   ProgInfo.SGPRSpill = MFI->getNumSpilledSGPRs();
   ProgInfo.VGPRSpill = MFI->getNumSpilledVGPRs();
 
   ProgInfo.LDSSize = MFI->getLDSSize();
+
+  unsigned LDSGranularityBytes = getLdsDwGranularity(STM) * 4;
   ProgInfo.LDSBlocks =
       alignTo(ProgInfo.LDSSize, LDSGranularityBytes) / LDSGranularityBytes;
 
