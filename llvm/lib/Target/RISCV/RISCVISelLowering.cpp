@@ -13175,8 +13175,12 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   if (VecVT.getVectorElementType() == MVT::i1)
     return widenVectorOpsToi8(Op, DL, DAG);
 
+  MVT ContainerVecVT = VecVT;
+  if (VecVT.isFixedLengthVector())
+    ContainerVecVT = getContainerForFixedLengthVector(VecVT);
+
   // If concatenating would exceed LMUL=8, we need to split.
-  if ((VecVT.getSizeInBits().getKnownMinValue() * Factor) >
+  if ((ContainerVecVT.getSizeInBits().getKnownMinValue() * Factor) >
       (8 * RISCV::RVVBitsPerBlock)) {
     SmallVector<SDValue, 8> Ops(Factor * 2);
     for (unsigned i = 0; i != Factor; ++i) {
@@ -13246,8 +13250,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
     ConcatVec =
         convertToScalableVector(ConcatContainerVT, ConcatVec, DAG, Subtarget);
 
-    MVT ContainerVT = getContainerForFixedLengthVector(VecVT);
-    ElementCount ContainerEC = ContainerVT.getVectorElementCount();
+    ElementCount ContainerEC = ContainerVecVT.getVectorElementCount();
 
     SmallVector<SDValue, 8> Ops(Factor);
     // Then, we extract the new scalable sub-vectors.
@@ -13260,13 +13263,13 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       // VECTOR_DEINTERLEAVE will just concat them back together later
       // anyway.
       if (ElementCount::isKnownGE(Idx, ConcatContainerEC))
-        Ops[i] = DAG.getUNDEF(ContainerVT);
+        Ops[i] = DAG.getUNDEF(ContainerVecVT);
       else
-        Ops[i] = DAG.getExtractSubvector(DL, ContainerVT, ConcatVec,
+        Ops[i] = DAG.getExtractSubvector(DL, ContainerVecVT, ConcatVec,
                                          Idx.getKnownMinValue());
     }
 
-    SmallVector<EVT, 8> VTs(Factor, ContainerVT);
+    SmallVector<EVT, 8> VTs(Factor, ContainerVecVT);
     SDValue NewDeinterleave =
         DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, VTs, Ops);
 
