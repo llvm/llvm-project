@@ -279,18 +279,6 @@ void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
   finishBuildOpDecorate(MIB, DecArgs, StrImm);
 }
 
-void buildOpMemberDecorate(Register Reg, MachineInstr &I,
-                           const SPIRVInstrInfo &TII,
-                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
-  MachineBasicBlock &MBB = *I.getParent();
-  auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemberDecorate))
-                 .addUse(Reg)
-                 .addImm(Member)
-                 .addImm(static_cast<uint32_t>(Dec));
-  finishBuildOpDecorate(MIB, DecArgs, StrImm);
-}
-
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD, const SPIRVSubtarget &ST) {
   for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
