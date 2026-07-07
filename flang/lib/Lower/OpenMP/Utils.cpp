@@ -1319,7 +1319,7 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
 }
 
 // ---------------------------------------------------------------------------
-// FlangOMPContext — shared OMPContext for metadirective variant-matching
+// OpenMP variant-matching context construction from an MLIR module
 // ---------------------------------------------------------------------------
 
 static llvm::Triple getOffloadTargetTriple(mlir::ModuleOp module) {
@@ -1333,29 +1333,17 @@ static llvm::Triple getOffloadTargetTriple(mlir::ModuleOp module) {
   return llvm::Triple();
 }
 
-bool FlangOMPContext::isDeviceCompilation(mlir::ModuleOp module) {
-  return llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation())
-      .getIsTargetDevice();
-}
-
-FlangOMPContext::FlangOMPContext(
+semantics::omp::OmpVariantMatchContext makeVariantMatchContext(
     mlir::ModuleOp module,
-    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits)
-    // No specific device is selected during variant matching; use an unknown
-    // device number so OMPContext does not inadvertently describe the host
-    // device (which would cause target-device selectors to match incorrectly).
-    : OMPContext(isDeviceCompilation(module), fir::getTargetTriple(module),
-                 getOffloadTargetTriple(module),
-                 /*DeviceNum=*/-1),
-      targetFeatures(fir::getTargetFeatures(module)) {
-  for (llvm::omp::TraitProperty trait : constructTraits)
-    addTrait(trait);
-}
-
-bool FlangOMPContext::matchesISATrait(llvm::StringRef rawString) const {
-  if (!targetFeatures || targetFeatures.nullOrEmpty())
-    return false;
-  return targetFeatures.contains(("+" + rawString).str());
+    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits) {
+  bool isDeviceCompilation =
+      llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation())
+          .getIsTargetDevice();
+  mlir::LLVM::TargetFeaturesAttr features = fir::getTargetFeatures(module);
+  return semantics::omp::OmpVariantMatchContext(
+      isDeviceCompilation, fir::getTargetTriple(module),
+      getOffloadTargetTriple(module),
+      features ? features.getFeaturesString() : std::string{}, constructTraits);
 }
 
 void collectEnclosingConstructTraits(

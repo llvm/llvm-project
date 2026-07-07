@@ -177,8 +177,6 @@ StringRef getOriginalAsmConstraints(const CallBase &CB);
 // little-endian words.
 void addStringImm(const StringRef &Str, MCInst &Inst);
 void addStringImm(const StringRef &Str, MachineInstrBuilder &MIB);
-void addStringImm(const StringRef &Str, IRBuilder<> &B,
-                  std::vector<Value *> &Args);
 
 // Read the series of integer operands back as a null-terminated string using
 // the reverse of the logic in addStringImm.

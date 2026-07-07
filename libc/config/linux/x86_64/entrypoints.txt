@@ -1226,6 +1226,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.dirfd
     libc.src.dirent.opendir
     libc.src.dirent.readdir
+    libc.src.dirent.fdopendir
 
     # pthread.h entrypoints
     libc.src.pthread.pthread_atfork

@@ -13,6 +13,7 @@
 #include "SPIRVUtils.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
+#include "SPIRVBuiltins.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVInstrInfo.h"
 #include "SPIRVSubtarget.h"
@@ -26,6 +27,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/MathExtras.h"
+#include <cstring>
 #include <queue>
 #include <vector>
 
@@ -153,15 +155,9 @@ StringRef getOriginalAsmConstraints(const CallBase &CB) {
 // when making string comparisons in compiler passes.
 // SPIR-V requires null-terminated UTF-8 strings padded to 32-bit alignment.
 static uint32_t convertCharsToWord(const StringRef &Str, unsigned i) {
-  uint32_t Word = 0u; // Build up this 32-bit word from 4 8-bit chars.
-  for (unsigned WordIndex = 0; WordIndex < 4; ++WordIndex) {
-    unsigned StrIndex = i + WordIndex;
-    uint8_t CharToAdd = 0;       // Initilize char as padding/null.
-    if (StrIndex < Str.size()) { // If it's within the string, get a real char.
-      CharToAdd = Str[StrIndex];
-    }
-    Word |= (CharToAdd << (WordIndex * 8));
-  }
+  uint32_t Word = 0u; // Padding/null bytes are zero-initialized.
+  unsigned Count = std::min(static_cast<size_t>(4), Str.size() - i);
+  std::memcpy(&Word, Str.data() + i, Count);
   return Word;
 }
 
@@ -183,15 +179,6 @@ void addStringImm(const StringRef &Str, MachineInstrBuilder &MIB) {
   for (unsigned i = 0; i < PaddedLen; i += 4) {
     // Add an operand for the 32-bits of chars or padding.
     MIB.addImm(convertCharsToWord(Str, i));
-  }
-}
-
-void addStringImm(const StringRef &Str, IRBuilder<> &B,
-                  std::vector<Value *> &Args) {
-  const size_t PaddedLen = getPaddedLen(Str);
-  for (unsigned i = 0; i < PaddedLen; i += 4) {
-    // Add a vector element for the 32-bits of chars or padding.
-    Args.push_back(B.getInt32(convertCharsToWord(Str, i)));
   }
 }
 
@@ -535,32 +522,6 @@ Type *getMDOperandAsType(const MDNode *N, unsigned I) {
   return toTypedPointer(ElementTy);
 }
 
-// The set of names is borrowed from the SPIR-V translator.
-// TODO: may be implemented in SPIRVBuiltins.td.
-static bool isPipeOrAddressSpaceCastBI(const StringRef MangledName) {
-  return MangledName == "write_pipe_2" || MangledName == "read_pipe_2" ||
-         MangledName == "write_pipe_2_bl" || MangledName == "read_pipe_2_bl" ||
-         MangledName == "write_pipe_4" || MangledName == "read_pipe_4" ||
-         MangledName == "reserve_write_pipe" ||
-         MangledName == "reserve_read_pipe" ||
-         MangledName == "commit_write_pipe" ||
-         MangledName == "commit_read_pipe" ||
-         MangledName == "work_group_reserve_write_pipe" ||
-         MangledName == "work_group_reserve_read_pipe" ||
-         MangledName == "work_group_commit_write_pipe" ||
-         MangledName == "work_group_commit_read_pipe" ||
-         MangledName == "get_pipe_num_packets_ro" ||
-         MangledName == "get_pipe_max_packets_ro" ||
-         MangledName == "get_pipe_num_packets_wo" ||
-         MangledName == "get_pipe_max_packets_wo" ||
-         MangledName == "sub_group_reserve_write_pipe" ||
-         MangledName == "sub_group_reserve_read_pipe" ||
-         MangledName == "sub_group_commit_write_pipe" ||
-         MangledName == "sub_group_commit_read_pipe" ||
-         MangledName == "to_global" || MangledName == "to_local" ||
-         MangledName == "to_private";
-}
-
 static bool isEnqueueKernelBI(const StringRef MangledName) {
   return MangledName == "__enqueue_kernel_basic" ||
          MangledName == "__enqueue_kernel_basic_events" ||
@@ -580,7 +541,7 @@ static bool isNonMangledOCLBuiltin(StringRef Name) {
     return false;
 
   return isEnqueueKernelBI(Name) || isKernelQueryBI(Name) ||
-         isPipeOrAddressSpaceCastBI(Name.drop_front(2)) ||
+         SPIRV::isPipeOrAddressSpaceCastBuiltin(Name) ||
          Name == "__translate_sampler_initializer";
 }
 

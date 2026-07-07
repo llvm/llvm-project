@@ -164,7 +164,6 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAMXFP8 = false;
   bool HasAMXMOVRS = false;
   bool HasAMXAVX512 = false;
-  bool HasAMXTF32 = false;
   bool HasSERIALIZE = false;
   bool HasTSXLDTRK = false;
   bool HasUSERMSR = false;
@@ -336,10 +335,6 @@ public:
       break;
     }
     return "";
-  }
-
-  bool useFP16ConversionIntrinsics() const override {
-    return false;
   }
 
   void getTargetDefines(const LangOptions &Opts,

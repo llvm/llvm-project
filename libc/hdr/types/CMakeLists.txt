@@ -88,6 +88,16 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_dirent
+  HDRS
+    struct_dirent.h
+  DEPENDS
+    libc.hdr.dirent_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_dirent
+)
+
+add_proxy_header_library(
   struct_epoll_event
   HDRS
     struct_epoll_event.h
@@ -341,6 +351,16 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.FILE
     libc.include.stdio
+)
+
+add_proxy_header_library(
+  DIR
+  HDRS
+    DIR.h
+  DEPENDS
+    libc.hdr.dirent_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.DIR
 )
 
 add_proxy_header_library(
