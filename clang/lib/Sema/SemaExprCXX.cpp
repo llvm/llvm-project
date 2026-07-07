@@ -907,8 +907,9 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
       return ExprError();
 
     // std::init / ref_to_uninit (paper §5): throwing a pointer to
-    // uninitialized memory. Dependent operands are outside this block; the
-    // Decl-less wrapper defers on a template pattern.
+    // uninitialized memory. The Decl-less wrapper defers only on an
+    // instantiation-dependent operand, rebuilt at instantiation; a
+    // non-dependent throw is checked at definition time.
     if (getLangOpts().Profiles)
       Profiles().checkInitProfileThrowOperand(Ex);
 
@@ -2615,9 +2616,10 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     Initializer = FullInit.get();
 
     // std::init / ref_to_uninit (paper §5): a written initializer for an
-    // allocated pointer binds it like a variable initialization. Dependent
-    // operands are outside this block; the Decl-less wrapper defers on a
-    // template pattern.
+    // allocated pointer binds it like a variable initialization. The
+    // Decl-less wrapper defers only on an instantiation-dependent allocated
+    // type or initializer, rebuilt at instantiation; a non-dependent
+    // new-expression is checked at definition time.
     if (getLangOpts().Profiles)
       Profiles().checkInitProfileNewInitializer(
           AllocType, Exprs.size() == 1 ? Exprs[0] : nullptr);

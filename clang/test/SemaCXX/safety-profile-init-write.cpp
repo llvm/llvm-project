@@ -175,13 +175,15 @@ void test_suppress_decl() {
   s.x = 1; // OK: the function-level suppression covers the body
 }
 
-// Like every Decl-less expression check, the store check defers on a template
-// pattern and fires once, at instantiation; a never-instantiated template and
-// a discarded if-constexpr branch stay silent.
+// Like every Decl-less expression check, the store check fires at definition
+// time when its target is non-dependent, and repeats when the local s is
+// remapped and the assignment rebuilt at instantiation -- the accepted
+// repetition. A dependent target (template_write_dependent_bad) defers on the
+// pattern and fires once per violating specialization.
 template <typename T>
 void template_write_bad() {
   Pair s [[uninit]];
-  s.x = 1; // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
+  s.x = 1; // expected-error 2 {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
 }
 template void template_write_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_write_bad<int>' requested here}}
 
@@ -192,19 +194,66 @@ void template_write_dependent_bad() {
 }
 template void template_write_dependent_bad<Pair>(); // expected-note {{in instantiation of function template specialization 'template_write_dependent_bad<Pair>' requested here}}
 
+// A never-instantiated pattern diagnoses its non-dependent store at
+// definition time, exactly once.
 template <typename T>
 void template_write_never_instantiated() {
   Pair s [[uninit]];
-  s.x = 1;
+  s.x = 1; // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
 }
 
+// A literal-false if-constexpr condition makes the then-branch a discarded
+// statement context already at pattern parse, so its store stays silent; the
+// live else-branch fires at definition time and repeats when the branch is
+// rebuilt at instantiation.
 template <typename T>
 void template_write_discarded_branch() {
   Pair s [[uninit]];
   if constexpr (false) {
     s.x = 1;
   } else {
-    s.x = 2; // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
+    s.x = 2; // expected-error 2 {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
   }
 }
 template void template_write_discarded_branch<int>(); // expected-note {{in instantiation of function template specialization 'template_write_discarded_branch<int>' requested here}}
+
+// An all-global store is *reused* by TreeTransform at instantiation (its
+// Build* never re-runs), so deferring would silently lose the diagnostic; it
+// is checked at definition time -- exactly one error, with no instantiation
+// note, whether or not the template is ever instantiated.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(std::init, rule: "static_marker")]] [[uninit]] Pair g_uninit_pair;
+
+template <typename T>
+void template_allglobal_write_bad() {
+  g_uninit_pair.x = 1; // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
+}
+template void template_allglobal_write_bad<int>();
+
+template <typename T>
+void template_allglobal_write_never_instantiated() {
+  g_uninit_pair.x = 1; // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
+}
+
+// A store that violates two rules at one location -- the subobject write into
+// the [[uninit]] object and the unmarked-pointer binding of its member --
+// fires both at definition time, and both repeat on the instantiation
+// rebuild.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(std::init, rule: "static_marker")]] [[uninit]] int g_uninit_int;
+struct WithPtrMember { int x; int *p; };
+
+template <typename T>
+void template_two_rules_bad() {
+  WithPtrMember s [[uninit]];
+  s.p = &g_uninit_int; // expected-error 2 {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}} \
+                       // expected-error 2 {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+template void template_two_rules_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_two_rules_bad<int>' requested here}}
+
+template <typename T>
+void template_two_rules_never_instantiated() {
+  WithPtrMember s [[uninit]];
+  s.p = &g_uninit_int; // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}} \
+                       // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}

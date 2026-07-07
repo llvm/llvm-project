@@ -319,8 +319,8 @@ void test_fnptr_call_arguments(void (*fp)(int *), void (*fr)(int &)) {
   (void)rtu;
 }
 
-// Decl-less like the declared-callee argument site: defers on the pattern and
-// fires once, at instantiation.
+// Decl-less like the declared-callee argument site; the dependent callee type
+// keeps the call unchecked on the pattern, so it fires once, at instantiation.
 template <typename T>
 void template_fnptr_call_arg(void (*fp)(T *)) {
   fp(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
@@ -353,10 +353,12 @@ void test_variadic_arguments() {
   (void)rtu;
 }
 
-// Decl-less: defers on the pattern, fires once at instantiation.
+// Decl-less with a non-dependent argument: fires at definition time, and
+// again when the call (always rebuilt) re-promotes the argument at
+// instantiation -- the accepted repetition.
 template <typename T>
 void template_variadic_arg() {
-  vf(0, &g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  vf(0, &g_uninit); // expected-error 2 {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
 }
 template void template_variadic_arg<int>(); // expected-note {{in instantiation of function template specialization 'template_variadic_arg<int>' requested here}}
 
@@ -441,12 +443,14 @@ void test_ref_captures() {
   (void)c1; (void)c2; (void)c3; (void)c4; (void)c5;
 }
 
-// A by-reference capture inside a template body defers on the pattern and
-// fires once, at instantiation (TreeTransform rebuilds the lambda).
+// A by-reference capture of a variable with a non-dependent type fires at
+// definition time, and again when TreeTransform's unconditional lambda
+// rebuild re-processes the capture at instantiation -- the accepted
+// repetition.
 template <typename T>
 void template_ref_capture_bad() {
   int x [[uninit]];
-  auto c = [&x] { x = 1; }; // expected-error {{capturing 'x' by reference binds a reference to uninitialized memory under profile 'std::init'}}
+  auto c = [&x] { x = 1; }; // expected-error 2 {{capturing 'x' by reference binds a reference to uninitialized memory under profile 'std::init'}}
   (void)c;
 }
 template void template_ref_capture_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_ref_capture_bad<int>' requested here}}
@@ -468,12 +472,13 @@ void test_operator_arguments() {
   a = &g_init;   // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
 }
 
-// A functor-call argument inside a template body defers on the pattern and
-// fires once, at instantiation, like every other Decl-less binding site.
+// A non-dependent functor-call argument fires at definition time like every
+// other Decl-less binding site, and repeats when the call is rebuilt at
+// instantiation (the local functor forces the rebuild).
 template <typename T>
 void template_functor_bad() {
   MarkedFunctor mf;
-  mf(&g_init); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  mf(&g_init); // expected-error 2 {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
 }
 template void template_functor_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_functor_bad<int>' requested here}}
 
@@ -719,57 +724,156 @@ void template_new_bad() {
 template void template_new_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_new_bad<int>' requested here}}
 
 // The call-argument, pointer-assignment, and return sites pass no Decl, so
-// (unlike the variable-init site, template_nondependent_bad above) their
-// deferral cannot come from D->isTemplated(). They must still fire exactly
-// once, at instantiation -- not twice, and not on the pattern.
+// (unlike the variable-init site, template_nondependent_bad above) they defer
+// only on an instantiation-dependent source. These sources are non-dependent,
+// so each fires at definition time -- and each construct is rebuilt at
+// instantiation anyway (the callee's implicit cast is stripped, forcing a
+// call rebuild; the local p is remapped; a return statement always rebuilds),
+// so the diagnostic repeats there. The repetition is accepted for now.
 template <typename T>
 void template_call_arg_unmarked() {
-  take_ptr(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  take_ptr(&g_uninit); // expected-error 2 {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
 }
 template void template_call_arg_unmarked<int>(); // expected-note {{in instantiation of function template specialization 'template_call_arg_unmarked<int>' requested here}}
 
 template <typename T>
 void template_call_arg_marked() {
-  take_uninit_ptr(&g_init); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  take_uninit_ptr(&g_init); // expected-error 2 {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
 }
 template void template_call_arg_marked<int>(); // expected-note {{in instantiation of function template specialization 'template_call_arg_marked<int>' requested here}}
 
 template <typename T>
 void template_assignment_bad() {
   int *p = nullptr;
-  p = &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  p = &g_uninit; // expected-error 2 {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
   (void)p;
 }
 template void template_assignment_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_assignment_bad<int>' requested here}}
 
 template <typename T>
 int *template_return_bad() {
-  return &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  return &g_uninit; // expected-error 2 {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
 }
 template int *template_return_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_return_bad<int>' requested here}}
 
-// A never-instantiated template stays silent: the deferred checks never run.
+// The definition-time fire repeats once per instantiation that rebuilds the
+// construct: two explicit instantiations pin the exact counts (one pattern
+// fire plus one per specialization).
+template <typename T>
+void template_assignment_repeats() {
+  int *p = nullptr;
+  p = &g_uninit; // expected-error 3 {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)p;
+}
+template void template_assignment_repeats<int>();  // expected-note {{in instantiation of function template specialization 'template_assignment_repeats<int>' requested here}}
+template void template_assignment_repeats<long>(); // expected-note {{in instantiation of function template specialization 'template_assignment_repeats<long>' requested here}}
+
+template <typename T>
+int *template_return_repeats() {
+  return &g_uninit; // expected-error 3 {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+template int *template_return_repeats<int>();  // expected-note {{in instantiation of function template specialization 'template_return_repeats<int>' requested here}}
+template int *template_return_repeats<long>(); // expected-note {{in instantiation of function template specialization 'template_return_repeats<long>' requested here}}
+
+// An instantiation-dependent source is not checkable on the pattern: no
+// definition-time fire. The construct is rebuilt at every instantiation, so
+// each violating specialization diagnoses once, with its note chain.
+template <typename T>
+void template_dependent_per_spec() {
+  T *p = nullptr;
+  p = (T *)&g_uninit; // expected-error 2 {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)p;
+}
+template void template_dependent_per_spec<int>();  // expected-note {{in instantiation of function template specialization 'template_dependent_per_spec<int>' requested here}}
+template void template_dependent_per_spec<long>(); // expected-note {{in instantiation of function template specialization 'template_dependent_per_spec<long>' requested here}}
+
+// Fully non-dependent constructs whose operands transform to themselves are
+// *reused* by TreeTransform at instantiation -- their Build* never re-runs.
+// Deferring would silently lose the diagnostic (these all-global shapes were
+// silent before), so they are checked at definition time: exactly one error,
+// on the pattern, with no instantiation note.
+int *g_ptr_sink = nullptr;
+int **g_pp_sink = nullptr;
+
+template <typename T>
+void template_allglobal_bad() {
+  g_ptr_sink = &g_uninit;             // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  throw &g_uninit;                    // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  g_pp_sink = new (int *)(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+template void template_allglobal_bad<int>();
+
+// The same shapes diagnose in a never-instantiated template: definition-time
+// checking deliberately trades strict "as-if after phase 7" purity for
+// reuse-proof diagnostics.
+template <typename T>
+void template_allglobal_never_instantiated() {
+  g_ptr_sink = &g_uninit;             // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  throw &g_uninit;                    // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  g_pp_sink = new (int *)(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
+// A never-instantiated template diagnoses its non-dependent violations at
+// definition time; only instantiation-dependent constructs (the (T *) cast)
+// stay silent without an instantiation.
 template <typename T>
 void template_never_instantiated() {
-  take_ptr(&g_uninit);
+  take_ptr(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
   int *p = nullptr;
-  p = &g_uninit;
+  p = &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  p = (T *)&g_uninit;
   (void)p;
 }
 
-// A violation in a discarded if-constexpr branch is never instantiated, so it
-// is not diagnosed -- even though the dependent condition keeps the branch live
-// on the pattern (where the check now defers).
+// A value-dependent if-constexpr condition is not yet known discarded at the
+// pattern, so the branch is live at parse and its non-dependent violations
+// diagnose at definition time. The f<int> instantiation discards the branch
+// (never rebuilding its statements), so nothing repeats.
 template <typename T>
 void template_discarded_branch() {
   if constexpr (sizeof(T) > 1000) {
-    take_ptr(&g_uninit);
+    take_ptr(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
     int *p = nullptr;
-    p = &g_uninit;
+    p = &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
     (void)p;
   }
 }
 template void template_discarded_branch<int>();
+
+// A generic lambda's body is a template pattern even in a non-template
+// function: a non-dependent violation diagnoses at definition time whether or
+// not the lambda is ever invoked, and an all-global shape is reused (not
+// rebuilt) when the call operator is instantiated, so invoking does not
+// repeat it.
+void generic_lambda_never_invoked() {
+  auto l = [](auto x) { g_ptr_sink = &g_uninit; }; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)l;
+}
+
+void generic_lambda_invoked() {
+  auto l = [](auto x) { g_ptr_sink = &g_uninit; }; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  l(1);
+}
+
+// A late-parsed inline member of a class template is a pattern too: a
+// non-dependent violation diagnoses when its body is parsed. Suppression on
+// the method or on the class covers the definition-time fire like any other.
+template <typename T>
+struct LateParsedMember {
+  void m() { g_ptr_sink = &g_uninit; } // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+};
+
+template <typename T>
+struct LateParsedSuppressMethod {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] void m() { g_ptr_sink = &g_uninit; } // OK: suppressed
+};
+
+template <typename T>
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(std::init)]] LateParsedSuppressClass {
+  void m() { g_ptr_sink = &g_uninit; } // OK: suppressed
+};
 
 // std::init / uninit_read (paper §4.5): a read *through* a [[ref_to_uninit]]
 // pointer or reference yields an uninitialized value, diagnosed at the
@@ -992,8 +1096,8 @@ void test_element_read_byte_exempt() {
   (void)v;
 }
 
-// Like the member read, the element read defers on a template pattern and
-// fires once, at instantiation.
+// The dependent element type makes the read instantiation-dependent, so it
+// defers on the pattern and fires once, at instantiation.
 template <typename T>
 void template_element_read_bad() {
   [[uninit]] T a[2];
@@ -1020,24 +1124,26 @@ struct HasAggMember {
   int get() { return agg.x; } // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
 };
 
-// Like every Decl-less read check, the member read defers on a template
-// pattern and fires once, at instantiation.
+// Like every Decl-less check, the member read fires at definition time when
+// its glvalue is non-dependent, and repeats when the read is rebuilt at
+// instantiation (the local s is remapped) -- the accepted repetition.
 template <typename T>
 void template_member_read_bad() {
   Pair s [[uninit]];
-  int y = s.x; // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  int y = s.x; // expected-error 2 {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
   (void)y;
 }
 template void template_member_read_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_member_read_bad<int>' requested here}}
 
-// A read through a [[ref_to_uninit]] parameter inside a template body defers on
-// the pattern (a dependent context) and fires once, at instantiation -- whether
-// the read's operand is non-dependent (template_read_nondependent_bad) or
-// dependent (template_read_dependent_bad). A never-instantiated template stays
-// silent. Mirrors the binding template_* cases above.
+// A read through a [[ref_to_uninit]] parameter inside a template body fires at
+// definition time when the operand is non-dependent
+// (template_read_nondependent_bad; the parameter remap rebuilds the read at
+// instantiation, repeating the diagnostic) and defers to instantiation when it
+// is dependent (template_read_dependent_bad). Mirrors the binding template_*
+// cases above.
 template <typename T>
 void template_read_nondependent_bad(int *p [[ref_to_uninit]]) {
-  int y = *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  int y = *p; // expected-error 2 {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
   (void)y;
 }
 template void template_read_nondependent_bad<int>(int *); // expected-note {{in instantiation of function template specialization 'template_read_nondependent_bad<int>' requested here}}
@@ -1048,9 +1154,29 @@ T template_read_dependent_bad(T *p [[ref_to_uninit]]) {
 }
 template int template_read_dependent_bad<int>(int *); // expected-note {{in instantiation of function template specialization 'template_read_dependent_bad<int>' requested here}}
 
+// A never-instantiated pattern diagnoses its non-dependent read at definition
+// time, exactly once.
 template <typename T>
 void template_read_never_instantiated(int *p [[ref_to_uninit]]) {
-  int y = *p;
+  int y = *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (void)y;
+}
+
+// An all-global read: the definition-time fire, plus a repeat when the
+// initialization of the local y is rebuilt at instantiation.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(std::init, rule: "static_marker")]] [[uninit]] Pair g_uninit_pair;
+
+template <typename T>
+void template_global_read_bad() {
+  int y = g_uninit_pair.x; // expected-error 2 {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  (void)y;
+}
+template void template_global_read_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_global_read_bad<int>' requested here}}
+
+template <typename T>
+void template_global_read_never_instantiated() {
+  int y = g_uninit_pair.x; // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
   (void)y;
 }
 
@@ -1081,11 +1207,12 @@ void test_compound_read_suppress(int *p [[ref_to_uninit]]) {
   [[profiles::suppress(std::init, rule: "uninit_read")]] { *p += 1; } // OK: rule-targeted suppress
 }
 
-// Like every Decl-less read check, the compound read defers on a template
-// pattern and fires once, at instantiation.
+// Like every Decl-less read check, the compound read fires at definition time
+// on a non-dependent operand and repeats when the parameter remap rebuilds the
+// assignment at instantiation.
 template <typename T>
 void template_compound_read_bad(int *p [[ref_to_uninit]]) {
-  *p += 1; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  *p += 1; // expected-error 2 {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
 }
 template void template_compound_read_bad<int>(int *); // expected-note {{in instantiation of function template specialization 'template_compound_read_bad<int>' requested here}}
 
@@ -1289,18 +1416,19 @@ void test_aggregate_suppress() {
 }
 
 // Aggregate field init inside a template body is non-dependent here, so it
-// defers on the pattern (a dependent context) and fires once at instantiation;
-// a never-instantiated template stays silent.
+// fires at definition time and repeats when the local variable's
+// initialization is rebuilt at instantiation; a never-instantiated template
+// diagnoses at definition, once.
 template <typename T>
 void template_aggregate_bad() {
-  AggPtr a{&g_uninit}; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  AggPtr a{&g_uninit}; // expected-error 2 {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
   (void)a;
 }
 template void template_aggregate_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_aggregate_bad<int>' requested here}}
 
 template <typename T>
 void template_aggregate_never() {
-  AggPtr a{&g_uninit};
+  AggPtr a{&g_uninit}; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
   (void)a;
 }
 
@@ -1315,15 +1443,22 @@ void throw_ptr_suppressed() {
   [[profiles::suppress(std::init)]] { throw &g_uninit; } // OK: suppressed
 }
 
-// A dependent thrown operand is rebuilt at instantiation, where the check
-// fires. A fully non-dependent throw inside a template is not rebuilt by
-// TreeTransform, so -- like the reinterpret_cast site -- the pattern defers
-// and the case goes undiagnosed; a known limitation.
+// A dependent thrown operand defers on the pattern and is rebuilt at
+// instantiation, where the check fires per specialization. A fully
+// non-dependent throw fires at definition time instead (see
+// template_allglobal_bad): TreeTransform reuses it unchanged, so deferring
+// would lose the diagnostic.
 template <typename T>
 void template_throw_bad() {
   throw (T *)&g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
 }
 template void template_throw_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_throw_bad<int>' requested here}}
+
+template <typename T>
+void template_throw_nondependent_bad() {
+  throw &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+template void template_throw_nondependent_bad<int>();
 
 // C++20 parenthesized aggregate initialization performs the same per-field
 // bindings as the braced form and is checked identically.
@@ -1342,7 +1477,7 @@ void test_aggregate_paren() {
 
 template <typename T>
 void template_aggregate_paren_bad() {
-  AggPtr a(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  AggPtr a(&g_uninit); // expected-error 2 {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
   (void)a;
 }
 template void template_aggregate_paren_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_aggregate_paren_bad<int>' requested here}}

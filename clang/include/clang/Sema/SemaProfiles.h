@@ -222,6 +222,14 @@ public:
   /// a marked target must refer to uninitialized memory, and an unmarked
   /// target must not. Shared by the variable, data-member, assignment,
   /// argument, and return check sites; gated by shouldEmitProfileViolation.
+  /// A Decl-less call defers only on an instantiation-dependent \p Src --
+  /// such a construct is always rebuilt at instantiation, re-running this
+  /// funnel with the substituted source -- and otherwise fires at definition
+  /// time; if the construct is rebuilt at instantiation anyway (a local
+  /// operand, a call argument, a return), the same diagnostic repeats there
+  /// (accepted for now). A Decl-carrying call instead defers via the
+  /// D->isTemplated() check in shouldEmitProfileViolation and fires on the
+  /// instantiated declaration.
   void checkInitProfileRefToUninit(SourceLocation Loc, bool TargetIsRefToUninit,
                             bool IsReference, const Expr *Src,
                             const Decl *D = nullptr);
@@ -252,7 +260,10 @@ public:
   /// their LHS promotion already funnels through the chokepoint). Reuses the
   /// ref_to_uninit recognizer with its read access preset, so a direct read
   /// of a named [[uninit]] object is left to the flow-based uninit_read
-  /// pass. A std::byte read is exempt (paper §4.5).
+  /// pass. A std::byte read is exempt (paper §4.5). Defers only on an
+  /// instantiation-dependent \p Glvalue (rebuilt at instantiation, where the
+  /// check re-runs); a non-dependent read fires at definition time and may
+  /// repeat if the read is rebuilt at instantiation anyway (accepted).
   void checkInitProfileReadThrough(SourceLocation Loc, const Expr *Glvalue,
                             QualType ValueType);
 
@@ -266,7 +277,10 @@ public:
   /// entity is its initialization (paper §4.5), and storage reached through
   /// [[ref_to_uninit]] is trusted (the deferred construct_at slice), so only
   /// a below-top-level [[uninit]] marker fires. A std::byte store is exempt
-  /// (paper §4.5).
+  /// (paper §4.5). Defers only on an instantiation-dependent \p LHS (rebuilt
+  /// at instantiation, where the check re-runs); a non-dependent store fires
+  /// at definition time and may repeat if the assignment is rebuilt at
+  /// instantiation anyway (accepted).
   void checkInitProfileSubobjectWrite(SourceLocation Loc, const Expr *LHS);
 
   /// std::init / ref_to_uninit (paper §5): a pointer argument passed through
@@ -284,14 +298,18 @@ public:
   /// is always the unmarked-direction violation. Called from
   /// \c Sema::BuildLambdaExpr for each by-reference non-init variable capture
   /// (init-captures are checked at \c createLambdaInitCaptureVarDecl); defers
-  /// on a template pattern, where TreeTransform rebuilds the lambda at
-  /// instantiation.
+  /// only when the captured variable's type is instantiation-dependent.
+  /// TreeTransform always rebuilds a lambda at instantiation, so a deferred
+  /// capture re-processes there -- and a definition-time fire repeats there
+  /// (accepted).
   void checkInitProfileRefCapture(SourceLocation Loc, const ValueDecl *Var);
 
   /// std::init / ref_to_uninit (paper §4.3): assigning to a pointer must
   /// respect the assigned-to pointer's [[ref_to_uninit]] marking; a no-op for
   /// a non-pointer LHS. Hosts the cluster from Sema::CreateBuiltinBinOp's
-  /// BO_Assign arm; also run on a reused assignment by recheckReusedExpr.
+  /// BO_Assign arm. An instantiation-dependent LHS defers to the
+  /// instantiation rebuild (its marker cannot be read yet); the source's
+  /// dependence is the shared funnel's to defer on.
   void checkInitProfilePointerAssignment(Expr *LHS, Expr *RHS,
                                          SourceLocation OpLoc);
 
@@ -299,32 +317,29 @@ public:
   /// §5.4-§5.6): the compound-assignment old-value load (read-through --
   /// excluding the shifts, whose LHS promotion already loads through the
   /// lvalue-to-rvalue chokepoint) and the subobject-write check. Hosts the
-  /// cluster from Sema::CheckAssignmentOperands; also run on a reused
-  /// assignment by recheckReusedExpr. \p IsCompound distinguishes `op=`
-  /// from `=` (host site: !CompoundType.isNull(); reused node:
-  /// isa<CompoundAssignOperator>).
+  /// cluster from Sema::CheckAssignmentOperands. \p IsCompound distinguishes
+  /// `op=` from `=` (!CompoundType.isNull() at the host site).
   void checkInitProfileAssignmentOperands(BinaryOperatorKind Opc,
                                           Expr *LHSExpr, bool IsCompound,
                                           SourceLocation OpLoc);
 
   /// std::init: the check pair a built-in ++/-- hosts -- the old-value load
   /// (read-through) and the store (subobject-write). Hosts the cluster from
-  /// Sema::CreateBuiltinUnaryOp's increment/decrement arm; also run on a
-  /// reused operator by recheckReusedExpr.
+  /// Sema::CreateBuiltinUnaryOp's increment/decrement arm.
   void checkInitProfileIncDec(Expr *Operand, SourceLocation OpLoc);
 
   /// std::init / ref_to_uninit (paper §5): a thrown pointer copy-initializes
   /// the exception object, which cannot carry [[ref_to_uninit]]; a no-op for
   /// a non-pointer exception object. Hosts the cluster from
-  /// Sema::BuildCXXThrow; also run on a reused throw by recheckReusedExpr.
+  /// Sema::BuildCXXThrow.
   void checkInitProfileThrowOperand(const Expr *Operand);
 
   /// std::init / ref_to_uninit (paper §5): a written initializer for an
   /// allocated pointer binds it like a variable initialization, and a heap
   /// pointer object cannot carry [[ref_to_uninit]]. \p Init is the single
   /// written initializer expression, or null when there is none (a no-op).
-  /// Hosts the cluster from Sema::BuildCXXNew; also run on a reused
-  /// new-expression by recheckReusedExpr.
+  /// Hosts the cluster from Sema::BuildCXXNew. An instantiation-dependent
+  /// allocated type defers to the instantiation rebuild.
   void checkInitProfileNewInitializer(QualType AllocType, Expr *Init);
 
   /// std::init / pointer_marker + union_marker (paper §4.1, §5.6): diagnose

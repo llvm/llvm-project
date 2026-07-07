@@ -180,16 +180,29 @@ or template instantiation; selected specializations replay suppressed
 diagnostics when used.  Unevaluated and discarded-statement contexts are
 skipped.  The profile name is passed as ``%0``.
 
-``checkProfileViolation`` fires at parse time.  For a *non-dependent*
-expression inside a template, the check therefore runs on the template
-*pattern*, and -- because for some node kinds (such as casts) a non-dependent
-``Build*`` result is reused unchanged at instantiation -- it is not re-run on
-the specialization.  As a result it can fire for a never-instantiated template
-or in an ``if constexpr`` branch discarded only at instantiation.
-``test::type_cast`` accepts this (it is a test-only profile).  A profile whose
-``Build*`` routine *is* re-run at instantiation can instead defer on a template
-pattern with a ``CurContext->isDependentContext()`` guard, as the ``std::init``
-ref_to_uninit binding checks do (see ``checkInitProfileRefToUninit``).
+``checkProfileViolation`` fires at parse time.  Inside a template, parse-time
+checks follow one unified model.  A *non-dependent* construct is checked on
+the template *pattern*, at definition time: TreeTransform may return such a
+node unchanged at instantiation (for some node kinds, such as casts, a
+non-dependent ``Build*`` result is reused), so deferring would silently lose
+the diagnostic.  This deliberately trades strict "as-if after phase 7" purity
+(P3589R2 §1.1) for reuse-proof diagnostics: a non-dependent violation
+diagnoses even in a never-instantiated template or in an ``if constexpr``
+branch whose discarding is not yet known at the pattern (a branch already
+known discarded -- a non-value-dependent false condition -- stays silent).
+An *instantiation-dependent* construct cannot be checked on the pattern; it
+is always rebuilt at instantiation, where the re-run ``Build*`` checks the
+substituted form, once per specialization.  A construct with non-dependent
+check operands can still be rebuilt at instantiation (a local variable, a
+call argument, or a return statement forces a rebuild, for example); the
+re-run ``Build*`` then repeats the definition-time diagnostic at the same
+location, with an ``in instantiation of ...`` note.  This repetition is
+accepted for now; ``test::type_cast``'s cast nodes are never rebuilt when
+non-dependent, so it never repeats.
+
+Under ``-fdelayed-template-parsing`` the body of a never-instantiated
+template is never parsed at all, so definition-time diagnosis of
+non-dependent violations does not occur in that mode.
 
 Suppression for parse-time check sites is consulted via the
 ``ProfileSuppressStack`` maintained by the parser-side ``ProfileSuppressScope``
@@ -1152,19 +1165,28 @@ recognizers symmetric.
   (``Sema::BuildLambdaExpr``).  A capture cannot carry the marker, so only the
   unmarked-direction violation can fire there; a *copy* capture is not a
   binding -- it reads the variable in the enclosing function's CFG, which is
-  the flow-based ``uninit_read`` pass's territory.  Every site defers on a
-  template pattern and
-  fires once, at instantiation.  The variable, data-member, and constructor
-  member-initializer sites pass the instantiated ``Decl`` (deferred by the
-  ``D->isTemplated()`` check in ``shouldEmitProfileViolation``); the
-  constructor site passes the enclosing constructor and is re-run by
+  the flow-based ``uninit_read`` pass's territory.  Inside a template the
+  sites split by timing.  The Decl-carrying variable, data-member, and
+  constructor member-initializer sites defer on the pattern (the
+  ``D->isTemplated()`` check in ``shouldEmitProfileViolation``) and fire
+  once, at instantiation, on the instantiated ``Decl``; the constructor site
+  passes the enclosing constructor and is re-run by
   ``BuildMemberInitializer`` at instantiation, exactly like
-  ``ctor_uninit_member``.  The Decl-less call-argument, assignment, return, and
-  aggregate-field sites -- whose ``Build*`` / ``InitListChecker`` routine is
-  re-run at instantiation -- instead defer via a
-  ``CurContext->isDependentContext()`` guard in ``checkInitProfileRefToUninit``, so
-  they neither double-fire nor fire in a discarded ``if constexpr`` branch or a
-  never-instantiated template.  The aggregate-field hooks
+  ``ctor_uninit_member``.  The Decl-less call-argument, assignment, return,
+  aggregate-field, and capture sites instead defer only when the source (for
+  the capture, the captured variable's type; for pointer assignment, also
+  the LHS) is *instantiation-dependent* -- such constructs are always rebuilt
+  at instantiation, where the re-run ``Build*`` / ``InitListChecker`` routine
+  checks the substituted form.  A non-dependent construct fires at
+  *definition time* (TreeTransform can reuse it unchanged, so deferring
+  would lose the diagnostic) and repeats if the construct is rebuilt at
+  instantiation anyway; see Pattern 1 above for the unified model, its
+  accepted phase-7 trade, and the accepted repetition.  The two timings are
+  visible side by side:
+  ``int *p = &g_uninit;`` in a template fires at instantiation (Decl-carrying
+  variable site), while ``p = &g_uninit;`` fires at definition time
+  (Decl-less assignment site) -- a deliberate asymmetry.  The aggregate-field
+  hooks
   (``CheckSubElementType`` for a pointer field, ``CheckReferenceType`` for a
   reference field) are scoped to a member subobject (``EK_Member`` with a
   non-null parent), so the enclosing variable/argument/return is left to its own
@@ -1193,8 +1215,10 @@ recognizers symmetric.
   subobject-wise delayed initialization of an ``[[uninit]]`` object is itself
   banned (paper §5.4/§5.5; only whole-object ``construct_at`` re-initializes,
   which is uniformly unmodeled), so no assignment could have given the
-  subobject a value.  Being Decl-less, it defers on a dependent context
-  and fires once, at instantiation.  An address-of (``&*p``), a reference
+  subobject a value.  Being Decl-less, it defers only on an
+  instantiation-dependent glvalue (rebuilt and re-checked at instantiation)
+  and otherwise fires at definition time, repeating if the read is rebuilt
+  at instantiation anyway (accepted).  An address-of (``&*p``), a reference
   binding, a discarded-value expression (``(void)*p``), and a write (``*p = 5``
   or ``s.x = 1``) apply no lvalue-to-rvalue conversion and so are not reads
   (``s.x = 1`` is instead banned as a subobject store by ``uninit_write``,
@@ -1361,8 +1385,10 @@ initialization sequence.
   exactly once, and class-typed ``operator=`` (which diverts to overload
   resolution) never reaches it -- and the built-in increment/decrement arm of
   ``Sema::CreateBuiltinUnaryOp`` (overloaded class ``++``/``--`` never
-  reaches it).  Both are Decl-less sites: they defer on a template pattern
-  via the dependent-context guard and fire once, at instantiation.
+  reaches it).  Both are Decl-less sites: they defer only on an
+  instantiation-dependent store target -- always rebuilt and re-checked at
+  instantiation -- and otherwise fire at definition time, repeating if the
+  operator is rebuilt at instantiation anyway (see Pattern 1 and R7).
 - A compound assignment or a built-in ``++``/``--`` also *reads* the old
   value, so on a subobject of a marked object the R7 read-through diagnostic
   fires alongside this rule's (the shift forms load through their LHS

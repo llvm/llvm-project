@@ -353,20 +353,27 @@ bool SemaProfiles::shouldEmitProfileViolation(StringRef ProfileName,
   // possible to 'SFINAE out' failure of a program to satisfy a profile
   // requirement."
   //
-  // A templated entity is not yet a phase-7 entity, so a profile rule must fire
-  // only on its instantiation -- where D is the instantiated, non-templated
-  // declaration -- not on the template pattern. Checking the pattern too would
-  // diagnose never-instantiated templates and double-fire (once when the
-  // pattern is parsed and again at each instantiation).
+  // A templated entity is not yet a phase-7 entity, so a Decl-carrying rule
+  // fires only on its instantiation -- where D is the instantiated,
+  // non-templated declaration -- not on the template pattern (the [[uninit]]
+  // marker checks and the binding checks that pass a Decl are re-run on the
+  // instantiated field / variable, so they defer here). Checking the pattern
+  // too would double-fire, once at parse and again per instantiation.
   //
-  // Decl-less expression check sites whose Build* routine is re-run at
-  // instantiation (the ref_to_uninit binding checks: call argument, pointer
-  // assignment, return) instead defer in a dependent context from their own
-  // wrapper, checkInitProfileRefToUninit, since no Decl is available here. The
-  // [[uninit]] marker checks pass D (via checkInitProfileMarkerPlacement) and
-  // are re-run on the instantiated field / variable, so they defer here too.
-  // The reinterpret_cast check still passes D == nullptr and is not re-checked
-  // at instantiation, so it keeps running once at parse time (a separate gap).
+  // The Decl-less expression check sites (D == nullptr here) instead defer
+  // from their own entry points, and only when their check-relevant operands
+  // are instantiation-dependent -- exactly the constructs TreeTransform
+  // always rebuilds, so the hosting Build* routine re-runs the deferred check
+  // at instantiation. A fully non-dependent construct may be returned
+  // unchanged by TreeTransform (its Build* never re-runs), so it is checked
+  // at definition time instead; when such a construct is rebuilt at
+  // instantiation anyway (a local operand, a call argument, a return), the
+  // definition-time diagnostic repeats there -- accepted for now. This
+  // deliberately trades strict phase-7 purity for reuse-proof diagnostics: a
+  // non-dependent violation in a never-instantiated template, or in an
+  // if-constexpr branch not yet known to be discarded, diagnoses at
+  // definition time -- the same model the test::type_cast profile and the
+  // reinterpret_cast check follow.
   if (D && D->isTemplated())
     return false;
   if (SemaRef.isUnevaluatedContext())
@@ -1047,19 +1054,6 @@ bool SemaProfiles::refersToUninitializedMemory(const Expr *E,
          UninitStorage::Uninitialized;
 }
 
-// The Decl-less ref_to_uninit check sites (call argument, default argument,
-// assignment, return, read-through) can't rely on the D->isTemplated()
-// deferral in shouldEmitProfileViolation, but their Build* routines are
-// re-run at instantiation, so defer on a template pattern here instead:
-// firing on the pattern double-diagnoses and wrongly fires in discarded
-// if-constexpr branches / never-instantiated templates. Sites that do pass a
-// Decl are unaffected. (This must stay out of shouldEmitProfileViolation:
-// its other Decl-less caller, the reinterpret_cast check, is *not* re-run at
-// instantiation, so deferring there would lose the diagnostic entirely.)
-static bool deferUninitCheckOnTemplatePattern(Sema &S, const Decl *D) {
-  return !D && S.CurContext && S.CurContext->isDependentContext();
-}
-
 void SemaProfiles::checkInitProfileRefToUninit(SourceLocation Loc,
                                         bool TargetIsRefToUninit,
                                         bool IsReference, const Expr *Src,
@@ -1068,7 +1062,15 @@ void SemaProfiles::checkInitProfileRefToUninit(SourceLocation Loc,
   // not a source the user wrote, so it must not drive this rule.
   if (!Src || isa<RecoveryExpr>(Src->IgnoreParens()))
     return;
-  if (deferUninitCheckOnTemplatePattern(SemaRef, D))
+  // An instantiation-dependent source cannot be classified yet; its construct
+  // is always rebuilt at instantiation, re-running this funnel with the
+  // substituted source. A non-dependent source is checked here, at definition
+  // time; if the construct is rebuilt at instantiation anyway (a local
+  // operand, a call argument, a return), the same diagnostic repeats there --
+  // accepted for now. Decl-carrying callers are exempt: they defer via the
+  // D->isTemplated() check in shouldEmitProfileViolation and fire on the
+  // instantiated declaration.
+  if (!D && Src->isInstantiationDependent())
     return;
   static constexpr StringRef Profile = "std::init";
   static constexpr StringRef Rule = "ref_to_uninit";
@@ -1132,7 +1134,11 @@ void SemaProfiles::checkInitProfileRefCapture(SourceLocation Loc,
   if (!Var->hasAttr<UninitAttr>() &&
       !(Var->getType()->isReferenceType() && Var->hasAttr<RefToUninitAttr>()))
     return;
-  if (deferUninitCheckOnTemplatePattern(SemaRef, /*D=*/nullptr))
+  // The only Expr-less deferral here: an instantiation-dependent captured
+  // type defers to instantiation, where TreeTransform's unconditional lambda
+  // rebuild re-processes the capture. A concrete capture fires at definition
+  // time and repeats on that same rebuild -- accepted for now.
+  if (Var->getType()->isInstantiationDependentType())
     return;
   if (!shouldEmitProfileViolation("std::init", "ref_to_uninit", Loc))
     return;
@@ -1190,7 +1196,11 @@ void SemaProfiles::checkInitProfileReadThrough(SourceLocation Loc,
   // a read the user wrote, so it must not drive this rule.
   if (!Glvalue || isa<RecoveryExpr>(Glvalue->IgnoreParens()))
     return;
-  if (deferUninitCheckOnTemplatePattern(SemaRef, /*D=*/nullptr))
+  // An instantiation-dependent glvalue cannot be classified yet; its read is
+  // always rebuilt at instantiation, where this check re-runs with the
+  // substituted operand. A non-dependent read fires at definition time and
+  // repeats if the read is rebuilt at instantiation anyway -- accepted.
+  if (Glvalue->isInstantiationDependent())
     return;
   // Paper §4.5: reading an uninitialized std::byte is permitted.
   if (getASTContext().getBaseElementType(ValueType)->isStdByteType())
@@ -1210,7 +1220,12 @@ void SemaProfiles::checkInitProfileSubobjectWrite(SourceLocation Loc,
   // a store the user wrote, so it must not drive this rule.
   if (!LHS || isa<RecoveryExpr>(LHS->IgnoreParens()))
     return;
-  if (deferUninitCheckOnTemplatePattern(SemaRef, /*D=*/nullptr))
+  // An instantiation-dependent store target cannot be classified yet; its
+  // assignment is always rebuilt at instantiation, where this check re-runs
+  // with the substituted LHS. A non-dependent store fires at definition time
+  // and repeats if the assignment is rebuilt at instantiation anyway --
+  // accepted.
+  if (LHS->isInstantiationDependent())
     return;
   // Paper §4.5: an uninitialized std::byte may be manipulated freely.
   if (getASTContext().getBaseElementType(LHS->getType())->isStdByteType())
@@ -1232,6 +1247,13 @@ void SemaProfiles::checkInitProfilePointerAssignment(Expr *LHS, Expr *RHS,
   // default unmarked pointer (paper §4.3) and must not be bound to
   // uninitialized memory.
   if (!LHS->getType()->isPointerType())
+    return;
+  // An instantiation-dependent LHS (e.g. an unresolved member access) has no
+  // readable marker yet -- getDirectlyNamedDecl would report it unmarked, a
+  // false positive when the instantiated entity is [[ref_to_uninit]]. The
+  // assignment is rebuilt at instantiation, where the marker is concrete.
+  // The source's dependence is the funnel's to defer on.
+  if (LHS->isInstantiationDependent())
     return;
   const ValueDecl *VD = getDirectlyNamedDecl(LHS);
   checkInitProfileRefToUninit(OpLoc, VD && VD->hasAttr<RefToUninitAttr>(),
@@ -1282,8 +1304,11 @@ void SemaProfiles::checkInitProfileNewInitializer(QualType AllocType,
   // [[ref_to_uninit]], so binding it to uninitialized memory is always the
   // unmarked-direction violation. A braced `new T*{&x}` presents the
   // InitListExpr, which the recognizer's single-element pass-through looks
-  // through.
-  if (!AllocType->isPointerType() || !Init)
+  // through. An instantiation-dependent allocated type (note that a
+  // dependent-pointee `T*` still passes isPointerType) defers to the
+  // instantiation rebuild, which re-runs this check with the concrete type.
+  if (!AllocType->isPointerType() ||
+      AllocType->isInstantiationDependentType() || !Init)
     return;
   checkInitProfileRefToUninit(Init->getExprLoc(),
                               /*TargetIsRefToUninit=*/false,
