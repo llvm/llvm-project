@@ -86,7 +86,8 @@ entry:
 define i64 @zext_i1_i64(i1 zeroext %a) nounwind ssp {
 ; CHECK-LABEL: zext_i1_i64:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ; kill: def $x0 killed $w0
+; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    ret
 entry:
   %conv = zext i1 %a to i64
@@ -164,7 +165,8 @@ entry:
 define i64 @sext_i1_i64(i1 signext %a) nounwind ssp {
 ; CHECK-LABEL: sext_i1_i64:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ; kill: def $x0 killed $w0
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    sbfx x0, x8, #0, #1
 ; CHECK-NEXT:    ret
 entry:
   %conv = sext i1 %a to i64
@@ -207,7 +209,8 @@ entry:
 define i64 @zext_i8_zext_i64(i8 zeroext %in) {
 ; CHECK-LABEL: zext_i8_zext_i64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $x0 killed $w0
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ubfx x0, x8, #0, #8
 ; CHECK-NEXT:    ret
   %big = zext i8 %in to i64
   ret i64 %big
@@ -216,7 +219,8 @@ define i64 @zext_i8_zext_i64(i8 zeroext %in) {
 define i64 @zext_i16_zext_i64(i16 zeroext %in) {
 ; CHECK-LABEL: zext_i16_zext_i64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $x0 killed $w0
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ubfx x0, x8, #0, #16
 ; CHECK-NEXT:    ret
   %big = zext i16 %in to i64
   ret i64 %big
@@ -225,7 +229,8 @@ define i64 @zext_i16_zext_i64(i16 zeroext %in) {
 define i64 @zext_i32_zext_i64(i32 zeroext %in) {
 ; CHECK-LABEL: zext_i32_zext_i64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $x0 killed $w0
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ubfx x0, x8, #0, #32
 ; CHECK-NEXT:    ret
   %big = zext i32 %in to i64
   ret i64 %big
@@ -300,7 +305,8 @@ define i64 @zext_i32_sext_i64(i32 zeroext %in) {
 define i64 @sext_i8_sext_i64(i8 signext %in) {
 ; CHECK-LABEL: sext_i8_sext_i64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $x0 killed $w0
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    sxtb x0, w8
 ; CHECK-NEXT:    ret
   %big = sext i8 %in to i64
   ret i64 %big
@@ -309,7 +315,8 @@ define i64 @sext_i8_sext_i64(i8 signext %in) {
 define i64 @sext_i16_sext_i64(i16 signext %in) {
 ; CHECK-LABEL: sext_i16_sext_i64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $x0 killed $w0
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    sxth x0, w8
 ; CHECK-NEXT:    ret
   %big = sext i16 %in to i64
   ret i64 %big
@@ -318,7 +325,8 @@ define i64 @sext_i16_sext_i64(i16 signext %in) {
 define i64 @sext_i32_sext_i64(i32 signext %in) {
 ; CHECK-LABEL: sext_i32_sext_i64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $x0 killed $w0
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    sxtw x0, w8
 ; CHECK-NEXT:    ret
   %big = sext i32 %in to i64
   ret i64 %big

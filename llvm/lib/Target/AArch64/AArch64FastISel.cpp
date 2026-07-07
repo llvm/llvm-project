@@ -4030,14 +4030,21 @@ Register AArch64FastISel::emiti1Ext(Register SrcReg, MVT DestVT, bool IsZExt) {
       ResultReg = Reg64;
     }
     return ResultReg;
-  } else {
-    if (DestVT == MVT::i64) {
-      // FIXME: We're SExt i1 to i64.
-      return Register();
-    }
-    return fastEmitInst_rii(AArch64::SBFMWri, &AArch64::GPR32RegClass, SrcReg,
-                            0, 0);
   }
+
+  // Sign extend.
+  if (DestVT == MVT::i64) {
+    Register Reg64 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+            TII.get(AArch64::SUBREG_TO_REG), Reg64)
+        .addReg(SrcReg)
+        .addImm(AArch64::sub_32);
+    return fastEmitInst_rii(AArch64::SBFMXri, &AArch64::GPR64RegClass, Reg64, 0,
+                            0);
+  }
+
+  return fastEmitInst_rii(AArch64::SBFMWri, &AArch64::GPR32RegClass, SrcReg, 0,
+                          0);
 }
 
 Register AArch64FastISel::emitMul_rr(MVT RetVT, Register Op0, Register Op1) {
@@ -4535,16 +4542,8 @@ bool AArch64FastISel::selectIntExt(const Instruction *I) {
   // Try to optimize already sign-/zero-extended values from function arguments.
   bool IsZExt = isa<ZExtInst>(I);
   if (const auto *Arg = dyn_cast<Argument>(I->getOperand(0))) {
-    if ((IsZExt && Arg->hasZExtAttr()) || (!IsZExt && Arg->hasSExtAttr())) {
-      if (RetVT == MVT::i64 && SrcVT != MVT::i64) {
-        Register ResultReg = createResultReg(&AArch64::GPR64RegClass);
-        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-                TII.get(AArch64::SUBREG_TO_REG), ResultReg)
-            .addReg(SrcReg)
-            .addImm(AArch64::sub_32);
-        SrcReg = ResultReg;
-      }
-
+    if (((IsZExt && Arg->hasZExtAttr()) || (!IsZExt && Arg->hasSExtAttr())) &&
+        RetVT == MVT::i32) {
       updateValueMap(I, SrcReg);
       return true;
     }
