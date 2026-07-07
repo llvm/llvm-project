@@ -11,6 +11,7 @@
 
 #include "Fortran.h"
 #include "flang/Common/enum-set.h"
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -141,6 +142,13 @@ public:
   // Take a string from the Cli and apply it to the LanguageFeatureControl.
   // Return true if the option was recognized (and hence applied).
   bool EnableWarning(std::string_view input);
+  // Apply -Werror=<name> or -Wno-error=<name> to a Flang warning group.
+  // Return true if the option was recognized.
+  bool SetWarningErrorTreatment(std::string_view specifier, bool asError);
+  // Return true if a non-fatal diagnostic should be treated as an error.
+  bool ShouldPromoteWarningToError(bool globalWarnAsErr,
+      std::optional<LanguageFeature> languageFeature,
+      std::optional<UsageWarning> usageWarning) const;
   // The add and replace functions are not currently used but are provided
   // to allow a flexible many-to-one mapping from Cli spellings to enum values.
   // Taking a string by value because the functions own this string after the
@@ -194,6 +202,10 @@ private:
   bool warnAllLanguage_{false};
   UsageWarnings warnUsage_;
   bool warnAllUsage_{false};
+  LanguageFeatures warnAsErrorLanguage_;
+  UsageWarnings warnAsErrorUsage_;
+  LanguageFeatures warnNotAsErrorLanguage_;
+  UsageWarnings warnNotAsErrorUsage_;
   bool disableAllWarnings_{false};
 };
 } // namespace Fortran::common

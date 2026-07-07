@@ -169,6 +169,19 @@ bool Message::SortBefore(const Message &that) const {
       location_, that.location_);
 }
 
+static bool ShouldTreatMessageAsFatal(const Message &msg,
+    bool globalWarningsAreErrors,
+    const common::LanguageFeatureControl *control) {
+  if (msg.IsFatal()) {
+    return true;
+  }
+  if (control) {
+    return control->ShouldPromoteWarningToError(
+        globalWarningsAreErrors, msg.languageFeature(), msg.usageWarning());
+  }
+  return globalWarningsAreErrors;
+}
+
 bool Message::IsFatal() const { return IsFatalSeverity(severity()); }
 
 Severity Message::severity() const {
@@ -500,7 +513,7 @@ void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
     }
     msgsWithLastLocation.push_back(msg);
     msg->Emit(o, allCooked, echoSourceLines, hintFlagPtr);
-    if (warningsAreErrors || msg->IsFatal()) {
+    if (ShouldTreatMessageAsFatal(*msg, warningsAreErrors, hintFlagPtr)) {
       ++errorsEmitted;
     }
     // If maxErrorsToEmit is 0, emit all errors, otherwise break after
@@ -522,20 +535,10 @@ void Messages::AttachTo(Message &msg, std::optional<Severity> severity) {
   messages_.clear();
 }
 
-bool Messages::AnyFatalError(bool warningsAreErrors) const {
-  // Short-circuit in the most common case.
-  if (messages_.empty()) {
-    return false;
-  }
-  // If warnings are errors and there are warnings or errors, this is fatal.
-  // This preserves the compiler's current behavior of treating any non-fatal
-  // message as a warning. We may want to refine this in the future.
-  if (warningsAreErrors) {
-    return true;
-  }
-  // Otherwise, check the message buffer for fatal errors.
+bool Messages::AnyFatalError(bool warningsAreErrors,
+    const common::LanguageFeatureControl *control) const {
   for (const auto &msg : messages_) {
-    if (msg.IsFatal()) {
+    if (ShouldTreatMessageAsFatal(msg, warningsAreErrors, control)) {
       return true;
     }
   }

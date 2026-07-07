@@ -380,7 +380,8 @@ public:
       const common::LanguageFeatureControl *hintFlags = nullptr,
       std::size_t maxErrorsToEmit = 0, bool warningsAreErrors = false) const;
   void AttachTo(Message &, std::optional<Severity> = std::nullopt);
-  bool AnyFatalError(bool warningsAreErrors = false) const;
+  bool AnyFatalError(bool warningsAreErrors = false,
+      const common::LanguageFeatureControl *control = nullptr) const;
 
 private:
   template <typename... A>
