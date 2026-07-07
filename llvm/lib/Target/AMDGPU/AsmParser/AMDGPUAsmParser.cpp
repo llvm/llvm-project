@@ -6025,14 +6025,16 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
   }
 
   // Error if the ISA version doesn't match
-  AMDGPU::IsaVersion DirectiveISA = AMDGPU::getIsaVersion(
-      AMDGPU::getArchNameAMDGCN(ParsedTargetID.getGPUKind()));
+  StringRef DirectiveProcessor =
+      AMDGPU::getArchNameAMDGCN(ParsedTargetID.getGPUKind());
+  AMDGPU::IsaVersion DirectiveISA = AMDGPU::getIsaVersion(DirectiveProcessor);
   AMDGPU::IsaVersion CurrentISA = AMDGPU::getIsaVersion(getSTI().getCPU());
   if (DirectiveISA != CurrentISA) {
-    return getParser().Error(
-        TargetStart, ".amdgcn_target " + Twine(ParsedTargetID.toString()) +
-                         " does not match the specified target id " +
-                         Twine(CurrentTargetID->toString()));
+    return getParser().Error(TargetStart,
+                             ".amdgcn_target directive processor " +
+                                 Twine(DirectiveProcessor) +
+                                 " does not match the specified processor " +
+                                 Twine(getSTI().getCPU()));
   }
 
   // Warn if sramecc or xnack mismatch. These do not change the encoding.
@@ -6776,11 +6778,26 @@ bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
   const std::optional<AMDGPU::TargetID> &CurrentTargetID =
       getTargetStreamer().getTargetID();
 
-  if (*CurrentTargetID != ParsedTargetID) {
+  Triple DirectiveTriple(ParsedTargetID.getTargetTripleString());
+  const Triple &STITriple = getSTI().getTargetTriple();
+  if (!DirectiveTriple.isCompatibleWith(STITriple)) {
     return Error(getParser().getTok().getLoc(),
                  ".amd_amdgpu_isa " + Twine(ParsedTargetID.toString()) +
-                     " does not match the specified target id " +
+                     " is incompatible with " +
                      Twine(CurrentTargetID->toString()));
+  }
+
+  // Error if the ISA version doesn't match
+  StringRef DirectiveProcessor =
+      AMDGPU::getArchNameAMDGCN(ParsedTargetID.getGPUKind());
+  AMDGPU::IsaVersion DirectiveISA = AMDGPU::getIsaVersion(DirectiveProcessor);
+  AMDGPU::IsaVersion CurrentISA = AMDGPU::getIsaVersion(getSTI().getCPU());
+  if (DirectiveISA != CurrentISA) {
+    return Error(getParser().getTok().getLoc(),
+                 ".amd_amdgpu_isa directive processor " +
+                     Twine(DirectiveProcessor) +
+                     " does not match the specified processor " +
+                     Twine(getSTI().getCPU()));
   }
 
   getTargetStreamer().EmitISAVersion();

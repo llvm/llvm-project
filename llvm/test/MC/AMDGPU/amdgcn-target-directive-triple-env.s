@@ -13,5 +13,5 @@
 
 //--- amdpal-llvm.s
 // AMDPAL-LLVM: .amd_amdgpu_isa "amdgcn-amd-amdpal-llvm-gfx802"
-// AMDPAL-ERR: error: .amd_amdgpu_isa amdgcn-amd-amdpal-llvm-gfx802 does not match the specified target id amdgcn-amd-amdpal-unknown-gfx802
+// AMDPAL-ERR: error: .amd_amdgpu_isa amdgcn-amd-amdpal-llvm-gfx802 is incompatible with amdgcn-amd-amdpal-unknown-gfx802
 .amd_amdgpu_isa "amdgcn-amd-amdpal-llvm-gfx802"
