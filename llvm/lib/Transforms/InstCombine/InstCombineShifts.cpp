@@ -1334,6 +1334,16 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     }
   }
 
+  // 1 << X --> X + 1 if X is known to be 0 or 1. Require more than 2 bits so
+  // the new add can be marked nsw.
+  if (match(Op0, m_One()) && BitWidth > 2 &&
+      llvm::computeKnownBits(Op1, Q).countMaxActiveBits() <= 1) {
+    auto *Add = BinaryOperator::CreateAdd(Op1, Op0);
+    Add->setHasNoUnsignedWrap();
+    Add->setHasNoSignedWrap();
+    return Add;
+  }
+
   if (setShiftFlags(I, Q))
     return &I;
 

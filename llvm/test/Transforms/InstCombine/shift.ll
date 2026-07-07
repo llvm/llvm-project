@@ -2045,6 +2045,76 @@ define i32 @ashr_sdiv_extra_use(i32 %x) {
   ret i32 %r
 }
 
+define i32 @shl1_range01_assume(i32 %a) {
+; CHECK-LABEL: @shl1_range01_assume(
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[A:%.*]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[SHL:%.*]] = add nuw nsw i32 [[A]], 1
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %cond = icmp ult i32 %a, 2
+  call void @llvm.assume(i1 %cond)
+  %shl = shl i32 1, %a
+  ret i32 %shl
+}
+
+define i32 @shl1_range01_assume_flags(i32 %a) {
+; CHECK-LABEL: @shl1_range01_assume_flags(
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[A:%.*]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[SHL:%.*]] = add nuw nsw i32 [[A]], 1
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %cond = icmp ult i32 %a, 2
+  call void @llvm.assume(i1 %cond)
+  %shl = shl nuw nsw i32 1, %a
+  ret i32 %shl
+}
+
+define i8 @shl1_known01_mask(i8 %x) {
+; CHECK-LABEL: @shl1_known01_mask(
+; CHECK-NEXT:    [[AMT:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[SHL:%.*]] = add nuw nsw i8 [[AMT]], 1
+; CHECK-NEXT:    ret i8 [[SHL]]
+;
+  %amt = and i8 %x, 1
+  %shl = shl i8 1, %amt
+  ret i8 %shl
+}
+
+define <2 x i8> @shl1_known01_mask_vec(<2 x i8> %x) {
+; CHECK-LABEL: @shl1_known01_mask_vec(
+; CHECK-NEXT:    [[AMT:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[SHL:%.*]] = add nuw nsw <2 x i8> [[AMT]], splat (i8 1)
+; CHECK-NEXT:    ret <2 x i8> [[SHL]]
+;
+  %amt = and <2 x i8> %x, splat (i8 1)
+  %shl = shl <2 x i8> splat (i8 1), %amt
+  ret <2 x i8> %shl
+}
+
+define i2 @shl1_known01_i2(i2 %x) {
+; CHECK-LABEL: @shl1_known01_i2(
+; CHECK-NEXT:    [[AMT:%.*]] = and i2 [[X:%.*]], 1
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i2 1, [[AMT]]
+; CHECK-NEXT:    ret i2 [[SHL]]
+;
+  %amt = and i2 %x, 1
+  %shl = shl i2 1, %amt
+  ret i2 %shl
+}
+
+define i8 @shl1_known03_mask(i8 %x) {
+; CHECK-LABEL: @shl1_known03_mask(
+; CHECK-NEXT:    [[AMT:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 1, [[AMT]]
+; CHECK-NEXT:    ret i8 [[SHL]]
+;
+  %amt = and i8 %x, 3
+  %shl = shl i8 1, %amt
+  ret i8 %shl
+}
+
 define i32 @shl1_cttz(i32 %x) {
 ; CHECK-LABEL: @shl1_cttz(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
