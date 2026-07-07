@@ -575,6 +575,11 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
 
   PushContextAndClauseSets(
       std::get<parser::OmpDirectiveName>(x.t).source, dirId);
+
+  // Record each variant directive so its COLLAPSE/ORDERED can be checked
+  // against the associated loop nest.
+  if (dirId != llvm::omp::Directive::OMPD_metadirective)
+    metadirectiveLoopVariants_.push_back(&x);
 }
 
 void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &x) {
@@ -585,10 +590,55 @@ void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
   EnterDirectiveNest(MetadirectiveNest);
+  metadirectiveLoopVariants_.clear();
 }
 
 void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &) {
   ExitDirectiveNest(MetadirectiveNest);
+}
+
+// Check a loop-associated metadirective's variants against the loop nest they
+// apply to. The nest is not attached to the directive in the parse tree. It is
+// the next executable construct, either a following sibling or the first
+// execution-part construct for a declarative metadirective.
+void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
+  if (metadirectiveLoopVariants_.empty())
+    return;
+  if (parser::Unwrap<parser::CompilerDirective>(x))
+    return;
+  // Take the pending variants off the worklist so they are validated only
+  // here, at this first construct, loop nest or not.
+  std::vector<const parser::OmpDirectiveSpecification *> variants;
+  variants.swap(metadirectiveLoopVariants_);
+
+  if (!parser::Unwrap<parser::DoConstruct>(x))
+    return;
+
+  unsigned version{context_.langOptions().OpenMPVersion};
+  LoopSequence sequence(x, version, /*allowAllLoops=*/true, &context_);
+  const auto &[haveSemantic, havePerfect]{sequence.depth()};
+
+  for (const parser::OmpDirectiveSpecification *spec : variants) {
+    auto [needDepth, needPerfect]{
+        GetAffectedNestDepthWithReason(*spec, version, &context_)};
+    if (!needDepth || *needDepth.value <= 0)
+      continue;
+    auto haveDepth{needPerfect ? havePerfect : haveSemantic};
+    if (!haveDepth || *haveDepth.value <= 0)
+      continue;
+    if (*needDepth.value > *haveDepth.value) {
+      std::string_view perfectTxt{needPerfect ? " perfect" : ""};
+      auto &msg{context_.Say(spec->DirName().source,
+          "This construct requires a%s nest of depth %" PRId64
+          ", but the associated nest is a%s nest of depth %" PRId64
+          ""_err_en_US,
+          perfectTxt, *needDepth.value, perfectTxt, *haveDepth.value)};
+      haveDepth.reason.AttachTo(msg);
+      needDepth.reason.AttachTo(msg);
+    } else {
+      CheckRectangularNest(*spec, sequence);
+    }
+  }
 }
 
 static const parser::traits::OmpContextSelectorSpecification *
