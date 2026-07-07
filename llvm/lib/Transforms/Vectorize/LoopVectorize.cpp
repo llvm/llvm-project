@@ -7114,12 +7114,8 @@ bool LoopVectorizationPlanner::requiresScalarEpilogue(VPlan &Plan,
                                                       ElementCount VF) const {
   // A scalar epilogue is required, if we unconditionally execute the scalar
   // loop. Must be called before removeBranchOnConst.
-  VPBasicBlock *ScalarPH = Plan.getScalarPreheader();
-  bool Result =
-      ScalarPH &&
-      any_of(ScalarPH->getPredecessors(), [ScalarPH](VPBlockBase *Pred) {
-        return Pred->getSingleSuccessor() == ScalarPH;
-      });
+  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
+  bool Result = MiddleVPBB->getSingleSuccessor() == Plan.getScalarPreheader();
   assert(CM.requiresScalarEpilogue(VF.isVector()) == Result &&
          "CM.requiresScalarEpilogue and the VPlan-based check must agree");
   return Result;
