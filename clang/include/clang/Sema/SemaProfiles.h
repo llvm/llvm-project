@@ -97,8 +97,14 @@ public:
   ProfilesSuppressAttr *makeImplicitProfilesSuppressAttr(StringRef ProfileName,
                                                          StringRef RuleName);
 
-  bool isProfileSuppressed(StringRef ProfileName,
-                           StringRef RuleName = "") const;
+  /// True if a live parse-time suppress entry for \p ProfileName /
+  /// \p RuleName covers \p Loc. An entry matches only tokens at or after its
+  /// construct's begin location (its dominion, P3589R2 s2.4p3); the owning
+  /// ProfileSuppressScope's lifetime bounds the dominion's end. Tokens from
+  /// outside the construct -- e.g. a template pattern instantiated
+  /// synchronously while the scope is live -- are not suppressed.
+  bool isProfileSuppressed(StringRef ProfileName, StringRef RuleName,
+                           SourceLocation Loc) const;
   bool isProfileSuppressed(StringRef ProfileName, StringRef RuleName,
                            const Decl *D) const;
   bool isProfileSuppressed(StringRef ProfileName, StringRef RuleName,

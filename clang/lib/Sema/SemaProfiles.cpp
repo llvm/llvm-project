@@ -21,6 +21,7 @@
 #include "clang/AST/ParentMap.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -255,11 +256,25 @@ static bool profileSuppressMatches(StringRef EntryProfile, StringRef EntryRule,
 }
 
 bool SemaProfiles::isProfileSuppressed(StringRef ProfileName,
-                                StringRef RuleName) const {
-  for (const auto &E : ProfileSuppressStack)
-    if (profileSuppressMatches(E.ProfileName, E.RuleName, ProfileName,
-                               RuleName))
+                                       StringRef RuleName,
+                                       SourceLocation Loc) const {
+  const SourceManager &SM = getASTContext().getSourceManager();
+  for (const auto &E : ProfileSuppressStack) {
+    if (!profileSuppressMatches(E.ProfileName, E.RuleName, ProfileName,
+                                RuleName))
+      continue;
+    // The entry's dominion starts at its construct's begin location, so a
+    // violation at an earlier token -- e.g. in a template pattern
+    // instantiated synchronously while the scope is live -- is outside it
+    // (P3589R2 s2.4p3). Fail open on an invalid location on either side
+    // (isBeforeInTranslationUnit rejects invalid locations), preserving
+    // plain-liveness behavior for synthesized code. Locations are compared
+    // in raw TU token order: expansion-loc normalization would collapse all
+    // tokens of one macro expansion onto the invocation and over-suppress.
+    if (Loc.isInvalid() || E.Begin.isInvalid() ||
+        !SM.isBeforeInTranslationUnit(Loc, E.Begin))
       return true;
+  }
   return false;
 }
 
@@ -324,7 +339,7 @@ bool SemaProfiles::shouldEmitProfileViolation(StringRef ProfileName,
   // based dominion, P3589R2 s2.4p3). Their decl-aware walk already covers a
   // suppression on the declaration or a lexical parent.
   if ((!InProfileFinalizationCheck &&
-       isProfileSuppressed(ProfileName, RuleName)) ||
+       isProfileSuppressed(ProfileName, RuleName, Loc)) ||
       isProfileSuppressed(ProfileName, RuleName, D))
     return false;
   // P3589R2 Section 1.1: "its static semantic effects are as-if applied only
