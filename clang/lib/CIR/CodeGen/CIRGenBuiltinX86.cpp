@@ -1806,11 +1806,65 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_pslldqi512_byteshift:
   case X86::BI__builtin_ia32_psrldqi128_byteshift:
   case X86::BI__builtin_ia32_psrldqi256_byteshift:
-  case X86::BI__builtin_ia32_psrldqi512_byteshift:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+  case X86::BI__builtin_ia32_psrldqi512_byteshift: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    auto byteVecType = cast<cir::VectorType>(ops[0].getType());
+    auto resultType = cast<cir::VectorType>(this->convertType(expr->getType()));
+
+    unsigned shiftVal = getSExtIntValueFromConstOp(ops[1]);
+
+    // If pslldq is shifting the vector more than 15 bytes, emit zero.
+    // This matches the hardware behavior where shifting by 16+ bytes
+    // clears the entire 128-bit lane.
+    if (shiftVal >= 16) {
+      mlir::Value zeroVec = builder.getZero(loc, byteVecType);
+      builder.createBitcast(zeroVec, resultType);
+      return zeroVec;
+    }
+
+    uint64_t numElts = byteVecType.getSize();
+    assert(numElts % 16 == 0 && "Expected a multiple of 16");
+
+    llvm::SmallVector<int64_t, 64> shuffleMask;
+
+    const llvm::Boolean isLeftShift =
+        builtinID == X86::BI__builtin_ia32_pslldqi128_byteshift ||
+        builtinID == X86::BI__builtin_ia32_pslldqi256_byteshift ||
+        builtinID == X86::BI__builtin_ia32_pslldqi512_byteshift;
+    const unsigned laneSize = 16;
+    const int switchOperand = numElts - laneSize;
+
+    // 256/512-bit pslldq/psrldq operates on 128-bit lanes so we need to
+    // handle that
+    for (auto laneOffset = 0ull; laneOffset < numElts; laneOffset += laneSize) {
+      for (auto elt : llvm::seq<unsigned>(0, laneSize)) {
+        unsigned idx =
+            isLeftShift ? (numElts + elt - shiftVal) : (elt + shiftVal);
+
+        bool isZeroPadding = isLeftShift ? (idx < numElts) : (idx >= laneSize);
+        if (isZeroPadding)
+          idx += isLeftShift ? (-switchOperand) : switchOperand;
+
+        shuffleMask.push_back(idx + laneOffset);
+      }
+    }
+
+    mlir::Value zeroVector = builder.getZero(loc, byteVecType);
+
+    // Perform the shuffle
+    // (left concatenating zeros on left, right concatenating zeros on right)
+    auto [firstOperand, secondOperand] =
+        isLeftShift ? std::make_pair(zeroVector, ops[0])
+                    : std::make_pair(ops[0], zeroVector);
+
+    // Mask the result using circular arithmetic on concatenated buffer
+    mlir::Value shuffleResult =
+        builder.createVecShuffle(loc, firstOperand, secondOperand, shuffleMask);
+
+    if (byteVecType != resultType)
+      return builder.createBitcast(shuffleResult, resultType);
+    return shuffleResult;
+  }
   case X86::BI__builtin_ia32_kshiftliqi:
   case X86::BI__builtin_ia32_kshiftlihi:
   case X86::BI__builtin_ia32_kshiftlisi:
