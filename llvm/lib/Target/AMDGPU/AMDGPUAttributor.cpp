@@ -1142,39 +1142,7 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
-    ChangeStatus Change = ChangeStatus::UNCHANGED;
-
-    auto CheckCallSite = [&](AbstractCallSite CS) {
-      Function *Caller = CS.getInstruction()->getFunction();
-      Function *Func = getAssociatedFunction();
-      LLVM_DEBUG(dbgs() << '[' << getName() << "] Call " << Caller->getName()
-                        << "->" << Func->getName() << '\n');
-      (void)Func;
-
-      const auto *CallerAA = A.getAAFor<AAAMDWavesPerEU>(
-          *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
-      if (!CallerAA || !CallerAA->isValidState())
-        return false;
-
-      ConstantRange Assumed = getAssumed();
-      unsigned Min = std::max(Assumed.getLower().getZExtValue(),
-                              CallerAA->getAssumed().getLower().getZExtValue());
-      unsigned Max = std::max(Assumed.getUpper().getZExtValue(),
-                              CallerAA->getAssumed().getUpper().getZExtValue());
-      ConstantRange Range(APInt(32, Min), APInt(32, Max));
-      IntegerRangeState RangeState(Range);
-      getState() = RangeState;
-      Change |= getState() == Assumed ? ChangeStatus::UNCHANGED
-                                      : ChangeStatus::CHANGED;
-
-      return true;
-    };
-
-    bool AllCallSitesKnown = true;
-    if (!A.checkForAllCallSites(CheckCallSite, *this, true, AllCallSitesKnown))
-      return indicatePessimisticFixpoint();
-
-    return Change;
+    return updateImplImpl<AAAMDWavesPerEU>(A);
   }
 
   /// Create an abstract attribute view for the position \p IRP.
