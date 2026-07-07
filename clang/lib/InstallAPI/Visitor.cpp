@@ -318,6 +318,7 @@ static bool hasVTable(const CXXRecordDecl *D) {
     case TSK_Undeclared:
     case TSK_ExplicitSpecialization:
     case TSK_ImplicitInstantiation:
+    case TSK_FriendDeclaration:
     case TSK_ExplicitInstantiationDefinition:
       return true;
     case TSK_ExplicitInstantiationDeclaration:
@@ -334,6 +335,7 @@ static bool hasVTable(const CXXRecordDecl *D) {
   case TSK_Undeclared:
   case TSK_ExplicitSpecialization:
   case TSK_ImplicitInstantiation:
+  case TSK_FriendDeclaration:
     return false;
 
   case TSK_ExplicitInstantiationDeclaration:
@@ -361,6 +363,7 @@ static CXXLinkage getVTableLinkage(const CXXRecordDecl *D) {
       if (isInlined(KeyFunctionD))
         return CXXLinkage::LinkOnceODRLinkage;
       return CXXLinkage::ExternalLinkage;
+    case TSK_FriendDeclaration:
     case TSK_ImplicitInstantiation:
       llvm_unreachable("No external vtable for implicit instantiations");
     case TSK_ExplicitInstantiationDefinition:
@@ -375,6 +378,7 @@ static CXXLinkage getVTableLinkage(const CXXRecordDecl *D) {
   case TSK_Undeclared:
   case TSK_ExplicitSpecialization:
   case TSK_ImplicitInstantiation:
+  case TSK_FriendDeclaration:
     return CXXLinkage::LinkOnceODRLinkage;
   case TSK_ExplicitInstantiationDeclaration:
   case TSK_ExplicitInstantiationDefinition:
@@ -601,6 +605,7 @@ bool InstallAPIVisitor::VisitCXXRecordDecl(const CXXRecordDecl *D) {
     case TSK_Undeclared:
     case TSK_ExplicitSpecialization:
       break;
+    case TSK_FriendDeclaration:
     case TSK_ImplicitInstantiation:
       continue;
     case TSK_ExplicitInstantiationDeclaration:

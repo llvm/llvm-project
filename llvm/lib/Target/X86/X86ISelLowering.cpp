@@ -55077,12 +55077,9 @@ static bool isHorizontalBinOp(unsigned HOpcode, SDValue &LHS, SDValue &RHS,
   SDValue NewLHS = A.getNode() ? A : B; // If A is 'UNDEF', use B for it.
   SDValue NewRHS = B.getNode() ? B : A; // If B is 'UNDEF', use A for it.
 
+  // Avoid 128-bit multi lane shuffles if pre-AVX2 and FP (integer will split).
   bool IsIdentityPostShuffle =
       isSequentialOrUndefInRange(PostShuffleMask, 0, NumElts, 0);
-  if (IsIdentityPostShuffle)
-    PostShuffleMask.clear();
-
-  // Avoid 128-bit multi lane shuffles if pre-AVX2 and FP (integer will split).
   if (!IsIdentityPostShuffle && !Subtarget.hasAVX2() && VT.isFloatingPoint() &&
       isMultiLaneShuffleMask(128, VT.getScalarSizeInBits(), PostShuffleMask))
     return false;
@@ -55126,6 +55123,21 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
             N->user_begin()->getOperand(1).getOpcode() == HorizOpcode);
   };
 
+  auto CanonicalizeHorizOps = [&](const SDLoc &DL, SDValue &LHS, SDValue &RHS) {
+    assert(PostShuffleMask.size() == VT.getVectorNumElements() &&
+           "Illegal shuffle mask");
+    LHS = DAG.getBitcast(VT, LHS);
+    RHS = DAG.getBitcast(VT, RHS);
+    if (VT.is256BitVector() && isUndefUpperHalf(PostShuffleMask) &&
+        !isLaneCrossingShuffleMask(128, VT.getScalarSizeInBits(),
+                                   PostShuffleMask)) {
+      LHS = extract128BitVector(LHS, 0, DAG, DL);
+      RHS = extract128BitVector(RHS, 0, DAG, DL);
+      PostShuffleMask.truncate(PostShuffleMask.size() / 2);
+    }
+    return LHS.getSimpleValueType();
+  };
+
   switch (Opcode) {
   case ISD::FADD:
   case ISD::FSUB:
@@ -55136,13 +55148,12 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
       auto HorizOpcode = IsAdd ? X86ISD::FHADD : X86ISD::FHSUB;
       if (isHorizontalBinOp(HorizOpcode, LHS, RHS, DAG, Subtarget, IsAdd,
                             PostShuffleMask, MergableHorizOp(HorizOpcode))) {
-        SDValue HorizBinOp =
-            DAG.getNode(HorizOpcode, SDLoc(N), VT, DAG.getBitcast(VT, LHS),
-                        DAG.getBitcast(VT, RHS));
-        if (!PostShuffleMask.empty())
-          HorizBinOp = DAG.getVectorShuffle(VT, SDLoc(HorizBinOp), HorizBinOp,
-                                            DAG.getUNDEF(VT), PostShuffleMask);
-        return HorizBinOp;
+        SDLoc DL(N);
+        MVT HorizVT = CanonicalizeHorizOps(DL, LHS, RHS);
+        SDValue HorizBinOp = DAG.getNode(HorizOpcode, DL, HorizVT, LHS, RHS);
+        HorizBinOp = DAG.getVectorShuffle(HorizVT, DL, HorizBinOp, HorizBinOp,
+                                          PostShuffleMask);
+        return DAG.getInsertSubvector(DL, DAG.getUNDEF(VT), HorizBinOp, 0);
       }
     }
     break;
@@ -55164,13 +55175,13 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
                                         ArrayRef<SDValue> Ops) {
           return DAG.getNode(HorizOpcode, DL, Ops[0].getValueType(), Ops);
         };
-        SDValue HorizBinOp = SplitOpsAndApply(
-            DAG, Subtarget, SDLoc(N), VT,
-            {DAG.getBitcast(VT, LHS), DAG.getBitcast(VT, RHS)}, HOpBuilder);
-        if (!PostShuffleMask.empty())
-          HorizBinOp = DAG.getVectorShuffle(VT, SDLoc(HorizBinOp), HorizBinOp,
-                                            DAG.getUNDEF(VT), PostShuffleMask);
-        return HorizBinOp;
+        SDLoc DL(N);
+        MVT HorizVT = CanonicalizeHorizOps(DL, LHS, RHS);
+        SDValue HorizBinOp = SplitOpsAndApply(DAG, Subtarget, DL, HorizVT,
+                                              {LHS, RHS}, HOpBuilder);
+        HorizBinOp = DAG.getVectorShuffle(HorizVT, DL, HorizBinOp, HorizBinOp,
+                                          PostShuffleMask);
+        return DAG.getInsertSubvector(DL, DAG.getUNDEF(VT), HorizBinOp, 0);
       }
     }
     break;

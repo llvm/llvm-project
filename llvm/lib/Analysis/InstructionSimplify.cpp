@@ -7290,6 +7290,34 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   return nullptr;
 }
 
+/// interleaveN(extractvalue(deinterleaveN(x), 0), ...,
+///             extractvalue(deinterleaveN(x), N-1)) --> x
+static Value *simplifyIdentityInterleave(Intrinsic::ID IID,
+                                         ArrayRef<Value *> Args) {
+  unsigned Factor = getInterleaveIntrinsicFactor(IID);
+  if (!Factor || Factor != Args.size())
+    return nullptr;
+
+  Intrinsic::ID DeinterleaveID = Intrinsic::getDeinterleaveIntrinsicID(Factor);
+  IntrinsicInst *DI = nullptr;
+  for (unsigned Idx = 0; Idx != Factor; ++Idx) {
+    auto *EV = dyn_cast<ExtractValueInst>(Args[Idx]);
+    if (!EV || EV->getNumIndices() != 1 || *EV->idx_begin() != Idx)
+      return nullptr;
+
+    auto *CurDI = dyn_cast<IntrinsicInst>(EV->getAggregateOperand());
+    if (!CurDI || CurDI->getIntrinsicID() != DeinterleaveID)
+      return nullptr;
+
+    if (!DI)
+      DI = CurDI;
+    else if (DI != CurDI)
+      return nullptr;
+  }
+
+  return DI->getArgOperand(0);
+}
+
 Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                ArrayRef<Value *> Args, FastMathFlags FMF,
                                const SimplifyQuery &Q, Function *CxtF,
@@ -7316,6 +7344,9 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       return nullptr;
     }
   }
+
+  if (Value *V = simplifyIdentityInterleave(IID, Args))
+    return V;
 
   if (NumOperands == 1)
     return simplifyUnaryIntrinsic(IID, Args[0], FMF, Q);
