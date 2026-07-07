@@ -20,6 +20,7 @@ Global Instruction Selection
    RegBankSelect
    InstructionSelect
    KnownBits
+
 Introduction
 ------------
 
