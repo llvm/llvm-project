@@ -20,7 +20,6 @@
 ! RUN:     -fomit-frame-pointer \
 ! RUN:     -fpass-plugin=Bye%pluginext \
 ! RUN:     -fversion-loops-for-stride \
-! RUN:     -freal-sum-reassociation \
 ! RUN:     -fno-ppc-native-vector-element-order \
 ! RUN:     -fppc-native-vector-element-order \
 ! RUN:     -mllvm -print-before-all \
@@ -51,7 +50,6 @@
 ! CHECK: "-freciprocal-math"
 ! CHECK: "-fconvert=little-endian"
 ! CHECK: "-fpass-plugin=Bye
-! CHECK: "-freal-sum-reassociation"
 ! CHECK: "-fversion-loops-for-stride"
 ! CHECK: "-fno-ppc-native-vector-element-order"
 ! CHECK: "-fppc-native-vector-element-order"
@@ -65,14 +63,3 @@
 ! CHECK: "-mllvm" "-print-before-all"
 ! CHECK: "-fwrapv"
 ! CHECK: "-save-temps=obj"
-
-! RUN: %flang -fsyntax-only -### %s -o %t 2>&1 \
-! RUN:     -fno-real-sum-reassociation -freal-sum-reassociation \
-! RUN:   | FileCheck %s --check-prefix=REAL-SUM
-! REAL-SUM: "-fc1"{{.*}} "-freal-sum-reassociation"
-
-! RUN: %flang -fsyntax-only -### %s -o %t 2>&1 \
-! RUN:     -freal-sum-reassociation -fno-real-sum-reassociation \
-! RUN:   | FileCheck %s --check-prefix=NO-REAL-SUM
-! NO-REAL-SUM: "-fc1"
-! NO-REAL-SUM-NOT: "-freal-sum-reassociation"
