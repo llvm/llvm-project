@@ -2100,45 +2100,28 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     if (Subtarget->enableSubRegLiveness() &&
         (Subtarget->hasSVE2p1() ||
          (Subtarget->hasSME2() && Subtarget->isStreaming()))) {
-      // 2x loads
-      setOperationAction(ISD::LOAD, MVT::nxv32i8, Custom);
-      setOperationAction(ISD::LOAD, MVT::nxv16i16, Custom);
-      setOperationAction(ISD::LOAD, MVT::nxv8i32, Custom);
-      setOperationAction(ISD::LOAD, MVT::nxv4i64, Custom);
-      setOperationAction(ISD::LOAD, MVT::nxv16f16, Custom);
-      setOperationAction(ISD::LOAD, MVT::nxv8f32, Custom);
-      setOperationAction(ISD::LOAD, MVT::nxv4f64, Custom);
-      setOperationAction(ISD::LOAD, MVT::nxv16bf16, Custom);
 
-      // 2x stores
-      setOperationAction(ISD::STORE, MVT::nxv32i8, Custom);
-      setOperationAction(ISD::STORE, MVT::nxv16i16, Custom);
-      setOperationAction(ISD::STORE, MVT::nxv8i32, Custom);
-      setOperationAction(ISD::STORE, MVT::nxv4i64, Custom);
-      setOperationAction(ISD::STORE, MVT::nxv16f16, Custom);
-      setOperationAction(ISD::STORE, MVT::nxv8f32, Custom);
-      setOperationAction(ISD::STORE, MVT::nxv4f64, Custom);
-      setOperationAction(ISD::STORE, MVT::nxv16bf16, Custom);
+      for (unsigned Opcode : {ISD::LOAD, ISD::STORE}) {
+        // 2x multi-vector load/stores
+        setOperationAction(Opcode, MVT::nxv32i8, Custom);
+        setOperationAction(Opcode, MVT::nxv16i16, Custom);
+        setOperationAction(Opcode, MVT::nxv8i32, Custom);
+        setOperationAction(Opcode, MVT::nxv4i64, Custom);
+        setOperationAction(Opcode, MVT::nxv16f16, Custom);
+        setOperationAction(Opcode, MVT::nxv8f32, Custom);
+        setOperationAction(Opcode, MVT::nxv4f64, Custom);
+        setOperationAction(Opcode, MVT::nxv16bf16, Custom);
 
-      // 4x loads
-      setOperationAction(ISD::LOAD, MVT::nxv64i8, Custom);
-      setOperationAction(ISD::LOAD, MVT::nxv32i16, Custom);
-      setOperationAction(ISD::LOAD, MVT::nxv16i32, Custom);
-      setOperationAction(ISD::LOAD, MVT::nxv8i64, Custom);
-      setOperationAction(ISD::LOAD, MVT::nxv32f16, Custom);
-      setOperationAction(ISD::LOAD, MVT::nxv16f32, Custom);
-      setOperationAction(ISD::LOAD, MVT::nxv8f64, Custom);
-      setOperationAction(ISD::LOAD, MVT::nxv32bf16, Custom);
-
-      // 4x stores
-      setOperationAction(ISD::STORE, MVT::nxv64i8, Custom);
-      setOperationAction(ISD::STORE, MVT::nxv32i16, Custom);
-      setOperationAction(ISD::STORE, MVT::nxv16i32, Custom);
-      setOperationAction(ISD::STORE, MVT::nxv8i64, Custom);
-      setOperationAction(ISD::STORE, MVT::nxv32f16, Custom);
-      setOperationAction(ISD::STORE, MVT::nxv16f32, Custom);
-      setOperationAction(ISD::STORE, MVT::nxv8f64, Custom);
-      setOperationAction(ISD::STORE, MVT::nxv32bf16, Custom);
+        // 4x multi-vector load/stores
+        setOperationAction(Opcode, MVT::nxv64i8, Custom);
+        setOperationAction(Opcode, MVT::nxv32i16, Custom);
+        setOperationAction(Opcode, MVT::nxv16i32, Custom);
+        setOperationAction(Opcode, MVT::nxv8i64, Custom);
+        setOperationAction(Opcode, MVT::nxv32f16, Custom);
+        setOperationAction(Opcode, MVT::nxv16f32, Custom);
+        setOperationAction(Opcode, MVT::nxv8f64, Custom);
+        setOperationAction(Opcode, MVT::nxv32bf16, Custom);
+      }
     }
   }
 
@@ -7759,27 +7742,20 @@ static SDValue LowerNTStore(StoreSDNode *StoreNode, EVT VT, EVT MemVT,
   return SDValue();
 }
 
-// Lower scalable vectors that are 2/4 times the width of a legal SVE type to
-// multi-vector operations.
-static SDValue tryLowerMultiVectorStore(StoreSDNode *StoreNode,
-                                        SelectionDAG &DAG) {
-  SDValue Value = StoreNode->getValue();
-  EVT VT = Value.getValueType();
-  EVT MemVT = StoreNode->getMemoryVT();
-
-  if (!StoreNode->isSimple() || !StoreNode->isUnindexed() ||
-      StoreNode->isNonTemporal() || !StoreNode->getOffset().isUndef() ||
-      !VT.isScalableVector() || !VT.isSimple() || VT != MemVT)
-    return SDValue();
-
-  MVT StoreVT = VT.getSimpleVT();
+struct SVEMultiVectorInfo {
   MVT RegVT;
-  unsigned IntID;
   unsigned NumVecs;
+  Intrinsic::ID LoadIntID;
+  Intrinsic::ID StoreIntID;
+  Intrinsic::ID PTrueIntID;
+};
 
-  switch (StoreVT.SimpleTy) {
+static std::optional<SVEMultiVectorInfo> getSVEMultiVectorInfo(MVT VT) {
+  SVEMultiVectorInfo Info;
+
+  switch (VT.SimpleTy) {
   default:
-    return SDValue();
+    return std::nullopt;
 
   case MVT::nxv32i8:
   case MVT::nxv16i16:
@@ -7789,9 +7765,10 @@ static SDValue tryLowerMultiVectorStore(StoreSDNode *StoreNode,
   case MVT::nxv8f32:
   case MVT::nxv4f64:
   case MVT::nxv16bf16:
-    IntID = Intrinsic::aarch64_sve_st1_pn_x2;
-    NumVecs = 2;
-    RegVT = StoreVT.getHalfNumVectorElementsVT();
+    Info.LoadIntID = Intrinsic::aarch64_sve_ld1_pn_x2;
+    Info.StoreIntID = Intrinsic::aarch64_sve_st1_pn_x2;
+    Info.NumVecs = 2;
+    Info.RegVT = VT.getHalfNumVectorElementsVT();
     break;
   case MVT::nxv64i8:
   case MVT::nxv32i16:
@@ -7801,41 +7778,68 @@ static SDValue tryLowerMultiVectorStore(StoreSDNode *StoreNode,
   case MVT::nxv16f32:
   case MVT::nxv8f64:
   case MVT::nxv32bf16:
-    IntID = Intrinsic::aarch64_sve_st1_pn_x4;
-    NumVecs = 4;
-    RegVT = StoreVT.getHalfNumVectorElementsVT().getHalfNumVectorElementsVT();
+    Info.LoadIntID = Intrinsic::aarch64_sve_ld1_pn_x4;
+    Info.StoreIntID = Intrinsic::aarch64_sve_st1_pn_x4;
+    Info.NumVecs = 4;
+    Info.RegVT = VT.getHalfNumVectorElementsVT().getHalfNumVectorElementsVT();
     break;
   }
 
-  unsigned PredIntID;
-  switch (StoreVT.getScalarSizeInBits()) {
+  switch (VT.getScalarSizeInBits()) {
   default:
     llvm_unreachable("covered by previous switch");
   case 8:
-    PredIntID = Intrinsic::aarch64_sve_ptrue_c8;
+    Info.PTrueIntID = Intrinsic::aarch64_sve_ptrue_c8;
     break;
   case 16:
-    PredIntID = Intrinsic::aarch64_sve_ptrue_c16;
+    Info.PTrueIntID = Intrinsic::aarch64_sve_ptrue_c16;
     break;
   case 32:
-    PredIntID = Intrinsic::aarch64_sve_ptrue_c32;
+    Info.PTrueIntID = Intrinsic::aarch64_sve_ptrue_c32;
     break;
   case 64:
-    PredIntID = Intrinsic::aarch64_sve_ptrue_c64;
+    Info.PTrueIntID = Intrinsic::aarch64_sve_ptrue_c64;
     break;
   }
 
+  return Info;
+}
+
+static bool isValidSVEMultiVectorOp(const LSBaseSDNode *LSNode, EVT VT) {
+  return LSNode->isSimple() && LSNode->isUnindexed() &&
+         LSNode->getOffset().isUndef() && VT.isScalableVector() &&
+         VT.isSimple() && VT == LSNode->getMemoryVT();
+}
+
+// Lower scalable vectors that are 2/4 times the width of a legal SVE type to
+// multi-vector operations.
+static SDValue tryLowerMultiVectorStore(StoreSDNode *StoreNode,
+                                        SelectionDAG &DAG) {
+  SDValue Value = StoreNode->getValue();
+  EVT VT = Value.getValueType();
+
+  if (!isValidSVEMultiVectorOp(StoreNode, VT))
+    return SDValue();
+
+  MVT StoreVT = VT.getSimpleVT();
+  std::optional<SVEMultiVectorInfo> MultiVecInfo =
+      getSVEMultiVectorInfo(StoreVT);
+  if (!MultiVecInfo)
+    return SDValue();
+
   SDLoc DL(StoreNode);
-  SDValue PNg = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::aarch64svcount,
-                            DAG.getConstant(PredIntID, DL, MVT::i64));
+  SDValue PNg =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::aarch64svcount,
+                  DAG.getConstant(MultiVecInfo->PTrueIntID, DL, MVT::i64));
 
   SmallVector<SDValue, 8> Ops;
   Ops.push_back(StoreNode->getChain());
-  Ops.push_back(DAG.getConstant(IntID, DL, MVT::i64));
+  Ops.push_back(DAG.getConstant(MultiVecInfo->StoreIntID, DL, MVT::i64));
 
-  unsigned RegElts = RegVT.getVectorMinNumElements();
-  for (unsigned i = 0; i != NumVecs; ++i)
-    Ops.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, RegVT, Value,
+  unsigned RegElts = MultiVecInfo->RegVT.getVectorMinNumElements();
+  for (unsigned i = 0; i != MultiVecInfo->NumVecs; ++i)
+    Ops.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MultiVecInfo->RegVT,
+                              Value,
                               DAG.getVectorIdxConstant(i * RegElts, DL)));
 
   Ops.push_back(PNg);
@@ -7844,6 +7848,42 @@ static SDValue tryLowerMultiVectorStore(StoreSDNode *StoreNode,
   return DAG.getMemIntrinsicNode(
       ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops,
       StoreNode->getMemoryVT(), StoreNode->getMemOperand());
+}
+
+static bool tryLowerMultiVectorLoad(LoadSDNode *LoadNode,
+                                    SmallVectorImpl<SDValue> &Results,
+                                    SelectionDAG &DAG) {
+  EVT VT = LoadNode->getValueType(0);
+
+  if (!isValidSVEMultiVectorOp(LoadNode, VT))
+    return false;
+
+  MVT LoadVT = VT.getSimpleVT();
+  std::optional<SVEMultiVectorInfo> MultiVecInfo =
+      getSVEMultiVectorInfo(LoadVT);
+  if (!MultiVecInfo)
+    return false;
+
+  SDLoc DL(LoadNode);
+  SDValue PNg =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::aarch64svcount,
+                  DAG.getConstant(MultiVecInfo->PTrueIntID, DL, MVT::i64));
+
+  SmallVector<EVT, 5> ResultVTs(MultiVecInfo->NumVecs, MultiVecInfo->RegVT);
+  ResultVTs.push_back(MVT::Other);
+
+  SDValue NewLoad =
+      DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, ResultVTs,
+                  {LoadNode->getChain(),
+                   DAG.getConstant(MultiVecInfo->LoadIntID, DL, MVT::i64), PNg,
+                   LoadNode->getBasePtr()});
+
+  SmallVector<SDValue, 4> ResultOps;
+  for (unsigned I = 0; I != MultiVecInfo->NumVecs; ++I)
+    ResultOps.push_back(NewLoad.getValue(I));
+  Results.push_back(DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ResultOps));
+  Results.push_back(NewLoad.getValue(MultiVecInfo->NumVecs) /* Chain */);
+  return true;
 }
 
 // Custom lowering for any store, vector or scalar and/or default or with
@@ -32208,91 +32248,9 @@ void AArch64TargetLowering::ReplaceNodeResults(
       return;
     }
 
-    LSBaseSDNode *LSNode = dyn_cast<LSBaseSDNode>(N);
-    if (LSNode && LSNode->isSimple() && LSNode->isUnindexed() &&
-        LSNode->getValueType(0).isScalableVector() &&
-        N->getValueType(0).isSimple() && N->getValueType(0) == MemVT) {
-      MVT VT = N->getValueType(0).getSimpleVT();
-
-      unsigned IntID;
-      switch (VT.SimpleTy) {
-      default:
+    if (auto *Load = dyn_cast<LoadSDNode>(N))
+      if (tryLowerMultiVectorLoad(Load, Results, DAG))
         return;
-      case MVT::nxv32i8:
-      case MVT::nxv16i16:
-      case MVT::nxv8i32:
-      case MVT::nxv4i64:
-      case MVT::nxv16f16:
-      case MVT::nxv8f32:
-      case MVT::nxv4f64:
-      case MVT::nxv16bf16:
-        IntID = Intrinsic::aarch64_sve_ld1_pn_x2;
-        break;
-      case MVT::nxv64i8:
-      case MVT::nxv32i16:
-      case MVT::nxv16i32:
-      case MVT::nxv8i64:
-      case MVT::nxv32f16:
-      case MVT::nxv16f32:
-      case MVT::nxv8f64:
-      case MVT::nxv32bf16:
-        IntID = Intrinsic::aarch64_sve_ld1_pn_x4;
-        break;
-      }
-
-      unsigned PredIntID;
-      switch (VT.getScalarSizeInBits()) {
-      default:
-        llvm_unreachable("covered by previous switch");
-      case 8:
-        PredIntID = Intrinsic::aarch64_sve_ptrue_c8;
-        break;
-      case 16:
-        PredIntID = Intrinsic::aarch64_sve_ptrue_c16;
-        break;
-      case 32:
-        PredIntID = Intrinsic::aarch64_sve_ptrue_c32;
-        break;
-      case 64:
-        PredIntID = Intrinsic::aarch64_sve_ptrue_c64;
-        break;
-      }
-
-      SDValue Chain = LSNode->getChain();
-      SDValue Addr = LSNode->getBasePtr();
-
-      if (!LSNode->getOffset().isUndef())
-        return;
-
-      SDLoc DL(N);
-      SDValue PNg =
-          DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::aarch64svcount,
-                      DAG.getConstant(PredIntID, DL, MVT::i64));
-
-      if (IntID == Intrinsic::aarch64_sve_ld1_pn_x2) {
-        MVT RegVT = VT.getHalfNumVectorElementsVT();
-        SDValue NewLoad = DAG.getNode(
-            ISD::INTRINSIC_W_CHAIN, DL, {RegVT, RegVT, MVT::Other},
-            {Chain, DAG.getConstant(IntID, DL, MVT::i64), PNg, Addr});
-        Results.push_back(
-            DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
-                        {NewLoad.getValue(0), NewLoad.getValue(1)}));
-        Results.push_back(NewLoad.getValue(2) /* Chain */);
-        return;
-      }
-
-      assert(IntID == Intrinsic::aarch64_sve_ld1_pn_x4);
-      MVT RegVT = VT.getHalfNumVectorElementsVT().getHalfNumVectorElementsVT();
-      SDValue NewLoad = DAG.getNode(
-          ISD::INTRINSIC_W_CHAIN, DL, {RegVT, RegVT, RegVT, RegVT, MVT::Other},
-          {Chain, DAG.getConstant(IntID, DL, MVT::i64), PNg, Addr});
-      Results.push_back(
-          DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
-                      {NewLoad.getValue(0), NewLoad.getValue(1),
-                       NewLoad.getValue(2), NewLoad.getValue(3)}));
-      Results.push_back(NewLoad.getValue(4) /* Chain */);
-      return;
-    }
 
     if ((!LoadNode->isVolatile() && !LoadNode->isAtomic()) ||
         LoadNode->getMemoryVT() != MVT::i128) {
