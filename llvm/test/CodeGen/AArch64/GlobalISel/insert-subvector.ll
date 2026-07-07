@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=aarch64 %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-SD %s
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 %s -o - 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-GI %s
 
-; CHECK-GI:         warning: Instruction selection used fallback path for insert_v8i32_v4i32_high
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for insert_v8i32_v4i32_low
-
 define <4 x i32> @insert_v4i32_v2i32_high(<4 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: insert_v4i32_v2i32_high:
 ; CHECK:       // %bb.0: // %entry
@@ -29,20 +26,40 @@ entry:
 }
 
 define <8 x i32> @insert_v8i32_v4i32_high(<8 x i32> %a, <4 x i32> %b) {
-; CHECK-LABEL: insert_v8i32_v4i32_high:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov v0.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: insert_v8i32_v4i32_high:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: insert_v8i32_v4i32_high:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov s3, v1.s[0]
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v3.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v3.s[2], v1.s[2]
+; CHECK-GI-NEXT:    mov v3.s[3], v1.s[3]
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
+; CHECK-GI-NEXT:    ret
 entry:
   %vector = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> %a, <4 x i32> %b, i64 0)
   ret <8 x i32> %vector
 }
 
 define <8 x i32> @insert_v8i32_v4i32_low(<8 x i32> %a, <4 x i32> %b) {
-; CHECK-LABEL: insert_v8i32_v4i32_low:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: insert_v8i32_v4i32_low:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: insert_v8i32_v4i32_low:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov s1, v0.s[0]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    mov v1.s[2], v0.s[2]
+; CHECK-GI-NEXT:    mov v1.s[3], v0.s[3]
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v1.16b, v2.16b
+; CHECK-GI-NEXT:    ret
 entry:
   %vector = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> %a, <4 x i32> %b, i64 4)
   ret <8 x i32> %vector
