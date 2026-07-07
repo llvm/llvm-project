@@ -6,13 +6,7 @@
 # CHECK: DBG_VALUE $q19
 
 --- |
-  ; ModuleID = '-'
-  source_filename = "-"
-  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
-  target triple = "aarch64"
-
-  ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
-  define dso_local void @f(ptr noundef %p) local_unnamed_addr #0 !dbg !24 {
+  define void @f(ptr %p) !dbg !24 {
   entry:
       #dbg_value(ptr %p, !30, !DIExpression(), !43)
     %vld4 = tail call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld4.v16i8.p0(ptr %p), !dbg !44
@@ -35,16 +29,6 @@
     tail call void @llvm.aarch64.neon.st1x4.v16i8.p0(<16 x i8> %vld4.fca.0.extract, <16 x i8> %vld4.fca.1.extract, <16 x i8> %vld4.fca.2.extract, <16 x i8> %vld4.fca.3.extract, ptr %p), !dbg !47
     ret void, !dbg !48
   }
-
-  ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: read)
-  declare { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld4.v16i8.p0(ptr) #1
-
-  ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: write)
-  declare void @llvm.aarch64.neon.st1x4.v16i8.p0(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, ptr captures(none)) #2
-
-  attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "frame-pointer"="non-leaf-no-reserve" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fp-armv8,+neon,+v8a,-fmv" }
-  attributes #1 = { mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: read) }
-  attributes #2 = { mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!13, !14, !15, !16, !17}
@@ -104,57 +88,14 @@
 ---
 name:            f
 alignment:       4
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-failedISel:      false
 tracksRegLiveness: true
-hasWinCFI:       false
 noPhis:          true
 isSSA:           false
 noVRegs:         true
 hasFakeUses:     false
-callsEHReturn:   false
-callsUnwindInit: false
-hasEHContTarget: false
-hasEHScopes:     false
-hasEHFunclets:   false
-isOutlined:      false
-debugInstrRef:   false
-failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:
-  - { reg: '$x0', virtual-reg: '' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    1
-  adjustsStack:    false
-  hasCalls:        false
-  framePointerPolicy: non-leaf-no-reserve
-  stackProtector:  ''
-  functionContext: ''
-  maxCallFrameSize: 0
-  cvBytesOfCalleeSavedRegisters: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
-  hasTailCall:     false
-  isCalleeSavedInfoValid: false
-  localFrameSize:  0
-fixedStack:      []
-stack:           []
-entry_values:    []
-callSites:       []
-debugValueSubstitutions: []
-constants:       []
-machineFunctionInfo: {}
+  - { reg: '$x0' }
 body:             |
   bb.0.entry:
     liveins: $x0
