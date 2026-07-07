@@ -34,14 +34,13 @@ jobs:
         run: |
           cmake \
             -B build \
-            -S llvm \
+            -S compiler-rt \
             -G Ninja \
             -DCMAKE_C_COMPILER=clang-23 \
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_ENABLE_ASSERTIONS=ON \
-            -DCOMPILER_RT_STANDALONE_BUILD=On \
-            -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
+            -DCOMPILER_RT_STANDALONE_BUILD=ON \
             -DCOMPILER_RT_USE_LIBC_MATH=ON \
             -DCOMPILER_RT_INCLUDE_TESTS=ON
 
