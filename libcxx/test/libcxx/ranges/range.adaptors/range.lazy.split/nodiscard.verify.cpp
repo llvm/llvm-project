@@ -11,17 +11,19 @@
 // Check that functions are marked [[nodiscard]]
 
 #include <ranges>
+#include <string>
 #include <utility>
 
 void test() {
   // [range.lazy.split.overview]
 
-  std::string str = "the quick brown fox";
+  std::string str { "the quick brown fox" };
   char pattern    = ' ';
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::split(str, pattern);
+  std::views::lazy_split(str, pattern);
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::split(pattern);
+  std::views::lazy_split(pattern);
+
 }
