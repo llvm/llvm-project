@@ -156,7 +156,7 @@ jobs:
           BENCHMARKS: ${{ needs.extract-info.outputs.benchmarks }}
         run: |
           source .venv/bin/activate
-          # Run 3 times so we can pick the median, and interleave to reduce effects like thermal throttling
+          # Run 3 times so we can pick the median, and interleave to mitigate the impact of environmental noise
           ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
           ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee baseline.lnt
           ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
