@@ -1391,16 +1391,10 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Type *ETy = (IsByVal ? Arg.IndirectType : Arg.Ty);
 
     const Align ArgAlign = [&]() {
-      if (IsByVal) {
-        // The ByValAlign in the Outs[OIdx].Flags is always set at this point,
-        // so we don't need to worry whether it's naturally aligned or not.
-        // See TargetLowering::LowerCallTo().
-        const Align InitialAlign = ArgOuts[0].Flags.getNonZeroByValAlign();
-        return getDeviceByValParamAlign(CB->getCalledFunction(), ETy,
-                                        InitialAlign, DL);
-      }
-      return getPTXParamAlign(CB, Arg.Ty, ArgI + AttributeList::FirstArgIndex,
-                              DL);
+      const unsigned ParamIdx = ArgI + AttributeList::FirstArgIndex;
+      if (IsByVal)
+        return getDeviceByValParamAlign(CB, ETy, ParamIdx, DL);
+      return getPTXParamAlign(CB, Arg.Ty, ParamIdx, DL);
     }();
 
     const unsigned TySize = DL.getTypeAllocSize(ETy);
