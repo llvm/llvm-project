@@ -30,11 +30,10 @@ std::optional<TypeSizeAndAlignment>
 getTypeSizeAndAlignment(Type ty, ModuleOp module, const DataLayout &dl,
                         OpenACCSupport *support) {
   if (ty.isIntOrIndexOrFloat() ||
-      isa<ComplexType, VectorType, DataLayoutTypeInterface>(ty)) {
+      isa<ComplexType, VectorType, DataLayoutTypeInterface>(ty))
     return TypeSizeAndAlignment{
         dl.getTypeSize(ty),
         llvm::TypeSize::getFixed(dl.getTypeABIAlignment(ty))};
-  }
 
   // Product of element size and static dimensions; no inter-element padding or
   // array alignment rules are applied. This is acceptable as per API
@@ -74,10 +73,9 @@ getTypeSizeAndAlignment(Type ty, ModuleOp module, const DataLayout &dl,
     return TypeSizeAndAlignment{size, sizeAndAlignment->second};
   }
 
-  if (isa<FunctionType>(ty)) {
+  if (isa<FunctionType>(ty))
     return getTypeSizeAndAlignmentHelper(
         LLVM::LLVMPointerType::get(ty.getContext()), module, dl, support);
-  }
 
   return std::nullopt;
 }

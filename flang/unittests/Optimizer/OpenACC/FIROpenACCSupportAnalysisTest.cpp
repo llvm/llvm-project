@@ -37,17 +37,15 @@ struct FIROpenACCSupportAnalysisTest : public testing::Test {
 
   std::optional<acc::TypeSizeAndAlignment> getExpectedFIRSize(Type ty) {
     std::optional<DataLayout> dl = acc::getDataLayout(module);
-    if (!dl) {
+    if (!dl)
       return std::nullopt;
-    }
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
         /*forceUnifiedTBAATree=*/false, *dl);
     std::optional<std::pair<uint64_t, unsigned short>> sizeAndAlignment =
         fir::getTypeSizeAndAlignment(
             UnknownLoc::get(&context), ty, *dl, typeConverter.getKindMap());
-    if (!sizeAndAlignment) {
+    if (!sizeAndAlignment)
       return std::nullopt;
-    }
     return acc::TypeSizeAndAlignment{
         llvm::TypeSize::getFixed(sizeAndAlignment->first),
         llvm::TypeSize::getFixed(sizeAndAlignment->second)};

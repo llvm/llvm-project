@@ -99,10 +99,9 @@ FIROpenACCSupportAnalysis::getTypeSizeAndAlignment(
   if (!dl)
     return std::nullopt;
 
-  if (isa<fir::ReferenceType, fir::HeapType, fir::LLVMPointerType>(ty)) {
+  if (isa<fir::ReferenceType, fir::HeapType, fir::LLVMPointerType>(ty))
     return mlir::acc::getTypeSizeAndAlignment(
         LLVM::LLVMPointerType::get(ty.getContext()), module, *dl, &support);
-  }
 
   if (!fir::isa_fir_type(ty))
     return mlir::acc::getTypeSizeAndAlignment(ty, module, *dl, &support);
@@ -111,10 +110,9 @@ FIROpenACCSupportAnalysis::getTypeSizeAndAlignment(
                                        /*forceUnifiedTBAATree=*/false, *dl);
   fir::KindMapping kindMap = typeConverter.getKindMap();
 
-  if (auto boxTy = dyn_cast<fir::BaseBoxType>(ty)) {
+  if (auto boxTy = dyn_cast<fir::BaseBoxType>(ty))
     return mlir::acc::getTypeSizeAndAlignment(
         typeConverter.convertBoxTypeAsStruct(boxTy), module, *dl, &support);
-  }
 
   auto sizeAndAlignment = fir::getTypeSizeAndAlignment(
       UnknownLoc::get(ty.getContext()), ty, *dl, kindMap);

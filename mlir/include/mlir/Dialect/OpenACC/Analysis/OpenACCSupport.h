@@ -337,10 +337,9 @@ public:
   /// Returns the size and ABI alignment in bytes for \p ty.
   std::optional<TypeSizeAndAlignment> getTypeSizeAndAlignment(Type ty,
                                                               ModuleOp module) {
-    if (impl) {
+    if (impl)
       if (auto result = impl->getTypeSizeAndAlignment(ty, module, *this))
         return result;
-    }
     return acc::getTypeSizeAndAlignment(ty, module, this);
   }
 
