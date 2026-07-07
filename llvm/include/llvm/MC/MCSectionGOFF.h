@@ -35,7 +35,7 @@ class LLVM_ABI MCSectionGOFF final : public MCSection {
   // The attributes of the GOFF symbols.
   union {
     GOFF::SDAttr SDAttributes;
-    GOFF::EDAttr EDAttributes;
+    mutable GOFF::EDAttr EDAttributes;
     GOFF::PRAttr PRAttributes;
   };
 
@@ -67,7 +67,9 @@ class LLVM_ABI MCSectionGOFF final : public MCSection {
                 GOFF::EDAttr EDAttributes, MCSectionGOFF *Parent)
       : MCSection(Name, K.isText(), IsVirtual, nullptr), Parent(Parent),
         EDAttributes(EDAttributes), SymbolType(GOFF::ESD_ST_ElementDefinition),
-        IsBSS(K.isBSS()), RequiresNonZeroLength(0), Emitted(0) {}
+        IsBSS(K.isBSS()), RequiresNonZeroLength(0), Emitted(0) {
+          setAlignment(Align(1 << EDAttributes.Alignment));
+        }
 
   MCSectionGOFF(StringRef Name, SectionKind K, bool IsVirtual,
                 GOFF::PRAttr PRAttributes, MCSectionGOFF *Parent)
@@ -96,6 +98,12 @@ public:
   }
   GOFF::EDAttr getEDAttributes() const {
     assert(isED() && "Not a ED section");
+    // Update alignment.
+    uint8_t Log = Log2(getAlign());
+    if (Log <= GOFF::ESD_ALIGN_4Kpage)
+      EDAttributes.Alignment = static_cast<GOFF::ESDAlignment>(Log);
+    else
+      llvm_unreachable("Unsupported alignment");
     return EDAttributes;
   }
   GOFF::PRAttr getPRAttributes() const {
