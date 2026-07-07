@@ -1317,3 +1317,87 @@ define float @fabs_fneg_nsz_assume_neg(float %a) {
   %c = call float @llvm.fabs.f32(float %b)
   ret float %c
 }
+
+; The fabs cannot be eliminated because fadd nsz may return -0.0 or +0.0.
+define float @fabs_fadd_nsz_assume_neg(float %a) {
+; CHECK-LABEL: @fabs_fadd_nsz_assume_neg(
+; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I32]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[C:%.*]] = call float @llvm.fabs.f32(float [[A]])
+; CHECK-NEXT:    ret float [[C]]
+;
+  %i32 = bitcast float %a to i32
+  %cmp = icmp slt i32 %i32, 0
+  call void @llvm.assume(i1 %cmp)
+  %b = fadd nsz float %a, 0.0
+  %c = call float @llvm.fabs.f32(float %b)
+  ret float %c
+}
+
+define float @fabs_fsub_nsz_assume_neg(float %a) {
+; CHECK-LABEL: @fabs_fsub_nsz_assume_neg(
+; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I32]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[C:%.*]] = call float @llvm.fabs.f32(float [[A]])
+; CHECK-NEXT:    ret float [[C]]
+;
+  %i32 = bitcast float %a to i32
+  %cmp = icmp slt i32 %i32, 0
+  call void @llvm.assume(i1 %cmp)
+  %b = fsub nsz float %a, 0.0
+  %c = call float @llvm.fabs.f32(float %b)
+  ret float %c
+}
+
+define float @fabs_fmul_nsz_assume_neg(float %a) {
+; CHECK-LABEL: @fabs_fmul_nsz_assume_neg(
+; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I32]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[C:%.*]] = call float @llvm.fabs.f32(float [[A]])
+; CHECK-NEXT:    ret float [[C]]
+;
+  %i32 = bitcast float %a to i32
+  %cmp = icmp slt i32 %i32, 0
+  call void @llvm.assume(i1 %cmp)
+  %b = fmul nsz float %a, 1.0
+  %c = call float @llvm.fabs.f32(float %b)
+  ret float %c
+}
+
+define float @fabs_fdiv_nsz_assume_neg(float %a) {
+; CHECK-LABEL: @fabs_fdiv_nsz_assume_neg(
+; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I32]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[C:%.*]] = call float @llvm.fabs.f32(float [[A]])
+; CHECK-NEXT:    ret float [[C]]
+;
+  %i32 = bitcast float %a to i32
+  %cmp = icmp slt i32 %i32, 0
+  call void @llvm.assume(i1 %cmp)
+  %b = fdiv nsz float %a, 1.0
+  %c = call float @llvm.fabs.f32(float %b)
+  ret float %c
+}
+
+define float @fabs_sin_nsz_assume_neg(float %a) {
+; CHECK-LABEL: @fabs_sin_nsz_assume_neg(
+; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I32]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[B:%.*]] = call nsz float @llvm.sin.f32(float [[A]])
+; CHECK-NEXT:    [[C:%.*]] = call float @llvm.fabs.f32(float [[B]])
+; CHECK-NEXT:    ret float [[C]]
+;
+  %i32 = bitcast float %a to i32
+  %cmp = icmp slt i32 %i32, 0
+  call void @llvm.assume(i1 %cmp)
+  %b = call nsz float @llvm.sin.f32(float %a)
+  %c = call float @llvm.fabs.f32(float %b)
+  ret float %c
+}
+
+declare float @llvm.sin.f32(float)
