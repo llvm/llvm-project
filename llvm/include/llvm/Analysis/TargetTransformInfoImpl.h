@@ -553,6 +553,10 @@ public:
     return false;
   }
 
+  virtual bool shouldRewriteMaskedStoreAsLoadBlendStore() const {
+    return false;
+  }
+
   virtual bool isFPVectorizationPotentiallyUnsafe() const { return false; }
 
   virtual bool allowsMisalignedMemoryAccesses(LLVMContext &Context,

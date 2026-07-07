@@ -335,6 +335,17 @@ public:
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
+  bool shouldRewriteMaskedStoreAsLoadBlendStore() const override {
+    // NEON has no masked-store instruction, so the loop vectorizer otherwise
+    // scalarizes a predicated store into a per-lane extract/branch/store
+    // ladder. Rewriting a guaranteed-safe masked store as an unconditional
+    // load + select + unconditional store removes that ladder entirely.
+    // Enable the rewrite only when SVE / Streaming-SVE is unavailable: with
+    // SVE the masked store lowers to a single predicated instruction, so the
+    // rewrite is neutral there (see RFC OptimizeMaskedMemory 7.2).
+    return !ST->isSVEorStreamingSVEAvailable();
+  }
+
   bool isElementTypeLegalForCompressStore(Type *Ty) const {
     return Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isIntegerTy(32) ||
            Ty->isIntegerTy(64);

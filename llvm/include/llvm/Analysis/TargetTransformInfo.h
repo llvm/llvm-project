@@ -1163,6 +1163,14 @@ public:
   /// vector loads/stores.
   LLVM_ABI bool enableMaskedInterleavedAccessVectorization() const;
 
+  /// Return true if a masked store whose pointer is provably touched on every
+  /// loop iteration should be rewritten as an unconditional load + select +
+  /// unconditional store. Targets with a microcoded / slow masked-store path
+  /// (e.g. AMD znver1/2/3) should return true. Returning false leaves the
+  /// masked store untouched. Consulted by LoopVectorize when
+  /// -enable-masked-memory-optimization is on.
+  LLVM_ABI bool shouldRewriteMaskedStoreAsLoadBlendStore() const;
+
   /// Indicate that it is potentially unsafe to automatically vectorize
   /// floating-point operations because the semantics of vector and scalar
   /// floating-point semantics may differ. For example, ARM NEON v7 SIMD math

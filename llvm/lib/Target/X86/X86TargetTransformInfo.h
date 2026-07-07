@@ -252,6 +252,8 @@ public:
   bool supportsEfficientVectorElementLoadStore() const override;
   bool enableInterleavedAccessVectorization() const override;
 
+  bool shouldRewriteMaskedStoreAsLoadBlendStore() const override;
+
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
 
   InstructionCost getBranchMispredictPenalty() const override;

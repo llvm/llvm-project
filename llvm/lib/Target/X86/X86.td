@@ -505,6 +505,13 @@ def TuningSlowSHLD : SubtargetFeature<"slow-shld", "IsSHLDSlow", "true",
                                        "SHLD instruction is slow",
                                        [], InlineIgnore>;
 
+def TuningSlowMaskedStore
+    : SubtargetFeature<"slow-masked-store", "HasSlowMaskedStore", "true",
+                       "Variable-mask vector store is microcoded / slow "
+                       "(e.g. AMD znver1/2/3 vmaskmovps/vpmaskmovd path); "
+                       "prefer rewriting safe masked stores as unconditional "
+                       "load+select+store">;
+
 def TuningSlowPMULLD : SubtargetFeature<"slow-pmulld", "IsPMULLDSlow", "true",
                                         "PMULLD instruction is slow (compared to PMULLW/PMULHW and PMULUDQ)",
                                         [], InlineIgnore>;
@@ -1683,6 +1690,7 @@ def ProcessorFeatures {
                                      TuningFastImm16,
                                      TuningSlowDivide64,
                                      TuningSlowSHLD,
+                                     TuningSlowMaskedStore,
                                      TuningSBBDepBreaking,
                                      TuningInsertVZEROUPPER,
                                      TuningAllowLight256Bit];
@@ -1705,8 +1713,11 @@ def ProcessorFeatures {
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
 
   list<SubtargetFeature> ZN4AdditionalTuning = [TuningFastDPWSSD];
+  // znver4 (and later) has first-class AVX-512 masked-store hardware; drop the
+  // tuning that says variable-mask stores are slow.
   list<SubtargetFeature> ZN4Tuning =
-    !listconcat(ZN3Tuning, ZN4AdditionalTuning);
+    !listremove(!listconcat(ZN3Tuning, ZN4AdditionalTuning),
+                [TuningSlowMaskedStore]);
   list<SubtargetFeature> ZN4AdditionalFeatures = [FeatureAVX512,
                                                   FeatureCDI,
                                                   FeatureDQI,
