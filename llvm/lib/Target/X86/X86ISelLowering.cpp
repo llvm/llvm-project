@@ -25010,8 +25010,8 @@ static SDValue EmitAVX512Test(SDValue Op0, SDValue Op1, ISD::CondCode CC,
       if (!VT.isVectorOf(MVT::i1) || !IsLegalTestVT(VT))
         return SDValue();
 
-      EVT IntVT = EVT::getIntegerVT(*DAG.getContext(),
-                                    VT.getVectorNumElements());
+      EVT IntVT =
+          EVT::getIntegerVT(*DAG.getContext(), VT.getVectorNumElements());
       ScalarMask = DAG.getZExtOrTrunc(ScalarMask, dl, IntVT);
       ScalarMask = DAG.getBitcast(VT, ScalarMask);
 
