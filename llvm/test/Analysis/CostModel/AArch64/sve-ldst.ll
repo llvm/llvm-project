@@ -9,7 +9,7 @@ define void @scalable_loads() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %res.nxv8i8 = load <vscale x 8 x i8>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %res.nxv16i8 = load <vscale x 16 x i8>, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %res.nxv32i8 = load <vscale x 32 x i8>, ptr undef, align 32
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %res.nxv1i64 = load <vscale x 1 x i64>, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %res.nxv1i64 = load <vscale x 1 x i64>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %res.nxv32i1 = load <vscale x 32 x i1>, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %res.nxv16i1 = load <vscale x 16 x i1>, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %res.nxv4i1 = load <vscale x 4 x i1>, ptr undef, align 1
@@ -19,7 +19,7 @@ define void @scalable_loads() {
 ; A510-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %res.nxv8i8 = load <vscale x 8 x i8>, ptr undef, align 8
 ; A510-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %res.nxv16i8 = load <vscale x 16 x i8>, ptr undef, align 16
 ; A510-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:2 for: %res.nxv32i8 = load <vscale x 32 x i8>, ptr undef, align 32
-; A510-NEXT:  Cost Model: Found costs of Invalid for: %res.nxv1i64 = load <vscale x 1 x i64>, ptr undef, align 8
+; A510-NEXT:  Cost Model: Found costs of 3 for: %res.nxv1i64 = load <vscale x 1 x i64>, ptr undef, align 8
 ; A510-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:2 for: %res.nxv32i1 = load <vscale x 32 x i1>, ptr undef, align 4
 ; A510-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %res.nxv16i1 = load <vscale x 16 x i1>, ptr undef, align 2
 ; A510-NEXT:  Cost Model: Found costs of Invalid for: %res.nxv4i1 = load <vscale x 4 x i1>, ptr undef, align 1
@@ -40,7 +40,7 @@ define void @scalable_stores() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <vscale x 8 x i8> undef, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <vscale x 16 x i8> undef, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <vscale x 32 x i8> undef, ptr undef, align 32
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: store <vscale x 1 x i64> undef, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: store <vscale x 1 x i64> undef, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <vscale x 32 x i1> undef, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <vscale x 16 x i1> undef, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of Invalid for: store <vscale x 4 x i1> undef, ptr undef, align 1
@@ -50,7 +50,7 @@ define void @scalable_stores() {
 ; A510-NEXT:  Cost Model: Found costs of 1 for: store <vscale x 8 x i8> undef, ptr undef, align 8
 ; A510-NEXT:  Cost Model: Found costs of 1 for: store <vscale x 16 x i8> undef, ptr undef, align 16
 ; A510-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <vscale x 32 x i8> undef, ptr undef, align 32
-; A510-NEXT:  Cost Model: Found costs of Invalid for: store <vscale x 1 x i64> undef, ptr undef, align 8
+; A510-NEXT:  Cost Model: Found costs of 3 for: store <vscale x 1 x i64> undef, ptr undef, align 8
 ; A510-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <vscale x 32 x i1> undef, ptr undef, align 4
 ; A510-NEXT:  Cost Model: Found costs of 1 for: store <vscale x 16 x i1> undef, ptr undef, align 2
 ; A510-NEXT:  Cost Model: Found costs of Invalid for: store <vscale x 4 x i1> undef, ptr undef, align 1
