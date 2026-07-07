@@ -39,7 +39,7 @@ public:
 
   _LIBCPP_ACQUIRE_CAPABILITY() void lock();
   [[__nodiscard__]] _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) bool try_lock() _NOEXCEPT;
-  _LIBCPP_RELEASE_CAPABILITY void unlock() _NOEXCEPT;
+  _LIBCPP_RELEASE_CAPABILITY() void unlock() _NOEXCEPT;
 
   typedef __libcpp_mutex_t* native_handle_type;
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() { return &__m_; }
