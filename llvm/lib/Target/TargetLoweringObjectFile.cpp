@@ -352,9 +352,26 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       // the time the app starts up.  However, we can't put this into a
       // mergable section, because the linker doesn't take relocations into
       // consideration when it tries to merge entries in the section.
+      //
+      // ROPI_RWPI is deliberately excluded below: under a two-base
+      // (text via PC, data via r9) model used for placement-independent XIP
+      // images, a reloc-bearing constant (e.g. a dyn vtable) must be fixable
+      // by a loader after placement is known, so it has to land in a writable
+      // relocation-bearing section (.data.rel.ro), addressed via r9 -- see the
+      // matching ARMTargetLowering::isReadOnly change.
+      //
+      // Exception: a global with an explicit section keeps stock behavior
+      // even under ROPI_RWPI. The user pinned the placement, and linker
+      // scripts route pinned sections by NAME; diverting the kind to
+      // ReadOnlyWithRel would stamp SHF_WRITE onto the named section and
+      // (via the matching isReadOnly change) address it r9-relative while
+      // the bytes sit wherever the script put the name -- reintroducing the
+      // addressing-vs-placement mismatch. The loader-fixup model only covers
+      // compiler-placed constants.
       Reloc::Model ReloModel = TM.getRelocationModel();
       if (ReloModel == Reloc::Static || ReloModel == Reloc::ROPI ||
-          ReloModel == Reloc::RWPI || ReloModel == Reloc::ROPI_RWPI ||
+          ReloModel == Reloc::RWPI ||
+          (ReloModel == Reloc::ROPI_RWPI && GVar->hasSection()) ||
           !C->needsDynamicRelocation())
         return SectionKind::getReadOnly();
 
