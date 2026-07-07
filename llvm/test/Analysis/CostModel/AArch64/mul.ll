@@ -75,7 +75,7 @@ define void @vi64() {
 
 define void @vi128() {
 ; CHECK-LABEL: 'vi128'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <2 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <2 x i128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %e2 = mul <2 x i128> undef, undef

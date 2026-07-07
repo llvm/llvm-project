@@ -825,6 +825,7 @@ public:
   Symbol &AddGenericUse(GenericDetails &, const SourceName &, const Symbol &);
   void AddAndCheckModuleUse(SourceName, bool isIntrinsic);
   void CollectUseRenames(const parser::UseStmt &);
+  void AddImplicitUseModules();
   void ClearUseRenames() { useRenames_.clear(); }
   void ClearUseOnly() { useOnly_.clear(); }
   void ClearModuleUses() {
@@ -855,6 +856,8 @@ private:
   // Record a use from useModuleScope_ of use Name/Symbol as local Name/Symbol
   SymbolRename AddUse(const SourceName &localName, const SourceName &useName);
   SymbolRename AddUse(const SourceName &, const SourceName &, Symbol *);
+  void AddUseForPublicSymbols(SourceName, const std::set<SourceName> &);
+  void AddUseForCommonBlocks();
   void DoAddUse(
       SourceName, SourceName, Symbol &localSymbol, const Symbol &useSymbol);
   void AddUse(const GenericSpecInfo &);
@@ -3862,30 +3865,40 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
                     },
           rename.u);
     }
-    for (const auto &[name, symbol] : *useModuleScope_) {
-      // Default USE imports public names, excluding intrinsic-only and most
-      // miscellaneous details. Allow OpenMP mapper identifiers represented
-      // as MapperDetails, and also legacy MiscDetails::ConstructName.
-      bool isMapper{symbol->has<MapperDetails>()};
-      if (!isMapper) {
-        if (const auto *misc{symbol->detailsIf<MiscDetails>()}) {
-          isMapper = misc->kind() == MiscDetails::Kind::ConstructName;
-        }
+    AddUseForPublicSymbols(x.moduleName.source, useNames);
+  }
+  AddUseForCommonBlocks();
+
+  useModuleScope_ = nullptr;
+}
+
+void ModuleVisitor::AddUseForPublicSymbols(
+    SourceName location, const std::set<SourceName> &useNames) {
+  for (const auto &[name, symbol] : *useModuleScope_) {
+    // Default USE imports public names, excluding intrinsic-only and most
+    // miscellaneous details. Allow OpenMP mapper identifiers represented
+    // as MapperDetails, and also legacy MiscDetails::ConstructName.
+    bool isMapper{symbol->has<MapperDetails>()};
+    if (!isMapper) {
+      if (const auto *misc{symbol->detailsIf<MiscDetails>()}) {
+        isMapper = misc->kind() == MiscDetails::Kind::ConstructName;
       }
-      if (symbol->attrs().test(Attr::PUBLIC) && !IsUseRenamed(symbol->name()) &&
-          (!symbol->implicitAttrs().test(Attr::INTRINSIC) ||
-              symbol->has<UseDetails>()) &&
-          (!symbol->has<MiscDetails>() || isMapper) &&
-          useNames.count(name) == 0) {
-        SourceName location{x.moduleName.source};
-        if (auto *localSymbol{FindInScope(name)}) {
-          DoAddUse(location, localSymbol->name(), *localSymbol, *symbol);
-        } else {
-          DoAddUse(location, location, CopySymbol(name, *symbol), *symbol);
-        }
+    }
+    if (symbol->attrs().test(Attr::PUBLIC) && !IsUseRenamed(symbol->name()) &&
+        (!symbol->implicitAttrs().test(Attr::INTRINSIC) ||
+            symbol->has<UseDetails>()) &&
+        (!symbol->has<MiscDetails>() || isMapper) &&
+        useNames.count(name) == 0) {
+      if (auto *localSymbol{FindInScope(name)}) {
+        DoAddUse(location, localSymbol->name(), *localSymbol, *symbol);
+      } else {
+        DoAddUse(location, location, CopySymbol(name, *symbol), *symbol);
       }
     }
   }
+}
+
+void ModuleVisitor::AddUseForCommonBlocks() {
   // Go through the list of COMMON block symbols in the module scope and add
   // their USE association to the current scope's USE-associated COMMON blocks.
   for (const auto &[name, symbol] : useModuleScope_->commonBlocks()) {
@@ -3900,8 +3913,37 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
   for (const auto &[name, symbol] : useModuleScope_->commonBlockUses()) {
     currScope().AddCommonBlockUse(name, symbol->attrs(), symbol->GetUltimate());
   }
+}
 
-  useModuleScope_ = nullptr;
+void ModuleVisitor::AddImplicitUseModules() {
+  for (const std::string &module : context().implicitUseModules()) {
+    if (module.empty()) {
+      continue;
+    }
+    SourceName moduleName{module};
+    std::optional<SourceName> currModuleName{currScope().GetName()};
+    if (currScope().IsModule() && currModuleName &&
+        *currModuleName == moduleName) {
+      continue;
+    }
+    parser::Name name{moduleName};
+    std::optional<bool> isIntrinsic;
+    if (currScope().IsModule() && currScope().symbol() &&
+        currScope().symbol()->attrs().test(Attr::INTRINSIC)) {
+      // Intrinsic modules USE only other intrinsic modules.
+      isIntrinsic = true;
+    }
+    useModuleScope_ = FindModule(name, isIntrinsic);
+    if (!useModuleScope_) {
+      continue;
+    }
+    AddAndCheckModuleUse(moduleName,
+        useModuleScope_->parent().kind() == Scope::Kind::IntrinsicModules);
+    useModuleScope_->symbol()->ReplaceName(moduleName);
+    AddUseForPublicSymbols(moduleName, {});
+    AddUseForCommonBlocks();
+    useModuleScope_ = nullptr;
+  }
 }
 
 ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
@@ -10297,6 +10339,7 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
     CollectUseRenames(useStmt.statement.value());
   }
   Walk(useStmts);
+  AddImplicitUseModules();
   UseCUDABuiltinNames();
   ClearUseRenames();
   ClearUseOnly();

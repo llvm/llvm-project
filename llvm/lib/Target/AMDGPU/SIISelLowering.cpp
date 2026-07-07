@@ -2901,7 +2901,7 @@ void SITargetLowering::allocateSpecialEntryInputVGPRs(
 
 // Try to allocate a VGPR at the end of the argument list, or if no argument
 // VGPRs are left allocating a stack slot.
-// If \p Mask is is given it indicates bitfield position in the register.
+// If \p Mask is given it indicates bitfield position in the register.
 // If \p Arg is given use it with new ]p Mask instead of allocating new.
 static ArgDescriptor allocateVGPR32Input(CCState &CCInfo, unsigned Mask = ~0u,
                                          ArgDescriptor Arg = ArgDescriptor()) {
@@ -18499,7 +18499,7 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
     return DCI.DAG.getConstantFP(Zero, SDLoc(N), N->getValueType(0));
   }
 
-  APFloat One(F.getSemantics(), "1.0");
+  APFloat One = APFloat::getOne(F.getSemantics());
   if (F > One)
     return DCI.DAG.getConstantFP(One, SDLoc(N), N->getValueType(0));
 
