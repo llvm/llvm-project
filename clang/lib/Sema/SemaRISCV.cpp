@@ -287,6 +287,9 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
           BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
           Record.HasVL, Record.NF, MaskedPolicyScheme, DefaultPolicy,
           Record.IsTuple);
+    if (Record.HasMasked && Record.MaskedPrototypeHasResultMask)
+      ProtoMaskSeq[1] = PrototypeDescriptor(
+          BaseTypeModifier::Vector, VectorTypeModifier::DoubleLMULMaskVector);
 
     bool UnMaskedHasPolicy = UnMaskedPolicyScheme != PolicyScheme::SchemeNone;
     bool MaskedHasPolicy = MaskedPolicyScheme != PolicyScheme::SchemeNone;
@@ -357,6 +360,10 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
                   BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
                   Record.HasVL, Record.NF, MaskedPolicyScheme, P,
                   Record.IsTuple);
+          if (Record.MaskedPrototypeHasResultMask)
+            PolicyPrototype[1] =
+                PrototypeDescriptor(BaseTypeModifier::Vector,
+                                    VectorTypeModifier::DoubleLMULMaskVector);
           std::optional<RVVTypes> PolicyTypes = TypeCache.computeTypes(
               BaseType, Log2LMUL, Record.NF, PolicyPrototype);
           InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr,

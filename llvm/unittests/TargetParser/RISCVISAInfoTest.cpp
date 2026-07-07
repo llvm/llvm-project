@@ -1662,7 +1662,7 @@ Experimental extensions
     zvvmm                0.1
     zvvmtls              0.1
     zvvmttls             0.1
-    zvzip                0.1
+    zvzip                0.3
     smcsps               0.20
     smehv                0.20
     smijt                0.20

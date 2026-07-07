@@ -37,14 +37,6 @@ vpairo.vv   v1, v2, v3, v0.t
 # CHECK-ASM: encoding: [0xd7,0xa0,0x25,0x4a]
 vunzipe.v   v1, v2
 
-# CHECK-ASM-AND-OBJ: vunzipe.v   v1, v2, v0.t
-# CHECK-ASM: encoding: [0xd7,0xa0,0x25,0x48]
-vunzipe.v   v1, v2, v0.t
-
 # CHECK-ASM-AND-OBJ: vunzipo.v v1, v2
 # CHECK-ASM: encoding: [0xd7,0xa0,0x27,0x4a]
 vunzipo.v v1, v2
-
-# CHECK-ASM-AND-OBJ: vunzipe.v   v1, v2, v0.t
-# CHECK-ASM: encoding: [0xd7,0xa0,0x25,0x48]
-vunzipe.v   v1, v2, v0.t

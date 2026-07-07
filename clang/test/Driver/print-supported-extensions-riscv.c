@@ -272,7 +272,7 @@
 // CHECK-NEXT:     zvvmm                0.1       'Zvvmm' (Integer Matrix Multiply-Accumulate)
 // CHECK-NEXT:     zvvmtls              0.1       'Zvvmtls' (Matrix Tile Load/Store)
 // CHECK-NEXT:     zvvmttls             0.1       'Zvvmttls' (Transposing Matrix Tile Load/Store)
-// CHECK-NEXT:     zvzip                0.1       'Zvzip' (Vector Reordering Structured Data)
+// CHECK-NEXT:     zvzip                0.3       'Zvzip' (Vector Reordering Structured Data)
 // CHECK-NEXT:     smcsps               0.20      'Smcsps' (Conditional Stack Pointer Swap at Machine Level)
 // CHECK-NEXT:     smehv                0.20      'Smehv' (Synchronous Exception Hardware Vectoring at Machine Level)
 // CHECK-NEXT:     smijt                0.20      'Smijt' (Interrupt Jump Table at Machine Level)
