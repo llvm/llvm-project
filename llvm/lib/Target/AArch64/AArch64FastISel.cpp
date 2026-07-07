@@ -4543,7 +4543,7 @@ bool AArch64FastISel::selectIntExt(const Instruction *I) {
   bool IsZExt = isa<ZExtInst>(I);
   if (const auto *Arg = dyn_cast<Argument>(I->getOperand(0))) {
     if (((IsZExt && Arg->hasZExtAttr()) || (!IsZExt && Arg->hasSExtAttr())) &&
-        RetVT == MVT::i32) {
+        RetVT <= MVT::i32) {
       updateValueMap(I, SrcReg);
       return true;
     }
