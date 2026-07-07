@@ -1,3 +1,11 @@
+add_header_library(
+  kernel_timespec
+  HDRS
+    kernel_timespec.h
+  DEPENDS
+    libc.hdr.types.struct_timespec
+)
+
 add_object_library(
   clock_gettime
   HDRS
@@ -12,6 +20,7 @@ add_object_library(
     libc.src.__support.error_or
     libc.src.__support.OSUtil.osutil
     libc.src.__support.OSUtil.linux.vdso
+    .kernel_timespec
 )
 
 add_object_library(
@@ -27,4 +36,5 @@ add_object_library(
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.OSUtil.osutil
+    .kernel_timespec
 )

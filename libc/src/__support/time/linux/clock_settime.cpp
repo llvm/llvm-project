@@ -13,8 +13,8 @@
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/time/linux/kernel_timespec.h"
 #include <sys/syscall.h>
-
 #if defined(SYS_clock_settime64)
 #include <linux/time_types.h>
 #endif
@@ -24,9 +24,25 @@ namespace internal {
 ErrorOr<int> clock_settime(clockid_t clockid, const timespec *ts) {
   int ret;
 #if defined(SYS_clock_settime64)
-  ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_settime64,
-                                          static_cast<long>(clockid),
-                                          reinterpret_cast<long>(ts));
+  // In overlay mode on 32-bit platforms, the system timespec (which we use)
+  // may be 32-bit (8 bytes), while the kernel's __kernel_timespec (used by
+  // _time64 syscalls) is 64-bit (16 bytes). If they match, we can pass the
+  // pointer directly. Otherwise, we must convert to avoid stack corruption.
+  if constexpr (sizeof(timespec) == sizeof(__kernel_timespec)) {
+    ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_settime64,
+                                            static_cast<long>(clockid),
+                                            reinterpret_cast<long>(ts));
+  } else {
+    __kernel_timespec ts64{};
+    __kernel_timespec *ts64_ptr = nullptr;
+    if (ts != nullptr) {
+      ts64 = to_kernel_timespec(*ts);
+      ts64_ptr = &ts64;
+    }
+    ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_settime64,
+                                            static_cast<long>(clockid),
+                                            reinterpret_cast<long>(ts64_ptr));
+  }
 #elif defined(SYS_clock_settime)
   static_assert(
       sizeof(timespec::tv_nsec) == sizeof(long),

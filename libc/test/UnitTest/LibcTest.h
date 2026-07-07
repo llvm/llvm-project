@@ -29,7 +29,9 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/CPP/new.h"
 #include "src/__support/c_string.h"
+
 #include "src/__support/macros/properties/compiler.h"
 #include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
