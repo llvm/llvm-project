@@ -2,7 +2,6 @@
 
 // Tests for issue #207785.
 
-#define C(x) __attribute__((cleanup(x)))
 void f1(double *x);
 void f2(double *x);
 void f3(double *x);
@@ -12,18 +11,43 @@ void g1() {
   // CHECK: call void @f3
   // CHECK-NOT: call void @f2
   // CHECK-NOT: call void @f1
-  C(f1) C(f2) C(f3) double x;
+  __attribute__((cleanup(f1)))
+  __attribute__((cleanup(f2)))
+  __attribute__((cleanup(f3)))
+  double x;
 }
 
 // CHECK-LABEL: define {{.*}} void @g2()
 void g2() {
   // CHECK: call void @f1
-  C(f1) C(f1) double x;
+  __attribute__((cleanup(f1)))
+  __attribute__((cleanup(f1)))
+  double x;
 }
 
 // CHECK-LABEL: define {{.*}} void @g3()
 void g3() {
   // CHECK: call void @f1
   // CHECK-NOT: call void @f2
-  C(f2) C(f1) double x;
+  __attribute__((cleanup(f2)))
+  __attribute__((cleanup(f1)))
+  double x;
+}
+
+// CHECK-LABEL: define {{.*}} void @g4()
+void g4() {
+  // CHECK: call void @f1
+  // CHECK-NOT: call void @f2
+  [[gnu::cleanup(f2)]]
+  [[gnu::cleanup(f1)]]
+  double x;
+}
+
+// CHECK-LABEL: define {{.*}} void @g5()
+void g5() {
+  // CHECK: call void @f1
+  // CHECK-NOT: call void @f2
+  [[gnu::cleanup(f2)]]
+  __attribute__((cleanup(f1)))
+  double x;
 }

@@ -28,3 +28,16 @@ void b3() {
   __attribute__((cleanup(f4)))
   double x;
 }
+
+void b4() {
+  [[gnu::cleanup(f2)]] // expected-warning {{declaration has multiple 'cleanup' attributes; all but the last one will be ignored}}
+  [[gnu::cleanup(f3)]]
+  double x;
+}
+
+void b5() {
+  [[gnu::cleanup(f2)]] // expected-warning {{declaration has multiple 'cleanup' attributes; all but the last one will be ignored}}
+  __attribute__((cleanup(f3))) // expected-warning {{declaration has multiple 'cleanup' attributes; all but the last one will be ignored}}
+  __attribute__((cleanup(f4)))
+  double x;
+}
