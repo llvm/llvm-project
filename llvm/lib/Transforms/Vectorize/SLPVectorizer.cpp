@@ -2212,7 +2212,9 @@ public:
                  const SmallDenseSet<Value *> &UserIgnoreLst);
 
   /// Construct a vectorizable tree that starts at \p Roots.
-  void buildTree(ArrayRef<Value *> Roots);
+  void buildTree(ArrayRef<Value *> Roots, bool AlwaysMergeSiblingLoops = false);
+
+  bool sawSiblingMismatchBailout() const { return SawSiblingMismatchBailout; }
 
   /// Return the scalars of the root node.
   ArrayRef<Value *> getRootNodeScalars() const {
@@ -2300,7 +2302,7 @@ public:
   buildExternalUses(const ExtraValueToDebugLocsMap &ExternallyUsedValues = {});
 
   /// Transforms graph nodes to target specific representations, if profitable.
-  void transformNodes();
+  void transformNodes(bool AlwaysMergeSiblingLoops = false);
 
   /// Clear the internal data structures that are created by 'buildTree'.
   void deleteTree() {
@@ -2337,6 +2339,7 @@ public:
     TreeEntryToStridedPtrInfoMap.clear();
     CurrentLoopNest.clear();
     MergedLoopBTCs.clear();
+    SawSiblingMismatchBailout = false;
   }
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
@@ -4067,6 +4070,7 @@ private:
 
   /// This is the recursive part of buildTree.
   void buildTreeRec(ArrayRef<Value *> Roots, unsigned Depth, const EdgeInfo &EI,
+                    bool AlwaysMergeSiblingLoops = false,
                     unsigned InterleaveFactor = 0);
 
   /// \returns true if the ExtractElement/ExtractValue instructions in \p VL can
@@ -4183,7 +4187,8 @@ private:
       const SmallMapVector<
           std::tuple<BasicBlock *, Value *, Type *>,
           SmallVector<SmallVector<std::pair<LoadInst *, int64_t>>>, 8>
-          &GatheredLoads);
+          &GatheredLoads,
+      bool AlwaysMergeSiblingLoops);
 
   /// Helper for `findExternalStoreUsersReorderIndices()`. It iterates over the
   /// users of \p TE and collects the stores. It returns the map from the store
@@ -5023,6 +5028,8 @@ private:
   /// Per-depth SCEVs trip counts at every loop level where the tree builder has
   /// joined diverging sibling loops.
   SmallVector<const SCEV *> MergedLoopBTCs;
+  /// True if this tree build hit a sibling-trip-count mismatch bailout.
+  bool SawSiblingMismatchBailout = false;
 
   /// Maps the loops to their loop nests.
   SmallDenseMap<const Loop *, SmallVector<const Loop *>> LoopToLoopNest;
@@ -10022,13 +10029,13 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
   buildTreeRec(Roots, 0, EdgeInfo());
 }
 
-void BoUpSLP::buildTree(ArrayRef<Value *> Roots) {
+void BoUpSLP::buildTree(ArrayRef<Value *> Roots, bool AlwaysMergeSiblingLoops) {
   deleteTree();
   assert(TreeEntryToStridedPtrInfoMap.empty() &&
          "TreeEntryToStridedPtrInfoMap is not cleared");
   if (!allSameType(Roots))
     return;
-  buildTreeRec(Roots, 0, EdgeInfo());
+  buildTreeRec(Roots, 0, EdgeInfo(), AlwaysMergeSiblingLoops);
 }
 
 /// Tries to find subvector of loads and builds new vector of only loads if can
@@ -10189,7 +10196,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     const SmallMapVector<
         std::tuple<BasicBlock *, Value *, Type *>,
         SmallVector<SmallVector<std::pair<LoadInst *, int64_t>>>, 8>
-        &GatheredLoads) {
+        &GatheredLoads,
+    bool AlwaysMergeSiblingLoops) {
   GatheredLoadsEntriesFirst = VectorizableTree.size();
 
   SmallVector<SmallPtrSet<const Value *, 4>> LoadSetsToVectorize(
@@ -10583,7 +10591,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                            }))
                   continue;
                 unsigned Sz = VectorizableTree.size();
-                buildTreeRec(SubSlice, 0, EdgeInfo(), InterleaveFactor);
+                buildTreeRec(SubSlice, 0, EdgeInfo(), AlwaysMergeSiblingLoops,
+                             InterleaveFactor);
                 if (Sz == VectorizableTree.size()) {
                   IsVectorized = false;
                   // Try non-interleaved vectorization with smaller vector
@@ -10638,7 +10647,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
       inversePermutation(E.ReorderIndices, ReorderMask);
       reorderScalars(GatheredScalars, ReorderMask);
     }
-    buildTreeRec(GatheredScalars, 0, EdgeInfo());
+    buildTreeRec(GatheredScalars, 0, EdgeInfo(), AlwaysMergeSiblingLoops);
   }
   // If no new entries created, consider it as no gathered loads entries must be
   // handled.
@@ -13101,6 +13110,7 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
 
 void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
                            const EdgeInfo &UserTreeIdx,
+                           bool AlwaysMergeSiblingLoops,
                            unsigned InterleaveFactor) {
   assert((allConstant(VLRef) || allSameType(VLRef)) && "Invalid types!");
 
@@ -13129,7 +13139,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       } else {
         TE->CombinedEntriesWithIndices.emplace_back(VectorizableTree.size(),
                                                     Idx == 0 ? 0 : Op1.size());
-        buildTreeRec(Op, Depth, {TE, Idx});
+        buildTreeRec(Op, Depth, {TE, Idx}, AlwaysMergeSiblingLoops);
       }
     };
     AddNode(Op1, 0);
@@ -13202,104 +13212,107 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     return;
   }
 
-  // Check the loop nest. We need to be sure we handle a single loop nest at a
-  // time to avoid incorrect cost estimation because of the loop aware cost
-  // model.
-  if (VectorizableTree.empty()) {
-    assert(CurrentLoopNest.empty() && "Expected empty loop nest");
-    // Process the first node? Initial fill of the loop nest.
-    BasicBlock *Parent = S.getMainOp()->getParent();
-    if (const Loop *L = LI->getLoopFor(Parent)) {
-      L = findInnermostNonInvariantLoop(L, VL);
-      if (L)
-        CurrentLoopNest.assign(getLoopNest(L));
-    }
-  } else if (!UserTreeIdx ||
-             UserTreeIdx.UserTE->State == TreeEntry::SplitVectorize ||
-             UserTreeIdx.UserTE->isGather() ||
-             UserTreeIdx.UserTE->getMainOp()->getParent() !=
-                 S.getMainOp()->getParent()) {
-    BasicBlock *Parent = S.getMainOp()->getParent();
-    if (const Loop *L = LI->getLoopFor(Parent)) {
-      // Check that the new loop nest shares the same outer structure as the
-      // tree's current loop nest. Completely disjoint nests (different
-      // outermost loops) are forced to gather because their scales cannot be
-      // meaningfully combined. Sibling inner loops (inside a common outer
-      // loop or outside any loops at all) are allowed: the cost model scales
-      // each entry by its own loop via getScaleToLoopIterations(), so a tree
-      // that spans sibling inner loops (e.g. a PHI at their merge block) can
-      // still be costed correctly. Contract CurrentLoopNest to the longest
-      // common prefix with the new entry's nest so subsequent entries in yet
-      // another sibling can also be admitted.
-      L = findInnermostNonInvariantLoop(L, VL);
-      if (L) {
-        SmallVector<const Loop *> NewLoopNest(getLoopNest(L));
-        unsigned CommonLen = 0;
-        for (const auto [L1, L2] : zip(CurrentLoopNest, NewLoopNest)) {
-          if (L1 != L2)
-            break;
-          ++CommonLen;
+  if (!AlwaysMergeSiblingLoops) {
+    // Check the loop nest. We need to be sure we handle a single loop nest at a
+    // time to avoid incorrect cost estimation because of the loop aware cost
+    // model.
+    if (VectorizableTree.empty()) {
+      assert(CurrentLoopNest.empty() && "Expected empty loop nest");
+      // Process the first node? Initial fill of the loop nest.
+      BasicBlock *Parent = S.getMainOp()->getParent();
+      if (const Loop *L = LI->getLoopFor(Parent)) {
+        L = findInnermostNonInvariantLoop(L, VL);
+        if (L)
+          CurrentLoopNest.assign(getLoopNest(L));
+      }
+    } else if (!UserTreeIdx ||
+               UserTreeIdx.UserTE->State == TreeEntry::SplitVectorize ||
+               UserTreeIdx.UserTE->isGather() ||
+               UserTreeIdx.UserTE->getMainOp()->getParent() !=
+                   S.getMainOp()->getParent()) {
+      BasicBlock *Parent = S.getMainOp()->getParent();
+      if (const Loop *L = LI->getLoopFor(Parent)) {
+        // Check that the new loop nest shares the same outer structure as the
+        // tree's current loop nest. Completely disjoint nests (different
+        // outermost loops) are forced to gather because their scales cannot be
+        // meaningfully combined. Sibling inner loops (inside a common outer
+        // loop or outside any loops at all) are allowed: the cost model scales
+        // each entry by its own loop via getScaleToLoopIterations(), so a tree
+        // that spans sibling inner loops (e.g. a PHI at their merge block) can
+        // still be costed correctly. Contract CurrentLoopNest to the longest
+        // common prefix with the new entry's nest so subsequent entries in yet
+        // another sibling can also be admitted.
+        L = findInnermostNonInvariantLoop(L, VL);
+        if (L) {
+          SmallVector<const Loop *> NewLoopNest(getLoopNest(L));
+          unsigned CommonLen = 0;
+          for (const auto [L1, L2] : zip(CurrentLoopNest, NewLoopNest)) {
+            if (L1 != L2)
+              break;
+            ++CommonLen;
+          }
+          auto ValidateMergedBTCs = [&](unsigned StartDepth) -> bool {
+            unsigned EndDepth =
+                std::min<unsigned>(NewLoopNest.size(), MergedLoopBTCs.size());
+            for (unsigned D = StartDepth; D < EndDepth; ++D) {
+              const SCEV *Constraint = MergedLoopBTCs[D];
+              if (!Constraint)
+                continue;
+              const SCEV *NewBTC = SE->getBackedgeTakenCount(NewLoopNest[D]);
+              if (isa<SCEVCouldNotCompute>(NewBTC) || NewBTC != Constraint)
+                return false;
+            }
+            return true;
+          };
+          auto BailOutToGather = [&]() {
+            SawSiblingMismatchBailout = true;
+            LLVM_DEBUG(dbgs()
+                       << "SLP: Sibling loops have different trip counts.\n");
+            newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
+          };
+          if (CurrentLoopNest.empty()) {
+            if (!ValidateMergedBTCs(0)) {
+              BailOutToGather();
+              return;
+            }
+            CurrentLoopNest.assign(NewLoopNest);
+          } else if (CommonLen < CurrentLoopNest.size() &&
+                     CommonLen < NewLoopNest.size()) {
+            // Divergence below the common prefix: the tree now spans sibling
+            // loops at depth CommonLen. Admitting them into one tree makes
+            // the profitability decision JOINT across both siblings, so a
+            // very hot sibling could otherwise let an unprofitable cold
+            // sibling ride along "for free" (per-entry scaling of the cold
+            // sibling's entries would be dwarfed by the hot one). Require
+            // SCEV-proven equal backedge-taken counts for the diverging
+            // siblings before joining; otherwise force gather.
+            const Loop *SibA = CurrentLoopNest[CommonLen];
+            const Loop *SibB = NewLoopNest[CommonLen];
+            const SCEV *BecA = SE->getBackedgeTakenCount(SibA);
+            const SCEV *BecB = SE->getBackedgeTakenCount(SibB);
+            if (isa<SCEVCouldNotCompute>(BecA) || BecA != BecB) {
+              BailOutToGather();
+              return;
+            }
+            if (!ValidateMergedBTCs(CommonLen + 1)) {
+              BailOutToGather();
+              return;
+            }
+            if (MergedLoopBTCs.size() <= CommonLen)
+              MergedLoopBTCs.resize(CommonLen + 1, nullptr);
+            MergedLoopBTCs[CommonLen] = BecA;
+            CurrentLoopNest.truncate(CommonLen);
+          } else if (NewLoopNest.size() > CurrentLoopNest.size()) {
+            if (!ValidateMergedBTCs(CurrentLoopNest.size())) {
+              BailOutToGather();
+              return;
+            }
+            CurrentLoopNest.append(
+                std::next(NewLoopNest.begin(), CurrentLoopNest.size()),
+                NewLoopNest.end());
+          }
+          // Otherwise NewLoopNest is a prefix of CurrentLoopNest: keep as-is.
         }
-        auto ValidateMergedBTCs = [&](unsigned StartDepth) -> bool {
-          unsigned EndDepth =
-              std::min<unsigned>(NewLoopNest.size(), MergedLoopBTCs.size());
-          for (unsigned D = StartDepth; D < EndDepth; ++D) {
-            const SCEV *Constraint = MergedLoopBTCs[D];
-            if (!Constraint)
-              continue;
-            const SCEV *NewBTC = SE->getBackedgeTakenCount(NewLoopNest[D]);
-            if (isa<SCEVCouldNotCompute>(NewBTC) || NewBTC != Constraint)
-              return false;
-          }
-          return true;
-        };
-        auto BailOutToGather = [&]() {
-          LLVM_DEBUG(dbgs()
-                     << "SLP: Sibling loops have different trip counts.\n");
-          newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
-        };
-        if (CurrentLoopNest.empty()) {
-          if (!ValidateMergedBTCs(0)) {
-            BailOutToGather();
-            return;
-          }
-          CurrentLoopNest.assign(NewLoopNest);
-        } else if (CommonLen < CurrentLoopNest.size() &&
-                   CommonLen < NewLoopNest.size()) {
-          // Divergence below the common prefix: the tree now spans sibling
-          // loops at depth CommonLen. Admitting them into one tree makes
-          // the profitability decision JOINT across both siblings, so a
-          // very hot sibling could otherwise let an unprofitable cold
-          // sibling ride along "for free" (per-entry scaling of the cold
-          // sibling's entries would be dwarfed by the hot one). Require
-          // SCEV-proven equal backedge-taken counts for the diverging
-          // siblings before joining; otherwise force gather.
-          const Loop *SibA = CurrentLoopNest[CommonLen];
-          const Loop *SibB = NewLoopNest[CommonLen];
-          const SCEV *BecA = SE->getBackedgeTakenCount(SibA);
-          const SCEV *BecB = SE->getBackedgeTakenCount(SibB);
-          if (isa<SCEVCouldNotCompute>(BecA) || BecA != BecB) {
-            BailOutToGather();
-            return;
-          }
-          if (!ValidateMergedBTCs(CommonLen + 1)) {
-            BailOutToGather();
-            return;
-          }
-          if (MergedLoopBTCs.size() <= CommonLen)
-            MergedLoopBTCs.resize(CommonLen + 1, nullptr);
-          MergedLoopBTCs[CommonLen] = BecA;
-          CurrentLoopNest.truncate(CommonLen);
-        } else if (NewLoopNest.size() > CurrentLoopNest.size()) {
-          if (!ValidateMergedBTCs(CurrentLoopNest.size())) {
-            BailOutToGather();
-            return;
-          }
-          CurrentLoopNest.append(
-              std::next(NewLoopNest.begin(), CurrentLoopNest.size()),
-              NewLoopNest.end());
-        }
-        // Otherwise NewLoopNest is a prefix of CurrentLoopNest: keep as-is.
       }
     }
   }
@@ -13355,12 +13368,12 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         continue;
       InstructionsState S = getSameOpcode(Op, *TLI);
       if ((!S || S.getOpcode() != Instruction::PHI) || S.isAltShuffle())
-        buildTreeRec(Op, Depth + 1, {TE, I});
+        buildTreeRec(Op, Depth + 1, {TE, I}, AlwaysMergeSiblingLoops);
       else
         PHIOps.push_back(I);
     }
     for (unsigned I : PHIOps)
-      buildTreeRec(Operands[I], Depth + 1, {TE, I});
+      buildTreeRec(Operands[I], Depth + 1, {TE, I}, AlwaysMergeSiblingLoops);
   };
   switch (ShuffleOrOp) {
     case Instruction::PHI: {
@@ -13402,7 +13415,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         SmallVector<Value *> Calls;
         if (checkEVsForVecCalls(VL, S, *TLI, Indices, Calls)) {
           TE->StructEVIndices = std::move(Indices);
-          buildTreeRec(Operands.front(), Depth + 1, {TE, 0});
+          buildTreeRec(Operands.front(), Depth + 1, {TE, 0},
+                       AlwaysMergeSiblingLoops);
         }
       }
       return;
@@ -13437,7 +13451,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
                  TE->dump());
 
       TE->setOperands(Operands);
-      buildTreeRec(TE->getOperand(1), Depth + 1, {TE, 1});
+      buildTreeRec(TE->getOperand(1), Depth + 1, {TE, 1},
+                   AlwaysMergeSiblingLoops);
       return;
     }
     case Instruction::Load: {
@@ -13501,7 +13516,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       }
       TE->setOperands(Operands);
       if (State == TreeEntry::ScatterVectorize)
-        buildTreeRec(PointerOps, Depth + 1, {TE, 0});
+        buildTreeRec(PointerOps, Depth + 1, {TE, 0}, AlwaysMergeSiblingLoops);
       return;
     }
     case Instruction::ZExt:
@@ -13542,7 +13557,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
 
       TE->setOperands(Operands);
       for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
-        buildTreeRec(TE->getOperand(I), Depth, {TE, I});
+        buildTreeRec(TE->getOperand(I), Depth, {TE, I},
+                     AlwaysMergeSiblingLoops);
       if (ShuffleOrOp == Instruction::Trunc) {
         ExtraBitWidthNodes.insert(getOperandEntry(TE, 0)->Idx);
       } else if (ShuffleOrOp == Instruction::SIToFP ||
@@ -13588,8 +13604,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         }
       }
       TE->setOperands(Operands);
-      buildTreeRec(Operands.front(), Depth, {TE, 0});
-      buildTreeRec(Operands.back(), Depth, {TE, 1});
+      buildTreeRec(Operands.front(), Depth, {TE, 0}, AlwaysMergeSiblingLoops);
+      buildTreeRec(Operands.back(), Depth, {TE, 1}, AlwaysMergeSiblingLoops);
       if (ShuffleOrOp == Instruction::ICmp) {
         unsigned NumSignBits0 =
             ComputeNumSignBits(VL0->getOperand(0), *DL, AC, nullptr, DT);
@@ -13640,7 +13656,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       }
       TE->setOperands(Operands);
       for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
-        buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I});
+        buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I},
+                     AlwaysMergeSiblingLoops);
       return;
     }
     case Instruction::GetElementPtr: {
@@ -13651,7 +13668,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       TE->setOperands(Operands);
 
       for (unsigned I = 0, Ops = Operands.size(); I < Ops; ++I)
-        buildTreeRec(Operands[I], Depth + 1, {TE, I});
+        buildTreeRec(Operands[I], Depth + 1, {TE, I}, AlwaysMergeSiblingLoops);
       return;
     }
     case Instruction::Store: {
@@ -13666,7 +13683,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
             dbgs() << "SLP: added a new TreeEntry (strided StoreInst).\n";
             TE->dump());
         TE->setOperands(Operands);
-        buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0});
+        buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0},
+                     AlwaysMergeSiblingLoops);
         return;
       }
       if (State == TreeEntry::ExpandVectorize) {
@@ -13681,7 +13699,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
                 << "SLP: added a new TreeEntry (expanded masked StoreInst).\n";
             TE->dump());
         TE->setOperands(Operands);
-        buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0});
+        buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0},
+                     AlwaysMergeSiblingLoops);
         return;
       }
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
@@ -13689,7 +13708,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (StoreInst).\n";
                  TE->dump());
       TE->setOperands(Operands);
-      buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0});
+      buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0},
+                   AlwaysMergeSiblingLoops);
       return;
     }
     case Instruction::Call: {
@@ -13714,7 +13734,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         // vectorize it.
         if (isVectorIntrinsicWithScalarOpAtArg(ID, I, TTI))
           continue;
-        buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I});
+        buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I},
+                     AlwaysMergeSiblingLoops);
       }
       return;
     }
@@ -13758,8 +13779,10 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
           }
         }
         TE->setOperands(Operands);
-        buildTreeRec(Operands.front(), Depth + 1, {TE, 0});
-        buildTreeRec(Operands.back(), Depth + 1, {TE, 1});
+        buildTreeRec(Operands.front(), Depth + 1, {TE, 0},
+                     AlwaysMergeSiblingLoops);
+        buildTreeRec(Operands.back(), Depth + 1, {TE, 1},
+                     AlwaysMergeSiblingLoops);
         return;
       }
 
@@ -13771,7 +13794,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       }
       TE->setOperands(Operands);
       for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
-        buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I});
+        buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I},
+                     AlwaysMergeSiblingLoops);
       return;
     }
     default:
@@ -15222,7 +15246,7 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
   return BitcastCost <= SelectCost;
 }
 
-void BoUpSLP::transformNodes() {
+void BoUpSLP::transformNodes(bool AlwaysMergeSiblingLoops) {
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   BaseGraphSize = VectorizableTree.size();
   // Turn graph transforming mode on and off, when done.
@@ -15484,7 +15508,8 @@ void BoUpSLP::transformNodes() {
           unsigned PrevSize = VectorizableTree.size();
           [[maybe_unused]] unsigned PrevEntriesSize =
               LoadEntriesToVectorize.size();
-          buildTreeRec(Slice, 0, EdgeInfo(&E, UINT_MAX));
+          buildTreeRec(Slice, 0, EdgeInfo(&E, UINT_MAX),
+                       AlwaysMergeSiblingLoops);
           if (PrevSize + 1 == VectorizableTree.size() && !SameTE &&
               VectorizableTree[PrevSize]->isGather() &&
               VectorizableTree[PrevSize]->hasState() &&
@@ -15831,7 +15856,7 @@ void BoUpSLP::transformNodes() {
   }
   // Try to vectorize gathered loads if this is not just a gather of loads.
   if (!GatheredLoads.empty())
-    tryToVectorizeGatheredLoads(GatheredLoads);
+    tryToVectorizeGatheredLoads(GatheredLoads, AlwaysMergeSiblingLoops);
 }
 
 /// Merges shuffle masks and emits final shuffle instruction, if required. It
@@ -27980,6 +28005,23 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   return Changed;
 }
 
+static InstructionCost prepareCurrentTree(BoUpSLP &R,
+                                          bool AlwaysMergeSiblingLoops,
+                                          const Value *Op = nullptr) {
+  if (R.isProfitableToReorder()) {
+    R.reorderTopToBottom();
+    R.reorderBottomToTop(Op != nullptr &&
+                         !isa<InsertElementInst, InsertValueInst>(Op));
+  }
+  R.transformNodes(AlwaysMergeSiblingLoops);
+  R.computeMinimumValueSizes();
+
+  InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
+  R.buildExternalUses();
+
+  return TreeCost;
+}
+
 std::optional<bool>
 SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                                        unsigned Idx, unsigned MinVF,
@@ -28031,7 +28073,22 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
       return false;
     }
   }
+
+  auto PrepareAndCostCurrentTree =
+      [](BoUpSLP &R, const InstructionsState &S,
+         bool AlwaysMergeSiblingLoops =
+             false) -> std::pair<InstructionCost, unsigned> {
+    InstructionCost TreeCost = prepareCurrentTree(R, AlwaysMergeSiblingLoops);
+
+    unsigned CanonicalSize = R.getCanonicalGraphSize();
+    if (S && S.getOpcode() == Instruction::Load)
+      CanonicalSize = 2; // cut off masked gather small trees
+
+    return {R.getTreeCost(TreeCost), CanonicalSize};
+  };
+
   R.buildTree(Chain);
+
   // Check if tree tiny and store itself or its value is not vectorized.
   if (R.isTreeTinyAndNotFullyVectorizable()) {
     if (R.isGathered(Chain.front()) ||
@@ -28040,23 +28097,33 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
     Size = R.getCanonicalGraphSize();
     return false;
   }
-  if (R.isProfitableToReorder()) {
-    R.reorderTopToBottom();
-    R.reorderBottomToTop();
+
+  auto [Cost, BestSize] = PrepareAndCostCurrentTree(R, S);
+
+  bool RebuildTreeRequired = false;
+  if (R.sawSiblingMismatchBailout()) {
+    R.buildTree(Chain, /*AlwaysMergeSiblingLoops=*/true);
+    RebuildTreeRequired = true;
+
+    if (!R.isTreeTinyAndNotFullyVectorizable()) {
+      auto [AllowCost, AllowSize] =
+          PrepareAndCostCurrentTree(R, S, /*AlwaysMergeSiblingLoops=*/true);
+      if (AllowCost < Cost) {
+        Cost = AllowCost;
+        BestSize = AllowSize;
+        RebuildTreeRequired = false;
+      }
+    }
   }
-  R.transformNodes();
-  R.computeMinimumValueSizes();
-
-  InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
-  R.buildExternalUses();
-
-  Size = R.getCanonicalGraphSize();
-  if (S && S.getOpcode() == Instruction::Load)
-    Size = 2; // cut off masked gather small trees
-  InstructionCost Cost = R.getTreeCost(TreeCost);
+  Size = BestSize;
 
   LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost << " for VF=" << VF << "\n");
   if (Cost < -SLPCostThreshold) {
+    if (RebuildTreeRequired) {
+      R.buildTree(Chain);
+      PrepareAndCostCurrentTree(R, S);
+    }
+
     LLVM_DEBUG(dbgs() << "SLP: Decided to vectorize cost = " << Cost << "\n");
 
     using namespace ore;
@@ -29024,23 +29091,36 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       R.buildTree(Ops);
       if (R.isTreeTinyAndNotFullyVectorizable())
         continue;
-      if (R.isProfitableToReorder()) {
-        R.reorderTopToBottom();
-        R.reorderBottomToTop(
-            !isa<InsertElementInst, InsertValueInst>(Ops.front()));
-      }
-      R.transformNodes();
-      R.computeMinimumValueSizes();
-      InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
-      R.buildExternalUses();
 
-      InstructionCost Cost = R.getTreeCost(TreeCost);
+      InstructionCost Cost = R.getTreeCost(prepareCurrentTree(
+          R, /*AlwaysMergeSiblingLoops=*/false, Ops.front()));
+
+      bool RebuildTreeRequired = false;
+      if (R.sawSiblingMismatchBailout()) {
+        R.buildTree(Ops, /*AlwaysMergeSiblingLoops=*/true);
+        RebuildTreeRequired = true;
+
+        if (!R.isTreeTinyAndNotFullyVectorizable()) {
+          InstructionCost AllowCost = R.getTreeCost(prepareCurrentTree(
+              R, /*AlwaysMergeSiblingLoops=*/true, Ops.front()));
+          if (AllowCost < Cost) {
+            Cost = AllowCost;
+            RebuildTreeRequired = false;
+          }
+        }
+      }
       CandidateFound = true;
       MinCost = std::min(MinCost, Cost);
 
       LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                         << " for VF=" << ActualVF << "\n");
       if (Cost < -SLPCostThreshold) {
+        if (RebuildTreeRequired) {
+          R.buildTree(Ops);
+          R.getTreeCost(prepareCurrentTree(R, /*AlwaysMergeSiblingLoops=*/false,
+                                           Ops.front()));
+        }
+
         LLVM_DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
         R.getORE()->emit(OptimizationRemark(SV_NAME, "VectorizedList",
                                                     cast<Instruction>(Ops[0]))

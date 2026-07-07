@@ -9,46 +9,34 @@ define void @sibling_mismatch_stores(ptr %out, double %a, double %b, double %c, 
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 [[SEL]], label %[[A_PREHEADER:.*]], label %[[B_PREHEADER:.*]]
 ; CHECK:       [[A_PREHEADER]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <6 x double> poison, double [[A]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <6 x double> [[TMP0]], double [[B]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <6 x double> [[TMP1]], double [[C]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <6 x double> [[TMP2]], <6 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 0, i32 1, i32 2>
 ; CHECK-NEXT:    br label %[[A_HEADER:.*]]
 ; CHECK:       [[A_HEADER]]:
 ; CHECK-NEXT:    [[IA:%.*]] = phi i32 [ 0, %[[A_PREHEADER]] ], [ [[IA_NEXT:%.*]], %[[A_LATCH:.*]] ]
-; CHECK-NEXT:    [[AA0:%.*]] = phi double [ [[A]], %[[A_PREHEADER]] ], [ [[AA0N:%.*]], %[[A_LATCH]] ]
-; CHECK-NEXT:    [[AA1:%.*]] = phi double [ [[B]], %[[A_PREHEADER]] ], [ [[AA1N:%.*]], %[[A_LATCH]] ]
-; CHECK-NEXT:    [[AA2:%.*]] = phi double [ [[C]], %[[A_PREHEADER]] ], [ [[AA2N:%.*]], %[[A_LATCH]] ]
-; CHECK-NEXT:    [[AA3:%.*]] = phi double [ [[A]], %[[A_PREHEADER]] ], [ [[AA3N:%.*]], %[[A_LATCH]] ]
-; CHECK-NEXT:    [[AA4:%.*]] = phi double [ [[B]], %[[A_PREHEADER]] ], [ [[AA4N:%.*]], %[[A_LATCH]] ]
-; CHECK-NEXT:    [[AA5:%.*]] = phi double [ [[C]], %[[A_PREHEADER]] ], [ [[AA5N:%.*]], %[[A_LATCH]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <6 x double> [ [[TMP3]], %[[A_PREHEADER]] ], [ [[TMP5:%.*]], %[[A_LATCH]] ]
 ; CHECK-NEXT:    br label %[[A_BODY:.*]]
 ; CHECK:       [[A_BODY]]:
-; CHECK-NEXT:    [[AA0N]] = fadd double [[AA0]], [[A]]
-; CHECK-NEXT:    [[AA1N]] = fadd double [[AA1]], [[B]]
-; CHECK-NEXT:    [[AA2N]] = fadd double [[AA2]], [[C]]
-; CHECK-NEXT:    [[AA3N]] = fadd double [[AA3]], [[A]]
-; CHECK-NEXT:    [[AA4N]] = fadd double [[AA4]], [[B]]
-; CHECK-NEXT:    [[AA5N]] = fadd double [[AA5]], [[C]]
+; CHECK-NEXT:    [[TMP5]] = fadd <6 x double> [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    br label %[[A_LATCH]]
 ; CHECK:       [[A_LATCH]]:
 ; CHECK-NEXT:    [[IA_NEXT]] = add nuw nsw i32 [[IA]], 1
 ; CHECK-NEXT:    [[A_DONE:%.*]] = icmp eq i32 [[IA_NEXT]], [[NA]]
 ; CHECK-NEXT:    br i1 [[A_DONE]], label %[[A_EXIT:.*]], label %[[A_HEADER]]
 ; CHECK:       [[B_PREHEADER]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <6 x double> poison, double [[B]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <6 x double> [[TMP6]], double [[C]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <6 x double> [[TMP7]], double [[A]], i32 2
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <6 x double> [[TMP8]], <6 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 0, i32 1, i32 2>
 ; CHECK-NEXT:    br label %[[B_HEADER:.*]]
 ; CHECK:       [[B_HEADER]]:
 ; CHECK-NEXT:    [[IB:%.*]] = phi i32 [ 0, %[[B_PREHEADER]] ], [ [[IB_NEXT:%.*]], %[[B_LATCH:.*]] ]
-; CHECK-NEXT:    [[BB0:%.*]] = phi double [ [[B]], %[[B_PREHEADER]] ], [ [[BB0N:%.*]], %[[B_LATCH]] ]
-; CHECK-NEXT:    [[BB1:%.*]] = phi double [ [[C]], %[[B_PREHEADER]] ], [ [[BB1N:%.*]], %[[B_LATCH]] ]
-; CHECK-NEXT:    [[BB2:%.*]] = phi double [ [[A]], %[[B_PREHEADER]] ], [ [[BB2N:%.*]], %[[B_LATCH]] ]
-; CHECK-NEXT:    [[BB3:%.*]] = phi double [ [[B]], %[[B_PREHEADER]] ], [ [[BB3N:%.*]], %[[B_LATCH]] ]
-; CHECK-NEXT:    [[BB4:%.*]] = phi double [ [[C]], %[[B_PREHEADER]] ], [ [[BB4N:%.*]], %[[B_LATCH]] ]
-; CHECK-NEXT:    [[BB5:%.*]] = phi double [ [[A]], %[[B_PREHEADER]] ], [ [[BB5N:%.*]], %[[B_LATCH]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <6 x double> [ [[TMP9]], %[[B_PREHEADER]] ], [ [[TMP11:%.*]], %[[B_LATCH]] ]
 ; CHECK-NEXT:    br label %[[B_BODY:.*]]
 ; CHECK:       [[B_BODY]]:
-; CHECK-NEXT:    [[BB0N]] = fadd double [[BB0]], [[B]]
-; CHECK-NEXT:    [[BB1N]] = fadd double [[BB1]], [[C]]
-; CHECK-NEXT:    [[BB2N]] = fadd double [[BB2]], [[A]]
-; CHECK-NEXT:    [[BB3N]] = fadd double [[BB3]], [[B]]
-; CHECK-NEXT:    [[BB4N]] = fadd double [[BB4]], [[C]]
-; CHECK-NEXT:    [[BB5N]] = fadd double [[BB5]], [[A]]
+; CHECK-NEXT:    [[TMP11]] = fadd <6 x double> [[TMP10]], [[TMP9]]
 ; CHECK-NEXT:    br label %[[B_LATCH]]
 ; CHECK:       [[B_LATCH]]:
 ; CHECK-NEXT:    [[IB_NEXT]] = add nuw nsw i32 [[IB]], 1
@@ -59,52 +47,22 @@ define void @sibling_mismatch_stores(ptr %out, double %a, double %b, double %c, 
 ; CHECK:       [[B_EXIT]]:
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
-; CHECK-NEXT:    [[S0:%.*]] = phi double [ [[AA0N]], %[[A_EXIT]] ], [ [[BB0N]], %[[B_EXIT]] ]
-; CHECK-NEXT:    [[S1:%.*]] = phi double [ [[AA1N]], %[[A_EXIT]] ], [ [[BB1N]], %[[B_EXIT]] ]
-; CHECK-NEXT:    [[S2:%.*]] = phi double [ [[AA2N]], %[[A_EXIT]] ], [ [[BB2N]], %[[B_EXIT]] ]
-; CHECK-NEXT:    [[S3:%.*]] = phi double [ [[AA3N]], %[[A_EXIT]] ], [ [[BB3N]], %[[B_EXIT]] ]
-; CHECK-NEXT:    [[S4:%.*]] = phi double [ [[AA4N]], %[[A_EXIT]] ], [ [[BB4N]], %[[B_EXIT]] ]
-; CHECK-NEXT:    [[S5:%.*]] = phi double [ [[AA5N]], %[[A_EXIT]] ], [ [[BB5N]], %[[B_EXIT]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <6 x double> [ [[TMP5]], %[[A_EXIT]] ], [ [[TMP11]], %[[B_EXIT]] ]
 ; CHECK-NEXT:    br label %[[HOT_HEADER:.*]]
 ; CHECK:       [[HOT_HEADER]]:
 ; CHECK-NEXT:    [[IH:%.*]] = phi i32 [ 0, %[[JOIN]] ], [ [[IH_NEXT:%.*]], %[[HOT_LATCH:.*]] ]
-; CHECK-NEXT:    [[P0:%.*]] = phi double [ [[S0]], %[[JOIN]] ], [ [[N0:%.*]], %[[HOT_LATCH]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi double [ [[S1]], %[[JOIN]] ], [ [[N1:%.*]], %[[HOT_LATCH]] ]
-; CHECK-NEXT:    [[P2:%.*]] = phi double [ [[S2]], %[[JOIN]] ], [ [[N2:%.*]], %[[HOT_LATCH]] ]
-; CHECK-NEXT:    [[P3:%.*]] = phi double [ [[S3]], %[[JOIN]] ], [ [[N3:%.*]], %[[HOT_LATCH]] ]
-; CHECK-NEXT:    [[P4:%.*]] = phi double [ [[S4]], %[[JOIN]] ], [ [[N4:%.*]], %[[HOT_LATCH]] ]
-; CHECK-NEXT:    [[P5:%.*]] = phi double [ [[S5]], %[[JOIN]] ], [ [[N5:%.*]], %[[HOT_LATCH]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <6 x double> [ [[TMP12]], %[[JOIN]] ], [ [[TMP14:%.*]], %[[HOT_LATCH]] ]
 ; CHECK-NEXT:    br label %[[HOT_BODY:.*]]
 ; CHECK:       [[HOT_BODY]]:
-; CHECK-NEXT:    [[N0]] = fadd double [[P0]], [[S0]]
-; CHECK-NEXT:    [[N1]] = fadd double [[P1]], [[S1]]
-; CHECK-NEXT:    [[N2]] = fadd double [[P2]], [[S2]]
-; CHECK-NEXT:    [[N3]] = fadd double [[P3]], [[S3]]
-; CHECK-NEXT:    [[N4]] = fadd double [[P4]], [[S4]]
-; CHECK-NEXT:    [[N5]] = fadd double [[P5]], [[S5]]
+; CHECK-NEXT:    [[TMP14]] = fadd <6 x double> [[TMP13]], [[TMP12]]
 ; CHECK-NEXT:    br label %[[HOT_LATCH]]
 ; CHECK:       [[HOT_LATCH]]:
 ; CHECK-NEXT:    [[IH_NEXT]] = add nuw nsw i32 [[IH]], 1
 ; CHECK-NEXT:    [[H_DONE:%.*]] = icmp eq i32 [[IH_NEXT]], [[NH]]
 ; CHECK-NEXT:    br i1 [[H_DONE]], label %[[EXIT:.*]], label %[[HOT_HEADER]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R0:%.*]] = phi double [ [[N0]], %[[HOT_LATCH]] ]
-; CHECK-NEXT:    [[R1:%.*]] = phi double [ [[N1]], %[[HOT_LATCH]] ]
-; CHECK-NEXT:    [[R2:%.*]] = phi double [ [[N2]], %[[HOT_LATCH]] ]
-; CHECK-NEXT:    [[R3:%.*]] = phi double [ [[N3]], %[[HOT_LATCH]] ]
-; CHECK-NEXT:    [[R4:%.*]] = phi double [ [[N4]], %[[HOT_LATCH]] ]
-; CHECK-NEXT:    [[R5:%.*]] = phi double [ [[N5]], %[[HOT_LATCH]] ]
-; CHECK-NEXT:    [[OUT1:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 1
-; CHECK-NEXT:    [[OUT2:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 2
-; CHECK-NEXT:    [[OUT3:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 3
-; CHECK-NEXT:    [[OUT4:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 4
-; CHECK-NEXT:    [[OUT5:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 5
-; CHECK-NEXT:    store double [[R0]], ptr [[OUT]], align 8
-; CHECK-NEXT:    store double [[R1]], ptr [[OUT1]], align 8
-; CHECK-NEXT:    store double [[R2]], ptr [[OUT2]], align 8
-; CHECK-NEXT:    store double [[R3]], ptr [[OUT3]], align 8
-; CHECK-NEXT:    store double [[R4]], ptr [[OUT4]], align 8
-; CHECK-NEXT:    store double [[R5]], ptr [[OUT5]], align 8
+; CHECK-NEXT:    [[TMP15:%.*]] = phi <6 x double> [ [[TMP14]], %[[HOT_LATCH]] ]
+; CHECK-NEXT:    store <6 x double> [[TMP15]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -240,8 +198,6 @@ define dso_local void @sibling_mismatch_reduction(ptr noundef %base, ptr noundef
 ; CHECK:       [[FOR_COND9_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP5:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[CMP1148:%.*]] = icmp ugt i64 [[SUB_PTR_DIV4]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP0]], i32 1
 ; CHECK-NEXT:    br i1 [[CMP1148]], label %[[FOR_BODY13:.*]], label %[[FOR_COND_CLEANUP12:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I_043:%.*]] = phi i64 [ [[ADD7:%.*]], %[[FOR_BODY]] ], [ 0, %[[ENTRY]] ]
@@ -254,21 +210,18 @@ define dso_local void @sibling_mismatch_reduction(ptr noundef %base, ptr noundef
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[ADD]], [[SUB_PTR_DIV]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND9_PREHEADER]]
 ; CHECK:       [[FOR_COND_CLEANUP12]]:
-; CHECK-NEXT:    [[ACC_SROA_8_1_LCSSA:%.*]] = phi double [ [[TMP2]], %[[FOR_COND9_PREHEADER]] ], [ [[TMP9:%.*]], %[[FOR_BODY13]] ]
-; CHECK-NEXT:    [[ACC_SROA_0_1_LCSSA:%.*]] = phi double [ [[TMP1]], %[[FOR_COND9_PREHEADER]] ], [ [[TMP8:%.*]], %[[FOR_BODY13]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x double> [ [[TMP0]], %[[FOR_COND9_PREHEADER]] ], [ [[TMP9:%.*]], %[[FOR_BODY13]] ]
+; CHECK-NEXT:    [[ACC_SROA_0_1_LCSSA:%.*]] = extractelement <2 x double> [[TMP6]], i32 0
+; CHECK-NEXT:    [[ACC_SROA_8_1_LCSSA:%.*]] = extractelement <2 x double> [[TMP6]], i32 1
 ; CHECK-NEXT:    [[ADD26:%.*]] = fadd double [[ACC_SROA_8_1_LCSSA]], [[ACC_SROA_0_1_LCSSA]]
 ; CHECK-NEXT:    store double [[ADD26]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY13]]:
-; CHECK-NEXT:    [[ACC_SROA_0_151:%.*]] = phi double [ [[TMP8]], %[[FOR_BODY13]] ], [ [[TMP1]], %[[FOR_COND9_PREHEADER]] ]
-; CHECK-NEXT:    [[ACC_SROA_8_150:%.*]] = phi double [ [[TMP9]], %[[FOR_BODY13]] ], [ [[TMP2]], %[[FOR_COND9_PREHEADER]] ]
 ; CHECK-NEXT:    [[I8_049:%.*]] = phi i64 [ [[ADD22:%.*]], %[[FOR_BODY13]] ], [ 0, %[[FOR_COND9_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x double> [ [[TMP9]], %[[FOR_BODY13]] ], [ [[TMP0]], %[[FOR_COND9_PREHEADER]] ]
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[I8_049]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load double, ptr [[ARRAYIDX15]], align 8
-; CHECK-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX15]], i64 8
-; CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr [[ARRAYIDX18]], align 8
-; CHECK-NEXT:    [[TMP8]] = tail call double @llvm.fmuladd.f64(double [[TMP6]], double 4.000000e+00, double [[ACC_SROA_0_151]])
-; CHECK-NEXT:    [[TMP9]] = tail call double @llvm.fmuladd.f64(double [[TMP7]], double 4.000000e+00, double [[ACC_SROA_8_150]])
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x double>, ptr [[ARRAYIDX15]], align 8
+; CHECK-NEXT:    [[TMP9]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP8]], <2 x double> splat (double 4.000000e+00), <2 x double> [[TMP7]])
 ; CHECK-NEXT:    [[ADD22]] = add nuw i64 [[I8_049]], 2
 ; CHECK-NEXT:    [[ADD10:%.*]] = or disjoint i64 [[ADD22]], 1
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp ult i64 [[ADD10]], [[SUB_PTR_DIV4]]
