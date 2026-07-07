@@ -651,7 +651,8 @@ func.func @xfer_read_scalable_column(%a: index, %b: index, %pad: f32, %src: memr
 // -----
 
 /// Same as above but for f64, which exercises a different zero-init constant
-/// (see https://github.com/iree-org/iree/issues/24689).
+/// Same as xfer_read_scalable_column but for f64, which exercises a different
+/// zero-init constant (see https://github.com/iree-org/iree/issues/24689).
 
 // CHECK-LABEL:   func.func @xfer_read_scalable_column_f64(
 // CHECK-SAME:      %[[IDX_0:[a-zA-Z0-9]+]]: index,
