@@ -21,6 +21,9 @@
 
 // Scalar types
 
+char pass_char(char arg) { return arg; }
+// CHECK-LABEL: define signext i8 @pass_char(i8 signext %{{.*}})
+
 signed char pass_schar(signed char arg) { return arg; }
 // CHECK-LABEL: define signext i8 @pass_schar(i8 signext %{{.*}})
 
@@ -74,8 +77,8 @@ _Complex long double pass_complex_longdouble(_Complex long double arg) { return 
 
 // Verify that the following are complex-like types
 struct complexlike_float { float re, im; };
-struct complexlike_float pass_complexlike_float2(struct complexlike_float arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_float @pass_complexlike_float2({ float, float } %{{.*}})
+struct complexlike_float pass_complexlike_float(struct complexlike_float arg) { return arg; }
+// CHECK-LABEL: define %struct.complexlike_float @pass_complexlike_float({ float, float } %{{.*}})
 
 struct complexlike_double { double re, im; };
 struct complexlike_double pass_complexlike_double(struct complexlike_double arg) { return arg; }
@@ -260,7 +263,7 @@ char * pass_pointer(char * arg) { return arg; }
 
 typedef int vecint __attribute__ ((vector_size(16)));
 vecint pass_vector_type(vecint arg) { return arg; }
-// CHECKNOVEC-LABEL: define <4 x i32> @pass_vector_type(ptr dead_on_return %{{.*}})
+// CHECKNOVEC-LABEL: define <4 x i32> @pass_vector_type(ptr align 8 dead_on_return %{{.*}})
 // CHECKVEC-LABEL: define <4 x i32> @pass_vector_type(<4 x i32>  %{{.*}})
 
 // Union with just a single float element are treated as float inside a struct.

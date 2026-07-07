@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
+#include "../lib/Transforms/Vectorize/LoopVectorizationPlanner.h"
 #include "../lib/Transforms/Vectorize/VPlanCFG.h"
 #include "../lib/Transforms/Vectorize/VPlanHelpers.h"
 #include "../lib/Transforms/Vectorize/VPlanUtils.h"
@@ -197,24 +198,24 @@ TEST_F(VPInstructionTest, setOperand) {
   VPInstruction *I1 =
       new VPInstruction(Instruction::Add, {VPV1, VPV2},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
-  EXPECT_EQ(1u, VPV1->getNumUsers());
+  EXPECT_TRUE(VPV1->hasOneUse());
   EXPECT_EQ(I1, *VPV1->user_begin());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV2->hasOneUse());
   EXPECT_EQ(I1, *VPV2->user_begin());
 
   // Replace operand 0 (VPV1) with VPV3.
   VPValue *VPV3 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
   I1->setOperand(0, VPV3);
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV1->user_empty());
+  EXPECT_TRUE(VPV2->hasOneUse());
   EXPECT_EQ(I1, *VPV2->user_begin());
-  EXPECT_EQ(1u, VPV3->getNumUsers());
+  EXPECT_TRUE(VPV3->hasOneUse());
   EXPECT_EQ(I1, *VPV3->user_begin());
 
   // Replace operand 1 (VPV2) with VPV3.
   I1->setOperand(1, VPV3);
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV1->user_empty());
+  EXPECT_TRUE(VPV2->user_empty());
   EXPECT_EQ(2u, VPV3->getNumUsers());
   EXPECT_EQ(I1, *VPV3->user_begin());
   EXPECT_EQ(I1, *std::next(VPV3->user_begin()));
@@ -222,13 +223,13 @@ TEST_F(VPInstructionTest, setOperand) {
   // Replace operand 0 (VPV3) with VPV4.
   VPValue *VPV4 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 4));
   I1->setOperand(0, VPV4);
-  EXPECT_EQ(1u, VPV3->getNumUsers());
+  EXPECT_TRUE(VPV3->hasOneUse());
   EXPECT_EQ(I1, *VPV3->user_begin());
   EXPECT_EQ(I1, *VPV4->user_begin());
 
   // Replace operand 1 (VPV3) with VPV4.
   I1->setOperand(1, VPV4);
-  EXPECT_EQ(0u, VPV3->getNumUsers());
+  EXPECT_TRUE(VPV3->user_empty());
   EXPECT_EQ(I1, *VPV4->user_begin());
   EXPECT_EQ(I1, *std::next(VPV4->user_begin()));
 
@@ -248,18 +249,18 @@ TEST_F(VPInstructionTest, replaceAllUsesWith) {
   VPV1->replaceAllUsesWith(VPV3);
   EXPECT_EQ(VPV3, I1->getOperand(0));
   EXPECT_EQ(VPV2, I1->getOperand(1));
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV1->user_empty());
+  EXPECT_TRUE(VPV2->hasOneUse());
   EXPECT_EQ(I1, *VPV2->user_begin());
-  EXPECT_EQ(1u, VPV3->getNumUsers());
+  EXPECT_TRUE(VPV3->hasOneUse());
   EXPECT_EQ(I1, *VPV3->user_begin());
 
   // Replace all uses of VPV2 with VPV3.
   VPV2->replaceAllUsesWith(VPV3);
   EXPECT_EQ(VPV3, I1->getOperand(0));
   EXPECT_EQ(VPV3, I1->getOperand(1));
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV1->user_empty());
+  EXPECT_TRUE(VPV2->user_empty());
   EXPECT_EQ(2u, VPV3->getNumUsers());
   EXPECT_EQ(I1, *VPV3->user_begin());
 
@@ -269,8 +270,8 @@ TEST_F(VPInstructionTest, replaceAllUsesWith) {
   EXPECT_EQ(VPV1, I1->getOperand(1));
   EXPECT_EQ(2u, VPV1->getNumUsers());
   EXPECT_EQ(I1, *VPV1->user_begin());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
-  EXPECT_EQ(0u, VPV3->getNumUsers());
+  EXPECT_TRUE(VPV2->user_empty());
+  EXPECT_TRUE(VPV3->user_empty());
 
   VPInstruction *I2 =
       new VPInstruction(Instruction::Add, {VPV1, VPV2},
@@ -291,15 +292,15 @@ TEST_F(VPInstructionTest, releaseOperandsAtDeletion) {
       new VPInstruction(Instruction::Add, {VPV1, VPV2},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
 
-  EXPECT_EQ(1u, VPV1->getNumUsers());
+  EXPECT_TRUE(VPV1->hasOneUse());
   EXPECT_EQ(I1, *VPV1->user_begin());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV2->hasOneUse());
   EXPECT_EQ(I1, *VPV2->user_begin());
 
   delete I1;
 
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV1->user_empty());
+  EXPECT_TRUE(VPV2->user_empty());
 }
 
 using VPBasicBlockTest = VPlanTestBase;
@@ -1490,8 +1491,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   {
     VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-    InductionDescriptor IndDesc;
-    VPScalarIVStepsRecipe Recipe(IndDesc, Op1, Op2, Op2);
+    VPScalarIVStepsRecipe Recipe(Op1, Op2, Op2, Instruction::BinaryOpsEnd);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1860,8 +1860,8 @@ TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
   VPlan &Plan = getPlan();
 
   // isSingleScalar opcode without operands.
-  std::unique_ptr<VPInstruction> VScale(new VPInstructionWithType(
-      VPInstruction::VScale, {}, IntegerType::get(C, 32)));
+  std::unique_ptr<VPInstruction> VScale(
+      VPBuilder().createVScale(IntegerType::get(C, 32)));
   EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(VScale.get()));
 
   // isSingleScalar opcode with a uniform operand.
@@ -1892,6 +1892,32 @@ TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
                                 {StepVector.get()}, IntegerType::get(C, 32)));
   EXPECT_FALSE(
       vputils::isUniformAcrossVFsAndUFs(FirstActiveLaneNonUniform.get()));
+}
+
+TEST_F(VPBasicBlockTest, VPRegionValueClonePropagatesMaterialized) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Preheader = Plan.getEntry();
+  VPBasicBlock *Header = Plan.createVPBasicBlock("header");
+  VPBasicBlock *Latch = Plan.createVPBasicBlock("latch");
+  VPRegionBlock *Region = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                                "loop", Header, Latch);
+  VPBlockUtils::connectBlocks(Header, Latch);
+  VPBlockUtils::connectBlocks(Preheader, Region);
+  VPBlockUtils::connectBlocks(Region, Plan.getScalarHeader());
+
+  VPRegionValue *CanIV = Region->getCanonicalIV();
+  EXPECT_TRUE(isa<VPSymbolicValue>(CanIV));
+  EXPECT_FALSE(CanIV->isMaterialized());
+
+  // Materialize the canonical IV by replacing all uses, then verify clone
+  // propagates the materialized state.
+  CanIV->replaceAllUsesWith(Plan.getConstantInt(32, 0));
+  EXPECT_TRUE(CanIV->isMaterialized());
+
+  std::unique_ptr<VPlan> Clone(Plan.duplicate());
+  VPRegionValue *ClonedCanIV = Clone->getVectorLoopRegion()->getCanonicalIV();
+  EXPECT_NE(CanIV, ClonedCanIV);
+  EXPECT_TRUE(ClonedCanIV->isMaterialized());
 }
 
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
@@ -1938,8 +1964,7 @@ TEST_F(VPRecipeTest, UFVScaleUserBeforeMaterialization) {
   VPBlockUtils::connectBlocks(Plan.getEntry(), LoopRegion);
   VPBlockUtils::connectBlocks(LoopRegion, Plan.getScalarHeader());
 
-  auto *VScale = new VPInstructionWithType(VPInstruction::VScale, {}, IVTy);
-  Plan.getVectorPreheader()->appendRecipe(VScale);
+  auto *VScale = VPBuilder(Plan.getVectorPreheader()).createVScale(IVTy);
 
   auto *Step = new VPInstruction(Instruction::Mul, {VScale, UF},
                                  VPIRFlags::getDefaultFlags(Instruction::Mul));

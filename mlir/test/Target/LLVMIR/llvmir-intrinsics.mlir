@@ -566,6 +566,9 @@ llvm.func @masked_load_store_intrinsics(%A: !llvm.ptr, %mask: vector<7xi1>) {
   // CHECK: call void @llvm.masked.store.v7f32.p0(<7 x float> %{{.*}}, ptr align 1 %0, <7 x i1> %{{.*}})
   llvm.intr.masked.store %b, %A, %mask { alignment = 1: i32} :
     vector<7xf32>, vector<7xi1> into !llvm.ptr
+  // CHECK: call void @llvm.masked.store.v7f32.p0(<7 x float> %{{.*}}, ptr align 1 %0, <7 x i1> %{{.*}}), !nontemporal !{{.*}}
+  llvm.intr.masked.store %b, %A, %mask { alignment = 1: i32, nontemporal} :
+    vector<7xf32>, vector<7xi1> into !llvm.ptr
   llvm.return
 }
 
@@ -1417,7 +1420,7 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
 // CHECK-DAG: declare float @llvm.fmuladd.f32(float, float, float)
 // CHECK-DAG: declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
-// CHECK-DAG: declare void @llvm.prefetch.p0(ptr readonly captures(none), i32 immarg, i32 immarg, i32 immarg)
+// CHECK-DAG: declare void @llvm.prefetch.p0(ptr readonly captures(none), i32 immarg range(i32 0, 2), i32 immarg range(i32 0, 4), i32 immarg range(i32 0, 2))
 // CHECK-DAG: declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
 // CHECK-DAG: declare float @llvm.exp.f32(float)
 // CHECK-DAG: declare <8 x float> @llvm.exp.v8f32(<8 x float>) #0

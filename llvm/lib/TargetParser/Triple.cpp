@@ -21,6 +21,18 @@
 #include <cstring>
 using namespace llvm;
 
+bool Triple::operator==(const Triple &Other) const {
+  return Arch == Other.Arch && SubArch == Other.SubArch &&
+         Vendor == Other.Vendor && OS == Other.OS &&
+         Environment == Other.Environment && ObjectFormat == Other.ObjectFormat;
+}
+
+bool Triple::operator<(const Triple &Other) const {
+  return std::tie(Arch, SubArch, Vendor, OS, Environment, ObjectFormat, Data) <
+         std::tie(Other.Arch, Other.SubArch, Other.Vendor, Other.OS,
+                  Other.Environment, Other.ObjectFormat, Other.Data);
+}
+
 StringRef Triple::getArchTypeName(ArchType Kind) {
   switch (Kind) {
   case UnknownArch:
@@ -1744,9 +1756,12 @@ bool Triple::getMacOSXVersion(VersionTuple &Version) const {
     } else if (Version.getMajor() < 25) {
       // darwin20-24 corresponds to macOS 11-15.
       Version = VersionTuple(11 + Version.getMajor() - 20);
-    } else {
-      // darwin25 corresponds with macOS26+.
+    } else if ((Version.getMajor() == 25) || (Version.getMajor() == 26)) {
+      // darwin25-26 corresponds to macOS 26-27.
       Version = VersionTuple(Version.getMajor() + 1);
+    } else {
+      // Starting with darwin27, it naturally corresponds to the same macOS
+      // version.
     }
     break;
   case MacOSX:
@@ -2495,7 +2510,7 @@ bool Triple::isLittleEndian() const {
 unsigned Triple::getDefaultWCharSize() const {
   if (getArch() == Triple::xcore)
     return 1;
-  if (isOSWindows() || isWindowsCygwinEnvironment() || isPS() || isUEFI())
+  if (isOSWindowsOrUEFI() || isPS())
     return 2;
   if (isOSAIX() && isArch32Bit())
     return 2;
@@ -2642,6 +2657,12 @@ VersionTuple Triple::getCanonicalVersionForOS(OSType OSKind,
       return VersionTuple(26, 0);
     if (!IsInValidRange)
       return Version.withMajorReplaced(Version.getMajor() + WatchOSRangeBump);
+    break;
+  }
+  case DriverKit: {
+    // DriverKit26 is canonicalized to 27.
+    if (Version.getMajor() == 26U)
+      return Version.withMajorReplaced(27);
     break;
   }
   default:

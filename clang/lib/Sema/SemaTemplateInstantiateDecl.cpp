@@ -1101,22 +1101,6 @@ void Sema::updateAttrsForLateParsedTemplate(const Decl *Pattern, Decl *Inst) {
   }
 }
 
-void Sema::InstantiateDefaultCtorDefaultArgs(CXXConstructorDecl *Ctor) {
-  assert(Context.getTargetInfo().getCXXABI().isMicrosoft() &&
-         Ctor->isDefaultConstructor());
-  unsigned NumParams = Ctor->getNumParams();
-  if (NumParams == 0)
-    return;
-  DLLExportAttr *Attr = Ctor->getAttr<DLLExportAttr>();
-  if (!Attr)
-    return;
-  for (unsigned I = 0; I != NumParams; ++I) {
-    (void)CheckCXXDefaultArgExpr(Attr->getLocation(), Ctor,
-                                   Ctor->getParamDecl(I));
-    CleanupVarDeclMarking();
-  }
-}
-
 /// Get the previous declaration of a declaration for the purposes of template
 /// instantiation. If this finds a previous declaration, then the previous
 /// declaration of the instantiation of D should be an instantiation of the
@@ -1783,13 +1767,19 @@ TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   TypeSourceInfo *TSI = SemaRef.SubstType(
       D->getTypeSourceInfo(), TemplateArgs, D->getTypeSpecStartLoc(),
       D->getDeclName(), /*AllowDeducedTST*/ true);
-  if (!TSI)
-    return nullptr;
-
-  if (TSI->getType()->isFunctionType()) {
+  bool Invalid = false;
+  if (!TSI) {
+    if (!InstantiatingVarTemplate)
+      return nullptr;
+    TSI = SemaRef.Context.getTrivialTypeSourceInfo(SemaRef.Context.IntTy,
+                                                   D->getLocation());
+    Invalid = true;
+  } else if (TSI->getType()->isFunctionType()) {
     SemaRef.Diag(D->getLocation(), diag::err_variable_instantiates_to_function)
         << D->isStaticDataMember() << TSI->getType();
-    return nullptr;
+    if (!InstantiatingVarTemplate)
+      return nullptr;
+    Invalid = true;
   }
 
   DeclContext *DC = Owner;
@@ -1857,6 +1847,9 @@ TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
 
   if (SemaRef.getLangOpts().OpenACC)
     SemaRef.OpenACC().ActOnVariableDeclarator(Var);
+
+  if (Invalid)
+    Var->setInvalidDecl();
 
   return Var;
 }
@@ -2879,8 +2872,21 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     Function->setRangeEnd(D->getSourceRange().getEnd());
   }
   Function->setPreviousDeclaration(PrevDecl);
-  if (PrevDecl)
+  if (PrevDecl) {
     SemaRef.mergeDeclAttributes(Function, PrevDecl);
+
+    if (QualType OT = PrevDecl->getReturnType();
+        OT != cast<FunctionType>(T)->getReturnType()) {
+      // If this function has a deduced return type and has already been
+      // defined, copy the deduced value from the old declaration.
+      if (AutoType *OldAT = OT->getContainedAutoType();
+          OldAT && OldAT->isDeduced()) {
+        QualType DT = OldAT->getDeducedType();
+        Function->setType(DT.isNull() ? SemaRef.SubstAutoTypeDependent(T)
+                                      : SemaRef.SubstAutoType(T, DT));
+      }
+    }
+  }
 
   if (D->isInlined())
     Function->setImplicitlyInline();
@@ -6009,7 +6015,10 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
         FunctionDecl *NewFunction = InstantiateFunctionDeclaration(
             (*It)->getDescribedFunctionTemplate(), Info->TemplateArguments,
             PointOfInstantiation);
-        assert(NewFunction && "Failed to instantiate function template");
+        // This should always succeed for well-formed code.
+        if (!NewFunction)
+          return;
+
         assert(NewFunction != Function && "Expected a new specialization");
         assert(declaresSameEntity(NewFunction, Function));
         if (TemplateSpecializationKind TSK =
@@ -6070,7 +6079,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
         // default arguments.
         if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
             Ctor->isDefaultConstructor()) {
-          InstantiateDefaultCtorDefaultArgs(Ctor);
+          if (DLLExportAttr *Attr = Ctor->getAttr<DLLExportAttr>())
+            BuildCtorClosureDefaultArgs(Attr->getLocation(), Ctor);
         }
       }
 

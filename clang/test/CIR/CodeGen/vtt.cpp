@@ -277,8 +277,8 @@ D::D() {}
 // CIR-COMMON:      cir.func {{.*}} @_ZN1BC2Ev
 // CIR-COMMON-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_B>
 // CIR-COMMON-SAME:                      %[[VTT_ARG:.*]]: !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
-// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca {{.*}} ["vtt", init]
+// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
+// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca "vtt" {{.*}} init
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        cir.store %[[VTT_ARG]], %[[VTT_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
@@ -343,8 +343,8 @@ D::D() {}
 // CIR-COMMON:      cir.func {{.*}} @_ZN1CC2Ev
 // CIR-COMMON-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_C>
 // CIR-COMMON-SAME:                      %[[VTT_ARG:.*]]: !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
-// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca {{.*}} ["vtt", init]
+// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
+// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca "vtt" {{.*}} init
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        cir.store %[[VTT_ARG]], %[[VTT_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
@@ -409,8 +409,8 @@ D::D() {}
 // CIR-COMMON:      cir.func {{.*}} @_ZN1DC2Ev
 // CIR-COMMON-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_D>
 // CIR-COMMON-SAME:                      %[[VTT_ARG:.*]]: !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
-// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca {{.*}} ["vtt", init]
+// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
+// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca "vtt" {{.*}} init
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        cir.store %[[VTT_ARG]], %[[VTT_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
@@ -480,7 +480,7 @@ D::D() {}
 
 // CIR-COMMON:      cir.func {{.*}} @_ZN1AC2Ev
 // CIR-COMMON-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_A>
-// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
 // CIR-COMMON:        %[[VPTR:.*]] = cir.vtable.address_point(@_ZTV1A, address_point = <index = 0, offset = 2>) : !cir.vptr
@@ -499,7 +499,7 @@ D::D() {}
 
 // CIR-COMMON:      cir.func {{.*}} @_ZN1DC1Ev
 // CIR-COMMON-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_D>
-// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
 // CIR-COMMON:        %[[A_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [40] -> !cir.ptr<!rec_A>

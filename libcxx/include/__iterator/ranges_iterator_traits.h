@@ -19,9 +19,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <ranges::input_range _Range>
 using __range_key_type _LIBCPP_NODEBUG = __remove_const_t<typename ranges::range_value_t<_Range>::first_type>;
@@ -33,8 +33,8 @@ template <ranges::input_range _Range>
 using __range_to_alloc_type _LIBCPP_NODEBUG =
     pair<const typename ranges::range_value_t<_Range>::first_type, typename ranges::range_value_t<_Range>::second_type>;
 
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif
 
 #endif // _LIBCPP___ITERATOR_RANGES_ITERATOR_TRAITS_H

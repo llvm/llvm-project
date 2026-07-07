@@ -64,7 +64,7 @@ using LVNames = SmallVector<StringRef, 16>;
 // As the CodeView constants are different to the DWARF constants, the
 // CodeView reader will map them to the DWARF ones.
 
-class LVCodeViewReader final : public LVBinaryReader {
+class LLVM_ABI LVCodeViewReader final : public LVBinaryReader {
   friend class LVTypeVisitor;
   friend class LVSymbolVisitor;
   friend class LVSymbolVisitorDelegate;

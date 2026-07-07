@@ -40,6 +40,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -67,6 +68,7 @@ template class LLVM_EXPORT_TEMPLATE basic_parser<double>;
 template class LLVM_EXPORT_TEMPLATE basic_parser<float>;
 template class LLVM_EXPORT_TEMPLATE basic_parser<std::string>;
 template class LLVM_EXPORT_TEMPLATE basic_parser<char>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<ElementCount>;
 
 #if !(defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && defined(_MSC_VER))
 // Only instantiate opt<std::string> when not building a Windows DLL. When
@@ -103,6 +105,7 @@ void parser<float>::anchor() {}
 void parser<std::string>::anchor() {}
 void parser<std::optional<std::string>>::anchor() {}
 void parser<char>::anchor() {}
+void parser<ElementCount>::anchor() {}
 
 // These anchor functions instantiate opt<T> and reference its virtual
 // destructor to ensure MSVC exports the corresponding vtable and typeinfo when
@@ -448,6 +451,13 @@ void cl::AddLiteralOption(Option &O, StringRef Name) {
 
 extrahelp::extrahelp(StringRef Help) : morehelp(Help) {
   GlobalParser->MoreHelp.push_back(Help);
+}
+
+Option::Option(NumOccurrencesFlag OccurrencesFlag, OptionHidden Hidden)
+    : NumOccurrences(0), Occurrences(OccurrencesFlag), Value(0),
+      HiddenFlag(Hidden), Formatting(NormalFormatting), Misc(0),
+      FullyInitialized(false), Position(0), AdditionalVals(0) {
+  Categories.push_back(&getGeneralCategory());
 }
 
 void Option::addArgument() {
@@ -2004,7 +2014,43 @@ bool parser<bool>::parse(Option &O, StringRef ArgName, StringRef Arg,
 //
 bool parser<boolOrDefault>::parse(Option &O, StringRef ArgName, StringRef Arg,
                                   boolOrDefault &Value) {
-  return parseBool<boolOrDefault, BOU_TRUE, BOU_FALSE>(O, ArgName, Arg, Value);
+  return parseBool<boolOrDefault, boolOrDefault::BOU_TRUE,
+                   boolOrDefault::BOU_FALSE>(O, ArgName, Arg, Value);
+}
+
+// parser<FixedOrScalableQuantity> implementation
+//
+template <typename FixedOrScalableQuantityT>
+static bool parseFixedOrScalableQuantity(Option &O, StringRef Arg,
+                                         StringRef ValueKind,
+                                         FixedOrScalableQuantityT &Value) {
+  using ScalarTy = typename FixedOrScalableQuantityT::ScalarTy;
+
+  Arg = Arg.trim();
+
+  ScalarTy MinValue;
+  if (!Arg.getAsInteger(0, MinValue)) {
+    Value = FixedOrScalableQuantityT::getFixed(MinValue);
+    return false;
+  }
+
+  StringRef Remainder = Arg;
+  if (!Remainder.consume_front("vscale"))
+    return O.error("'" + Arg + "' value invalid for " + ValueKind +
+                   " argument!");
+
+  Remainder = Remainder.ltrim();
+  if (!Remainder.consume_front('x'))
+    return O.error("'" + Arg + "' value invalid for " + ValueKind +
+                   " argument!");
+
+  Remainder = Remainder.ltrim();
+  if (Remainder.getAsInteger(0, MinValue))
+    return O.error("'" + Arg + "' value invalid for " + ValueKind +
+                   " argument!");
+
+  Value = FixedOrScalableQuantityT::getScalable(MinValue);
+  return false;
 }
 
 // parser<int> implementation
@@ -2063,6 +2109,13 @@ bool parser<unsigned long long>::parse(Option &O, StringRef ArgName,
   if (Arg.getAsInteger(0, Value))
     return O.error("'" + Arg + "' value invalid for ullong argument!");
   return false;
+}
+
+// parser<ElementCount> implementation
+//
+bool parser<ElementCount>::parse(Option &O, StringRef ArgName, StringRef Arg,
+                                 ElementCount &Value) {
+  return parseFixedOrScalableQuantity(O, Arg, getValueName(), Value);
 }
 
 // parser<double>/parser<float> implementation
@@ -2222,6 +2275,14 @@ void generic_parser_base::printGenericOptionDiff(
 
 // printOptionDiff - Specializations for printing basic value types.
 //
+namespace llvm {
+namespace cl {
+static raw_ostream &operator<<(raw_ostream &OS, boolOrDefault V) {
+  return OS << static_cast<int>(V);
+}
+} // namespace cl
+} // namespace llvm
+
 #define PRINT_OPT_DIFF(T)                                                      \
   void parser<T>::printOptionDiff(const Option &O, T V, OptionValue<T> D,      \
                                   size_t GlobalWidth) const {                  \
@@ -2253,6 +2314,7 @@ PRINT_OPT_DIFF(unsigned long long)
 PRINT_OPT_DIFF(double)
 PRINT_OPT_DIFF(float)
 PRINT_OPT_DIFF(char)
+PRINT_OPT_DIFF(ElementCount)
 
 void parser<std::string>::printOptionDiff(const Option &O, StringRef V,
                                           const OptionValue<std::string> &D,
@@ -2800,6 +2862,9 @@ ArrayRef<StringRef> cl::getCompilerBuildConfig() {
 #endif
 #if __has_feature(undefined_behavior_sanitizer)
       "+ubsan",
+#endif
+#ifdef LLVM_INTEGRATED_CRT_ALLOC
+      "+alloc:" LLVM_INTEGRATED_CRT_ALLOC,
 #endif
   };
   return ArrayRef(Config).drop_front(1);

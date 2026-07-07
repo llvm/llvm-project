@@ -33,6 +33,7 @@ PROJECT_DEPENDENCIES = {
     "lld": {"llvm"},
     "mlir": {"llvm"},
     "polly": {"llvm"},
+    "offload": {"clang", "lld", "flang"},
 }
 
 # This mapping describes the additional projects that should be tested when a
@@ -67,7 +68,6 @@ DEPENDENTS_TO_TEST = {
         "mlir",
         "polly",
         "flang",
-        "openmp",
     },
 }
 
@@ -75,6 +75,7 @@ DEPENDENTS_TO_TEST = {
 # but not necessarily run for testing. The only case of this currently is lldb
 # which needs some runtimes enabled for tests.
 DEPENDENT_RUNTIMES_TO_BUILD = {
+    "flang": {"openmp"},
     "lldb": {"libcxx", "libcxxabi", "libunwind", "compiler-rt"}
 }
 
@@ -89,7 +90,9 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "compiler-rt": {"compiler-rt"},
     "flang": {"flang-rt"},
     "flang-rt": {"flang-rt"},
-    ".ci": {"compiler-rt", "libc", "flang-rt", "libclc"},
+    "openmp": {"openmp"},
+    "offload": {"offload", "openmp"},
+    ".ci": {"compiler-rt", "libc", "flang-rt", "libclc", "openmp", "offload"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
     "llvm": {"libcxx", "libcxxabi", "libunwind"},
@@ -98,7 +101,6 @@ DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
 }
 
 EXCLUDE_LINUX = {
-    "openmp",  # https://github.com/google/llvm-premerge-checks/issues/410
 }
 
 # Runtimes configured for cross-compilation using LLVM_RUNTIME_TARGETS.
@@ -116,6 +118,7 @@ EXCLUDE_WINDOWS = {
     "libcxxabi",
     "libunwind",
     "flang-rt",
+    "offload",
 }
 
 # These are projects that we should test if the project itself is changed but
@@ -139,6 +142,7 @@ EXCLUDE_MAC = {
     "libcxx",
     "libcxxabi",
     "libunwind",
+    "offload",
 }
 
 PROJECT_CHECK_TARGETS = {
@@ -150,7 +154,7 @@ PROJECT_CHECK_TARGETS = {
     "libunwind": "check-unwind",
     "lldb": "check-lldb",
     "llvm": "check-llvm",
-    "clang": "check-clang",
+    "clang": "check-clang check-clang-python",
     "CIR": "check-clang-cir",
     "bolt": "check-bolt",
     "lld": "check-lld",
@@ -159,9 +163,10 @@ PROJECT_CHECK_TARGETS = {
     "libc": "check-libc",
     "libclc": "check-libclc",
     "mlir": "check-mlir",
-    "openmp": "check-openmp",
+    "openmp": "openmp",  # Run only build in pre-merge
     "polly": "check-polly",
     "lit": "check-lit",
+    "offload": "offload",  # Run only build in pre-merge
 }
 
 RUNTIMES = {
@@ -172,6 +177,8 @@ RUNTIMES = {
     "libc",
     "flang-rt",
     "libclc",
+    "openmp",
+    "offload",
 }
 
 # Meta projects are projects that need explicit handling but do not reside

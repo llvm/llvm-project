@@ -51,8 +51,7 @@ void OpenACCRecipeBuilderBase::makeAllocaCopy(mlir::Location loc,
           cgf.getContext().UnsignedLongLongTy));
 
   auto loopBuilder = [&]() {
-    auto itr =
-        cir::AllocaOp::create(builder, loc, itrPtrTy, itrTy, "itr", itrAlign);
+    auto itr = cir::AllocaOp::create(builder, loc, itrPtrTy, "itr", itrAlign);
     cir::ConstantOp constZero = builder.getConstInt(loc, itrTy, 0);
     builder.CIRBaseBuilderTy::createStore(loc, constZero, itr);
     builder.createFor(
@@ -126,9 +125,7 @@ mlir::Value OpenACCRecipeBuilderBase::makeBoundsAlloca(
   auto getUpperBound = [&](mlir::Value bound) {
     auto upperBoundVal =
         mlir::acc::GetUpperboundOp::create(builder, loc, idxType, bound);
-    return mlir::UnrealizedConversionCastOp::create(builder, loc, itrTy,
-                                                    upperBoundVal.getResult())
-        .getResult(0);
+    return builder.createBuiltinIntCast(loc, upperBoundVal.getResult(), itrTy);
   };
 
   auto isArrayTy = [&](QualType ty) {
@@ -141,7 +138,7 @@ mlir::Value OpenACCRecipeBuilderBase::makeBoundsAlloca(
   cir::PointerType topLevelTyPtr = builder.getPointerTo(topLevelTy);
   // Do an alloca for the 'top' level type without bounds.
   mlir::Value initialAlloca = builder.createAlloca(
-      loc, topLevelTyPtr, topLevelTy, allocaName,
+      loc, topLevelTyPtr, allocaName,
       cgf.getContext().getTypeAlignInChars(boundTypes.back()));
 
   bool lastBoundWasArray = isArrayTy(boundTypes.back());
@@ -253,35 +250,32 @@ std::pair<mlir::Value, mlir::Value> OpenACCRecipeBuilderBase::createBoundsLoop(
     // get the lower and upper bound for iterating over.
     auto lowerBoundVal =
         mlir::acc::GetLowerboundOp::create(builder, loc, idxType, bound);
-    auto lbConversion = mlir::UnrealizedConversionCastOp::create(
-        builder, loc, itrTy, lowerBoundVal.getResult());
+    mlir::Value lbConversion =
+        builder.createBuiltinIntCast(loc, lowerBoundVal.getResult(), itrTy);
     auto upperBoundVal =
         mlir::acc::GetUpperboundOp::create(builder, loc, idxType, bound);
-    auto ubConversion = mlir::UnrealizedConversionCastOp::create(
-        builder, loc, itrTy, upperBoundVal.getResult());
+    mlir::Value ubConversion =
+        builder.createBuiltinIntCast(loc, upperBoundVal.getResult(), itrTy);
 
     // Create a memory location for the iterator.
-    auto itr =
-        cir::AllocaOp::create(builder, loc, itrPtrTy, itrTy, "iter", itrAlign);
+    auto itr = cir::AllocaOp::create(builder, loc, itrPtrTy, "iter", itrAlign);
     // Store to the iterator: either lower bound, or if inverse loop, upper
     // bound.
     if (inverse) {
       cir::ConstantOp constOne = builder.getConstInt(loc, itrTy, 1);
 
-      auto sub =
-          cir::SubOp::create(builder, loc, ubConversion.getResult(0), constOne);
+      auto sub = cir::SubOp::create(builder, loc, ubConversion, constOne);
 
       // Upperbound is exclusive, so subtract 1.
       builder.CIRBaseBuilderTy::createStore(loc, sub, itr);
     } else {
       // Lowerbound is inclusive, so we can include it.
-      builder.CIRBaseBuilderTy::createStore(loc, lbConversion.getResult(0),
-                                            itr);
+      builder.CIRBaseBuilderTy::createStore(loc, lbConversion, itr);
     }
     // Save the 'end' iterator based on whether we are inverted or not. This
     // end iterator never changes, so we can just get it and convert it, so no
     // need to store/load/etc.
-    auto endItr = inverse ? lbConversion : ubConversion;
+    mlir::Value endItr = inverse ? lbConversion : ubConversion;
 
     builder.createFor(
         loc,
@@ -291,7 +285,7 @@ std::pair<mlir::Value, mlir::Value> OpenACCRecipeBuilderBase::createBoundsLoop(
           // Use 'not equal' since we are just doing an increment/decrement.
           auto cmp = builder.createCompare(
               loc, inverse ? cir::CmpOpKind::ge : cir::CmpOpKind::lt, loadCur,
-              endItr.getResult(0));
+              endItr);
           builder.createCondition(cmp);
         },
         /*bodyBuilder=*/
@@ -620,9 +614,8 @@ void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
 
     mlir::Value zero =
         builder.getConstInt(loc, mlir::cast<cir::IntType>(cgf.ptrDiffTy), 0);
-    mlir::Value itr =
-        cir::AllocaOp::create(builder, loc, itrPtrTy, itrTy, "itr",
-                              cgf.cgm.getSize(cgf.getPointerAlign()));
+    mlir::Value itr = cir::AllocaOp::create(
+        builder, loc, itrPtrTy, "itr", cgf.cgm.getSize(cgf.getPointerAlign()));
     builder.CIRBaseBuilderTy::createStore(loc, zero, itr);
 
     builder.setInsertionPointAfter(builder.createFor(

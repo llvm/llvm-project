@@ -989,6 +989,8 @@ void ASTContext::cleanup() {
     A->second->~AttrVec();
   DeclAttrs.clear();
 
+  CtorClosureDefaultArgs.clear();
+
   for (const auto &Value : ModuleInitializers)
     Value.second->~PerModuleInitializers();
   ModuleInitializers.clear();
@@ -1545,6 +1547,17 @@ void ASTContext::eraseDeclAttrs(const Decl *D) {
     Pos->second->~AttrVec();
     DeclAttrs.erase(Pos);
   }
+}
+
+ArrayRef<CXXDefaultArgExpr *>
+ASTContext::getCtorClosureDefaultArgs(const CXXConstructorDecl *CD) {
+  return CtorClosureDefaultArgs.lookup(CD);
+}
+
+void ASTContext::setCtorClosureDefaultArgs(const CXXConstructorDecl *CD,
+                                           ArrayRef<CXXDefaultArgExpr *> Args) {
+  assert(!CtorClosureDefaultArgs.contains(CD));
+  CtorClosureDefaultArgs[CD] = Args;
 }
 
 ArrayRef<ExplicitInstantiationDecl *>
@@ -12583,6 +12596,7 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   // Modifiers.
   int HowLong = 0;
   bool Signed = false, Unsigned = false;
+  bool IsChar = false, IsShort = false;
   RequiresICE = false;
 
   // Read the prefixed modifiers first.
@@ -12606,8 +12620,29 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       assert(!Unsigned && "Can't use 'U' modifier multiple times!");
       Unsigned = true;
       break;
+    case 'B':
+      // This modifier represents int8 type (byte-width).
+      assert(!IsSpecial &&
+             "Can't use two 'N', 'W', 'Z', 'O', 'B', or 'T' modifiers!");
+      assert(HowLong == 0 && "Can't use both 'L' and 'B' modifiers!");
+#ifndef NDEBUG
+      IsSpecial = true;
+#endif
+      IsChar = true;
+      break;
+    case 'T':
+      // This modifier represents int16 type (short-width).
+      assert(!IsSpecial &&
+             "Can't use two 'N', 'W', 'Z', 'O', 'B', or 'T' modifiers!");
+      assert(HowLong == 0 && "Can't use both 'L' and 'T' modifiers!");
+#ifndef NDEBUG
+      IsSpecial = true;
+#endif
+      IsShort = true;
+      break;
     case 'L':
-      assert(!IsSpecial && "Can't use 'L' with 'W', 'N', 'Z' or 'O' modifiers");
+      assert(!IsSpecial &&
+             "Can't use 'L' with 'W', 'N', 'Z', 'O', 'B', or 'T' modifiers");
       assert(HowLong <= 2 && "Can't have LLLL modifier");
       ++HowLong;
       break;
@@ -12723,7 +12758,11 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Context.ShortTy;
     break;
   case 'i':
-    if (HowLong == 3)
+    if (IsChar)
+      Type = Unsigned ? Context.UnsignedCharTy : Context.SignedCharTy;
+    else if (IsShort)
+      Type = Unsigned ? Context.UnsignedShortTy : Context.ShortTy;
+    else if (HowLong == 3)
       Type = Unsigned ? Context.UnsignedInt128Ty : Context.Int128Ty;
     else if (HowLong == 2)
       Type = Unsigned ? Context.UnsignedLongLongTy : Context.LongLongTy;

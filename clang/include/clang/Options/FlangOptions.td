@@ -190,9 +190,10 @@ defm ppc_native_vec_elem_order: BoolOptionWithoutMarshalling<"f", "ppc-native-ve
   PosFlag<SetTrue, [], [ClangOption], "Specifies PowerPC native vector element order (default)">,
   NegFlag<SetFalse, [], [ClangOption], "Specifies PowerPC non-native vector element order">>;
 defm unsigned : OptInFC1FFlag<"unsigned", "Enables UNSIGNED type">;
+defm enumeration_type : OptInFC1FFlag<"enumeration-type", "Enables F2023 ENUMERATION TYPE (experimental; FIR lowering is incomplete)">;
 defm openacc_default_none_scalars_strict : OptOutFC1FFlag<"openacc-default-none-scalars-strict",
-  "Require explicit data clauses for all variables (including scalars) under OpenACC DEFAULT(NONE) (default)",
-  "Allow scalars without explicit data clauses under OpenACC DEFAULT(NONE) (pre-OpenACC-3.2 behavior)">;
+  "Require explicit data clauses for all variables (including scalars) under OpenACC DEFAULT(NONE)",
+  "Allow scalars without explicit data clauses under OpenACC DEFAULT(NONE) (default, pre-OpenACC-3.2 behavior)">;
 defm openacc_multiple_names_in_routine : OptOutFC1FFlag<"openacc-multiple-names-in-routine",
   "Accept multiple names in OpenACC ROUTINE directive (extension)",
   "Do not accept multiple names in OpenACC ROUTINE directive">;

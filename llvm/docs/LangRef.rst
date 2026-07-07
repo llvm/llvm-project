@@ -1355,7 +1355,11 @@ Currently, only the following parameter attributes are defined:
     ``byval`` parameters). This is not a valid attribute for return
     values.
 
-    The byval type argument indicates the in-memory value type.
+    The byval type argument is only used for its allocation size and alignment
+    (if there is no explicit align attribute). That is, the hidden copy is
+    interpreted as a call to memcpy with the allocation size of the specified type,
+    instead of loading from the pointee and storing back into the copy in the type.
+    In particular, the padding between field types of a struct type is still copied.
 
     The byval attribute also supports specifying an alignment with the
     ``align`` attribute. It indicates the alignment of the stack slot to
@@ -1585,6 +1589,8 @@ Currently, only the following parameter attributes are defined:
     :ref:`bitcast instruction <i_bitcast>`. This is not a valid attribute for
     return values and can only be applied to one parameter.
 
+.. _attr_nonnull:
+
 ``nonnull``
     This indicates that the parameter or return pointer is not null. This
     attribute may only be applied to pointer-typed parameters. This is not
@@ -1595,6 +1601,8 @@ Currently, only the following parameter attributes are defined:
     if the pointer has non-zero non-address bits or non-zero external state.
     The ``nonnull`` attribute should be combined with the ``noundef`` attribute
     to ensure a pointer is not null or otherwise the behavior is undefined.
+
+.. _attr_dereferenceable:
 
 ``dereferenceable(<n>)``
     This indicates that the parameter or return pointer is dereferenceable. This
@@ -1608,9 +1616,15 @@ Currently, only the following parameter attributes are defined:
     ``null_pointer_is_valid`` function attribute is present.
     ``n`` should be a positive number. The pointer should be well defined,
     otherwise it is undefined behavior. This means ``dereferenceable(<n>)``
-    implies ``noundef``. When used in an assume operand bundle, more restricted
-    semantics apply. See  :ref:`assume operand bundles <assume_opbundles>` for
-    more details.
+    implies ``noundef``.
+
+    The ``dereferenceable`` attribute only implies dereferenceability at the
+    point of the attribute (i.e. on function entry for arguments or at the
+    point of the call for return values). The underlying object may still get
+    freed after that point. Other attributes such as ``nofree`` can be used
+    to exclude frees.
+
+.. _attr_dereferenceable_or_null:
 
 ``dereferenceable_or_null(<n>)``
     This indicates that the parameter or return value isn't both
@@ -1664,6 +1678,8 @@ Currently, only the following parameter attributes are defined:
     constant. Undef or constant expressions are not valid. This is
     only valid on intrinsic declarations and cannot be applied to a
     call site or arbitrary function.
+
+.. _attr_noundef:
 
 ``noundef``
     This attribute applies to parameters and return values. If the value
@@ -2147,6 +2163,9 @@ For example:
     uses the ``nobuiltin`` attribute. This is only valid at call sites for
     direct calls to functions that are declared with the ``nobuiltin``
     attribute.
+
+.. _attr_cold:
+
 ``cold``
     This attribute indicates that this function is rarely called. When
     computing edge weights, basic blocks post-dominated by a cold
@@ -2281,8 +2300,9 @@ For example:
     - ``errnomem``: This refers to accesses to the ``errno`` variable.
     - ``target_mem#`` : These refer to target specific state that cannot be
       accessed by any other means. # is a number between 0 and 1 inclusive.
-      Note: The target_mem locations are experimental and intended for internal
-      testing only. They must not be used in production code.
+      Note: The following target_mem locations are implemented in AArch64.
+      target_mem0 represents SME ZT0 state, target_mem1 represents SME ZA
+      state.
 
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
@@ -2379,6 +2399,14 @@ For example:
     This attribute indicates that the inliner should never inline this
     function in any situation. This attribute may not be used together
     with the ``alwaysinline`` attribute.
+``noipa``
+    Disables any interprocedural analysis that inspects the definition of this
+    function. This attribute is equivalent to moving this function definition to
+    a separate, optimizer-opaque, module. Any attributes on the function are
+    still respected (as they would be if they remained on a function declaration
+    in this module). This attribute does *not* control inlining or outlining.
+    Add the ``noinline`` and ``nooutline`` attributes as well in cases where
+    inlining and outlining should additionally be disabled.
 ``nomerge``
     This attribute indicates that calls to this function should never be merged
     during optimization. For example, it will prevent tail merging otherwise
@@ -2850,7 +2878,8 @@ For example:
 
     The following aspects are currently supported:
 
-    - ``float``: The call has a floating point argument
+    - ``fixed``: The call has a C ISO 18037 fixed-point argument.
+    - ``float``: The call has a floating-point argument.
 
 
 
@@ -3125,33 +3154,57 @@ Assume Operand Bundles
 ^^^^^^^^^^^^^^^^^^^^^^
 
 Operand bundles on an :ref:`llvm.assume <int_assume>` allow representing
-assumptions, such as that a :ref:`parameter attribute <paramattrs>` or a
-:ref:`function attribute <fnattrs>` holds for a certain value at a certain
-location. Operand bundles enable assumptions that are either hard or impossible
-to represent as a boolean argument of an :ref:`llvm.assume <int_assume>`.
+assumptions that hold at the location of the assume. Operand bundles enable
+assumptions that are either hard or impossible to represent as a boolean
+argument of an :ref:`llvm.assume <int_assume>`.
 
 Assumes with operand bundles must have ``i1 true`` as the condition operand.
 
-An assume operand bundle has the form:
+Just like for the argument of :ref:`llvm.assume <int_assume>`, if any of the
+provided guarantees are violated at runtime the behavior is undefined.
 
-::
+While attributes expect constant arguments, assume operand bundles may be
+provided a dynamic value, for example:
 
-      "<tag>"([ <arguments>] ])
+.. code-block:: llvm
 
-In the case of function or parameter attributes, the operand bundle has the
-restricted form:
+      call void @llvm.assume(i1 true) ["align"(ptr %val, i32 %align)]
 
-::
+The following attributes are currently accepted:
 
-      "<tag>"([ <holds for value> [, <attribute argument>] ])
+``"align"(ptr %p, i64 %align)``, ``"align"(ptr %p, i64 %align, i64 %offset)``
+  Equivalent to :ref:`align(%align) <attr_align>` on ``%p``, or ``%p - %offset``
+  if the ``%offset`` argument exists, except that ``%align`` may be a
+  non-power-of-two alignment (including a zero alignment). If ``%align`` is not
+  a power of two the pointer value must be all-zero. Otherwise the behavior is
+  undefined.
 
-* The tag of the operand bundle is usually the name of the attribute that can be
-  assumed to hold. It can also be `ignore`; this tag doesn't contain any
-  information and should be ignored.
-* The first argument, if present, is the value for which the attribute holds.
-* The second argument, if present, is an argument of the attribute.
+``"cold"()``
+  Equivalent to :ref:`cold <attr_cold>`.
 
-If there are no arguments the attribute is a property of the call location.
+``"dereferenceable"(ptr %p, i64 %size)``
+  Equivalent to :ref:`dereferenceable(%size) <attr_dereferenceable>` on ``%p``,
+  except that ``%size`` may also be zero, in which case the bundle doesn't
+  imply ``nonnull``.
+
+``"dereferenceable_or_null"(ptr %p, i64 %size)``
+  Equivalent to :ref:`dereferenceable_or_null(%size)
+  <attr_dereferenceable_or_null>` on ``%p``, except that ``%size`` may also be
+  zero.
+
+``"ignore"(...)``
+  Doesn't imply anything and is ignored. This is used to drop an assume where
+  the ``llvm.assume`` call cannot be replaced or dropped.
+
+``"nonnull"(ptr %p)``
+  Equivalent to :ref:`nonnull <attr_nonnull>` on ``%p``.
+
+``"noundef"(any_type %v)``
+  Equivalent to :ref:`noundef <attr_noundef>` on ``%v``.
+
+``"separate_storage"(ptr %p1, ptr %p2)``
+  This indicates that no pointer :ref:`based <pointeraliasing>` on one of its
+  arguments can alias any pointer based on the other.
 
 For example:
 
@@ -3168,39 +3221,6 @@ allows the optimizer to assume that at location of call to
 
 allows the optimizer to assume that the :ref:`llvm.assume <int_assume>`
 call location is cold and that ``%val`` may not be null.
-
-Just like for the argument of :ref:`llvm.assume <int_assume>`, if any of the
-provided guarantees are violated at runtime the behavior is undefined.
-
-While attributes expect constant arguments, assume operand bundles may be
-provided a dynamic value, for example:
-
-.. code-block:: llvm
-
-      call void @llvm.assume(i1 true) ["align"(ptr %val, i32 %align)]
-
-If the operand bundle value violates any requirements on the attribute value,
-the behavior is undefined, unless one of the following exceptions applies:
-
-* ``"align"`` operand bundles may specify a non-power-of-two alignment
-  (including a zero alignment). If this is the case, then the pointer value
-  must be an all-zero pointer, otherwise the behavior is undefined.
-
-* ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
-  dereferenceable at the point of the assumption. The pointer may not be
-  dereferenceable at later pointers, e.g., because it could have been freed.
-  Only ``n > 0`` implies that the pointer is dereferenceable.
-
-In addition to allowing operand bundles encoding function and parameter
-attributes, an assume operand bundle may also encode a ``separate_storage``
-operand bundle. This has the form:
-
-.. code-block:: llvm
-
-    separate_storage(<val1>, <val2>)``
-
-This indicates that no pointer :ref:`based <pointeraliasing>` on one of its
-arguments can alias any pointer based on the other.
 
 Even if the assumed property can be encoded as a boolean value, like
 ``nonnull``, using operand bundles to express the property can still have
@@ -3336,18 +3356,33 @@ Module-Level Inline Assembly
 ----------------------------
 
 Modules may contain "module-level inline asm" blocks, which corresponds
-to the GCC "file scope inline asm" blocks. These blocks are internally
-concatenated by LLVM and treated as a single unit, but may be separated
-in the ``.ll`` file if desired. The syntax is very simple:
+to the GCC "file scope inline asm" blocks:
 
 .. code-block:: llvm
 
-    module asm "inline asm code goes here"
-    module asm "more can go here"
+    module asm
+        "inline asm code goes here"
+        "more can go here"
 
-The strings can contain any character by escaping non-printable
+The sequence of string literals is internally concatenated using newlines as
+separators. The strings can contain any character by escaping non-printable
 characters. The escape sequence used is simply "\\xx" where "xx" is the
 two digit hex code for the number.
+
+Additionally, module-level inline assembly can specify an optional list of
+properties:
+
+.. code-block:: llvm
+
+    module asm(target_features: "+foo", target_cpu: "bar")
+        "inline asm code goes here"
+        "more can go here"
+
+Currently, the only supported properties are ``target_features`` and
+``target_cpu``, with the same meaning as the ``"target-features"`` and
+``"target-cpu"`` function attributes.
+
+Consecutive blocks with identical properties will be concatenated into one.
 
 Note that the assembly string *must* be parseable by LLVM's integrated assembler
 (unless it is disabled), even when emitting a ``.s`` file.
@@ -7823,11 +7858,14 @@ it is attached to is completely unpredictable.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The existence of the ``!dereferenceable`` metadata on the instruction
-tells the optimizer that the value loaded is known to be dereferenceable,
-otherwise the behavior is undefined.
+tells the optimizer that the value loaded is known to be dereferenceable
+at the current program point, otherwise the behavior is undefined.
 The number of bytes known to be dereferenceable is specified by the integer
 value in the metadata node. This is analogous to the ''dereferenceable''
 attribute on parameters and return values.
+
+The ``!deferenceable`` metadata can be combined with the ``!nofree`` metadata
+to indicate that the pointer will stay dereferenceable forever.
 
 .. _md_dereferenceable_or_null:
 
@@ -7836,7 +7874,8 @@ attribute on parameters and return values.
 
 The existence of the ``!dereferenceable_or_null`` metadata on the
 instruction tells the optimizer that the value loaded is known to be either
-dereferenceable or null, otherwise the behavior is undefined.
+dereferenceable at the current program point or null, otherwise the behavior is
+undefined.
 The number of bytes known to be dereferenceable is specified by the integer
 value in the metadata node. This is analogous to the ''dereferenceable_or_null''
 attribute on parameters and return values.
@@ -8141,7 +8180,7 @@ Together these two attributes provide a four-way classification:
 
 - ``body`` only: main vectorized loop body
 - ``epilogue`` only: scalar epilogue loop after vectorization
-- Both ``body`` and ``epilogue``: vectorized epilogue 
+- Both ``body`` and ``epilogue``: vectorized epilogue
   (a remainder loop that was itself vectorized during epilogue
   vectorization)
 - Neither: a plain loop not produced by the vectorizer
@@ -8633,6 +8672,10 @@ value (but see the ``llvm.launder.invariant.group`` intrinsic which affects
 when two pointers are considered the same). Pointers returned by bitcast or
 getelementptr with only zero indices are considered the same.
 
+Note that the metadata value in invariant.group carries no semantic value.
+Because it must have no entries, all invariant.group annotations in a module
+reference the same uniqued empty node.
+
 Examples:
 
 .. code-block:: llvm
@@ -8681,10 +8724,81 @@ change in the future.
 
 See :doc:`TypeMetadata`.
 
+.. _metadata_callee_type:
+
 '``callee_type``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-See :doc:`CalleeTypeMetadata`.
+The ``!callee_type`` metadata is introduced to support the generation of a call graph
+section in the object file. The ``!callee_type`` metadata is used
+to identify the types of the intended callees of indirect call instructions. The ``!callee_type`` metadata is a
+list of one or more generalized ``!callgraph`` metadata objects (See the :ref:`metadata_callgraph` section) with each ``!callgraph``
+metadata pointing to a callee's :ref:`type identifier <calleetype-type-identifier>`.
+
+While ``!callee_type`` and ``!callgraph`` are private to the Call Graph Section pipeline and contain no offsets,
+LLVM's `Control Flow Integrity (CFI)
+<https://clang.org/docs/ControlFlowIntegrity.html>`_ uses a structurally similar ``!type`` metadata in its implementation (See :doc:`TypeMetadata`),
+which shares the same type identifier format but includes a leading offset for vtable compatibility.
+
+.. _calleetype-type-identifier:
+
+Type identifier
+"""""""""""""""
+
+The type for an indirect call target is the callee's function signature.
+Mapping from a type to an identifier is an ABI detail.
+In the current implementation, an identifier of type T is
+computed as follows:
+
+  -  Obtain the generalized mangled name for “typeinfo name for T”.
+  -  Compute MD5 hash of the name as a string.
+  -  Reinterpret the first 8 bytes of the hash as a little-endian 64-bit integer.
+
+To avoid mismatched pointer types, generalizations are applied.
+Pointers in return and argument types are treated as equivalent as long as the qualifiers for the 
+type they point to match. For example, ``char*``, ``char**``, and ``int*`` are considered equivalent
+types. However, ``char*`` and ``const char*`` are considered distinct types.
+
+.. _metadata_callgraph:
+
+'``callgraph``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``!callgraph`` metadata associates a function definition with its type
+identifier. It uses the same generalized type encoding as the ``!type`` metadata
+used for CFI and WPD, and allows us to emit a call graph section in the object
+file that can be used to compute a conservative and precise static call graph
+in a linked binary.
+
+Syntax:
+"""""""
+
+A ``!callgraph`` metadata node is attached to a function definition as follows:
+
+.. code-block:: llvm
+
+  define void @foo() !callgraph !0
+  !0 = !{!"_ZTSFvvE.generalized"}
+
+The metadata node is a 1-element tuple containing only the generalized type
+identifier as ``MDString``.
+
+Relation to Control Flow Integrity (CFI)
+""""""""""""""""""""""""""""""""""""""""
+
+While ``!callgraph`` metadata is structurally similar to LLVM's ``!type``
+metadata (which is used by `Control Flow Integrity (CFI)
+<https://clang.org/docs/ControlFlowIntegrity.html>`_ and Whole Program
+Devirtualization), they serve different purposes:
+
+* ``!type`` (CFI): Contains an offset (e.g., ``!{i64 0, !"_ZTSFvvE.generalized"}``)
+  to support virtual table offset calculations and devirtualization.
+* ``!callgraph`` (Call Graph Section): Does not contain an offset. This is
+  private to the Call Graph Section pipeline.
+
+The generalized type identifier format used by both is identical. For more
+details on the generalized type identifier format and CFI's metadata, see
+:doc:`TypeMetadata` and :ref:`metadata_callee_type`.
 
 '``associated``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -8770,7 +8884,7 @@ is executed, followed by ``uint64_t`` value and execution count pairs.
 The value profiling kind is 0 for indirect call targets and 1 for memory
 operations. For indirect call targets, each profile value is a hash
 of the callee function name, and for memory operations each value is the
-byte length. It is illegal to have duplicate profile values (e.g., 
+byte length. It is illegal to have duplicate profile values (e.g.,
 duplicate function hashes for indirect calls or byte lengths for memory
 operations).
 
@@ -13149,6 +13263,9 @@ the default rounding mode.
 If the ``nneg`` flag is set, and the ``uitofp`` argument is negative,
 the result is a poison value.
 
+If the '``nsz``' flag is set and the input value is 0, the sign bit of
+the result is non-deterministic.
+
 
 Example:
 """"""""
@@ -13195,6 +13312,9 @@ The '``sitofp``' instruction interprets its operand as a signed integer
 quantity and converts it to the corresponding floating-point value. If the
 value cannot be exactly represented, it is rounded using the default rounding
 mode.
+
+If the '``nsz``' flag is set and the input value is 0, the sign bit of
+the result is non-deterministic.
 
 Example:
 """"""""
@@ -14529,6 +14649,9 @@ does not define what this type is, so all transformations should be
 prepared to handle these functions regardless of the type used. The intrinsics
 are overloaded, and can be used for pointers to different address spaces.
 
+The underlying argument list is destroyed when a function returns, so
+a ``va_list`` must not outlive the function that created it.
+
 This example shows how the :ref:`va_arg <i_va_arg>` instruction and the
 variable argument handling intrinsic functions are used.
 
@@ -14625,10 +14748,13 @@ Semantics:
 
 The '``llvm.va_end``' intrinsic works just like the ``va_end`` macro
 available in C. In a target-dependent way, it destroys the ``va_list``
-element to which the argument points. Calls to
+element to which the argument points. Calls to ``llvm.va_end`` can be
+omitted when they are a no-op for the given target. ``llvm.va_end``
+is a no-op for all currently supported targets.
+
+When used, calls to ``llvm.va_end`` must be matched exactly with calls to
 :ref:`llvm.va_start <int_va_start>` and
-:ref:`llvm.va_copy <int_va_copy>` must be matched exactly with calls to
-``llvm.va_end``.
+:ref:`llvm.va_copy <int_va_copy>`.
 
 .. _int_va_copy:
 
@@ -14664,6 +14790,10 @@ available in C. In a target-dependent way, it copies the source
 ``va_list`` element into the destination ``va_list`` element. This
 intrinsic is necessary because the ``llvm.va_start`` intrinsic may be
 arbitrarily complex and require, for example, memory allocation.
+
+On targets where ``llvm.va_copy`` is equivalent to ``memcpy``, ``memcpy``
+can be used instead to duplicate a ``va_list``. ``llvm.va_copy`` is
+equivalent to ``memcpy`` on all currently supported targets.
 
 Accurate Garbage Collection Intrinsics
 --------------------------------------
@@ -15628,7 +15758,7 @@ knows those logical layouts are lowered to the same physical layout:
     - `{ i32, i32, i32, i32 }`
     - `[ i32 x 4 ]`
 
-This means is is valid to lower the following code to either:
+This means it is valid to lower the following code to either:
 
 .. code-block:: llvm
 
@@ -19320,6 +19450,102 @@ Example:
       %r = call i4 @llvm.clmul.i4(i4 -4, i4 2)   ; %r = -8
       %r = call i4 @llvm.clmul.i4(i4 -4, i4 -5)  ; %r = 4
 
+.. _int_pext:
+
+'``llvm.pext.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.pext`` on any integer
+or integer vector type.
+
+::
+
+      declare i32 @llvm.pext.i32(i32 %val, i32 %mask)
+      declare i64 @llvm.pext.i64(i64 %val, i64 %mask)
+      declare <4 x i32> @llvm.pext.v4i32(<4 x i32> %val, <4 x i32> %mask)
+
+Overview:
+"""""""""
+
+The '``llvm.pext``' family of intrinsic functions extracts the bits from ``val``
+where the ``mask`` has bits set and packs them contiguously in the low bits
+of the result, same as the x86 ``PEXT`` instruction.
+
+Arguments:
+""""""""""
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+Semantics:
+""""""""""
+
+The '``llvm.pext``' intrinsic extracts bits from the first argument
+``val`` at the positions indicated by set bits in ``mask``, and packs
+them contiguously into the low bits of the result. The remaining high
+bits of the result are zero.
+
+Equivalently, if the set bit positions in ``mask`` (from LSB to MSB)
+are ``p0, p1, ..., pk``, then the result bit ``i`` equals bit ``pi``
+of ``val``.
+
+.. code-block:: text
+
+      %r = call i8 @llvm.pext.i8(i8 0b10101010, i8 0b11001100) ; %r = 0b00001010
+      %r = call i8 @llvm.pext.i8(i8 0b11111111, i8 0b10101010) ; %r = 0b00001111
+
+.. _int_pdep:
+
+'``llvm.pdep.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.pdep`` on any integer or
+integer vector type.
+
+::
+
+      declare i32 @llvm.pdep.i32(i32 %val, i32 %mask)
+      declare i64 @llvm.pdep.i64(i64 %val, i64 %mask)
+      declare <4 x i32> @llvm.pdep.v4i32(<4 x i32> %val, <4 x i32> %mask)
+
+Overview:
+"""""""""
+
+The '``llvm.pdep``' family of intrinsic functions deposits the low bits of
+``val`` into the result at the positions where ``mask`` has bits set, same as
+the x86 ``PDEP`` instruction.
+
+Arguments:
+""""""""""
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+Semantics:
+""""""""""
+
+The '``llvm.pdep``' intrinsic takes the low bits of the first argument
+``val`` and scatters them to the bit positions in the result indicated by
+set bits in ``mask``. Bits in the result at positions where ``mask`` is
+zero are zero.
+
+Equivalently, if the set bit positions in ``mask`` (from LSB to MSB) are
+``p0, p1, ..., pk``, then result bit ``pi`` equals bit ``i`` of ``val``.
+
+The operations satisfy the round-trip identity:
+``pdep(pext(val, mask), mask) == val & mask``.
+
+.. code-block:: text
+
+      %r = call i8 @llvm.pdep.i8(i8 0b00001010, i8 0b11001100) ; %r = 0b10001000
+      %r = call i8 @llvm.pdep.i8(i8 0b00001111, i8 0b10101010) ; %r = 0b10101010
+
 .. _int_overflow:
 
 Arithmetic with Overflow Intrinsics
@@ -22019,7 +22245,7 @@ Arguments:
 The first argument is the vector to be counted. This argument must be a vector
 with integer element type. The return type must also be an integer type which is
 wide enough to hold the maximum number of elements of the source vector. The
-behavior of this intrinsic is undefined if the return type is not wide enough
+result is a :ref:`poison value <poisonvalues>` if the return type is not wide enough
 for the number of elements in the input vector.
 
 The second argument is a constant flag that indicates whether the intrinsic
@@ -27535,7 +27761,7 @@ Arguments:
 The first argument is the vector to be counted. This argument must be a vector
 with integer element type. The return type must also be an integer type which is
 wide enough to hold the maximum number of elements of the source vector. The
-behavior of this intrinsic is undefined if the return type is not wide enough
+result is a :ref:`poison value <poisonvalues>` if the return type is not wide enough
 for the number of elements in the input vector.
 
 The second argument is a constant flag that indicates whether the intrinsic

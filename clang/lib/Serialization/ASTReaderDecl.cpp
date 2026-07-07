@@ -2341,6 +2341,14 @@ void ASTDeclReader::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
         InheritedConstructor(Shadow, Ctor);
   }
 
+  if (unsigned NumArgs = Record.readUInt32()) {
+    CXXDefaultArgExpr **Args =
+        new (Reader.getContext()) CXXDefaultArgExpr *[NumArgs];
+    for (unsigned I = 0; I != NumArgs; I++)
+      Args[I] = cast_or_null<CXXDefaultArgExpr>(Record.readStmt());
+    D->setCtorClosureDefaultArgs(ArrayRef(Args, NumArgs));
+  }
+
   VisitCXXMethodDecl(D);
 }
 

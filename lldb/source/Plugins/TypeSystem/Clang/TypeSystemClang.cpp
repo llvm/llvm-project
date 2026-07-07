@@ -8521,14 +8521,19 @@ TypeSystemClang::dump(lldb::opaque_compiler_type_t type) const {
 namespace {
 struct ScopedASTColor {
   ScopedASTColor(clang::ASTContext &ast, bool show_colors)
-      : ast(ast), old_show_colors(ast.getDiagnostics().getShowColors()) {
-    ast.getDiagnostics().setShowColors(show_colors);
+      : ast(ast),
+        old_show_colors(
+            ast.getDiagnostics().getDiagnosticOptions().getShowColors()) {
+    ast.getDiagnostics().getDiagnosticOptions().setShowColors(
+        show_colors ? clang::ShowColorsKind::On : clang::ShowColorsKind::Off);
   }
 
-  ~ScopedASTColor() { ast.getDiagnostics().setShowColors(old_show_colors); }
+  ~ScopedASTColor() {
+    ast.getDiagnostics().getDiagnosticOptions().setShowColors(old_show_colors);
+  }
 
   clang::ASTContext &ast;
-  const bool old_show_colors;
+  const clang::ShowColorsKind old_show_colors;
 };
 } // namespace
 

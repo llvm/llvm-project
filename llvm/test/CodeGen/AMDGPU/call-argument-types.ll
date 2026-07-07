@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -mattr=-flat-for-global -amdgpu-scalarize-global-loads=0 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -mattr=-flat-for-global -amdgpu-scalarize-global-loads=0 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global -amdgpu-scalarize-global-loads=0 < %s | FileCheck -enable-var-scope -check-prefixes=HSA %s
-; RUN: llc -mtriple=amdgcn -global-isel=1 -new-reg-bank-select -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-scalarize-global-loads=0 < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GISEL %s
+; RUN: llc -mtriple=amdgcn -global-isel=1 -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-scalarize-global-loads=0 < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GISEL %s
 
 declare hidden void @external_void_func_i1(i1) #0
 declare hidden void @external_void_func_i1_signext(i1 signext) #0

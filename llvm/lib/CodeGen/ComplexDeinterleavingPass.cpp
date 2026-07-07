@@ -1245,11 +1245,8 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
   auto Collect = [&Flags](Instruction *Insn, SmallVectorImpl<Product> &Muls,
                           AddendList &Addends) -> bool {
     SmallVector<PointerIntPair<Value *, 1, bool>> Worklist = {{Insn, true}};
-    SmallPtrSet<Value *, 8> Visited;
     while (!Worklist.empty()) {
       auto [V, IsPositive] = Worklist.pop_back_val();
-      if (!Visited.insert(V).second)
-        continue;
 
       Instruction *I = dyn_cast<Instruction>(V);
       if (!I) {

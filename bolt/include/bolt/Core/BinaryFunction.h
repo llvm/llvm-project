@@ -37,6 +37,7 @@
 #include "bolt/Utils/NameResolver.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
@@ -63,8 +64,6 @@ namespace llvm {
 class DWARFUnit;
 
 namespace bolt {
-
-class DataflowInfoManager;
 
 using InputOffsetToAddressMapTy = std::unordered_multimap<uint64_t, uint64_t>;
 
@@ -195,7 +194,9 @@ public:
     /// Keeps track of other functions we depend on because there is a reference
     /// to the constant islands in them.
     IslandProxiesType Proxies, ColdProxies;
-    SmallPtrSet<BinaryFunction *, 1> Dependency; // The other way around
+    SetVector<BinaryFunction *, SmallVector<BinaryFunction *, 1>,
+              SmallPtrSet<BinaryFunction *, 1>>
+        Dependency; // The other way around
 
     mutable MCSymbol *FunctionConstantIslandLabel{nullptr};
     mutable MCSymbol *FunctionColdConstantIslandLabel{nullptr};
@@ -1023,6 +1024,14 @@ public:
   MCInst *getInstructionContainingOffset(uint64_t Offset);
 
   std::optional<MCInst> disassembleInstructionAtOffset(uint64_t Offset) const;
+
+  /// Given a starting point \p Offset and a number of bytes \p MinLength,
+  /// returns the number of bytes \p MinLength + Tail such that the last
+  /// instruction in the sequence is not split apart. Returns std::nullopt if
+  /// disassembling fails. Assumes that \p Offset aligns with instruction stream
+  /// and that the instructions can be disassembled.
+  uint64_t getInstructionSequenceLength(uint64_t Offset,
+                                        uint64_t MinLength) const;
 
   /// Return offset for the first instruction. If there is data at the
   /// beginning of a function then offset of the first instruction could
@@ -2454,7 +2463,7 @@ public:
   /// while the second successor - false/fall-through branch.
   ///
   /// When we reverse the branch condition, the CFG is updated accordingly.
-  void fixBranches(DataflowInfoManager *DIM = nullptr);
+  void fixBranches();
 
   /// Mark function as finalized. No further optimizations are permitted.
   void setFinalized() { CurrentState = State::CFG_Finalized; }

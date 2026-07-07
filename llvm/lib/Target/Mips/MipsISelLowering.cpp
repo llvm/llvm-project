@@ -877,9 +877,10 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
   } else {
     // Pattern match DINS.
     //  $dst = or (and $src, mask0), mask1
-    //  where mask0 = ((1 << SMSize0) -1) << SMPos0
+    //  where mask0 = maskTrailingOnes<uint64_t>(SMSize0) << SMPos0
     //  => dins $dst, $src, pos, size
-    if (~CN->getSExtValue() == ((((int64_t)1 << SMSize0) - 1) << SMPos0) &&
+    uint64_t Mask = maskTrailingOnes<uint64_t>(SMSize0) << SMPos0;
+    if (~CN->getSExtValue() == (int64_t)Mask &&
         ((SMSize0 + SMPos0 <= 64 && Subtarget.hasMips64r2()) ||
          (SMSize0 + SMPos0 <= 32))) {
       // Check if AND instruction has constant as argument
@@ -3138,6 +3139,7 @@ static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
                                         ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
                                         CCState &State);
 
+#define GET_CALLING_CONV_IMPL
 #include "MipsGenCallingConv.inc"
 
  CCAssignFn *MipsTargetLowering::CCAssignFnForCall() const{
@@ -3873,7 +3875,7 @@ SDValue MipsTargetLowering::LowerFormalArguments(
 
       assert(!VA.needsCustom() && "unexpected custom memory argument");
 
-      // Only arguments pased on the stack should make it here. 
+      // Only arguments pased on the stack should make it here.
       assert(VA.isMemLoc());
 
       // The stack pointer offset is relative to the caller stack frame.
@@ -4661,8 +4663,8 @@ void MipsTargetLowering::passByValArg(
   SDValue Dst = DAG.getNode(ISD::ADD, DL, PtrTy, StackPtr,
                             DAG.getIntPtrConstant(VA.getLocMemOffset(), DL));
   Chain = DAG.getMemcpy(
-      Chain, DL, Dst, Src, DAG.getConstant(MemCpySize, DL, PtrTy),
-      Align(Alignment), /*isVolatile=*/false, /*AlwaysInline=*/false,
+      Chain, DL, Dst, Src, DAG.getConstant(MemCpySize, DL, PtrTy), Alignment,
+      Alignment, /*isVolatile=*/false, /*AlwaysInline=*/false,
       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
   MemOpChains.push_back(Chain);
 }

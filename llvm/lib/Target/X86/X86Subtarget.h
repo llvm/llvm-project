@@ -335,6 +335,8 @@ public:
 
   bool isOSWindows() const { return TargetTriple.isOSWindows(); }
 
+  bool isOSWindowsOrUEFI() const { return TargetTriple.isOSWindowsOrUEFI(); }
+
   bool isTargetUEFI64() const { return Is64Bit && isUEFI(); }
 
   bool isTargetWin64() const { return Is64Bit && isOSWindows(); }

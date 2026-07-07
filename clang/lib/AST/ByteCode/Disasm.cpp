@@ -570,7 +570,9 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
   OS.indent(Spaces) << "Depth: " << Depth << "\n";
   OS.indent(Spaces) << "ArgSize: " << ArgSize << "\n";
   OS.indent(Spaces) << "Args: " << (void *)Args << "\n";
+#ifndef NDEBUG
   OS.indent(Spaces) << "FrameOffset: " << FrameOffset << "\n";
+#endif
   OS.indent(Spaces) << "FrameSize: " << (Func ? Func->getFrameSize() : 0)
                     << "\n";
 

@@ -2054,25 +2054,24 @@ define amdgpu_kernel void @bit4_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-O0-NEXT:    s_load_dword s0, s[4:5], 0x2c
+; GCN-O0-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
+; GCN-O0-NEXT:    s_load_dword s1, s[4:5], 0x2c
 ; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-O0-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-O0-NEXT:    s_load_dword s3, s[4:5], 0x2c
-; GCN-O0-NEXT:    s_mov_b32 s2, 0xffff
+; GCN-O0-NEXT:    s_mov_b32 s0, 0xffff
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0x100
-; GCN-O0-NEXT:    s_and_b32 s2, s2, s4
+; GCN-O0-NEXT:    s_and_b32 s0, s0, s4
 ; GCN-O0-NEXT:    s_mov_b32 s5, 16
 ; GCN-O0-NEXT:    s_lshl_b32 s4, s4, s5
-; GCN-O0-NEXT:    s_or_b32 s2, s2, s4
+; GCN-O0-NEXT:    s_or_b32 s0, s0, s4
 ; GCN-O0-NEXT:    s_mov_b32 s4, 3
-; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-O0-NEXT:    s_lshl_b32 s3, s3, s4
-; GCN-O0-NEXT:    s_lshr_b32 s2, s2, s3
-; GCN-O0-NEXT:    s_and_b32 s2, 1, s2
-; GCN-O0-NEXT:    s_cmp_eq_u32 s2, 1
-; GCN-O0-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GCN-O0-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
-; GCN-O0-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-O0-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-O0-NEXT:    s_lshl_b32 s1, s1, s4
+; GCN-O0-NEXT:    s_lshr_b32 s0, s0, s1
+; GCN-O0-NEXT:    s_and_b32 s0, 1, s0
+; GCN-O0-NEXT:    s_cmp_eq_u32 s0, 1
+; GCN-O0-NEXT:    s_cselect_b32 s0, 1, 0
+; GCN-O0-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-O0-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-O0-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-O0-NEXT:    s_endpgm
 entry:
@@ -2089,10 +2088,8 @@ define amdgpu_kernel void @bit128_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s2, 1
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GCN-NEXT:    s_cselect_b32 s3, 1, 0
 ; GCN-NEXT:    s_cmp_lg_u32 s2, 2
-; GCN-NEXT:    v_readfirstlane_b32 s3, v0
 ; GCN-NEXT:    s_cselect_b32 s3, s3, 1
 ; GCN-NEXT:    s_cmp_lg_u32 s2, 3
 ; GCN-NEXT:    s_cselect_b32 s3, s3, 0

@@ -107,8 +107,6 @@ public:
 
   unsigned getMinGlobalAlign(uint64_t Size, bool HasNonWeakDef) const override;
 
-  bool useFP16ConversionIntrinsics() const override { return false; }
-
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
@@ -185,7 +183,7 @@ public:
     fillValidCPUList(Values);
   }
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     ISARevision = getISARevision(Name);
     return ISARevision != -1;
   }

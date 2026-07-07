@@ -2536,7 +2536,7 @@ protected:
     switch (break_type) {
     case eClearTypeFileAndLine: // Breakpoint by source position
     {
-      const ConstString filename(m_options.m_filename);
+      llvm::StringRef filename(m_options.m_filename);
       BreakpointLocationCollection loc_coll;
 
       for (size_t i = 0; i < num_breakpoints; ++i) {
@@ -3109,7 +3109,7 @@ protected:
         result.AppendError("no breakpoints specified, cannot delete names");
         return;
       }
-      ConstString bp_name(m_name_options.m_name.GetCurrentValue());
+      llvm::StringRef bp_name(m_name_options.m_name.GetCurrentValueAsRef());
       size_t num_valid_ids = valid_bp_ids.GetSize();
       for (size_t index = 0; index < num_valid_ids; index++) {
         lldb::break_id_t bp_id =
@@ -3632,6 +3632,14 @@ public:
       case 'd':
         m_description.assign(std::string(option_arg));
         break;
+      case 'm': {
+        uint64_t this_mask = (uint64_t)OptionArgParser::ToOptionEnum(
+            option_arg,
+            g_breakpoint_override_add_options[option_idx].enum_values,
+            eResolverUnknown, error);
+        if (error.Success())
+          m_mask |= this_mask;
+      } break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -3641,6 +3649,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_description.clear();
+      m_mask = 0;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -3650,6 +3659,7 @@ public:
     // Instance variables to hold the values for command options.
 
     std::string m_description;
+    uint64_t m_mask;
   };
   Options *GetOptions() override { return &m_all_options; }
 
@@ -3657,8 +3667,11 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target *target =
         m_dummy_options.m_use_dummy ? &GetDummyTarget() : GetTarget();
+    // If no mask was provided, then the default is file and line:
+    if (m_options.m_mask == 0)
+      m_options.m_mask = eResolverFileAndLine;
     llvm::Expected<lldb::user_id_t> id = target->AddBreakpointResolverOverride(
-        m_python_class_options.GetName(),
+        m_python_class_options.GetName(), m_options.m_mask,
         m_python_class_options.GetStructuredData(), m_options.m_description);
     if (id) {
       result.AppendMessageWithFormatv("{0}", *id);
@@ -3765,7 +3778,11 @@ protected:
         }
       }
     }
-    target->DescribeBreakpointOverrides(result.GetOutputStream(), idxs);
+    target->DescribeBreakpointOverrides(
+        result.GetOutputStream(), idxs,
+        GetCommandInterpreter().GetDebugger().GetTerminalWidth(),
+        GetCommandInterpreter().GetDebugger().GetUseColor());
+
     if (idxs.empty()) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
