@@ -26,25 +26,13 @@ def main():
         # LLDB_PYTHON_RELATIVE_PATH is the relative path from lldb's prefix
         # to where lldb's python libraries will be installed.
         #
-        # The way we're going to compute this is to take the relative path from
-        # PYTHON'S prefix to where python libraries are supposed to be
-        # installed.
-        #
-        # The result is if LLDB and python are give the same prefix, then
-        # lldb's python lib will be put in the correct place for python to find it.
-        # If not, you'll have to use lldb -P or lldb -print-script-interpreter-info
-        # to figure out where it is.
-        try:
-            print(relpath_nodots(sysconfig.get_path("platlib"), sys.prefix))
-        except ValueError:
-            # Try to fall back to something reasonable if sysconfig's platlib
-            # is outside of sys.prefix
-            if os.name == "posix":
-                print("lib/python%d.%d/site-packages" % sys.version_info[:2])
-            elif os.name == "nt":
-                print("Lib\\site-packages")
-            else:
-                raise
+        # This will always be lib/site-packages (or lib\site-packages).
+        if os.name == "posix":
+            print("lib/site-packages")
+        elif os.name == "nt":
+            print("Lib\\site-packages")
+        else:
+            raise
     elif args.variable_name == "LLDB_PYTHON_EXE_RELATIVE_PATH":
         tried = list()
         exe = sys.executable

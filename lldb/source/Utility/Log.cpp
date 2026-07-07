@@ -16,6 +16,7 @@
 
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
@@ -71,8 +72,8 @@ void Log::ListCategories(llvm::raw_ostream &stream,
                   });
 }
 
-std::optional<Log::MaskType>
-Log::GetFlags(llvm::raw_ostream &stream, const ChannelMap::value_type &entry,
+llvm::Expected<Log::MaskType>
+Log::GetFlags(const ChannelMap::value_type &entry,
               llvm::ArrayRef<const char *> categories) {
   Log::MaskType flags = 0;
   llvm::SmallVector<std::string> unrecognized_categories;
@@ -97,14 +98,16 @@ Log::GetFlags(llvm::raw_ostream &stream, const ChannelMap::value_type &entry,
   }
 
   if (unrecognized_categories.size()) {
-    stream << "error: unrecognized log "
-           << ((unrecognized_categories.size() == 1) ? "category "
-                                                     : "categories ")
-           << llvm::join(unrecognized_categories.begin(),
-                         unrecognized_categories.end(), ", ")
-           << "\n";
-    ListCategories(stream, entry);
-    return {};
+    std::string error_str;
+    llvm::raw_string_ostream error_stream(error_str);
+    error_stream << "error: unrecognized log "
+                 << ((unrecognized_categories.size() == 1) ? "category "
+                                                           : "categories ")
+                 << llvm::join(unrecognized_categories.begin(),
+                               unrecognized_categories.end(), ", ")
+                 << "\n";
+    ListCategories(error_stream, entry);
+    return llvm::createStringError(error_str);
   }
 
   return flags;
@@ -223,26 +226,25 @@ void Log::Unregister(llvm::StringRef name) {
   g_channel_map->erase(iter);
 }
 
-bool Log::EnableLogChannel(const std::shared_ptr<LogHandler> &log_handler_sp,
-                           uint32_t log_options, llvm::StringRef channel,
-                           llvm::ArrayRef<const char *> categories,
-                           llvm::raw_ostream &error_stream) {
+llvm::Error
+Log::EnableLogChannel(const std::shared_ptr<LogHandler> &log_handler_sp,
+                      uint32_t log_options, llvm::StringRef channel,
+                      llvm::ArrayRef<const char *> categories) {
   auto iter = g_channel_map->find(channel);
-  if (iter == g_channel_map->end()) {
-    error_stream << llvm::formatv("Invalid log channel '{0}'.\n", channel);
-    return false;
+  if (iter == g_channel_map->end())
+    return llvm::createStringErrorV("Invalid log channel '{0}'.\n", channel);
+
+  if (categories.empty()) {
+    iter->second.Enable(log_handler_sp, std::nullopt, log_options);
+    return llvm::Error::success();
   }
 
-  std::optional<MaskType> flags;
+  llvm::Expected<MaskType> flags = GetFlags(*iter, categories);
+  if (!flags)
+    return flags.takeError();
 
-  if (!categories.empty()) {
-    flags = GetFlags(error_stream, *iter, categories);
-    if (!flags)
-      return false;
-  }
-
-  iter->second.Enable(log_handler_sp, flags, log_options);
-  return true;
+  iter->second.Enable(log_handler_sp, *flags, log_options);
+  return llvm::Error::success();
 }
 
 bool Log::DisableLogChannel(llvm::StringRef channel,
@@ -254,15 +256,18 @@ bool Log::DisableLogChannel(llvm::StringRef channel,
     return false;
   }
 
-  std::optional<MaskType> flags;
-
-  if (!categories.empty()) {
-    flags = GetFlags(error_stream, *iter, categories);
-    if (!flags)
-      return false;
+  if (categories.empty()) {
+    iter->second.Disable(std::nullopt);
+    return true;
   }
 
-  iter->second.Disable(flags);
+  llvm::Expected<MaskType> flags = GetFlags(*iter, categories);
+  if (!flags) {
+    error_stream << toString(flags.takeError()) << "\n";
+    return false;
+  }
+
+  iter->second.Disable(*flags);
   return true;
 }
 

@@ -125,6 +125,15 @@ class Array<Bytecode t> {
   Bytecode elemT = t;
 
   string cBuilder = "$_args";
+
+  // Optional custom getter expression for the array from the parent type.
+  string cGetter = "";
+}
+// - Array variant where the size is known from a previously serialized member.
+//   This avoids encoding a redundant length prefix.
+class ArrayWithKnownSize<Bytecode t, string sizeRef> : Array<t> {
+ // Expression providing the element count (e.g., "otherMember.size()").
+  string knownSizeRef = sizeRef;
 }
 // - Array elements currently needs a different bytecode type to accommodate
 //   for the list print/parsing.
@@ -177,4 +186,3 @@ def none;
 def ReservedOrDead : DialectAttrOrType<(none)>;
 
 #endif // BYTECODE_BASE
-

@@ -11893,12 +11893,12 @@ class InstructionsCompatibilityAnalysis {
   /// elements.
   static bool isSupportedOpcode(const unsigned Opcode) {
     return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
-           Opcode == Instruction::LShr || Opcode == Instruction::Shl ||
-           Opcode == Instruction::SDiv || Opcode == Instruction::UDiv ||
-           Opcode == Instruction::And || Opcode == Instruction::Or ||
-           Opcode == Instruction::Xor || Opcode == Instruction::FAdd ||
-           Opcode == Instruction::FSub || Opcode == Instruction::FMul ||
-           Opcode == Instruction::FDiv;
+           Opcode == Instruction::Mul || Opcode == Instruction::LShr ||
+           Opcode == Instruction::Shl || Opcode == Instruction::SDiv ||
+           Opcode == Instruction::UDiv || Opcode == Instruction::And ||
+           Opcode == Instruction::Or || Opcode == Instruction::Xor ||
+           Opcode == Instruction::FAdd || Opcode == Instruction::FSub ||
+           Opcode == Instruction::FMul || Opcode == Instruction::FDiv;
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -12520,6 +12520,7 @@ public:
       switch (MainOpcode) {
       case Instruction::Add:
       case Instruction::Sub:
+      case Instruction::Mul:
       case Instruction::LShr:
       case Instruction::Shl:
       case Instruction::SDiv:
