@@ -7799,7 +7799,6 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         Acc += cast<ConstantSDNode>(Elt)->getAPIntValue().trunc(EltBits);
       }
       EVT EltVT = N1.getValueType().getScalarType();
-      SDValue Result = getConstant(Acc, DL, EltVT);
       return getAnyExtOrTrunc(getConstant(Acc, DL, EltVT), DL, VT);
     }
   }
