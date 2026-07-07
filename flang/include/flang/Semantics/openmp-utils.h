@@ -119,6 +119,12 @@ const Symbol *GetHostSymbol(const Symbol &sym);
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
 
+// Returns true if the symbol has a temporary stack-allocated descriptor.
+// This includes assumed-shape and assumed-rank dummy arguments that are
+// not allocatable or pointer. These descriptors are created on the caller's
+// stack and become invalid after the function returns.
+bool HasTemporaryStackDescriptor(const Symbol &symbol);
+
 MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr);
 template <typename T> MaybeExpr GetEvaluateExpr(const T &inp) {
   return GetEvaluateExpr(parser::UnwrapRef<parser::Expr>(inp));
@@ -202,6 +208,22 @@ std::optional<DynamicUserCondition> MakeVariantMatchInfo(
     llvm::omp::VariantMatchInfo &vmi,
     const parser::traits::OmpContextSelectorSpecification &ctxSel,
     SemanticsContext &semaCtx);
+
+/// An `llvm::omp::OMPContext` describing the current compilation, used for
+/// OpenMP variant matching. It overrides ISA-trait matching to test against
+/// the target features.
+class OmpVariantMatchContext : public llvm::omp::OMPContext {
+public:
+  OmpVariantMatchContext(bool isDeviceCompilation, llvm::Triple targetTriple,
+      llvm::Triple targetOffloadTriple, std::string targetFeatures,
+      llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits = {});
+  OmpVariantMatchContext(const SemanticsContext &context,
+      llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits = {});
+  bool matchesISATrait(llvm::StringRef rawString) const override;
+
+private:
+  std::string features_;
+};
 
 std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr);
 const SomeExpr *HasStorageOverlap(

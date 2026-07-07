@@ -446,6 +446,10 @@ private:
   _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<__allow_reusing_expected_tail_padding, __repr> __repr_;
 };
 
+// Helper to handle comparisons that produce a value whose type is not bool,
+// but allows only implicit (and not explicit) conversions to bool.
+constexpr bool __into_bool(bool __b) noexcept { return __b; }
+
 template <class _Tp, class _Err>
 class expected : private __expected_base<_Tp, _Err> {
   static_assert(!is_reference_v<_Tp> && !is_function_v<_Tp> && !is_same_v<remove_cv_t<_Tp>, in_place_t> &&
@@ -825,8 +829,6 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__has_val(); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_error() const noexcept { return !this->has_value(); }
-
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& value() const& {
     static_assert(is_copy_constructible_v<_Err>, "error_type has to be copy constructible");
     if (!this->__has_val()) {
@@ -1173,7 +1175,7 @@ public:
     }
 #  endif
   {
-    return __x.__has_val() && static_cast<bool>(__x.__val() == __v);
+    return __x.__has_val() && std::__into_bool(__x.__val() == __v);
   }
 
   template <class _E2>
@@ -1184,7 +1186,7 @@ public:
     }
 #  endif
   {
-    return !__x.__has_val() && static_cast<bool>(__x.__unex() == __e.error());
+    return !__x.__has_val() && std::__into_bool(__x.__unex() == __e.error());
   }
 };
 
@@ -1601,8 +1603,6 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__has_val(); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_error() const noexcept { return !this->has_value(); }
-
   _LIBCPP_HIDE_FROM_ABI constexpr void operator*() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         this->__has_val(), "expected::operator* requires the expected to contain a value");
@@ -1888,7 +1888,7 @@ public:
     if (__x.__has_val() != __y.__has_val()) {
       return false;
     } else {
-      return __x.__has_val() || static_cast<bool>(__x.__unex() == __y.__unex());
+      return __x.__has_val() || std::__into_bool(__x.__unex() == __y.__unex());
     }
   }
 
@@ -1900,7 +1900,7 @@ public:
     }
 #  endif
   {
-    return !__x.__has_val() && static_cast<bool>(__x.__unex() == __y.error());
+    return !__x.__has_val() && std::__into_bool(__x.__unex() == __y.error());
   }
 };
 

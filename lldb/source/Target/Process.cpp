@@ -50,6 +50,7 @@
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/MemoryHistory.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/MemoryRegionInfoCache.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -479,14 +480,15 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_stdio_communication("process.stdio"), m_stdio_communication_mutex(),
       m_stdin_forward(false), m_stdout_data(), m_stderr_data(),
       m_profile_data_comm_mutex(), m_profile_data(), m_iohandler_sync(0),
-      m_memory_cache(*this), m_allocated_memory_cache(*this),
-      m_should_detach(false), m_next_event_action_up(),
-      m_currently_handling_do_on_removals(false), m_resume_requested(false),
-      m_interrupt_tid(LLDB_INVALID_THREAD_ID), m_finalizing(false),
-      m_destructing(false), m_clear_thread_plans_on_stop(false),
-      m_force_next_event_delivery(false), m_last_broadcast_state(eStateInvalid),
-      m_destroy_in_process(false), m_can_interpret_function_calls(false),
-      m_run_thread_plan_lock(), m_can_jit(eCanJITDontKnow),
+      m_memory_cache(*this), m_memory_region_infos_cache(),
+      m_allocated_memory_cache(*this), m_should_detach(false),
+      m_next_event_action_up(), m_currently_handling_do_on_removals(false),
+      m_resume_requested(false), m_interrupt_tid(LLDB_INVALID_THREAD_ID),
+      m_finalizing(false), m_destructing(false),
+      m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
+      m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
+      m_can_interpret_function_calls(false), m_run_thread_plan_lock(),
+      m_can_jit(eCanJITDontKnow),
       m_crash_info_dict_sp(new StructuredData::Dictionary()) {
   CheckInWithManager();
 
@@ -595,6 +597,7 @@ void Process::Finalize(bool destructing) {
   m_notifications.swap(empty_notifications);
   m_image_tokens.clear();
   m_memory_cache.Clear();
+  m_memory_region_infos_cache.Clear();
   m_allocated_memory_cache.Clear(/*deallocate_memory=*/true);
   {
     std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
@@ -1458,6 +1461,7 @@ void Process::SetPrivateState(StateType new_state) {
       if (!m_mod_id.IsLastResumeForUserExpression())
         m_mod_id.SetStopEventForLastNaturalStopID(event_sp);
       m_memory_cache.Clear();
+      m_memory_region_infos_cache.Clear();
       LLDB_LOGF(log, "(plugin = %s, state = %s, stop_id = %u",
                GetPluginName().data(), StateAsCString(new_state),
                m_mod_id.GetStopID());
@@ -2697,7 +2701,11 @@ addr_t Process::AllocateMemory(size_t size, uint32_t permissions,
     return LLDB_INVALID_ADDRESS;
   }
 
-  return m_allocated_memory_cache.AllocateMemory(size, permissions, error);
+  addr_t alloced_addr =
+      m_allocated_memory_cache.AllocateMemory(size, permissions, error);
+  m_memory_region_infos_cache.Clear();
+
+  return alloced_addr;
 }
 
 addr_t Process::CallocateMemory(size_t size, uint32_t permissions,
@@ -2750,6 +2758,7 @@ void Process::SetCanRunCode(bool can_run_code) {
 
 Status Process::DeallocateMemory(addr_t ptr) {
   Status error;
+  m_memory_region_infos_cache.Clear();
   if (!m_allocated_memory_cache.DeallocateMemory(ptr)) {
     error = Status::FromErrorStringWithFormat(
         "deallocation of memory at 0x%" PRIx64 " failed.", (uint64_t)ptr);
@@ -2791,8 +2800,8 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
   // only print a progress update if we're reading from a
   // live session which might go over gdb remote serial protocol.
   if (IsLiveDebugSession())
-    progress_up = std::make_unique<Progress>(
-        "Reading binary from memory", file_spec.GetFilename().GetString());
+    progress_up = std::make_unique<Progress>("Reading binary from memory",
+                                             file_spec.GetFilename().str());
 
   if (ObjectFile *_ = module_sp->GetMemoryObjectFile(
           shared_from_this(), header_addr, error, size_to_read))
@@ -4363,7 +4372,7 @@ thread_result_t Process::RunPrivateStateThread(bool is_override) {
   // They must see parent frames, not provider-augmented frames.
   std::optional<PolicyStack::Guard> policy_guard;
   if (is_override)
-    policy_guard.emplace(Policy::PrivateState());
+    policy_guard = PolicyStack::Get().PushPrivateState();
 
   bool control_only = true;
 
@@ -5418,7 +5427,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // GetStackFrameList returns parent frames during event processing.
     std::optional<PolicyStack::Guard> policy_guard;
     if (backup_private_state_thread)
-      policy_guard.emplace(Policy::PrivateState());
+      policy_guard = PolicyStack::Get().PushPrivateState();
 
     while (true) {
       // We usually want to resume the process if we get to the top of the
@@ -5490,10 +5499,10 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
             Halt(clear_thread_plans, use_run_lock);
           }
 
-          diagnostic_manager.Printf(
-              lldb::eSeverityError,
-              "didn't get running event after initial resume, got %s instead.",
-              StateAsCString(stop_state));
+          diagnostic_manager.Printf(lldb::eSeverityError,
+                                    "didn't get running event after initial "
+                                    "resume, got %s instead.",
+                                    StateAsCString(stop_state));
           return_value = eExpressionSetupError;
           break;
         }
@@ -6269,6 +6278,7 @@ void Process::DidExec() {
   m_instrumentation_runtimes.clear();
   m_thread_list.DiscardThreadPlans();
   m_memory_cache.Clear(true);
+  m_memory_region_infos_cache.Clear();
   DoDidExec();
   CompleteAttach();
   // Flush the process (threads and all stack frames) after running
@@ -6381,8 +6391,8 @@ bool Process::GetProcessInfo(ProcessInstanceInfo &info) {
   return platform_sp->GetProcessInfo(GetID(), info);
 }
 
-lldb_private::UUID Process::FindModuleUUID(const llvm::StringRef path) {
-  return lldb_private::UUID();
+bool Process::FindModuleUUID(ModuleSpec &spec) {
+  return spec.GetUUID().IsValid();
 }
 
 ThreadCollectionSP Process::GetHistoryThreads(lldb::addr_t addr) {
@@ -6489,10 +6499,22 @@ Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                     MemoryRegionInfo &range_info) {
   if (const lldb::ABISP &abi = GetABI())
     load_addr = abi->FixAnyAddress(load_addr);
+
+  std::optional<MemoryRegionInfo> cached_region =
+      m_memory_region_infos_cache.GetMemoryRegion(load_addr);
+  if (cached_region) {
+    range_info = *cached_region;
+    return Status();
+  }
+
   Status error = DoGetMemoryRegionInfo(load_addr, range_info);
-  // Reject a region that does not contain the requested address.
-  if (error.Success() && !range_info.GetRange().Contains(load_addr))
-    error = Status::FromErrorString("Invalid memory region");
+  if (error.Success()) {
+    // Reject a region that does not contain the requested address.
+    if (!range_info.GetRange().Contains(load_addr))
+      error = Status::FromErrorString("Invalid memory region");
+    else
+      m_memory_region_infos_cache.AddRegion(range_info);
+  }
 
   return error;
 }

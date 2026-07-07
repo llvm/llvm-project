@@ -62,9 +62,8 @@ static_assert(!std::__unsigned_integer<SomeObject>);
 static_assert(!std::__unsigned_integer<SomeEnum>);
 static_assert(!std::__unsigned_integer<SomeScopedEnum>);
 
-// cv-qualified versions are distinct types ([basic.type.qualifier]) and so
-// not unsigned integer types per [basic.fundamental]/p2. The three meaningful
-// flavors in C++ are const, volatile, and const volatile.
+// cv-qualified versions are distinct types ([basic.type.qualifier]) and not
+// unsigned integer types per [basic.fundamental]/p2.
 static_assert(!std::__unsigned_integer<const unsigned int>);
 static_assert(!std::__unsigned_integer<volatile unsigned int>);
 static_assert(!std::__unsigned_integer<const volatile unsigned int>);

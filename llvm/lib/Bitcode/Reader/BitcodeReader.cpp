@@ -581,6 +581,7 @@ public:
 class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   LLVMContext &Context;
   Module *TheModule = nullptr;
+  Triple BitcodeTargetTriple;
   // Next offset to start scanning for lazy parsing of function bodies.
   uint64_t NextUnreadBit = 0;
   // Last function offset found in the VST.
@@ -642,8 +643,7 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
 
   // When intrinsic functions are encountered which require upgrading they are
   // stored here with their replacement function.
-  using UpdatedIntrinsicMap = DenseMap<Function *, Function *>;
-  UpdatedIntrinsicMap UpgradedIntrinsics;
+  DenseMap<Function *, Function *> UpgradedIntrinsics;
 
   // Several operations happen after the module header has been read, but
   // before function bodies are processed. This keeps track of whether
@@ -705,7 +705,8 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
 
 public:
   BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
-                StringRef ProducerIdentification, LLVMContext &Context);
+                StringRef ProducerIdentification, LLVMContext &Context,
+                Triple BitcodeTargetTriple);
 
   Error materializeForwardReferencedFunctions();
 
@@ -1063,8 +1064,9 @@ std::error_code llvm::errorToErrorCodeAndEmitErrors(LLVMContext &Ctx,
 
 BitcodeReader::BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
                              StringRef ProducerIdentification,
-                             LLVMContext &Context)
+                             LLVMContext &Context, Triple TTriple)
     : BitcodeReaderBase(std::move(Stream), Strtab), Context(Context),
+      BitcodeTargetTriple(TTriple),
       ValueList(this->Stream.SizeInBytes(),
                 [this](unsigned ValID, BasicBlock *InsertBB) {
                   return materializeValue(ValID, InsertBB);
@@ -2308,6 +2310,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::DenormalFPEnv;
   case bitc::ATTR_KIND_NOOUTLINE:
     return Attribute::NoOutline;
+  case bitc::ATTR_KIND_NOIPA:
+    return Attribute::NoIPA;
   }
 }
 
@@ -2469,12 +2473,29 @@ Error BitcodeReader::parseAttributeGroupBlock() {
                         MemoryEffects::argMemOnly(ArgMem) |
                         MemoryEffects::errnoMemOnly(OtherMem) |
                         MemoryEffects::otherMemOnly(OtherMem);
+              // Old versions dont have target memory location.
+              // It was represented as Inaccessible memory for AArch64.
+              if (BitcodeTargetTriple.isAArch64())
+                ME = ME.getWithModRef(IRMemLocation::TargetMem0,
+                                      InaccessibleMem) |
+                     ME.getWithModRef(IRMemLocation::TargetMem1,
+                                      InaccessibleMem);
               B.addMemoryAttr(ME);
             } else {
               // Construct the memory attribute directly from the encoded base
               // on newer versions.
-              B.addMemoryAttr(MemoryEffects::createFromIntValue(
-                  EncodedME & 0x00FFFFFFFFFFFFFFULL));
+              auto ME = MemoryEffects::createFromIntValue(
+                  EncodedME & 0x00FFFFFFFFFFFFFFULL);
+              // Only from Version=2 onwards target memory location exist.
+              // It was represented as Inaccessible memory for AArch64.
+              if (Version == 1 && BitcodeTargetTriple.isAArch64())
+                ME = ME.getWithModRef(
+                         IRMemLocation::TargetMem0,
+                         ME.getModRef(IRMemLocation::InaccessibleMem)) |
+                     ME.getWithModRef(
+                         IRMemLocation::TargetMem1,
+                         ME.getModRef(IRMemLocation::InaccessibleMem));
+              B.addMemoryAttr(ME);
             }
           } else if (Kind == Attribute::Captures)
             B.addCapturesAttr(CaptureInfo::createFromIntValue(Record[++i]));
@@ -4579,6 +4600,9 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
   // Initialize to the current module's layout string in case none is specified.
   std::string TentativeDataLayoutStr = TheModule->getDataLayoutStr();
 
+  // Apply to the following module asm.
+  Module::GlobalAsmProperties Props;
+
   auto ResolveDataLayout = [&]() -> Error {
     if (ResolvedDataLayout)
       return Error::success();
@@ -4787,11 +4811,23 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
         return error("Invalid data layout record");
       break;
     }
+    case bitc::MODULE_CODE_ASM_PROPERTY: {
+      std::string Str;
+      if (convertToString(Record, 0, Str))
+        return error("Invalid module asm record");
+      size_t SepPos = Str.find('\0');
+      if (SepPos == std::string::npos)
+        return error("Invalid module asm record");
+      if (!Props.set(StringRef(Str.data(), SepPos), Str.substr(SepPos + 1)))
+        return error("Unknown module asm property");
+      break;
+    }
     case bitc::MODULE_CODE_ASM: {  // ASM: [strchr x N]
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid asm record");
-      TheModule->setModuleInlineAsm(S);
+      TheModule->appendModuleInlineAsm(Module::GlobalAsmFragment(S, Props));
+      Props = {};
       break;
     }
     case bitc::MODULE_CODE_DEPLIB: {  // DEPLIB: [strchr x N]
@@ -7216,15 +7252,15 @@ Error BitcodeReader::materializeModule() {
   // delete the old functions to clean up. We can't do this unless the entire
   // module is materialized because there could always be another function body
   // with calls to the old function.
-  for (auto &I : UpgradedIntrinsics) {
-    for (auto *U : I.first->users()) {
-      if (CallInst *CI = dyn_cast<CallInst>(U))
-        UpgradeIntrinsicCall(CI, I.second);
+  for (auto &[OldFn, NewFn] : UpgradedIntrinsics) {
+    for (User *U : OldFn->users()) {
+      if (auto *CI = dyn_cast<CallInst>(U))
+        UpgradeIntrinsicCall(CI, NewFn);
     }
-    if (I.first != I.second) {
-      if (!I.first->use_empty())
-        I.first->replaceAllUsesWith(I.second);
-      I.first->eraseFromParent();
+    if (OldFn != NewFn) {
+      if (!OldFn->use_empty())
+        OldFn->replaceAllUsesWith(NewFn);
+      OldFn->eraseFromParent();
     }
   }
   UpgradedIntrinsics.clear();
@@ -8700,10 +8736,20 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
       return std::move(E);
   }
 
+  // Cache target triple early for target-memory attribute upgrading.
+  // Suppress target parser diagnostics during this early parse,
+  // because attribute parsing runs before target parsing.
+  Triple BitcodeTargetTriple;
+  BitstreamCursor TripleStream(Buffer);
+  if (Expected<std::string> TripleStr = readTriple(TripleStream))
+    BitcodeTargetTriple = Triple(*TripleStr);
+  else
+    consumeError(TripleStr.takeError());
+
   if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
     return std::move(JumpFailed);
   auto *R = new BitcodeReader(std::move(Stream), Strtab, ProducerIdentification,
-                              Context);
+                              Context, BitcodeTargetTriple);
 
   std::unique_ptr<Module> M =
       std::make_unique<Module>(ModuleIdentifier, Context);

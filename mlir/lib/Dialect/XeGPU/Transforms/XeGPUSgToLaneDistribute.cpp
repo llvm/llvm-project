@@ -17,7 +17,7 @@
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -153,7 +153,8 @@ struct SgToLaneLoadNd : public OpConversionPattern<xegpu::LoadNdOp> {
     if (op.getTensorDescType().getLayout() != layout)
       return rewriter.notifyMatchFailure(
           op, "conflicting layout attributes on tensor descriptor and anchor");
-    auto uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    const auto *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
     if (!uArch)
       return rewriter.notifyMatchFailure(
           op, "xegpu::LoadNdOp require target attribute attached to "
@@ -260,7 +261,8 @@ struct SgToLaneDpas : public OpConversionPattern<xegpu::DpasOp> {
               "lane layout");
 
     // Validate bit widths match uArch packed format requirements
-    const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    const auto *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
     if (uArch) {
       const auto *uArchInstruction =
           dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(
@@ -580,7 +582,7 @@ struct SgToLaneLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
     auto newOp = xegpu::LoadGatherOp::create(
         rewriter, op.getLoc(), distResultTy1D, distSource, distOffsets,
         distMask, op.getChunkSizeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
-        op.getL3HintAttr(), /*layout=*/nullptr);
+        op.getL3HintAttr(), /*layout=*/nullptr, /*contiguity=*/nullptr);
 
     Value result = newOp->getResult(0);
     if (distResultTy1D != distResultTy)
@@ -620,7 +622,8 @@ struct SgToLaneVectorReduction
 
     // Get the subgroup size from the layout.
     int64_t sgSize = layout.getEffectiveLaneLayoutAsInt()[0];
-    const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    const auto *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
     if (!uArch)
       return rewriter.notifyMatchFailure(
           op, "xegpu::ReductionOp require target attribute attached to "
@@ -1111,7 +1114,8 @@ struct SgToLaneStoreScatter
     xegpu::StoreScatterOp::create(rewriter, op.getLoc(), distValue, distDest,
                                   distOffsets, distMask, op.getChunkSizeAttr(),
                                   op.getL1HintAttr(), op.getL2HintAttr(),
-                                  op.getL3HintAttr(), /*layout=*/nullptr);
+                                  op.getL3HintAttr(), /*layout=*/nullptr,
+                                  /*contiguity=*/nullptr);
     rewriter.eraseOp(op);
     return success();
   }
@@ -1291,7 +1295,8 @@ struct SgToLaneVectorExtractStridedSlice
         return rewriter.notifyMatchFailure(
             op, "only single dimension distribution is supported");
       int64_t distDim = distributedDims[0];
-      const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+      const auto *uArch =
+          xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
       if (!uArch)
         return rewriter.notifyMatchFailure(
             op, "target attribute required to determine subgroup size");
@@ -1495,7 +1500,8 @@ struct SgToLaneVectorInsertStridedSlice
             op, "only single dimension distribution is supported");
       int64_t destDistDim = destDistributedDims[0];
 
-      const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+      const auto *uArch =
+          xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
       if (!uArch)
         return rewriter.notifyMatchFailure(
             op, "target attribute required to determine subgroup size");
@@ -1758,7 +1764,8 @@ struct SgToLaneDpasMx : public OpConversionPattern<xegpu::DpasMxOp> {
   LogicalResult
   matchAndRewrite(xegpu::DpasMxOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    const auto *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
     if (!uArch)
       return failure();
     if (!uArch->isSupportedInstruction(

@@ -85,9 +85,11 @@ module @TestIndex attributes {
 // CHECK-LABEL: @TestFunc
 module @TestFunc attributes {
   // CHECK: bytecode.func = () -> (),
-  // CHECK: bytecode.func1 = (i1) -> i32
+  // CHECK: bytecode.func1 = (i1) -> i32,
+  // CHECK: bytecode.func2 = (i32) -> (f32, f64)
   bytecode.func = () -> (),
-  bytecode.func1 = (i1) -> (i32)
+  bytecode.func1 = (i1) -> (i32),
+  bytecode.func2 = (i32) -> (f32, f64)
 } {}
 
 //===----------------------------------------------------------------------===//
@@ -97,9 +99,13 @@ module @TestFunc attributes {
 // CHECK-LABEL: @TestMemRef
 module @TestMemRef attributes {
   // CHECK: bytecode.test = memref<2xi8>,
-  // CHECK: bytecode.test1 = memref<2xi8, 1>
+  // CHECK: bytecode.test1 = memref<2xi8, 1>,
+  // CHECK: bytecode.test2 = memref<?x?xf32>,
+  // CHECK: bytecode.test3 = memref<2x3xf32, strided<[3, 1]>>
   bytecode.test = memref<2xi8>,
-  bytecode.test1 = memref<2xi8, 1>
+  bytecode.test1 = memref<2xi8, 1>,
+  bytecode.test2 = memref<?x?xf32>,
+  bytecode.test3 = memref<2x3xf32, strided<[3, 1], offset: 0>>
 } {}
 
 //===----------------------------------------------------------------------===//
@@ -165,9 +171,11 @@ module @TestUnrankedTensor attributes {
 // CHECK-LABEL: @TestVector
 module @TestVector attributes {
   // CHECK: bytecode.test = vector<8x8x128xi8>,
-  // CHECK: bytecode.test1 = vector<8x[8]xf32>
+  // CHECK: bytecode.test1 = vector<8x[8]xf32>,
+  // CHECK: bytecode.test2 = vector<[4]x[4]xf16>
   bytecode.test = vector<8x8x128xi8>,
-  bytecode.test1 = vector<8x[8]xf32>
+  bytecode.test1 = vector<8x[8]xf32>,
+  bytecode.test2 = vector<[4]x[4]xf16>
 } {}
 
 //===----------------------------------------------------------------------===//
@@ -178,4 +186,22 @@ module @TestVector attributes {
 module @TestToken attributes {
   // CHECK: bytecode.test = token
   bytecode.test = token
+} {}
+
+//===----------------------------------------------------------------------===//
+// IntegerType (packing variants)
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestIntegerTypePacking
+module @TestIntegerTypePacking attributes {
+  // CHECK-DAG: bytecode.i1 = i1
+  // CHECK-DAG: bytecode.i2 = i2
+  // CHECK-DAG: bytecode.si1 = si1
+  // CHECK-DAG: bytecode.ui1 = ui1
+  // CHECK-DAG: bytecode.i4096 = i4096
+  bytecode.i1 = i1,
+  bytecode.i2 = i2,
+  bytecode.si1 = si1,
+  bytecode.ui1 = ui1,
+  bytecode.i4096 = i4096
 } {}

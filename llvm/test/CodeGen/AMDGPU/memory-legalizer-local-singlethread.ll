@@ -5,9 +5,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1010 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX10-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -O0 -mcpu=gfx700 -amdgcn-skip-cache-invalidations < %s | FileCheck --check-prefixes=SKIP-CACHE-INV %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx90a < %s | FileCheck -check-prefixes=GFX90A-NOTTGSPLIT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx90a -mattr=+tgsplit < %s | FileCheck -check-prefixes=GFX90A-TGSPLIT %s
+; RUN: sed 's/attributes #0 = { nounwind }/attributes #0 = { nounwind "amdgpu-tg-split" }/' %s | llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx90a | FileCheck -check-prefixes=GFX90A-TGSPLIT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx942 < %s | FileCheck -check-prefixes=GFX942-NOTTGSPLIT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx942 -mattr=+tgsplit < %s | FileCheck -check-prefixes=GFX942-TGSPLIT %s
+; RUN: sed 's/attributes #0 = { nounwind }/attributes #0 = { nounwind "amdgpu-tg-split" }/' %s | llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx942 | FileCheck -check-prefixes=GFX942-TGSPLIT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX11-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1100 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX11-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12-WGP %s
@@ -231,7 +231,7 @@ define amdgpu_kernel void @local_singlethread_unordered_load(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %in, ptr addrspace(3) %out) {
+    ptr addrspace(3) %in, ptr addrspace(3) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("singlethread") unordered, align 4
   store i32 %val, ptr addrspace(3) %out
@@ -455,7 +455,7 @@ define amdgpu_kernel void @local_singlethread_monotonic_load(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %in, ptr addrspace(3) %out) {
+    ptr addrspace(3) %in, ptr addrspace(3) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("singlethread") monotonic, align 4
   store i32 %val, ptr addrspace(3) %out
@@ -679,7 +679,7 @@ define amdgpu_kernel void @local_singlethread_acquire_load(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %in, ptr addrspace(3) %out) {
+    ptr addrspace(3) %in, ptr addrspace(3) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("singlethread") acquire, align 4
   store i32 %val, ptr addrspace(3) %out
@@ -903,7 +903,7 @@ define amdgpu_kernel void @local_singlethread_seq_cst_load(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %in, ptr addrspace(3) %out) {
+    ptr addrspace(3) %in, ptr addrspace(3) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("singlethread") seq_cst, align 4
   store i32 %val, ptr addrspace(3) %out
@@ -1108,7 +1108,7 @@ define amdgpu_kernel void @local_singlethread_unordered_store(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(3) %out) {
+    i32 %in, ptr addrspace(3) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("singlethread") unordered, align 4
   ret void
@@ -1312,7 +1312,7 @@ define amdgpu_kernel void @local_singlethread_monotonic_store(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(3) %out) {
+    i32 %in, ptr addrspace(3) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("singlethread") monotonic, align 4
   ret void
@@ -1516,7 +1516,7 @@ define amdgpu_kernel void @local_singlethread_release_store(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(3) %out) {
+    i32 %in, ptr addrspace(3) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("singlethread") release, align 4
   ret void
@@ -1720,7 +1720,7 @@ define amdgpu_kernel void @local_singlethread_seq_cst_store(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(3) %out) {
+    i32 %in, ptr addrspace(3) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("singlethread") seq_cst, align 4
   ret void
@@ -1924,7 +1924,7 @@ define amdgpu_kernel void @local_singlethread_monotonic_atomicrmw(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread") monotonic
   ret void
@@ -2128,7 +2128,7 @@ define amdgpu_kernel void @local_singlethread_acquire_atomicrmw(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread") acquire
   ret void
@@ -2332,7 +2332,7 @@ define amdgpu_kernel void @local_singlethread_release_atomicrmw(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread") release
   ret void
@@ -2536,7 +2536,7 @@ define amdgpu_kernel void @local_singlethread_acq_rel_atomicrmw(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread") acq_rel
   ret void
@@ -2740,7 +2740,7 @@ define amdgpu_kernel void @local_singlethread_seq_cst_atomicrmw(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread") seq_cst
   ret void
@@ -2989,7 +2989,7 @@ define amdgpu_kernel void @local_singlethread_acquire_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread") acquire
   store i32 %val, ptr addrspace(3) %out, align 4
@@ -3239,7 +3239,7 @@ define amdgpu_kernel void @local_singlethread_acq_rel_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread") acq_rel
   store i32 %val, ptr addrspace(3) %out, align 4
@@ -3489,7 +3489,7 @@ define amdgpu_kernel void @local_singlethread_seq_cst_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread") seq_cst
   store i32 %val, ptr addrspace(3) %out, align 4
@@ -3750,7 +3750,7 @@ define amdgpu_kernel void @local_singlethread_monotonic_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") monotonic monotonic
@@ -4011,7 +4011,7 @@ define amdgpu_kernel void @local_singlethread_acquire_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") acquire monotonic
@@ -4272,7 +4272,7 @@ define amdgpu_kernel void @local_singlethread_release_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") release monotonic
@@ -4533,7 +4533,7 @@ define amdgpu_kernel void @local_singlethread_acq_rel_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") acq_rel monotonic
@@ -4794,7 +4794,7 @@ define amdgpu_kernel void @local_singlethread_seq_cst_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") seq_cst monotonic
@@ -5055,7 +5055,7 @@ define amdgpu_kernel void @local_singlethread_monotonic_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") monotonic acquire
@@ -5316,7 +5316,7 @@ define amdgpu_kernel void @local_singlethread_acquire_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") acquire acquire
@@ -5577,7 +5577,7 @@ define amdgpu_kernel void @local_singlethread_release_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") release acquire
@@ -5838,7 +5838,7 @@ define amdgpu_kernel void @local_singlethread_acq_rel_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") acq_rel acquire
@@ -6099,7 +6099,7 @@ define amdgpu_kernel void @local_singlethread_seq_cst_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") seq_cst acquire
@@ -6360,7 +6360,7 @@ define amdgpu_kernel void @local_singlethread_monotonic_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") monotonic seq_cst
@@ -6621,7 +6621,7 @@ define amdgpu_kernel void @local_singlethread_acquire_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") acquire seq_cst
@@ -6882,7 +6882,7 @@ define amdgpu_kernel void @local_singlethread_release_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") release seq_cst
@@ -7143,7 +7143,7 @@ define amdgpu_kernel void @local_singlethread_acq_rel_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") acq_rel seq_cst
@@ -7404,7 +7404,7 @@ define amdgpu_kernel void @local_singlethread_seq_cst_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") seq_cst seq_cst
@@ -7710,7 +7710,7 @@ define amdgpu_kernel void @local_singlethread_monotonic_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") monotonic monotonic
@@ -8018,7 +8018,7 @@ define amdgpu_kernel void @local_singlethread_acquire_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") acquire monotonic
@@ -8326,7 +8326,7 @@ define amdgpu_kernel void @local_singlethread_release_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") release monotonic
@@ -8634,7 +8634,7 @@ define amdgpu_kernel void @local_singlethread_acq_rel_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") acq_rel monotonic
@@ -8942,7 +8942,7 @@ define amdgpu_kernel void @local_singlethread_seq_cst_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") seq_cst monotonic
@@ -9250,7 +9250,7 @@ define amdgpu_kernel void @local_singlethread_monotonic_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") monotonic acquire
@@ -9558,7 +9558,7 @@ define amdgpu_kernel void @local_singlethread_acquire_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") acquire acquire
@@ -9866,7 +9866,7 @@ define amdgpu_kernel void @local_singlethread_release_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") release acquire
@@ -10174,7 +10174,7 @@ define amdgpu_kernel void @local_singlethread_acq_rel_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") acq_rel acquire
@@ -10482,7 +10482,7 @@ define amdgpu_kernel void @local_singlethread_seq_cst_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") seq_cst acquire
@@ -10790,7 +10790,7 @@ define amdgpu_kernel void @local_singlethread_monotonic_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") monotonic seq_cst
@@ -11098,7 +11098,7 @@ define amdgpu_kernel void @local_singlethread_acquire_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") acquire seq_cst
@@ -11406,7 +11406,7 @@ define amdgpu_kernel void @local_singlethread_release_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") release seq_cst
@@ -11714,7 +11714,7 @@ define amdgpu_kernel void @local_singlethread_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") acq_rel seq_cst
@@ -12022,7 +12022,7 @@ define amdgpu_kernel void @local_singlethread_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread") seq_cst seq_cst
@@ -12248,7 +12248,7 @@ define amdgpu_kernel void @local_singlethread_one_as_unordered_load(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %in, ptr addrspace(3) %out) {
+    ptr addrspace(3) %in, ptr addrspace(3) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("singlethread-one-as") unordered, align 4
   store i32 %val, ptr addrspace(3) %out
@@ -12472,7 +12472,7 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_load(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %in, ptr addrspace(3) %out) {
+    ptr addrspace(3) %in, ptr addrspace(3) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("singlethread-one-as") monotonic, align 4
   store i32 %val, ptr addrspace(3) %out
@@ -12696,7 +12696,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_load(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %in, ptr addrspace(3) %out) {
+    ptr addrspace(3) %in, ptr addrspace(3) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("singlethread-one-as") acquire, align 4
   store i32 %val, ptr addrspace(3) %out
@@ -12920,7 +12920,7 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_load(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %in, ptr addrspace(3) %out) {
+    ptr addrspace(3) %in, ptr addrspace(3) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("singlethread-one-as") seq_cst, align 4
   store i32 %val, ptr addrspace(3) %out
@@ -13125,7 +13125,7 @@ define amdgpu_kernel void @local_singlethread_one_as_unordered_store(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(3) %out) {
+    i32 %in, ptr addrspace(3) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("singlethread-one-as") unordered, align 4
   ret void
@@ -13329,7 +13329,7 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_store(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(3) %out) {
+    i32 %in, ptr addrspace(3) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("singlethread-one-as") monotonic, align 4
   ret void
@@ -13533,7 +13533,7 @@ define amdgpu_kernel void @local_singlethread_one_as_release_store(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(3) %out) {
+    i32 %in, ptr addrspace(3) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("singlethread-one-as") release, align 4
   ret void
@@ -13737,7 +13737,7 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_store(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(3) %out) {
+    i32 %in, ptr addrspace(3) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("singlethread-one-as") seq_cst, align 4
   ret void
@@ -13941,7 +13941,7 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_atomicrmw(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread-one-as") monotonic
   ret void
@@ -14145,7 +14145,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_atomicrmw(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread-one-as") acquire
   ret void
@@ -14349,7 +14349,7 @@ define amdgpu_kernel void @local_singlethread_one_as_release_atomicrmw(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread-one-as") release
   ret void
@@ -14553,7 +14553,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_atomicrmw(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread-one-as") acq_rel
   ret void
@@ -14757,7 +14757,7 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_atomicrmw(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread-one-as") seq_cst
   ret void
@@ -15006,7 +15006,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread-one-as") acquire
   store i32 %val, ptr addrspace(3) %out, align 4
@@ -15256,7 +15256,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread-one-as") acq_rel
   store i32 %val, ptr addrspace(3) %out, align 4
@@ -15506,7 +15506,7 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in) {
+    ptr addrspace(3) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("singlethread-one-as") seq_cst
   store i32 %val, ptr addrspace(3) %out, align 4
@@ -15767,7 +15767,7 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_monotonic_cmpxchg
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") monotonic monotonic
@@ -16028,7 +16028,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") acquire monotonic
@@ -16289,7 +16289,7 @@ define amdgpu_kernel void @local_singlethread_one_as_release_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") release monotonic
@@ -16550,7 +16550,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") acq_rel monotonic
@@ -16811,7 +16811,7 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") seq_cst monotonic
@@ -17072,7 +17072,7 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") monotonic acquire
@@ -17333,7 +17333,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") acquire acquire
@@ -17594,7 +17594,7 @@ define amdgpu_kernel void @local_singlethread_one_as_release_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") release acquire
@@ -17855,7 +17855,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") acq_rel acquire
@@ -18116,7 +18116,7 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") seq_cst acquire
@@ -18377,7 +18377,7 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") monotonic seq_cst
@@ -18638,7 +18638,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") acquire seq_cst
@@ -18899,7 +18899,7 @@ define amdgpu_kernel void @local_singlethread_one_as_release_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") release seq_cst
@@ -19160,7 +19160,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") acq_rel seq_cst
@@ -19421,7 +19421,7 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") seq_cst seq_cst
@@ -19727,7 +19727,7 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_monotonic_ret_cmp
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") monotonic monotonic
@@ -20035,7 +20035,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_monotonic_ret_cmpxc
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") acquire monotonic
@@ -20343,7 +20343,7 @@ define amdgpu_kernel void @local_singlethread_one_as_release_monotonic_ret_cmpxc
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") release monotonic
@@ -20651,7 +20651,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_monotonic_ret_cmpxc
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") acq_rel monotonic
@@ -20959,7 +20959,7 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_monotonic_ret_cmpxc
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") seq_cst monotonic
@@ -21267,7 +21267,7 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_acquire_ret_cmpxc
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") monotonic acquire
@@ -21575,7 +21575,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_acquire_ret_cmpxchg
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") acquire acquire
@@ -21883,7 +21883,7 @@ define amdgpu_kernel void @local_singlethread_one_as_release_acquire_ret_cmpxchg
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") release acquire
@@ -22191,7 +22191,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_acquire_ret_cmpxchg
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") acq_rel acquire
@@ -22499,7 +22499,7 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_acquire_ret_cmpxchg
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") seq_cst acquire
@@ -22807,7 +22807,7 @@ define amdgpu_kernel void @local_singlethread_one_as_monotonic_seq_cst_ret_cmpxc
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") monotonic seq_cst
@@ -23115,7 +23115,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acquire_seq_cst_ret_cmpxchg
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") acquire seq_cst
@@ -23423,7 +23423,7 @@ define amdgpu_kernel void @local_singlethread_one_as_release_seq_cst_ret_cmpxchg
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") release seq_cst
@@ -23731,7 +23731,7 @@ define amdgpu_kernel void @local_singlethread_one_as_acq_rel_seq_cst_ret_cmpxchg
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") acq_rel seq_cst
@@ -24039,7 +24039,7 @@ define amdgpu_kernel void @local_singlethread_one_as_seq_cst_seq_cst_ret_cmpxchg
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(3) %out, i32 %in, i32 %old) {
+    ptr addrspace(3) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(3) %gep, i32 %old, i32 %in syncscope("singlethread-one-as") seq_cst seq_cst
@@ -24047,3 +24047,5 @@ entry:
   store i32 %val0, ptr addrspace(3) %out, align 4
   ret void
 }
+
+attributes #0 = { nounwind }
