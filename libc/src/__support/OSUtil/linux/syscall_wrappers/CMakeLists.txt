@@ -632,6 +632,18 @@ add_header_library(
 )
 
 add_header_library(
+  fcntl
+  HDRS
+    fcntl.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   fsync
   HDRS
     fsync.h
@@ -702,6 +714,19 @@ add_header_library(
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  ioctl
+  HDRS
+    ioctl.h
+  DEPENDS
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.error_or
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
     libc.include.sys_syscall
 )

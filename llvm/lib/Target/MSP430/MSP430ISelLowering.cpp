@@ -230,6 +230,7 @@ MSP430TargetLowering::getRegForInlineAsmConstraint(
 //                      Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
+#define GET_CALLING_CONV_IMPL
 #include "MSP430GenCallingConv.inc"
 
 /// For each argument in a function store the number of pieces it is composed

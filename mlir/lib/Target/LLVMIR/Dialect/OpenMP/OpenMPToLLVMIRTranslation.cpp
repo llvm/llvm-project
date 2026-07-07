@@ -284,42 +284,36 @@ public:
     }
   }
 
-  // Rewrite all uses of the original variable, in the basic blocks whose names
-  // start with `prefix`, with the linear variable in-place.
+  // Rewrite all uses of the original variable, in the basic blocks in the
+  // [startBB, endBB] interval, with the linear variable in-place.
   void rewriteInPlace(llvm::IRBuilderBase &builder, llvm::BasicBlock *startBB,
-                      llvm::BasicBlock *endBB, llvm::StringRef prefix,
-                      size_t varIndex) {
+                      llvm::BasicBlock *endBB, size_t varIndex) {
     llvm::SmallVector<llvm::BasicBlock *, 32> worklist;
-    llvm::SmallPtrSet<llvm::BasicBlock *, 32> visited;
-    llvm::SmallPtrSet<llvm::BasicBlock *, 32> matchingBBs;
+    llvm::SmallPtrSet<llvm::BasicBlock *, 32> collectedBBs;
 
     assert(startBB && endBB && "Invalid startBB/endBB");
 
-    // Traverse basic blocks from startBB to endBB and save those
-    // whose names start with the specified prefix.
+    // Collect basic blocks from startBB to endBB.
     worklist.push_back(startBB);
-    visited.insert(startBB);
+    collectedBBs.insert(startBB);
 
     while (!worklist.empty()) {
       llvm::BasicBlock *bb = worklist.pop_back_val();
-
-      if (bb->hasName() && bb->getName().starts_with(prefix))
-        matchingBBs.insert(bb);
 
       if (bb == endBB)
         continue;
 
       for (llvm::BasicBlock *succ : llvm::successors(bb)) {
-        if (visited.insert(succ).second)
+        if (collectedBBs.insert(succ).second)
           worklist.push_back(succ);
       }
     }
 
-    // Rewrite all uses in the matching BBs.
+    // Rewrite all uses in the collected BBs.
     llvm::SmallVector<llvm::User *> users(linearOrigVal[varIndex]->users());
     for (auto *user : users) {
       if (auto *userInst = dyn_cast<llvm::Instruction>(user)) {
-        if (matchingBBs.contains(userInst->getParent()))
+        if (collectedBBs.contains(userInst->getParent()))
           user->replaceUsesOfWith(linearOrigVal[varIndex],
                                   linearLoopBodyTemps[varIndex]);
       }
@@ -358,7 +352,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("allocate");
   };
   auto checkBare = [&todo](auto op, LogicalResult &result) {
-    if (op.getBare())
+    if (op.getKernelType() == omp::TargetExecMode::bare)
       result = todo("ompx_bare");
   };
   auto checkDepend = [&todo](auto op, LogicalResult &result) {
@@ -392,8 +386,26 @@ static LogicalResult checkImplementationStatus(Operation &op) {
           op.getReductionSyms())
         result = todo("reduction");
     if (op.getReductionMod() &&
-        op.getReductionMod().value() != omp::ReductionModifier::defaultmod)
-      result = todo("reduction with modifier");
+        op.getReductionMod().value() != omp::ReductionModifier::defaultmod) {
+      omp::ReductionModifier mod = op.getReductionMod().value();
+      // The `task` reduction modifier is supported on the parallel and
+      // worksharing (do/for and sections) constructs. Other modifiers, and the
+      // `task` modifier on other constructs, are not yet implemented.
+      bool taskModifierSupported =
+          mod == omp::ReductionModifier::task &&
+          isa<omp::ParallelOp, omp::WsloopOp, omp::SectionsOp>(op);
+      if (!taskModifierSupported) {
+        result = todo("reduction with modifier");
+      } else if (auto byref = op.getReductionByref()) {
+        // The task reduction modifier lowering only handles non-byref
+        // reductions for now.
+        for (bool isByRef : *byref)
+          if (isByRef) {
+            result = todo("task reduction modifier with by-ref reduction");
+            break;
+          }
+      }
+    }
   };
   auto checkTaskReductionByref = [&todo](auto op, LogicalResult &result) {
     if (auto byrefAttr = op.getTaskReductionByref())
@@ -1733,6 +1745,25 @@ findAssociatedValue(Value privateVar, llvm::IRBuilderBase &builder,
   return moduleTranslation.lookupValue(privateVar);
 }
 
+// Privatizer region arguments may be by-value even when the available LLVM
+// value is storage for that value, e.g. lowered Fortran boxchar descriptors in
+// task context structs. Materialize the value expected by the region argument
+// while preserving the existing pointer mapping for pointer arguments.
+static llvm::Value *
+materializeRegionArgValue(llvm::IRBuilderBase &builder,
+                          LLVM::ModuleTranslation &moduleTranslation,
+                          BlockArgument regionArg, llvm::Value *value) {
+  if (!regionArg)
+    return value;
+
+  llvm::Type *regionArgType =
+      moduleTranslation.convertType(regionArg.getType());
+  if (regionArgType->isPointerTy() || !value->getType()->isPointerTy())
+    return value;
+
+  return builder.CreateLoad(regionArgType, value);
+}
+
 /// Initialize a single (first)private variable. You probably want to use
 /// allocateAndInitPrivateVars instead of this.
 /// This returns the private variable which has been initialized. This
@@ -1924,10 +1955,15 @@ static LogicalResult copyFirstPrivateVars(
     // copyRegion implements `lhs = rhs`
     Region &copyRegion = decl.getCopyRegion();
 
-    moduleTranslation.mapValue(decl.getCopyMoldArg(), moldVar);
+    llvm::Value *copyMoldVar = materializeRegionArgValue(
+        builder, moduleTranslation, decl.getCopyMoldArg(), moldVar);
+    llvm::Value *copyPrivateVar = materializeRegionArgValue(
+        builder, moduleTranslation, decl.getCopyPrivateArg(), llvmVar);
+
+    moduleTranslation.mapValue(decl.getCopyMoldArg(), copyMoldVar);
 
     // map copyRegion lhs arg
-    moduleTranslation.mapValue(decl.getCopyPrivateArg(), llvmVar);
+    moduleTranslation.mapValue(decl.getCopyPrivateArg(), copyPrivateVar);
 
     // in-place convert copy region
     if (failed(inlineConvertOmpRegions(copyRegion, "omp.private.copy", builder,
@@ -2024,6 +2060,23 @@ static bool constructIsCancellable(Operation *op) {
       .wasInterrupted();
 }
 
+// Forward declarations for the task-reduction helpers defined alongside the
+// omp.taskgroup lowering further down in this file. These are shared by the
+// `reduction(task, ...)` modifier lowering on the parallel/worksharing
+// constructs and by the omp.taskgroup / omp.taskloop.context task_reduction
+// lowering. When \p isModifier is set, `__kmpc_taskred_modifier_init` is
+// emitted (opening a task-reduction scope) instead of `__kmpc_taskred_init`,
+// with \p isWorksharing selecting the runtime `is_ws` argument.
+static llvm::Value *emitTaskReductionInitCall(
+    ArrayRef<omp::DeclareReductionOp> redDecls,
+    ArrayRef<llvm::Value *> origPtrs, StringRef helperNamePrefix,
+    llvm::IRBuilderBase &builder, llvm::OpenMPIRBuilder::InsertPointTy allocaIP,
+    LLVM::ModuleTranslation &moduleTranslation, bool isModifier = false,
+    bool isWorksharing = false);
+static void
+emitTaskReductionModifierFini(bool isWorksharing, llvm::IRBuilderBase &builder,
+                              LLVM::ModuleTranslation &moduleTranslation);
+
 static LogicalResult
 convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) {
@@ -2056,6 +2109,10 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
           reductionDecls, privateReductionVariables, reductionVariableMap,
           isByRef)))
     return failure();
+
+  bool isTaskReductionMod =
+      sectionsOp.getReductionMod() == omp::ReductionModifier::task &&
+      sectionsOp.getNumReductionVars() > 0;
 
   SmallVector<StorableBodyGenCallbackTy> sectionCBs;
 
@@ -2096,6 +2153,19 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
   if (sectionCBs.empty())
     return success();
 
+  // For `reduction(task, ...)` open a task-reduction scope for the worksharing
+  // region. Participating explicit tasks accumulate into the per-thread private
+  // copies, which the worksharing reduction then combines across threads. This
+  // is emitted only after the empty-sections early return above, so it stays
+  // balanced with the matching fini emitted after the sections region.
+  if (isTaskReductionMod &&
+      !emitTaskReductionInitCall(reductionDecls, privateReductionVariables,
+                                 "__omp_taskred_mod_", builder, allocaIP,
+                                 moduleTranslation, /*isModifier=*/true,
+                                 /*isWorksharing=*/true))
+    return sectionsOp.emitError(
+        "failed to emit task reduction modifier initialization");
+
   assert(isa<omp::SectionOp>(*sectionsOp.getRegion().op_begin()));
 
   // TODO: Perform appropriate actions according to the data-sharing
@@ -2124,6 +2194,11 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   builder.restoreIP(*afterIP);
+
+  // Close the task-reduction scope before combining the worksharing copies.
+  if (isTaskReductionMod)
+    emitTaskReductionModifierFini(/*isWorksharing=*/true, builder,
+                                  moduleTranslation);
 
   // Process the reductions if required.
   return createReductionsAndCleanup(
@@ -3079,14 +3154,15 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     // initialized character box is yielded by value. Here we need to store the
     // yielded value into the private allocation, and load the private
     // allocation to match the type expected by region block arguments.
+    [[maybe_unused]] llvm::Value *llvmPrivateVar = llvmPrivateVarAlloc;
     if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
         !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
       builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
       // Load it so we have the value pointed to by the GEP
-      llvmPrivateVarAlloc = builder.CreateLoad(privateVarOrErr.get()->getType(),
-                                               llvmPrivateVarAlloc);
+      llvmPrivateVar = builder.CreateLoad(privateVarOrErr.get()->getType(),
+                                          llvmPrivateVarAlloc);
     }
-    assert(llvmPrivateVarAlloc->getType() ==
+    assert(llvmPrivateVar->getType() ==
            moduleTranslation.convertType(blockArg.getType()));
 
     // Mapping blockArg -> llvmPrivateVarAlloc is done inside the body callback
@@ -3484,15 +3560,6 @@ computeTaskloopBounds(omp::LoopNestOp loopOp, llvm::IRBuilderBase &builder,
   return llvm::Error::success();
 }
 
-// Forward declaration: defined alongside the taskgroup task_reduction
-// lowering further down in this file. Shared between omp.taskgroup and
-// omp.taskloop.context translation.
-static llvm::Value *emitTaskReductionInitCall(
-    ArrayRef<omp::DeclareReductionOp> redDecls,
-    ArrayRef<llvm::Value *> origPtrs, StringRef helperNamePrefix,
-    llvm::IRBuilderBase &builder, llvm::OpenMPIRBuilder::InsertPointTy allocaIP,
-    LLVM::ModuleTranslation &moduleTranslation);
-
 // Converts an OpenMP taskloop construct into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
@@ -3561,14 +3628,15 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
     llvm::IRBuilderBase::InsertPointGuard guard(builder);
     builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
 
+    [[maybe_unused]] llvm::Value *llvmPrivateVar = llvmPrivateVarAlloc;
     if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
         !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
       builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
       // Load it so we have the value pointed to by the GEP
-      llvmPrivateVarAlloc = builder.CreateLoad(privateVarOrErr.get()->getType(),
-                                               llvmPrivateVarAlloc);
+      llvmPrivateVar = builder.CreateLoad(privateVarOrErr.get()->getType(),
+                                          llvmPrivateVarAlloc);
     }
-    assert(llvmPrivateVarAlloc->getType() ==
+    assert(llvmPrivateVar->getType() ==
            moduleTranslation.convertType(blockArg.getType()));
   }
 
@@ -3842,9 +3910,11 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
       assert(llvmPrivateVarAlloc &&
              "reads from mold so shouldn't have been skipped");
 
-      llvm::Expected<llvm::Value *> privateVarOrErr =
-          initPrivateVar(builder, moduleTranslation, privDecl, mold, blockArg,
-                         llvmPrivateVarAlloc, builder.GetInsertBlock());
+      llvm::Value *moldArg = materializeRegionArgValue(
+          builder, moduleTranslation, privDecl.getInitMoldArg(), mold);
+      llvm::Expected<llvm::Value *> privateVarOrErr = initPrivateVar(
+          builder, moduleTranslation, privDecl, moldArg, blockArg,
+          llvmPrivateVarAlloc, builder.GetInsertBlock());
       if (!privateVarOrErr)
         return privateVarOrErr.takeError();
 
@@ -3855,14 +3925,15 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
       // initialized character box is yielded by value. Here we need to store
       // the yielded value into the private allocation, and load the private
       // allocation to match the type expected by region block arguments.
+      [[maybe_unused]] llvm::Value *llvmPrivateVar = llvmPrivateVarAlloc;
       if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
           !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
         builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
         // Load it so we have the value pointed to by the GEP
-        llvmPrivateVarAlloc = builder.CreateLoad(
-            privateVarOrErr.get()->getType(), llvmPrivateVarAlloc);
+        llvmPrivateVar = builder.CreateLoad(privateVarOrErr.get()->getType(),
+                                            llvmPrivateVarAlloc);
       }
-      assert(llvmPrivateVarAlloc->getType() ==
+      assert(llvmPrivateVar->getType() ==
              moduleTranslation.convertType(blockArg.getType()));
 
       // Mapping blockArg -> llvmPrivateVarAlloc is done inside the body
@@ -4060,8 +4131,11 @@ emitTaskReductionCombFn(omp::DeclareReductionOp decl, StringRef baseName,
 /// \p allocaIP. \p helperNamePrefix is used to disambiguate the generated
 /// init/combiner helper symbol names between taskgroup and taskloop callers.
 ///
-/// Returns the `ptr` value produced by `__kmpc_taskred_init` (the taskgroup
-/// reduction handle), or null on failure.
+/// When \p isModifier is false, emits `__kmpc_taskred_init` and returns the
+/// `ptr` value it produces (the taskgroup reduction handle). When \p isModifier
+/// is true, emits `__kmpc_taskred_modifier_init` instead to open a
+/// task-reduction scope for a parallel or worksharing construct, passing
+/// \p isWorksharing as the runtime `is_ws` argument. Returns null on failure.
 ///
 /// Only the non-byref form is handled here. Byref reductions have already
 /// been rejected by `checkImplementationStatus`.
@@ -4069,7 +4143,8 @@ static llvm::Value *emitTaskReductionInitCall(
     ArrayRef<omp::DeclareReductionOp> redDecls,
     ArrayRef<llvm::Value *> origPtrs, StringRef helperNamePrefix,
     llvm::IRBuilderBase &builder, llvm::OpenMPIRBuilder::InsertPointTy allocaIP,
-    LLVM::ModuleTranslation &moduleTranslation) {
+    LLVM::ModuleTranslation &moduleTranslation, bool isModifier,
+    bool isWorksharing) {
   assert(redDecls.size() == origPtrs.size() &&
          "expected one orig pointer per reduction decl");
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
@@ -4138,7 +4213,7 @@ static llvm::Value *emitTaskReductionInitCall(
     storeField(6, llvm::ConstantInt::get(i32Ty, 0));      // flags
   }
 
-  // Emit call: __kmpc_taskred_init(gtid, num, &arr).
+  // Emit the runtime call that registers the task reduction data.
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   uint32_t srcLocSize;
   llvm::Constant *srcLocStr =
@@ -4146,10 +4221,43 @@ static llvm::Value *emitTaskReductionInitCall(
   llvm::Value *ident = ompBuilder->getOrCreateIdent(srcLocStr, srcLocSize);
   ompBuilder->updateToLocation(ompLoc);
   llvm::Value *gtid = ompBuilder->getOrCreateThreadID(ident);
+  if (isModifier) {
+    // __kmpc_taskred_modifier_init(loc, gtid, is_ws, num, &arr) opens a
+    // task-reduction scope for the enclosing parallel/worksharing region.
+    llvm::FunctionCallee modInit = ompBuilder->getOrCreateRuntimeFunction(
+        *llvmModule, llvm::omp::OMPRTL___kmpc_taskred_modifier_init);
+    return builder.CreateCall(modInit,
+                              {ident, gtid,
+                               builder.getInt32(isWorksharing ? 1 : 0),
+                               builder.getInt32(n), arrAlloca},
+                              ".taskred.desc");
+  }
+  // __kmpc_taskred_init(gtid, num, &arr).
   llvm::FunctionCallee taskredInit = ompBuilder->getOrCreateRuntimeFunction(
       *llvmModule, llvm::omp::OMPRTL___kmpc_taskred_init);
   return builder.CreateCall(taskredInit, {gtid, builder.getInt32(n), arrAlloca},
                             ".taskred.desc");
+}
+
+/// Emits `__kmpc_task_reduction_modifier_fini(loc, gtid, is_ws)` at the current
+/// builder insertion point, closing the task-reduction scope opened by the
+/// `task` reduction modifier on a parallel or worksharing construct.
+static void
+emitTaskReductionModifierFini(bool isWorksharing, llvm::IRBuilderBase &builder,
+                              LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  uint32_t srcLocSize;
+  llvm::Constant *srcLocStr =
+      ompBuilder->getOrCreateSrcLocStr(ompLoc, srcLocSize);
+  llvm::Value *ident = ompBuilder->getOrCreateIdent(srcLocStr, srcLocSize);
+  ompBuilder->updateToLocation(ompLoc);
+  llvm::Value *gtid = ompBuilder->getOrCreateThreadID(ident);
+  llvm::FunctionCallee fini = ompBuilder->getOrCreateRuntimeFunction(
+      *llvmModule, llvm::omp::OMPRTL___kmpc_task_reduction_modifier_fini);
+  builder.CreateCall(fini,
+                     {ident, gtid, builder.getInt32(isWorksharing ? 1 : 0)});
 }
 
 /// Converts an OpenMP taskgroup construct into LLVM IR using OpenMPIRBuilder.
@@ -4334,6 +4442,20 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                                reductionVariableMap, isByRef, deferredStores)))
     return failure();
 
+  // For `reduction(task, ...)` open a task-reduction scope for the worksharing
+  // loop. Participating explicit tasks accumulate into the per-thread private
+  // copies, which the worksharing reduction then combines across threads.
+  bool isTaskReductionMod =
+      wsloopOp.getReductionMod() == omp::ReductionModifier::task &&
+      wsloopOp.getNumReductionVars() > 0;
+  if (isTaskReductionMod &&
+      !emitTaskReductionInitCall(reductionDecls, privateReductionVariables,
+                                 "__omp_taskred_mod_", builder, allocaIP,
+                                 moduleTranslation, /*isModifier=*/true,
+                                 /*isWorksharing=*/true))
+    return wsloopOp.emitError(
+        "failed to emit task reduction modifier initialization");
+
   // TODO: Handle doacross loops when the ordered clause has a parameter.
   bool isOrdered = wsloopOp.getOrdered().has_value();
   std::optional<omp::ScheduleModifier> scheduleMod = wsloopOp.getScheduleMod();
@@ -4370,7 +4492,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
   }
 
-  llvm::BasicBlock *sourceBlock = builder.GetInsertBlock();
   llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
       wsloopOp.getRegion(), "omp.wsloop.region", builder, moduleTranslation);
 
@@ -4399,17 +4520,20 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   // Check if we can generate no-loop kernel
   bool noLoopMode = false;
   omp::TargetOp targetOp = wsloopOp->getParentOfType<mlir::omp::TargetOp>();
-  if (targetOp) {
-    Operation *targetCapturedOp = targetOp.getInnermostCapturedOmpOp();
+  if (targetOp &&
+      targetOp.getKernelType() == omp::TargetExecMode::spmd_no_loop) {
+    Operation *targetCapturedOp =
+        cast<omp::ComposableOpInterface>(*targetOp).findCapturedOp();
     // We need this check because, without it, noLoopMode would be set to true
     // for every omp.wsloop nested inside a no-loop SPMD target region, even if
     // that loop is not the top-level SPMD one.
-    if (loopOp == targetCapturedOp) {
-      if (targetOp.getKernelExecFlags(targetCapturedOp) ==
-          omp::TargetExecMode::no_loop)
-        noLoopMode = true;
-    }
+    if (loopOp == targetCapturedOp)
+      noLoopMode = true;
   }
+
+  for (size_t index = 0; index < wsloopOp.getLinearVars().size(); index++)
+    linearClauseProcessor.rewriteInPlace(builder, loopInfo->getBody(),
+                                         loopInfo->getLatch(), index);
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
       ompBuilder->applyWorkshareLoop(
@@ -4432,16 +4556,17 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                                                 loopInfo->getLastIter());
     if (failed(handleError(afterBarrierIP, *loopOp)))
       return failure();
-    for (size_t index = 0; index < wsloopOp.getLinearVars().size(); index++)
-      linearClauseProcessor.rewriteInPlace(
-          builder, sourceBlock->getSingleSuccessor(), *regionBlock,
-          "omp.loop_nest.region", index);
 
     builder.restoreIP(oldIP);
   }
 
   // Set the correct branch target for task cancellation
   popCancelFinalizationCB(cancelTerminators, *ompBuilder, wsloopIP.get());
+
+  // Close the task-reduction scope before the worksharing reduction combine.
+  if (isTaskReductionMod)
+    emitTaskReductionModifierFini(/*isWorksharing=*/true, builder,
+                                  moduleTranslation);
 
   // Process the reductions if required.
   if (failed(createReductionsAndCleanup(
@@ -4475,6 +4600,13 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   SmallVector<llvm::Value *> privateReductionVariables(
       opInst.getNumReductionVars());
   SmallVector<DeferredStore> deferredStores;
+  // Only open a task-reduction scope when the `task` modifier is present and
+  // there are reduction variables to combine; otherwise the matching fini in
+  // the reduction-combine path (guarded by getNumReductionVars() > 0) would be
+  // skipped, leaving the modifier init unbalanced.
+  bool isTaskReductionMod =
+      opInst.getReductionMod() == omp::ReductionModifier::task &&
+      opInst.getNumReductionVars() > 0;
 
   auto bodyGenCB =
       [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
@@ -4522,6 +4654,17 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
                               reductionVariableMap, isByRef, deferredStores)))
       return llvm::make_error<PreviouslyReportedError>();
 
+    // For `reduction(task, ...)` open a task-reduction scope so participating
+    // explicit tasks accumulate into the per-thread private copies; the
+    // parallel reduction then combines those copies across the team.
+    if (isTaskReductionMod &&
+        !emitTaskReductionInitCall(reductionDecls, privateReductionVariables,
+                                   "__omp_taskred_mod_", builder, allocaIP,
+                                   moduleTranslation, /*isModifier=*/true,
+                                   /*isWorksharing=*/false))
+      return llvm::createStringError(
+          "failed to emit task reduction modifier initialization");
+
     // Save the alloca insertion point on ModuleTranslation stack for use in
     // nested regions.
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
@@ -4548,6 +4691,12 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
 
       // Move to region cont block
       builder.SetInsertPoint((*regionBlock)->getTerminator());
+
+      // Close the task-reduction scope before the per-thread reduction
+      // contributions are combined across the team.
+      if (isTaskReductionMod)
+        emitTaskReductionModifierFini(/*isWorksharing=*/false, builder,
+                                      moduleTranslation);
 
       // Generate reductions from info
       llvm::UnreachableInst *tempTerminator = builder.CreateUnreachable();
@@ -4792,6 +4941,10 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   }
   builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
 
+  for (size_t index = 0; index < simdOp.getLinearVars().size(); index++)
+    linearClauseProcessor.rewriteInPlace(builder, loopInfo->getBody(),
+                                         loopInfo->getLatch(), index);
+
   ompBuilder->applySimd(loopInfo, alignedVars,
                         simdOp.getIfExpr()
                             ? moduleTranslation.lookupValue(simdOp.getIfExpr())
@@ -4799,29 +4952,6 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                         order, simdlen, safelen);
 
   linearClauseProcessor.emitStoresForLinearVar(builder);
-
-  // Check if this SIMD loop contains ordered regions
-  bool hasOrderedRegions = false;
-  simdOp.getRegion().walk([&](omp::OrderedRegionOp orderedOp) {
-    hasOrderedRegions = true;
-    return WalkResult::interrupt();
-  });
-
-  for (size_t index = 0; index < simdOp.getLinearVars().size(); index++) {
-    llvm::BasicBlock *startBB = sourceBlock->getSingleSuccessor();
-    llvm::BasicBlock *endBB = *regionBlock;
-    linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
-                                         "omp.loop_nest.region", index);
-
-    if (hasOrderedRegions) {
-      // Also rewrite uses in ordered regions so they read the current value
-      linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
-                                           "omp.ordered.region", index);
-      // Also rewrite uses in finalize blocks (code after ordered regions)
-      linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
-                                           "omp_region.finalize", index);
-    }
-  }
 
   // We now need to reduce the per-simd-lane reduction variable into the
   // original variable. This works a bit differently to other reductions (e.g.
@@ -6546,7 +6676,6 @@ calculateBoundsOffset(LLVM::ModuleTranslation &moduleTranslation,
     // to use or standardizing/canonicalizing the order of the bounds to compute
     // the offset may be useful in the future when there's other frontends with
     // different formats.
-    std::vector<llvm::Value *> dimensionIndexSizeOffset;
     for (int i = bounds.size() - 1; i >= 0; --i) {
       if (auto boundOp = dyn_cast_if_present<omp::MapBoundsOp>(
               bounds[i].getDefiningOp())) {
@@ -7655,19 +7784,25 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Lowers the FlagsAttr which is applied to the module on the device
-/// pass when offloading, this attribute contains OpenMP RTL globals that can
-/// be passed as flags to the frontend, otherwise they are set to default
+/// Lowers the FlagsAttr which is applied to the module when offloading. This
+/// attribute contains OpenMP RTL globals that can be passed as flags to the
+/// frontend, otherwise they are set to default
 static LogicalResult
 convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
                  LLVM::ModuleTranslation &moduleTranslation) {
-  if (!cast<mlir::ModuleOp>(op))
-    return failure();
+  auto offloadMod = dyn_cast<omp::OffloadModuleInterface>(op);
+  if (!offloadMod)
+    return op->emitOpError() << "omp flags attached to non offload module op";
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
-  ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
-                              attribute.getOpenmpDeviceVersion());
+  if (offloadMod.getIsTargetDevice())
+    ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
+                                attribute.getOpenmpDeviceVersion());
+
+  // The flags below are only intended to be emitted for GPU offload targets.
+  if (!offloadMod.getIsGPU())
+    return success();
 
   if (attribute.getNoGpuLib())
     return success();
@@ -8174,7 +8309,8 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
   }
 
   // Update kernel bounds structure for the `OpenMPIRBuilder` to use.
-  omp::TargetExecMode execMode = targetOp.getKernelExecFlags(capturedOp);
+  // Use the kernel_type attribute set by the frontend instead of analyzing IR.
+  omp::TargetExecMode execMode = targetOp.getKernelType();
   switch (execMode) {
   case omp::TargetExecMode::bare:
     attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_BARE;
@@ -8185,7 +8321,7 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
   case omp::TargetExecMode::spmd:
     attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_SPMD;
     break;
-  case omp::TargetExecMode::no_loop:
+  case omp::TargetExecMode::spmd_no_loop:
     attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
     break;
   }
@@ -8194,10 +8330,6 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
   attrs.MinThreads = 1;
   attrs.MaxThreads.front() = combinedMaxThreadsVal;
   attrs.ReductionDataSize = reductionDataSize;
-  // TODO: Allow modified buffer length similar to
-  // fopenmp-cuda-teams-reduction-recs-num flag in clang.
-  if (attrs.ReductionDataSize != 0)
-    attrs.ReductionBufferLength = 1024;
 }
 
 /// Gather LLVM runtime values for all clauses evaluated in the host that are
@@ -8245,9 +8377,7 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
   if (numThreads)
     attrs.MaxThreads = moduleTranslation.lookupValue(numThreads);
 
-  bool hostEvalTripCount;
-  targetOp.getKernelExecFlags(capturedOp, &hostEvalTripCount);
-  if (hostEvalTripCount) {
+  if (targetOp.hasHostEvalTripCount()) {
     llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
     attrs.LoopTripCount = nullptr;
 
@@ -8554,7 +8684,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::TargetKernelRuntimeAttrs runtimeAttrs;
   llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs defaultAttrs;
-  Operation *targetCapturedOp = targetOp.getInnermostCapturedOmpOp();
+  Operation *targetCapturedOp =
+      cast<omp::ComposableOpInterface>(*targetOp).findCapturedOp();
   initTargetDefaultAttrs(targetOp, targetCapturedOp, defaultAttrs,
                          isTargetDevice, isGPU);
 
@@ -8689,6 +8820,21 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
         // a deleted block.
         ompBuilder->Builder.ClearInsertionPoint();
         ompBuilder->Builder.SetCurrentDebugLocation(llvm::DebugLoc());
+      } else if (llvm::Function *llvmFunc =
+                     moduleTranslation.lookupFunction(funcOp.getName())) {
+        // Device-side declare target functions are externally visible by
+        // default so they can be referenced from other device translation
+        // units. That also prevents the offload LTO from internalizing and
+        // deleting them when they end up unused in the final device image.
+        // Such dead functions can still reference internal LDS and trigger
+        // spurious "local memory global used by non-kernel function" backend
+        // warnings. Marking them hidden keeps the symbol usable within the
+        // device image's linkage unit while letting LTO drop it when nothing
+        // references it; symbols that must stay reachable (e.g. via an offload
+        // entry that takes their address) are kept alive by that reference.
+        if (!llvmFunc->isDeclaration() && llvmFunc->hasExternalLinkage() &&
+            llvmFunc->getVisibility() == llvm::GlobalValue::DefaultVisibility)
+          llvmFunc->setVisibility(llvm::GlobalValue::HiddenVisibility);
       }
     }
     return success();

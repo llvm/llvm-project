@@ -274,8 +274,10 @@ fissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
     }
 
     if (parallelize && hoisted.empty() &&
-        parallelize->getNextNode() == terminator)
+        parallelize->getNextNode() == terminator) {
+      teams.setCombined(true);
       break;
+    }
     if (parallelize) {
       auto newTeams = rewriter.cloneWithoutRegions(teams);
       auto *newTeamsBlock = rewriter.createBlock(
@@ -290,6 +292,7 @@ fissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
       parallelize->replaceAllUsesWith(cloned);
       parallelize->erase();
       omp::TerminatorOp::create(rewriter, loc);
+      newTeams.setCombined(true);
       changed = true;
     }
   }
@@ -758,10 +761,10 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
   // Create the inner target op
   auto newTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getBareAttr(),
-      targetOp.getDependKindsAttr(), targetOp.getDependVars(),
-      targetOp.getDependIteratedKindsAttr(), targetOp.getDependIterated(),
-      targetOp.getDevice(), targetOp.getDynGroupprivateAccessGroupAttr(),
+      targetOp.getAllocatorVars(), targetOp.getDependKindsAttr(),
+      targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
+      targetOp.getDependIterated(), targetOp.getDevice(),
+      targetOp.getDynGroupprivateAccessGroupAttr(),
       targetOp.getDynGroupprivateFallbackAttr(),
       targetOp.getDynGroupprivateSize(), targetOp.getHasDeviceAddrVars(),
       targetOp.getHostEvalVars(), targetOp.getIfExpr(),
@@ -770,7 +773,7 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
       innerMapInfos, targetOp.getMapIterated(), targetOp.getNowaitAttr(),
       targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
       targetOp.getPrivateNeedsBarrierAttr(), targetOp.getThreadLimitVars(),
-      targetOp.getPrivateMapsAttr());
+      targetOp.getPrivateMapsAttr(), targetOp.getKernelTypeAttr());
   rewriter.inlineRegionBefore(targetOp.getRegion(), newTargetOp.getRegion(),
                               newTargetOp.getRegion().begin());
   rewriter.replaceOp(targetOp, targetDataOp);
@@ -1483,10 +1486,10 @@ genPreTargetOp(omp::TargetOp targetOp, SmallVector<Value> &preMapOperands,
   // update the hostEvalVars of preTargetOp
   omp::TargetOp preTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getBareAttr(),
-      targetOp.getDependKindsAttr(), targetOp.getDependVars(),
-      targetOp.getDependIteratedKindsAttr(), targetOp.getDependIterated(),
-      targetOp.getDevice(), targetOp.getDynGroupprivateAccessGroupAttr(),
+      targetOp.getAllocatorVars(), targetOp.getDependKindsAttr(),
+      targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
+      targetOp.getDependIterated(), targetOp.getDevice(),
+      targetOp.getDynGroupprivateAccessGroupAttr(),
       targetOp.getDynGroupprivateFallbackAttr(),
       targetOp.getDynGroupprivateSize(), targetOp.getHasDeviceAddrVars(),
       preHostEvalVars, targetOp.getIfExpr(), targetOp.getInReductionVars(),
@@ -1494,7 +1497,8 @@ genPreTargetOp(omp::TargetOp targetOp, SmallVector<Value> &preMapOperands,
       targetOp.getIsDevicePtrVars(), preMapOperands, targetOp.getMapIterated(),
       targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
       targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
-      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr());
+      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr(),
+      targetOp.getKernelTypeAttr());
   auto *preTargetBlock = rewriter.createBlock(
       &preTargetOp.getRegion(), preTargetOp.getRegion().begin(), {}, {});
   IRMapping preMapping;
@@ -1576,10 +1580,10 @@ genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
   // Create the isolated target op
   omp::TargetOp isolatedTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getBareAttr(),
-      targetOp.getDependKindsAttr(), targetOp.getDependVars(),
-      targetOp.getDependIteratedKindsAttr(), targetOp.getDependIterated(),
-      targetOp.getDevice(), targetOp.getDynGroupprivateAccessGroupAttr(),
+      targetOp.getAllocatorVars(), targetOp.getDependKindsAttr(),
+      targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
+      targetOp.getDependIterated(), targetOp.getDevice(),
+      targetOp.getDynGroupprivateAccessGroupAttr(),
       targetOp.getDynGroupprivateFallbackAttr(),
       targetOp.getDynGroupprivateSize(), targetOp.getHasDeviceAddrVars(),
       isolatedHostEvalVars, targetOp.getIfExpr(), targetOp.getInReductionVars(),
@@ -1587,7 +1591,10 @@ genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
       targetOp.getIsDevicePtrVars(), postMapOperands, targetOp.getMapIterated(),
       targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
       targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
-      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr());
+      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr(),
+      omp::TargetExecModeAttr::get(targetOp->getContext(),
+                                   omp::TargetExecMode::spmd));
+  isolatedTargetOp.setCombined(true);
   auto *isolatedTargetBlock =
       rewriter.createBlock(&isolatedTargetOp.getRegion(),
                            isolatedTargetOp.getRegion().begin(), {}, {});
@@ -1659,10 +1666,10 @@ static omp::TargetOp genPostTargetOp(omp::TargetOp targetOp,
   // Create the post target op
   omp::TargetOp postTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getBareAttr(),
-      targetOp.getDependKindsAttr(), targetOp.getDependVars(),
-      targetOp.getDependIteratedKindsAttr(), targetOp.getDependIterated(),
-      targetOp.getDevice(), targetOp.getDynGroupprivateAccessGroupAttr(),
+      targetOp.getAllocatorVars(), targetOp.getDependKindsAttr(),
+      targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
+      targetOp.getDependIterated(), targetOp.getDevice(),
+      targetOp.getDynGroupprivateAccessGroupAttr(),
       targetOp.getDynGroupprivateFallbackAttr(),
       targetOp.getDynGroupprivateSize(), targetOp.getHasDeviceAddrVars(),
       postHostEvalVars, targetOp.getIfExpr(), targetOp.getInReductionVars(),
@@ -1670,7 +1677,8 @@ static omp::TargetOp genPostTargetOp(omp::TargetOp targetOp,
       targetOp.getIsDevicePtrVars(), postMapOperands, targetOp.getMapIterated(),
       targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
       targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
-      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr());
+      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr(),
+      targetOp.getKernelTypeAttr());
   // Create the block for postTargetOp
   auto *postTargetBlock = rewriter.createBlock(
       &postTargetOp.getRegion(), postTargetOp.getRegion().begin(), {}, {});

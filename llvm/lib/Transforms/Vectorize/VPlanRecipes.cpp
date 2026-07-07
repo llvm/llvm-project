@@ -371,8 +371,7 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
     assert((OpType != OperationType::FCmp ||
             FCmpFlags.CmpPredStorage == Other.FCmpFlags.CmpPredStorage) &&
            "Cannot drop CmpPredicate");
-    getFMFsRef().NoNaNs &= Other.getFMFsRef().NoNaNs;
-    getFMFsRef().NoInfs &= Other.getFMFsRef().NoInfs;
+    getFMFsRef() = getFastMathFlagsOrNone() & Other.getFastMathFlagsOrNone();
     break;
   case OperationType::NonNegOp:
     NonNegFlags.NonNeg &= Other.NonNegFlags.NonNeg;
@@ -388,8 +387,7 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
            "Cannot change IsOrdered");
     assert(ReductionFlags.IsInLoop == Other.ReductionFlags.IsInLoop &&
            "Cannot change IsInLoop");
-    getFMFsRef().NoNaNs &= Other.getFMFsRef().NoNaNs;
-    getFMFsRef().NoInfs &= Other.getFMFsRef().NoInfs;
+    getFMFsRef() = getFastMathFlagsOrNone() & Other.getFastMathFlagsOrNone();
     break;
   case OperationType::Other:
     break;
@@ -1942,22 +1940,28 @@ void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+/// Shared execute logic for VPPhi and VPWidenPHIRecipe. Creates a PHI node,
+/// adds incoming values, and stores the result in State. For header phis, only
+/// the preheader incoming value is added; the backedge is fixed up later by
+/// VPlan::execute().
+static void executePhiRecipe(VPSingleDefRecipe *R, VPPhiAccessors &Phi,
+                             VPTransformState &State, bool IsScalar,
+                             const Twine &Name) {
+  unsigned NumIncoming = VPBlockUtils::isHeader(R->getParent(), State.VPDT)
+                             ? 1
+                             : Phi.getNumIncoming();
+  Value *FirstInc = State.get(Phi.getIncomingValue(0), IsScalar);
+  PHINode *NewPhi = State.Builder.CreatePHI(FirstInc->getType(), 2, Name);
+  NewPhi->addIncoming(FirstInc,
+                      State.CFG.VPBB2IRBB.at(Phi.getIncomingBlock(0)));
+  for (unsigned Idx = 1; Idx != NumIncoming; ++Idx)
+    NewPhi->addIncoming(State.get(Phi.getIncomingValue(Idx), IsScalar),
+                        State.CFG.VPBB2IRBB.at(Phi.getIncomingBlock(Idx)));
+  State.set(R, NewPhi, IsScalar);
+}
+
 void VPPhi::execute(VPTransformState &State) {
-  PHINode *NewPhi = State.Builder.CreatePHI(getScalarType(), 2, getName());
-  unsigned NumIncoming = getNumIncoming();
-  // Detect header phis: the parent block dominates its second incoming block
-  // (the latch). Those IR incoming values have not been generated yet and need
-  // to be added after they have been executed.
-  if (NumIncoming == 2 &&
-      State.VPDT.dominates(getParent(), getIncomingBlock(1))) {
-    NumIncoming = 1;
-  }
-  for (unsigned Idx = 0; Idx != NumIncoming; ++Idx) {
-    Value *IncV = State.get(getIncomingValue(Idx), VPLane(0));
-    BasicBlock *PredBB = State.CFG.VPBB2IRBB.at(getIncomingBlock(Idx));
-    NewPhi->addIncoming(IncV, PredBB);
-  }
-  State.set(this, NewPhi, VPLane(0));
+  executePhiRecipe(this, *this, State, /*IsScalar=*/true, getName());
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2947,9 +2951,8 @@ InstructionCost VPDerivedIVRecipe::computeCost(ElementCount VF,
     bool NeedsMul = true, NeedsAdd = true, NeedsShl = false;
 
     // If the start value is zero the add gets folded away.
-    if (auto *VPV = dyn_cast<VPIRValue>(getStartValue()))
-      if (auto *StartC = dyn_cast<ConstantInt>(VPV->getValue()))
-        NeedsAdd = !StartC->isZero();
+    if (auto *StartC = dyn_cast<VPConstantInt>(getStartValue()))
+      NeedsAdd = !StartC->isZero();
 
     // For some values of step the arithmetic changes:
     //  1. A step of 1 requires no operation.
@@ -2957,22 +2960,20 @@ InstructionCost VPDerivedIVRecipe::computeCost(ElementCount VF,
     //  3. A power-of-2 step will use a shl, instead of a mul.
     Type *StepTy = getStepValue()->getScalarType();
     InstructionCost Cost(0);
-    if (auto *VPV = dyn_cast<VPIRValue>(getStepValue())) {
-      if (auto *StepC = dyn_cast<ConstantInt>(VPV->getValue())) {
-        if (StepC->isOne())
-          NeedsMul = false;
-        else if (StepC->isMinusOne()) {
-          // This will most likely end up as a negate in simplifyRecipe, and
-          // the negate will be combined with the add to make a sub.
-          // NOTE: This is perhaps an invalid assumption that the cost of an
-          // 'add' is the same as a 'sub'.
-          NeedsMul = false;
-          NeedsAdd = true;
-        } else if (StepC->getValue().isPowerOf2()) {
-          // This will most likely end up as a shift-left in simplifyRecipe
-          NeedsMul = false;
-          NeedsShl = true;
-        }
+    if (auto *StepC = dyn_cast<VPConstantInt>(getStepValue())) {
+      if (StepC->isOne())
+        NeedsMul = false;
+      else if (StepC->getAPInt().isAllOnes()) {
+        // This will most likely end up as a negate in simplifyRecipe, and
+        // the negate will be combined with the add to make a sub.
+        // NOTE: This is perhaps an invalid assumption that the cost of an
+        // 'add' is the same as a 'sub'.
+        NeedsMul = false;
+        NeedsAdd = true;
+      } else if (StepC->getAPInt().isPowerOf2()) {
+        // This will most likely end up as a shift-left in simplifyRecipe
+        NeedsMul = false;
+        NeedsShl = true;
       }
     }
 
@@ -4920,10 +4921,7 @@ bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
 }
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
-  Value *Op0 = State.get(getOperand(0));
-  Type *VecTy = Op0->getType();
-  Instruction *VecPhi = State.Builder.CreatePHI(VecTy, 2, Name);
-  State.set(this, VecPhi);
+  executePhiRecipe(this, *this, State, /*IsScalar=*/false, Name);
 }
 
 InstructionCost VPWidenPHIRecipe::computeCost(ElementCount VF,

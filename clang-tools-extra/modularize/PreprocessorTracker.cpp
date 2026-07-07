@@ -1078,9 +1078,6 @@ public:
     auto I = ConditionalExpansions.find(InstanceKey);
     // If existing instance of condition not found, add one.
     if (I == ConditionalExpansions.end()) {
-      std::string InstanceSourceLine =
-          getSourceLocationString(PP, InstanceLoc) + ":\n" +
-          getSourceLine(PP, InstanceLoc) + "\n";
       ConditionalExpansions[InstanceKey] =
           ConditionalTracker(DirectiveKind, ConditionValue,
                              ConditionUnexpandedHandle, InclusionPathHandle);

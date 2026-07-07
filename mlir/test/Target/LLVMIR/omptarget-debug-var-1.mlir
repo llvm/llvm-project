@@ -39,7 +39,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     %4 = omp.map.info var_ptr(%ascast : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %5 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %6 = omp.map.info var_ptr(%ascast2 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr
-    omp.target map_entries(%4 -> %arg0, %5 -> %arg1, %6 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%4 -> %arg0, %5 -> %arg1, %6 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       llvm.intr.dbg.declare #var_x = %arg0 : !llvm.ptr
       llvm.intr.dbg.declare #var_arr = %arg1 : !llvm.ptr
       llvm.intr.dbg.declare #var_i = %arg2 : !llvm.ptr
