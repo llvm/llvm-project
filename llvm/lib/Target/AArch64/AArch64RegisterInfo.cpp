@@ -1286,6 +1286,12 @@ bool AArch64RegisterInfo::getRegAllocationHints(
       if (Use.getOpcode() != AArch64::COPY_INTO_TRANSPOSED_TUPLE)
         continue;
 
+      const MachineOperand &Src = Use.getOperand(1);
+      const MachineOperand &Dst = Use.getOperand(0);
+
+      if (!Src.getSubReg() || !Dst.getSubReg())
+        continue;
+
       const TargetRegisterClass *StridedRC;
       switch (RegID) {
       case AArch64::ZPR2StridedOrContiguousRegClassID:
@@ -1304,13 +1310,13 @@ bool AArch64RegisterInfo::getRegAllocationHints(
           StridedOrder.push_back(Reg);
 
       unsigned TupleSize = Use.getOperand(2).getImm();
-      unsigned TupIdx = Use.getOperand(0).getSubReg() - AArch64::zsub0;
+      unsigned TupIdx = Dst.getSubReg() - AArch64::zsub0;
 
-      unsigned TupleID = MRI.getRegClass(Use.getOperand(0).getReg())->getID();
+      unsigned TupleID = MRI.getRegClass(Dst.getReg())->getID();
       bool IsMulZPR = TupleID == AArch64::ZPR2Mul2RegClassID ||
                       TupleID == AArch64::ZPR4Mul4RegClassID;
 
-      iterator_range Copies = MRI.def_instructions(Use.getOperand(0).getReg());
+      iterator_range Copies = MRI.def_instructions(Dst.getReg());
       MachineRegisterInfo::def_instr_iterator CopyWithAssignedSrc =
           llvm::find_if(Copies, [&](const MachineInstr &Def) {
             auto &Src = Def.getOperand(1);
@@ -1363,7 +1369,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
 
           // If the COPY_INTO_TRANSPOSED_TUPLE nodes use the ZPRMul classes, the
           // starting register of the first load should be a multiple of 2 or 4.
-          unsigned SubRegIdx = Use.getOperand(1).getSubReg();
+          unsigned SubRegIdx = Src.getSubReg();
           if (IsMulZPR &&
               (getSubReg(Reg, SubRegIdx) - AArch64::Z0) % TupleSize != TupIdx)
             continue;
@@ -1379,19 +1385,22 @@ bool AArch64RegisterInfo::getRegAllocationHints(
                      (getSubReg(R - 1, AArch64::zsub0) - AArch64::Z0) + 1)) &&
                    !Matrix->isPhysRegUsed(R);
           };
-          if (all_of(iota_range<unsigned>(0U, TupleSize, /*Inclusive=*/false),
-                     IsFreeConsecutiveReg))
+          if (all_of(seq(0U, TupleSize), IsFreeConsecutiveReg))
             Hints.push_back(Reg);
         }
       } else {
         // At least copy already has a physical register assigned to its source.
         // Find the starting sub-register of this and use it to work out the
         // correct strided register to suggest based on the current op index.
-        unsigned AssignedTupIdx =
-            CopyWithAssignedSrc->getOperand(0).getSubReg() - AArch64::zsub0;
+        MachineOperand &AssignedSrc = CopyWithAssignedSrc->getOperand(1);
+        MachineOperand &AssignedDst = CopyWithAssignedSrc->getOperand(0);
+
+        if (!AssignedSrc.getSubReg() || !AssignedDst.getSubReg())
+          continue;
+
+        unsigned AssignedTupIdx = AssignedDst.getSubReg() - AArch64::zsub0;
         MCPhysReg TargetStartReg =
-            getSubReg(VRM->getPhys(CopyWithAssignedSrc->getOperand(1).getReg()),
-                      AArch64::zsub0) +
+            getSubReg(VRM->getPhys(AssignedSrc.getReg()), AArch64::zsub0) +
             (TupIdx - AssignedTupIdx);
 
         for (unsigned I = 0; I < StridedOrder.size(); ++I)
