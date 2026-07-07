@@ -1,8 +1,8 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --use-script --binary %t -- %s \
+// RUN: %dexter_regression_test_run --binary %t -- %s \
 // RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-FORWARD
 // RUN: %dexter_regression_test_cxx_build %s -o %t -DREVERSE_TEST
-// RUN: %dexter_regression_test_run --use-script --binary %t -- %s \
+// RUN: %dexter_regression_test_run --binary %t -- %s \
 // RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-REVERSE
 
 /// Check that the debugger is able to correctly evaluate lists of values for

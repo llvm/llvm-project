@@ -1237,6 +1237,12 @@ SmallVector<utils::IteratorType> TilingNoDpsOp::getLoopIteratorTypes() {
   return {};
 }
 
+FailureOr<TilingResult> TilingNoDpsOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
+}
+
 FailureOr<TilingResult>
 TilingNoDpsOp::getTiledImplementation(OpBuilder &builder,
                                       ArrayRef<OpFoldResult> offsets,

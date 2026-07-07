@@ -1105,8 +1105,14 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
                                DenseMap<VPValue *, VPValue *> &EndValues,
                                PredicatedScalarEvolution &PSE) {
   VPValue *Incoming;
-  if (!match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
-    return nullptr;
+  if (!match(Op,
+             m_CombineOr(m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))) {
+    VPValue *Mask;
+    if (!match(Op, m_ExtractLane(m_LastActiveLane(m_VPValue(Mask)),
+                                 m_VPValue(Incoming))) ||
+        Mask != vputils::findHeaderMask(Plan))
+      return nullptr;
+  }
 
   VPWidenInductionRecipe *WideIV = getOptimizableIVOf(Incoming, PSE);
   if (!WideIV)
@@ -1737,6 +1743,14 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
     Def->replaceAllUsesWith(
         Builder.createNaryOp(VPInstruction::Broadcast, Def->getOperand(0)));
     return;
+  }
+
+  // Replace uses of a BuildVector by users that only use its first lane with
+  // its first operand directly.
+  if (match(Def, m_BuildVector())) {
+    Def->replaceUsesWithIf(Def->getOperand(0), [Def](VPUser &U, unsigned) {
+      return U.usesFirstLaneOnly(Def);
+    });
   }
 
   // Look through broadcast of single-scalar when used as select conditions; in
@@ -3454,8 +3468,10 @@ void VPlanTransforms::addExplicitVectorLength(
 
   // Replace all uses of the canonical IV with VPCurrentIterationPHIRecipe
   // except for the canonical IV increment.
-  CanonicalIV->replaceAllUsesWith(CurrentIteration);
-  CanonicalIVIncrement->setOperand(0, CanonicalIV);
+  CanonicalIV->replaceUsesWithIf(CurrentIteration,
+                                 [CanonicalIVIncrement](VPUser &U, unsigned) {
+                                   return &U != CanonicalIVIncrement;
+                                 });
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
 }

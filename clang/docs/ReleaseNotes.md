@@ -143,8 +143,19 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   compilers. On most targets this is not a breaking change because `fastcc`
   and the platform C calling convention agree for `void(ptr)`. It is an ABI
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
+- `va_arg` on clang aarch64 msvc now reads types with 16-byte size and alignment
+  (e.g. `__int128`) with their actual alignment (instead of an alignment of 8
+  which was used before). Such c-variadic arguments are already passed as
+  aligned, so previously reading the argument could read padding. Clang now
+  matches how MSVC reads such c-variadic arguments.
 - Fixed incorrect struct return when single large vector (256/512-bit) used on
   x86-64 targets. (#GH203760) The bug was introduced since Clang 21. (#GH120670)
+- Clang now applies MSVC's MD5 shortening to over-long Microsoft C++ RTTI type
+  descriptor name strings, matching the behavior already used for the RTTI
+  symbol names. Previously the full name string was always emitted, so deeply
+  nested template types (for example, ones containing local lambdas) could
+  produce very large writable `.data` sections. Emitted RTTI name strings
+  change only for types whose name exceeds the length limit. (#GH206313)
 
 ### AST Dumping Potentially Breaking Changes
 
@@ -154,6 +165,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   fields were missing from the JSON output.
 - Colons that appear at the end of a ParamCommentCommand name are not serialized
   as part of the name.
+- AST pretty-printing now respects `PrintingPolicy::FullyQualifiedName` when
+  printing `DeclRefExpr` names, including expression-form non-type template
+  arguments in printed types. Previously, these references could be printed
+  unqualified. (#GH206041)
 
 ### Clang Frontend Potentially Breaking Changes
 
@@ -231,6 +246,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### C++2d Feature Support
 
+- Added compiler flags `-std=c++2d` and `-std=gnu++2d` for experimental C++2d implementation work.
+
 - Clang now supports [P3733R1](https://wg21.link/p3733r1>) More named universal character escapes.
   The change is applied as a DR to all C++ language modes. (#GH203944)
 
@@ -254,6 +271,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   operator()](https://cplusplus.github.io/CWG/issues/1780.html)
 - Clang now allows omitting `typename` before a template name in a
   conversion operator, implementing [CWG2413](https://wg21.link/cwg2413).
+- Member specializations can now be declared in class scope, according to the
+  resolution of [CWG727](https://wg21.link/cwg727). This is still not sufficient
+  to resolve that core issue.
 - Clang now uses non-reference types for structured bindings whose initializer
   returns a prvalue. This resolves [CWG3135](https://wg21.link/cwg3135).
 
@@ -673,9 +693,6 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Clang now rejects inline asm constraints and clobbers that contain an
   embedded null character, instead of silently truncating them. (#GH173900)
 
-- Added `-Wstringop-overread` to warn when `memcpy`, `memmove`, `memcmp`,
-  and related builtins read more bytes than the source buffer size (#GH83728).
-
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
@@ -683,6 +700,14 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   `umask` has bits set outside `0777`. Those bits are silently discarded
   by the kernel, so setting them is almost always a typo (matching the
   bionic libc `diagnose_if` check).
+
+- Improved how Unicode characters are displayed in diagnostic messages.
+
+- `-Wtautological-pointer-compare` and `-Wpointer-bool-conversion` now
+  diagnose a reference to a function (e.g. of type `void (&)()`) compared
+  against or converted to a null pointer, the same as a bare function name.
+  (#GH46362)
+
 
 ### Improvements to Clang's time-trace
 
@@ -748,6 +773,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
 - Fixed assertion failures involving code completion with delayed default arguments and exception specifications. (#GH200879)
 - Fixed a regression where calling a function that takes a class-type parameter by value inside `decltype` of a concept could be incorrectly rejected when used as a non-type template argument. (#GH175831)
+- Fixed a crash in the constant evaluator when an ill-formed array new-expression whose bound could not be determined (e.g. `new int[]()`) was used in a constant expression. (#GH200139)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -794,6 +820,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed an alias template CTAD crash.
 - Correctly diagnose uses of `co_await` / `co_yield` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+- Fixed clang incorrectly rejecting several cases of out-of-line definitions. (#GH101330)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed crash instantiating class member specializations.
@@ -811,6 +838,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   when used inside decltype in the return type. (#GH180460)
 - Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in `constexpr`. (#GH180044)
 - Fixed a crash when `explicit(bool)` is used with an incomplete enumeration. (#GH183887)
+- Fix crash-on-invalid caused by qualified forward declarations. (#GH202320)
 - Fixed a crash on `typeid` of incomplete local types during template instantiation. (#GH63242), (#GH176397)
 - Fixed spurious diagnostics produced when checking if constraints are equivalent for redeclarations,
   which could make the program mistakenly ill-formed.
@@ -924,6 +952,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   - Support intrinsic of `_mm256_maskz_bitrev_epi8`.
   - Support intrinsic of `_mm_bitrev_epi8`.
   - Support intrinsic of `_mm256_bitrev_epi8`.
+- Removed support for `AMX-TF32` (`-mamx-tf32`) and `TMMULTF32PS` instruction.
 
 #### Arm and AArch64 Support
 
@@ -959,6 +988,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - When targeting Windows x64 with EGPR (`-mapx-features=egpr`), Clang now
   automatically enables V3 unwind info (`-fwinx64-eh-unwind=v3`) if no
   explicit unwind version was specified.
+
+- Clang now supports `-std:c++26preview` for compatibility with MSVC. This enables C++26 features.
 
 #### LoongArch Support
 
