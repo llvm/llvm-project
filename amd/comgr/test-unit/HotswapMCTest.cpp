@@ -156,6 +156,66 @@ TEST(EncodeSBranch, FailsOnInvalidState) {
   EXPECT_TRUE(S.encodeSBranch(0, 8).empty());
 }
 
+// -- encodeLongBranch (s_add_pc_i64) -----------------------------------------
+//
+// The long branch reaches anywhere via s_add_pc_i64, which adds a signed
+// literal to the PC of the next instruction: landing PC == From + size + imm.
+// A positive (forward) offset fits a 32-bit literal (8 bytes); a negative
+// (backward) offset needs a 64-bit literal (12 bytes). These verify the offset
+// math and encoding structurally rather than pinning exact bytes.
+
+// Read the signed literal that follows the 4-byte opcode dword.
+static int64_t longBranchLiteral(llvm::ArrayRef<uint8_t> Out) {
+  if (Out.size() == LongBranchFwdBytes)
+    return static_cast<int32_t>(readDword(Out.data() + MinInstSize));
+  int64_t V = 0;
+  std::memcpy(&V, Out.data() + MinInstSize, sizeof(V));
+  return V;
+}
+
+TEST(EncodeLongBranch, ForwardLandsOnTarget) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  // ~512 KB forward -- well beyond s_branch's +-128 KB reach.
+  const uint64_t From = 0x1000, To = 0x81000;
+  llvm::SmallVector<uint8_t> Out = encodeLongBranch(S, From, To);
+  ASSERT_EQ(Out.size(), LongBranchFwdBytes);
+  EXPECT_EQ(From + Out.size() + longBranchLiteral(Out), To);
+
+  std::vector<InternalDecodedInst> Dec;
+  ASSERT_TRUE(decodeTextSection(Out.data(), Out.size(), S, Dec));
+  ASSERT_EQ(Dec.size(), 1u);
+  EXPECT_EQ(Dec[0].Mnemonic, "s_add_pc_i64");
+}
+
+TEST(EncodeLongBranch, BackwardUsesWideLiteralAndLandsOnTarget) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  // Backward jump (trampoline tail -> earlier return point).
+  const uint64_t From = 0x81000, To = 0x1004;
+  llvm::SmallVector<uint8_t> Out = encodeLongBranch(S, From, To);
+  ASSERT_EQ(Out.size(), LongBranchMaxBytes);
+  EXPECT_EQ(static_cast<int64_t>(From) + static_cast<int64_t>(Out.size()) +
+                longBranchLiteral(Out),
+            static_cast<int64_t>(To));
+
+  std::vector<InternalDecodedInst> Dec;
+  ASSERT_TRUE(decodeTextSection(Out.data(), Out.size(), S, Dec));
+  ASSERT_EQ(Dec.size(), 1u);
+  EXPECT_EQ(Dec[0].Mnemonic, "s_add_pc_i64");
+}
+
+TEST(EncodeLongBranch, ReachesBeyondSBranchRange) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  // 4 MB: s_branch rejects it, the long branch encodes it.
+  const uint64_t From = 0, To = 0x400000;
+  EXPECT_TRUE(S.encodeSBranch(From, To).empty());
+  llvm::SmallVector<uint8_t> Out = encodeLongBranch(S, From, To);
+  ASSERT_FALSE(Out.empty());
+  EXPECT_EQ(From + Out.size() + longBranchLiteral(Out), To);
+}
+
 // -- assembleSingleInst / decodeTextSection round-trip ------------------------
 
 TEST(AssembleDecode, SNopRoundTrip) {

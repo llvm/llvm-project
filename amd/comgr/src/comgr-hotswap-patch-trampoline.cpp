@@ -447,7 +447,12 @@ struct ScratchAlloc {
 
 std::optional<ScratchAlloc> tryAllocScratchVgpr(PatchContext &Ctx, size_t Idx) {
   InternalDecodedInst &DI = Ctx.Decoded[Idx];
-  std::string KernelName = Ctx.Elf.findKernelAtOffset(DI.Offset);
+  // findKernelAtOffset matches against symbol virtual addresses, so bias the
+  // .text-relative DI.Offset by textAddr() (matching the other patches). A
+  // bare offset misses when .text has a non-zero sh_addr, leaving KdVgprs ==
+  // 0 and handing the allocator a live register.
+  std::string KernelName =
+      Ctx.Elf.findKernelAtOffset(DI.Offset + Ctx.Elf.textAddr());
   unsigned KdVgprs = 0;
   if (std::optional<unsigned> Opt =
           Ctx.Elf.getKernelVgprCount(KernelName, Ctx.Config.VgprGranuleSize))
@@ -476,12 +481,57 @@ void commitScratchVgpr(PatchContext &Ctx, const ScratchAlloc &Alloc) {
   Stats.ScratchAboveKd += Alloc.ExtraVgprsNeeded;
 }
 
+// -- scratch-SGPR allocation ------------------------------------------------
+//
+// Allocate a scratch SGPR above the kernel's .sgpr_count. Those SGPRs are
+// never used by the kernel, and GFX10+ waves always have the full SGPR file
+// (no KD bump needed), so unlike VGPRs this needs no liveness. Same strategy
+// the E5M3 patch uses.
+//
+// TODO: the E5M3 patch open-codes this same scratch-SGPR reservation. Hoist
+// SgprScratchAlloc / tryAllocScratchSgpr / commitScratchSgpr into shared
+// infrastructure both patches call, rather than duplicating it.
+
+struct SgprScratchAlloc {
+  unsigned Sgpr = 0;
+  std::string KernelName;
+  unsigned ExtraSgprsNeeded = 0;
+};
+
+std::optional<SgprScratchAlloc> tryAllocScratchSgpr(PatchContext &Ctx,
+                                                    size_t Idx) {
+  InternalDecodedInst &DI = Ctx.Decoded[Idx];
+  std::string KernelName =
+      Ctx.Elf.findKernelAtOffset(DI.Offset + Ctx.Elf.textAddr());
+  std::optional<unsigned> KdSgprs = Ctx.Elf.getKernelSgprCount(KernelName);
+  unsigned SgprKdCount = KdSgprs.value_or(Ctx.Config.MaxSgprs);
+
+  SgprAllocator Alloc(SgprKdCount, Ctx.Config.MaxSgprs);
+  std::optional<unsigned> S = Alloc.alloc();
+  if (!S)
+    return std::nullopt;
+
+  SgprScratchAlloc Out;
+  Out.Sgpr = *S;
+  Out.KernelName = std::move(KernelName);
+  Out.ExtraSgprsNeeded = Alloc.extraSgprsNeeded();
+  return Out;
+}
+
+void commitScratchSgpr(PatchContext &Ctx, const SgprScratchAlloc &Alloc) {
+  if (Alloc.ExtraSgprsNeeded == 0 || Alloc.KernelName.empty())
+    return;
+  KernelPatchStats &Stats = Ctx.KernelStats[Alloc.KernelName];
+  Stats.ExtraSgprs = std::max(Stats.ExtraSgprs, Alloc.ExtraSgprsNeeded);
+}
+
 // -- patchTensorLoadToLds ---------------------------------------------------
 //
 // Prepend s_pack_hh_b32_b16 to clear multicast routing bits in the group
 // descriptor's base SGPR. If the SGPR is live after the tensor_load, bracket
-// the sequence with v_writelane/v_readlane to save and restore its value
-// through a scratch VGPR lane.
+// the sequence with s_mov_b32 through a scratch SGPR to save/restore it. (An
+// earlier version used a VGPR lane, but occupancy-1 kernels have no free VGPR
+// so the patch declined; a scratch SGPR is always available.)
 
 bool patchTensorLoadToLds(PatchContext &Ctx, size_t Idx) {
   InternalDecodedInst &DI = Ctx.Decoded[Idx];
@@ -494,10 +544,9 @@ bool patchTensorLoadToLds(PatchContext &Ctx, size_t Idx) {
     return false;
   }
 
-  // Idempotency guard: check whether the immediately preceding instruction
-  // matches one of the specific patterns we emit during patching:
-  //   dead-SGPR path: s_pack_hh_b32_b16 sN, 0, sN  (dst == BaseMCReg)
-  //   live-SGPR path: v_writelane_b32 vX, sN, 0     (src == BaseMCReg)
+  // Idempotency guard: both paths emit `s_pack_hh_b32_b16 sN, 0, sN`
+  // (dst == BaseMCReg) right before the relocated instruction, so one check
+  // covers re-rewrites.
   if (Idx > 0) {
     const InternalDecodedInst &Prev = Ctx.Decoded[Idx - 1];
     const MCInst &PI = Prev.Inst;
@@ -505,11 +554,6 @@ bool patchTensorLoadToLds(PatchContext &Ctx, size_t Idx) {
         PI.getOperand(0).isReg() &&
         MRI.regsOverlap(PI.getOperand(0).getReg(), BaseMCReg.id()) &&
         PI.getOperand(1).isImm() && PI.getOperand(1).getImm() == 0)
-      return false;
-    if (Prev.Mnemonic == "v_writelane_b32" && PI.getNumOperands() >= 3 &&
-        PI.getOperand(1).isReg() &&
-        MRI.regsOverlap(PI.getOperand(1).getReg(), BaseMCReg.id()) &&
-        PI.getOperand(2).isImm() && PI.getOperand(2).getImm() == 0)
       return false;
   }
 
@@ -528,16 +572,16 @@ bool patchTensorLoadToLds(PatchContext &Ctx, size_t Idx) {
   const uint8_t *OrigInst = Ctx.Text + DI.Offset;
 
   if (SgprLive) {
-    std::optional<ScratchAlloc> ScratchVgpr = tryAllocScratchVgpr(Ctx, Idx);
-    if (!ScratchVgpr) {
-      log() << "hotswap: error: tensor_load_to_lds: no scratch VGPR "
+    std::optional<SgprScratchAlloc> ScratchSgpr = tryAllocScratchSgpr(Ctx, Idx);
+    if (!ScratchSgpr) {
+      log() << "hotswap: error: tensor_load_to_lds: no scratch SGPR "
                "available\n";
       return false;
     }
 
-    std::string V = "v" + std::to_string(ScratchVgpr->Vgpr);
-    std::string SaveAsm = "v_writelane_b32 " + V + ", " + BaseSreg + ", 0";
-    std::string RestoreAsm = "v_readlane_b32 " + BaseSreg + ", " + V + ", 0";
+    std::string S = "s" + std::to_string(ScratchSgpr->Sgpr);
+    std::string SaveAsm = "s_mov_b32 " + S + ", " + BaseSreg;
+    std::string RestoreAsm = "s_mov_b32 " + BaseSreg + ", " + S;
     SmallVector<uint8_t> Save = assembleSingleInst(SaveAsm, Ctx.LS);
     SmallVector<uint8_t> Restore = assembleSingleInst(RestoreAsm, Ctx.LS);
     if (Save.empty() || Restore.empty()) {
@@ -554,19 +598,12 @@ bool patchTensorLoadToLds(PatchContext &Ctx, size_t Idx) {
     if (!emitReplacementCode(Ctx, DI.Offset, DI.Size, Replacement))
       return false;
 
-    // Record the scratch reservation only after the patch is committed:
-    // any earlier failure (assembly, emission) leaves nothing at DI.Offset
-    // to back the reservation, and bumping the kernel descriptor would
-    // reserve VGPRs the code object never uses.
-    ScratchPatchInfo SPI;
-    SPI.Offset = DI.Offset;
-    SPI.ScratchRegs.resize(Ctx.Config.MaxVgprs);
-    SPI.ScratchRegs.set(ScratchVgpr->Vgpr);
-    Ctx.OutScratchPatches.push_back(std::move(SPI));
-    commitScratchVgpr(Ctx, *ScratchVgpr);
+    // SGPRs above .sgpr_count need no KD bump on GFX10+; commit only after
+    // the patch is emitted, to keep per-kernel stats accurate.
+    commitScratchSgpr(Ctx, *ScratchSgpr);
 
     log() << "hotswap: tensor_load_to_lds: " << BaseSreg
-          << " live, save/restore via " << V << "\n";
+          << " live, save/restore via " << S << "\n";
   } else {
     SmallVector<uint8_t> Replacement;
     Replacement.append(PackBytes.begin(), PackBytes.end());
@@ -762,7 +799,8 @@ bool patchDsAddtid(PatchContext &Ctx, size_t Idx) {
     // because the original data VGPR must be preserved as the store source.
     StoreScratch = tryAllocScratchVgpr(Ctx, Idx);
     if (!StoreScratch) {
-      std::string KernelName = Ctx.Elf.findKernelAtOffset(DI.Offset);
+      std::string KernelName =
+          Ctx.Elf.findKernelAtOffset(DI.Offset + Ctx.Elf.textAddr());
       StringRef KernelDisplay =
           KernelName.empty() ? StringRef("<unknown>") : StringRef(KernelName);
       std::optional<uint32_t> LdsSize =

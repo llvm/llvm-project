@@ -29,11 +29,11 @@
 
 // COM: Live-SGPR trampoline body (for kernel 2): also placed in the
 // COM: padding region. save + pack + tensor + restore + branch-back.
-// DISASM: v_writelane_b32
-// DISASM: s_pack_hh_b32_b16
-// DISASM: tensor_load_to_lds
-// DISASM: v_readlane_b32
-// DISASM: s_branch
+// DISASM: s_mov_b32 [[SCRATCH:s[0-9]+]], s4
+// DISASM-NEXT: s_pack_hh_b32_b16 s4, 0, s4
+// DISASM-NEXT: tensor_load_to_lds
+// DISASM-NEXT: s_mov_b32 s4, [[SCRATCH]]
+// DISASM-NEXT: s_branch
 
 // COM: Kernel 2 (live SGPR, no sled): the original tensor_load is
 // COM: replaced by s_branch backward to the trampoline body above.

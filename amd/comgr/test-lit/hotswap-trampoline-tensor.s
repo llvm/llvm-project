@@ -2,7 +2,7 @@
 // COM: Prepends s_pack_hh_b32_b16 to clear multicast routing bits in
 // COM: the descriptor's base SGPR. Base operand variants via NOP sled:
 // COM:   dead SGPR  — only s_pack_hh prepended (no save/restore)
-// COM:   live SGPR  — v_writelane save, s_pack_hh, tensor, v_readlane restore
+// COM:   live SGPR  — s_mov save, s_pack_hh, tensor, s_mov restore
 // COM:   alt descriptor — different SGPR range (s[16:23]) for pack target
 // COM:   SGPR redef — descriptor SGPR overwritten before use (dead path)
 // COM: Verifies per-kernel behavior with CHECK-LABEL blocks and explicit
@@ -43,15 +43,15 @@
 // COM: Kernel 2 (live SGPR): s_branch forward to sled, then save/pack/
 // COM: tensor/restore sequence in sled area with branch-back.
 // COM: s4 is used after tensor_load_to_lds (s_mov reads it), so
-// COM: save/restore via scratch VGPR is required.
+// COM: save/restore via a scratch SGPR is required.
 // DISASM-LABEL: <test_tensor_live>:
 // DISASM: s_branch
-// DISASM: s_mov_b32
-// DISASM: v_writelane_b32
-// DISASM: s_pack_hh_b32_b16
-// DISASM: tensor_load_to_lds
-// DISASM: v_readlane_b32
-// DISASM: s_branch
+// DISASM: s_endpgm
+// DISASM: s_mov_b32 [[SCRATCH:s[0-9]+]], s4
+// DISASM-NEXT: s_pack_hh_b32_b16 s4, 0, s4
+// DISASM-NEXT: tensor_load_to_lds
+// DISASM-NEXT: s_mov_b32 s4, [[SCRATCH]]
+// DISASM-NEXT: s_branch
 
 // COM: Kernel 3 (alternate descriptor s[16:23]): verifies
 // COM: getDescriptorBaseSgpr correctly extracts s16 from a different

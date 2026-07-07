@@ -347,6 +347,17 @@ Expected<ElfView> ElfView::create(uint8_t *Data, size_t Size) {
 // -- ElfView::findKernelAtOffset ----------------------------------------------
 
 std::string ElfView::findKernelAtOffset(uint64_t TextOffset) const {
+  // Select the nearest-preceding STT_FUNC symbol (greatest st_value <=
+  // TextOffset). AMDGPU kernel entry symbols often have st_size == 0, so an
+  // exact containment test never matches; honor st_size only when non-zero.
+  //
+  // The nearest-preceding function could be a non-kernel device function; the
+  // guard below rejects that case so callers never scratch-allocate against a
+  // non-kernel context.
+  bool Found = false;
+  uint64_t BestValue = 0;
+  std::string BestName;
+
   for (const ELFT::Shdr &SymShdr : Sections) {
     if (SymShdr.sh_type != ELF::SHT_SYMTAB &&
         SymShdr.sh_type != ELF::SHT_DYNSYM)
@@ -369,19 +380,39 @@ std::string ElfView::findKernelAtOffset(uint64_t TextOffset) const {
         continue;
       if (Sym.st_shndx != TextSectionIndex)
         continue;
-      if (TextOffset < Sym.st_value || TextOffset >= Sym.st_value + Sym.st_size)
+      if (TextOffset < Sym.st_value)
+        continue;
+      // Honor an explicit upper bound; skip it for zero-size symbols.
+      if (Sym.st_size != 0 && TextOffset >= Sym.st_value + Sym.st_size)
+        continue;
+      if (Found && Sym.st_value <= BestValue)
         continue;
       Expected<StringRef> NameOrErr = Sym.getName(*StrTabOrErr);
       if (!NameOrErr) {
-        log() << "hotswap: error: findKernelAtOffset: function symbol "
-              << "covering offset 0x" << utohexstr(TextOffset)
-              << " has unreadable name: " << toString(NameOrErr.takeError())
-              << "\n";
-        return "";
+        consumeError(NameOrErr.takeError());
+        continue;
       }
-      return NameOrErr->str();
+      Found = true;
+      BestValue = Sym.st_value;
+      BestName = NameOrErr->str();
     }
   }
+
+  if (Found) {
+    // Confirm the selected symbol is actually a kernel: every kernel carries a
+    // "<name>.kd" descriptor symbol, whereas a plain device function does not.
+    // This is the same descriptor lookup getKernelVgprCount performs, so a real
+    // kernel is never rejected; a non-kernel is reported as "not found" so the
+    // caller declines instead of scratch-allocating against a wrong context.
+    if (const_cast<ElfView *>(this)->findKernelDescriptor(BestName)) {
+      return BestName;
+    }
+    log() << "hotswap: findKernelAtOffset: nearest function symbol '"
+          << BestName << "' preceding offset 0x" << utohexstr(TextOffset)
+          << " has no .kd descriptor (not a kernel); treating as no match.\n";
+    return "";
+  }
+
   log() << "hotswap: findKernelAtOffset: no function symbol covers offset 0x"
         << utohexstr(TextOffset) << " in .text.\n";
   return "";

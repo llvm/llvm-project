@@ -54,6 +54,10 @@ struct KernelDescriptorElfOptions {
   uint64_t TextAddr = 0x1000;
   uint64_t RodataAddr = 0x2000;
   bool EmitKernelDescriptorSymbol = true;
+  // Emit the kernel entry STT_FUNC symbol with st_size == 0, matching AMDGPU
+  // HSACO objects where the size lives on the .kd object symbol. Exercises the
+  // nearest-preceding lookup in ElfView::findKernelAtOffset.
+  bool ZeroSizeKernelSym = false;
   std::optional<uint64_t> KernelDescriptorSymbolValue;
   uint32_t GroupSegmentFixedSize = 0;
   uint32_t ComputePgmRsrc3 = 0;
@@ -282,7 +286,7 @@ makeKernelDescriptorElf(llvm::ArrayRef<uint8_t> Text,
   KernelSym.setBindingAndType(STB_GLOBAL, STT_FUNC);
   KernelSym.st_shndx = 1;
   KernelSym.st_value = Options.TextAddr;
-  KernelSym.st_size = Text.size();
+  KernelSym.st_size = Options.ZeroSizeKernelSym ? 0 : Text.size();
   std::memcpy(Buf + SymTabOff + 1 * sizeof(Elf64_Sym), &KernelSym,
               sizeof(KernelSym));
 

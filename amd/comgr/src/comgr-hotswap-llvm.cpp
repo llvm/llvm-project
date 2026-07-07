@@ -450,6 +450,15 @@ SmallVector<uint8_t> assembleSingleInst(StringRef AsmStr, const LLVMState &S) {
 
 // -- buildTrampoline ----------------------------------------------------------
 
+std::string joinAsmLines(ArrayRef<std::string> AsmLines) {
+  std::string AsmSource;
+  for (StringRef Line : AsmLines) {
+    AsmSource += Line;
+    AsmSource += '\n';
+  }
+  return AsmSource;
+}
+
 Trampoline buildTrampoline(ArrayRef<std::string> AsmLines,
                            uint64_t OriginalOffset, uint32_t OriginalSize,
                            uint64_t TrampolineTextOffset, const LLVMState &S) {
@@ -457,13 +466,7 @@ Trampoline buildTrampoline(ArrayRef<std::string> AsmLines,
   Result.OriginalOffset = OriginalOffset;
   Result.OriginalSize = OriginalSize;
 
-  std::string AsmSource;
-  for (StringRef Line : AsmLines) {
-    AsmSource += Line;
-    AsmSource += '\n';
-  }
-
-  SmallVector<uint8_t> Bytes = assembleSingleInst(AsmSource, S);
+  SmallVector<uint8_t> Bytes = assembleSingleInst(joinAsmLines(AsmLines), S);
   if (Bytes.empty()) {
     log() << "hotswap: error: buildTrampoline: assembleSingleInst returned "
           << "empty for trampoline originating at offset 0x"
