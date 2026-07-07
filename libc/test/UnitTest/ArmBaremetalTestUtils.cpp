@@ -64,9 +64,9 @@ struct __llvm_libc_stdio_cookie __llvm_libc_stderr_cookie;
 static void stdio_open(struct __llvm_libc_stdio_cookie *cookie, size_t mode) {
   const char std_stream_name[] = ":tt";
   size_t args[] = {
-    reinterpret_cast<size_t>(std_stream_name),
-    mode,
-    sizeof(std_stream_name) - 1UL,
+      reinterpret_cast<size_t>(std_stream_name),
+      mode,
+      sizeof(std_stream_name) - 1UL,
   };
   cookie->handle = semihosting_call(SYS_OPEN, args);
 }
@@ -87,9 +87,9 @@ void __llvm_libc_exit(int status) {
 ssize_t __llvm_libc_stdio_write(struct __llvm_libc_stdio_cookie *cookie,
                                 const char *buf, size_t size) {
   size_t args[] = {
-    static_cast<size_t>(cookie->handle),
-    reinterpret_cast<size_t>(buf),
-    size,
+      static_cast<size_t>(cookie->handle),
+      reinterpret_cast<size_t>(buf),
+      size,
   };
   ssize_t retval = semihosting_call(SYS_WRITE, args);
   if (retval >= 0)
