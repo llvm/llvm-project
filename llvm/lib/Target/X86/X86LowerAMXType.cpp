@@ -39,6 +39,7 @@
 //===----------------------------------------------------------------------===//
 //
 #include "X86.h"
+#include "X86Subtarget.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -97,6 +98,47 @@ static bool containsAMXCode(Function &F) {
     for (Instruction &I : BB)
       if (I.getType()->isX86_AMXTy())
         return true;
+  return false;
+}
+
+// Check if the instruction is an ACE-only intrinsic.
+// ACE (Palette 2) doesn't have TILELOADD/TILESTORED instructions,
+// so volatile tile data transformation should skip ACE intrinsics.
+static bool isACEOnlyIntrinsic(Instruction *I) {
+  auto *II = dyn_cast<IntrinsicInst>(I);
+  if (!II)
+    return false;
+  switch (II->getIntrinsicID()) {
+  // ACE outer product intrinsics
+  case Intrinsic::x86_top2bf16ps_internal:
+  case Intrinsic::x86_top4buud_internal:
+  case Intrinsic::x86_top4busd_internal:
+  case Intrinsic::x86_top4bssd_internal:
+  case Intrinsic::x86_top4bsud_internal:
+  // ACE mixed precision intrinsics
+  case Intrinsic::x86_top4mxhf8ps_internal:
+  case Intrinsic::x86_top4mxbhf8ps_internal:
+  case Intrinsic::x86_top4mxhbf8ps_internal:
+  case Intrinsic::x86_top4mxbf8ps_internal:
+  case Intrinsic::x86_top4mxbssps_internal:
+  // ACE tile movement intrinsics
+  case Intrinsic::x86_tilesetcol_internal:
+  case Intrinsic::x86_tilesetrow_internal:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Check if PHI node has any ACE-only intrinsic as incoming value.
+static bool hasACEIncomingValue(PHINode *PHI) {
+  for (unsigned I = 0, E = PHI->getNumIncomingValues(); I != E; ++I) {
+    Value *Op = PHI->getIncomingValue(I);
+    if (auto *Inst = dyn_cast<Instruction>(Op)) {
+      if (isACEOnlyIntrinsic(Inst))
+        return true;
+    }
+  }
   return false;
 }
 
@@ -206,6 +248,59 @@ std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
   case Intrinsic::x86_tcvtrowps2phl_internal:
   case Intrinsic::x86_tilemovrow_internal: {
     assert(OpNo == 2 && "Illegal Operand Number.");
+    Row = II->getArgOperand(0);
+    Col = II->getArgOperand(1);
+    break;
+  }
+  // ACE internal intrinsics - outer products with ZMM sources
+  // Pattern: (m, n, k, acc_tile, zmm1, zmm2) -> acc_tile += zmm1 * zmm2
+  case Intrinsic::x86_top2bf16ps_internal:
+  case Intrinsic::x86_top4buud_internal:
+  case Intrinsic::x86_top4busd_internal:
+  case Intrinsic::x86_top4bssd_internal:
+  case Intrinsic::x86_top4bsud_internal: {
+    switch (OpNo) {
+    case 3: // Accumulator tile
+      Row = II->getArgOperand(0);
+      Col = II->getArgOperand(1);
+      break;
+    case 4: // ZMM source 1 - doesn't have tile shape, use full dimensions
+      LLVM_FALLTHROUGH;
+    case 5: // ZMM source 2
+      // ZMM sources don't need shape calculation for tile purposes
+      // but if needed: Row = m, Col = k for src1; Row = k/4, Col = n for src2
+      Row = II->getArgOperand(0);
+      Col = II->getArgOperand(2);
+      break;
+    }
+    break;
+  }
+  // ACE TOP4MX intrinsics - mixed precision with BSR index
+  // Pattern: (m, n, k, bsr_idx, acc_tile, zmm1, zmm2)
+  case Intrinsic::x86_top4mxhf8ps_internal:
+  case Intrinsic::x86_top4mxbhf8ps_internal:
+  case Intrinsic::x86_top4mxhbf8ps_internal:
+  case Intrinsic::x86_top4mxbf8ps_internal:
+  case Intrinsic::x86_top4mxbssps_internal: {
+    switch (OpNo) {
+    case 4: // Accumulator tile
+      Row = II->getArgOperand(0);
+      Col = II->getArgOperand(1);
+      break;
+    case 5: // ZMM source 1
+      LLVM_FALLTHROUGH;
+    case 6: // ZMM source 2
+      Row = II->getArgOperand(0);
+      Col = II->getArgOperand(2);
+      break;
+    }
+    break;
+  }
+  // ACE TILEMOV intrinsics - move ZMM to tile row/column
+  // Pattern: (m, n, zmm_src, idx) -> tile
+  case Intrinsic::x86_tilesetcol_internal:
+  case Intrinsic::x86_tilesetrow_internal: {
+    // Output tile shape
     Row = II->getArgOperand(0);
     Col = II->getArgOperand(1);
     break;
@@ -715,11 +810,18 @@ bool X86VolatileTileData::volatileTileData() {
     for (Instruction *I : AMXDefInsts) {
       if (isIncomingOfPHI(I))
         continue;
+      // Skip ACE-only intrinsics - ACE (Palette 2) doesn't have
+      // TILELOADD/TILESTORED instructions needed for volatile model.
+      if (isACEOnlyIntrinsic(I))
+        continue;
       volatileTileNonPHI(I);
       Changed = true;
     }
 
     for (Instruction *I : PHIInsts) {
+      // Skip PHI nodes with ACE intrinsic incoming values.
+      if (hasACEIncomingValue(dyn_cast<PHINode>(I)))
+        continue;
       volatileTilePHI(dyn_cast<PHINode>(I));
       Changed = true;
     }
@@ -734,9 +836,18 @@ namespace {
 class X86LowerAMXCast {
   Function &Func;
   std::unique_ptr<DominatorTree> DT;
+  bool IsACEOnly; // ACE v1 without AMX TILELOADD/TILESTORED
 
 public:
-  X86LowerAMXCast(Function &F) : Func(F), DT(nullptr) {}
+  X86LowerAMXCast(Function &F, const TargetMachine *TM = nullptr)
+      : Func(F), DT(nullptr), IsACEOnly(false) {
+    if (TM) {
+      // Check if we're ACE-only (no AMX TILELOADD/TILESTORED available)
+      const X86Subtarget *ST =
+          static_cast<const X86Subtarget *>(TM->getSubtargetImpl(F));
+      IsACEOnly = ST && ST->hasACEV1() && !ST->hasAMXTILE();
+    }
+  }
   bool combineCastStore(IntrinsicInst *Cast, StoreInst *ST);
   bool combineLoadCast(IntrinsicInst *Cast, LoadInst *LD);
   bool combineTilezero(IntrinsicInst *Cast);
@@ -962,6 +1073,10 @@ bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
     return false;
 
   auto *II = cast<IntrinsicInst>(Tile);
+  // ACE v1 doesn't have TILESTORED instruction - skip combining for ACE targets
+  // or ACE intrinsics. ACE uses struct-based API with vector load/store.
+  if (IsACEOnly || isACEOnlyIntrinsic(II))
+    return false;
   // Tile is output from AMX intrinsic. The first operand of the
   // intrinsic is row, the second operand of the intrinsic is column.
   Value *Row = II->getOperand(0);
@@ -991,6 +1106,10 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
   // TODO: If it is cast intrinsic or phi node, we can propagate the
   // shape information through def-use chain.
   if (!isAMXIntrinsic(II))
+    return false;
+  // ACE v1 doesn't have TILELOADD instruction - skip combining for ACE targets
+  // or ACE intrinsics. ACE uses struct-based API with vector load/store.
+  if (IsACEOnly || isACEOnlyIntrinsic(II))
     return false;
   std::tie(Row, Col) = getShape(II, OpNo);
   IRBuilder<> Builder(LD);
@@ -1225,6 +1344,18 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
     auto *II = dyn_cast<IntrinsicInst>(U.getUser());
     if (!II)
       return false; // May be bitcast from x86amx to <256 x i32>.
+    // ACE v1 doesn't have TILELOADD - for ACE targets or ACE intrinsics,
+    // use tilezero since ACE tiles are typically zero-initialized in struct
+    // API.
+    if (IsACEOnly || isACEOnlyIntrinsic(II)) {
+      Value *Row = nullptr, *Col = nullptr;
+      std::tie(Row, Col) = getShape(II, OpNo);
+      Value *NewInst = Builder.CreateIntrinsic(Intrinsic::x86_tilezero_internal,
+                                               {}, {Row, Col});
+      AMXCast->replaceAllUsesWith(NewInst);
+      AMXCast->eraseFromParent();
+      return true;
+    }
     Prepare(AMXCast->getOperand(0)->getType());
     Builder.CreateStore(Src, AllocaAddr);
     // TODO we can pick an constant operand for the shape.
@@ -1247,6 +1378,15 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
     auto *II = dyn_cast<IntrinsicInst>(Src);
     if (!II)
       return false; // May be bitcast from <256 x i32> to x86amx.
+    // ACE v1 doesn't have TILESTORED - for ACE targets or ACE intrinsics,
+    // just create a poison value since the tile result is typically not read
+    // back.
+    if (IsACEOnly || isACEOnlyIntrinsic(II)) {
+      Value *Poison = PoisonValue::get(AMXCast->getType());
+      AMXCast->replaceAllUsesWith(Poison);
+      AMXCast->eraseFromParent();
+      return true;
+    }
     Prepare(AMXCast->getType());
     Value *Row = II->getOperand(0);
     Value *Col = II->getOperand(1);
@@ -1290,7 +1430,7 @@ bool lowerAmxType(Function &F, const TargetMachine *TM,
     return false;
 
   bool C = false;
-  X86LowerAMXCast LAC(F);
+  X86LowerAMXCast LAC(F, TM);
   C |= LAC.combineAMXcast(TLI);
   // There might be remaining AMXcast after combineAMXcast and they should be
   // handled elegantly.

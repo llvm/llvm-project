@@ -4563,7 +4563,13 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
       return Load ? X86::VMOVUPSZrm : X86::VMOVUPSZmr;
   case 1024:
     assert(X86::TILERegClass.hasSubClassEq(RC) && "Unknown 1024-byte regclass");
-    assert(STI.hasAMXTILE() && "Using 8*1024-bit register requires AMX-TILE");
+    assert((STI.hasAMXTILE() || STI.hasACEV1()) &&
+           "Using 8*1024-bit register requires AMX-TILE or ACE");
+    // ACE v1 doesn't have TILELOADD/TILESTORED - tile spilling should be
+    // handled by X86LowerTileCopy using TILEMOVROW row-by-row.
+    // This path should only be hit for AMX targets.
+    assert(STI.hasAMXTILE() &&
+           "ACE tile spill should use TILEMOVROW, not TILELOADD/TILESTORED");
 #define GET_EGPR_IF_ENABLED(OPC) (STI.hasEGPR() ? OPC##_EVEX : OPC)
     return Load ? GET_EGPR_IF_ENABLED(X86::TILELOADD)
                 : GET_EGPR_IF_ENABLED(X86::TILESTORED);

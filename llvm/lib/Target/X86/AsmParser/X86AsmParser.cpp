@@ -3973,6 +3973,56 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
     }
   }
 
+  // ACE BSR instructions: Strip %bsr0 operands and distinguish load/store.
+  // BSR (Block Scale Register) is implicit in the encoding (always BSR0),
+  // but the spec requires explicit %bsr0 in assembly syntax for disambiguation.
+  //
+  // For BSRMOVH and BSRMOVL, load vs store is determined by operand order:
+  // - ATT load: zmm/mem, bsr0 (ZMM first, BSR last) - move TO bsr0
+  // - ATT store: bsr0, zmm/mem (BSR first, ZMM last) - move FROM bsr0
+  // - Intel syntax reverses source/dest from ATT
+  //
+  // Note: Check for specific ACE BSR instructions to avoid matching standard
+  // x86 "bsrl"/"bsrq" (bit scan reverse).
+  if (Name == "bsrinit" || Name == "bsrmovf" || Name == "bsrmovh" ||
+      Name == "bsrmovl") {
+    // Single pass: track positions and filter operands simultaneously
+    int FirstBsrPos = -1;
+    int FirstNonBsrPos = -1;
+    SmallVector<std::unique_ptr<MCParsedAsmOperand>, 4> NewOperands;
+    NewOperands.push_back(std::move(Operands[0])); // Keep the mnemonic token
+
+    for (size_t I = 1; I < Operands.size(); ++I) {
+      X86Operand &Op = static_cast<X86Operand &>(*Operands[I]);
+      if (Op.isReg() && Op.getReg() == X86::BSR0) {
+        if (FirstBsrPos < 0)
+          FirstBsrPos = I;
+        // Skip BSR operands (don't add to NewOperands)
+      } else {
+        if (FirstNonBsrPos < 0)
+          FirstNonBsrPos = I;
+        NewOperands.push_back(std::move(Operands[I]));
+      }
+    }
+
+    // BSR instructions require explicit %bsr0 operand
+    if (FirstBsrPos < 0)
+      return Error(NameLoc, "BSR instruction requires explicit %bsr0 operand");
+
+    Operands = std::move(NewOperands);
+
+    // For BSRMOVH and BSRMOVL, detect set vs get by operand order
+    if (Name == "bsrmovh" || Name == "bsrmovl") {
+      // Intel: BSR first = set (ZMM→BSR); ATT: non-BSR first = set
+      bool IsLoad = isParsingIntelSyntax() ? (FirstBsrPos < FirstNonBsrPos)
+                                           : (FirstNonBsrPos < FirstBsrPos);
+      StringRef NewMnemonic =
+          IsLoad ? (Name == "bsrmovh" ? "bsrmovh_set" : "bsrmovl_set")
+                 : (Name == "bsrmovh" ? "bsrmovh_get" : "bsrmovl_get");
+      static_cast<X86Operand &>(*Operands[0]).setTokenValue(NewMnemonic);
+    }
+  }
+
   if (Flags)
     Operands.push_back(X86Operand::CreatePrefix(Flags, NameLoc, NameLoc));
   return false;
