@@ -1162,13 +1162,14 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
             Builder.CreateLoad(LI.getType(), LoadOp2, LI.getProperties(),
                                LoadOp2->getName() + ".val");
         assert(LI.isUnordered() && "implied by above");
-        // Each new load performs the same access as the original load in one
-        // arm of the select, and executes only when that arm is selected, so
-        // every fact the original load carried still holds. Clone all load
-        // metadata (not just the poison-generating kinds) to preserve !tbaa,
-        // !invariant.group, !nontemporal, !dereferenceable, etc.
+        // The original load is replaced by two loads that execute
+        // unconditionally, so any metadata implying immediate UB (e.g.
+        // !noundef, !dereferenceable, !invariant.load) must not be carried
+        // over. Copy all metadata and then drop the UB-implying kinds.
         copyMetadataForLoad(*V1, LI);
+        V1->dropUBImplyingAttrsAndMetadata();
         copyMetadataForLoad(*V2, LI);
+        V2->dropUBImplyingAttrsAndMetadata();
         return SelectInst::Create(SI->getCondition(), V1, V2, "", nullptr,
                                   ProfcheckDisableMetadataFixes ? nullptr : SI);
       }

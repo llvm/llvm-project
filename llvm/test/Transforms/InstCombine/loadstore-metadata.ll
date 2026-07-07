@@ -199,13 +199,15 @@ entry:
   ret i32 %c
 }
 
-; Preserve none-UB metadata on loads.
+; The two new loads execute unconditionally, so UB-implying (!noundef,
+; !dereferenceable, !invariant.load) and AA/type metadata (!tbaa,
+; !invariant.group, ...) are dropped; only poison-generating metadata is kept.
 define ptr @preserve_load_metadata_after_select_transform1(i1 %c, ptr dereferenceable(8) %a, ptr dereferenceable(8) %b) {
 ; CHECK-LABEL: define ptr @preserve_load_metadata_after_select_transform1(
 ; CHECK-SAME: i1 [[C:%.*]], ptr dereferenceable(8) [[A:%.*]], ptr dereferenceable(8) [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B_VAL:%.*]] = load ptr, ptr [[B]], align 1, !tbaa [[SCALAR_TYPE_TBAA0]], !invariant.load [[META6]], !nontemporal [[META7]], !nonnull [[META6]], !dereferenceable [[META8]], !invariant.group [[META6]], !align [[META8]], !llvm.access.group [[META6]], !noundef [[META6]]
-; CHECK-NEXT:    [[A_VAL:%.*]] = load ptr, ptr [[A]], align 1, !tbaa [[SCALAR_TYPE_TBAA0]], !invariant.load [[META6]], !nontemporal [[META7]], !nonnull [[META6]], !dereferenceable [[META8]], !invariant.group [[META6]], !align [[META8]], !llvm.access.group [[META6]], !noundef [[META6]]
+; CHECK-NEXT:    [[B_VAL:%.*]] = load ptr, ptr [[B]], align 1, !nonnull [[META6]], !align [[META8]]
+; CHECK-NEXT:    [[A_VAL:%.*]] = load ptr, ptr [[A]], align 1, !nonnull [[META6]], !align [[META8]]
 ; CHECK-NEXT:    [[L_SEL:%.*]] = select i1 [[C]], ptr [[B_VAL]], ptr [[A_VAL]]
 ; CHECK-NEXT:    ret ptr [[L_SEL]]
 ;
@@ -215,13 +217,15 @@ entry:
   ret ptr %l.sel
 }
 
-; Preserve none-UB metadata on loads.
+; The two new loads execute unconditionally, so UB-implying (!noundef,
+; !dereferenceable, !invariant.load) and AA/type metadata (!tbaa,
+; !invariant.group, ...) are dropped; only poison-generating metadata is kept.
 define i32 @preserve_load_metadata_after_select_transform_range(i1 %c, ptr dereferenceable(8) %a, ptr dereferenceable(8) %b) {
 ; CHECK-LABEL: define i32 @preserve_load_metadata_after_select_transform_range(
 ; CHECK-SAME: i1 [[C:%.*]], ptr dereferenceable(8) [[A:%.*]], ptr dereferenceable(8) [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B_VAL:%.*]] = load i32, ptr [[B]], align 1, !tbaa [[SCALAR_TYPE_TBAA0]], !range [[RNG11:![0-9]+]], !invariant.load [[META6]], !llvm.access.group [[META6]], !noundef [[META6]]
-; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, ptr [[A]], align 1, !tbaa [[SCALAR_TYPE_TBAA0]], !range [[RNG11]], !invariant.load [[META6]], !llvm.access.group [[META6]], !noundef [[META6]]
+; CHECK-NEXT:    [[B_VAL:%.*]] = load i32, ptr [[B]], align 1, !range [[RNG11:![0-9]+]]
+; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, ptr [[A]], align 1, !range [[RNG11]]
 ; CHECK-NEXT:    [[L_SEL:%.*]] = select i1 [[C]], i32 [[B_VAL]], i32 [[A_VAL]]
 ; CHECK-NEXT:    ret i32 [[L_SEL]]
 ;
