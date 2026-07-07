@@ -87,6 +87,12 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     // all.
   }
 
+  // __bf16 is enabled by default in the constructor. Disable it on AIX
+  // (ABI not yet defined), soft-float, and SPE targets.
+  if (getTriple().isOSAIX() || FloatABI == SoftFloat || HasSPE) {
+    HasBFloat16 = false;
+  }
+
   return true;
 }
 

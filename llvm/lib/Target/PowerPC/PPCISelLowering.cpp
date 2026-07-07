@@ -241,6 +241,22 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setTruncStoreAction(MVT::f128, MVT::f16, Expand);
   setOperationAction(ISD::FP_TO_FP16, MVT::f128, Expand);
 
+  // bf16 is soft-promoted to f32 on all PowerPC targets.
+  // Loads/stores use the integer i16 path (lhz/sth) via TypeSoftPromoteHalf.
+  // BF16_TO_FP (extend) is done inline via left-shift-16.
+  // FP_TO_BF16 (truncate) is done via the __truncsfbf2 libcall.
+  //
+  // BF16_TO_FP and FP_TO_BF16 must be explicitly marked Expand so that
+  // LegalizeDAG expands them to the shift+bitcast / libcall sequences before
+  // ISel.  Without this they default to Legal and reach ISel with no matching
+  // .td pattern, causing a "Cannot select" fatal error.
+  for (MVT VT : {MVT::f32, MVT::f64, MVT::f128}) {
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::bf16, Expand);
+    setTruncStoreAction(VT, MVT::bf16, Expand);
+    setOperationAction(ISD::BF16_TO_FP, VT, Expand);
+    setOperationAction(ISD::FP_TO_BF16, VT, Expand);
+  }
+
   if (Subtarget.isISA3_0()) {
     setLoadExtAction(ISD::EXTLOAD, MVT::f128, MVT::f16, Legal);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Legal);

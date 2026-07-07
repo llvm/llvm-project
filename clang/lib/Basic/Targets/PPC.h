@@ -83,9 +83,12 @@ public:
     SuitableAlign = 128;
     LongDoubleWidth = LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble();
+    BFloat16Width = BFloat16Align = 16;
+    BFloat16Format = &llvm::APFloat::BFloat();
     HasStrictFP = true;
     HasIbm128 = true;
     HasUnalignedAccess = true;
+    HasBFloat16 = true;
   }
 
   // Set the language option for altivec based on our value.
