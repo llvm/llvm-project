@@ -206,10 +206,6 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
 void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
                            ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
-void buildOpMemberDecorate(Register Reg, MachineInstr &I,
-                           const SPIRVInstrInfo &TII,
-                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 
 // Add an OpDecorate instruction by "spirv.Decorations" metadata node.
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
@@ -536,8 +532,6 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
 #define SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR "spv.was-available-externally"
-
-bool getVacantFunctionName(Module &M, std::string &Name);
 
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
                      MachineIRBuilder &MIRBuilder,
