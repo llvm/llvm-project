@@ -46,51 +46,72 @@
 # CHECK-NEXT: [0]   - C1NanoUnitALU0
 # CHECK-NEXT: [1]   - C1NanoUnitALU1
 # CHECK-NEXT: [2]   - C1NanoUnitB
-# CHECK-NEXT: [3]   - C1NanoUnitDiv
-# CHECK-NEXT: [4]   - C1NanoUnitLd1
-# CHECK-NEXT: [5]   - C1NanoUnitLdSt
-# CHECK-NEXT: [6]   - C1NanoUnitMAC
-# CHECK-NEXT: [7]   - C1NanoUnitPAC
-# CHECK-NEXT: [8]   - C1NanoUnitVALU0
-# CHECK-NEXT: [9]   - C1NanoUnitVALU1
-# CHECK-NEXT: [10]  - C1NanoUnitVMAC0
-# CHECK-NEXT: [11]  - C1NanoUnitVMAC1
-# CHECK-NEXT: [12]  - C1NanoUnitVMC
+# CHECK-NEXT: [3]   - C1NanoUnitCMELD
+# CHECK-NEXT: [4]   - C1NanoUnitCMEMC
+# CHECK-NEXT: [5.0] - C1NanoUnitCMEMML0
+# CHECK-NEXT: [5.1] - C1NanoUnitCMEMML0
+# CHECK-NEXT: [6]   - C1NanoUnitCMEMML1
+# CHECK-NEXT: [7.0] - C1NanoUnitCMEPERMF
+# CHECK-NEXT: [7.1] - C1NanoUnitCMEPERMF
+# CHECK-NEXT: [7.2] - C1NanoUnitCMEPERMF
+# CHECK-NEXT: [8.0] - C1NanoUnitCMEPERMS
+# CHECK-NEXT: [8.1] - C1NanoUnitCMEPERMS
+# CHECK-NEXT: [9]   - C1NanoUnitCMEPF
+# CHECK-NEXT: [10.0] - C1NanoUnitCMERNMRET
+# CHECK-NEXT: [10.1] - C1NanoUnitCMERNMRET
+# CHECK-NEXT: [10.2] - C1NanoUnitCMERNMRET
+# CHECK-NEXT: [11]  - C1NanoUnitCMEST
+# CHECK-NEXT: [12]  - C1NanoUnitCMEVX0ALU
+# CHECK-NEXT: [13]  - C1NanoUnitCMEVX0FPDOT
+# CHECK-NEXT: [14]  - C1NanoUnitCMEVX0MUL
+# CHECK-NEXT: [15]  - C1NanoUnitCMEVX1ALU
+# CHECK-NEXT: [16]  - C1NanoUnitCMEVX1FPDOT
+# CHECK-NEXT: [17]  - C1NanoUnitCMEVX1MUL
+# CHECK-NEXT: [18]  - C1NanoUnitDiv
+# CHECK-NEXT: [19]  - C1NanoUnitLd1
+# CHECK-NEXT: [20]  - C1NanoUnitLdSt
+# CHECK-NEXT: [21]  - C1NanoUnitMAC
+# CHECK-NEXT: [22]  - C1NanoUnitPAC
+# CHECK-NEXT: [23]  - C1NanoUnitVALU0
+# CHECK-NEXT: [24]  - C1NanoUnitVALU1
+# CHECK-NEXT: [25]  - C1NanoUnitVMAC0
+# CHECK-NEXT: [26]  - C1NanoUnitVMAC1
+# CHECK-NEXT: [27]  - C1NanoUnitVMC
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     9.50   9.50    -      -     91.00
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5.0]  [5.1]  [6]    [7.0]  [7.1]  [7.2]  [8.0]  [8.1]  [9]    [10.0] [10.1] [10.2] [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     9.50   9.50    -      -     91.00
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     aesd	z0.b, z0.b, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     aese	z0.b, z0.b, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     aesimc	z0.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     aesmc	z0.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     sha1h	s0, s1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha1su1	v0.4s, v1.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha256su0	v0.4s, v1.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha1c	q0, s1, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha1p	q0, s1, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha1m	q0, s1, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha1su0	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha256h	q0, q1, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha256h2	q0, q1, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha256su1	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sha512h	q0, q1, v2.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sha512h2	q0, q1, v2.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sha512su0	v11.2d, v12.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sha512su1	v11.2d, v13.2d, v14.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     eor3	v25.16b, v12.16b, v7.16b, v2.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rax1	v30.2d, v29.2d, v26.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     xar	v26.2d, v21.2d, v27.2d, #63
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     bcax	v31.16b, v26.16b, v2.16b, v1.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm3ss1	v20.4s, v23.4s, v21.4s, v22.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm3tt1a	v20.4s, v23.4s, v21.s[3]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm3tt1b	v20.4s, v23.4s, v21.s[3]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm3tt2a	v20.4s, v23.4s, v21.s[3]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm3tt2b	v20.4s, v23.4s, v21.s[3]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm3partw1	v30.4s, v29.4s, v26.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm3partw2	v30.4s, v29.4s, v26.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm4ekey	v11.4s, v11.4s, v19.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm4e	v2.4s, v15.4s
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5.0]  [5.1]  [6]    [7.0]  [7.1]  [7.2]  [8.0]  [8.1]  [9]    [10.0] [10.1] [10.2] [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     aesd	z0.b, z0.b, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     aese	z0.b, z0.b, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     aesimc	z0.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     aesmc	z0.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     sha1h	s0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha1su1	v0.4s, v1.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha256su0	v0.4s, v1.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha1c	q0, s1, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha1p	q0, s1, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha1m	q0, s1, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha1su0	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha256h	q0, q1, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha256h2	q0, q1, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sha256su1	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00   sha512h	q0, q1, v2.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00   sha512h2	q0, q1, v2.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00   sha512su0	v11.2d, v12.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00   sha512su1	v11.2d, v13.2d, v14.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     eor3	v25.16b, v12.16b, v7.16b, v2.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rax1	v30.2d, v29.2d, v26.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     xar	v26.2d, v21.2d, v27.2d, #63
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     bcax	v31.16b, v26.16b, v2.16b, v1.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm3ss1	v20.4s, v23.4s, v21.4s, v22.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm3tt1a	v20.4s, v23.4s, v21.s[3]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm3tt1b	v20.4s, v23.4s, v21.s[3]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm3tt2a	v20.4s, v23.4s, v21.s[3]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm3tt2b	v20.4s, v23.4s, v21.s[3]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm3partw1	v30.4s, v29.4s, v26.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm3partw2	v30.4s, v29.4s, v26.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm4ekey	v11.4s, v11.4s, v19.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     7.00   sm4e	v2.4s, v15.4s

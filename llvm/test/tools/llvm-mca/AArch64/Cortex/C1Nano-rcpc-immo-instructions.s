@@ -29,33 +29,54 @@
 # CHECK-NEXT: [0]   - C1NanoUnitALU0
 # CHECK-NEXT: [1]   - C1NanoUnitALU1
 # CHECK-NEXT: [2]   - C1NanoUnitB
-# CHECK-NEXT: [3]   - C1NanoUnitDiv
-# CHECK-NEXT: [4]   - C1NanoUnitLd1
-# CHECK-NEXT: [5]   - C1NanoUnitLdSt
-# CHECK-NEXT: [6]   - C1NanoUnitMAC
-# CHECK-NEXT: [7]   - C1NanoUnitPAC
-# CHECK-NEXT: [8]   - C1NanoUnitVALU0
-# CHECK-NEXT: [9]   - C1NanoUnitVALU1
-# CHECK-NEXT: [10]  - C1NanoUnitVMAC0
-# CHECK-NEXT: [11]  - C1NanoUnitVMAC1
-# CHECK-NEXT: [12]  - C1NanoUnitVMC
+# CHECK-NEXT: [3]   - C1NanoUnitCMELD
+# CHECK-NEXT: [4]   - C1NanoUnitCMEMC
+# CHECK-NEXT: [5.0] - C1NanoUnitCMEMML0
+# CHECK-NEXT: [5.1] - C1NanoUnitCMEMML0
+# CHECK-NEXT: [6]   - C1NanoUnitCMEMML1
+# CHECK-NEXT: [7.0] - C1NanoUnitCMEPERMF
+# CHECK-NEXT: [7.1] - C1NanoUnitCMEPERMF
+# CHECK-NEXT: [7.2] - C1NanoUnitCMEPERMF
+# CHECK-NEXT: [8.0] - C1NanoUnitCMEPERMS
+# CHECK-NEXT: [8.1] - C1NanoUnitCMEPERMS
+# CHECK-NEXT: [9]   - C1NanoUnitCMEPF
+# CHECK-NEXT: [10.0] - C1NanoUnitCMERNMRET
+# CHECK-NEXT: [10.1] - C1NanoUnitCMERNMRET
+# CHECK-NEXT: [10.2] - C1NanoUnitCMERNMRET
+# CHECK-NEXT: [11]  - C1NanoUnitCMEST
+# CHECK-NEXT: [12]  - C1NanoUnitCMEVX0ALU
+# CHECK-NEXT: [13]  - C1NanoUnitCMEVX0FPDOT
+# CHECK-NEXT: [14]  - C1NanoUnitCMEVX0MUL
+# CHECK-NEXT: [15]  - C1NanoUnitCMEVX1ALU
+# CHECK-NEXT: [16]  - C1NanoUnitCMEVX1FPDOT
+# CHECK-NEXT: [17]  - C1NanoUnitCMEVX1MUL
+# CHECK-NEXT: [18]  - C1NanoUnitDiv
+# CHECK-NEXT: [19]  - C1NanoUnitLd1
+# CHECK-NEXT: [20]  - C1NanoUnitLdSt
+# CHECK-NEXT: [21]  - C1NanoUnitMAC
+# CHECK-NEXT: [22]  - C1NanoUnitPAC
+# CHECK-NEXT: [23]  - C1NanoUnitVALU0
+# CHECK-NEXT: [24]  - C1NanoUnitVALU1
+# CHECK-NEXT: [25]  - C1NanoUnitVMAC0
+# CHECK-NEXT: [26]  - C1NanoUnitVMAC1
+# CHECK-NEXT: [27]  - C1NanoUnitVMC
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT:  -      -      -      -     4.50   8.50    -      -      -      -      -      -      -
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5.0]  [5.1]  [6]    [7.0]  [7.1]  [7.2]  [8.0]  [8.1]  [9]    [10.0] [10.1] [10.2] [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.50   8.50    -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapur	w7, [x24]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapur	x20, [x13]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapurb	w13, [x17]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapurh	w3, [x22]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapursb	w7, [x8]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapursb	x29, [x7]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapursh	w17, [x19]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapursh	x3, [x3]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapursw	x3, [x18]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stlur	w3, [x27]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stlur	x23, [x25]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stlurb	w30, [x17]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     stlurh	w9, [x29]
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5.0]  [5.1]  [6]    [7.0]  [7.1]  [7.2]  [8.0]  [8.1]  [9]    [10.0] [10.1] [10.2] [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapur	w7, [x24]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapur	x20, [x13]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapurb	w13, [x17]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapurh	w3, [x22]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapursb	w7, [x8]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapursb	x29, [x7]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapursh	w17, [x19]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapursh	x3, [x3]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ldapursw	x3, [x18]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     stlur	w3, [x27]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     stlur	x23, [x25]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     stlurb	w30, [x17]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     stlurh	w9, [x29]
