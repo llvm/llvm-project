@@ -153,22 +153,22 @@ body:             |
    bb.0.entry:
      liveins: $x0, $x1, $z16, $z17, $z18, $z19, $z20, $z21, $z22
 
-    ; CHECK: ptrue pn8.b
+    ; CHECK: stp d9, d8, [sp, #-16]!
+    ; CHECK-NEXT: .cfi_def_cfa_offset 16
+    ; CHECK-NEXT: .cfi_offset b8, -8
+    ; CHECK-NEXT: .cfi_offset b9, -16
+    ; CHECK-NEXT: ptrue	pn8.b
     ; CHECK-NEXT: mov w8, wzr
-    ; CHECK-NEXT: ld1b { z16.b, z24.b }, pn8/z, [x0]
-    ; CHECK-NEXT: ld1b { z17.b, z25.b }, pn8/z, [x0, x1]
-    ; CHECK-NEXT: udot za.s[w8, 0, vgx2], { z16.b, z17.b }, z0.b
-    ; CHECK-NEXT: udot za.s[w8, 0, vgx2], { z24.b, z25.b }, z0.b
+    ; CHECK-NEXT: ld1b { z0.b, z8.b }, pn8/z, [x0]
+    ; CHECK-NEXT: ld1b { z1.b, z9.b }, pn8/z, [x0, x1]
+    ; CHECK-NEXT: udot za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b
+    ; CHECK-NEXT: udot za.s[w8, 0, vgx2], { z8.b, z9.b }, z0.b
+    ; CHECK-NEXT: // fake_use: $z16 $z17 $z18 $z19 $z20 $z21 $z22
+    ; CHECK-NEXT: ldp d9, d8, [sp], #16
+    ; CHECK-NEXT: ret
 
      %0:gpr64 = COPY $x1
      %1:gpr64common = COPY $x0
-     %2:zpr = COPY $z16
-     %3:zpr = COPY $z17
-     %4:zpr = COPY $z18
-     %5:zpr = COPY $z19
-     %6:zpr = COPY $z20
-     %7:zpr = COPY $z21
-     %8:zpr = COPY $z22
      %9:matrixindexgpr32_8_11 = COPY $wzr
      %10:pnr_p8to15 = PTRUE_C_B implicit $vg
      %11:zpr2stridedorcontiguous = LD1B_2Z_IMM_PSEUDO %10, %1, 0
@@ -177,5 +177,6 @@ body:             |
      %14:zpr2 = FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO %11.zsub1, %12.zsub1
      $za = UDOT_VG2_M2ZZ_BtoS $za, %9, 0, %13, undef %15:zpr_4b
      $za = UDOT_VG2_M2ZZ_BtoS $za, %9, 0, %14, undef %16:zpr_4b
+     FAKE_USE $z16, $z17, $z18, $z19, $z20, $z21, $z22
      RET_ReallyLR
 ...
