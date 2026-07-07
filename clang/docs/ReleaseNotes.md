@@ -626,6 +626,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Improved `-Wassign-enum` performance by caching enum enumerator values. (#GH176454)
 
+- Clang now emits `-Wpsabi` diagnostics for externally visible x86-64
+  function definitions that return or take AVX or AVX-512 vector types without
+  enabling the corresponding target feature.
+
 - Fixed a false negative in `-Warray-bounds` where the warning was suppressed
   when accessing a member function on a past-the-end array element.
   (#GH179128)
@@ -870,6 +874,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a missing vtable for `dynamic_cast<FinalClass *>(this)` in a function template. (#GH198511)
 - Fixed an assertion failure during init-list checking of an array whose element type is an incomplete class. (#GH140685)
 - Fixed a crash when using a pack indexing type (e.g. ``Ts...[0]``) imported from another module. (#GH204479)
+- Fixed an ODR-merging error in modules, where class-scope `using enum` declarations were not recognized as matching across module
+  boundaries.  (#GH207066)
 
 #### Bug Fixes to AST Handling
 

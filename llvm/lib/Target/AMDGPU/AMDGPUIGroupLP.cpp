@@ -2796,36 +2796,24 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
   // allowed past the SCHED_BARRIER.
   SchedGroupMask InvertedMask = ~Mask;
 
-  // ALU implies VALU, SALU, MFMA, TRANS.
-  if ((InvertedMask & SchedGroupMask::ALU) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::VALU & ~SchedGroupMask::SALU &
-                    ~SchedGroupMask::MFMA & ~SchedGroupMask::TRANS;
-  // VALU, SALU, MFMA, TRANS implies ALU.
-  else if ((InvertedMask & SchedGroupMask::VALU) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::SALU) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::MFMA) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::TRANS) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::ALU;
+  static constexpr std::pair<SchedGroupMask, SchedGroupMask> ImpliedGroups[] = {
+      {SchedGroupMask::ALU, SchedGroupMask::VALU | SchedGroupMask::SALU |
+                                SchedGroupMask::MFMA | SchedGroupMask::TRANS},
+      {SchedGroupMask::VMEM, SchedGroupMask::VMEM_READ |
+                                 SchedGroupMask::VMEM_WRITE |
+                                 SchedGroupMask::LDSDMA},
+      {SchedGroupMask::DS, SchedGroupMask::DS_READ | SchedGroupMask::DS_WRITE |
+                               SchedGroupMask::LDSDMA},
+  };
 
-  // VMEM implies VMEM_READ, VMEM_WRITE, LDSDMA.
-  if ((InvertedMask & SchedGroupMask::VMEM) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::VMEM_READ & ~SchedGroupMask::VMEM_WRITE &
-                    ~SchedGroupMask::LDSDMA;
-  // VMEM_READ, VMEM_WRITE, LDSDMA implies VMEM.
-  else if ((InvertedMask & SchedGroupMask::VMEM_READ) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::VMEM_WRITE) ==
-               SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::LDSDMA) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::VMEM;
-
-  // DS implies DS_READ, DS_WRITE, LDSDMA.
-  if ((InvertedMask & SchedGroupMask::DS) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::DS_READ & ~SchedGroupMask::DS_WRITE &
-                    ~SchedGroupMask::LDSDMA;
-  // DS_READ, DS_WRITE implies DS.
-  else if ((InvertedMask & SchedGroupMask::DS_READ) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::DS_WRITE) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::DS;
+  for (auto [Aggregate, Members] : ImpliedGroups) {
+    // Aggregate allowed past the barrier implies all its members are too.
+    if ((InvertedMask & Aggregate) == SchedGroupMask::NONE)
+      InvertedMask &= ~Members;
+    // Any member allowed past the barrier implies the aggregate is too.
+    else if ((InvertedMask & Members) != Members)
+      InvertedMask &= ~Aggregate;
+  }
 
   LLVM_DEBUG(dbgs() << "After Inverting, SchedGroup Mask: " << (int)InvertedMask
                     << "\n");
