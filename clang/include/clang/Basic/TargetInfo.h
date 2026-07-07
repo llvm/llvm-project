@@ -1801,9 +1801,7 @@ public:
 
   /// Returns whether the target's ABI guarantees that a class's vtable has a
   /// unique address program-wide.
-  virtual VTableUniquenessKind getVTableUniqueness() const {
-    return VTableUniquenessKind::AlwaysUnique;
-  }
+  virtual VTableUniquenessKind getVTableUniqueness() const;
 
   /// Controls whether global operator delete is called by the deleting
   /// destructor or at the point where ::delete was called. Historically Clang
