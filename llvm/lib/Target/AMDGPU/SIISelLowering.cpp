@@ -18503,6 +18503,9 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
   if (F > One)
     return DCI.DAG.getConstantFP(One, SDLoc(N), N->getValueType(0));
 
+  if (F.isSignaling())
+    return DCI.DAG.getConstantFP(F.makeQuiet(), SDLoc(N), N->getValueType(0));
+
   return SDValue(CSrc, 0);
 }
 
