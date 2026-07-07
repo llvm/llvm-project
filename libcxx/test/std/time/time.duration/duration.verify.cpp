@@ -16,12 +16,12 @@
 #include <chrono>
 
 void test() {
-  // expected-error-re@*:* {{static assertion failed {{.*}}A duration representation can not be const-qualified}}
+  // expected-error-re@*:* {{static assertion failed {{.*}}A duration representation cannot be qualified}}
   (void)sizeof(std::chrono::duration<const int>);
 
-  // expected-error-re@*:* {{static assertion failed {{.*}}A duration representation can not be volatile-qualified}}
+  // expected-error-re@*:* {{static assertion failed {{.*}}A duration representation cannot be qualified}}
   (void)sizeof(std::chrono::duration<volatile int>);
 
-  // expected-error-re@*:* {{static assertion failed {{.*}}A duration representation can not be const-qualified}}
+  // expected-error-re@*:* {{static assertion failed {{.*}}A duration representation cannot be qualified}}
   (void)sizeof(std::chrono::duration<const volatile int>);
 }
