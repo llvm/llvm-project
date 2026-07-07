@@ -221,13 +221,14 @@ type. Where address spaces are allowed (e.g., variables, parameters, return
 types) and what values are valid depends on the target and language mode.
 
 The meaning of each value is defined by the target; multiple address spaces are
-used in environments such as OpenCL, CUDA, HIP, and other GPU programming
+used in environments such as OpenCL, CUDA, HIP, SYCL, and other GPU programming
 models to distinguish global, local, constant, and private memory. See for
-example the address spaces defined in the `NVPTX Usage Guide`_ and the
-`AMDGPU Usage Guide`_.
+example the address spaces defined in the `NVPTX User Guide`_, the
+`AMDGPU User Guide`_, and the `SPIR-V User Guide`_.
 
-.. _`NVPTX Usage Guide`: https://llvm.org/docs/NVPTXUsage.html#address-spaces
-.. _`AMDGPU Usage Guide`: https://llvm.org/docs/AMDGPUUsage.html#address-spaces
+.. _`NVPTX User Guide`: https://llvm.org/docs/NVPTXUsage.html#address-spaces
+.. _`AMDGPU User Guide`: https://llvm.org/docs/AMDGPUUsage.html#address-spaces
+.. _`SPIR-V User Guide`: https://llvm.org/docs/SPIRVUsage.html#address-spaces
 
 Address spaces may partially overlap or be entirely distinct. The compiler may
 reject attempts to convert between distinct, incompatible address spaces.
