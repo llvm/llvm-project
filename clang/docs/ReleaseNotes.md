@@ -165,6 +165,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   fields were missing from the JSON output.
 - Colons that appear at the end of a ParamCommentCommand name are not serialized
   as part of the name.
+- AST pretty-printing now respects `PrintingPolicy::FullyQualifiedName` when
+  printing `DeclRefExpr` names, including expression-form non-type template
+  arguments in printed types. Previously, these references could be printed
+  unqualified. (#GH206041)
 
 ### Clang Frontend Potentially Breaking Changes
 
