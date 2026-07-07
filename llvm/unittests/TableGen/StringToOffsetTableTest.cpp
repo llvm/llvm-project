@@ -63,7 +63,8 @@ TEST(StringToOffsetTableTest, OctalEscapeNotFollowedByDigit) {
   // Should be: "    "\000abc""
 
   EXPECT_TRUE(Output.find("\\000abc") != std::string::npos)
-      << "Expected no string boundary after octal escape when not followed by digit, got: "
+      << "Expected no string boundary after octal escape when not followed by "
+         "digit, got: "
       << Output;
   EXPECT_TRUE(Output.find("\\000\" \"a") == std::string::npos)
       << "Unexpected string boundary found: " << Output;
