@@ -148,8 +148,7 @@ public:
 
 bool DebugLifetimeModeling::evalCall(const CallEvent &Call,
                                      CheckerContext &C) const {
-  const auto *CE = dyn_cast_if_present<CallExpr>(Call.getOriginExpr());
-  if (!CE)
+  if (!llvm::isa_and_nonnull<CallExpr>(Call.getOriginExpr()))
     return false;
 
   const FnCheck *Handler = Callbacks.lookup(Call);

@@ -29,17 +29,16 @@ void UseAfterLifetimeEnd::checkEndFunction(const ReturnStmt *RS,
 
   RetExpr = RetExpr->IgnoreParens();
   SVal RetVal = C.getSVal(RetExpr);
-  ExplodedNode *N = nullptr;
 
   std::vector<const MemRegion *> RetValRegion =
       lifetime_modeling::getDanglingRegionsAfterReturn(RetVal, State, C);
-  for (const MemRegion *Region : RetValRegion) {
-    if (!N)
-      N = C.generateNonFatalErrorNode();
-    if (!N)
-      return;
+  if (RetValRegion.empty())
+    return;
 
-    reportDanglingSource(Region, N, C);
+  if (ExplodedNode *N =
+          C.generateNonFatalErrorNode(State, C.getPredecessor())) {
+    for (const MemRegion *R : RetValRegion)
+      reportDanglingSource(R, N, C);
   }
 }
 
