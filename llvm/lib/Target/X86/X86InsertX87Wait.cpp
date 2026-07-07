@@ -56,41 +56,32 @@ FunctionPass *llvm::createX86InsertX87WaitLegacyPass() {
   return new X86InsertX87WaitLegacy();
 }
 
-static bool isX87ControlInstruction(MachineInstr &MI) {
-  switch (MI.getOpcode()) {
+// Classifies an x87 control instruction by whether it performs the implicit
+// wait (FP exception sync); non-waiting FN-prefixed forms do not.
+enum class X87ControlKind { NotControl, Waiting, NonWaiting };
+
+static X87ControlKind classifyX87ControlInstruction(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return X87ControlKind::NotControl;
   case X86::FNINIT:
-  case X86::FLDCW16m:
   case X86::FNSTCW16m:
   case X86::FNSTSW16r:
   case X86::FNSTSWm:
   case X86::FNCLEX:
-  case X86::FLDENVm:
   case X86::FSTENVm:
-  case X86::FRSTORm:
   case X86::FSAVEm:
+    return X87ControlKind::NonWaiting;
+  case X86::FLDCW16m:
+  case X86::FLDENVm:
+  case X86::FRSTORm:
   case X86::FINCSTP:
   case X86::FDECSTP:
   case X86::FFREE:
   case X86::FFREEP:
   case X86::FNOP:
   case X86::WAIT:
-    return true;
-  default:
-    return false;
-  }
-}
-
-static bool isX87NonWaitingControlInstruction(MachineInstr &MI) {
-  // a few special control instructions don't perform a wait operation
-  switch (MI.getOpcode()) {
-  case X86::FNINIT:
-  case X86::FNSTSW16r:
-  case X86::FNSTSWm:
-  case X86::FNSTCW16m:
-  case X86::FNCLEX:
-    return true;
-  default:
-    return false;
+    return X87ControlKind::Waiting;
   }
 }
 
@@ -111,13 +102,20 @@ static bool insertWaitInstruction(MachineFunction &MF) {
       // a load/store instruction, or the instruction is x87 control
       // instruction, do not insert wait.
       if (!(MI->mayRaiseFPException() || MI->mayLoadOrStore()) ||
-          isX87ControlInstruction(*MI))
+          classifyX87ControlInstruction(MI->getOpcode()) !=
+              X87ControlKind::NotControl)
         continue;
-      // If the following instruction is an X87 instruction and isn't an X87
-      // non-waiting control instruction, we can omit insert wait instruction.
+      // If the following instruction is an X87 instruction that performs the
+      // wait operation itself, we can omit inserting wait. Skip
+      // meta-instructions so the decision is independent of debug info, and
+      // keep the wait for non-waiting (FN-prefixed) successors.
       MachineBasicBlock::iterator AfterMI = std::next(MI);
-      if (AfterMI != MBB.end() && X86::isX87Instruction(*AfterMI) &&
-          !isX87NonWaitingControlInstruction(*AfterMI))
+      MachineBasicBlock::iterator NextMI = AfterMI;
+      while (NextMI != MBB.end() && NextMI->isMetaInstruction())
+        ++NextMI;
+      if (NextMI != MBB.end() && X86::isX87Instruction(*NextMI) &&
+          classifyX87ControlInstruction(NextMI->getOpcode()) !=
+              X87ControlKind::NonWaiting)
         continue;
 
       BuildMI(MBB, AfterMI, MI->getDebugLoc(), TII->get(X86::WAIT));

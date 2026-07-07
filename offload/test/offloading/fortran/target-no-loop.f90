@@ -88,9 +88,7 @@ end program main
 ! CHECK:  info: #Args: 3 Teams x Thrds:   3x  16 {{.*}}
 ! CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
 ! CHECK:  info: #Args: 3 Teams x Thrds:   64x  16 {{.*}}
-! TODO: This kernel is currently incorrectly tagged as no-loop. This is a known issue in the
-!       Flang frontend that currently does not result in any known runtime problems.
-! CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
+! CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
 ! CHECK:  info: #Args: 3 Teams x Thrds:   1x  16
 ! CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}} Generic mode
 ! CHECK:  info: #Args: 3 Teams x Thrds:   16x  16 {{.*}}

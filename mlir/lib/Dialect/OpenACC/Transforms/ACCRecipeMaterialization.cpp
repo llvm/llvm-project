@@ -392,6 +392,7 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
 
     if (!recipe.getDestroyRegion().empty()) {
       SmallVector<Value> results{origPtr, reductionOp.getResult()};
+      results.append(triples);
       Block::iterator ip = std::next(Block::iterator(combineRegionOp));
       cloneDestroy(loc, recipe, combineRegionOp->getBlock(), ip, results);
     }

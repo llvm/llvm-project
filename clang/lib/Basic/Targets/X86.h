@@ -105,6 +105,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAVX512BF16 = false;
   bool HasAVX512DQ = false;
   bool HasAVX512BITALG = false;
+  bool HasAVX512BMM = false;
   bool HasAVX512BW = false;
   bool HasAVX512VL = false;
   bool HasAVX512VBMI = false;
@@ -335,10 +336,6 @@ public:
       break;
     }
     return "";
-  }
-
-  bool useFP16ConversionIntrinsics() const override {
-    return false;
   }
 
   void getTargetDefines(const LangOptions &Opts,

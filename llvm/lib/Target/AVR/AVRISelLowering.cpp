@@ -1151,6 +1151,7 @@ bool AVRTargetLowering::isOffsetFoldingLegal(
 //             Formal Arguments Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
+#define GET_CALLING_CONV_IMPL
 #include "AVRGenCallingConv.inc"
 
 /// Registers for calling conventions, ordered in reverse as required by ABI.

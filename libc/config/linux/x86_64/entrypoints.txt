@@ -333,6 +333,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.socket.sendto
     libc.src.sys.socket.setsockopt
     libc.src.sys.socket.shutdown
+    libc.src.sys.socket.sockatmark
     libc.src.sys.socket.socket
     libc.src.sys.socket.socketpair
     # TODO: These functions are not compatible with 64-bit musl. They need to
@@ -514,6 +515,8 @@ endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
     # complex.h entrypoints
+    libc.src.complex.cabs
+    libc.src.complex.cabsf
     libc.src.complex.carg
     libc.src.complex.cargf
     libc.src.complex.creal
@@ -1223,6 +1226,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.dirfd
     libc.src.dirent.opendir
     libc.src.dirent.readdir
+    libc.src.dirent.fdopendir
 
     # pthread.h entrypoints
     libc.src.pthread.pthread_atfork
@@ -1304,13 +1308,17 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
+    libc.src.sched.__sched_andcpuset
     libc.src.sched.__sched_clrcpuset
     libc.src.sched.__sched_cpualloc
+    libc.src.sched.__sched_cpuequal
     libc.src.sched.__sched_cpufree
     libc.src.sched.__sched_getcpucount
-    libc.src.sched.__sched_setcpuzero
-    libc.src.sched.__sched_setcpuset
     libc.src.sched.__sched_getcpuisset
+    libc.src.sched.__sched_orcpuset
+    libc.src.sched.__sched_setcpuset
+    libc.src.sched.__sched_setcpuzero
+    libc.src.sched.__sched_xorcpuset
 
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
@@ -1522,6 +1530,10 @@ if(LLVM_LIBC_FULL_BUILD)
 endif()
 
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    libc.src.stdlib.realpath
+  )
+
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
       # regex.h entrypoints

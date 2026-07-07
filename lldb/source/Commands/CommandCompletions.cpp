@@ -147,15 +147,13 @@ public:
   Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
                                           SymbolContext &context,
                                           Address *addr) override {
-    llvm::StringRef spec_file_name =
-        m_partial_spec.GetFilename().GetStringRef();
-    llvm::StringRef spec_dir_name =
-        m_partial_spec.GetDirectory().GetStringRef();
+    llvm::StringRef spec_file_name = m_partial_spec.GetFilename();
+    llvm::StringRef spec_dir_name = m_partial_spec.GetDirectory();
     if (context.comp_unit != nullptr) {
       llvm::StringRef cur_file_name =
-          context.comp_unit->GetPrimaryFile().GetFilename().GetStringRef();
+          context.comp_unit->GetPrimaryFile().GetFilename();
       llvm::StringRef cur_dir_name =
-          context.comp_unit->GetPrimaryFile().GetDirectory().GetStringRef();
+          context.comp_unit->GetPrimaryFile().GetDirectory();
 
       bool match = false;
       if (!spec_file_name.empty() && cur_file_name.starts_with(spec_file_name))
@@ -180,7 +178,7 @@ public:
     // Now convert the filelist to completions:
     for (size_t i = 0; i < m_matching_files.GetSize(); i++) {
       m_request.AddCompletion(
-          m_matching_files.GetFileSpecAtIndex(i).GetFilename().GetCString());
+          m_matching_files.GetFileSpecAtIndex(i).GetFilename());
     }
   }
 
@@ -309,7 +307,7 @@ public:
       // And a file name match.
       if (m_file_name) {
         llvm::StringRef cur_file_name =
-            context.module_sp->GetFileSpec().GetFilename().GetStringRef();
+            context.module_sp->GetFileSpec().GetFilename();
         if (cur_file_name.starts_with(*m_file_name))
           m_request.AddCompletion(cur_file_name);
       }

@@ -114,6 +114,7 @@ enum ProcessorSubtypes {
   HYGONFAM18H_C86_4G_M4,
   HYGONFAM18H_C86_4G_M6,
   HYGONFAM18H_C86_4G_M7,
+  HYGONFAM18H_C86_4G_M8,
   CPU_SUBTYPE_MAX
 };
 
@@ -238,6 +239,7 @@ enum ProcessorFeatures {
   FEATURE_AMX_FP8 = 120,
   FEATURE_MOVRS,
   FEATURE_AMX_MOVRS,
+  FEATURE_AVX512BMM,
   CPU_FEATURE_MAX
 };
 
@@ -905,6 +907,11 @@ getHygonProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       Type = HYGONFAM18H;
       Subtype = HYGONFAM18H_C86_4G_M7;
       break; // c86-4g-m7
+    case 8:
+      CPU = "c86-4g-m8";
+      Type = HYGONFAM18H;
+      Subtype = HYGONFAM18H_C86_4G_M8;
+      break; // c86-4g-m8
     }
     break; // Hygon Family 18H
   default:
@@ -1197,6 +1204,8 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   // AMD cpuid bit for prefetchi is different from Intel
   if (HasExtLeaf21 && ((EAX >> 20) & 1))
     setFeature(FEATURE_PREFETCHI);
+  if (HasExtLeaf21 && ((EAX >> 23) & 1) && HasAVX512Save)
+    setFeature(FEATURE_AVX512BMM);
 
   bool HasLeaf14 = MaxLevel >= 0x14 &&
                    !getX86CpuIDAndInfoEx(0x14, 0x0, &EAX, &EBX, &ECX, &EDX);
