@@ -301,24 +301,24 @@ static bool is64BitKind(object::Archive::Kind Kind) {
 static void
 printMemberHeader(raw_ostream &Out, uint64_t Pos, raw_ostream &StringTable,
                   StringMap<uint64_t> &MemberNames, object::Archive::Kind Kind,
-                  bool Thin, const NewArchiveMember &M,
+                  bool Thin, const NewArchiveMember &M, StringRef MemberName,
                   sys::TimePoint<std::chrono::seconds> ModTime, uint64_t Size) {
   if (isBSDLike(Kind))
-    return printBSDMemberHeader(Out, Pos, M.MemberName, ModTime, M.UID, M.GID,
+    return printBSDMemberHeader(Out, Pos, MemberName, ModTime, M.UID, M.GID,
                                 M.Perms, Size);
-  if (!useStringTable(Thin, M.MemberName))
-    return printGNUSmallMemberHeader(Out, M.MemberName, ModTime, M.UID, M.GID,
+  if (!useStringTable(Thin, MemberName))
+    return printGNUSmallMemberHeader(Out, MemberName, ModTime, M.UID, M.GID,
                                      M.Perms, Size);
   Out << '/';
   uint64_t NamePos;
   if (Thin) {
     NamePos = StringTable.tell();
-    StringTable << M.MemberName << "/\n";
+    StringTable << MemberName << "/\n";
   } else {
-    auto Insertion = MemberNames.insert({M.MemberName, uint64_t(0)});
+    auto Insertion = MemberNames.insert({MemberName, uint64_t(0)});
     if (Insertion.second) {
       Insertion.first->second = StringTable.tell();
-      StringTable << M.MemberName;
+      StringTable << MemberName;
       if (isCOFFArchive(Kind))
         StringTable << '\0';
       else
@@ -338,6 +338,8 @@ struct MemberData {
   StringRef Padding;
   uint64_t PreHeadPadSize = 0;
   std::unique_ptr<SymbolicFile> SymFile = nullptr;
+  std::string HybridName = "";
+  std::unique_ptr<MemoryBuffer> NativeBuf = nullptr;
 };
 } // namespace
 
@@ -846,6 +848,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
 
   for (const NewArchiveMember &M : NewMembers) {
     MemberData &D = Ret.emplace_back();
+    D.Data = M.Buf->getBuffer();
 
     if (NeedSymbols != SymtabWritingMode::NoSymtab || isAIXBigArchive(Kind)) {
       Expected<std::unique_ptr<SymbolicFile>> SymFileOrErr = getSymbolicFile(
@@ -855,6 +858,35 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
       if (!SymFileOrErr)
         return createFileError(M.MemberName, SymFileOrErr.takeError());
       D.SymFile = std::move(*SymFileOrErr);
+
+      if (SymMap && D.SymFile.get()) {
+        auto COFFObj = dyn_cast<COFFObjectFile>(D.SymFile.get());
+        std::optional<MemoryBufferRef> HybridView;
+        if (COFFObj && (HybridView = COFFObj->findHybridObjectSection())) {
+          // Strip the hybrid section.
+          D.NativeBuf = COFFObj->stripHybridSection();
+          D.Data = D.NativeBuf->getBuffer();
+
+          // Create a separate archive member for the hybrid ARM64X object.
+          MemberData &ECData = Ret.emplace_back();
+          ECData.Data = HybridView->getBuffer();
+
+          SymFileOrErr =
+              getSymbolicFile(*HybridView, Context, Kind, [&](Error Err) {
+                Warn(createFileError(M.MemberName, std::move(Err)));
+              });
+          if (!SymFileOrErr)
+            return createFileError(M.MemberName, SymFileOrErr.takeError());
+          ECData.SymFile = std::move(*SymFileOrErr);
+
+          // Use obj.arm64ec subdirectory for the hybrid object name.
+          size_t Pos = M.MemberName.find_last_of("/\\");
+          Pos = Pos == StringRef::npos ? 0 : Pos + 1;
+          ECData.HybridName = (M.MemberName.substr(0, Pos) + "obj.arm64ec/" +
+                               M.MemberName.substr(Pos))
+                                  .str();
+        }
+      }
     }
   }
 
@@ -887,13 +919,19 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
   uint64_t PrevOffset = 0;
   uint64_t NextMemHeadPadSize = 0;
 
-  for (uint32_t Index = 0; Index < Ret.size(); ++Index) {
+  for (uint32_t Index = 0, MemberIndex = 0; Index < Ret.size(); ++Index) {
     MemberData &D = Ret[Index];
-    const NewArchiveMember *M = &NewMembers[Index];
+    const NewArchiveMember *M = &NewMembers[MemberIndex];
+    // Native COFF members (resulting from stripping a hybrid object section)
+    // are followed by an extracted hybrid object member, using the same
+    // NewArchiveMember.
+    if (!D.NativeBuf.get())
+      ++MemberIndex;
     raw_string_ostream Out(D.Header);
 
-    MemoryBufferRef Buf = M->Buf->getMemBufferRef();
-    D.Data = Thin ? "" : Buf.getBuffer();
+    uint64_t Size = D.Data.size();
+    if (Thin)
+      D.Data = "";
 
     // ld64 expects the members to be 8-byte aligned for 64-bit content and at
     // least 4-byte aligned for 32-bit content.  Opt for the larger encoding
@@ -905,17 +943,19 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
         offsetToAlignment(D.Data.size() + MemberPadding, Align(2));
     D.Padding = StringRef(PaddingData, MemberPadding + TailPadding);
 
+    StringRef MemberName = D.HybridName.size() ? D.HybridName : M->MemberName;
+
     sys::TimePoint<std::chrono::seconds> ModTime;
     if (UniqueTimestamps)
       // Increment timestamp for each file of a given name.
-      ModTime = sys::toTimePoint(FilenameCount[M->MemberName]++);
+      ModTime = sys::toTimePoint(FilenameCount[MemberName]++);
     else
       ModTime = M->ModTime;
 
-    uint64_t Size = Buf.getBufferSize() + MemberPadding;
+    Size += MemberPadding;
     if (Size > object::Archive::MaxMemberSize) {
       std::string StringMsg =
-          "File " + M->MemberName.str() + " exceeds size limit";
+          "File " + MemberName.str() + " exceeds size limit";
       return make_error<object::GenericBinaryError>(
           std::move(StringMsg), object::object_error::parse_failed);
     }
@@ -923,8 +963,8 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
     // In the big archive file format, we need to calculate and include the next
     // member offset and previous member offset in the file member header.
     if (isAIXBigArchive(Kind)) {
-      uint64_t OffsetToMemData = Pos + sizeof(object::BigArMemHdrType) +
-                                 alignTo(M->MemberName.size(), 2);
+      uint64_t OffsetToMemData =
+          Pos + sizeof(object::BigArMemHdrType) + alignTo(MemberName.size(), 2);
 
       if (Index == 0)
         NextMemHeadPadSize =
@@ -935,33 +975,33 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
       D.PreHeadPadSize = NextMemHeadPadSize;
       Pos += D.PreHeadPadSize;
       uint64_t NextOffset = Pos + sizeof(object::BigArMemHdrType) +
-                            alignTo(M->MemberName.size(), 2) + alignTo(Size, 2);
+                            alignTo(MemberName.size(), 2) + alignTo(Size, 2);
 
       // If there is another member file after this, we need to calculate the
       // padding before the header.
       if (Index + 1 != Ret.size()) {
         uint64_t OffsetToNextMemData =
             NextOffset + sizeof(object::BigArMemHdrType) +
-            alignTo(NewMembers[Index + 1].MemberName.size(), 2);
+            alignTo(NewMembers[MemberIndex].MemberName.size(), 2);
         NextMemHeadPadSize =
             alignToPowerOf2(OffsetToNextMemData,
                             getMemberAlignment(Ret[Index + 1].SymFile.get())) -
             OffsetToNextMemData;
         NextOffset += NextMemHeadPadSize;
       }
-      printBigArchiveMemberHeader(Out, M->MemberName, ModTime, M->UID, M->GID,
+      printBigArchiveMemberHeader(Out, MemberName, ModTime, M->UID, M->GID,
                                   M->Perms, Size, PrevOffset, NextOffset);
       PrevOffset = Pos;
     } else {
       printMemberHeader(Out, Pos, StringTable, MemberNames, Kind, Thin, *M,
-                        ModTime, Size);
+                        MemberName, ModTime, Size);
     }
 
     if (NeedSymbols != SymtabWritingMode::NoSymtab) {
       Expected<std::vector<unsigned>> SymbolsOrErr =
           getSymbols(D.SymFile.get(), Index + 1, SymNames, SymMap);
       if (!SymbolsOrErr)
-        return createFileError(M->MemberName, SymbolsOrErr.takeError());
+        return createFileError(MemberName, SymbolsOrErr.takeError());
       D.Symbols = std::move(*SymbolsOrErr);
       if (D.SymFile)
         HasObject = true;
