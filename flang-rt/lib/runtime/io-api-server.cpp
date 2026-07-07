@@ -299,8 +299,9 @@ using RPCCallbackTy = std::uint32_t (*)(void *, std::uint32_t);
 
 // COFF workaround for the lack of weak symbols, copied from the sanitizers.
 #if defined(_MSC_VER)
-// Stub function to be replaced with __tgt_register_rpc_callback if present.
-extern "C" void register_rpc_callback_stub(RPCCallbackTy) { }
+extern "C" void register_rpc_callback_stub(RPCCallbackTy) {
+  // Stub function to be replaced with __tgt_register_rpc_callback if present.
+}
 #pragma comment(linker, \
     "/alternatename:__tgt_register_rpc_callback=" \
     "register_rpc_callback_stub")
