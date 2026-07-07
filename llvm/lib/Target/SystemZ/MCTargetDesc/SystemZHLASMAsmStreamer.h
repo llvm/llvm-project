@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAsmStreamer.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -30,7 +31,7 @@
 namespace llvm {
 class MCSymbolGOFF;
 
-class SystemZHLASMAsmStreamer final : public MCStreamer {
+class SystemZHLASMAsmStreamer final : public MCAsmBaseStreamer {
   constexpr static size_t InstLimit = 80;
   constexpr static size_t ContIndicatorColumn = 72;
   constexpr static size_t ContStartColumn = 15;
@@ -41,25 +42,17 @@ class SystemZHLASMAsmStreamer final : public MCStreamer {
   raw_string_ostream OS;
   const MCAsmInfo *MAI;
   std::unique_ptr<MCInstPrinter> InstPrinter;
-  std::unique_ptr<MCAssembler> Assembler;
-  SmallString<128> CommentToEmit;
-  raw_svector_ostream CommentStream;
-  raw_null_ostream NullStream;
   bool IsVerboseAsm = false;
 
 public:
   SystemZHLASMAsmStreamer(MCContext &Context,
-                          std::unique_ptr<formatted_raw_ostream> os,
-                          std::unique_ptr<MCInstPrinter> printer,
-                          std::unique_ptr<MCCodeEmitter> emitter,
-                          std::unique_ptr<MCAsmBackend> asmbackend)
-      : MCStreamer(Context), FOSOwner(std::move(os)), FOS(*FOSOwner), OS(Str),
-        MAI(&Context.getAsmInfo()), InstPrinter(std::move(printer)),
-        Assembler(std::make_unique<MCAssembler>(
-            Context, std::move(asmbackend), std::move(emitter),
-            (asmbackend) ? asmbackend->createObjectWriter(NullStream)
-                         : nullptr)),
-        CommentStream(CommentToEmit) {
+                          std::unique_ptr<formatted_raw_ostream> OS,
+                          std::unique_ptr<MCInstPrinter> Printer,
+                          std::unique_ptr<MCCodeEmitter> Emitter,
+                          std::unique_ptr<MCAsmBackend> AsmBackend)
+      : MCAsmBaseStreamer(Context, std::move(Emitter), std::move(AsmBackend)),
+        FOSOwner(std::move(OS)), FOS(*FOSOwner), OS(Str),
+        MAI(&Context.getAsmInfo()), InstPrinter(std::move(Printer)) {
     assert(InstPrinter);
     if (Assembler->getBackendPtr())
       setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
@@ -70,8 +63,6 @@ public:
       InstPrinter->setCommentStream(CommentStream);
   }
 
-  MCAssembler &getAssembler() { return *Assembler; }
-
   void EmitEOL();
   void EmitComment();
 
@@ -79,6 +70,8 @@ public:
   /// output of the compiler more readable. This only affects the MCAsmStreamer
   /// and only when verbose assembly output is enabled.
   void AddComment(const Twine &T, bool EOL = true) override;
+
+  raw_ostream &getCommentOS() override;
 
   void emitBytes(StringRef Data) override;
 
@@ -95,6 +88,8 @@ public:
 
   /// Do we support EmitRawText?
   bool hasRawTextSupport() const override { return true; }
+
+  void addEncodingComment(const MCInst &Inst, const MCSubtargetInfo &STI);
 
   /// @name MCStreamer Interface
   /// @{
