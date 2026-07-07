@@ -32,34 +32,26 @@ SECTIONS {
     KEEP(*(.vectors))
     KEEP(*(.vectors.*))
     KEEP(*(.data.init.enter))
-    KEEP(*(SORT_BY_NAME(.init) SORT_BY_NAME(.init.*)))
   } > boot_flash
 
   .text : ALIGN(8) {
     KEEP(*(.text.startup .text.startup.*))
-    KEEP(*(.init))
     *(.text .text.* .gnu.linkonce.t.*)
-    KEEP(*(.fini))
+  } > flash
 
-    . = ALIGN(8);
-    PROVIDE_HIDDEN(__preinit_array_start = .);
+  .preinit_array : ALIGN(8) {
     KEEP(*(.preinit_array))
     KEEP(*(.preinit_array.*))
-    PROVIDE_HIDDEN(__preinit_array_end = .);
+  } > flash
 
-    PROVIDE_HIDDEN(__init_array_start = .);
+  .init_array : ALIGN(8) {
     KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*)))
     KEEP(*(.init_array))
-    KEEP(*(SORT_BY_INIT_PRIORITY(.ctors.*)))
-    KEEP(*(.ctors))
-    PROVIDE_HIDDEN(__init_array_end = .);
+  } > flash
 
-    PROVIDE_HIDDEN(__fini_array_start = .);
+  .fini_array : ALIGN(8) {
     KEEP(*(SORT_BY_INIT_PRIORITY(.fini_array.*)))
     KEEP(*(.fini_array))
-    KEEP(*(SORT_BY_INIT_PRIORITY(.dtors.*)))
-    KEEP(*(.dtors))
-    PROVIDE_HIDDEN(__fini_array_end = .);
   } > flash
 
   .rodata : ALIGN(8) {
