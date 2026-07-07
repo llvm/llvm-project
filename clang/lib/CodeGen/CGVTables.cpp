@@ -992,10 +992,7 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
   // insignificant either when no RTTI is emitted or for a weak vtable on a
   // target that may duplicate vtables. In those cases the vtable can be marked
   // unnamed_addr.
-  bool VTableMayBeDuplicated =
-      CGM.getTarget().getVTableUniqueness() ==
-          VTableUniquenessKind::UniqueIfStrongLinkage &&
-      VTable->isWeakForLinker();
+  bool VTableMayBeDuplicated = CGM.mayVTableBeDuplicated(VTable->getLinkage());
   if (!CGM.shouldEmitRTTI() || VTableMayBeDuplicated)
     VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
@@ -1211,6 +1208,13 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   }
 
   llvm_unreachable("Invalid TemplateSpecializationKind!");
+}
+
+bool CodeGenModule::mayVTableBeDuplicated(
+    llvm::GlobalValue::LinkageTypes Linkage) const {
+  return getTarget().getVTableUniqueness() ==
+             VTableUniquenessKind::UniqueIfStrongLinkage &&
+         llvm::GlobalValue::isWeakForLinker(Linkage);
 }
 
 /// This is a callback from Sema to tell us that a particular vtable is
