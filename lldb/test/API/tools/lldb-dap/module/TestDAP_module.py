@@ -27,6 +27,7 @@ class TestDAP_module(DAPTestCaseBase):
             breakpoints = session.set_function_breakpoints(["foo"]).body.breakpoints
             self.assertEqual(len(breakpoints), 1, "expect one breakpoint.")
             foo_bp_id = self.expect_not_none(breakpoints[0].id)
+            self.assertFalse(breakpoints[0].verified)
 
         session.verify_stopped_on_breakpoint(foo_bp_id, after=ctx.process_event)
         active_modules = session.get_modules()

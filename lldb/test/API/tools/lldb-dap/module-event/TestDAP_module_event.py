@@ -1,8 +1,10 @@
+from lldbsuite.test.decorators import skipIfTargetDoesNotSupportSharedLibraries
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs, StoppedReason
 from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestDAP_module_event(DAPTestCaseBase):
     def test_module_event(self):
         session = self.build_and_create_session()
