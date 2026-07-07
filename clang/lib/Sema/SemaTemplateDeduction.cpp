@@ -4833,6 +4833,10 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
             /*HasDeducedAnyParam=*/nullptr);
         Result != TemplateDeductionResult::Success)
       return Result;
+    // Substituting the function type can instantiate the trailing return type,
+    // so handle the same immediate-context substitution failure here.
+    if (Trap.hasErrorOccurred())
+      return TemplateDeductionResult::SubstitutionFailure;
   }
 
   TemplateDeductionResult Result;
@@ -4842,6 +4846,11 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
         /*OriginalCallArgs=*/nullptr, /*PartialOverloading=*/false,
         /*PartialOrdering=*/true, IsAddressOfFunction);
   });
+  if (Trap.hasErrorOccurred()) {
+    if (Specialization)
+      Specialization->setInvalidDecl(true);
+    return TemplateDeductionResult::SubstitutionFailure;
+  }
   if (Result != TemplateDeductionResult::Success)
     return Result;
 
