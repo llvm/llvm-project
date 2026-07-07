@@ -1737,6 +1737,7 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpAtomicStore:
   case SPIRV::OpAtomicExchange:
   case SPIRV::OpAtomicCompareExchange:
+  case SPIRV::OpAtomicCompareExchangeWeak:
   case SPIRV::OpAtomicIIncrement:
   case SPIRV::OpAtomicIDecrement:
   case SPIRV::OpAtomicIAdd:
