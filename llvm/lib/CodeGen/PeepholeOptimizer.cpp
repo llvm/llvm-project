@@ -1390,7 +1390,7 @@ bool PeepholeOptimizer::optimizeRegSequenceUses(
     if (UseMI->isCopy() || UseMI->isInlineAsm())
       continue;
 
-    // FIMXE This is a workaround for some restrictions on AMDGPU
+    // FIXME This is a workaround for some restrictions on AMDGPU
     // instructions. For instance, S_MOVRELS_B32 expects src0 to be a
     // subreg of its implicit vector register use.
     if (UseMI->hasRegisterImplicitUseOperand(DstReg))
