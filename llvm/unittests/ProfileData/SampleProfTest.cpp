@@ -178,7 +178,8 @@ struct SampleProfTest : ::testing::Test {
     return Buffer;
   }
 
-  // Read the format version from a profile stored in an in-memory buffer.
+  // Read the profile from an in-memory buffer, verify its payload, and
+  // return the format version.
   ErrorOr<uint64_t> readVersionFromBuffer(ArrayRef<char> Buffer) {
     std::unique_ptr<MemoryBuffer> MemBuffer = MemoryBuffer::getMemBuffer(
         StringRef(Buffer.data(), Buffer.size()), "profile",
@@ -188,8 +189,13 @@ struct SampleProfTest : ::testing::Test {
     if (std::error_code EC = ReaderOrErr.getError())
       return EC;
     auto Reader = std::move(ReaderOrErr.get());
-    if (std::error_code EC = Reader->readHeader())
+    if (std::error_code EC = Reader->read())
       return EC;
+    if (Reader->getProfiles().size() != 1)
+      return sampleprof_error::malformed;
+    FunctionSamples *Samples = Reader->getSamplesFor("_Z3fooi");
+    if (!Samples || Samples->getTotalSamples() != 1)
+      return sampleprof_error::malformed;
     return Reader->getFormatVersion();
   }
 
