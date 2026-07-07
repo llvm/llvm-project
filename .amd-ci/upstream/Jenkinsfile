@@ -496,6 +496,9 @@ try {
                         )
                     )
                     assert gitVars.GIT_COMMIT
+                    // Record the llvm-project commit in the build description
+                    // once the clone completes.
+                    addCommitToBuildDescr(gitVars.GIT_URL, gitVars.GIT_COMMIT, llvmProj)
                     if (isPrBranch) {
                         prLatestCommit = gitVars.GIT_COMMIT
                         withEnv([gitPathEnv]) {
@@ -882,6 +885,35 @@ try {
 }
 
 /*
+ * Append a line to the build description (HTML, <br>-separated), matching the
+ * convention used by aocc-essentials CommitCheck.
+ */
+void appendDescription(String text) {
+    if (currentBuild.description) {
+        currentBuild.description += '<br>' + text
+    } else {
+        currentBuild.description = text
+    }
+}
+
+/*
+ * Record a repo's GIT_COMMIT in the build description as a clickable link:
+ *   GIT_COMMIT (<repo>): <a href='<url>/commit/<full-sha>'><short-sha></a>
+ */
+void addCommitToBuildDescr(String gitUrl, String gitCommit, String gitRepo) {
+    String ourUrl = gitUrl
+    if (ourUrl.endsWith('.git')) {
+        ourUrl = ourUrl[0..ourUrl.length() - 5]
+    }
+    String commitDescrip = (
+        'GIT_COMMIT (' + gitRepo + "): <a href='" +
+            ourUrl + '/commit/' + gitCommit + "'>" +
+            gitCommit[0..7] + '</a>'
+    )
+    appendDescription(commitDescrip)
+}
+
+/*
  * Using build(propagate: false, ...) and the following function
  * supplies better information back to GitHub Checks than if
  * we leave it to 'propagate: true'.
@@ -1069,8 +1101,9 @@ ls -l spec_libs/ || true
  */
 void cloneSpecConfigs(String repoUrl, String branch, String credentialsId, String gitTool) {
     echo "[+] Cloning spec-configs (${repoUrl}, branch ${branch}) into spec-configs/"
+    def specScmVars // groovylint-disable-line NoDef,VariableTypeRequired
     dir('spec-configs') {
-        checkout(
+        specScmVars = checkout(
             changelog: false,
             scm: scmGit(
                 gitTool: gitTool,
@@ -1088,6 +1121,11 @@ void cloneSpecConfigs(String repoUrl, String branch, String credentialsId, Strin
         )
     }
     echo '[+] Clone of spec-configs completed'
+    // Record the spec-configs commit in the build description once the clone
+    // completes.
+    if (specScmVars?.GIT_COMMIT) {
+        addCommitToBuildDescr(specScmVars.GIT_URL ?: repoUrl, specScmVars.GIT_COMMIT, 'spec-configs')
+    }
     sh(label: 'spec-configs-summary',
        script: '''set -e
 ls -1 spec-configs | head -n 50
