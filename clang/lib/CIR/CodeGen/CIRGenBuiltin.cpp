@@ -355,10 +355,9 @@ static RValue emitUnaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   mlir::Value arg = cgf.emitScalarExpr(e.getArg(0));
 
   CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &e);
-  assert(!cir::MissingFeatures::fpConstraints());
 
-  auto call =
-      Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
+  auto call = Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(),
+                                arg, cgf.getBuilder().getConstrainedFPAttr());
   return RValue::get(call->getResult(0));
 }
 
@@ -400,12 +399,13 @@ static mlir::Value emitBinaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   mlir::Value arg0 = cgf.emitScalarExpr(e.getArg(0));
   mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
 
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &e);
+
   mlir::Location loc = cgf.getLoc(e.getExprLoc());
   mlir::Type ty = cgf.convertType(e.getType());
 
-  assert(!cir::MissingFeatures::fpConstraints());
-
-  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1);
+  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1,
+                         cgf.getBuilder().getConstrainedFPAttr());
   return call->getResult(0);
 }
 

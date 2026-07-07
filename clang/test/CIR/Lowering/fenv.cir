@@ -55,9 +55,11 @@ module {
     cir.return
   }
 
-  // The exception behavior is derived from the strict_except field: true maps to
-  // "fpexcept.strict", false maps to "fpexcept.maytrap", and an absent value
-  // maps to "fpexcept.ignore".
+  // Exception behavior mapping:
+  // - strict_except = true  -> "fpexcept.strict"
+  // - strict_except = false -> "fpexcept.maytrap" (unless except_mode = masked)
+  // - except_mode = masked  -> "fpexcept.ignore" (FPE_Ignore)
+  // - strict_except absent  -> "fpexcept.ignore"
   // CHECK-LABEL: llvm.func @exception_behaviors
   cir.func @exception_behaviors(%a: !cir.float, %b: !cir.float) {
     // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
@@ -68,7 +70,10 @@ module {
     %1 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<strict_except = false>}
     // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.ignore">
     // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
-    %2 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest>}
+    %2 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<except_mode = masked, strict_except = false>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.ignore">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %3 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest>}
     cir.return
   }
 

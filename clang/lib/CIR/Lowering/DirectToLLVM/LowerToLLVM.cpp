@@ -431,11 +431,17 @@ static llvm::StringRef getConstrainedRoundingMetadata(cir::FenvAttr fenv) {
 
 // Return the LLVM metadata string that encodes the exception behavior described
 // by the given fenv attribute, in the form expected by the constrained
-// floating-point intrinsics (e.g. "fpexcept.strict"). A strict exception
-// behavior maps to "fpexcept.strict"; a non-strict (non-deterministic)
-// exception behavior maps to "fpexcept.maytrap"; and the absence of an
-// exception behavior maps to "fpexcept.ignore".
+// floating-point intrinsics (e.g. "fpexcept.strict").
+//
+// Mapping from FenvAttr fields (as produced by getConstrainedFPAttr):
+// - except_mode = masked  -> "fpexcept.ignore"  (FPE_Ignore)
+// - strict_except = true  -> "fpexcept.strict"  (FPE_Strict)
+// - strict_except = false -> "fpexcept.maytrap" (FPE_MayTrap)
+// - strict_except absent  -> "fpexcept.ignore"
 static llvm::StringRef getConstrainedExceptMetadata(cir::FenvAttr fenv) {
+  std::optional<cir::FPExceptionMode> exceptMode = fenv.getExceptMode();
+  if (exceptMode && *exceptMode == cir::FPExceptionMode::Masked)
+    return "fpexcept.ignore";
   mlir::BoolAttr strictExcept = fenv.getStrictExcept();
   if (!strictExcept)
     return "fpexcept.ignore";

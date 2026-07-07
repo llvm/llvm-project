@@ -30,7 +30,8 @@ namespace clang::CIRGen {
 
 CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
-    : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder) {
+    : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder),
+      curFPFeatures(cgm.getLangOpts()) {
   ehStack.setCGF(this);
 }
 
@@ -494,6 +495,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   LangOptions::FPExceptionModeKind eb = getLangOpts().getDefaultExceptionMode();
   builder.setDefaultConstrainedRounding(rm);
   builder.setDefaultConstrainedExcept(eb);
+  builder.setIsFPConstrained(false);
   if ((fd && (fd->UsesFPIntrin() || fd->hasAttr<StrictFPAttr>())) ||
       (!fd && (eb != LangOptions::FPExceptionModeKind::FPE_Ignore ||
                rm != llvm::RoundingMode::NearestTiesToEven))) {
@@ -773,10 +775,6 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     // Emit the standard function prologue.
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
-    if (funcDecl->UsesFPIntrin() || funcDecl->hasAttr<StrictFPAttr>()) {
-      cgm.errorNYI(loc, "STDC FENV_ACCESS");
-      return fn;
-    }
 
     // Save parameters for coroutine function.
     if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
@@ -1424,10 +1422,12 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   // TODO(cir): create guard to restore fast math configurations.
   assert(!cir::MissingFeatures::fastMathGuard());
 
-  [[maybe_unused]] llvm::RoundingMode newRoundingMode =
-      fpFeatures.getRoundingMode();
-  [[maybe_unused]] LangOptions::FPExceptionModeKind newExceptionBehavior =
+  llvm::RoundingMode newRoundingMode = fpFeatures.getRoundingMode();
+  LangOptions::FPExceptionModeKind newExceptionBehavior =
       fpFeatures.getExceptionMode();
+
+  cgf.builder.setDefaultConstrainedRounding(newRoundingMode);
+  cgf.builder.setDefaultConstrainedExcept(newExceptionBehavior);
 
   // TODO(cir): override FP flags once FM configs are guarded.
   assert(!cir::MissingFeatures::fastMathFlags());

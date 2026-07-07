@@ -30,12 +30,6 @@ namespace clang::CIRGen {
 
 class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
-  bool isFPConstrained = false;
-  LangOptions::FPExceptionModeKind defaultConstrainedExcept =
-      LangOptions::FPE_Ignore;
-  llvm::RoundingMode defaultConstrainedRounding =
-      llvm::RoundingMode::NearestTiesToEven;
-  bool defaultConstrainedStrictExcept = false;
 
   llvm::StringMap<unsigned> recordNames;
   llvm::StringMap<unsigned> globalsVersioning;
@@ -122,44 +116,6 @@ public:
 
     return baseName + "." + std::to_string(recordNames[baseName]++);
   }
-
-  //
-  // Floating point specific helpers
-  // -------------------------------
-  //
-
-  /// Enable/Disable use of constrained floating point math. When enabled the
-  /// CreateF<op>() calls instead create constrained floating point intrinsic
-  /// calls. Fast math flags are unaffected by this setting.
-  void setIsFPConstrained(bool isCon) { isFPConstrained = isCon; }
-
-  /// Query for the use of constrained floating point math
-  bool getIsFPConstrained() const { return isFPConstrained; }
-
-  /// Set the exception handling to be used with constrained floating point
-  void setDefaultConstrainedExcept(LangOptions::FPExceptionModeKind newExcept) {
-    defaultConstrainedExcept = newExcept;
-  }
-
-  /// Get the exception handling used with constrained floating point
-  LangOptions::FPExceptionModeKind getDefaultConstrainedExcept() const {
-    return defaultConstrainedExcept;
-  }
-
-  /// Set the rounding mode handling to be used with constrained floating point
-  void setDefaultConstrainedRounding(llvm::RoundingMode newRounding) {
-    defaultConstrainedRounding = newRounding;
-  }
-
-  /// Get the rounding mode handling used with constrained floating point
-  llvm::RoundingMode getDefaultConstrainedRounding() const {
-    return defaultConstrainedRounding;
-  }
-
-  void initializeDefaultFenv(llvm::RoundingMode rm, LangOptions::FPExceptionModeKind eb) {
-    // TODO(cir): implement this
-  }
-
 
   cir::LongDoubleType getLongDoubleTy(const llvm::fltSemantics &format) const {
     if (&format == &llvm::APFloat::IEEEdouble())

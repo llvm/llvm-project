@@ -1059,8 +1059,7 @@ public:
       result.compType = vecType->getElementType();
     result.opcode = e->getOpcode();
     result.loc = e->getSourceRange();
-    // TODO(cir): Result.FPFeatures
-    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+    result.fpFeatures = e->getFPFeaturesInEffect(cgf.getLangOpts());
     result.e = e;
     return result;
   }
