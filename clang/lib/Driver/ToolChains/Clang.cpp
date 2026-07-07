@@ -1170,8 +1170,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   //       OffloadKind as an argument.
   bool OffloadUsesLLVMLibc =
       C.getActiveOffloadKinds() == Action::OFK_OpenMP ||
-      ((JA.isDeviceOffloading(Action::OFK_Cuda) ||
-        JA.isDeviceOffloading(Action::OFK_HIP)) &&
+      (C.getActiveOffloadKinds() != Action::OFK_None &&
        getToolChain().getTriple().getEnvironment() == llvm::Triple::LLVM);
   if (!Args.hasArg(options::OPT_nostdinc) &&
       Args.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
