@@ -1157,6 +1157,23 @@ protected:
   static const uint32_t GCOVTagAFDOFunction = 0xac000000;
 };
 
+/// A helper class that wraps a local set of string names from NameTable.
+class SampleProfileNameSet {
+  const SampleProfileReader &Reader;
+  StringSet<> NamesInProfile;
+
+public:
+  explicit SampleProfileNameSet(const SampleProfileReader &R) : Reader(R) {
+    for (FunctionId Name : Reader.getNameTable())
+      NamesInProfile.insert(Name.stringRef());
+  }
+
+  /// Check if a canonical function name exists in the profile name table.
+  bool contains(StringRef CanonName) const {
+    return NamesInProfile.contains(CanonName);
+  }
+};
+
 } // end namespace sampleprof
 
 } // end namespace llvm
