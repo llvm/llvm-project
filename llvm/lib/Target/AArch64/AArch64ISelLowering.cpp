@@ -1,3 +1,4 @@
+
 //===-- AArch64ISelLowering.cpp - AArch64 DAG Lowering Implementation  ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -23179,17 +23180,14 @@ static SDValue foldADCToCINC(SDNode *N, SelectionDAG &DAG) {
 ///
 /// This allows using the zero register (xzr/wzr) to encode the immediate
 /// operand (rather than a MOV to a GPR).
+
 static SDValue performAddSubCarryCombine(SDNode *N, SelectionDAG &DAG,
                                          unsigned NewOpcode) {
-  SDValue RHS = N->getOperand(1);
-  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-    APInt Imm = C->getAPIntValue();
-    if (Imm.isAllOnes()) {
-      SDLoc DL(N);
-      RHS = DAG.getConstant(0, DL, RHS.getValueType());
-      return DAG.getNode(NewOpcode, DL, N->getVTList(), N->getOperand(0), RHS,
-                         N->getOperand(2));
-    }
+  if (isAllOnesConstant(N->getOperand(1))) {
+    SDLoc DL(N);
+    SDValue RHS = DAG.getConstant(0, DL, N->getOperand(1).getValueType());
+    return DAG.getNode(NewOpcode, DL, N->getVTList(), N->getOperand(0), RHS,
+                       N->getOperand(2));
   }
   return SDValue();
 }
