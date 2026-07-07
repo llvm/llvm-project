@@ -114,12 +114,12 @@ body:             |
   ; CHECK-NEXT:   undef renamable $vgpr3 = KILL killed renamable $vgpr3, implicit-def $vgpr3_vgpr4, implicit $exec
   ; CHECK-NEXT:   S_WAITCNT .Vmcnt_0
   ; CHECK-NEXT:   $vgpr4 = V_MOV_B32_e32 killed $vgpr0, implicit $exec, implicit $exec
-  ; CHECK-NEXT:   $vgpr6 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit-def $vgpr5_vgpr6, implicit $vgpr1_vgpr2
+  ; CHECK-NEXT:   $vgpr6 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit $vgpr1_vgpr2
   ; CHECK-NEXT:   $vgpr5 = V_MOV_B32_e32 $vgpr1, implicit $exec, implicit $vgpr1_vgpr2, implicit $exec
   ; CHECK-NEXT:   SCRATCH_STORE_DWORDX2_SADDR killed $vgpr5_vgpr6, $sgpr32, 12, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s64) into %stack.4, align 4, addrspace 5)
   ; CHECK-NEXT:   DBG_VALUE $sgpr32, 0, !9, !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpReinterpret(i32), DIOpConstant(i32 12), DIOpAdd(), DIOpReinterpret(ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), debug-location !8
   ; CHECK-NEXT:   DBG_VALUE renamable $vgpr5_vgpr6, 0, !9, !DIExpression(DIOpArg(0, ptr), DIOpDeref(ptr)), debug-location !8
-  ; CHECK-NEXT:   $vgpr6 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit-def $vgpr5_vgpr6, implicit $vgpr3_vgpr4
+  ; CHECK-NEXT:   $vgpr6 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit $vgpr3_vgpr4
   ; CHECK-NEXT:   $vgpr5 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit $vgpr3_vgpr4, implicit $exec
   ; CHECK-NEXT:   SCRATCH_STORE_DWORDX2_SADDR killed $vgpr5_vgpr6, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, debug-location !10 :: ("amdgpu-thread-private" store (s64) into %stack.3, align 4, addrspace 5)
   ; CHECK-NEXT:   DBG_VALUE $sgpr32, 0, !7, !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpReinterpret(i32), DIOpConstant(i32 4), DIOpAdd(), DIOpReinterpret(ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), debug-location !8
