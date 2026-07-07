@@ -58,9 +58,7 @@ int ThrowsCounted::throw_after = 0;
 
 struct NoMoveNoCopy {
   constexpr explicit NoMoveNoCopy(int x) : value(x) {}
-  NoMoveNoCopy(NoMoveNoCopy const&) { assert(false); }
-  NoMoveNoCopy(NoMoveNoCopy const&&) { assert(false); }
-
+  NoMoveNoCopy(const NoMoveNoCopy&)   = delete;
   friend void operator&(NoMoveNoCopy) = delete;
   int value;
 };
@@ -74,7 +72,7 @@ public:
   using value_type        = NoMoveNoCopy;
 
   PrvalueIterator() = delete;
-  constexpr PrvalueIterator(const int* ptr) : ptr_(ptr) {}
+  constexpr explicit PrvalueIterator(const int* ptr) : ptr_(ptr) {}
 
   constexpr NoMoveNoCopy operator*() const { return NoMoveNoCopy(*ptr_); }
 
