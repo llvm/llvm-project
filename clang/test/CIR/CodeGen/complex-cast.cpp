@@ -394,7 +394,7 @@ void complex_user_defined_cast() {
 
 // LLVM: %[[P_ADDR:.*]] = alloca %struct.Point
 // LLVM: %[[C_ADDR:.*]] = alloca { i32, i32 }
-// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr %[[P_ADDR]], ptr @__const._Z25complex_user_defined_castv.p, i64 8, i1 false)
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[P_ADDR]], ptr align 4 @__const._Z25complex_user_defined_castv.p, i64 8, i1 false)
 // LLVM: %[[POINT_TO_COMPLEX:.*]] = call noundef { i32, i32 } @_ZZ25complex_user_defined_castvENK5PointcvCiEv(ptr noundef nonnull align 4 dereferenceable(8) %[[P_ADDR]])
 // LLVM: store { i32, i32 } %[[POINT_TO_COMPLEX]], ptr %[[C_ADDR]], align 4
 

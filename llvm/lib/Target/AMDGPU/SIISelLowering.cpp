@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
@@ -2900,7 +2901,7 @@ void SITargetLowering::allocateSpecialEntryInputVGPRs(
 
 // Try to allocate a VGPR at the end of the argument list, or if no argument
 // VGPRs are left allocating a stack slot.
-// If \p Mask is is given it indicates bitfield position in the register.
+// If \p Mask is given it indicates bitfield position in the register.
 // If \p Arg is given use it with new ]p Mask instead of allocating new.
 static ArgDescriptor allocateVGPR32Input(CCState &CCInfo, unsigned Mask = ~0u,
                                          ArgDescriptor Arg = ArgDescriptor()) {
@@ -9862,6 +9863,13 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
 bool SITargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
+  // Named barriers have fixed, non-relocated LDS addresses, so a constant
+  // offset into an array of them can be folded into the address.
+  if (GA->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+    const auto *GV = dyn_cast<GlobalVariable>(GA->getGlobal());
+    return GV && AMDGPU::isNamedBarrier(*GV);
+  }
+
   // OSes that use ELF REL relocations (instead of RELA) can only store a
   // 32-bit addend in the instruction, so it is not safe to allow offset folding
   // which can create arbitrary 64-bit addends. (This is only a problem for
@@ -10810,25 +10818,38 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_wave_reduce_min:
   case Intrinsic::amdgcn_wave_reduce_umin:
+  case Intrinsic::amdgcn_wave_reduce_fmin:
   case Intrinsic::amdgcn_wave_reduce_max:
   case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_wave_reduce_fmax:
   case Intrinsic::amdgcn_wave_reduce_add:
+  case Intrinsic::amdgcn_wave_reduce_fadd:
   case Intrinsic::amdgcn_wave_reduce_sub:
+  case Intrinsic::amdgcn_wave_reduce_fsub:
   case Intrinsic::amdgcn_wave_reduce_and:
   case Intrinsic::amdgcn_wave_reduce_or:
   case Intrinsic::amdgcn_wave_reduce_xor: {
     EVT SrcVT = Op.getOperand(1).getValueType();
-    if (SrcVT == MVT::i16) {
+    if (SrcVT.getFixedSizeInBits() == 16) {
+      bool IsFPOp = SrcVT.isFloatingPoint();
       bool NeedsSignExt = IntrinsicID == Intrinsic::amdgcn_wave_reduce_min ||
                           IntrinsicID == Intrinsic::amdgcn_wave_reduce_max ||
                           IntrinsicID == Intrinsic::amdgcn_wave_reduce_add ||
                           IntrinsicID == Intrinsic::amdgcn_wave_reduce_sub;
-      unsigned ExtOpc = NeedsSignExt ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-      SDValue ExtendedSrc = DAG.getNode(ExtOpc, DL, MVT::i32, Op.getOperand(1));
+      unsigned ExtOpc = IsFPOp         ? ISD::FP_EXTEND
+                        : NeedsSignExt ? ISD::SIGN_EXTEND
+                                       : ISD::ZERO_EXTEND;
+      auto SrcType = IsFPOp ? MVT::f16 : MVT::i16;
+      auto ExtType = IsFPOp ? MVT::f32 : MVT::i32;
+      SDValue ExtendedSrc = DAG.getNode(ExtOpc, DL, ExtType, Op.getOperand(1));
       SDValue Strategy = Op.getOperand(2);
-      SDValue Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+      SDValue Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ExtType,
                                    Op.getOperand(0), ExtendedSrc, Strategy);
-      return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Result);
+      if (IsFPOp)
+        return DAG.getNode(ISD::FP_ROUND, DL, SrcType, Result,
+                           DAG.getTargetConstant(1, DL, MVT::i32));
+      else
+        return DAG.getNode(ISD::TRUNCATE, DL, SrcType, Result);
     }
     return SDValue();
   }
@@ -11983,10 +12004,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         SDValue M0Val;
         M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, Op->getOperand(2),
                             DAG.getShiftAmountConstant(4, MVT::i32, DL));
-        M0Val = SDValue(
-            DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, M0Val,
-                               DAG.getTargetConstant(0x3F, DL, MVT::i32)),
-            0);
+        M0Val = DAG.getNode(ISD::AND, DL, MVT::i32, M0Val,
+                            DAG.getConstant(0x3F, DL, MVT::i32));
         Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
       } else
         Ops.push_back(copyToM0(DAG, Chain, DL, Op->getOperand(2)).getValue(0));
@@ -12623,22 +12642,17 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue BarID;
     BarID = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
                         DAG.getShiftAmountConstant(4, MVT::i32, DL));
-    BarID =
-        SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, BarID,
-                                   DAG.getTargetConstant(0x3F, DL, MVT::i32)),
-                0);
+    BarID = DAG.getNode(ISD::AND, DL, MVT::i32, BarID,
+                        DAG.getConstant(0x3F, DL, MVT::i32));
     // Member count should be put into M0[ShAmt:+6]
     // Barrier ID should be put into M0[5:0]
-    M0Val =
-        SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, CntOp,
-                                   DAG.getTargetConstant(0x3F, DL, MVT::i32)),
-                0);
+    SDValue MemberCnt = DAG.getNode(ISD::AND, DL, MVT::i32, CntOp,
+                                    DAG.getConstant(0x3F, DL, MVT::i32));
     constexpr unsigned ShAmt = 16;
-    M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, CntOp,
+    M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, MemberCnt,
                         DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
 
-    M0Val = SDValue(
-        DAG.getMachineNode(AMDGPU::S_OR_B32, DL, MVT::i32, M0Val, BarID), 0);
+    M0Val = DAG.getNode(ISD::OR, DL, MVT::i32, M0Val, BarID);
 
     Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
 
@@ -12689,10 +12703,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       SDValue M0Val;
       M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
                           DAG.getShiftAmountConstant(4, MVT::i32, DL));
-      M0Val =
-          SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, M0Val,
-                                     DAG.getTargetConstant(0x3F, DL, MVT::i32)),
-                  0);
+      M0Val = DAG.getNode(ISD::AND, DL, MVT::i32, M0Val,
+                          DAG.getConstant(0x3F, DL, MVT::i32));
       Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
     }
 
@@ -18487,7 +18499,7 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
     return DCI.DAG.getConstantFP(Zero, SDLoc(N), N->getValueType(0));
   }
 
-  APFloat One(F.getSemantics(), "1.0");
+  APFloat One = APFloat::getOne(F.getSemantics());
   if (F > One)
     return DCI.DAG.getConstantFP(One, SDLoc(N), N->getValueType(0));
 
@@ -19239,10 +19251,8 @@ MachineSDNode *SITargetLowering::buildRSRC(SelectionDAG &DAG, const SDLoc &DL,
   SDValue PtrLo = DAG.getTargetExtractSubreg(AMDGPU::sub0, DL, MVT::i32, Ptr);
   SDValue PtrHi = DAG.getTargetExtractSubreg(AMDGPU::sub1, DL, MVT::i32, Ptr);
   if (RsrcDword1) {
-    PtrHi =
-        SDValue(DAG.getMachineNode(AMDGPU::S_OR_B32, DL, MVT::i32, PtrHi,
-                                   DAG.getConstant(RsrcDword1, DL, MVT::i32)),
-                0);
+    PtrHi = DAG.getNode(ISD::OR, DL, MVT::i32, PtrHi,
+                        DAG.getConstant(RsrcDword1, DL, MVT::i32));
   }
 
   SDValue DataLo =

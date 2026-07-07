@@ -687,6 +687,12 @@ public:
   /// Tests whether the OS is Windows.
   bool isOSWindows() const { return getOS() == Triple::Win32; }
 
+  /// Tests whether the OS is Windows or UEFI. These targets generally share
+  /// Windows low-level platform ABI conventions, but this does not imply
+  /// support for a hosted Windows environment or its runtime libraries. Use
+  /// object format or environment predicates when those properties matter.
+  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
+
   /// Checks if the environment is MSVC.
   bool isKnownWindowsMSVCEnvironment() const {
     return isOSWindows() && getEnvironment() == Triple::MSVC;

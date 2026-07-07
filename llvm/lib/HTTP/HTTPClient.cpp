@@ -290,6 +290,7 @@ Error HTTPClient::perform(const HTTPRequest &Request,
     }
 
   WinHTTPSession *Session = static_cast<WinHTTPSession *>(Handle);
+  assert(!Session->SessionHandle && "perform() can only be called once");
 
   // Parse URL
   std::wstring Host, Path;

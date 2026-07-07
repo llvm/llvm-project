@@ -78,6 +78,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  inet_address_macros
+  HDRS
+    inet-address-macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.arpa_inet
+    libc.include.llvm-libc-macros.inet_address_macros
+)
+
+add_proxy_header_library(
   net_if_macros
   HDRS
     net_if_macros.h
@@ -135,6 +144,7 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.stdlib_macros
 )
 
+add_header_library(dirent_overlay HDRS dirent_overlay.h)
 add_header_library(stdio_overlay HDRS stdio_overlay.h)
 
 add_proxy_header_library(

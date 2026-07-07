@@ -10127,7 +10127,7 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
 
     IndexExpr = Res.get();
     uint64_t V = Value.getZExtValue();
-    if (FullySubstituted && (V < 0 || V >= Expansions.size())) {
+    if (FullySubstituted && V >= Expansions.size()) {
       Diag(IndexExpr->getBeginLoc(), diag::err_pack_index_out_of_bound)
           << V << Pattern << Expansions.size();
       return QualType();

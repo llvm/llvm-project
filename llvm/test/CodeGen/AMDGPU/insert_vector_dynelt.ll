@@ -3933,37 +3933,37 @@ define amdgpu_kernel void @bit4_inselt(ptr addrspace(1) %out, <4 x i1> %vec, i32
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-O0-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GCN-O0-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-O0-NEXT:    s_load_dword s6, s[4:5], 0x2c
+; GCN-O0-NEXT:    s_load_dword s7, s[4:5], 0x2c
 ; GCN-O0-NEXT:    s_load_dword s2, s[4:5], 0x30
-; GCN-O0-NEXT:    s_mov_b32 s10, 3
+; GCN-O0-NEXT:    s_mov_b32 s9, 3
 ; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-O0-NEXT:    s_and_b32 s3, s6, s10
-; GCN-O0-NEXT:    s_mov_b32 s7, 0xffff
-; GCN-O0-NEXT:    s_and_b32 s4, s7, s3
+; GCN-O0-NEXT:    s_and_b32 s3, s7, s9
+; GCN-O0-NEXT:    s_mov_b32 s6, 0xffff
+; GCN-O0-NEXT:    s_and_b32 s4, s6, s3
 ; GCN-O0-NEXT:    s_mov_b32 s3, 1
 ; GCN-O0-NEXT:    s_lshr_b32 s5, s4, s3
 ; GCN-O0-NEXT:    s_mov_b32 s4, 15
-; GCN-O0-NEXT:    s_and_b32 s4, s6, s4
 ; GCN-O0-NEXT:    s_and_b32 s4, s7, s4
-; GCN-O0-NEXT:    s_mov_b32 s9, 2
-; GCN-O0-NEXT:    s_lshr_b32 s4, s4, s9
-; GCN-O0-NEXT:    s_mov_b32 s8, s4
-; GCN-O0-NEXT:    s_and_b32 s8, s8, s10
-; GCN-O0-NEXT:    s_and_b32 s7, s7, s8
-; GCN-O0-NEXT:    s_lshr_b32 s8, s7, s3
-; GCN-O0-NEXT:    s_and_b32 s6, 1, s6
-; GCN-O0-NEXT:    s_cmp_eq_u32 s6, 1
-; GCN-O0-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; GCN-O0-NEXT:    s_and_b32 s2, s2, s10
+; GCN-O0-NEXT:    s_and_b32 s4, s6, s4
+; GCN-O0-NEXT:    s_mov_b32 s8, 2
+; GCN-O0-NEXT:    s_lshr_b32 s4, s4, s8
+; GCN-O0-NEXT:    s_mov_b32 s10, s4
+; GCN-O0-NEXT:    s_and_b32 s10, s10, s9
+; GCN-O0-NEXT:    s_and_b32 s6, s6, s10
+; GCN-O0-NEXT:    s_lshr_b32 s6, s6, s3
+; GCN-O0-NEXT:    s_and_b32 s7, 1, s7
+; GCN-O0-NEXT:    s_and_b32 s2, s2, s9
 ; GCN-O0-NEXT:    s_mul_i32 s3, s2, s3
 ; GCN-O0-NEXT:    s_mov_b32 s2, 0
 ; GCN-O0-NEXT:    s_add_i32 s3, s2, s3
-; GCN-O0-NEXT:    s_add_i32 s2, s2, s9
+; GCN-O0-NEXT:    s_add_i32 s2, s2, s8
+; GCN-O0-NEXT:    s_cmp_eq_u32 s7, 1
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
-; GCN-O0-NEXT:    v_mov_b32_e32 v0, s8
+; GCN-O0-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s2
 ; GCN-O0-NEXT:    buffer_store_byte v0, v1, s[12:15], 0 offen offset:1
-; GCN-O0-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[6:7]
+; GCN-O0-NEXT:    s_cselect_b32 s6, 1, 0
+; GCN-O0-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-O0-NEXT:    buffer_store_byte v0, off, s[12:15], 0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s5
 ; GCN-O0-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:1

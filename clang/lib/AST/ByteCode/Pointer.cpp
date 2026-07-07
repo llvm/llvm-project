@@ -915,8 +915,12 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
     // Primitives should never end up here.
     assert(!Ctx.canClassify(Ty));
+    const Descriptor *FieldDesc = Ptr.getFieldDesc();
+    assert(FieldDesc);
 
     if (const auto *RT = Ty->getAsCanonical<RecordType>()) {
+      if (!FieldDesc->isRecord())
+        return false;
       const auto *Record = Ptr.getRecord();
       assert(Record && "Missing record descriptor");
 
@@ -986,6 +990,8 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
     }
 
     if (const auto *AT = Ty->getAsArrayTypeUnsafe()) {
+      if (!FieldDesc->isArray())
+        return false;
       const size_t NumElems = Ptr.getNumElems();
       QualType ElemTy = AT->getElementType();
       R = APValue(APValue::UninitArray{}, NumElems, NumElems);
@@ -1005,14 +1011,12 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
     // Complex types.
     if (Ty->isAnyComplexType()) {
-      const Descriptor *Desc = Ptr.getFieldDesc();
       // Can happen via C casts.
-      if (!Desc->getType()->isAnyComplexType())
+      if (!FieldDesc->getType()->isAnyComplexType())
         return false;
 
-      PrimType ElemT = Desc->getPrimType();
+      PrimType ElemT = FieldDesc->getPrimType();
       if (isIntegerOrBoolType(ElemT)) {
-        PrimType ElemT = Desc->getPrimType();
         INT_TYPE_SWITCH(ElemT, {
           auto V1 = Ptr.elem<T>(0);
           auto V2 = Ptr.elem<T>(1);
@@ -1029,10 +1033,10 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
     // Vector types.
     if (const auto *VT = Ty->getAs<VectorType>()) {
-      const Descriptor *Desc = Ptr.getFieldDesc();
-      assert(Ptr.getFieldDesc()->isPrimitiveArray());
-      PrimType ElemT = Desc->getPrimType();
+      if (!FieldDesc->isPrimitiveArray())
+        return false;
 
+      PrimType ElemT = FieldDesc->getPrimType();
       SmallVector<APValue> Values;
       Values.reserve(VT->getNumElements());
       for (unsigned I = 0; I != VT->getNumElements(); ++I) {
@@ -1047,9 +1051,9 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
     // Constant Matrix types.
     if (const auto *MT = Ty->getAs<ConstantMatrixType>()) {
-      assert(Ptr.getFieldDesc()->isPrimitiveArray());
-      const Descriptor *Desc = Ptr.getFieldDesc();
-      PrimType ElemT = Desc->getPrimType();
+      if (!FieldDesc->isPrimitiveArray())
+        return false;
+      PrimType ElemT = FieldDesc->getPrimType();
       unsigned NumElems = MT->getNumElementsFlattened();
 
       SmallVector<APValue> Values;

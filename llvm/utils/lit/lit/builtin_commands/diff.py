@@ -7,18 +7,17 @@ import re
 import sys
 
 # diff.py runs in two modes during the in-process migration:
-#   - In-process (default): imported as 'lit.builtin_commands.diff', so the
-#     'lit' package is already resolvable => lit.util works
-#   - Spawned fallback: run standalone via 'sys.executable diff.py', with
-#     PYTHONPATH set to the 'lit/' directory itself, not its parent. No entry
-#     on sys.path is the parent of 'lit/', so 'lit' can't be imported as package =>
-#     'lit.util' raises ImportError. util.py sits directly in that PYTHONPATH
-#     dir, so bare 'import util' resolves instead.
-# Both paths load the same module; the fallback handles the path difference.
-# TODO: Collapse to a standard 'import lit.util' once standalone spawning is removed.
+#   - In-process: imported as 'lit.builtin_commands.diff', so __package__ is
+#     set and the relative import resolves to lit.util from the source tree.
+#   - Spawned fallback: run as __main__ with __package__=None, so the relative
+#     import raises ImportError and the fallback picks up util.py via PYTHONPATH
+#     pointing at the lit/ directory.
+# A relative import is used (not 'import lit.util') to avoid accidentally
+# importing a system-installed lit package that may lack abs_path_preserve_drive.
+# TODO: Collapse to 'from .. import util' once standalone spawning is removed.
 
 try:
-    import lit.util as util
+    from .. import util
 except ImportError:
     import util
 

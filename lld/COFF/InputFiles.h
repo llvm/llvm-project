@@ -136,9 +136,17 @@ private:
 // .obj or .o file. This may be a member of an archive file.
 class ObjFile : public InputFile {
 public:
-  static ObjFile *create(COFFLinkerContext &ctx, MemoryBufferRef mb,
+  static ObjFile *create(COFFLinkerContext &ctx, COFFObjectFile *coffObj,
                          bool lazy = false);
+  static ObjFile *create(COFFLinkerContext &ctx, MemoryBufferRef mb,
+                         bool lazy = false) {
+    return ObjFile::create(ctx, ObjFile::createCOFFObject(ctx, mb).release(),
+                           lazy);
+  }
   explicit ObjFile(SymbolTable &symtab, COFFObjectFile *coffObj, bool lazy);
+
+  static std::unique_ptr<COFFObjectFile>
+  createCOFFObject(COFFLinkerContext &ctx, MemoryBufferRef mb);
 
   static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
   void parse() override;
