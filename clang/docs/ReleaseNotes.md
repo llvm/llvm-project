@@ -143,6 +143,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   compilers. On most targets this is not a breaking change because `fastcc`
   and the platform C calling convention agree for `void(ptr)`. It is an ABI
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
+- `va_arg` on clang aarch64 msvc now reads types with 16-byte size and alignment
+  (e.g. `__int128`) with their actual alignment (instead of an alignment of 8
+  which was used before). Such c-variadic arguments are already passed as
+  aligned, so previously reading the argument could read padding. Clang now
+  matches how MSVC reads such c-variadic arguments.
 - Fixed incorrect struct return when single large vector (256/512-bit) used on
   x86-64 targets. (#GH203760) The bug was introduced since Clang 21. (#GH120670)
 - Clang now applies MSVC's MD5 shortening to over-long Microsoft C++ RTTI type
