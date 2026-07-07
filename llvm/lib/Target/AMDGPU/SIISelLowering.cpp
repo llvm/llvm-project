@@ -18499,7 +18499,7 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
     return DCI.DAG.getConstantFP(Zero, SDLoc(N), N->getValueType(0));
   }
 
-  APFloat One(F.getSemantics(), "1.0");
+  APFloat One = APFloat::getOne(F.getSemantics());
   if (F > One)
     return DCI.DAG.getConstantFP(One, SDLoc(N), N->getValueType(0));
 

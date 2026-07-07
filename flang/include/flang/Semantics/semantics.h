@@ -101,6 +101,9 @@ public:
   const std::vector<std::string> &intrinsicModuleDirectories() const {
     return intrinsicModuleDirectories_;
   }
+  const std::vector<std::string> &implicitUseModules() const {
+    return implicitUseModules_;
+  }
   const std::string &moduleDirectory() const { return moduleDirectory_; }
   const std::string &moduleFileSuffix() const { return moduleFileSuffix_; }
   bool underscoring() const { return underscoring_; }
@@ -143,6 +146,10 @@ public:
   SemanticsContext &set_intrinsicModuleDirectories(
       const std::vector<std::string> &x) {
     intrinsicModuleDirectories_ = x;
+    return *this;
+  }
+  SemanticsContext &set_implicitUseModules(const std::vector<std::string> &x) {
+    implicitUseModules_ = x;
     return *this;
   }
   SemanticsContext &set_moduleDirectory(const std::string &x) {
@@ -391,6 +398,7 @@ private:
   std::optional<parser::CharBlock> location_;
   std::vector<std::string> searchDirectories_;
   std::vector<std::string> intrinsicModuleDirectories_;
+  std::vector<std::string> implicitUseModules_;
   std::string moduleDirectory_{"."s};
   std::string moduleFileSuffix_{".mod"};
   std::string targetTriple_;

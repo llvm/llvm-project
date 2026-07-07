@@ -2590,7 +2590,7 @@ define amdgpu_kernel void @flat_wg_ld_acquire_single64(ptr addrspace(0) %p) #1 {
   ; GFX9-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
-  ; GFX9-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
+  ; GFX9-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit $sgpr0_sgpr1
   ; GFX9-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
   ; GFX9-NEXT:   dead renamable $vgpr0 = FLAT_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load syncscope("workgroup") acquire (s32) from %ir.p.load)
   ; GFX9-NEXT:   S_ENDPGM 0
@@ -2609,7 +2609,7 @@ define amdgpu_kernel void @flat_wg_ld_acquire_single64(ptr addrspace(0) %p) #1 {
   ; GFX10-W32-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX10-W32-NEXT: {{  $}}
   ; GFX10-W32-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
-  ; GFX10-W32-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
+  ; GFX10-W32-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit $sgpr0_sgpr1
   ; GFX10-W32-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
   ; GFX10-W32-NEXT:   dead renamable $vgpr0 = FLAT_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 1, implicit $exec, implicit $flat_scr :: (load syncscope("workgroup") acquire (s32) from %ir.p.load)
   ; GFX10-W32-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
@@ -2621,7 +2621,7 @@ define amdgpu_kernel void @flat_wg_ld_acquire_single64(ptr addrspace(0) %p) #1 {
   ; GFX10-W64-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX10-W64-NEXT: {{  $}}
   ; GFX10-W64-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
-  ; GFX10-W64-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
+  ; GFX10-W64-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit $sgpr0_sgpr1
   ; GFX10-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
   ; GFX10-W64-NEXT:   dead renamable $vgpr0 = FLAT_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load syncscope("workgroup") acquire (s32) from %ir.p.load)
   ; GFX10-W64-NEXT:   S_ENDPGM 0
@@ -2631,7 +2631,7 @@ define amdgpu_kernel void @flat_wg_ld_acquire_single64(ptr addrspace(0) %p) #1 {
   ; GFX12-W32-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX12-W32-NEXT: {{  $}}
   ; GFX12-W32-NEXT:   renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
-  ; GFX12-W32-NEXT:   $vgpr0, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 $sgpr0, killed $sgpr1, implicit $exec, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
+  ; GFX12-W32-NEXT:   $vgpr0, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 $sgpr0, killed $sgpr1, implicit $exec, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
   ; GFX12-W32-NEXT:   dead renamable $vgpr0 = FLAT_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 8, implicit $exec, implicit $flat_scr :: (load syncscope("workgroup") acquire (s32) from %ir.p.load)
   ; GFX12-W32-NEXT:   S_WAIT_LOADCNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_DSCNT_soft 0
@@ -2643,7 +2643,7 @@ define amdgpu_kernel void @flat_wg_ld_acquire_single64(ptr addrspace(0) %p) #1 {
   ; GFX12-W64-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX12-W64-NEXT: {{  $}}
   ; GFX12-W64-NEXT:   renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
-  ; GFX12-W64-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
+  ; GFX12-W64-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit $sgpr0_sgpr1
   ; GFX12-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
   ; GFX12-W64-NEXT:   dead renamable $vgpr0 = FLAT_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load syncscope("workgroup") acquire (s32) from %ir.p.load)
   ; GFX12-W64-NEXT:   S_ENDPGM 0
@@ -2670,7 +2670,7 @@ define amdgpu_kernel void @flat_wg_st_seq_cst_multi(ptr addrspace(0) %p, i32 %x)
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX9-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX9-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
+  ; GFX9-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit $sgpr0_sgpr1
   ; GFX9-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
   ; GFX9-NEXT:   $vgpr2 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX9-NEXT:   S_WAITCNT_soft .Lgkmcnt_0
@@ -2697,7 +2697,7 @@ define amdgpu_kernel void @flat_wg_st_seq_cst_multi(ptr addrspace(0) %p, i32 %x)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX10-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX10-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
+  ; GFX10-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit $sgpr0_sgpr1
   ; GFX10-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
   ; GFX10-NEXT:   $vgpr2 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX10-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
@@ -2711,7 +2711,7 @@ define amdgpu_kernel void @flat_wg_st_seq_cst_multi(ptr addrspace(0) %p, i32 %x)
   ; GFX12-W32-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX12-W32-NEXT: {{  $}}
   ; GFX12-W32-NEXT:   renamable $sgpr0_sgpr1_sgpr2 = S_LOAD_DWORDX3_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s96) from %ir.p.kernarg.offset, align 4, addrspace 4)
-  ; GFX12-W32-NEXT:   $vgpr0, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 $sgpr0, killed $sgpr1, implicit $exec, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
+  ; GFX12-W32-NEXT:   $vgpr0, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 $sgpr0, killed $sgpr1, implicit $exec, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
   ; GFX12-W32-NEXT:   $vgpr2 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX12-W32-NEXT:   S_WAIT_BVHCNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_SAMPLECNT_soft 0
@@ -2726,7 +2726,7 @@ define amdgpu_kernel void @flat_wg_st_seq_cst_multi(ptr addrspace(0) %p, i32 %x)
   ; GFX12-W64-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX12-W64-NEXT: {{  $}}
   ; GFX12-W64-NEXT:   renamable $sgpr0_sgpr1_sgpr2 = S_LOAD_DWORDX3_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s96) from %ir.p.kernarg.offset, align 4, addrspace 4)
-  ; GFX12-W64-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
+  ; GFX12-W64-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit $sgpr0_sgpr1
   ; GFX12-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
   ; GFX12-W64-NEXT:   $vgpr2 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX12-W64-NEXT:   S_WAIT_BVHCNT_soft 0

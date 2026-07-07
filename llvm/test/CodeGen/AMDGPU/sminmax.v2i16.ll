@@ -359,9 +359,9 @@ define amdgpu_kernel void @s_abs_v4i16(ptr addrspace(1) %out, <4 x i16> %val) #0
 ; VI-NEXT:    s_or_b32 s2, s4, s2
 ; VI-NEXT:    s_add_i32 s3, s3, 0x20000
 ; VI-NEXT:    s_add_i32 s2, s2, 0x20000
-; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
