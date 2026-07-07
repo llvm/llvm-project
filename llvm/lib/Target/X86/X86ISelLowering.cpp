@@ -54152,9 +54152,9 @@ static std::optional<unsigned> getPow2PrefixMaskNumElts(SDValue V) {
   return getPow2PrefixMaskNumElts(MaskBits);
 }
 
-static std::optional<MVT>
-getLegalMaskedMemCopyVT(EVT EltVT, unsigned ActiveElts,
-                        const TargetLowering &TLI) {
+static std::optional<MVT> getLegalMaskedMemCopyVT(EVT EltVT,
+                                                  unsigned ActiveElts,
+                                                  const TargetLowering &TLI) {
   if (!EltVT.isSimple())
     return std::nullopt;
 
@@ -54453,11 +54453,10 @@ static SDValue combinePrefixMaskedLoadStore(MaskedStoreSDNode *MS,
     return SDValue();
 
   SDLoc DL(MS);
-  SDValue NarrowLoad =
-      DAG.getLoad(*NarrowVT, DL, ML->getChain(), ML->getBasePtr(),
-                  ML->getPointerInfo(), ML->getBaseAlign(),
-                  ML->getMemOperand()->getFlags(), ML->getAAInfo(),
-                  ML->getRanges());
+  SDValue NarrowLoad = DAG.getLoad(
+      *NarrowVT, DL, ML->getChain(), ML->getBasePtr(), ML->getPointerInfo(),
+      ML->getBaseAlign(), ML->getMemOperand()->getFlags(), ML->getAAInfo(),
+      ML->getRanges());
 
   return DAG.getStore(NarrowLoad.getValue(1), DL, NarrowLoad, MS->getBasePtr(),
                       MS->getPointerInfo(), MS->getBaseAlign(),
