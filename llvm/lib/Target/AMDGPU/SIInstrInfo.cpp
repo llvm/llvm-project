@@ -4506,7 +4506,8 @@ bool SIInstrInfo::mayAccessVMEMThroughFlat(const MachineInstr &MI) const {
   return false;
 }
 
-bool SIInstrInfo::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
+bool SIInstrInfo::mayAccessLDSThroughFlat(const MachineInstr &MI,
+                                          bool TgSplit) const {
   assert(isFLAT(MI));
 
   // Flat instruction such as SCRATCH and GLOBAL do not use the lgkm counter.
@@ -4514,7 +4515,7 @@ bool SIInstrInfo::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
     return false;
 
   // If in tgsplit mode then there can be no use of LDS.
-  if (ST.isTgSplitEnabled())
+  if (TgSplit)
     return false;
 
   // If there are no memory operands then conservatively assume the flat

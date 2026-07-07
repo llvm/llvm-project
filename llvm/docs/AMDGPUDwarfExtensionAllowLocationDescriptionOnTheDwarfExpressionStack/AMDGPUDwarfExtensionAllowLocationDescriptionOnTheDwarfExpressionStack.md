@@ -3205,7 +3205,7 @@ location list expressions.</i>
     subprogram instance that immediately lexically encloses the current call
     frame's subprogram or entry point.
 
-    The DWARF is ill-formed if L is is not comprised of one memory location
+    The DWARF is ill-formed if L is not comprised of one memory location
     description for one of the target architecture specific address spaces.
 
 ### A.3.4 Call Site Entries and Parameters
