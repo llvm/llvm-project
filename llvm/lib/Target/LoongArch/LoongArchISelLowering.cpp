@@ -6450,6 +6450,8 @@ static SDValue matchHalfOf128BitLanes(SDValue N, bool isLow) {
 
   for (unsigned I = 0; I != NumElts; ++I) {
     SDValue Elt = BV->getOperand(I);
+    if (Elt.isUndef())
+      continue;
     if (Elt.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
       return SDValue();
 
@@ -6512,7 +6514,7 @@ static SDValue performSHLCombine(SDNode *N, SelectionDAG &DAG,
   if (!LHS.hasOneUse())
     return SDValue();
 
-  SDValue Vec = matchHalfOf128BitLanes(LHS.getOperand(0), true);
+  SDValue Vec = matchHalfOf128BitLanes(LHS.getOperand(0), /*isLow=*/true);
   if (!Vec)
     return SDValue();
 
@@ -8497,10 +8499,10 @@ static SDValue performEXTENDCombine(SDNode *N, SelectionDAG &DAG,
     if (SDValue R = PromoteMaskArithmetic(SDValue(N, 0), DL, DAG, Subtarget))
       return R;
 
-    if (SDValue R = matchHalfOf128BitLanes(N->getOperand(0), false)) {
+    if (SDValue R = matchHalfOf128BitLanes(N->getOperand(0), /*isLow=*/false)) {
       if (N->getOpcode() == ISD::SIGN_EXTEND)
         return DAG.getNode(LoongArchISD::VEXTH, DL, VT, R);
-      else if (N->getOpcode() == ISD::ZERO_EXTEND)
+      if (N->getOpcode() == ISD::ZERO_EXTEND)
         return DAG.getNode(LoongArchISD::VEXTH_U, DL, VT, R);
     }
   }
