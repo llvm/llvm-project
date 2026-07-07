@@ -1,5 +1,5 @@
-#ifndef LLVM_CLANG_INCLUDE_STATICANALYZER_CHECKERS_LIFETIMEMODELING_H
-#define LLVM_CLANG_INCLUDE_STATICANALYZER_CHECKERS_LIFETIMEMODELING_H
+#ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_LIFETIMEMODELING_H
+#define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_LIFETIMEMODELING_H
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
@@ -7,9 +7,6 @@
 #include <vector>
 
 namespace clang::ento::lifetime_modeling {
-/// Returns true if the lifetime of a region has ended.
-bool isDeallocated(ProgramStateRef State, const MemRegion *Region);
-
 /// Returns the set of lifetime sources bound to \p Source that are dangling
 /// stack regions.
 std::vector<const MemRegion *>
@@ -18,4 +15,4 @@ getDanglingRegionsAfterReturn(SVal Source, ProgramStateRef State,
 
 } // namespace clang::ento::lifetime_modeling
 
-#endif // LLVM_CLANG_INCLUDE_STATICANALYZER_CHECKERS_LIFETIMEMODELING_H
+#endif // LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_LIFETIMEMODELING_H

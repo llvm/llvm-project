@@ -789,7 +789,7 @@ def SmartPtrChecker: Checker<"SmartPtr">,
   Documentation<HasDocumentation>;
 
 def LifetimeModeling : Checker<"LifetimeModeling">,
-  HelpText<"Model [[clang::lifetimebound]] annotations for lifetime analysis">,
+  HelpText<"Model lifetime annotations for other checkers">,
   Documentation<NotDocumented>,
   Hidden;
 
@@ -1588,8 +1588,7 @@ def CheckerDocumentationChecker : Checker<"CheckerDocumentation">,
   Documentation<NotDocumented>;
 
 def DebugLifetimeModeling : Checker<"DebugLifetimeModeling">,
-  HelpText<"Prints the bindings recorded by the LifetimeModeling checker. "
-           "Use with clang_analyzer_dumpLifetimeOriginsOf().">,
+  HelpText<"Dump the set of regions the bound variable originates from">,
   Dependencies<[LifetimeModeling]>,
   Documentation<NotDocumented>;
 

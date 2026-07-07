@@ -1,5 +1,5 @@
+#include "LifetimeModeling.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
-#include "clang/StaticAnalyzer/Checkers/LifetimeModeling.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 
 using namespace clang;

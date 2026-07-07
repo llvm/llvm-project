@@ -1,4 +1,4 @@
-#include "clang/StaticAnalyzer/Checkers/LifetimeModeling.h"
+#include "LifetimeModeling.h"
 #include "clang/AST/Attr.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
@@ -55,7 +55,7 @@ std::vector<const MemRegion *> lifetime_modeling::getDanglingRegionsAfterReturn(
   return Regions;
 }
 
-static ProgramStateRef bindValues(ProgramStateRef State, SVal RetVal,
+static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
                                   const MemRegion *Source) {
   LifetimeSourceSet::Factory &F = State->get_context<LifetimeSourceSet>();
   const LifetimeSourceSet *LSet = State->get<LifetimeBoundMap>(RetVal);
@@ -85,15 +85,14 @@ void LifetimeModeling::checkPostCall(const CallEvent &Call,
       unsigned Idx = PVD->getFunctionScopeIndex();
       SVal Arg = Call.getArgSVal(Idx);
       if (const MemRegion *ArgValRegion = Arg.getAsRegion())
-        State = bindValues(State, RetVal, ArgValRegion);
+        State = bindSource(State, RetVal, ArgValRegion);
     }
   }
 
-  if (const auto *IC = dyn_cast<CXXInstanceCall>(&Call)) {
-    if (lifetimes::implicitObjectParamIsLifetimeBound(FD)) {
-      if (const MemRegion *AttrRegion = IC->getCXXThisVal().getAsRegion())
-        State = bindValues(State, RetVal, AttrRegion);
-    }
+  const auto *IC = dyn_cast<CXXInstanceCall>(&Call);
+  if (IC && lifetimes::implicitObjectParamIsLifetimeBound(FD)) {
+    if (const MemRegion *ThisRegion = IC->getCXXThisVal().getAsRegion())
+      State = bindSource(State, RetVal, ThisRegion);
   }
   C.addTransition(State);
 }
@@ -104,16 +103,15 @@ void LifetimeModeling::checkDeadSymbols(SymbolReaper &SymReaper,
   LifetimeBoundMapTy LBMap = State->get<LifetimeBoundMap>();
 
   for (SVal Val : llvm::make_first_range(LBMap)) {
-    if (const MemRegion *ValRegion = Val.getAsRegion()) {
-      if (!SymReaper.isLiveRegion(ValRegion))
-        State = State->remove<LifetimeBoundMap>(Val);
-    } else if (SymbolRef ValRef =
-                   Val.getAsSymbol(/*IncludeBaseRegions=*/true)) {
-      if (!SymReaper.isLive(ValRef))
-        State = State->remove<LifetimeBoundMap>(Val);
-    }
+    if (const auto *R = Val.getAsRegion(); R && SymReaper.isLiveRegion(R))
+      continue;
+
+    if (SymbolRef S = Val.getAsSymbol(/*IncludeBaseRegions=*/true);
+        S && SymReaper.isLive(S))
+      continue;
+
+    State = State->remove<LifetimeBoundMap>(Val);
   }
-  C.addTransition(State);
 }
 
 void LifetimeModeling::printState(raw_ostream &Out, ProgramStateRef State,
