@@ -23179,12 +23179,11 @@ static SDValue foldADCToCINC(SDNode *N, SelectionDAG &DAG) {
 ///
 /// This allows using the zero register (xzr/wzr) to encode the immediate
 /// operand (rather than a MOV to a GPR).
-
 static SDValue performAddSubCarryCombine(SDNode *N, SelectionDAG &DAG,
                                          unsigned NewOpcode) {
   if (isAllOnesConstant(N->getOperand(1))) {
     SDLoc DL(N);
-    SDValue RHS = DAG.getConstant(0, DL, N->getOperand(1).getValueType());
+    SDValue RHS = DAG.getConstant(0, DL, N->getOperand(0).getValueType());
     return DAG.getNode(NewOpcode, DL, N->getVTList(), N->getOperand(0), RHS,
                        N->getOperand(2));
   }
