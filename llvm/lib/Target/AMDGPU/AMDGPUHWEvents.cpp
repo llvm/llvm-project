@@ -56,8 +56,8 @@ static HWEvents getExpertSchedulingEventType(const MachineInstr &Inst,
   return HWEvents::NONE;
 }
 
-static HWEvents getVmemHWEvent(const MachineInstr &Inst, const GCNSubtarget &ST,
-                               const SIInstrInfo &TII) {
+HWEvents getSimplifiedVMEMEventsFor(const MachineInstr &Inst,
+                                    const SIInstrInfo &TII) {
   switch (Inst.getOpcode()) {
   // FIXME: GLOBAL_INV needs to be tracked with xcnt too.
   case AMDGPU::GLOBAL_INV:
@@ -82,7 +82,8 @@ static HWEvents getVmemHWEvent(const MachineInstr &Inst, const GCNSubtarget &ST,
       return HWEvents::SCRATCH_WRITE_ACCESS;
     return HWEvents::VMEM_WRITE_ACCESS;
   }
-  if (!ST.hasExtendedWaitCounts() || SIInstrInfo::isFLAT(Inst))
+
+  if (SIInstrInfo::isFLAT(Inst))
     return HWEvents::VMEM_READ_ACCESS;
 
   if (SIInstrInfo::isImage(Inst)) {
@@ -116,14 +117,14 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
 
   if (TII.isFLAT(Inst)) {
     if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode()))
-      return getVmemHWEvent(Inst, ST, TII);
+      return getSimplifiedVMEMEventsFor(Inst, TII);
 
     assert(Inst.mayLoadOrStore());
     HWEvents E = HWEvents::NONE;
     if (TII.mayAccessVMEMThroughFlat(Inst)) {
       if (ST.hasWaitXcnt())
         E |= HWEvents::VMEM_GROUP;
-      E |= getVmemHWEvent(Inst, ST, TII);
+      E |= getSimplifiedVMEMEventsFor(Inst, TII);
     }
 
     if (TII.mayAccessLDSThroughFlat(Inst))
@@ -144,7 +145,7 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
     // BUFFER_WBL2 is included here because unlike invalidates, has to be
     // followed "S_WAITCNT vmcnt(0)" is needed after to ensure the writeback has
     // completed.
-    HWEvents E = getVmemHWEvent(Inst, ST, TII);
+    HWEvents E = getSimplifiedVMEMEventsFor(Inst, TII);
     if (ST.hasWaitXcnt())
       E |= HWEvents::VMEM_GROUP;
     if (ST.vmemWriteNeedsExpWaitcnt() &&

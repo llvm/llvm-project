@@ -476,9 +476,10 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
           rewriter, operand.getLoc(), *operandBufferType, operand);
       // A cast is needed if the operand and the block argument have different
       // bufferized types.
-      if (type != *operandBufferType)
-        bufferizedOperand = memref::CastOp::create(rewriter, operand.getLoc(),
-                                                   type, bufferizedOperand);
+      if (type != *operandBufferType) {
+        bufferizedOperand = *options.createCast(rewriter, operand.getLoc(),
+                                                type, bufferizedOperand);
+      }
       newOperands.push_back(bufferizedOperand);
     }
     operands.getMutableForwardedOperands().assign(newOperands);

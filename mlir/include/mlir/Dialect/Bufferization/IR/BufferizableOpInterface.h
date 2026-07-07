@@ -258,6 +258,12 @@ struct BufferizationOptions {
   /// Memcpy function: Generate a memcpy between two buffers.
   using MemCpyFn =
       std::function<LogicalResult(OpBuilder &, Location, Value, Value)>;
+  /// Cast function: Convert a buffer value to a new value with the specified
+  /// type. This method is typically used when a simple cast-like operation is
+  /// sufficient to convert the buffer value, for example, when layout maps
+  /// between buffer value and resulting type do not match.
+  using CastFn =
+      std::function<FailureOr<Value>(OpBuilder &, Location, Type, Value)>;
   /// Initializer function for analysis state.
   using AnalysisStateInitFn = std::function<void(AnalysisState &)>;
   /// Tensor-like -> Buffer-like type conversion.
@@ -300,6 +306,7 @@ struct BufferizationOptions {
   /// Helper functions for allocation and memory copying.
   std::optional<AllocationFn> allocationFn;
   std::optional<MemCpyFn> memCpyFn;
+  std::optional<CastFn> castFn;
 
   /// Create a memref allocation with the given type and dynamic extents.
   FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
@@ -308,6 +315,10 @@ struct BufferizationOptions {
   /// Creates a memcpy between two given buffers.
   LogicalResult createMemCpy(OpBuilder &b, Location loc, Value from,
                              Value to) const;
+
+  /// Creates a cast function from a buffer value to a new type.
+  FailureOr<Value> createCast(OpBuilder &b, Location loc, Type dest,
+                              Value value) const;
 
   /// Specifies whether not bufferizable ops are allowed in the input. If so,
   /// bufferization.to_buffer and bufferization.to_tensor ops are inserted at

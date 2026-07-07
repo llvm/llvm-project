@@ -126,6 +126,7 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.stdlib_macros
 )
 
+add_header_library(dirent_overlay HDRS dirent_overlay.h)
 add_header_library(stdio_overlay HDRS stdio_overlay.h)
 
 add_proxy_header_library(
@@ -400,6 +401,7 @@ add_proxy_header_library(
     regex_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.regex_macros
+    libc.include.regex
 )
 
 add_subdirectory(types)

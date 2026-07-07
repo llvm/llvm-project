@@ -7,8 +7,7 @@
 /// Zero-sized structs should not crash.
 int b() {
   struct {      } a[10];
-  __builtin_memcpy(&a[2], a, 2); // c-warning {{buffer has size 0, but size argument is 2}} \
-                                 // c-warning {{'memcpy' reading 2 bytes from a region of size 0}}
+  __builtin_memcpy(&a[2], a, 2); // c-warning {{buffer has size 0, but size argument is 2}}
   return 0;
 }
 

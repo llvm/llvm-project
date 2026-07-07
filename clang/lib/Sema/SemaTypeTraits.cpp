@@ -1285,6 +1285,14 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
     //     T t(create<Args>()...);
     assert(!Args.empty());
 
+    // LWG3819: For reference_meows_from_temporary traits, && is not added to
+    // the source object type.
+    // Otherwise, compute the result of add_rvalue_reference_t.
+    bool UseRawObjectType =
+        Kind == clang::BTT_ReferenceBindsToTemporary ||
+        Kind == clang::BTT_ReferenceConstructsFromTemporary ||
+        Kind == clang::BTT_ReferenceConvertsFromTemporary;
+
     // Precondition: T and all types in the parameter pack Args shall be
     // complete types, (possibly cv-qualified) void, or arrays of
     // unknown bound.
@@ -1300,21 +1308,14 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
 
     // Make sure the first argument is not incomplete nor a function type.
     QualType T = Args[0]->getType();
-    if (T->isIncompleteType() || T->isFunctionType())
+    if (T->isIncompleteType() || T->isFunctionType() ||
+        (UseRawObjectType && !T->isReferenceType()))
       return false;
 
     // Make sure the first argument is not an abstract type.
     CXXRecordDecl *RD = T->getAsCXXRecordDecl();
     if (RD && RD->isAbstract())
       return false;
-
-    // LWG3819: For reference_meows_from_temporary traits, && is not added to
-    // the source object type.
-    // Otherwise, compute the result of add_rvalue_reference_t.
-    bool UseRawObjectType =
-        Kind == clang::BTT_ReferenceBindsToTemporary ||
-        Kind == clang::BTT_ReferenceConstructsFromTemporary ||
-        Kind == clang::BTT_ReferenceConvertsFromTemporary;
 
     llvm::BumpPtrAllocator OpaqueExprAllocator;
     SmallVector<Expr *, 2> ArgExprs;

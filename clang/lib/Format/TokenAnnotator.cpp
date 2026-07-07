@@ -2500,6 +2500,8 @@ private:
         Current.setType(TT_Unknown);
       } else {
         Current.setType(TT_ConditionalExpr);
+        if (IsCpp)
+          Contexts.back().IsExpression = true;
       }
     } else if (Current.isBinaryOperator() &&
                (!Current.Previous || Current.Previous->isNot(tok::l_square)) &&
@@ -2819,7 +2821,7 @@ private:
       // If there is an identifier (or with a few exceptions a keyword) right
       // before the parentheses, this is unlikely to be a cast.
       if (LeftOfParens->Tok.getIdentifierInfo() &&
-          LeftOfParens->isNoneOf(Keywords.kw_in, tok::kw_return, tok::kw_case,
+          LeftOfParens->isNoneOf(TT_ObjCForIn, tok::kw_return, tok::kw_case,
                                  tok::kw_delete, tok::kw_throw)) {
         return false;
       }
@@ -3041,14 +3043,6 @@ private:
     // && in C# must be a binary operator.
     if (Style.isCSharp() && Tok.is(tok::ampamp))
       return TT_BinaryOperator;
-
-    // The keyword `and` (tok::ampamp) is always binary, never a declarator.
-    // Not extended to `bitand` (tok::amp), which can be a reference.
-    if (Tok.is(tok::ampamp)) {
-      const auto *Info = Tok.Tok.getIdentifierInfo();
-      if (Info && Info->isCPlusPlusOperatorKeyword())
-        return TT_BinaryOperator;
-    }
 
     if (Style.isVerilog()) {
       // In Verilog, `*` can only be a binary operator.  `&` can be either unary
