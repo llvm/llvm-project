@@ -5230,7 +5230,8 @@ static bool isOpZeroOfSubwordPreincLoad(int Opcode) {
 }
 
 // This function checks for sign extension from 32 bits to 64 bits.
-static bool definedBySignExtendingOp(const unsigned Reg,
+static bool definedBySignExtendingOp(const PPCInstrInfo &TII,
+                                     const unsigned Reg,
                                      const MachineRegisterInfo *MRI) {
   if (!Register::isVirtualRegister(Reg))
     return false;
@@ -5240,9 +5241,7 @@ static bool definedBySignExtendingOp(const unsigned Reg,
     return false;
 
   int Opcode = MI->getOpcode();
-  const PPCInstrInfo *TII =
-      MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
-  if (TII->isSExt32To64(Opcode))
+  if (TII.isSExt32To64(Opcode))
     return true;
 
   // The first def of LBZU/LHZU is sign extended.
@@ -5277,7 +5276,8 @@ static bool definedBySignExtendingOp(const unsigned Reg,
 // This function checks the machine instruction that defines the input register
 // Reg. If that machine instruction always outputs a value that has only zeros
 // in the higher 32 bits then this function will return true.
-static bool definedByZeroExtendingOp(const unsigned Reg,
+static bool definedByZeroExtendingOp(const PPCInstrInfo &TII,
+                                     const unsigned Reg,
                                      const MachineRegisterInfo *MRI) {
   if (!Register::isVirtualRegister(Reg))
     return false;
@@ -5287,9 +5287,7 @@ static bool definedByZeroExtendingOp(const unsigned Reg,
     return false;
 
   int Opcode = MI->getOpcode();
-  const PPCInstrInfo *TII =
-      MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
-  if (TII->isZExt32To64(Opcode))
+  if (TII.isZExt32To64(Opcode))
     return true;
 
   // The first def of LBZU/LHZU/LWZU are zero extended.
@@ -5442,9 +5440,6 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   if (RC == &PPC::G8RCRegClass || RC == &PPC::G8RC_and_G8RC_NOX0RegClass)
     return;
 
-  const PPCInstrInfo *TII =
-      MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
-
   // Map the 32bit to 64bit opcodes for instructions that are not signed or zero
   // extended themselves, but may have operands who's destination registers of
   // signed or zero extended instructions.
@@ -5460,7 +5455,7 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
     // Set the new opcode to the mapped 64-bit version.
     NewOpcode = It->second;
   } else {
-    if (!TII->isSExt32To64(Opcode))
+    if (!isSExt32To64(Opcode))
       return;
 
     // The TableGen function `get64BitInstrFromSignedExt32BitInstr` is used to
@@ -5473,7 +5468,7 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
          "Must have a 64-bit opcode to map the 32-bit opcode!");
 
   const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
-  const MCInstrDesc &MCID = TII->get(NewOpcode);
+  const MCInstrDesc &MCID = get(NewOpcode);
   const TargetRegisterClass *NewRC =
       TRI->getRegClass(MCID.operands()[0].RegClass);
 
@@ -5512,8 +5507,8 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
       // Promote the used 32-bit register to 64-bit register.
       Register TmpReg = MRI->createVirtualRegister(NewUsedRegRC);
       Register DstTmpReg = MRI->createVirtualRegister(NewUsedRegRC);
-      BuildMI(*MBB, MI, DL, TII->get(PPC::IMPLICIT_DEF), TmpReg);
-      BuildMI(*MBB, MI, DL, TII->get(PPC::INSERT_SUBREG), DstTmpReg)
+      BuildMI(*MBB, MI, DL, get(PPC::IMPLICIT_DEF), TmpReg);
+      BuildMI(*MBB, MI, DL, get(PPC::INSERT_SUBREG), DstTmpReg)
           .addReg(TmpReg)
           .addReg(OperandReg)
           .addImm(PPC::sub_32);
@@ -5523,7 +5518,7 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
 
   Register NewDefinedReg = MRI->createVirtualRegister(NewRC);
 
-  BuildMI(*MBB, MI, DL, TII->get(NewOpcode), NewDefinedReg);
+  BuildMI(*MBB, MI, DL, get(NewOpcode), NewDefinedReg);
   MachineBasicBlock::instr_iterator Iter(MI);
   --Iter;
   MachineInstrBuilder MIBuilder(*Iter->getMF(), Iter);
@@ -5550,7 +5545,7 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   // After the defined register is promoted to 64-bit for the promoted
   // instruction, we need to demote the 64-bit defined register back to a
   // 32-bit register
-  BuildMI(*MBB, ++Iter, DL, TII->get(PPC::COPY), SrcReg)
+  BuildMI(*MBB, ++Iter, DL, get(PPC::COPY), SrcReg)
       .addReg(NewDefinedReg, RegState::Kill, PPC::sub_32);
   LV->recomputeForSingleDefVirtReg(NewDefinedReg);
 }
@@ -5571,8 +5566,8 @@ PPCInstrInfo::isSignOrZeroExtended(const unsigned Reg,
   if (!MI)
     return std::pair<bool, bool>(false, false);
 
-  bool IsSExt = definedBySignExtendingOp(Reg, MRI);
-  bool IsZExt = definedByZeroExtendingOp(Reg, MRI);
+  bool IsSExt = definedBySignExtendingOp(*this, Reg, MRI);
+  bool IsZExt = definedByZeroExtendingOp(*this, Reg, MRI);
 
   // If we know the instruction always returns sign- and zero-extended result,
   // return here.
