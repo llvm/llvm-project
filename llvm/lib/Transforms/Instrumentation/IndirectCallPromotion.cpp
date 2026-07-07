@@ -160,6 +160,11 @@ static cl::list<std::string> ICPIgnoredBaseTypes(
         "binary could be different due to profiling limitations. Type info "
         "names are those string literals used in LLVM type metadata"));
 
+static cl::opt<int> HotFuncCutoffForICP(
+    "hot-func-cutoff-for-icp", cl::Hidden, cl::init(990000),
+    cl::desc("A count is hot for indirect call promotion if it exceeds "
+             "the minimum count to reach this percentile of total counts."
+             "Default value is the same as ProfileSummaryCutoffHot."));
 namespace {
 
 // The key is a vtable global variable, and the value is a map.
@@ -881,8 +886,10 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
                           << TotalCount << "\n");
         continue;
       }
-      // Only pormote hot if ICPAllowHotOnly is true.
-      if (ICPAllowHotOnly && !PSI->isHotCount(TotalCount)) {
+      // Only promote hot if ICPAllowHotOnly is true. ICP has its own cutoff
+      // threshold for hotness.
+      if (ICPAllowHotOnly &&
+          !PSI->isHotCountNthPercentile(HotFuncCutoffForICP, TotalCount)) {
         LLVM_DEBUG(dbgs() << "Don't promote the non-hot candidate: TotalCount="
                           << TotalCount << "\n");
         continue;
