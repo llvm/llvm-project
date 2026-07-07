@@ -6,6 +6,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -triple aarch64-linux-gnu %s -DHAVE
 // RUN: %clang_cc1 -fsyntax-only -verify -triple riscv32 %s -DHAVE
 // RUN: %clang_cc1 -fsyntax-only -verify -triple riscv64 %s -DHAVE
+// RUN: %clang_cc1 -fsyntax-only -verify -triple powerpc-linux-gnu %s -DHAVE
+// RUN: %clang_cc1 -fsyntax-only -verify -triple powerpc64le-linux-gnu %s -DHAVE
 // RUN: %clang_cc1 -fsyntax-only -verify -triple s390x-ibm-zos %s
 
 #ifndef HAVE

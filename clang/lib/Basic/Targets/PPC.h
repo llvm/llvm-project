@@ -86,6 +86,12 @@ public:
     HasStrictFP = true;
     HasIbm128 = true;
     HasUnalignedAccess = true;
+    // _Float16 is supported on all PowerPC Linux targets via software
+    // promotion to float32, matching the approach used by AArch64 and RISC-V.
+    // AIX, soft-float, and SPE targets clear this flag in
+    // handleTargetFeatures() since their ABI has not yet been defined.
+    HasFloat16 = true;
+    HasFastHalfType = false;
   }
 
   // Set the language option for altivec based on our value.

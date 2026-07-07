@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -triple spir-unknown-unknown %s -DHAVE
 // RUN: %clang_cc1 -fsyntax-only -verify -triple armv7a-linux-gnu %s -DHAVE
 // RUN: %clang_cc1 -fsyntax-only -verify -triple aarch64-linux-gnu %s -DHAVE
+// RUN: %clang_cc1 -fsyntax-only -verify -triple powerpc-linux-gnu %s -DHAVE
+// RUN: %clang_cc1 -fsyntax-only -verify -triple powerpc64le-linux-gnu %s -DHAVE
 // RUN: %clang_cc1 -fsyntax-only -verify -triple s390x-ibm-zos %s
 #ifdef HAVE
 // expected-no-diagnostics

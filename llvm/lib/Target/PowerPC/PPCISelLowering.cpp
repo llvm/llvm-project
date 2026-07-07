@@ -247,6 +247,13 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Legal);
     setTruncStoreAction(MVT::f64, MVT::f16, Legal);
     setTruncStoreAction(MVT::f32, MVT::f16, Legal);
+    // ISA 3.0 (Power9) has XSCVHPDP/XSCVDPHP for scalar HP<->DP conversion.
+    // Mark FP16_TO_FP / FP_TO_FP16 as Legal so the soft-promote machinery
+    // uses hardware instead of __extendhfsf2/__truncsfhf2 libcalls.
+    setOperationAction(ISD::FP16_TO_FP, MVT::f64, Legal);
+    setOperationAction(ISD::FP16_TO_FP, MVT::f32, Legal);
+    setOperationAction(ISD::FP_TO_FP16, MVT::f64, Legal);
+    setOperationAction(ISD::FP_TO_FP16, MVT::f32, Legal);
   } else {
     // No extending loads from f16 or HW conversions back and forth.
     setLoadExtAction(ISD::EXTLOAD, MVT::f128, MVT::f16, Expand);
