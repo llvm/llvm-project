@@ -1,4 +1,4 @@
-//===-- ArchitectureRISCV.cpp ---------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,7 +35,7 @@ bool ArchitectureRISCV::IsValidTrapInstruction(
     llvm::ArrayRef<uint8_t> reference, llvm::ArrayRef<uint8_t> observed) const {
   // RISC-V has only two trap encodings here: 16-bit C.EBREAK or 32-bit EBREAK.
   // These instructions don't have any operands so check that the reference and
-  // observed bytes  match.
+  // observed bytes match.
   if ((reference.size() != 2 && reference.size() != 4) ||
       reference.size() > observed.size())
     return false;
