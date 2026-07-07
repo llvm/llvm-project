@@ -196,7 +196,7 @@ void llvm::ilist_traits<::mlir::Block>::addNodeToList(Block *block) {
   assert(!block->getParent() && "already in a region!");
   Region *region = getParentRegion();
   block->parentValidOpOrderPair.setPointer(region);
-  block->blockNumber = region->nextBlockNumber++;
+  block->blockID = region->nextBlockID++;
 }
 
 /// This is a trait method invoked when an operation is removed from a
@@ -204,8 +204,8 @@ void llvm::ilist_traits<::mlir::Block>::addNodeToList(Block *block) {
 void llvm::ilist_traits<::mlir::Block>::removeNodeFromList(Block *block) {
   assert(block->getParent() && "not already in a region!");
   block->parentValidOpOrderPair.setPointer(nullptr);
-  // The number is invalid until the block is added to a region again.
-  block->blockNumber = -1u;
+  // The ID is invalid until the block is added to a region again.
+  block->blockID = -1u;
 }
 
 /// This is a trait method invoked when an operation is moved from one block
@@ -218,11 +218,11 @@ void llvm::ilist_traits<::mlir::Block>::transferNodesFromList(
   if (curParent == otherList.getParentRegion())
     return;
 
-  // Update the 'parent' member of each Block and give it a number in its new
+  // Update the 'parent' member of each Block and give it an ID in its new
   // region.
   for (; first != last; ++first) {
     first->parentValidOpOrderPair.setPointer(curParent);
-    first->blockNumber = curParent->nextBlockNumber++;
+    first->blockID = curParent->nextBlockID++;
   }
 }
 

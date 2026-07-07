@@ -76,14 +76,14 @@ public:
   // Block numbering
   //===--------------------------------------------------------------------===//
 
-  /// One past the largest block number handed out in this region; block numbers
-  /// lie in [0, getMaxBlockNumber()). See Block::getNumber().
-  unsigned getMaxBlockNumber() const { return nextBlockNumber; }
+  /// One past the largest block ID handed out in this region; block IDs lie in
+  /// [0, getMaxBlockID()). See Block::getBlockID().
+  unsigned getMaxBlockID() const { return nextBlockID; }
 
-  /// The block-number epoch, part of the generic number-indexed graph contract
-  /// (LoopInfo, DominatorTree) for detecting stale numbering. MLIR never
-  /// renumbers blocks, so this is a fixed 0. See Block::getNumber().
-  unsigned getBlockNumberEpoch() const { return 0; }
+  /// The block-ID epoch, part of the generic number-indexed graph contract
+  /// (LoopInfo, DominatorTree) for detecting stale IDs. MLIR never renumbers a
+  /// region's blocks, so this is a fixed 0. See Block::getBlockID().
+  unsigned getBlockIDEpoch() const { return 0; }
 
   //===--------------------------------------------------------------------===//
   // Argument Handling
@@ -357,8 +357,8 @@ private:
   /// This is the object we are part of.
   Operation *container = nullptr;
 
-  /// Next block number to hand out. See Block::getNumber().
-  unsigned nextBlockNumber = 0;
+  /// Next block ID to hand out. See Block::getBlockID().
+  unsigned nextBlockID = 0;
 
   friend struct llvm::ilist_traits<Block>;
 };

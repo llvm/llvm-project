@@ -52,17 +52,18 @@ public:
   /// model.
   Region *getParent() const;
 
-  /// Return a number uniquely identifying this block within its parent region.
-  /// The number is assigned when the block is added to a region and never
-  /// changes while the block stays in that region; removing a block leaves a
-  /// hole (numbers are not reused). Only valid for a block that is in a region.
+  /// Return an ID uniquely identifying this block within its parent region.
+  /// The ID is assigned when the block joins a region and reassigned when the
+  /// block is moved to a different region; it is stable while the block stays
+  /// in a region, and removing a block leaves a hole (IDs are not reused). Only
+  /// valid for a block that is in a region.
   ///
   /// Unlike computeBlockNumber(), this is O(1) and stable; it exists so that
   /// generic graph algorithms (e.g. LoopInfo, DominatorTree) can index blocks
-  /// by number.
-  unsigned getNumber() const {
-    assert(getParent() && "only blocks in a region have a valid number");
-    return blockNumber;
+  /// by ID.
+  unsigned getBlockID() const {
+    assert(getParent() && "only blocks in a region have a valid ID");
+    return blockID;
   }
 
   /// Returns the closest surrounding operation that contains this block.
@@ -435,10 +436,9 @@ private:
   /// the operations within this block have a valid ordering.
   llvm::PointerIntPair<Region *, /*IntBits=*/1, bool> parentValidOpOrderPair;
 
-  /// Unique number of this block within its parent region, assigned when the
-  /// block is added to a region; -1u while the block has no parent. See
-  /// getNumber().
-  unsigned blockNumber = -1u;
+  /// Unique ID of this block within its parent region, (re)assigned when the
+  /// block joins a region; -1u while the block has no parent. See getBlockID().
+  unsigned blockID = -1u;
 
   /// This is the list of operations in the block.
   OpListType operations;
