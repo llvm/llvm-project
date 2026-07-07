@@ -46,6 +46,7 @@ static const unsigned ZOSAddressMap[] = {
     0, // hlsl_private
     0, // hlsl_device
     0, // hlsl_input
+    0, // hlsl_output
     0, // hlsl_push_constant
     0  // wasm_funcref
 };
@@ -105,8 +106,6 @@ public:
   }
 
   unsigned getMinGlobalAlign(uint64_t Size, bool HasNonWeakDef) const override;
-
-  bool useFP16ConversionIntrinsics() const override { return false; }
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
@@ -184,7 +183,7 @@ public:
     fillValidCPUList(Values);
   }
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     ISARevision = getISARevision(Name);
     return ISARevision != -1;
   }

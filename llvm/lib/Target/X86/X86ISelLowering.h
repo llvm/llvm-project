@@ -367,11 +367,14 @@ namespace llvm {
 
     bool isGuaranteedNotToBeUndefOrPoisonForTargetNode(
         SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-        bool PoisonOnly, unsigned Depth) const override;
+        UndefPoisonKind Kind, unsigned Depth) const override;
 
-    bool canCreateUndefOrPoisonForTargetNode(
-        SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-        bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const override;
+    bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
+                                             const APInt &DemandedElts,
+                                             const SelectionDAG &DAG,
+                                             UndefPoisonKind Kind,
+                                             bool ConsiderFlags,
+                                             unsigned Depth) const override;
 
     bool isSplatValueForTargetNode(SDValue Op, const APInt &DemandedElts,
                                    APInt &UndefElts, const SelectionDAG &DAG,
@@ -599,6 +602,12 @@ namespace llvm {
                                  const SelectionDAG &DAG,
                                  const MachineMemOperand &MMO) const override;
 
+    bool isProfitableToCombineMinNumMaxNum(EVT VT) const override {
+      // X86 has instructions that correspond to cmp + select, so forming
+      // minnum/maxnum is not profitable.
+      return false;
+    }
+
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
 
@@ -627,13 +636,12 @@ namespace llvm {
                            const LibcallLoweringInfo &Libcalls) const override;
 
     bool useLoadStackGuardNode(const Module &M) const override;
-    bool useStackGuardXorFP() const override;
+    bool useStackGuardMixFP() const override;
     void
     insertSSPDeclarations(Module &M,
                           const LibcallLoweringInfo &Libcalls) const override;
-    SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
+    SDValue emitStackGuardMixFP(SelectionDAG &DAG, SDValue Val,
                                 const SDLoc &DL) const override;
-
 
     /// Return true if the target stores SafeStack pointer at a fixed offset in
     /// some non-standard address space, and populates the address space and
@@ -876,6 +884,7 @@ namespace llvm {
 
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
+
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
     TargetLoweringBase::AtomicExpansionKind
@@ -887,6 +896,10 @@ namespace llvm {
 
     LoadInst *
     lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
+
+    bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
+      return false;
+    }
 
     bool needsCmpXchgNb(Type *MemType) const;
 

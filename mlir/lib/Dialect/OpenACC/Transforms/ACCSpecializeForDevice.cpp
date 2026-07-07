@@ -95,6 +95,11 @@ public:
     } else {
       // For non-specialized functions, apply patterns only to ACC operations
       // inside compute constructs (not to the compute constructs themselves).
+      // Use ExistingOps strictness so the greedy driver does not expand the
+      // worklist to parent ops, which would accidentally unwrap the compute
+      // construct (e.g. after inlining acc routines with their own data
+      // regions).
+      config.setStrictness(GreedyRewriteStrictness::ExistingOps);
       SmallVector<Operation *> opsToTransform;
       func.walk([&](Operation *op) {
         if (isa<ACC_COMPUTE_CONSTRUCT_OPS>(op)) {

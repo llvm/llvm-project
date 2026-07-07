@@ -79,6 +79,7 @@ static bool supportsAArch64(uint64_t Type) {
   case ELF::R_AARCH64_PREL16:
   case ELF::R_AARCH64_PREL32:
   case ELF::R_AARCH64_PREL64:
+  case ELF::R_AARCH64_TLS_DTPREL64:
     return true;
   default:
     return false;
@@ -91,6 +92,7 @@ static uint64_t resolveAArch64(uint64_t Type, uint64_t Offset, uint64_t S,
   case ELF::R_AARCH64_ABS32:
     return (S + Addend) & 0xFFFFFFFF;
   case ELF::R_AARCH64_ABS64:
+  case ELF::R_AARCH64_TLS_DTPREL64:
     return S + Addend;
   case ELF::R_AARCH64_PREL16:
     return (S + Addend - Offset) & 0xFFFF;
@@ -683,6 +685,27 @@ static uint64_t resolveCOFFARM64(uint64_t Type, uint64_t Offset, uint64_t S,
   }
 }
 
+static bool supportsCOFFMIPS(uint64_t Type) {
+  switch (Type) {
+  case COFF::IMAGE_REL_MIPS_SECREL:
+  case COFF::IMAGE_REL_MIPS_REFWORD:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static uint64_t resolveCOFFMIPS(uint64_t Type, uint64_t Offset, uint64_t S,
+                                uint64_t LocData, int64_t /*Addend*/) {
+  switch (Type) {
+  case COFF::IMAGE_REL_MIPS_SECREL:
+  case COFF::IMAGE_REL_MIPS_REFWORD:
+    return (S + LocData) & 0xFFFFFFFF;
+  default:
+    llvm_unreachable("Invalid relocation type");
+  }
+}
+
 static bool supportsMachOX86_64(uint64_t Type) {
   return Type == MachO::X86_64_RELOC_UNSIGNED;
 }
@@ -724,6 +747,7 @@ static bool supportsWasm64(uint64_t Type) {
   case wasm::R_WASM_TABLE_INDEX_SLEB64:
   case wasm::R_WASM_TABLE_INDEX_I64:
   case wasm::R_WASM_FUNCTION_OFFSET_I64:
+  case wasm::R_WASM_MEMORY_ADDR_LOCREL_I64:
     return true;
   default:
     return supportsWasm32(Type);
@@ -763,6 +787,7 @@ static uint64_t resolveWasm64(uint64_t Type, uint64_t Offset, uint64_t S,
   case wasm::R_WASM_TABLE_INDEX_SLEB64:
   case wasm::R_WASM_TABLE_INDEX_I64:
   case wasm::R_WASM_FUNCTION_OFFSET_I64:
+  case wasm::R_WASM_MEMORY_ADDR_LOCREL_I64:
     // For wasm section, its offset at 0 -- ignoring Value
     return LocData;
   default:
@@ -783,6 +808,8 @@ getRelocationResolver(const ObjectFile &Obj) {
       return {supportsCOFFARM, resolveCOFFARM};
     case Triple::aarch64:
       return {supportsCOFFARM64, resolveCOFFARM64};
+    case Triple::mipsel:
+      return {supportsCOFFMIPS, resolveCOFFMIPS};
     default:
       return {nullptr, nullptr};
     }

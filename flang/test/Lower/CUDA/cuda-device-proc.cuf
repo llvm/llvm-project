@@ -101,26 +101,26 @@ attributes(global) subroutine devsub()
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
-! CHECK: nvvm.barrier0
+! CHECK: nvvm.barrier
 ! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
-! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<and> %c1{{.*}} -> i32
+! CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<and> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[A]], %[[B]] : i32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[CMP]] : (i1) -> i32
-! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<and> %[[CONV]] -> i32
-! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<popc> %c1{{.*}} -> i32
+! CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<and> %[[CONV]] -> i32
+! CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<popc> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[A]], %[[B]] : i32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[CMP]] : (i1) -> i32
-! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<popc> %[[CONV]] -> i32
-! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<or> %c1{{.*}} -> i32
+! CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<popc> %[[CONV]] -> i32
+! CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<or> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[A]], %[[B]] : i32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[CMP]] : (i1) -> i32
-! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<or> %[[CONV]] -> i32
+! CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<or> %[[CONV]] -> i32
 ! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 ! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
 ! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
@@ -160,10 +160,10 @@ end
 ! CHECK: %{{.*}} = fir.call @__nv_clz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
 ! CHECK: %{{.*}} = fir.call @__nv_clzll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i32
 ! CHECK: %{{.*}} = fir.call @__nv_fast_cosf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_ddiv_rn(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_ddiv_rz(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_ddiv_ru(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_ddiv_rd(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
+! CHECK: %{{.*}} = fir.call @__ddiv_rn(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
+! CHECK: %{{.*}} = fir.call @__ddiv_rz(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
+! CHECK: %{{.*}} = fir.call @__ddiv_ru(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
+! CHECK: %{{.*}} = fir.call @__ddiv_rd(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
 ! CHECK: %{{.*}} = fir.call @__nv_double2float_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f32
 ! CHECK: %{{.*}} = fir.call @__nv_double2float_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f32
 ! CHECK: %{{.*}} = fir.call @__nv_double2float_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f32
@@ -212,11 +212,11 @@ end
 
 ! CHECK-LABEL: func.func @_QPhost1()
 ! CHECK: cuf.kernel
-! CHECK: nvvm.barrier0
+! CHECK: nvvm.barrier
 ! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
-! CHECK: nvvm.barrier #nvvm.reduction<and> %c1{{.*}} -> i32
-! CHECK: nvvm.barrier #nvvm.reduction<popc> %c1{{.*}} -> i32
-! CHECK: nvvm.barrier #nvvm.reduction<or> %c1{{.*}} -> i32
+! CHECK: nvvm.barrier.reduction #nvvm.reduction<and> %c1{{.*}} -> i32
+! CHECK: nvvm.barrier.reduction #nvvm.reduction<popc> %c1{{.*}} -> i32
+! CHECK: nvvm.barrier.reduction #nvvm.reduction<or> %c1{{.*}} -> i32
 
 attributes(device) subroutine testMatch()
   integer :: a, ipred, mask, v32
@@ -766,3 +766,17 @@ end subroutine
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
 ! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
+
+
+subroutine call_c_kernel()
+  interface
+    subroutine c_kernel() bind(c,name='c_kernel')
+    end subroutine
+  end interface
+
+  call c_kernel<<<1,1>>>()
+end subroutine
+
+! CHECK-LABEL: func.func @_QPcall_c_kernel()
+! CHECK: cuf.kernel_launch @c_kernel<<<{{.*}}>>>()
+! CHECK: func.func private @c_kernel() attributes {cuf.proc_attr = #cuf.cuda_proc<global>, fir.bindc_name = "c_kernel", fir.proc_attrs = #fir.proc_attrs<bind_c>}

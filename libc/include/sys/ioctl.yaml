@@ -1,14 +1,17 @@
 header: sys/ioctl.h
-header_template: ioctl.h.def
-standards: POSIX
-macros: []
-types: []
+standards:
+  - linux
+macros:
+  - macro_name: FIONREAD
+    macro_header: sys-ioctl-macros.h
+  - macro_name: TIOCGWINSZ
+    macro_header: sys-ioctl-macros.h
+types:
+  - type_name: struct_winsize
 enums: []
 objects: []
 functions:
   - name: ioctl
-    standards:
-      - Linux
     return_type: int
     arguments:
       - type: int

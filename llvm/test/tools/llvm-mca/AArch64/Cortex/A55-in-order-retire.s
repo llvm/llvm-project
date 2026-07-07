@@ -119,4 +119,4 @@ add	w7, w9, w0
 # CHECK-NEXT: 3.     2     0.0    0.0    0.0       add	w3, w4, #1
 # CHECK-NEXT: 4.     2     0.0    0.0    0.0       add	w5, w6, w0
 # CHECK-NEXT: 5.     2     0.0    0.0    0.0       add	w7, w9, w0
-# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        12    0.0    0.0    0.0       <total>

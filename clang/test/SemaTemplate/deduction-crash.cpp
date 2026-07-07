@@ -172,3 +172,8 @@ namespace PR51872_part1 {
   // expected-error@-1 {{no viable constructor or deduction guide for deduction of template arguments of 'T1'}}
   // expected-note@-7  {{candidate template ignored: could not match 'PR51872_part1::T1<value-parameter-0-0>' against 'int'}}
 }
+
+namespace GH177545 {
+  template<decltype(auto)()() volatile throw() -> char> // expected-error {{'decltype(auto)' can only be used as a return type in a function declaration}}
+  struct T2;                                            // expected-error@* {{function cannot return function type 'auto () volatile throw() -> decltype(auto)'}}
+}

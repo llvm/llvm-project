@@ -21,6 +21,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
@@ -48,7 +49,9 @@ public:
   bool visitAnd(BinaryOperator &BO);
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool expandVPStrideLoad(IntrinsicInst &I);
-  bool widenVPMerge(IntrinsicInst &I);
+  bool expandMulReduction(IntrinsicInst &I);
+  bool widenVPMerge(Instruction *I);
+  bool visitFreezeInst(FreezeInst &BO);
 };
 } // namespace
 
@@ -115,12 +118,13 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 // follows:
 //
 // loop:
-//   %phi = phi <vscale x 4 x i1> [ zeroinitializer, %entry ], [ %rec, %loop ]
+//   %phi = phi <vscale x 4 x i1> [zeroinitializer, %entry], [%freeze, %loop]
 //   %cmp = icmp ...
 //   %rec = call <vscale x 4 x i1> @llvm.vp.merge(%cmp, i1 true, %phi, %evl)
+//   %freeze = freeze <vscale x 4 x i1> %rec [optional]
 //   ...
 // middle:
-//   %res = call i1 @llvm.vector.reduce.or(<vscale x 4 x i1> %rec)
+//   %res = call i1 @llvm.vector.reduce.or(<vscale x 4 x i1> %freeze)
 //
 // However RVV doesn't have any tail undisturbed mask instructions and so we
 // need a convoluted sequence of mask instructions to lower the i1 vp.merge: see
@@ -130,55 +134,65 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 // generate a single vmerge.vim:
 //
 // loop:
-//   %phi = phi <vscale x 4 x i8> [ zeroinitializer, %entry ], [ %rec, %loop ]
+//   %phi = phi <vscale x 4 x i8> [zeroinitializer, %entry], [%freeze, %loop]
 //   %cmp = icmp ...
 //   %rec = call <vscale x 4 x i8> @llvm.vp.merge(%cmp, i8 true, %phi, %evl)
-//   %trunc = trunc <vscale x 4 x i8> %rec to <vscale x 4 x i1>
+//   %freeze = freeze <vscale x 4 x i8> %rec
+//   %trunc = trunc <vscale x 4 x i8> %freeze to <vscale x 4 x i1>
 //   ...
 // middle:
-//   %res = call i1 @llvm.vector.reduce.or(<vscale x 4 x i1> %rec)
+//   %res = call i1 @llvm.vector.reduce.or(<vscale x 4 x i1> %trunc)
 //
 // The trunc will normally be sunk outside of the loop, but even if there are
 // users inside the loop it is still profitable.
-bool RISCVCodeGenPrepare::widenVPMerge(IntrinsicInst &II) {
-  if (!II.getType()->getScalarType()->isIntegerTy(1))
+bool RISCVCodeGenPrepare::widenVPMerge(Instruction *Root) {
+  if (!Root->getType()->getScalarType()->isIntegerTy(1))
     return false;
 
   Value *Mask, *True, *PhiV, *EVL;
   using namespace PatternMatch;
-  if (!match(&II,
-             m_Intrinsic<Intrinsic::vp_merge>(m_Value(Mask), m_Value(True),
-                                              m_Value(PhiV), m_Value(EVL))))
+  auto m_VPMerge = m_Intrinsic<Intrinsic::vp_merge>(
+      m_Value(Mask), m_Value(True), m_Value(PhiV), m_Value(EVL));
+  if (!match(Root, m_CombineOr(m_VPMerge, m_Freeze(m_VPMerge))))
     return false;
 
   auto *Phi = dyn_cast<PHINode>(PhiV);
   if (!Phi || !Phi->hasOneUse() || Phi->getNumIncomingValues() != 2 ||
       !match(Phi->getIncomingValue(0), m_Zero()) ||
-      Phi->getIncomingValue(1) != &II)
+      Phi->getIncomingValue(1) != Root)
     return false;
 
   Type *WideTy =
-      VectorType::get(IntegerType::getInt8Ty(II.getContext()),
-                      cast<VectorType>(II.getType())->getElementCount());
+      VectorType::get(IntegerType::getInt8Ty(Root->getContext()),
+                      cast<VectorType>(Root->getType())->getElementCount());
 
   IRBuilder<> Builder(Phi);
   PHINode *WidePhi = Builder.CreatePHI(WideTy, 2);
   WidePhi->addIncoming(ConstantAggregateZero::get(WideTy),
                        Phi->getIncomingBlock(0));
-  Builder.SetInsertPoint(&II);
+  Builder.SetInsertPoint(Root);
   Value *WideTrue = Builder.CreateZExt(True, WideTy);
   Value *WideMerge = Builder.CreateIntrinsic(Intrinsic::vp_merge, {WideTy},
                                              {Mask, WideTrue, WidePhi, EVL});
+  if (isa<FreezeInst>(Root))
+    WideMerge = Builder.CreateFreeze(WideMerge);
   WidePhi->addIncoming(WideMerge, Phi->getIncomingBlock(1));
-  Value *Trunc = Builder.CreateTrunc(WideMerge, II.getType());
+  Value *Trunc = Builder.CreateTrunc(WideMerge, Root->getType());
 
-  II.replaceAllUsesWith(Trunc);
+  Root->replaceAllUsesWith(Trunc);
 
   // Break the cycle and delete the old chain.
   Phi->setIncomingValue(1, Phi->getIncomingValue(0));
-  llvm::RecursivelyDeleteTriviallyDeadInstructions(&II);
+  llvm::RecursivelyDeleteTriviallyDeadInstructions(Root);
 
   return true;
+}
+
+bool RISCVCodeGenPrepare::visitFreezeInst(FreezeInst &I) {
+  if (auto *II = dyn_cast<IntrinsicInst>(I.getOperand(0)))
+    if (II->getIntrinsicID() == Intrinsic::vp_merge)
+      return widenVPMerge(&I);
+  return false;
 }
 
 // LLVM vector reduction intrinsics return a scalar result, but on RISC-V vector
@@ -216,7 +230,10 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   if (expandVPStrideLoad(I))
     return true;
 
-  if (widenVPMerge(I))
+  if (expandMulReduction(I))
+    return true;
+
+  if (widenVPMerge(&I))
     return true;
 
   if (I.getIntrinsicID() != Intrinsic::vector_reduce_fadd &&
@@ -244,6 +261,118 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
 
   PHI->eraseFromParent();
 
+  return true;
+}
+
+// Extract pieces of size PieceEC from Vec, then build a binary tree of
+// element-wise multiplies reducing to a single piece.
+static Value *buildMulTree(IRBuilder<> &Builder, ElementCount PieceEC,
+                           Value *Vec) {
+  auto *VecTy = cast<VectorType>(Vec->getType());
+  auto *PieceTy = VectorType::get(VecTy->getElementType(), PieceEC);
+  unsigned PieceElts = PieceEC.getKnownMinValue();
+  unsigned NumPieces = VecTy->getElementCount().getKnownMinValue() / PieceElts;
+  assert(isPowerOf2_32(NumPieces));
+
+  SmallVector<Value *, 8> Pieces(NumPieces);
+  for (unsigned i = 0; i < NumPieces; i++)
+    Pieces[i] = Builder.CreateExtractVector(PieceTy, Vec, i * PieceElts);
+
+  while (Pieces.size() > 1) {
+    for (unsigned i = 0; i < Pieces.size() / 2; i++)
+      Pieces[i] =
+          Builder.CreateMul(Pieces[i * 2], Pieces[i * 2 + 1], "bin.rdx");
+    Pieces.truncate(Pieces.size() / 2);
+  }
+  return Pieces[0];
+}
+
+// Partially expand a vector_reduce_mul wider than M1 to reduce
+// register pressure and the number of vsetvlis required.
+bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
+  if (II.getIntrinsicID() != Intrinsic::vector_reduce_mul)
+    return false;
+
+  if (!ST->hasVInstructions())
+    return false;
+
+  Value *TmpVec = II.getArgOperand(0);
+  auto *VecTy = cast<VectorType>(TmpVec->getType());
+  unsigned EltSize = VecTy->getScalarSizeInBits();
+
+  if (auto *ScalTy = dyn_cast<ScalableVectorType>(VecTy)) {
+    unsigned MinElts = ScalTy->getMinNumElements();
+
+    if (auto VLen = ST->getRealVLen()) {
+      // If VLEN is exactly known, convert to a fixed vector reduction and
+      // recurse to let the fixed path handle it (shuffle reduction instead
+      // of a scalar loop).
+      unsigned VScale = *VLen / RISCV::RVVBitsPerBlock;
+      auto *FixedTy =
+          FixedVectorType::get(VecTy->getElementType(), MinElts * VScale);
+      IRBuilder<> Builder(&II);
+      Value *Fixed = Builder.CreateExtractVector(FixedTy, TmpVec, (uint64_t)0);
+      auto *FixedRdx = cast<IntrinsicInst>(Builder.CreateIntrinsic(
+          Intrinsic::vector_reduce_mul, {FixedTy}, {Fixed}));
+      II.replaceAllUsesWith(FixedRdx);
+      II.eraseFromParent();
+      expandMulReduction(*FixedRdx);
+      return true;
+    }
+
+    unsigned M1MinElts = RISCV::RVVBitsPerBlock / EltSize;
+    if (MinElts <= M1MinElts || !isPowerOf2_32(MinElts / M1MinElts))
+      return false;
+
+    IRBuilder<> Builder(&II);
+    auto M1EC = ElementCount::getScalable(M1MinElts);
+    Value *Reduced = buildMulTree(Builder, M1EC, TmpVec);
+    Value *Rdx = Builder.CreateIntrinsic(Intrinsic::vector_reduce_mul,
+                                         {Reduced->getType()}, {Reduced});
+    II.replaceAllUsesWith(Rdx);
+    II.eraseFromParent();
+    return true;
+  }
+
+  unsigned VF = cast<FixedVectorType>(VecTy)->getNumElements();
+  unsigned MinVLen = ST->getRealMinVLen();
+  unsigned M1VF = MinVLen / EltSize;
+
+  if (!isPowerOf2_32(VF) || VF <= M1VF)
+    return false;
+
+  IRBuilder<> Builder(&II);
+  auto M1EC = ElementCount::getFixed(M1VF);
+  auto *M1Ty = VectorType::get(VecTy->getElementType(), M1EC);
+
+  // When VLEN is exactly known, extract m1 pieces and build a mul tree.
+  // This greatly reduces register pressure during the reduction, and
+  // avoids all but one vsetvli (the one from original LMUL to m1).
+  // TODO: Generalize to handle the splitting case.
+  if (MinVLen == ST->getRealMaxVLen() && VF <= 8 * M1VF) {
+    TmpVec = buildMulTree(Builder, M1EC, TmpVec);
+  } else {
+    // For non-exact VLEN, shuffle-reduce at the original vector width down to
+    // m1, then extract.  This prioritizes reducing the number of vsetvli
+    // over maximal reduction of LMUL for the intermediate states.
+    SmallVector<int, 32> ShuffleMask(VF);
+    for (unsigned LiveElts = VF; LiveElts > M1VF; LiveElts /= 2) {
+      unsigned Half = LiveElts / 2;
+      std::iota(ShuffleMask.begin(), ShuffleMask.begin() + Half, Half);
+      std::fill(ShuffleMask.begin() + Half, ShuffleMask.end(), -1);
+      Value *Shuf =
+          Builder.CreateShuffleVector(TmpVec, ShuffleMask, "rdx.shuf");
+      TmpVec = Builder.CreateMul(TmpVec, Shuf, "bin.rdx");
+    }
+    // Extract the M1-sized subvector and emit the final reduction intrinsic.
+    // This is the reason we're here - to force a vsetvli toggle once at m1.
+    TmpVec = Builder.CreateExtractVector(M1Ty, TmpVec, (uint64_t)0, "rdx.sub");
+  }
+
+  Value *Rdx =
+      Builder.CreateIntrinsic(Intrinsic::vector_reduce_mul, {M1Ty}, {TmpVec});
+  II.replaceAllUsesWith(Rdx);
+  II.eraseFromParent();
   return true;
 }
 

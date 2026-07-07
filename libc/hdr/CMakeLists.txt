@@ -78,6 +78,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  netinet_in_macros
+  HDRS
+    netinet_in_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.netinet_in
+    libc.include.llvm-libc-macros.netinet_in_macros
+)
+
+add_proxy_header_library(
   pthread_macros
   HDRS
     pthread_macros.h
@@ -117,6 +126,7 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.stdlib_macros
 )
 
+add_header_library(dirent_overlay HDRS dirent_overlay.h)
 add_header_library(stdio_overlay HDRS stdio_overlay.h)
 
 add_proxy_header_library(
@@ -150,6 +160,24 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  sys_ipc_macros
+  HDRS
+    sys_ipc_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_ipc
+    libc.include.llvm-libc-macros.sys_ipc_macros
+)
+
+add_proxy_header_library(
+  sys_sem_macros
+  HDRS
+    sys_sem_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_sem
+    libc.include.llvm-libc-macros.sys_sem_macros
+)
+
+add_proxy_header_library(
   sys_socket_macros
   HDRS
     sys_socket_macros.h
@@ -165,6 +193,24 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.sys_stat
     libc.include.llvm-libc-macros.sys_stat_macros
+)
+
+add_proxy_header_library(
+  sys_mman_macros
+  HDRS
+    sys_mman_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_mman
+    libc.include.llvm-libc-macros.sys_mman_macros
+)
+
+add_proxy_header_library(
+  sys_ptrace_macros
+  HDRS
+    sys_ptrace_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_ptrace
+    libc.include.llvm-libc-macros.sys_ptrace_macros
 )
 
 add_header_library(unistd_overlay HDRS unistd_overlay.h)
@@ -240,6 +286,15 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.sys_auxv_macros
     libc.include.sys_auxv
+)
+
+add_proxy_header_library(
+  sys_resource_macros
+  HDRS
+    sys_resource_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_resource_macros
+    libc.include.sys_resource
 )
 
 add_header_library(wchar_overlay HDRS wchar_overlay.h)
@@ -338,6 +393,15 @@ add_gen_header(
     libc.include.llvm-libc-types.Elf64_Xword
     libc.include.llvm-libc-types.Elf64_auxv_t
   PROXY
+)
+
+add_proxy_header_library(
+  regex_macros
+  HDRS
+    regex_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.regex_macros
+    libc.include.regex
 )
 
 add_subdirectory(types)

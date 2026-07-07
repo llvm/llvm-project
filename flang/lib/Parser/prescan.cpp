@@ -56,6 +56,8 @@ static inline int IsSpace(const char *p) {
     return 1;
   } else if (p[0] == '\xc2' && p[1] == '\xa0') { // UTF-8 NBSP
     return 2;
+  } else if (*p == '\r') { // bare carriage return retained in line
+    return 1;
   } else {
     return 0;
   }
@@ -1014,9 +1016,9 @@ void Prescanner::QuotedCharacterLiteral(
     if (*at_ == '\\') {
       if (escapesEnabled) {
         isEscaped = !isEscaped;
-      } else {
-        // The parser always processes escape sequences, so don't confuse it
-        // when escapes are disabled.
+      } else if (!preprocessingOnly_) {
+        // Except when -E is used, the parser always processes escape sequences,
+        // so don't confuse it when escapes are disabled.
         insert('\\');
       }
     } else {

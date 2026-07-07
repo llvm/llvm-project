@@ -1,0 +1,6 @@
+header: macro_only.h
+standards:
+  - stdc
+macros:
+  - macro_name: MACRO_A
+    macro_value: 1

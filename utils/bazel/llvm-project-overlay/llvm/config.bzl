@@ -83,9 +83,9 @@ win32_defines = [
 # TODO: We should switch to platforms-based config settings to make this easier
 # to express.
 os_defines = select({
-    "@bazel_tools//src/conditions:windows": win32_defines,
-    "@bazel_tools//src/conditions:darwin": macos_defines,
-    "@bazel_tools//src/conditions:freebsd": posix_defines,
+    "@platforms//os:freebsd": posix_defines,
+    "@platforms//os:macos": macos_defines,
+    "@platforms//os:windows": win32_defines,
     "//conditions:default": linux_defines,
 })
 
@@ -93,20 +93,20 @@ os_defines = select({
 # all recent toolchains. Add it here by default on Linux as we can't perform a
 # configure time check.
 builtin_thread_pointer = select({
-    "@bazel_tools//src/conditions:linux_ppc64le": [],
-    "@bazel_tools//src/conditions:linux": ["HAVE_BUILTIN_THREAD_POINTER"],
+    Label("//llvm:linux_ppc64le"): [],
+    "@platforms//os:linux": ["HAVE_BUILTIN_THREAD_POINTER"],
     "//conditions:default": [],
 })
 
 # TODO: We should split out host vs. target here.
 llvm_config_defines = os_defines + builtin_thread_pointer + select({
-    "@bazel_tools//src/conditions:windows": native_arch_defines("X86", "x86_64-pc-win32"),
-    "@bazel_tools//src/conditions:darwin_arm64": native_arch_defines("AArch64", "arm64-apple-darwin"),
-    "@bazel_tools//src/conditions:darwin_x86_64": native_arch_defines("X86", "x86_64-unknown-darwin"),
-    "@bazel_tools//src/conditions:linux_aarch64": native_arch_defines("AArch64", "aarch64-unknown-linux-gnu"),
-    "@bazel_tools//src/conditions:linux_ppc64le": native_arch_defines("PowerPC", "powerpc64le-unknown-linux-gnu"),
-    "@bazel_tools//src/conditions:linux_riscv64": native_arch_defines("RISCV", "riscv64-unknown-linux-gnu"),
-    "@bazel_tools//src/conditions:linux_s390x": native_arch_defines("SystemZ", "systemz-unknown-linux_gnu"),
+    Label("//llvm:darwin_arm64"): native_arch_defines("AArch64", "arm64-apple-darwin"),
+    Label("//llvm:darwin_x86_64"): native_arch_defines("X86", "x86_64-unknown-darwin"),
+    Label("//llvm:linux_aarch64"): native_arch_defines("AArch64", "aarch64-unknown-linux-gnu"),
+    Label("//llvm:linux_ppc64le"): native_arch_defines("PowerPC", "powerpc64le-unknown-linux-gnu"),
+    Label("//llvm:linux_riscv64"): native_arch_defines("RISCV", "riscv64-unknown-linux-gnu"),
+    Label("//llvm:linux_s390x"): native_arch_defines("SystemZ", "systemz-unknown-linux_gnu"),
+    "@platforms//os:windows": native_arch_defines("X86", "x86_64-pc-win32"),
     "//conditions:default": native_arch_defines("X86", "x86_64-unknown-linux-gnu"),
 }) + [
     "LLVM_VERSION_MAJOR={}".format(LLVM_VERSION_MAJOR),

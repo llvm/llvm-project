@@ -12,6 +12,7 @@
 
 #include "level_zero/ze_api.h"
 #include <cassert>
+#include <cstring>
 #include <deque>
 #include <exception>
 #include <functional>
@@ -379,16 +380,15 @@ struct StreamWrapper {
   }
 };
 
-static ze_module_handle_t loadModule(const void *data, size_t dataSize) {
+static ze_module_handle_t
+loadModule(const void *data, size_t dataSize,
+           ze_module_format_t format = ZE_MODULE_FORMAT_NATIVE) {
   assert(data);
   ze_module_handle_t zeModule;
-  ze_module_desc_t desc = {ZE_STRUCTURE_TYPE_MODULE_DESC,
-                           nullptr,
-                           ZE_MODULE_FORMAT_IL_SPIRV,
-                           dataSize,
-                           (const uint8_t *)data,
-                           nullptr,
-                           nullptr};
+  ze_module_desc_t desc = {
+      ZE_STRUCTURE_TYPE_MODULE_DESC, nullptr, format, dataSize,
+      (const uint8_t *)data,         nullptr, nullptr};
+
   ze_module_build_log_handle_t buildLogHandle;
   ze_result_t result =
       zeModuleCreate(getRtContext().context.get(), getRtContext().device, &desc,
@@ -520,6 +520,24 @@ extern "C" ze_module_handle_t mgpuModuleLoad(const void *data,
   return catchAll([&]() { return loadModule(data, gpuBlobSize); });
 }
 
+extern "C" ze_module_handle_t mgpuModuleLoadJIT(void *data, int optLevel,
+                                                size_t assemblySize) {
+  // Account for extra null terminator added in embedBinaryImpl.
+  // A null terminator is added during embedding binary for assembly format to
+  // support JIT paths that expect null-terminated strings. However, for SPIR-V
+  // binary format, the null terminator is not expected. So we need to subtract
+  // the null terminator when loading SPIR-V binary.
+  assert((assemblySize == 0 ||
+          reinterpret_cast<char *>(data)[assemblySize - 1] == 0) &&
+         "Expected null terminator at the end of the assembly string.");
+  size_t actualAssemblySize = assemblySize - 1;
+  assert(actualAssemblySize % 4 == 0 &&
+         "SPIR-V binary size must be a multiple of 4");
+  return catchAll([&]() {
+    return loadModule(data, actualAssemblySize, ZE_MODULE_FORMAT_IL_SPIRV);
+  });
+}
+
 extern "C" ze_kernel_handle_t mgpuModuleGetFunction(ze_module_handle_t module,
                                                     const char *name) {
   assert(module && name);
@@ -533,7 +551,7 @@ extern "C" ze_kernel_handle_t mgpuModuleGetFunction(ze_module_handle_t module,
 extern "C" void mgpuLaunchKernel(ze_kernel_handle_t kernel, size_t gridX,
                                  size_t gridY, size_t gridZ, size_t blockX,
                                  size_t blockY, size_t blockZ,
-                                 size_t sharedMemBytes, StreamWrapper *stream,
+                                 int32_t sharedMemBytes, StreamWrapper *stream,
                                  void **params, void ** /*extra*/,
                                  size_t paramsCount) {
 

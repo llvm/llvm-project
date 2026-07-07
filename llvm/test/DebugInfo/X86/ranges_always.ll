@@ -102,9 +102,9 @@
 ; CHECK:     NULL
 ; CHECK:   DW_TAG_subprogram
 ; EXPR:      DW_AT_low_pc
-; EXPR-SAME:   [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x30, DW_OP_plus)
+; EXPR-SAME:   [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x1e, DW_OP_plus)
 ; FORM:      DW_AT_low_pc
-; FORM-SAME:   [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0x30 address = 0x0000000000000030 ".text")
+; FORM-SAME:   [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0x1e address = 0x000000000000001e ".text")
 ; EXPRORFORM: DW_AT_high_pc
 ; EXPRORFORM-SAME: (0x00000001)
 ; RNG:       DW_AT_ranges

@@ -10,7 +10,6 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
 using namespace mlir;
@@ -18,8 +17,8 @@ using namespace mlir::gpu;
 
 // Maximum grid and block dimensions of all known GPUs are less than 2^32.
 static constexpr uint64_t kMaxDim = std::numeric_limits<uint32_t>::max();
-// Maximum cluster size
-static constexpr uint64_t kMaxClusterDim = 8;
+// Maximum cluster size.
+static constexpr uint64_t kMaxClusterDim = 16;
 // Maximum subgroups are no larger than 128.
 static constexpr uint64_t kMaxSubgroupSize = 128;
 
@@ -29,15 +28,7 @@ static ConstantIntRanges getIndexRange(uint64_t umin, uint64_t umax) {
                                          APInt(width, umax));
 }
 
-namespace {
-enum class LaunchDims : uint32_t { Block = 0, Grid = 1, Cluster = 2 };
-} // end namespace
-
-/// If the operation `op` is in a context that is annotated with maximum
-/// launch dimensions (a launch op with constant block or grid
-/// sizes or a launch_func op with the appropriate dimensions), return
-/// the bound on the maximum size of the dimension that the op is querying.
-/// IDs will be one less than this bound.
+static uint64_t zext(uint32_t arg) { return static_cast<uint64_t>(arg); }
 
 static Value valueByDim(KernelDim3 dims, Dimension dim) {
   switch (dim) {
@@ -51,53 +42,55 @@ static Value valueByDim(KernelDim3 dims, Dimension dim) {
   llvm_unreachable("All dimension enum cases handled above");
 }
 
-static uint64_t zext(uint32_t arg) { return static_cast<uint64_t>(arg); }
-
-static std::optional<uint64_t>
-getKnownLaunchAttr(GPUFuncOp func, LaunchDims dims, Dimension dim) {
+static std::optional<uint32_t>
+getKnownLaunchAttr(GPUFuncOp func, DimensionKind dims, Dimension dim) {
   DenseI32ArrayAttr bounds;
   switch (dims) {
-  case LaunchDims::Block:
+  case DimensionKind::Other:
+    return std::nullopt;
+  case DimensionKind::Block:
     bounds = func.getKnownBlockSizeAttr();
     break;
-  case LaunchDims::Grid:
+  case DimensionKind::Grid:
     bounds = func.getKnownGridSizeAttr();
     break;
-  case LaunchDims::Cluster:
+  case DimensionKind::Cluster:
     bounds = func.getKnownClusterSizeAttr();
     break;
   }
   if (!bounds)
     return std::nullopt;
-  if (bounds.size() < static_cast<uint32_t>(dim))
+  if (bounds.size() <= static_cast<uint32_t>(dim))
     return std::nullopt;
-  return zext(bounds[static_cast<uint32_t>(dim)]);
+  return bounds[static_cast<uint32_t>(dim)];
 }
 
-static std::optional<uint64_t> getKnownLaunchAttr(FunctionOpInterface func,
+static std::optional<uint32_t> getKnownLaunchAttr(FunctionOpInterface func,
                                                   StringRef attrName,
                                                   Dimension dim) {
   auto bounds = func.getOperation()->getAttrOfType<DenseI32ArrayAttr>(attrName);
   if (!bounds)
     return std::nullopt;
-  if (bounds.size() < static_cast<uint32_t>(dim))
+  if (bounds.size() <= static_cast<uint32_t>(dim))
     return std::nullopt;
-  return zext(bounds[static_cast<uint32_t>(dim)]);
+  return bounds[static_cast<uint32_t>(dim)];
 }
 
-template <typename Op>
-static std::optional<uint64_t> getKnownLaunchDim(Op op, LaunchDims type) {
-  Dimension dim = op.getDimension();
-  if (auto launch = op->template getParentOfType<LaunchOp>()) {
+std::optional<uint32_t>
+mlir::gpu::getKnownDimensionSizeAround(Operation *op, DimensionKind kind,
+                                       Dimension dim) {
+  if (auto launch = op->getParentOfType<LaunchOp>()) {
     KernelDim3 bounds;
-    switch (type) {
-    case LaunchDims::Block:
+    switch (kind) {
+    case DimensionKind::Other:
+      return std::nullopt;
+    case DimensionKind::Block:
       bounds = launch.getBlockSizeOperandValues();
       break;
-    case LaunchDims::Grid:
+    case DimensionKind::Grid:
       bounds = launch.getGridSizeOperandValues();
       break;
-    case LaunchDims::Cluster:
+    case DimensionKind::Cluster:
       if (launch.hasClusterSize()) {
         auto clusterBounds = launch.getClusterSizeOperandValues();
         if (clusterBounds)
@@ -107,25 +100,27 @@ static std::optional<uint64_t> getKnownLaunchDim(Op op, LaunchDims type) {
     }
     Value maybeBound = valueByDim(bounds, dim);
     APInt value;
-    if (matchPattern(maybeBound, m_ConstantInt(&value)))
+    if (maybeBound && matchPattern(maybeBound, m_ConstantInt(&value)))
       return value.getZExtValue();
   }
 
-  if (auto gpuFunc = op->template getParentOfType<GPUFuncOp>()) {
-    auto inherentAttr = getKnownLaunchAttr(gpuFunc, type, dim);
+  if (auto gpuFunc = op->getParentOfType<GPUFuncOp>()) {
+    auto inherentAttr = getKnownLaunchAttr(gpuFunc, kind, dim);
     if (inherentAttr)
       return inherentAttr;
   }
-  if (auto func = op->template getParentOfType<FunctionOpInterface>()) {
+  if (auto func = op->getParentOfType<FunctionOpInterface>()) {
     StringRef attrName;
-    switch (type) {
-    case LaunchDims::Block:
+    switch (kind) {
+    case DimensionKind::Other:
+      return std::nullopt;
+    case DimensionKind::Block:
       attrName = GPUDialect::KnownBlockSizeAttrHelper::getNameStr();
       break;
-    case LaunchDims::Grid:
+    case DimensionKind::Grid:
       attrName = GPUDialect::KnownGridSizeAttrHelper::getNameStr();
       break;
-    case LaunchDims::Cluster:
+    case DimensionKind::Cluster:
       attrName = GPUDialect::KnownClusterSizeAttrHelper::getNameStr();
       break;
     }
@@ -146,8 +141,10 @@ void ClusterDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
 
 void ClusterDimBlocksOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                            SetIntRangeFn setResultRange) {
-  if (auto known = getKnownLaunchDim(*this, LaunchDims::Cluster))
-    return setResultRange(getResult(), getIndexRange(*known, *known));
+  if (auto known = getKnownDimensionSizeAround(*this, DimensionKind::Cluster,
+                                               getDimension()))
+    return setResultRange(getResult(),
+                          getIndexRange(zext(*known), zext(*known)));
 
   uint64_t max = kMaxClusterDim;
   if (auto specified = getUpperBound())
@@ -166,8 +163,9 @@ void ClusterIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
 void ClusterBlockIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                          SetIntRangeFn setResultRange) {
   uint64_t max = kMaxClusterDim;
-  if (auto known = getKnownLaunchDim(*this, LaunchDims::Cluster))
-    max = *known;
+  if (auto known = getKnownDimensionSizeAround(*this, DimensionKind::Cluster,
+                                               getDimension()))
+    max = zext(*known);
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
   setResultRange(getResult(), getIndexRange(0, max - 1ULL));
@@ -175,11 +173,12 @@ void ClusterBlockIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
 
 void BlockDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                    SetIntRangeFn setResultRange) {
-  std::optional<uint64_t> knownVal =
-      getKnownLaunchDim(*this, LaunchDims::Block);
+  std::optional<uint32_t> knownVal =
+      getKnownDimensionSizeAround(*this, DimensionKind::Block, getDimension());
   if (knownVal)
-    return setResultRange(getResult(), getIndexRange(*knownVal, *knownVal));
-  ;
+    return setResultRange(getResult(),
+                          getIndexRange(zext(*knownVal), zext(*knownVal)));
+
   uint64_t max = kMaxDim;
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
@@ -189,8 +188,9 @@ void BlockDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
 void BlockIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                   SetIntRangeFn setResultRange) {
   uint64_t max = kMaxDim;
-  if (auto fromContext = getKnownLaunchDim(*this, LaunchDims::Grid))
-    max = fromContext.value();
+  if (auto fromContext = getKnownDimensionSizeAround(*this, DimensionKind::Grid,
+                                                     getDimension()))
+    max = zext(*fromContext);
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
   setResultRange(getResult(), getIndexRange(0, max - 1ULL));
@@ -198,9 +198,11 @@ void BlockIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
 
 void GridDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                   SetIntRangeFn setResultRange) {
-  std::optional<uint64_t> knownVal = getKnownLaunchDim(*this, LaunchDims::Grid);
+  std::optional<uint32_t> knownVal =
+      getKnownDimensionSizeAround(*this, DimensionKind::Grid, getDimension());
   if (knownVal)
-    return setResultRange(getResult(), getIndexRange(*knownVal, *knownVal));
+    return setResultRange(getResult(),
+                          getIndexRange(zext(*knownVal), zext(*knownVal)));
   uint64_t max = kMaxDim;
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
@@ -210,8 +212,9 @@ void GridDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
 void ThreadIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                    SetIntRangeFn setResultRange) {
   uint64_t max = kMaxDim;
-  if (auto fromContext = getKnownLaunchDim(*this, LaunchDims::Block))
-    max = fromContext.value();
+  if (auto fromContext = getKnownDimensionSizeAround(
+          *this, DimensionKind::Block, getDimension()))
+    max = zext(*fromContext);
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
   setResultRange(getResult(), getIndexRange(0, max - 1ULL));
@@ -239,10 +242,12 @@ void GlobalIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
     return setResultRange(getResult(),
                           getIndexRange(0, specified->getZExtValue() - 1ULL));
 
-  uint64_t blockDimMax =
-      getKnownLaunchDim(*this, LaunchDims::Block).value_or(kMaxDim);
-  uint64_t gridDimMax =
-      getKnownLaunchDim(*this, LaunchDims::Grid).value_or(kMaxDim);
+  uint64_t blockDimMax = zext(
+      getKnownDimensionSizeAround(*this, DimensionKind::Block, getDimension())
+          .value_or(kMaxDim));
+  uint64_t gridDimMax = zext(
+      getKnownDimensionSizeAround(*this, DimensionKind::Grid, getDimension())
+          .value_or(kMaxDim));
   setResultRange(getResult(),
                  getIndexRange(0, (blockDimMax * gridDimMax) - 1ULL));
 }

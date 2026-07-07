@@ -167,12 +167,18 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
 
   for (unsigned I = 0; I < ExitingBlocks.size(); ++I) {
     BasicBlock *BB = ExitingBlocks[I];
-    if (BranchInst *Branch = dyn_cast<BranchInst>(BB->getTerminator())) {
+    if (UncondBrInst *Branch = dyn_cast<UncondBrInst>(BB->getTerminator())) {
+      BasicBlock *Succ0 = Branch->getSuccessor(0);
+      Succ0 = L->contains(Succ0) ? nullptr : Succ0;
+      CHub.addBranch(BB, Succ0);
+
+      LLVM_DEBUG(dbgs() << "Added extiting branch: " << printBasicBlock(BB)
+                        << " -> " << printBasicBlock(Succ0) << '\n');
+    } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(BB->getTerminator())) {
       BasicBlock *Succ0 = Branch->getSuccessor(0);
       Succ0 = L->contains(Succ0) ? nullptr : Succ0;
 
-      BasicBlock *Succ1 =
-          Branch->isUnconditional() ? nullptr : Branch->getSuccessor(1);
+      BasicBlock *Succ1 = Branch->getSuccessor(1);
       Succ1 = L->contains(Succ1) ? nullptr : Succ1;
       CHub.addBranch(BB, Succ0, Succ1);
 

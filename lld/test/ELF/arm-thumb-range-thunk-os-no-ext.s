@@ -12,6 +12,7 @@
 // RUN: llvm-objdump --no-show-raw-insn -d %t2 --start-address=0x900000 --stop-address=0x900004 | FileCheck --check-prefix=CHECK7 %s
 // RUN: llvm-objdump --no-show-raw-insn -d %t2 --start-address=0xa00000 --stop-address=0xa00018 | FileCheck --check-prefix=CHECK8 %s
 // RUN: llvm-objdump --no-show-raw-insn -d %t2 --start-address=0xb00000 --stop-address=0xb00004 | FileCheck --check-prefix=CHECK9 %s
+// RUN: rm %t.o %t2
 
 /// Test the Range extension Thunks for Thumb when all the code is in a single
 /// OutputSection. The Thumb BL instruction has a range of 4Mb. We create a

@@ -61,15 +61,50 @@ TYPE_PARSER(parenthesized(
 TYPE_PARSER(construct<AcImpliedDoControl>(
     maybe(integerTypeSpec / "::"), loopBounds(scalarIntExpr)))
 
+// Conditional expression lookahead helper: checks if input starting with '('
+// contains '?' at nesting level 1. This avoids exponential backtracking when
+// parsing deeply nested parentheses that are not conditional expressions.
+struct ConditionalExprLookahead {
+  using resultType = Success;
+  constexpr ConditionalExprLookahead() {}
+  std::optional<Success> Parse(ParseState &state) const {
+    ParseState scan{state};
+    if (!attempt("("_tok).Parse(scan)) {
+      return std::nullopt;
+    }
+    int nestLevel{1};
+    while (!scan.IsAtEnd()) {
+      if (attempt(charLiteralConstant).Parse(scan)) {
+        // Skip character literals; don't check contents.
+      } else if (attempt("("_tok).Parse(scan)) {
+        ++nestLevel;
+      } else if (attempt(")"_tok).Parse(scan)) {
+        if (--nestLevel == 0) {
+          return std::nullopt;
+        }
+      } else if (attempt("?"_tok).Parse(scan)) {
+        if (nestLevel == 1) {
+          return {Success{}};
+        }
+      } else {
+        scan.UncheckedAdvance();
+      }
+    }
+    return std::nullopt;
+  }
+};
+
 // R1001 primary ->
 //         literal-constant | designator | array-constructor |
 //         structure-constructor | function-reference | type-param-inquiry |
-//         type-param-name | ( expr )
+//         type-param-name | ( expr ) | conditional-expr
 // type-param-inquiry is parsed as a structure component, except for
 // substring%KIND/LEN
 constexpr auto primary{instrumented("primary"_en_US,
     first(construct<Expr>(indirect(charLiteralConstantSubstring)),
         construct<Expr>(literalConstant),
+        construct<Expr>(ConditionalExprLookahead{} >>
+            parenthesized(Parser<ConditionalExpr>{})),
         construct<Expr>(construct<Expr::Parentheses>("(" >>
             expr / !","_tok / recovery(")"_tok, SkipPastNested<'(', ')'>{}))),
         construct<Expr>(indirect(functionReference) / !"("_tok / !"%"_tok),
@@ -93,6 +128,17 @@ constexpr auto primary{instrumented("primary"_en_US,
 constexpr auto level1Expr{sourced(
     primary || // must come before define op to resolve .TRUE._8 ambiguity
     construct<Expr>(construct<Expr::DefinedUnary>(definedOpName, primary)))};
+
+// F2023 R1002 conditional-expr ->
+//   ( scalar-logical-expr ? expr
+//     [ : scalar-logical-expr ? expr ]...
+//     : expr )
+// The chained list form is encoded as a right-associative tree: the else-expr
+// is either a chained conditional-expr (which need not be separately
+// parenthesized) or a terminal expr.
+TYPE_PARSER(
+    construct<ConditionalExpr>(scalarLogicalExpr / "?", indirect(expr) / ":",
+        indirect(construct<Expr>(Parser<ConditionalExpr>{}) || expr)))
 
 // R1004 mult-operand -> level-1-expr [power-op mult-operand]
 // R1007 power-op -> **

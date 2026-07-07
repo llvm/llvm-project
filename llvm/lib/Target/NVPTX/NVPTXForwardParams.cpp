@@ -102,7 +102,7 @@ static bool eliminateMove(MachineInstr &Mov, const MachineRegisterInfo &MRI,
     (LI->uses().begin() + LDInstBasePtrOpIdx)
         ->ChangeToES(ParamSymbol->getSymbolName());
     (LI->uses().begin() + LDInstAddrSpaceOpIdx)
-        ->ChangeToImmediate(NVPTX::AddressSpace::Param);
+        ->ChangeToImmediate(NVPTX::AddressSpace::DeviceParam);
   }
   return true;
 }

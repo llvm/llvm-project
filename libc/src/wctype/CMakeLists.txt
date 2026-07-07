@@ -5,7 +5,7 @@ add_entrypoint_object(
   HDRS
     iswalpha.h
   DEPENDS
-    libc.src.__support.wctype_utils    
+    libc.src.__support.wctype_utils
 )
 
 add_entrypoint_object(
@@ -27,6 +27,7 @@ add_entrypoint_object(
     iswdigit.h
   DEPENDS
     libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
 )
 
 add_entrypoint_object(
@@ -94,4 +95,85 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.wctype_utils
     libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  iswupper
+  SRCS
+    iswupper.cpp
+  HDRS
+    iswupper.h
+  DEPENDS
+    libc.hdr.types.wint_t
+    libc.src.__support.wctype_utils
+)
+
+add_entrypoint_object(
+  iswpunct
+  SRCS
+    iswpunct.cpp
+  HDRS
+    iswpunct.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  iswprint
+  SRCS
+    iswprint.cpp
+  HDRS
+    iswprint.h
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  iswctype
+  SRCS
+    iswctype.cpp
+  HDRS
+    iswctype.h
+  DEPENDS
+    libc.src.__support.wctype_impl
+    libc.hdr.types.wctype_t
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  wctype
+  SRCS
+    wctype.cpp
+  HDRS
+    wctype_impl.h
+  DEPENDS
+    libc.src.__support.wctype_impl
+    libc.hdr.types.wctype_t
+)
+
+add_entrypoint_object(
+  towlower
+  SRCS
+    towlower.cpp
+  HDRS
+    towlower.h
+  DEPENDS
+    libc.hdr.types.wint_t
+    libc.src.__support.common
+    libc.src.__support.wctype_utils
+)
+
+add_entrypoint_object(
+  towupper
+  SRCS
+    towupper.cpp
+  HDRS
+    towupper.h
+  DEPENDS
+    libc.hdr.types.wint_t
+    libc.src.__support.common
+    libc.src.__support.wctype_utils
 )

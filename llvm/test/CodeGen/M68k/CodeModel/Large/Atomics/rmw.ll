@@ -624,13 +624,14 @@ define i64 @atomicrmw_max_i64(i64 %val, ptr %ptr) {
 ; NO-ATOMIC-NEXT:  ; %bb.0:
 ; NO-ATOMIC-NEXT:    suba.l #52, %sp
 ; NO-ATOMIC-NEXT:    .cfi_def_cfa_offset -56
-; NO-ATOMIC-NEXT:    movem.l %d2-%d4/%a2-%a3, (32,%sp) ; 24-byte Folded Spill
-; NO-ATOMIC-NEXT:    move.l (60,%sp), %d3
-; NO-ATOMIC-NEXT:    move.l (56,%sp), %d4
-; NO-ATOMIC-NEXT:    move.l (64,%sp), %a2
-; NO-ATOMIC-NEXT:    move.l (4,%a2), %d1
-; NO-ATOMIC-NEXT:    move.l (%a2), %d0
-; NO-ATOMIC-NEXT:    lea (24,%sp), %a3
+; NO-ATOMIC-NEXT:    movem.l %d2-%d5/%a2, (32,%sp) ; 24-byte Folded Spill
+; NO-ATOMIC-NEXT:    move.l (64,%sp), %d3
+; NO-ATOMIC-NEXT:    move.l %d3, (%sp)
+; NO-ATOMIC-NEXT:    move.l #0, (4,%sp)
+; NO-ATOMIC-NEXT:    move.l (60,%sp), %d4
+; NO-ATOMIC-NEXT:    move.l (56,%sp), %d5
+; NO-ATOMIC-NEXT:    jsr __atomic_load_8
+; NO-ATOMIC-NEXT:    lea (24,%sp), %a2
 ; NO-ATOMIC-NEXT:    bra .LBB7_1
 ; NO-ATOMIC-NEXT:  .LBB7_3: ; %atomicrmw.start
 ; NO-ATOMIC-NEXT:    ; in Loop: Header=BB7_1 Depth=1
@@ -648,22 +649,22 @@ define i64 @atomicrmw_max_i64(i64 %val, ptr %ptr) {
 ; NO-ATOMIC-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NO-ATOMIC-NEXT:    move.l %d0, (24,%sp)
 ; NO-ATOMIC-NEXT:    move.l %d1, (28,%sp)
-; NO-ATOMIC-NEXT:    move.l %a2, (%sp)
-; NO-ATOMIC-NEXT:    move.l %a3, (4,%sp)
-; NO-ATOMIC-NEXT:    move.l %d3, %d2
-; NO-ATOMIC-NEXT:    sub.l %d1, %d2
+; NO-ATOMIC-NEXT:    move.l %d3, (%sp)
+; NO-ATOMIC-NEXT:    move.l %a2, (4,%sp)
 ; NO-ATOMIC-NEXT:    move.l %d4, %d2
+; NO-ATOMIC-NEXT:    sub.l %d1, %d2
+; NO-ATOMIC-NEXT:    move.l %d5, %d2
 ; NO-ATOMIC-NEXT:    subx.l %d0, %d2
 ; NO-ATOMIC-NEXT:    slt %d2
 ; NO-ATOMIC-NEXT:    cmpi.b #0, %d2
 ; NO-ATOMIC-NEXT:    bne .LBB7_3
 ; NO-ATOMIC-NEXT:  ; %bb.2: ; %atomicrmw.start
 ; NO-ATOMIC-NEXT:    ; in Loop: Header=BB7_1 Depth=1
-; NO-ATOMIC-NEXT:    move.l %d3, %d1
-; NO-ATOMIC-NEXT:    move.l %d4, %d0
+; NO-ATOMIC-NEXT:    move.l %d4, %d1
+; NO-ATOMIC-NEXT:    move.l %d5, %d0
 ; NO-ATOMIC-NEXT:    bra .LBB7_3
 ; NO-ATOMIC-NEXT:  .LBB7_4: ; %atomicrmw.end
-; NO-ATOMIC-NEXT:    movem.l (32,%sp), %d2-%d4/%a2-%a3 ; 24-byte Folded Reload
+; NO-ATOMIC-NEXT:    movem.l (32,%sp), %d2-%d5/%a2 ; 24-byte Folded Reload
 ; NO-ATOMIC-NEXT:    adda.l #52, %sp
 ; NO-ATOMIC-NEXT:    rts
 ;
@@ -672,13 +673,14 @@ define i64 @atomicrmw_max_i64(i64 %val, ptr %ptr) {
 ; NO-ATOMIC-PIC-NEXT:  ; %bb.0:
 ; NO-ATOMIC-PIC-NEXT:    suba.l #52, %sp
 ; NO-ATOMIC-PIC-NEXT:    .cfi_def_cfa_offset -56
-; NO-ATOMIC-PIC-NEXT:    movem.l %d2-%d4/%a2-%a3, (32,%sp) ; 24-byte Folded Spill
-; NO-ATOMIC-PIC-NEXT:    move.l (60,%sp), %d3
-; NO-ATOMIC-PIC-NEXT:    move.l (56,%sp), %d4
-; NO-ATOMIC-PIC-NEXT:    move.l (64,%sp), %a2
-; NO-ATOMIC-PIC-NEXT:    move.l (4,%a2), %d1
-; NO-ATOMIC-PIC-NEXT:    move.l (%a2), %d0
-; NO-ATOMIC-PIC-NEXT:    lea (24,%sp), %a3
+; NO-ATOMIC-PIC-NEXT:    movem.l %d2-%d5/%a2, (32,%sp) ; 24-byte Folded Spill
+; NO-ATOMIC-PIC-NEXT:    move.l (64,%sp), %d3
+; NO-ATOMIC-PIC-NEXT:    move.l %d3, (%sp)
+; NO-ATOMIC-PIC-NEXT:    move.l #0, (4,%sp)
+; NO-ATOMIC-PIC-NEXT:    move.l (60,%sp), %d4
+; NO-ATOMIC-PIC-NEXT:    move.l (56,%sp), %d5
+; NO-ATOMIC-PIC-NEXT:    jsr (__atomic_load_8@PLT,%pc)
+; NO-ATOMIC-PIC-NEXT:    lea (24,%sp), %a2
 ; NO-ATOMIC-PIC-NEXT:    bra .LBB7_1
 ; NO-ATOMIC-PIC-NEXT:  .LBB7_3: ; %atomicrmw.start
 ; NO-ATOMIC-PIC-NEXT:    ; in Loop: Header=BB7_1 Depth=1
@@ -696,22 +698,22 @@ define i64 @atomicrmw_max_i64(i64 %val, ptr %ptr) {
 ; NO-ATOMIC-PIC-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NO-ATOMIC-PIC-NEXT:    move.l %d0, (24,%sp)
 ; NO-ATOMIC-PIC-NEXT:    move.l %d1, (28,%sp)
-; NO-ATOMIC-PIC-NEXT:    move.l %a2, (%sp)
-; NO-ATOMIC-PIC-NEXT:    move.l %a3, (4,%sp)
-; NO-ATOMIC-PIC-NEXT:    move.l %d3, %d2
-; NO-ATOMIC-PIC-NEXT:    sub.l %d1, %d2
+; NO-ATOMIC-PIC-NEXT:    move.l %d3, (%sp)
+; NO-ATOMIC-PIC-NEXT:    move.l %a2, (4,%sp)
 ; NO-ATOMIC-PIC-NEXT:    move.l %d4, %d2
+; NO-ATOMIC-PIC-NEXT:    sub.l %d1, %d2
+; NO-ATOMIC-PIC-NEXT:    move.l %d5, %d2
 ; NO-ATOMIC-PIC-NEXT:    subx.l %d0, %d2
 ; NO-ATOMIC-PIC-NEXT:    slt %d2
 ; NO-ATOMIC-PIC-NEXT:    cmpi.b #0, %d2
 ; NO-ATOMIC-PIC-NEXT:    bne .LBB7_3
 ; NO-ATOMIC-PIC-NEXT:  ; %bb.2: ; %atomicrmw.start
 ; NO-ATOMIC-PIC-NEXT:    ; in Loop: Header=BB7_1 Depth=1
-; NO-ATOMIC-PIC-NEXT:    move.l %d3, %d1
-; NO-ATOMIC-PIC-NEXT:    move.l %d4, %d0
+; NO-ATOMIC-PIC-NEXT:    move.l %d4, %d1
+; NO-ATOMIC-PIC-NEXT:    move.l %d5, %d0
 ; NO-ATOMIC-PIC-NEXT:    bra .LBB7_3
 ; NO-ATOMIC-PIC-NEXT:  .LBB7_4: ; %atomicrmw.end
-; NO-ATOMIC-PIC-NEXT:    movem.l (32,%sp), %d2-%d4/%a2-%a3 ; 24-byte Folded Reload
+; NO-ATOMIC-PIC-NEXT:    movem.l (32,%sp), %d2-%d5/%a2 ; 24-byte Folded Reload
 ; NO-ATOMIC-PIC-NEXT:    adda.l #52, %sp
 ; NO-ATOMIC-PIC-NEXT:    rts
 ;
@@ -720,13 +722,14 @@ define i64 @atomicrmw_max_i64(i64 %val, ptr %ptr) {
 ; ATOMIC-NEXT:  ; %bb.0:
 ; ATOMIC-NEXT:    suba.l #52, %sp
 ; ATOMIC-NEXT:    .cfi_def_cfa_offset -56
-; ATOMIC-NEXT:    movem.l %d2-%d4/%a2-%a3, (32,%sp) ; 24-byte Folded Spill
-; ATOMIC-NEXT:    move.l (60,%sp), %d3
-; ATOMIC-NEXT:    move.l (56,%sp), %d4
-; ATOMIC-NEXT:    move.l (64,%sp), %a2
-; ATOMIC-NEXT:    move.l (4,%a2), %d1
-; ATOMIC-NEXT:    move.l (%a2), %d0
-; ATOMIC-NEXT:    lea (24,%sp), %a3
+; ATOMIC-NEXT:    movem.l %d2-%d5/%a2, (32,%sp) ; 24-byte Folded Spill
+; ATOMIC-NEXT:    move.l (64,%sp), %d3
+; ATOMIC-NEXT:    move.l %d3, (%sp)
+; ATOMIC-NEXT:    move.l #0, (4,%sp)
+; ATOMIC-NEXT:    move.l (60,%sp), %d4
+; ATOMIC-NEXT:    move.l (56,%sp), %d5
+; ATOMIC-NEXT:    jsr __atomic_load_8
+; ATOMIC-NEXT:    lea (24,%sp), %a2
 ; ATOMIC-NEXT:    bra .LBB7_1
 ; ATOMIC-NEXT:  .LBB7_3: ; %atomicrmw.start
 ; ATOMIC-NEXT:    ; in Loop: Header=BB7_1 Depth=1
@@ -744,22 +747,22 @@ define i64 @atomicrmw_max_i64(i64 %val, ptr %ptr) {
 ; ATOMIC-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ATOMIC-NEXT:    move.l %d0, (24,%sp)
 ; ATOMIC-NEXT:    move.l %d1, (28,%sp)
-; ATOMIC-NEXT:    move.l %a2, (%sp)
-; ATOMIC-NEXT:    move.l %a3, (4,%sp)
-; ATOMIC-NEXT:    move.l %d3, %d2
-; ATOMIC-NEXT:    sub.l %d1, %d2
+; ATOMIC-NEXT:    move.l %d3, (%sp)
+; ATOMIC-NEXT:    move.l %a2, (4,%sp)
 ; ATOMIC-NEXT:    move.l %d4, %d2
+; ATOMIC-NEXT:    sub.l %d1, %d2
+; ATOMIC-NEXT:    move.l %d5, %d2
 ; ATOMIC-NEXT:    subx.l %d0, %d2
 ; ATOMIC-NEXT:    slt %d2
 ; ATOMIC-NEXT:    cmpi.b #0, %d2
 ; ATOMIC-NEXT:    bne .LBB7_3
 ; ATOMIC-NEXT:  ; %bb.2: ; %atomicrmw.start
 ; ATOMIC-NEXT:    ; in Loop: Header=BB7_1 Depth=1
-; ATOMIC-NEXT:    move.l %d3, %d1
-; ATOMIC-NEXT:    move.l %d4, %d0
+; ATOMIC-NEXT:    move.l %d4, %d1
+; ATOMIC-NEXT:    move.l %d5, %d0
 ; ATOMIC-NEXT:    bra .LBB7_3
 ; ATOMIC-NEXT:  .LBB7_4: ; %atomicrmw.end
-; ATOMIC-NEXT:    movem.l (32,%sp), %d2-%d4/%a2-%a3 ; 24-byte Folded Reload
+; ATOMIC-NEXT:    movem.l (32,%sp), %d2-%d5/%a2 ; 24-byte Folded Reload
 ; ATOMIC-NEXT:    adda.l #52, %sp
 ; ATOMIC-NEXT:    rts
 ;
@@ -768,13 +771,14 @@ define i64 @atomicrmw_max_i64(i64 %val, ptr %ptr) {
 ; ATOMIC-PIC-NEXT:  ; %bb.0:
 ; ATOMIC-PIC-NEXT:    suba.l #52, %sp
 ; ATOMIC-PIC-NEXT:    .cfi_def_cfa_offset -56
-; ATOMIC-PIC-NEXT:    movem.l %d2-%d4/%a2-%a3, (32,%sp) ; 24-byte Folded Spill
-; ATOMIC-PIC-NEXT:    move.l (60,%sp), %d3
-; ATOMIC-PIC-NEXT:    move.l (56,%sp), %d4
-; ATOMIC-PIC-NEXT:    move.l (64,%sp), %a2
-; ATOMIC-PIC-NEXT:    move.l (4,%a2), %d1
-; ATOMIC-PIC-NEXT:    move.l (%a2), %d0
-; ATOMIC-PIC-NEXT:    lea (24,%sp), %a3
+; ATOMIC-PIC-NEXT:    movem.l %d2-%d5/%a2, (32,%sp) ; 24-byte Folded Spill
+; ATOMIC-PIC-NEXT:    move.l (64,%sp), %d3
+; ATOMIC-PIC-NEXT:    move.l %d3, (%sp)
+; ATOMIC-PIC-NEXT:    move.l #0, (4,%sp)
+; ATOMIC-PIC-NEXT:    move.l (60,%sp), %d4
+; ATOMIC-PIC-NEXT:    move.l (56,%sp), %d5
+; ATOMIC-PIC-NEXT:    jsr (__atomic_load_8@PLT,%pc)
+; ATOMIC-PIC-NEXT:    lea (24,%sp), %a2
 ; ATOMIC-PIC-NEXT:    bra .LBB7_1
 ; ATOMIC-PIC-NEXT:  .LBB7_3: ; %atomicrmw.start
 ; ATOMIC-PIC-NEXT:    ; in Loop: Header=BB7_1 Depth=1
@@ -792,22 +796,22 @@ define i64 @atomicrmw_max_i64(i64 %val, ptr %ptr) {
 ; ATOMIC-PIC-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ATOMIC-PIC-NEXT:    move.l %d0, (24,%sp)
 ; ATOMIC-PIC-NEXT:    move.l %d1, (28,%sp)
-; ATOMIC-PIC-NEXT:    move.l %a2, (%sp)
-; ATOMIC-PIC-NEXT:    move.l %a3, (4,%sp)
-; ATOMIC-PIC-NEXT:    move.l %d3, %d2
-; ATOMIC-PIC-NEXT:    sub.l %d1, %d2
+; ATOMIC-PIC-NEXT:    move.l %d3, (%sp)
+; ATOMIC-PIC-NEXT:    move.l %a2, (4,%sp)
 ; ATOMIC-PIC-NEXT:    move.l %d4, %d2
+; ATOMIC-PIC-NEXT:    sub.l %d1, %d2
+; ATOMIC-PIC-NEXT:    move.l %d5, %d2
 ; ATOMIC-PIC-NEXT:    subx.l %d0, %d2
 ; ATOMIC-PIC-NEXT:    slt %d2
 ; ATOMIC-PIC-NEXT:    cmpi.b #0, %d2
 ; ATOMIC-PIC-NEXT:    bne .LBB7_3
 ; ATOMIC-PIC-NEXT:  ; %bb.2: ; %atomicrmw.start
 ; ATOMIC-PIC-NEXT:    ; in Loop: Header=BB7_1 Depth=1
-; ATOMIC-PIC-NEXT:    move.l %d3, %d1
-; ATOMIC-PIC-NEXT:    move.l %d4, %d0
+; ATOMIC-PIC-NEXT:    move.l %d4, %d1
+; ATOMIC-PIC-NEXT:    move.l %d5, %d0
 ; ATOMIC-PIC-NEXT:    bra .LBB7_3
 ; ATOMIC-PIC-NEXT:  .LBB7_4: ; %atomicrmw.end
-; ATOMIC-PIC-NEXT:    movem.l (32,%sp), %d2-%d4/%a2-%a3 ; 24-byte Folded Reload
+; ATOMIC-PIC-NEXT:    movem.l (32,%sp), %d2-%d5/%a2 ; 24-byte Folded Reload
 ; ATOMIC-PIC-NEXT:    adda.l #52, %sp
 ; ATOMIC-PIC-NEXT:    rts
   %old = atomicrmw max ptr %ptr, i64 %val seq_cst

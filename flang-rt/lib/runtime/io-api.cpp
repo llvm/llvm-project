@@ -244,6 +244,11 @@ RT_API_ATTRS Cookie BeginUnformattedIO(
       iostat = unit->SetDirection(DIR);
     }
     if (iostat == IostatOk) {
+      if (unit->IsAfterEndfile() && DIR == Direction::Output) {
+        iostat = IostatWriteAfterEndfile;
+      }
+    }
+    if (iostat == IostatOk) {
       IoStatementState &io{
           unit->BeginIoStatement<ExternalUnformattedIoStatementState<DIR>>(
               terminator, *unit, sourceFile, sourceLine)};
@@ -684,6 +689,29 @@ bool IODEF(SetSign)(Cookie cookie, const char *keyword, std::size_t length) {
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInKeyword,
         "Invalid SIGN='%.*s'", static_cast<int>(length), keyword);
+    return false;
+  }
+}
+
+bool IODEF(SetLeadingZero)(
+    Cookie cookie, const char *keyword, std::size_t length) {
+  IoStatementState &io{*cookie};
+  if (auto *open{io.get_if<OpenStatementState>()}) {
+    open->set_mustBeFormatted();
+  }
+  static const char *keywords[]{
+      "PRINT", "PROCESSOR_DEFINED", "SUPPRESS", nullptr};
+  switch (IdentifyValue(keyword, length, keywords)) {
+  case 0: // LZP, print leading zero, if the field has room for it
+  case 1: // LZ, processor default, treated as LZP
+    io.mutableModes().editingFlags &= ~leadingZeroSuppress;
+    return true;
+  case 2:
+    io.mutableModes().editingFlags |= leadingZeroSuppress;
+    return true;
+  default:
+    io.GetIoErrorHandler().SignalError(IostatErrorInKeyword,
+        "Invalid LEADING_ZERO='%.*s'", static_cast<int>(length), keyword);
     return false;
   }
 }

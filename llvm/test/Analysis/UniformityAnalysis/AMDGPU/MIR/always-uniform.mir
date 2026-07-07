@@ -10,7 +10,7 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: MachineUniformityInfo for function:  @readlane
-    ; CHECK-NEXT: ALL VALUES UNIFORM
+    ; CHECK: ALL VALUES UNIFORM
     %0:vgpr_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
@@ -28,7 +28,7 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: MachineUniformityInfo for function:  @readlane2
-    ; CHECK-NEXT: ALL VALUES UNIFORM
+    ; CHECK: ALL VALUES UNIFORM
     %0:vgpr_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %4:sgpr_32 = V_READLANE_B32 $vgpr0, 0, implicit $exec
@@ -49,9 +49,31 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: MachineUniformityInfo for function:  @sgprcopy
-    ; CHECK-NEXT: ALL VALUES UNIFORM
+    ; CHECK: ALL VALUES UNIFORM
     liveins: $sgpr0,$sgpr1,$vgpr0
     %0:sgpr_32 = COPY $sgpr0
     %1:vgpr_32 = COPY $sgpr1
     S_ENDPGM 0
+...
+
+# G_DYN_STACKALLOC result is always uniform. The returned value is computed
+# from the wave-uniform stack pointer and the wave-wide max allocation size
+# (reduced via wave_reduce_umax when divergent), both of which are uniform.
+# Hence the result is always uniform, even when the input size is divergent.
+---
+name:            dyn_stackalloc_divergent_size
+legalized:       true
+frameInfo:
+  maxAlignment: 4
+stack:
+  - { id: 0, type: variable-sized, alignment: 4 }
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @dyn_stackalloc_divergent_size
+    ; CHECK: DIVERGENT: %0
+    ; CHECK-NOT: DIVERGENT: {{.*}}G_DYN_STACKALLOC
+    %0:_(s32) = COPY $vgpr0
+    %1:_(p5) = G_DYN_STACKALLOC %0(s32), 4
+    S_ENDPGM 0, implicit %1
 ...

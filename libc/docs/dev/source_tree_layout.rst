@@ -90,8 +90,9 @@ public libraries ``libc.a``, ``libm.a`` etc.
 The ``src`` directory
 ---------------------
 
-This directory contains the implementations of the llvm-libc entrypoints. It is
-further organized as follows:
+This directory contains the implementations of the llvm-libc entrypoints. For
+more details on what an entrypoint is and how it is implemented, see the
+:ref:`entrypoints` documentation. It is further organized as follows:
 
 1. There is a top-level CMakeLists.txt file.
 2. For every public header file provided by llvm-libc, there exists a

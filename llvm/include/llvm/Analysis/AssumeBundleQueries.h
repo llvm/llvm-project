@@ -31,31 +31,7 @@ enum AssumeBundleArg {
   ABA_Argument = 1,
 };
 
-/// Query the operand bundle of an llvm.assume to find a single attribute of
-/// the specified kind applied on a specified Value.
-///
-/// This has a non-constant complexity. It should only be used when a single
-/// attribute is going to be queried.
-///
-/// Return true iff the queried attribute was found.
-/// If ArgVal is set. the argument will be stored to ArgVal.
-LLVM_ABI bool hasAttributeInAssume(AssumeInst &Assume, Value *IsOn,
-                                   StringRef AttrName,
-                                   uint64_t *ArgVal = nullptr);
-inline bool hasAttributeInAssume(AssumeInst &Assume, Value *IsOn,
-                                 Attribute::AttrKind Kind,
-                                 uint64_t *ArgVal = nullptr) {
-  return hasAttributeInAssume(Assume, IsOn,
-                              Attribute::getNameFromAttrKind(Kind), ArgVal);
-}
-
-template<> struct DenseMapInfo<Attribute::AttrKind> {
-  static Attribute::AttrKind getEmptyKey() {
-    return Attribute::EmptyKey;
-  }
-  static Attribute::AttrKind getTombstoneKey() {
-    return Attribute::TombstoneKey;
-  }
+template <> struct DenseMapInfo<Attribute::AttrKind> {
   static unsigned getHashValue(Attribute::AttrKind AK) {
     return hash_combine(AK);
   }
@@ -84,9 +60,8 @@ using RetainedKnowledgeMap =
     DenseMap<RetainedKnowledgeKey, Assume2KnowledgeMap>;
 
 /// Insert into the map all the informations contained in the operand bundles of
-/// the llvm.assume. This should be used instead of hasAttributeInAssume when
-/// many queries are going to be made on the same llvm.assume.
-/// String attributes are not inserted in the map.
+/// the llvm.assume. This should be used when many queries are going to be made
+/// on the same llvm.assume. String attributes are not inserted in the map.
 /// If the IR changes the map will be outdated.
 LLVM_ABI void fillMapFromAssume(AssumeInst &Assume,
                                 RetainedKnowledgeMap &Result);
@@ -124,18 +99,6 @@ struct RetainedKnowledge {
   operator bool() const { return AttrKind != Attribute::None; }
   static RetainedKnowledge none() { return RetainedKnowledge{}; }
 };
-
-/// Retreive the information help by Assume on the operand at index Idx.
-/// Assume should be an llvm.assume and Idx should be in the operand bundle.
-LLVM_ABI RetainedKnowledge getKnowledgeFromOperandInAssume(AssumeInst &Assume,
-                                                           unsigned Idx);
-
-/// Retreive the information help by the Use U of an llvm.assume. the use should
-/// be in the operand bundle.
-inline RetainedKnowledge getKnowledgeFromUseInAssume(const Use *U) {
-  return getKnowledgeFromOperandInAssume(*cast<AssumeInst>(U->getUser()),
-                                         U->getOperandNo());
-}
 
 /// Tag in operand bundle indicating that this bundle should be ignored.
 constexpr StringRef IgnoreBundleTag = "ignore";

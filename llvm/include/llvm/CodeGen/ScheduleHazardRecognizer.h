@@ -14,6 +14,8 @@
 #ifndef LLVM_CODEGEN_SCHEDULEHAZARDRECOGNIZER_H
 #define LLVM_CODEGEN_SCHEDULEHAZARDRECOGNIZER_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class MachineInstr;
@@ -22,7 +24,7 @@ class SUnit;
 /// HazardRecognizer - This determines whether or not an instruction can be
 /// issued this cycle, and whether or not a noop needs to be inserted to handle
 /// the hazard.
-class ScheduleHazardRecognizer {
+class LLVM_ABI ScheduleHazardRecognizer {
 protected:
   /// MaxLookAhead - Indicate the number of cycles in the scoreboard
   /// state. Important to restore the state after backtracking. Additionally,

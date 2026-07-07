@@ -4,8 +4,8 @@
 
 ; Anonymous function with 129 VGPRs, which is too many with a block size of 16.
 ;
-; ERR-DAG: .set __unnamed_1.num_vgpr, 129
-; ERR-DAG: too many DVGPR blocks for _dvgpr$ symbol for '__unnamed_1'
+; ERR-DAG: .set .L__unnamed_1.num_vgpr, 129
+; ERR-DAG: DVGPR block count 9 exceeds maximum of 8 for __dvgpr$ symbol for '__unnamed_1'
 ;
 define amdgpu_cs_chain void @0(<121 x float> %arg) #0 {
   tail call void @0(<121 x float> %arg)

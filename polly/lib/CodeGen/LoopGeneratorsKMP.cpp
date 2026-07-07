@@ -131,8 +131,11 @@ ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
 
   // Create basic blocks.
   BasicBlock *HeaderBB = BasicBlock::Create(Context, "polly.par.setup", SubFn);
+  // Add terminator so that DT computation doesn't fail.
+  auto *UI = new UnreachableInst(Context, HeaderBB);
   SubFnDT = std::make_unique<DominatorTree>(*SubFn);
   SubFnLI = std::make_unique<LoopInfo>(*SubFnDT);
+  UI->eraseFromParent();
 
   BasicBlock *ExitBB = BasicBlock::Create(Context, "polly.par.exit", SubFn);
   BasicBlock *CheckNextBB =

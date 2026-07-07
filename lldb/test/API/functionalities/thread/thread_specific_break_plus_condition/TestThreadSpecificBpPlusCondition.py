@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class ThreadSpecificBreakPlusConditionTestCase(TestBase):
     # test frequently times out or hangs
     @skipIfDarwin

@@ -17,9 +17,9 @@
 // correctly rounded and opencl precision versions.
 
 #define __CLC_FUNCTION __clc_sqrt_cr
-#define __CLC_BODY <clc/shared/unary_decl.inc>
+#define __CLC_BODY "clc/shared/unary_decl.inc"
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 
 #undef __CLC_FUNCTION
 

@@ -43,12 +43,27 @@ class Header:
         self.docgen_root = Path(__file__).parent
         self.libc_root = self.docgen_root.parent.parent
         self.docgen_yaml = self.docgen_root / Path(header_name).with_suffix(".yaml")
+        # Path to libc/include/<name>.yaml
+        self.include_yaml = Path(
+            self.libc_root, "include", Path(header_name).with_suffix(".yaml")
+        )
         self.fns_dir = Path(self.libc_root, "src", self.stem)
         self.macros_dir = Path(self.libc_root, "include", "llvm-libc-macros")
 
     def macro_file_exists(self) -> bool:
         for _ in self.__get_macro_files():
             return True
+
+        if self.include_yaml.exists():
+            import yaml
+
+            parsed = yaml.safe_load(self.include_yaml.read_text(encoding="utf-8"))
+            if (
+                parsed
+                and "macros" in parsed
+                and any("macro_value" in m for m in parsed["macros"])
+            ):
+                return True
 
         return False
 
@@ -74,6 +89,15 @@ class Header:
         for f in self.__get_macro_files():
             if f"#define {m_name}" in f.read_text():
                 return True
+
+        if self.include_yaml.exists():
+            import yaml
+
+            parsed = yaml.safe_load(self.include_yaml.read_text(encoding="utf-8"))
+            if parsed and "macros" in parsed:
+                for macro in parsed["macros"]:
+                    if macro.get("macro_name") == m_name and "macro_value" in macro:
+                        return True
 
         return False
 

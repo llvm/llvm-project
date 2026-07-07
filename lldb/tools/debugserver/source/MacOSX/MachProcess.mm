@@ -19,6 +19,7 @@
 #include <mach/mach.h>
 #include <mach/task.h>
 #include <pthread.h>
+#include <setjmp.h>
 #include <signal.h>
 #include <spawn.h>
 #include <sys/fcntl.h>
@@ -538,6 +539,7 @@ MachProcess::MachProcess()
       m_dyld_process_snapshot_create_for_process(nullptr),
       m_dyld_process_snapshot_get_shared_cache(nullptr),
       m_dyld_shared_cache_for_each_file(nullptr),
+      m_dyld_shared_cache_get_mapped_size(nullptr),
       m_dyld_process_snapshot_dispose(nullptr), m_dyld_process_dispose(nullptr),
       m_dyld_process_info_for_each_image(nullptr),
       m_dyld_process_info_release(nullptr),
@@ -559,6 +561,8 @@ MachProcess::MachProcess()
   m_dyld_shared_cache_for_each_file =
       (void (*)(void *, void (^)(const char *)))dlsym(
           RTLD_DEFAULT, "dyld_shared_cache_for_each_file");
+  m_dyld_shared_cache_get_mapped_size = (uint64_t(*)(void *))dlsym(
+      RTLD_DEFAULT, "dyld_shared_cache_get_mapped_size");
   m_dyld_process_snapshot_dispose =
       (void (*)(void *))dlsym(RTLD_DEFAULT, "dyld_process_snapshot_dispose");
   m_dyld_process_dispose =
@@ -950,7 +954,7 @@ bool MachProcess::GetMachOInformationFromMemory(
 // with all the details we want to send to lldb.
 JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     const std::vector<struct binary_image_information> &image_infos,
-    bool report_load_commands) {
+    DNBBinaryInformationLevel info_level) {
 
   JSONGenerator::ArraySP image_infos_array_sp(new JSONGenerator::Array());
 
@@ -960,19 +964,20 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     // If we should report the Mach-O header and load commands,
     // and those were unreadable, don't report anything about this
     // binary.
-    if (report_load_commands && !image_infos[i].is_valid_mach_header)
+    if (info_level == eBinaryInformationLevelFull &&
+        !image_infos[i].is_valid_mach_header)
       continue;
     JSONGenerator::DictionarySP image_info_dict_sp(
         new JSONGenerator::Dictionary());
     image_info_dict_sp->AddIntegerItem("load_address",
                                        image_infos[i].load_address);
-    // TODO: lldb currently rejects a response without this, but it
-    // is always zero from dyld.  It can be removed once we've had time
-    // for lldb's that require it to be present are obsolete.
-    image_info_dict_sp->AddIntegerItem("mod_date", 0);
-    image_info_dict_sp->AddStringItem("pathname", image_infos[i].filename);
+    if (info_level == eBinaryInformationLevelAddrOnly) {
+      image_infos_array_sp->AddItem(image_info_dict_sp);
+      continue;
+    }
 
-    if (!report_load_commands) {
+    image_info_dict_sp->AddStringItem("pathname", image_infos[i].filename);
+    if (info_level == eBinaryInformationLevelAddrName) {
       image_infos_array_sp->AddItem(image_info_dict_sp);
       continue;
     }
@@ -980,6 +985,10 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     uuid_string_t uuidstr;
     uuid_unparse_upper(image_infos[i].macho_info.uuid, uuidstr);
     image_info_dict_sp->AddStringItem("uuid", uuidstr);
+    if (info_level == eBinaryInformationLevelAddrNameUUID) {
+      image_infos_array_sp->AddItem(image_info_dict_sp);
+      continue;
+    }
 
     if (!image_infos[i].macho_info.min_version_os_name.empty() &&
         !image_infos[i].macho_info.min_version_os_version.empty()) {
@@ -1003,6 +1012,12 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
         "filetype", image_infos[i].macho_info.mach_header.filetype);
     mach_header_dict_sp->AddIntegerItem ("flags", 
                          image_infos[i].macho_info.mach_header.flags);
+    int mh_size = image_infos[i].macho_info.mach_header.magic == MH_MAGIC
+                      ? sizeof(mach_header)
+                      : sizeof(mach_header_64);
+    mach_header_dict_sp->AddIntegerItem(
+        "sizeof_mh_and_loadcmds",
+        mh_size + image_infos[i].macho_info.mach_header.sizeofcmds);
 
     //          DynamicLoaderMacOSX doesn't currently need these fields, so
     //          don't send them.
@@ -1116,12 +1131,12 @@ void MachProcess::GetAllLoadedBinariesViaDYLDSPI(
 // macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer.
 JSONGenerator::ObjectSP
 MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid,
-                                        bool report_load_commands) {
+                                        DNBBinaryInformationLevel info_level) {
 
   int pointer_size = GetInferiorAddrSize(pid);
   std::vector<struct binary_image_information> image_infos;
   GetAllLoadedBinariesViaDYLDSPI(image_infos);
-  if (report_load_commands) {
+  if (info_level == eBinaryInformationLevelFull) {
     uint32_t platform = GetPlatform();
     const size_t image_count = image_infos.size();
     for (size_t i = 0; i < image_count; i++) {
@@ -1132,7 +1147,7 @@ MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid,
       }
     }
   }
-  return FormatDynamicLibrariesIntoJSON(image_infos, report_load_commands);
+  return FormatDynamicLibrariesIntoJSON(image_infos, info_level);
 }
 
 std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
@@ -1156,7 +1171,8 @@ MachProcess::GetMainBinaryCPUTypes(nub_process_t pid) {
 // using the
 // dyld SPIs that exist in macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer.
 JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
-    nub_process_t pid, std::vector<uint64_t> &macho_addresses) {
+    nub_process_t pid, DNBBinaryInformationLevel info_level,
+    std::vector<uint64_t> &macho_addresses) {
 
   int pointer_size = GetInferiorAddrSize(pid);
 
@@ -1199,8 +1215,7 @@ JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
         image_infos[i].is_valid_mach_header = true;
       }
     }
-    return FormatDynamicLibrariesIntoJSON(image_infos,
-                                          /* report_load_commands =  */ true);
+    return FormatDynamicLibrariesIntoJSON(image_infos, info_level);
 }
 
 bool MachProcess::GetDebugserverSharedCacheInfo(
@@ -1229,15 +1244,15 @@ bool MachProcess::GetDebugserverSharedCacheInfo(
   return false;
 }
 
-bool MachProcess::GetInferiorSharedCacheFilepath(
-    std::string &inferior_sc_path) {
+bool MachProcess::GetInferiorSharedCacheFilepathAndSize(
+    std::string &inferior_sc_path, uint64_t &size) {
   inferior_sc_path.clear();
 
   if (!m_dyld_process_create_for_task ||
       !m_dyld_process_snapshot_create_for_process ||
       !m_dyld_process_snapshot_get_shared_cache ||
       !m_dyld_shared_cache_for_each_file || !m_dyld_process_snapshot_dispose ||
-      !m_dyld_process_dispose)
+      !m_dyld_shared_cache_get_mapped_size || !m_dyld_process_dispose)
     return false;
 
   __block std::string sc_path;
@@ -1261,6 +1276,8 @@ bool MachProcess::GetInferiorSharedCacheFilepath(
     done = true;
     sc_path = path;
   });
+  size = m_dyld_shared_cache_get_mapped_size(cache);
+
   m_dyld_process_snapshot_dispose(snapshot);
   m_dyld_process_dispose(process);
 
@@ -1301,26 +1318,28 @@ MachProcess::GetInferiorSharedCacheInfo(nub_process_t pid) {
     }
   }
 
-  // If debugserver and the inferior are have the same cache UUID,
-  // use the simple call to get the filepath to debugserver's shared
-  // cache, return that.
-  uuid_t debugserver_sc_uuid;
-  std::string debugserver_sc_path;
-  bool found_sc_filepath = false;
-  if (GetDebugserverSharedCacheInfo(debugserver_sc_uuid, debugserver_sc_path)) {
-    if (uuid_compare(inferior_sc_uuid, debugserver_sc_uuid) == 0 &&
-        !debugserver_sc_path.empty()) {
-      reply_sp->AddStringItem("shared_cache_path", debugserver_sc_path);
-      found_sc_filepath = true;
-    }
-  }
 
   // Use SPI that are only available on newer OSes to fetch the
   // filepath of the shared cache of the inferior, if available.
-  if (!found_sc_filepath) {
-    std::string inferior_sc_path;
-    if (GetInferiorSharedCacheFilepath(inferior_sc_path))
-      reply_sp->AddStringItem("shared_cache_path", inferior_sc_path);
+  std::string inferior_sc_path;
+  uint64_t size;
+  if (GetInferiorSharedCacheFilepathAndSize(inferior_sc_path, size)) {
+    reply_sp->AddStringItem("shared_cache_path", inferior_sc_path);
+    reply_sp->AddIntegerItem("shared_cache_size", size);
+  } else {
+    // If debugserver and the inferior are have the same cache UUID,
+    // use the simple call to get the filepath to debugserver's shared
+    // cache, return that.  Can't get the shared cache size this way,
+    // currently.
+    uuid_t debugserver_sc_uuid;
+    std::string debugserver_sc_path;
+    if (GetDebugserverSharedCacheInfo(debugserver_sc_uuid,
+                                      debugserver_sc_path)) {
+      if (uuid_compare(inferior_sc_uuid, debugserver_sc_uuid) == 0 &&
+          !debugserver_sc_path.empty()) {
+        reply_sp->AddStringItem("shared_cache_path", debugserver_sc_path);
+      }
+    }
   }
 
   return reply_sp;
@@ -2918,11 +2937,79 @@ void *MachProcess::ProfileThread(void *arg) {
   return NULL;
 }
 
+namespace {
+// The XNU kernel enforces ptrace(PT_DENY_ATTACH) by delivering a SIGSEGV to the
+// process that tries to attach, while it is still inside the ptrace() syscall.
+// That kills debugserver outright instead of failing the call with an error.
+// This leaves lldb unable to tell the user why the attach failed. The condition
+// can't be detected up front because the target's P_LNOATTACH flag isn't
+// exposed to userspace, so instead we install a temporary SIGSEGV handler
+// around the ptrace() call and jump back out of it if the signal fires, turning
+// the fatal signal into a clean error.
+
+sigjmp_buf g_deny_attach_jmpbuf;
+// Only act on the SIGSEGV if it arrives on the thread that armed the guard
+// while a PT_ATTACHEXC call is in flight; anything else is a genuine crash.
+volatile sig_atomic_t g_deny_attach_armed = 0;
+pthread_t g_deny_attach_thread;
+
+void DenyAttachSIGSEGVHandler(int signo) {
+  if (g_deny_attach_armed &&
+      pthread_equal(pthread_self(), g_deny_attach_thread)) {
+    g_deny_attach_armed = 0;
+    siglongjmp(g_deny_attach_jmpbuf, 1);
+  }
+  // Not the deny-attach case: restore the default disposition and re-raise so a
+  // real crash is still reported the usual way.
+  signal(signo, SIG_DFL);
+  raise(signo);
+}
+
+// Wrapper around ptrace(PT_ATTACHEXC, pid) that survives the SIGSEGV the kernel
+// sends when `pid` has called ptrace(PT_DENY_ATTACH). On a normal attach it
+// behaves exactly like ptrace() (returning its result with errno set). If the
+// attach is rejected via the deny-attach signal it sets `denied_attach` and
+// returns -1 with errno set to EPERM.
+int PTraceAttachExcDenyAttachSafe(pid_t pid, bool &denied_attach) {
+  denied_attach = false;
+
+  struct sigaction new_action = {};
+  struct sigaction old_action = {};
+  new_action.sa_handler = DenyAttachSIGSEGVHandler;
+  sigemptyset(&new_action.sa_mask);
+  // SA_NODEFER so a genuine fault inside the handler crashes normally instead
+  // of deadlocking with SIGSEGV blocked.
+  new_action.sa_flags = SA_NODEFER;
+
+  if (::sigaction(SIGSEGV, &new_action, &old_action) != 0) {
+    // Couldn't install the handler; fall back to the unguarded call.
+    return ::ptrace(PT_ATTACHEXC, pid, 0, 0);
+  }
+
+  g_deny_attach_thread = pthread_self();
+  int result;
+  int saved_errno;
+  if (sigsetjmp(g_deny_attach_jmpbuf, 1) == 0) {
+    g_deny_attach_armed = 1;
+    result = ::ptrace(PT_ATTACHEXC, pid, 0, 0);
+    saved_errno = errno;
+    g_deny_attach_armed = 0;
+  } else {
+    // The kernel delivered SIGSEGV: the target denied the attach.
+    denied_attach = true;
+    result = -1;
+    saved_errno = EPERM;
+  }
+
+  ::sigaction(SIGSEGV, &old_action, nullptr);
+  errno = saved_errno;
+  return result;
+}
+} // namespace
+
 pid_t MachProcess::AttachForDebug(
-    pid_t pid, 
-    const RNBContext::IgnoredExceptions &ignored_exceptions, 
-    char *err_str,
-    size_t err_len) {
+    pid_t pid, const RNBContext::IgnoredExceptions &ignored_exceptions,
+    char *err_str, size_t err_len) {
   // Clear out and clean up from any current state
   Clear();
   if (pid != 0) {
@@ -2955,7 +3042,8 @@ pid_t MachProcess::AttachForDebug(
     DNBLog("[LaunchAttach] (%d) About to ptrace(PT_ATTACHEXC, %d)...", getpid(),
            pid);
     errno = 0;
-    int ptrace_result = ::ptrace(PT_ATTACHEXC, pid, 0, 0);
+    bool denied_attach = false;
+    int ptrace_result = PTraceAttachExcDenyAttachSafe(pid, denied_attach);
     int ptrace_errno = errno;
     DNBLog("[LaunchAttach] (%d) Completed ptrace(PT_ATTACHEXC, %d) == %d",
            getpid(), pid, ptrace_result);
@@ -2972,6 +3060,18 @@ pid_t MachProcess::AttachForDebug(
       m_flags |= eMachProcessFlagsAttached;
       DNBLogThreadedIf(LOG_PROCESS, "successfully attached to pid %d", pid);
       return m_pid;
+    } else if (denied_attach) {
+      // The target denied being debugged via ptrace(PT_DENY_ATTACH). The kernel
+      // would normally kill debugserver for attempting this; we caught the
+      // signal instead, so report a useful error rather than crashing.
+      snprintf(err_str, err_len,
+               "cannot attach to process %d because it has disabled debugging "
+               "via ptrace(PT_DENY_ATTACH). Attach earlier, put a breakpoint "
+               "on ptrace and return 0.",
+               pid);
+      DNBLogError("[LaunchAttach] (%d) MachProcess::AttachForDebug pid %d "
+                  "denied attach via ptrace(PT_DENY_ATTACH)",
+                  getpid(), pid);
     } else {
       ::snprintf(err_str, err_len, "%s", err.AsString());
       DNBLogError(

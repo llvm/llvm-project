@@ -33,6 +33,7 @@ struct basic_string {
   const C *c_str() const;
   const C *data() const;
 
+  void clear();
   bool empty() const;
   size_type size() const;
   size_type length() const;

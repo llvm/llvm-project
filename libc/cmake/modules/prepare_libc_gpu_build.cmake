@@ -7,7 +7,7 @@ endif()
 set(req_ver "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
 if(LLVM_VERSION_MAJOR AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
    ${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "${req_ver}"))
-  message(FATAL_ERROR "Cannot build libc for GPU. CMake compiler "
+   message(WARNING "libc for GPU requires an up-to-date clang. CMake compiler "
                       "'${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' "
                       " is not 'Clang ${req_ver}'.")
 endif()
@@ -29,6 +29,7 @@ if(LIBC_GPU_TEST_JOBS)
   set_property(GLOBAL PROPERTY JOB_POOLS LIBC_GPU_TEST_POOL=${LIBC_GPU_TEST_JOBS})
   set(LIBC_HERMETIC_TEST_JOB_POOL JOB_POOL LIBC_GPU_TEST_POOL)
 else()
+  set(LIBC_GPU_TEST_JOBS 1)
   set_property(GLOBAL PROPERTY JOB_POOLS LIBC_GPU_TEST_POOL=1)
   set(LIBC_HERMETIC_TEST_JOB_POOL JOB_POOL LIBC_GPU_TEST_POOL)
 endif()
@@ -65,24 +66,6 @@ else()
                  "built")
 endif()
 set(LIBC_GPU_TARGET_ARCHITECTURE "${gpu_test_architecture}")
-
-# Identify the GPU loader utility used to run tests.
-set(LIBC_GPU_LOADER_EXECUTABLE "" CACHE STRING "Executable for the GPU loader.")
-if(LIBC_GPU_LOADER_EXECUTABLE)
-  set(gpu_loader_executable ${LIBC_GPU_LOADER_EXECUTABLE})
-else()
-  find_program(gpu_loader_executable
-               NAMES llvm-gpu-loader NO_DEFAULT_PATH
-               PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
-endif()
-if(NOT TARGET libc.utils.gpu.loader AND gpu_loader_executable)
-  add_custom_target(libc.utils.gpu.loader)
-  set_target_properties(
-    libc.utils.gpu.loader
-    PROPERTIES
-      EXECUTABLE "${gpu_loader_executable}"
-  )
-endif()
 
 # The AMDGPU environment uses different code objects to encode the ABI for
 # kernel calls and intrinsic functions. We want to expose this to conform to

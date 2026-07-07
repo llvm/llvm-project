@@ -1196,8 +1196,10 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_PPC64_TOC16_LO:
       // Record the TOC entry (.toc + addend) as not relaxable.
       if (sym.isSection() && isa<Defined>(sym) &&
-          cast<Defined>(sym).section->name == ".toc")
+          cast<Defined>(sym).section->name == ".toc") {
+        std::lock_guard<std::mutex> lock(ctx.relocMutex);
         ctx.ppc64noTocRelax.insert({&sym, addend});
+      }
       expr = R_GOTREL;
       break;
     case R_PPC64_TOC16_HA:

@@ -60,7 +60,7 @@ FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
   // a fix extra conditions in `isGuaranteedCastCompatible`.
   if (memref::CastOp::areCastCompatible(srcType, destType) &&
       isGuaranteedCastCompatible(srcType, destType)) {
-    Value casted = memref::CastOp::create(b, value.getLoc(), destType, value);
+    Value casted = *options.createCast(b, value.getLoc(), destType, value);
     return casted;
   }
 
@@ -97,6 +97,20 @@ LogicalResult mlir::bufferization::foldToBufferToTensorPair(
   // Directly rewrite if the type did not change.
   if (srcType == destType) {
     rewriter.replaceOp(toBuffer, bufferToTensor.getBuffer());
+    return success();
+  }
+
+  if (!llvm::isa<BaseMemRefType>(srcType) ||
+      !llvm::isa<BaseMemRefType>(destType)) {
+    // Non-builtin case: the best is to try the user-provided cast.
+    assert(options.castFn.has_value() &&
+           "user-provided cast is required for non-builtin types");
+    auto replacement =
+        options.createCast(rewriter, bufferToTensor.getBuffer().getLoc(),
+                           destType, bufferToTensor.getBuffer());
+    if (failed(replacement))
+      return failure();
+    rewriter.replaceOp(toBuffer, *replacement);
     return success();
   }
 
@@ -240,7 +254,8 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
     if (failed(copyBufferType))
       return failure();
     memorySpace = copyBufferType->getMemorySpace();
-  } else if (auto ms = options.defaultMemorySpaceFn(getType())) {
+  } else if (auto ms = options.defaultMemorySpaceFn(
+                 cast<TensorLikeType>(getType()))) {
     memorySpace = *ms;
   } else {
     return getOperation()->emitError("could not infer memory space");
@@ -908,7 +923,7 @@ std::optional<Value> CloneOp::buildClone(OpBuilder &builder, Value alloc) {
 
 LogicalResult DeallocOp::inferReturnTypes(
     MLIRContext *context, std::optional<::mlir::Location> location,
-    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    ValueRange operands, DictionaryAttr attributes, PropertyRef properties,
     RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   DeallocOpAdaptor adaptor(operands, attributes, properties, regions);
   inferredReturnTypes = SmallVector<Type>(adaptor.getRetained().size(),

@@ -701,5 +701,3 @@ exit:
 }
 
 
-declare i64 @llvm.smin.i64(i64, i64)
-declare i16 @llvm.smin.i16(i16, i16)

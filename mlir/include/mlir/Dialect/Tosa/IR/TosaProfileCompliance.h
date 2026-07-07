@@ -23,10 +23,22 @@ using namespace mlir::tosa;
 // Type Compilance Definition
 //===----------------------------------------------------------------------===//
 
-typedef struct {
+struct TypeInfo {
+  TypeInfo(mlir::TypeID typeID, uint32_t bitWidth)
+      : typeID(typeID), bitWidth(bitWidth), valueTypeID(mlir::TypeID()),
+        scaleTypeID(mlir::TypeID()), blockShape(std::nullopt) {}
+
+  TypeInfo(mlir::TypeID typeID, uint32_t bitWidth, mlir::TypeID valueTypeID,
+           mlir::TypeID scaleTypeID, tosa::BlockShape blockShape)
+      : typeID(typeID), bitWidth(bitWidth), valueTypeID(valueTypeID),
+        scaleTypeID(scaleTypeID), blockShape(blockShape) {}
+
   mlir::TypeID typeID;
   uint32_t bitWidth;
-} TypeInfo;
+  mlir::TypeID valueTypeID;
+  mlir::TypeID scaleTypeID;
+  std::optional<tosa::BlockShape> blockShape;
+};
 
 enum CheckCondition {
   invalid,
@@ -70,6 +82,12 @@ public:
 
 private:
   TypeInfo convertTypeToInfo(Type type) {
+    if (auto blockScaledTy = dyn_cast<tosa::BlockScaledType>(type)) {
+      Type valueTy = blockScaledTy.getValueType();
+      Type scaleTy = blockScaledTy.getScaleType();
+      return {type.getTypeID(), tosa::getBitWidth(valueTy), valueTy.getTypeID(),
+              scaleTy.getTypeID(), blockScaledTy.getBlockShape()};
+    }
     return {type.getTypeID(), tosa::getBitWidth(type)};
   }
 
@@ -128,14 +146,16 @@ public:
       const SmallVector<ArrayRef<T>> &specDefinedProfileSet);
 
   bool isSameTypeInfo(TypeInfo a, TypeInfo b) {
-    return a.typeID == b.typeID && a.bitWidth == b.bitWidth;
+    return a.typeID == b.typeID && a.bitWidth == b.bitWidth &&
+           a.valueTypeID == b.valueTypeID && a.scaleTypeID == b.scaleTypeID &&
+           a.blockShape == b.blockShape;
   }
 
   // Find the required profiles or extensions from the compliance info according
   // to the operand type combination.
   template <typename T>
-  OpComplianceInfo<T>
-  findMatchedEntry(Operation *op, SmallVector<OpComplianceInfo<T>> compInfo);
+  SmallVector<OpComplianceInfo<T>>
+  findMatchedEntries(Operation *op, SmallVector<OpComplianceInfo<T>> compInfo);
 
   // Debug utilites.
   template <typename T>
@@ -145,11 +165,12 @@ public:
   SmallVector<StringRef>
   stringifyProfile(const SmallVector<ArrayRef<T>> &profileSet);
 
-  static llvm::SmallString<7> stringifyTypeInfo(const TypeInfo &typeInfo);
+  static llvm::SmallString<32> stringifyTypeInfo(const TypeInfo &typeInfo);
 
 private:
   template <typename T>
-  FailureOr<OpComplianceInfo<T>> getOperatorDefinition(Operation *op);
+  FailureOr<SmallVector<OpComplianceInfo<T>>>
+  getOperatorMatchedEntries(Operation *op);
 
   OperationProfileComplianceMap profileComplianceMap;
   OperationExtensionComplianceMap extensionComplianceMap;

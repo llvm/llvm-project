@@ -18,6 +18,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/DTLTO/DTLTO.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Plugins/PassPlugin.h"
@@ -234,6 +235,19 @@ static cl::opt<bool>
     AllVtablesHaveTypeInfos("all-vtables-have-type-infos", cl::Hidden,
                             cl::desc("All vtables have type infos"));
 
+// Specifying a symbol here states that it is a library symbol that had a
+// definition in bitcode, but was not extracted. Such symbols cannot safely
+// be referenced, since they have already lost their opportunity to be defined.
+//
+// FIXME: Listing all bitcode libfunc symbols here is clunky. A higher-level way
+// to indicate which TUs made it into the link might be better, but this would
+// require more detailed tracking of the sources of constructs in the IR.
+// Alternatively, there may be some other data structure that could hold this
+// information.
+static cl::list<std::string> BitcodeLibFuncs(
+    "bitcode-libfuncs", cl::Hidden,
+    cl::desc("set of unextracted libfuncs implemented in bitcode"));
+
 static cl::opt<bool> TimeTrace("time-trace", cl::desc("Record time trace"));
 
 static cl::opt<unsigned> TimeTraceGranularity(
@@ -411,6 +425,24 @@ static int run(int argc, char **argv) {
   auto DTLTOCompilerArgsSV = llvm::to_vector<0>(llvm::map_range(
       DTLTOCompilerArgs, [](const std::string &S) { return StringRef(S); }));
 
+  auto AddStream =
+      [&](size_t Task,
+          const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
+    std::string Path = OutputFilename + "." + utostr(Task);
+
+    std::error_code EC;
+    auto S = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_None);
+    check(EC, Path);
+    return std::make_unique<CachedFileStream>(std::move(S), Path);
+  };
+
+  auto AddBuffer = [&](size_t Task, const Twine &ModuleName,
+                       std::unique_ptr<MemoryBuffer> MB) {
+    auto Stream = AddStream(Task, ModuleName);
+    *Stream->OS << MB->getBuffer();
+    check(Stream->commit(), "Failed to commit cache");
+  };
+
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
     Backend = createWriteIndexesThinBackend(llvm::hardware_concurrency(Threads),
@@ -420,13 +452,7 @@ static int run(int argc, char **argv) {
                                             ThinLTOEmitImports,
                                             /*LinkedObjectsFile=*/nullptr,
                                             /*OnWrite=*/{});
-  else if (!DTLTODistributor.empty()) {
-    Backend = createOutOfProcessThinBackend(
-        llvm::heavyweight_hardware_concurrency(Threads),
-        /*OnWrite=*/{}, ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
-        DTLTODistributor, DTLTODistributorArgsSV, DTLTOCompiler,
-        DTLTOCompilerPrependArgsSV, DTLTOCompilerArgsSV, SaveTemps);
-  } else
+  else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),
         /* OnWrite */ {}, ThinLTOEmitIndexes, ThinLTOEmitImports);
@@ -449,7 +475,17 @@ static int run(int argc, char **argv) {
 
   LTO::LTOKind LTOMode = UnifiedLTOMode;
 
-  LTO Lto(std::move(Conf), std::move(Backend), 1, LTOMode);
+  std::unique_ptr<LTO> Lto;
+  if (!DTLTODistributor.empty()) {
+    Lto = std::make_unique<DTLTO>(
+        std::move(Conf), 1, LTOMode, nullptr, ThinLTOEmitIndexes,
+        ThinLTOEmitImports, OutputFilename, DTLTODistributor,
+        DTLTODistributorArgsSV, DTLTOCompiler, DTLTOCompilerPrependArgsSV,
+        DTLTOCompilerArgsSV, AddBuffer, SaveTemps);
+  } else {
+    Lto =
+        std::make_unique<LTO>(std::move(Conf), std::move(Backend), 1, LTOMode);
+  }
 
   for (std::string F : InputFilenames) {
     std::unique_ptr<MemoryBuffer> MB = check(MemoryBuffer::getFile(F), F);
@@ -483,7 +519,7 @@ static int run(int argc, char **argv) {
       continue;
 
     MBs.push_back(std::move(MB));
-    check(Lto.add(std::move(Input), Res), F);
+    check(Lto->add(std::move(Input), Res), F);
   }
 
   if (!CommandLineResolutions.empty()) {
@@ -496,30 +532,15 @@ static int run(int argc, char **argv) {
   if (HasErrors)
     return 1;
 
-  auto AddStream =
-      [&](size_t Task,
-          const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
-    std::string Path = OutputFilename + "." + utostr(Task);
-
-    std::error_code EC;
-    auto S = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_None);
-    check(EC, Path);
-    return std::make_unique<CachedFileStream>(std::move(S), Path);
-  };
-
-  auto AddBuffer = [&](size_t Task, const Twine &ModuleName,
-                       std::unique_ptr<MemoryBuffer> MB) {
-    auto Stream = AddStream(Task, ModuleName);
-    *Stream->OS << MB->getBuffer();
-    check(Stream->commit(), "Failed to commit cache");
-  };
+  Lto->setBitcodeLibFuncs(
+      SmallVector<StringRef>(BitcodeLibFuncs.begin(), BitcodeLibFuncs.end()));
 
   FileCache Cache;
   if (!CacheDir.empty())
     Cache = check(localCache("ThinLTO", "Thin", CacheDir, AddBuffer),
                   "failed to create cache");
 
-  check(Lto.run(AddStream, Cache), "LTO::run failed");
+  check(Lto->run(AddStream, Cache), "LTO::run failed");
   return static_cast<int>(HasErrors);
 }
 

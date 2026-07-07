@@ -9,7 +9,7 @@
 ; depends on whether the coroutine was resumed or not.
 define ptr @f(i32 %n) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @malloc(i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
@@ -46,7 +46,7 @@ declare void @free(ptr)
 ; CHECK-LABEL: define ptr @f(
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 24)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
@@ -59,7 +59,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @f.resume(
+; CHECK-LABEL: define internal void @f.resume(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*]]:
 ; CHECK-NEXT:    [[INDEX_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
@@ -81,7 +81,8 @@ declare void @free(ptr)
 ; CHECK-NEXT:    [[SP1_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 17
 ; CHECK-NEXT:    [[SP1_RELOAD:%.*]] = load i8, ptr [[SP1_RELOAD_ADDR]], align 1
 ; CHECK-NEXT:    call void @print(i8 [[SP1_RELOAD]])
-; CHECK-NEXT:    call void @free(ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    br label %[[COROEND]]
 ; CHECK:       [[COROEND]]:
 ; CHECK-NEXT:    ret void
@@ -89,7 +90,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    unreachable
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @f.destroy(
+; CHECK-LABEL: define internal void @f.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
 ; CHECK-NEXT:    [[INDEX_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
@@ -106,13 +107,14 @@ declare void @free(ptr)
 ; CHECK-NEXT:    [[SP1_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 17
 ; CHECK-NEXT:    [[SP1_RELOAD:%.*]] = load i8, ptr [[SP1_RELOAD_ADDR]], align 1
 ; CHECK-NEXT:    call void @print(i8 [[SP1_RELOAD]])
-; CHECK-NEXT:    call void @free(ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[UNREACHABLE]]:
 ; CHECK-NEXT:    unreachable
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @f.cleanup(
+; CHECK-LABEL: define internal void @f.cleanup(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_CLEANUP:.*:]]
 ; CHECK-NEXT:    [[INDEX_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16

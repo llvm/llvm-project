@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/mem_fence/clc_mem_fence.h>
+#include "clc/mem_fence/clc_mem_fence.h"
 
 #define BUILTIN_FENCE_ORDER(memory_order, ...)                                 \
   switch (memory_order) {                                                      \

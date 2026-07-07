@@ -60,6 +60,23 @@ void genFormTeamStatement(AbstractConverter &, pft::Evaluation &eval,
                           const parser::FormTeamStmt &);
 
 //===----------------------------------------------------------------------===//
+// COARRAY utils
+//===----------------------------------------------------------------------===//
+
+mlir::Value genLowerCoBounds(AbstractConverter &converter, mlir::Location loc,
+                             const semantics::Symbol &sym);
+
+mlir::Value genUpperCoBounds(AbstractConverter &converter, mlir::Location loc,
+                             const semantics::Symbol &sym);
+
+mlir::Value genAllocateCoarray(
+    AbstractConverter &converter, mlir::Location loc,
+    const semantics::Symbol &sym, mlir::Value addr,
+    const std::optional<Fortran::parser::AllocateCoarraySpec> &allocSpec =
+        std::nullopt,
+    mlir::Value errMsg = {}, bool hasStat = false);
+
+//===----------------------------------------------------------------------===//
 // COARRAY expressions
 //===----------------------------------------------------------------------===//
 

@@ -1,7 +1,177 @@
 #ifndef _MEMORY_
 #define _MEMORY_
 
+#include "stddef.h"
+
 namespace std {
+
+template <typename T>
+struct default_delete {};
+
+template <typename T>
+struct default_delete<T[]> {};
+
+template <typename T, typename Deleter = default_delete<T>>
+class unique_ptr {
+public:
+  unique_ptr() noexcept {}
+  explicit unique_ptr(T *p) noexcept {}
+  unique_ptr(T *p, Deleter d) noexcept {}
+  unique_ptr(const unique_ptr &) = delete;
+  unique_ptr(unique_ptr &&t) noexcept {}
+  template <typename U, typename E>
+  unique_ptr(unique_ptr<U, E> &&t) noexcept {}
+  ~unique_ptr() {}
+
+  T &operator*() const { return *ptr; }
+  T *operator->() const { return ptr; }
+  explicit operator bool() const noexcept { return ptr != nullptr; }
+
+  T *get() const { return ptr; }
+  T *release() { return ptr; }
+  void reset() {}
+  void reset(T *p) {}
+
+  unique_ptr &operator=(unique_ptr &) = delete;
+  template <typename U, typename E>
+  unique_ptr &operator=(unique_ptr<U, E> &) = delete;
+  unique_ptr &operator=(unique_ptr &&) noexcept { return *this; }
+  template <typename U, typename E>
+  unique_ptr &operator=(unique_ptr<U, E> &&) noexcept { return *this; }
+
+  bool operator==(const unique_ptr &) const noexcept { return false; }
+  bool operator!=(const unique_ptr &) const noexcept { return true; }
+
+private:
+  T *ptr = nullptr;
+};
+
+template <typename T, typename Deleter>
+class unique_ptr<T[], Deleter> {
+public:
+  unique_ptr() noexcept {}
+  template <typename U>
+  explicit unique_ptr(U p) noexcept {}
+  template <typename U>
+  unique_ptr(U p, Deleter d) noexcept {}
+  ~unique_ptr() {}
+
+  T &operator[](size_t i) const { return ptr[i]; }
+  T *get() const { return ptr; }
+  explicit operator bool() const noexcept { return ptr != nullptr; }
+
+  void reset() {}
+  void reset(T *p) {}
+
+private:
+  T *ptr = nullptr;
+};
+
+template <typename T, typename... Args>
+unique_ptr<T> make_unique(Args &&...args) {
+  return unique_ptr<T>(new T(static_cast<Args &&>(args)...));
+}
+
+template <typename T>
+class shared_ptr {
+public:
+  shared_ptr() {}
+  explicit shared_ptr(T *p) {}
+  template <typename Y>
+  explicit shared_ptr(Y *p) {}
+  template <typename Y, typename D>
+  shared_ptr(Y *p, D d) {}
+  shared_ptr(const shared_ptr &) {}
+  shared_ptr(shared_ptr &&) {}
+  ~shared_ptr() {}
+
+  T &operator*() const { return *this->get(); }
+  T *operator->() const { return this->get(); }
+  T *get() const { return ptr; }
+  void reset() {}
+  void reset(T *p) {}
+  explicit operator bool() const noexcept { return this->get() != nullptr; }
+
+  shared_ptr &operator=(shared_ptr &&) { return *this; }
+  template <typename U>
+  shared_ptr &operator=(shared_ptr<U> &&) { return *this; }
+
+private:
+  T *ptr = nullptr;
+};
+
+template <typename T>
+class shared_ptr<T[]> {
+public:
+  shared_ptr() {}
+  explicit shared_ptr(T *p) {}
+  template <typename Y>
+  explicit shared_ptr(Y *p) {}
+  template <typename Y, typename D>
+  shared_ptr(Y *p, D d) {}
+  shared_ptr(const shared_ptr &) {}
+  shared_ptr(shared_ptr &&) {}
+  ~shared_ptr() {}
+
+  T &operator[](size_t i) const { return ptr[i]; }
+  T *get() const { return ptr; }
+  void reset() {}
+  void reset(T *p) {}
+  explicit operator bool() const noexcept { return ptr != nullptr; }
+
+private:
+  T *ptr = nullptr;
+};
+
+template <typename T, typename... Args>
+shared_ptr<T> make_shared(Args &&...args) {
+  return shared_ptr<T>(new T(static_cast<Args &&>(args)...));
+}
+
+template <typename T>
+class weak_ptr {
+public:
+  weak_ptr() {}
+  bool expired() const { return true; }
+};
+
+template <typename Y>
+struct auto_ptr_ref {
+  Y *ptr;
+};
+
+template <typename X>
+class auto_ptr {
+public:
+  typedef X element_type;
+  explicit auto_ptr(X *p = 0) throw() {}
+  auto_ptr(auto_ptr &a) throw() {}
+  template <typename Y>
+  auto_ptr(auto_ptr<Y> &a) throw() {}
+  auto_ptr &operator=(auto_ptr &a) throw() { return *this; }
+  template <typename Y>
+  auto_ptr &operator=(auto_ptr<Y> &a) throw() { return *this; }
+  auto_ptr &operator=(auto_ptr_ref<X> r) throw() { return *this; }
+  ~auto_ptr() throw() {}
+  auto_ptr(auto_ptr_ref<X> r) throw() {}
+  template <typename Y>
+  operator auto_ptr_ref<Y>() throw() {
+    auto_ptr_ref<Y> r;
+    r.ptr = ptr;
+    return r;
+  }
+  template <typename Y>
+  operator auto_ptr<Y>() throw() { return auto_ptr<Y>(ptr); }
+
+private:
+  X *ptr = nullptr;
+};
+
+template <>
+class auto_ptr<void> {
+public:
+  typedef void element_type;
+};
 
 template <typename T>
 class allocator {};

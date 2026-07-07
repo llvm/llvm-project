@@ -68,10 +68,51 @@ entry:
   ret ptr addrspace(4) %tmp
 }
 
+; When amdgpu-no-implicitarg-ptr is set, calling the intrinsic is UB and the
+; call should be folded to poison.
+define ptr addrspace(4) @no_implicitarg_ptr() #2 {
+; AMDHSA-LABEL: define ptr addrspace(4) @no_implicitarg_ptr(
+; AMDHSA-SAME: ) #[[ATTR0:[0-9]+]] {
+; AMDHSA-NEXT:  [[ENTRY:.*:]]
+; AMDHSA-NEXT:    ret ptr addrspace(4) poison
+;
+; MESA-LABEL: define ptr addrspace(4) @no_implicitarg_ptr(
+; MESA-SAME: ) #[[ATTR0:[0-9]+]] {
+; MESA-NEXT:  [[ENTRY:.*:]]
+; MESA-NEXT:    ret ptr addrspace(4) poison
+;
+entry:
+  %tmp = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  ret ptr addrspace(4) %tmp
+}
+
+; When amdgpu-no-implicitarg-ptr is set, a load from the intrinsic's returned
+; pointer is also UB. The call folds to poison and loading from poison yields
+; poison via existing InstCombine rules.
+define i32 @no_implicitarg_ptr_load() #2 {
+; AMDHSA-LABEL: define i32 @no_implicitarg_ptr_load(
+; AMDHSA-SAME: ) #[[ATTR0]] {
+; AMDHSA-NEXT:  [[ENTRY:.*:]]
+; AMDHSA-NEXT:    store i1 true, ptr poison, align 1
+; AMDHSA-NEXT:    ret i32 poison
+;
+; MESA-LABEL: define i32 @no_implicitarg_ptr_load(
+; MESA-SAME: ) #[[ATTR0]] {
+; MESA-NEXT:  [[ENTRY:.*:]]
+; MESA-NEXT:    store i1 true, ptr poison, align 1
+; MESA-NEXT:    ret i32 poison
+;
+entry:
+  %ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %val = load i32, ptr addrspace(4) %ptr
+  ret i32 %val
+}
+
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare noundef align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #1
 
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { "amdgpu-no-implicitarg-ptr" }
 
 !llvm.module.flags = !{!0}
 

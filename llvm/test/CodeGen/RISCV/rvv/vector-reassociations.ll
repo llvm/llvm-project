@@ -97,10 +97,10 @@ define <vscale x 1 x i8> @vadd_vv_passthru(<vscale x 1 x i8> %0, <vscale x 1 x i
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, tu, ma
 ; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vadd.vv v10, v8, v9
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vadd.vv v9, v8, v8
-; CHECK-NEXT:    vadd.vv v8, v9, v10
+; CHECK-NEXT:    vadd.vv v11, v8, v8
+; CHECK-NEXT:    vadd.vv v8, v11, v10
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vadd.nxv1i8.nxv1i8(
@@ -127,8 +127,9 @@ entry:
 define <vscale x 1 x i8> @vadd_vv_passthru_negative(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, i32 %2) nounwind {
 ; CHECK-LABEL: vadd_vv_passthru_negative:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, tu, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, tu, ma
 ; CHECK-NEXT:    vadd.vv v10, v8, v9
 ; CHECK-NEXT:    vadd.vv v9, v8, v10
 ; CHECK-NEXT:    vadd.vv v8, v8, v9

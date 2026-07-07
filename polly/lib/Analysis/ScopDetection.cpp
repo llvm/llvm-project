@@ -571,7 +571,7 @@ bool ScopDetection::isValidSwitch(BasicBlock &BB, SwitchInst *SI,
                                      ConditionSCEV, ConditionSCEV, SI);
 }
 
-bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
+bool ScopDetection::isValidBranch(BasicBlock &BB, CondBrInst *BI,
                                   Value *Condition, bool IsLoopBranch,
                                   DetectionContext &Context) {
   // Constant integer conditions are always affine.
@@ -665,22 +665,24 @@ bool ScopDetection::isValidCFG(BasicBlock &BB, bool IsLoopBranch,
   if (isa<ReturnInst>(TI) && CurRegion.isTopLevelRegion())
     return true;
 
-  Value *Condition = getConditionFromTerminator(TI);
+  if (isa<UncondBrInst>(TI))
+    return true;
 
-  if (!Condition)
-    return invalid<ReportInvalidTerminator>(Context, /*Assert=*/true, &BB);
-
-  // UndefValue is not allowed as condition.
-  if (isa<UndefValue>(Condition))
-    return invalid<ReportUndefCond>(Context, /*Assert=*/true, TI, &BB);
-
-  if (BranchInst *BI = dyn_cast<BranchInst>(TI))
+  if (auto *BI = dyn_cast<CondBrInst>(TI)) {
+    Value *Condition = BI->getCondition();
+    if (isa<UndefValue>(Condition))
+      return invalid<ReportUndefCond>(Context, /*Assert=*/true, TI, &BB);
     return isValidBranch(BB, BI, Condition, IsLoopBranch, Context);
+  }
 
-  SwitchInst *SI = dyn_cast<SwitchInst>(TI);
-  assert(SI && "Terminator was neither branch nor switch");
+  if (auto *SI = dyn_cast<SwitchInst>(TI)) {
+    Value *Condition = SI->getCondition();
+    if (isa<UndefValue>(Condition))
+      return invalid<ReportUndefCond>(Context, /*Assert=*/true, TI, &BB);
+    return isValidSwitch(BB, SI, Condition, IsLoopBranch, Context);
+  }
 
-  return isValidSwitch(BB, SI, Condition, IsLoopBranch, Context);
+  return invalid<ReportInvalidTerminator>(Context, /*Assert=*/true, &BB);
 }
 
 bool ScopDetection::isValidCallInst(CallInst &CI,
@@ -886,7 +888,7 @@ ScopDetection::getDelinearizationTerms(DetectionContext &Context,
         if (auto *AF2 = dyn_cast<SCEVAddRecExpr>(Op))
           collectParametricTerms(SE, AF2, Terms);
         if (auto *AF2 = dyn_cast<SCEVMulExpr>(Op)) {
-          SmallVector<const SCEV *, 0> Operands;
+          SmallVector<SCEVUse, 0> Operands;
 
           for (const SCEV *MulOp : AF2->operands()) {
             if (auto *Const = dyn_cast<SCEVConstant>(MulOp))

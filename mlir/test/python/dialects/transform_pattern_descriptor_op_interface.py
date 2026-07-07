@@ -7,7 +7,6 @@ from mlir.dialects import transform, func, arith, ext
 from mlir.dialects.transform import AnyOpType, structured
 
 
-@ext.register_dialect
 class MyPatternDescriptors(ext.Dialect, name="my_pattern_descriptors"):
     pass
 
@@ -17,7 +16,7 @@ def run(emit_schedule):
     with ir.Context(), ir.Location.unknown():
         payload = emit_payload()
 
-        MyPatternDescriptors.load(register=False, reload=True)
+        MyPatternDescriptors.load(reload=True)
 
         # NB: Pattern descriptor ops have their interfaces attached
         #     in their respective test functions.
@@ -58,7 +57,6 @@ def schedule_boilerplate():
             yield schedule, named_sequence
 
 
-@ext.register_operation(MyPatternDescriptors)
 class SubiAddiRewritePatternOp(MyPatternDescriptors.Operation, name="add_pattern"):
     @classmethod
     def attach_interface_impls(cls, ctx=None):

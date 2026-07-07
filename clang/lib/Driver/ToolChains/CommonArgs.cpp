@@ -58,9 +58,9 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/PPCTargetParser.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include <optional>
 
 using namespace clang::driver;
@@ -101,6 +101,10 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64:
   case llvm::Triple::m68k:
+  case llvm::Triple::mips64:
+  case llvm::Triple::mips64el:
+  case llvm::Triple::mips:
+  case llvm::Triple::mipsel:
     return !clang::driver::tools::areOptimizationsEnabled(Args);
   default:
     break;
@@ -117,10 +121,6 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
     case llvm::Triple::armeb:
     case llvm::Triple::thumb:
     case llvm::Triple::thumbeb:
-    case llvm::Triple::mips64:
-    case llvm::Triple::mips64el:
-    case llvm::Triple::mips:
-    case llvm::Triple::mipsel:
     case llvm::Triple::systemz:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
@@ -683,7 +683,6 @@ void tools::AddTargetFeature(const ArgList &Args,
 /// Get the (LLVM) name of the AMDGPU gpu we are targeting.
 static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
                                       const ArgList &Args) {
-  Arg *MArch = Args.getLastArg(options::OPT_march_EQ);
   if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     auto GPUName = getProcessorFromTargetID(T, A->getValue());
     return llvm::StringSwitch<std::string>(GPUName)
@@ -696,8 +695,6 @@ static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
         .Case("aruba", "cayman")
         .Default(GPUName.str());
   }
-  if (MArch)
-    return getProcessorFromTargetID(T, MArch->getValue()).str();
   return "";
 }
 
@@ -949,6 +946,20 @@ bool tools::isUseSeparateSections(const llvm::Triple &Triple) {
   return Triple.isPS();
 }
 
+void tools::addSeparateSectionFlags(const llvm::Triple &Triple,
+                                    const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
+  bool UseSeparateSections = isUseSeparateSections(Triple);
+  if (Args.hasFlag(options::OPT_ffunction_sections,
+                   options::OPT_fno_function_sections, UseSeparateSections))
+    CmdArgs.push_back("-ffunction-sections");
+
+  bool HasDefaultDataSections = Triple.isOSBinFormatXCOFF();
+  if (Args.hasFlag(options::OPT_fdata_sections, options::OPT_fno_data_sections,
+                   UseSeparateSections || HasDefaultDataSections))
+    CmdArgs.push_back("-fdata-sections");
+}
+
 bool tools::isTLSDESCEnabled(const ToolChain &TC,
                              const llvm::opt::ArgList &Args) {
   const llvm::Triple &Triple = TC.getEffectiveTriple();
@@ -984,7 +995,7 @@ void tools::addDTLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
     const Driver &D = ToolChain.getDriver();
     CmdArgs.push_back(Args.MakeArgString("--thinlto-remote-compiler=" +
-                                         Twine(D.getClangProgramPath())));
+                                         Twine(D.getDriverProgramPath())));
     if (auto *PA = D.getPrependArg())
       CmdArgs.push_back(Args.MakeArgString(
           "--thinlto-remote-compiler-prepend-arg=" + Twine(PA)));
@@ -1145,6 +1156,15 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (!Parallelism.empty())
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
                                          ParallelismOpt + Parallelism));
+
+  // Forward the SLP vectorization preference to the LTO backend by toggling
+  // the existing -vectorize-slp cl::opt, which the pass honors directly. This
+  // avoids minting dedicated linker options for what is only pipeline tuning.
+  if (Arg *A = Args.getLastArg(options::OPT_fslp_vectorize,
+                               options::OPT_fno_slp_vectorize))
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine(PluginOptPrefix) + "-vectorize-slp=" +
+        (A->getOption().matches(options::OPT_fslp_vectorize) ? "1" : "0")));
 
   // Pass down GlobalISel options.
   if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
@@ -1416,9 +1436,16 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
     return;
 
   SmallVector<std::string> CandidateRPaths(TC.getArchSpecificLibPaths());
-  if (const auto CandidateRPath = TC.getStdlibPath())
-    CandidateRPaths.emplace_back(*CandidateRPath);
-
+  if (const auto StdlibPath = TC.getStdlibPath()) {
+    for (const Multilib &M : llvm::reverse(TC.getSelectedMultilibs())) {
+      if (M.isDefault())
+        continue;
+      SmallString<128> P(*StdlibPath);
+      llvm::sys::path::append(P, M.gccSuffix());
+      CandidateRPaths.emplace_back(std::string(P));
+    }
+    CandidateRPaths.emplace_back(*StdlibPath);
+  }
   for (const auto &CandidateRPath : CandidateRPaths) {
     if (TC.getVFS().exists(CandidateRPath)) {
       CmdArgs.push_back("-rpath");
@@ -1490,7 +1517,7 @@ void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
   // information using -fopenmp-targets= option.
   constexpr llvm::StringLiteral Targets("--offload-targets=");
 
-  SmallVector<std::string> Triples;
+  SmallVector<StringRef> Triples;
   auto TCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
   std::transform(TCRange.first, TCRange.second, std::back_inserter(Triples),
                  [](auto TC) { return TC.second->getTripleString(); });
@@ -1789,23 +1816,29 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   }
   // If there is a static runtime with no dynamic list, force all the symbols
   // to be dynamic to be sure we export sanitizer interface functions.
-  if (AddExportDynamic)
+  if (AddExportDynamic && !TC.getTriple().isNVPTX())
     CmdArgs.push_back("--export-dynamic");
 
   if (SanArgs.hasCrossDsoCfi() && !AddExportDynamic)
     CmdArgs.push_back("--export-dynamic-symbol=__cfi_check");
 
   if (SanArgs.hasMemTag()) {
-    if (!TC.getTriple().isAndroid()) {
-      TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
-          << "-fsanitize=memtag*" << TC.getTriple().str();
-    }
+    CmdArgs.push_back("-z");
     CmdArgs.push_back(
-        Args.MakeArgString("--android-memtag-mode=" + SanArgs.getMemtagMode()));
-    if (SanArgs.hasMemtagHeap())
-      CmdArgs.push_back("--android-memtag-heap");
-    if (SanArgs.hasMemtagStack())
-      CmdArgs.push_back("--android-memtag-stack");
+        Args.MakeArgString("memtag-mode=" + SanArgs.getMemtagMode()));
+
+    if (SanArgs.hasMemtagHeap()) {
+      CmdArgs.push_back("-z");
+      CmdArgs.push_back("memtag-heap");
+    }
+
+    if (SanArgs.hasMemtagStack()) {
+      CmdArgs.push_back("-z");
+      CmdArgs.push_back("memtag-stack");
+    }
+
+    if (TC.getTriple().isAndroid())
+      CmdArgs.push_back("--android-memtag-note");
   }
 
   return !StaticRuntimes.empty() || !NonWholeStaticRuntimes.empty() ||
@@ -1861,7 +1894,7 @@ const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
                                   const InputInfo &Output) {
   auto AddPostfix = [JA](auto &F) {
     if (JA.getOffloadingDeviceKind() == Action::OFK_HIP)
-      F += (Twine("_") + JA.getOffloadingArch()).str();
+      F += (Twine("_") + JA.getOffloadingArch().ArchName).str();
     F += ".dwo";
   };
   if (Arg *A = Args.getLastArg(options::OPT_gsplit_dwarf_EQ))
@@ -1872,12 +1905,14 @@ const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
   if (const Arg *A = Args.getLastArg(options::OPT_dumpdir)) {
     T = A->getValue();
   } else {
-    Arg *FinalOutput = Args.getLastArg(options::OPT_o, options::OPT__SLASH_o);
-    if (FinalOutput && Args.hasArg(options::OPT_c)) {
-      T = FinalOutput->getValue();
+    if (Args.hasArg(options::OPT_o, options::OPT__SLASH_o,
+                    options::OPT__SLASH_Fo) &&
+        Args.hasArg(options::OPT_c) && Output.isFilename()) {
+      // The driver has resolved /Fo<dir>/ into a concrete obj path in Output.
+      StringRef Obj = Output.getFilename();
+      T = Obj;
       llvm::sys::path::remove_filename(T);
-      llvm::sys::path::append(T,
-                              llvm::sys::path::stem(FinalOutput->getValue()));
+      llvm::sys::path::append(T, llvm::sys::path::stem(Obj));
       AddPostfix(T);
       return Args.MakeArgString(T);
     }
@@ -2347,6 +2382,16 @@ bool tools::checkDebugInfoOption(const Arg *A, const ArgList &Args,
   return false;
 }
 
+void tools::addDebugInfoForProfilingArgs(const Driver &D, const ToolChain &TC,
+                                         const ArgList &Args,
+                                         ArgStringList &CmdArgs) {
+  if (Args.hasFlag(options::OPT_fdebug_info_for_profiling,
+                   options::OPT_fno_debug_info_for_profiling, false) &&
+      checkDebugInfoOption(
+          Args.getLastArg(options::OPT_fdebug_info_for_profiling), Args, D, TC))
+    CmdArgs.push_back("-fdebug-info-for-profiling");
+}
+
 void tools::AddAssemblerKPIC(const ToolChain &ToolChain, const ArgList &Args,
                              ArgStringList &CmdArgs) {
   llvm::Reloc::Model RelocationModel;
@@ -2755,8 +2800,9 @@ static void GetSDLFromOffloadArchive(
   SmallString<128> DeviceTriple;
   DeviceTriple += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
   DeviceTriple += '-';
-  std::string NormalizedTriple = T.getToolChain().getTriple().normalize(
-      llvm::Triple::CanonicalForm::FOUR_IDENT);
+  std::string NormalizedTriple =
+      T.getToolChain().getEffectiveTriple().normalize(
+          llvm::Triple::CanonicalForm::FOUR_IDENT);
   DeviceTriple += NormalizedTriple;
   if (!Target.empty()) {
     DeviceTriple += '-';
@@ -3107,8 +3153,7 @@ void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
 
   // First check for a CPU-specific library in <ResourceDir>/lib/<triple>/<CPU>.
   // TODO: Factor this into common logic that checks for valid subtargets.
-  if (const Arg *CPUArg =
-          DriverArgs.getLastArg(options::OPT_mcpu_EQ, options::OPT_march_EQ)) {
+  if (const Arg *CPUArg = DriverArgs.getLastArg(options::OPT_mcpu_EQ)) {
     StringRef CPU = CPUArg->getValue();
     if (!CPU.empty()) {
       SmallString<128> CPUPath(BasePath);
@@ -3272,8 +3317,16 @@ void tools::handleColorDiagnosticsArgs(const Driver &D, const ArgList &Args,
           << Value << A->getOption().getName();
   }
 
-  if (D.getDiags().getDiagnosticOptions().ShowColors)
+  switch (D.getDiags().getDiagnosticOptions().getShowColors()) {
+  case ShowColorsKind::On:
     CmdArgs.push_back("-fcolor-diagnostics");
+    break;
+  case ShowColorsKind::Off:
+    CmdArgs.push_back("-fno-color-diagnostics");
+    break;
+  case ShowColorsKind::Auto:
+    break;
+  }
 }
 
 void tools::escapeSpacesAndBackslashes(const char *Arg,
@@ -3294,7 +3347,7 @@ void tools::escapeSpacesAndBackslashes(const char *Arg,
 const char *tools::renderEscapedCommandLine(const ToolChain &TC,
                                             const llvm::opt::ArgList &Args) {
   const Driver &D = TC.getDriver();
-  const char *Exec = D.getClangProgramPath();
+  const char *Exec = D.getDriverProgramPath();
 
   llvm::opt::ArgStringList OriginalArgs;
   for (const auto &Arg : Args)
@@ -3315,7 +3368,8 @@ const char *tools::renderEscapedCommandLine(const ToolChain &TC,
 bool tools::shouldRecordCommandLine(const ToolChain &TC,
                                     const llvm::opt::ArgList &Args,
                                     bool &FRecordCommandLine,
-                                    bool &GRecordCommandLine) {
+                                    bool &GRecordCommandLine,
+                                    bool &DXRecordCommandLine) {
   const Driver &D = TC.getDriver();
   const llvm::Triple &Triple = TC.getEffectiveTriple();
   const std::string &TripleStr = Triple.getTriple();
@@ -3326,13 +3380,15 @@ bool tools::shouldRecordCommandLine(const ToolChain &TC,
   GRecordCommandLine =
       Args.hasFlag(options::OPT_grecord_command_line,
                    options::OPT_gno_record_command_line, false);
+  DXRecordCommandLine = Triple.isDXIL() && Args.hasArg(options::OPT_g_Flag);
   if (FRecordCommandLine && !Triple.isOSBinFormatELF() &&
       !Triple.isOSBinFormatXCOFF() && !Triple.isOSBinFormatMachO())
     D.Diag(diag::err_drv_unsupported_opt_for_target)
         << Args.getLastArg(options::OPT_frecord_command_line)->getAsString(Args)
         << TripleStr;
 
-  return FRecordCommandLine || TC.UseDwarfDebugFlags() || GRecordCommandLine;
+  return FRecordCommandLine || TC.UseDwarfDebugFlags() || GRecordCommandLine ||
+         DXRecordCommandLine;
 }
 
 void tools::renderGlobalISelOptions(const Driver &D, const ArgList &Args,
@@ -3371,8 +3427,9 @@ void tools::renderGlobalISelOptions(const Driver &D, const ArgList &Args,
 }
 
 void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
-                                               ArgStringList &CmdArgs) {
-  bool use_fwrapv = false;
+                                               ArgStringList &CmdArgs,
+                                               bool IsMSVCCompat) {
+  bool use_fwrapv = IsMSVCCompat;
   bool use_fwrapv_pointer = false;
   for (const Arg *A : Args.filtered(
            options::OPT_fstrict_overflow, options::OPT_fno_strict_overflow,
@@ -3405,6 +3462,8 @@ void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
 
   if (use_fwrapv)
     CmdArgs.push_back("-fwrapv");
+  if (!use_fwrapv && IsMSVCCompat)
+    CmdArgs.push_back("-fno-wrapv");
   if (use_fwrapv_pointer)
     CmdArgs.push_back("-fwrapv-pointer");
 }

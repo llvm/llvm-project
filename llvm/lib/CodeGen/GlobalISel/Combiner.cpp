@@ -222,17 +222,14 @@ Combiner::WorkListMaintainer::create(Level Lvl, WorkListTy &WorkList,
 }
 
 Combiner::Combiner(MachineFunction &MF, const CombinerInfo &CInfo,
-                   const TargetPassConfig *TPC, GISelValueTracking *VT,
-                   GISelCSEInfo *CSEInfo)
+                   GISelValueTracking *VT, GISelCSEInfo *CSEInfo)
     : Builder(CSEInfo ? std::make_unique<CSEMIRBuilder>()
                       : std::make_unique<MachineIRBuilder>()),
       WLObserver(WorkListMaintainer::create(CInfo.ObserverLvl, WorkList,
                                             MF.getRegInfo())),
       ObserverWrapper(std::make_unique<GISelObserverWrapper>()), CInfo(CInfo),
       Observer(*ObserverWrapper), B(*Builder), MF(MF), MRI(MF.getRegInfo()),
-      VT(VT), TPC(TPC), CSEInfo(CSEInfo) {
-  (void)this->TPC; // FIXME: Remove when used.
-
+      VT(VT), CSEInfo(CSEInfo) {
   // Setup builder.
   B.setMF(MF);
   if (CSEInfo)

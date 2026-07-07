@@ -197,9 +197,79 @@ ChangeStatus &llvm::operator&=(ChangeStatus &L, ChangeStatus R) {
 }
 ///}
 
+namespace {
+/// NVPTX/AMDGPU address space values (shared between both targets)
+enum class NVPTXAMDGPUAddressSpace : unsigned {
+  Generic = 0,
+  Global = 1,
+  Shared = 3,
+  Constant = 4,
+  Local = 5,
+};
+
+/// SPIRV address space values (StorageClass)
+enum class SPIRVAddressSpace : unsigned {
+  Local = 0,    // Function (private/local)
+  Global = 1,   // CrossWorkgroup (global)
+  Constant = 2, // UniformConstant (constant)
+  Shared = 3,   // Workgroup (shared)
+  Generic = 4,  // Generic
+};
+} // namespace
+
 bool AA::isGPU(const Module &M) {
   Triple T(M.getTargetTriple());
   return T.isGPU();
+}
+
+bool AA::isGPUGenericAddressSpace(const Module &M, unsigned AS) {
+  assert(AA::isGPU(M) && "Only callable on GPU targets");
+  Triple T(M.getTargetTriple());
+
+  if (T.isSPIRV())
+    return AS == static_cast<unsigned>(SPIRVAddressSpace::Generic);
+
+  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Generic);
+}
+
+bool AA::isGPUGlobalAddressSpace(const Module &M, unsigned AS) {
+  assert(AA::isGPU(M) && "Only callable on GPU targets");
+  Triple T(M.getTargetTriple());
+
+  if (T.isSPIRV())
+    return AS == static_cast<unsigned>(SPIRVAddressSpace::Global);
+
+  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Global);
+}
+
+bool AA::isGPUSharedAddressSpace(const Module &M, unsigned AS) {
+  assert(AA::isGPU(M) && "Only callable on GPU targets");
+  Triple T(M.getTargetTriple());
+
+  if (T.isSPIRV())
+    return AS == static_cast<unsigned>(SPIRVAddressSpace::Shared);
+
+  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Shared);
+}
+
+bool AA::isGPUConstantAddressSpace(const Module &M, unsigned AS) {
+  assert(AA::isGPU(M) && "Only callable on GPU targets");
+  Triple T(M.getTargetTriple());
+
+  if (T.isSPIRV())
+    return AS == static_cast<unsigned>(SPIRVAddressSpace::Constant);
+
+  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Constant);
+}
+
+bool AA::isGPULocalAddressSpace(const Module &M, unsigned AS) {
+  assert(AA::isGPU(M) && "Only callable on GPU targets");
+  Triple T(M.getTargetTriple());
+
+  if (T.isSPIRV())
+    return AS == static_cast<unsigned>(SPIRVAddressSpace::Local);
+
+  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Local);
 }
 
 bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
@@ -213,9 +283,6 @@ bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
     if (!CB->isConvergent() && !CB->mayReadOrWriteMemory())
       return true;
 
-    if (AANoSync::isNoSyncIntrinsic(&I))
-      return true;
-
     bool IsKnownNoSync;
     return AA::hasAssumedIRAttr<Attribute::NoSync>(
         A, &QueryingAA, IRPosition::callsite_function(*CB),
@@ -225,7 +292,7 @@ bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
   if (!I.mayReadOrWriteMemory())
     return true;
 
-  return !I.isVolatile() && !AANoSync::isNonRelaxedAtomic(&I);
+  return !AANoSync::isNonRelaxedAtomic(&I);
 }
 
 bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
@@ -872,15 +939,16 @@ bool AA::isAssumedThreadLocalObject(Attributor &A, Value &Obj,
     }
   }
 
-  if (A.getInfoCache().targetIsGPU()) {
-    if (Obj.getType()->getPointerAddressSpace() ==
-        (int)AA::GPUAddressSpace::Local) {
+  if (A.getInfoCache().IsTargetGPU()) {
+    if (AA::isGPULocalAddressSpace(A.getInfoCache().getModule(),
+                                   Obj.getType()->getPointerAddressSpace())) {
       LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj
                         << "' is thread local; GPU local memory\n");
       return true;
     }
-    if (Obj.getType()->getPointerAddressSpace() ==
-        (int)AA::GPUAddressSpace::Constant) {
+    if (AA::isGPUConstantAddressSpace(
+            A.getInfoCache().getModule(),
+            Obj.getType()->getPointerAddressSpace())) {
       LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj
                         << "' is thread local; GPU constant memory\n");
       return true;
@@ -1136,13 +1204,11 @@ Attributor::updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
     break;
   };
 
-  AttributeList AL;
+  AttributeList AL = IRP.getAttrList();
   Value *AttrListAnchor = IRP.getAttrListAnchor();
-  auto It = AttrsMap.find(AttrListAnchor);
-  if (It == AttrsMap.end())
-    AL = IRP.getAttrList();
-  else
-    AL = It->getSecond();
+  auto [Iter, Inserted] = AttrsMap.insert({AttrListAnchor, AL});
+  if (!Inserted)
+    AL = Iter->second;
 
   LLVMContext &Ctx = IRP.getAnchorValue().getContext();
   auto AttrIdx = IRP.getAttrIdx();
@@ -1160,8 +1226,9 @@ Attributor::updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
 
   AL = AL.removeAttributesAtIndex(Ctx, AttrIdx, AM);
   AL = AL.addAttributesAtIndex(Ctx, AttrIdx, AB);
-  AttrsMap[AttrListAnchor] = AL;
-  return ChangeStatus::CHANGED;
+
+  Iter->second = AL;
+  return HasChanged;
 }
 
 bool Attributor::hasAttr(const IRPosition &IRP,
@@ -1264,10 +1331,6 @@ ChangeStatus Attributor::manifestAttrs(const IRPosition &IRP,
   };
   return updateAttrMap<Attribute>(IRP, Attrs, AddAttrCB);
 }
-
-const IRPosition IRPosition::EmptyKey(DenseMapInfo<void *>::getEmptyKey());
-const IRPosition
-    IRPosition::TombstoneKey(DenseMapInfo<void *>::getTombstoneKey());
 
 SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   IRPositions.emplace_back(IRP);
@@ -2472,7 +2535,7 @@ ChangeStatus Attributor::cleanupIR() {
           Callee->removeParamAttr(Idx, Attribute::NoUndef);
       }
     }
-    if (isa<Constant>(NewV) && isa<BranchInst>(U->getUser())) {
+    if (isa<Constant>(NewV) && isa<CondBrInst>(U->getUser())) {
       Instruction *UserI = cast<Instruction>(U->getUser());
       if (isa<UndefValue>(NewV)) {
         ToBeChangedToUnreachableInsts.insert(UserI);
@@ -3296,7 +3359,7 @@ InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
 }
 
 std::optional<unsigned> InformationCache::getFlatAddressSpace() const {
-  if (TargetTriple.isGPU())
+  if (IsTargetGPU())
     return 0;
   return std::nullopt;
 }

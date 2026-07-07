@@ -82,7 +82,7 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
   };
 
   // Read a symbol from the __TEXT segment...
-  check_symbol("objc_msgSend");
+  check_symbol("objc_begin_catch");
   // ... and one from the __DATA segment
   check_symbol("OBJC_IVAR_$_NSObject.isa");
 }

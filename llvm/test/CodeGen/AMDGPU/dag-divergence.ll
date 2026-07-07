@@ -82,10 +82,9 @@ define <2 x i128> @wide_carry_divergence_error(i128 %arg) {
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
 ; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
 ; GCN-NEXT:    v_sub_u32_e32 v0, vcc, 0, v0
-; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    v_subb_u32_e32 v1, vcc, 0, v1, vcc
-; GCN-NEXT:    v_subb_u32_e32 v2, vcc, 0, v3, vcc
-; GCN-NEXT:    v_subb_u32_e32 v3, vcc, 0, v3, vcc
+; GCN-NEXT:    v_subb_u32_e64 v2, s[4:5], 0, 0, vcc
+; GCN-NEXT:    v_mov_b32_e32 v3, v2
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    v_mov_b32_e32 v5, 0
 ; GCN-NEXT:    v_mov_b32_e32 v6, 0

@@ -36,7 +36,7 @@ void TaintTesterChecker::checkPostStmt(const Expr *E,
   if (!State)
     return;
 
-  if (isTainted(State, E, C.getLocationContext())) {
+  if (isTainted(State, E, C.getStackFrame())) {
     if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
       auto report = std::make_unique<PathSensitiveBugReport>(BT, "tainted", N);
       report->addRange(E->getSourceRange());

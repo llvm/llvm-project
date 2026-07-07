@@ -415,7 +415,7 @@ public:
         RecordOffset(RecordOffset) {}
 
   TypeIndex Index;
-  RegisterId Register;
+  RegisterId Register = RegisterId::NONE;
   StringRef Name;
 
   uint32_t RecordOffset = 0;
@@ -625,6 +625,49 @@ public:
         RecordOffset(RecordOffset) {}
 
   int32_t Offset = 0;
+
+  uint32_t RecordOffset = 0;
+};
+
+struct DefRangeRegisterRelIndirHeader {
+  ulittle16_t Register;
+  ulittle16_t Flags;
+  little32_t BasePointerOffset;
+  /// Offset to add after dereferencing `Register + BasePointerOffset`.
+  little32_t OffsetInUdt;
+};
+
+/// S_DEFRANGE_REGISTER_REL_INDIR
+///
+/// The local is located at `*(Register + BasePointerOffset) + OffsetInUDT`.
+class DefRangeRegisterRelIndirSym : public SymbolRecord {
+public:
+  explicit DefRangeRegisterRelIndirSym(SymbolRecordKind Kind)
+      : SymbolRecord(Kind) {}
+  explicit DefRangeRegisterRelIndirSym(uint32_t RecordOffset)
+      : SymbolRecord(SymbolRecordKind::DefRangeRegisterRelIndirSym),
+        RecordOffset(RecordOffset) {}
+
+  // These flags are the same as in DefRangeRegisterRelSym.
+  // The flags implement this notional bitfield:
+  //   uint16_t IsSubfield : 1;
+  //   uint16_t Padding : 3;
+  //   uint16_t OffsetInParent : 12;
+  enum : uint16_t {
+    IsSubfieldFlag = 1,
+    OffsetInParentShift = 4,
+  };
+
+  bool hasSpilledUDTMember() const { return Hdr.Flags & IsSubfieldFlag; }
+  uint16_t offsetInParent() const { return Hdr.Flags >> OffsetInParentShift; }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + sizeof(DefRangeRegisterRelIndirHeader);
+  }
+
+  DefRangeRegisterRelIndirHeader Hdr;
+  LocalVariableAddrRange Range;
+  std::vector<LocalVariableAddrGap> Gaps;
 
   uint32_t RecordOffset = 0;
 };
@@ -943,7 +986,7 @@ public:
 
   uint32_t Offset = 0;
   TypeIndex Type;
-  RegisterId Register;
+  RegisterId Register = RegisterId::NONE;
   StringRef Name;
 
   uint32_t RecordOffset = 0;
@@ -963,7 +1006,7 @@ public:
   uint32_t Offset = 0;
   TypeIndex Type;
   uint32_t OffsetInUdt = 0;
-  RegisterId Register;
+  RegisterId Register = RegisterId::NONE;
   StringRef Name;
 
   uint32_t RecordOffset = 0;

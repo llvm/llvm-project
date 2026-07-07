@@ -157,6 +157,7 @@ class TestLuaAPI(TestBase):
                     tests.append(filename)
         return tests
 
+    @skipIfMTE  # Lua is not MTE-aware.
     def test_lua_api(self):
         if "LUA_EXECUTABLE" not in os.environ or not os.path.exists(
             os.environ["LUA_EXECUTABLE"]

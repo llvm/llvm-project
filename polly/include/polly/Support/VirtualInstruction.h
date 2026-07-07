@@ -322,20 +322,6 @@ public:
                                                 RHS.getInstruction());
   }
 
-  static polly::VirtualInstruction getTombstoneKey() {
-    polly::VirtualInstruction TombstoneKey;
-    TombstoneKey.Stmt = DenseMapInfo<polly::ScopStmt *>::getTombstoneKey();
-    TombstoneKey.Inst = DenseMapInfo<Instruction *>::getTombstoneKey();
-    return TombstoneKey;
-  }
-
-  static polly::VirtualInstruction getEmptyKey() {
-    polly::VirtualInstruction EmptyKey;
-    EmptyKey.Stmt = DenseMapInfo<polly::ScopStmt *>::getEmptyKey();
-    EmptyKey.Inst = DenseMapInfo<Instruction *>::getEmptyKey();
-    return EmptyKey;
-  }
-
   static unsigned getHashValue(polly::VirtualInstruction Val) {
     return DenseMapInfo<std::pair<polly::ScopStmt *, Instruction *>>::
         getHashValue(std::make_pair(Val.getStmt(), Val.getInstruction()));

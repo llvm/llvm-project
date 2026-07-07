@@ -383,14 +383,6 @@ struct VTableSlot {
 } // end anonymous namespace
 
 template <> struct llvm::DenseMapInfo<VTableSlot> {
-  static VTableSlot getEmptyKey() {
-    return {DenseMapInfo<Metadata *>::getEmptyKey(),
-            DenseMapInfo<uint64_t>::getEmptyKey()};
-  }
-  static VTableSlot getTombstoneKey() {
-    return {DenseMapInfo<Metadata *>::getTombstoneKey(),
-            DenseMapInfo<uint64_t>::getTombstoneKey()};
-  }
   static unsigned getHashValue(const VTableSlot &I) {
     return DenseMapInfo<Metadata *>::getHashValue(I.TypeID) ^
            DenseMapInfo<uint64_t>::getHashValue(I.ByteOffset);
@@ -402,14 +394,6 @@ template <> struct llvm::DenseMapInfo<VTableSlot> {
 };
 
 template <> struct llvm::DenseMapInfo<VTableSlotSummary> {
-  static VTableSlotSummary getEmptyKey() {
-    return {DenseMapInfo<StringRef>::getEmptyKey(),
-            DenseMapInfo<uint64_t>::getEmptyKey()};
-  }
-  static VTableSlotSummary getTombstoneKey() {
-    return {DenseMapInfo<StringRef>::getTombstoneKey(),
-            DenseMapInfo<uint64_t>::getTombstoneKey()};
-  }
   static unsigned getHashValue(const VTableSlotSummary &I) {
     return DenseMapInfo<StringRef>::getHashValue(I.TypeID) ^
            DenseMapInfo<uint64_t>::getHashValue(I.ByteOffset);
@@ -489,7 +473,7 @@ struct VirtualCallSite {
       emitRemark(OptName, TargetName, OREGetter);
     CB.replaceAllUsesWith(New);
     if (auto *II = dyn_cast<InvokeInst>(&CB)) {
-      BranchInst::Create(II->getNormalDest(), CB.getIterator());
+      UncondBrInst::Create(II->getNormalDest(), CB.getIterator());
       II->getUnwindDest()->removePredecessor(II->getParent());
     }
     CB.eraseFromParent();
@@ -1595,14 +1579,14 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
         auto &F = *CB.getCaller();
         auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
         auto EC = BFI.getBlockFreq(&F.getEntryBlock());
-        auto CC = F.getEntryCount(/*AllowSynthetic=*/true);
+        auto CC = F.getEntryCount();
         double CallCount = 0.0;
-        if (EC.getFrequency() != 0 && CC && CC->getCount() != 0) {
+        if (EC.getFrequency() != 0 && CC && *CC != 0) {
           double CallFreq =
               static_cast<double>(
                   BFI.getBlockFreq(CB.getParent()).getFrequency()) /
               EC.getFrequency();
-          CallCount = CallFreq * CC->getCount();
+          CallCount = CallFreq * *CC;
         }
         FunctionEntryCounts[&JT] += CallCount;
       }
@@ -1645,7 +1629,7 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
   for (auto &P : SlotInfo.ConstCSInfo)
     Apply(P.second);
   for (auto &[F, C] : FunctionEntryCounts) {
-    assert(!F->getEntryCount(/*AllowSynthetic=*/true) &&
+    assert(!F->getEntryCount() &&
            "Unexpected entry count for funnel that was freshly synthesized");
     F->setEntryCount(static_cast<uint64_t>(std::round(C)));
   }
@@ -1940,7 +1924,7 @@ bool DevirtModule::tryVirtualConstProp(
     if (!Fn)
       return false;
 
-    if (Fn->isDeclaration() ||
+    if (Fn->isDeclaration() || Fn->isInterposable() ||
         !computeFunctionBodyMemoryAccess(*Fn, FAM.getResult<AAManager>(*Fn))
              .doesNotAccessMemory() ||
         Fn->arg_empty() || !Fn->arg_begin()->use_empty() ||
@@ -2026,8 +2010,7 @@ bool DevirtModule::tryVirtualConstProp(
 
     if (CSByConstantArg.second.isExported()) {
       ResByArg->TheKind = WholeProgramDevirtResolution::ByArg::VirtualConstProp;
-      exportConstant(Slot, CSByConstantArg.first, "byte", OffsetByte,
-                     ResByArg->Byte);
+      ResByArg->Byte = OffsetByte;
       exportConstant(Slot, CSByConstantArg.first, "bit", 1ULL << OffsetBit,
                      ResByArg->Bit);
     }
@@ -2309,8 +2292,7 @@ void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
       break;
     }
     case WholeProgramDevirtResolution::ByArg::VirtualConstProp: {
-      Constant *Byte = importConstant(Slot, CSByConstantArg.first, "byte",
-                                      Int32Ty, ResByArg.Byte);
+      Constant *Byte = ConstantInt::get(Int32Ty, ResByArg.Byte);
       Constant *Bit = importConstant(Slot, CSByConstantArg.first, "bit", Int8Ty,
                                      ResByArg.Bit);
       applyVirtualConstProp(CSByConstantArg.second, "", Byte, Bit);

@@ -258,6 +258,19 @@ Error SymbolRecordMapping::visitKnownRecord(
 }
 
 Error SymbolRecordMapping::visitKnownRecord(
+    CVSymbol &CVR, DefRangeRegisterRelIndirSym &DefRangeRegisterRelIndir) {
+
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.Register));
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.Flags));
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.BasePointerOffset));
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.OffsetInUdt));
+  error(mapLocalVariableAddrRange(IO, DefRangeRegisterRelIndir.Range));
+  error(IO.mapVectorTail(DefRangeRegisterRelIndir.Gaps, MapGap()));
+
+  return Error::success();
+}
+
+Error SymbolRecordMapping::visitKnownRecord(
     CVSymbol &CVR, DefRangeRegisterSym &DefRangeRegister) {
 
   error(IO.mapObject(DefRangeRegister.Hdr.Register));

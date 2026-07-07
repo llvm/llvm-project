@@ -15,9 +15,6 @@
 ; CHECK64: aghi  4,192
 ; CHECK64: b 2(7)
 
-; CHECK64: L#PPA1_func0_0 DS 0H
-; CHECK64: * Length/4 of Parms
-; CHECK64:  DC XL2'0000'
 define void @func0() {
   call i64 (i64) @fun(i64 10) 
   ret void
@@ -32,9 +29,6 @@ define void @func0() {
 ; CHECK64: aghi  4,160
 ; CHECK64: b 2(7)
 
-; CHECK64: L#PPA1_func1_0 DS 0H
-; CHECK64: * Length/4 of Parms
-; CHECK64:  DC XL2'0002'
 define void @func1(ptr %ptr) {
   %l01 = load volatile i64, ptr %ptr
   %l02 = load volatile i64, ptr %ptr
@@ -366,9 +360,6 @@ define void @large_stack0() {
 ; CHECK64: stmg  6,7,2064(4)
 ; CHECK64: lgr 3,0
 
-; CHECK64: L#PPA1_large_stack1_0 DS 0H
-; CHECK64: * Length/4 of Parms
-; CHECK64:  DC XL2'0006'
 define void @large_stack1(i64 %n1, i64 %n2, i64 %n3) {
   %arr = alloca [131072 x i64], align 8
   call i64 (ptr, i64, i64, i64) @fun3(ptr %arr,
@@ -400,6 +391,18 @@ define void @large_stack2(i64 %n1, i64 %n2, i64 %n3) {
   ret void
 }
 
+; Verify stack alignment is 32
+; CHECK-LABEL: large_stack3
+; CHECK: agfi 4,-2147483648
+; CHECK-NEXT: aghi 4,-224
+; CHECK: agfi 4,2147483616
+; CHECK-NEXT: aghi 4,256
+define void @large_stack3() {
+  %arr = alloca [268435457 x i64], align 8
+  call i64 (ptr) @fun1(ptr %arr)
+  ret void
+}
+
 ; CHECK-LABEL: L#EPM_leaf_func0_0 DS 0H
 ; CHECK: * DSA Size 0x0
 ; CHECK: * Entry Flags
@@ -414,6 +417,7 @@ define void @large_stack2(i64 %n1, i64 %n2, i64 %n3) {
 ; CHECK: aghik	3,1,-4
 ; CHECK-NOT: aghi  4,
 ; CHECK-NOT: lmg
+; CHECK-LABEL: L#leaf_func0_end_0 DS 0H
 define i64 @leaf_func0(i64 %a, i64 %b, i64 %c) {
   %n = add i64 %a, %b
   %m = mul i64 %n, %c
@@ -421,22 +425,11 @@ define i64 @leaf_func0(i64 %a, i64 %b, i64 %c) {
   ret i64 %o
 }
 
-
-; =============================
-;     Tests for PPA1 Fields
-; =============================
-; CHECK-LABEL: named_func DS 0H
-; CHECK:      * PPA1 Flags 4
-; CHECK-NEXT: *   Bit 7: 1 = Name Length and Name
-; CHECK-NEXT:  DC XL1'81'
 define i64 @named_func(i64 %arg) {
   %sum = add i64 1, %arg
   ret i64 %sum
 }
 
-; CHECK-LABEL: __unnamed_1 DS 0H
-; CHECK:      * PPA1 Flags 4
-; CHECK-NEXT:  DC XL1'80'
 define void @""(ptr %p) {
   call i64 (ptr) @fun1(ptr %p)
   ret void
@@ -448,3 +441,28 @@ declare i64 @fun1(ptr %ptr)
 declare i64 @fun2(i64 %n, ptr %arr0, ptr %arr1)
 declare i64 @fun3(ptr %ptr, i64 %n1, i64 %n2, i64 %n3)
 declare i64 @fun4(ptr %ptr0, ptr %ptr1, i64 %n1, i64 %n2, i64 %n3)
+
+; =============================
+;     Tests for PPA1 Fields
+; =============================
+
+; CHECK64: L#PPA1_func0_0 DS 0H
+; CHECK64: * Length/4 of Parms
+; CHECK64:  DC XL2'0000'
+
+; CHECK64: L#PPA1_func1_0 DS 0H
+; CHECK64: * Length/4 of Parms
+; CHECK64:  DC XL2'0002'
+
+; CHECK64: L#PPA1_large_stack1_0 DS 0H
+; CHECK64: * Length/4 of Parms
+; CHECK64:  DC XL2'0006'
+
+; CHECK-LABEL: L#PPA1_named_func_0 DS 0H
+; CHECK:      * PPA1 Flags 4
+; CHECK-NEXT: *   Bit 7: 1 = Name Length and Name
+; CHECK-NEXT:  DC XL1'81'
+
+; CHECK-LABEL: L#PPA1_0 DS 0H
+; CHECK:      * PPA1 Flags 4
+; CHECK-NEXT:  DC XL1'80'

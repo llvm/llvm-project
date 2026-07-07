@@ -1,0 +1,47 @@
+//===--- BuiltinsAVR.def - AVR Builtin function database --------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the AVR-specific builtin function database.  Users of
+// this file must define the BUILTIN macro to make use of this information.
+//
+//===----------------------------------------------------------------------===//
+
+// Void instructions
+BUILTIN(__builtin_avr_nop, "v", "n")
+BUILTIN(__builtin_avr_sei, "v", "n")
+BUILTIN(__builtin_avr_cli, "v", "n")
+BUILTIN(__builtin_avr_sleep, "v", "n")
+BUILTIN(__builtin_avr_wdr, "v", "n")
+
+// Swap nibbles
+BUILTIN(__builtin_avr_swap, "UcUc", "nc")
+
+// TODO:
+// Fractional multiply
+// BUILTIN(__builtin_avr_fmul, "UiUcUc", "nc")
+// BUILTIN(__builtin_avr_fmuls, "SiScSc", "nc")
+// BUILTIN(__builtin_avr_fmulsu, "SiScUc", "nc")
+
+// Delay cycles
+// BUILTIN(__builtin_avr_delay_cycles, "vULi", "n")
+
+// Emit N NOP instructions
+// BUILTIN(__builtin_avr_nops, "vUi", "n")
+
+// Bit manipulation
+// BUILTIN(__builtin_avr_insert_bits, "UcULiUcUc", "nc")
+
+// Flash segment query
+// BUILTIN(__builtin_avr_flash_segment, "ScvC*", "nc")
+
+// __builtin_avr_mask1
+// __builtin_avr_strlen_flash
+// __builtin_avr_strlen_flashx
+// __builtin_avr_strlen_memx
+
+#undef BUILTIN

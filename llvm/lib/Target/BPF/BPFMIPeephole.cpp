@@ -323,20 +323,21 @@ private:
   bool insertMissingCallerSavedSpills();
   bool removeMayGotoZero();
   bool addExitAfterUnreachable();
+  bool expandStackArgPseudos();
 
 public:
 
   // Main entry point for this pass.
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
-
     initialize(MF);
 
-    bool Changed;
-    Changed = eliminateRedundantMov();
+    bool Changed = expandStackArgPseudos();
+    if (skipFunction(MF.getFunction()))
+      return Changed;
+
+    Changed |= eliminateRedundantMov();
     if (SupportGotol)
-      Changed = adjustBranch() || Changed;
+      Changed |= adjustBranch();
     Changed |= insertMissingCallerSavedSpills();
     Changed |= removeMayGotoZero();
     Changed |= addExitAfterUnreachable();
@@ -750,6 +751,64 @@ bool BPFMIPreEmitPeephole::addExitAfterUnreachable() {
 
   BuildMI(&MBB, MI.getDebugLoc(), TII->get(BPF::RET));
   return true;
+}
+
+bool BPFMIPreEmitPeephole::expandStackArgPseudos() {
+  bool Changed = false;
+
+  for (MachineBasicBlock &MBB : *MF) {
+    for (auto It = MBB.begin(), End = MBB.end(); It != End;) {
+      MachineInstr &MI = *It++;
+      DebugLoc DL = MI.getDebugLoc();
+
+      switch (MI.getOpcode()) {
+      default:
+        break;
+
+      case BPF::LOAD_STACK_ARG_PSEUDO: {
+        Register DstReg = MI.getOperand(0).getReg();
+        int16_t Off = MI.getOperand(1).getImm();
+
+        BuildMI(MBB, MI, DL, TII->get(BPF::LDD), DstReg)
+            .addReg(BPF::R11)
+            .addImm(Off);
+        MI.eraseFromParent();
+        Changed = true;
+        break;
+      }
+
+      case BPF::STORE_STACK_ARG_PSEUDO: {
+        int16_t Off = MI.getOperand(0).getImm();
+        const MachineOperand &SrcMO = MI.getOperand(1);
+        Register SrcReg = SrcMO.getReg();
+        bool IsKill = SrcMO.isKill();
+
+        BuildMI(MBB, MI, DL, TII->get(BPF::STD))
+            .addReg(SrcReg, getKillRegState(IsKill))
+            .addReg(BPF::R11)
+            .addImm(Off);
+        MI.eraseFromParent();
+        Changed = true;
+        break;
+      }
+
+      case BPF::STORE_STACK_ARG_IMM_PSEUDO: {
+        int16_t Off = MI.getOperand(0).getImm();
+        int32_t Val = MI.getOperand(1).getImm();
+
+        BuildMI(MBB, MI, DL, TII->get(BPF::STD_imm))
+            .addImm(Val)
+            .addReg(BPF::R11)
+            .addImm(Off);
+        MI.eraseFromParent();
+        Changed = true;
+        break;
+      }
+      }
+    }
+  }
+
+  return Changed;
 }
 
 } // end default namespace

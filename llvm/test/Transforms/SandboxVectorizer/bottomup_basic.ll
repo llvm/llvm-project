@@ -187,10 +187,9 @@ define float @scalars_with_external_uses_not_dead(ptr %ptr) {
 ; CHECK-LABEL: define float @scalars_with_external_uses_not_dead(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
-; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
-; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
 ; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META5:![0-9]+]]
+; CHECK-NEXT:    [[LD0:%.*]] = extractelement <2 x float> [[VECL]], i32 0, !sandboxvec [[META5]]
+; CHECK-NEXT:    [[LD1:%.*]] = extractelement <2 x float> [[VECL]], i32 1, !sandboxvec [[META5]]
 ; CHECK-NEXT:    store <2 x float> [[VECL]], ptr [[PTR0]], align 4, !sandboxvec [[META5]]
 ; CHECK-NEXT:    [[USER:%.*]] = fneg float [[LD1]]
 ; CHECK-NEXT:    ret float [[LD0]]
@@ -198,10 +197,10 @@ define float @scalars_with_external_uses_not_dead(ptr %ptr) {
 ; REVERT-LABEL: define float @scalars_with_external_uses_not_dead(
 ; REVERT-SAME: ptr [[PTR:%.*]]) {
 ; REVERT-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
-; REVERT-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
-; REVERT-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
-; REVERT-NEXT:    store float [[LD0]], ptr [[PTR0]], align 4, !sandboxvec [[META5:![0-9]+]]
+; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1, !sandboxvec [[META5:![0-9]+]]
+; REVERT-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4, !sandboxvec [[META5]]
+; REVERT-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4, !sandboxvec [[META5]]
+; REVERT-NEXT:    store float [[LD0]], ptr [[PTR0]], align 4, !sandboxvec [[META5]]
 ; REVERT-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4, !sandboxvec [[META5]]
 ; REVERT-NEXT:    [[USER:%.*]] = fneg float [[LD1]]
 ; REVERT-NEXT:    ret float [[LD0]]
@@ -513,8 +512,8 @@ define void @diamondWithConstantVector(ptr %ptr) {
 ; REVERT-NEXT:    [[GEPA1:%.*]] = getelementptr i32, ptr [[PTR]], i64 1, !sandboxvec [[META14:![0-9]+]]
 ; REVERT-NEXT:    [[GEPB0:%.*]] = getelementptr i32, ptr [[PTR]], i64 10
 ; REVERT-NEXT:    [[GEPB1:%.*]] = getelementptr i32, ptr [[PTR]], i64 11, !sandboxvec [[META15:![0-9]+]]
-; REVERT-NEXT:    [[ZEXT0:%.*]] = zext i16 0 to i32
-; REVERT-NEXT:    [[ZEXT1:%.*]] = zext i16 0 to i32
+; REVERT-NEXT:    [[ZEXT0:%.*]] = zext i16 0 to i32, !sandboxvec [[META14]]
+; REVERT-NEXT:    [[ZEXT1:%.*]] = zext i16 0 to i32, !sandboxvec [[META14]]
 ; REVERT-NEXT:    store i32 [[ZEXT0]], ptr [[GEPA0]], align 4, !sandboxvec [[META14]]
 ; REVERT-NEXT:    store i32 [[ZEXT1]], ptr [[GEPA1]], align 4, !sandboxvec [[META14]]
 ; REVERT-NEXT:    [[ORB0:%.*]] = or i32 0, [[ZEXT0]], !sandboxvec [[META15]]
@@ -700,6 +699,51 @@ define void @vectorize_constant_vectors(ptr %ptr) {
   store <2 x i8> %sub1, ptr %ptr1
   ret void
 }
+
+; ZExt's operands can be of different types.
+define void @diff_types(ptr %ptr, ptr %ptrX, ptr %ptrY) {
+; CHECK-LABEL: define void @diff_types(
+; CHECK-SAME: ptr [[PTR:%.*]], ptr [[PTRX:%.*]], ptr [[PTRY:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[LDX:%.*]] = load i16, ptr [[PTRX]], align 2
+; CHECK-NEXT:    [[LDY:%.*]] = load i8, ptr [[PTRY]], align 1
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i16 [[LDX]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[LDY]], 0
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i1> poison, i1 [[CMP0]], i32 0, !sandboxvec [[META20:![0-9]+]]
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i1> [[PACK]], i1 [[CMP1]], i32 1, !sandboxvec [[META20]]
+; CHECK-NEXT:    [[VCAST:%.*]] = zext <2 x i1> [[PACK1]] to <2 x i32>, !sandboxvec [[META20]]
+; CHECK-NEXT:    store <2 x i32> [[VCAST]], ptr [[PTR0]], align 4, !sandboxvec [[META20]]
+; CHECK-NEXT:    ret void
+;
+; REVERT-LABEL: define void @diff_types(
+; REVERT-SAME: ptr [[PTR:%.*]], ptr [[PTRX:%.*]], ptr [[PTRY:%.*]]) {
+; REVERT-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1, !sandboxvec [[META20:![0-9]+]]
+; REVERT-NEXT:    [[LDX:%.*]] = load i16, ptr [[PTRX]], align 2
+; REVERT-NEXT:    [[LDY:%.*]] = load i8, ptr [[PTRY]], align 1
+; REVERT-NEXT:    [[CMP0:%.*]] = icmp eq i16 [[LDX]], 0
+; REVERT-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[LDY]], 0
+; REVERT-NEXT:    [[ZEXT0:%.*]] = zext i1 [[CMP0]] to i32, !sandboxvec [[META20]]
+; REVERT-NEXT:    [[ZEXT1:%.*]] = zext i1 [[CMP1]] to i32, !sandboxvec [[META20]]
+; REVERT-NEXT:    store i32 [[ZEXT0]], ptr [[PTR0]], align 4, !sandboxvec [[META20]]
+; REVERT-NEXT:    store i32 [[ZEXT1]], ptr [[PTR1]], align 4, !sandboxvec [[META20]]
+; REVERT-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+
+  %ldX = load i16, ptr %ptrX
+  %ldY = load i8, ptr %ptrY
+  %cmp0 = icmp eq i16 %ldX, 0
+  %cmp1 = icmp eq i8 %ldY, 0
+  %zext0 = zext i1 %cmp0 to i32
+  %zext1 = zext i1 %cmp1 to i32
+  store i32 %zext0, ptr %ptr0
+  store i32 %zext1, ptr %ptr1
+
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META1]] = distinct !{!"sandboxregion"}
@@ -721,6 +765,7 @@ define void @vectorize_constant_vectors(ptr %ptr) {
 ; CHECK: [[META17]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META18]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META19]] = distinct !{!"sandboxregion"}
+; CHECK: [[META20]] = distinct !{!"sandboxregion"}
 ;.
 ; REVERT: [[META0]] = distinct !{!"sandboxregion"}
 ; REVERT: [[META1]] = distinct !{!"sandboxregion"}
@@ -742,4 +787,5 @@ define void @vectorize_constant_vectors(ptr %ptr) {
 ; REVERT: [[META17]] = distinct !{!"sandboxregion"}
 ; REVERT: [[META18]] = distinct !{!"sandboxregion"}
 ; REVERT: [[META19]] = distinct !{!"sandboxregion"}
+; REVERT: [[META20]] = distinct !{!"sandboxregion"}
 ;.

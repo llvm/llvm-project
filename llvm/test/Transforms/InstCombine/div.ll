@@ -1869,6 +1869,170 @@ define i32 @udiv_and_shl(i32 %a, i32 %b, i32 %c) {
   ret i32 %div
 }
 
+; sdiv X, (select Cond, 1, C) --> select Cond, X, (sdiv X, C)
+
+define i32 @sdiv_select_one_false(i32 %a, i1 %b) {
+; CHECK-LABEL: @sdiv_select_one_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[B:%.*]], i32 [[A]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %sub = select i1 %b, i32 1, i32 2
+  %div = sdiv i32 %a, %sub
+  ret i32 %div
+}
+
+; sdiv X, (select Cond, C, 1) --> select Cond, (sdiv X, C), X
+
+define i32 @sdiv_select_one_true(i32 %a, i1 %b) {
+; CHECK-LABEL: @sdiv_select_one_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[B:%.*]], i32 [[TMP1]], i32 [[A]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %sub = select i1 %b, i32 2, i32 1
+  %div = sdiv i32 %a, %sub
+  ret i32 %div
+}
+
+; udiv X, (select Cond, 1, C) --> select Cond, X, (udiv X, C)
+
+define i32 @udiv_select_one_false(i32 %a, i1 %b) {
+; CHECK-LABEL: @udiv_select_one_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[B:%.*]], i32 [[A]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %sub = select i1 %b, i32 1, i32 3
+  %div = udiv i32 %a, %sub
+  ret i32 %div
+}
+
+; udiv X, (select Cond, 1, Y) --> select Cond, X, (udiv X, Y) for known-non-zero, non-poison variable
+
+define i32 @udiv_select_one_false_nonnull_var(i32 %a, i1 %b, i32 noundef %y) {
+; CHECK-LABEL: @udiv_select_one_false_nonnull_var(
+; CHECK-NEXT:    [[YNZ:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[A:%.*]], [[YNZ]]
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[B:%.*]], i32 [[A]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %yor1 = or i32 %y, 1
+  %sub = select i1 %b, i32 1, i32 %yor1
+  %div = udiv i32 %a, %sub
+  ret i32 %div
+}
+
+; negative test - divisor is known-non-zero but maybe poison
+
+define i32 @udiv_select_one_false_nonnull_poison_var(i32 %a, i1 %b, i32 %y) {
+; CHECK-LABEL: @udiv_select_one_false_nonnull_poison_var(
+; CHECK-NEXT:    [[YNZ:%.*]] = add nuw i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[B:%.*]], i32 1, i32 [[YNZ]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[SUB]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %ynz = add nuw i32 %y, 1
+  %sub = select i1 %b, i32 1, i32 %ynz
+  %div = udiv i32 %a, %sub
+  ret i32 %div
+}
+
+; negative test - select has multiple uses, not profitable to duplicate div
+
+define i32 @sdiv_select_one_multiuse(i32 %a, i1 %b) {
+; CHECK-LABEL: @sdiv_select_one_multiuse(
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[B:%.*]], i32 1, i32 2
+; CHECK-NEXT:    call void @use(i32 [[SUB]])
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A:%.*]], [[SUB]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %sub = select i1 %b, i32 1, i32 2
+  call void @use(i32 %sub)
+  %div = sdiv i32 %a, %sub
+  ret i32 %div
+}
+
+; negative test - variable divisor (not a constant), does not apply
+
+define i32 @sdiv_select_one_false_var(i32 %a, i1 %b, i32 %y) {
+; CHECK-LABEL: @sdiv_select_one_false_var(
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[B:%.*]], i32 1, i32 [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A:%.*]], [[SUB]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %sub = select i1 %b, i32 1, i32 %y
+  %div = sdiv i32 %a, %sub
+  ret i32 %div
+}
+
+; negative test - divisor is -1: sdiv INT_MIN, -1 is UB, must not hoist
+
+define i32 @sdiv_select_one_false_neg1(i32 %a, i1 %b) {
+; CHECK-LABEL: @sdiv_select_one_false_neg1(
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[B:%.*]], i32 1, i32 -1
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A:%.*]], [[SUB]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %sub = select i1 %b, i32 1, i32 -1
+  %div = sdiv i32 %a, %sub
+  ret i32 %div
+}
+
+; sdiv X, (select Cond, 1, C) --> select Cond, X, (sdiv X, C) -- vector splat
+
+define <2 x i32> @sdiv_select_one_false_vec(<2 x i32> %a, i1 %b) {
+; CHECK-LABEL: @sdiv_select_one_false_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <2 x i32> [[A:%.*]], splat (i32 2)
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[B:%.*]], <2 x i32> [[A]], <2 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <2 x i32> [[DIV]]
+;
+  %sub = select i1 %b, <2 x i32> <i32 1, i32 1>, <2 x i32> <i32 2, i32 2>
+  %div = sdiv <2 x i32> %a, %sub
+  ret <2 x i32> %div
+}
+
+; sdiv X, (select Cond, C, 1) --> select Cond, (sdiv X, C), X -- vector splat
+
+define <2 x i32> @sdiv_select_one_true_vec(<2 x i32> %a, i1 %b) {
+; CHECK-LABEL: @sdiv_select_one_true_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <2 x i32> [[A:%.*]], splat (i32 2)
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[B:%.*]], <2 x i32> [[TMP1]], <2 x i32> [[A]]
+; CHECK-NEXT:    ret <2 x i32> [[DIV]]
+;
+  %sub = select i1 %b, <2 x i32> <i32 2, i32 2>, <2 x i32> <i32 1, i32 1>
+  %div = sdiv <2 x i32> %a, %sub
+  ret <2 x i32> %div
+}
+
+; udiv X, (select Cond, 1, Y) --> select Cond, X, (udiv X, Y) for known-non-zero, non-poison variable -- vector splat
+
+define <2 x i32> @udiv_select_one_false_nonnull_var_vec(<2 x i32> %a, i1 %b, <2 x i32> noundef %y) {
+; CHECK-LABEL: @udiv_select_one_false_nonnull_var_vec(
+; CHECK-NEXT:    [[YOR1:%.*]] = or <2 x i32> [[Y:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv <2 x i32> [[A:%.*]], [[YOR1]]
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[B:%.*]], <2 x i32> [[A]], <2 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <2 x i32> [[DIV]]
+;
+  %yor1 = or <2 x i32> %y, <i32 1, i32 1>
+  %sub = select i1 %b, <2 x i32> <i32 1, i32 1>, <2 x i32> %yor1
+  %div = udiv <2 x i32> %a, %sub
+  ret <2 x i32> %div
+}
+
+; negative test - divisor has poison
+
+define <2 x i32> @sdiv_select_one_false_poison_vec(<2 x i32> %a, i1 %b) {
+; CHECK-LABEL: @sdiv_select_one_false_poison_vec(
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[B:%.*]], <2 x i32> splat (i32 1), <2 x i32> <i32 2, i32 poison>
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv <2 x i32> [[A:%.*]], [[SUB]]
+; CHECK-NEXT:    ret <2 x i32> [[DIV]]
+;
+  %sub = select i1 %b, <2 x i32> <i32 1, i32 1>, <2 x i32> <i32 2, i32 poison>
+  %div = sdiv <2 x i32> %a, %sub
+  ret <2 x i32> %div
+}
+
 !0 = !{!"function_entry_count", i64 1000}
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}

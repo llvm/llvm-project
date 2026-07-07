@@ -9,7 +9,7 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 ;   ARMHWLoops: Trip count does not fit into 32bits
 ;   preferPredicateOverEpilogue: hardware-loop is not profitable.
 ;
-define dso_local void @tail_folding(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) {
+define void @tail_folding(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) {
 ; CHECK-LABEL: tail_folding(
 ; CHECK:       vector.body:
 ; CHECK-NOT:   call <4 x i32> @llvm.masked.load.v4i32.p0(
@@ -40,7 +40,7 @@ for.body:
 ; The same test case but now with predicate.enable = true should get
 ; tail-folded.
 ;
-define dso_local void @predicate_loop_hint(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) {
+define void @predicate_loop_hint(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) {
 ; CHECK-LABEL: predicate_loop_hint(
 ; CHECK:       vector.body:
 ; CHECK:         %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]

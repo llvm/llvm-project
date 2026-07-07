@@ -14,7 +14,7 @@ entry:
 define <3 x float> @test_tdo_v2_f32_exp() {
 ; CHECK-LABEL: define <3 x float> @test_tdo_v2_f32_exp() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <3 x float> <float 1.000000e+00, float 1.000000e+00, float 0x4005BF0A80000000>
+; CHECK-NEXT:    ret <3 x float> <float 1.000000e+00, float 1.000000e+00, float f0x402DF854>
 ;
 entry:
   %c = call <3 x float> @_Z3expDv3_f(<3 x float> <float 0.000000e+00, float -0.000000e+00, float 1.000000e+00>)
@@ -24,7 +24,7 @@ entry:
 define half @test_tdo_scalar_f16_exp() {
 ; CHECK-LABEL: define half @test_tdo_scalar_f16_exp() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret half 0xH3C00
+; CHECK-NEXT:    ret half 1.000000e+00
 ;
 entry:
   %c = call half @_Z3expDh(half 0.000000e+00)
@@ -34,7 +34,7 @@ entry:
 define <3 x half> @test_tdo_v2_f16_exp() {
 ; CHECK-LABEL: define <3 x half> @test_tdo_v2_f16_exp() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH4170>
+; CHECK-NEXT:    ret <3 x half> <half 1.000000e+00, half 1.000000e+00, half 2.718750e+00>
 ;
 entry:
   %c = call <3 x half> @_Z3expDv3_Dh(<3 x half> <half 0.000000e+00, half -0.000000e+00, half 1.000000e+00>)
@@ -54,7 +54,7 @@ entry:
 define <3 x double> @test_tdo_v2_f64_exp() {
 ; CHECK-LABEL: define <3 x double> @test_tdo_v2_f64_exp() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <3 x double> <double 1.000000e+00, double 1.000000e+00, double 0x4005BF0A8B145769>
+; CHECK-NEXT:    ret <3 x double> <double 1.000000e+00, double 1.000000e+00, double f0x4005BF0A8B145769>
 ;
 entry:
   %c = call <3 x double> @_Z3expDv3_d(<3 x double> <double 0.000000e+00, double -0.000000e+00, double 1.000000e+00>)

@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcfunc.h>
-#include <clc/utils.h>
+#include "clc/clcfunc.h"
+#include "clc/utils.h"
+
+#define __CLC_GENTYPE __CLC_XCONCAT(__CLC_SCALAR_GENTYPE, __CLC_VECSIZE)
 
 // Define some useful macros for type conversions.
 #define __CLC_AS_GENTYPE __CLC_XCONCAT(__clc_as_, __CLC_GENTYPE)
@@ -56,8 +58,6 @@
 #define __CLC_CONVERT_UINTN __CLC_XCONCAT(__clc_convert_, __CLC_UINTN)
 #define __CLC_CONVERT_ULONGN __CLC_XCONCAT(__clc_convert_, __CLC_ULONGN)
 
-#define __CLC_CONVERT_BIT_INTN __CLC_XCONCAT(__clc_convert_, __CLC_BIT_INTN)
-
 // See definitions of __CLC_S_GENTYPE/__CLC_U_GENTYPE below, which depend on the
 // specific size of floating-point type. These are the signed and unsigned
 // integers of the same bitwidth and element count as the GENTYPE. They match
@@ -69,78 +69,63 @@
 #define __CLC_CONVERT_S_GENTYPE __CLC_XCONCAT(__clc_convert_, __CLC_S_GENTYPE)
 #define __CLC_CONVERT_U_GENTYPE __CLC_XCONCAT(__clc_convert_, __CLC_U_GENTYPE)
 
+#define __CLC_GENTYPE_S_SIGNBIT (__CLC_S_GENTYPE)((1ll << (__CLC_FPSIZE - 1)))
+#define __CLC_GENTYPE_U_SIGNBIT (__CLC_U_GENTYPE)((1ull << (__CLC_FPSIZE - 1u)))
+
 #if (!defined(__CLC_HALF_ONLY) && !defined(__CLC_DOUBLE_ONLY))
 #define __CLC_SCALAR_GENTYPE float
 #define __CLC_FPSIZE 32
 #define __CLC_FP_LIT(x) (__CLC_GENTYPE) x##F
 #define __CLC_GENTYPE_NAN (__CLC_GENTYPE) FLT_NAN
 #define __CLC_GENTYPE_INF (__CLC_GENTYPE) INFINITY
+#define __CLC_GENTYPE_MIN (__CLC_GENTYPE) FLT_MIN
 #define __CLC_GENTYPE_TRUE_MIN (__CLC_GENTYPE) FLT_TRUE_MIN
-
 #define __CLC_S_GENTYPE __CLC_XCONCAT(int, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(uint, __CLC_VECSIZE)
 
-#define __CLC_GENTYPE float
+#define __CLC_GENTYPE_DENORMS_ARE_ZERO __clc_denormals_are_zero_fp32()
+#define __CLC_GENTYPE_FAST_FMA __CLC_FAST_FMA_F32
+
 #define __CLC_BIT_INT int
-#define __CLC_BIT_INTN int
 #define __CLC_SCALAR
 #define __CLC_VECSIZE
 #define __CLC_VECSIZE_OR_1 1
 #include __CLC_BODY
 #undef __CLC_VECSIZE_OR_1
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
-#undef __CLC_BIT_INTN
 #undef __CLC_SCALAR
 
 #define __CLC_VECSIZE_OR_1 __CLC_VECSIZE
 
-#define __CLC_GENTYPE float2
-#define __CLC_BIT_INTN int2
 #define __CLC_VECSIZE 2
 #include __CLC_BODY
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
-#undef __CLC_BIT_INTN
 
-#define __CLC_GENTYPE float3
-#define __CLC_BIT_INTN int3
 #define __CLC_VECSIZE 3
 #include __CLC_BODY
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
-#undef __CLC_BIT_INTN
 
-#define __CLC_GENTYPE float4
-#define __CLC_BIT_INTN int4
 #define __CLC_VECSIZE 4
 #include __CLC_BODY
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
-#undef __CLC_BIT_INTN
 
-#define __CLC_GENTYPE float8
-#define __CLC_BIT_INTN int8
 #define __CLC_VECSIZE 8
 #include __CLC_BODY
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
-#undef __CLC_BIT_INTN
 
-#define __CLC_GENTYPE float16
-#define __CLC_BIT_INTN int16
 #define __CLC_VECSIZE 16
 #include __CLC_BODY
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
 #undef __CLC_BIT_INT
-#undef __CLC_BIT_INTN
 
 #undef __CLC_VECSIZE_OR_1
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
 #undef __CLC_GENTYPE_NAN
+#undef __CLC_GENTYPE_MIN
 #undef __CLC_GENTYPE_TRUE_MIN
+#undef __CLC_GENTYPE_DENORMS_ARE_ZERO
+#undef __CLC_GENTYPE_FAST_FMA
 #undef __CLC_FP_LIT
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE
@@ -155,7 +140,10 @@
 #define __CLC_FPSIZE 64
 #define __CLC_FP_LIT(x) (__CLC_GENTYPE)(x)
 #define __CLC_GENTYPE_NAN (__CLC_GENTYPE) DBL_NAN
+#define __CLC_GENTYPE_MIN (__CLC_GENTYPE) DBL_MIN
 #define __CLC_GENTYPE_TRUE_MIN (__CLC_GENTYPE) DBL_TRUE_MIN
+#define __CLC_GENTYPE_DENORMS_ARE_ZERO __clc_denormals_are_zero_fp64()
+#define __CLC_GENTYPE_FAST_FMA __CLC_FAST_FMA_F64
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(long, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(ulong, __CLC_VECSIZE)
@@ -163,64 +151,43 @@
 #define __CLC_SCALAR
 #define __CLC_VECSIZE
 #define __CLC_VECSIZE_OR_1 1
-#define __CLC_GENTYPE double
 #define __CLC_BIT_INT long
-#define __CLC_BIT_INTN long
 #include __CLC_BODY
 #undef __CLC_VECSIZE_OR_1
-#undef __CLC_GENTYPE
-#undef __CLC_BIT_INTN
 #undef __CLC_VECSIZE
 #undef __CLC_SCALAR
 
 #define __CLC_VECSIZE_OR_1 __CLC_VECSIZE
 
-#define __CLC_GENTYPE double2
-#define __CLC_BIT_INTN long2
 #define __CLC_VECSIZE 2
 #include __CLC_BODY
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
-#undef __CLC_BIT_INTN
 
-#define __CLC_GENTYPE double3
-#define __CLC_BIT_INTN long3
 #define __CLC_VECSIZE 3
 #include __CLC_BODY
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
-#undef __CLC_BIT_INTN
 
-#define __CLC_GENTYPE double4
-#define __CLC_BIT_INTN long4
 #define __CLC_VECSIZE 4
 #include __CLC_BODY
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
-#undef __CLC_BIT_INTN
 
-#define __CLC_GENTYPE double8
-#define __CLC_BIT_INTN long8
 #define __CLC_VECSIZE 8
 #include __CLC_BODY
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
-#undef __CLC_BIT_INTN
 
-#define __CLC_GENTYPE double16
-#define __CLC_BIT_INTN long16
 #define __CLC_VECSIZE 16
 #include __CLC_BODY
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
 #undef __CLC_BIT_INT
-#undef __CLC_BIT_INTN
 
 #undef __CLC_VECSIZE_OR_1
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
 #undef __CLC_GENTYPE_NAN
+#undef __CLC_GENTYPE_MIN
 #undef __CLC_GENTYPE_TRUE_MIN
+#undef __CLC_GENTYPE_DENORMS_ARE_ZERO
+#undef __CLC_GENTYPE_FAST_FMA
 #undef __CLC_FP_LIT
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE
@@ -235,7 +202,10 @@
 #define __CLC_FPSIZE 16
 #define __CLC_FP_LIT(x) (__CLC_GENTYPE) x##H
 #define __CLC_GENTYPE_NAN (__CLC_GENTYPE) HALF_NAN
+#define __CLC_GENTYPE_MIN (__CLC_GENTYPE) HALF_MIN
 #define __CLC_GENTYPE_TRUE_MIN (__CLC_GENTYPE) HALF_TRUE_MIN
+#define __CLC_GENTYPE_DENORMS_ARE_ZERO __clc_denormals_are_zero_fp16()
+#define __CLC_GENTYPE_FAST_FMA __CLC_FAST_FMA_F16
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(short, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(ushort, __CLC_VECSIZE)
@@ -243,64 +213,43 @@
 #define __CLC_SCALAR
 #define __CLC_VECSIZE
 #define __CLC_VECSIZE_OR_1 1
-#define __CLC_GENTYPE half
 #define __CLC_BIT_INT short
-#define __CLC_BIT_INTN short
 #include __CLC_BODY
-#undef __CLC_GENTYPE
-#undef __CLC_BIT_INTN
 #undef __CLC_VECSIZE_OR_1
 #undef __CLC_VECSIZE
 #undef __CLC_SCALAR
 
 #define __CLC_VECSIZE_OR_1 __CLC_VECSIZE
 
-#define __CLC_GENTYPE half2
-#define __CLC_BIT_INTN short2
 #define __CLC_VECSIZE 2
 #include __CLC_BODY
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
-#undef __CLC_BIT_INTN
 
-#define __CLC_GENTYPE half3
-#define __CLC_BIT_INTN short3
 #define __CLC_VECSIZE 3
 #include __CLC_BODY
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
-#undef __CLC_BIT_INTN
 
-#define __CLC_GENTYPE half4
-#define __CLC_BIT_INTN short4
 #define __CLC_VECSIZE 4
 #include __CLC_BODY
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
-#undef __CLC_BIT_INTN
 
-#define __CLC_GENTYPE half8
-#define __CLC_BIT_INTN short8
 #define __CLC_VECSIZE 8
 #include __CLC_BODY
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
-#undef __CLC_BIT_INTN
 
-#define __CLC_GENTYPE half16
-#define __CLC_BIT_INTN short16
 #define __CLC_VECSIZE 16
 #include __CLC_BODY
 #undef __CLC_VECSIZE
-#undef __CLC_GENTYPE
 #undef __CLC_BIT_INT
-#undef __CLC_BIT_INTN
 
 #undef __CLC_VECSIZE_OR_1
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
 #undef __CLC_GENTYPE_NAN
+#undef __CLC_GENTYPE_MIN
 #undef __CLC_GENTYPE_TRUE_MIN
+#undef __CLC_GENTYPE_DENORMS_ARE_ZERO
+#undef __CLC_GENTYPE_FAST_FMA
 #undef __CLC_FP_LIT
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE
@@ -343,8 +292,6 @@
 #undef __CLC_CONVERT_UINTN
 #undef __CLC_CONVERT_ULONGN
 
-#undef __CLC_CONVERT_BIT_INTN
-
 #undef __CLC_ULONGN
 #undef __CLC_UINTN
 #undef __CLC_USHORTN
@@ -365,3 +312,5 @@
 #undef __CLC_HALF_ONLY
 #undef __CLC_FLOAT_ONLY
 #undef __CLC_DOUBLE_ONLY
+
+#undef __CLC_GENTYPE

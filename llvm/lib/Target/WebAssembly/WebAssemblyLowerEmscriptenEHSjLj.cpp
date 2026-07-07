@@ -263,9 +263,10 @@
 
 #include "WebAssembly.h"
 #include "WebAssemblyTargetMachine.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
+#include "llvm/CodeGen/WasmEHInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1646,7 +1647,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
   BasicBlock *OrigEntry = Entry->getNextNode();
   BasicBlock *SetjmpDispatchBB =
       BasicBlock::Create(C, "setjmp.dispatch", &F, OrigEntry);
-  cast<BranchInst>(Entry->getTerminator())->setSuccessor(0, SetjmpDispatchBB);
+  cast<UncondBrInst>(Entry->getTerminator())->setSuccessor(SetjmpDispatchBB);
 
   // Create catch.dispatch.longjmp BB and a catchswitch instruction
   BasicBlock *CatchDispatchLongjmpBB =
@@ -1745,7 +1746,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
     }
   }
 
-  SmallDenseMap<BasicBlock *, SmallSetVector<BasicBlock *, 4>, 4>
+  SmallMapVector<BasicBlock *, SmallSetVector<BasicBlock *, 4>, 4>
       UnwindDestToNewPreds;
   for (auto *CI : LongjmpableCalls) {
     // Even if the callee function has attribute 'nounwind', which is true for

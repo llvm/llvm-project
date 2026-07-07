@@ -38,7 +38,10 @@ std::optional<DataLayout> getDataLayout(Operation *op,
 ///
 /// Creates a new `acc.compute_region` with the given launch arguments and
 /// origin string, then clones the operations from `regionToClone` into its
-/// body. Multi-block regions are wrapped with `scf.execute_region`.
+/// body. Launch operands should be `acc.par_width` results (`index`); the
+/// region entry block gets matching `index` block arguments first, then
+/// arguments for each `ins` operand. Multi-block regions are wrapped with
+/// `scf.execute_region`.
 ///
 /// The `mapping` is used and updated during cloning, allowing callers to
 /// track value correspondences. Optional `output`, `kernelFuncName`,

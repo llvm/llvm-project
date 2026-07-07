@@ -202,6 +202,14 @@ llvm::json::Value toJSON(const TextEdit &P) {
   return Result;
 }
 
+llvm::json::Value toJSON(const InsertReplaceEdit &P) {
+  return llvm::json::Object{
+      {"newText", P.newText},
+      {"insert", P.insert},
+      {"replace", P.replace},
+  };
+}
+
 bool fromJSON(const llvm::json::Value &Params, ChangeAnnotation &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
@@ -414,6 +422,8 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
               break;
           }
         }
+        if (auto IRSupport = Item->getBoolean("insertReplaceSupport"))
+          R.InsertReplace = *IRSupport;
       }
       if (auto *ItemKind = Completion->getObject("completionItemKind")) {
         if (auto *ValueSet = ItemKind->get("valueSet")) {
@@ -1184,7 +1194,8 @@ llvm::json::Value toJSON(const CompletionItem &CI) {
   if (CI.insertTextFormat != InsertTextFormat::Missing)
     Result["insertTextFormat"] = static_cast<int>(CI.insertTextFormat);
   if (CI.textEdit)
-    Result["textEdit"] = *CI.textEdit;
+    Result["textEdit"] = std::visit(
+        [](const auto &V) { return llvm::json::Value(V); }, *CI.textEdit);
   if (!CI.additionalTextEdits.empty())
     Result["additionalTextEdits"] = llvm::json::Array(CI.additionalTextEdits);
   if (CI.deprecated)
@@ -1743,17 +1754,18 @@ llvm::json::Value toJSON(const ASTNode &N) {
   return Result;
 }
 
+static void printASTNode(llvm::raw_ostream &OS, const ASTNode &N,
+                         unsigned Level) {
+  OS.indent(2 * Level) << N.role << ": " << N.kind;
+  if (!N.detail.empty())
+    OS << " - " << N.detail;
+  OS << "\n";
+  for (const ASTNode &C : N.children)
+    printASTNode(OS, C, Level + 1);
+}
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const ASTNode &Root) {
-  std::function<void(const ASTNode &, unsigned)> Print = [&](const ASTNode &N,
-                                                             unsigned Level) {
-    OS.indent(2 * Level) << N.role << ": " << N.kind;
-    if (!N.detail.empty())
-      OS << " - " << N.detail;
-    OS << "\n";
-    for (const ASTNode &C : N.children)
-      Print(C, Level + 1);
-  };
-  Print(Root, 0);
+  printASTNode(OS, Root, 0);
   return OS;
 }
 

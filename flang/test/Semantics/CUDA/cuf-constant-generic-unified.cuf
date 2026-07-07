@@ -1,0 +1,41 @@
+! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o - | FileCheck %s
+
+! Under -gpu=mem:unified, a CONSTANT actual argument (device memory)
+! must resolve to the device-attributed specific in a generic that also
+! has a host-typed specific. Previously, the Constant CUDA data
+! attribute was unhandled in the generic matching distance computation,
+! causing ambiguity errors.
+
+module m
+  interface gen
+    module procedure sub_host
+    module procedure sub_device
+  end interface
+contains
+  subroutine sub_host(x)
+    integer :: x
+  end subroutine
+  subroutine sub_device(x)
+    integer, device :: x
+  end subroutine
+end module
+
+module mconst
+  integer, constant :: cvar
+end module
+
+subroutine caller(host_val)
+  use m
+  use mconst
+  implicit none
+  integer, intent(in) :: host_val
+
+  ! constant actual -> device specific (constant is device memory)
+  call gen(cvar)
+  ! host actual under unified -> device specific (per cuf14.cuf rules)
+  call gen(host_val)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPcaller
+! CHECK: fir.call @_QMmPsub_device
+! CHECK: fir.call @_QMmPsub_device

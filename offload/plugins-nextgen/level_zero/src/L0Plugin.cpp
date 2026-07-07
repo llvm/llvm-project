@@ -61,8 +61,11 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
     // We have a driver that supports at least one device.
     ContextList.emplace_back(*this, Driver, DriverId);
     auto &DrvInfo = ContextList.back();
-    if (auto Err = DrvInfo.init())
+    if (auto Err = DrvInfo.init()) {
+      // Remove the partially initialized context from the list
+      ContextList.pop_back();
       return std::move(Err);
+    }
     llvm::SmallVector<ze_device_handle_t> FoundDevices(DeviceCount);
     CALL_ZE_RET_ERROR(zeDeviceGet, Driver, &DeviceCount, FoundDevices.data());
 
@@ -119,8 +122,6 @@ Expected<int32_t> LevelZeroPluginTy::initImpl() {
 Error LevelZeroPluginTy::deinitImpl() {
   ODBG(OLDT_Deinit) << "Deinit Level0 plugin!";
   if (auto Err = ContextTLSTable.deinit())
-    return Err;
-  if (auto Err = DeviceTLSTable.deinit())
     return Err;
   for (auto &Context : ContextList)
     if (auto Err = Context.deinit())
@@ -209,23 +210,12 @@ Error LevelZeroPluginTy::syncBarrierImpl(omp_interop_val_t *Interop) {
     return Plugin::success();
 
   const auto L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
-  const auto device_id = Interop->device_id;
-  auto &l0Device = getDeviceFromId(device_id);
 
-  // We can synchronize both L0 & SYCL objects with the same ze command.
-  if (l0Device.useImmForInterop()) {
-    ODBG(OLDT_Sync) << "LevelZeroPluginTy::sync_barrier: Synchronizing "
-                    << Interop << " with ImmCmdList barrier";
-    auto ImmCmdList = L0->ImmCmdList;
+  ODBG(OLDT_Sync) << "LevelZeroPluginTy::sync_barrier: Synchronizing "
+                  << Interop << " with ImmCmdList barrier";
+  auto ImmCmdList = L0->ImmCmdList;
 
-    CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, ImmCmdList,
-                      L0DefaultTimeout);
-  } else {
-    ODBG(OLDT_Sync) << "LevelZeroPluginTy::sync_barrier: Synchronizing "
-                    << Interop << " with queue synchronize";
-    auto CmdQueue = L0->CommandQueue;
-    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
-  }
+  CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, ImmCmdList, L0DefaultTimeout);
 
   return Plugin::success();
 }
@@ -240,33 +230,14 @@ Error LevelZeroPluginTy::asyncBarrierImpl(omp_interop_val_t *Interop) {
     return Plugin::success();
 
   const auto L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
-  const auto device_id = Interop->device_id;
   if (Interop->attrs.inorder)
     return Plugin::success();
 
-  auto &l0Device = getDeviceFromId(device_id);
-  if (l0Device.useImmForInterop()) {
-    ODBG(OLDT_Sync) << "LevelZeroPluginTy::async_barrier: Appending ImmCmdList "
-                    << "barrier to " << Interop;
-    auto ImmCmdList = L0->ImmCmdList;
-    CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, ImmCmdList, nullptr, 0,
-                      nullptr);
-  } else {
-#if 0
-    // TODO: re-enable once we have a way to delay the CmdList reset .
-    ODBG(OLDT_Sync) << "LevelZeroPluginTy::async_barrier: Appending CmdList "
-                   << "barrier to " << Interop;
-    auto CmdQueue = L0->CommandQueue;
-    ze_command_list_handle_t CmdList = l0Device.getCmdList();
-    CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
-    CALL_ZE_RET_ERROR(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,
-                      nullptr);
-    CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
-#else
-    return syncBarrierImpl(Interop);
-#endif
-  }
+  ODBG(OLDT_Sync) << "LevelZeroPluginTy::async_barrier: Appending ImmCmdList "
+                  << "barrier to " << Interop;
+  auto ImmCmdList = L0->ImmCmdList;
+  CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, ImmCmdList, nullptr, 0,
+                    nullptr);
 
   return Plugin::success();
 }

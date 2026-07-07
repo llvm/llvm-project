@@ -217,6 +217,10 @@ public:
     // Points to (Y - X) that will be used to rewrite this candidate.
     Value *Delta = nullptr;
 
+    // List of instructions we need to drop poison generating annotations from.
+    // This is used so we can defer dropping until the candidate is evaluated.
+    SmallVector<Instruction *> DropList;
+
     /// Cost model: Evaluate the computational efficiency of the candidate.
     ///
     /// Efficiency levels (higher is better):
@@ -682,12 +686,7 @@ bool StraightLineStrengthReduce::isSimilar(Candidate &C, Candidate &Basis,
 bool StraightLineStrengthReduce::candidatePredicate(Candidate *Basis,
                                                     Candidate &C,
                                                     Candidate::DKind K) {
-  SmallVector<Instruction *> DropPoisonGeneratingInsts;
-  // Ensure the IR of Basis->Ins is not more poisonous than its SCEV.
-  if (!isSimilar(C, *Basis, K) ||
-      (EnablePoisonReuseGuard &&
-       !SE->canReuseInstruction(SE->getSCEV(Basis->Ins), Basis->Ins,
-                                DropPoisonGeneratingInsts)))
+  if (!isSimilar(C, *Basis, K))
     return false;
 
   assert(DT->dominates(Basis->Ins, C.Ins));
@@ -705,10 +704,9 @@ bool StraightLineStrengthReduce::candidatePredicate(Candidate *Basis,
       !C.isProfitableRewrite(*Delta, Candidate::IndexDelta))
     return false;
 
-  // If there is a Delta that we can reuse Basis to rewrite C,
-  // clean up DropPoisonGeneratingInsts returned by successful
-  // SE->canReuseInstruction()
-  for (Instruction *I : DropPoisonGeneratingInsts)
+  // If there is a Delta that we can reuse Basis to rewrite C, clean up
+  // previously collected poison generating instructions.
+  for (Instruction *I : Basis->DropList)
     I->dropPoisonGeneratingAnnotations();
 
   // Record delta if none has been found yet, or the new delta is
@@ -981,7 +979,14 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasis(
   LLVM_DEBUG(dbgs() << "Allocated Candidate: " << C << "\n");
   Candidates.push_back(C);
   RewriteCandidates[C.Ins].push_back(&Candidates.back());
-  CandidateDict.add(Candidates.back());
+  // Only add to the dict if this instruction is safe to reuse as a basis. By
+  // doing this early we avoid calling canReuseInstruction repeatedly for the
+  // same instruction. The DropList is stored on the Candidate so
+  // candidatePredicate can drop the flags when a rewrite is being done.
+  if (!EnablePoisonReuseGuard ||
+      SE->canReuseInstruction(SE->getSCEV(I), I, Candidates.back().DropList)) {
+    CandidateDict.add(Candidates.back());
+  }
 }
 
 void StraightLineStrengthReduce::allocateCandidatesAndFindBasis(
@@ -1086,7 +1091,7 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForGEP(
   if (GEP->getType()->isVectorTy())
     return;
 
-  SmallVector<const SCEV *, 4> IndexExprs;
+  SmallVector<SCEVUse, 4> IndexExprs;
   for (Use &Idx : GEP->indices())
     IndexExprs.push_back(SE->getSCEV(Idx));
 
@@ -1095,12 +1100,12 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForGEP(
     if (GTI.isStruct())
       continue;
 
-    const SCEV *OrigIndexExpr = IndexExprs[I - 1];
-    IndexExprs[I - 1] = SE->getZero(OrigIndexExpr->getType());
+    SCEVUse OrigIndexExpr = IndexExprs[I - 1];
+    IndexExprs[I - 1] = SE->getZero(OrigIndexExpr.getPointer()->getType());
 
     // The base of this candidate is GEP's base plus the offsets of all
     // indices except this current one.
-    const SCEV *BaseExpr = SE->getGEPExpr(cast<GEPOperator>(GEP), IndexExprs);
+    SCEVUse BaseExpr = SE->getGEPExpr(cast<GEPOperator>(GEP), IndexExprs);
     Value *ArrayIdx = GEP->getOperand(I);
     uint64_t ElementSize = GTI.getSequentialElementStride(*DL);
     IntegerType *PtrIdxTy = cast<IntegerType>(DL->getIndexType(GEP->getType()));

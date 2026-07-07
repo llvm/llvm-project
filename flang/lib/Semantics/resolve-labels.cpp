@@ -97,6 +97,13 @@ constexpr Legality IsLegalDoTerm(
   }
 }
 
+// Handles an assignment statement that might be wrapped by a construct
+// other than an ActionStmt.
+constexpr Legality IsLegalDoTerm(
+    const parser::Statement<parser::AssignmentStmt> &) {
+  return Legality::formerly;
+}
+
 template <typename A> constexpr bool IsFormat(const parser::Statement<A> &) {
   return std::is_same_v<A, common::Indirection<parser::FormatStmt>>;
 }
@@ -550,6 +557,14 @@ public:
         derivedTypeDef,
         std::get<parser::Statement<parser::EndTypeStmt>>(derivedTypeDef.t));
     PopDisposableMap();
+  }
+
+  // F2023 C7115
+  void Post(const parser::EnumerationTypeDef &enumTypeDef) {
+    CheckOptionalName<parser::EnumerationTypeStmt>(
+        "enumeration type definition", enumTypeDef,
+        std::get<parser::Statement<parser::EndEnumerationTypeStmt>>(
+            enumTypeDef.t));
   }
 
   void Post(const parser::LabelDoStmt &labelDoStmt) {
@@ -1037,8 +1052,10 @@ void CheckLabelDoConstraints(const SourceStmtList &dos,
           SayLabel(label));
     } else if (!doTarget.labeledStmtClassificationSet.test(
                    TargetStatementEnum::Do)) {
-      context.Say(doTarget.parserCharBlock,
-          "A DO loop should terminate with an END DO or CONTINUE"_err_en_US);
+      context
+          .Say(doTarget.parserCharBlock,
+              "This statement cannot terminate the DO loop"_err_en_US)
+          .Attach(position, "which begins at"_en_US);
     } else {
       loopBodies.emplace_back(SkipLabel(position), doTarget.parserCharBlock);
     }

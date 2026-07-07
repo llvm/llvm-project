@@ -9,6 +9,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugSuppression.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -178,43 +179,20 @@ bool BugSuppression::isSuppressed(const BugReport &R) {
 // back to the primary template definition, allowing us to find the suppression
 // attribute.
 //
-// The function handles two cases:
-// 1. Instantiation from a class template - searches redeclarations to find
-//    the definition (not just a forward declaration).
-// 2. Instantiation from a partial specialization - returns it directly.
-//
-// For non-template-specialization decls, returns the input unchanged.
+// The function handles specializations (and partial specializations) of
+// class templates.
+// For any other decl, it returns the input unchanged.
 static const Decl *
 preferTemplateDefinitionForTemplateSpecializations(const Decl *D) {
-  const auto *SpecializationDecl = dyn_cast<ClassTemplateSpecializationDecl>(D);
-  if (!SpecializationDecl)
+  const auto *RD = dyn_cast<CXXRecordDecl>(D);
+  if (!RD)
     return D;
-
-  auto InstantiatedFrom = SpecializationDecl->getInstantiatedFrom();
-  if (!InstantiatedFrom)
-    return D;
-
-  // This might be a class template.
-  if (const auto *Tmpl = InstantiatedFrom.dyn_cast<ClassTemplateDecl *>()) {
-    // Interestingly, the source template might be a forward declaration, so we
-    // need to find the definition redeclaration.
-    for (const auto *Redecl : Tmpl->redecls()) {
-      if (cast<ClassTemplateDecl>(Redecl)->isThisDeclarationADefinition()) {
-        return Redecl;
-      }
-    }
-    assert(false &&
-           "This class template must have a redecl that is a definition");
-    return D;
-  }
-
-  // It might be a partial specialization.
-  const auto *PartialSpecialization =
-      InstantiatedFrom.dyn_cast<ClassTemplatePartialSpecializationDecl *>();
-
-  // The partial specialization should be a definition.
-  assert(PartialSpecialization->isThisDeclarationADefinition());
-  return PartialSpecialization;
+  if (const CXXRecordDecl *Pattern = RD->getTemplateInstantiationPattern())
+    RD = Pattern;
+  RD = RD->getDefinitionOrSelf();
+  if (const auto *CTD = RD->getDescribedClassTemplate())
+    return CTD;
+  return RD;
 }
 
 bool BugSuppression::isSuppressed(const PathDiagnosticLocation &Location,

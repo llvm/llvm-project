@@ -1279,6 +1279,11 @@ public:
                           const Expr *Exp, AccessKind AK, Expr *MutexExp,
                           ProtectedOperationKind POK, til::SExpr *Self,
                           SourceLocation Loc);
+  void warnIfAnyMutexNotHeldForRead(const FactSet &FSet, const NamedDecl *D,
+                                    const Expr *Exp,
+                                    llvm::ArrayRef<Expr *> Args,
+                                    ProtectedOperationKind POK,
+                                    SourceLocation Loc);
   void warnIfMutexHeld(const FactSet &FSet, const NamedDecl *D, const Expr *Exp,
                        Expr *MutexExp, til::SExpr *Self, SourceLocation Loc);
 
@@ -1848,6 +1853,38 @@ void ThreadSafetyAnalyzer::warnIfMutexNotHeld(
   }
 }
 
+void ThreadSafetyAnalyzer::warnIfAnyMutexNotHeldForRead(
+    const FactSet &FSet, const NamedDecl *D, const Expr *Exp,
+    llvm::ArrayRef<Expr *> Args, ProtectedOperationKind POK,
+    SourceLocation Loc) {
+  SmallVector<CapabilityExpr, 2> Caps;
+  for (auto *Arg : Args) {
+    CapabilityExpr Cp = SxBuilder.translateAttrExpr(Arg, D, Exp, nullptr);
+    if (Cp.isInvalid()) {
+      warnInvalidLock(Handler, Arg, D, Exp, Cp.getKind());
+      continue;
+    }
+    if (Cp.shouldIgnore())
+      continue;
+    const FactEntry *LDat = FSet.findLockUniv(FactMan, Cp);
+    if (LDat && LDat->isAtLeast(LK_Shared))
+      return; // At least one held — read access is safe.
+    // FIXME: try findPartialMatch as a fallback to support
+    //        -Wno-thread-safety-precise, as warnIfMutexNotHeld does.
+    Caps.push_back(Cp);
+  }
+  if (Caps.empty())
+    return;
+  // Materialize names only now that we know we are going to warn.
+  SmallVector<std::string, 2> NameStorage;
+  SmallVector<StringRef, 2> Names;
+  for (const auto &Cp : Caps) {
+    NameStorage.push_back(Cp.toString());
+    Names.push_back(NameStorage.back());
+  }
+  Handler.handleGuardedByAnyReadNotHeld(D, POK, Names, Loc);
+}
+
 /// Warn if the LSet contains the given lock.
 void ThreadSafetyAnalyzer::warnIfMutexHeld(const FactSet &FSet,
                                            const NamedDecl *D, const Expr *Exp,
@@ -1934,8 +1971,18 @@ void ThreadSafetyAnalyzer::checkAccess(const FactSet &FSet, const Expr *Exp,
     Handler.handleNoMutexHeld(D, POK, AK, Loc);
   }
 
-  for (const auto *I : D->specific_attrs<GuardedByAttr>())
-    warnIfMutexNotHeld(FSet, D, Exp, AK, I->getArg(), POK, nullptr, Loc);
+  for (const auto *I : D->specific_attrs<GuardedByAttr>()) {
+    if (AK == AK_Written || I->args_size() == 1) {
+      // Write requires all capabilities; single-arg read uses the normal
+      // per-lock warning path.
+      for (auto *Arg : I->args())
+        warnIfMutexNotHeld(FSet, D, Exp, AK, Arg, POK, nullptr, Loc);
+    } else {
+      // Multi-arg read: holding any one of the listed capabilities is
+      // sufficient (a writer must hold all, so any one prevents writes).
+      warnIfAnyMutexNotHeldForRead(FSet, D, Exp, I->args(), POK, Loc);
+    }
+  }
 }
 
 /// Checks pt_guarded_by and pt_guarded_var attributes.
@@ -1998,9 +2045,20 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
   if (D->hasAttr<PtGuardedVarAttr>() && FSet.isEmpty(FactMan))
     Handler.handleNoMutexHeld(D, PtPOK, AK, Exp->getExprLoc());
 
-  for (auto const *I : D->specific_attrs<PtGuardedByAttr>())
-    warnIfMutexNotHeld(FSet, D, Exp, AK, I->getArg(), PtPOK, nullptr,
-                       Exp->getExprLoc());
+  for (auto const *I : D->specific_attrs<PtGuardedByAttr>()) {
+    if (AK == AK_Written || I->args_size() == 1) {
+      // Write requires all capabilities; single-arg read uses the normal
+      // per-lock warning path.
+      for (auto *Arg : I->args())
+        warnIfMutexNotHeld(FSet, D, Exp, AK, Arg, PtPOK, nullptr,
+                           Exp->getExprLoc());
+    } else {
+      // Multi-arg read: holding any one of the listed capabilities is
+      // sufficient (a writer must hold all, so any one prevents writes).
+      warnIfAnyMutexNotHeldForRead(FSet, D, Exp, I->args(), PtPOK,
+                                   Exp->getExprLoc());
+    }
+  }
 }
 
 /// Process a function call, method call, constructor call,
