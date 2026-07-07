@@ -2634,13 +2634,11 @@ define i16 @combine_four_i8_loads_i16_poison(ptr %p) {
 ; LE-LABEL: @combine_four_i8_loads_i16_poison(
 ; LE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 2
 ; LE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i64 3
-; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P]], align 1
-; LE-NEXT:    [[TMP1:%.*]] = trunc i32 [[L1]] to i16
 ; LE-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1
 ; LE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
 ; LE-NEXT:    [[Z3:%.*]] = zext i8 [[L3]] to i16
 ; LE-NEXT:    [[Z4:%.*]] = zext i8 [[L4]] to i16
-; LE-NEXT:    ret i16 [[TMP1]]
+; LE-NEXT:    ret i16 poison
 ;
 ; BE-LABEL: @combine_four_i8_loads_i16_poison(
 ; BE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1

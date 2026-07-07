@@ -1235,7 +1235,7 @@ struct LoadOps {
   bool FoundRoot = false;
   uint64_t LoadSize = 0;
   uint64_t Shift = 0;
-  Type *ZextType;
+  Type *ZextType = nullptr;
   AAMDNodes AATags;
 };
 
@@ -1272,6 +1272,22 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
     LI1 = dyn_cast<LoadInst>(L1);
   }
   LoadInst *LI2 = dyn_cast<LoadInst>(L2);
+
+  // Reject early if the combined size of the loads exceeds the target type
+  // size. This avoids attempting to emit an invalid ZExt (from wider to
+  // narrower type) when out-of-bounds shifts lead to matching too many loads.
+  if (LI2) {
+    uint64_t CurrentLoadSize = 0;
+    if (LOps.FoundRoot)
+      CurrentLoadSize = LOps.LoadSize;
+    else if (LI1)
+      CurrentLoadSize = LI1->getType()->getPrimitiveSizeInBits();
+
+    uint64_t LI2Size = LI2->getType()->getPrimitiveSizeInBits();
+    uint64_t TargetSize = X->getType()->getScalarSizeInBits();
+    if (CurrentLoadSize + LI2Size > TargetSize)
+      return false;
+  }
 
   // Check if loads are same, atomic, volatile and having same address space.
   if (LI1 == LI2 || !LI1 || !LI2 || !LI1->isSimple() || !LI2->isSimple() ||
