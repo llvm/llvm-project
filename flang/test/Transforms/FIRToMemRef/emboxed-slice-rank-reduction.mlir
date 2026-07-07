@@ -58,19 +58,22 @@ func.func @rank_reduced_embox_slice(
 // CHECK:       arith.constant 0 : index
 // CHECK-NEXT:  %[[CONE:.+]] = arith.constant 1 : index
 
-// Fortran dim 0 (embox slice range, lb = 1) -> delta 0 added onto memref
-// position 2.
+// Fortran dim 0 (embox slice range, lb = 1, stride = 1) -> delta 0 added onto
+// memref position 2.
 // CHECK-NEXT:  %[[LB0_DELTA:.+]] = arith.subi %[[C1]], %[[CONE]] : index
-// CHECK-NEXT:  %[[IDX_DIM0:.+]] = arith.addi %{{.+}}, %[[LB0_DELTA]] : index
+// CHECK-NEXT:  %[[SCALED0:.+]] = arith.muli %{{.+}}, %[[C1]] : index
+// CHECK-NEXT:  %[[IDX_DIM0:.+]] = arith.addi %[[SCALED0]], %[[LB0_DELTA]] : index
 
 // Fortran dim 1 (embox slice SCALAR, lb = 2) -> delta 1 OVERWRITES memref
-// position 1 (no arith.addi follows -- the delta itself becomes the index).
+// position 1 (no arith.muli or arith.addi -- the delta itself becomes the
+// index).
 // CHECK-NEXT:  %[[LB1_DELTA:.+]] = arith.subi %[[C2]], %[[CONE]] : index
 
-// Fortran dim 2 (embox slice range, lb = 1) -> delta 0 added onto memref
-// position 0.
+// Fortran dim 2 (embox slice range, lb = 1, stride = 1) -> delta 0 added onto
+// memref position 0.
 // CHECK-NEXT:  %[[LB2_DELTA:.+]] = arith.subi %[[C1]], %[[CONE]] : index
-// CHECK-NEXT:  %[[IDX_DIM2:.+]] = arith.addi %{{.+}}, %[[LB2_DELTA]] : index
+// CHECK-NEXT:  %[[SCALED2:.+]] = arith.muli %{{.+}}, %[[C1]] : index
+// CHECK-NEXT:  %[[IDX_DIM2:.+]] = arith.addi %[[SCALED2]], %[[LB2_DELTA]] : index
 
 // reinterpret_cast: offset stays 0 (never touched), sizes = parent extents in
 // memref order (3, 2, 3) via getMemrefIndices' rank override, strides =

@@ -522,24 +522,23 @@ static Value castTypeToIndexType(Value originalValue,
                                     originalValue);
 }
 
-/// Fold the embox's slice per-dim (lb - 1) shift into `indices` after
-/// `getMemrefIndices` has produced them. Handles both range and rank-reducing
-/// (scalar-subscript) slice triples uniformly.
+/// Fold the embox's slice per-dim (lb - 1) shift and stride into `indices`
+/// after `getMemrefIndices` has produced them. Handles both range and
+/// rank-reducing (scalar-subscript) slice triples uniformly.
 ///
 /// Necessary because `getMemrefIndices` only consumes the first `rank*3`
 /// entries of `sliceInfo.sliceVec` (the array_coor's own slice); the embox's
-/// triples sit at `sliceVec[rank*3 .. 2*rank*3-1]` and are otherwise dropped,
-/// leaving the memref access short by `(lb - 1)` per dim -- and, for
-/// collapsed dims, additionally polluted with the array_coor's own scalar
-/// subscript (typically a loop variable) that would drag the load off the
-/// target dim across iterations.
+/// triples sit at `sliceVec[rank*3 .. 2*rank*3-1]` and are otherwise dropped.
 ///
 /// Behaviour, per Fortran dim `d` of the embox slice (memref position
 /// `m = parentRank - 1 - d`):
-///   - Range triple `(lb, ub, step)`:
-///       indices[m] += (lb - 1)
-///     Adds the (lb - 1) shift on top of whatever `getMemrefIndices` produced
-///     for that dim.
+///   - Range triple `(lb, ub, stride)`:
+///       indices[m] = indices[m] * stride + (lb - 1)
+///     `indices[m]` on entry is a *0-based* box index produced by
+///     `getMemrefIndices`. Converting a 0-based box index j to a 0-based
+///     parent index via the embox range (lb, stride) gives:
+///       parent_0based = lb + j*stride - 1 = j*stride + (lb - 1)
+///     For unit stride this reduces to `indices[m] += (lb - 1)`.
 ///   - Scalar-subscript triple `(lb, undef, undef)`:
 ///       indices[m]  = (lb - 1)
 ///     Overwrites the memref position outright. The dim is collapsed in the
@@ -549,20 +548,32 @@ static Value castTypeToIndexType(Value originalValue,
 ///     `(lb - 1) * parentStride[d]`, without needing any parent-shape
 ///     lookups from the caller.
 ///
-/// Example A -- non-rank-reducing (2-D):
+/// Example A -- non-rank-reducing (2-D), unit strides:
 ///
 ///   `fir.array_coor %box(...)[%innerSlice] %i, %j` with
 ///     - array_coor slice: identity in both dims
 ///     - embox slice     : `fir.slice %c2,%c2,%c1, %c1,%c1,%c1`
-///                         (Fortran dim 0 lb = 2, dim 1 lb = 1)
+///                         (Fortran dim 0 lb = 2, stride = 1)
 ///
 ///   Incoming `indices` (memref order): [ %j', %i' ]
 ///   Fold:
-///     - dim 0 (range): delta = 1 -> indices[1] += 1
-///     - dim 1 (range): delta = 0 -> indices[0] += 0
+///     - dim 0 (range, stride=1, lb=2): indices[1] = %i'*1 + 1
+///     - dim 1 (range, stride=1, lb=1): indices[0] = %j'*1 + 0
 ///   Result:  [ %j', %i' + 1 ]
 ///
-/// Example B -- rank-reducing (3-D parent, dim 1 collapsed):
+/// Example B -- non-rank-reducing (1-D), non-unit stride (e.g. a(1:10:2)):
+///
+///   `fir.array_coor %box(...)[%innerSlice] %i` with
+///     - array_coor slice: identity
+///     - embox slice     : `fir.slice %c1,%c10,%c2`
+///                         (Fortran dim 0 lb = 1, stride = 2)
+///
+///   Incoming `indices`: [ %i' ]  where %i' = i - 1  (from getMemrefIndices)
+///   Fold:
+///     - dim 0 (range, stride=2, lb=1): indices[0] = %i'*2 + 0
+///   Result: [ (i-1)*2 ]
+///
+/// Example C -- rank-reducing (3-D parent, dim 1 collapsed):
 ///
 ///   %parent : !fir.ref<!fir.array<3x2x2xi32>>
 ///   %shape  = fir.shape %c3, %c2, %c2
@@ -580,9 +591,9 @@ static Value castTypeToIndexType(Value originalValue,
 ///                ^ dim 2   ^ dim 1 (collapsed)              ^ dim 0
 ///
 ///   Fold:
-///     - dim 0 (range, lb=1): indices[2] += 0
+///     - dim 0 (range, stride=1, lb=1): indices[2] = %ii'*1 + 0
 ///     - dim 1 (scalar, lb=2): indices[1]  = 1        (overwrite)
-///     - dim 2 (range, lb=1): indices[0] += 0
+///     - dim 2 (range, stride=1, lb=1): indices[0] = %jj'*1 + 0
 ///
 ///   Final: `memref.load %reinterpret_cast[%jj', 1, %ii'] : memref<?x?x?xi32,
 ///   strided<[?, ?, ?], offset: ?>>` -- stride 3 on the middle position
@@ -610,9 +621,17 @@ void FIRToMemRef::foldSliceLbIntoIndices(SmallVectorImpl<Value> &indices,
     Value lb = castTypeToIndexType(triples[d * 3], rewriter);
     Value delta = arith::SubIOp::create(rewriter, loc, lb, cOne);
     bool isScalar = isUndef(triples[d * 3 + 1]) || isUndef(triples[d * 3 + 2]);
-    indices[m] = isScalar
-                     ? delta
-                     : arith::AddIOp::create(rewriter, loc, indices[m], delta);
+    if (isScalar) {
+      indices[m] = delta;
+    } else {
+      // Scale the box-relative index by the embox stride before adding the lb
+      // offset. For non-unit strides (e.g. a(1:10:2)) omitting this would give
+      // the wrong physical element.
+      Value strideVal = castTypeToIndexType(triples[d * 3 + 2], rewriter);
+      Value scaled =
+          arith::MulIOp::create(rewriter, loc, indices[m], strideVal);
+      indices[m] = arith::AddIOp::create(rewriter, loc, scaled, delta);
+    }
   }
 }
 
@@ -987,7 +1006,8 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   if (!complexPartIdx && memRefTy.hasStaticShape() && !isDescriptor)
     return std::pair{*converted, indices};
 
-  unsigned rank = arrayCoorOp.getIndices().size();
+  const unsigned acRank = arrayCoorOp.getIndices().size();
+  unsigned rank = acRank;
   if (auto embox = firMemref.getDefiningOp<fir::EmboxOp>())
     rank = getRankFromEmbox(embox);
 
@@ -1054,13 +1074,16 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
     Value oneIdx =
         arith::ConstantIndexOp::create(rewriter, arrayCoorOp->getLoc(), 1);
     // shapeVec is populated by collectSliceInfoFrom in the order:
-    //   [<arrayCoor's shape>, <embox/rebox's shape>]
-    // When both contribute (firMemrefIsEmbox && arrayCoorOp has a slice), the
-    // first `rank` entries are the *box's* shape (= slice extents) while the
-    // next `rank` are the underlying *parent's* extents. Strides for the
-    // reinterpret_cast must come from the parent's contiguous element strides,
-    // not the slice extents (using the latter yields an outer stride that
-    // walks by the slice's size instead of the parent's leading dim).
+    //   [<arrayCoor's shape (acRank entries)>, <embox's shape (rank entries)>]
+    // When both contribute (firMemrefIsEmbox && arrayCoorOp has a slice),
+    // shapeVec[0..acRank-1] are the box's visible extents and
+    // shapeVec[acRank..acRank+rank-1] are the parent's extents. Strides for
+    // the reinterpret_cast must come from the parent's contiguous element
+    // strides, not the box's extents (using the latter yields an outer stride
+    // that walks by the slice's size instead of the parent's leading dim).
+    //
+    // acRank == rank in the non-rank-reducing case; acRank < rank when the
+    // embox slice collapses one or more dims via scalar subscripts.
     //
     // Example -- 4x2 parent, slice a(1:2, :) keeping 2 elements per dim:
     //   %parent : !fir.ref<!fir.array<4x2xi32>>
@@ -1078,27 +1101,27 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
     //
     // For rank = 2 the loop below emits (memref order, outer -> inner):
     //   size[outer]   = shapeVec[1]                       = 2  (slice's dim1)
-    //   stride[outer] = shapeVec[parentShapeBase + 0]     = 4  (parent's dim0)
-    //   size[inner]   = shapeVec[0]                       = 2  (slice's dim0)
-    //   stride[inner] = 1
+    //   stride[outer] = shapeVec[parentShapeStartIdx + 0]     = 4  (parent's
+    //   dim0) size[inner]   = shapeVec[0]                       = 2  (slice's
+    //   dim0) stride[inner] = 1
     //
-    // Without the `parentShapeBase` shift, `stride[outer]` would be
+    // Without the `parentShapeStartIdx` shift, `stride[outer]` would be
     // `shapeVec[0] = 2` -- the slice's own extent -- and successive outer
     // steps would walk by 2 elements instead of the parent's 4-element row,
     // clobbering the wrong columns.
     const bool hasParentShape = firMemrefIsEmbox && arrayCoorOp.getSlice() &&
-                                shapeVec.size() >= 2 * rank;
-    const unsigned parentShapeBase = hasParentShape ? rank : 0;
+                                shapeVec.size() >= acRank + rank;
+    const unsigned parentShapeStartIdx = hasParentShape ? acRank : 0;
     for (unsigned i = rank - 1; i > 0; --i) {
       // Sizes are always the box/slice's visible extents (shapeVec[0..rank-1]).
       Value size = shapeVec[i];
       sizes.push_back(castTypeToIndexType(size, rewriter));
 
-      // Strides use the parent's extents (via `parentShapeBase`).
-      Value stride = shapeVec[parentShapeBase + 0];
+      // Strides use the parent's extents (via `parentShapeStartIdx`).
+      Value stride = shapeVec[parentShapeStartIdx + 0];
       for (unsigned j = 1; j <= i - 1; ++j)
-        stride = arith::MulIOp::create(rewriter, loc,
-                                       shapeVec[parentShapeBase + j], stride);
+        stride = arith::MulIOp::create(
+            rewriter, loc, shapeVec[parentShapeStartIdx + j], stride);
       if (complexPartIdx)
         stride = arith::MulIOp::create(
             rewriter, loc, stride,

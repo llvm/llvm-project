@@ -48,13 +48,17 @@ func.func @emboxed_slice_array_coor(%arg0: !fir.ref<!fir.array<4x2xi32>>) -> i32
 // CHECK:       arith.constant 0 : index
 // CHECK-NEXT:  %[[CONE:.+]] = arith.constant 1 : index
 
-// Fortran dim 0 (embox lb = 2) -> delta 1, added onto memref position 1.
+// Fortran dim 0 (embox lb = 2, stride = 1) -> delta 1, added onto memref
+// position 1.
 // CHECK-NEXT:  %[[LB0_DELTA:.+]] = arith.subi %[[C2]], %[[CONE]] : index
-// CHECK-NEXT:  %[[IDX_DIM0:.+]] = arith.addi %{{.+}}, %[[LB0_DELTA]] : index
+// CHECK-NEXT:  %[[SCALED0:.+]] = arith.muli %{{.+}}, %[[C1]] : index
+// CHECK-NEXT:  %[[IDX_DIM0:.+]] = arith.addi %[[SCALED0]], %[[LB0_DELTA]] : index
 
-// Fortran dim 1 (embox lb = 1) -> delta 0, added onto memref position 0.
+// Fortran dim 1 (embox lb = 1, stride = 1) -> delta 0, added onto memref
+// position 0.
 // CHECK-NEXT:  %[[LB1_DELTA:.+]] = arith.subi %[[C1]], %[[CONE]] : index
-// CHECK-NEXT:  %[[IDX_DIM1:.+]] = arith.addi %{{.+}}, %[[LB1_DELTA]] : index
+// CHECK-NEXT:  %[[SCALED1:.+]] = arith.muli %{{.+}}, %[[C1]] : index
+// CHECK-NEXT:  %[[IDX_DIM1:.+]] = arith.addi %[[SCALED1]], %[[LB1_DELTA]] : index
 
 // reinterpret_cast: offset stays a plain 0 constant, sizes = slice extents
 // (1, 1), strides = [parent's dim-0 element stride, 1] in memref order.
