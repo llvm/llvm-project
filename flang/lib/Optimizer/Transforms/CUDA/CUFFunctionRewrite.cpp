@@ -124,6 +124,8 @@ private:
 class CUFFunctionRewrite
     : public fir::impl::CUFFunctionRewriteBase<CUFFunctionRewrite> {
 public:
+  using CUFFunctionRewriteBase::CUFFunctionRewriteBase;
+
   void runOnOperation() override {
     auto *ctx = &getContext();
     mlir::RewritePatternSet patterns(ctx);
