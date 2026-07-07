@@ -914,12 +914,14 @@ void MipsGotSection::build() {
         // for the module index. Therefore only checking for
         // S->isPreemptible is not sufficient (this happens e.g. for
         // thread-locals that have been marked as local through a linker script)
-        if (!s->isPreemptible && !ctx.arg.shared)
-          // Write one to the GOT slot.
-          addConstant({R_ADDEND, ctx.target->symbolicRel, offset, 1, s});
-        else
+        if (s->isPreemptible)
           ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsModuleIndexRel, *this,
                                          offset, *s);
+        else if (ctx.arg.shared)
+          ctx.in.relaDyn->addReloc({ctx.target->tlsModuleIndexRel, this, offset});
+        else
+          // Write one to the GOT slot.
+          addConstant({R_ADDEND, ctx.target->symbolicRel, offset, 1, s});
         offset += ctx.arg.wordsize;
         // However, we can skip writing the TLS offset reloc for non-preemptible
         // symbols since it is known even in shared libraries
