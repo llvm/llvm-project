@@ -151,6 +151,12 @@ static cl::opt<bool> SLPInstCountCheck(
     cl::desc("Reject vectorization if vector instruction count exceeds "
              "scalar instruction count"));
 
+static cl::opt<bool> SLPGep(
+    "slp-vectorize-multi-index-gep", cl::init(true), cl::Hidden,
+    cl::desc("Relax GEP vectorization to multi-index GEPs whose leading "
+             "indices are constants and whose only varying index is the "
+             "last one (all users must be loads)"));
+
 static cl::opt<int>
 MaxVectorRegSizeOption("slp-max-reg-size", cl::init(128), cl::Hidden,
     cl::desc("Attempt to vectorize for this register size in bits"));
@@ -1588,6 +1594,22 @@ convertTo(Instruction *I, const InstructionsState &S) {
 
 } // end anonymous namespace
 
+/// \returns true if \p V is a GEP whose leading indices are constant and whose
+/// only varying index is the last one, with all users being loads. Such GEPs
+/// can be vectorized like two-operand GEPs. Gated by -slp-vectorize-gep.
+static bool canRelaxMultiIndexGEP(Value *V) {
+  auto *GEP = dyn_cast<GetElementPtrInst>(V);
+  if (!GEP)
+    return false;
+  if (!SLPGep && GEP->getNumOperands() != 2)
+    return false;
+  // Only the last index may vary; leading indices must be constant.
+  if (!all_of(drop_end(drop_begin(GEP->operands())), IsaPred<ConstantInt>))
+    return false;
+  // Restrict to loads: the varying index feeds a gather/consecutive load.
+  return all_of(GEP->users(), IsaPred<LoadInst>);
+}
+
 static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                                        const TargetLibraryInfo &TLI);
 
@@ -1782,7 +1804,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
              "Alternate instructions are only supported by BinaryOperator and "
              "CastInst.");
       if (auto *Gep = dyn_cast<GetElementPtrInst>(I)) {
-        if (Gep->getNumOperands() != 2 ||
+        if ((!canRelaxMultiIndexGEP(Gep) && Gep->getNumOperands() != 2) ||
             Gep->getOperand(0)->getType() != MainOp->getOperand(0)->getType())
           return InstructionsState::invalid();
       } else if (auto *EI = dyn_cast<ExtractElementInst>(I)) {
@@ -6990,13 +7012,29 @@ static bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
     return false;
   auto *GEP1 = dyn_cast<GetElementPtrInst>(Ptr1);
   auto *GEP2 = dyn_cast<GetElementPtrInst>(Ptr2);
-  return (!GEP1 || GEP1->getNumOperands() == 2) &&
-         (!GEP2 || GEP2->getNumOperands() == 2) &&
-         (((!GEP1 || isConstant(GEP1->getOperand(1))) &&
-           (!GEP2 || isConstant(GEP2->getOperand(1)))) ||
+  // For relaxable multi-index GEPs of equal arity, the last operand is the
+  // varying index and the leading indices must match. Otherwise require plain
+  // two-operand GEPs and index operand 1.
+  unsigned IdxOp1 = 1, IdxOp2 = 1;
+  if (GEP1 && GEP2 && GEP1->getNumOperands() != 2 &&
+      GEP1->getNumOperands() == GEP2->getNumOperands() &&
+      canRelaxMultiIndexGEP(GEP1) && canRelaxMultiIndexGEP(GEP2)) {
+    unsigned LastOp = GEP1->getNumOperands() - 1;
+    if (any_of(seq<unsigned>(LastOp), [=](unsigned Idx) {
+          return GEP1->getOperand(Idx) != GEP2->getOperand(Idx);
+        }))
+      return false;
+    IdxOp1 = IdxOp2 = LastOp;
+  } else if ((GEP1 && GEP1->getNumOperands() != 2) ||
+             (GEP2 && GEP2->getNumOperands() != 2)) {
+    return false;
+  }
+  return (((!GEP1 || isConstant(GEP1->getOperand(IdxOp1))) &&
+           (!GEP2 || isConstant(GEP2->getOperand(IdxOp2)))) ||
           !CompareOpcodes ||
           (GEP1 && GEP2 &&
-           getSameOpcode({GEP1->getOperand(1), GEP2->getOperand(1)}, TLI)));
+           getSameOpcode({GEP1->getOperand(IdxOp1), GEP2->getOperand(IdxOp2)},
+                         TLI)));
 }
 
 /// Calculates minimal alignment as a common alignment.
@@ -11170,19 +11208,20 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       return TreeEntry::NeedToGather;
     return TreeEntry::Vectorize;
   case Instruction::GetElementPtr: {
-    // We don't combine GEPs with complicated (nested) indexing.
+    // We don't combine GEPs with complicated (nested) indexing, unless they
+    // are relaxable multi-index GEPs (see canRelaxMultiIndexGEP).
     for (Value *V : VL) {
       auto *I = dyn_cast<GetElementPtrInst>(V);
       if (!I)
         continue;
-      if (I->getNumOperands() != 2) {
+      if (!canRelaxMultiIndexGEP(I) && I->getNumOperands() != 2) {
         LLVM_DEBUG(dbgs() << "SLP: not-vectorizable GEP (nested indexes).\n");
         return TreeEntry::NeedToGather;
       }
     }
 
     // We can't combine several GEPs into one vector if they operate on
-    // different types.
+    // different source element types.
     Type *Ty0 = cast<GEPOperator>(VL0)->getSourceElementType();
     for (Value *V : VL) {
       auto *GEP = dyn_cast<GEPOperator>(V);
@@ -11195,13 +11234,34 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       }
     }
 
-    // We don't combine GEPs with non-constant indexes.
-    Type *Ty1 = VL0->getOperand(1)->getType();
+    // Relaxed multi-index GEPs re-emit VL0's leading indices for every lane, so
+    // all GEPs must share the same arity and leading indices; only the pointer
+    // and last index may differ.
+    auto *GEP0 = cast<GetElementPtrInst>(VL0);
+    for (Value *V : VL) {
+      auto *GEP = dyn_cast<GetElementPtrInst>(V);
+      if (!GEP)
+        continue;
+      if (GEP->getNumOperands() != GEP0->getNumOperands()) {
+        LLVM_DEBUG(dbgs() << "SLP: not-vectorizable GEP (arity mismatch).\n");
+        return TreeEntry::NeedToGather;
+      }
+      for (unsigned J = 1, N = GEP->getNumOperands() - 1; J < N; ++J)
+        if (GEP->getOperand(J) != GEP0->getOperand(J)) {
+          LLVM_DEBUG(dbgs()
+                     << "SLP: not-vectorizable GEP (leading index mismatch).\n");
+          return TreeEntry::NeedToGather;
+        }
+    }
+
+    // We don't combine GEPs with non-constant indexes; the varying index is
+    // the last operand.
+    Type *Ty1 = VL0->getOperand(VL0->getNumOperands() - 1)->getType();
     for (Value *V : VL) {
       auto *I = dyn_cast<GetElementPtrInst>(V);
       if (!I)
         continue;
-      auto *Op = I->getOperand(1);
+      auto *Op = I->getOperand(I->getNumOperands() - 1);
       if ((!IsScatterVectorizeUserTE && !isa<ConstantInt>(Op)) ||
           (Op->getType() != Ty1 &&
            ((IsScatterVectorizeUserTE && !isa<ConstantInt>(Op)) ||
@@ -12168,13 +12228,18 @@ class InstructionsCompatibilityAnalysis {
       // Required to be able to find correct matches between different gather
       // nodes and reuse the vectorized values rather than trying to gather them
       // again.
-      const unsigned IndexIdx = 1;
+      // The varying index is the last operand; the node carries just
+      // [pointer, lastIndex].
+      const unsigned IndexIdx = VL0->getNumOperands() - 1;
       Type *VL0Ty = VL0->getOperand(IndexIdx)->getType();
       Type *Ty =
           all_of(VL,
                  [&](Value *V) {
                    auto *GEP = dyn_cast<GetElementPtrInst>(V);
-                   return !GEP || VL0Ty == GEP->getOperand(IndexIdx)->getType();
+                   return !GEP ||
+                          VL0Ty ==
+                              GEP->getOperand(GEP->getNumOperands() - 1)
+                                  ->getType();
                  })
               ? VL0Ty
               : DL.getIndexType(cast<GetElementPtrInst>(VL0)
@@ -12188,7 +12253,7 @@ class InstructionsCompatibilityAnalysis {
           continue;
         }
         Operands[0][Idx] = GEP->getPointerOperand();
-        auto *Op = GEP->getOperand(IndexIdx);
+        auto *Op = GEP->getOperand(GEP->getNumOperands() - 1);
         auto *CI = dyn_cast<ConstantInt>(Op);
         Operands[1][Idx] = CI ? ConstantFoldIntegerCast(
                                     CI, Ty, CI->getValue().isSignBitSet(), DL)
@@ -12763,7 +12828,9 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
                     return doesNotNeedToBeScheduled(V);
                   if (!BB)
                     BB = I->getParent();
-                  return BB == I->getParent() && I->getNumOperands() == 2;
+                  return BB == I->getParent() &&
+                         (canRelaxMultiIndexGEP(I) ||
+                          I->getNumOperands() == 2);
                 }) &&
          BB &&
          sortPtrAccesses(VL, UserTreeIdx.UserTE->getMainOp()->getType(), *DL,
@@ -24212,10 +24279,14 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *Op0 = vectorizeOperand(E, 0);
 
       SmallVector<Value *> OpVecs;
-      for (int J = 1, N = GEP0->getNumOperands(); J < N; ++J) {
-        Value *OpVec = vectorizeOperand(E, J);
-        OpVecs.push_back(OpVec);
-      }
+      // The tree entry carries only [pointer, lastIndex]. Re-emit VL0's
+      // constant leading indices verbatim, then append the vectorized last
+      // index. A plain two-operand GEP has no leading indices, so this
+      // reproduces the original GEP.
+      for (unsigned J = 1, N = GEP0->getNumOperands() - 1; J < N; ++J)
+        OpVecs.push_back(GEP0->getOperand(J));
+      for (int J = 1, N = E->getNumOperands(); J < N; ++J)
+        OpVecs.push_back(vectorizeOperand(E, J));
 
       Value *V = Builder.CreateGEP(GEP0->getSourceElementType(), Op0, OpVecs);
       if (Instruction *I = dyn_cast<GetElementPtrInst>(V)) {
@@ -28731,13 +28802,14 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
       Stores[getUnderlyingObject(SI->getPointerOperand())].push_back(SI);
     }
 
-    // Ignore getelementptr instructions that have more than one index, a
-    // constant index, or a pointer operand that doesn't point to a scalar
-    // type.
+    // Ignore getelementptr instructions that have a constant index or a
+    // pointer operand that doesn't point to a scalar type. Accept a single
+    // index or a relaxable multi-index GEP (see canRelaxMultiIndexGEP), whose
+    // last index is the one we try to vectorize.
     else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-      if (GEP->getNumIndices() != 1)
+      if (GEP->getNumIndices() != 1 && !canRelaxMultiIndexGEP(GEP))
         continue;
-      Value *Idx = GEP->idx_begin()->get();
+      Value *Idx = GEP->getOperand(GEP->getNumOperands() - 1);
       if (isa<Constant>(Idx))
         continue;
       if (!isValidElementType(Idx->getType()))
@@ -32916,7 +32988,9 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
     if (It == Entry.second.end())
       continue;
     unsigned MaxVecRegSize = R.getMaxVecRegSize();
-    unsigned EltSize = R.getVectorElementSize(*(*It)->idx_begin());
+    // The varying index is the last operand.
+    unsigned EltSize = R.getVectorElementSize(
+        (*It)->getOperand((*It)->getNumOperands() - 1));
     if (MaxVecRegSize < EltSize)
       continue;
 
@@ -32936,8 +33010,9 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
       // If so, they are marked as deleted, so remove them from the set of
       // candidates.
       Candidates.remove_if([&R](Value *I) {
+        auto *GEP = cast<GetElementPtrInst>(I);
         return R.isDeleted(cast<Instruction>(I)) ||
-               isa<Constant>(cast<GetElementPtrInst>(I)->idx_begin()->get());
+               isa<Constant>(GEP->getOperand(GEP->getNumOperands() - 1));
       });
 
       // Remove from the set of candidates all pairs of getelementptrs with
@@ -32958,7 +33033,8 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
           if (isa<SCEVConstant>(SE->getMinusSCEV(SCEVI, SCEVJ))) {
             Candidates.remove(GEPI);
             Candidates.remove(GEPJ);
-          } else if (GEPI->idx_begin()->get() == GEPJ->idx_begin()->get()) {
+          } else if (GEPI->getOperand(GEPI->getNumOperands() - 1) ==
+                     GEPJ->getOperand(GEPJ->getNumOperands() - 1)) {
             Candidates.remove(GEPJ);
           }
         }
@@ -32976,8 +33052,10 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
       auto BundleIndex = 0u;
       for (auto *V : Candidates) {
         auto *GEP = cast<GetElementPtrInst>(V);
-        auto *GEPIdx = GEP->idx_begin()->get();
-        assert(GEP->getNumIndices() == 1 && !isa<Constant>(GEPIdx));
+        // The varying index is the last operand.
+        auto *GEPIdx = GEP->getOperand(GEP->getNumOperands() - 1);
+        assert((GEP->getNumIndices() == 1 || canRelaxMultiIndexGEP(GEP)) &&
+               !isa<Constant>(GEPIdx));
         Bundle[BundleIndex++] = GEPIdx;
       }
 
