@@ -1135,7 +1135,6 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   case X86::PTCMMRLFP16PSV:
   case X86::PTILELOADDRSV:
   case X86::PTILELOADDRST1V:
-  case X86::PTMMULTF32PSV:
   case X86::PTDPBF8PSV:
   case X86::PTDPBHF8PSV:
   case X86::PTDPHBF8PSV:

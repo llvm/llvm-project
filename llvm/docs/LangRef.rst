@@ -2302,8 +2302,9 @@ For example:
     - ``errnomem``: This refers to accesses to the ``errno`` variable.
     - ``target_mem#`` : These refer to target specific state that cannot be
       accessed by any other means. # is a number between 0 and 1 inclusive.
-      Note: The target_mem locations are experimental and intended for internal
-      testing only. They must not be used in production code.
+      Note: The following target_mem locations are implemented in AArch64.
+      target_mem0 represents SME ZT0 state, target_mem1 represents SME ZA
+      state.
 
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
@@ -15759,7 +15760,7 @@ knows those logical layouts are lowered to the same physical layout:
     - `{ i32, i32, i32, i32 }`
     - `[ i32 x 4 ]`
 
-This means is is valid to lower the following code to either:
+This means it is valid to lower the following code to either:
 
 .. code-block:: llvm
 

@@ -6,8 +6,8 @@ define amdgpu_kernel void @foo(ptr %0) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; CHECK-NEXT:    v_mov_b64_e32 v[0:1], 0
-; CHECK-NEXT:    v_mov_b32_e32 v6, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NEXT:    v_mov_b32_e32 v6, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v5, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]

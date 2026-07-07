@@ -971,7 +971,7 @@ StructuredData::ArraySP
 PlatformDarwin::ExtractCrashInfoAnnotations(Process &process) {
   Log *log = GetLog(LLDBLog::Process);
 
-  ConstString section_name("__crash_info");
+  llvm::StringRef section_name("__crash_info");
   Target &target = process.GetTarget();
   StructuredData::ArraySP array_sp = std::make_shared<StructuredData::Array>();
 
