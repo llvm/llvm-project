@@ -2601,6 +2601,16 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     if (match(Op1, m_Not(m_Value(X))))
       return BinaryOperator::CreateAdd(X, InstCombiner::AddOne(C));
 
+    Constant *C2;
+    if (!I.hasNoUnsignedWrap() && !I.hasNoSignedWrap() && Op1->hasOneUse() &&
+        match(Op1, m_c_Or(m_Value(X), m_ImmConstant(C2))) &&
+        C2->isElementWiseEqual(C)) {
+      Constant *NotC = ConstantExpr::getNot(C2);
+      // If C is signed max, then C - (X | C) is just the sign bit of X.
+      if (match(NotC, m_SignMask()))
+        return BinaryOperator::CreateAnd(X, NotC);
+    }
+
     // Try to fold constant sub into select arguments.
     if (SelectInst *SI = dyn_cast<SelectInst>(Op1))
       if (Instruction *R = FoldOpIntoSelect(I, SI))
@@ -2610,8 +2620,6 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     if (PHINode *PN = dyn_cast<PHINode>(Op1))
       if (Instruction *R = foldOpIntoPhi(I, PN))
         return R;
-
-    Constant *C2;
 
     // C-(C2-X) --> X+(C-C2)
     if (match(Op1, m_Sub(m_ImmConstant(C2), m_Value(X))))

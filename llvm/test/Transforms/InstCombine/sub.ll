@@ -2948,3 +2948,90 @@ define i32 @sub_const_or_no_disjoint(i32 %x) {
   %r = sub i32 100, %a
   ret i32 %r
 }
+
+define i32 @sub_const_or_same_signmask_complement_i32(i32 %x) {
+; CHECK-LABEL: @sub_const_or_same_signmask_complement_i32(
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X:%.*]], -2147483648
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or i32 %x, 2147483647
+  %r = sub i32 2147483647, %a
+  ret i32 %r
+}
+
+define i8 @sub_const_or_same_signmask_complement_i8(i8 %x) {
+; CHECK-LABEL: @sub_const_or_same_signmask_complement_i8(
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[X:%.*]], -128
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = or i8 %x, 127
+  %r = sub i8 127, %a
+  ret i8 %r
+}
+
+define <2 x i32> @sub_const_or_same_signmask_complement_splat_vec(<2 x i32> %x) {
+; CHECK-LABEL: @sub_const_or_same_signmask_complement_splat_vec(
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 -2147483648)
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = or <2 x i32> %x, splat (i32 2147483647)
+  %r = sub <2 x i32> splat (i32 2147483647), %a
+  ret <2 x i32> %r
+}
+
+define i32 @sub_const_or_same_not_signmask(i32 %x) {
+; CHECK-LABEL: @sub_const_or_same_not_signmask(
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[X:%.*]], 42
+; CHECK-NEXT:    [[R:%.*]] = sub i32 42, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or i32 %x, 42
+  %r = sub i32 42, %a
+  ret i32 %r
+}
+
+define i32 @sub_const_or_different_constant(i32 %x) {
+; CHECK-LABEL: @sub_const_or_different_constant(
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[X:%.*]], 2147483647
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i32 2147483646, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or i32 %x, 2147483647
+  %r = sub i32 2147483646, %a
+  ret i32 %r
+}
+
+define i8 @sub_const_or_same_extra_use(i8 %x) {
+; CHECK-LABEL: @sub_const_or_same_extra_use(
+; CHECK-NEXT:    [[A:%.*]] = or i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[R:%.*]] = sub i8 127, [[A]]
+; CHECK-NEXT:    call void @use8(i8 [[A]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = or i8 %x, 127
+  %r = sub i8 127, %a
+  call void @use8(i8 %a)
+  ret i8 %r
+}
+
+define i8 @sub_nsw_const_or_same_signmask_complement(i8 %x) {
+; CHECK-LABEL: @sub_nsw_const_or_same_signmask_complement(
+; CHECK-NEXT:    [[A:%.*]] = or i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 127, [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = or i8 %x, 127
+  %r = sub nsw i8 127, %a
+  ret i8 %r
+}
+
+define i8 @sub_nuw_const_or_same_signmask_complement(i8 %x) {
+; CHECK-LABEL: @sub_nuw_const_or_same_signmask_complement(
+; CHECK-NEXT:    [[A:%.*]] = or i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i8 127, [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = or i8 %x, 127
+  %r = sub nuw i8 127, %a
+  ret i8 %r
+}
