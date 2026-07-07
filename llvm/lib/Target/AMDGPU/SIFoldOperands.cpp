@@ -631,7 +631,7 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
     MachineBasicBlock *MBB = MI->getParent();
     auto Liveness = MBB->computeRegisterLiveness(TRI, AMDGPU::VCC, MI, 16);
     if (Liveness != MachineBasicBlock::LQR_Dead) {
-      LLVM_DEBUG(dbgs() << "Not shrinking " << *MI << " due to vcc liveness\n");
+      LLVM_DEBUG(dbgs() << "Not shrinking due to live vcc: " << *MI);
       return false;
     }
 
