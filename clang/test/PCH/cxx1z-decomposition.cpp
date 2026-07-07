@@ -24,7 +24,7 @@ constexpr int foo(Q &&q) {
 }
 
 auto [noinit]; // expected-error{{structured binding declaration '[noinit]' requires an initializer; expected '=' or braced initializer list}}
-               // CHECK: clang/test/PCH/cxx1z-decomposition.cpp:[[@LINE-1]]:14: error: structured binding declaration '[noinit]' requires an initializer; expected '=' or braced initializer list
+               // CHECK: :[[@LINE-1]]:14: error: structured binding declaration '[noinit]' requires an initializer; expected '=' or braced initializer list
 
 #else
 

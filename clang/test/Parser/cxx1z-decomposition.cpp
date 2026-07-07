@@ -113,11 +113,11 @@ namespace BadSpecifiers {
     // FIXME: This error is not very good.
     auto [d]() = s; // expected-error {{expected ';'}} expected-error {{expected expression}}
     auto [e][1] = s; // expected-error {{expected ';'}} expected-error {{structured binding declaration '[e]' requires an initializer; expected '=' or braced initializer list}}
-                     // CHECK: clang/test/Parser/cxx1z-decomposition.cpp:[[@LINE-1]]:13: error: structured binding declaration '[e]' requires an initializer; expected '=' or braced initializer list
+                     // CHECK: :[[@LINE-1]]:13: error: structured binding declaration '[e]' requires an initializer; expected '=' or braced initializer list
 
     // FIXME: This should fire the 'misplaced array declarator' diagnostic.
     int [K] arr = {0}; // expected-error {{structured binding declaration '[K]' requires an initializer; expected '=' or braced initializer list}} expected-error {{expected ';'}} expected-error {{cannot be declared with type 'int'}}
-                       // CHECK: clang/test/Parser/cxx1z-decomposition.cpp:[[@LINE-1]]:13: error: structured binding declaration '[K]' requires an initializer; expected '=' or braced initializer list
+                       // CHECK: :[[@LINE-1]]:13: error: structured binding declaration '[K]' requires an initializer; expected '=' or braced initializer list
     int [5] arr = {0}; // expected-error {{place the brackets after the name}}
 
     auto *[f] = s; // expected-error {{cannot be declared with type 'auto *'}} expected-error {{incompatible initializer}}
@@ -158,7 +158,7 @@ namespace Init {
     int arr[1];
     struct S { int n; };
     auto &[bad1]; // expected-error {{structured binding declaration '[bad1]' requires an initializer; expected '=' or braced initializer list}}
-                  // CHECK: clang/test/Parser/cxx1z-decomposition.cpp:[[@LINE-1]]:17: error: structured binding declaration '[bad1]' requires an initializer; expected '=' or braced initializer list
+                  // CHECK: :[[@LINE-1]]:17: error: structured binding declaration '[bad1]' requires an initializer; expected '=' or braced initializer list
     const auto &[bad2](S{}, S{}); // expected-error {{initializer for variable '[bad2]' with type 'const auto &' contains multiple expressions}}
     const auto &[bad3](); // expected-error {{expected expression}}
     auto &[good1] = arr;
@@ -167,10 +167,10 @@ namespace Init {
     S [goodish3] = { 4 }; // expected-error {{cannot be declared with type 'S'}}
     S [goodish4] { 4 }; // expected-error {{cannot be declared with type 'S'}}
     auto [A, B] C = {1, 2}; // expected-error{{structured binding declaration '[A, B]' requires an initializer; expected '=' or braced initializer list}} expected-error{{expected ';' at end of declaration}}
-                            // CHECK: clang/test/Parser/cxx1z-decomposition.cpp:[[@LINE-1]]:17: error: structured binding declaration '[A, B]' requires an initializer; expected '=' or braced initializer list
+                            // CHECK: :[[@LINE-1]]:17: error: structured binding declaration '[A, B]' requires an initializer; expected '=' or braced initializer list
     T t1 = t; // check that uninitialized structured binding declaration error works with templates and macros
     auto [t0, t2] MYC = {t, t1}; // expected-error{{structured binding declaration '[t0, t2]' requires an initializer; expected '=' or braced initializer list}} expected-error{{expected ';' at end of declaration}}
-                                 // CHECK: clang/test/Parser/cxx1z-decomposition.cpp:[[@LINE-1]]:19: error: structured binding declaration '[t0, t2]' requires an initializer; expected '=' or braced initializer list
+                                 // CHECK: :[[@LINE-1]]:19: error: structured binding declaration '[t0, t2]' requires an initializer; expected '=' or braced initializer list
   }
 }
 
