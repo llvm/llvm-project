@@ -8312,8 +8312,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformAttributedStmt(AttributedStmt *S,
                                                 StmtDiscardKind SDK) {
-  SemaProfiles::ProfileSuppressScope ProfileSuppressGuard(getSema(),
-                                                          S->getAttrs());
+  SemaProfiles::ProfileSuppressScope ProfileSuppressGuard(
+      getSema(), S->getAttrs(), S->getBeginLoc());
 
   StmtResult SubStmt = getDerived().TransformStmt(S->getSubStmt(), SDK);
 

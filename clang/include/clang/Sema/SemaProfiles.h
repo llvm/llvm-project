@@ -50,6 +50,11 @@ public:
   struct ProfileSuppressEntry {
     StringRef ProfileName;
     StringRef RuleName;
+    /// Begin location of the construct the suppression appertains to (the
+    /// declaration or statement, not the attribute). The entry's dominion
+    /// starts here; its end is bounded by the ProfileSuppressScope's
+    /// lifetime (P3589R2 s2.4p3).
+    SourceLocation Begin;
   };
   SmallVector<ProfileSuppressEntry, 4> ProfileSuppressStack;
 
@@ -311,14 +316,15 @@ public:
     Sema &S;
     unsigned Count = 0;
 
-    void push(StringRef ProfileName, StringRef RuleName);
+    void push(StringRef ProfileName, StringRef RuleName, SourceLocation Begin);
     void addFromDecl(const Decl *D);
 
   public:
     ProfileSuppressScope(Sema &S, const ParsedAttributesView &Attrs);
     ProfileSuppressScope(Sema &S, const Decl *D,
                          bool WalkLexicalParents = false);
-    ProfileSuppressScope(Sema &S, ArrayRef<const Attr *> Attrs);
+    ProfileSuppressScope(Sema &S, ArrayRef<const Attr *> Attrs,
+                         SourceLocation Begin);
     ~ProfileSuppressScope();
   };
 };

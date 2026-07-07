@@ -377,8 +377,9 @@ bool SemaProfiles::checkProfileViolation(StringRef ProfileName,
 }
 
 void SemaProfiles::ProfileSuppressScope::push(StringRef ProfileName,
-                                      StringRef RuleName) {
-  S.Profiles().ProfileSuppressStack.push_back({ProfileName, RuleName});
+                                      StringRef RuleName,
+                                      SourceLocation Begin) {
+  S.Profiles().ProfileSuppressStack.push_back({ProfileName, RuleName, Begin});
   ++Count;
 }
 
@@ -391,14 +392,19 @@ SemaProfiles::ProfileSuppressScope::ProfileSuppressScope(
     if (AL.getKind() != ParsedAttr::AT_ProfilesSuppress)
       continue;
     const auto &Args = AL.getProfileSuppressArgs();
+    // These are the prefix attributes of a statement or declaration about to
+    // be parsed, so the attribute's own location is the construct's begin.
     if (!Args.Name.empty())
-      push(Args.Name, Args.Rule);
+      push(Args.Name, Args.Rule, AL.getLoc());
   }
 }
 
 void SemaProfiles::ProfileSuppressScope::addFromDecl(const Decl *D) {
+  SourceLocation Begin = D->getBeginLoc();
+  if (Begin.isInvalid())
+    Begin = D->getLocation();
   for (const auto *A : D->specific_attrs<ProfilesSuppressAttr>())
-    push(A->getProfileName(), A->getRule());
+    push(A->getProfileName(), A->getRule(), Begin);
 }
 
 SemaProfiles::ProfileSuppressScope::ProfileSuppressScope(Sema &S, const Decl *D,
@@ -416,13 +422,14 @@ SemaProfiles::ProfileSuppressScope::ProfileSuppressScope(Sema &S, const Decl *D,
 }
 
 SemaProfiles::ProfileSuppressScope::ProfileSuppressScope(Sema &S,
-                                                  ArrayRef<const Attr *> Attrs)
+                                                  ArrayRef<const Attr *> Attrs,
+                                                  SourceLocation Begin)
     : S(S) {
   if (!S.getLangOpts().Profiles)
     return;
   for (const auto *A : Attrs)
     if (const auto *PSA = dyn_cast<ProfilesSuppressAttr>(A))
-      push(PSA->getProfileName(), PSA->getRule());
+      push(PSA->getProfileName(), PSA->getRule(), Begin);
 }
 
 SemaProfiles::ProfileSuppressScope::~ProfileSuppressScope() {
