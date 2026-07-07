@@ -11,6 +11,8 @@
 
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchSharedLibrary.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchStaticLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/StaticLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/TUSummaryEncoding.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/BuildNamespace.h"

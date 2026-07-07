@@ -11,6 +11,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <OffloadAPI.h>
+#include <cstdlib>
 #include <fstream>
 
 using namespace llvm;
@@ -19,8 +20,22 @@ using namespace llvm;
 // test, while having sensible lifetime for the platform environment
 #ifndef DISABLE_WRAPPER
 struct OffloadInitWrapper {
-  OffloadInitWrapper() { olInit(nullptr); }
-  ~OffloadInitWrapper() { olShutDown(); }
+  OffloadInitWrapper() {
+    if (ol_result_t Res = olInit(nullptr)) {
+      errs() << "olInit failed: "
+             << (Res->Details ? Res->Details : "(no details)") << " (code "
+             << Res->Code << ")\n";
+      std::abort();
+    }
+  }
+  ~OffloadInitWrapper() {
+    if (ol_result_t Res = olShutDown()) {
+      errs() << "olShutDown failed: "
+             << (Res->Details ? Res->Details : "(no details)") << " (code "
+             << Res->Code << ")\n";
+      std::abort();
+    }
+  }
 };
 static OffloadInitWrapper Wrapper{};
 #endif

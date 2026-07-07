@@ -5483,3 +5483,337 @@ define i64 @test_predsumu_u32x2_u64(<2 x i32> %a, i64 %b) {
   %res = call i64 @llvm.riscv.predsumu.i64.v2i32(<2 x i32> %a, i64 %b)
   ret i64 %res
 }
+
+; Packed Merge
+define <8 x i8> @test_pmerge_merge_u8x8(<8 x i8> %rd, <8 x i8> %rs1, <8 x i8> %rs2) {
+; RV32-LABEL: test_pmerge_merge_u8x8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    merge a1, a3, a5
+; RV32-NEXT:    merge a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_merge_u8x8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    merge a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call <8 x i8> @llvm.riscv.pmerge.v8i8(<8 x i8> %rs1, <8 x i8> %rs2, <8 x i8> %rd)
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_pmerge_mvm_u8x8(<8 x i8> %rs1, <8 x i8> %rd, <8 x i8> %rs2) {
+; RV32-LABEL: test_pmerge_mvm_u8x8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mvm a1, a5, a3
+; RV32-NEXT:    mvm a0, a4, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_mvm_u8x8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mvm a0, a2, a1
+; RV64-NEXT:    ret
+  %res = call <8 x i8> @llvm.riscv.pmerge.v8i8(<8 x i8> %rs1, <8 x i8> %rs2, <8 x i8> %rd)
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_pmerge_mvmn_u8x8(<8 x i8> %rs2, <8 x i8> %rs1, <8 x i8> %rd) {
+; RV32-LABEL: test_pmerge_mvmn_u8x8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mvmn a1, a3, a5
+; RV32-NEXT:    mvmn a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_mvmn_u8x8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mvmn a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call <8 x i8> @llvm.riscv.pmerge.v8i8(<8 x i8> %rs1, <8 x i8> %rs2, <8 x i8> %rd)
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_pmerge_merge_i8x8(<8 x i8> %rd, <8 x i8> %rs1, <8 x i8> %rs2) {
+; RV32-LABEL: test_pmerge_merge_i8x8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    merge a1, a3, a5
+; RV32-NEXT:    merge a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_merge_i8x8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    merge a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call <8 x i8> @llvm.riscv.pmerge.v8i8(<8 x i8> %rs1, <8 x i8> %rs2, <8 x i8> %rd)
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_pmerge_mvm_i8x8(<8 x i8> %rs1, <8 x i8> %rd, <8 x i8> %rs2) {
+; RV32-LABEL: test_pmerge_mvm_i8x8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mvm a1, a5, a3
+; RV32-NEXT:    mvm a0, a4, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_mvm_i8x8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mvm a0, a2, a1
+; RV64-NEXT:    ret
+  %res = call <8 x i8> @llvm.riscv.pmerge.v8i8(<8 x i8> %rs1, <8 x i8> %rs2, <8 x i8> %rd)
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_pmerge_mvmn_i8x8(<8 x i8> %rs2, <8 x i8> %rs1, <8 x i8> %rd) {
+; RV32-LABEL: test_pmerge_mvmn_i8x8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mvmn a1, a3, a5
+; RV32-NEXT:    mvmn a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_mvmn_i8x8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mvmn a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call <8 x i8> @llvm.riscv.pmerge.v8i8(<8 x i8> %rs1, <8 x i8> %rs2, <8 x i8> %rd)
+  ret <8 x i8> %res
+}
+
+define <4 x i16> @test_pmerge_merge_u16x4(<4 x i16> %rd, <4 x i16> %rs1, <4 x i16> %rs2) {
+; RV32-LABEL: test_pmerge_merge_u16x4:
+; RV32:       # %bb.0:
+; RV32-NEXT:    merge a1, a3, a5
+; RV32-NEXT:    merge a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_merge_u16x4:
+; RV64:       # %bb.0:
+; RV64-NEXT:    merge a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pmerge.v4i16(<4 x i16> %rs1, <4 x i16> %rs2, <4 x i16> %rd)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_pmerge_mvm_u16x4(<4 x i16> %rs1, <4 x i16> %rd, <4 x i16> %rs2) {
+; RV32-LABEL: test_pmerge_mvm_u16x4:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mvm a1, a5, a3
+; RV32-NEXT:    mvm a0, a4, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_mvm_u16x4:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mvm a0, a2, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pmerge.v4i16(<4 x i16> %rs1, <4 x i16> %rs2, <4 x i16> %rd)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_pmerge_mvmn_u16x4(<4 x i16> %rs2, <4 x i16> %rs1, <4 x i16> %rd) {
+; RV32-LABEL: test_pmerge_mvmn_u16x4:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mvmn a1, a3, a5
+; RV32-NEXT:    mvmn a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_mvmn_u16x4:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mvmn a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pmerge.v4i16(<4 x i16> %rs1, <4 x i16> %rs2, <4 x i16> %rd)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_pmerge_merge_i16x4(<4 x i16> %rd, <4 x i16> %rs1, <4 x i16> %rs2) {
+; RV32-LABEL: test_pmerge_merge_i16x4:
+; RV32:       # %bb.0:
+; RV32-NEXT:    merge a1, a3, a5
+; RV32-NEXT:    merge a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_merge_i16x4:
+; RV64:       # %bb.0:
+; RV64-NEXT:    merge a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pmerge.v4i16(<4 x i16> %rs1, <4 x i16> %rs2, <4 x i16> %rd)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_pmerge_mvm_i16x4(<4 x i16> %rs1, <4 x i16> %rd, <4 x i16> %rs2) {
+; RV32-LABEL: test_pmerge_mvm_i16x4:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mvm a1, a5, a3
+; RV32-NEXT:    mvm a0, a4, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_mvm_i16x4:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mvm a0, a2, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pmerge.v4i16(<4 x i16> %rs1, <4 x i16> %rs2, <4 x i16> %rd)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_pmerge_mvmn_i16x4(<4 x i16> %rs2, <4 x i16> %rs1, <4 x i16> %rd) {
+; RV32-LABEL: test_pmerge_mvmn_i16x4:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mvmn a1, a3, a5
+; RV32-NEXT:    mvmn a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_mvmn_i16x4:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mvmn a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pmerge.v4i16(<4 x i16> %rs1, <4 x i16> %rs2, <4 x i16> %rd)
+  ret <4 x i16> %res
+}
+
+define <2 x i32> @test_pmerge_merge_u32x2(<2 x i32> %rd, <2 x i32> %rs1, <2 x i32> %rs2) {
+; RV32-LABEL: test_pmerge_merge_u32x2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    merge a1, a3, a5
+; RV32-NEXT:    merge a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_merge_u32x2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    merge a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pmerge.v2i32(<2 x i32> %rs1, <2 x i32> %rs2, <2 x i32> %rd)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pmerge_mvm_u32x2(<2 x i32> %rs1, <2 x i32> %rd, <2 x i32> %rs2) {
+; RV32-LABEL: test_pmerge_mvm_u32x2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mvm a1, a5, a3
+; RV32-NEXT:    mvm a0, a4, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_mvm_u32x2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mvm a0, a2, a1
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pmerge.v2i32(<2 x i32> %rs1, <2 x i32> %rs2, <2 x i32> %rd)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pmerge_mvmn_u32x2(<2 x i32> %rs2, <2 x i32> %rs1, <2 x i32> %rd) {
+; RV32-LABEL: test_pmerge_mvmn_u32x2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mvmn a1, a3, a5
+; RV32-NEXT:    mvmn a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_mvmn_u32x2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mvmn a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pmerge.v2i32(<2 x i32> %rs1, <2 x i32> %rs2, <2 x i32> %rd)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pmerge_merge_i32x2(<2 x i32> %rd, <2 x i32> %rs1, <2 x i32> %rs2) {
+; RV32-LABEL: test_pmerge_merge_i32x2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    merge a1, a3, a5
+; RV32-NEXT:    merge a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_merge_i32x2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    merge a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pmerge.v2i32(<2 x i32> %rs1, <2 x i32> %rs2, <2 x i32> %rd)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pmerge_mvm_i32x2(<2 x i32> %rs1, <2 x i32> %rd, <2 x i32> %rs2) {
+; RV32-LABEL: test_pmerge_mvm_i32x2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mvm a1, a5, a3
+; RV32-NEXT:    mvm a0, a4, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_mvm_i32x2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mvm a0, a2, a1
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pmerge.v2i32(<2 x i32> %rs1, <2 x i32> %rs2, <2 x i32> %rd)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pmerge_mvmn_i32x2(<2 x i32> %rs2, <2 x i32> %rs1, <2 x i32> %rd) {
+; RV32-LABEL: test_pmerge_mvmn_i32x2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mvmn a1, a3, a5
+; RV32-NEXT:    mvmn a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmerge_mvmn_i32x2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mvmn a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pmerge.v2i32(<2 x i32> %rs1, <2 x i32> %rs2, <2 x i32> %rd)
+  ret <2 x i32> %res
+}
+
+; Packed absolute difference sum
+define i32 @test_pabdsumu_u8x8_u32(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_pabdsumu_u8x8_u32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pabdsumu.b a0, a0, a2
+; RV32-NEXT:    pabdsumau.b a0, a1, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pabdsumu_u8x8_u32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pabdsumu.b a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.pabdsumu.i32.v8i8(<8 x i8> %a, <8 x i8> %b)
+  ret i32 %res
+}
+
+define i64 @test_pabdsumu_u8x8_u64(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_pabdsumu_u8x8_u64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pabdsumu.b a1, a1, a3
+; RV32-NEXT:    pabdsumu.b a0, a0, a2
+; RV32-NEXT:    waddu a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pabdsumu_u8x8_u64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pabdsumu.b a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i64 @llvm.riscv.pabdsumu.i64.v8i8(<8 x i8> %a, <8 x i8> %b)
+  ret i64 %res
+}
+
+define i32 @test_pabdsumau_u8x8_u32(i32 %rd, <8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_pabdsumau_u8x8_u32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pabdsumau.b a0, a1, a3
+; RV32-NEXT:    pabdsumau.b a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pabdsumau_u8x8_u32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pabdsumau.b a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.pabdsumau.i32.v8i8(i32 %rd, <8 x i8> %a, <8 x i8> %b)
+  ret i32 %res
+}
+
+define i64 @test_pabdsumau_u8x8_u64(i64 %rd, <8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_pabdsumau_u8x8_u64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pabdsumu.b a3, a3, a5
+; RV32-NEXT:    pabdsumu.b a2, a2, a4
+; RV32-NEXT:    waddau a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pabdsumau_u8x8_u64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pabdsumau.b a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call i64 @llvm.riscv.pabdsumau.i64.v8i8(i64 %rd, <8 x i8> %a, <8 x i8> %b)
+  ret i64 %res
+}

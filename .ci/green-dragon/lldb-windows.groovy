@@ -20,7 +20,9 @@ pipeline {
     stages {
         stage('Pull Docker Image') {
             steps {
-                bat 'docker pull swiftlang/swift-ci:lldb-windowsservercore-1809'
+                timeout(10) {
+                    bat 'docker pull swiftlang/swift-ci:lldb-windowsservercore-1809'
+                }
             }
         }
 
@@ -36,17 +38,19 @@ pipeline {
 
         stage('Print Machine Info') {
             steps {
-                bat '''
-                    docker run --rm ^
-                        swiftlang/swift-ci:lldb-windowsservercore-1809 ^
-                        powershell -Command "cmake --version; ninja --version; python --version; swig -version"
-                '''
+                timeout(5) {
+                    bat '''
+                        docker run --rm ^
+                            swiftlang/swift-ci:lldb-windowsservercore-1809 ^
+                            powershell -Command "cmake --version; ninja --version; python --version; swig -version"
+                    '''
+                }
             }
         }
 
         stage('Build and Test') {
             steps {
-                timeout(240) {
+                timeout(60) {
                     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                         writeFile file: 'build.bat', text: '''@echo off
 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat" || exit /b 1
@@ -101,10 +105,14 @@ ninja check-lldb -C ..\\llvm-build || exit /b 1
 
     post {
         always {
-            junit allowEmptyResults: true, testResults: 'llvm-build/test/results-no-lldb-server.xml,llvm-build/test/results-lldb-server.xml'
+            timeout(5) {
+                junit allowEmptyResults: true, testResults: 'llvm-build/test/results-no-lldb-server.xml,llvm-build/test/results-lldb-server.xml'
+            }
         }
         cleanup {
-            deleteDir()
+            timeout(5) {
+                deleteDir()
+            }
         }
     }
 }
