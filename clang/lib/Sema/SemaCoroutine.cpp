@@ -532,8 +532,11 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
   if (!CtorArgExprs.empty()) {
     // Create an initialization sequence for the promise type using the
     // constructor arguments, wrapped in a parenthesized list expression.
+    SmallVector<SourceLocation, 4> CommaLocs(CtorArgExprs.size() - 1,
+                                             SourceLocation());
     Expr *PLE = ParenListExpr::Create(Context, FD->getLocation(),
-                                      CtorArgExprs, FD->getLocation());
+                                      CtorArgExprs, FD->getLocation(),
+                                      CommaLocs);
     InitializedEntity Entity = InitializedEntity::InitializeVariable(VD);
     InitializationKind Kind = InitializationKind::CreateForInit(
         VD->getLocation(), /*DirectInit=*/true, PLE);

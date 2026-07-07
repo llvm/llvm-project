@@ -911,17 +911,18 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         InitKind = LambdaCaptureInitKind::DirectInit;
 
         ExprVector Exprs;
+        SmallVector<SourceLocation, 4> CommaLocs;
         if (Tentative) {
           Parens.skipToEnd();
           *Tentative = LambdaIntroducerTentativeParse::Incomplete;
-        } else if (ParseExpressionList(Exprs)) {
+        } else if (ParseExpressionList(Exprs, {}, false, CommaLocs)) {
           Parens.skipToEnd();
           Init = ExprError();
         } else {
           Parens.consumeClose();
           Init = Actions.ActOnParenListExpr(Parens.getOpenLocation(),
                                             Parens.getCloseLocation(),
-                                            Exprs);
+                                            Exprs, CommaLocs);
         }
       } else if (Tok.isOneOf(tok::l_brace, tok::equal)) {
         // Each lambda init-capture forms its own full expression, which clears
@@ -2917,6 +2918,7 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
   if (Tok.is(tok::l_paren)) {
     SourceLocation ConstructorLParen, ConstructorRParen;
     ExprVector ConstructorArgs;
+    SmallVector<SourceLocation, 4> CommaLocs;
     BalancedDelimiterTracker T(*this, tok::l_paren);
     T.consumeOpen();
     ConstructorLParen = T.getOpenLocation();
@@ -2940,7 +2942,7 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
       if (ParseExpressionList(ConstructorArgs, [&] {
             PreferredType.enterFunctionArgument(Tok.getLocation(),
                                                 RunSignatureHelp);
-          })) {
+          }, false, CommaLocs)) {
         if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
           RunSignatureHelp();
         SkipUntil(tok::semi, StopAtSemi | StopBeforeMatch);
@@ -2955,7 +2957,7 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
     }
     Initializer = Actions.ActOnParenListExpr(ConstructorLParen,
                                              ConstructorRParen,
-                                             ConstructorArgs);
+                                             ConstructorArgs, CommaLocs);
   } else if (Tok.is(tok::l_brace) && getLangOpts().CPlusPlus11) {
     Diag(Tok.getLocation(),
          diag::warn_cxx98_compat_generalized_initializer_lists);

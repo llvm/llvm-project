@@ -3179,8 +3179,10 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildParenListExpr(SourceLocation LParenLoc,
                                   MultiExprArg SubExprs,
-                                  SourceLocation RParenLoc) {
-    return getSema().ActOnParenListExpr(LParenLoc, RParenLoc, SubExprs);
+                                  SourceLocation RParenLoc,
+                                  ArrayRef<SourceLocation> CommaLocs) {
+    return getSema().ActOnParenListExpr(LParenLoc, RParenLoc, SubExprs,
+                                        CommaLocs);
   }
 
   ExprResult RebuildCXXParenListInitExpr(ArrayRef<Expr *> Args, QualType T,
@@ -4495,13 +4497,13 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
   if (CXXScalarValueInitExpr *VIE = dyn_cast<CXXScalarValueInitExpr>(Init)) {
     SourceRange Parens = VIE->getSourceRange();
     return getDerived().RebuildParenListExpr(Parens.getBegin(), {},
-                                             Parens.getEnd());
+                                             Parens.getEnd(), {});
   }
 
   // FIXME: We shouldn't build ImplicitValueInitExprs for direct-initialization.
   if (isa<ImplicitValueInitExpr>(Init))
     return getDerived().RebuildParenListExpr(SourceLocation(), {},
-                                             SourceLocation());
+                                             SourceLocation(), {});
 
   // Revert initialization by constructor back to a parenthesized or braced list
   // of expressions. Any other form of initializer can just be reused directly.
@@ -4543,8 +4545,10 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
            "no parens or braces but have direct init with arguments?");
     return ExprEmpty();
   }
+  SmallVector<SourceLocation, 4> CommaLocs(
+      NewArgs.empty() ? 0 : NewArgs.size() - 1, SourceLocation());
   return getDerived().RebuildParenListExpr(Parens.getBegin(), NewArgs,
-                                           Parens.getEnd());
+                                           Parens.getEnd(), CommaLocs);
 }
 
 template<typename Derived>
@@ -14318,7 +14322,8 @@ TreeTransform<Derived>::TransformParenListExpr(ParenListExpr *E) {
 
   return getDerived().RebuildParenListExpr(E->getLParenLoc(),
                                            Inits,
-                                           E->getRParenLoc());
+                                           E->getRParenLoc(),
+                                           E->getCommaLocs());
 }
 
 /// Transform an address-of-label expression.

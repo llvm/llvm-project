@@ -7990,8 +7990,10 @@ ExprResult InitializationSequence::Perform(Sema &S,
         !Kind.isExplicitCast()) {
       // Rebuild the ParenListExpr.
       SourceRange ParenRange = Kind.getParenOrBraceRange();
+      SmallVector<SourceLocation, 4> CommaLocs(
+          Args.empty() ? 0 : Args.size() - 1, SourceLocation());
       return S.ActOnParenListExpr(ParenRange.getBegin(), ParenRange.getEnd(),
-                                  Args);
+                                  Args, CommaLocs);
     }
     assert(Kind.getKind() == InitializationKind::IK_Copy ||
            Kind.isExplicitCast() ||

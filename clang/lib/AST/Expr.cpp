@@ -4960,11 +4960,15 @@ SourceLocation DesignatedInitUpdateExpr::getEndLoc() const {
 }
 
 ParenListExpr::ParenListExpr(SourceLocation LParenLoc, ArrayRef<Expr *> Exprs,
-                             SourceLocation RParenLoc)
+                             SourceLocation RParenLoc,
+                             ArrayRef<SourceLocation> CommaLocs)
     : Expr(ParenListExprClass, QualType(), VK_PRValue, OK_Ordinary),
       LParenLoc(LParenLoc), RParenLoc(RParenLoc) {
   ParenListExprBits.NumExprs = Exprs.size();
-  llvm::copy(Exprs, getTrailingObjects());
+  assert(CommaLocs.size() == getNumCommas() &&
+         "wrong number of comma locations for paren list");
+  llvm::copy(Exprs, getTrailingObjects<Stmt *>());
+  llvm::copy(CommaLocs, getTrailingObjects<SourceLocation>());
   setDependence(computeDependence(this));
 }
 
@@ -4976,16 +4980,21 @@ ParenListExpr::ParenListExpr(EmptyShell Empty, unsigned NumExprs)
 ParenListExpr *ParenListExpr::Create(const ASTContext &Ctx,
                                      SourceLocation LParenLoc,
                                      ArrayRef<Expr *> Exprs,
-                                     SourceLocation RParenLoc) {
-  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *>(Exprs.size()),
-                           alignof(ParenListExpr));
-  return new (Mem) ParenListExpr(LParenLoc, Exprs, RParenLoc);
+                                     SourceLocation RParenLoc,
+                                     ArrayRef<SourceLocation> CommaLocs) {
+  unsigned NumCommas = Exprs.empty() ? 0 : Exprs.size() - 1;
+  void *Mem = Ctx.Allocate(
+      totalSizeToAlloc<Stmt *, SourceLocation>(Exprs.size(), NumCommas),
+      alignof(ParenListExpr));
+  return new (Mem) ParenListExpr(LParenLoc, Exprs, RParenLoc, CommaLocs);
 }
 
 ParenListExpr *ParenListExpr::CreateEmpty(const ASTContext &Ctx,
                                           unsigned NumExprs) {
-  void *Mem =
-      Ctx.Allocate(totalSizeToAlloc<Stmt *>(NumExprs), alignof(ParenListExpr));
+  unsigned NumCommas = NumExprs ? NumExprs - 1 : 0;
+  void *Mem = Ctx.Allocate(
+      totalSizeToAlloc<Stmt *, SourceLocation>(NumExprs, NumCommas),
+      alignof(ParenListExpr));
   return new (Mem) ParenListExpr(EmptyShell(), NumExprs);
 }
 

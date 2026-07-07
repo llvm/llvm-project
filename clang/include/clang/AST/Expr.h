@@ -6086,16 +6086,24 @@ public:
 
 class ParenListExpr final
     : public Expr,
-      private llvm::TrailingObjects<ParenListExpr, Stmt *> {
+      private llvm::TrailingObjects<ParenListExpr, Stmt *, SourceLocation> {
   friend class ASTStmtReader;
   friend TrailingObjects;
 
   /// The location of the left and right parentheses.
   SourceLocation LParenLoc, RParenLoc;
 
+  size_t numTrailingObjects(OverloadToken<Stmt *>) const {
+    return getNumExprs();
+  }
+
+  size_t numTrailingObjects(OverloadToken<SourceLocation>) const {
+    return getNumCommas();
+  }
+
   /// Build a paren list.
   ParenListExpr(SourceLocation LParenLoc, ArrayRef<Expr *> Exprs,
-                SourceLocation RParenLoc);
+                SourceLocation RParenLoc, ArrayRef<SourceLocation> CommaLocs);
 
   /// Build an empty paren list.
   ParenListExpr(EmptyShell Empty, unsigned NumExprs);
@@ -6103,14 +6111,15 @@ class ParenListExpr final
 public:
   /// Create a paren list.
   static ParenListExpr *Create(const ASTContext &Ctx, SourceLocation LParenLoc,
-                               ArrayRef<Expr *> Exprs,
-                               SourceLocation RParenLoc);
+                               ArrayRef<Expr *> Exprs, SourceLocation RParenLoc,
+                               ArrayRef<SourceLocation> CommaLocs);
 
   /// Create an empty paren list.
   static ParenListExpr *CreateEmpty(const ASTContext &Ctx, unsigned NumExprs);
 
   /// Return the number of expressions in this paren list.
   unsigned getNumExprs() const { return ParenListExprBits.NumExprs; }
+  unsigned getNumCommas() const { return getNumExprs() ? getNumExprs() - 1 : 0; }
 
   Expr *getExpr(unsigned Init) {
     assert(Init < getNumExprs() && "Initializer access out of range!");
@@ -6121,13 +6130,19 @@ public:
     return const_cast<ParenListExpr *>(this)->getExpr(Init);
   }
 
-  Expr **getExprs() { return reinterpret_cast<Expr **>(getTrailingObjects()); }
+  Expr **getExprs() {
+    return reinterpret_cast<Expr **>(getTrailingObjects<Stmt *>());
+  }
 
   Expr *const *getExprs() const {
-    return reinterpret_cast<Expr *const *>(getTrailingObjects());
+    return reinterpret_cast<Expr *const *>(getTrailingObjects<Stmt *>());
   }
 
   ArrayRef<Expr *> exprs() const { return {getExprs(), getNumExprs()}; }
+
+  ArrayRef<SourceLocation> getCommaLocs() const {
+    return {getTrailingObjects<SourceLocation>(), getNumCommas()};
+  }
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
@@ -6140,10 +6155,12 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(getTrailingObjects(getNumExprs()));
+    return child_range(getTrailingObjects<Stmt *>(),
+                       getTrailingObjects<Stmt *>() + getNumExprs());
   }
   const_child_range children() const {
-    return const_child_range(getTrailingObjects(getNumExprs()));
+    return const_child_range(getTrailingObjects<Stmt *>(),
+                             getTrailingObjects<Stmt *>() + getNumExprs());
   }
 };
 

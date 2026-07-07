@@ -365,10 +365,11 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
       CalledSignatureHelp = true;
       return PreferredType;
     };
+    SmallVector<SourceLocation, 4> CommaLocs;
     if (ParseExpressionList(Exprs, [&] {
           PreferredType.enterFunctionArgument(Tok.getLocation(),
                                               RunSignatureHelp);
-        })) {
+        }, false, CommaLocs)) {
       if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
         RunSignatureHelp();
       Actions.ActOnInitializerError(OmpPrivParm);
@@ -380,7 +381,8 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
         RLoc = T.getCloseLocation();
 
       ExprResult Initializer =
-          Actions.ActOnParenListExpr(T.getOpenLocation(), RLoc, Exprs);
+          Actions.ActOnParenListExpr(T.getOpenLocation(), RLoc, Exprs,
+                                     CommaLocs);
       Actions.AddInitializerToDecl(OmpPrivParm, Initializer.get(),
                                    /*DirectInit=*/true);
     }
