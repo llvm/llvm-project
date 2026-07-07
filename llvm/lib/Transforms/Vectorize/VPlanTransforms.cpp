@@ -1110,7 +1110,7 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
     VPValue *Mask;
     if (!match(Op, m_ExtractLane(m_LastActiveLane(m_VPValue(Mask)),
                                  m_VPValue(Incoming))) ||
-        Mask != vputils::findHeaderMask(Plan))
+        !match(Mask, m_HeaderMask()))
       return nullptr;
   }
 
