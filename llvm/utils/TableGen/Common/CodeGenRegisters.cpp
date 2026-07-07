@@ -2578,10 +2578,22 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
         }
       }
 
-      auto [SubSetRC, Inserted] = getOrCreateSubClass(
-          RC, &SubSetVec,
-          RC->getName() + "_with_" + CompositeSubIdx->getName() + "_in_" +
-              CompositeSubRC->getName());
+      std::string Name =
+          (Twine(RC->getName()) + "_with_" + CompositeSubIdx->getName() +
+           "_in_" + CompositeSubRC->getName())
+              .str();
+
+      auto HasRegClassNamed = [&](StringRef Candidate) {
+        return llvm::any_of(RegClasses, [&](const CodeGenRegisterClass &RC) {
+          return RC.getName() == Candidate;
+        });
+      };
+      if (HasRegClassNamed(Name) && &SubRC != CompositeSubRC)
+        Name = (Twine(RC->getName()) + "_with_" + SubIdx->getName() + "_in_" +
+                SubRC.getName())
+                   .str();
+
+      auto [SubSetRC, Inserted] = getOrCreateSubClass(RC, &SubSetVec, Name);
 
       if (Inserted)
         SubSetRC->setInferredFrom(CompositeSubIdx, CompositeSubRC);

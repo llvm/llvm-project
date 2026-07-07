@@ -74,6 +74,19 @@ DecodeGPR64x8ClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
   return Success;
 }
 
+template <unsigned RegClassID, unsigned Multiple, unsigned Min, unsigned Max>
+static DecodeStatus
+DecodeMulMinMaxRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                             const MCDisassembler *Decoder) {
+  unsigned Reg = (RegNo * Multiple) + Min;
+  if (Reg < Min || Reg > Max || (Reg % Multiple))
+    return Fail;
+  MCRegister Register =
+      getAArch64MCRegisterClass(RegClassID).getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
 template <unsigned Min, unsigned Max>
 static DecodeStatus DecodeZPRMul2_MinMax(MCInst &Inst, unsigned RegNo,
                                          uint64_t Address,

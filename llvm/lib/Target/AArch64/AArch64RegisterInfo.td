@@ -1425,10 +1425,27 @@ class ZPRVectorListMul<int ElementWidth, int NumRegs, string RegClassSuffix = ""
                                  # "AArch64::ZPR" # RegClassSuffix # "RegClassID" # ">";
 }
 
+class ZPRVectorListMinMax<int ElementWidth, int NumRegs, int Min, int Max,
+                          string RegClassSuffix = "">
+  : ZPRVectorList<ElementWidth, NumRegs> {
+  let Name = "SVEVectorList" # NumRegs # "x" # ElementWidth # RegClassSuffix;
+  let DiagnosticType = "Invalid" # Name;
+  let PredicateMethod =
+      "isTypedVectorListMinMax<RegKind::SVEDataVector, "
+                                 # NumRegs # ", 0, "
+                                 # ElementWidth #  ", "
+                                 # Min # ", " # Max # ">";
+}
+
+def ZPR3_3b : RegisterClass<"AArch64", [untyped], 128,
+                            (add (trunc ZSeqTriples, 8))> {
+  let Size = 384;
+}
+
 let EncoderMethod = "EncodeRegMul_MinMax<1, 0, 7>",
-    DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR3RegClassID, 0, 8>" in {
-  def ZZZ_Any_3b  : RegisterOperand<ZPR3, "printTypedVectorList<0,0>"> {
-    let ParserMatchClass = ZPRVectorListMul<0, 3, "_3b">;
+    DecoderMethod = "DecodeMulMinMaxRegisterClass<AArch64::ZPR3_3bRegClassID, 1, 0, 7>" in {
+  def ZZZ_Any_3b : RegisterOperand<ZPR3_3b, "printTypedVectorList<0,0>"> {
+    let ParserMatchClass = ZPRVectorListMinMax<0, 3, 0, 7, "3_3b">;
   }
 }
 

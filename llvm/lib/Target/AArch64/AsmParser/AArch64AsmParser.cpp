@@ -1252,6 +1252,7 @@ public:
     switch (Class) {
     case AArch64::ZPRRegClassID:
     case AArch64::ZPR_3bRegClassID:
+    case AArch64::ZPR3_3bRegClassID:
     case AArch64::ZPR_4bRegClassID:
     case AArch64::ZPRMul2_LoRegClassID:
     case AArch64::ZPRMul2_HiRegClassID:
@@ -1448,6 +1449,19 @@ public:
     if (!Res)
       return DiagnosticPredicate::NoMatch;
     if (!getAArch64MCRegisterClass(RegClass).contains(VectorList.Reg))
+      return DiagnosticPredicate::NearMatch;
+    return DiagnosticPredicate::Match;
+  }
+
+  template <RegKind VectorKind, unsigned NumRegs, unsigned NumElements,
+            unsigned ElementWidth, unsigned Min, unsigned Max>
+  DiagnosticPredicate isTypedVectorListMinMax() const {
+    bool Res =
+        isTypedVectorList<VectorKind, NumRegs, NumElements, ElementWidth>();
+    if (!Res)
+      return DiagnosticPredicate::NoMatch;
+    unsigned Reg = Ctx.getRegisterInfo()->getEncodingValue(VectorList.Reg);
+    if (Reg < Min || Reg > Max)
       return DiagnosticPredicate::NearMatch;
     return DiagnosticPredicate::Match;
   }
@@ -6412,7 +6426,7 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "Invalid vector list, expected list with 4 consecutive "
                       "SVE vectors, where the first vector is a multiple of 4 "
                       "and with matching element types");
-  case Match_InvalidSVEVectorList3x0_3b:
+  case Match_InvalidSVEVectorList3x03_3b:
     return Error(Loc, "Invalid vector list, expected list with 3 consecutive "
                       "SVE vectors starting at z0-z7");
   case Match_InvalidLookupTable:
@@ -7032,7 +7046,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVEVectorList2x16Mul2_Hi:
   case Match_InvalidSVEVectorList2x32Mul2_Hi:
   case Match_InvalidSVEVectorList2x64Mul2_Hi:
-  case Match_InvalidSVEVectorList3x0_3b:
+  case Match_InvalidSVEVectorList3x03_3b:
   case Match_InvalidSVEVectorListStrided2x8:
   case Match_InvalidSVEVectorListStrided2x16:
   case Match_InvalidSVEVectorListStrided2x32:
