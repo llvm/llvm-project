@@ -1527,9 +1527,7 @@ bool WaitcntBrackets::counterOutOfOrder(AMDGPU::InstCounterType T) const {
         HWEvents::VMEM_SAMPLER_READ_ACCESS | HWEvents::VMEM_BVH_READ_ACCESS;
     if (!Context->ST.hasExtendedWaitCounts() &&
         (Events & ExtendedImageEvents).any()) {
-      Events -= ExtendedImageEvents; // TODO: Tests pass even if I only use
-                                     // VMEM_SAMPLER_READ_ACCESS which isn't
-                                     // normal; indicates weak testing coverage
+      Events -= ExtendedImageEvents;
       Events |= HWEvents::VMEM_READ_ACCESS;
     }
 

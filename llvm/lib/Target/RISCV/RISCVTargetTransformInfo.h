@@ -439,6 +439,7 @@ public:
       return true;
     case RecurKind::AnyOf:
     case RecurKind::FAdd:
+    case RecurKind::FSub:
     case RecurKind::FMulAdd:
       // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
       // expanded.

@@ -102,7 +102,7 @@ static size_t getLongestEntryLength(ArrayRef<SubtargetFeatureKV> Table) {
   return MaxLen;
 }
 
-static size_t getLongestEntryLength(ArrayRef<StringRef> Table) {
+static size_t getLongestEntryLength(StringTable Table) {
   size_t MaxLen = 0;
   for (StringRef I : Table)
     MaxLen = std::max(MaxLen, I.size());
@@ -110,8 +110,7 @@ static size_t getLongestEntryLength(ArrayRef<StringRef> Table) {
 }
 
 /// Display help for feature and mcpu choices.
-static void Help(ArrayRef<StringRef> CPUNames,
-                 ArrayRef<SubtargetFeatureKV> FeatTable) {
+static void Help(StringTable CPUNames, ArrayRef<SubtargetFeatureKV> FeatTable) {
   // the static variable ensures that the help information only gets
   // printed once even though a target machine creates multiple subtargets
   static bool PrintOnce = false;
@@ -125,7 +124,7 @@ static void Help(ArrayRef<StringRef> CPUNames,
 
   // Print the CPU table.
   errs() << "Available CPUs for this target:\n\n";
-  for (auto &CPUName : CPUNames) {
+  for (auto &CPUName : drop_begin(CPUNames)) {
     // Skip apple-latest, as that's only meant to be used in
     // disassemblers/debuggers, and we don't want normal code to be built with
     // it as an -mcpu=
@@ -150,7 +149,7 @@ static void Help(ArrayRef<StringRef> CPUNames,
 }
 
 /// Display help for mcpu choices only
-static void cpuHelp(ArrayRef<StringRef> CPUNames) {
+static void cpuHelp(StringTable CPUNames) {
   // the static variable ensures that the help information only gets
   // printed once even though a target machine creates multiple subtargets
   static bool PrintOnce = false;
@@ -160,7 +159,7 @@ static void cpuHelp(ArrayRef<StringRef> CPUNames) {
 
   // Print the CPU table.
   errs() << "Available CPUs for this target:\n\n";
-  for (auto &CPU : CPUNames) {
+  for (auto &CPU : llvm::drop_begin(CPUNames)) {
     // Skip apple-latest, as that's only meant to be used in
     // disassemblers/debuggers, and we don't want normal code to be built with
     // it as an -mcpu=
@@ -179,7 +178,7 @@ static void cpuHelp(ArrayRef<StringRef> CPUNames) {
 
 static FeatureBitset getFeatures(MCSubtargetInfo &STI, StringRef CPU,
                                  StringRef TuneCPU, StringRef FS,
-                                 ArrayRef<StringRef> ProcNames,
+                                 StringTable ProcNames,
                                  ArrayRef<SubtargetSubTypeKV> ProcDesc,
                                  ArrayRef<SubtargetFeatureKV> ProcFeatures) {
   SubtargetFeatures Features(FS);
@@ -257,15 +256,15 @@ void MCSubtargetInfo::setDefaultFeatures(StringRef CPU, StringRef TuneCPU,
 }
 
 MCSubtargetInfo::MCSubtargetInfo(
-    const Triple &TT, StringRef C, StringRef TC, StringRef FS,
-    ArrayRef<StringRef> PN, ArrayRef<SubtargetFeatureKV> PF,
-    ArrayRef<SubtargetSubTypeKV> PD, const MCWriteProcResEntry *WPR,
+    const Triple &TT, StringRef C, StringRef TC, StringRef FS, StringTable PN,
+    ArrayRef<SubtargetFeatureKV> PF, ArrayRef<SubtargetSubTypeKV> PD,
+    const MCSchedModel *PSM, const MCWriteProcResEntry *WPR,
     const MCWriteLatencyEntry *WL, const MCReadAdvanceEntry *RA,
     const InstrStage *IS, const unsigned *OC, const unsigned *FP)
     : TargetTriple(TT), CPU(std::string(C)), TuneCPU(std::string(TC)),
-      ProcNames(PN), ProcFeatures(PF), ProcDesc(PD), WriteProcResTable(WPR),
-      WriteLatencyTable(WL), ReadAdvanceTable(RA), Stages(IS),
-      OperandCycles(OC), ForwardingPaths(FP) {
+      ProcNames(PN), ProcFeatures(PF), ProcDesc(PD), ProcSchedModels(PSM),
+      WriteProcResTable(WPR), WriteLatencyTable(WL), ReadAdvanceTable(RA),
+      Stages(IS), OperandCycles(OC), ForwardingPaths(FP) {
   InitMCProcessorInfo(CPU, TuneCPU, FS);
 }
 
@@ -449,8 +448,7 @@ const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
              << " (ignoring processor)\n";
     return MCSchedModel::Default;
   }
-  assert(CPUEntry->schedModel() && "Missing processor SchedModel value");
-  return *CPUEntry->schedModel();
+  return ProcSchedModels[CPUEntry->SchedModelIdx];
 }
 
 InstrItineraryData
