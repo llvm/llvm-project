@@ -1,18 +1,23 @@
-//===--- Implementation of a platform independent Dir data structure ------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of the platform independent Dir class.
+///
+//===----------------------------------------------------------------------===//
 
-#include "dir.h"
+#include "src/__support/File/dir.h"
 
+#include "hdr/errno_macros.h"
 #include "src/__support/CPP/mutex.h" // lock_guard
 #include "src/__support/CPP/new.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/error_or.h"
-#include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -45,14 +50,20 @@ ErrorOr<struct dirent *> Dir::read() {
   if (fillsize == 0)
     return nullptr;
 
-  struct dirent *d = reinterpret_cast<struct dirent *>(buffer + readptr);
-#ifdef __linux__
-  // The d_reclen field is available on Linux but not required by POSIX.
-  readptr += d->d_reclen;
-#else
-  // Other platforms have to implement how the read pointer is to be updated.
-#error "DIR read pointer update is missing."
-#endif
+  cpp::span<uint8_t> buf_span(buffer, BUFSIZE);
+
+  if (fillsize - readptr < sizeof(struct dirent))
+    return Error(EIO);
+
+  struct dirent *d =
+      reinterpret_cast<struct dirent *>(buf_span.subspan(readptr).data());
+
+  size_t reclen = platform_dir_reclen(d);
+
+  if (reclen == 0 || readptr + reclen > fillsize)
+    return Error(EIO);
+
+  readptr += reclen;
   return d;
 }
 
