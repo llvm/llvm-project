@@ -286,7 +286,6 @@ public:
   unsigned getMaxPrefetchIterationsAhead() const override {
     return MaxPrefetchIterationsAhead;
   }
-  bool enableTgtMemIntrinsicPrefetching() const override { return true; }
   Align getPrefFunctionAlignment() const {
     return PrefFunctionAlignment;
   }

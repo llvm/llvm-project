@@ -342,11 +342,6 @@ public:
   ///
   virtual bool enableWritePrefetching() const;
 
-  /// \return True if prefetching should also be done for target-specific
-  /// memory intrinsics.
-  ///
-  virtual bool enableTgtMemIntrinsicPrefetching() const;
-
   /// Return the minimum stride necessary to trigger software
   /// prefetching.
   ///

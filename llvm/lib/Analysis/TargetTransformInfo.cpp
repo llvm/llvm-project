@@ -912,10 +912,6 @@ bool TargetTransformInfo::enableWritePrefetching() const {
   return TTIImpl->enableWritePrefetching();
 }
 
-bool TargetTransformInfo::enableTgtMemIntrinsicPrefetching() const {
-  return TTIImpl->enableTgtMemIntrinsicPrefetching();
-}
-
 bool TargetTransformInfo::shouldPrefetchAddressSpace(unsigned AS) const {
   return TTIImpl->shouldPrefetchAddressSpace(AS);
 }

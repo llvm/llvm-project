@@ -1463,10 +1463,6 @@ public:
   /// \return True if prefetching should also be done for writes.
   LLVM_ABI bool enableWritePrefetching() const;
 
-  /// \return True if prefetching should also be done for target-specific
-  /// memory intrinsics.
-  LLVM_ABI bool enableTgtMemIntrinsicPrefetching() const;
-
   /// \return if target want to issue a prefetch in address space \p AS.
   LLVM_ABI bool shouldPrefetchAddressSpace(unsigned AS) const;
 

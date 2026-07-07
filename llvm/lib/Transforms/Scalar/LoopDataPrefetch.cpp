@@ -24,6 +24,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
@@ -39,10 +40,6 @@ using namespace llvm;
 static cl::opt<bool>
 PrefetchWrites("loop-prefetch-writes", cl::Hidden, cl::init(false),
                cl::desc("Prefetch write addresses"));
-
-static cl::opt<bool> PrefetchTgtMemIntrinsics(
-    "loop-prefetch-tgt-mem-intrinsics", cl::Hidden, cl::init(false),
-    cl::desc("Prefetch addresses from target-specific memory intrinsics"));
 
 static cl::opt<unsigned>
     PrefetchDistance("prefetch-distance",
@@ -104,12 +101,6 @@ private:
     if (PrefetchWrites.getNumOccurrences() > 0)
       return PrefetchWrites;
     return TTI->enableWritePrefetching();
-  }
-
-  bool doPrefetchTgtMemIntrinsics() {
-    if (PrefetchTgtMemIntrinsics.getNumOccurrences() > 0)
-      return PrefetchTgtMemIntrinsics;
-    return TTI->enableTgtMemIntrinsicPrefetching();
   }
 
   AssumptionCache *AC;
@@ -352,7 +343,8 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
         PtrValue = SMemI->getPointerOperand();
         WriteMem = true;
       } else if (IntrinsicInst *IntrI = dyn_cast<IntrinsicInst>(&I)) {
-        if (!doPrefetchTgtMemIntrinsics())
+        const Triple &TargetTriple = BB->getModule()->getTargetTriple();
+        if (!TargetTriple.isAArch64())
           continue;
         MemIntrinsicInfo IntrInfo;
         bool IsTgtMemIntrinsic = TTI->getTgtMemIntrinsic(IntrI, IntrInfo);

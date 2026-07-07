@@ -712,7 +712,6 @@ public:
   }
   virtual unsigned getMaxPrefetchIterationsAhead() const { return UINT_MAX; }
   virtual bool enableWritePrefetching() const { return false; }
-  virtual bool enableTgtMemIntrinsicPrefetching() const { return false; }
   virtual bool shouldPrefetchAddressSpace(unsigned AS) const { return !AS; }
 
   virtual InstructionCost getPartialReductionCost(
