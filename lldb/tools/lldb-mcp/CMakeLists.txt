@@ -11,6 +11,8 @@ add_lldb_tool(lldb-mcp
     lldbProtocolMCP
   )
 
+lldb_prevent_liblldb_symbol_interposition(lldb-mcp)
+
 if(APPLE)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/lldb-mcp-Info.plist.in

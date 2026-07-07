@@ -812,6 +812,7 @@ class PredTwoOpPseudo<string name, ZPRRegOp zprty,
                       FalseLanesEnum flags = FalseLanesNone>
 : SVEPseudo2Instr<name, 0>,
   Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, zprty:$Zs2), []> {
+  let ElementSize = zprty.ElementSize;
   let FalseLanes = flags;
 }
 
@@ -819,6 +820,7 @@ class PredTwoOpImmPseudo<string name, ZPRRegOp zprty, Operand immty,
                          FalseLanesEnum flags = FalseLanesNone>
 : SVEPseudo2Instr<name, 0>,
   Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, immty:$imm), []> {
+  let ElementSize = zprty.ElementSize;
   let FalseLanes = flags;
 }
 
@@ -826,6 +828,7 @@ class PredThreeOpPseudo<string name, ZPRRegOp zprty,
                         FalseLanesEnum flags = FalseLanesNone>
 : SVEPseudo2Instr<name, 0>,
   Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, zprty:$Zs2, zprty:$Zs3), []> {
+  let ElementSize = zprty.ElementSize;
   let FalseLanes = flags;
 }
 
@@ -846,11 +849,13 @@ class UnpredTwoOpImmPseudo<string name, ZPRRegOp zprty, Operand immty>
 //
 
 class PredOneOpPassthruPseudo<string name, ZPRRegOp zprty,
-                              FalseLanesEnum flags = FalseLanesNone>
+                              FalseLanesEnum flags = FalseLanesNone,
+                              ElementSizeEnum size = zprty.ElementSize>
 : SVEPseudo2Instr<name, 0>,
   Pseudo<(outs zprty:$Zd), (ins zprty:$Passthru, PPR3bAny:$Pg, zprty:$Zs), []> {
-  let FalseLanes = flags;
   let Constraints = !if(!eq(flags, FalseLanesZero), "$Zd = $Passthru,@earlyclobber $Zd", "");
+  let ElementSize = size;
+  let FalseLanes = flags;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3188,7 +3193,7 @@ multiclass sve_fp_2op_p_zd<bits<7> opc, string asm,
   def : SVE_3_Op_Pat<packedvt1, int_op, packedvt1, vt2, packedvt3, !cast<Instruction>(NAME)>;
   def : SVE_1_Op_Passthru_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME)>;
 
-  def _UNDEF : PredOneOpPassthruPseudo<NAME, !cast<ZPRRegOp>(i_zprtype), FalseLanesUndef>;
+  def _UNDEF : PredOneOpPassthruPseudo<NAME, !cast<ZPRRegOp>(i_zprtype), FalseLanesUndef, Sz>;
 
   defm : SVE_1_Op_PassthruUndef_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME # _UNDEF)>;
 }

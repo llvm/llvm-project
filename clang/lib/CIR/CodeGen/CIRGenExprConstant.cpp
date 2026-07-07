@@ -1304,18 +1304,10 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     return cir::IntAttr::get(ty, value.getInt());
   }
   case APValue::Float: {
-    const llvm::APFloat &init = value.getFloat();
-    if (&init.getSemantics() == &llvm::APFloat::IEEEhalf() &&
-        !cgm.getASTContext().getLangOpts().NativeHalfType &&
-        cgm.getASTContext().getTargetInfo().useFP16ConversionIntrinsics()) {
-      cgm.errorNYI("ConstExprEmitter::tryEmitPrivate half");
-      return {};
-    }
-
     mlir::Type ty = cgm.convertType(destType);
     assert(mlir::isa<cir::FPTypeInterface>(ty) &&
            "expected floating-point type");
-    return cir::FPAttr::get(ty, init);
+    return cir::FPAttr::get(ty, value.getFloat());
   }
   case APValue::Array: {
     const ArrayType *arrayTy = cgm.getASTContext().getAsArrayType(destType);
