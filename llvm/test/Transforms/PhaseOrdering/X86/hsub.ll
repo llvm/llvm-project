@@ -381,9 +381,8 @@ define <16 x i16> @sub_v16i16_FEuCBA98765432u0(<16 x i16> %a, <16 x i16> %b) {
 ; SSE2-NEXT:    [[BF:%.*]] = extractelement <16 x i16> [[B]], i64 15
 ; SSE2-NEXT:    [[BCD:%.*]] = sub i16 [[BC]], [[BD]]
 ; SSE2-NEXT:    [[BEF:%.*]] = sub i16 [[BE]], [[BF]]
-; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i16> [[A:%.*]], <16 x i16> [[B]], <16 x i32> <i32 0, i32 poison, i32 4, i32 6, i32 16, i32 18, i32 20, i32 22, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i16> [[A]], <16 x i16> [[B]], <16 x i32> <i32 1, i32 poison, i32 5, i32 7, i32 17, i32 19, i32 21, i32 23, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE2-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i16> [[TMP1]], <16 x i16> [[A]], <16 x i32> <i32 0, i32 poison, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i16> [[A:%.*]], <16 x i16> [[B]], <16 x i32> <i32 1, i32 poison, i32 5, i32 7, i32 17, i32 19, i32 21, i32 23, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i16> [[A]], <16 x i16> [[B]], <16 x i32> <i32 0, i32 poison, i32 4, i32 6, i32 16, i32 18, i32 20, i32 22, i32 8, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:    [[TMP7:%.*]] = shufflevector <16 x i16> [[TMP2]], <16 x i16> [[A]], <16 x i32> <i32 0, i32 poison, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 25, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:    [[HSUB8:%.*]] = sub <16 x i16> [[TMP3]], [[TMP7]]
 ; SSE2-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i16> [[A]], <16 x i16> [[B]], <16 x i32> <i32 10, i32 12, i32 14, i32 24, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>

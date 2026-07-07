@@ -1083,7 +1083,7 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
         Record.push_back(getAttrKindEncoding(Kind));
         if (Kind == Attribute::Memory) {
           // Version field for upgrading old memory effects.
-          const uint64_t Version = 1;
+          const uint64_t Version = 2;
           Record.push_back((Version << 56) | Attr.getValueAsInt());
         } else {
           Record.push_back(Attr.getValueAsInt());

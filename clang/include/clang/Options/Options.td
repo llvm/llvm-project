@@ -634,6 +634,7 @@ defvar cpp17 = LangOpts<"CPlusPlus17">;
 defvar cpp20 = LangOpts<"CPlusPlus20">;
 defvar cpp23 = LangOpts<"CPlusPlus23">;
 defvar cpp26 = LangOpts<"CPlusPlus26">;
+defvar cpp29 = LangOpts<"CPlusPlus29">;
 defvar c99 = LangOpts<"C99">;
 defvar c23 = LangOpts<"C23">;
 defvar lang_std = LangOpts<"LangStd">;
@@ -5698,7 +5699,7 @@ def mno_restrict_it: Flag<["-"], "mno-restrict-it">, Group<m_arm_Features_Group>
   HelpText<"Allow generation of complex IT blocks.">;
 def marm : Flag<["-"], "marm">, Alias<mno_thumb>;
 def ffixed_r9 : Flag<["-"], "ffixed-r9">, Group<m_Group>,
-  HelpText<"Reserve the r9 register (ARM/x86_64 only)">;
+  HelpText<"Reserve the r9 register (ARM/Hexagon/x86_64 only)">;
 def mno_movt : Flag<["-"], "mno-movt">, Group<m_arm_Features_Group>,
   HelpText<"Disallow use of movt/movw pairs (ARM only)">;
 def mcrc : Flag<["-"], "mcrc">, Group<m_Group>,
@@ -7062,7 +7063,10 @@ def mhexagon_hvx_ieee_fp : Flag<["-"], "mhvx-ieee-fp">,
 def mno_hexagon_hvx_ieee_fp : Flag<["-"], "mno-hvx-ieee-fp">,
   Group<m_hexagon_Features_Group>,
   HelpText<"Disable Hexagon HVX IEEE floating-point">;
-def ffixed_r19: Flag<["-"], "ffixed-r19">, Group<f_Group>,
+foreach i = {6-7} in
+    def ffixed_r#i : Flag<["-"], "ffixed-r"#i>, Group<m_Group>,
+    HelpText<"Reserve register r"#i#" (Hexagon only)">;
+def ffixed_r19: Flag<["-"], "ffixed-r19">, Group<m_Group>,
   HelpText<"Reserve register r19 (Hexagon/x86_64 only; x86_64 requires APX EGPR)">;
 } // let Flags = [TargetSpecific]
 def mmemops : Flag<["-"], "mmemops">, Group<m_hexagon_Features_Group>,
@@ -7170,8 +7174,6 @@ def mamx_int8 : Flag<["-"], "mamx-int8">, Group<m_x86_Features_Group>;
 def mno_amx_int8 : Flag<["-"], "mno-amx-int8">, Group<m_x86_Features_Group>;
 def mamx_fp8 : Flag<["-"], "mamx-fp8">, Group<m_x86_Features_Group>;
 def mno_amx_fp8 : Flag<["-"], "mno-amx-fp8">, Group<m_x86_Features_Group>;
-def mamx_tf32 : Flag<["-"], "mamx-tf32">, Group<m_x86_Features_Group>;
-def mno_amx_tf32 : Flag<["-"], "mno-amx-tf32">, Group<m_x86_Features_Group>;
 def mamx_tile : Flag<["-"], "mamx-tile">, Group<m_x86_Features_Group>;
 def mno_amx_tile : Flag<["-"], "mno-amx-tile">, Group<m_x86_Features_Group>;
 def mamx_movrs: Flag<["-"], "mamx-movrs">, Group<m_x86_Features_Group>;
@@ -7395,10 +7397,10 @@ def ffixed_edi : Flag<["-"], "ffixed-edi">, Group<m_Group>,
                  HelpText<"Reserve the edi register (x86 only)">;
 foreach i = {8, 10-15} in
     def ffixed_r#i : Flag<["-"], "ffixed-r"#i>, Group<m_Group>,
-    HelpText<"Reserve the r"#i#" register (x86_64 only)">;
+    HelpText<"Reserve the r"#i#" register (Hexagon/x86_64 only)">;
 foreach i = {16-18,20-31} in
     def ffixed_r#i : Flag<["-"], "ffixed-r"#i>, Group<m_Group>,
-    HelpText<"Reserve the r"#i#" register (x86_64 with APX EGPR only)">;
+    HelpText<"Reserve the r"#i#" register (Hexagon/x86_64 only; x86_64 requires APX EGPR)">;
 
 } // let Flags = [TargetSpecific]
 
@@ -9293,7 +9295,7 @@ def _SLASH_execution_charset : CLCompileJoined<"execution-charset:">,
   HelpText<"Set runtime encoding, supports only UTF-8">,
   Alias<fexec_charset_EQ>;
 def _SLASH_std : CLCompileJoined<"std:">,
-  HelpText<"Set language version (c++14,c++17,c++20,c++23preview,c++latest,c11,c17)">;
+  HelpText<"Set language version (c++14,c++17,c++20,c++23preview,c++26preview,c++latest,c11,c17)">;
 def _SLASH_U : CLJoinedOrSeparate<"U">, HelpText<"Undefine macro">,
   MetaVarName<"<macro>">, Alias<U>;
 def _SLASH_validate_charset : CLFlag<"validate-charset">,
