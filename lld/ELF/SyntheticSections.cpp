@@ -904,8 +904,7 @@ void MipsGotSection::build() {
       uint64_t off = p.second * ctx.arg.wordsize;
       if (s == nullptr) {
         if (ctx.arg.shared)
-          ctx.in.relaDyn->addReloc(
-              {ctx.target->tlsModuleIndexRel, this, off});
+          ctx.in.relaDyn->addReloc({ctx.target->tlsModuleIndexRel, this, off});
         else
           addConstant(
               {R_ADDEND, ctx.target->symbolicRel, off, 1, ctx.dummySym});
