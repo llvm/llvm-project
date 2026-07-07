@@ -918,7 +918,8 @@ void MipsGotSection::build() {
           ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsModuleIndexRel, *this,
                                          offset, *s);
         else if (ctx.arg.shared)
-          ctx.in.relaDyn->addReloc({ctx.target->tlsModuleIndexRel, this, offset});
+          ctx.in.relaDyn->addReloc(
+              {ctx.target->tlsModuleIndexRel, this, offset});
         else
           // Write one to the GOT slot.
           addConstant({R_ADDEND, ctx.target->symbolicRel, offset, 1, s});
