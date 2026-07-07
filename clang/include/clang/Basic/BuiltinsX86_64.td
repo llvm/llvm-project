@@ -248,7 +248,6 @@ let Features = "amx-avx512,avx10.2", Attributes = [NoThrow, RequiredVectorWidth<
   def tilemovrow_internal : X86Builtin<"_Vector<16, int>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
 }
 
-
 let Features = "amx-fp8", Attributes = [NoThrow] in {
   def tdpbf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<256, int>, _Vector<256, int>)">;
   def tdpbhf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<256, int>, _Vector<256, int>)">;
