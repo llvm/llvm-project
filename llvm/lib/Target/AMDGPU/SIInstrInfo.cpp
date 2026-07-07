@@ -132,7 +132,6 @@ static bool canRemat(const MachineInstr &MI) {
 static std::tuple<unsigned, unsigned, unsigned>
 splitGlobalAddressRelocFlags(const GCNSubtarget &ST,
                              const MachineOperand &SrcOp) {
-  assert(SrcOp.isGlobal() && "Expected a global address operand");
   const GlobalValue *GV = SrcOp.getGlobal();
   unsigned SrcFlags = SrcOp.getTargetFlags();
 
@@ -151,16 +150,6 @@ splitGlobalAddressRelocFlags(const GCNSubtarget &ST,
     // For 64-bit GOT-relative, use the 64-bit relocation.
     LoReloc = SIInstrInfo::MO_GOTPCREL64;
     HiReloc = SIInstrInfo::MO_GOTPCREL64;
-  } else if (!(SrcFlags &
-               (SIInstrInfo::MO_ABS32_LO | SIInstrInfo::MO_ABS32_HI))) {
-    // No explicit relocation flags set; infer from target properties.
-    if (!ST.isAmdPalOS() && !ST.isMesa3DOS()) {
-      const SITargetLowering *TLI = ST.getTargetLowering();
-      if (TLI->shouldEmitFixup(GV) || TLI->shouldEmitPCReloc(GV)) {
-        LoReloc = SIInstrInfo::MO_REL32_LO;
-        HiReloc = SIInstrInfo::MO_REL32_HI;
-      }
-    }
   }
 
   unsigned BaseFlags =
