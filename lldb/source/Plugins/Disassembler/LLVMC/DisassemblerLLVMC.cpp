@@ -1399,8 +1399,8 @@ void DisassemblerLLVMC::MCDisasmInstance::PrintMCInst(
         if (sym_ctx.function && comments_string.empty()) {
           const char *func_name = sym_ctx.function->GetName().AsCString(nullptr);
           if (sym_ctx.line_entry.IsValid()) {
-            const char *file =
-                sym_ctx.line_entry.GetFile().GetFilename().AsCString(nullptr);
+            llvm::StringRef file =
+               sym_ctx.line_entry.GetFile().GetFilename();
             std::string line = std::to_string(sym_ctx.line_entry.line);
             comments_stream << func_name << " at " << file << ":" << line;
           } else

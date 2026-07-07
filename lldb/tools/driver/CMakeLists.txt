@@ -59,7 +59,7 @@ add_dependencies(lldb
 # it to lldb's copy instead of liblldb.so's, breaking shared-state assumptions.
 # --exclude-libs,ALL keeps archive symbols out of lldb's .dynsym, eliminating
 # the hazard without affecting the executable's own use of those symbols.
-if(UNIX AND NOT APPLE)
+if(UNIX AND NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "AIX")
   target_link_options(lldb PRIVATE "LINKER:--exclude-libs,ALL")
 endif()
 
