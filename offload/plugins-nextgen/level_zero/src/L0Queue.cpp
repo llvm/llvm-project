@@ -15,6 +15,7 @@
 #include "L0Kernel.h"
 #include "L0Plugin.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -56,6 +57,98 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
   return CmdList->appendLaunchKernel(Kernel, &KEnv.GroupCounts, SignalEvent,
                                      NumWaitEvents, WaitEvents,
                                      KEnv.IsCooperative);
+}
+
+Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
+                            size_t Size) {
+  if (Size == 0 || PatternSize == 0)
+    return Plugin::success();
+
+  // Fast path: Level Zero's native fill requires a power-of-two pattern size
+  // no larger than the device's maximum fill pattern size.
+  const size_t MaxFill = Device.getMaxFillPatternSize();
+  if (llvm::isPowerOf2_64(PatternSize) &&
+      (MaxFill == 0 || PatternSize <= MaxFill))
+    return memoryFillImpl(Ptr, Pattern, PatternSize, Size);
+
+  return memoryFillFallback(Ptr, Pattern, PatternSize, Size);
+}
+
+Error L0QueueTy::memoryFillFallback(void *Ptr, const void *Pattern,
+                                    size_t PatternSize, size_t Size) {
+  // Strategy 1: if every byte of the pattern is identical, a single-byte
+  // native fill produces the same result and stays on the fast path.
+  const auto *PatternBytes = static_cast<const uint8_t *>(Pattern);
+  bool AllBytesEqual = true;
+  for (size_t I = 1; I < PatternSize; I++) {
+    if (PatternBytes[I] != PatternBytes[0]) {
+      AllBytesEqual = false;
+      break;
+    }
+  }
+  if (AllBytesEqual)
+    return memoryFillImpl(Ptr, Pattern, /*PatternSize=*/1, Size);
+
+  // Strategy 4: host-accessible target memory can be filled on the CPU. This
+  // is cheapest when the destination is HOST/SHARED USM and avoids the device
+  // entirely.
+  const auto TgtType = Device.getMemAllocType(Ptr);
+  if (TgtType == ZE_MEMORY_TYPE_HOST || TgtType == ZE_MEMORY_TYPE_SHARED)
+    return memoryFillHost(Ptr, Pattern, PatternSize, Size);
+
+  // Strategy 2 (oversized power-of-two pattern) and Strategy 3 (arbitrary
+  // pattern) both reduce to the same correct on-device construction: seed one
+  // copy of the pattern, then replicate it with doubling device-to-device
+  // copies. This keeps the fill resident on the device without requiring the
+  // pattern to be expressible as a single native fill.
+  return memoryFillReplicate(Ptr, Pattern, PatternSize, Size);
+}
+
+Error L0QueueTy::memoryFillHost(void *Ptr, const void *Pattern,
+                                size_t PatternSize, size_t Size) {
+  auto *Dst = static_cast<uint8_t *>(Ptr);
+  const auto *Src = static_cast<const uint8_t *>(Pattern);
+  for (size_t Off = 0; Off < Size; Off += PatternSize)
+    std::copy_n(Src, PatternSize, Dst + Off);
+  return Plugin::success();
+}
+
+Error L0QueueTy::memoryFillReplicate(void *Ptr, const void *Pattern,
+                                     size_t PatternSize, size_t Size) {
+  auto *Dst = static_cast<uint8_t *>(Ptr);
+
+  // Seed the destination with one copy of the pattern. On discrete devices a
+  // plain host pointer is not a reliable copy source, so stage the pattern
+  // through host USM first, mirroring dataSubmitImpl().
+  const void *Seed = Pattern;
+  if (Device.isDiscreteDevice() &&
+      PatternSize <= Device.getPlugin().getOptions().StagingBufferSize &&
+      Device.getMemAllocType(Pattern) != ZE_MEMORY_TYPE_HOST) {
+    auto PtrOrErr = Device.getStagingBuffer().get(/*IsAsync*/ true);
+    if (!PtrOrErr)
+      return PtrOrErr.takeError();
+    void *Staged = *PtrOrErr;
+    std::copy_n(static_cast<const uint8_t *>(Pattern), PatternSize,
+                static_cast<uint8_t *>(Staged));
+    Seed = Staged;
+  }
+
+  if (auto Err = memoryCopy(Dst, Seed, PatternSize))
+    return Err;
+
+  // Replicate the already-filled prefix, doubling the filled span each step.
+  // A fence between iterations enforces ordering on out-of-order queues (it is
+  // a no-op for in-order queues).
+  size_t Filled = PatternSize;
+  while (Filled < Size) {
+    if (auto Err = dataFence())
+      return Err;
+    const size_t Chunk = (std::min)(Filled, Size - Filled);
+    if (auto Err = memoryCopy(Dst + Filled, Dst, Chunk))
+      return Err;
+    Filled += Chunk;
+  }
+  return Plugin::success();
 }
 
 // L0AsyncQueueTy implementation.

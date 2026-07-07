@@ -109,6 +109,11 @@ class L0DeviceTy final : public GenericDeviceTy {
 
   std::pair<uint32_t, uint32_t> ComputeOrdinal{MaxOrdinal, 0};
 
+  /// Maximum memory fill pattern size (bytes) supported natively by the
+  /// compute command queue group. Level Zero requires native fill pattern
+  /// sizes to be a power of two not exceeding this value.
+  size_t MaxFillPatternSize = 0;
+
   /// Command queue index for each device.
   uint32_t ComputeIndex = 0;
 
@@ -340,6 +345,10 @@ public:
 
   uint32_t getComputeEngine() const { return ComputeOrdinal.first; }
   uint32_t getNumComputeQueues() const { return ComputeOrdinal.second; }
+
+  /// Maximum native memory fill pattern size (bytes) for the compute queue
+  /// group. A value of 0 means the property was unavailable.
+  size_t getMaxFillPatternSize() const { return MaxFillPatternSize; }
 
   void reportDeviceInfo() const;
 

@@ -69,10 +69,14 @@ public:
     return dataSubmitImpl(TgtPtr, HstPtr, Size);
   }
 
+  /// Fill \p Size bytes at \p Ptr with copies of the \p PatternSize -byte
+  /// pattern at \p Pattern. Level Zero's native fill only accepts pattern
+  /// sizes that are a power of two and do not exceed the compute queue group's
+  /// maximum fill pattern size. Requests that satisfy those constraints take
+  /// the fast native path; all others are served by a slower fallback so that
+  /// arbitrary (non-power-of-two or oversized) patterns are still supported.
   Error memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
-                   size_t Size) {
-    return memoryFillImpl(Ptr, Pattern, PatternSize, Size);
-  }
+                   size_t Size);
 
   Error dispatchLaunchKernel(ze_kernel_handle_t Kernel, L0LaunchEnvTy &KEnv,
                              ze_event_handle_t SignalEvent = nullptr,
@@ -132,10 +136,30 @@ public:
                                  L0LaunchEnvTy &KEnv) = 0;
   virtual Error hostCallImpl(void (*Callback)(void *), void *UserData) = 0;
 
+  /// Native Level Zero fill. Only valid when \p PatternSize is a power of two
+  /// within the device's maximum fill pattern size; the dispatcher in
+  /// memoryFill() enforces this before calling here.
   virtual Error memoryFillImpl(void *Ptr, const void *Pattern,
                                size_t PatternSize, size_t Size) {
     return CmdList->appendMemoryFill(Ptr, Pattern, PatternSize, Size);
   }
+
+  /// Slow-path fill for patterns the native fill cannot handle (non-power-of-
+  /// two, or larger than the device's maximum fill pattern size). Selects
+  /// among the fallback strategies below.
+  Error memoryFillFallback(void *Ptr, const void *Pattern, size_t PatternSize,
+                           size_t Size);
+
+  /// Fill host-accessible (HOST/SHARED USM) memory with the pattern on the CPU.
+  Error memoryFillHost(void *Ptr, const void *Pattern, size_t PatternSize,
+                       size_t Size);
+
+  /// Fill device memory by seeding the destination with a single copy of the
+  /// pattern and then replicating it on-device, doubling the filled span each
+  /// iteration. Works for arbitrary pattern sizes.
+  Error memoryFillReplicate(void *Ptr, const void *Pattern, size_t PatternSize,
+                            size_t Size);
+
   virtual Error dataFenceImpl() = 0;
 
   virtual Error appendSignalEventImpl(ze_event_handle_t Event) {

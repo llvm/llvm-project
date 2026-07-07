@@ -116,6 +116,9 @@ std::pair<uint32_t, uint32_t> L0DeviceTy::findComputeOrdinal() {
     if (Properties[I].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
       Ordinal.first = I;
       Ordinal.second = Properties[I].numQueues;
+      // Cache the maximum native fill pattern size for this compute group so
+      // the fill path can decide between the fast native fill and a fallback.
+      MaxFillPatternSize = Properties[I].maxMemoryFillPatternSize;
       break;
     }
   }
