@@ -1054,9 +1054,9 @@ void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
              ->GetObjectFile()
              ->GetFileSpec()
              .GetFilename()
-             .IsEmpty()) {
-      kernel_name =
-          m_kernel.GetModule()->GetObjectFile()->GetFileSpec().GetFilename();
+             .empty()) {
+      kernel_name = ConstString(
+          m_kernel.GetModule()->GetObjectFile()->GetFileSpec().GetFilename());
     }
     m_kernel.SetName(kernel_name.AsCString(nullptr));
 

@@ -83,6 +83,8 @@ TEST(BuildNamespaceKindTest, FormatProvider) {
             "CompilationUnit");
   EXPECT_EQ(llvm::formatv("{0}", BuildNamespaceKind::LinkUnit).str(),
             "LinkUnit");
+  EXPECT_EQ(llvm::formatv("{0}", BuildNamespaceKind::StaticLibrary).str(),
+            "StaticLibrary");
 }
 
 TEST(BuildNamespaceKindTest, StreamOutputCompilationUnit) {
@@ -95,6 +97,12 @@ TEST(BuildNamespaceKindTest, StreamOutputLinkUnit) {
   std::string S;
   llvm::raw_string_ostream(S) << BuildNamespaceKind::LinkUnit;
   EXPECT_EQ(S, "LinkUnit");
+}
+
+TEST(BuildNamespaceKindTest, StreamOutputStaticLibrary) {
+  std::string S;
+  llvm::raw_string_ostream(S) << BuildNamespaceKind::StaticLibrary;
+  EXPECT_EQ(S, "StaticLibrary");
 }
 
 TEST(BuildNamespaceTest, FormatProvider) {

@@ -345,8 +345,6 @@ public:
 
   bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
 
-  bool isTgSplitEnabled() const { return EnableTgSplit; }
-
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
 
@@ -637,6 +635,10 @@ public:
 
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
   bool hasSPackHL() const { return HasGFX11Insts; }
+
+  /// Return true if the target has the V_CVT_PK_I16_F32/V_CVT_PK_U16_F32
+  /// instructions.
+  bool hasVCvtPkIU16F32() const { return HasGFX11Insts; }
 
   /// Return true if the target's EXP instruction has the COMPR flag, which
   /// affects the meaning of the EN (enable) bits.
@@ -1035,8 +1037,8 @@ public:
     return hasTrue16BitInsts() && EnableRealTrue16Insts;
   }
 
-  bool requiresWaitOnWorkgroupReleaseFence() const {
-    return getGeneration() >= GFX10 || isTgSplitEnabled();
+  bool requiresWaitOnWorkgroupReleaseFence(bool TgSplit) const {
+    return getGeneration() >= GFX10 || TgSplit;
   }
 };
 

@@ -1024,15 +1024,15 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
-; DEFAULT-NEXT:    [[TMP0:%.*]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 1)
-; DEFAULT-NEXT:    [[TMP1:%.*]] = trunc nuw nsw <4 x i64> [[TMP0]] to <4 x i32>
-; DEFAULT-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i64 3
-; DEFAULT-NEXT:    store i32 [[TMP2]], ptr [[DST]], align 4
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; DEFAULT-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
+; DEFAULT-NEXT:    [[TMP1:%.*]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 1)
+; DEFAULT-NEXT:    [[TMP2:%.*]] = trunc nuw nsw <4 x i64> [[TMP1]] to <4 x i32>
+; DEFAULT-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP2]], i64 3
+; DEFAULT-NEXT:    store i32 [[TMP4]], ptr [[DST]], align 4
 ; DEFAULT-NEXT:    br label %[[SCALAR_PH:.*]]
 ; DEFAULT:       [[SCALAR_PH]]:
 ;
@@ -1138,10 +1138,13 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT:       [[VECTOR_MEMCHECK]]:
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
+; DEFAULT-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP5]], 1
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = sub i64 [[C1]], [[A2]]
-; DEFAULT-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
+; DEFAULT-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP6]], 1
+; DEFAULT-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP11]], [[TMP8]]
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = sub i64 [[C1]], [[B3]]
-; DEFAULT-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP7]], [[TMP5]]
+; DEFAULT-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP7]], 1
+; DEFAULT-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP13]], [[TMP8]]
 ; DEFAULT-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; DEFAULT-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH1:.*]]
 ; DEFAULT:       [[VECTOR_PH1]]:
@@ -1191,10 +1194,13 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED:       [[VECTOR_MEMCHECK]]:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
+; PRED-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP2]], 1
 ; PRED-NEXT:    [[TMP3:%.*]] = sub i64 [[C1]], [[A2]]
-; PRED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP2]]
+; PRED-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP3]], 1
+; PRED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
 ; PRED-NEXT:    [[TMP4:%.*]] = sub i64 [[C1]], [[B3]]
-; PRED-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP4]], [[TMP2]]
+; PRED-NEXT:    [[TMP23:%.*]] = sub i64 [[TMP4]], 1
+; PRED-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP23]], [[TMP5]]
 ; PRED-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; PRED-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:

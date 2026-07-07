@@ -32,6 +32,7 @@
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/NVGPU/Transforms/Passes.h"
+#include "mlir/Dialect/NVVM/Transforms/Passes.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "mlir/Dialect/Quant/Transforms/Passes.h"
@@ -74,6 +75,7 @@ void mlir::registerAllPasses() {
   registerGPUPasses();
   registerLinalgPasses();
   registerNVGPUPasses();
+  NVVM::registerNVVMPasses();
   registerSparseTensorPasses();
   LLVM::registerLLVMPasses();
   LLVM::registerTargetLLVMIRTransformsPasses();

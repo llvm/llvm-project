@@ -665,8 +665,9 @@ class InterleavedAccessInfo {
 public:
   InterleavedAccessInfo(PredicatedScalarEvolution &PSE, Loop *L,
                         DominatorTree *DT, LoopInfo *LI,
-                        const LoopAccessInfo *LAI)
-      : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI) {}
+                        const LoopAccessInfo *LAI, bool OptForSize)
+      : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI), OptForSize(OptForSize) {
+  }
 
   ~InterleavedAccessInfo() { invalidateGroups(); }
 
@@ -738,6 +739,7 @@ private:
   DominatorTree *DT;
   LoopInfo *LI;
   const LoopAccessInfo *LAI;
+  bool OptForSize;
 
   /// True if the loop may contain non-reversed interleaved groups with
   /// out-of-bounds accesses. We ensure we don't speculatively access memory
@@ -807,11 +809,11 @@ private:
 
   /// Collect all the accesses with a constant stride in program order. Any
   /// SCEV predicates needed to compute the strides are added to \p
-  /// Predicates.
+  /// Predicates if it is not nullptr.
   void collectConstStrideAccesses(
       MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
       const DenseMap<Value *, const SCEV *> &Strides,
-      SmallVectorImpl<const SCEVPredicate *> &Predicates);
+      SmallVectorImpl<const SCEVPredicate *> *Predicates);
 
   /// Returns true if \p Stride is allowed in an interleaved group.
   LLVM_ABI static bool isStrided(int Stride);

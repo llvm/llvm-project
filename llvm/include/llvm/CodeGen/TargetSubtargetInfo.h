@@ -14,8 +14,10 @@
 #define LLVM_CODEGEN_TARGETSUBTARGETINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
@@ -42,6 +44,7 @@ class LibcallLoweringInfo;
 class MachineInstr;
 struct MachineSchedPolicy;
 struct MCReadAdvanceEntry;
+struct MCSchedModel;
 struct MCWriteLatencyEntry;
 struct MCWriteProcResEntry;
 class RegisterBankInfo;
@@ -51,7 +54,8 @@ class SUnit;
 class TargetFrameLowering;
 class TargetInstrInfo;
 class TargetLowering;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class Triple;
@@ -66,9 +70,9 @@ struct SchedRegion;
 class LLVM_ABI TargetSubtargetInfo : public MCSubtargetInfo {
 protected: // Can only create subclasses...
   TargetSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                      StringRef FS, ArrayRef<StringRef> PN,
+                      StringRef FS, StringTable PN,
                       ArrayRef<SubtargetFeatureKV> PF,
-                      ArrayRef<SubtargetSubTypeKV> PD,
+                      ArrayRef<SubtargetSubTypeKV> PD, const MCSchedModel *PSM,
                       const MCWriteProcResEntry *WPR,
                       const MCWriteLatencyEntry *WL,
                       const MCReadAdvanceEntry *RA, const InstrStage *IS,
@@ -86,6 +90,10 @@ public:
   ~TargetSubtargetInfo() override;
 
   virtual bool isXRaySupported() const { return false; }
+
+  /// \returns true if the target intrinsic \p IntrinsicID is supported by this
+  /// subtarget.
+  bool isIntrinsicSupported(unsigned IntrinsicID) const;
 
   // Interfaces to the major aspects of target machine information:
   //
@@ -173,7 +181,7 @@ public:
   ///
   /// Similar in behavior to `isZeroIdiom`. However, it knows how to identify
   /// all dependency breaking instructions (i.e. not just zero-idioms).
-  /// 
+  ///
   /// As for `isZeroIdiom`, this method returns a mask of "broken" dependencies.
   /// (See method `isZeroIdiom` for a detailed description of Mask).
   virtual bool isDependencyBreaking(const MachineInstr *MI, APInt &Mask) const {
@@ -370,6 +378,12 @@ public:
   /// Target features where the callee may have an additional feature,
   /// instead of the caller.
   virtual const FeatureBitset &getInlineInverseFeatures() const = 0;
+  /// Target features where all mismatches prevent inlining.
+  virtual const FeatureBitset &getInlineMustMatchFeatures() const = 0;
+
+private:
+  /// Lazy, incrementally-populated cache for isIntrinsicSupported().
+  mutable DenseMap<unsigned, bool> IntrinsicSupportCache;
 };
 } // end namespace llvm
 

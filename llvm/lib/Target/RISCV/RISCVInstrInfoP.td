@@ -1754,6 +1754,25 @@ class PatGprPairGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), (vt GPRPair:$rs2))),
           (Inst GPRPair:$rs1, GPRPair:$rs2)>;
 
+// Reduction sum. PatRedSum is the single-GPR source (predsum.bs/hs/ws), result
+// XLenVT; PatRedSumPair is the RV32 paired source (predsum.dbs/dhs), result i32.
+// Target-illegal results (i32 accumulator on RV64, i64 on RV32) don't reach
+// isel and are split in ReplaceNodeResults.
+class PatRedSum<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
+    : Pat<(XLenVT (OpNode (VecVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
+class PatRedSumPair<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
+    : Pat<(i32 (OpNode (VecVT GPRPair:$rs1), (i32 GPR:$rs2))),
+          (Inst GPRPair:$rs1, GPR:$rs2)>;
+
+// Absolute difference sum, optionally accumulating into rd.
+class PatAbdSum<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
+    : Pat<(XLenVT (OpNode (VecVT GPR:$rs1), (VecVT GPR:$rs2))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
+class PatAbdSumAcc<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
+    : Pat<(XLenVT (OpNode (XLenVT GPR:$rd), (VecVT GPR:$rs1), (VecVT GPR:$rs2))),
+          (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
 class PatGprPairImm<SDPatternOperator OpNode, RVInst Inst,
                     SDPatternOperator ImmType, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), ImmType:$imm)),
@@ -2027,6 +2046,10 @@ let Predicates = [HasStdExtP] in {
   def : PatGprGpr<abds, PABD_H, XLenVecI16VT>;
   def : PatGprGpr<abdu, PABDU_H, XLenVecI16VT>;
 
+  // 8-bit absolute difference sum patterns
+  def : PatAbdSum<int_riscv_pabdsumu, PABDSUMU_B, XLenVecI8VT>;
+  def : PatAbdSumAcc<int_riscv_pabdsumau, PABDSUMAU_B, XLenVecI8VT>;
+
   // 16-bit multiply high patterns
   def : PatGprGpr<mulhs, PMULH_H, XLenVecI16VT>;
   def : PatGprGpr<mulhu, PMULHU_H, XLenVecI16VT>;
@@ -2202,9 +2225,13 @@ let append Predicates = [IsRV32] in {
   //          (PWMULSU_H GPR:$rs1, GPR:$rs2)>;
 
   // 8/16-bit bitreverse patterns
-  // FIXME: Use BREV8 with Zbkb.
+  // With Zbkb, brev8 reverses the bits within each byte directly; otherwise
+  // reverse all bits then swap the bytes back.
+  let append Predicates = [NoStdExtZbkb] in
   def : Pat<(v4i8 (bitreverse GPR:$rs)),
             (REV8_RV32 (REV_RV32 GPR:$rs))>;
+  let append Predicates = [HasStdExtZbkb] in
+  def : Pat<(v4i8 (bitreverse GPR:$rs)), (BREV8 GPR:$rs)>;
   def : Pat<(v2i16 (bitreverse GPR:$rs)),
             (PPAIROE_H (REV_RV32 GPR:$rs), (REV_RV32 GPR:$rs))>;
 
@@ -2391,6 +2418,18 @@ let append Predicates = [IsRV32] in {
   def : PatGprPairGprPair<setult, PMSLTU_DH, v4i16>;
   def : PatGprPairGprPair<setult, PMSLTU_DW, v2i32>;
 
+  // 8-bit reduction sum patterns
+  def : PatRedSum<int_riscv_predsum, PREDSUM_BS, v4i8>;
+  def : PatRedSum<int_riscv_predsumu, PREDSUMU_BS, v4i8>;
+  def : PatRedSumPair<int_riscv_predsum, PREDSUM_DBS, v8i8>;
+  def : PatRedSumPair<int_riscv_predsumu, PREDSUMU_DBS, v8i8>;
+
+  // 16-bit reduction sum patterns
+  def : PatRedSum<int_riscv_predsum, PREDSUM_HS, v2i16>;
+  def : PatRedSum<int_riscv_predsumu, PREDSUMU_HS, v2i16>;
+  def : PatRedSumPair<int_riscv_predsum, PREDSUM_DHS, v4i16>;
+  def : PatRedSumPair<int_riscv_predsumu, PREDSUMU_DHS, v4i16>;
+
   // [s|u]min/[s|u]max patterns
   def : PatGprPairGprPair<smin, PMIN_DB, v8i8>;
   def : PatGprPairGprPair<umin, PMINU_DB, v8i8>;
@@ -2411,9 +2450,15 @@ let append Predicates = [IsRV32] in {
 
   // 8/16-bit bitreverse patterns
   // FIXME: Custom lower?
+  // With Zbkb, brev8 reverses the bits within each byte directly.
+  let append Predicates = [NoStdExtZbkb] in
   def : Pat<(v8i8 (bitreverse GPRPair:$rs)),
             (BuildGPRPair (REV8_RV32 (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even))),
                           (REV8_RV32 (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))))>;
+  let append Predicates = [HasStdExtZbkb] in
+  def : Pat<(v8i8 (bitreverse GPRPair:$rs)),
+            (BuildGPRPair (BREV8 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)),
+                          (BREV8 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd)))>;
   def : Pat<(v4i16 (bitreverse GPRPair:$rs)),
             (PPAIROE_DH (BuildGPRPair (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)),
                                       (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))),
@@ -2600,6 +2645,18 @@ let append Predicates = [IsRV64] in {
   def : PatGprGpr<setlt, PMSLT_W, v2i32>;
   def : PatGprGpr<setult, PMSLTU_W, v2i32>;
 
+  // 8-bit reduction sum patterns
+  def : PatRedSum<int_riscv_predsum, PREDSUM_BS, v8i8>;
+  def : PatRedSum<int_riscv_predsumu, PREDSUMU_BS, v8i8>;
+
+  // 16-bit reduction sum patterns
+  def : PatRedSum<int_riscv_predsum, PREDSUM_HS, v4i16>;
+  def : PatRedSum<int_riscv_predsumu, PREDSUMU_HS, v4i16>;
+
+  // 32-bit reduction sum patterns
+  def : PatRedSum<int_riscv_predsum, PREDSUM_WS, v2i32>;
+  def : PatRedSum<int_riscv_predsumu, PREDSUMU_WS, v2i32>;
+
   // 32-bit [s|u]min/[s|u]max patterns
   def : PatGprGpr<smin, PMIN_W, v2i32>;
   def : PatGprGpr<umin, PMINU_W, v2i32>;
@@ -2615,8 +2672,12 @@ let append Predicates = [IsRV64] in {
             (PPAIROE_W (REV8_RV64 GPR:$rs), (REV8_RV64 GPR:$rs))>;
 
   // 8/16/32-bit bitreverse patterns
+  // With Zbkb, brev8 reverses the bits within each byte directly.
+  let append Predicates = [NoStdExtZbkb] in
   def : Pat<(v8i8 (bitreverse GPR:$rs)),
             (REV8_RV64 (REV_RV64 GPR:$rs))>;
+  let append Predicates = [HasStdExtZbkb] in
+  def : Pat<(v8i8 (bitreverse GPR:$rs)), (BREV8 GPR:$rs)>;
   def : Pat<(v4i16 (bitreverse GPR:$rs)),
             (REV16_RV64 (REV_RV64 GPR:$rs))>;
   def : Pat<(v2i32 (bitreverse GPR:$rs)),

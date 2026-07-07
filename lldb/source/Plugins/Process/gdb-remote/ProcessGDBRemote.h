@@ -322,6 +322,9 @@ protected:
   lldb::CommandObjectSP m_command_sp;
   int64_t m_breakpoint_pc_offset;
   lldb::tid_t m_initial_tid; // The initial thread ID, given by stub on attach
+  lldb::tid_t m_last_stop_primary_tid =
+      LLDB_INVALID_THREAD_ID; // Thread ID from the most recent
+                              // T-packet's "thread:<tid>" key.
   bool m_use_g_packet_for_reading;
 
   bool m_allow_flash_writes;
@@ -487,6 +490,10 @@ private:
   /// Returns an error if any breakpoint could not be set; the remaining
   /// breakpoints are still set.
   llvm::Error HandleAcceleratorBreakpoints(const AcceleratorActions &actions);
+
+  /// Create a new target for an accelerator and connect it to the GDB server
+  /// described by the action's connection info.
+  llvm::Error HandleAcceleratorConnection(const AcceleratorActions &actions);
 
   /// Breakpoint callback invoked when an accelerator-plugin-requested
   /// breakpoint is hit. Resolves any requested symbol values, notifies the

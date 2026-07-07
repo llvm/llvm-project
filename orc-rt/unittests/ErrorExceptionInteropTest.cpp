@@ -123,6 +123,7 @@ TEST(ErrorExceptionInteropTest, RoundTripExceptionThroughError) {
   });
 }
 
+#if ORC_RT_ENABLE_EXCEPTIONS
 static std::string peekAtErrorMessage(Error &Err) {
   std::string Msg;
   Err = handleErrors(std::move(Err), [&](std::unique_ptr<ErrorInfoBase> EIB) {
@@ -131,6 +132,7 @@ static std::string peekAtErrorMessage(Error &Err) {
   });
   return Msg;
 }
+#endif // ORC_RT_ENABLE_EXCEPTIONS
 
 TEST(ErrorExceptionInteropTest, RoundTripErrorThroughException) {
   // Test Error → Exception → Error preserves type and message

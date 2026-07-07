@@ -16,6 +16,7 @@
 #include "X86BaseInfo.h"
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
+#include "X86MCLFIRewriter.h"
 #include "X86TargetStreamer.h"
 #include "llvm-c/Visibility.h"
 #include "llvm/ADT/APInt.h"
@@ -80,7 +81,7 @@ bool X86_MC::hasLockPrefix(const MCInst &MI) {
 static bool isMemOperand(const MCInst &MI, unsigned Op, unsigned RegClassID) {
   const MCOperand &Base = MI.getOperand(Op + X86::AddrBaseReg);
   const MCOperand &Index = MI.getOperand(Op + X86::AddrIndexReg);
-  const MCRegisterClass &RC = X86MCRegisterClasses[RegClassID];
+  const MCRegisterClass &RC = getX86MCRegisterClass(RegClassID);
 
   return (Base.isReg() && Base.getReg() && RC.contains(Base.getReg())) ||
          (Index.isReg() && Index.getReg() && RC.contains(Index.getReg()));
@@ -624,7 +625,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   const MCRegisterClass &VR128XRC = MRI.getRegClass(X86::VR128XRegClassID);
   const MCRegisterClass &VR256XRC = MRI.getRegClass(X86::VR256XRegClassID);
 
-  auto ClearsSuperReg = [=](MCRegister RegID) {
+  auto ClearsSuperReg = [&](MCRegister RegID) {
     // On X86-64, a general purpose integer register is viewed as a 64-bit
     // register internal to the processor.
     // An update to the lower 32 bits of a 64 bit integer register is
@@ -787,6 +788,14 @@ static MCInstrAnalysis *createX86MCInstrAnalysis(const MCInstrInfo *Info) {
   return new X86_MC::X86MCInstrAnalysis(Info);
 }
 
+static MCLFIRewriter *
+createX86MCLFIRewriter(MCContext &Ctx,
+                       std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                       std::unique_ptr<MCInstrInfo> &&InstInfo) {
+  return new X86::X86MCLFIRewriter(Ctx, std::move(RegInfo),
+                                   std::move(InstInfo));
+}
+
 // Force static initialization.
 extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMC() {
   for (Target *T : {&getTheX86_32Target(), &getTheX86_64Target()}) {
@@ -808,6 +817,9 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMC() {
 
     // Register the code emitter.
     TargetRegistry::RegisterMCCodeEmitter(*T, createX86MCCodeEmitter);
+
+    // Register the LFI rewriter.
+    TargetRegistry::RegisterMCLFIRewriter(*T, createX86MCLFIRewriter);
 
     // Register the obj target streamer.
     TargetRegistry::RegisterObjectTargetStreamer(*T,

@@ -674,11 +674,14 @@ static llvm::Triple computeTargetTriple(const Driver &D,
       StringRef ObjectMode = *ObjectModeValue;
       llvm::Triple::ArchType AT = llvm::Triple::UnknownArch;
 
+      // Silently accept '32_64' and 'any'
+      const bool OtherAllowedMode =
+          ObjectMode == "32_64" || ObjectMode == "any";
       if (ObjectMode == "64") {
         AT = Target.get64BitArchVariant().getArch();
       } else if (ObjectMode == "32") {
         AT = Target.get32BitArchVariant().getArch();
-      } else {
+      } else if (!OtherAllowedMode) {
         D.Diag(diag::err_drv_invalid_object_mode) << ObjectMode;
       }
 
@@ -1668,7 +1671,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       (Std->containsValue("c++20") || Std->containsValue("c++2a") ||
        Std->containsValue("c++23") || Std->containsValue("c++2b") ||
        Std->containsValue("c++26") || Std->containsValue("c++2c") ||
-       Std->containsValue("c++latest"));
+       Std->containsValue("c++2d") || Std->containsValue("c++latest"));
 
   // Process -fmodule-header{=} flags.
   if (Arg *A = Args.getLastArg(options::OPT_fmodule_header_EQ,
