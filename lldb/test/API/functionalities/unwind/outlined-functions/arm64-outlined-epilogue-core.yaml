@@ -1,0 +1,98 @@
+cpu: arm64
+threads:
+  - regsets:
+    - flavor: gpr
+      registers: [{name: sp, value: 0x000000016fdfef10},
+                  {name: fp, value: 0x000000016fdfef30},
+                  {name: lr, value: 0x00000001000005bc},
+                  {name: pc, value: 0x00000001000005c8}]
+
+memory-regions:
+  # stack memory fetched via 
+  # (lldb) p/x $sp
+  # (lldb) (lldb) x/56gx $sp
+  # % pbpaste | sed -e 's,.*: ,,' -e 's/ /, /g' -e 's/$/,/'
+  - addr: 0x16fdfef10
+    UInt64: [
+      0x0000000201294180, 0x00000002012940d8,
+      0x000000016fdfef30, 0x00000001000004d0,
+      0x000000016fdfef40, 0x00000001000004fc,
+      0x000000016fdfef60, 0x000000010000052c,
+      0x0000000201294180, 0x0000000000000000,
+      0x000000016fdff5e0, 0x000000019b657924,
+      0x0000000000000000, 0x0000000000000001,
+      0x0000000000000000, 0x00000eee94dd2336,
+      0x0000000000000000, 0x000000010000c000,
+      0x000000019b626000, 0x000000016fdff5f0,
+      0x0000000100104000, 0x6013e5e74dd70cbb,
+      0x0000000100000504, 0x00000000000493e4,
+      0x00000001000e0101, 0x0000000201294220,
+      0x0000000042000000, 0x000000019b657f78,
+      0x00000002031b9e60, 0x000000016fdff010,
+      0x000000010000c000, 0x0000000000000001,
+      0x00000002031b6480, 0x00000002012940d8,
+      0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000,
+      0x0000000000000010, 0x0000000000000007,
+      0x0000000201294180, 0x000000016fdfefa8,
+      0x000000016fdfefa0, 0x000000016fdff158,
+      0x000000016fdff010, 0x000000016fdfefd8,
+      0x000000016fdfefc0, 0x0000000000004000,
+      0x00000001000dc000, 0x0000000000004000,
+      0x00000001000e0000, 0x0000000000024000,
+      0x0000000100104000, 0x0000000000070000,
+      0x0000000000000000, 0x0000000000000000
+    ]
+
+  # Code for `foo_epilogue`
+  #   0x1000005c8 <+0>: 0xd65f03c0   ret    
+  - addr: 0x1000005c8
+    UInt32: [ 0xd65f03c0 ]  # ret
+
+  # Code for `OUTLINED_FUNCTION_3`
+  #   0x1000005b8 <+0>:  0x94000004   bl     0x1000005c8    ; foo_epilogue
+  #   0x1000005bc <+4>:  0xa9417bfd   ldp    x29, x30, [sp, #0x10]
+  #   0x1000005c0 <+8>:  0x910083ff   add    sp, sp, #0x20
+  #   0x1000005c4 <+12>: 0xd65f03c0   ret    
+  - addr: 0x1000005b8
+    UInt32: [ 0x94000004, 0xa9417bfd, 0x910083ff, 0xd65f03c0 ]
+              
+  # Code for `function_epilogue_outlined`
+  #   0x1000005ac <+0>: 0xd10083ff   sub    sp, sp, #0x20
+  #   0x1000005b0 <+4>: 0xa9017bfd   stp    x29, x30, [sp, #0x10]
+  #   0x1000005b4 <+8>: 0x14000001   b      0x1000005b8    ; OUTLINED_FUNCTION_3
+  - addr: 0x1000005ac
+    UInt32: [ 0xd10083ff, 0xa9017bfd, 0x14000001 ]
+
+  # Code for `call_external_functions`
+  #   0x1000004b0 <+0>:  0xa9bf7bfd   stp    x29, x30, [sp, #-0x10]!
+  #   0x1000004b4 <+4>:  0x910003fd   mov    x29, sp
+  #   0x1000004b8 <+8>:  0x90000000   adrp   x0, 0
+  #   0x1000004bc <+12>: 0x91176000   add    x0, x0, #0x5d8 ; "there"
+  #   0x1000004c0 <+16>: 0x94000043   bl     0x1000005cc    ; symbol stub for: puts
+  #   0x1000004c4 <+20>: 0x94000021   bl     0x100000548    ; function_prologue_outlined
+  #   0x1000004c8 <+24>: 0x9400002c   bl     0x100000578    ; function_body_outlined
+  #   0x1000004cc <+28>: 0x94000038   bl     0x1000005ac    ; function_epilogue_outlined
+  #   0x1000004d0 <+32>: 0x90000000   adrp   x0, 0
+  #   0x1000004d4 <+36>: 0x91177800   add    x0, x0, #0x5de ; "done"
+  #   0x1000004d8 <+40>: 0x9400003d   bl     0x1000005cc    ; symbol stub for: puts
+  #   0x1000004dc <+44>: 0xa8c17bfd   ldp    x29, x30, [sp], #0x10
+  #   0x1000004e0 <+48>: 0xd65f03c0   ret
+  - addr: 0x1000004b0
+    UInt32: [ 0xa9bf7bfd, 0x910003fd, 0x90000000, 0x91176000, 
+              0x94000043, 0x94000021, 0x9400002c, 0x94000038, 
+              0x90000000, 0x91177800, 0x9400003d, 0xa8c17bfd, 0xd65f03c0 ]
+
+  # Code for `sub_main_function`
+  #   0x1000004e4 <+0>:  0xa9bf7bfd   stp    x29, x30, [sp, #-0x10]!
+  #   0x1000004e8 <+4>:  0x910003fd   mov    x29, sp
+  #   0x1000004ec <+8>:  0x90000000   adrp   x0, 0
+  #   0x1000004f0 <+12>: 0x91178c00   add    x0, x0, #0x5e3 ; "in subfunc"
+  #   0x1000004f4 <+16>: 0x94000036   bl     0x1000005cc    ; symbol stub for: puts
+  #   0x1000004f8 <+20>: 0x97ffffee   bl     0x1000004b0    ; call_external_functions at main.c:7
+  #   0x1000004fc <+24>: 0xa8c17bfd   ldp    x29, x30, [sp], #0x10
+  #   0x100000500 <+28>: 0xd65f03c0   ret
+  - addr: 0x1000004e4
+    UInt32: [ 0xa9bf7bfd, 0x910003fd, 0x90000000, 0x91178c00, 
+              0x94000036, 0x97ffffee, 0xa8c17bfd, 0xd65f03c0 ]
+

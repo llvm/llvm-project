@@ -303,6 +303,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.socket.sendto
     libc.src.sys.socket.setsockopt
     libc.src.sys.socket.shutdown
+    libc.src.sys.socket.sockatmark
     libc.src.sys.socket.socket
     libc.src.sys.socket.socketpair
     # TODO: These functions are not compatible with 64-bit musl. They need to
@@ -448,6 +449,8 @@ endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
     # complex.h entrypoints
+    libc.src.complex.cabs
+    libc.src.complex.cabsf
     libc.src.complex.carg
     libc.src.complex.cargf
     libc.src.complex.creal
@@ -1148,10 +1151,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.compiler.__stack_chk_fail
 
     # dirent.h entrypoints
-    libc.src.dirent.closedir
-    libc.src.dirent.dirfd
-    libc.src.dirent.opendir
-    libc.src.dirent.readdir
+    # SYS_fcntl isn't available on RISC-V 32 QEMU.
+    # libc.src.dirent.closedir
+    # libc.src.dirent.dirfd
+    # libc.src.dirent.opendir
+    # libc.src.dirent.readdir
+    # libc.src.dirent.fdopendir
 
     # arpa/inet.h entrypoints
     libc.src.arpa.inet.htonl

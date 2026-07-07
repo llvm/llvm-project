@@ -178,6 +178,13 @@ void NVPTXInstPrinter::printFTZFlag(const MCInst *MI, int OpNum,
     O << ".ftz";
 }
 
+void NVPTXInstPrinter::printMultimem(const MCInst *MI, int OpNum,
+                                     const MCSubtargetInfo &, raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  if (MO.getImm())
+    O << "multimem.";
+}
+
 void NVPTXInstPrinter::printNegatedPredicate(const MCInst *MI, int OpNum,
                                              const MCSubtargetInfo &,
                                              raw_ostream &O) {

@@ -702,8 +702,8 @@ void SBBreakpoint::RemoveName(const char *name_to_remove) {
   if (bkpt_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         bkpt_sp->GetTarget().GetAPIMutex());
-    bkpt_sp->GetTarget().RemoveNameFromBreakpoint(bkpt_sp,
-                                                  ConstString(name_to_remove));
+    bkpt_sp->GetTarget().RemoveNameFromBreakpoint(
+        bkpt_sp, llvm::StringRef(name_to_remove));
   }
 }
 

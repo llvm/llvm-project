@@ -332,8 +332,7 @@ uint32_t AppleObjCRuntime::GetFoundationVersion() {
       lldb::ModuleSP module_sp = modules.GetModuleAtIndex(idx);
       if (!module_sp)
         continue;
-      if (strcmp(module_sp->GetFileSpec().GetFilename().AsCString(""),
-                 "Foundation") == 0) {
+      if (module_sp->GetFileSpec().GetFilename() == "Foundation") {
         m_Foundation_major = module_sp->GetVersion().getMajor();
         return *m_Foundation_major;
       }
@@ -402,8 +401,7 @@ AppleObjCRuntime::GetObjCVersion(Process *process, ModuleSP &objc_module_sp) {
       SectionList *sections = module_sp->GetSectionList();
       if (!sections)
         return ObjCRuntimeVersions::eObjC_VersionUnknown;
-      SectionSP v1_telltale_section_sp =
-          sections->FindSectionByName(ConstString("__OBJC"));
+      SectionSP v1_telltale_section_sp = sections->FindSectionByName("__OBJC");
       if (v1_telltale_section_sp) {
         return ObjCRuntimeVersions::eAppleObjC_V1;
       }

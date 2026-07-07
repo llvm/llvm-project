@@ -14,6 +14,7 @@ from enum import Enum
 from dex.dextIR.FrameIR import FrameIR
 from dex.dextIR.LocIR import LocIR
 from dex.dextIR.ProgramState import ProgramState
+from dex.test_script.Nodes import Where
 
 
 class StopReason(Enum):
@@ -50,7 +51,6 @@ class StepIR:
         frames: List[FrameIR],
         step_kind: StepKind = None,
         watches: OrderedDict = None,
-        scope_watches: Optional[Dict[str, List[str]]] = None,
         program_state: ProgramState = None,
     ):
         self.step_index = step_index
@@ -65,8 +65,7 @@ class StepIR:
         if watches is None:
             watches = {}
         self.watches = watches
-        self.scope_watches = scope_watches or OrderedDict()
-        self.hit_fn_bps: List[str] = []
+        self.hit_where_bps: List[Where] = []
 
     def __str__(self):
         try:
@@ -127,18 +126,33 @@ class StepIR:
             lines.append(f"    {frame.loc}")
             lines.append(f"    $pc = {frame.instruction_addr}")
 
-        if self.scope_watches:
+        frame_scope_watches = {
+            frame_idx: frame.scope_watches
+            for frame_idx, frame in enumerate(self.frames)
+        }
+        if frame_scope_watches:
             lines.append(f"Variable Scopes:")
-            for scope_name in sorted(self.scope_watches):
-                lines.append(
-                    f"  {scope_name}: [{', '.join(self.scope_watches[scope_name])}]"
-                )
+            for frame_idx, scope_watches in sorted(frame_scope_watches.items()):
+                frame_str = "" if frame_idx == 0 else f"(Frame {frame_idx}) "
+                for scope_name, scope_vars in sorted(scope_watches.items()):
+                    lines.append(
+                        f"  {frame_str}{scope_name}: [{', '.join(scope_vars)}]"
+                    )
 
-        if self.watches:
+        frame_watches = {
+            frame_idx: frame.watches for frame_idx, frame in enumerate(self.frames)
+        }
+        if frame_watches:
             lines.append(f"Variables:")
-            for value in sorted(self.watches.values(), key=lambda v: v.expression):
-                if value.sub_values:
-                    value.dump_nested(lines, 1)
-                else:
-                    lines.append(f"  {value}")
+            for frame_idx, watches in frame_watches.items():
+                indent = 1
+                if frame_idx != 0:
+                    lines.append(f"  Frame {frame_idx}:")
+                    indent = 2
+                for value in sorted(watches.values(), key=lambda v: v.expression):
+                    if value.sub_values:
+                        value.dump_nested(lines, indent)
+                    else:
+                        lines.append(f"{'  ' * indent}{value}")
+
         return lines

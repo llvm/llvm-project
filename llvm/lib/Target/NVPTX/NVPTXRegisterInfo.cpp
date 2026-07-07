@@ -23,8 +23,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-reg-info"
 
-namespace llvm {
-StringRef getNVPTXRegClassName(TargetRegisterClass const *RC) {
+StringRef llvm::getNVPTXRegClassName(TargetRegisterClass const *RC) {
   if (RC == &NVPTX::B128RegClass)
     return ".b128";
   if (RC == &NVPTX::B64RegClass)
@@ -58,7 +57,7 @@ StringRef getNVPTXRegClassName(TargetRegisterClass const *RC) {
   return "INTERNAL";
 }
 
-StringRef getNVPTXRegClassStr(TargetRegisterClass const *RC) {
+StringRef llvm::getNVPTXRegClassStr(TargetRegisterClass const *RC) {
   if (RC == &NVPTX::B128RegClass)
     return "%rq";
   if (RC == &NVPTX::B64RegClass)
@@ -73,7 +72,6 @@ StringRef getNVPTXRegClassStr(TargetRegisterClass const *RC) {
     return "!Special!";
   return "INTERNAL";
 }
-} // namespace llvm
 
 NVPTXRegisterInfo::NVPTXRegisterInfo()
     : NVPTXGenRegisterInfo(0), StrPool(StrAlloc) {}
