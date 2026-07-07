@@ -64,6 +64,10 @@ public:
                       SmallVectorImpl<MCFixup> &Fixups,
                       const MCSubtargetInfo &STI) const;
 
+  void expandAddBaseIdx(const MCInst &MI, SmallVectorImpl<char> &CB,
+                        SmallVectorImpl<MCFixup> &Fixups,
+                        const MCSubtargetInfo &STI) const;
+
   void expandLongCondBr(const MCInst &MI, SmallVectorImpl<char> &CB,
                         SmallVectorImpl<MCFixup> &Fixups,
                         const MCSubtargetInfo &STI) const;
@@ -317,6 +321,68 @@ void RISCVMCCodeEmitter::expandAddTPRel(const MCInst &MI,
                        .addOperand(DestReg)
                        .addOperand(SrcReg)
                        .addOperand(TPReg);
+  uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  support::endian::write(CB, Binary, llvm::endianness::little);
+}
+
+static unsigned getAddOpAndFixups(unsigned AddOp) {
+  switch (AddOp) {
+  default:
+    llvm_unreachable("Unexpected ADD or SHXADD Opcode on GP-relative!");
+  case RISCV::PseudoAddBaseIdx:
+    return RISCV::ADD;
+  case RISCV::PseudoAddUWBaseIdx:
+    return RISCV::ADD_UW;
+  case RISCV::PseudoSh1AddBaseIdx:
+    return RISCV::SH1ADD;
+  case RISCV::PseudoSh2AddBaseIdx:
+    return RISCV::SH2ADD;
+  case RISCV::PseudoSh3AddBaseIdx:
+    return RISCV::SH3ADD;
+  case RISCV::PseudoSh1AddUWBaseIdx:
+    return RISCV::SH1ADD_UW;
+  case RISCV::PseudoSh2AddUWBaseIdx:
+    return RISCV::SH2ADD_UW;
+  case RISCV::PseudoSh3AddUWBaseIdx:
+    return RISCV::SH3ADD_UW;
+  }
+}
+
+// Pseudo ADD/SHXADD (base-index variant) to a simple ADD or SHXADD with the
+// correct relocation.
+void RISCVMCCodeEmitter::expandAddBaseIdx(const MCInst &MI,
+                                          SmallVectorImpl<char> &CB,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
+  MCOperand DestReg = MI.getOperand(0);
+  // At link time rs2 of the add/shXadd may be rewritten to gp (or zero for
+  // abs-near) when the symbol can be reached via gp-relative addressing.
+  MCOperand Src1 = MI.getOperand(1);
+  MCOperand Src2 = MI.getOperand(2);
+
+  MCOperand SrcSymbol = MI.getOperand(3);
+  assert(SrcSymbol.isExpr() &&
+         "Expected expression as third input to GP-relative add");
+
+  const auto *Expr = dyn_cast<MCSpecifierExpr>(SrcSymbol.getExpr());
+  assert(Expr && (Expr->getSpecifier() == ELF::R_RISCV_BASE_IDX_ADD) &&
+         "Expected expression as third input to base+index add");
+
+  unsigned BuildOpcode = getAddOpAndFixups(MI.getOpcode());
+
+  // Emit the correct base_idx_add relocation for the symbol.
+  addFixup(Fixups, 0, Expr, ELF::R_RISCV_BASE_IDX_ADD);
+
+  // Emit base_idx_add where the relax feature is enabled.
+  if (STI.hasFeature(RISCV::FeatureRelax)) {
+    Fixups.back().setLinkerRelaxable();
+  }
+
+  // Emit a normal ADD or SHXADD instruction with the given operands.
+  MCInst TmpInst = MCInstBuilder(BuildOpcode)
+                       .addOperand(DestReg)
+                       .addOperand(Src1)
+                       .addOperand(Src2);
   uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
   support::endian::write(CB, Binary, llvm::endianness::little);
 }
@@ -589,6 +655,17 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
     expandAddTPRel(MI, CB, Fixups, STI);
     MCNumEmitted += 1;
     return;
+  case RISCV::PseudoAddBaseIdx:
+  case RISCV::PseudoAddUWBaseIdx:
+  case RISCV::PseudoSh1AddBaseIdx:
+  case RISCV::PseudoSh2AddBaseIdx:
+  case RISCV::PseudoSh3AddBaseIdx:
+  case RISCV::PseudoSh1AddUWBaseIdx:
+  case RISCV::PseudoSh2AddUWBaseIdx:
+  case RISCV::PseudoSh3AddUWBaseIdx:
+    expandAddBaseIdx(MI, CB, Fixups, STI);
+    MCNumEmitted += 1;
+    return;
   case RISCV::PseudoLongBEQ:
   case RISCV::PseudoLongBNE:
   case RISCV::PseudoLongBEQI:
@@ -807,12 +884,16 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
              "invalid specifier");
       break;
     case ELF::R_RISCV_TPREL_ADD:
-      // tprel_add is only used to indicate that a relocation should be emitted
-      // for an add instruction used in TP-relative addressing. It should not be
-      // expanded as if representing an actual instruction operand and so to
-      // encounter it here is an error.
+    case ELF::R_RISCV_BASE_IDX_ADD:
+      // tprel_add / base_idx_add are only used to indicate that a relocation
+      // should be emitted for an add instruction used in TP-relative or
+      // base+index addressing. They should not be expanded as if representing
+      // an actual instruction operand and so to encounter them here is an
+      // error.
+
       llvm_unreachable(
-          "ELF::R_RISCV_TPREL_ADD should not represent an instruction operand");
+          "R_RISCV_TPREL_ADD or R_RISCV_BASE_IDX_ADD should not represent "
+          "an instruction operand");
     case RISCV::S_QC_ACCESS:
       // The same logic for tprel_add applies to S_QC_ACCESS, for similar
       // reasons, but we use a specifier becuase %qc.access() gets expanded
@@ -830,6 +911,16 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       break;
     case ELF::R_RISCV_HI20:
       FixupKind = RISCV::fixup_riscv_hi20;
+      RelaxCandidate = true;
+      break;
+    case RISCV::S_BASE_IDX_LO:
+      if (MIFrm == RISCVII::InstFormatI)
+        FixupKind = ELF::R_RISCV_BASE_IDX_LO12_I;
+      else if (MIFrm == RISCVII::InstFormatS)
+        FixupKind = ELF::R_RISCV_BASE_IDX_LO12_S;
+      else
+        llvm_unreachable(
+            "S_BASE_IDX_LO used with unexpected instruction format");
       RelaxCandidate = true;
       break;
     case RISCV::S_PCREL_LO:
