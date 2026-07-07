@@ -24,7 +24,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
@@ -343,9 +342,6 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
         PtrValue = SMemI->getPointerOperand();
         WriteMem = true;
       } else if (IntrinsicInst *IntrI = dyn_cast<IntrinsicInst>(&I)) {
-        const Triple &TargetTriple = BB->getModule()->getTargetTriple();
-        if (!TargetTriple.isAArch64())
-          continue;
         MemIntrinsicInfo IntrInfo;
         bool IsTgtMemIntrinsic = TTI->getTgtMemIntrinsic(IntrI, IntrInfo);
         if (!IsTgtMemIntrinsic)
