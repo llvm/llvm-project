@@ -1635,6 +1635,147 @@ define i8 @assume_cond_false(i1 %cond, i8 %x, i8 %y) {
   ret i8 %sel
 }
 
+define i32 @select_eq_zero_known01_assume(i32 %a) {
+; CHECK-LABEL: define i32 @select_eq_zero_known01_assume(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[RANGE:%.*]] = icmp ult i32 [[A]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[RANGE]])
+; CHECK-NEXT:    [[SEL:%.*]] = add nuw nsw i32 [[A]], 1
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %range = icmp ult i32 %a, 2
+  call void @llvm.assume(i1 %range)
+  %iszero = icmp eq i32 %a, 0
+  %sel = select i1 %iszero, i32 1, i32 2
+  ret i32 %sel
+}
+
+define i32 @select_ne_zero_known01_assume(i32 %a) {
+; CHECK-LABEL: define i32 @select_ne_zero_known01_assume(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[RANGE:%.*]] = icmp ult i32 [[A]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[RANGE]])
+; CHECK-NEXT:    [[SEL:%.*]] = add nuw nsw i32 [[A]], 1
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %range = icmp ult i32 %a, 2
+  call void @llvm.assume(i1 %range)
+  %isnonzero = icmp ne i32 %a, 0
+  %sel = select i1 %isnonzero, i32 2, i32 1
+  ret i32 %sel
+}
+
+define i32 @select_eq_one_known01_assume(i32 %a) {
+; CHECK-LABEL: define i32 @select_eq_one_known01_assume(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[RANGE:%.*]] = icmp ult i32 [[A]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[RANGE]])
+; CHECK-NEXT:    [[SEL:%.*]] = add nuw nsw i32 [[A]], 1
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %range = icmp ult i32 %a, 2
+  call void @llvm.assume(i1 %range)
+  %isone = icmp eq i32 %a, 1
+  %sel = select i1 %isone, i32 2, i32 1
+  ret i32 %sel
+}
+
+define i8 @select_eq_zero_known01_mask(i8 %x) {
+; CHECK-LABEL: define i8 @select_eq_zero_known01_mask(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[X01:%.*]] = and i8 [[X]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = or disjoint i8 [[X01]], 42
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %x01 = and i8 %x, 1
+  %iszero = icmp eq i8 %x01, 0
+  %sel = select i1 %iszero, i8 42, i8 43
+  ret i8 %sel
+}
+
+define <2 x i8> @select_eq_zero_known01_mask_vec(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i8> @select_eq_zero_known01_mask_vec(
+; CHECK-SAME: <2 x i8> [[X:%.*]]) {
+; CHECK-NEXT:    [[X01:%.*]] = and <2 x i8> [[X]], splat (i8 1)
+; CHECK-NEXT:    [[SEL:%.*]] = or disjoint <2 x i8> [[X01]], splat (i8 42)
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %x01 = and <2 x i8> %x, splat (i8 1)
+  %iszero = icmp eq <2 x i8> %x01, zeroinitializer
+  %sel = select <2 x i1> %iszero, <2 x i8> splat (i8 42), <2 x i8> splat (i8 43)
+  ret <2 x i8> %sel
+}
+
+define i8 @select_eq_zero_known01_signed_max(i8 %x) {
+; CHECK-LABEL: define i8 @select_eq_zero_known01_signed_max(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[X01:%.*]] = and i8 [[X]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = add nuw i8 [[X01]], 127
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %x01 = and i8 %x, 1
+  %iszero = icmp eq i8 %x01, 0
+  %sel = select i1 %iszero, i8 127, i8 -128
+  ret i8 %sel
+}
+
+define i8 @select_eq_zero_known01_unsigned_wrap(i8 %x) {
+; CHECK-LABEL: define i8 @select_eq_zero_known01_unsigned_wrap(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[X01:%.*]] = and i8 [[X]], 1
+; CHECK-NEXT:    [[SEXT:%.*]] = add nsw i8 [[X01]], -1
+; CHECK-NEXT:    ret i8 [[SEXT]]
+;
+  %x01 = and i8 %x, 1
+  %iszero = icmp eq i8 %x01, 0
+  %sel = select i1 %iszero, i8 -1, i8 0
+  ret i8 %sel
+}
+
+define i32 @select_eq_zero_unknown(i32 %a) {
+; CHECK-LABEL: define i32 @select_eq_zero_unknown(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ISZERO]], i32 1, i32 2
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %iszero = icmp eq i32 %a, 0
+  %sel = select i1 %iszero, i32 1, i32 2
+  ret i32 %sel
+}
+
+define i32 @select_eq_zero_known01_not_adjacent(i32 %a) {
+; CHECK-LABEL: define i32 @select_eq_zero_known01_not_adjacent(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[RANGE:%.*]] = icmp ult i32 [[A]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[RANGE]])
+; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ISZERO]], i32 1, i32 3
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %range = icmp ult i32 %a, 2
+  call void @llvm.assume(i1 %range)
+  %iszero = icmp eq i32 %a, 0
+  %sel = select i1 %iszero, i32 1, i32 3
+  ret i32 %sel
+}
+
+define i32 @select_eq_zero_known01_reversed(i32 %a) {
+; CHECK-LABEL: define i32 @select_eq_zero_known01_reversed(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[RANGE:%.*]] = icmp ult i32 [[A]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[RANGE]])
+; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ISZERO]], i32 2, i32 1
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %range = icmp ult i32 %a, 2
+  call void @llvm.assume(i1 %range)
+  %iszero = icmp eq i32 %a, 0
+  %sel = select i1 %iszero, i32 2, i32 1
+  ret i32 %sel
+}
+
 ; Test case to make sure we don't consider an all ones float values for converting the select into a sext.
 define <4 x float> @PR33721(<4 x float> %w) {
 ; CHECK-LABEL: define <4 x float> @PR33721(

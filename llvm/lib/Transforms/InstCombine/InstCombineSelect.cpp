@@ -2126,7 +2126,8 @@ static Instruction *foldSelectZeroOrOnes(ICmpInst *Cmp, Value *TVal,
 }
 
 static Value *foldSelectInstWithICmpConst(SelectInst &SI, ICmpInst *ICI,
-                                          InstCombiner::BuilderTy &Builder) {
+                                          InstCombiner::BuilderTy &Builder,
+                                          const SimplifyQuery &SQ) {
   const APInt *CmpC;
   Value *V;
   CmpPredicate Pred;
@@ -2149,6 +2150,27 @@ static Value *foldSelectInstWithICmpConst(SelectInst &SI, ICmpInst *ICI,
     // (V == SMAX) ? SMAX-1 : V --> smin(V, SMAX-1)
     if (CmpC->isMaxSignedValue() && match(TVal, m_SpecificInt(*CmpC - 1)))
       return Builder.CreateBinaryIntrinsic(Intrinsic::smin, V, TVal);
+  }
+
+  // If V is known to be 0 or 1, a select between adjacent constants based on
+  // V == 0/1 can be represented directly as V + C.
+  const APInt *TrueC, *FalseC;
+  if (ICmpInst::isEquality(Pred) && V->getType() == SI.getType() &&
+      (CmpC->isZero() || CmpC->isOne()) &&
+      match(TVal, m_APInt(TrueC)) && match(FVal, m_APInt(FalseC)) &&
+      computeKnownBits(V, SQ.getWithInstruction(&SI)).countMaxActiveBits() <=
+          1) {
+    bool IsEqual = Pred == ICmpInst::ICMP_EQ;
+    bool CondIfZero = IsEqual == CmpC->isZero();
+    const APInt &ValueIfZero = CondIfZero ? *TrueC : *FalseC;
+    const APInt &ValueIfOne = CondIfZero ? *FalseC : *TrueC;
+    if (ValueIfOne == ValueIfZero + 1) {
+      bool HasNUW = !ValueIfZero.isMaxValue();
+      bool HasNSW = SI.getType()->getScalarSizeInBits() > 1 &&
+                    !ValueIfZero.isMaxSignedValue();
+      return Builder.CreateAdd(V, ConstantInt::get(V->getType(), ValueIfZero),
+                               "", HasNUW, HasNSW);
+    }
   }
 
   // Fold icmp(X) ? f(X) : C to f(X) when f(X) is guaranteed to be equal to C
@@ -2404,7 +2426,7 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
           canonicalizeSPF(*ICI, SI.getTrueValue(), SI.getFalseValue(), *this))
     return replaceInstUsesWith(SI, V);
 
-  if (Value *V = foldSelectInstWithICmpConst(SI, ICI, Builder))
+  if (Value *V = foldSelectInstWithICmpConst(SI, ICI, Builder, SQ))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = canonicalizeClampLike(SI, *ICI, Builder, *this))
