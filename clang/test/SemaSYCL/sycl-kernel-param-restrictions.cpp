@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -Wno-vla-cxx-extension -fsycl-is-host -verify %s
 // RUN: %clang_cc1 -triple spirv64 -std=c++17 -fsyntax-only -Wno-vla-cxx-extension -fsycl-is-device -verify %s
 
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -Wnonportable-sycl -Wno-vla-cxx-extension -fsycl-is-host -verify=nonportable %s
+
 // A unique kernel name type is required for each declared kernel entry point.
 template<int, int = 0> struct KN;
 
@@ -213,3 +215,108 @@ void test() {
 }
 
 } // namespace badref7
+
+
+#include <stdatomic.h>
+// Check for atomic parameters and subobjects.
+namespace badref8 {
+// Kernel entry point template definition.
+template<typename KNT, typename T>
+[[clang::sycl_kernel_entry_point(KNT)]]
+void kernel_single_task(T t) {}
+
+struct S { 
+  int a;
+  _Atomic int b;
+};
+
+class Kernel {
+  S data{1, 2};
+public:
+  void operator()() { }
+};
+
+void test() {
+  _Atomic int a = 0;
+  // TODO _Atomic(int) a
+  S s{1, 2};
+  S arr[] = {s, s};
+  kernel_single_task<class KN<15>>([=]{ (void)a; });
+  kernel_single_task<class KN<16>>([=]{ (void)s; });
+  kernel_single_task<class KN<17>>([=]{ (void)arr; });
+  kernel_single_task<class KN<18>>(Kernel());
+  // kernel_single_task<class KN<17>>([](S s) { (void)s; }); // DOESNT DETECT
+}
+
+} // namespace badref8
+
+
+// Check for flexible array members -- would not be copyable to device
+namespace badref9 {
+// Kernel entry point template definition.
+template<typename KNT, typename T>
+[[clang::sycl_kernel_entry_point(KNT)]]
+void kernel_single_task(T t) {}
+
+struct FAM { 
+  int a;
+  int[] b;
+};
+
+class Kernel {
+  FAM fam;
+public:
+  void operator()() { }
+};
+
+void test() {
+  FAM fam;
+  kernel_single_task<class KN<19>>([=]{ (void)fam; }); // DOESNT DETECT
+  kernel_single_task<class KN<20>>(Kernel());
+}
+
+} // namespace badref9
+
+// Check for variable member array -- would not be copyable to device
+namespace badref10 {
+// Kernel entry point template definition.
+template<typename KNT, typename T>
+[[clang::sycl_kernel_entry_point(KNT)]]
+void kernel_single_task(T t) {}
+
+class Kernel {
+  int len;
+public:
+  Kernel(int l, int vmt[n]) : len(l) {}
+  void operator()(int n, int vmt[n]) { (void)vmt; }
+};
+
+void test() {
+  int n;
+  int Vmt[n];
+  kernel_single_task<class KN<21>>([=](int n, int vmt[n]) { (void)vmt; }); // DOESNT DETECT
+  kernel_single_task<class KN<22>>(Kernel()); // DOESNT DETECT
+  kernel_single_task<class KN<23>>([=]{ (void)Vmt; });
+}
+
+} // namespace badref10
+
+// Check for pointer parameters
+namespace nonportable1 {
+// Kernel entry point template definition.
+template<typename KNT, typename T>
+[[clang::sycl_kernel_entry_point(KNT)]]
+void kernel_single_task(T t) {}
+
+class Kernel {
+public:
+  void operator()(int *ptr) { (void)ptr; }
+};
+
+void test() {
+  int *ptr;
+  kernel_single_task<class KN<24>>(Kernel()); // DOESNT DETECT
+  kernel_single_task<class KN<25>>([=]{ (void)ptr; }); // DOESNT DETECT
+}
+
+} // namespace nonportable1

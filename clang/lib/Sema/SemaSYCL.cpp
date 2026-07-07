@@ -750,6 +750,36 @@ public:
       // invalid use of a reference.
       IsValid = false;
       return false;
+    } 
+    
+    Ty.dump();
+    if (Ty->isAtomicType() ||
+        Ty->isStructureTypeWithFlexibleArrayMember() ||
+        Ty->isVariablyModifiedType()) {
+
+      auto DirectParent = ObjectAccessPath.back();
+      auto *DirectFieldParent = cast<const FieldDecl *>(DirectParent);
+      SemaSYCLRef.Diag(DirectFieldParent->getLocation(),
+                       diag::err_bad_kernel_param_type)
+          << DirectFieldParent->getType();
+      emitObjectAccessPathNotes();
+
+      IsValid = false;
+      return false;
+    } /*
+    } else if (0 ) { // TODO detect virtual base class 
+
+    } // TODO introduce warning to detect pointers 
+    // "sycl portability warning: it is user's responsibility to ensure pointers being used are USM"
+    */
+    // Warn about pointer parameters in SYCL kernels if non-portable SYCL
+    // warnings are enabled.
+    if (Ty->isPointerType()) {
+      auto DirectParent = ObjectAccessPath.back();
+      auto *DirectFieldParent = cast<const FieldDecl *>(DirectParent);
+      SemaSYCLRef.Diag(DirectFieldParent->getLocation(),
+                   diag::warn_sycl_kernel_has_ptr_param);
+      emitObjectAccessPathNotes();
     }
     return true;
   }
