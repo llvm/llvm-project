@@ -337,10 +337,6 @@ public:
     return "";
   }
 
-  bool useFP16ConversionIntrinsics() const override {
-    return false;
-  }
-
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 

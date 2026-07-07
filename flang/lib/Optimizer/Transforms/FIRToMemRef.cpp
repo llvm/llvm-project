@@ -147,7 +147,7 @@ private:
                                  PatternRewriter &, FIRToMemRefTypeConverter &);
 
   FailureOr<SmallVector<Value>> getMemrefIndices(fir::ArrayCoorOp, Operation *,
-                                                 PatternRewriter &, Value,
+                                                 PatternRewriter &,
                                                  Value) const;
 
   bool memrefIsOptional(Operation *) const;
@@ -349,6 +349,69 @@ bool FIRToMemRef::materializeShapeExtents(
   return false;
 }
 
+/// Accumulate the shape/shift/slice operands carried by `op` into `info`.
+///
+/// Accepts `fir::ArrayCoorOp`, `fir::EmboxOp`, and `fir::ReboxOp`; on any
+/// other op type this is a no-op (`if constexpr` guard in the body). Fields
+/// of `info` are **appended** to, never cleared -- callers routinely invoke
+/// this twice (once for the array_coor, once for the underlying embox/rebox)
+/// so ordering matters.
+///
+/// What each shape operand contributes:
+///   - `fir.shape %e0, %e1, ...`         -> appends extents to `shapeVec`.
+///   - `fir.shape_shift %lb0, %e0, ...`  -> appends extents to `shapeVec`
+///                                          and lower bounds to `shiftVec`.
+///   - `fir.shift %lb0, %lb1, ...`       -> appends lower bounds only,
+///                                          into `shiftVec`.
+///   - no shape operand (nullptr)        -> `shapeVec`/`shiftVec` unchanged.
+///
+/// What the slice operand contributes:
+///   - `fir.slice %lb0, %ub0, %step0, ...` -> appends *all* triple SSA values
+///                                             to `sliceVec` (per-dim, in
+///                                             Fortran order).
+///   - projected slice (extra `%fields`)  -> also sets `hasProjectedSlice`
+///                                             and, when the first field is
+///                                             a compile-time constant,
+///                                             `projectedSliceStart`.
+///   - no slice operand (nullptr)          -> `sliceVec` unchanged.
+///
+/// Examples (IR shown Fortran-first; sliceVec entries listed in append
+/// order):
+///
+/// 1) `fir.array_coor %arr(%shape) [%slice] %i, %j` where
+///        %shape = fir.shape %c4, %c2                  ; parent 4x2
+///        %slice = fir.slice %c1, %c2, %c1, %c1, %c2, %c1
+///
+///    Before: info = { shapeVec=[], shiftVec=[], sliceVec=[] }
+///    After : info = { shapeVec=[%c4, %c2],
+///                     shiftVec=[],
+///                     sliceVec=[%c1, %c2, %c1,   // dim 0 triple
+///                               %c1, %c2, %c1] } // dim 1 triple
+///
+/// 2) `fir.embox %arr(%shape_shift) [%slice]` where
+///        %shape_shift = fir.shape_shift %clb0, %e0, %clb1, %e1
+///        %slice       = fir.slice %c2, %c2, %c1, %c1, %c1, %c1
+///
+///    After: info = { shapeVec=[%e0, %e1],
+///                    shiftVec=[%clb0, %clb1],
+///                    sliceVec=[%c2, %c2, %c1,   // dim 0 triple
+///                              %c1, %c1, %c1] } // dim 1 triple
+///
+/// 3) Two-slice stack -- first the array_coor, then the underlying embox:
+///    call sequence:
+///        collectSliceInfoFrom(arrayCoorOp, info);
+///        collectSliceInfoFrom(emboxOp,     info);
+///
+///    Result: `sliceVec` holds the array_coor's triples first, followed by
+///    the embox's triples. Downstream helpers (e.g. `getMemrefIndices`) only
+///    consume the leading `rank` triples, so the two contributions are
+///    positionally distinguishable but not intrinsically labelled.
+///
+/// 4) Rank-reducing embox slice via scalar subscript
+///    (`fir.slice %c1, %c3, %c1, %c2, %undef, %undef, %c1, %c2, %c1`):
+///    All 9 triple SSAs are appended to `sliceVec`. Callers detect the
+///    scalar-subscript form by testing `isa<fir::UndefOp>` on the ub/step
+///    entries.
 template <typename OpTy>
 void FIRToMemRef::collectSliceInfoFrom(OpTy op, SliceInfo &info) const {
   if constexpr (std::is_same_v<OpTy, fir::ArrayCoorOp> ||
@@ -496,10 +559,89 @@ static mlir::Value createTypeConversion(PatternRewriter &rewriter,
   return fir::ConvertOp::create(rewriter, loc, toTy, value);
 }
 
+/// Build the 0-based memref indices for the `memref.load`/`memref.store`
+/// that will replace `arrayCoorOp`. Returns the indices in **memref order**
+/// (the reverse of Fortran col-major dim order).
+///
+/// Parameters:
+///   - `arrayCoorOp` : the source `fir.array_coor`.
+///   - `memref`      : the defining op of `arrayCoorOp.getMemref()`. Only
+///                     used to detect a `fir.embox` base (from which extra
+///                     shape/slice info is pulled -- rebox is deliberately
+///                     *not* queried for shape/slice info).
+///   - `one`         : a shared `arith.constant 1 : index` used as the
+///                     default step/shift when the array_coor has neither
+///                     slice nor shape_shift.
+///
+/// Returns `failure()` when the array_coor's index count matches neither
+/// the full parent rank nor the non-scalar-subscript rank -- the pass then
+/// declines the rewrite.
+///
+/// Effective rank and slice collection:
+///   - Starts with `rank = arrayCoorOp.getIndices().size()`.
+///   - If the base is a `fir.embox`, `rank` is overridden to the parent
+///     rank (via `getRankFromEmbox`), and `collectSliceInfoFrom(embox, ...)`
+///     appends the embox's shape/slice triples after the array_coor's.
+///   - `sliceLbs` / `sliceStrides` are then extracted from *the full*
+///     `sliceVec`, but the two loops below only read positions
+///     `[0..rank-1]` of `sliceLbs`/`sliceStrides` (i.e. `sliceVec` entries
+///     `[0..rank*3-1]`). When both the array_coor and the embox have a
+///     slice, the embox's triples sit at `sliceVec[rank*3..2*rank*3-1]`
+///     and are *not* consumed here.
+///
+/// Two-pass index assembly (Fortran dim order):
+///   Pass 1 -- scalar subscripts:
+///     For each Fortran dim `i`, if the array_coor's slice's step-triple
+///     is `fir.undef` (scalar-subscript form `lb, undef, undef`), push
+///     `sliceLb - shift` and mark `filledPositions[i] = true`. This "eats"
+///     the sourced-index count for that dim.
+///   Pass 2 -- range dims:
+///     For each non-filled dim, take one input from `arrayCoorOp.getIndices()`
+///     and lower to
+///         delta      = index - (1 or shift)  ; 0-based within the slice
+///         scaled     = delta * slice_step
+///         slice_off  = sliceLb - shift
+///         finalIndex = scaled + slice_off
+///
+///   The vector is then reversed to memref (row-major) order.
+///
+/// Example A -- plain `fir.array_coor` over a raw ref, no slice:
+///
+///     %shape = fir.shape %c4, %c2 : (index, index) -> !fir.shape<2>
+///     %addr  = fir.array_coor %arr(%shape) %i, %j
+///          : (!fir.ref<!fir.array<4x2xi32>>, !fir.shape<2>, index, index)
+///          -> !fir.ref<i32>
+///
+///     Emitted (Fortran order, before reverse):
+///       [ %i - 1, %j - 1 ]
+///     Returned (memref order):
+///       [ %j - 1, %i - 1 ]     ; memref<2x4> dim 0 = Fortran dim 1
+///
+/// Example B -- explicit slice on the array_coor (no embox):
+///
+///     %slice = fir.slice %c2, %c8, %c2, %c1, %c7, %c3
+///     %addr  = fir.array_coor %arr(%shape) [%slice] %i, %j
+///
+///     Fortran-dim-0 finalIndex = (%i - 1) * 2 + (2 - 1) = 2*%i - 1
+///     Fortran-dim-1 finalIndex = (%j - 1) * 3 + (1 - 1) =   3*(%j - 1)
+///     Returned (memref order): [ Fortran-dim-1, Fortran-dim-0 ]
+///
+/// Example C -- rank-reducing scalar subscript on the array_coor's slice:
+///
+///     %slice = fir.slice %c1, %c3, %c1, %k, %undef, %undef  ; dim1 scalar@k
+///     %addr  = fir.array_coor %box(%boxShape) [%slice] %i
+///          : (!fir.box<...>, !fir.shape<2>, !fir.slice<2>, index)
+///          -> !fir.ref<i32>
+///
+///     Pass 1 marks Fortran dim 1 filled with (%k - 1).
+///     Pass 2 computes Fortran dim 0 from %i.
+///     Returned (memref order): [ %k - 1, %i - 1 ]
+///     Note the array_coor has only *one* input index -- the `rank ==
+///     nonScalarRank` branch (`hasReducedRankIndices`) is what makes this
+///     validate.
 FailureOr<SmallVector<Value>>
 FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
-                              PatternRewriter &rewriter, Value converted,
-                              Value one) const {
+                              PatternRewriter &rewriter, Value one) const {
   IndexType indexTy = rewriter.getIndexType();
   SmallVector<Value> indices;
   Location loc = arrayCoorOp->getLoc();
@@ -696,7 +838,7 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
 
   Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
   FailureOr<SmallVector<Value>> failureOrIndices =
-      getMemrefIndices(arrayCoorOp, memref, rewriter, *converted, one);
+      getMemrefIndices(arrayCoorOp, memref, rewriter, one);
   if (failed(failureOrIndices))
     return failure();
   SmallVector<Value> indices = *failureOrIndices;
@@ -986,6 +1128,47 @@ FIRToMemRef::getFIRConvert(Operation *memOp, Operation *op,
   return convert->getResult(0);
 }
 
+/// Peephole-simplify an index-shaped SSA value before it gets fed into
+/// memref index arithmetic. Returns a (possibly newly-created) `Value`;
+/// the input is left untouched. Callers must not assume the result is
+/// `index`-typed -- they typically follow up with an explicit
+/// `arith.index_cast` when needed (see `getMemrefIndices` and the
+/// `fir.coordinate_of` rewriter).
+///
+/// Handled patterns (all other inputs are returned as-is):
+///
+///   1. Block argument
+///        %arg    : any type
+///      -> `%arg` unchanged (nothing to inspect).
+///
+///   2. `arith.constant` of an integer type that isn't `index`
+///        %c5_i64 = arith.constant 5 : i64
+///      -> new `%c5 = arith.constant 5 : index` at the same location.
+///      (Constants that are already `index` are returned unchanged.)
+///
+///   3. `arith.extsi %ic` where the operand of the `extsi` is
+///      `arith.index_cast`:
+///        %ic  = arith.index_cast %x : index to i32
+///        %ext = arith.extsi %ic     : i32 to i64
+///      -> peels back to `%x` (the ext+cast pair is a no-op on the
+///      original index-typed value). When the immediate producer isn't an
+///      `index_cast`, the `extsi` is stripped and its operand returned
+///      (with any further canonicalization the operand itself qualifies
+///      for) -- the width extension is dropped either way; callers must
+///      `index_cast` if they need an index-typed result.
+///
+///   4. `arith.addi %a, %b`
+///      -> recursively canonicalize both operands, and if their result
+///      types match, build a new `arith.addi` at the same location. If
+///      the canonicalized operand types diverge, returns the original op
+///      untouched (the caller can still `index_cast` externally).
+///
+/// Only these four patterns fire -- this is intentionally a narrow peephole,
+/// not a general folder. Multiplication, sub, cast chains through other ops,
+/// etc. all pass through untouched.
+///
+/// Idempotence: safe to call repeatedly. An already-index constant / a
+/// non-recognized op returns immediately.
 Value FIRToMemRef::canonicalizeIndex(Value index,
                                      PatternRewriter &rewriter) const {
   if (auto blockArg = dyn_cast<BlockArgument>(index))
