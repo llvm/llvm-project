@@ -71,20 +71,13 @@ selects.config_setting_group(
 )
 
 bool_flag(
-    name = "enable_lzma",
+    name = "enable_system_lzma",
     build_setting_default = False,
 )
 
 config_setting(
-    name = "lzma_enabled_setting",
-    flag_values = {":enable_lzma": "true"},
-)
-
-selects.config_setting_group(
-    name = "lzma_enabled",
-    match_any = [
-        ":lzma_enabled_setting",
-    ],
+    name = "system_lzma_enabled",
+    flag_values = {":enable_system_lzma": "true"},
 )
 
 _VERSION_SUBSTITUTIONS = {
@@ -217,7 +210,7 @@ expand_template(
             "#cmakedefine01 LLDB_ENABLE_LIBEDIT": "#define LLDB_ENABLE_LIBEDIT 0",
         },
     }) | select({
-        ":lzma_enabled": {
+        ":system_lzma_enabled": {
             "#cmakedefine01 LLDB_ENABLE_LZMA": "#define LLDB_ENABLE_LZMA 1",
         },
         "//conditions:default": {
@@ -662,7 +655,7 @@ cc_library(
         ],
         "//conditions:default": [],
     }) + select({
-        ":lzma_enabled": [
+        ":system_lzma_enabled": [
             "-llzma",
         ],
         "//conditions:default": [],
