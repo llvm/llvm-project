@@ -14,6 +14,7 @@
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/CUDA/memmove-function.h"
+#include "flang/Runtime/CUDA/stream.h"
 #include "flang/Runtime/assign.h"
 
 #include "cuda_runtime.h"
@@ -231,9 +232,9 @@ void RTDEF(CUFDataTransferPtrPtr)(void *dst, void *src, std::size_t bytes,
     Terminator terminator{sourceFile, sourceLine};
     terminator.Crash("host to host copy not supported");
   }
-  // TODO: Use cudaMemcpyAsync when we have support for stream.
   CUDA_REPORT_IF_ERROR_LOC(
-      cudaMemcpy(dst, src, bytes, kind), sourceFile, sourceLine);
+      cudaMemcpyAsync(dst, src, bytes, kind, RTNAME(CUFGetDefaultStream)()),
+      sourceFile, sourceLine);
 }
 
 void RTDEF(CUFDataTransferPtrDesc)(void *addr, Descriptor *desc,
