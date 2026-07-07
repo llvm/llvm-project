@@ -69,12 +69,18 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
       libc.src.__support.threads.identifier
   )
 
+  set(pi_mutex_dep)
+  if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.pi_mutex)
+    set(pi_mutex_dep .${LIBC_TARGET_OS}.pi_mutex)
+  endif()
+
   add_header_library(
     unix_mutex
     HDRS
       unix_mutex.h
     DEPENDS
       .raw_mutex
+      ${pi_mutex_dep}
       libc.src.__support.CPP.atomic
   )
 

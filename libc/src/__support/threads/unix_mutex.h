@@ -20,6 +20,10 @@
 #include "src/__support/threads/mutex_common.h"
 #include "src/__support/threads/raw_mutex.h"
 
+#ifdef LIBC_TARGET_OS_IS_LINUX
+#include "src/__support/threads/linux/pi_mutex.h"
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 
 // TODO: support shared/recursive/robust mutexes.
@@ -39,6 +43,17 @@ class Mutex final : private RawMutex {
 
   // CndVar needs to access Mutex as RawMutex
   friend class CndVar;
+
+#ifdef LIBC_TARGET_OS_IS_LINUX
+  LIBC_INLINE PIMutexRef pi_mutex_ref() {
+    PIMutexRef::Type type = PIMutexRef::Type::Normal;
+    if (is_recursive())
+      type = PIMutexRef::Type::Recursive;
+    else if (is_error_checking())
+      type = PIMutexRef::Type::ErrorChecking;
+    return {get_raw_futex(), type, &lock_count};
+  }
+#endif
 
   template <class LockRoutine>
   LIBC_INLINE MutexError lock_impl(LockRoutine do_lock) {
@@ -73,6 +88,10 @@ public:
         error_checking(is_error_checking), owner(0), lock_count(0) {}
 
   LIBC_INLINE static MutexError destroy(Mutex *lock) {
+#ifdef LIBC_TARGET_OS_IS_LINUX
+    if (lock->priority_inherit)
+      return lock->pi_mutex_ref().destroy();
+#endif
     LIBC_ASSERT(lock->owner == 0 && lock->lock_count == 0 &&
                 "Mutex destroyed while being locked.");
     RawMutex::destroy(lock);
@@ -80,6 +99,10 @@ public:
   }
 
   LIBC_INLINE MutexError lock() {
+#ifdef LIBC_TARGET_OS_IS_LINUX
+    if (priority_inherit)
+      return pi_mutex_ref().lock(/*timeout=*/cpp::nullopt, this->pshared);
+#endif
     return lock_impl([this] {
       // Since timeout is not specified, we do not need to check the return
       // value.
@@ -90,6 +113,10 @@ public:
   }
 
   LIBC_INLINE MutexError timed_lock(internal::AbsTimeout abs_time) {
+#ifdef LIBC_TARGET_OS_IS_LINUX
+    if (priority_inherit)
+      return pi_mutex_ref().lock(abs_time, this->pshared);
+#endif
     return lock_impl([this, abs_time] {
       // TODO: check deadlock? POSIX made it optional.
       if (this->RawMutex::lock(abs_time, this->pshared))
@@ -99,6 +126,10 @@ public:
   }
 
   LIBC_INLINE MutexError unlock() {
+#ifdef LIBC_TARGET_OS_IS_LINUX
+    if (priority_inherit)
+      return pi_mutex_ref().unlock(this->pshared);
+#endif
     if (is_recursive()) {
       // lock_count == 0 can happen if previous unlock is
       // suspended before signal frame
@@ -121,6 +152,10 @@ public:
   }
 
   LIBC_INLINE MutexError try_lock() {
+#ifdef LIBC_TARGET_OS_IS_LINUX
+    if (priority_inherit)
+      return pi_mutex_ref().try_lock();
+#endif
     return lock_impl([this] {
       if (this->RawMutex::try_lock())
         return MutexError::NONE;

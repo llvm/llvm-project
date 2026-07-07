@@ -199,3 +199,10 @@ Cyclic joining with more than two threads is not detected.
 Concurrent and repeated joinings on the same thread are faulty behaviors, because
 target thread's TLS may already be torn down.  ``EINVAL`` may be returned if
 multiple joinings occur on the same thread but it is not guaranteed to observe.
+
+Invalid Mutex Lock
+------------------------------------------------------
+The kernel may return special errors from futex-like syscalls in edge cases.
+POSIX.1 specifies that ``EINTR`` must be handled inside libc, but it does not
+clearly define how other special errors, such as ``EPERM`` or ``ENOMEM``, should
+be handled. For such cases, we return ``EINVAL``.

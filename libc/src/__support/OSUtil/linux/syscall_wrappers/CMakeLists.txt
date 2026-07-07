@@ -1,4 +1,18 @@
 add_header_library(
+  futex
+  HDRS
+    futex.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.stdint_proxy
+    libc.hdr.types.struct_timespec
+    libc.include.sys_syscall
+)
+
+add_header_library(
   getrandom
   HDRS
     getrandom.h

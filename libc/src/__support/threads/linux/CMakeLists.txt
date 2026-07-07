@@ -24,6 +24,26 @@ add_header_library(
     libc.src.__support.time.abs_timeout
 )
 
+add_header_library(
+  pi_mutex
+  HDRS
+    pi_mutex.h
+  DEPENDS
+    .futex_utils
+    .futex_word_type
+    libc.hdr.errno_macros
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.futex
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.optional
+    libc.src.__support.time.monotonicity
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.null_check
+)
+
 add_object_library(
   thread
   SRCS
