@@ -1531,3 +1531,22 @@ namespace SubPtr {
   }
   static_assert(dynAlloc() == 1);
 }
+
+namespace ActivatingDifferentUnionMember {
+  struct A { long x; };
+
+  union U;
+  constexpr A foo(U *up);
+
+  union U {
+    A a = foo(this); // both-note {{in call to 'foo(&u)'}}
+    int y;
+  };
+
+  constexpr A foo(U *up) {
+    up->y = 11; // both-note {{assignment would change active union member during the initialization of a different member}}
+    return {42};
+  }
+
+  constexpr U u = {}; // both-error {{must be initialized by a constant expression}}
+}
