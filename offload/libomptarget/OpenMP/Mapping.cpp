@@ -282,6 +282,14 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       LR.TPR.Flags.IsPresent = false;
       LR.TPR.Flags.IsHostPointer = true;
       LR.TPR.TargetPointer = HstPtrBegin;
+      // Create a mapping for a case when map(close, alloc:...) is applied to a
+      // subsection of previously mapped allocation. The mapping would prevent
+      // map(close, alloc:...) from creating a new allocation as it would reuse
+      // the mapped allocation instead.
+      HDTTMap->emplace(new HostDataToTargetTy(
+          (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
+          (uintptr_t)HstPtrBegin + Size, (uintptr_t)HstPtrBegin,
+          (uintptr_t)HstPtrBegin, true, HstPtrName));
     }
   } else if (HasPresentModifier) {
     ODBG(ODT_Mapping) << "Mapping required by 'present' map type modifier does "
