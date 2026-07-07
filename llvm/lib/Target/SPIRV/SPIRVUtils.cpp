@@ -180,7 +180,6 @@ void addStringImm(StringRef Str, MachineInstrBuilder &MIB) {
   }
 }
 
-
 std::string getStringImm(const MachineInstr &MI, unsigned StartIndex) {
   return getSPIRVStringOperand(MI, StartIndex);
 }
