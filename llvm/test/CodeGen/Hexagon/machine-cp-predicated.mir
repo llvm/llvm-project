@@ -1,0 +1,41 @@
+# RUN: llc -mtriple=hexagon -run-pass=machine-cp -o - %s | FileCheck %s
+
+# A predicated instruction conditionally defines its destination: when the
+# predicate is false the destination keeps its previous value, so it is
+# implicitly read. MachineCopyPropagation must not remove a COPY that supplies
+# that pass-through value, nor rename a predicated def into a COPY's
+# destination.
+
+# Forward propagation: the COPY feeding a predicated def must survive.
+---
+name: forward_predicated_def_keeps_copy
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $p0
+    ; CHECK-LABEL: name: forward_predicated_def_keeps_copy
+    ; CHECK: $r2 = COPY $r1
+    ; CHECK-NEXT: $r2 = A2_tfrt $p0, killed $r0
+    $r2 = COPY $r1
+    $r2 = A2_tfrt $p0, killed $r0
+    $r0 = COPY killed $r2
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...
+
+# Backward propagation: propagateDefs must not rename a predicated def into the
+# COPY's destination, because on the predicate-false path that destination
+# would keep a stale value.
+---
+name: backward_predicated_def_keeps_copy
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $p0
+    ; CHECK-LABEL: name: backward_predicated_def_keeps_copy
+    ; CHECK: renamable $r1 = A2_tfrt $p0, killed $r0
+    ; CHECK-NEXT: $r2 = COPY killed renamable $r1
+    renamable $r1 = A2_tfrt $p0, killed $r0
+    $r2 = COPY killed renamable $r1
+    $r0 = COPY killed $r2
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...

@@ -1004,6 +1004,12 @@ void MachineCopyPropagation::forwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         // Skip invalidating constant registers.
         if (!MRI->isConstantPhysReg(Reg)) {
           Defs.push_back(Reg.asMCReg());
+          // If this instruction is predicated, the def is conditional. When
+          // the predicate is false the register keeps its previous value, so
+          // it is implicitly read. Treat it as read to keep the COPY that
+          // defines it from being eliminated as dead.
+          if (TII->isPredicated(MI))
+            readRegister(Reg.asMCReg(), MI, RegularUse);
           continue;
         }
       } else if (MO.readsReg()) {
@@ -1115,6 +1121,13 @@ void MachineCopyPropagation::forwardCopyPropagateBlock(MachineBasicBlock &MBB) {
 
 void MachineCopyPropagation::propagateDefs(MachineInstr &MI) {
   if (!Tracker.hasAnyCopies())
+    return;
+
+  // If this instruction is predicated, the def is conditional. When the
+  // predicate is false the destination register keeps its previous value.
+  // Backward-propagating through a predicated def would rename the register
+  // and delete the COPY that provided that pass-through value.
+  if (TII->isPredicated(MI))
     return;
 
   for (unsigned OpIdx = 0, OpEnd = MI.getNumOperands(); OpIdx != OpEnd;
