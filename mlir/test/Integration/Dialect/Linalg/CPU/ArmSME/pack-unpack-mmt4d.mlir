@@ -272,44 +272,44 @@ module @transforms attributes { transform.with_named_sequence } {
     %mmt4d_func = transform.get_parent_op %mmt4d {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
 
     // Step 1: Tile
-    // Tile parallel dims (note, the N dim is scalable!)
-    %tiled_mmt4d_parallel, %_:4 = transform.structured.tile_using_for %mmt4d tile_sizes [1, 1, 0, 8, [8], 0]
+    // Tile parallel dims (note, the M, N dim is scalable!)
+    %tiled_mmt4d_parallel, %_:4 = transform.structured.tile_using_for %mmt4d tile_sizes [1, 1, 0, [8], [8], 0]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
     // Tile reduction dims
-    %tiled_mmt4d, %_1:2 = transform.structured.tile_using_for %tiled_mmt4d_parallel tile_sizes [0, 0, 1, 0, 0, 1]
-      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %tiled_mmt4d, %loop_k = transform.structured.tile_using_for %tiled_mmt4d_parallel tile_sizes [0, 0, 1, 0, 0, 0]
+      : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
 
-    // Step 2: Vectorize linalg.mmt4d (note, the N dim is scalable!)
+    // Step 2: Vectorize linalg.mmt4d (note, the M, N dim is scalable!)
     // TODO: Lower directly to named contractions: https://github.com/llvm/llvm-project/issues/159749
     transform.structured.vectorize %tiled_mmt4d
-      vector_sizes  [1, 1, 1, 8, [8], 1]  {assume_dynamic_dims_match_vec_sizes} : !transform.any_op
+      vector_sizes  [1, 1, 1, [8], [8], 1]  : !transform.any_op
 
-    // Step 3: Simplify
-    // vector.multi_reduction --> vector.contract
-    // Generates a 6-dim vector.contract with the dim matching the original MMT4D Op
-    // and with the following split into parallel and reduction dims:
-    //    * parallel, parallel, reduction, parallel, parallel, reduction
-    transform.apply_patterns to %mmt4d_func {
+    // Step 3: Lower vector.mask %mask { vector.transfer_* } to vector.transfer_* %mask
+    transform.apply_patterns to %loop_k {
+      transform.apply_patterns.vector.lower_masked_transfers
+    } : !transform.op<"scf.for">
+
+    // Step 4: Hoist the C accumulator load/store out of the k-loop while still
+    // in tensor form, so transfer_write has a result value the loop can yield.
+    transform.apply_licm to %loop_k : !transform.op<"scf.for">
+    transform.loop.hoist_loop_invariant_subsets %loop_k : !transform.op<"scf.for">
+
+    // Lower to outerproduct
+    %func_pre = transform.structured.match ops{["func.func"]} in %module
+      : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func_pre {
       transform.apply_patterns.vector.reduction_to_contract
-      // Reduce the rank of xfer ops. This transforms vector.contract to be
-      // more matmul-like and to enable the lowering to outer product Ops.
       transform.apply_patterns.vector.transfer_permutation_patterns
-    } : !transform.op<"func.func">
-
-   // Hoisting and LICM - not strictly required
-   %mmt4d_func_h = transform.structured.hoist_redundant_vector_transfers %mmt4d_func
-     : (!transform.op<"func.func">) -> !transform.op<"func.func">
-   %all_loops = transform.structured.match interface{LoopLikeInterface} in %mmt4d_func_h
-     : (!transform.op<"func.func">) -> !transform.any_op
-   transform.apply_licm to %all_loops : !transform.any_op
-   transform.loop.hoist_loop_invariant_subsets %all_loops : !transform.any_op
-
-   // Simplification
-   transform.apply_patterns to %mmt4d_func_h {
-     transform.apply_patterns.vector.reduction_to_contract
-     transform.apply_patterns.vector.cast_away_vector_leading_one_dim
-     transform.apply_patterns.canonicalization
-   } : !transform.op<"func.func">
+      transform.apply_patterns.canonicalization
+    } : !transform.any_op
+    transform.apply_patterns to %func_pre {
+      transform.apply_patterns.vector.reduction_to_contract
+      transform.apply_patterns.vector.cast_away_vector_leading_one_dim
+      transform.apply_patterns.vector.lower_contraction
+          lowering_strategy = "outerproduct"
+      transform.apply_patterns.vector.drop_unit_dims_with_shape_cast
+      transform.apply_patterns.canonicalization
+    } {apply_cse} : !transform.any_op
 
    //==========================================================================
    // HANDLE PACK + UNPACK
@@ -353,30 +353,16 @@ module @transforms attributes { transform.with_named_sequence } {
    //==========================================================================
    // BUFFERIZATION
    //==========================================================================
-   %bufferize = transform.bufferization.one_shot_bufferize %module
+   %bufferize = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %module
      {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
+   %func = transform.structured.match ops{["func.func"]} in %bufferize
+     : (!transform.any_op) -> !transform.any_op
 
-   //==========================================================================
-   // SIMPLIFY THE CONTRACT Op
-   //==========================================================================
-   %contract = transform.collect_matching @match_contract in %bufferize : (!transform.any_op) -> (!transform.any_op)
-   %contract_func = transform.get_parent_op %contract {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
-
-   // Drop trailing unit dims (the correspondong pattern works only
-   // post-bufferization)
-   transform.apply_patterns to %contract_func {
-      transform.apply_patterns.tensor.fold_tensor_subset_ops
-      transform.apply_patterns.vector.drop_inner_most_unit_dims_from_xfer_ops
-      transform.apply_patterns.canonicalization
-    } : !transform.op<"func.func">
-
-   //==========================================================================
-   // LOWER CONTRACT TO FMA
-   //==========================================================================
-   transform.apply_patterns to %contract_func {
-      transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
-      transform.apply_patterns.vector.lower_outerproduct
-   } : !transform.op<"func.func">
+   transform.apply_patterns to %func {
+     transform.apply_patterns.vector.rank_reducing_subview_patterns
+     transform.apply_patterns.vector.drop_unit_dims_with_shape_cast
+     transform.apply_patterns.canonicalization
+   } {apply_cse} : !transform.any_op
 
    transform.yield
    }
@@ -387,12 +373,6 @@ module @transforms attributes { transform.with_named_sequence } {
   transform.named_sequence @match_mmt4d(
       %entry: !transform.any_op {transform.readonly}) -> !transform.any_op {
     transform.match.operation_name %entry ["linalg.mmt4d"] : !transform.any_op
-    transform.yield %entry : !transform.any_op
-  }
-
-  transform.named_sequence @match_contract(
-      %entry: !transform.any_op {transform.readonly}) -> !transform.any_op {
-    transform.match.operation_name %entry ["vector.contract"] : !transform.any_op
     transform.yield %entry : !transform.any_op
   }
 }
