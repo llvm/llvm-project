@@ -49,14 +49,34 @@ DeclContext *Sema::computeDeclContext(QualType T) {
 DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
                                       bool EnteringContext) {
   NestedNameSpecifier NNS = SS.getScopeRep();
-  if (NNS.isDependent()) {
+  if (!NNS.isDependent()) {
+  switch (NNS.getKind()) {
+  case NestedNameSpecifier::Kind::Namespace:
+    return const_cast<NamespaceDecl *>(
+        NNS.getAsNamespaceAndPrefix().Namespace->getNamespace());
+
+  case NestedNameSpecifier::Kind::Type:
+    return NNS.getAsType()->castAsTagDecl();
+
+  case NestedNameSpecifier::Kind::Global:
+    return Context.getTranslationUnitDecl();
+
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
+    return NNS.getAsMicrosoftSuper();
+
+  case NestedNameSpecifier::Kind::Null:
+    return nullptr;
+  }
+
+  llvm_unreachable("Invalid NestedNameSpecifier::Kind!");
+  }
+
     // If this nested-name-specifier refers to the current
     // instantiation, return its DeclContext.
     if (CXXRecordDecl *Record = getCurrentInstantiationOf(NNS))
       return Record;
 
-    if (EnteringContext) {
-      if (NNS.getKind() != NestedNameSpecifier::Kind::Type)
+      if (!EnteringContext || NNS.getKind() != NestedNameSpecifier::Kind::Type)
         return nullptr;
       const Type *NNSType = NNS.getAsType();
 
@@ -67,14 +87,16 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
         // We are entering the context of the nested name specifier, so try to
         // match the nested name specifier to either a primary class template
         // or a class template partial specialization.
-        if (ClassTemplateDecl *ClassTemplate =
+          ClassTemplateDecl *ClassTemplate =
                 dyn_cast_or_null<ClassTemplateDecl>(
-                    SpecType->getTemplateName().getAsTemplateDecl())) {
+                    SpecType->getTemplateName().getAsTemplateDecl())
           // FIXME: The fallback on the search of partial
           // specialization using ContextType should be eventually removed since
           // it doesn't handle the case of constrained template parameters
           // correctly. Currently removing this fallback would change the
           // diagnostic output for invalid code in a number of tests.
+          if (!ClassTemplate)
+            return nullptr;
           ClassTemplatePartialSpecializationDecl *PartialSpec = nullptr;
           ArrayRef<TemplateParameterList *> TemplateParamLists =
               SS.getTemplateParamLists();
@@ -115,35 +137,13 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
               ClassTemplate->getCanonicalInjectedSpecializationType(Context);
           if (Context.hasSameType(Injected, QualType(SpecType, 0)))
             return ClassTemplate->getTemplatedDecl();
-        }
+          return nullptr;
       } else if (const auto *RecordT = dyn_cast<RecordType>(NNSType)) {
         // The nested name specifier refers to a member of a class template.
         return RecordT->getDecl()->getDefinitionOrSelf();
       }
-    }
 
     return nullptr;
-  }
-
-  switch (NNS.getKind()) {
-  case NestedNameSpecifier::Kind::Namespace:
-    return const_cast<NamespaceDecl *>(
-        NNS.getAsNamespaceAndPrefix().Namespace->getNamespace());
-
-  case NestedNameSpecifier::Kind::Type:
-    return NNS.getAsType()->castAsTagDecl();
-
-  case NestedNameSpecifier::Kind::Global:
-    return Context.getTranslationUnitDecl();
-
-  case NestedNameSpecifier::Kind::MicrosoftSuper:
-    return NNS.getAsMicrosoftSuper();
-
-  case NestedNameSpecifier::Kind::Null:
-    return nullptr;
-  }
-
-  llvm_unreachable("Invalid NestedNameSpecifier::Kind!");
 }
 
 bool Sema::isDependentScopeSpecifier(const CXXScopeSpec &SS) {
