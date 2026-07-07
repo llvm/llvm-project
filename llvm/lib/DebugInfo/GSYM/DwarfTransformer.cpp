@@ -653,10 +653,9 @@ void DwarfTransformer::parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die,
 Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
   size_t NumBefore = Gsym.getNumFunctionInfos();
   auto getDie = [&](DWARFUnit &DwarfUnit) -> DWARFDie {
-    DWARFDie ReturnDie = DwarfUnit.getUnitDIE(false);
     // Apple uses DW_AT_GNU_dwo_id for things other than split DWARF.
     if (IsMachO)
-      return ReturnDie;
+      return DwarfUnit.getUnitDIE(false);
 
     if (DwarfUnit.getDWOId()) {
       DWARFUnit *DWOCU = DwarfUnit.getNonSkeletonUnitDIE(false).getDwarfUnit();
@@ -673,10 +672,10 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
                  << DWOName << "\n";
             });
       else {
-        ReturnDie = DWOCU->getUnitDIE(false);
+        return DWOCU->getUnitDIE(false);
       }
     }
-    return ReturnDie;
+    return DwarfUnit.getUnitDIE(false);
   };
   if (NumThreads == 1) {
     // Parse all DWARF data from this thread, use the same string/file table
