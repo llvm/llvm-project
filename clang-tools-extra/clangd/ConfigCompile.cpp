@@ -690,6 +690,8 @@ struct FragmentCompiler {
                   .map("OpenDelimiter",
                        Config::ArgumentListsPolicy::OpenDelimiter)
                   .map("Delimiters", Config::ArgumentListsPolicy::Delimiters)
+                  .map("NamePlaceholders",
+                       Config::ArgumentListsPolicy::NamePlaceholders)
                   .map("FullPlaceholders",
                        Config::ArgumentListsPolicy::FullPlaceholders)
                   .value())

@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <cstring>
 #include <string>
 
 using namespace clang;
@@ -181,11 +182,16 @@ CodeCompletionString::Chunk::Chunk(ChunkKind Kind, const char *Text)
   switch (Kind) {
   case CK_TypedText:
   case CK_Text:
-  case CK_Placeholder:
   case CK_Informative:
   case CK_ResultType:
   case CK_CurrentParameter:
     this->Text = Text;
+    break;
+
+  case CK_Placeholder:
+    this->Placeholder.Full = Text;
+    this->Placeholder.TerseStart = 0;
+    this->Placeholder.TerseLen = strlen(Text);
     break;
 
   case CK_Optional:
@@ -262,9 +268,14 @@ CodeCompletionString::Chunk::CreateOptional(CodeCompletionString *Optional) {
   return Result;
 }
 
-CodeCompletionString::Chunk
-CodeCompletionString::Chunk::CreatePlaceholder(const char *Placeholder) {
-  return Chunk(CK_Placeholder, Placeholder);
+CodeCompletionString::Chunk CodeCompletionString::Chunk::CreatePlaceholder(
+    const char *Placeholder, size_t TerseStart, size_t TerseLen) {
+  Chunk Result;
+  Result.Kind = CK_Placeholder;
+  Result.Placeholder.Full = Placeholder;
+  Result.Placeholder.TerseStart = TerseStart;
+  Result.Placeholder.TerseLen = TerseLen;
+  return Result;
 }
 
 CodeCompletionString::Chunk
@@ -323,7 +334,8 @@ std::string CodeCompletionString::getAsString() const {
       OS << "{#" << C.Optional->getAsString() << "#}";
       break;
     case CK_Placeholder:
-      OS << "<#" << C.Text << "#>";
+      OS << "<#" << C.Placeholder.Full << "(" << C.Placeholder.TerseStart
+         << ", " << C.Placeholder.TerseLen << ")#>";
       break;
     case CK_Informative:
     case CK_ResultType:
@@ -454,7 +466,15 @@ void CodeCompletionBuilder::AddOptionalChunk(CodeCompletionString *Optional) {
 }
 
 void CodeCompletionBuilder::AddPlaceholderChunk(const char *Placeholder) {
-  Chunks.push_back(Chunk::CreatePlaceholder(Placeholder));
+  Chunks.push_back(
+      Chunk::CreatePlaceholder(Placeholder, 0, strlen(Placeholder)));
+}
+
+void CodeCompletionBuilder::AddPlaceholderChunk(const char *Placeholder,
+                                                size_t TerseStart,
+                                                size_t TerseLen) {
+  assert(TerseStart + TerseLen <= strlen(Placeholder) && "Terse substring OOB");
+  Chunks.push_back(Chunk::CreatePlaceholder(Placeholder, TerseStart, TerseLen));
 }
 
 void CodeCompletionBuilder::AddInformativeChunk(const char *Text) {

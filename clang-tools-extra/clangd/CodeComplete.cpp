@@ -482,7 +482,8 @@ struct CodeCompletionBuilder {
           C.SemaResult->CursorKind,
           /*IncludeFunctionArguments=*/C.SemaResult->FunctionCanBeCall ||
               C.SemaResult->DeclaringEntity,
-          /*RequiredQualifiers=*/&Completion.RequiredQualifier);
+          /*RequiredQualifiers=*/&Completion.RequiredQualifier,
+          ArgumentLists == Config::ArgumentListsPolicy::NamePlaceholders);
       S.ReturnType = getReturnType(*SemaCCS);
       if (C.SemaResult->Kind == CodeCompletionResult::RK_Declaration)
         if (const auto *D = C.SemaResult->getDeclaration())
@@ -1229,8 +1230,11 @@ private:
       case CodeCompletionString::CK_VerticalSpace:
         break;
       case CodeCompletionString::CK_CurrentParameter:
-      case CodeCompletionString::CK_Placeholder:
         processParameterChunk(Chunk.Text, Signature);
+        Signal.NumberOfOptionalParameters++;
+        break;
+      case CodeCompletionString::CK_Placeholder:
+        processParameterChunk(Chunk.Placeholder.Full, Signature);
         Signal.NumberOfOptionalParameters++;
         break;
       default:
@@ -1263,8 +1267,11 @@ private:
         ReturnType = Chunk.Text;
         break;
       case CodeCompletionString::CK_CurrentParameter:
-      case CodeCompletionString::CK_Placeholder:
         processParameterChunk(Chunk.Text, Signature);
+        Signal.NumberOfParameters++;
+        break;
+      case CodeCompletionString::CK_Placeholder:
+        processParameterChunk(Chunk.Placeholder.Full, Signature);
         Signal.NumberOfParameters++;
         break;
       case CodeCompletionString::CK_Optional: {
