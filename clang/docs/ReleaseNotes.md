@@ -626,6 +626,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Improved `-Wassign-enum` performance by caching enum enumerator values. (#GH176454)
 
+- Clang now emits `-Wpsabi` diagnostics for externally visible x86-64
+  function definitions that return or take AVX or AVX-512 vector types without
+  enabling the corresponding target feature.
+
 - Fixed a false negative in `-Warray-bounds` where the warning was suppressed
   when accessing a member function on a past-the-end array element.
   (#GH179128)
