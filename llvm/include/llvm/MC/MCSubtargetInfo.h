@@ -157,10 +157,6 @@ public:
     FeatureBits = FeatureBits_;
   }
 
-  /// Update the CPU string. This is needed when assembly directives
-  /// change the target CPU.
-  void setCPU(StringRef C) { CPU = C.str(); }
-
   StringRef getFeatureString() const { return FeatureString; }
 
   bool hasFeature(unsigned Feature) const {
