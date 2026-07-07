@@ -57667,8 +57667,7 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
 
       if (WideVT == VT && Wide.getOpcode() == ISD::AssertZext && ShiftAmt &&
           *ShiftAmt < NarrowBits) {
-        APInt HighBits =
-            APInt::getHighBitsSet(WideBits, WideBits - NarrowBits);
+        APInt HighBits = APInt::getHighBitsSet(WideBits, WideBits - NarrowBits);
         if (DAG.MaskedValueIsZero(Wide, HighBits)) {
           SDValue WideShiftAmt =
               DAG.getShiftAmountConstant(*ShiftAmt, VT, SDLoc(N0));
