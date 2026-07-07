@@ -65,3 +65,14 @@
 ! CHECK: "-mllvm" "-print-before-all"
 ! CHECK: "-fwrapv"
 ! CHECK: "-save-temps=obj"
+
+! RUN: %flang -fsyntax-only -### %s -o %t 2>&1 \
+! RUN:     -fno-real-sum-reassociation -freal-sum-reassociation \
+! RUN:   | FileCheck %s --check-prefix=REAL-SUM
+! REAL-SUM: "-fc1"{{.*}} "-freal-sum-reassociation"
+
+! RUN: %flang -fsyntax-only -### %s -o %t 2>&1 \
+! RUN:     -freal-sum-reassociation -fno-real-sum-reassociation \
+! RUN:   | FileCheck %s --check-prefix=NO-REAL-SUM
+! NO-REAL-SUM: "-fc1"
+! NO-REAL-SUM-NOT: "-freal-sum-reassociation"
