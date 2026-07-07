@@ -700,6 +700,20 @@ CPlusPlusNameParser::ParseFullNameImpl() {
         continue_parsing = false;
       }
       break;
+    case tok::kw_class:
+    case tok::kw_struct: // MS ABI: class Foo::Bar
+      if (state != State::Beginning) {
+        continue_parsing = false;
+        break;
+      }
+      Advance();
+      if (ConsumeToken(tok::raw_identifier)) {
+        state = State::AfterIdentifier;
+      } else {
+        TakeBack();
+        continue_parsing = false;
+      }
+      break;
     default:
       continue_parsing = false;
       break;
