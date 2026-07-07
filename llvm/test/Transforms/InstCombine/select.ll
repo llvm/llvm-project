@@ -5800,3 +5800,113 @@ entry:
   call void @use_v2i64(<2 x i64> %neg)
   ret <2 x i64> %r
 }
+
+define i32 @and_ne_rhs_select_or_lhs(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @and_ne_rhs_select_or_lhs(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp ne i32 %and, %b
+  %or = or i32 %a, %b
+  %sel = select i1 %cmp, i32 %or, i32 %a
+  ret i32 %sel
+}
+
+define i32 @and_eq_rhs_select_lhs_or(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @and_eq_rhs_select_lhs_or(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp eq i32 %and, %b
+  %or = or i32 %a, %b
+  %sel = select i1 %cmp, i32 %a, i32 %or
+  ret i32 %sel
+}
+
+define i32 @commuted_and_or_ne(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @commuted_and_or_ne(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[B]], [[A]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %b, %a
+  %cmp = icmp ne i32 %and, %b
+  %or = or i32 %b, %a
+  %sel = select i1 %cmp, i32 %or, i32 %a
+  ret i32 %sel
+}
+
+define i32 @swapped_icmp_and_ne(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @swapped_icmp_and_ne(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp ne i32 %b, %and
+  %or = or i32 %a, %b
+  %sel = select i1 %cmp, i32 %or, i32 %a
+  ret i32 %sel
+}
+
+define i32 @and_ne_lhs_select_or_rhs(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @and_ne_lhs_select_or_rhs(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp ne i32 %and, %a
+  %or = or i32 %a, %b
+  %sel = select i1 %cmp, i32 %or, i32 %b
+  ret i32 %sel
+}
+
+define <2 x i32> @and_ne_rhs_select_or_lhs_vec(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: define <2 x i32> @and_ne_rhs_select_or_lhs_vec(
+; CHECK-SAME: <2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]]) {
+; CHECK-NEXT:    [[SEL:%.*]] = or <2 x i32> [[A]], [[B]]
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %and = and <2 x i32> %a, %b
+  %cmp = icmp ne <2 x i32> %and, %b
+  %or = or <2 x i32> %a, %b
+  %sel = select <2 x i1> %cmp, <2 x i32> %or, <2 x i32> %a
+  ret <2 x i32> %sel
+}
+
+define i32 @no_fold_and_ne_different_rhs(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: define i32 @no_fold_and_ne_different_rhs(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], [[C]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP_NOT]], i32 0, i32 [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A]], [[OR]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp ne i32 %and, %c
+  %or = or i32 %a, %b
+  %sel = select i1 %cmp, i32 %or, i32 %a
+  ret i32 %sel
+}
+
+define i32 @no_fold_and_ne_different_falseval(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: define i32 @no_fold_and_ne_different_falseval(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], [[B]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP_NOT]], i32 [[C]], i32 [[OR]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp ne i32 %and, %b
+  %or = or i32 %a, %b
+  %sel = select i1 %cmp, i32 %or, i32 %c
+  ret i32 %sel
+}

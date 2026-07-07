@@ -141,6 +141,48 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
   return IC.replaceOperand(Sel, IsEq ? 1 : 2, FoldedVal);
 }
 
+/// select (icmp ne (and A, B), B), (or A, B), A -> or A, B
+/// select (icmp eq (and A, B), B), A, (or A, B) -> or A, B
+static Value *foldSelectAndOrSubset(SelectInst &Sel) {
+  auto *Cmp = dyn_cast<ICmpInst>(Sel.getCondition());
+  if (!Cmp || (Cmp->getPredicate() != ICmpInst::ICMP_EQ &&
+               Cmp->getPredicate() != ICmpInst::ICMP_NE))
+    return nullptr;
+
+  Value *A = nullptr;
+  Value *B = nullptr;
+  auto MatchAndSubset = [&](Value *AndVal, Value *Subset) {
+    Value *X, *Y;
+    if (!match(AndVal, m_And(m_Value(X), m_Value(Y))))
+      return false;
+    if (X == Subset)
+      A = Y;
+    else if (Y == Subset)
+      A = X;
+    else
+      return false;
+    B = Subset;
+    return true;
+  };
+
+  if (!MatchAndSubset(Cmp->getOperand(0), Cmp->getOperand(1)) &&
+      !MatchAndSubset(Cmp->getOperand(1), Cmp->getOperand(0)))
+    return nullptr;
+
+  Value *OrVal = Cmp->getPredicate() == ICmpInst::ICMP_NE ? Sel.getTrueValue()
+                                                          : Sel.getFalseValue();
+  Value *SubsetVal = Cmp->getPredicate() == ICmpInst::ICMP_NE
+                         ? Sel.getFalseValue()
+                         : Sel.getTrueValue();
+  if (SubsetVal != A)
+    return nullptr;
+
+  if (!match(OrVal, m_c_Or(m_Specific(A), m_Specific(B))))
+    return nullptr;
+
+  return OrVal;
+}
+
 /// This folds:
 ///  select (icmp eq (and X, C1)), TC, FC
 ///    iff C1 is a power 2 and the difference between TC and FC is a power-of-2.
@@ -4893,6 +4935,10 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (auto *FalseGep = dyn_cast<GetElementPtrInst>(FalseVal))
     if (auto *NewGep = SelectGepWithBase(FalseGep, TrueVal, true))
       return NewGep;
+
+  if (SelType->isIntOrIntVectorTy())
+    if (Value *V = foldSelectAndOrSubset(SI))
+      return replaceInstUsesWith(SI, V);
 
   // See if we can fold the select into one of our operands.
   if (SelType->isIntOrIntVectorTy() || SelType->isFPOrFPVectorTy()) {
