@@ -21,6 +21,7 @@ def foo : Instruction {
     bits<32> factor;
     let Inst{7...0} = 0xAA;
     let Inst{14...8} = factor{6...0}; // no offset
+    let Inst{64} = 1;
     let AsmString = "foo  $factor";
     field bits<16> SoftFail = 0;
     }
@@ -46,12 +47,20 @@ def biz : Instruction {
     }
 
 }
+// CHECK: static const uint64_t InstBits[] = {
+// CHECK: UINT64_C(187), // bar
+// CHECK: UINT64_C(204), // biz
+// CHECK: UINT64_C(170), // foo
+// CHECK: };
+// CHECK: Inst = APInt(65, InstBits[TableIndex]);
+
 // CHECK-LABEL: case ::biz: {
 // CHECK:      Value.insertBits(op.extractBitsAsZExtValue(4, 3), 12, 4);
 // CHECK-NEXT: Value.insertBits(op.extractBitsAsZExtValue(4, 7), 8, 4);
 
-// CHECK-LABEL: case ::foo: {
-// CHECK:      Value.insertBits(op.extractBitsAsZExtValue(7, 0), 8, 7);
-
 // CHECK-LABEL: case ::bar: {
 // CHECK:      Value.insertBits(op.extractBitsAsZExtValue(8, 3), 8, 8);
+
+// CHECK-LABEL: case ::foo: {
+// CHECK:      Value.insertBits(UINT64_C(1), 64, 1);
+// CHECK:      Value.insertBits(op.extractBitsAsZExtValue(7, 0), 8, 7);
