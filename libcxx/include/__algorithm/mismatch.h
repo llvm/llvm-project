@@ -65,53 +65,55 @@ __mismatch_vectorized(_Iter __first1, _Iter __last1, _Iter __first2) {
   constexpr size_t __vec_size     = __native_vector_size<__value_type>;
   using __vec                     = __simd_vector<__value_type, __vec_size>;
 
-  if (!__libcpp_is_constant_evaluated() && std::__altivec_has_element_wise_compare) {
-    auto __orig_first1 = __first1;
-    auto __last2       = __first2 + (__last1 - __first1);
-    while (static_cast<size_t>(__last1 - __first1) >= __unroll_count * __vec_size) [[__unlikely__]] {
-      __vec __lhs[__unroll_count];
-      __vec __rhs[__unroll_count];
+  if (!__libcpp_is_constant_evaluated()) {
+    if constexpr (std::__altivec_has_element_wise_compare) {
+      auto __orig_first1 = __first1;
+      auto __last2       = __first2 + (__last1 - __first1);
+      while (static_cast<size_t>(__last1 - __first1) >= __unroll_count * __vec_size) [[__unlikely__]] {
+        __vec __lhs[__unroll_count];
+        __vec __rhs[__unroll_count];
 
-      for (size_t __i = 0; __i != __unroll_count; ++__i) {
-        __lhs[__i] = std::__load_vector<__vec>(__first1 + __i * __vec_size);
-        __rhs[__i] = std::__load_vector<__vec>(__first2 + __i * __vec_size);
+        for (size_t __i = 0; __i != __unroll_count; ++__i) {
+          __lhs[__i] = std::__load_vector<__vec>(__first1 + __i * __vec_size);
+          __rhs[__i] = std::__load_vector<__vec>(__first2 + __i * __vec_size);
+        }
+
+        for (size_t __i = 0; __i != __unroll_count; ++__i) {
+          if (auto __cmp_res = std::__simd_compare_eq(__lhs[__i], __rhs[__i]); !std::__all_of(__cmp_res)) {
+            auto __offset = __i * __vec_size + std::__find_first_not_set(__cmp_res);
+            return {__first1 + __offset, __first2 + __offset};
+          }
+        }
+
+        __first1 += __unroll_count * __vec_size;
+        __first2 += __unroll_count * __vec_size;
       }
 
-      for (size_t __i = 0; __i != __unroll_count; ++__i) {
-        if (auto __cmp_res = std::__simd_compare_eq(__lhs[__i], __rhs[__i]); !std::__all_of(__cmp_res)) {
-          auto __offset = __i * __vec_size + std::__find_first_not_set(__cmp_res);
+      // check the remaining 0-3 vectors
+      while (static_cast<size_t>(__last1 - __first1) >= __vec_size) {
+        if (auto __cmp_res =
+                std::__simd_compare_eq(std::__load_vector<__vec>(__first1), std::__load_vector<__vec>(__first2));
+            !std::__all_of(__cmp_res)) {
+          auto __offset = std::__find_first_not_set(__cmp_res);
           return {__first1 + __offset, __first2 + __offset};
         }
+        __first1 += __vec_size;
+        __first2 += __vec_size;
       }
 
-      __first1 += __unroll_count * __vec_size;
-      __first2 += __unroll_count * __vec_size;
-    }
+      if (__last1 - __first1 == 0)
+        return {__first1, __first2};
 
-    // check the remaining 0-3 vectors
-    while (static_cast<size_t>(__last1 - __first1) >= __vec_size) {
-      if (auto __cmp_res =
-              std::__simd_compare_eq(std::__load_vector<__vec>(__first1), std::__load_vector<__vec>(__first2));
-          !std::__all_of(__cmp_res)) {
-        auto __offset = std::__find_first_not_set(__cmp_res);
+      // Check if we can load elements in front of the current pointer. If that's the case load a vector at
+      // (last - vector_size) to check the remaining elements
+      if (static_cast<size_t>(__first1 - __orig_first1) >= __vec_size) {
+        __first1      = __last1 - __vec_size;
+        __first2      = __last2 - __vec_size;
+        auto __offset = std::__find_first_not_set(
+            std::__simd_compare_eq(std::__load_vector<__vec>(__first1), std::__load_vector<__vec>(__first2)));
         return {__first1 + __offset, __first2 + __offset};
-      }
-      __first1 += __vec_size;
-      __first2 += __vec_size;
-    }
-
-    if (__last1 - __first1 == 0)
-      return {__first1, __first2};
-
-    // Check if we can load elements in front of the current pointer. If that's the case load a vector at
-    // (last - vector_size) to check the remaining elements
-    if (static_cast<size_t>(__first1 - __orig_first1) >= __vec_size) {
-      __first1 = __last1 - __vec_size;
-      __first2 = __last2 - __vec_size;
-      auto __offset = std::__find_first_not_set(
-          std::__simd_compare_eq(std::__load_vector<__vec>(__first1), std::__load_vector<__vec>(__first2)));
-      return {__first1 + __offset, __first2 + __offset};
-    } // else loop over the elements individually
+      } // else loop over the elements individually
+    } // end if constexpr
   }
 
   __equal_to __pred;

@@ -145,8 +145,8 @@ _LIBCPP_DIAGNOSTIC_POP
 // when -faltivec-src-compat=xl is active (== returns scalar bool, not a mask).
 #  if defined(__ALTIVEC__)
 inline constexpr bool __altivec_has_element_wise_compare =
-    sizeof(std::__simd_compare_eq(std::declval<__simd_vector<int, 4>>(),
-                                  std::declval<__simd_vector<int, 4>>())) == sizeof(__simd_vector<int, 4>);
+    sizeof(std::__simd_compare_eq(std::declval<__simd_vector<int, 4>>(), std::declval<__simd_vector<int, 4>>())) ==
+    sizeof(__simd_vector<int, 4>);
 #  else
 inline constexpr bool __altivec_has_element_wise_compare = true;
 #  endif
