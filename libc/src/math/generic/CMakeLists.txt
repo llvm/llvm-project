@@ -427,6 +427,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  tgammabf16
+  SRCS
+    tgammabf16.cpp
+  HDRS
+    ../tgammabf16.h
+  DEPENDS
+    libc.src.__support.math.tgammabf16
+)
+
+add_entrypoint_object(
   tanf
   SRCS
     tanf.cpp

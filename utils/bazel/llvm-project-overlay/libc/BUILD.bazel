@@ -9897,6 +9897,25 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_tgammabf16",
+    hdrs = ["src/__support/math/tgammabf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_exp",
+        ":__support_math_log",
+        ":__support_math_sin",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_totalorder",
     hdrs = ["src/__support/math/totalorder.h"],
     deps = [
@@ -13648,6 +13667,13 @@ libc_math_function(
 libc_math_function(
     name = "tanpif16",
     additional_deps = [":__support_math_tanpif16"],
+)
+
+libc_math_function(
+    name = "tgammabf16",
+    additional_deps = [
+        ":__support_math_tgammabf16",
+    ],
 )
 
 libc_math_function(
