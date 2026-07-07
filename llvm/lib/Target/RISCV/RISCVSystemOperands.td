@@ -133,6 +133,8 @@ def : SysReg<"sstatus", 0x100>;
 def : SysReg<"sie", 0x104>;
 def : SysReg<"stvec", 0x105>;
 def : SysReg<"scounteren", 0x106>;
+let isRV32Only = 1 in
+def : SysReg<"sieh", 0x114>;
 
 //===----------------------------------------------------------------------===//
 // Supervisor Configuration
@@ -157,7 +159,11 @@ def : SysReg<"stval", 0x143>;
 let isDeprecatedName = 1 in
 def : SysReg<"sbadaddr", 0x143>;
 def : SysReg<"sip", 0x144>;
+let isRV32Only = 1 in
+def : SysReg<"siph", 0x154>;
+def : SysReg<"stopei", 0x15C>;
 def : SysReg<"scountovf", 0xDA0>;
+def : SysReg<"stopi", 0xDB0>;
 
 //===----------------------------------------------------------------------===//
 // Supervisor Indirect
@@ -227,8 +233,19 @@ def : SysReg<"hideleg", 0x603>;
 def : SysReg<"hie", 0x604>;
 def : SysReg<"hcounteren", 0x606>;
 def : SysReg<"hgeie", 0x607>;
-let isRV32Only = 1 in
+def : SysReg<"hvien", 0x608>;
+def : SysReg<"hvictl", 0x609>;
+let isRV32Only = 1 in {
 def : SysReg<"hedelegh", 0x612>;
+def : SysReg<"hidelegh", 0x613>;
+def : SysReg<"hvienh", 0x618>;
+}
+def : SysReg<"hviprio1", 0x646>;
+def : SysReg<"hviprio2", 0x647>;
+let isRV32Only = 1 in {
+def : SysReg<"hviprio1h", 0x656>;
+def : SysReg<"hviprio2h", 0x657>;
+}
 
 //===----------------------------------------------------------------------===//
 // Hypervisor Trap Handling
@@ -238,6 +255,8 @@ def : SysReg<"htval", 0x643>;
 def : SysReg<"hip", 0x644>;
 def : SysReg<"hvip", 0x645>;
 def : SysReg<"htinst", 0x64A>;
+let isRV32Only = 1 in
+def : SysReg<"hviph", 0x655>;
 def : SysReg<"hgeip", 0xE12>;
 
 //===----------------------------------------------------------------------===//
@@ -285,12 +304,18 @@ foreach i = 0...3 in {
 def : SysReg<"vsstatus", 0x200>;
 def : SysReg<"vsie", 0x204>;
 def : SysReg<"vstvec", 0x205>;
+let isRV32Only = 1 in
+def : SysReg<"vsieh", 0x214>;
 def : SysReg<"vsscratch", 0x240>;
 def : SysReg<"vsepc", 0x241>;
 def : SysReg<"vscause", 0x242>;
 def : SysReg<"vstval", 0x243>;
 def : SysReg<"vsip", 0x244>;
+let isRV32Only = 1 in
+def : SysReg<"vsiph", 0x254>;
+def : SysReg<"vstopei", 0x25C>;
 def : SysReg<"vsatp", 0x280>;
+def : SysReg<"vstopi", 0xEB0>;
 
 //===----------------------------------------------------------------------===//
 // Virtual Supervisor Indirect
@@ -350,8 +375,6 @@ def : SysReg<"mieh", 0x314>;
 def : SysReg<"mvienh", 0x318>;
 def : SysReg<"mviph", 0x319>;
 } // isRV32Only
-def : SysReg<"mtopei", 0x35C>;
-def : SysReg<"mtopi", 0xFB0>;
 
 //===----------------------------------------------------------------------===//
 // Machine Trap Handling
@@ -366,9 +389,10 @@ def : SysReg<"mbadaddr", 0x343>;
 def : SysReg<"mip", 0x344>;
 def : SysReg<"mtinst", 0x34A>;
 def : SysReg<"mtval2", 0x34B>;
-let isRV32Only = 1 in {
+let isRV32Only = 1 in
 def : SysReg<"miph", 0x354>;
-} // isRV32Only
+def : SysReg<"mtopei", 0x35C>;
+def : SysReg<"mtopi", 0xFB0>;
 
 //===----------------------------------------------------------------------===//
 // Machine Indirect
@@ -515,34 +539,6 @@ def : SysReg<"dscratch0", 0x7B2>;
 let isAltName = 1 in
 def : SysReg<"dscratch", 0x7B2>;
 def : SysReg<"dscratch1", 0x7B3>;
-
-//===-----------------------------------------------
-// Advanced Interrupt Architecture
-//===-----------------------------------------------
-
-def : SysReg<"stopei", 0x15C>;
-def : SysReg<"stopi", 0xDB0>;
-let isRV32Only = 1 in {
-def : SysReg<"sieh", 0x114>;
-def : SysReg<"siph", 0x154>;
-} // isRV32Only
-
-// Hypervisor and VS CSRs
-def : SysReg<"hvien", 0x608>;
-def : SysReg<"hvictl", 0x609>;
-def : SysReg<"hviprio1", 0x646>;
-def : SysReg<"hviprio2", 0x647>;
-def : SysReg<"vstopei", 0x25C>;
-def : SysReg<"vstopi", 0xEB0>;
-let isRV32Only = 1 in {
-def : SysReg<"hidelegh", 0x613>;
-def : SysReg<"hvienh", 0x618>;
-def : SysReg<"hviph", 0x655>;
-def : SysReg<"hviprio1h", 0x656>;
-def : SysReg<"hviprio2h", 0x657>;
-def : SysReg<"vsieh", 0x214>;
-def : SysReg<"vsiph", 0x254>;
-} // isRV32Only
 
 //===-----------------------------------------------
 // Vendor CSRs
