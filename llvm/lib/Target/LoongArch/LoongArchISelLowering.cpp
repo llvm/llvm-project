@@ -2518,9 +2518,22 @@ static bool buildVPERMIInfo(ArrayRef<int> Mask, SDValue V1, SDValue V2,
     int MHi = Mask[i + 1];
 
     if (MaskSize == 8) { // Only v8i32/v8f32 need this check.
-      int M2Lo = Mask[i + 4];
-      int M2Hi = Mask[i + 5];
-      if (M2Lo != MLo + 4 || M2Hi != MHi + 4)
+      auto isValid2 = [&](int &M, int M2) {
+        // If high half index is undef, it's always valid.
+        if (M2 == -1)
+          return true;
+        if (M == -1) {
+          // If low half index is undef, use index from high half,
+          // remapped to low half.
+          if ((M2 % MaskSize) < 4)
+            return false;
+          M = M2 - 4;
+          return true;
+        }
+        // Index in low half must be same as index in high half.
+        return M2 == M + 4;
+      };
+      if (!isValid2(MLo, Mask[i + 4]) || !isValid2(MHi, Mask[i + 5]))
         return false;
     }
 
