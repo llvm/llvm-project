@@ -4984,7 +4984,7 @@ public:
   Expr *getSubExpr() { return cast<Expr>(Val); }
   void setSubExpr(Expr *E) { Val = E; }
 
-  VarArgKind getVarargABI() { return TInfo.getInt(); }
+  VarArgKind getVarargABI() const { return TInfo.getInt(); }
   void setVarargABI(int Kind) { TInfo.setInt(static_cast<VarArgKind>(Kind)); }
 
   /// Returns whether this is really a Win64 ABI va_arg expression.
