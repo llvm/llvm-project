@@ -5520,7 +5520,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
               if (AddVal.countr_zero() >= ShiftBits) {
                 APInt RangeLower = -AddVal;
                 bool Overflow;
-                RangeLower.uadd_ov(RangeWidth, Overflow);
+                (void)RangeLower.uadd_ov(RangeWidth, Overflow);
                 if (!RangeWidth.isZero() && !Overflow) {
                   SDValue Shift = DAG.getNode(
                       ISD::SRL, dl, ShValTy, N0.getOperand(0),
