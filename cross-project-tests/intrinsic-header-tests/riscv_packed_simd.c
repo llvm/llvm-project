@@ -2336,3 +2336,21 @@ uint32_t test_pabdsumau_u8x8_u32(uint32_t rd, uint8x8_t a, uint8x8_t b) {
 uint64_t test_pabdsumau_u8x8_u64(uint64_t rd, uint8x8_t a, uint8x8_t b) {
   return __riscv_pabdsumau_u8x8_u64(rd, a, b);
 }
+
+// CHECK-LABEL: test_psabs_i8x4:
+// CHECK:       psabs.b
+int8x4_t test_psabs_i8x4(int8x4_t a) { return __riscv_psabs_i8x4(a); }
+
+// CHECK-LABEL: test_psabs_i16x2:
+// CHECK:       psabs.h
+int16x2_t test_psabs_i16x2(int16x2_t a) { return __riscv_psabs_i16x2(a); }
+
+// CHECK-LABEL: test_psabs_i8x8:
+// RV32:        psabs.db
+// RV64:        psabs.b
+int8x8_t test_psabs_i8x8(int8x8_t a) { return __riscv_psabs_i8x8(a); }
+
+// CHECK-LABEL: test_psabs_i16x4:
+// RV32:        psabs.dh
+// RV64:        psabs.h
+int16x4_t test_psabs_i16x4(int16x4_t a) { return __riscv_psabs_i16x4(a); }
