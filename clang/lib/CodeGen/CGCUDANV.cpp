@@ -191,9 +191,8 @@ private:
   /// Create offloading entries to register globals in RDC mode.
   void createOffloadingEntries();
   /// For HIP+PGO, emit the per-TU __llvm_profile_sections_<CUID> global.
-  /// On the device side, InstrProfiling emits the populated section-bounds
-  /// table only when the TU has real profile data. On the host side it is a
-  /// placeholder void* shadow stored in
+  /// On the device side it is the populated 7-pointer section-bounds table.
+  /// On the host side it is a placeholder void* shadow stored in
   /// OffloadProfShadow, registered later by makeRegisterGlobalsFn (non-RDC)
   /// or createOffloadingEntries (RDC) so the runtime can locate the
   /// device-side table by name.
@@ -343,26 +342,22 @@ void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
     emitDeviceStubBodyLegacy(CGF, Args);
 }
 
-/// Build the input as a sized array of pointers so that it can be launched by
-/// the offloading runtime.
+/// CUDA passes the arguments with a level of indirection. For example, a
+/// (void*, short, void*) is passed as {void **, short *, void **} to the launch
+/// function. For the LLVM/Offload launch we include the number of arguments and their size.
+/// Thus, we pass {{void **, short*, void **}, 3, {sizeof(void*),
+/// sizeof(short), sizeof(void*)}}.
 Address CGNVCUDARuntime::prepareKernelArgsLLVMOffload(CodeGenFunction &CGF,
                                                       FunctionArgList &Args) {
-  SmallVector<llvm::Type *> ArgTypes, KernelLaunchParamsTypes;
-  for (auto &Arg : Args)
-    ArgTypes.push_back(CGF.ConvertTypeForMem(Arg->getType()));
-  llvm::StructType *KernelArgsTy = llvm::StructType::create(ArgTypes);
-  llvm::Type *KernelArgsPtrsTy = llvm::ArrayType::get(PtrTy, Args.size());
+  SmallVector<llvm::Type *> KernelLaunchParamsTypes;
 
-  auto *Int32Ty = CGF.Builder.getInt32Ty();
-  KernelLaunchParamsTypes.push_back(Int32Ty);
+  auto *Int64Ty = CGF.Builder.getInt64Ty();
+  KernelLaunchParamsTypes.push_back(PtrTy);
+  KernelLaunchParamsTypes.push_back(Int64Ty);
   KernelLaunchParamsTypes.push_back(PtrTy);
 
   llvm::StructType *KernelLaunchParamsTy =
       llvm::StructType::create(KernelLaunchParamsTypes);
-  Address KernelArgs = CGF.CreateTempAllocaWithoutCast(
-      KernelArgsTy, CharUnits::fromQuantity(16), "kernel_args");
-  Address KernelArgsPtrs = CGF.CreateTempAllocaWithoutCast(
-      KernelArgsPtrsTy, CharUnits::fromQuantity(16), "kernel_args_ptrs");
   Address KernelLaunchParams = CGF.CreateTempAllocaWithoutCast(
       KernelLaunchParamsTy, CharUnits::fromQuantity(16),
       "kernel_launch_params");
@@ -373,17 +368,24 @@ Address CGNVCUDARuntime::prepareKernelArgsLLVMOffload(CodeGenFunction &CGF,
       SizeTy, LangAS::Default, CharUnits::fromQuantity(16), "kernel_arg_sizes",
       llvm::ConstantInt::get(SizeTy, std::max<size_t>(1, Args.size())));
 
-  CGF.Builder.CreateStore(llvm::ConstantInt::get(Int32Ty, Args.size()),
+  CGF.Builder.CreateStore(KernelArgs.emitRawPointer(CGF),
                           CGF.Builder.CreateStructGEP(KernelLaunchParams, 0));
-  CGF.Builder.CreateStore(KernelArgsPtrs.emitRawPointer(CGF),
+  CGF.Builder.CreateStore(llvm::ConstantInt::get(Int64Ty, Args.size()),
                           CGF.Builder.CreateStructGEP(KernelLaunchParams, 1));
+  CGF.Builder.CreateStore(KernelArgSizes.emitRawPointer(CGF),
+                          CGF.Builder.CreateStructGEP(KernelLaunchParams, 2));
 
   for (unsigned i = 0; i < Args.size(); ++i) {
-    auto *ArgVal = CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(Args[i]));
-    Address ArgAddr = CGF.Builder.CreateStructGEP(KernelArgs, i);
-    CGF.Builder.CreateStore(ArgVal, ArgAddr);
-    CGF.Builder.CreateStore(ArgAddr.emitRawPointer(CGF),
-                            CGF.Builder.CreateConstArrayGEP(KernelArgsPtrs, i));
+    llvm::Value *VarPtr = CGF.GetAddrOfLocalVar(Args[i]).emitRawPointer(CGF);
+    llvm::Value *VoidVarPtr = CGF.Builder.CreatePointerCast(VarPtr, PtrTy);
+    CGF.Builder.CreateDefaultAlignedStore(
+        VoidVarPtr, CGF.Builder.CreateConstGEP1_32(
+                        PtrTy, KernelArgs.emitRawPointer(CGF), i));
+
+    auto ArgSize = CGM.getDataLayout().getTypeAllocSize( CGM.getTypes().ConvertType(Args[i]->getType()));
+    CGF.Builder.CreateDefaultAlignedStore(
+        llvm::ConstantInt::get(SizeTy, ArgSize), CGF.Builder.CreateConstGEP1_32(
+                        PtrTy, KernelArgSizes.emitRawPointer(CGF), i));
   }
 
   return KernelLaunchParams;
@@ -1385,9 +1387,13 @@ void CGNVCUDARuntime::createOffloadingEntries() {
   }
 }
 
-// For HIP host+device compiles with PGO enabled, emit the host-side shadow for
-// the per-TU __llvm_profile_sections_<CUID> global. Device-side section table
-// emission is owned by InstrProfiling so it can be gated on real profile data.
+// For HIP host+device compiles with PGO enabled, emit the per-TU global
+// __llvm_profile_sections_<CUID>. Device side: a 7-pointer struct holding
+// section start/stop bounds for the names/counters/data sections plus the
+// raw-version variable. Host side: an opaque void* shadow whose only
+// purpose is to give the host-runtime a registered symbol name to look up
+// via hipGetSymbolAddress; the actual device-side data lives in the
+// matching device-side global.
 void CGNVCUDARuntime::emitOffloadProfilingSections() {
   if (!CGM.getLangOpts().HIP)
     return;
@@ -1451,13 +1457,11 @@ void CGNVCUDARuntime::emitOffloadProfilingSections() {
     OffloadProfSectionShadows.push_back({Shadow, DeviceName.str()});
   };
 
-  // Keep this order in sync with the runtime: data, counters, uniform counters,
-  // then names.
+  // Keep this order in sync with the runtime: data, counters, then names.
   for (auto &&I : EmittedKernels) {
     std::string KernelName = getDeviceSideName(cast<NamedDecl>(I.D));
     AddSectionShadow("data", Twine("__profd_") + KernelName);
     AddSectionShadow("cnts", Twine("__profc_") + KernelName);
-    AddSectionShadow("ucnts", Twine("__llvm_prf_unifcnt_") + KernelName);
     AddSectionShadow("names",
                      Twine(llvm::getInstrProfNamesVarName()) + "_" + CUIDHash);
   }
