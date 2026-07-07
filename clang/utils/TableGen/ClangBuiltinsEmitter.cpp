@@ -416,6 +416,9 @@ std::string renderAttributes(const Record *Builtin, BuiltinType BT) {
     OS << "z";
   }
 
+  if (Builtin->isSubClassOf("TargetAtomicMixin"))
+    OS << 'A';
+
   for (const auto *Attr : Builtin->getValueAsListOfDefs("Attributes")) {
     OS << Attr->getValueAsString("Mangling");
     if (Attr->isSubClassOf("IndexedAttribute")) {

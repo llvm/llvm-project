@@ -203,6 +203,7 @@ class OCLLangBuiltin : LangBuiltin<"ALL_OCL_LANGUAGES">;
 class TargetBuiltin : Builtin {
   string Features = "";
 }
+class TargetAtomicMixin;
 class TargetLibBuiltin : TargetBuiltin {
   string Header;
   string Languages = "ALL_LANGUAGES";

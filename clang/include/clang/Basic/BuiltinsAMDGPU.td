@@ -157,15 +157,15 @@ def __builtin_amdgcn_sched_group_barrier : AMDGPUBuiltin<"void(_Constant int, _C
 def __builtin_amdgcn_iglp_opt : AMDGPUBuiltin<"void(_Constant int)">;
 def __builtin_amdgcn_s_dcache_inv : AMDGPUBuiltin<"void()">;
 def __builtin_amdgcn_buffer_wbinvl1 : AMDGPUBuiltin<"void()">;
-def __builtin_amdgcn_fence : AMDGPUBuiltin<"void(unsigned int, char const *, ...)">;
+def __builtin_amdgcn_fence : AMDGPUBuiltin<"void(unsigned int, char const *, ...)">, TargetAtomicMixin;
 def __builtin_amdgcn_groupstaticsize : AMDGPUBuiltin<"unsigned int()">;
 def __builtin_amdgcn_wavefrontsize : AMDGPUBuiltin<"unsigned int()", [Const]>;
 
-def __builtin_amdgcn_atomic_inc32 : AMDGPUBuiltin<"uint32_t(uint32_t volatile *, uint32_t, unsigned int, char const *)">;
-def __builtin_amdgcn_atomic_inc64 : AMDGPUBuiltin<"uint64_t(uint64_t volatile *, uint64_t, unsigned int, char const *)">;
+def __builtin_amdgcn_atomic_inc32 : AMDGPUBuiltin<"uint32_t(uint32_t volatile *, uint32_t, unsigned int, char const *)">, TargetAtomicMixin;
+def __builtin_amdgcn_atomic_inc64 : AMDGPUBuiltin<"uint64_t(uint64_t volatile *, uint64_t, unsigned int, char const *)">, TargetAtomicMixin;
 
-def __builtin_amdgcn_atomic_dec32 : AMDGPUBuiltin<"uint32_t(uint32_t volatile *, uint32_t, unsigned int, char const *)">;
-def __builtin_amdgcn_atomic_dec64 : AMDGPUBuiltin<"uint64_t(uint64_t volatile *, uint64_t, unsigned int, char const *)">;
+def __builtin_amdgcn_atomic_dec32 : AMDGPUBuiltin<"uint32_t(uint32_t volatile *, uint32_t, unsigned int, char const *)">, TargetAtomicMixin;
+def __builtin_amdgcn_atomic_dec64 : AMDGPUBuiltin<"uint64_t(uint64_t volatile *, uint64_t, unsigned int, char const *)">, TargetAtomicMixin;
 
 // FIXME: Need to disallow constant address space.
 def __builtin_amdgcn_div_scale : AMDGPUBuiltin<"double(double, double, bool, bool *)">;
@@ -218,9 +218,9 @@ def __builtin_amdgcn_wave_shuffle : AMDGPUBuiltin<"int(int, int)", [Const]> {
   let ArgNames = ["src", "idx"];
 }
 def __builtin_amdgcn_fmed3f : AMDGPUBuiltin<"float(float, float, float)", [Const]>;
-def __builtin_amdgcn_ds_faddf : AMDGPUBuiltin<"float(float address_space<3> *, float, _Constant int, _Constant int, _Constant bool)">;
-def __builtin_amdgcn_ds_fminf : AMDGPUBuiltin<"float(float address_space<3> *, float, _Constant int, _Constant int, _Constant bool)">;
-def __builtin_amdgcn_ds_fmaxf : AMDGPUBuiltin<"float(float address_space<3> *, float, _Constant int, _Constant int, _Constant bool)">;
+def __builtin_amdgcn_ds_faddf : AMDGPUBuiltin<"float(float address_space<3> *, float, _Constant int, _Constant int, _Constant bool)">, TargetAtomicMixin;
+def __builtin_amdgcn_ds_fminf : AMDGPUBuiltin<"float(float address_space<3> *, float, _Constant int, _Constant int, _Constant bool)">, TargetAtomicMixin;
+def __builtin_amdgcn_ds_fmaxf : AMDGPUBuiltin<"float(float address_space<3> *, float, _Constant int, _Constant int, _Constant bool)">, TargetAtomicMixin;
 def __builtin_amdgcn_ds_append : AMDGPUBuiltin<"int(int address_space<3> *)">;
 def __builtin_amdgcn_ds_consume : AMDGPUBuiltin<"int(int address_space<3> *)">;
 def __builtin_amdgcn_alignbit : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int)", [Const]>;
@@ -383,25 +383,25 @@ def __builtin_amdgcn_s_bitreplicate : AMDGPUBuiltin<"uint64_t(unsigned int)", [C
   let ArgNames = ["src"];
 }
 
-def __builtin_amdgcn_global_atomic_fadd_f64 : AMDGPUBuiltin<"double(double address_space<1> *, double)", [], "gfx90a-insts">;
-def __builtin_amdgcn_global_atomic_fadd_f32 : AMDGPUBuiltin<"float(float address_space<1> *, float)", [], "atomic-fadd-rtn-insts">;
-def __builtin_amdgcn_global_atomic_fadd_v2f16 : AMDGPUBuiltin<"_ExtVector<2, _Float16>(_ExtVector<2, _Float16> address_space<1> *, _ExtVector<2, _Float16>)", [CustomTypeChecking], "atomic-buffer-global-pk-add-f16-insts">;
-def __builtin_amdgcn_global_atomic_fmin_f64 : AMDGPUBuiltin<"double(double address_space<1> *, double)", [], "gfx90a-insts">;
-def __builtin_amdgcn_global_atomic_fmax_f64 : AMDGPUBuiltin<"double(double address_space<1> *, double)", [], "gfx90a-insts">;
+def __builtin_amdgcn_global_atomic_fadd_f64 : AMDGPUBuiltin<"double(double address_space<1> *, double)", [], "gfx90a-insts">, TargetAtomicMixin;
+def __builtin_amdgcn_global_atomic_fadd_f32 : AMDGPUBuiltin<"float(float address_space<1> *, float)", [], "atomic-fadd-rtn-insts">, TargetAtomicMixin;
+def __builtin_amdgcn_global_atomic_fadd_v2f16 : AMDGPUBuiltin<"_ExtVector<2, _Float16>(_ExtVector<2, _Float16> address_space<1> *, _ExtVector<2, _Float16>)", [CustomTypeChecking], "atomic-buffer-global-pk-add-f16-insts">, TargetAtomicMixin;
+def __builtin_amdgcn_global_atomic_fmin_f64 : AMDGPUBuiltin<"double(double address_space<1> *, double)", [], "gfx90a-insts">, TargetAtomicMixin;
+def __builtin_amdgcn_global_atomic_fmax_f64 : AMDGPUBuiltin<"double(double address_space<1> *, double)", [], "gfx90a-insts">, TargetAtomicMixin;
 
-def __builtin_amdgcn_flat_atomic_fadd_f64 : AMDGPUBuiltin<"double(double address_space<0> *, double)", [], "gfx90a-insts">;
-def __builtin_amdgcn_flat_atomic_fmin_f64 : AMDGPUBuiltin<"double(double address_space<0> *, double)", [], "gfx90a-insts">;
-def __builtin_amdgcn_flat_atomic_fmax_f64 : AMDGPUBuiltin<"double(double address_space<0> *, double)", [], "gfx90a-insts">;
+def __builtin_amdgcn_flat_atomic_fadd_f64 : AMDGPUBuiltin<"double(double address_space<0> *, double)", [], "gfx90a-insts">, TargetAtomicMixin;
+def __builtin_amdgcn_flat_atomic_fmin_f64 : AMDGPUBuiltin<"double(double address_space<0> *, double)", [], "gfx90a-insts">, TargetAtomicMixin;
+def __builtin_amdgcn_flat_atomic_fmax_f64 : AMDGPUBuiltin<"double(double address_space<0> *, double)", [], "gfx90a-insts">, TargetAtomicMixin;
 
-def __builtin_amdgcn_ds_atomic_fadd_f64 : AMDGPUBuiltin<"double(double address_space<3> *, double)", [], "gfx90a-insts">;
-def __builtin_amdgcn_ds_atomic_fadd_f32 : AMDGPUBuiltin<"float(float address_space<3> *, float)", [], "gfx8-insts">;
+def __builtin_amdgcn_ds_atomic_fadd_f64 : AMDGPUBuiltin<"double(double address_space<3> *, double)", [], "gfx90a-insts">, TargetAtomicMixin;
+def __builtin_amdgcn_ds_atomic_fadd_f32 : AMDGPUBuiltin<"float(float address_space<3> *, float)", [], "gfx8-insts">, TargetAtomicMixin;
 
-def __builtin_amdgcn_flat_atomic_fadd_f32 : AMDGPUBuiltin<"float(float address_space<0> *, float)", [], "gfx940-insts">;
-def __builtin_amdgcn_flat_atomic_fadd_v2f16 : AMDGPUBuiltin<"_ExtVector<2, _Float16>(_ExtVector<2, _Float16> address_space<0> *, _ExtVector<2, _Float16>)", [CustomTypeChecking], "atomic-flat-pk-add-16-insts">;
-def __builtin_amdgcn_flat_atomic_fadd_v2bf16 : AMDGPUBuiltin<"_ExtVector<2, short>(_ExtVector<2, short> address_space<0> *, _ExtVector<2, short>)", [CustomTypeChecking], "atomic-flat-pk-add-16-insts">;
-def __builtin_amdgcn_global_atomic_fadd_v2bf16 : AMDGPUBuiltin<"_ExtVector<2, short>(_ExtVector<2, short> address_space<1> *, _ExtVector<2, short>)", [CustomTypeChecking], "atomic-global-pk-add-bf16-inst">;
-def __builtin_amdgcn_ds_atomic_fadd_v2bf16 : AMDGPUBuiltin<"_ExtVector<2, short>(_ExtVector<2, short> address_space<3> *, _ExtVector<2, short>)", [CustomTypeChecking], "atomic-ds-pk-add-16-insts">;
-def __builtin_amdgcn_ds_atomic_fadd_v2f16 : AMDGPUBuiltin<"_ExtVector<2, _Float16>(_ExtVector<2, _Float16> address_space<3> *, _ExtVector<2, _Float16>)", [CustomTypeChecking], "atomic-ds-pk-add-16-insts">;
+def __builtin_amdgcn_flat_atomic_fadd_f32 : AMDGPUBuiltin<"float(float address_space<0> *, float)", [], "gfx940-insts">, TargetAtomicMixin;
+def __builtin_amdgcn_flat_atomic_fadd_v2f16 : AMDGPUBuiltin<"_ExtVector<2, _Float16>(_ExtVector<2, _Float16> address_space<0> *, _ExtVector<2, _Float16>)", [CustomTypeChecking], "atomic-flat-pk-add-16-insts">, TargetAtomicMixin;
+def __builtin_amdgcn_flat_atomic_fadd_v2bf16 : AMDGPUBuiltin<"_ExtVector<2, short>(_ExtVector<2, short> address_space<0> *, _ExtVector<2, short>)", [CustomTypeChecking], "atomic-flat-pk-add-16-insts">, TargetAtomicMixin;
+def __builtin_amdgcn_global_atomic_fadd_v2bf16 : AMDGPUBuiltin<"_ExtVector<2, short>(_ExtVector<2, short> address_space<1> *, _ExtVector<2, short>)", [CustomTypeChecking], "atomic-global-pk-add-bf16-inst">, TargetAtomicMixin;
+def __builtin_amdgcn_ds_atomic_fadd_v2bf16 : AMDGPUBuiltin<"_ExtVector<2, short>(_ExtVector<2, short> address_space<3> *, _ExtVector<2, short>)", [CustomTypeChecking], "atomic-ds-pk-add-16-insts">, TargetAtomicMixin;
+def __builtin_amdgcn_ds_atomic_fadd_v2f16 : AMDGPUBuiltin<"_ExtVector<2, _Float16>(_ExtVector<2, _Float16> address_space<3> *, _ExtVector<2, _Float16>)", [CustomTypeChecking], "atomic-ds-pk-add-16-insts">, TargetAtomicMixin;
 def __builtin_amdgcn_load_to_lds : AMDGPUBuiltin<"void(void *, void address_space<3> *, _Constant unsigned int, _Constant int, _Constant unsigned int)", [], "vmem-to-lds-load-insts">;
 def __builtin_amdgcn_load_async_to_lds : AMDGPUBuiltin<"void(void *, void address_space<3> *, _Constant unsigned int, _Constant int, _Constant unsigned int)", [], "vmem-to-lds-load-insts">;
 def __builtin_amdgcn_global_load_lds : AMDGPUBuiltin<"void(void address_space<1> *, void address_space<3> *, _Constant unsigned int, _Constant int, _Constant unsigned int)", [], "vmem-to-lds-load-insts">;

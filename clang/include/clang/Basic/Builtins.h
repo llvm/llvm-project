@@ -284,6 +284,11 @@ public:
     return strchr(getAttributesString(ID), 'c') != nullptr;
   }
 
+  /// Return true if this is a target-specific atomic builtin.
+  bool isTargetAtomicBuiltin(unsigned ID) const {
+    return strchr(getAttributesString(ID), 'A') != nullptr;
+  }
+
   /// Return true if we know this builtin never throws an exception.
   bool isNoThrow(unsigned ID) const {
     return strchr(getAttributesString(ID), 'n') != nullptr;
