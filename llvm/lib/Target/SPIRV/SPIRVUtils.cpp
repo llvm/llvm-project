@@ -182,15 +182,6 @@ void addStringImm(const StringRef &Str, MachineInstrBuilder &MIB) {
   }
 }
 
-void addStringImm(const StringRef &Str, IRBuilder<> &B,
-                  std::vector<Value *> &Args) {
-  const size_t PaddedLen = getPaddedLen(Str);
-  for (unsigned i = 0; i < PaddedLen; i += 4) {
-    // Add a vector element for the 32-bits of chars or padding.
-    Args.push_back(B.getInt32(convertCharsToWord(Str, i)));
-  }
-}
-
 std::string getStringImm(const MachineInstr &MI, unsigned StartIndex) {
   return getSPIRVStringOperand(MI, StartIndex);
 }
