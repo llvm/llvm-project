@@ -206,7 +206,7 @@ private:
       requires _Const && convertible_to<iterator_t<_View>, iterator_t<_Base>>
         : __parent_(__i.__parent_), __current_(std::move(__i.__current_)) {}
 
-    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const { return value_type{*this}; }
+    _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const { return value_type{*this}; }
 
     _LIBCPP_HIDE_FROM_ABI constexpr __outer_iterator& operator++() {
       const auto __end = ranges::end(__parent_->__base_);
