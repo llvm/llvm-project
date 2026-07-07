@@ -198,8 +198,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         {MVT::v4f32, MVT::v2f64}, Custom);
   }
 
-  // Combine expands these operations, because wasi-libc does not yet have the
-  // dedicated libcalls.
+  // Combine expands these operations, because wasi-libc and emscripten do not
+  // yet have the dedicated libcalls.
   setTargetDAGCombine(
       {ISD::FMINIMUM, ISD::FMAXIMUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM});
 
@@ -3992,12 +3992,13 @@ static SDValue performMinMaxF128Combine(SDNode *N, SelectionDAG &DAG) {
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   switch (N->getOpcode()) {
-  // wasi-libc does not currently define fminimuml and fmaximuml.
+  // wasi-libc and emscripten do not currently define fminimuml and fmaximuml.
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
     return TLI.expandFMINIMUM_FMAXIMUM(N, DAG);
 
-  // wasi-libc does not currently define fminimum_numl and fmaximum_numl.
+  // wasi-libc and emscripten do not currently define fminimum_numl and
+  // fmaximum_numl.
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
     return TLI.expandFMINIMUMNUM_FMAXIMUMNUM(N, DAG);
