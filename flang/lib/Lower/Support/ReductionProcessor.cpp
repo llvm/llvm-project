@@ -766,6 +766,7 @@ bool ReductionProcessor::processReductionArguments(
       hlfir::EntityWithAttributes entity = convertExprToHLFIR(
           converter.getCurrentLocation(), converter, *expr, symMap, stmtCtx);
       reductionVal = entity.getBase();
+      // TODO Add support for Boxed and Sequenced types once these are supported
       refTy = reductionVal.getType();
     } else {
       mlir::Value symVal = converter.getSymbolAddress(*symbol);

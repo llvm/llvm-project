@@ -1438,8 +1438,6 @@ addReductionObjectOverrides(fir::FirOpBuilder &builder, mlir::Location loc,
   if (entry.objects.empty())
     return;
 
-  assert(entry.objects.size() == blockArgs.size() &&
-         "reduction object list must match block arguments");
   for (auto pair : llvm::zip_equal(entry.objects, blockArgs)) {
     const Object &object = std::get<0>(pair);
     const mlir::BlockArgument &arg = std::get<1>(pair);
