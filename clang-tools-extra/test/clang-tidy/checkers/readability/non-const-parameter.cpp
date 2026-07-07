@@ -7,6 +7,8 @@
 //
 // It does not warn about pointers to records or function pointers.
 
+#include <new>
+
 // Some external function where first argument is nonconst and second is const.
 char *strcpy1(char *dest, const char *src);
 unsigned my_strcpy(char *buf, const char *s);
@@ -433,9 +435,6 @@ void dependentInitInGenericLambdaMultiArg() {
     DependentCtor2<T> s(p, p);
   };
 }
-
-namespace std { typedef decltype(sizeof(int)) size_t; }
-void* operator new(std::size_t, void*) noexcept;
 
 void placementNew1(char *buffer) {
   new (buffer) int();

@@ -1,0 +1,9 @@
+#ifndef _NEW_
+#define _NEW_
+
+#include "stddef.h"
+
+void* operator new(size_t, void* p) noexcept;
+void* operator new[](size_t, void* p) noexcept;
+
+#endif // _NEW_
