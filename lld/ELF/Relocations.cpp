@@ -1370,10 +1370,11 @@ void elf::postScanRelocations(Ctx &ctx) {
         ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsModuleIndexRel, *got, off,
                                        sym);
 
-      // If the symbol is preemptible we need the dynamic linker to write
-      // the offset too.
+      // If the symbol is preemptible (or weak global across DSOs) we need the
+      // dynamic linker to write the offset too.
       uint64_t offsetOff = off + ctx.arg.wordsize;
-      if (sym.isPreemptible)
+      if (sym.isPreemptible || (sym.binding == STB_WEAK &&
+                                sym.visibility() == STV_DEFAULT))
         ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsOffsetRel, *got,
                                        offsetOff, sym);
       else
