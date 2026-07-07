@@ -23,7 +23,7 @@ TEST_P(olMemPrefetchTest, SuccessHostToDevice) {
   const void *Mems[] = {Alloc};
   const size_t Sizes[] = {Size};
   ASSERT_SUCCESS(olMemPrefetch(Queue, 1, Mems, Sizes,
-                               OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
+                               OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   for (size_t I = 0; I < Size; I++)
@@ -43,9 +43,9 @@ TEST_P(olMemPrefetchTest, SuccessDeviceToHost) {
   const size_t Sizes[] = {Size};
   // Migrate to the device first, then bring it back.
   ASSERT_SUCCESS(olMemPrefetch(Queue, 1, Mems, Sizes,
-                               OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
+                               OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE));
   ASSERT_SUCCESS(olMemPrefetch(Queue, 1, Mems, Sizes,
-                               OL_USM_MIGRATION_FLAG_DEVICE_TO_HOST));
+                               OL_MEM_MIGRATION_FLAG_DEVICE_TO_HOST));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   for (size_t I = 0; I < Size; I++)
@@ -68,7 +68,7 @@ TEST_P(olMemPrefetchTest, SuccessMultiple) {
   }
 
   ASSERT_SUCCESS(olMemPrefetch(Queue, NumAllocs, Mems, Sizes,
-                               OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
+                               OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   for (size_t I = 0; I < NumAllocs; I++) {
@@ -81,7 +81,7 @@ TEST_P(olMemPrefetchTest, SuccessMultiple) {
 
 TEST_P(olMemPrefetchTest, SuccessZeroCount) {
   ASSERT_SUCCESS(olMemPrefetch(Queue, 0, nullptr, nullptr,
-                               OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
+                               OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 }
 
@@ -93,7 +93,7 @@ TEST_P(olMemPrefetchTest, SuccessZeroSize) {
   const void *Mems[] = {Alloc};
   const size_t Sizes[] = {0};
   ASSERT_SUCCESS(olMemPrefetch(Queue, 1, Mems, Sizes,
-                               OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
+                               OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   ASSERT_SUCCESS(olMemFree(Alloc));
@@ -109,7 +109,7 @@ TEST_P(olMemPrefetchTest, SuccessUnsupportedAllocType) {
   const void *Mems[] = {Alloc};
   const size_t Sizes[] = {Size};
   ASSERT_SUCCESS(olMemPrefetch(Queue, 1, Mems, Sizes,
-                               OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
+                               OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   ASSERT_SUCCESS(olMemFree(Alloc));
@@ -132,7 +132,7 @@ TEST_P(olMemPrefetchTest, InvalidNullMems) {
   const size_t Sizes[] = {0};
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olMemPrefetch(Queue, 1, nullptr, Sizes,
-                             OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
+                             OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE));
 }
 
 TEST_P(olMemPrefetchTest, InvalidNullSizes) {
@@ -143,7 +143,7 @@ TEST_P(olMemPrefetchTest, InvalidNullSizes) {
   const void *Mems[] = {Alloc};
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olMemPrefetch(Queue, 1, Mems, nullptr,
-                             OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE));
+                             OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE));
 
   ASSERT_SUCCESS(olMemFree(Alloc));
 }

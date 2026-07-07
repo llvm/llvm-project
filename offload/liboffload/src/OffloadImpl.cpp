@@ -1032,11 +1032,11 @@ Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
 
 Error olMemPrefetch_impl(ol_queue_handle_t Queue, size_t Count,
                          const void **Mems, const size_t *Sizes,
-                         ol_usm_migration_flags_t Flags) {
+                         ol_mem_migration_flags_t Flags) {
   if (Count == 0)
     return Error::success();
 
-  bool ToHost = (Flags & OL_USM_MIGRATION_FLAG_DEVICE_TO_HOST) != 0;
+  bool ToHost = (Flags & OL_MEM_MIGRATION_FLAG_DEVICE_TO_HOST) != 0;
   return Queue->Device->Device->dataPrefetch(Count, Mems, Sizes, ToHost,
                                              Queue->AsyncInfo);
 }
