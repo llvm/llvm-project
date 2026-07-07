@@ -268,6 +268,16 @@ void LoopInvariantCodeMotion::runOnOperation() {
   auto &aliasAnalysis = getAnalysis<AliasAnalysis>();
   aliasAnalysis.addAnalysisImplementation(fir::AliasAnalysis{});
 
+  // Enable alias-query caching for the duration of this pass. The scope
+  // enables caching on every registered implementation that supports it
+  // (the FIR AliasAnalysis memoizes getSource()) and no-ops on the rest, and
+  // reliably disables it on every exit. This is a frozen-snapshot cache with
+  // no listener: it is sound here because LICM only moves operations, and
+  // getSource()'s position-dependent inputs are already frozen for the pass
+  // run by the AliasAnalysis's own dominance/scope caches, so caching is
+  // observationally equivalent to no caching across the hoists.
+  mlir::AliasAnalysis::QueryCacheScope cacheScope(aliasAnalysis);
+
   std::function<bool(Operation *, LoopLikeOpInterface, bool)>
       shouldMoveOutOfLoop = [&](Operation *op, LoopLikeOpInterface loopLike,
                                 bool maybeConditionallyExecuted) {

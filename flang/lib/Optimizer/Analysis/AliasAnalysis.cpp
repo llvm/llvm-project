@@ -22,14 +22,17 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
+#include <utility>
 
 using namespace mlir;
 
@@ -1108,9 +1111,164 @@ static mlir::Value walkBlockArgPassThroughs(mlir::Value v) {
   return v;
 }
 
+//===----------------------------------------------------------------------===//
+// Source cache invalidation listener
+//===----------------------------------------------------------------------===//
+
+/// Listener installed on a rewriter while source caching is enabled in listener
+/// mode. It evicts the affected getSource() cache entries on each mutation and
+/// then forwards the notification to any previously installed listener so the
+/// cache composes with greedy/conversion driver listeners.
+class AliasAnalysisCacheListener
+    : public mlir::RewriterBase::ForwardingListener {
+public:
+  AliasAnalysisCacheListener(AliasAnalysis &aa,
+                             mlir::OpBuilder::Listener *previous)
+      : mlir::RewriterBase::ForwardingListener(previous), aa(aa),
+        previous(previous) {}
+
+  /// The listener that was installed on the rewriter before this one, so it
+  /// can be restored when caching is disabled.
+  mlir::OpBuilder::Listener *getPreviousListener() const { return previous; }
+
+  void notifyOperationErased(mlir::Operation *op) override {
+    // Runs before the operation's storage is freed, so evicting here closes
+    // the window where a freed-and-reused Operation* could produce a stale hit.
+    aa.evictSourceDependents(op);
+    ForwardingListener::notifyOperationErased(op);
+  }
+
+  void notifyOperationModified(mlir::Operation *op) override {
+    aa.evictSourceDependents(op);
+    ForwardingListener::notifyOperationModified(op);
+  }
+
+  void notifyOperationReplaced(mlir::Operation *op,
+                               mlir::Operation *newOp) override {
+    aa.evictSourceDependents(op);
+    ForwardingListener::notifyOperationReplaced(op, newOp);
+  }
+
+  void notifyOperationReplaced(mlir::Operation *op,
+                               mlir::ValueRange replacement) override {
+    aa.evictSourceDependents(op);
+    ForwardingListener::notifyOperationReplaced(op, replacement);
+  }
+
+private:
+  AliasAnalysis &aa;
+  mlir::OpBuilder::Listener *previous;
+};
+
+//===----------------------------------------------------------------------===//
+// AliasAnalysis special members
+//===----------------------------------------------------------------------===//
+
+// Defined out of line because cacheListener is a std::unique_ptr to the
+// (here-complete) AliasAnalysisCacheListener.
+AliasAnalysis::AliasAnalysis() = default;
+AliasAnalysis::~AliasAnalysis() = default;
+AliasAnalysis::AliasAnalysis(AliasAnalysis &&) = default;
+AliasAnalysis &AliasAnalysis::operator=(AliasAnalysis &&) = default;
+
+//===----------------------------------------------------------------------===//
+// Source cache
+//===----------------------------------------------------------------------===//
+
+void AliasAnalysis::enableSourceCache(mlir::RewriterBase *rewriter) {
+  sourceCacheEnabled = true;
+  if (rewriter && !cacheListener) {
+    cacheRewriter = rewriter;
+    cacheListener = std::make_unique<AliasAnalysisCacheListener>(
+        *this, rewriter->getListener());
+    rewriter->setListener(cacheListener.get());
+  }
+}
+
+void AliasAnalysis::disableSourceCache() {
+  sourceCacheEnabled = false;
+  if (cacheListener) {
+    // Restore the listener that was installed before ours.
+    cacheRewriter->setListener(cacheListener->getPreviousListener());
+    cacheListener.reset();
+    cacheRewriter = nullptr;
+  }
+  clearSourceCache();
+}
+
+void AliasAnalysis::evictSourceDependents(mlir::Operation *op) {
+  if (getSourceCache.empty())
+    return;
+
+  // Collect the ops whose dependents must be evicted. For erased ops, this
+  // includes ops nested in their regions, since cached entries may depend on
+  // those nested ops too and their storage is freed along with the parent.
+  llvm::SmallVector<mlir::Operation *, 8> worklist{op};
+  while (!worklist.empty()) {
+    mlir::Operation *cur = worklist.pop_back_val();
+    auto it = opDependents.find(cur);
+    if (it != opDependents.end()) {
+      // Copy the keys out before erasing, then drop the cache entries.
+      llvm::SmallVector<SourceCacheKey, 2> keys = std::move(it->second);
+      opDependents.erase(it);
+      for (const SourceCacheKey &key : keys)
+        getSourceCache.erase(key);
+    }
+    for (mlir::Region &region : cur->getRegions())
+      for (mlir::Block &block : region)
+        for (mlir::Operation &nested : block)
+          worklist.push_back(&nested);
+  }
+}
+
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                                                bool getLastInstantiationPoint,
                                                bool collectScopedOrigins) {
+  if (!sourceCacheEnabled)
+    return getSourceImpl(v, getLastInstantiationPoint, collectScopedOrigins);
+
+  // Key on the queried value and the two boolean flags. Recursive sub-queries
+  // go through this same wrapper, so the whole walk is memoized.
+  SourceCacheKey key{v, (getLastInstantiationPoint ? 1u : 0u) |
+                            (collectScopedOrigins ? 2u : 0u)};
+  auto it = getSourceCache.find(key);
+  if (it != getSourceCache.end()) {
+    // Propagate this entry's dependencies into the enclosing query (if any) so
+    // transitive dependencies are tracked: if a dep of this entry is later
+    // erased, the enclosing entry that incorporated it is evicted too.
+    if (currentDepSink)
+      currentDepSink->append(it->second.deps.begin(), it->second.deps.end());
+    return it->second.result;
+  }
+
+  // Miss: compute with a fresh dependency sink, then propagate to the parent.
+  llvm::SmallVector<mlir::Operation *, 4> deps;
+  llvm::SmallVectorImpl<mlir::Operation *> *parentSink = currentDepSink;
+  currentDepSink = &deps;
+  Source source =
+      getSourceImpl(v, getLastInstantiationPoint, collectScopedOrigins);
+  currentDepSink = parentSink;
+
+  // Deduplicate before storing / indexing (the walk may visit an op multiple
+  // times). Sorting by pointer only affects internal bookkeeping, not emitted
+  // IR, so dump determinism is preserved.
+  llvm::sort(deps);
+  deps.erase(llvm::unique(deps), deps.end());
+
+  if (parentSink)
+    parentSink->append(deps.begin(), deps.end());
+
+  bool inserted =
+      getSourceCache.try_emplace(key, CachedSource{source, deps}).second;
+  if (inserted)
+    for (mlir::Operation *depOp : deps)
+      opDependents[depOp].push_back(key);
+  return source;
+}
+
+AliasAnalysis::Source
+AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
+                             bool collectScopedOrigins) {
   // If v is a pass-through block argument (see walkBlockArgPassThroughs),
   // continue from the underlying operand so the tracking loop below has a
   // defining op to chew on. Without this, a recursive query like the one in
@@ -1147,6 +1305,9 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   // buildSourceAtDeclare reuses getSource purely for declare classification).
   llvm::SmallVector<Source::ScopedOrigin, 4> scopedOrigins;
   while (defOp && !breakFromLoop) {
+    // Record each operation visited along the def-use chain as a dependency
+    // of this query, so the cached result is evicted if any of them changes.
+    recordSourceDep(defOp);
     // Operations may have multiple results, so we need to analyze
     // the result for which the source is queried.
     auto opResult = mlir::cast<OpResult>(v);
@@ -1414,6 +1575,10 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           if (collectScopedOrigins) {
             Source::ScopedOrigin scopedOrigin;
             scopedOrigin.scope = getDeclarationScope(op);
+            // The chosen scope depends on the dominating fir.dummy_scope op;
+            // record it so the entry is evicted if that scope op changes.
+            if (scopedOrigin.scope)
+              recordSourceDep(scopedOrigin.scope.getDefiningOp());
             scopedOrigin.declValue = opResult;
             scopedOrigin.accessPath.steps.assign(pathSteps.rbegin(),
                                                  pathSteps.rend());

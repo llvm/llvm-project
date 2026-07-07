@@ -99,3 +99,13 @@ ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
   }
   return result;
 }
+
+void AliasAnalysis::enableQueryCaching(RewriterBase *rewriter) {
+  for (const std::unique_ptr<Concept> &aliasImpl : aliasImpls)
+    aliasImpl->enableQueryCaching(rewriter);
+}
+
+void AliasAnalysis::disableQueryCaching() {
+  for (const std::unique_ptr<Concept> &aliasImpl : aliasImpls)
+    aliasImpl->disableQueryCaching();
+}
