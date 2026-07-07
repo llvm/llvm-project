@@ -2,16 +2,16 @@
 
 // The flags should behave the same way on the clang driver and also on CC1.
 
-// RUN: not %clang     -fsyntax-only %s --ssaf-tu-summary-file=foobar             2>&1 | %{filecheck}=NOT-MATCHING-THE-PATTERN
-// RUN: not %clang_cc1 -fsyntax-only %s --ssaf-tu-summary-file=foobar             2>&1 | %{filecheck}=NOT-MATCHING-THE-PATTERN
-// RUN: not %clang     -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.unknownfmt 2>&1 | %{filecheck}=UNKNOWN-FILE-FORMAT
-// RUN: not %clang_cc1 -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.unknownfmt 2>&1 | %{filecheck}=UNKNOWN-FILE-FORMAT
-// RUN: not %clang     -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.json       2>&1 | %{filecheck}=NO-EXTRACTORS-ENABLED
-// RUN: not %clang_cc1 -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.json       2>&1 | %{filecheck}=NO-EXTRACTORS-ENABLED
-// RUN: not %clang     -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.json --ssaf-extract-summaries=extractor1            2>&1 | %{filecheck}=NO-EXTRACTOR-WITH-NAME
-// RUN: not %clang_cc1 -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.json --ssaf-extract-summaries=extractor1            2>&1 | %{filecheck}=NO-EXTRACTOR-WITH-NAME
-// RUN: not %clang     -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.json --ssaf-extract-summaries=extractor1,extractor2 2>&1 | %{filecheck}=NO-EXTRACTORS-WITH-NAME
-// RUN: not %clang_cc1 -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.json --ssaf-extract-summaries=extractor1,extractor2 2>&1 | %{filecheck}=NO-EXTRACTORS-WITH-NAME
+// RUN: not %clang     -fsyntax-only %s --ssaf-tu-summary-file=foobar             --ssaf-compilation-unit-id=test-cu 2>&1 | %{filecheck}=NOT-MATCHING-THE-PATTERN
+// RUN: not %clang_cc1 -fsyntax-only %s --ssaf-tu-summary-file=foobar             --ssaf-compilation-unit-id=test-cu 2>&1 | %{filecheck}=NOT-MATCHING-THE-PATTERN
+// RUN: not %clang     -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.unknownfmt --ssaf-compilation-unit-id=test-cu 2>&1 | %{filecheck}=UNKNOWN-FILE-FORMAT
+// RUN: not %clang_cc1 -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.unknownfmt --ssaf-compilation-unit-id=test-cu 2>&1 | %{filecheck}=UNKNOWN-FILE-FORMAT
+// RUN: not %clang     -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.json       --ssaf-compilation-unit-id=test-cu 2>&1 | %{filecheck}=NO-EXTRACTORS-ENABLED
+// RUN: not %clang_cc1 -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.json       --ssaf-compilation-unit-id=test-cu 2>&1 | %{filecheck}=NO-EXTRACTORS-ENABLED
+// RUN: not %clang     -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.json --ssaf-compilation-unit-id=test-cu --ssaf-extract-summaries=extractor1            2>&1 | %{filecheck}=NO-EXTRACTOR-WITH-NAME
+// RUN: not %clang_cc1 -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.json --ssaf-compilation-unit-id=test-cu --ssaf-extract-summaries=extractor1            2>&1 | %{filecheck}=NO-EXTRACTOR-WITH-NAME
+// RUN: not %clang     -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.json --ssaf-compilation-unit-id=test-cu --ssaf-extract-summaries=extractor1,extractor2 2>&1 | %{filecheck}=NO-EXTRACTORS-WITH-NAME
+// RUN: not %clang_cc1 -fsyntax-only %s --ssaf-tu-summary-file=%t.ssaf.json --ssaf-compilation-unit-id=test-cu --ssaf-extract-summaries=extractor1,extractor2 2>&1 | %{filecheck}=NO-EXTRACTORS-WITH-NAME
 
 void empty() {}
 

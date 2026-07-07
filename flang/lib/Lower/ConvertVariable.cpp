@@ -703,8 +703,8 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
 
   if (Fortran::evaluate::IsCoarray(sym))
     if (hasFinalization(sym) || hasAllocatableDirectComponent(sym))
-      TODO(loc, "Coarray with an allocatable direct component and/or requiring "
-                "finalization.");
+      TODO(loc, "coarray: coarray with an allocatable direct component and/or "
+                "requiring finalization");
 
   if (var.isModuleOrSubmoduleVariable()) {
     // A non-intrinsic module global is defined when lowering the module.
@@ -2337,7 +2337,7 @@ void Fortran::lower::mapSymbolAttributes(
     if (Fortran::evaluate::IsCoarray(sym))
       // Operation in MIF dialect to create an alias of the coarray not
       // yet supported (by using the procedure provided by PRIF).
-      TODO(loc, "coarray dummy argument not yet supported.");
+      TODO(loc, "coarray: dummy argument not yet supported");
 
     mlir::Value dummyArg = symMap.lookupSymbol(sym).getAddr();
     if (lowerToBoxValue(sym, dummyArg, converter)) {
@@ -2638,7 +2638,8 @@ void Fortran::lower::mapSymbolAttributes(
            "must be a non-ALLOCATABLE coarray");
     if (Fortran::semantics::IsSaved(sym) &&
         sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram)
-      TODO(loc, "non-ALLOCATABLE SAVE Coarray outside the main program.");
+      TODO(loc,
+           "coarray: non-ALLOCATABLE SAVE coarray outside the main program");
     ;
     Fortran::lower::genAllocateCoarray(converter, loc, sym, addr);
     ::genDeclareSymbol(converter, symMap, sym, addr, len, extents, lbounds,

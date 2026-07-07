@@ -2200,19 +2200,32 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     return true;
   }
   case AArch64::G_INSERT_VECTOR_ELT: {
-    // Convert the type from p0 to s64 to help selection.
     LLT DstTy = MRI.getType(I.getOperand(0).getReg());
     LLT SrcVecTy = MRI.getType(I.getOperand(1).getReg());
-    if (!SrcVecTy.isPointerVector())
-      return false;
-    auto NewSrc = MIB.buildCopy(LLT::scalar(64), I.getOperand(2).getReg());
-    MRI.setType(I.getOperand(1).getReg(),
-                DstTy.changeElementType(LLT::scalar(64)));
-    MRI.setType(I.getOperand(0).getReg(),
-                DstTy.changeElementType(LLT::scalar(64)));
-    MRI.setRegClass(NewSrc.getReg(0), &AArch64::GPR64RegClass);
-    I.getOperand(2).setReg(NewSrc.getReg(0));
-    return true;
+    if (SrcVecTy.isPointerVector()) {
+      // Convert the type from p0 to s64 to help selection.
+      auto NewSrc = MIB.buildCopy(LLT::scalar(64), I.getOperand(2).getReg());
+      MRI.setType(I.getOperand(1).getReg(),
+                  DstTy.changeElementType(LLT::scalar(64)));
+      MRI.setType(I.getOperand(0).getReg(),
+                  DstTy.changeElementType(LLT::scalar(64)));
+      MRI.setRegClass(NewSrc.getReg(0), &AArch64::GPR64RegClass);
+      I.getOperand(2).setReg(NewSrc.getReg(0));
+      return true;
+    }
+
+    Register EltReg = I.getOperand(2).getReg();
+    LLT EltTy = MRI.getType(EltReg);
+    if (EltTy.isScalar() &&
+        (EltTy.getSizeInBits() == 8 || EltTy.getSizeInBits() == 16) &&
+        RBI.getRegBank(EltReg, MRI, TRI)->getID() == AArch64::GPRRegBankID) {
+      // Convert the type from s8/s16 to s32 to help selection.
+      auto NewElt = MIB.buildCopy(LLT::scalar(32), EltReg);
+      MRI.setRegClass(NewElt.getReg(0), &AArch64::GPR32RegClass);
+      I.getOperand(2).setReg(NewElt.getReg(0));
+      return true;
+    }
+    return false;
   }
   case TargetOpcode::G_UITOFP:
   case TargetOpcode::G_SITOFP: {
@@ -3603,6 +3616,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_MEMCPY_INLINE:
   case TargetOpcode::G_MEMMOVE:
   case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE:
     assert(STI.hasMOPS() && "Shouldn't get here without +mops feature");
     return selectMOPS(I, MRI);
   }
@@ -3629,6 +3643,7 @@ bool AArch64InstructionSelector::selectMOPS(MachineInstr &GI,
     Mopcode = AArch64::MOPSMemoryMovePseudo;
     break;
   case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE:
     // For tagged memset see llvm.aarch64.mops.memset.tag
     Mopcode = AArch64::MOPSMemorySetPseudo;
     break;
@@ -4108,7 +4123,7 @@ bool AArch64InstructionSelector::selectUnmergeValues(MachineInstr &I,
   // directly. Otherwise, we need to do a bit of setup with some subregister
   // inserts.
   if (NarrowTy.getSizeInBits() * NumElts == 128) {
-    InsertRegs = SmallVector<Register, 4>(NumInsertRegs, SrcReg);
+    InsertRegs.assign(NumInsertRegs, SrcReg);
   } else {
     // No. We have to perform subregister inserts. For each insert, create an
     // implicit def and a subregister insert, and save the register we create.
@@ -7935,7 +7950,7 @@ void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,
   // should be able to reuse the Renderers already calculated by
   // selectCVTFixedPointVecBase.
   InstructionSelector::ComplexRendererFns Renderer =
-      selectCVTFixedPointVecBase(MI.getOperand(2), /*isReciprocal*/ false);
+      selectCVTFixedPointVecBase(MI.getOperand(OpIdx), /*isReciprocal*/ false);
   assert((Renderer && Renderer->size() == 1) &&
          "Expected selectCVTFixedPointVec to provide a function\n");
   (Renderer->front())(MIB);
@@ -7944,7 +7959,7 @@ void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,
 void AArch64InstructionSelector::renderFixedPointRecipXForm(
     MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
   InstructionSelector::ComplexRendererFns Renderer =
-      selectCVTFixedPointVecBase(MI.getOperand(2), /*isReciprocal*/ true);
+      selectCVTFixedPointVecBase(MI.getOperand(OpIdx), /*isReciprocal*/ true);
   assert((Renderer && Renderer->size() == 1) &&
          "Expected selectCVTFixedPosRecipOperandVec to provide a function\n");
   (Renderer->front())(MIB);

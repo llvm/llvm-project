@@ -97,8 +97,9 @@ define i32 @test_bswap_srli_24_bswap_i32(i32 %a) nounwind {
 define i64 @test_bswap_srli_48_bswap_i64(i64 %a) nounwind {
 ; RV32ZB-LABEL: test_bswap_srli_48_bswap_i64:
 ; RV32ZB:       # %bb.0:
-; RV32ZB-NEXT:    slli a1, a0, 16
+; RV32ZB-NEXT:    mv a1, a0
 ; RV32ZB-NEXT:    li a0, 0
+; RV32ZB-NEXT:    slli a1, a1, 16
 ; RV32ZB-NEXT:    ret
 ;
 ; RV64ZB-LABEL: test_bswap_srli_48_bswap_i64:
@@ -204,8 +205,9 @@ define i32 @test_bswap_shli_24_bswap_i32(i32 %a) nounwind {
 define i64 @test_bswap_shli_48_bswap_i64(i64 %a) nounwind {
 ; RV32ZB-LABEL: test_bswap_shli_48_bswap_i64:
 ; RV32ZB:       # %bb.0:
-; RV32ZB-NEXT:    srli a0, a1, 16
+; RV32ZB-NEXT:    mv a0, a1
 ; RV32ZB-NEXT:    li a1, 0
+; RV32ZB-NEXT:    srli a0, a0, 16
 ; RV32ZB-NEXT:    ret
 ;
 ; RV64ZB-LABEL: test_bswap_shli_48_bswap_i64:

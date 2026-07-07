@@ -931,7 +931,7 @@ static llvm::Error Evaluate_DW_OP_deref(EvalContext &eval_ctx,
   if (eval_ctx.stack.empty())
     return llvm::createStringError("expression stack empty for %s", op_name);
 
-  if (size > 8)
+  if (size == 0 || size > 8)
     return llvm::createStringError("Invalid address size for %s: %u", op_name,
                                    size);
 
@@ -1214,6 +1214,9 @@ static llvm::Error Evaluate_DW_OP_convert(EvalContext &eval_ctx,
     if (!bit_size)
       return llvm::createStringError("unspecified architecture");
   } else {
+    if (!eval_ctx.dwarf_cu)
+      return llvm::createStringError(
+          "DW_OP_convert with a DIE offset requires a DWARF unit");
     auto bit_size_sign_or_err =
         eval_ctx.dwarf_cu->GetDIEBitSizeAndSign(relative_die_offset);
     if (!bit_size_sign_or_err)
@@ -1359,14 +1362,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     switch (opcode) {
     case DW_OP_addr:
       stack.push_back(Scalar(op->getRawOperand(0)));
-      if (eval_ctx.target && eval_ctx.target->GetArchitecture().GetCore() ==
-                                 ArchSpec::eCore_wasm32) {
-        // wasm file sections aren't mapped into memory, therefore addresses can
-        // never point into a file section and are always LoadAddresses.
-        stack.back().SetValueType(Value::ValueType::LoadAddress);
-      } else {
-        stack.back().SetValueType(Value::ValueType::FileAddress);
-      }
+      stack.back().SetValueType(Value::ValueType::FileAddress);
       break;
 
     case DW_OP_deref: {
@@ -1411,13 +1407,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_const8s:
       stack.push_back(to_generic(static_cast<int64_t>(op->getRawOperand(0))));
       break;
-    // These should also use to_generic, but we can't do that due to a
-    // producer-side bug in llvm. See llvm.org/pr48087.
     case DW_OP_constu:
-      stack.push_back(Scalar(op->getRawOperand(0)));
+      stack.push_back(to_generic(op->getRawOperand(0)));
       break;
     case DW_OP_consts:
-      stack.push_back(Scalar(static_cast<int64_t>(op->getRawOperand(0))));
+      stack.push_back(to_generic(static_cast<int64_t>(op->getRawOperand(0))));
       break;
 
     case DW_OP_dup:
@@ -1904,14 +1898,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       lldb::addr_t value =
           eval_ctx.dwarf_cu->ReadAddressFromDebugAddrSection(index);
       stack.push_back(Scalar(value));
-      if (eval_ctx.target && eval_ctx.target->GetArchitecture().GetCore() ==
-                                 ArchSpec::eCore_wasm32) {
-        // wasm file sections aren't mapped into memory, therefore addresses can
-        // never point into a file section and are always LoadAddresses.
-        stack.back().SetValueType(Value::ValueType::LoadAddress);
-      } else {
-        stack.back().SetValueType(Value::ValueType::FileAddress);
-      }
+      stack.back().SetValueType(Value::ValueType::FileAddress);
     } break;
 
     case DW_OP_GNU_const_index: {

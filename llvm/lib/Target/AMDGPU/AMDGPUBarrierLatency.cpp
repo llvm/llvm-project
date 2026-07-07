@@ -50,7 +50,9 @@ public:
     IgnoredScopes.insert(Context.getOrInsertSyncScopeID("singlethread-one-as"));
 
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    if (!ST.requiresWaitOnWorkgroupReleaseFence()) {
+    bool TgSplit =
+        ST.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(MF->getFunction());
+    if (!ST.requiresWaitOnWorkgroupReleaseFence(TgSplit)) {
       // Prior to GFX10 workgroup scope does not normally require waitcnts
       IgnoredScopes.insert(Context.getOrInsertSyncScopeID("workgroup"));
     }
@@ -94,6 +96,7 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
   const unsigned BarrierSignalWaitLatency = BarrierSignalWaitLatencyOpt;
   SmallVector<SUnit *, 8> RegionTDM;
   SmallVector<SUnit *, 8> RegionAsync;
+  const TargetSchedModel *SchedModel = DAG->getSchedModel();
 
   for (SUnit &SU : DAG->SUnits) {
     const MachineInstr *MI = SU.getInstr();
@@ -115,7 +118,10 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
         // Only consider memory loads
         if (!MI->mayLoad() || MI->mayStore())
           continue;
-        addLatencyToEdge(PredDep, SU, FenceLatency);
+
+        addLatencyToEdge(PredDep, SU,
+                         SchedModel ? SchedModel->computeInstrLatency(MI, false)
+                                    : FenceLatency);
       }
     } else if (Op == AMDGPU::S_BARRIER_WAIT) {
       for (SDep &PredDep : SU.Preds) {

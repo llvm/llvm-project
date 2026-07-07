@@ -70,6 +70,13 @@ static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
 
 static void printConstPtr(mlir::AsmPrinter &p, mlir::IntegerAttr value);
 
+static mlir::ParseResult
+parseDataMemberPath(mlir::AsmParser &parser,
+                    mlir::DenseI32ArrayAttr &memberPath);
+
+static void printDataMemberPath(mlir::AsmPrinter &p,
+                                mlir::DenseI32ArrayAttr memberPath);
+
 #define GET_ATTRDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
 
@@ -207,18 +214,56 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   if (!sTy)
     return emitError() << "expected !cir.struct or !cir.union type";
 
+  // union record initializer is just a single element that has to match one of
+  // the fields in the union (the new active member).
+  if (sTy.isUnion()) {
+    if (members.size() != 1)
+      return emitError() << "union constant must have exactly one element, got "
+                         << members.size();
+    auto m = mlir::cast<mlir::TypedAttr>(members[0]);
+    if (!llvm::is_contained(sTy.getMembers(), m.getType()))
+      return emitError() << "union element type " << m.getType()
+                         << " is not a member of " << sTy;
+    return success();
+  }
+
   if (sTy.getMembers().size() != members.size())
     return emitError() << "number of elements must match";
 
-  unsigned attrIdx = 0;
-  for (auto &member : sTy.getMembers()) {
+  for (const auto &[attrIdx, member] : llvm::enumerate(sTy.getMembers())) {
     auto m = mlir::cast<mlir::TypedAttr>(members[attrIdx]);
+
+    // As a special case, we allow a flexible array member. This can only be the
+    // last element, the rest of the array type has to match (that is, the
+    // element type has to match), and the array member must be size zero.
+    if (attrIdx == sTy.getMembers().size() - 1) {
+      auto memArrayTy = dyn_cast<cir::ArrayType>(member);
+      if (memArrayTy && memArrayTy.getSize() == 0) {
+
+        // The FAM must only match another array type initializer.
+        if (!isa<cir::ArrayType>(m.getType()))
+          return emitError()
+                 << "element at index " << attrIdx << " has type "
+                 << m.getType() << " but the expected type for this element is "
+                 << member;
+
+        cir::ArrayType initArrayTy = cast<cir::ArrayType>(m.getType());
+        // The FAM only matches an equivalent array type.
+        if (initArrayTy.getElementType() != memArrayTy.getElementType())
+          return emitError()
+                 << "flexible array member at index " << attrIdx << " has type "
+                 << m.getType()
+                 << " which doesn't match the expected element type of member "
+                 << member;
+        continue;
+      }
+    }
+
     if (member != m.getType())
       return emitError() << "element at index " << attrIdx << " has type "
                          << m.getType()
                          << " but the expected type for this element is "
                          << member;
-    attrIdx++;
   }
 
   return success();
@@ -262,49 +307,54 @@ static void printConstPtr(AsmPrinter &p, mlir::IntegerAttr value) {
     p << value;
 }
 
+static ParseResult parseDataMemberPath(AsmParser &parser,
+                                       mlir::DenseI32ArrayAttr &memberPath) {
+  if (parser.parseOptionalKeyword("null").succeeded())
+    return success();
+
+  auto parsed = mlir::FieldParser<mlir::DenseI32ArrayAttr>::parse(parser);
+  if (mlir::failed(parsed))
+    return failure();
+  memberPath = *parsed;
+  return success();
+}
+
+static void printDataMemberPath(AsmPrinter &p,
+                                mlir::DenseI32ArrayAttr memberPath) {
+  if (!memberPath)
+    p << "null";
+  else
+    p.printStrippedAttrOrType(memberPath);
+}
+
 //===----------------------------------------------------------------------===//
 // IntAttr definitions
 //===----------------------------------------------------------------------===//
 
-template <typename IntT>
-static bool isTooLargeForType(const mlir::APInt &value, IntT expectedValue) {
-  if constexpr (std::is_signed_v<IntT>) {
-    return value.getSExtValue() != expectedValue;
-  } else {
-    return value.getZExtValue() != expectedValue;
-  }
-}
-
-template <typename IntT>
-static mlir::ParseResult parseIntLiteralImpl(mlir::AsmParser &p,
-                                             llvm::APInt &value,
-                                             cir::IntTypeInterface ty) {
-  IntT ivalue;
-  const bool isSigned = ty.isSigned();
-  if (p.parseInteger(ivalue))
-    return p.emitError(p.getCurrentLocation(), "expected integer value");
-
-  value = mlir::APInt(ty.getWidth(), ivalue, isSigned, /*implicitTrunc=*/true);
-  if (isTooLargeForType(value, ivalue))
-    return p.emitError(p.getCurrentLocation(),
-                       "integer value too large for the given type");
-
-  return success();
-}
-
 mlir::ParseResult parseIntLiteral(mlir::AsmParser &parser, llvm::APInt &value,
                                   cir::IntTypeInterface ty) {
-  if (ty.isSigned())
-    return parseIntLiteralImpl<int64_t>(parser, value, ty);
-  return parseIntLiteralImpl<uint64_t>(parser, value, ty);
+  llvm::SMLoc loc = parser.getCurrentLocation();
+  llvm::APInt parsed;
+  mlir::OptionalParseResult result = parser.parseOptionalInteger(parsed);
+  if (!result.has_value() || failed(*result))
+    return parser.emitError(loc, "expected integer value");
+
+  const unsigned width = ty.getWidth();
+  const bool fits =
+      ty.isSigned() ? parsed.getSignificantBits() <= width
+                    : !parsed.isNegative() && parsed.getActiveBits() <= width;
+  if (!fits)
+    return parser.emitError(loc, "integer value too large for the given type");
+
+  value = ty.isSigned() ? parsed.sextOrTrunc(width) : parsed.zextOrTrunc(width);
+  return success();
 }
 
 void printIntLiteral(mlir::AsmPrinter &p, llvm::APInt value,
                      cir::IntTypeInterface ty) {
-  if (ty.isSigned())
-    p << value.getSExtValue();
-  else
-    p << value.getZExtValue();
+  llvm::SmallString<40> str;
+  value.toString(str, /*radix=*/10, /*isSigned=*/ty.isSigned());
+  p << str;
 }
 
 LogicalResult IntAttr::verify(function_ref<InFlightDiagnostic()> emitError,
@@ -509,27 +559,34 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
 LogicalResult
 DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                        cir::DataMemberType ty,
-                       std::optional<unsigned> memberIndex) {
-  // DataMemberAttr without a given index represents a null value.
-  if (!memberIndex.has_value())
-    return success();
+                       mlir::DenseI32ArrayAttr memberPath) {
+  if (!memberPath)
+    return success(); // null pointer — always valid
 
-  cir::RecordType recTy = ty.getClassTy();
-  if (recTy.isIncomplete())
-    return emitError()
-           << "incomplete 'cir.record' cannot be used to build a non-null "
-              "data member pointer";
+  if (memberPath.empty())
+    return emitError() << "#cir.data_member path must not be empty";
 
-  unsigned memberIndexValue = memberIndex.value();
-  if (memberIndexValue >= recTy.getNumElements())
-    return emitError()
-           << "member index of a #cir.data_member attribute is out of range";
+  mlir::Type currentTy = ty.getClassTy();
+  for (auto [step, idx] : llvm::enumerate(memberPath.asArrayRef())) {
+    auto recTy = mlir::dyn_cast<cir::RecordType>(currentTy);
+    if (!recTy)
+      return emitError() << "#cir.data_member path step " << step
+                         << " reaches a non-record type";
 
-  mlir::Type memberTy = recTy.getMembers()[memberIndexValue];
-  if (memberTy != ty.getMemberTy())
+    if (recTy.isIncomplete())
+      return success(); // cannot validate further; trust the builder
+
+    if (idx < 0 || static_cast<unsigned>(idx) >= recTy.getNumElements())
+      return emitError() << "#cir.data_member path index " << idx << " at step "
+                         << step << " is out of range";
+
+    currentTy = recTy.getMembers()[idx];
+  }
+
+  if (currentTy != ty.getMemberTy())
     return emitError()
-           << "member type of a #cir.data_member attribute must match the "
-              "attribute type";
+           << "member type of a #cir.data_member attribute must match "
+              "the attribute type";
 
   return success();
 }

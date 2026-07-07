@@ -288,9 +288,7 @@ class LoopCachePrinterPass
 public:
   explicit LoopCachePrinterPass(raw_ostream &OS) : OS(OS) {}
 
-  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                                 LoopStandardAnalysisResults &AR,
-                                 LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

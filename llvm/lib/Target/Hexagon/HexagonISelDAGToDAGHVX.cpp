@@ -23,7 +23,6 @@
 #include <map>
 #include <optional>
 #include <set>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -2747,7 +2746,7 @@ void HexagonDAGToDAGISel::ppHvxShuffleOfShuffle(std::vector<SDNode *> &&Nodes) {
     unsigned HalfIdx;
   };
 
-  using MapType = std::unordered_map<SDValue, unsigned>;
+  using MapType = DenseMap<SDValue, unsigned>;
 
   auto getMaskElt = [&](unsigned Idx, ShuffleVectorSDNode *Shuff0,
                         ShuffleVectorSDNode *Shuff1,

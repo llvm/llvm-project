@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-- < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx600 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,SICIVI,FUNC %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-enable-ds128 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,SICIVI,FUNC %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-enable-ds128 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,FUNC %s
 ; RUN: llc -mtriple=r600-- -mcpu=redwood < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=EG -check-prefix=FUNC %s

@@ -11,9 +11,9 @@ define double @foo(double %0, double %1, i64 %n) strictfp {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    fsrmi 3
 ; CHECK-NEXT:    fadd.d fa5, fa5, fa0
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    fsrmi 0
 ; CHECK-NEXT:    fadd.d fa5, fa5, fa1
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    beqz a0, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    fmv.d fa0, fa5
@@ -51,8 +51,9 @@ define double @bar(double %0, double %1, i64 %n) strictfp {
 ; CHECK-NEXT:    .cfi_offset fs1, -32
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    fmv.d fs0, fa1
+; CHECK-NEXT:    fmv.d.x fa5, zero
 ; CHECK-NEXT:    fmv.d fs1, fa0
-; CHECK-NEXT:    fmv.d.x fa0, zero
+; CHECK-NEXT:    fmv.d fa0, fa5
 ; CHECK-NEXT:  .LBB1_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    fsrmi 3
@@ -99,9 +100,9 @@ define double @foo2(double %0, double %1, i64 %n, i64 %fcsr) strictfp {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    csrwi fcsr, 0
 ; CHECK-NEXT:    fadd.d fa5, fa5, fa0
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    fscsr a1
 ; CHECK-NEXT:    fadd.d fa5, fa5, fa1
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    beqz a0, .LBB2_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    fmv.d fa0, fa5

@@ -351,6 +351,7 @@ CODEGENOPT(TimeTrace         , 1, 0, Benign) ///< Set when -ftime-trace is enabl
 VALUE_CODEGENOPT(TimeTraceGranularity, 32, 500, Benign) ///< Minimum time granularity (in microseconds),
                                                         ///< traced by time profiler
 CODEGENOPT(InterchangeLoops  , 1, 0, Benign) ///< Run loop-interchange.
+CODEGENOPT(EnableNewPMCodeGen, 1, 0, Benign) ///< Use NewPM for the CodeGen pipeline.
 CODEGENOPT(FuseLoops         , 1, 0, Benign) ///< Run loop-fusion.
 CODEGENOPT(UnrollLoops       , 1, 0, Benign) ///< Control whether loops are unrolled.
 CODEGENOPT(RerollLoops       , 1, 0, Benign) ///< Control whether loops are rerolled.
@@ -521,10 +522,12 @@ CODEGENOPT(ResMayAlias, 1, 0, Benign)
 /// Assume that all resources are bound if enabled
 CODEGENOPT(AllResourcesBound, 1, 0, Benign)
 
-/// Controls how unwind v2 (epilog) information should be generated for x64
-/// Windows.
-ENUM_CODEGENOPT(WinX64EHUnwindV2, WinX64EHUnwindV2Mode,
-                2, WinX64EHUnwindV2Mode::Disabled, Benign)
+/// Do not embed dx.source.* metadata in HLSL modules.
+CODEGENOPT(DisableDXSourceMetadata, 1, 0, Benign)
+
+/// Controls the x64 Windows unwind info version.
+ENUM_CODEGENOPT(WinX64EHUnwind, WinX64EHUnwindMode, 3,
+                WinX64EHUnwindMode::Default, Benign)
 
 /// Controls the mechanism used for Control Flow Guard (CFG) on Windows.
 ENUM_CODEGENOPT(WinControlFlowGuardMechanism, ControlFlowGuardMechanism,

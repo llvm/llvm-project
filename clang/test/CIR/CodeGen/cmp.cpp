@@ -16,9 +16,9 @@ void c0(int a, int b) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z2c0ii(
 
-// CIR: %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR: %[[B_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
-// CIR: %[[X_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init]
+// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!cir.bool>
 
 // CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]]
 // CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]]
@@ -142,9 +142,9 @@ void c0_unsigned(unsigned int a, unsigned int b) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z11c0_unsignedjj(
 
-// CIR: %[[U_A_PTR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init]
-// CIR: %[[U_B_PTR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["b", init]
-// CIR: %[[U_X_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init]
+// CIR: %[[U_A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!u32i>
+// CIR: %[[U_B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!u32i>
+// CIR: %[[U_X_PTR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!cir.bool>
 
 // CIR: %[[UA1:.*]] = cir.load{{.*}} %[[U_A_PTR]]
 // CIR: %[[UB1:.*]] = cir.load{{.*}} %[[U_B_PTR]]
@@ -266,9 +266,9 @@ void c0_float(float a, float b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z8c0_floatff(%arg0: !cir.float{{.*}}, %arg1: !cir.float{{.*}})
-// CIR: %[[A_PTR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a", init]
-// CIR: %[[B_PTR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
-// CIR: %[[X_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init]
+// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.float>
+// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.float>
+// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!cir.bool>
 
 // CIR: cir.store{{.*}} %arg0, %[[A_PTR]] : !cir.float, !cir.ptr<!cir.float>
 // CIR: cir.store{{.*}} %arg1, %[[B_PTR]] : !cir.float, !cir.ptr<!cir.float>
@@ -347,8 +347,8 @@ void pointer_cmp(int *a, int *b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z11pointer_cmpPiS_(%arg0: !cir.ptr<!s32i>{{.*}}, %arg1: !cir.ptr<!s32i>{{.*}}){{.*}} {
-// CIR: %[[A_PTR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["a", init]
-// CIR: %[[B_PTR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["b", init]
+// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
 
 // CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
@@ -402,9 +402,9 @@ void bool_cmp(bool a, bool b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z8bool_cmpbb(%arg0: !cir.bool{{.*}}, %arg1: !cir.bool{{.*}}){{.*}} {
-// CIR: %[[A_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a", init]
-// CIR: %[[B_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
-// CIR: %[[X_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init]
+// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!cir.bool>
 
 // CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR: %[[A1_INT:.*]] = cir.cast bool_to_int %[[A1]] : !cir.bool -> !s32i

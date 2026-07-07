@@ -122,8 +122,7 @@ define <vscale x 16 x i1> @reinterpret_ptrue() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ret
-  %in = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %in)
+  %out = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> splat (i1 true))
   ret <vscale x 16 x i1> %out
 }
 
@@ -144,8 +143,7 @@ define <vscale x 16 x i1> @chained_reinterpret() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ret
-  %in = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %cast2 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %in)
+  %cast2 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> splat (i1 true))
   %out = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %cast2)
   ret <vscale x 16 x i1> %out
 }

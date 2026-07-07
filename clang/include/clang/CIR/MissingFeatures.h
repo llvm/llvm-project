@@ -47,7 +47,6 @@ struct MissingFeatures {
 
   // Load/store attributes
   static bool opLoadEmitScalarRangeCheck() { return false; }
-  static bool opLoadStoreNontemporal() { return false; }
   static bool opLoadStoreTbaa() { return false; }
   static bool opLoadStoreAtomic() { return false; }
   static bool opLoadStoreObjC() { return false; }
@@ -320,7 +319,6 @@ struct MissingFeatures {
   static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
   static bool fixedPointType() { return false; }
-  static bool stringTypeWithDifferentArraySize() { return false; }
 
   // Future CIR operations
   static bool callOp() { return false; }

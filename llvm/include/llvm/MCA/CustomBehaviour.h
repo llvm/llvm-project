@@ -137,7 +137,7 @@ class LatencyInstrument : public Instrument {
   std::optional<unsigned> Latency;
 
 public:
-  static const StringRef DESC_NAME;
+  LLVM_ABI static const StringRef DESC_NAME;
   LatencyInstrument(StringRef Data) : Instrument(DESC_NAME, Data) {
     // Skip spaces and tabs.
     Data = Data.trim();

@@ -22,10 +22,10 @@ module declare_target01
 
   !$omp declare target (my_var)
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: A structure component cannot appear on the DECLARE TARGET directive
   !$omp declare target (my_var%t_i)
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: A structure component cannot appear on the DECLARE TARGET directive
   !$omp declare target (my_var%t_arr)
 
   !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
@@ -36,10 +36,10 @@ module declare_target01
 
   !$omp declare target (arr)
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: An array element cannot appear on the DECLARE TARGET directive
   !$omp declare target (arr(1))
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: An array element cannot appear on the DECLARE TARGET directive
   !$omp declare target (arr(1:2))
 
   !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
@@ -61,18 +61,18 @@ module declare_target01
 
   !$omp declare target enter (my_var) device_type(host)
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: A structure component cannot appear on the DECLARE TARGET directive
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
   !$omp declare target to (my_var%t_i)
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: A structure component cannot appear on the DECLARE TARGET directive
   !$omp declare target enter (my_var%t_i)
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: A structure component cannot appear on the DECLARE TARGET directive
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
   !$omp declare target to (my_var%t_arr)
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: A structure component cannot appear on the DECLARE TARGET directive
   !$omp declare target enter (my_var%t_arr)
 
   !ERROR: Type parameter inquiry is not allowed as a list item on TO clause
@@ -99,18 +99,18 @@ module declare_target01
 
   !$omp declare target enter (arr) device_type(nohost)
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: An array element cannot appear on the DECLARE TARGET directive
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
   !$omp declare target to (arr(1))
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: An array element cannot appear on the DECLARE TARGET directive
   !$omp declare target enter (arr(1))
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: An array element cannot appear on the DECLARE TARGET directive
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
   !$omp declare target to (arr(1:2))
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: An array element cannot appear on the DECLARE TARGET directive
   !$omp declare target enter (arr(1:2))
 
   !ERROR: Type parameter inquiry is not allowed as a list item on TO clause
@@ -138,10 +138,10 @@ module declare_target01
 
   !$omp declare target link (my_var2) device_type(any)
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: A structure component cannot appear on the DECLARE TARGET directive
   !$omp declare target link (my_var2%t_i)
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: A structure component cannot appear on the DECLARE TARGET directive
   !$omp declare target link (my_var2%t_arr)
 
   !ERROR: Type parameter inquiry is not allowed as a list item on LINK clause
@@ -152,10 +152,10 @@ module declare_target01
 
   !$omp declare target link (arr2)
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: An array element cannot appear on the DECLARE TARGET directive
   !$omp declare target link (arr2(1))
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
+  !ERROR: An array element cannot appear on the DECLARE TARGET directive
   !$omp declare target link (arr2(1:2))
 
   !ERROR: Type parameter inquiry is not allowed as a list item on LINK clause

@@ -28,6 +28,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IRBuilder.h"
@@ -3427,9 +3428,10 @@ void SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 /// intrinsic ID.
 static llvm::Intrinsic::ID getBarrierSyncIntrinsic(bool aligned,
                                                    bool hasCount) {
-  if (hasCount)
+  if (hasCount) {
     return aligned ? llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count
                    : llvm::Intrinsic::nvvm_barrier_cta_sync_count;
+  }
   return aligned ? llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all
                  : llvm::Intrinsic::nvvm_barrier_cta_sync_all;
 }
@@ -3465,6 +3467,20 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
   if (hasCount)
     args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
   return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair NVVM::BarrierArriveOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::BarrierArriveOp>(op);
+  llvm::Value *barrierId = thisOp.getBarrierId()
+                               ? mt.lookupValue(thisOp.getBarrierId())
+                               : builder.getInt32(0);
+  llvm::Value *numThreads = mt.lookupValue(thisOp.getNumberOfThreads());
+  llvm::Intrinsic::ID id =
+      thisOp.getAligned()
+          ? llvm::Intrinsic::nvvm_barrier_cta_arrive_aligned_count
+          : llvm::Intrinsic::nvvm_barrier_cta_arrive_count;
+  return {id, {barrierId, numThreads}};
 }
 
 mlir::NVVM::IDArgPair NVVM::BarrierReductionOp::getIntrinsicIDAndArgs(
@@ -6315,6 +6331,15 @@ LogicalResult Tcgen05LdRedOp::verify() {
 // NVVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
+namespace {
+struct NVVMInlinerInterface final : DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
+
 // TODO: This should be the llvm.nvvm dialect once this is supported.
 void NVVMDialect::initialize() {
   addOperations<
@@ -6329,6 +6354,7 @@ void NVVMDialect::initialize() {
   // Support unknown operations because not all NVVM operations are
   // registered.
   allowUnknownOperations();
+  addInterfaces<NVVMInlinerInterface>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, NVVMDialect>();
   declarePromisedInterface<gpu::TargetAttrInterface, NVVMTargetAttr>();
 }
