@@ -1,9 +1,9 @@
 // DEFINE: %{compile} =  mlir-opt %s \
 // DEFINE:    -transform-interpreter -test-transform-dialect-erase-schedule \
-// DEFINE:    -cse -canonicalize -test-lower-to-llvm
+// DEFINE:    -canonicalize -test-lower-to-arm-sme -test-lower-to-llvm
 // DEFINE: %{entry_point} = main
-// DEFINE: %{run} = %mcr_aarch64_cmd -e %{entry_point} -entry-point-result=void --march=aarch64 --mattr="+sve"\
-// DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
+// DEFINE: %{run} = %mcr_aarch64_cmd -e %{entry_point} -entry-point-result=void --march=aarch64 --mattr="+sve,+sme"\
+// DEFINE:    -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib
 
 // RUN: %{compile} | %{run} | FileCheck %s
 
@@ -30,7 +30,7 @@
 ///   * The matrix-multiplication dimension that's scalable: N.
 ///
 /// 2. The lowering of linalg.mmt4d leverages scalable vectorisation.
-///   * The matrix-multiplication dimension that's scalable: N (to match data
+///   * The matrix-multiplication dimension that's scalable: M, N (to match data
 ///     tiling configuration).
 ///
 /// 3. Neither `linalg.pack` nor `linalg.unpack` are vectorised ATM.
@@ -54,22 +54,22 @@
 //===----------------------------------------------------------------------===//
 func.func @main() {
   // Allocate and initialise the inputs
-  %A_empty = tensor.empty() : tensor<7x16xi32>
-  %B_empty = tensor.empty() : tensor<16x13xi32>
+  %A_empty = tensor.empty() : tensor<7x16xf32>
+  %B_empty = tensor.empty() : tensor<16x13xf32>
 
-  %c3 = arith.constant 3 : i32
-  %c4 = arith.constant 4 : i32
-  %A = linalg.fill ins(%c3 : i32) outs(%A_empty : tensor<7x16xi32>) -> tensor<7x16xi32>
-  %B = linalg.fill ins(%c4 : i32) outs(%B_empty : tensor<16x13xi32>) -> tensor<16x13xi32>
+  %c3 = arith.constant 3.0 : f32
+  %c4 = arith.constant 4.0 : f32
+  %A = linalg.fill ins(%c3 : f32) outs(%A_empty : tensor<7x16xf32>) -> tensor<7x16xf32>
+  %B = linalg.fill ins(%c4 : f32) outs(%B_empty : tensor<16x13xf32>) -> tensor<16x13xf32>
   %C = arith.constant dense<[
-    [ 1,  8, 15, 22, 29, 36, 43, 50, 57, 64, 71, 78, 85],
-    [ 2,  9, 16, 23, 30, 37, 44, 51, 58, 65, 72, 79, 86],
-    [ 3, 10, 17, 24, 31, 38, 45, 52, 59, 66, 73, 80, 87],
-    [ 4, 11, 18, 25, 32, 39, 46, 53, 60, 67, 74, 81, 88],
-    [ 5, 12, 19, 26, 33, 40, 47, 54, 61, 68, 75, 82, 89],
-    [ 6, 13, 20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90],
-    [ 7, 14, 21, 28, 35, 42, 49, 56, 63, 70, 77, 84, 91]
-  ]> : tensor<7x13xi32>
+    [ 1.,  8., 15., 22., 29., 36., 43., 50., 57., 64., 71., 78., 85.],
+    [ 2.,  9., 16., 23., 30., 37., 44., 51., 58., 65., 72., 79., 86.],
+    [ 3., 10., 17., 24., 31., 38., 45., 52., 59., 66., 73., 80., 87.],
+    [ 4., 11., 18., 25., 32., 39., 46., 53., 60., 67., 74., 81., 88.],
+    [ 5., 12., 19., 26., 33., 40., 47., 54., 61., 68., 75., 82., 89.],
+    [ 6., 13., 20., 27., 34., 41., 48., 55., 62., 69., 76., 83., 90.],
+    [ 7., 14., 21., 28., 35., 42., 49., 56., 63., 70., 77., 84., 91.]
+  ]> : tensor<7x13xf32>
 
   // VARIANT: Matrix multiplication via linalg.mmt4d
   // CHECK: Unranked Memref
@@ -80,12 +80,12 @@ func.func @main() {
   // CHECK:  [197,   204,   211,   218,   225,   232,   239,   246,   253,   260,   267,   274,   281]
   // CHECK:  [198,   205,   212,   219,   226,   233,   240,   247,   254,   261,   268,   275,   282]
   // CHECK:  [199,   206,   213,   220,   227,   234,   241,   248,   255,   262,   269,   276,   283]
-  %C_mmt4d = func.call @matmul_via_mmt4d(%A, %B, %C) : (tensor<7x16xi32>, tensor<16x13xi32>, tensor<7x13xi32>) -> tensor<7x13xi32>
-  %C_mmt4d_cast = tensor.cast %C_mmt4d : tensor<7x13xi32> to tensor<*xi32>
+  %C_mmt4d = func.call @matmul_via_mmt4d(%A, %B, %C) : (tensor<7x16xf32>, tensor<16x13xf32>, tensor<7x13xf32>) -> tensor<7x13xf32>
+  %C_mmt4d_cast = tensor.cast %C_mmt4d : tensor<7x13xf32> to tensor<*xf32>
   vector.print str "--------------------------\n"
   vector.print str "RESULT FROM linalg.mmt4d:\n"
   vector.print str "--------------------------\n"
-  call @printMemrefI32(%C_mmt4d_cast) : (tensor<*xi32>) -> ()
+  call @printMemrefF32(%C_mmt4d_cast) : (tensor<*xf32>) -> ()
 
   // VARIANT: Matrix multiplication via linalg.matmul
   // CHECK: Unranked Memref
@@ -96,12 +96,12 @@ func.func @main() {
   // CHECK:  [197,   204,   211,   218,   225,   232,   239,   246,   253,   260,   267,   274,   281]
   // CHECK:  [198,   205,   212,   219,   226,   233,   240,   247,   254,   261,   268,   275,   282]
   // CHECK:  [199,   206,   213,   220,   227,   234,   241,   248,   255,   262,   269,   276,   283]
-  %C_matmul = func.call @matmul(%A, %B, %C) : (tensor<7x16xi32>, tensor<16x13xi32>, tensor<7x13xi32>) -> tensor<7x13xi32>
-  %C_matmul_cast = tensor.cast %C_matmul : tensor<7x13xi32> to tensor<*xi32>
+  %C_matmul = func.call @matmul(%A, %B, %C) : (tensor<7x16xf32>, tensor<16x13xf32>, tensor<7x13xf32>) -> tensor<7x13xf32>
+  %C_matmul_cast = tensor.cast %C_matmul : tensor<7x13xf32> to tensor<*xf32>
   vector.print str "\n--------------------------\n"
   vector.print str "RESULT FROM linalg.matmul:\n"
   vector.print str "--------------------------\n"
-  call @printMemrefI32(%C_matmul_cast) : (tensor<*xi32>) -> ()
+  call @printMemrefF32(%C_matmul_cast) : (tensor<*xf32>) -> ()
 
   return
 }
@@ -111,11 +111,11 @@ func.func @main() {
 //
 // Implements matrix-multiplication via linalg.matmul
 //===----------------------------------------------------------------------===//
-func.func private @matmul(%A: tensor<7x16xi32>, %B: tensor<16x13xi32>, %C: tensor<7x13xi32>) -> tensor<7x13xi32> {
-  %C_matmul = linalg.matmul ins(%A, %B: tensor<7x16xi32>, tensor<16x13xi32>)
-                            outs(%C: tensor<7x13xi32>) -> tensor<7x13xi32>
+func.func private @matmul(%A: tensor<7x16xf32>, %B: tensor<16x13xf32>, %C: tensor<7x13xf32>) -> tensor<7x13xf32> {
+  %C_matmul = linalg.matmul ins(%A, %B: tensor<7x16xf32>, tensor<16x13xf32>)
+                            outs(%C: tensor<7x13xf32>) -> tensor<7x13xf32>
 
-  return %C_matmul : tensor<7x13xi32>
+  return %C_matmul : tensor<7x13xf32>
 }
 
 //===----------------------------------------------------------------------===//
@@ -123,17 +123,17 @@ func.func private @matmul(%A: tensor<7x16xi32>, %B: tensor<16x13xi32>, %C: tenso
 //
 // Implements matrix-multiplication via linalg.mmt4d
 //===----------------------------------------------------------------------===//
-func.func private @pack_lhs(%A: tensor<7x16xi32>) -> tensor<1x16x8x1xi32> {
-  %pad = arith.constant 0 : i32
+func.func private @pack_lhs(%A: tensor<7x16xf32>) -> tensor<1x16x8x1xf32> {
+  %pad = arith.constant 0.0 : f32
 
-  %A_pack_empty = tensor.empty() : tensor<1x16x8x1xi32>
+  %A_pack_empty = tensor.empty() : tensor<1x16x8x1xf32>
   %A_pack = linalg.pack %A
-    padding_value(%pad : i32)
+    padding_value(%pad : f32)
     inner_dims_pos = [0, 1]
     inner_tiles = [8, 1]
-    into %A_pack_empty : tensor<7x16xi32> -> tensor<1x16x8x1xi32>
+    into %A_pack_empty : tensor<7x16xf32> -> tensor<1x16x8x1xf32>
 
-  return %A_pack : tensor<1x16x8x1xi32>
+  return %A_pack : tensor<1x16x8x1xf32>
 }
 
 //===----------------------------------------------------------------------===//
@@ -142,8 +142,8 @@ func.func private @pack_lhs(%A: tensor<7x16xi32>) -> tensor<1x16x8x1xi32> {
 // Implements packing for the B matrix (RHS) in matrix multiplication. The
 // inner tile size is "scalable": 8 * vscale.
 //===----------------------------------------------------------------------===//
-func.func private @pack_rhs(%B: tensor<16x13xi32>) ->  tensor<?x16x?x1xi32> {
-  %pad = arith.constant 0 : i32
+func.func private @pack_rhs(%B: tensor<16x13xf32>) ->  tensor<?x16x?x1xf32> {
+  %pad = arith.constant 0.0 : f32
 
   // Compute the outer tile size.
   %vs = vector.vscale
@@ -152,15 +152,15 @@ func.func private @pack_rhs(%B: tensor<16x13xi32>) ->  tensor<?x16x?x1xi32> {
   %c13 = arith.constant 13 : index
   %outer_tile_size = arith.ceildivui %c13, %vs_c8 : index
 
-  %B_pack_empty = tensor.empty(%outer_tile_size, %vs_c8) : tensor<?x16x?x1xi32>
+  %B_pack_empty = tensor.empty(%outer_tile_size, %vs_c8) : tensor<?x16x?x1xf32>
   %B_pack = linalg.pack %B
-     padding_value(%pad : i32)
+     padding_value(%pad : f32)
      outer_dims_perm = [1, 0]
      inner_dims_pos = [1, 0]
      inner_tiles = [%vs_c8, 1]
-     into %B_pack_empty : tensor<16x13xi32> -> tensor<?x16x?x1xi32>
+     into %B_pack_empty : tensor<16x13xf32> -> tensor<?x16x?x1xf32>
 
-  return %B_pack : tensor<?x16x?x1xi32>
+  return %B_pack : tensor<?x16x?x1xf32>
 }
 
 //===----------------------------------------------------------------------===//
@@ -169,8 +169,8 @@ func.func private @pack_rhs(%B: tensor<16x13xi32>) ->  tensor<?x16x?x1xi32> {
 // Implements packing for the C matrix (accumulator) in matrix multiplication.
 // The inner tile size is "scalable": 8 * vscale
 //===----------------------------------------------------------------------===//
-func.func private @pack_acc(%C: tensor<7x13xi32>) -> tensor<1x?x8x?xi32> {
-  %pad = arith.constant 0 : i32
+func.func private @pack_acc(%C: tensor<7x13xf32>) -> tensor<1x?x8x?xf32> {
+  %pad = arith.constant 0.0 : f32
 
   // Compute the outer tile size.
   %c13 = arith.constant 13 : index
@@ -179,14 +179,14 @@ func.func private @pack_acc(%C: tensor<7x13xi32>) -> tensor<1x?x8x?xi32> {
   %vs_c8 = arith.muli %vs, %c8 : index
   %outer_tile_size = arith.ceildivui %c13, %vs_c8 : index
 
-  %C_pack_empty = tensor.empty(%outer_tile_size, %vs_c8) : tensor<1x?x8x?xi32>
+  %C_pack_empty = tensor.empty(%outer_tile_size, %vs_c8) : tensor<1x?x8x?xf32>
   %C_pack = linalg.pack %C
-    padding_value(%pad : i32)
+    padding_value(%pad : f32)
     outer_dims_perm = [0, 1]
     inner_dims_pos = [0, 1]
-    inner_tiles = [8, %vs_c8] into %C_pack_empty : tensor<7x13xi32> -> tensor<1x?x8x?xi32>
+    inner_tiles = [8, %vs_c8] into %C_pack_empty : tensor<7x13xf32> -> tensor<1x?x8x?xf32>
 
-  return %C_pack : tensor<1x?x8x?xi32>
+  return %C_pack : tensor<1x?x8x?xf32>
 }
 
 //===----------------------------------------------------------------------===//
@@ -195,41 +195,41 @@ func.func private @pack_acc(%C: tensor<7x13xi32>) -> tensor<1x?x8x?xi32> {
 // Implements unpacking for the C matrix (accumulator) in matrix
 // multiplication. The inner tile size is "scalable": 8 * vscale
 //===----------------------------------------------------------------------===//
-func.func private @unpack_acc(%C_packed: tensor<1x?x8x?xi32>) -> tensor<7x13xi32> {
+func.func private @unpack_acc(%C_packed: tensor<1x?x8x?xf32>) -> tensor<7x13xf32> {
   %vs = vector.vscale
   %c8 = arith.constant 8 : index
   %vs_c8 = arith.muli %vs, %c8 : index
 
-  %C_out_empty = tensor.empty() : tensor<7x13xi32>
+  %C_out_empty = tensor.empty() : tensor<7x13xf32>
   %C_out_unpack = linalg.unpack %C_packed
     outer_dims_perm = [0, 1]
     inner_dims_pos = [0, 1]
     inner_tiles = [8, %vs_c8]
-    into %C_out_empty : tensor<1x?x8x?xi32> -> tensor<7x13xi32>
+    into %C_out_empty : tensor<1x?x8x?xf32> -> tensor<7x13xf32>
 
-  return %C_out_unpack: tensor<7x13xi32>
+  return %C_out_unpack: tensor<7x13xf32>
 }
 
 //===----------------------------------------------------------------------===//
 //  Helper methods for printing
 //===----------------------------------------------------------------------===//
-func.func private @print_pack_A(%A_pack : tensor<1x16x8x1xi32>) -> () {
-  %A_pack_cast = tensor.cast %A_pack : tensor<1x16x8x1xi32> to tensor<*xi32>
-  call @printMemrefI32(%A_pack_cast) : (tensor<*xi32>) -> ()
+func.func private @print_pack_A(%A_pack : tensor<1x16x8x1xf32>) -> () {
+  %A_pack_cast = tensor.cast %A_pack : tensor<1x16x8x1xf32> to tensor<*xf32>
+  call @printMemrefF32(%A_pack_cast) : (tensor<*xf32>) -> ()
 
   return
 }
 
-func.func private @print_pack_B(%B_pack : tensor<?x16x?x1xi32>) -> () {
-  %B_pack_cast = tensor.cast %B_pack : tensor<?x16x?x1xi32> to tensor<*xi32>
-  call @printMemrefI32(%B_pack_cast) : (tensor<*xi32>) -> ()
+func.func private @print_pack_B(%B_pack : tensor<?x16x?x1xf32>) -> () {
+  %B_pack_cast = tensor.cast %B_pack : tensor<?x16x?x1xf32> to tensor<*xf32>
+  call @printMemrefF32(%B_pack_cast) : (tensor<*xf32>) -> ()
 
   return
 }
 
-func.func private @print_pack_C(%C_pack : tensor<1x?x8x?xi32>) -> () {
-  %C_pack_cast = tensor.cast %C_pack : tensor<1x?x8x?xi32> to tensor<*xi32>
-  call @printMemrefI32(%C_pack_cast) : (tensor<*xi32>) -> ()
+func.func private @print_pack_C(%C_pack : tensor<1x?x8x?xf32>) -> () {
+  %C_pack_cast = tensor.cast %C_pack : tensor<1x?x8x?xf32> to tensor<*xf32>
+  call @printMemrefF32(%C_pack_cast) : (tensor<*xf32>) -> ()
 
   return
 }
@@ -239,25 +239,25 @@ func.func private @print_pack_C(%C_pack : tensor<1x?x8x?xi32>) -> () {
 //
 // Implements matrix-multiplication via linalg.mmt4d
 //===----------------------------------------------------------------------===//
-func.func private @matmul_via_mmt4d(%A: tensor<7x16xi32>, %B: tensor<16x13xi32>, %C: tensor<7x13xi32>) -> tensor<7x13xi32> {
+func.func private @matmul_via_mmt4d(%A: tensor<7x16xf32>, %B: tensor<16x13xf32>, %C: tensor<7x13xf32>) -> tensor<7x13xf32> {
   // Pack input matrices
-  %A_pack = func.call @pack_lhs(%A): (tensor<7x16xi32>) -> tensor<1x16x8x1xi32>
-  %B_pack = func.call @pack_rhs(%B): (tensor<16x13xi32>) -> tensor<?x16x?x1xi32>
-  %C_pack = func.call @pack_acc(%C): (tensor<7x13xi32>) -> tensor<1x?x8x?xi32>
+  %A_pack = func.call @pack_lhs(%A): (tensor<7x16xf32>) -> tensor<1x16x8x1xf32>
+  %B_pack = func.call @pack_rhs(%B): (tensor<16x13xf32>) -> tensor<?x16x?x1xf32>
+  %C_pack = func.call @pack_acc(%C): (tensor<7x13xf32>) -> tensor<1x?x8x?xf32>
 
   // Print the packed matrices (this is the only _visible_ part that changes
   // when adjusting the SVE vector size).
-  func.call @print_pack_A(%A_pack) : (tensor<1x16x8x1xi32>) -> ()
-  func.call @print_pack_B(%B_pack) : (tensor<?x16x?x1xi32>) -> ()
-  func.call @print_pack_C(%C_pack) : (tensor<1x?x8x?xi32>) -> ()
+  func.call @print_pack_A(%A_pack) : (tensor<1x16x8x1xf32>) -> ()
+  func.call @print_pack_B(%B_pack) : (tensor<?x16x?x1xf32>) -> ()
+  func.call @print_pack_C(%C_pack) : (tensor<1x?x8x?xf32>) -> ()
 
   // MMT4D
-  %mmt4d = linalg.mmt4d ins(%A_pack, %B_pack : tensor<1x16x8x1xi32>, tensor<?x16x?x1xi32>) outs(%C_pack : tensor<1x?x8x?xi32>) -> tensor<1x?x8x?xi32>
+  %mmt4d = linalg.mmt4d ins(%A_pack, %B_pack : tensor<1x16x8x1xf32>, tensor<?x16x?x1xf32>) outs(%C_pack : tensor<1x?x8x?xf32>) -> tensor<1x?x8x?xf32>
 
   // Unpack the output
-  %C_out_unpack = func.call @unpack_acc(%mmt4d) : (tensor<1x?x8x?xi32>) -> tensor<7x13xi32>
+  %C_out_unpack = func.call @unpack_acc(%mmt4d) : (tensor<1x?x8x?xf32>) -> tensor<7x13xf32>
 
-  return %C_out_unpack : tensor<7x13xi32>
+  return %C_out_unpack : tensor<7x13xf32>
 }
 
 //===----------------------------------------------------------------------===//
@@ -400,4 +400,4 @@ module @transforms attributes { transform.with_named_sequence } {
 //===----------------------------------------------------------------------===//
 // Function signatures
 //===----------------------------------------------------------------------===//
-func.func private @printMemrefI32(%ptr : tensor<*xi32>)
+func.func private @printMemrefF32(%ptr : tensor<*xf32>)
