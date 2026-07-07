@@ -2941,8 +2941,7 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
 
   // Emit remark for first unsafe dependence
   bool HasForcedDistribution =
-      getBooleanLoopAttribute(
-          TheLoop, "llvm.loop.distribute.enable");
+      getBooleanLoopAttribute(TheLoop, "llvm.loop.distribute.enable");
 
   const std::string Info =
       HasForcedDistribution

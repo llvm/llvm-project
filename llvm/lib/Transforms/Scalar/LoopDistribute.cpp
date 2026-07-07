@@ -943,8 +943,7 @@ private:
   void setForced() {
     if (getBooleanLoopAttribute(L, "llvm.loop.distribute.enable"))
       IsForced = true;
-    else if (getBooleanLoopAttribute(
-                 L, "llvm.loop.distribute.disable"))
+    else if (getBooleanLoopAttribute(L, "llvm.loop.distribute.disable"))
       IsForced = false;
   }
 

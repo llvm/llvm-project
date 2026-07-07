@@ -331,12 +331,9 @@ clang::CodeGen::LoopInfo::createLoopDistributeMetadata(
   if (Enabled != true) {
     SmallVector<Metadata *, 4> NewLoopProperties;
     if (Enabled == false) {
-      NewLoopProperties.append(
-          LoopProperties.begin(), LoopProperties.end());
+      NewLoopProperties.append(LoopProperties.begin(), LoopProperties.end());
       NewLoopProperties.push_back(MDNode::get(
-          Ctx,
-          {MDString::get(
-              Ctx, "llvm.loop.distribute.disable")}));
+          Ctx, {MDString::get(Ctx, "llvm.loop.distribute.disable")}));
       LoopProperties = NewLoopProperties;
     }
     return createLoopVectorizeMetadata(Attrs, LoopProperties,
@@ -345,15 +342,13 @@ clang::CodeGen::LoopInfo::createLoopDistributeMetadata(
 
   bool FollowupHasTransforms = false;
   SmallVector<Metadata *, 4> Followup =
-      createLoopVectorizeMetadata(
-          Attrs, LoopProperties, FollowupHasTransforms);
+      createLoopVectorizeMetadata(Attrs, LoopProperties, FollowupHasTransforms);
 
   SmallVector<Metadata *, 4> Args;
   Args.append(LoopProperties.begin(), LoopProperties.end());
 
-  Args.push_back(MDNode::get(
-      Ctx,
-      {MDString::get(Ctx, "llvm.loop.distribute.enable")}));
+  Args.push_back(
+      MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.distribute.enable")}));
 
   if (FollowupHasTransforms)
     Args.push_back(
