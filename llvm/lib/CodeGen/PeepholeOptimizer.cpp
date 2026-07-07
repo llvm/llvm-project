@@ -1379,6 +1379,11 @@ bool PeepholeOptimizer::optimizeRegSequenceUses(
   if (!TII->getRegSequenceInputs(MI, 0, InputRegs))
     return false;
 
+  auto GetSubRegClass = [this](Register Reg, unsigned SubIdx) {
+    const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+    return SubIdx ? TRI->getSubRegisterClass(RC, SubIdx) : RC;
+  };
+
   bool Changed = false;
   for (MachineOperand &UseMO :
        make_early_inc_range(MRI->use_nodbg_operands(DstReg))) {
@@ -1406,37 +1411,24 @@ bool PeepholeOptimizer::optimizeRegSequenceUses(
     Register SrcReg = It->Reg;
     unsigned SrcSubReg = It->SubReg;
 
-    // Determine the register class for the COPY destination.
-    const TargetRegisterClass *DefRC = MRI->getRegClass(DstReg);
-    const TargetRegisterClass *DefSubRC =
-        TRI->getSubRegisterClass(DefRC, UseSubReg);
-
-    if (!DefSubRC || !DefSubRC->isAllocatable())
+    const TargetRegisterClass *CopyRC = GetSubRegClass(DstReg, UseSubReg);
+    if (!CopyRC)
       continue;
 
-    const TargetRegisterClass *CopyRC = DefSubRC;
-
-    // Constrain to the use instruction's requirements.
     unsigned UseOpIdx = UseMI->getOperandNo(&UseMO);
     if (const TargetRegisterClass *UseRC =
             UseMI->getRegClassConstraint(UseOpIdx, TII, TRI)) {
-      const TargetRegisterClass *CommonRC =
-          TRI->getCommonSubClass(DefSubRC, UseRC);
-      if (!CommonRC)
-        continue;
-      CopyRC = CommonRC;
-    }
-
-    // Ensure the source can provide this register class.
-    const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
-    const TargetRegisterClass *SrcProvides = SrcRC;
-    if (SrcSubReg) {
-      SrcProvides = TRI->getSubRegisterClass(SrcRC, SrcSubReg);
-      if (!SrcProvides)
+      CopyRC = TRI->getCommonSubClass(CopyRC, UseRC);
+      if (!CopyRC)
         continue;
     }
 
-    if (!TRI->getCommonSubClass(SrcProvides, CopyRC))
+    const TargetRegisterClass *SrcProvides = GetSubRegClass(SrcReg, SrcSubReg);
+    if (!SrcProvides)
+      continue;
+
+    CopyRC = TRI->getCommonSubClass(SrcProvides, CopyRC);
+    if (!CopyRC)
       continue;
 
     // Create a COPY after the REG_SEQUENCE.
