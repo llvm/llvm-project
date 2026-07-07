@@ -19,7 +19,7 @@ using AdvSIMDFP64Vector = LIBC_NAMESPACE::cpp::simd<double, 2>;
 
 // Returns the ptr, but hides its value from the compiler so accesses through it
 // cannot be optimized based on the contents.
-#define ptr_barrier(ptr)                                                       \
+#define PTR_BARRIER(ptr)                                                       \
   ({                                                                           \
     __typeof(ptr) __ptr = (ptr);                                               \
     __asm("" : "+r"(__ptr));                                                   \
