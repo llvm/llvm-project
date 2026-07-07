@@ -17,9 +17,7 @@ define float @frexp_fcmp_ogt_1(float nofpclass(nan inf) %x, float nofpclass(inf)
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -49,9 +47,7 @@ define float @frexp_fcmp_oge_1(float nofpclass(nan inf) %x, float nofpclass(inf)
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -81,9 +77,7 @@ define float @frexp_fcmp_ugt_1(float nofpclass(nan inf) %x, float nofpclass(inf)
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -113,9 +107,7 @@ define float @frexp_fcmp_uge_1(float nofpclass(nan inf) %x, float nofpclass(inf)
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -145,9 +137,7 @@ define float @frexp_fcmp_olt_1(float nofpclass(nan inf) %x, float nofpclass(inf)
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -177,9 +167,7 @@ define float @frexp_fcmp_ole_1(float nofpclass(nan inf) %x, float nofpclass(inf)
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -210,9 +198,7 @@ define float @frexp_fcmp_ult_1(float nofpclass(nan inf) %x, float nofpclass(inf)
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -242,9 +228,7 @@ define float @frexp_fcmp_ule_1(float nofpclass(nan inf) %x, float nofpclass(inf)
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -274,9 +258,7 @@ define float @frexp_cmp_ugt_0.5(float nofpclass(nan inf) %x, float nofpclass(inf
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -306,9 +288,7 @@ define float @frexp_cmp_uge_0.5(float nofpclass(nan inf) %x, float nofpclass(inf
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -338,9 +318,7 @@ define float @frexp_fcmp_ult_0.5(float nofpclass(nan inf) %x, float nofpclass(in
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -370,9 +348,7 @@ define float @frexp_fcmp_ule_0.5(float nofpclass(nan inf) %x, float nofpclass(in
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -402,9 +378,7 @@ define float @frexp_fcmp_ugt_0.5(float nofpclass(nan inf) %x, float nofpclass(in
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -434,9 +408,7 @@ define float @frexp_fcmp_uge_0.5(float nofpclass(nan inf) %x, float nofpclass(in
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -466,9 +438,7 @@ define float @frexp_fcmp_oeq_1(float nofpclass(nan inf) %x, float nofpclass(inf)
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -498,9 +468,7 @@ define float @frexp_fcmp_ueq_1(float nofpclass(nan inf) %x, float nofpclass(inf)
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -530,9 +498,7 @@ define float @frexp_fcmp_one_1(float nofpclass(nan inf) %x, float nofpclass(inf)
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -562,9 +528,7 @@ define float @frexp_fcmp_une_1(float nofpclass(nan inf) %x, float nofpclass(inf)
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -594,9 +558,7 @@ define float @frexp_fcmp_oeq_0.5(float nofpclass(nan inf) %x, float nofpclass(in
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -626,9 +588,7 @@ define float @frexp_fcmp_ueq_0.5(float nofpclass(nan inf) %x, float nofpclass(in
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -658,9 +618,7 @@ define float @frexp_fcmp_one_0.5(float nofpclass(nan inf) %x, float nofpclass(in
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -690,9 +648,7 @@ define float @frexp_fcmp_une_0.5(float nofpclass(nan inf) %x, float nofpclass(in
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -899,9 +855,7 @@ define float @frexp_fcmp_ogt_nextdown1(float nofpclass(nan inf) %x, float nofpcl
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -932,9 +886,7 @@ define float @frexp_fcmp_ole_nextdown1(float nofpclass(nan inf) %x, float nofpcl
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -1066,9 +1018,7 @@ define float @frexp_fcmp_olt_1_multiple_conditions_wrong_constant(float nofpclas
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -1106,9 +1056,7 @@ define float @frexp_fcmp_olt_1_multiple_conditions_nonfinite_constant(float nofp
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -1144,9 +1092,7 @@ define float @frexp_fcmp_olt_1_multiple_conditions_edge_case_compare(float nofpc
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -1184,9 +1130,7 @@ define float @frexp_fcmp_olt_1_multiple_conditions_other(float nofpclass(nan inf
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i32(float [[NOT_INF]], i32 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -1221,9 +1165,7 @@ define float @frexp_fcmp_ogt_1_large_int(float nofpclass(nan inf) %x, float nofp
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i128 } @llvm.frexp.f32.i128(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i128 } [[FREXP]], 1
 ; CHECK-NEXT:    [[SCALED:%.*]] = call float @llvm.ldexp.f32.i128(float [[NOT_INF]], i128 [[EXP]])
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[SCALED]], +inf
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0.000000e+00, float [[SCALED]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[SCALED]]
 ; CHECK:       [[LARGE]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
