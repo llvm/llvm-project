@@ -17,6 +17,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "AMDGPU.h"
 #include "AMDGPUAliasAnalysis.h"
+#include "AMDGPUAsmPrinter.h"
 #include "AMDGPUBarrierLatency.h"
 #include "AMDGPUCoExecSchedStrategy.h"
 #include "AMDGPUCtorDtorLowering.h"
@@ -962,6 +963,16 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 
+  // TODO: Move this into the base CodeGenPassBuilder once all
+  // targets that currently implement it have a ported asm-printer pass.
+  if (PIC) {
+    PIC->addClassToPassName(AMDGPUAsmPrinterBeginPass::name(),
+                            "amdgpu-asm-printer-begin");
+    PIC->addClassToPassName(AMDGPUAsmPrinterPass::name(), "amdgpu-asm-printer");
+    PIC->addClassToPassName(AMDGPUAsmPrinterEndPass::name(),
+                            "amdgpu-asm-printer-end");
+  }
+
   PB.registerPipelineParsingCallback(
       [this](StringRef Name, CGSCCPassManager &PM,
              ArrayRef<PassBuilder::PipelineElement> Pipeline) {
@@ -1090,7 +1101,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         if (EnableLowerExecSync)
           PM.addPass(AMDGPULowerExecSyncPass());
         if (EnableSwLowerLDS)
-          PM.addPass(AMDGPUSwLowerLDSPass(*this));
+          PM.addPass(AMDGPUSwLowerLDSPass());
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
         if (Level != OptimizationLevel::O0) {
@@ -1484,7 +1495,7 @@ void AMDGPUPassConfig::addIRPasses() {
 
   // Lower LDS accesses to global memory pass if address sanitizer is enabled.
   if (EnableSwLowerLDS)
-    addPass(createAMDGPUSwLowerLDSLegacyPass(&TM));
+    addPass(createAMDGPUSwLowerLDSLegacyPass());
 
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS) {
@@ -2269,7 +2280,7 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
     addModulePass(AMDGPULowerExecSyncPass(), PMW);
 
   if (EnableSwLowerLDS)
-    addModulePass(AMDGPUSwLowerLDSPass(TM), PMW);
+    addModulePass(AMDGPUSwLowerLDSPass(), PMW);
 
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS)
@@ -2406,15 +2417,16 @@ void AMDGPUCodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {
 
 void AMDGPUCodeGenPassBuilder::addAsmPrinterBegin(
     PassManagerWrapper &PMW) const {
-  // TODO: Add AsmPrinterBegin
+  addModulePass(AMDGPUAsmPrinterBeginPass(), PMW,
+                /*Force=*/true);
 }
 
 void AMDGPUCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
-  // TODO: Add AsmPrinter.
+  addMachineFunctionPass(AMDGPUAsmPrinterPass(), PMW);
 }
 
 void AMDGPUCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
-  // TODO: Add AsmPrinterEnd
+  addModulePass(AMDGPUAsmPrinterEndPass(), PMW);
 }
 
 Error AMDGPUCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {

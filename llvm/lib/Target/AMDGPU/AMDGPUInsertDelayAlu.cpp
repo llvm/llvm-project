@@ -35,10 +35,9 @@ public:
   // Return true if MI waits for all outstanding VALU instructions to complete.
   static bool instructionWaitsForVALU(const MachineInstr &MI) {
     // These instruction types wait for VA_VDST==0 before issuing.
-    const uint64_t VA_VDST_0 = SIInstrFlags::DS | SIInstrFlags::EXP |
-                               SIInstrFlags::FLAT | SIInstrFlags::MIMG |
-                               SIInstrFlags::MTBUF | SIInstrFlags::MUBUF;
-    if (MI.getDesc().TSFlags & VA_VDST_0)
+    if (SIInstrFlags::isDS(MI) || SIInstrFlags::isEXP(MI) ||
+        SIInstrFlags::isFLAT(MI) || SIInstrFlags::isMIMG(MI) ||
+        SIInstrFlags::isBuffer(MI))
       return true;
     if (MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B32 ||
         MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B64)
@@ -51,11 +50,10 @@ public:
 
   static bool instructionWaitsForSGPRWrites(const MachineInstr &MI) {
     // These instruction types wait for VA_SDST==0 before issuing.
-    uint64_t MIFlags = MI.getDesc().TSFlags;
-    if (MIFlags & SIInstrFlags::SMRD)
+    if (SIInstrFlags::isSMRD(MI))
       return true;
 
-    if (MIFlags & SIInstrFlags::SALU) {
+    if (SIInstrFlags::isSALU(MI)) {
       for (auto &Op : MI.operands()) {
         if (Op.isReg())
           return true;

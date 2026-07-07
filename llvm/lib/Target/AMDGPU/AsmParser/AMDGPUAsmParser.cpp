@@ -2997,7 +2997,7 @@ MCRegister AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
   }
 
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
-  const MCRegisterClass RC = TRI->getRegClass(RCID);
+  const MCRegisterClass &RC = TRI->getRegClass(RCID);
   if (RegIdx >= RC.getNumRegs() || (RegKind == IS_VGPR && RegIdx > 255)) {
     Error(Loc, "register index is out of range");
     return AMDGPU::NoRegister;
@@ -5980,14 +5980,22 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
   if (getParser().parseEscapedString(TargetIDDirective))
     return true;
 
-  SMRange TargetRange = SMRange(TargetStart, getTok().getLoc());
-  if (getTargetStreamer().getTargetID()->toString() != TargetIDDirective)
+  std::optional<AMDGPU::TargetID> MaybeParsed =
+      AMDGPU::TargetID::parseTargetIDString(TargetIDDirective);
+  if (!MaybeParsed)
+    return getParser().Error(TargetStart, "malformed target ID");
+
+  const AMDGPU::TargetID &ParsedTargetID = *MaybeParsed;
+  const std::optional<AMDGPU::TargetID> &CurrentTargetID =
+      getTargetStreamer().getTargetID();
+
+  if (*CurrentTargetID != ParsedTargetID) {
     return getParser().Error(
-        TargetRange.Start,
-        (Twine(".amdgcn_target directive's target id ") +
-         Twine(TargetIDDirective) +
-         Twine(" does not match the specified target id ") +
-         Twine(getTargetStreamer().getTargetID()->toString())));
+        TargetStart, Twine(".amdgcn_target directive's target id ") +
+                         Twine(ParsedTargetID.toString()) +
+                         Twine(" does not match the specified target id ") +
+                         Twine(CurrentTargetID->toString()));
+  }
 
   return false;
 }
@@ -6682,9 +6690,24 @@ bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
                  "architectures");
   }
 
-  auto TargetIDDirective = getLexer().getTok().getStringContents();
-  if (getTargetStreamer().getTargetID()->toString() != TargetIDDirective)
-    return Error(getParser().getTok().getLoc(), "target id must match options");
+  StringRef TargetIDDirective = getLexer().getTok().getStringContents();
+
+  std::optional<AMDGPU::TargetID> MaybeParsed =
+      AMDGPU::TargetID::parseTargetIDString(TargetIDDirective);
+  if (!MaybeParsed)
+    return Error(getParser().getTok().getLoc(), "malformed target id");
+
+  const AMDGPU::TargetID &ParsedTargetID = *MaybeParsed;
+  const std::optional<AMDGPU::TargetID> &CurrentTargetID =
+      getTargetStreamer().getTargetID();
+
+  if (*CurrentTargetID != ParsedTargetID) {
+    return Error(getParser().getTok().getLoc(),
+                 Twine(".amd_amdgpu_isa directive's target id ") +
+                     Twine(ParsedTargetID.toString()) +
+                     Twine(" does not match the specified target id ") +
+                     Twine(CurrentTargetID->toString()));
+  }
 
   getTargetStreamer().EmitISAVersion();
   Lex();
@@ -9939,6 +9962,11 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
     int ModIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
 
     if (ModIdx == -1)
+      continue;
+
+    // For MAC instructions, src2 is tied to vdst and its op_sel bit
+    // is not encoded.
+    if (AMDGPU::isMAC(Opc) && ModOps[J] == AMDGPU::OpName::src2_modifiers)
       continue;
 
     uint32_t ModVal = 0;

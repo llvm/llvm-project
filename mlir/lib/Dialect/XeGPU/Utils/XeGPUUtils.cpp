@@ -18,7 +18,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
@@ -786,9 +786,7 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
                              const xegpu::uArch::uArch *uArch) {
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.
-  if (uArch->getName().equals_insensitive("pvc") &&
-      uArch->getName().equals_insensitive("bmg") &&
-      uArch->getName().equals_insensitive("cri"))
+  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3>(uArch))
     return false;
   if (!layout)
     return false;

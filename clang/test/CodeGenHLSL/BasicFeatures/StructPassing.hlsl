@@ -11,9 +11,9 @@ struct S : P {
 };
 
 // CHECK-LABEL: define hidden void @_Z5case11S(
-// CHECK-SAME: ptr noundef dead_on_return [[S:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef align 1 dead_on_return [[S:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[SLOCAL:%.*]] = alloca [[STRUCT_S:%.*]], align 1
 // CHECK-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 4
@@ -26,9 +26,9 @@ void case1(S s) {
 }
 
 // CHECK-LABEL: define hidden void @_Z5case21S(
-// CHECK-SAME: ptr noundef dead_on_return [[S:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef align 1 dead_on_return [[S:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[SLOCAL:%.*]] = alloca [[STRUCT_S:%.*]], align 1
 // CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_S]], align 1
@@ -43,17 +43,25 @@ void case2(S s) {
   sLocal = s;
 }
 
+// CHECK-LABEL: define hidden void @_Z4useS1S(
+// CHECK-SAME: ptr noundef align 1 dead_on_return [[S:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 4
+// CHECK-NEXT:    ret void
+//
 void useS(S s) {}
 
 // CHECK-LABEL: define hidden void @_Z5case31S(
-// CHECK-SAME: ptr noundef dead_on_return [[S:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef align 1 dead_on_return [[S:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[BYVAL_TEMP:%.*]] = alloca [[STRUCT_S:%.*]], align 1
 // CHECK-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[BYVAL_TEMP]], ptr align 1 [[S]], i32 20, i1 false)
-// CHECK-NEXT:    call void @_Z4useS1S(ptr noundef dead_on_return [[BYVAL_TEMP]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    call void @_Z4useS1S(ptr noundef align 1 dead_on_return [[BYVAL_TEMP]]) #[[ATTR3:[0-9]+]] [ "convergencectrl"(token [[TMP0]]) ]
 // CHECK-NEXT:    ret void
 //
 void case3(S s) {
@@ -62,9 +70,9 @@ void case3(S s) {
 }
 
 // CHECK-LABEL: define hidden void @_Z5case41S(
-// CHECK-SAME: ptr noundef dead_on_return [[S:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef align 1 dead_on_return [[S:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[PLOCAL:%.*]] = alloca [[STRUCT_P:%.*]], align 1
 // CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_S:%.*]], align 1
@@ -79,9 +87,9 @@ void case4(S s) {
 }
 
 // CHECK-LABEL: define hidden void @_Z5case51S(
-// CHECK-SAME: ptr noundef dead_on_return [[S:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef align 1 dead_on_return [[S:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[P:%.*]] = alloca [[STRUCT_P:%.*]], align 1
 // CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_P]], align 1
@@ -98,19 +106,27 @@ void case5(S s) {
   p = s;
 }
 
+// CHECK-LABEL: define hidden void @_Z4useP1P(
+// CHECK-SAME: ptr noundef align 1 dead_on_return [[P:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_INDIRECT_ADDR]], align 4
+// CHECK-NEXT:    ret void
+//
 void useP(P p) {}
 
 // CHECK-LABEL: define hidden void @_Z5case61S(
-// CHECK-SAME: ptr noundef dead_on_return [[S:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef align 1 dead_on_return [[S:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_P:%.*]], align 1
 // CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_S:%.*]], align 1
 // CHECK-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TMP]], ptr align 1 [[S]], i32 20, i1 false)
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TMP]], ptr align 1 [[TMP]], i32 4, i1 false)
-// CHECK-NEXT:    call void @_Z4useP1P(ptr noundef dead_on_return [[AGG_TMP]]) #[[ATTR2]]
+// CHECK-NEXT:    call void @_Z4useP1P(ptr noundef align 1 dead_on_return [[AGG_TMP]]) #[[ATTR3]] [ "convergencectrl"(token [[TMP0]]) ]
 // CHECK-NEXT:    ret void
 //
 void case6(S s) {
