@@ -23183,7 +23183,7 @@ static SDValue performAddSubCarryCombine(SDNode *N, SelectionDAG &DAG,
                                          unsigned NewOpcode) {
   if (isAllOnesConstant(N->getOperand(1))) {
     SDLoc DL(N);
-    SDValue RHS = DAG.getConstant(0, DL, N->getOperand(0).getValueType());
+    SDValue RHS = DAG.getConstant(0, DL, N->getValueType(0));
     return DAG.getNode(NewOpcode, DL, N->getVTList(), N->getOperand(0), RHS,
                        N->getOperand(2));
   }
