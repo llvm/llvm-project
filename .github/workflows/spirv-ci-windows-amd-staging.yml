@@ -45,6 +45,9 @@ jobs:
       - name: Install zstd via vcpkg
         run: vcpkg install zstd:x64-windows
 
+      - name: Add vcpkg bin to PATH (zstd.dll runtime lookup)
+        run: echo 'C:\vcpkg\installed\x64-windows\bin' >> "$GITHUB_PATH"
+
       - name: Checkout llvm-project (PR head)
         # On pull_request events: PR head from the (possibly fork) head repo.
         # On workflow_dispatch: the branch the dispatch was on.
@@ -86,6 +89,7 @@ jobs:
           cmake -G Ninja -S llvm-project/llvm -B build \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_APPLOCAL_DEPS=OFF \
             -DLLVM_ENABLE_ASSERTIONS=ON \
             -DLLVM_ENABLE_PROJECTS="clang;lld" \
             -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86;SPIRV" \
@@ -111,6 +115,7 @@ jobs:
           cmake -G Ninja -S llvm-project/amd/device-libs -B build-device-libs \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_APPLOCAL_DEPS=OFF \
             -DCMAKE_PREFIX_PATH=$PWD_WIN/build \
             -DLLVM_DIR=$PWD_WIN/build/lib/cmake/llvm
 
@@ -123,6 +128,7 @@ jobs:
           cmake -G Ninja -S llvm-project/amd/comgr -B build-comgr \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_APPLOCAL_DEPS=OFF \
             -DCMAKE_PREFIX_PATH="$PWD_WIN/build;$PWD_WIN/build-device-libs" \
             -DLLVM_DIR=$PWD_WIN/build/lib/cmake/llvm \
             -DAMDDeviceLibs_DIR=$PWD_WIN/build-device-libs/lib/cmake/AMDDeviceLibs \
@@ -182,6 +188,9 @@ jobs:
       # build-edge input that ninja validates at planning time.
       - name: Install zstd via vcpkg
         run: vcpkg install zstd:x64-windows
+
+      - name: Add vcpkg bin to PATH (zstd.dll runtime lookup)
+        run: echo 'C:\vcpkg\installed\x64-windows\bin' >> "$GITHUB_PATH"
 
       - name: Checkout llvm-project (PR head)
         # On pull_request events: PR head from the (possibly fork) head repo.
@@ -310,6 +319,9 @@ jobs:
       - name: Install zstd via vcpkg
         run: vcpkg install zstd:x64-windows
 
+      - name: Add vcpkg bin to PATH (zstd.dll runtime lookup)
+        run: echo 'C:\vcpkg\installed\x64-windows\bin' >> "$GITHUB_PATH"
+
       - name: Checkout llvm-project (PR head)
         # On pull_request events: PR head from the (possibly fork) head repo.
         # On workflow_dispatch: the branch the dispatch was on.
@@ -382,6 +394,9 @@ jobs:
       # build-edge input that ninja validates at planning time.
       - name: Install zstd via vcpkg
         run: vcpkg install zstd:x64-windows
+
+      - name: Add vcpkg bin to PATH (zstd.dll runtime lookup)
+        run: echo 'C:\vcpkg\installed\x64-windows\bin' >> "$GITHUB_PATH"
 
       - name: Checkout llvm-project (PR head)
         # On pull_request events: PR head from the (possibly fork) head repo.
