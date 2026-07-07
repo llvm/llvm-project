@@ -57647,6 +57647,38 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
                                                  DAG, DCI, Subtarget))
     return V;
 
+  // If an AssertZext-backed wide source is known to have zeros above the
+  // truncated type, prefer shifting the wide value directly. This avoids an
+  // 8/16-bit shift followed by a zero-extend when the result is used in a
+  // wider register, for example as an address index.
+  if (N->getOpcode() == ISD::ZERO_EXTEND &&
+      (VT == MVT::i32 || VT == MVT::i64) && N0.getOpcode() == ISD::SRL &&
+      N0.hasOneUse()) {
+    SDValue Trunc = N0.getOperand(0);
+    EVT NarrowVT = Trunc.getValueType();
+
+    if (Trunc.getOpcode() == ISD::TRUNCATE && Trunc.hasOneUse() &&
+        NarrowVT.isScalarInteger()) {
+      SDValue Wide = Trunc.getOperand(0);
+      EVT WideVT = Wide.getValueType();
+      unsigned NarrowBits = NarrowVT.getSizeInBits();
+      unsigned WideBits = WideVT.getSizeInBits();
+      std::optional<unsigned> ShiftAmt = DAG.getValidShiftAmount(N0);
+
+      if (WideVT == VT && Wide.getOpcode() == ISD::AssertZext && ShiftAmt &&
+          *ShiftAmt < NarrowBits) {
+        APInt HighBits =
+            APInt::getHighBitsSet(WideBits, WideBits - NarrowBits);
+        if (DAG.MaskedValueIsZero(Wide, HighBits)) {
+          SDValue WideShiftAmt =
+              DAG.getShiftAmountConstant(*ShiftAmt, VT, SDLoc(N0));
+          return DAG.getNode(ISD::SRL, SDLoc(N0), VT, Wide, WideShiftAmt,
+                             N0->getFlags());
+        }
+      }
+    }
+  }
+
   if (VT.isVector())
     if (SDValue R = PromoteMaskArithmetic(SDValue(N, 0), dl, DAG, Subtarget))
       return R;
