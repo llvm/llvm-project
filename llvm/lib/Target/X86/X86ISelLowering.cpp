@@ -12948,6 +12948,12 @@ static SDValue lowerShuffleAsZeroOrAnyExtend(
                                            InputV, Mask, Subtarget, DAG);
   };
 
+  // Match against a foldable v4i32 VZEXT_MOVL zero-extending instruction.
+  if (VT == MVT::v4i32 &&
+      (V1.getOpcode() == ISD::SCALAR_TO_VECTOR || isa<MemSDNode>(V1)) &&
+      Mask[0] == 0 && Zeroable.countLeadingOnes() == (NumElements - 1))
+    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, V1);
+
   // The widest scale possible for extending is to a 64-bit integer.
   assert(Bits % 64 == 0 &&
          "The number of bits in a vector must be divisible by 64 on x86!");
