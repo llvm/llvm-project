@@ -13623,20 +13623,18 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetUpdateDirective(
 
 /// Check the number of expressions specified in a multidimensional clause and
 /// return whether an error was encountered.
-template <typename ClauseT>
-static bool checkExprsInMultidimClause(SemaBase &SemaRef, const ClauseT *Clause,
-                                       const OMPXBareClause *BareClause) {
-  if (!Clause)
-    return false;
-
-  const uint64_t NumVars = Clause->getVarRefs().size();
+static bool validateMultidimClauseExprs(
+    SemaBase &SemaRef, OpenMPClauseKind ClauseKind,
+    SourceLocation ClauseBeginLoc, ArrayRef<const Expr *> ClauseVarList,
+    const Expr *DimsModifierExpr, const OMPXBareClause *BareClause = nullptr) {
+  const uint64_t NumVars = ClauseVarList.size();
 
   // The ompx_bare clause allows up to three expressions.
   if (BareClause) {
     if (NumVars > 3) {
-      SemaRef.Diag(Clause->getBeginLoc(),
+      SemaRef.Diag(ClauseBeginLoc,
                    diag::err_ompx_more_than_three_expr_not_allowed)
-          << getOpenMPClauseName(Clause->getClauseKind());
+          << getOpenMPClauseName(ClauseKind);
       return true;
     }
     return false;
@@ -13644,37 +13642,48 @@ static bool checkExprsInMultidimClause(SemaBase &SemaRef, const ClauseT *Clause,
 
   // By default, only one expression accepted.
   uint64_t MaxExprs = 1;
-
-  const Expr *DimsExpr = Clause->getDimsModifierExpr();
-  if (DimsExpr) {
+  if (DimsModifierExpr) {
     // Cannot verify the expected size yet.
-    if (DimsExpr->isInstantiationDependent())
+    if (DimsModifierExpr->isInstantiationDependent())
       return false;
 
     // The dims modifier determines the exact number of expressions.
-    MaxExprs =
-        DimsExpr->EvaluateKnownConstInt(SemaRef.getASTContext()).getExtValue();
+    MaxExprs = DimsModifierExpr->EvaluateKnownConstInt(SemaRef.getASTContext())
+                   .getExtValue();
   }
 
   if (NumVars != MaxExprs) {
-    SemaRef.Diag(Clause->getBeginLoc(), diag::err_omp_unexpected_num_exprs)
-        << getOpenMPClauseName(Clause->getClauseKind()) << MaxExprs << NumVars;
+    SemaRef.Diag(ClauseBeginLoc, diag::err_omp_unexpected_num_exprs)
+        << getOpenMPClauseName(ClauseKind) << MaxExprs << NumVars;
     return true;
   }
   if (NumVars > 3) {
-    SemaRef.Diag(Clause->getBeginLoc(), diag::err_omp_max_three_exprs)
-        << getOpenMPClauseName(Clause->getClauseKind());
+    SemaRef.Diag(ClauseBeginLoc, diag::err_omp_max_three_exprs)
+        << getOpenMPClauseName(ClauseKind);
     return true;
   }
   return false;
 }
 
+/// Check the number of expressions specified in a multidimensional clause and
+/// return whether an error was encountered.
+template <typename ClauseT>
+static bool validateMultidimClauseExprs(SemaBase &SemaRef,
+                                        const ClauseT *Clause,
+                                        const OMPXBareClause *BareClause) {
+  if (!Clause)
+    return false;
+  return validateMultidimClauseExprs(
+      SemaRef, Clause->getClauseKind(), Clause->getBeginLoc(),
+      Clause->getVarRefs(), Clause->getDimsModifierExpr(), BareClause);
+}
+
 /// Check the number of expressions specified in clauses that can contain
 /// multidimensional values, e.g., num_teams and thread_limit. The function
 /// returns true on error.
-static bool checkMultidimClauses(SemaBase &SemaRef,
-                                 ArrayRef<OMPClause *> Clauses,
-                                 bool MayHaveBareClause = false) {
+static bool validateMultidimClauses(SemaBase &SemaRef,
+                                    ArrayRef<OMPClause *> Clauses,
+                                    bool MayHaveBareClause = false) {
   auto BareClauseIt =
       MayHaveBareClause ? llvm::find_if(Clauses, llvm::IsaPred<OMPXBareClause>)
                         : Clauses.end();
@@ -13704,8 +13713,8 @@ static bool checkMultidimClauses(SemaBase &SemaRef,
       return true;
     }
   }
-  return checkExprsInMultidimClause(SemaRef, ThreadLimitClause, BareClause) ||
-         checkExprsInMultidimClause(SemaRef, NumTeamsClause, BareClause);
+  return validateMultidimClauseExprs(SemaRef, ThreadLimitClause, BareClause) ||
+         validateMultidimClauseExprs(SemaRef, NumTeamsClause, BareClause);
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPTeamsDirective(ArrayRef<OMPClause *> Clauses,
@@ -13715,7 +13724,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTeamsDirective(ArrayRef<OMPClause *> Clauses,
   if (!AStmt)
     return StmtError();
 
-  if (checkMultidimClauses(*this, Clauses))
+  if (validateMultidimClauses(*this, Clauses))
     return StmtError();
 
   // Report affected OpenMP target offloading behavior when in HIP lang-mode.
@@ -14479,7 +14488,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDirective(
 
   setBranchProtectedScope(SemaRef, OMPD_target_teams, AStmt);
 
-  if (checkMultidimClauses(*this, Clauses, /*MayHaveBareClause=*/true))
+  if (validateMultidimClauses(*this, Clauses, /*MayHaveBareClause=*/true))
     return StmtError();
 
   return OMPTargetTeamsDirective::Create(getASTContext(), StartLoc, EndLoc,
@@ -14492,7 +14501,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeDirective(
   if (!AStmt)
     return StmtError();
 
-  if (checkMultidimClauses(*this, Clauses))
+  if (validateMultidimClauses(*this, Clauses))
     return StmtError();
 
   CapturedStmt *CS =
@@ -14521,7 +14530,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeParallelForDirective(
   if (!AStmt)
     return StmtError();
 
-  if (checkMultidimClauses(*this, Clauses))
+  if (validateMultidimClauses(*this, Clauses))
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(
@@ -14551,7 +14560,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeParallelForSimdDirective(
   if (!AStmt)
     return StmtError();
 
-  if (checkMultidimClauses(*this, Clauses))
+  if (validateMultidimClauses(*this, Clauses))
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(
@@ -14584,7 +14593,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeSimdDirective(
   if (!AStmt)
     return StmtError();
 
-  if (checkMultidimClauses(*this, Clauses))
+  if (validateMultidimClauses(*this, Clauses))
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(

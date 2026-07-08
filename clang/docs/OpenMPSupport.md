@@ -381,15 +381,15 @@ Please post on the [Discourse forums (Runtimes - OpenMP category)] for more
 information or if you want to help with the
 implementation.
 
-| Feature                                                               | C/C++ Status        | Fortran Status      | Reviews                                                                                                  |
-| --------------------------------------------------------------------- | ------------------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
-| dyn_groupprivate clause                                               | {part}`partial`     | {part}`In Progress` | C/C++: Host device support missing                                                                       |
-| loop flatten transformation                                           | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                          |
-| loop grid/tile modifiers for sizes clause                             | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                          |
-| attach map-type modifier                                              | {part}`In Progress` | {none}`unclaimed`   | C/C++: @abhinavgaba; RT: @abhinavgaba ([PR149036][PR149036], [PR158370][PR158370])                       |
-| need_device_ptr modifier for adjust_args clause                       | {part}`partial`     | {none}`unclaimed`   | Clang Parsing/Sema: [PR168905][PR168905] [PR169558][PR169558]                                            |
-| fallback modifier for use_device_ptr clause                           | {good}`done`        | {none}`unclaimed`   | Clang: @abhinavgaba ([PR170578][PR170578], [PR173931][PR173931]) RT: @abhinavgaba ([PR169603][PR169603]) |
-| dims clause with strict behavior (multidimensional teams and leagues) | {part}`In Progress` | {part}`In Progress` | C/C++: kevinsala Fortran: skc7, kparzysz, mjklemm                                                        |
+| Feature                                                                                         | C/C++ Status        | Fortran Status      | Reviews                                                                                                  |
+| ----------------------------------------------------------------------------------------------- | ------------------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
+| dyn_groupprivate clause                                                                         | {part}`partial`     | {part}`In Progress` | C/C++: Host device support missing                                                                       |
+| loop flatten transformation                                                                     | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                          |
+| loop grid/tile modifiers for sizes clause                                                       | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                          |
+| attach map-type modifier                                                                        | {part}`In Progress` | {none}`unclaimed`   | C/C++: @abhinavgaba; RT: @abhinavgaba ([PR149036][PR149036], [PR158370][PR158370])                       |
+| need_device_ptr modifier for adjust_args clause                                                 | {part}`partial`     | {none}`unclaimed`   | Clang Parsing/Sema: [PR168905][PR168905] [PR169558][PR169558]                                            |
+| fallback modifier for use_device_ptr clause                                                     | {good}`done`        | {none}`unclaimed`   | Clang: @abhinavgaba ([PR170578][PR170578], [PR173931][PR173931]) RT: @abhinavgaba ([PR169603][PR169603]) |
+| dims modifier for num_teams, thread_limit, and num_threads (multidimensional teams and leagues) | {part}`partial`     | {part}`In Progress` | C/C++: @kevinsala ([PR206412]); Fortran: @skc7, @kparzysz, @mjklemm                                      |
 
 ## OpenMP Extensions
 
