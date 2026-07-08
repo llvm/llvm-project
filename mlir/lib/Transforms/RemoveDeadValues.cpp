@@ -335,14 +335,26 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // can make our optimization strong by even removing a live return value (%0),
   // since it forwards only to non-live value(s) (%1#1).
   size_t numReturns = funcOp.getNumResults();
+  bool canCleanReturnValues = true;
   BitVector nonLiveRets(numReturns, true);
+
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
+
+    if (callOp->getNumResults() != numReturns) {
+      canCleanReturnValues = false;
+      nonLiveRets.reset();
+      break;
+    }
+
     BitVector liveCallRets = markLives(callOp->getResults(), nonLiveSet, la);
     nonLiveRets &= liveCallRets.flip();
   }
 
+  if (!canCleanReturnValues)
+    nonLiveArgs.reset();
+    
   // Note that in the absence of control flow ops forcing the control to go from
   // the entry (first) block to the other blocks, the control never reaches any
   // block other than the entry block, because every block has a terminator.
@@ -358,7 +370,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   cl.functions.push_back({funcOp, nonLiveArgs, nonLiveRets});
 
   // Do (5) and (6).
-  if (numReturns == 0)
+  if (!canCleanReturnValues || numReturns == 0)
     return;
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();

@@ -868,3 +868,22 @@ module @func_with_non_call_users {
   }
   spirv.EntryPoint "GLCompute" @callee
 }
+
+// -----
+
+// Check that function cleanup is conservative when a call-like op does not
+// expose the same number of results as the callee.
+func.func private @call_and_store_callee(%arg0: memref<f32>) -> memref<f32> {
+  // CHECK-LABEL: func.func private @call_and_store_callee
+  // CHECK-SAME: (%[[ARG0:.*]]: memref<f32>) -> memref<f32>
+  // CHECK: return %[[ARG0]] : memref<f32>
+  return %arg0 : memref<f32>
+}
+
+func.func @call_and_store_before(%arg0: memref<f32>) -> memref<f32> {
+  // CHECK-LABEL: func.func @call_and_store_before
+  // CHECK: test.call_and_store
+  // CHECK: return
+  test.call_and_store @call_and_store_callee(%arg0), %arg0 {store_before_call = true, tag_name = "call"} : (memref<f32>, memref<f32>) -> ()
+  return {tag = "return"} %arg0 : memref<f32>
+}
