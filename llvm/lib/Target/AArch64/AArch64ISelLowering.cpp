@@ -25605,6 +25605,16 @@ static SDValue performExtendCombine(SDNode *N,
   if (SDValue R = performExtendDuplaneTruncCombine(N, DAG))
     return R;
 
+  // Fold an extend of a CSET into its arms:
+  //   ?ext (CSEL 0/1, 1/0, cc, cond) -> CSEL (zext 0/1), (zext 1/0), cc, cond
+  // This is not done for zero-extend since (i64 zext (i32 CSET)) is free.
+  if (N->getOpcode() != ISD::ZERO_EXTEND && VT == MVT::i64 && N0.hasOneUse() &&
+      getCSETCondCode(N0))
+    return DAG.getNode(AArch64ISD::CSEL, dl, VT,
+                       DAG.getNode(ISD::ZERO_EXTEND, dl, VT, N0.getOperand(0)),
+                       DAG.getNode(ISD::ZERO_EXTEND, dl, VT, N0.getOperand(1)),
+                       N0.getOperand(2), N0.getOperand(3));
+
   return SDValue();
 }
 
