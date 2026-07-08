@@ -347,3 +347,46 @@ namespace test16 {
     //   expected-note@#test16-C-n {{implicitly declared private here}}
   }
 }
+
+namespace test17 {
+  template <class T> class A;
+
+  template <class T>
+  struct B {
+    template <bool V>
+    struct C {
+      int f(A<T> *p) { return p->x; }
+    };
+  };
+
+  template <class T>
+  class A {
+    friend struct B<T>::template C<true>;
+    int x;
+  };
+
+  template struct B<int>::C<true>;
+}
+
+namespace test18 {
+  template <class T> class A;
+
+  template <class T>
+  struct B {
+    template <bool V>
+    struct C {
+      int f(A<T> *p) { return p->x; }
+      // expected-error@-1 {{'x' is a private member of 'test18::A<int>'}}
+    };
+  };
+
+  template <class T>
+  class A {
+    friend struct B<T>::template C<false>;
+    int x;
+    // expected-note@-1 {{implicitly declared private here}}
+  };
+
+  template struct B<int>::C<true>;
+  // expected-note@-1 {{in instantiation of member function 'test18::B<int>::C<true>::f' requested here}}
+}
