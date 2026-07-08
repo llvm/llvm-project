@@ -4924,8 +4924,7 @@ Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
   MDCallbacks.MDType = Callbacks.MDType;
   MDLoader = MetadataLoader(Stream, *M, ValueList, IsImporting, MDCallbacks);
   SkipDebugIntrinsicUpgrade = Callbacks.SkipDebugIntrinsicUpgrade;
-  Error Err = parseModule(0, ShouldLazyLoadMetadata, Callbacks);
-  return Err;
+  return parseModule(0, ShouldLazyLoadMetadata, Callbacks);
 }
 
 Error BitcodeReader::typeCheckLoadStoreInst(Type *ValType, Type *PtrType) {
