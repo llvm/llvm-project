@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
@@ -605,6 +606,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     AddPromotedToType(ISD::FP_TO_FP16, MVT::i16, MVT::i32);
 
     setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::i16, Custom);
+    setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::i32, Custom);
     setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i16, Custom);
     setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i1, Custom);
 
@@ -634,13 +636,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     // BF16 - VOP1 Actions.
     if (Subtarget->hasBF16TransInsts())
       setOperationAction({ISD::FCOS, ISD::FSIN, ISD::FDIV}, MVT::bf16, Custom);
-
-    setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::FP_TO_SINT_SAT,
-                        ISD::FP_TO_UINT_SAT},
-                       MVT::f16, Promote);
-    setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::FP_TO_SINT_SAT,
-                        ISD::FP_TO_UINT_SAT},
-                       MVT::bf16, Promote);
 
     // F16 - VOP2 Actions.
     setOperationAction({ISD::BR_CC, ISD::SELECT_CC}, {MVT::f16, MVT::bf16},
@@ -687,6 +682,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     // v_perm_b32 can handle either of these.
     setOperationAction(ISD::BSWAP, {MVT::i16, MVT::v2i16}, Legal);
     setOperationAction(ISD::BSWAP, MVT::v4i16, Custom);
+
+    // Legalize vector types for sat conversions to select v_cvt_pk_[iu]16_f32.
+    if (Subtarget->hasVCvtPkIU16F32())
+      setOperationAction(
+          {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT},
+          {MVT::v2i16, MVT::v4i16, MVT::v8i16, MVT::v16i16, MVT::v32i16},
+          Custom);
 
     // XXX - Do these do anything? Vector constants turn into build_vector.
     setOperationAction(ISD::Constant, {MVT::v2i16, MVT::v2f16}, Legal);
@@ -1052,6 +1054,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::FMINIMUMNUM,
                        ISD::FMAXIMUMNUM,
                        ISD::FMA,
+                       ISD::ABS,
                        ISD::SMIN,
                        ISD::SMAX,
                        ISD::UMIN,
@@ -1062,6 +1065,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::SMAX,
                        ISD::UMIN,
                        ISD::UMAX,
+                       ISD::USUBSAT,
                        ISD::AND,
                        ISD::OR,
                        ISD::XOR,
@@ -2897,7 +2901,7 @@ void SITargetLowering::allocateSpecialEntryInputVGPRs(
 
 // Try to allocate a VGPR at the end of the argument list, or if no argument
 // VGPRs are left allocating a stack slot.
-// If \p Mask is is given it indicates bitfield position in the register.
+// If \p Mask is given it indicates bitfield position in the register.
 // If \p Arg is given use it with new ]p Mask instead of allocating new.
 static ArgDescriptor allocateVGPR32Input(CCState &CCInfo, unsigned Mask = ~0u,
                                          ArgDescriptor Arg = ArgDescriptor()) {
@@ -3726,15 +3730,8 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
-
-      // FIXME: This helps when the return is a real sret. If it is a
-      // automatically inserted sret (i.e. CanLowerReturn returns false), an
-      // extra copy is inserted in SelectionDAGBuilder which obscures this.
-      unsigned NumBits =
-          32 - getSubtarget()->getKnownHighZeroBitsForFrameIndex();
-      Val = DAG.getNode(
-          ISD::AssertZext, DL, VT, Val,
-          DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), NumBits)));
+      Val = annotateStackObjectPointer(Val, DAG, DL,
+                                       Arg.Flags.getNonZeroMemAlign());
     }
 
     Val = convertABITypeToValueType(DAG, Val, VA, DL);
@@ -7460,19 +7457,22 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
                                              SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16 ||
-         VT == MVT::v4f32 || VT == MVT::v8i16 || VT == MVT::v8f16 ||
-         VT == MVT::v8bf16 || VT == MVT::v16i16 || VT == MVT::v16f16 ||
-         VT == MVT::v16bf16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16 ||
-         VT == MVT::v32bf16 || VT == MVT::v4f64 || VT == MVT::v8f64 ||
-         VT == MVT::v16f64 || VT == MVT::v32f64);
+  assert(VT.isVector() && VT.getVectorElementCount().isKnownEven());
 
   auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
 
   SDLoc SL(Op);
-  SDValue OpLo = DAG.getNode(Opc, SL, Lo.getValueType(), Lo, Op->getFlags());
-  SDValue OpHi = DAG.getNode(Opc, SL, Hi.getValueType(), Hi, Op->getFlags());
+
+  // Forward any trailing scalar operands unchanged to both halves.
+  SmallVector<SDValue, 2> LoOps = {Lo};
+  SmallVector<SDValue, 2> HiOps = {Hi};
+  auto TrailingOps = drop_begin(Op->ops());
+  LoOps.append(TrailingOps.begin(), TrailingOps.end());
+  HiOps.append(TrailingOps.begin(), TrailingOps.end());
+
+  SDValue OpLo = DAG.getNode(Opc, SL, LoVT, LoOps, Op->getFlags());
+  SDValue OpHi = DAG.getNode(Opc, SL, HiVT, HiOps, Op->getFlags());
 
   return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(Op), VT, OpLo, OpHi);
 }
@@ -7497,14 +7497,7 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
                                               SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16 ||
-         VT == MVT::v4f32 || VT == MVT::v8i16 || VT == MVT::v8f16 ||
-         VT == MVT::v8bf16 || VT == MVT::v16i16 || VT == MVT::v16f16 ||
-         VT == MVT::v16bf16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16 ||
-         VT == MVT::v32bf16 || VT == MVT::v4f64 || VT == MVT::v8f64 ||
-         VT == MVT::v16f64 || VT == MVT::v32f64 || VT == MVT::v4i64 ||
-         VT == MVT::v8i64 || VT == MVT::v16i64 || VT == MVT::v32i64);
+  assert(VT.isVector() && VT.getVectorElementCount().isKnownEven());
 
   auto [Lo0, Hi0] = DAG.SplitVectorOperand(Op.getNode(), 0);
   auto [Lo1, Hi1] = DAG.SplitVectorOperand(Op.getNode(), 1);
@@ -7623,6 +7616,12 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FCANONICALIZE:
   case ISD::BSWAP:
     return splitUnaryVectorOp(Op, DAG);
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+    if (Op.getValueType().isVector() && Op.getValueType() != MVT::v2i16 &&
+        Op.getOperand(0).getValueType().getScalarType() == MVT::f32)
+      return splitUnaryVectorOp(Op, DAG);
+    return LowerFP_TO_INT_SAT(Op, DAG);
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
     return lowerFMINNUM_FMAXNUM(Op, DAG);
@@ -7639,8 +7638,7 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return splitTernaryVectorOp(Op, DAG);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
-    if (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 &&
-        Op.getValueType() == MVT::i16 &&
+    if (Subtarget->hasVCvtPkIU16F32() && Op.getValueType() == MVT::i16 &&
         Op.getOperand(0).getValueType() == MVT::f32) {
       // Make f32->i16 legal so we can select V_CVT_PK_[IU]16_F32.
       return Op;
@@ -8795,6 +8793,7 @@ SDValue SITargetLowering::lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const {
 
 static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   switch (Op->getOpcode()) {
+  case ISD::ABS:
   case ISD::SRA:
   case ISD::SMIN:
   case ISD::SMAX:
@@ -8802,6 +8801,7 @@ static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   case ISD::SRL:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::USUBSAT:
     return ISD::ZERO_EXTEND;
   case ISD::ADD:
   case ISD::SUB:
@@ -8823,6 +8823,26 @@ static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   }
 }
 
+SDValue
+SITargetLowering::promoteUniformUnaryOpToI32(SDValue Op,
+                                             DAGCombinerInfo &DCI) const {
+  EVT OpTy = Op.getValueType();
+  SelectionDAG &DAG = DCI.DAG;
+  EVT ExtTy = OpTy.changeElementType(*DAG.getContext(), MVT::i32);
+
+  if (isNarrowingProfitable(Op.getNode(), ExtTy, OpTy))
+    return SDValue();
+
+  SDLoc DL(Op);
+  SDValue Input = Op.getOperand(0);
+  const unsigned ExtOp = getExtOpcodeForPromotedOp(Op);
+  Input = DAG.getNode(ExtOp, DL, ExtTy, Input);
+
+  SDValue NewVal = DAG.getNode(Op.getOpcode(), DL, ExtTy, Input);
+
+  return DAG.getNode(ISD::TRUNCATE, DL, OpTy, NewVal);
+}
+
 SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
                                                 DAGCombinerInfo &DCI) const {
   const unsigned Opc = Op.getOpcode();
@@ -8830,7 +8850,8 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
          Opc == ISD::SRL || Opc == ISD::SRA || Opc == ISD::AND ||
          Opc == ISD::OR || Opc == ISD::XOR || Opc == ISD::MUL ||
          Opc == ISD::SETCC || Opc == ISD::SELECT || Opc == ISD::SMIN ||
-         Opc == ISD::SMAX || Opc == ISD::UMIN || Opc == ISD::UMAX);
+         Opc == ISD::SMAX || Opc == ISD::UMIN || Opc == ISD::UMAX ||
+         Opc == ISD::USUBSAT);
 
   EVT OpTy = (Opc != ISD::SETCC) ? Op.getValueType()
                                  : Op->getOperand(0).getValueType();
@@ -9835,6 +9856,13 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
 bool SITargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
+  // Named barriers have fixed, non-relocated LDS addresses, so a constant
+  // offset into an array of them can be folded into the address.
+  if (GA->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+    const auto *GV = dyn_cast<GlobalVariable>(GA->getGlobal());
+    return GV && AMDGPU::isNamedBarrier(*GV);
+  }
+
   // OSes that use ELF REL relocations (instead of RELA) can only store a
   // 32-bit addend in the instruction, so it is not safe to allow offset folding
   // which can create arbitrary 64-bit addends. (This is only a problem for
@@ -10783,25 +10811,38 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_wave_reduce_min:
   case Intrinsic::amdgcn_wave_reduce_umin:
+  case Intrinsic::amdgcn_wave_reduce_fmin:
   case Intrinsic::amdgcn_wave_reduce_max:
   case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_wave_reduce_fmax:
   case Intrinsic::amdgcn_wave_reduce_add:
+  case Intrinsic::amdgcn_wave_reduce_fadd:
   case Intrinsic::amdgcn_wave_reduce_sub:
+  case Intrinsic::amdgcn_wave_reduce_fsub:
   case Intrinsic::amdgcn_wave_reduce_and:
   case Intrinsic::amdgcn_wave_reduce_or:
   case Intrinsic::amdgcn_wave_reduce_xor: {
     EVT SrcVT = Op.getOperand(1).getValueType();
-    if (SrcVT == MVT::i16) {
+    if (SrcVT.getFixedSizeInBits() == 16) {
+      bool IsFPOp = SrcVT.isFloatingPoint();
       bool NeedsSignExt = IntrinsicID == Intrinsic::amdgcn_wave_reduce_min ||
                           IntrinsicID == Intrinsic::amdgcn_wave_reduce_max ||
                           IntrinsicID == Intrinsic::amdgcn_wave_reduce_add ||
                           IntrinsicID == Intrinsic::amdgcn_wave_reduce_sub;
-      unsigned ExtOpc = NeedsSignExt ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-      SDValue ExtendedSrc = DAG.getNode(ExtOpc, DL, MVT::i32, Op.getOperand(1));
+      unsigned ExtOpc = IsFPOp         ? ISD::FP_EXTEND
+                        : NeedsSignExt ? ISD::SIGN_EXTEND
+                                       : ISD::ZERO_EXTEND;
+      auto SrcType = IsFPOp ? MVT::f16 : MVT::i16;
+      auto ExtType = IsFPOp ? MVT::f32 : MVT::i32;
+      SDValue ExtendedSrc = DAG.getNode(ExtOpc, DL, ExtType, Op.getOperand(1));
       SDValue Strategy = Op.getOperand(2);
-      SDValue Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+      SDValue Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ExtType,
                                    Op.getOperand(0), ExtendedSrc, Strategy);
-      return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Result);
+      if (IsFPOp)
+        return DAG.getNode(ISD::FP_ROUND, DL, SrcType, Result,
+                           DAG.getTargetConstant(1, DL, MVT::i32));
+      else
+        return DAG.getNode(ISD::TRUNCATE, DL, SrcType, Result);
     }
     return SDValue();
   }
@@ -11093,7 +11134,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return lowerBALLOTIntrinsic(*this, Op.getNode(), DAG);
   case Intrinsic::amdgcn_fmed3:
     return DAG.getNode(AMDGPUISD::FMED3, DL, VT, Op.getOperand(1),
-                       Op.getOperand(2), Op.getOperand(3));
+                       Op.getOperand(2), Op.getOperand(3), Op->getFlags());
   case Intrinsic::amdgcn_fdot2:
     return DAG.getNode(AMDGPUISD::FDOT2, DL, VT, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(4));
@@ -11956,10 +11997,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         SDValue M0Val;
         M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, Op->getOperand(2),
                             DAG.getShiftAmountConstant(4, MVT::i32, DL));
-        M0Val = SDValue(
-            DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, M0Val,
-                               DAG.getTargetConstant(0x3F, DL, MVT::i32)),
-            0);
+        M0Val = DAG.getNode(ISD::AND, DL, MVT::i32, M0Val,
+                            DAG.getConstant(0x3F, DL, MVT::i32));
         Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
       } else
         Ops.push_back(copyToM0(DAG, Chain, DL, Op->getOperand(2)).getValue(0));
@@ -12596,22 +12635,17 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue BarID;
     BarID = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
                         DAG.getShiftAmountConstant(4, MVT::i32, DL));
-    BarID =
-        SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, BarID,
-                                   DAG.getTargetConstant(0x3F, DL, MVT::i32)),
-                0);
+    BarID = DAG.getNode(ISD::AND, DL, MVT::i32, BarID,
+                        DAG.getConstant(0x3F, DL, MVT::i32));
     // Member count should be put into M0[ShAmt:+6]
     // Barrier ID should be put into M0[5:0]
-    M0Val =
-        SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, CntOp,
-                                   DAG.getTargetConstant(0x3F, DL, MVT::i32)),
-                0);
+    SDValue MemberCnt = DAG.getNode(ISD::AND, DL, MVT::i32, CntOp,
+                                    DAG.getConstant(0x3F, DL, MVT::i32));
     constexpr unsigned ShAmt = 16;
-    M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, CntOp,
+    M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, MemberCnt,
                         DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
 
-    M0Val = SDValue(
-        DAG.getMachineNode(AMDGPU::S_OR_B32, DL, MVT::i32, M0Val, BarID), 0);
+    M0Val = DAG.getNode(ISD::OR, DL, MVT::i32, M0Val, BarID);
 
     Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
 
@@ -12662,10 +12696,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       SDValue M0Val;
       M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
                           DAG.getShiftAmountConstant(4, MVT::i32, DL));
-      M0Val =
-          SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, M0Val,
-                                     DAG.getTargetConstant(0x3F, DL, MVT::i32)),
-                  0);
+      M0Val = DAG.getNode(ISD::AND, DL, MVT::i32, M0Val,
+                          DAG.getConstant(0x3F, DL, MVT::i32));
       Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
     }
 
@@ -18460,7 +18492,7 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
     return DCI.DAG.getConstantFP(Zero, SDLoc(N), N->getValueType(0));
   }
 
-  APFloat One(F.getSemantics(), "1.0");
+  APFloat One = APFloat::getOne(F.getSemantics());
   if (F > One)
     return DCI.DAG.getConstantFP(One, SDLoc(N), N->getValueType(0));
 
@@ -18543,6 +18575,10 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
 SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   switch (N->getOpcode()) {
+  case ISD::ABS:
+    if (SDValue Res = promoteUniformUnaryOpToI32(SDValue(N, 0), DCI))
+      return Res;
+    break;
   case ISD::ADD:
   case ISD::SUB:
   case ISD::SHL:
@@ -18558,6 +18594,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::USUBSAT:
     if (auto Res = promoteUniformOpToI32(SDValue(N, 0), DCI))
       return Res;
     break;
@@ -19207,10 +19244,8 @@ MachineSDNode *SITargetLowering::buildRSRC(SelectionDAG &DAG, const SDLoc &DL,
   SDValue PtrLo = DAG.getTargetExtractSubreg(AMDGPU::sub0, DL, MVT::i32, Ptr);
   SDValue PtrHi = DAG.getTargetExtractSubreg(AMDGPU::sub1, DL, MVT::i32, Ptr);
   if (RsrcDword1) {
-    PtrHi =
-        SDValue(DAG.getMachineNode(AMDGPU::S_OR_B32, DL, MVT::i32, PtrHi,
-                                   DAG.getConstant(RsrcDword1, DL, MVT::i32)),
-                0);
+    PtrHi = DAG.getNode(ISD::OR, DL, MVT::i32, PtrHi,
+                        DAG.getConstant(RsrcDword1, DL, MVT::i32));
   }
 
   SDValue DataLo =
@@ -19685,9 +19720,9 @@ void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       Op, Known, DemandedElts, DAG, Depth);
 }
 
-void SITargetLowering::computeKnownBitsForFrameIndex(
-    const int FI, KnownBits &Known, const MachineFunction &MF) const {
-  TargetLowering::computeKnownBitsForFrameIndex(FI, Known, MF);
+void SITargetLowering::computeKnownBitsForStackObjectPointer(
+    KnownBits &Known, const MachineFunction &MF, Align Alignment) const {
+  TargetLowering::computeKnownBitsForStackObjectPointer(Known, MF, Alignment);
 
   // Set the high bits to zero based on the maximum allowed scratch size per
   // wave. We can't use vaddr in MUBUF instructions if we don't know the address

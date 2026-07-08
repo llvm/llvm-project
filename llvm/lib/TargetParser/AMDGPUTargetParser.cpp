@@ -215,6 +215,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["swmmac-gfx1250-insts"] = true;
     [[fallthrough]];
   case GK_GFX1310:
+  case GK_GFX13_GENERIC:
     Features["cube-insts"] = true;
     Features["cvt-pknorm-vop2-insts"] = true;
     Features["lerp-inst"] = true;
@@ -267,6 +268,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["wavefrontsize32"] = true;
     Features["clusters"] = true;
     Features["mcast-load-insts"] = true;
+    Features["asynccnt"] = true;
     break;
   case GK_GFX1201:
   case GK_GFX1200:
@@ -311,6 +313,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   case GK_GFX1170:
   case GK_GFX1171:
   case GK_GFX1172:
+  case GK_GFX11_7_GENERIC:
     Features["ci-insts"] = true;
     Features["dot7-insts"] = true;
     Features["dot8-insts"] = true;

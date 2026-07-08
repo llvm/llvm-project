@@ -94,36 +94,48 @@ static cl::opt<bool> NoVerify("disable-verify",
                               cl::init(false), cl::cat(InterpreterCategory));
 
 cl::opt<ubi::UndefValueBehavior> UndefBehavior(
-    "", cl::desc("Choose undef value behavior:"),
-    cl::values(clEnumVal(ubi::UndefValueBehavior::NonDeterministic,
-                         "Each load of an uninitialized byte yields a freshly "
-                         "random value."),
-               clEnumVal(ubi::UndefValueBehavior::Zero,
-                         "All uses of an uninitialized byte yield zero.")));
+    "undef-behavior", cl::desc("Choose undef value behavior:"),
+    cl::values(clEnumValN(ubi::UndefValueBehavior::NonDeterministic, "nondet",
+                          "Each load of an uninitialized byte yields a freshly "
+                          "random value."),
+               clEnumValN(ubi::UndefValueBehavior::Zero, "zero",
+                          "All uses of an uninitialized byte yield zero.")));
 
 cl::opt<ubi::NaNPropagationBehavior> NaNPropagationBehavior(
-    "", cl::desc("Choose NaN propagation behavior:"),
+    "nan-behavior", cl::desc("Choose NaN propagation behavior:"),
     cl::values(
-        clEnumValN(ubi::NaNPropagationBehavior::NonDeterministic, "nan-nodet",
+        clEnumValN(ubi::NaNPropagationBehavior::NonDeterministic, "nondet",
                    "Non-deterministically choose from valid NaN results as "
                    "specified by language reference."),
-        clEnumValN(ubi::NaNPropagationBehavior::PreferredNaN, "nan-preferred",
+        clEnumValN(ubi::NaNPropagationBehavior::PreferredNaN, "preferred",
                    "The quiet bit is set and the payload is all-zero."),
         clEnumValN(
-            ubi::NaNPropagationBehavior::QuietingNaN, "nan-quieting",
+            ubi::NaNPropagationBehavior::QuietingNaN, "quieting",
             "The quiet bit is set and the payload is copied from any input"
             "operand that is a NaN."),
-        clEnumValN(ubi::NaNPropagationBehavior::UnchangedNaN, "nan-unchanged",
+        clEnumValN(ubi::NaNPropagationBehavior::UnchangedNaN, "unchanged",
                    "The quiet bit and payload are copied from any input operand"
                    "that is a NaN"),
         clEnumValN(ubi::NaNPropagationBehavior::TargetSpecificNaN,
-                   "nan-target-specific",
+                   "target-specific",
                    "The quiet bit is set and the payload is picked from a "
                    "known target-specific set of \"extra\" possible NaN "
                    "payloads.")),
     cl::init(ubi::NaNPropagationBehavior::NonDeterministic));
 
-class VerboseEventHandler : public ubi::EventHandler {
+class NoopEventHandler : public ubi::EventHandler {
+  void onImmediateUB(StringRef Msg) override {
+    errs() << "Immediate UB detected: " << Msg << '\n';
+  }
+
+  void onError(StringRef Msg) override { errs() << "Error: " << Msg << '\n'; }
+
+  void onUnrecognizedInstruction(Instruction &I) override {
+    errs() << "Unrecognized instruction: " << I << '\n';
+  }
+};
+
+class VerboseEventHandler : public NoopEventHandler {
 public:
   bool onInstructionExecuted(Instruction &I,
                              const ubi::AnyValue &Result) override {
@@ -135,12 +147,6 @@ public:
 
     return true;
   }
-
-  void onImmediateUB(StringRef Msg) override {
-    errs() << "Immediate UB detected: " << Msg << '\n';
-  }
-
-  void onError(StringRef Msg) override { errs() << "Error: " << Msg << '\n'; }
 
   bool onBBJump(Instruction &I, BasicBlock &To) override {
     errs() << I << " jump to ";
@@ -185,10 +191,6 @@ public:
     }
 
     llvm_unreachable("Unknown ProgramExitKind");
-  }
-
-  void onUnrecognizedInstruction(Instruction &I) override {
-    errs() << "Unrecognized instruction: " << I << '\n';
   }
 };
 
@@ -317,7 +319,7 @@ int main(int argc, char **argv) {
       Args.push_back(ubi::AnyValue::getNullValue(Ctx, Arg.getType()));
   }
 
-  ubi::EventHandler NoopHandler;
+  NoopEventHandler NoopHandler;
   VerboseEventHandler VerboseHandler;
   ubi::AnyValue RetVal;
   ubi::ProgramExitInfo ExitInfo = Ctx.runFunction(

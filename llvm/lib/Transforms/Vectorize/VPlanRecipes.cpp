@@ -371,8 +371,7 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
     assert((OpType != OperationType::FCmp ||
             FCmpFlags.CmpPredStorage == Other.FCmpFlags.CmpPredStorage) &&
            "Cannot drop CmpPredicate");
-    getFMFsRef().NoNaNs &= Other.getFMFsRef().NoNaNs;
-    getFMFsRef().NoInfs &= Other.getFMFsRef().NoInfs;
+    getFMFsRef() = getFastMathFlagsOrNone() & Other.getFastMathFlagsOrNone();
     break;
   case OperationType::NonNegOp:
     NonNegFlags.NonNeg &= Other.NonNegFlags.NonNeg;
@@ -388,8 +387,7 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
            "Cannot change IsOrdered");
     assert(ReductionFlags.IsInLoop == Other.ReductionFlags.IsInLoop &&
            "Cannot change IsInLoop");
-    getFMFsRef().NoNaNs &= Other.getFMFsRef().NoNaNs;
-    getFMFsRef().NoInfs &= Other.getFMFsRef().NoInfs;
+    getFMFsRef() = getFastMathFlagsOrNone() & Other.getFastMathFlagsOrNone();
     break;
   case OperationType::Other:
     break;
@@ -2953,9 +2951,8 @@ InstructionCost VPDerivedIVRecipe::computeCost(ElementCount VF,
     bool NeedsMul = true, NeedsAdd = true, NeedsShl = false;
 
     // If the start value is zero the add gets folded away.
-    if (auto *VPV = dyn_cast<VPIRValue>(getStartValue()))
-      if (auto *StartC = dyn_cast<ConstantInt>(VPV->getValue()))
-        NeedsAdd = !StartC->isZero();
+    if (auto *StartC = dyn_cast<VPConstantInt>(getStartValue()))
+      NeedsAdd = !StartC->isZero();
 
     // For some values of step the arithmetic changes:
     //  1. A step of 1 requires no operation.
@@ -2963,22 +2960,20 @@ InstructionCost VPDerivedIVRecipe::computeCost(ElementCount VF,
     //  3. A power-of-2 step will use a shl, instead of a mul.
     Type *StepTy = getStepValue()->getScalarType();
     InstructionCost Cost(0);
-    if (auto *VPV = dyn_cast<VPIRValue>(getStepValue())) {
-      if (auto *StepC = dyn_cast<ConstantInt>(VPV->getValue())) {
-        if (StepC->isOne())
-          NeedsMul = false;
-        else if (StepC->isMinusOne()) {
-          // This will most likely end up as a negate in simplifyRecipe, and
-          // the negate will be combined with the add to make a sub.
-          // NOTE: This is perhaps an invalid assumption that the cost of an
-          // 'add' is the same as a 'sub'.
-          NeedsMul = false;
-          NeedsAdd = true;
-        } else if (StepC->getValue().isPowerOf2()) {
-          // This will most likely end up as a shift-left in simplifyRecipe
-          NeedsMul = false;
-          NeedsShl = true;
-        }
+    if (auto *StepC = dyn_cast<VPConstantInt>(getStepValue())) {
+      if (StepC->isOne())
+        NeedsMul = false;
+      else if (StepC->getAPInt().isAllOnes()) {
+        // This will most likely end up as a negate in simplifyRecipe, and
+        // the negate will be combined with the add to make a sub.
+        // NOTE: This is perhaps an invalid assumption that the cost of an
+        // 'add' is the same as a 'sub'.
+        NeedsMul = false;
+        NeedsAdd = true;
+      } else if (StepC->getAPInt().isPowerOf2()) {
+        // This will most likely end up as a shift-left in simplifyRecipe
+        NeedsMul = false;
+        NeedsShl = true;
       }
     }
 

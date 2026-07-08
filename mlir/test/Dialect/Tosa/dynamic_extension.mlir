@@ -73,6 +73,22 @@ func.func @test_matmul_non_const_zps(%arg0: tensor<1x14x19xf32>, %arg1: tensor<1
 
 // -----
 
+func.func @test_matmul_t_non_const_a_zp(%arg0: tensor<1x14x19xf32>, %arg1: tensor<1x28x19xf32>, %a_zp: tensor<1xf32>) -> tensor<1x14x28xf32> {
+  %b_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<1x14x19xf32>, tensor<1x28x19xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<1x14x28xf32>
+  return %0 : tensor<1x14x28xf32>
+}
+
+// -----
+
+func.func @test_matmul_t_non_const_b_zp(%arg0: tensor<1x14x19xf32>, %arg1: tensor<1x28x19xf32>, %b_zp: tensor<1xf32>) -> tensor<1x14x28xf32> {
+  %a_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<1x14x19xf32>, tensor<1x28x19xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<1x14x28xf32>
+  return %0 : tensor<1x14x28xf32>
+}
+
+// -----
+
 func.func @test_negate_non_const_zps(%arg0: tensor<1xf32>, %input1_zp: tensor<1xf32>, %output_zp: tensor<1xf32>) -> tensor<1xf32> {
   %0 = tosa.negate %arg0, %input1_zp, %output_zp {} : (tensor<1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1xf32>
   return %0 : tensor<1xf32>

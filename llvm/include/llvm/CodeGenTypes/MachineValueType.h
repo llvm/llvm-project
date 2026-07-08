@@ -239,6 +239,13 @@ namespace llvm {
       return MVT::getVectorVT(getVectorElementType(), EC);
     }
 
+    /// Return a VT for a type whose attributes match ourselves with the
+    /// exception of the element type that is chosen by the caller.
+    MVT changeElementType(MVT EltVT) const {
+      EltVT = EltVT.getScalarType();
+      return isVector() ? changeVectorElementType(EltVT) : EltVT;
+    }
+
     /// Return the type converted to an equivalently sized integer or vector
     /// with integer element type. Similar to changeVectorElementTypeToInteger,
     /// but also handles scalars.
@@ -263,6 +270,21 @@ namespace llvm {
       MVT EltVT = getVectorElementType();
       auto EltCnt = getVectorElementCount();
       return MVT::getVectorVT(EltVT, EltCnt * 2);
+    }
+
+    // Return a VT for an Integer or vetor of integer type doubled in size
+    MVT widenIntegerElementType() const {
+      MVT BaseTy = getScalarType();
+      assert(BaseTy.isInteger() && "Not an integer or vector of integer MVT!");
+      assert((BaseTy != MVT::LAST_INTEGER_VALUETYPE) &&
+             "Widening of this Integer type not supported !");
+      MVT SclTy = getIntegerVT(BaseTy.getScalarSizeInBits() * 2);
+      assert((SclTy != MVT::INVALID_SIMPLE_VALUE_TYPE) &&
+             "Failed to widen to a valid scalar MVT!");
+      MVT ResTy = changeElementType(SclTy);
+      assert((ResTy != MVT::INVALID_SIMPLE_VALUE_TYPE) &&
+             "Failed to widen to a valid vector MVT!");
+      return ResTy;
     }
 
     /// Returns true if the given vector is a power of 2.

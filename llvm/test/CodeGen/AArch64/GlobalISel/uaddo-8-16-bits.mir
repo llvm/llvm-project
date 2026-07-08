@@ -11,16 +11,16 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x00000800), %bb.2(0x7ffff800)
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 8
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 8
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 8
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY1]], 8
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C]]
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i32) = G_AND [[ADD]], [[C]]
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND]](s32), [[C1]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.2
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[AND]](i32), [[C1]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -29,20 +29,20 @@ body:             |
   ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   $w0 = COPY [[ADD]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[ADD]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   bb.1.entry:
     successors: %bb.2(0x00000800), %bb.3(0x7ffff800)
     liveins: $w0, $w1
 
-    %2:_(s32) = COPY $w0
-    %3:_(s32) = G_ASSERT_ZEXT %2, 8
-    %0:_(s8) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY $w1
-    %5:_(s32) = G_ASSERT_ZEXT %4, 8
-    %1:_(s8) = G_TRUNC %5(s32)
-    %6:_(s8), %7:_(s1) = G_UADDO %0, %1
-    G_BRCOND %7(s1), %bb.2
+    %2:_(i32) = COPY $w0
+    %3:_(i32) = G_ASSERT_ZEXT %2, 8
+    %0:_(i8) = G_TRUNC %3(i32)
+    %4:_(i32) = COPY $w1
+    %5:_(i32) = G_ASSERT_ZEXT %4, 8
+    %1:_(i8) = G_TRUNC %5(i32)
+    %6:_(i8), %7:_(i1) = G_UADDO %0, %1
+    G_BRCOND %7(i1), %bb.2
     G_BR %bb.3
 
   bb.2:
@@ -51,8 +51,8 @@ body:             |
     G_TRAP
 
   bb.3:
-    %8:_(s32) = G_ZEXT %6(s8)
-    $w0 = COPY %8(s32)
+    %8:_(i32) = G_ZEXT %6(i8)
+    $w0 = COPY %8(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -65,16 +65,16 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x00000800), %bb.2(0x7ffff800)
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY1]], 16
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C]]
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i32) = G_AND [[ADD]], [[C]]
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND]](s32), [[C1]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.2
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[AND]](i32), [[C1]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -83,20 +83,20 @@ body:             |
   ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   $w0 = COPY [[ADD]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[ADD]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   bb.1:
     successors: %bb.2(0x00000800), %bb.3(0x7ffff800)
     liveins: $w0, $w1
 
-    %2:_(s32) = COPY $w0
-    %3:_(s32) = G_ASSERT_ZEXT %2, 16
-    %0:_(s16) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY $w1
-    %5:_(s32) = G_ASSERT_ZEXT %4, 16
-    %1:_(s16) = G_TRUNC %5(s32)
-    %6:_(s16), %7:_(s1) = G_UADDO %0, %1
-    G_BRCOND %7(s1), %bb.2
+    %2:_(i32) = COPY $w0
+    %3:_(i32) = G_ASSERT_ZEXT %2, 16
+    %0:_(i16) = G_TRUNC %3(i32)
+    %4:_(i32) = COPY $w1
+    %5:_(i32) = G_ASSERT_ZEXT %4, 16
+    %1:_(i16) = G_TRUNC %5(i32)
+    %6:_(i16), %7:_(i1) = G_UADDO %0, %1
+    G_BRCOND %7(i1), %bb.2
     G_BR %bb.3
 
   bb.2:
@@ -105,8 +105,8 @@ body:             |
     G_TRAP
 
   bb.3:
-    %8:_(s32) = G_ZEXT %6(s16)
-    $w0 = COPY %8(s32)
+    %8:_(i32) = G_ZEXT %6(i16)
+    $w0 = COPY %8(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -119,16 +119,16 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x00000800), %bb.2(0x7ffff800)
   ; CHECK-NEXT:   liveins: $w0, $w1, $x2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY1]], 16
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C]]
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i32) = G_AND [[ADD]], [[C]]
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND]](s32), [[C1]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.2
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[AND]](i32), [[C1]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -140,11 +140,11 @@ body:             |
   ; CHECK-NEXT:   liveins: $x2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   $w0 = COPY [[ADD]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[ADD]](i32)
   ; CHECK-NEXT:   BLR renamable $x2, implicit-def dead $lr, implicit $sp, implicit $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   $w0 = COPY [[ADD]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[ADD]](i32)
   ; CHECK-NEXT:   BLR killed renamable $x2, implicit-def dead $lr, implicit $sp, implicit $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   RET_ReallyLR
@@ -152,14 +152,14 @@ body:             |
     successors: %bb.2(0x00000800), %bb.3(0x7ffff800)
     liveins: $w0, $w1, $x2
 
-    %2:_(s32) = COPY $w0
-    %3:_(s32) = G_ASSERT_ZEXT %2, 16
-    %0:_(s16) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY $w1
-    %5:_(s32) = G_ASSERT_ZEXT %4, 16
-    %1:_(s16) = G_TRUNC %5(s32)
-    %6:_(s16), %7:_(s1) = G_UADDO %0, %1
-    G_BRCOND %7(s1), %bb.2
+    %2:_(i32) = COPY $w0
+    %3:_(i32) = G_ASSERT_ZEXT %2, 16
+    %0:_(i16) = G_TRUNC %3(i32)
+    %4:_(i32) = COPY $w1
+    %5:_(i32) = G_ASSERT_ZEXT %4, 16
+    %1:_(i16) = G_TRUNC %5(i32)
+    %6:_(i16), %7:_(i1) = G_UADDO %0, %1
+    G_BRCOND %7(i1), %bb.2
     G_BR %bb.3
 
   bb.2:
@@ -171,12 +171,12 @@ body:             |
     liveins: $x2
 
     ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    %8:_(s32) = G_ANYEXT %6(s16)
-    $w0 = COPY %8(s32)
+    %8:_(i32) = G_ANYEXT %6(i16)
+    $w0 = COPY %8(i32)
     BLR renamable $x2, implicit-def dead $lr, implicit $sp, implicit $w0
     ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    $w0 = COPY %8(s32)
+    $w0 = COPY %8(i32)
     BLR killed renamable $x2, implicit-def dead $lr, implicit $sp, implicit $w0
     ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     RET_ReallyLR
@@ -191,16 +191,16 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x00000800), %bb.2(0x7ffff800)
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY1]], 16
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C]]
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i32) = G_AND [[ADD]], [[C]]
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND]](s32), [[C1]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.2
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[AND]](i32), [[C1]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -209,20 +209,20 @@ body:             |
   ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   $w0 = COPY [[ADD]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[ADD]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   bb.1:
     successors: %bb.2(0x00000800), %bb.3(0x7ffff800)
     liveins: $w0, $w1
 
-    %2:_(s32) = COPY $w0
-    %3:_(s32) = G_ASSERT_ZEXT %2, 16
-    %0:_(s16) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY $w1
-    %5:_(s32) = G_ASSERT_ZEXT %4, 16
-    %1:_(s16) = G_TRUNC %5(s32)
-    %6:_(s16), %7:_(s1) = G_UADDO %0, %1
-    G_BRCOND %7(s1), %bb.2
+    %2:_(i32) = COPY $w0
+    %3:_(i32) = G_ASSERT_ZEXT %2, 16
+    %0:_(i16) = G_TRUNC %3(i32)
+    %4:_(i32) = COPY $w1
+    %5:_(i32) = G_ASSERT_ZEXT %4, 16
+    %1:_(i16) = G_TRUNC %5(i32)
+    %6:_(i16), %7:_(i1) = G_UADDO %0, %1
+    G_BRCOND %7(i1), %bb.2
     G_BR %bb.3
 
   bb.2:
@@ -231,8 +231,8 @@ body:             |
     G_TRAP
 
   bb.3:
-    %8:_(s32) = G_ANYEXT %6(s16)
-    $w0 = COPY %8(s32)
+    %8:_(i32) = G_ANYEXT %6(i16)
+    $w0 = COPY %8(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -245,17 +245,17 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x00000800), %bb.2(0x7ffff800)
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY1]], 16
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C]]
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i32) = G_AND [[ADD]], [[C]]
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND]](s32), [[C1]]
-  ; CHECK-NEXT:   DBG_VALUE [[ICMP]](s1)
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.2
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[AND]](i32), [[C1]]
+  ; CHECK-NEXT:   DBG_VALUE [[ICMP]](i1)
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -264,21 +264,21 @@ body:             |
   ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   $w0 = COPY [[ADD]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[ADD]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   bb.1:
     successors: %bb.2(0x00000800), %bb.3(0x7ffff800)
     liveins: $w0, $w1
 
-    %2:_(s32) = COPY $w0
-    %3:_(s32) = G_ASSERT_ZEXT %2, 16
-    %0:_(s16) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY $w1
-    %5:_(s32) = G_ASSERT_ZEXT %4, 16
-    %1:_(s16) = G_TRUNC %5(s32)
-    %6:_(s16), %7:_(s1) = G_UADDO %0, %1
-    DBG_VALUE %7(s1)
-    G_BRCOND %7(s1), %bb.2
+    %2:_(i32) = COPY $w0
+    %3:_(i32) = G_ASSERT_ZEXT %2, 16
+    %0:_(i16) = G_TRUNC %3(i32)
+    %4:_(i32) = COPY $w1
+    %5:_(i32) = G_ASSERT_ZEXT %4, 16
+    %1:_(i16) = G_TRUNC %5(i32)
+    %6:_(i16), %7:_(i1) = G_UADDO %0, %1
+    DBG_VALUE %7(i1)
+    G_BRCOND %7(i1), %bb.2
     G_BR %bb.3
 
   bb.2:
@@ -287,8 +287,8 @@ body:             |
     G_TRAP
 
   bb.3:
-    %8:_(s32) = G_ZEXT %6(s16)
-    $w0 = COPY %8(s32)
+    %8:_(i32) = G_ZEXT %6(i16)
+    $w0 = COPY %8(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -301,17 +301,17 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x00000800), %bb.2(0x7ffff800)
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY1]], 16
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C]]
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i32) = G_AND [[ADD]], [[C]]
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND]](s32), [[C1]]
-  ; CHECK-NEXT:   DBG_VALUE %6:_(s16)
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.2
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[AND]](i32), [[C1]]
+  ; CHECK-NEXT:   DBG_VALUE %6:_(i16)
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -320,21 +320,21 @@ body:             |
   ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   $w0 = COPY [[ADD]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[ADD]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   bb.1:
     successors: %bb.2(0x00000800), %bb.3(0x7ffff800)
     liveins: $w0, $w1
 
-    %2:_(s32) = COPY $w0
-    %3:_(s32) = G_ASSERT_ZEXT %2, 16
-    %0:_(s16) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY $w1
-    %5:_(s32) = G_ASSERT_ZEXT %4, 16
-    %1:_(s16) = G_TRUNC %5(s32)
-    %6:_(s16), %7:_(s1) = G_UADDO %0, %1
-    DBG_VALUE %6(s16)
-    G_BRCOND %7(s1), %bb.2
+    %2:_(i32) = COPY $w0
+    %3:_(i32) = G_ASSERT_ZEXT %2, 16
+    %0:_(i16) = G_TRUNC %3(i32)
+    %4:_(i32) = COPY $w1
+    %5:_(i32) = G_ASSERT_ZEXT %4, 16
+    %1:_(i16) = G_TRUNC %5(i32)
+    %6:_(i16), %7:_(i1) = G_UADDO %0, %1
+    DBG_VALUE %6(i16)
+    G_BRCOND %7(i1), %bb.2
     G_BR %bb.3
 
   bb.2:
@@ -343,8 +343,8 @@ body:             |
     G_TRAP
 
   bb.3:
-    %8:_(s32) = G_ZEXT %6(s16)
-    $w0 = COPY %8(s32)
+    %8:_(i32) = G_ZEXT %6(i16)
+    $w0 = COPY %8(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -357,21 +357,21 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x00000800), %bb.2(0x7ffff800)
   ; CHECK-NEXT:   liveins: $w0, $w1, $x2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT]](s32)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT1]](s32)
-  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(s16), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[TRUNC]], [[TRUNC1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 16
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_ZEXT]](i32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY1]], 16
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_ZEXT1]](i32)
+  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(i16), [[UADDO1:%[0-9]+]]:_(i1) = G_UADDO [[TRUNC]], [[TRUNC1]]
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UADDO]](s16)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](s32)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[UADDO]](i16)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   BLR renamable $x2, implicit-def dead $lr, implicit $sp, implicit $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[UADDO1]], [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[XOR]](s1), %bb.2
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i1) = G_CONSTANT i1 true
+  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(i1) = G_XOR [[UADDO1]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[XOR]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -383,8 +383,8 @@ body:             |
   ; CHECK-NEXT:   liveins: $x2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UADDO]](s16)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT1]](s32)
+  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[UADDO]](i16)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT1]](i32)
   ; CHECK-NEXT:   BLR renamable $x2, implicit-def dead $lr, implicit $sp, implicit $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   RET_ReallyLR
@@ -392,19 +392,19 @@ body:             |
     successors: %bb.2(0x00000800), %bb.3(0x7ffff800)
     liveins: $w0, $w1, $x2
 
-    %2:_(s32) = COPY $w0
-    %3:_(s32) = G_ASSERT_ZEXT %2, 16
-    %0:_(s16) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY $w1
-    %5:_(s32) = G_ASSERT_ZEXT %4, 16
-    %1:_(s16) = G_TRUNC %5(s32)
-    %6:_(s16), %7:_(s1) = G_UADDO %0, %1
+    %2:_(i32) = COPY $w0
+    %3:_(i32) = G_ASSERT_ZEXT %2, 16
+    %0:_(i16) = G_TRUNC %3(i32)
+    %4:_(i32) = COPY $w1
+    %5:_(i32) = G_ASSERT_ZEXT %4, 16
+    %1:_(i16) = G_TRUNC %5(i32)
+    %6:_(i16), %7:_(i1) = G_UADDO %0, %1
     ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    %8:_(s32) = G_ANYEXT %6(s16)
-    $w0 = COPY %8(s32)
+    %8:_(i32) = G_ANYEXT %6(i16)
+    $w0 = COPY %8(i32)
     BLR renamable $x2, implicit-def dead $lr, implicit $sp, implicit $w0
     ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    G_BRCOND %7(s1), %bb.2
+    G_BRCOND %7(i1), %bb.2
     G_BR %bb.3
 
   bb.2:
@@ -416,8 +416,8 @@ body:             |
     liveins: $x2
 
     ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    %9:_(s32) = G_ANYEXT %6(s16)
-    $w0 = COPY %9(s32)
+    %9:_(i32) = G_ANYEXT %6(i16)
+    $w0 = COPY %9(i32)
     BLR renamable $x2, implicit-def dead $lr, implicit $sp, implicit $w0
     ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     RET_ReallyLR
@@ -432,52 +432,52 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT]](s32)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT1]](s32)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
-  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(s16), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[TRUNC]], [[TRUNC1]]
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UADDO]](s16)
-  ; CHECK-NEXT:   G_BRCOND [[UADDO1]](s1), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 16
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_ZEXT]](i32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY1]], 16
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_ZEXT1]](i32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
+  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(i16), [[UADDO1:%[0-9]+]]:_(i1) = G_UADDO [[TRUNC]], [[TRUNC1]]
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[UADDO]](i16)
+  ; CHECK-NEXT:   G_BRCOND [[UADDO1]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[C]](s32), %bb.2, [[ANYEXT]](s32), %bb.0
-  ; CHECK-NEXT:   $w0 = COPY [[PHI]](s32)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[C]](i32), %bb.2, [[ANYEXT]](i32), %bb.0
+  ; CHECK-NEXT:   $w0 = COPY [[PHI]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UADDO]](s16)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT1]](s32)
+  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[UADDO]](i16)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT1]](i32)
   ; CHECK-NEXT:   G_BR %bb.1
   bb.1:
     liveins: $w0, $w1
 
-    %2:_(s32) = COPY $w0
-    %3:_(s32) = G_ASSERT_ZEXT %2, 16
-    %0:_(s16) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY $w1
-    %5:_(s32) = G_ASSERT_ZEXT %4, 16
-    %1:_(s16) = G_TRUNC %5(s32)
-    %11:_(s16) = G_CONSTANT i16 10
-    %6:_(s16), %7:_(s1) = G_UADDO %0, %1
-    G_BRCOND %7(s1), %bb.3
+    %2:_(i32) = COPY $w0
+    %3:_(i32) = G_ASSERT_ZEXT %2, 16
+    %0:_(i16) = G_TRUNC %3(i32)
+    %4:_(i32) = COPY $w1
+    %5:_(i32) = G_ASSERT_ZEXT %4, 16
+    %1:_(i16) = G_TRUNC %5(i32)
+    %11:_(i16) = G_CONSTANT i16 10
+    %6:_(i16), %7:_(i1) = G_UADDO %0, %1
+    G_BRCOND %7(i1), %bb.3
     G_BR %bb.2
 
   bb.2:
-    %9:_(s16) = G_PHI %11(s16), %bb.3, %6(s16), %bb.1
-    %10:_(s32) = G_ANYEXT %9(s16)
-    $w0 = COPY %10(s32)
+    %9:_(i16) = G_PHI %11(i16), %bb.3, %6(i16), %bb.1
+    %10:_(i32) = G_ANYEXT %9(i16)
+    $w0 = COPY %10(i32)
     RET_ReallyLR implicit $w0
 
   bb.3:
-    %8:_(s32) = G_ANYEXT %6(s16)
-    $w0 = COPY %8(s32)
+    %8:_(i32) = G_ANYEXT %6(i16)
+    $w0 = COPY %8(i32)
     G_BR %bb.2
 
 ...
@@ -490,23 +490,23 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x00000800), %bb.3(0x7ffff800)
   ; CHECK-NEXT:   liveins: $w0, $w1, $x2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT]](s32)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT1]](s32)
-  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(s16), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[TRUNC]], [[TRUNC1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 16
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_ZEXT]](i32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY1]], 16
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_ZEXT1]](i32)
+  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(i16), [[UADDO1:%[0-9]+]]:_(i1) = G_UADDO [[TRUNC]], [[TRUNC1]]
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x00000800), %bb.3(0x7ffff800)
   ; CHECK-NEXT:   liveins: $x2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UADDO]](s16)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](s32)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[UADDO]](i16)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   BLR renamable $x2, implicit-def dead $lr, implicit $sp, implicit $w0
-  ; CHECK-NEXT:   G_BRCOND [[UADDO1]](s1), %bb.2
+  ; CHECK-NEXT:   G_BRCOND [[UADDO1]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -515,30 +515,30 @@ body:             |
   ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO]](s16)
-  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[UADDO]](i16)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   bb.1:
     successors: %bb.2(0x00000800), %bb.3(0x7ffff800)
     liveins: $w0, $w1, $x2
 
-    %2:_(s32) = COPY $w0
-    %3:_(s32) = G_ASSERT_ZEXT %2, 16
-    %0:_(s16) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY $w1
-    %5:_(s32) = G_ASSERT_ZEXT %4, 16
-    %1:_(s16) = G_TRUNC %5(s32)
-    %6:_(s16), %7:_(s1) = G_UADDO %0, %1
+    %2:_(i32) = COPY $w0
+    %3:_(i32) = G_ASSERT_ZEXT %2, 16
+    %0:_(i16) = G_TRUNC %3(i32)
+    %4:_(i32) = COPY $w1
+    %5:_(i32) = G_ASSERT_ZEXT %4, 16
+    %1:_(i16) = G_TRUNC %5(i32)
+    %6:_(i16), %7:_(i1) = G_UADDO %0, %1
     G_BR %bb.4
 
   bb.4:
     liveins: $x2
     successors: %bb.2(0x00000800), %bb.3(0x7ffff800)
 
-    %8:_(s32) = G_ANYEXT %6(s16)
-    $w0 = COPY %8(s32)
+    %8:_(i32) = G_ANYEXT %6(i16)
+    $w0 = COPY %8(i32)
     BLR renamable $x2, implicit-def dead $lr, implicit $sp, implicit $w0
-    G_BRCOND %7(s1), %bb.2
+    G_BRCOND %7(i1), %bb.2
     G_BR %bb.3
 
   bb.2:
@@ -547,8 +547,8 @@ body:             |
     G_TRAP
 
   bb.3:
-    %9:_(s32) = G_ZEXT %6(s16)
-    $w0 = COPY %9(s32)
+    %9:_(i32) = G_ZEXT %6(i16)
+    $w0 = COPY %9(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -561,17 +561,17 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x00000800), %bb.2(0x7ffff800)
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT]](s32)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 8
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_ZEXT1]](s32)
-  ; CHECK-NEXT:   [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC]](s16)
-  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(s8), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[TRUNC2]], [[TRUNC1]]
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[UADDO1]], [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[XOR]](s1), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 16
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_ZEXT]](i32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY1]], 8
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i8) = G_TRUNC [[ASSERT_ZEXT1]](i32)
+  ; CHECK-NEXT:   [[TRUNC2:%[0-9]+]]:_(i8) = G_TRUNC [[TRUNC]](i16)
+  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(i8), [[UADDO1:%[0-9]+]]:_(i1) = G_UADDO [[TRUNC2]], [[TRUNC1]]
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i1) = G_CONSTANT i1 true
+  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(i1) = G_XOR [[UADDO1]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[XOR]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -580,22 +580,22 @@ body:             |
   ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO]](s8)
-  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[UADDO]](i8)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   bb.1:
     successors: %bb.2(0x00000800), %bb.3(0x7ffff800)
     liveins: $w0, $w1
 
-    %2:_(s32) = COPY $w0
-    %3:_(s32) = G_ASSERT_ZEXT %2, 16
-    %0:_(s16) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY $w1
-    %5:_(s32) = G_ASSERT_ZEXT %4, 8
-    %1:_(s8) = G_TRUNC %5(s32)
-    %6:_(s8) = G_TRUNC %0(s16)
-    %7:_(s8), %8:_(s1) = G_UADDO %6, %1
-    G_BRCOND %8(s1), %bb.2
+    %2:_(i32) = COPY $w0
+    %3:_(i32) = G_ASSERT_ZEXT %2, 16
+    %0:_(i16) = G_TRUNC %3(i32)
+    %4:_(i32) = COPY $w1
+    %5:_(i32) = G_ASSERT_ZEXT %4, 8
+    %1:_(i8) = G_TRUNC %5(i32)
+    %6:_(i8) = G_TRUNC %0(i16)
+    %7:_(i8), %8:_(i1) = G_UADDO %6, %1
+    G_BRCOND %8(i1), %bb.2
     G_BR %bb.3
 
   bb.2:
@@ -604,8 +604,8 @@ body:             |
     G_TRAP
 
   bb.3:
-    %9:_(s32) = G_ZEXT %7(s8)
-    $w0 = COPY %9(s32)
+    %9:_(i32) = G_ZEXT %7(i8)
+    $w0 = COPY %9(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -618,17 +618,17 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x00000800), %bb.2(0x7ffff800)
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 8
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_ZEXT]](s32)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT1]](s32)
-  ; CHECK-NEXT:   [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC1]](s16)
-  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(s8), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[TRUNC]], [[TRUNC2]]
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[UADDO1]], [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[XOR]](s1), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 8
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[ASSERT_ZEXT]](i32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY1]], 16
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_ZEXT1]](i32)
+  ; CHECK-NEXT:   [[TRUNC2:%[0-9]+]]:_(i8) = G_TRUNC [[TRUNC1]](i16)
+  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(i8), [[UADDO1:%[0-9]+]]:_(i1) = G_UADDO [[TRUNC]], [[TRUNC2]]
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i1) = G_CONSTANT i1 true
+  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(i1) = G_XOR [[UADDO1]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[XOR]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -637,22 +637,22 @@ body:             |
   ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO]](s8)
-  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[UADDO]](i8)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   bb.1:
     successors: %bb.2(0x00000800), %bb.3(0x7ffff800)
     liveins: $w0, $w1
 
-    %2:_(s32) = COPY $w0
-    %3:_(s32) = G_ASSERT_ZEXT %2, 8
-    %0:_(s8) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY $w1
-    %5:_(s32) = G_ASSERT_ZEXT %4, 16
-    %1:_(s16) = G_TRUNC %5(s32)
-    %6:_(s8) = G_TRUNC %1(s16)
-    %7:_(s8), %8:_(s1) = G_UADDO %0, %6
-    G_BRCOND %8(s1), %bb.2
+    %2:_(i32) = COPY $w0
+    %3:_(i32) = G_ASSERT_ZEXT %2, 8
+    %0:_(i8) = G_TRUNC %3(i32)
+    %4:_(i32) = COPY $w1
+    %5:_(i32) = G_ASSERT_ZEXT %4, 16
+    %1:_(i16) = G_TRUNC %5(i32)
+    %6:_(i8) = G_TRUNC %1(i16)
+    %7:_(i8), %8:_(i1) = G_UADDO %0, %6
+    G_BRCOND %8(i1), %bb.2
     G_BR %bb.3
 
   bb.2:
@@ -661,8 +661,8 @@ body:             |
     G_TRAP
 
   bb.3:
-    %9:_(s32) = G_ZEXT %7(s8)
-    $w0 = COPY %9(s32)
+    %9:_(i32) = G_ZEXT %7(i8)
+    $w0 = COPY %9(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -675,18 +675,18 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x00000800), %bb.2(0x7ffff800)
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT]](s32)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT1]](s32)
-  ; CHECK-NEXT:   [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC]](s16)
-  ; CHECK-NEXT:   [[TRUNC3:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC1]](s16)
-  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(s8), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[TRUNC2]], [[TRUNC3]]
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[UADDO1]], [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[XOR]](s1), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 16
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_ZEXT]](i32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY1]], 16
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_ZEXT1]](i32)
+  ; CHECK-NEXT:   [[TRUNC2:%[0-9]+]]:_(i8) = G_TRUNC [[TRUNC]](i16)
+  ; CHECK-NEXT:   [[TRUNC3:%[0-9]+]]:_(i8) = G_TRUNC [[TRUNC1]](i16)
+  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(i8), [[UADDO1:%[0-9]+]]:_(i1) = G_UADDO [[TRUNC2]], [[TRUNC3]]
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i1) = G_CONSTANT i1 true
+  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(i1) = G_XOR [[UADDO1]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[XOR]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -695,23 +695,23 @@ body:             |
   ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO]](s8)
-  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[UADDO]](i8)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   bb.1:
     successors: %bb.2(0x00000800), %bb.3(0x7ffff800)
     liveins: $w0, $w1
 
-    %2:_(s32) = COPY $w0
-    %3:_(s32) = G_ASSERT_ZEXT %2, 16
-    %0:_(s16) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY $w1
-    %5:_(s32) = G_ASSERT_ZEXT %4, 16
-    %1:_(s16) = G_TRUNC %5(s32)
-    %6:_(s8) = G_TRUNC %0(s16)
-    %7:_(s8) = G_TRUNC %1(s16)
-    %8:_(s8), %9:_(s1) = G_UADDO %6, %7
-    G_BRCOND %9(s1), %bb.2
+    %2:_(i32) = COPY $w0
+    %3:_(i32) = G_ASSERT_ZEXT %2, 16
+    %0:_(i16) = G_TRUNC %3(i32)
+    %4:_(i32) = COPY $w1
+    %5:_(i32) = G_ASSERT_ZEXT %4, 16
+    %1:_(i16) = G_TRUNC %5(i32)
+    %6:_(i8) = G_TRUNC %0(i16)
+    %7:_(i8) = G_TRUNC %1(i16)
+    %8:_(i8), %9:_(i1) = G_UADDO %6, %7
+    G_BRCOND %9(i1), %bb.2
     G_BR %bb.3
 
   bb.2:
@@ -720,8 +720,8 @@ body:             |
     G_TRAP
 
   bb.3:
-    %10:_(s32) = G_ZEXT %8(s8)
-    $w0 = COPY %10(s32)
+    %10:_(i32) = G_ZEXT %8(i8)
+    $w0 = COPY %10(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -735,29 +735,29 @@ body:             |
     ; CHECK-LABEL: name: cannot_fold_overflow_status_used_in_select
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT]](s32)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT1]](s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 10
-    ; CHECK-NEXT: [[UADDO:%[0-9]+]]:_(s16), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[UADDO1]](s1), [[C]], [[UADDO]]
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[SELECT]](s16)
-    ; CHECK-NEXT: $w0 = COPY [[ZEXT]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 16
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_ZEXT]](i32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY1]], 16
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_ZEXT1]](i32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 10
+    ; CHECK-NEXT: [[UADDO:%[0-9]+]]:_(i16), [[UADDO1:%[0-9]+]]:_(i1) = G_UADDO [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i16) = G_SELECT [[UADDO1]](i1), [[C]], [[UADDO]]
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[SELECT]](i16)
+    ; CHECK-NEXT: $w0 = COPY [[ZEXT]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %2:_(s32) = COPY $w0
-    %3:_(s32) = G_ASSERT_ZEXT %2, 16
-    %0:_(s16) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY $w1
-    %5:_(s32) = G_ASSERT_ZEXT %4, 16
-    %1:_(s16) = G_TRUNC %5(s32)
-    %9:_(s16) = G_CONSTANT i16 10
-    %6:_(s16), %7:_(s1) = G_UADDO %0, %1
-    %8:_(s16) = G_SELECT %7(s1), %9, %6
-    %10:_(s32) = G_ZEXT %8(s16)
-    $w0 = COPY %10(s32)
+    %2:_(i32) = COPY $w0
+    %3:_(i32) = G_ASSERT_ZEXT %2, 16
+    %0:_(i16) = G_TRUNC %3(i32)
+    %4:_(i32) = COPY $w1
+    %5:_(i32) = G_ASSERT_ZEXT %4, 16
+    %1:_(i16) = G_TRUNC %5(i32)
+    %9:_(i16) = G_CONSTANT i16 10
+    %6:_(i16), %7:_(i1) = G_UADDO %0, %1
+    %8:_(i16) = G_SELECT %7(i1), %9, %6
+    %10:_(i32) = G_ZEXT %8(i16)
+    $w0 = COPY %10(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -770,14 +770,14 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x00000800), %bb.2(0x7ffff800)
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(s16), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[TRUNC]], [[TRUNC1]]
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[UADDO1]], [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[XOR]](s1), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[COPY1]](i32)
+  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(i16), [[UADDO1:%[0-9]+]]:_(i1) = G_UADDO [[TRUNC]], [[TRUNC1]]
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i1) = G_CONSTANT i1 true
+  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(i1) = G_XOR [[UADDO1]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[XOR]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -786,19 +786,19 @@ body:             |
   ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UADDO]](s16)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](s32)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[UADDO]](i16)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   bb.1:
     successors: %bb.2(0x00000800), %bb.3(0x7ffff800)
     liveins: $w0, $w1
 
-    %2:_(s32) = COPY $w0
-    %0:_(s16) = G_TRUNC %2(s32)
-    %3:_(s32) = COPY $w1
-    %1:_(s16) = G_TRUNC %3(s32)
-    %4:_(s16), %5:_(s1) = G_UADDO %0, %1
-    G_BRCOND %5(s1), %bb.2
+    %2:_(i32) = COPY $w0
+    %0:_(i16) = G_TRUNC %2(i32)
+    %3:_(i32) = COPY $w1
+    %1:_(i16) = G_TRUNC %3(i32)
+    %4:_(i16), %5:_(i1) = G_UADDO %0, %1
+    G_BRCOND %5(i1), %bb.2
     G_BR %bb.3
 
   bb.2:
@@ -807,8 +807,8 @@ body:             |
     G_TRAP
 
   bb.3:
-    %6:_(s32) = G_ANYEXT %4(s16)
-    $w0 = COPY %6(s32)
+    %6:_(i32) = G_ANYEXT %4(i16)
+    $w0 = COPY %6(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -821,21 +821,21 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x7ffff800), %bb.2(0x00000800)
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT]](s32)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT1]](s32)
-  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(s16), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[TRUNC]], [[TRUNC1]]
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[UADDO1]], [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[XOR]](s1), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 16
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_ZEXT]](i32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY1]], 16
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_ZEXT1]](i32)
+  ; CHECK-NEXT:   [[UADDO:%[0-9]+]]:_(i16), [[UADDO1:%[0-9]+]]:_(i1) = G_UADDO [[TRUNC]], [[TRUNC1]]
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i1) = G_CONSTANT i1 true
+  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(i1) = G_XOR [[UADDO1]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[XOR]](i1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO]](s16)
-  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[UADDO]](i16)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -844,19 +844,19 @@ body:             |
     successors: %bb.2(0x7ffff800), %bb.3(0x00000800)
     liveins: $w0, $w1
 
-    %2:_(s32) = COPY $w0
-    %3:_(s32) = G_ASSERT_ZEXT %2, 16
-    %0:_(s16) = G_TRUNC %3(s32)
-    %4:_(s32) = COPY $w1
-    %5:_(s32) = G_ASSERT_ZEXT %4, 16
-    %1:_(s16) = G_TRUNC %5(s32)
-    %6:_(s16), %7:_(s1) = G_UADDO %0, %1
-    G_BRCOND %7(s1), %bb.2
+    %2:_(i32) = COPY $w0
+    %3:_(i32) = G_ASSERT_ZEXT %2, 16
+    %0:_(i16) = G_TRUNC %3(i32)
+    %4:_(i32) = COPY $w1
+    %5:_(i32) = G_ASSERT_ZEXT %4, 16
+    %1:_(i16) = G_TRUNC %5(i32)
+    %6:_(i16), %7:_(i1) = G_UADDO %0, %1
+    G_BRCOND %7(i1), %bb.2
     G_BR %bb.3
 
   bb.2:
-    %8:_(s32) = G_ZEXT %6(s16)
-    $w0 = COPY %8(s32)
+    %8:_(i32) = G_ZEXT %6(i16)
+    $w0 = COPY %8(i32)
     RET_ReallyLR implicit $w0
 
   bb.3:

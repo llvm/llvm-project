@@ -49,7 +49,6 @@
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -5384,9 +5383,14 @@ private:
     mlir::Value rhsVal = getRefFromValue(rhs.getBase());
     mlir::Value lhsVal = getRefFromValue(lhs.getBase());
     // Get shape from the rhs if available otherwise get it from lhs.
-    mlir::Value shape = getShapeFromDecl(rhs.getBase());
-    if (!shape)
-      shape = getShapeFromDecl(lhs.getBase());
+    mlir::Value shape;
+    if (fir::isa_ref_type(rhsVal.getType()) ||
+        fir::isa_ref_type(lhsVal.getType())) {
+      if (mlir::Value rhsShape = getShapeFromDecl(rhs.getBase()))
+        shape = rhsShape;
+      else
+        shape = getShapeFromDecl(lhs.getBase());
+    }
 
     // device = host
     if (lhsIsDevice && !rhsIsDevice) {
@@ -5443,8 +5447,13 @@ private:
       }
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
-      cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
-                                  transferKindAttr, hasManagedOrUnifedSymbols);
+      if (fir::isa_trivial(rhsVal.getType())) {
+        fir::StoreOp::create(builder, loc, rhsVal, lhsVal);
+      } else {
+        cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
+                                    transferKindAttr,
+                                    hasManagedOrUnifedSymbols);
+      }
       return;
     }
 

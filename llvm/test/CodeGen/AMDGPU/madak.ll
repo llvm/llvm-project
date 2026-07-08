@@ -1323,14 +1323,13 @@ define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], fl
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:  .LBB9_2: ; %bb4
+; GFX6-NEXT:    s_load_dword s0, s[4:5], 0x12
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s2, -1
-; GFX6-NEXT:    s_waitcnt expcnt(0)
+; GFX6-NEXT:    v_mov_b32_e32 v1, 0x42280000
+; GFX6-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    s_load_dword s0, s[4:5], 0x12
-; GFX6-NEXT:    v_mov_b32_e32 v1, 0x42280000
-; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mac_f32_e64 v1, s0, 0.5
 ; GFX6-NEXT:    v_mul_f32_e32 v0, v1, v0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -1348,9 +1347,9 @@ define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], fl
 ; GFX8-NEXT:    flat_store_dword v[0:1], v0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:  .LBB9_2: ; %bb4
+; GFX8-NEXT:    s_load_dword s0, s[4:5], 0x48
 ; GFX8-NEXT:    flat_load_dword v0, v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    s_load_dword s0, s[4:5], 0x48
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0x42280000
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mac_f32_e64 v1, s0, 0.5
@@ -1370,9 +1369,9 @@ define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], fl
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  .LBB9_2: ; %bb4
+; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x48
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x48
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x42280000
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mac_f32_e64 v1, s0, 0.5
@@ -1392,9 +1391,9 @@ define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], fl
 ; GFX10-MAD-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX10-MAD-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-MAD-NEXT:  .LBB9_2: ; %bb4
+; GFX10-MAD-NEXT:    s_load_dword s0, s[4:5], 0x48
 ; GFX10-MAD-NEXT:    global_load_dword v0, v[0:1], off glc dlc
 ; GFX10-MAD-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-MAD-NEXT:    s_load_dword s0, s[4:5], 0x48
 ; GFX10-MAD-NEXT:    v_mov_b32_e32 v1, 0.5
 ; GFX10-MAD-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-MAD-NEXT:    v_madak_f32 v1, s0, v1, 0x42280000
@@ -1414,10 +1413,9 @@ define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], fl
 ; GFX11-MAD-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-MAD-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-MAD-NEXT:  .LBB9_2: ; %bb4
-; GFX11-MAD-NEXT:    global_load_b32 v0, v[0:1], off glc dlc
-; GFX11-MAD-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-MAD-NEXT:    s_load_b32 s0, s[4:5], 0x48
-; GFX11-MAD-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-MAD-NEXT:    global_load_b32 v0, v[0:1], off glc dlc
+; GFX11-MAD-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-MAD-NEXT:    v_mul_f32_e64 v1, s0, 0.5
 ; GFX11-MAD-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-MAD-NEXT:    v_add_f32_e32 v1, 0x42280000, v1
@@ -1437,9 +1435,9 @@ define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], fl
 ; GFX942-FMA-NEXT:    global_store_dword v[0:1], v0, off sc0 sc1
 ; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-FMA-NEXT:  .LBB9_2: ; %bb4
+; GFX942-FMA-NEXT:    s_load_dword s0, s[4:5], 0x48
 ; GFX942-FMA-NEXT:    global_load_dword v0, v[0:1], off sc0 sc1
 ; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-FMA-NEXT:    s_load_dword s0, s[4:5], 0x48
 ; GFX942-FMA-NEXT:    v_mov_b32_e32 v1, 0x42280000
 ; GFX942-FMA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-FMA-NEXT:    v_fmac_f32_e64 v1, s0, 0.5
@@ -1459,9 +1457,9 @@ define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], fl
 ; GFX10-FMA-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX10-FMA-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-FMA-NEXT:  .LBB9_2: ; %bb4
+; GFX10-FMA-NEXT:    s_load_dword s0, s[4:5], 0x48
 ; GFX10-FMA-NEXT:    global_load_dword v0, v[0:1], off glc dlc
 ; GFX10-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FMA-NEXT:    s_load_dword s0, s[4:5], 0x48
 ; GFX10-FMA-NEXT:    v_mov_b32_e32 v1, 0.5
 ; GFX10-FMA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-FMA-NEXT:    v_fmaak_f32 v1, s0, v1, 0x42280000
@@ -1481,9 +1479,9 @@ define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], fl
 ; GFX11-FMA-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-FMA-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-FMA-NEXT:  .LBB9_2: ; %bb4
+; GFX11-FMA-NEXT:    s_load_b32 s0, s[4:5], 0x48
 ; GFX11-FMA-NEXT:    global_load_b32 v0, v[0:1], off glc dlc
 ; GFX11-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FMA-NEXT:    s_load_b32 s0, s[4:5], 0x48
 ; GFX11-FMA-NEXT:    v_mov_b32_e32 v1, 0.5
 ; GFX11-FMA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FMA-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)

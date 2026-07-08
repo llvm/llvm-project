@@ -151,8 +151,10 @@ enum LLVMTypeID {
 };
 
 /// Get the string name of an LLVM Type ID.
-static inline const char *getLLVMTypeIDName(uint32_t type_id) {
+static inline const char *getLLVMTypeIDName(int32_t type_id) {
   switch (type_id) {
+  case -1:
+    return "none";
   case HalfTyID:
     return "half";
   case BFloatTyID:
