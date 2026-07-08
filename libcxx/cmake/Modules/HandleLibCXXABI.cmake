@@ -148,6 +148,12 @@ elseif ("${LIBCXX_CXX_ABI}" STREQUAL "libcxxabi")
     add_library(libcxx-abi-static-objects ALIAS cxxabi_static_objects)
   endif()
 
+  if (NOT TARGET cxxabi_static AND NOT TARGET cxxabi_shared
+      AND NOT TARGET cxxabi_static_objects AND NOT TARGET cxxabi_shared_objects)
+    message(FATAL_ERROR "Can't find any libc++abi target but LIBCXX_CXX_ABI is set to libcxxabi, "
+                        "did you forget to include libcxxabi in LLVM_ENABLE_RUNTIMES?")
+  endif()
+
 # Link against a system-provided libc++abi
 elseif ("${LIBCXX_CXX_ABI}" STREQUAL "system-libcxxabi")
   if(NOT LIBCXX_CXX_ABI_INCLUDE_PATHS)
