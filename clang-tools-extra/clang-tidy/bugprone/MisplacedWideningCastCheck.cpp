@@ -17,11 +17,15 @@ namespace clang::tidy::bugprone {
 MisplacedWideningCastCheck::MisplacedWideningCastCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      CheckImplicitCasts(Options.get("CheckImplicitCasts", false)) {}
+      CheckImplicitCasts(Options.get("CheckImplicitCasts", false)),
+      IgnoreConstexprOverflowProven(
+          Options.get("IgnoreConstexprOverflowProven", false)) {}
 
 void MisplacedWideningCastCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CheckImplicitCasts", CheckImplicitCasts);
+  Options.store(Opts, "IgnoreConstexprOverflowProven",
+                IgnoreConstexprOverflowProven);
 }
 
 void MisplacedWideningCastCheck::registerMatchers(MatchFinder *Finder) {
@@ -54,13 +58,15 @@ void MisplacedWideningCastCheck::registerMatchers(MatchFinder *Finder) {
       binaryOperator(isComparisonOperator(), hasEitherOperand(Cast)), this);
 }
 
-static unsigned getMaxCalculationWidth(const ASTContext &Context,
-                                       const Expr *E) {
+static unsigned getMaxCalculationWidth(const ASTContext &Context, const Expr *E,
+                                       bool IgnoreConstexprOverflowProven) {
   E = E->IgnoreParenImpCasts();
 
   if (const auto *Bop = dyn_cast<BinaryOperator>(E)) {
-    const unsigned LHSWidth = getMaxCalculationWidth(Context, Bop->getLHS());
-    const unsigned RHSWidth = getMaxCalculationWidth(Context, Bop->getRHS());
+    const unsigned LHSWidth = getMaxCalculationWidth(
+        Context, Bop->getLHS(), IgnoreConstexprOverflowProven);
+    const unsigned RHSWidth = getMaxCalculationWidth(
+        Context, Bop->getRHS(), IgnoreConstexprOverflowProven);
     if (Bop->getOpcode() == BO_Mul)
       return LHSWidth + RHSWidth;
     if (Bop->getOpcode() == BO_Add)
@@ -90,8 +96,18 @@ static unsigned getMaxCalculationWidth(const ASTContext &Context,
     return T->isIntegerType() ? Context.getIntWidth(T) : 1024U;
   } else if (const auto *I = dyn_cast<IntegerLiteral>(E)) {
     return I->getValue().getActiveBits();
+  } else if (IgnoreConstexprOverflowProven) {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+        if (VD->isConstexpr()) {
+          Expr::EvalResult Result;
+          if (E->EvaluateAsInt(Result, Context) &&
+              !Result.Val.getInt().isNegative())
+            return Result.Val.getInt().getActiveBits();
+        }
+      }
+    }
   }
-
   return Context.getIntWidth(E->getType());
 }
 
@@ -235,7 +251,8 @@ void MisplacedWideningCastCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Don't write a warning if we can easily see that the result is not
   // truncated.
-  if (Context.getIntWidth(CalcType) >= getMaxCalculationWidth(Context, Calc))
+  if (Context.getIntWidth(CalcType) >=
+      getMaxCalculationWidth(Context, Calc, IgnoreConstexprOverflowProven))
     return;
 
   diag(Cast->getBeginLoc(), "either cast from %0 to %1 is ineffective, or "

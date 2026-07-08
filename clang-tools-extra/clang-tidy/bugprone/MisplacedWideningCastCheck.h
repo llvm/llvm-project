@@ -34,6 +34,7 @@ public:
 
 private:
   const bool CheckImplicitCasts;
+  const bool IgnoreConstexprOverflowProven;
 };
 
 } // namespace clang::tidy::bugprone
