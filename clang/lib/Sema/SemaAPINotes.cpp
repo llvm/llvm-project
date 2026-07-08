@@ -1003,16 +1003,12 @@ static void stripAPINotesParameterNullability(QualType &ParamType) {
 struct APINotesParameterSelector {
   SmallVector<std::string, 4> Parameters;
 
-  SmallVector<StringRef, 4> getParameterRefs() const {
-    SmallVector<StringRef, 4> Refs;
-    Refs.reserve(Parameters.size());
-    for (const std::string &Parameter : Parameters)
-      Refs.push_back(Parameter);
-    return Refs;
-  }
-
   bool operator==(const APINotesParameterSelector &Other) const {
     return Parameters == Other.Parameters;
+  }
+
+  bool operator!=(const APINotesParameterSelector &Other) const {
+    return !(*this == Other);
   }
 };
 
@@ -1040,14 +1036,11 @@ getAPINotesParameterSelectorPrintingPolicy(const ASTContext &Context) {
 static std::string getAPINotesParameterSelectorSpelling(
     QualType ParamType, const ASTContext &Context, const PrintingPolicy &Policy,
     bool Desugar) {
+  if (Desugar)
+    ParamType = ParamType.getDesugaredType(Context);
+
   ParamType.removeLocalConst();
   stripAPINotesParameterNullability(ParamType);
-
-  if (Desugar) {
-    ParamType = ParamType.getDesugaredType(Context);
-    ParamType.removeLocalConst();
-    stripAPINotesParameterNullability(ParamType);
-  }
 
   return ParamType.getAsString(Policy);
 }
@@ -1073,7 +1066,7 @@ getAPINotesParameterSelectorCandidates(const Sema &S, const FunctionDecl *FD) {
         ParamType, S.Context, Policy, /*Desugar=*/true));
   }
 
-  if (!(Candidates.Source == Desugared))
+  if (Candidates.Source != Desugared)
     Candidates.Desugared = std::move(Desugared);
 
   return Candidates;
@@ -1087,11 +1080,10 @@ static void processExactAPINotes(
     Sema &S, SpecificDecl *D,
     const APINotesParameterSelectorCandidates &ParameterSelectorCandidates,
     llvm::function_ref<api_notes::APINotesReader::VersionedInfo<SpecificInfo>(
-        ArrayRef<StringRef>)>
+        ArrayRef<std::string>)>
         LookupExact) {
   auto ProcessSelector = [&](const APINotesParameterSelector &Selector) {
-    SmallVector<StringRef, 4> Parameters = Selector.getParameterRefs();
-    auto Info = LookupExact(Parameters);
+    auto Info = LookupExact(Selector.Parameters);
     if (Info.size() == 0)
       return false;
 
@@ -1147,7 +1139,7 @@ void Sema::ProcessAPINotes(Decl *D) {
           if (ParameterSelectorCandidates)
             processExactAPINotes<api_notes::GlobalFunctionInfo>(
                 *this, FD, *ParameterSelectorCandidates,
-                [&](ArrayRef<StringRef> Parameters) {
+                [&](ArrayRef<std::string> Parameters) {
                   return Reader->lookupGlobalFunction(FD->getName(), Parameters,
                                                       APINotesContext);
                 });
@@ -1352,7 +1344,7 @@ void Sema::ProcessAPINotes(Decl *D) {
             if (ParameterSelectorCandidates)
               processExactAPINotes<api_notes::CXXMethodInfo>(
                   *this, CXXMethod, *ParameterSelectorCandidates,
-                  [&](ArrayRef<StringRef> Parameters) {
+                  [&](ArrayRef<std::string> Parameters) {
                     return Reader->lookupCXXMethod(Context->id, MethodName,
                                                    Parameters);
                   });
