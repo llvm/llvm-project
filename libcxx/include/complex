@@ -266,6 +266,12 @@ template<class T> complex<T> tanh (const complex<T>&);
 #  include <__tuple/tuple_element.h>
 #  include <__tuple/tuple_size.h>
 #  include <__type_traits/conditional.h>
+#  include <__type_traits/conjunction.h>
+#  include <__type_traits/is_assignable.h>
+#  include <__type_traits/is_constructible.h>
+#  include <__type_traits/is_destructible.h>
+#  include <__type_traits/is_object.h>
+#  include <__type_traits/is_unqualified.h>
 #  include <__utility/move.h>
 #  include <cmath>
 #  include <version>
@@ -306,6 +312,16 @@ template <class _Tp>
 class complex {
 public:
   typedef _Tp value_type;
+
+  static_assert(_And<is_object<_Tp>,
+                      _BoolConstant<__is_unqualified_v<_Tp> >,
+                      is_default_constructible<_Tp>,
+                      is_copy_constructible<_Tp>,
+                      is_copy_assignable<_Tp>,
+                      is_destructible<_Tp> >::value,
+                "std::complex<T> requires T to be a cv-unqualified object type that satisfies the "
+                "Cpp17DefaultConstructible, Cpp17CopyConstructible, Cpp17CopyAssignable, and "
+                "Cpp17Destructible requirements");
 
 private:
   value_type __re_;
