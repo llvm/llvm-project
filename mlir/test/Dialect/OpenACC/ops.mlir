@@ -1187,11 +1187,15 @@ acc.shutdown device_num(%idxValue : index) if(%ifCond)
 
 // -----
 
-%hostDevType = arith.constant 2 : i32
-%onHost = acc.on_device %hostDevType : i32 -> i1
+%devTypeInt = arith.constant 2 : i32
+%onHostInt = acc.on_device %devType : i32 -> i1
+%devTypeIndex = arith.constant 2 : index
+%onHostIndex = acc.on_device %devType : index -> i1
 
-// CHECK: [[HOSTDEVTYPE:%.*]] = arith.constant 2 : i32
-// CHECK: %[[ONHOST:.*]] = acc.on_device [[HOSTDEVTYPE]] : i32 -> i1
+// CHECK: [[DEVTYPEINT:%.*]] = arith.constant 2 : i32
+// CHECK: %[[ONHOSTINT:.*]] = acc.on_device [[DEVTYPEINT]] : i32 -> i1
+// CHECK: [[DEVTYPEINDEX:%.*]] = arith.constant 2 : index
+// CHECK: %[[ONHOSTINDEX:.*]] = acc.on_device [[DEVTYPEINDEX]] : index -> i1
 
 // -----
 

@@ -3717,7 +3717,7 @@ def OpenACC_WaitOp : OpenACC_Op<"wait", [AttrSizedOperandSegments]> {
 // acc_on_device runtime call
 //===----------------------------------------------------------------------===//
 
-def OpenACC_OnDeviceOp : OpenACC_Op<"on_device", [NoMemoryEffect]> {
+def OpenACC_OnDeviceOp : OpenACC_Op<"on_device"> {
   let summary = "acc_on_device intrinsic operation";
 
   let description = [{
@@ -3732,7 +3732,7 @@ def OpenACC_OnDeviceOp : OpenACC_Op<"on_device", [NoMemoryEffect]> {
     ```
   }];
 
-  let arguments = (ins I32:$deviceType);
+  let arguments = (ins IntOrIndex:$deviceType);
   let results = (outs I1:$result);
 
   let assemblyFormat = [{
