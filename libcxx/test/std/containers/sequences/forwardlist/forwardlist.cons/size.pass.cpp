@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // <forward_list>
 
 // explicit forward_list(size_type n);                 // constexpr since C++26
