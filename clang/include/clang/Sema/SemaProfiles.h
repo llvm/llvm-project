@@ -304,6 +304,22 @@ public:
   /// (accepted).
   void checkInitProfileRefCapture(SourceLocation Loc, const ValueDecl *Var);
 
+  /// std::init / ref_to_uninit (paper §7.2): a member call binds its implicit
+  /// object parameter to \p Object, and that parameter can never carry
+  /// [[ref_to_uninit]], so a call on an object recognized as uninitialized
+  /// storage is always the unmarked-direction violation. Called from
+  /// \c Sema::PerformImplicitObjectArgumentInitialization, the funnel every
+  /// member-call flavor's object argument converts through -- dot and arrow
+  /// calls, member operators, functor operator(), operator->, and conversion
+  /// operators. Explicit-object member functions initialize their object as an
+  /// ordinary parameter and are already checked there; a destructor call is
+  /// skipped (destruction of uninitialized storage is the deferred destroy_at
+  /// slice). Defers only on an instantiation-dependent \p Object -- the call
+  /// is rebuilt at instantiation, re-running the funnel -- and otherwise fires
+  /// at definition time, repeating if the call is rebuilt anyway (accepted).
+  void checkInitProfileObjectArgument(const Expr *Object,
+                                      const CXXMethodDecl *Method);
+
   /// std::init / ref_to_uninit (paper §4.3): assigning to a pointer must
   /// respect the assigned-to pointer's [[ref_to_uninit]] marking; a no-op for
   /// a non-pointer LHS. Hosts the cluster from Sema::CreateBuiltinBinOp's

@@ -1562,3 +1562,138 @@ void test_unknown_regression_guard() {
   int *u1 = &g_uninit;                    // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
   (void)m1; (void)m2; (void)u1;
 }
+
+// A member call binds its implicit object parameter to the object argument
+// (paper §7.2), and that parameter can never carry [[ref_to_uninit]], so a
+// call on an object recognized as uninitialized storage is always the
+// unmarked-direction violation. Every member-call flavor converts its object
+// argument through the same funnel: dot and arrow calls, member operators,
+// functor operator(), operator->, and conversion operators.
+struct Callee {
+  int m;
+  int f() { return m; }
+  static int sf() { return 0; }
+  Callee &operator=(const Callee &);
+  bool operator==(const Callee &) const;
+  operator int() const;
+  int *operator->();
+  int operator()(int);
+};
+
+void test_member_call_on_uninit_object() {
+  Callee s [[uninit]];
+  s.f();     // expected-error {{calling member function 'f' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+  (&s)->f(); // expected-error {{calling member function 'f' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+}
+
+void test_member_call_through_marked_pointer(Callee *p [[ref_to_uninit]]) {
+  p->f();   // expected-error {{calling member function 'f' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+  (*p).f(); // expected-error {{calling member function 'f' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+}
+
+// Member operators bind the same implicit object parameter, so whole-object
+// assignment to an [[uninit]] class object -- previously unchecked through
+// the overloaded operator= path -- is caught here too.
+void test_member_operators_on_uninit_object() {
+  Callee s [[uninit]];
+  Callee t{};
+  s = t;          // expected-error {{calling member function 'operator=' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+  (void)(s == t); // expected-error {{calling member function 'operator==' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+  int v = s;      // expected-error {{calling member function 'operator int' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+  s(1);           // expected-error {{calling member function 'operator()' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+  (void)v;
+}
+
+void test_member_arrow_on_uninit_object() {
+  Callee s [[uninit]];
+  (void)*(s.operator->()); // expected-error {{calling member function 'operator->' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+}
+
+// A [[ref_to_uninit]]-returning reference function yields an uninitialized
+// referent; calling a member function on it is the same violation.
+[[ref_to_uninit]] Callee &get_uninit_callee();
+void test_member_call_on_marked_call_result() {
+  get_uninit_callee().f(); // expected-error {{calling member function 'f' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+}
+
+Callee make_callee();
+struct WithDtor {
+  int m;
+  void g();
+  ~WithDtor();
+};
+
+void test_member_call_silent_forms() {
+  Callee s [[uninit]];
+  s.sf();                 // OK: a static member uses no object argument
+  (void)sizeof(s.f());    // OK: unevaluated
+  Callee t{};
+  t.f();                  // OK: initialized object
+  Callee{}.f();           // OK: a prvalue object is not uninitialized storage
+  make_callee().f();      // OK: unmarked call result is trusted initialized
+  WithDtor d [[uninit]];
+  d.~WithDtor();          // OK: destruction is the deferred destroy_at slice
+}
+
+// The object itself being unmarked keeps the trust decision: a class whose
+// *member* is [[uninit]] may still have its member functions called (its
+// constructor body may have assigned the member, paper §5.1/§5.2).
+struct MemberOnlyUninit {
+  int m [[uninit]];
+  MemberOnlyUninit() { m = 1; }
+  int get() { return m; }
+};
+void test_member_call_unmarked_object_trusted(MemberOnlyUninit &r) {
+  MemberOnlyUninit o;
+  o.get(); // OK
+  r.get(); // OK: unknown-state reference parameter is not affirmatively uninit
+}
+
+// An explicit object member function initializes its object as an ordinary
+// parameter, so the existing parameter binding check owns it (and its
+// parameter *could* carry the marker).
+struct ExplicitObj {
+  int m;
+  void f(this ExplicitObj &self);
+};
+void test_member_call_explicit_object() {
+  ExplicitObj x [[uninit]];
+  x.f(); // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
+// A member with enable_if converts availability-check arguments under a
+// SFINAE trap; the real call still diagnoses exactly once.
+struct WithEnableIf {
+  int m;
+  void f() __attribute__((enable_if(true, "")));
+};
+void test_member_call_enable_if() {
+  WithEnableIf s [[uninit]];
+  s.f(); // expected-error {{calling member function 'f' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+}
+
+void test_member_call_suppressed() {
+  Callee s [[uninit]];
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] { s.f(); }         // OK: suppressed
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "ref_to_uninit")]] { s.f(); } // OK
+}
+
+// A dependent object argument defers to instantiation, where the rebuilt call
+// re-runs the funnel; a non-dependent call in a template fires at definition
+// time and repeats when the call is rebuilt at instantiation (the local is
+// remapped) -- the accepted repetition.
+template <typename T>
+void template_member_call_dependent_bad() {
+  T s [[uninit]];
+  s.f(); // expected-error {{calling member function 'f' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+}
+template void template_member_call_dependent_bad<Callee>(); // expected-note {{in instantiation of function template specialization 'template_member_call_dependent_bad<Callee>' requested here}}
+
+template <typename T>
+void template_member_call_nondependent_bad() {
+  Callee s [[uninit]];
+  s.f(); // expected-error 2 {{calling member function 'f' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+}
+template void template_member_call_nondependent_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_member_call_nondependent_bad<int>' requested here}}

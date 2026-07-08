@@ -14203,4 +14203,7 @@ def err_init_uninit_subobject_write : ProfileRuleError<
 def err_init_uninit_ref_capture : ProfileRuleError<
   "capturing %1 by reference binds a reference to uninitialized memory "
   "under profile '%0'">;
+def err_init_member_call_on_uninit : ProfileRuleError<
+  "calling member function %1 binds its implicit object parameter to "
+  "uninitialized memory under profile '%0'">;
 } // end of sema component.

@@ -6317,6 +6317,12 @@ ExprResult Sema::PerformImplicitObjectArgumentInitialization(
            << From->getSourceRange();
   }
 
+  // std::init / ref_to_uninit (paper §7.2): the implicit object parameter can
+  // never carry [[ref_to_uninit]], so a member call on an object recognized
+  // as uninitialized storage is the unmarked-direction violation.
+  if (getLangOpts().Profiles)
+    Profiles().checkInitProfileObjectArgument(From, Method);
+
   if (ICS.Standard.Second == ICK_Derived_To_Base) {
     ExprResult FromRes =
       PerformObjectMemberConversion(From, Qualifier, FoundDecl, Method);

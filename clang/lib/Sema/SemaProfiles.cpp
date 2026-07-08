@@ -1145,6 +1145,37 @@ void SemaProfiles::checkInitProfileRefCapture(SourceLocation Loc,
   Diag(Loc, diag::err_init_uninit_ref_capture) << "std::init" << Var;
 }
 
+void SemaProfiles::checkInitProfileObjectArgument(const Expr *Object,
+                                                  const CXXMethodDecl *Method) {
+  // A RecoveryExpr is a placeholder for an expression that already failed, not
+  // an object argument the user wrote, so it must not drive this rule.
+  if (!getLangOpts().Profiles || !Object ||
+      isa<RecoveryExpr>(Object->IgnoreParens()))
+    return;
+  // Destroying uninitialized storage is the deferred destroy_at slice (the
+  // paper models destruction, like construct_at, as a lifetime operation);
+  // implicit scope-exit destructions never reach this funnel, so diagnosing
+  // only the explicit s.~S() spelling would be an inconsistent sliver.
+  if (isa<CXXDestructorDecl>(Method))
+    return;
+  // An instantiation-dependent object argument cannot be classified yet; its
+  // call is always rebuilt at instantiation, re-running this funnel with the
+  // substituted object. A non-dependent call fires at definition time and
+  // repeats if the call is rebuilt at instantiation anyway -- accepted.
+  if (Object->isInstantiationDependent())
+    return;
+  if (!shouldEmitProfileViolation("std::init", "ref_to_uninit",
+                                  Object->getExprLoc()))
+    return;
+  // An arrow call's object argument arrives as the pointer expression, a dot
+  // call's as the object glvalue; dispatch the recognizer accordingly.
+  bool IsPointer = Object->getType()->isPointerType();
+  if (!refersToUninitializedMemory(Object, /*IsReference=*/!IsPointer))
+    return;
+  Diag(Object->getExprLoc(), diag::err_init_member_call_on_uninit)
+      << "std::init" << Method;
+}
+
 // The read-through diagnostic distinguishes indirection through a
 // [[ref_to_uninit]] pointer/reference from a subobject read of a named
 // [[uninit]] object, which involves no [[ref_to_uninit]] entity. Approximate

@@ -1157,7 +1157,18 @@ recognizers symmetric.
   a pointer argument is checked as an unmarked target, paper §7.2, while a
   promoted *value* read stays the read-through chokepoint's), return
   statements
-  (``Sema::BuildReturnStmt``), and lambda captures -- an init-capture binds
+  (``Sema::BuildReturnStmt``), implicit object arguments
+  (``Sema::PerformImplicitObjectArgumentInitialization``, the funnel every
+  member-call flavor's object argument converts through -- dot and arrow
+  calls, member operators including whole-object ``operator=``, functor
+  ``operator()``, ``operator->``, and conversion operators; the implicit
+  object parameter can never carry ``[[ref_to_uninit]]``, so a call on an
+  object recognized as uninitialized storage is checked as an unmarked
+  target, paper §7.2, with suppress as the escape -- an *explicit* object
+  member function instead initializes its object as an ordinary parameter,
+  which the parameter site above already owns and whose parameter can carry
+  the marker; a destructor call is skipped, destruction being the deferred
+  destroy_at slice), and lambda captures -- an init-capture binds
   like a variable initialization when its variable is created
   (``Sema::createLambdaInitCaptureVarDecl``), and a plain by-reference capture
   of an entity denoting uninitialized storage (an ``[[uninit]]`` variable, or
@@ -1173,7 +1184,8 @@ recognizers symmetric.
   passes the enclosing constructor and is re-run by
   ``BuildMemberInitializer`` at instantiation, exactly like
   ``ctor_uninit_member``.  The Decl-less call-argument, assignment, return,
-  aggregate-field, and capture sites instead defer only when the source (for
+  aggregate-field, object-argument, and capture sites instead defer only when
+  the source (for
   the capture, the captured variable's type; for pointer assignment, also
   the LHS) is *instantiation-dependent* -- such constructs are always rebuilt
   at instantiation, where the re-run ``Build*`` / ``InitListChecker`` routine
@@ -1395,12 +1407,14 @@ initialization sequence.
   promotion, the rest through R7's operator-site hooks).
 - ``std::byte`` stores are exempt (paper §4.5), matching every read-side
   rule.
-- Known gaps: whole-object assignment to a marked class object
-  (``s = S{...}``) goes through the overloaded ``operator=`` path and is not
-  checked -- class-type writes are uniformly deferred with construct_at --
-  and writes through ``[[ref_to_uninit]]`` are deliberately out of scope (for
-  a scalar the write is the initialization; verifying class-type writes needs
-  construct_at modeling).
+- Whole-object assignment to a marked class object (``s = S{...}``) diverts
+  to the overloaded ``operator=`` path and so never reaches this rule; it is
+  caught instead by the ``ref_to_uninit`` object-argument check (R7) when the
+  member ``operator=`` binds its implicit object parameter to the marked
+  object.  Class-type writes remain uniformly deferred with construct_at.
+- Known gaps: writes through ``[[ref_to_uninit]]`` are deliberately out of
+  scope (for a scalar the write is the initialization; verifying class-type
+  writes needs construct_at modeling).
 
 Diagnostic suppression
 ~~~~~~~~~~~~~~~~~~~~~~
