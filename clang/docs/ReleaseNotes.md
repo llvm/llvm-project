@@ -156,6 +156,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   nested template types (for example, ones containing local lambdas) could
   produce very large writable `.data` sections. Emitted RTTI name strings
   change only for types whose name exceeds the length limit. (#GH206313)
+- Fixed Itanium mangling for lambdas in default member initializers of local
+  classes to use `<local-name>` encoding, preventing mangling collisions between
+  distinct local classes.
 
 ### AST Dumping Potentially Breaking Changes
 
@@ -243,6 +246,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - `__is_trivially_equality_comparable` no longer returns false for all enum types. (#GH132672)
 - `auto` parameters are now available in all C++ language modes as an extension.
+- Clang now supports friend declarations with a dependent nested name specifier. (#GH104057)
 
 #### C++2d Feature Support
 
@@ -566,6 +570,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   allowing it to be disabled independently with `-Wno-unused-but-set-global`.
   (#GH148361)
 
+- `-Wunused-template` is now part of `-Wunused` (which is enabled by `-Wall`).
+  It diagnoses unused function and variable templates with internal linkage,
+  which in a header is a latent ODR hazard. It can be disabled with
+  `-Wno-unused-template`. (#GH202945)
+
 - Added `-Wlifetime-safety` to enable lifetime safety analysis,
   a CFG-based intra-procedural analysis that detects use-after-free and related
   temporal safety bugs. See the
@@ -815,6 +824,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a preprocessor assertion failure triggered when parsing an invalid template-id starting with `::template operator`. (#GH186582)
 - Fixed a crash when a function template is defined as a non-template friend with a global scope qualifier. (#GH185341)
 - Clang now rejects constant template parameters with block pointer types, since these are not implemented anyway and would lead to crashes. (#GH189247)
+- Clang no longer reject call expressions whose type is a not-yet-deduced auto type. (#GH207565)
 - Fixed a crash on error recovery when dealing with invalid templates. (#GH183075)
 - Fixed a crash when instantiating `requires` expressions involving substitution failures in C++ concepts. (#GH176402)
 - Concepts appearing in the require-clause of a member function no longer have access to non-public members of that class,

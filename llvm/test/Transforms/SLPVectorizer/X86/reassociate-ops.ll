@@ -292,3 +292,221 @@ entry:
   store double %add1, ptr %idxS1, align 8
   ret void
 }
+
+; Both operands of the top-level add are themselves 2-term adds in every
+; lane (a balanced tree), so scanAssociativeOperands() used to leave this
+; alone entirely (both initial columns were independently peelable). Lane 0
+; pairs {A,B} then {C,D}; lane 1 pairs the same 4 terms as {B,D} then
+; {A,C}, a grouping ordinary per-level recursion cannot undo, since it can
+; only reorder operands within one node, never move a term across the
+; left/right subtree boundary. With balanced chains also flattened and
+; columns realigned by value family before the pairwise reorder, all 4
+; terms should still be loadable as plain contiguous vectors.
+;
+; S[0] = (A[0] + B[0]) + (C[0] + D[0])
+; S[1] = (B[1] + D[1]) + (A[1] + C[1])
+define void @test_reassoc_add_balanced_permuted(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_add_balanced_permuted(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[DARRAY]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> [[TMP3]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <2 x double> [[TMP1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP0]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <2 x double> [[TMP8]], [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds double, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds double, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds double, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds double, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds double, ptr %Sarray, i64 1
+
+  %A0 = load double, ptr %Aarray, align 8
+  %A1 = load double, ptr %idxA1, align 8
+
+  %B0 = load double, ptr %Barray, align 8
+  %B1 = load double, ptr %idxB1, align 8
+
+  %C0 = load double, ptr %Carray, align 8
+  %C1 = load double, ptr %idxC1, align 8
+
+  %D0 = load double, ptr %Darray, align 8
+  %D1 = load double, ptr %idxD1, align 8
+
+  %addA0B0 = fadd fast double %A0, %B0
+  %addC0D0 = fadd fast double %C0, %D0
+  %add0 = fadd fast double %addA0B0, %addC0D0
+
+  %addB1D1 = fadd fast double %B1, %D1
+  %addA1C1 = fadd fast double %A1, %C1
+  %add1 = fadd fast double %addB1D1, %addA1C1
+
+  store double %add0, ptr %Sarray, align 8
+  store double %add1, ptr %idxS1, align 8
+  ret void
+}
+
+; Same balanced shape as immediately above, but both lanes pair the same
+; terms the same way, so this was already vectorizable via ordinary
+; per-level recursion even before balanced chains were flattened too.
+; Flattening it into one reassociated node instead should not regress the
+; result: still 4 plain contiguous loads combined in 3 steps either way.
+;
+; S[0] = (A[0] + B[0]) + (C[0] + D[0])
+; S[1] = (A[1] + B[1]) + (C[1] + D[1])
+define void @test_reassoc_add_balanced_aligned(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_add_balanced_aligned(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[DARRAY]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds double, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds double, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds double, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds double, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds double, ptr %Sarray, i64 1
+
+  %A0 = load double, ptr %Aarray, align 8
+  %A1 = load double, ptr %idxA1, align 8
+
+  %B0 = load double, ptr %Barray, align 8
+  %B1 = load double, ptr %idxB1, align 8
+
+  %C0 = load double, ptr %Carray, align 8
+  %C1 = load double, ptr %idxC1, align 8
+
+  %D0 = load double, ptr %Darray, align 8
+  %D1 = load double, ptr %idxD1, align 8
+
+  %addA0B0 = fadd fast double %A0, %B0
+  %addC0D0 = fadd fast double %C0, %D0
+  %add0 = fadd fast double %addA0B0, %addC0D0
+
+  %addA1B1 = fadd fast double %A1, %B1
+  %addC1D1 = fadd fast double %C1, %D1
+  %add1 = fadd fast double %addA1B1, %addC1D1
+
+  store double %add0, ptr %Sarray, align 8
+  store double %add1, ptr %idxS1, align 8
+  ret void
+}
+
+; Same balanced+permuted shape as test_reassoc_add_balanced_permuted, but
+; with a bitwise opcode, to check the balanced-chain handling is not
+; Add/FAdd specific: isAssociative() also covers And/Or/Xor and Mul/FMul,
+; and And needs no fast-math or wrap flags to qualify.
+;
+; S[0] = (A[0] & B[0]) & (C[0] & D[0])
+; S[1] = (B[1] & D[1]) & (A[1] & C[1])
+define void @test_reassoc_and_balanced_permuted(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_and_balanced_permuted(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[CARRAY]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[DARRAY]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP3]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = and <2 x i32> [[TMP1]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP0]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i32> [[TMP8]], [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = and <2 x i32> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[SARRAY]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i32, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i32, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds i32, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds i32, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds i32, ptr %Sarray, i64 1
+
+  %A0 = load i32, ptr %Aarray, align 4
+  %A1 = load i32, ptr %idxA1, align 4
+
+  %B0 = load i32, ptr %Barray, align 4
+  %B1 = load i32, ptr %idxB1, align 4
+
+  %C0 = load i32, ptr %Carray, align 4
+  %C1 = load i32, ptr %idxC1, align 4
+
+  %D0 = load i32, ptr %Darray, align 4
+  %D1 = load i32, ptr %idxD1, align 4
+
+  %andA0B0 = and i32 %A0, %B0
+  %andC0D0 = and i32 %C0, %D0
+  %and0 = and i32 %andA0B0, %andC0D0
+
+  %andB1D1 = and i32 %B1, %D1
+  %andA1C1 = and i32 %A1, %C1
+  %and1 = and i32 %andB1D1, %andA1C1
+
+  store i32 %and0, ptr %Sarray, align 4
+  store i32 %and1, ptr %idxS1, align 4
+  ret void
+}
+
+; An unbalanced 3-term chain like test_reassoc_add, but the third term is
+; the literal 0 (add's identity) instead of a third array, spread across a
+; different position per lane: lane 0 combines A and B first, then adds 0;
+; lane 1 combines B with 0 first, then adds A. This is the same shape (a
+; real value mixed with an unrelated identity placeholder in one column,
+; e.g. add(B, 0)) as a real gather-buildvector regression that combined
+; several unrelated `or`-with-0 expressions; getReassocColumnsQuality()
+; should recognize a column that is one real value plus the opcode's own
+; identity constant as cheap (isReassocIdentityConstant()), not just "2
+; unique values", so this still finds the clean 2-column [A, B] split
+; instead of leaving 0 diluting whichever column it naturally landed in.
+;
+; S[0] = (A[0] + B[0]) + 0
+; S[1] = (B[1] + 0) + A[1]
+define void @test_reassoc_add_identity(ptr %Aarray, ptr %Barray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_add_identity(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> <i32 poison, i32 0>, <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> <i32 0, i32 poison>, <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[SARRAY]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i32, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i32, ptr %Barray, i64 1
+  %idxS1 = getelementptr inbounds i32, ptr %Sarray, i64 1
+
+  %A0 = load i32, ptr %Aarray, align 4
+  %A1 = load i32, ptr %idxA1, align 4
+
+  %B0 = load i32, ptr %Barray, align 4
+  %B1 = load i32, ptr %idxB1, align 4
+
+  %addA0B0 = add i32 %A0, %B0
+  %add0 = add i32 %addA0B0, 0
+
+  %addB10 = add i32 %B1, 0
+  %add1 = add i32 %addB10, %A1
+
+  store i32 %add0, ptr %Sarray, align 4
+  store i32 %add1, ptr %idxS1, align 4
+  ret void
+}
