@@ -277,12 +277,12 @@ bool applyByteReplace(const RewriteRule &Rule, uint64_t InstOffset,
 NopSled *findNearestSled(std::vector<NopSled> &Sleds, uint64_t Offset,
                          uint64_t Needed) {
   NopSled *Best = nullptr;
-  int64_t BestDist = INT64_MAX;
+  uint64_t BestDist = std::numeric_limits<uint64_t>::max();
   for (NopSled &Sled : Sleds) {
-    if (Sled.WritePos + Needed > Sled.End)
+    if (Sled.WritePos > Sled.End || Needed > Sled.End - Sled.WritePos)
       continue;
-    int64_t Dist = std::abs(static_cast<int64_t>(Sled.WritePos) -
-                            static_cast<int64_t>(Offset));
+    uint64_t Dist = Sled.WritePos > Offset ? Sled.WritePos - Offset
+                                           : Offset - Sled.WritePos;
     if (Dist < MaxSledDistance && Dist < BestDist) {
       Best = &Sled;
       BestDist = Dist;
@@ -333,19 +333,18 @@ Expected<ElfView> ElfView::create(uint8_t *Data, size_t Size) {
   return ElfView(std::move(*FileOrErr), Sections, Text, TextIdx);
 }
 
-// -- ElfView::findKernelAtOffset ----------------------------------------------
+// -- ElfView::functionTextRanges ---------------------------------------------
 
-std::string ElfView::findKernelAtOffset(uint64_t TextOffset) const {
-  // Select the nearest-preceding STT_FUNC symbol (greatest st_value <=
-  // TextOffset). AMDGPU kernel entry symbols often have st_size == 0, so an
-  // exact containment test never matches; honor st_size only when non-zero.
-  //
-  // The nearest-preceding function could be a non-kernel device function; the
-  // guard below rejects that case so callers never scratch-allocate against a
-  // non-kernel context.
-  bool Found = false;
-  uint64_t BestValue = 0;
-  std::string BestName;
+std::vector<ElfView::FunctionTextRange> ElfView::functionTextRanges() const {
+  std::vector<FunctionTextRange> Ranges;
+  uint64_t TextBegin = textAddr();
+  uint64_t TextSizeValue = textSize();
+  if (TextSizeValue > std::numeric_limits<uint64_t>::max() - TextBegin) {
+    log() << "hotswap: error: function text range scan: .text virtual "
+          << "address range overflows uint64_t.\n";
+    return Ranges;
+  }
+  uint64_t TextEnd = TextBegin + TextSizeValue;
 
   for (const ELFT::Shdr &SymShdr : Sections) {
     if (SymShdr.sh_type != ELF::SHT_SYMTAB &&
@@ -357,34 +356,82 @@ std::string ElfView::findKernelAtOffset(uint64_t TextOffset) const {
       consumeError(SymsOrErr.takeError());
       continue;
     }
-    Expected<StringRef> StrTabOrErr =
-        File.getStringTableForSymtab(SymShdr, Sections);
-    if (!StrTabOrErr) {
-      consumeError(StrTabOrErr.takeError());
-      continue;
-    }
 
+    std::vector<const ELFT::Sym *> FuncSyms;
     for (const ELFT::Sym &Sym : *SymsOrErr) {
       if (Sym.getType() != ELF::STT_FUNC && Sym.getType() != ELF::STT_GNU_IFUNC)
         continue;
       if (Sym.st_shndx != TextSectionIndex)
         continue;
-      if (TextOffset < Sym.st_value)
-        continue;
-      // Honor an explicit upper bound; skip it for zero-size symbols.
-      if (Sym.st_size != 0 && TextOffset >= Sym.st_value + Sym.st_size)
-        continue;
-      if (Found && Sym.st_value <= BestValue)
-        continue;
-      Expected<StringRef> NameOrErr = Sym.getName(*StrTabOrErr);
-      if (!NameOrErr) {
-        consumeError(NameOrErr.takeError());
-        continue;
-      }
-      Found = true;
-      BestValue = Sym.st_value;
-      BestName = NameOrErr->str();
+      FuncSyms.push_back(&Sym);
     }
+    llvm::sort(FuncSyms, [](const ELFT::Sym *A, const ELFT::Sym *B) {
+      if (A->st_value != B->st_value)
+        return A->st_value < B->st_value;
+      return A->st_size > B->st_size;
+    });
+
+    for (size_t I = 0, E = FuncSyms.size(); I != E; ++I) {
+      const ELFT::Sym &Sym = *FuncSyms[I];
+      uint64_t Begin = Sym.st_value;
+      if (Begin < TextBegin || Begin >= TextEnd)
+        continue;
+      uint64_t End = TextEnd;
+      if (Sym.st_size != 0) {
+        End = Sym.st_value + Sym.st_size;
+        if (End < Begin)
+          End = TextEnd;
+        End = std::min(End, TextEnd);
+      } else {
+        for (size_t J = I + 1; J != E; ++J) {
+          if (FuncSyms[J]->st_value > Begin) {
+            End =
+                std::min(static_cast<uint64_t>(FuncSyms[J]->st_value), TextEnd);
+            break;
+          }
+        }
+      }
+      Ranges.push_back({Begin, End, &Sym, &SymShdr});
+    }
+  }
+
+  return Ranges;
+}
+
+// -- ElfView::findKernelAtAddress ---------------------------------------------
+
+std::string ElfView::findKernelAtAddress(uint64_t TextAddress) const {
+  bool Found = false;
+  uint64_t BestValue = 0;
+  std::string BestName;
+
+  std::vector<FunctionTextRange> Ranges = functionTextRanges();
+  for (const FunctionTextRange &Range : Ranges) {
+    if (TextAddress < Range.Begin || TextAddress >= Range.End)
+      continue;
+
+    const ELFT::Sym &Sym = *Range.Symbol;
+    if (Found && Sym.st_value <= BestValue)
+      continue;
+
+    Expected<StringRef> StrTabOrErr =
+        File.getStringTableForSymtab(*Range.Symtab, Sections);
+    if (!StrTabOrErr) {
+      consumeError(StrTabOrErr.takeError());
+      continue;
+    }
+
+    Expected<StringRef> NameOrErr = Sym.getName(*StrTabOrErr);
+    if (!NameOrErr) {
+      log() << "hotswap: error: findKernelAtAddress: function symbol "
+            << "covering address 0x" << utohexstr(TextAddress)
+            << " has unreadable name: " << toString(NameOrErr.takeError())
+            << "\n";
+      return "";
+    }
+    Found = true;
+    BestValue = Sym.st_value;
+    BestName = NameOrErr->str();
   }
 
   if (Found) {
@@ -396,14 +443,14 @@ std::string ElfView::findKernelAtOffset(uint64_t TextOffset) const {
     if (const_cast<ElfView *>(this)->findKernelDescriptor(BestName)) {
       return BestName;
     }
-    log() << "hotswap: findKernelAtOffset: nearest function symbol '"
-          << BestName << "' preceding offset 0x" << utohexstr(TextOffset)
+    log() << "hotswap: findKernelAtAddress: nearest function symbol '"
+          << BestName << "' preceding address 0x" << utohexstr(TextAddress)
           << " has no .kd descriptor (not a kernel); treating as no match.\n";
     return "";
   }
 
-  log() << "hotswap: findKernelAtOffset: no function symbol covers offset 0x"
-        << utohexstr(TextOffset) << " in .text.\n";
+  log() << "hotswap: findKernelAtAddress: no function symbol covers address 0x"
+        << utohexstr(TextAddress) << " in .text.\n";
   return "";
 }
 

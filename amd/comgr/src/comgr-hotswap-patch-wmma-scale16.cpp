@@ -241,7 +241,7 @@ static uint32_t patchWmmaScale16_16x16(PatchContext &Ctx, size_t Idx) {
   unsigned Src1Hi = Src1Lo + 1;
 
   std::string KernelName =
-      Ctx.Elf.findKernelAtOffset(DI.Offset + Ctx.Elf.textAddr());
+      Ctx.Elf.findKernelAtAddress(DI.Offset + Ctx.Elf.textAddr());
   std::optional<unsigned> KdVgprs =
       Ctx.Elf.getKernelVgprCount(KernelName, Ctx.Config.VgprGranuleSize);
   unsigned KdCount = KdVgprs.value_or(Ctx.Config.MaxVgprs);
@@ -551,7 +551,7 @@ static uint32_t patchWmmaScale16_32x16(PatchContext &Ctx, size_t Idx) {
   unsigned NegFlags = extractNegFlags(Raw);
 
   std::string KernelName =
-      Ctx.Elf.findKernelAtOffset(DI.Offset + Ctx.Elf.textAddr());
+      Ctx.Elf.findKernelAtAddress(DI.Offset + Ctx.Elf.textAddr());
   std::optional<unsigned> KdVgprs =
       Ctx.Elf.getKernelVgprCount(KernelName, Ctx.Config.VgprGranuleSize);
   unsigned KdCount = KdVgprs.value_or(Ctx.Config.MaxVgprs);

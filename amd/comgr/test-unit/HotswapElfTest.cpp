@@ -50,9 +50,9 @@ TEST(ElfView, RejectsNonElfInput) {
   llvm::consumeError(ViewOrErr.takeError());
 }
 
-// -- ElfView::findKernelAtOffset ----------------------------------------------
+// -- ElfView::findKernelAtAddress ---------------------------------------------
 
-TEST(ElfView, FindKernelAtOffsetResolvesNearestPrecedingForZeroSizeSymbol) {
+TEST(ElfView, FindKernelAtAddressResolvesNearestPrecedingForZeroSizeSymbol) {
   // AMDGPU kernel entry symbols frequently have st_size == 0 (the size lives on
   // the .kd object symbol), so an exact [st_value, st_value + st_size)
   // containment test never matches. The lookup must resolve via the
@@ -68,12 +68,12 @@ TEST(ElfView, FindKernelAtOffsetResolvesNearestPrecedingForZeroSizeSymbol) {
       ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
   ASSERT_TRUE((bool)ViewOrErr) << llvm::toString(ViewOrErr.takeError());
 
-  // findKernelAtOffset takes a virtual address; at the entry and at an interior
-  // offset the zero-size symbol still resolves.
-  EXPECT_EQ(ViewOrErr->findKernelAtOffset(0x1000), "zero_size_kernel");
-  EXPECT_EQ(ViewOrErr->findKernelAtOffset(0x1000 + 4), "zero_size_kernel");
+  // findKernelAtAddress takes a virtual address; at the entry and at an
+  // interior offset the zero-size symbol still resolves.
+  EXPECT_EQ(ViewOrErr->findKernelAtAddress(0x1000), "zero_size_kernel");
+  EXPECT_EQ(ViewOrErr->findKernelAtAddress(0x1000 + 4), "zero_size_kernel");
   // An address before the symbol has no preceding function symbol to resolve.
-  EXPECT_EQ(ViewOrErr->findKernelAtOffset(0x0FF0), "");
+  EXPECT_EQ(ViewOrErr->findKernelAtAddress(0x0FF0), "");
 }
 
 // -- ElfView::getKernelStaticLdsSize ------------------------------------------

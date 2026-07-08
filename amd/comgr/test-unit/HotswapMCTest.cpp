@@ -24,7 +24,9 @@
 #include "gtest/gtest.h"
 
 #include <cstring>
+#include <limits>
 #include <mutex>
+#include <vector>
 
 using namespace COMGR;
 using namespace COMGR::hotswap;
@@ -151,6 +153,30 @@ TEST(EncodeSBranch, OutOfRangeFails) {
   EXPECT_TRUE(S.encodeSBranch(0, 500000).empty());
 }
 
+TEST(EncodeSBranch, PositiveBoundaryRoundTrip) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  constexpr uint64_t To =
+      static_cast<uint64_t>(BranchOffsetMax + 1) * MinInstSize;
+  llvm::SmallVector<uint8_t> Out = S.encodeSBranch(0, To);
+  ASSERT_EQ(Out.size(), MinInstSize);
+  uint32_t Encoded = readDword(Out.data());
+  EXPECT_EQ(static_cast<int16_t>(Encoded & 0xFFFFu), BranchOffsetMax);
+  EXPECT_TRUE(S.encodeSBranch(0, To + MinInstSize).empty());
+}
+
+TEST(EncodeSBranch, NegativeBoundaryRoundTrip) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  constexpr uint64_t From =
+      static_cast<uint64_t>(-(BranchOffsetMin + 1)) * MinInstSize;
+  llvm::SmallVector<uint8_t> Out = S.encodeSBranch(From, 0);
+  ASSERT_EQ(Out.size(), MinInstSize);
+  uint32_t Encoded = readDword(Out.data());
+  EXPECT_EQ(static_cast<int16_t>(Encoded & 0xFFFFu), BranchOffsetMin);
+  EXPECT_TRUE(S.encodeSBranch(From + MinInstSize, 0).empty());
+}
+
 TEST(EncodeSBranch, FailsOnInvalidState) {
   LLVMState S; // default-constructed, Valid = false
   EXPECT_TRUE(S.encodeSBranch(0, 8).empty());
@@ -216,6 +242,24 @@ TEST(EncodeLongBranch, ReachesBeyondSBranchRange) {
   EXPECT_EQ(From + Out.size() + longBranchLiteral(Out), To);
 }
 
+TEST(FindNearestSled, RejectsOverflowingHeadroom) {
+  std::vector<NopSled> Sleds = {{0, 64, 60}, {100, 128, 100}};
+  EXPECT_EQ(findNearestSled(Sleds, 0, std::numeric_limits<uint64_t>::max()),
+            nullptr);
+}
+
+TEST(FindNearestSled, HandlesLargeUnsignedOffsets) {
+  std::vector<NopSled> Sleds = {{100, 128, 100},
+                                {std::numeric_limits<uint64_t>::max() - 32,
+                                 std::numeric_limits<uint64_t>::max(),
+                                 std::numeric_limits<uint64_t>::max() - 32}};
+  NopSled *Sled =
+      findNearestSled(Sleds, std::numeric_limits<uint64_t>::max() - 40,
+                      /*Needed=*/8);
+  ASSERT_NE(Sled, nullptr);
+  EXPECT_EQ(Sled, &Sleds[1]);
+}
+
 // -- assembleSingleInst / decodeTextSection round-trip ------------------------
 
 TEST(AssembleDecode, SNopRoundTrip) {
@@ -233,6 +277,90 @@ TEST(AssembleDecode, SNopRoundTrip) {
   ASSERT_EQ(Decoded.size(), 1u);
   EXPECT_EQ(Decoded[0].Size, MinInstSize);
   EXPECT_EQ(Decoded[0].Mnemonic, "s_nop");
+}
+
+TEST(AssembleDecode, CvtPkFp8LiteralSourcesDecodeAsTwelveBytes) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> Bytes = assembleSingleInst(
+      "v_cvt_pk_fp8_f32 v4, 0x477f0000, 0x477f0000 clamp", S);
+  ASSERT_EQ(Bytes.size(), 3u * MinInstSize);
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 1u);
+  const InternalDecodedInst &DI = Decoded[0];
+  EXPECT_EQ(DI.Size, 3u * MinInstSize);
+  EXPECT_EQ(DI.Mnemonic, "v_cvt_pk_fp8_f32");
+
+  const llvm::MCInst &Inst = DI.Inst;
+  ASSERT_GE(Inst.getNumOperands(), 7u);
+  EXPECT_TRUE(Inst.getOperand(0).isReg());
+  ASSERT_TRUE(Inst.getOperand(2).isImm());
+  EXPECT_EQ(Inst.getOperand(2).getImm(), 0x477f0000);
+  ASSERT_TRUE(Inst.getOperand(4).isImm());
+  EXPECT_EQ(Inst.getOperand(4).getImm(), 0x477f0000);
+  ASSERT_TRUE(Inst.getOperand(5).isImm());
+  EXPECT_EQ(Inst.getOperand(5).getImm(), 1);
+}
+
+TEST(AssembleDecode, CvtPkFp8MixedLiteralSourcesDecodeAsTwelveBytes) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> Src0LiteralBytes =
+      assembleSingleInst("v_cvt_pk_fp8_f32 v4, 0x477f0000, v5 clamp", S);
+  ASSERT_EQ(Src0LiteralBytes.size(), 3u * MinInstSize);
+
+  std::vector<InternalDecodedInst> Src0LiteralDecoded;
+  ASSERT_TRUE(decodeTextSection(
+      Src0LiteralBytes.data(), Src0LiteralBytes.size(), S, Src0LiteralDecoded));
+  ASSERT_EQ(Src0LiteralDecoded.size(), 1u);
+  const llvm::MCInst &Src0LiteralInst = Src0LiteralDecoded[0].Inst;
+  ASSERT_GE(Src0LiteralInst.getNumOperands(), 7u);
+  ASSERT_TRUE(Src0LiteralInst.getOperand(2).isImm());
+  EXPECT_EQ(Src0LiteralInst.getOperand(2).getImm(), 0x477f0000);
+  EXPECT_TRUE(Src0LiteralInst.getOperand(4).isReg());
+
+  llvm::SmallVector<uint8_t> Src1LiteralBytes = assembleSingleInst(
+      "v_cvt_pk_fp8_f32 v4, v5, 0.3333333432674408 clamp", S);
+  ASSERT_EQ(Src1LiteralBytes.size(), 3u * MinInstSize);
+
+  std::vector<InternalDecodedInst> Src1LiteralDecoded;
+  ASSERT_TRUE(decodeTextSection(
+      Src1LiteralBytes.data(), Src1LiteralBytes.size(), S, Src1LiteralDecoded));
+  ASSERT_EQ(Src1LiteralDecoded.size(), 1u);
+  const llvm::MCInst &Src1LiteralInst = Src1LiteralDecoded[0].Inst;
+  ASSERT_GE(Src1LiteralInst.getNumOperands(), 7u);
+  EXPECT_TRUE(Src1LiteralInst.getOperand(2).isReg());
+  ASSERT_TRUE(Src1LiteralInst.getOperand(4).isImm());
+  EXPECT_EQ(Src1LiteralInst.getOperand(4).getImm(), 0x3eaaaaab);
+}
+
+TEST(AssembleDecode, CvtPkFp8InlineConstantsDecodeAsEightBytes) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("v_cvt_pk_fp8_f32 v4, 1.0, 0.5 clamp", S);
+  ASSERT_EQ(Bytes.size(), 2u * MinInstSize);
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 1u);
+  const InternalDecodedInst &DI = Decoded[0];
+  EXPECT_EQ(DI.Size, 2u * MinInstSize);
+  EXPECT_EQ(DI.Mnemonic, "v_cvt_pk_fp8_f32");
+
+  const llvm::MCInst &Inst = DI.Inst;
+  ASSERT_GE(Inst.getNumOperands(), 7u);
+  ASSERT_TRUE(Inst.getOperand(2).isImm());
+  EXPECT_EQ(Inst.getOperand(2).getImm(), 0x3f800000);
+  ASSERT_TRUE(Inst.getOperand(4).isImm());
+  EXPECT_EQ(Inst.getOperand(4).getImm(), 0x3f000000);
+  ASSERT_TRUE(Inst.getOperand(5).isImm());
+  EXPECT_EQ(Inst.getOperand(5).getImm(), 1);
 }
 
 TEST(AssembleDecode, RejectsGarbageAsm) {
@@ -328,15 +456,13 @@ static void expectSameOperands(const llvm::MCInst &Actual,
 }
 
 static void expectInstMatchesAsm(const llvm::MCInst &Actual,
-                                 llvm::StringRef Asm,
-                                 const LLVMState &S) {
+                                 llvm::StringRef Asm, const LLVMState &S) {
   llvm::MCInst Expected = assembleOne(Asm, S);
   expectSameOperands(Actual, Expected, Asm);
 }
 
 static bool appendSingleInstBytes(llvm::SmallVectorImpl<uint8_t> &Bytes,
-                                  llvm::StringRef Asm,
-                                  const LLVMState &S) {
+                                  llvm::StringRef Asm, const LLVMState &S) {
   llvm::SmallVector<uint8_t> Inst = assembleSingleInst(Asm, S);
   if (Inst.empty()) {
     ADD_FAILURE() << "failed to assemble: " << Asm.str();

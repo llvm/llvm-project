@@ -163,6 +163,23 @@ static bool decodeKernelEntryStub(ArrayRef<uint8_t> Bytes, const LLVMState &LS,
   return Decoded.size() >= 6;
 }
 
+static bool startsWithBytes(ArrayRef<uint8_t> Bytes, ArrayRef<uint8_t> Prefix) {
+  return Bytes.size() >= Prefix.size() &&
+         Bytes.take_front(Prefix.size()).equals(Prefix);
+}
+
+static SmallVector<uint8_t> buildEntryStubBytePrefix(const LLVMState &LS) {
+  SmallVector<uint8_t> GlobalWb = assembleSingleInst("global_wb", LS);
+  SmallVector<uint8_t> VNop = assembleSingleInst("v_nop", LS);
+  if (GlobalWb.empty() || VNop.empty())
+    return {};
+
+  SmallVector<uint8_t> Prefix;
+  Prefix.append(GlobalWb.begin(), GlobalWb.end());
+  Prefix.append(VNop.begin(), VNop.end());
+  return Prefix;
+}
+
 static bool hasRegOperand(const MCInst &Inst, unsigned Index) {
   return Inst.getNumOperands() > Index && Inst.getOperand(Index).isReg();
 }
@@ -291,8 +308,11 @@ static std::optional<uint64_t> entryVAddr(const KernelDescriptorInfo &KD) {
   return KD.VAddr - Magnitude;
 }
 
-static std::optional<bool> descriptorAlreadyTargetsEntryStub(
-    const ElfView &Elf, const KernelDescriptorInfo &KD, const LLVMState &LS) {
+static std::optional<bool>
+descriptorAlreadyTargetsEntryStub(const ElfView &Elf,
+                                  const KernelDescriptorInfo &KD,
+                                  const LLVMState &LS,
+                                  ArrayRef<uint8_t> EntryStubPrefix) {
   std::optional<uint64_t> Entry = entryVAddr(KD);
   if (!Entry)
     return std::nullopt;
@@ -311,16 +331,15 @@ static std::optional<bool> descriptorAlreadyTargetsEntryStub(
 
   ArrayRef<uint8_t> Candidate(Elf.textData() + TextOffset,
                               KernelEntryStubStride);
-  // The full idempotency matcher uses LLVM's AMDGPU disassembler. Avoid
-  // running it over arbitrary original kernel entry bytes; real code objects
-  // can contain byte streams that are valid executable code but still trip
-  // decoder corner cases before COMGR can finish rewriting.
-  if (!hasKernelEntryTrampolinePrefix(Candidate, LS))
+  // Avoid feeding arbitrary kernel-entry instructions into the stub matcher.
+  // The full decode below is only needed once the bytes look like a hotswap
+  // entry stub.
+  if (!startsWithBytes(Candidate, EntryStubPrefix))
     return false;
 
   std::vector<InternalDecodedInst> Decoded;
-  if (!decodeKernelEntryStub(Candidate, LS, Decoded,
-                             "entry trampoline idempotency matcher"))
+  if (!decodeKernelEntryStub(Candidate, LS,
+                             Decoded, "entry trampoline idempotency matcher"))
     return false;
   if (!hasEntryStubOperandShape(Decoded, LS))
     return false;
@@ -432,11 +451,18 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
   if (Descriptors.empty())
     return 0;
 
+  SmallVector<uint8_t> EntryStubPrefix = buildEntryStubBytePrefix(LS);
+  if (EntryStubPrefix.empty()) {
+    log() << "hotswap: error: entry trampoline: failed to assemble byte "
+          << "prefix for idempotency matching.\n";
+    return std::nullopt;
+  }
+
   std::vector<KernelDescriptorInfo> Work;
   uint32_t MaxInstPrefLines = 0;
   for (const KernelDescriptorInfo &KD : Descriptors) {
     std::optional<bool> AlreadyHasEntryStub =
-        descriptorAlreadyTargetsEntryStub(Elf, KD, LS);
+        descriptorAlreadyTargetsEntryStub(Elf, KD, LS, EntryStubPrefix);
     if (!AlreadyHasEntryStub)
       return std::nullopt;
     if (*AlreadyHasEntryStub)

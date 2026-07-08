@@ -1,24 +1,29 @@
 // COM: Test HotSwap trampoline patch: tensor_load_to_lds multicast fix.
 // COM: Prepends s_pack_hh_b32_b16 to clear multicast routing bits in
 // COM: the descriptor's base SGPR. Base operand variants via NOP sled:
-// COM:   dead SGPR  — only s_pack_hh prepended (no save/restore)
-// COM:   live SGPR  — s_mov save, s_pack_hh, tensor, s_mov restore
-// COM:   alt descriptor — different SGPR range (s[16:23]) for pack target
-// COM:   SGPR redef — descriptor SGPR overwritten before use (dead path)
+// COM:   dead SGPR - only s_pack_hh prepended (no save/restore)
+// COM:   live SGPR - s_mov save, s_pack_hh, tensor, s_mov restore
+// COM:   alt descriptor - different SGPR range (s[16:23]) for pack target
+// COM:   SGPR redef - descriptor SGPR overwritten before use (dead path)
+// COM:   zero-size FUNC - live path when the function symbol has st_size == 0
 // COM: Verifies per-kernel behavior with CHECK-LABEL blocks and explicit
 // COM: s_branch checks.
 // COM:
 // COM: Companion tests:
-// COM:   hotswap-trampoline-tensor-nosled.s     — trampoline fallback path
-// COM:   hotswap-trampoline-tensor-multi.s      — multi-site stacking
-// COM:   hotswap-trampoline-tensor-liveness.s   — isSgprLiveAfter edge cases
+// COM:   hotswap-trampoline-tensor-nosled.s     - trampoline fallback path
+// COM:   hotswap-trampoline-tensor-multi.s      - multi-site stacking
+// COM:   hotswap-trampoline-tensor-liveness.s   - isSgprLiveAfter edge cases
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib %s -o %t.elf
 
-// RUN: hotswap-rewrite %t.elf \
+// RUN: env AMD_COMGR_EMIT_VERBOSE_LOGS=1 hotswap-rewrite %t.elf \
 // RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
 // RUN:   --output %t.out.elf \
+// RUN:   2>&1 \
 // RUN:   | %FileCheck --check-prefix=API %s
+// API-NOT: kernel descriptor symbol '.kd' not found
+// API: hotswap: tensor_load_to_lds: s4 live, save/restore via s{{[0-9]+}}
+// API-NOT: kernel descriptor symbol '.kd' not found
 // API: RESULT: SUCCESS
 
 // RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
@@ -68,7 +73,7 @@
 // COM: Kernel 4 (SGPR redefined before use): s4 is overwritten by
 // COM: s_mov_b32 s4, 0 immediately after tensor_load, then s_endpgm.
 // COM: isSgprLiveAfter sees a def-before-use and takes the dead path
-// COM: — no save/restore needed.
+// COM: - no save/restore needed.
 // DISASM-LABEL: <test_tensor_sgpr_redef>:
 // DISASM-NOT: v_writelane_b32
 // DISASM-NOT: v_readlane_b32
@@ -79,6 +84,18 @@
 // DISASM: s_branch
 // DISASM-NOT: v_writelane_b32
 // DISASM-NOT: v_readlane_b32
+
+// COM: Kernel 5 (zero-size FUNC): real Tensile objects can omit `.size`,
+// COM: leaving the FUNC symbol with st_size == 0. Kernel lookup must still
+// COM: find the descriptor so scratch allocation does not fall back to v0.
+// DISASM-LABEL: <test_tensor_zero_size>:
+// DISASM: s_branch
+// DISASM: s_endpgm
+// DISASM: s_mov_b32 [[ZERO_SCRATCH:s[0-9]+]], s4
+// DISASM-NEXT: s_pack_hh_b32_b16 s4, 0, s4
+// DISASM-NEXT: tensor_load_to_lds
+// DISASM-NEXT: s_mov_b32 s4, [[ZERO_SCRATCH]]
+// DISASM-NEXT: s_branch
 
 // COM: Idempotency: rewriting the output again should produce identical bytes.
 // RUN: hotswap-rewrite %t.out.elf \
@@ -199,6 +216,33 @@ test_tensor_sgpr_redef:
 .Ltest_tensor_sgpr_redef_end:
 .size test_tensor_sgpr_redef, .Ltest_tensor_sgpr_redef_end-test_tensor_sgpr_redef
 
+// ---- Kernel 5: tensor_load_to_lds with zero-sized FUNC symbol ---------------
+
+.globl test_tensor_zero_size
+.p2align 8
+.type test_tensor_zero_size,@function
+test_tensor_zero_size:
+  tensor_load_to_lds s[0:3], s[4:11]
+  s_mov_b32 s0, s4
+  s_endpgm
+  s_nop 0
+  s_nop 0
+  s_nop 0
+  s_nop 0
+  s_nop 0
+  s_nop 0
+  s_nop 0
+  s_nop 0
+  s_nop 0
+  s_nop 0
+  s_nop 0
+  s_nop 0
+  s_nop 0
+  s_nop 0
+  s_nop 0
+  s_nop 0
+// Deliberately no `.size`: this models Tensile objects that emit st_size == 0.
+
 .rodata
 .p2align 8
 .amdhsa_kernel test_tensor_dead
@@ -220,6 +264,12 @@ test_tensor_sgpr_redef:
 
 .p2align 8
 .amdhsa_kernel test_tensor_sgpr_redef
+  .amdhsa_next_free_vgpr 1
+  .amdhsa_next_free_sgpr 12
+.end_amdhsa_kernel
+
+.p2align 8
+.amdhsa_kernel test_tensor_zero_size
   .amdhsa_next_free_vgpr 1
   .amdhsa_next_free_sgpr 12
 .end_amdhsa_kernel

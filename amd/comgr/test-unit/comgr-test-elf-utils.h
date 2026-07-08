@@ -56,7 +56,7 @@ struct KernelDescriptorElfOptions {
   bool EmitKernelDescriptorSymbol = true;
   // Emit the kernel entry STT_FUNC symbol with st_size == 0, matching AMDGPU
   // HSACO objects where the size lives on the .kd object symbol. Exercises the
-  // nearest-preceding lookup in ElfView::findKernelAtOffset.
+  // nearest-preceding lookup in ElfView::findKernelAtAddress.
   bool ZeroSizeKernelSym = false;
   std::optional<uint64_t> KernelDescriptorSymbolValue;
   uint32_t GroupSegmentFixedSize = 0;

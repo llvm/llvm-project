@@ -447,12 +447,12 @@ struct ScratchAlloc {
 
 std::optional<ScratchAlloc> tryAllocScratchVgpr(PatchContext &Ctx, size_t Idx) {
   InternalDecodedInst &DI = Ctx.Decoded[Idx];
-  // findKernelAtOffset matches against symbol virtual addresses, so bias the
+  // findKernelAtAddress matches against symbol virtual addresses, so bias the
   // .text-relative DI.Offset by textAddr() (matching the other patches). A
   // bare offset misses when .text has a non-zero sh_addr, leaving KdVgprs ==
   // 0 and handing the allocator a live register.
   std::string KernelName =
-      Ctx.Elf.findKernelAtOffset(DI.Offset + Ctx.Elf.textAddr());
+      Ctx.Elf.findKernelAtAddress(DI.Offset + Ctx.Elf.textAddr());
   unsigned KdVgprs = 0;
   if (std::optional<unsigned> Opt =
           Ctx.Elf.getKernelVgprCount(KernelName, Ctx.Config.VgprGranuleSize))
@@ -502,7 +502,7 @@ std::optional<SgprScratchAlloc> tryAllocScratchSgpr(PatchContext &Ctx,
                                                     size_t Idx) {
   InternalDecodedInst &DI = Ctx.Decoded[Idx];
   std::string KernelName =
-      Ctx.Elf.findKernelAtOffset(DI.Offset + Ctx.Elf.textAddr());
+      Ctx.Elf.findKernelAtAddress(DI.Offset + Ctx.Elf.textAddr());
   std::optional<unsigned> KdSgprs = Ctx.Elf.getKernelSgprCount(KernelName);
   unsigned SgprKdCount = KdSgprs.value_or(Ctx.Config.MaxSgprs);
 
@@ -800,7 +800,7 @@ bool patchDsAddtid(PatchContext &Ctx, size_t Idx) {
     StoreScratch = tryAllocScratchVgpr(Ctx, Idx);
     if (!StoreScratch) {
       std::string KernelName =
-          Ctx.Elf.findKernelAtOffset(DI.Offset + Ctx.Elf.textAddr());
+          Ctx.Elf.findKernelAtAddress(DI.Offset + Ctx.Elf.textAddr());
       StringRef KernelDisplay =
           KernelName.empty() ? StringRef("<unknown>") : StringRef(KernelName);
       std::optional<uint32_t> LdsSize =

@@ -130,7 +130,7 @@ static constexpr uint64_t KdSize = sizeof(llvm::amdhsa::kernel_descriptor_t);
 
 // Maximum distance (bytes) between an instruction and a NOP sled for the
 // sled to be considered reachable by a single s_branch.
-static constexpr int64_t MaxSledDistance = 131072;
+static constexpr uint64_t MaxSledDistance = 131072;
 
 // Minimum size (bytes) of a consecutive NOP run to be usable as a sled.
 static constexpr uint64_t MinNopSledSize = 8;
@@ -175,6 +175,13 @@ public:
   using ELFT = llvm::object::ELF64LE;
   using ELFFileT = llvm::object::ELFFile<ELFT>;
 
+  struct FunctionTextRange {
+    uint64_t Begin = 0;
+    uint64_t End = 0;
+    const ELFT::Sym *Symbol = nullptr;
+    const ELFT::Shdr *Symtab = nullptr;
+  };
+
   /// Parse \p Data / \p Size into an ElfView. Fails if the bytes are not a
   /// valid ELF64 or if no `.text` section is found.
   static llvm::Expected<ElfView> create(uint8_t *Data, size_t Size);
@@ -215,9 +222,13 @@ public:
   uint8_t *textData() { return data() + textOffset(); }
   const uint8_t *textData() const { return data() + textOffset(); }
 
-  /// Find the kernel function symbol whose range includes \p TextOffset.
+  /// Enumerate function symbol ranges in `.text` using virtual addresses.
+  /// Zero-size symbols extend to the next function symbol or `.text` end.
+  std::vector<FunctionTextRange> functionTextRanges() const;
+
+  /// Find the kernel function symbol whose range includes \p TextAddress.
   /// Returns "" if no matching function symbol exists.
-  std::string findKernelAtOffset(uint64_t TextOffset) const;
+  std::string findKernelAtAddress(uint64_t TextAddress) const;
 
   /// Pointer to the kernel_descriptor for \p KernelName inside the buffer,
   /// or nullptr if not found.

@@ -32,6 +32,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Compiler.h"
 
+#include <algorithm>
 #include <cassert>
 #include <limits>
 
@@ -199,23 +200,83 @@ LLVM_ATTRIBUTE_WEAK void patchDebugFrame(uint8_t *, size_t, uint64_t, uint64_t,
 
 // -- NOP sled scanning --------------------------------------------------------
 
-/// Scan \p Decoded for runs of consecutive `s_nop` instructions at least
-/// MinNopSledSize bytes long and return the resulting NopSled list (each
-/// sled records Start / End byte offsets in .text and the initial WritePos
-/// at Start). These sleds are the landing zones emitToNopSled targets for
-/// in-place rewrites. NOPs are identified by MC opcode (cached on \p LS at
-/// initLLVM() time) rather than mnemonic string, so the scanner is robust
-/// against printer aliasing / mnemonic formatting variations.
+static std::vector<ElfView::FunctionTextRange>
+buildMergedFunctionTextRanges(const ElfView &Elf) {
+  std::vector<ElfView::FunctionTextRange> Ranges = Elf.functionTextRanges();
+  llvm::sort(Ranges, [](const ElfView::FunctionTextRange &L,
+                        const ElfView::FunctionTextRange &R) {
+    if (L.Begin != R.Begin)
+      return L.Begin < R.Begin;
+    return L.End < R.End;
+  });
+
+  std::vector<ElfView::FunctionTextRange> MergedRanges;
+  for (const ElfView::FunctionTextRange &Range : Ranges) {
+    if (Range.Begin >= Range.End)
+      continue;
+    if (MergedRanges.empty() || Range.Begin > MergedRanges.back().End) {
+      MergedRanges.push_back(Range);
+      continue;
+    }
+    MergedRanges.back().End = std::max(MergedRanges.back().End, Range.End);
+  }
+  return MergedRanges;
+}
+
+static bool isInFunctionTextRange(ArrayRef<ElfView::FunctionTextRange> Ranges,
+                                  uint64_t TextAddress) {
+  ArrayRef<ElfView::FunctionTextRange>::iterator It =
+      std::upper_bound(Ranges.begin(), Ranges.end(), TextAddress,
+                       [](uint64_t Value, const ElfView::FunctionTextRange &R) {
+                         return Value < R.Begin;
+                       });
+  if (It == Ranges.begin())
+    return false;
+  --It;
+  return TextAddress < It->End;
+}
+
+static bool
+isZeroFillDword(const uint8_t *Text, uint64_t TextSize,
+                const InternalDecodedInst &DI, uint64_t TextAddr,
+                ArrayRef<ElfView::FunctionTextRange> FunctionRanges) {
+  if (FunctionRanges.empty() || DI.Size != MinInstSize ||
+      DI.Offset > TextSize || MinInstSize > TextSize - DI.Offset ||
+      DI.Offset > std::numeric_limits<uint64_t>::max() - TextAddr ||
+      isInFunctionTextRange(FunctionRanges, TextAddr + DI.Offset))
+    return false;
+  return std::all_of(Text + DI.Offset, Text + DI.Offset + MinInstSize,
+                     [](uint8_t B) { return B == 0; });
+}
+
+/// Scan \p Decoded for runs of consecutive `s_nop` instructions or undecoded
+/// zero-filled alignment padding at least MinNopSledSize bytes long and return
+/// the resulting NopSled list (each sled records Start / End byte offsets in
+/// .text and the initial WritePos at Start). These sleds are the landing zones
+/// emitToNopSled targets for in-place rewrites. NOPs are identified by MC
+/// opcode (cached on \p LS at initLLVM() time) rather than mnemonic string, so
+/// the scanner is robust against printer aliasing / mnemonic formatting
+/// variations. Zero-filled padding is accepted only when function-symbol ranges
+/// prove it is between functions; zero bytes inside a function are executable
+/// code and are not sled space.
 static std::vector<NopSled>
-buildNopSledMap(ArrayRef<InternalDecodedInst> Decoded, const LLVMState &LS) {
+buildNopSledMap(ArrayRef<InternalDecodedInst> Decoded, const uint8_t *Text,
+                uint64_t TextSize, const LLVMState &LS, const ElfView &Elf) {
   std::vector<NopSled> Sleds;
+  std::vector<ElfView::FunctionTextRange> FunctionRanges =
+      buildMergedFunctionTextRanges(Elf);
   const size_t N = Decoded.size();
   size_t I = 0;
   while (I < N) {
-    if (Decoded[I].Inst.getOpcode() == LS.SNopOpcode) {
+    bool IsSledInst = Decoded[I].Inst.getOpcode() == LS.SNopOpcode;
+    bool IsZeroFill = isZeroFillDword(Text, TextSize, Decoded[I],
+                                      Elf.textAddr(), FunctionRanges);
+    if (IsSledInst || IsZeroFill) {
       uint64_t Start = Decoded[I].Offset;
       uint64_t End = Start;
-      while (I < N && Decoded[I].Inst.getOpcode() == LS.SNopOpcode) {
+      while (I < N && (Decoded[I].Inst.getOpcode() == LS.SNopOpcode ||
+                       isZeroFillDword(Text, TextSize, Decoded[I],
+                                       Elf.textAddr(), FunctionRanges))) {
         End = Decoded[I].Offset + Decoded[I].Size;
         ++I;
       }
@@ -236,13 +297,12 @@ buildNopSledMap(ArrayRef<InternalDecodedInst> Decoded, const LLVMState &LS) {
 /// original site, overwrites the original site with a branch-forward to the
 /// sled, and pads the leftover bytes of the original slot with cached s_nop
 /// bytes. Advances \c Sled.WritePos by the amount consumed. Returns false if
-/// either branch encoding fails, leaving \c Ctx.Text partially written.
+/// either branch encoding fails. Branches are encoded before any bytes are
+/// written so a failure leaves \c Ctx.Text and \c Sled.WritePos unchanged.
 [[nodiscard]] bool emitToNopSled(PatchContext &Ctx, NopSled &Sled,
                                  uint64_t InstOffset, uint32_t InstSize,
                                  ArrayRef<uint8_t> Replacement) {
   const LLVMState &LS = Ctx.LS;
-  std::memcpy(Ctx.Text + Sled.WritePos, Replacement.data(), Replacement.size());
-
   SmallVector<uint8_t> BrBack = LS.encodeSBranch(
       Sled.WritePos + Replacement.size(), InstOffset + InstSize);
   if (BrBack.empty()) {
@@ -252,8 +312,6 @@ buildNopSledMap(ArrayRef<InternalDecodedInst> Decoded, const LLVMState &LS) {
           << utohexstr(InstOffset + InstSize) << " failed.\n";
     return false;
   }
-  std::memcpy(Ctx.Text + Sled.WritePos + Replacement.size(), BrBack.data(),
-              BrBack.size());
 
   SmallVector<uint8_t> BrFwd = LS.encodeSBranch(InstOffset, Sled.WritePos);
   if (BrFwd.empty()) {
@@ -262,6 +320,10 @@ buildNopSledMap(ArrayRef<InternalDecodedInst> Decoded, const LLVMState &LS) {
           << utohexstr(Sled.WritePos) << " failed.\n";
     return false;
   }
+
+  std::memcpy(Ctx.Text + Sled.WritePos, Replacement.data(), Replacement.size());
+  std::memcpy(Ctx.Text + Sled.WritePos + Replacement.size(), BrBack.data(),
+              BrBack.size());
   std::memcpy(Ctx.Text + InstOffset, BrFwd.data(), BrFwd.size());
 
   // Pad the tail of the replaced instruction slot with cached s_nop bytes
@@ -368,12 +430,17 @@ SmallVector<uint8_t> encodeLongBranch(const LLVMState &LS, uint64_t FromOffset,
 [[nodiscard]] bool emitReplacementCode(PatchContext &Ctx, uint64_t InstOffset,
                                        uint32_t InstSize,
                                        ArrayRef<uint8_t> Replacement) {
-  // findNearestSled already enforces that the returned sled has at least
-  // `Needed` bytes of headroom, so a non-null result is sufficient to take
-  // the in-place path.
+  // findNearestSled enforces sled headroom. emitToNopSled still validates
+  // exact branch reachability because branch-back distance includes the
+  // replacement size, not just the original instruction offset.
   uint64_t Needed = Replacement.size() + MinInstSize;
-  if (NopSled *Sled = findNearestSled(Ctx.NopSleds, InstOffset, Needed))
-    return emitToNopSled(Ctx, *Sled, InstOffset, InstSize, Replacement);
+  if (NopSled *Sled = findNearestSled(Ctx.NopSleds, InstOffset, Needed)) {
+    if (emitToNopSled(Ctx, *Sled, InstOffset, InstSize, Replacement))
+      return true;
+    log() << "hotswap: emitReplacementCode: NOP sled at offset 0x"
+          << utohexstr(Sled->WritePos)
+          << " is not branch-reachable after assembly; using trampoline.\n";
+  }
   return emitToTrampoline(Ctx, InstOffset, InstSize, Replacement);
 }
 
@@ -396,14 +463,15 @@ static uint32_t runPerInstPass(uint32_t (*Fn)(PatchContext &, size_t),
 /// the whole-function WMMA-hazard pass after the per-instruction loop and
 /// records per-kernel stats via ElfView::updateKernelDescriptor.
 /// Returns the total number of applied patches across all passes.
-static uint32_t
+static std::optional<uint32_t>
 applyGfx1250B0toA0Rules(std::vector<InternalDecodedInst> &Decoded,
                         uint8_t *Text, uint64_t TextSize, const LLVMState &LS,
                         std::vector<Trampoline> &OutTrampolines, ElfView &Elf,
                         std::vector<ScratchPatchInfo> &OutScratchPatches,
                         const RewriteConfig &Config) {
   uint32_t Patched = 0;
-  std::vector<NopSled> Sleds = buildNopSledMap(Decoded, LS);
+  std::vector<NopSled> Sleds =
+      buildNopSledMap(Decoded, Text, TextSize, LS, Elf);
 
   CFG Cfg = buildCfg(Decoded, *LS.MCII);
   LivenessInfo Liveness =
@@ -482,14 +550,37 @@ applyGfx1250B0toA0Rules(std::vector<InternalDecodedInst> &Decoded,
       continue;
     std::optional<unsigned> VgprsBefore =
         Elf.getKernelVgprCount(KName, Config.VgprGranuleSize);
+    std::optional<unsigned> SgprsBefore = Elf.getKernelSgprCount(KName);
     if (Stats.ExtraVgprs > 0)
       Elf.updateKernelDescriptor(KName, Stats.ExtraVgprs,
                                  Config.VgprGranuleSize);
+    if (Stats.ExtraSgprs > 0) {
+      if (!SgprsBefore) {
+        log() << "hotswap: error: failed to read SGPR count for kernel "
+              << KName << "\n";
+        return std::nullopt;
+      }
+      if (Stats.ExtraSgprs >
+          std::numeric_limits<unsigned>::max() - *SgprsBefore) {
+        log() << "hotswap: error: SGPR count for kernel " << KName
+              << " overflows unsigned after hotswap scratch allocation\n";
+        return std::nullopt;
+      }
+      unsigned RequiredSgprs = *SgprsBefore + Stats.ExtraSgprs;
+      if (!Elf.updateKernelDescriptorSgprCount(KName, RequiredSgprs)) {
+        log() << "hotswap: error: failed to update SGPR count for kernel "
+              << KName << "\n";
+        return std::nullopt;
+      }
+    }
     std::optional<unsigned> VgprsAfter =
         Elf.getKernelVgprCount(KName, Config.VgprGranuleSize);
+    std::optional<unsigned> SgprsAfter = Elf.getKernelSgprCount(KName);
     log() << "hotswap: liveness: kernel " << KName
           << ": vgprs_before=" << VgprsBefore.value_or(0)
           << ", vgprs_after=" << VgprsAfter.value_or(0)
+          << ", sgprs_before=" << SgprsBefore.value_or(0)
+          << ", sgprs_after=" << SgprsAfter.value_or(0)
           << ", scratch_reused=" << Stats.ScratchReused
           << ", scratch_above_kd=" << Stats.ScratchAboveKd << "\n";
   }
@@ -680,8 +771,12 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
       return AMD_COMGR_STATUS_ERROR;
     }
 
-    Count = applyGfx1250B0toA0Rules(Decoded, Text, Elf.textSize(), LS, Deferred,
-                                    Elf, ScratchPatches, Config);
+    std::optional<uint32_t> Patched =
+        applyGfx1250B0toA0Rules(Decoded, Text, Elf.textSize(), LS, Deferred,
+                                Elf, ScratchPatches, Config);
+    if (!Patched)
+      return AMD_COMGR_STATUS_ERROR;
+    Count = *Patched;
     log() << "hotswap: applied " << Count << " B0-to-A0 patches\n";
   } else {
     log() << "hotswap: B0-to-A0 patches disabled for this rewrite\n";
