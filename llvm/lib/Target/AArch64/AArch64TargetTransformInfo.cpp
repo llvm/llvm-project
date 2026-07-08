@@ -2177,20 +2177,26 @@ static std::optional<Instruction *> instCombineXorSVECmpNE(InstCombiner &IC,
 // -> umin(ptrue, %v, 1)
 static std::optional<Instruction *> instCombineZExtSVECmpNE(InstCombiner &IC,
                                                             IntrinsicInst &II) {
-  if (!isAllActivePredicate(II.getOperand(0)) ||
-      !match(II.getOperand(2), m_Zero()) || !II.hasOneUse())
+  if (!isAllActivePredicate(II.getOperand(0)) || !II.hasOneUse())
     return std::nullopt;
+
+  Value *Zero = II.getOperand(1);
+  Value *Op = II.getOperand(2);
+  if (!match(Zero, m_Zero())) {
+    std::swap(Zero, Op);
+    if (!match(Zero, m_Zero()))
+      return std::nullopt;
+  }
 
   auto *User = cast<Instruction>(*II.user_begin());
   if (!match(User, m_ZExt(m_Specific(&II))))
     return std::nullopt;
 
   IC.Builder.SetInsertPoint(User);
-  Value *UMIN = IC.Builder.CreateIntrinsic(
-      Intrinsic::aarch64_sve_umin, II.getOperand(1)->getType(),
-      {II.getOperand(0), II.getOperand(1),
-       ConstantInt::get(II.getOperand(1)->getType(), 1)});
-  IC.replaceInstUsesWith(*User, UMIN);
+  Value *UMin =
+      IC.Builder.CreateIntrinsic(Intrinsic::umin, {Op->getType()},
+                                 {Op, ConstantInt::get(Op->getType(), 1)});
+  IC.replaceInstUsesWith(*User, UMin);
   IC.eraseInstFromFunction(*User);
   return &II;
 }

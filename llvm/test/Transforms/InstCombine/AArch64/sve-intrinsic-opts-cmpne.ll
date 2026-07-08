@@ -264,7 +264,8 @@ define <vscale x 16 x i1> @not_cmpne_wrong_xor_operand(<vscale x 16 x i8> %vec_a
 define <vscale x 16 x i8> @zext_cmpne_i8(<vscale x 16 x i8> %vec) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @zext_cmpne_i8(
 ; CHECK-SAME: <vscale x 16 x i8> [[VEC:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[ZEXT:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[VEC]], <vscale x 16 x i8> splat (i8 1))
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <vscale x 16 x i8> [[VEC]], zeroinitializer
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 16 x i1> [[TMP1]] to <vscale x 16 x i8>
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[ZEXT]]
 ;
   %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %vec, <vscale x 16 x i8> zeroinitializer)
@@ -272,10 +273,23 @@ define <vscale x 16 x i8> @zext_cmpne_i8(<vscale x 16 x i8> %vec) #0 {
   ret <vscale x 16 x i8> %zext
 }
 
+define <vscale x 16 x i8> @zext_cmpne_zero_lhs_i8(<vscale x 16 x i8> %vec) #0 {
+; CHECK-LABEL: define <vscale x 16 x i8> @zext_cmpne_zero_lhs_i8(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <vscale x 16 x i8> [[VEC]], zeroinitializer
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 16 x i1> [[TMP1]] to <vscale x 16 x i8>
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[ZEXT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> %vec)
+  %zext = zext <vscale x 16 x i1> %cmp to <vscale x 16 x i8>
+  ret <vscale x 16 x i8> %zext
+}
+
 define <vscale x 4 x i32> @zext_cmpne_wide_i32(<vscale x 4 x i32> %vec) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @zext_cmpne_wide_i32(
 ; CHECK-SAME: <vscale x 4 x i32> [[VEC:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[ZEXT:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.umin.u.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[VEC]], <vscale x 4 x i32> splat (i32 1))
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <vscale x 4 x i32> [[VEC]], zeroinitializer
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 4 x i1> [[TMP1]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[ZEXT]]
 ;
   %cmp = call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %vec, <vscale x 2 x i64> zeroinitializer)
