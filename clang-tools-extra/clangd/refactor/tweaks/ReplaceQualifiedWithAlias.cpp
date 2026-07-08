@@ -39,6 +39,8 @@ public:
 private:
   std::string AliasName;
   SourceRange AliasDeclToSkip;
+  llvm::DenseSet<const NamedDecl *> SelectedTargets;
+  std::string SelectedName;
   llvm::DenseSet<const NamedDecl *> RewriteTargets;
 };
 REGISTER_TWEAK(ReplaceQualifiedWithAlias)
@@ -60,6 +62,45 @@ void collectUsingDecls(const DeclContext *DC,
     if (const auto *Nested = llvm::dyn_cast<DeclContext>(D))
       collectUsingDecls(Nested, Out);
   }
+}
+
+bool collectAliasTargets(const NamedDecl *Alias, const Tweak::Selection &Inputs,
+                         llvm::DenseSet<const NamedDecl *> &Targets);
+
+bool collectAliasTargets(const NamedDecl *Alias, const Tweak::Selection &Inputs,
+                         llvm::DenseSet<const NamedDecl *> &Targets) {
+  ReferenceLoc QualifiedRef;
+  bool FoundQualifiedRef = false;
+  // Prefer the alias's own qualified reference when it exists, because it
+  // gives us the exact namespace spelling that should be rewritten.
+  findExplicitReferences(
+      Alias,
+      [&](ReferenceLoc Ref) {
+        if (FoundQualifiedRef || !Ref.Qualifier || Ref.Targets.empty())
+          return;
+        if (!isNamespaceQualifier(Ref.Qualifier))
+          return;
+        QualifiedRef = std::move(Ref);
+        FoundQualifiedRef = true;
+      },
+      Inputs.AST->getHeuristicResolver());
+
+  if (FoundQualifiedRef) {
+    for (const auto *Target : QualifiedRef.Targets) {
+      if (const auto *Canonical = canonicalDecl(Target))
+        Targets.insert(Canonical);
+    }
+    return !Targets.empty();
+  }
+
+  if (const auto *UD = llvm::dyn_cast<UsingDecl>(Alias)) {
+    for (const auto *Shadow : UD->shadows()) {
+      if (const auto *Canonical = canonicalDecl(Shadow->getTargetDecl()))
+        Targets.insert(Canonical);
+    }
+  }
+
+  return !Targets.empty();
 }
 
 // Returns the end of a qualified reference, extending past any template
@@ -109,6 +150,8 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
   // Reset all cached state before inspecting the new selection.
   AliasName.clear();
   AliasDeclToSkip = SourceRange();
+  SelectedTargets.clear();
+  SelectedName.clear();
   RewriteTargets.clear();
 
   auto *Node = Inputs.ASTSelection.commonAncestor();
@@ -120,36 +163,7 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
       return false;
 
     llvm::DenseSet<const NamedDecl *> Targets;
-
-    ReferenceLoc QualifiedRef;
-    bool FoundQualifiedRef = false;
-    // Prefer the alias's own qualified reference when it exists, because it
-    // gives us the exact namespace spelling that should be rewritten.
-    findExplicitReferences(
-        Alias,
-        [&](ReferenceLoc Ref) {
-          if (FoundQualifiedRef || !Ref.Qualifier || Ref.Targets.empty())
-            return;
-          if (!isNamespaceQualifier(Ref.Qualifier))
-            return;
-          QualifiedRef = std::move(Ref);
-          FoundQualifiedRef = true;
-        },
-        Inputs.AST->getHeuristicResolver());
-
-    if (FoundQualifiedRef) {
-      for (const auto *Target : QualifiedRef.Targets) {
-        if (const auto *Canonical = canonicalDecl(Target))
-          Targets.insert(Canonical);
-      }
-    } else if (const auto *UD = llvm::dyn_cast<UsingDecl>(Alias)) {
-      for (const auto *Shadow : UD->shadows()) {
-        if (const auto *Canonical = canonicalDecl(Shadow->getTargetDecl()))
-          Targets.insert(Canonical);
-      }
-    }
-
-    if (Targets.empty())
+    if (!collectAliasTargets(Alias, Inputs, Targets))
       return false;
 
     // Cache the alias spelling and the canonical declarations it stands for.
@@ -157,6 +171,66 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
     AliasName = Alias->getNameAsString();
     AliasDeclToSkip = Alias->getSourceRange();
     return true;
+  };
+
+  auto FindSelectedQualifiedRef = [&](const SelectionTree::Node *N) -> bool {
+    const SelectionTree::Node *Root = N;
+    while (Root && !Root->ASTNode.get<Decl>() && !Root->ASTNode.get<Stmt>())
+      Root = Root->Parent;
+    if (!Root)
+      return false;
+
+    bool FoundSelectedQualifiedRef = false;
+    auto ReportRef = [&](ReferenceLoc Ref) {
+      if (FoundSelectedQualifiedRef || !Ref.Qualifier || Ref.Targets.empty())
+        return;
+      if (!isNamespaceQualifier(Ref.Qualifier))
+        return;
+
+      auto &SM = Inputs.AST->getSourceManager();
+      const auto &LangOpts = Inputs.AST->getLangOpts();
+
+      SourceLocation QualifierLoc = Ref.Qualifier.getBeginLoc();
+      SourceLocation NameLoc = Ref.NameLoc;
+      if (QualifierLoc.isMacroID()) {
+        if (!SM.isMacroArgExpansion(QualifierLoc))
+          return;
+        QualifierLoc = SM.getFileLoc(QualifierLoc);
+      }
+      if (NameLoc.isMacroID()) {
+        if (!SM.isMacroArgExpansion(NameLoc))
+          return;
+        NameLoc = SM.getFileLoc(NameLoc);
+      }
+      if (SM.getFileID(QualifierLoc) != SM.getMainFileID() ||
+          SM.getFileID(NameLoc) != SM.getMainFileID())
+        return;
+
+      unsigned BeginOffset = SM.getFileOffset(QualifierLoc);
+      SourceLocation EndLoc = getReferenceEnd(NameLoc, SM, LangOpts);
+      if (BeginOffset > SM.getFileOffset(EndLoc))
+        return;
+
+      if (Inputs.SelectionBegin < BeginOffset ||
+          Inputs.SelectionBegin > SM.getFileOffset(EndLoc))
+        return;
+
+      SelectedName = Lexer::getSourceText(
+                         CharSourceRange::getTokenRange(NameLoc), SM, LangOpts)
+                         .str();
+      for (const auto *Target : Ref.Targets) {
+        if (const auto *Canonical = canonicalDecl(Target))
+          SelectedTargets.insert(Canonical);
+      }
+      FoundSelectedQualifiedRef = true;
+    };
+
+    if (const auto *D = Root->ASTNode.get<Decl>()) {
+      findExplicitReferences(D, ReportRef, Inputs.AST->getHeuristicResolver());
+    } else if (const auto *S = Root->ASTNode.get<Stmt>()) {
+      findExplicitReferences(S, ReportRef, Inputs.AST->getHeuristicResolver());
+    }
+    return FoundSelectedQualifiedRef;
   };
 
   // First look for an alias declaration in the current selection or one of
@@ -171,77 +245,18 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
     }
   }
 
-  llvm::DenseSet<const NamedDecl *> SelectedTargets;
-  std::string SelectedName;
-  bool FoundSelectedQualifiedRef = false;
-  // If the selection is a qualified reference instead of an alias, derive the
-  // target set from that reference and then search for a matching alias in the
-  // file.
-  for (const auto &D : Inputs.AST->getLocalTopLevelDecls()) {
-    findExplicitReferences(
-        D,
-        [&](ReferenceLoc Ref) {
-          if (FoundSelectedQualifiedRef || !Ref.Qualifier ||
-              Ref.Targets.empty())
-            return;
-          if (!isNamespaceQualifier(Ref.Qualifier))
-            return;
-
-          auto &SM = Inputs.AST->getSourceManager();
-          const auto &LangOpts = Inputs.AST->getLangOpts();
-
-          SourceLocation QualifierLoc = Ref.Qualifier.getBeginLoc();
-          SourceLocation NameLoc = Ref.NameLoc;
-          if (QualifierLoc.isMacroID()) {
-            if (!SM.isMacroArgExpansion(QualifierLoc))
-              return;
-            QualifierLoc = SM.getFileLoc(QualifierLoc);
-          }
-          if (NameLoc.isMacroID()) {
-            if (!SM.isMacroArgExpansion(NameLoc))
-              return;
-            NameLoc = SM.getFileLoc(NameLoc);
-          }
-          if (SM.getFileID(QualifierLoc) != SM.getMainFileID() ||
-              SM.getFileID(NameLoc) != SM.getMainFileID())
-            return;
-
-          unsigned BeginOffset = SM.getFileOffset(QualifierLoc);
-          SourceLocation EndLoc = getReferenceEnd(NameLoc, SM, LangOpts);
-          if (BeginOffset > SM.getFileOffset(EndLoc))
-            return;
-
-          if (Inputs.SelectionBegin < BeginOffset ||
-              Inputs.SelectionBegin > SM.getFileOffset(EndLoc))
-            return;
-
-          // Record the referred-to name so we can prefer aliases with the same
-          // identifier when several are visible.
-          SelectedName =
-              Lexer::getSourceText(CharSourceRange::getTokenRange(NameLoc), SM,
-                                   LangOpts)
-                  .str();
-          for (const auto *Target : Ref.Targets) {
-            if (const auto *Canonical = canonicalDecl(Target))
-              SelectedTargets.insert(Canonical);
-          }
-          FoundSelectedQualifiedRef = true;
-        },
-        Inputs.AST->getHeuristicResolver());
-    if (FoundSelectedQualifiedRef)
-      break;
-  }
-
-  if (!FoundSelectedQualifiedRef)
+  if (!FindSelectedQualifiedRef(Node))
     return false;
 
-  llvm::SmallVector<const UsingDecl *> VisibleUsingDecls;
-  collectUsingDecls(Inputs.AST->getASTContext().getTranslationUnitDecl(),
-                    VisibleUsingDecls);
+  // Search the file for a using-declaration that covers the selected reference.
+  // This avoids a full findExplicitReferences() traversal of the whole file;
+  // collectUsingDecls() only walks declarations, not expressions or statements.
+  // The expensive per-occurrence rewrite is deferred to apply().
   auto &SM = Inputs.AST->getSourceManager();
-  // Search visible using-declarations for one that shadows the same target
-  // set, then reuse its alias spelling.
-  for (const auto *UD : VisibleUsingDecls) {
+  llvm::SmallVector<const UsingDecl *> FileUsingDecls;
+  collectUsingDecls(Inputs.AST->getASTContext().getTranslationUnitDecl(),
+                    FileUsingDecls);
+  for (const auto *UD : FileUsingDecls) {
     if (!UD->getIdentifier())
       continue;
     if (!SelectedName.empty() && UD->getName() != SelectedName)
@@ -251,11 +266,13 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
         SM.getFileID(SM.getExpansionLoc(UDLoc)) != SM.getMainFileID())
       continue;
 
+    llvm::DenseSet<const NamedDecl *> AliasTargets;
+    if (!collectAliasTargets(UD, Inputs, AliasTargets))
+      continue;
+
     bool MatchesSelection = false;
-    for (const auto *Shadow : UD->shadows()) {
-      const auto *Canonical = canonicalDecl(Shadow->getTargetDecl());
-      if (Canonical &&
-          (SelectedTargets.empty() || SelectedTargets.contains(Canonical))) {
+    for (const auto *Target : AliasTargets) {
+      if (SelectedTargets.contains(Target)) {
         MatchesSelection = true;
         break;
       }
@@ -263,8 +280,10 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
     if (!MatchesSelection)
       continue;
 
-    if (SetFromAlias(UD))
-      return true;
+    RewriteTargets = std::move(AliasTargets);
+    AliasName = UD->getNameAsString();
+    AliasDeclToSkip = UD->getSourceRange();
+    return true;
   }
 
   return false;

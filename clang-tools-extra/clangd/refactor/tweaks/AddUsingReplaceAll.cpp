@@ -32,9 +32,9 @@ namespace clang {
 namespace clangd {
 
 /// Tweak for removing the full namespace qualifier under the cursor on
-/// DeclRefExpr and types and adding "using" statement instead. This tweak
+/// DeclRefExpr and types and adding the "using" statement instead. This tweak
 /// replaces all occurrences of the qualified symbol in the file, not just the
-/// one under the cursor, but it also requires more preparation and is more
+/// one under the cursor. However, it also requires more preparation and is more
 /// expensive to compute, so it is hidden behind a separate action from
 /// AddUsing, which only removes the qualifier under the cursor.
 class AddUsingReplaceAll : public Tweak {
