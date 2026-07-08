@@ -2024,6 +2024,21 @@ func.func @canonicalize_tile_broadcast_greater(%arg0: tensor<1x197x768xf32>, %ar
 
 // -----
 
+// CHECK-LABEL: @canonicalize_tile_broadcast_mul
+// CHECK-SAME: %[[ARG0:[^:]+]]: tensor<1x197x768xf32>, %[[ARG1:[^:]+]]: tensor<1x197x1xf32>, %[[SHIFT:[^:]+]]: tensor<1xi8>
+// CHECK-NOT: tosa.tile
+// CHECK: %[[MUL:.+]] = tosa.mul %[[ARG0]], %[[ARG1]], %[[SHIFT]] : (tensor<1x197x768xf32>, tensor<1x197x1xf32>, tensor<1xi8>) -> tensor<1x197x768xf32>
+// CHECK: return %[[MUL]]
+func.func @canonicalize_tile_broadcast_mul(%arg0: tensor<1x197x768xf32>, %arg1: tensor<1x197x1xf32>, %shift: tensor<1xi8>) -> tensor<1x197x768xf32> {
+  %shape = tosa.const_shape {values = dense<[1, 1, 768]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %tile = tosa.tile %arg1, %shape : (tensor<1x197x1xf32>, !tosa.shape<3>) -> tensor<1x197x768xf32>
+  %mul = tosa.mul %arg0, %tile, %shift : (tensor<1x197x768xf32>, tensor<1x197x768xf32>, tensor<1xi8>) -> tensor<1x197x768xf32>
+  return %mul : tensor<1x197x768xf32>
+}
+
+
+// -----
+
 // CHECK-LABEL: @dont_canonicalize_tile_when_result_no_longer_broadcastable
 // CHECK: tosa.tile
 // CHECK: tosa.sub
