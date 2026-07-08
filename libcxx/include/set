@@ -1192,8 +1192,8 @@ public:
   }
 
   template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 multiset(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  multiset(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
       : multiset(__f, __l, key_compare(), __a) {}
 
   template <class _InputIterator>
@@ -1247,8 +1247,8 @@ public:
     insert(__il.begin(), __il.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 multiset(initializer_list<value_type> __il, const allocator_type& __a)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  multiset(initializer_list<value_type> __il, const allocator_type& __a)
       : multiset(__il, key_compare(), __a) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 multiset& operator=(initializer_list<value_type> __il) {
