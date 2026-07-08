@@ -70,8 +70,10 @@ static inline constexpr bool IsFixedFormCommentChar(char ch) {
   return ch == '!' || ch == '*' || ch == 'C' || ch == 'c';
 }
 
-static bool HasTabInLabelField(const char *col1) {
-  for (int i{0}; i < 6 && col1[i] != '\n'; ++i) {
+static bool HasTabInLabelField(const char *col1, const char *limit) {
+  std::uint64_t len{static_cast<std::uint64_t>(limit - col1)};
+  int n{len < 6 ? static_cast<int>(len) : 6};
+  for (int i{0}; i < n && col1[i] != '\n'; ++i) {
     if (col1[i] == '\t') {
       return true;
     }
@@ -448,8 +450,9 @@ void Prescanner::LabelField(TokenSequence &token) {
 
   // Skip C-style comments.
   const char *p{SkipWhiteSpace(start)};
-  int spaces{
-      HasTabInLabelField(start - colOffset) ? 6 : static_cast<int>(p - start)};
+  std::uint64_t spaces{HasTabInLabelField(start - colOffset, limit_)
+          ? 6
+          : static_cast<std::uint64_t>(p - start)};
   if (spaces < 6 && IsCComment(p)) {
     at_ += spaces;
     column_ += spaces;
@@ -1464,15 +1467,18 @@ const char *Prescanner::FixedFormContinuationLine(bool atNewline) {
   }
   tabInCurrentLine_ = false;
   char col1{*nextLine_};
-  int trailingSpaces{0};
-  for (int i{4}; i > 0 && nextLine_[i] == ' '; --i) {
-    ++trailingSpaces;
-  }
   const char *afterWhiteSpace{SkipWhiteSpace(nextLine_)};
   const char *afterCComment{
       IsCComment(afterWhiteSpace) ? SkipCComment(afterWhiteSpace) : nullptr};
-  bool cCommentAndSpaces{afterCComment && !HasTabInLabelField(nextLine_) &&
-      afterCComment - nextLine_ + trailingSpaces == 5};
+  int trailingSpaces{0};
+  for (std::uint64_t i{afterCComment
+               ? static_cast<std::uint64_t>(afterCComment - nextLine_)
+               : 1};
+      i <= 4 && nextLine_[i] == ' '; ++i) {
+    ++trailingSpaces;
+  }
+  bool cCommentAndSpaces{
+      afterCComment && afterCComment - nextLine_ + trailingSpaces == 5};
   bool canBeNonDirectiveContinuation{
       ((col1 == ' ' ||
            ((col1 == 'D' || col1 == 'd') &&
