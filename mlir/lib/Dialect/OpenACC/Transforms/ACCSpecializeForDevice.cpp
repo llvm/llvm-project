@@ -80,13 +80,6 @@ using namespace mlir::acc;
 
 namespace {
 
-// acc_device_t values used by acc_on_device. The numeric values match the
-// openacc.h convention.
-enum AccDeviceType {
-  ACC_DEVICE_HOST = 2,
-  ACC_DEVICE_NOT_HOST = 3,
-};
-
 /// Fold acc.on_device with a constant device type in device code.
 class FoldAccOnDeviceOpConversion : public OpRewritePattern<acc::OnDeviceOp> {
   using OpRewritePattern<acc::OnDeviceOp>::OpRewritePattern;
