@@ -1145,9 +1145,9 @@ define amdgpu_kernel void @test_fmax_v16f32(ptr addrspace(1) %out, <16 x float> 
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v6, s6 :: v_dual_mov_b32 v7, s7
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v8, s12 :: v_dual_mov_b32 v9, s13
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v10, s14 :: v_dual_mov_b32 v11, s15
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v12, s16 :: v_dual_mov_b32 v13, s17
 ; GFX12-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v12, s16 :: v_dual_mov_b32 v13, s17
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v14, s18 :: v_dual_mov_b32 v15, s19
 ; GFX12-GISEL-NEXT:    s_clause 0x3
 ; GFX12-GISEL-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], null
