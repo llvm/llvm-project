@@ -1294,11 +1294,10 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
         cuf::FreeOp::create(*builder, loc, fir::getBase(exv), dataAttr);
       });
       // Main-program deallocation is skipped by needDeallocationOrFinalization,
-      // so free the device data here, before the descriptor free above (cleanups
-      // run in reverse of attachment). The context guard avoids reading a
-      // torn-down managed descriptor after a user cudaDeviceReset().
-      if (sym->owner().kind() ==
-              Fortran::semantics::Scope::Kind::MainProgram &&
+      // so free the device data here, before the descriptor free above
+      // (cleanups run in reverse of attachment). The context guard avoids
+      // reading a torn-down managed descriptor after a user cudaDeviceReset().
+      if (sym->owner().kind() == Fortran::semantics::Scope::Kind::MainProgram &&
           Fortran::semantics::IsAllocatable(*sym)) {
         auto *converterPtr = &converter;
         converter.getFctCtx().attachCleanup([converterPtr, loc, exv, sym]() {
@@ -1308,8 +1307,8 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
               .genThen([&]() {
                 if (const fir::MutableBoxValue *mutableBox =
                         exv.getBoxOf<fir::MutableBoxValue>())
-                  Fortran::lower::genDeallocateIfAllocated(*converterPtr,
-                                                           *mutableBox, loc, sym);
+                  Fortran::lower::genDeallocateIfAllocated(
+                      *converterPtr, *mutableBox, loc, sym);
               })
               .end();
         });

@@ -260,7 +260,9 @@ void *CUFAllocManaged(std::size_t sizeInBytes,
   return reinterpret_cast<void *>(p);
 }
 
-void CUFFreeManaged(void *p) { freeIfContextAlive(p, nullptr, /*async=*/false); }
+void CUFFreeManaged(void *p) {
+  freeIfContextAlive(p, nullptr, /*async=*/false);
+}
 
 void *CUFAllocUnified(std::size_t sizeInBytes,
     [[maybe_unused]] std::size_t alignment,
