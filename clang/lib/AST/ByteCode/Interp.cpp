@@ -1966,19 +1966,46 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   return true;
 }
 
-static bool getDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
+static bool getDynamicDecl(InterpState &S, CodePtr OpPC, PtrView TypePtr,
                            const CXXRecordDecl *&DynamicDecl) {
-  TypePtr = TypePtr.stripBaseCasts();
+
+  if (S.InitializingPtrs.empty()) {
+    TypePtr = TypePtr.stripBaseCasts();
+  } else {
+    auto depth = [](PtrView V) -> unsigned {
+      unsigned C = 1;
+      while (!V.isRoot()) {
+        ++C;
+        V = V.getBase();
+      }
+      return C;
+    };
+    // Consider a 'normal' diamond hierarchy:
+    //   A     A   3
+    //   |     |
+    //   B     C   2
+    //    \   /
+    //     \ /
+    //      D      1
+    // When we use a pointer of D*, cast it to B's A* and
+    // use it during the construction of C*, the expected
+    // dynamic type is B.
+    PtrView InitPtr = S.InitializingPtrs.back();
+    assert(depth(TypePtr) >= depth(InitPtr));
+    unsigned D = depth(TypePtr) - depth(InitPtr);
+    for (unsigned I = 0; I != D; ++I)
+      TypePtr = TypePtr.getBase();
+  }
 
   QualType DynamicType = TypePtr.getType();
-  if (TypePtr.isStatic() || TypePtr.isConst()) {
-    if (const VarDecl *VD = TypePtr.getRootVarDecl();
+  if (TypePtr.Pointee->isStatic() || TypePtr.isConst()) {
+    if (const VarDecl *VD = Pointer(TypePtr).getRootVarDecl();
         VD && !VD->isConstexpr()) {
       const Expr *E = S.Current->getExpr(OpPC);
-      APValue V = TypePtr.toAPValue(S.getASTContext());
+      APValue V = Pointer(TypePtr).toAPValue(S.getASTContext());
       QualType TT = S.getASTContext().getLValueReferenceType(DynamicType);
       S.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
-          << AccessKinds::AK_MemberCall << V.getAsString(S.getASTContext(), TT);
+          << AK_MemberCall << V.getAsString(S.getASTContext(), TT);
       return false;
     }
   }
@@ -2213,7 +2240,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   const FunctionDecl *Callee = Func->getDecl();
 
   const CXXRecordDecl *DynamicDecl = nullptr;
-  if (!getDynamicDecl(S, OpPC, ThisPtr, DynamicDecl))
+  if (!getDynamicDecl(S, OpPC, ThisPtr.view(), DynamicDecl))
     return false;
   assert(DynamicDecl);
 
@@ -2221,7 +2248,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   const auto *InitialFunction = cast<CXXMethodDecl>(Callee);
   const CXXMethodDecl *Overrider;
 
-  if (StaticDecl != DynamicDecl && !S.initializingBlock(ThisPtr.block())) {
+  if (StaticDecl != DynamicDecl) {
     if (!DynamicDecl->isDerivedFrom(StaticDecl))
       return false;
     Overrider = S.getContext().getOverridingFunction(DynamicDecl, StaticDecl,

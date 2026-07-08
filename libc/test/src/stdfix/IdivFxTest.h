@@ -14,7 +14,7 @@
 #include "hdr/signal_macros.h"
 
 template <typename T, typename XType>
-class IdivTest : public LIBC_NAMESPACE::testing::Test {
+class IdivFxTest : public LIBC_NAMESPACE::testing::Test {
 
   using FXRep = LIBC_NAMESPACE::fixed_point::FXRep<T>;
 
@@ -25,9 +25,9 @@ class IdivTest : public LIBC_NAMESPACE::testing::Test {
   static constexpr T one_fourth = FXRep::ONE_FOURTH();
 
 public:
-  typedef XType (*IdivFunc)(T, T);
+  typedef XType (*IdivFxFunc)(T, T);
 
-  void testSpecialNumbers(IdivFunc func) {
+  void testSpecialNumbers(IdivFxFunc func) {
     constexpr bool is_signed = (FXRep::SIGN_LEN > 0);
     constexpr bool has_integral = (FXRep::INTEGRAL_LEN > 0);
 
@@ -61,7 +61,7 @@ public:
     }
   }
 
-  void testInvalidNumbers(IdivFunc func) {
+  void testInvalidNumbers(IdivFxFunc func) {
     constexpr bool has_integral = (FXRep::INTEGRAL_LEN > 0);
 
     EXPECT_DEATH([func] { func(0.5, 0.0); }, WITH_SIGNAL(-1));
@@ -72,8 +72,8 @@ public:
 };
 
 #if defined(LIBC_ADD_NULL_CHECKS)
-#define LIST_IDIV_TESTS(Name, T, XType, func)                                  \
-  using LlvmLibcIdiv##Name##Test = IdivTest<T, XType>;                         \
+#define LIST_IDIVFX_TESTS(Name, T, XType, func)                                \
+  using LlvmLibcIdiv##Name##Test = IdivFxTest<T, XType>;                       \
   TEST_F(LlvmLibcIdiv##Name##Test, InvalidNumbers) {                           \
     testInvalidNumbers(&func);                                                 \
   }                                                                            \
@@ -82,8 +82,8 @@ public:
   }                                                                            \
   static_assert(true, "Require semicolon.")
 #else
-#define LIST_IDIV_TESTS(Name, T, XType, func)                                  \
-  using LlvmLibcIdiv##Name##Test = IdivTest<T, XType>;                         \
+#define LIST_IDIVFX_TESTS(Name, T, XType, func)                                \
+  using LlvmLibcIdiv##Name##Test = IdivFxTest<T, XType>;                       \
   TEST_F(LlvmLibcIdiv##Name##Test, SpecialNumbers) {                           \
     testSpecialNumbers(&func);                                                 \
   }                                                                            \

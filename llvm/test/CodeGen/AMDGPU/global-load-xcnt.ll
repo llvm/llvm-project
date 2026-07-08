@@ -23,9 +23,7 @@ define void @test_i8load_v4i8store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 ; GCN-SDAG-FAKE16-NEXT:    v_perm_b32 v1, v10, v7, 0xc0c0004
 ; GCN-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GCN-SDAG-FAKE16-NEXT:    v_or_b32_e32 v0, v6, v0
-; GCN-SDAG-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GCN-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-SDAG-FAKE16-NEXT:    v_or_b32_e32 v0, v1, v0
+; GCN-SDAG-FAKE16-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GCN-SDAG-FAKE16-NEXT:    global_store_b32 v[8:9], v0, off
 ; GCN-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -61,10 +59,8 @@ define void @test_i8load_v4i8store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 ; GCN-SDAG-REAL16-NEXT:    v_perm_b32 v1, v10, v7, 0xc0c0004
 ; GCN-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GCN-SDAG-REAL16-NEXT:    v_or_b16 v0.l, v6.l, v0.l
-; GCN-SDAG-REAL16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GCN-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-SDAG-REAL16-NEXT:    v_or_b32_e32 v0, v1, v0
-; GCN-SDAG-REAL16-NEXT:    global_store_b32 v[8:9], v0, off
+; GCN-SDAG-REAL16-NEXT:    v_or_b16 v1.h, v0.l, v1.h
+; GCN-SDAG-REAL16-NEXT:    global_store_b32 v[8:9], v1, off
 ; GCN-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %a = load i8, ptr addrspace(1) %ptr_a
   %b = load i8, ptr addrspace(1) %ptr_b
