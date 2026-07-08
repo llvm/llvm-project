@@ -140,8 +140,10 @@ protected:
   // (We always store a T, even if the call will use a pointer to const T).
   template <typename CallableT, typename CalledAsT>
   UniqueFunctionBase(CallableT Callable, CalledAs<CalledAsT>) {
-    constexpr bool UsesInlineStorage = sizeof(CallableT) <= InlineStorageSize &&
-                                       alignof(CallableT) <= InlineStorageAlign;
+    // static as workaround an MSVC bug which treats constexpr uses as odr-uses.
+    static constexpr bool UsesInlineStorage =
+        sizeof(CallableT) <= InlineStorageSize &&
+        alignof(CallableT) <= InlineStorageAlign;
     void *CallableAddr = &Storage.Inline;
     if constexpr (!UsesInlineStorage) {
       CallableAddr = allocate_buffer(sizeof(CallableT), alignof(CallableT));
