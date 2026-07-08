@@ -125,7 +125,7 @@ jobs:
         run: |
           configure-and-build.sh rva23u64-O3-head $SCRIPTS_DIR/riscv64.cmake
           configure-and-build.sh armv9-a-O3-head $SCRIPTS_DIR/aarch64.cmake
-          configure-and-build.sh x86_64-O3-head $SCRIPTS_DIR/x86_64.cmake
+          configure-and-build.sh x86-64-v3-O3-head $SCRIPTS_DIR/x86_64.cmake
         working-directory: llvm-test-suite
       - name: Build Clang @ base
         run: git checkout $BASE_SHA && ninja -C build $NINJA_TARGETS
@@ -134,14 +134,14 @@ jobs:
         run: |
           configure-and-build.sh rva23u64-O3-base $SCRIPTS_DIR/riscv64.cmake
           configure-and-build.sh armv9-a-O3-base $SCRIPTS_DIR/aarch64.cmake
-          configure-and-build.sh x86_64-O3-base $SCRIPTS_DIR/x86_64.cmake
+          configure-and-build.sh x86-64-v3-O3-base $SCRIPTS_DIR/x86_64.cmake
         working-directory: llvm-test-suite
       - name: Compute diffs
         run: |
           mkdir diffs
           ./utils/tdiff.py -a build.rva23u64-O3-base -b build.rva23u64-O3-head -s all > diffs/rva23u64-O3.diff || true
           ./utils/tdiff.py -a build.armv9-a-O3-base -b build.armv9-a-O3-head -s all > diffs/armv9-a-O3.diff || true
-          ./utils/tdiff.py -a build.x86_64-O3-base -b build.x86_64-O3-head -s all > diffs/x86_64-O3.diff || true
+          ./utils/tdiff.py -a build.x86-64-v3-O3-base -b build.x86-64-v3-O3-head -s all > diffs/x86-64-v3-O3.diff || true
         working-directory: llvm-test-suite
       - name: Upload diffs
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0

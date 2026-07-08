@@ -5770,6 +5770,14 @@ void Verifier::visitInstruction(Instruction &I) {
           "invariant.group metadata is only for loads and stores", &I);
   }
 
+  if (I.hasMetadata(LLVMContext::MD_invariant_load)) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    Check(isa<LoadInst>(I) || (II && II->onlyReadsMemory()),
+          "invariant.load metadata is only for loads and readonly "
+          "intrinsic calls",
+          &I);
+  }
+
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_nonnull)) {
     Check(I.getType()->isPointerTy(), "nonnull applies only to pointer types",
           &I);

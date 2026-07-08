@@ -93,6 +93,9 @@ public:
   }
 
   LIBC_INLINE string &operator=(string &&other) {
+    if (buffer_ != get_empty_string())
+      ::free(buffer_);
+
     buffer_ = other.buffer_;
     size_ = other.size_;
     capacity_ = other.capacity_;
@@ -155,7 +158,12 @@ public:
   }
 
   LIBC_INLINE void resize(size_t size) {
-    if (size > capacity_) {
+    // Avoid growing out of the static empty string during `resize(0)`,
+    // which may happen in string constructors.
+    if (size == size_)
+      return;
+
+    if (size >= capacity_) {
       reserve(size);
       const size_t size_extension = size - size_;
       inline_memset(data() + size_, '\0', size_extension);

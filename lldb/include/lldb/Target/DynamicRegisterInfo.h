@@ -14,10 +14,12 @@
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegisterFlags.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
+class Stream;
 
 class DynamicRegisterInfo {
 protected:
@@ -79,7 +81,7 @@ public:
   const lldb_private::RegisterInfo *GetRegisterInfo(uint32_t kind,
                                                     uint32_t num) const;
 
-  void Dump() const;
+  void Dump(Stream &s) const;
 
   void Clear();
 
