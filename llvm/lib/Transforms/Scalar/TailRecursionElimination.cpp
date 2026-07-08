@@ -430,7 +430,7 @@ static bool isPseudoAssociative(Instruction *I) {
 // the result of one. A depth-1 check is enough here: the value feeding a
 // return either uses the recursive call as an immediate operand (the
 // accumulator instruction, or the PHI merging it with the base case), or it
-// is rejected by getReturnValue below as a non-constant anyway.
+// is rejected by findBaseCaseRetConstant below as a non-constant anyway.
 static bool usesRecursiveCall(Value *V, Function &F) {
   auto IsRecursiveCall = [&F](Value *V) {
     auto *CI = dyn_cast<CallInst>(V);
@@ -458,7 +458,7 @@ static bool usesRecursiveCall(Value *V, Function &F) {
 //  return f(x-1) << 1;
 // }
 // ```
-static Constant *getReturnValue(Function &F) {
+static Constant *findBaseCaseRetConstant(Function &F) {
   Constant *BaseCaseVal = nullptr;
 
   for (BasicBlock &BB : F) {
@@ -504,7 +504,7 @@ static Constant *canTransformAccumulatorRecursion(Instruction *I,
 
     // findTRECandidate guarantees CI is a recursive call to its own
     // function, so scan the enclosing function for the base-case return.
-    AccInitVal = getReturnValue(*CI->getFunction());
+    AccInitVal = findBaseCaseRetConstant(*CI->getFunction());
     if (!AccInitVal)
       return nullptr;
   } else {
