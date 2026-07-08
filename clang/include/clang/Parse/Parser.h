@@ -304,8 +304,9 @@ public:
   typedef OpaquePtr<DeclGroupRef> DeclGroupPtrTy;
   typedef OpaquePtr<TemplateName> TemplateTy;
 
-  /// Initialize - Warm up the parser.
+  /// Prepare the parser and its components.
   ///
+  /// The lack of initialization can lead to missing functionality.
   void Initialize();
 
   /// Parse the first top-level declaration in a translation unit.

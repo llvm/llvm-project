@@ -579,9 +579,6 @@ void Parser::Initialize() {
   }
 
   Actions.Initialize();
-
-  // Prime the lexer look-ahead.
-  ConsumeToken();
 }
 
 void Parser::DestroyTemplateIds() {

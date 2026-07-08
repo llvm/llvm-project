@@ -44,6 +44,7 @@ IncrementalParser::IncrementalParser(CompilerInstance &Instance,
     External->StartTranslationUnit(Consumer);
 
   P->Initialize();
+  P->ConsumeToken();
 }
 
 IncrementalParser::~IncrementalParser() { P.reset(); }
