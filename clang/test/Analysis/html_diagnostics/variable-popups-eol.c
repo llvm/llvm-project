@@ -1,7 +1,6 @@
 // RUN: rm -fR %t
 // RUN: mkdir %t
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=html -o %t -verify %s
-void bar(int);
 
 void foo(void) {
   int a;
