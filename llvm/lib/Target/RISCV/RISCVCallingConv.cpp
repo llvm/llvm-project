@@ -206,7 +206,7 @@ ArrayRef<MCPhysReg> RISCV::getArgFPRs(const RISCVSubtarget &STI) {
 }
 
 ArrayRef<MCPhysReg> RISCV::getArgVRs(const RISCVSubtarget &STI) {
-  if (STI.hasStdExtV())
+  if (STI.hasVInstructions())
     return ArrayRef(ArgVRs);
 
   return {};
