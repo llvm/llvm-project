@@ -792,3 +792,29 @@ auto f() {
   return c;
 }
 }
+
+namespace TemplateRedecl1 {
+  template <class> auto f();
+  template <class T> void g() { (void)+f<T>(); };
+  template <class> auto f() { return 0; }
+  template auto f<int>();
+  template void g<int>();
+} // namespace TemplateRedecl1
+
+namespace TemplateRedecl2 {
+  struct A {
+    template <class> auto f() const;
+  };
+  template <class T> void g() { (void)+A().f<T>(); };
+  template <class> auto A::f() const { return 0; }
+  template auto A::f<int>() const;
+  template void g<int>();
+} // namespace TemplateRedecl2
+
+namespace TemplateRedecl3 {
+  template <class> auto f() __attribute__((cdecl));
+  template <class T> void g() { (void)+f<T>(); };
+  template <class> auto f() { return 0; }
+  template auto f<int>();
+  template void g<int>();
+} // namespace TemplateRedecl3
