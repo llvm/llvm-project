@@ -84,8 +84,9 @@ delinearizeStaticRCOffset(memref::ReinterpretCastOp rc) {
   return offsetIdxs;
 }
 
-static bool hasExactlyOneCollapsedNonUnitDim(MemRefType srcType,
-                                             MemRefType resType) {
+static bool hasExactlyOneCollapsedNonUnitDim(memref::ReinterpretCastOp rc) {
+  MemRefType srcType = dyn_cast<MemRefType>(rc.getSource().getType());
+  MemRefType resType = dyn_cast<MemRefType>(rc.getType());
   assert(srcType.hasStaticShape() && resType.hasStaticShape() &&
          "expected static shapes");
   assert(srcType.getRank() == resType.getRank() &&
@@ -129,14 +130,19 @@ static std::optional<unsigned> getSingleNonUnitDim(MemRefType type) {
   return (*nonUnitDims.begin()).index();
 }
 
-/// Returns reinterpret_cast result non-unit dimensions and, for static offsets,
-/// the corresponding source indices.
+/// Returns reinterpret_cast's result non-unit dimensions and, for static
+/// offsets, delinearized offset.
 ///
 /// Supports ranked, static-shape, rank-preserving reinterpret_casts from
-/// identity-layout sources. Scalar-shaped results may have arbitrary result
-/// strides. Non-scalar results must have static offsets, static result strides
-/// identical to the source identity strides, and exactly one non-unit source
-/// dimension collapsed to unit size. Returns nullopt for unsupported
+/// identity-layout sources. In addition:
+///     identical to the source identity strides, and exactly one non-unit
+///     source
+///  * Non-scalar results must have static offsets, static result strides
+///     dimension collapsed to unit size
+/// Scalar-shaped results may have arbitrary result strides (i.e. for scalars,
+/// strides are effectively irrelevant).
+///
+/// Returns nullopt for unsupported
 /// reinterpret_casts.
 ///
 /// Examples that return info:
@@ -179,7 +185,7 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
 
   ResultNonUnitDimsAndOffsetsForRC dimsAndOffs;
 
-  // Track result dimensions that produce varying indices; unit dimensions are
+  // Track non-unit result dimensions; unit dimensions are
   // always indexed at 0.
   for (auto [dim, resultSize] : llvm::enumerate(resType.getShape())) {
     if (resultSize != 1)
@@ -194,10 +200,13 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
   bool isScalarRes =
       llvm::all_of(resType.getShape(), [](int64_t size) { return size == 1; });
 
+  bool isOffsetDynamic = ShapedType::isDynamic(rcOffsets[0]);
+
+  // Cases with at least one non-unit dimension in reinterpret_cast's result are
+  // restricted to preserving all but one dimension from the source, which
+  // collapsed to `1` in the result, and fully static metadata.
   if (!isScalarRes) {
-    // Non-scalar cases are restricted to same-dimension, one-collapsed-dim
-    // views with static metadata.
-    if (ShapedType::isDynamic(rcOffsets[0]))
+    if (isOffsetDynamic)
       return std::nullopt;
 
     SmallVector<int64_t> srcIdentityStrides =
@@ -212,15 +221,15 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
                       }))
       return std::nullopt;
 
-    if (!hasExactlyOneCollapsedNonUnitDim(srcType, resType))
+    if (!hasExactlyOneCollapsedNonUnitDim(rc))
       return std::nullopt;
   }
 
   // CASE 1: Dynamic ReinterpretCast offset.
   //
-  // Dynamic offsets are supported only for scalar-shaped results, under the
-  // previous effectively-1D source restriction.
-  if (ShapedType::isDynamic(rcOffsets[0])) {
+  // Dynamic offsets are supported only for effectively-1D to scalar
+  // reinterpret_casts.
+  if (isOffsetDynamic) {
     // With an effectively-1D source, a dynamic offset can be mapped to its
     // unique non-unit dim. For other cases, bail out.
     if (llvm::count_if(srcType.getShape(),
@@ -234,9 +243,6 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
   // Delinearize static ReinterpretCast offset as in-bounds indices (one for
   // every source dimension).
   dimsAndOffs.delinearizedOffsets = delinearizeStaticRCOffset(rc);
-  assert(dimsAndOffs.delinearizedOffsets &&
-         "static reinterpret_cast offset must delinearize to in-bounds "
-         "reinterpret_cast source indices");
 
   return dimsAndOffs;
 }
@@ -297,7 +303,8 @@ public:
         getResultNonUnitDimsAndOffsetsForRC(rc);
     if (!dimsAndOffs)
       return rewriter.notifyMatchFailure(
-          op, "reinterpret_cast does not match scalar or loop copy region");
+          op,
+          "unsupported reinterpret_cast result dimensions, strides, or offset");
 
     Location loc = op.getLoc();
     Value dst = rc.getSource();
@@ -314,11 +321,10 @@ public:
           return (*dimsAndOffs->delinearizedOffsets)[dim] + rcResultSize >
                  dstType.getDimSize(dim);
         }))
-      return rewriter.notifyMatchFailure(
-          op, "copy accesses invalid accessible region");
+      return rewriter.notifyMatchFailure(op, "copy accesses are OOB");
 
-    // Reuse common index constants across bounds, steps, and static offsets,
-    // but avoid creating them for rank-0 copies.
+    // Constant Op cache to reuse common index constants across bounds, steps,
+    // and static offsets: 0 is stored at index 0 and 1 is stored at index 1.
     std::array<Value, 2> cachedIndexConstants;
     auto getOrCreateIndexConstant = [&](int64_t value) -> Value {
       if (value == 0 || value == 1) {
