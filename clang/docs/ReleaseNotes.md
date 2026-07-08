@@ -156,6 +156,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   nested template types (for example, ones containing local lambdas) could
   produce very large writable `.data` sections. Emitted RTTI name strings
   change only for types whose name exceeds the length limit. (#GH206313)
+- Fixed Itanium mangling for lambdas in default member initializers of local
+  classes to use `<local-name>` encoding, preventing mangling collisions between
+  distinct local classes.
 
 ### AST Dumping Potentially Breaking Changes
 
@@ -243,6 +246,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - `__is_trivially_equality_comparable` no longer returns false for all enum types. (#GH132672)
 - `auto` parameters are now available in all C++ language modes as an extension.
+- Clang now supports friend declarations with a dependent nested name specifier. (#GH104057)
 
 #### C++2d Feature Support
 

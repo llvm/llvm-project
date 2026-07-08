@@ -19913,13 +19913,14 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
       if (VPLoad && VPLoad != VPL)
         return SDValue();
       VPLoad = VPL;
-    } else if (DAG.isSplatValue(X))
+    } else if (DAG.isSplatValue(X)) {
       continue;
-    else if (DAG.getTargetLoweringInfo().isBinOp(X.getOpcode()) &&
-             X->getNumValues() == 1)
+    } else if (DAG.getTargetLoweringInfo().isBinOp(X.getOpcode()) &&
+               X->getNumValues() == 1) {
       append_range(Worklist, X->op_values());
-    else
+    } else {
       return SDValue();
+    }
   }
   if (!VPLoad)
     return SDValue();

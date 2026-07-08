@@ -2467,7 +2467,7 @@ bool TargetLowering::SimplifyDemandedBits(
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
 
-    unsigned DemandedBitsLZ = OriginalDemandedBits.countl_zero();
+    unsigned DemandedBitsLZ = DemandedBits.countl_zero();
     APInt LoMask = APInt::getLowBitsSet(BitWidth, BitWidth - DemandedBitsLZ);
 
     // If the demanded bits has leading zeroes, we don't demand those from the
@@ -3831,7 +3831,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   case ISD::FSUB:
   case ISD::FMUL:
   case ISD::FDIV:
-  case ISD::FREM: {
+  case ISD::FREM:
+  case ISD::PSEUDO_FMIN:
+  case ISD::PSEUDO_FMAX: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
 
@@ -12699,7 +12701,7 @@ void TargetLowering::forceExpandMultiply(SelectionDAG &DAG, const SDLoc &dl,
   // Hacker's Delight (itself derived from Knuth's Algorithm M from section
   // 4.3.1). If Signed is set, we can use arithmetic right shifts to propagate
   // sign bits while calculating the Hi half.
-  unsigned Bits = VT.getSizeInBits();
+  unsigned Bits = VT.getScalarSizeInBits();
   unsigned HalfBits = Bits / 2;
   SDValue Mask = DAG.getConstant(APInt::getLowBitsSet(Bits, HalfBits), dl, VT);
   SDValue LL = DAG.getNode(ISD::AND, dl, VT, LHS, Mask);
