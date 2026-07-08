@@ -79,6 +79,7 @@ enum UniformityLLTOpPredicateID {
   UniP3,
   UniP4,
   UniP5,
+  UniP6,
   UniP8,
   UniPtr32,
   UniPtr64,
@@ -104,6 +105,7 @@ enum UniformityLLTOpPredicateID {
 
   UniV2S16,
   UniV2S32,
+  UniV4S32,
   UniV2S64,
   UniV3S32,
   UniV6S32,
@@ -116,6 +118,7 @@ enum UniformityLLTOpPredicateID {
 
   DivV2S16,
   DivV2S32,
+  DivV4S32,
   DivV2S64,
   DivV3S32,
   DivV4S16,
@@ -170,6 +173,7 @@ enum RegBankLLTMappingApplyID {
   // any LLT, bank-only apply IDs
   VgprAnyTy,
   AgprAnyTy,
+  VgprOrAgprAnyTy,
 
   // sgpr scalars, pointers, vectors and B-types
   Sgpr16,
@@ -182,6 +186,7 @@ enum RegBankLLTMappingApplyID {
   SgprP3,
   SgprP4,
   SgprP5,
+  SgprP6,
   SgprP8,
   SgprPtr32,
   SgprPtr64,
@@ -318,6 +323,7 @@ enum LoweringMethodID {
   ScalarizeToS16,
   SplitTo32Select,
   SplitTo32SExtInReg,
+  S_BUF_to_BUF,
   Ext32To64,
   UniCstExt,
   CtPop64To32,
@@ -339,7 +345,11 @@ enum LoweringMethodID {
   InsVecEltToSel,
   InsVecEltTo32,
   AbsToNegMax,
-  AbsToS32
+  AbsToS32,
+  DynStackAlloc,
+  DeletePrefetch,
+  LowerSetRounding,
+  LowerGetRounding
 };
 
 enum FastRulesTypes {

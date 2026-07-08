@@ -11,7 +11,7 @@ subroutine default_none()
   !$acc parallel default(none) private(c)
   !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-mapping clause
   A(1:2) = 3
-  !ERROR: The DEFAULT(NONE) clause requires that 'b' must be listed in a data-mapping clause
+  !WARNING: OpenACC DEFAULT(NONE) ignored for scalar 'b' (-fno-openacc-default-none-scalars-strict) [-Wopenacc-default-none-scalars-strict]
   B = 4
   C = 5
   !$acc end parallel

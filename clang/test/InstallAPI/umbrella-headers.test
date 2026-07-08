@@ -1,7 +1,7 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
 ; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
-; RUN: cp -r %S/Inputs/Umbrella/Umbrella.framework %t/Frameworks/
+; RUN: cp -R %S/Inputs/Umbrella/Umbrella.framework %t/Frameworks/
 
 // Check base filename matches.
 ; RUN: clang-installapi --target=arm64-apple-macosx13 \

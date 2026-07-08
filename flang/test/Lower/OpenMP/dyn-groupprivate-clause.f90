@@ -5,7 +5,7 @@
 
 ! test 0: target with bare size, no modifiers.
 ! CHECK-LABEL: func.func @_QPf00
-! CHECK: omp.target dyn_groupprivate({{.*}} : i32)
+! CHECK: omp.target {{.*}}dyn_groupprivate({{.*}} : i32)
 subroutine f00(n)
   implicit none
   integer :: n
@@ -15,7 +15,7 @@ end subroutine
 
 ! test 1: target with cgroup-only modifier.
 ! CHECK-LABEL: func.func @_QPf01
-! CHECK: omp.target dyn_groupprivate(cgroup, {{.*}} : i32)
+! CHECK: omp.target {{.*}}dyn_groupprivate(cgroup, {{.*}} : i32)
 subroutine f01(n)
   implicit none
   integer :: n
@@ -25,7 +25,7 @@ end subroutine
 
 ! test 2: target with fallback(abort), no access-group.
 ! CHECK-LABEL: func.func @_QPf02
-! CHECK: omp.target dyn_groupprivate(fallback(abort), {{.*}} : i32)
+! CHECK: omp.target {{.*}}dyn_groupprivate(fallback(abort), {{.*}} : i32)
 subroutine f02(n)
   implicit none
   integer :: n
@@ -35,7 +35,7 @@ end subroutine
 
 ! test 3: target with fallback(default_mem), no access-group.
 ! CHECK-LABEL: func.func @_QPf03
-! CHECK: omp.target dyn_groupprivate(fallback(default_mem), {{.*}} : i32)
+! CHECK: omp.target {{.*}}dyn_groupprivate(fallback(default_mem), {{.*}} : i32)
 subroutine f03(n)
   implicit none
   integer :: n
@@ -45,7 +45,7 @@ end subroutine
 
 ! test 4: target with fallback(null), no access-group.
 ! CHECK-LABEL: func.func @_QPf04
-! CHECK: omp.target dyn_groupprivate(fallback(null), {{.*}} : i32)
+! CHECK: omp.target {{.*}}dyn_groupprivate(fallback(null), {{.*}} : i32)
 subroutine f04(n)
   implicit none
   integer :: n
@@ -55,7 +55,7 @@ end subroutine
 
 ! test 5: target with cgroup + fallback(abort).
 ! CHECK-LABEL: func.func @_QPf05
-! CHECK: omp.target dyn_groupprivate(cgroup, fallback(abort), {{.*}} : i32)
+! CHECK: omp.target {{.*}}dyn_groupprivate(cgroup, fallback(abort), {{.*}} : i32)
 subroutine f05(n)
   implicit none
   integer :: n
@@ -65,7 +65,7 @@ end subroutine
 
 ! test 6: target with cgroup + fallback(default_mem).
 ! CHECK-LABEL: func.func @_QPf06
-! CHECK: omp.target dyn_groupprivate(cgroup, fallback(default_mem), {{.*}} : i32)
+! CHECK: omp.target {{.*}}dyn_groupprivate(cgroup, fallback(default_mem), {{.*}} : i32)
 subroutine f06(n)
   implicit none
   integer :: n
@@ -75,7 +75,7 @@ end subroutine
 
 ! test 7: target with cgroup + fallback(null).
 ! CHECK-LABEL: func.func @_QPf07
-! CHECK: omp.target dyn_groupprivate(cgroup, fallback(null), {{.*}} : i32)
+! CHECK: omp.target {{.*}}dyn_groupprivate(cgroup, fallback(null), {{.*}} : i32)
 subroutine f07(n)
   implicit none
   integer :: n
@@ -86,7 +86,7 @@ end subroutine
 ! test 8: Constant integer literal as the size operand.
 ! CHECK-LABEL: func.func @_QPf08
 ! CHECK: %[[CST:.*]] = arith.constant 1024 : i32
-! CHECK: omp.target dyn_groupprivate(%[[CST]] : i32)
+! CHECK: omp.target {{.*}}dyn_groupprivate(%[[CST]] : i32)
 subroutine f08()
   !$omp target dyn_groupprivate(1024)
   !$omp end target
@@ -95,7 +95,7 @@ end subroutine
 ! test 9: Arithmetic expression as the size operand (n*1024).
 ! CHECK-LABEL: func.func @_QPf09
 ! CHECK: %{{.*}} = arith.muli {{.*}} : i32
-! CHECK: omp.target dyn_groupprivate({{.*}} : i32)
+! CHECK: omp.target {{.*}}dyn_groupprivate({{.*}} : i32)
 subroutine f09(n)
   implicit none
   integer :: n
@@ -105,7 +105,7 @@ end subroutine
 
 ! test 10: 64-bit (kind=8) integer size operand: verify the size type is propagated.
 ! CHECK-LABEL: func.func @_QPf10
-! CHECK: omp.target dyn_groupprivate({{.*}} : i64)
+! CHECK: omp.target {{.*}}dyn_groupprivate({{.*}} : i64)
 subroutine f10(n)
   implicit none
   integer(kind=8) :: n

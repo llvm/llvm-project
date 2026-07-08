@@ -33,7 +33,6 @@ if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
 endif ()
 
 flang_module_target(libomp-mod PUBLIC)
-add_dependencies(libomp-mod ${RUNTIMES_FORTRAN_BUILD_DEPS})
 
 install(FILES
   "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/omp_lib.h"

@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "Flang")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
@@ -241,9 +249,6 @@ if (FLANG_STANDALONE_BUILD)
   else()
     add_custom_target(check-all DEPENDS check-flang )
   endif()
-  if (LLVM_BUILD_DOCS)
-    add_custom_target(doxygen ALL)
-  endif()
 
 else()
   option(FLANG_INCLUDE_TESTS
@@ -305,6 +310,7 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${FLANG_SOURCE_DIR}/cmake/modules"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
+
 include(AddFlang)
 
 if (NOT DEFAULT_SYSROOT)
@@ -516,6 +522,9 @@ endif()
 
 option(FLANG_INCLUDE_DOCS "Generate build targets for the Flang docs."
        ${LLVM_INCLUDE_DOCS})
+if(FLANG_STANDALONE_BUILD)
+  include(HandleDoxygen)
+endif()
 if (FLANG_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()
@@ -589,3 +598,4 @@ install(
   COMPONENT flang-fortran-binding)
 add_llvm_install_targets(install-flang-fortran-binding
   COMPONENT flang-fortran-binding)
+

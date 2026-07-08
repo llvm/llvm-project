@@ -203,6 +203,9 @@ bool Xtensa::checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits,
   case Xtensa::ATOMCTL:
   case Xtensa::SCOMPARE1:
     return FeatureBits[Xtensa::FeatureS32C1I];
+    return FeatureBits[Xtensa::FeatureWindowed];
+  case Xtensa::GPIO_OUT_S2:
+    return FeatureBits[Xtensa::FeatureESP32S2Ops];
   case Xtensa::NoRegister:
     return false;
   }
@@ -226,6 +229,8 @@ MCRegister Xtensa::getUserRegister(unsigned Code, const MCRegisterInfo &MRI) {
     UserReg = Xtensa::F64S;
   } else if (MRI.getEncodingValue(Xtensa::THREADPTR) == Code) {
     UserReg = Xtensa::THREADPTR;
+  } else if (MRI.getEncodingValue(Xtensa::GPIO_OUT_S2) == Code) {
+    UserReg = Xtensa::GPIO_OUT_S2;
   }
 
   return UserReg;
@@ -274,6 +279,10 @@ createXtensaObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   return new XtensaTargetELFStreamer(S);
 }
 
+static MCTargetStreamer *createXtensaNullTargetStreamer(MCStreamer &S) {
+  return new XtensaTargetStreamer(S);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTargetMC() {
   // Register the MCAsmInfo.
   TargetRegistry::RegisterMCAsmInfo(getTheXtensaTarget(),
@@ -310,4 +319,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTargetMC() {
   // Register the ELF target streamer.
   TargetRegistry::RegisterObjectTargetStreamer(
       getTheXtensaTarget(), createXtensaObjectTargetStreamer);
+
+  // Register the null target streamer.
+  TargetRegistry::RegisterNullTargetStreamer(getTheXtensaTarget(),
+                                             createXtensaNullTargetStreamer);
 }

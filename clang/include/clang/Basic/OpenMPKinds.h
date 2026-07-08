@@ -188,6 +188,9 @@ struct OpenMPScheduleTy final {
   OpenMPScheduleClauseKind Schedule = OMPC_SCHEDULE_unknown;
   OpenMPScheduleClauseModifier M1 = OMPC_SCHEDULE_MODIFIER_unknown;
   OpenMPScheduleClauseModifier M2 = OMPC_SCHEDULE_MODIFIER_unknown;
+  /// Request the fused distr_static_chunk + static_chunkone runtime schedule
+  /// in `for_static_init`. The outer `distribute_static_init` is skipped.
+  bool UseFusedDistChunkSchedule = false;
 };
 
 /// OpenMP modifiers for 'reduction' clause.
@@ -257,6 +260,12 @@ enum OpenMPNumTasksClauseModifier {
 #define OPENMP_NUMTASKS_MODIFIER(Name) OMPC_NUMTASKS_##Name,
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_NUMTASKS_unknown
+};
+
+enum OpenMPNumTeamsClauseModifier {
+#define OPENMP_NUMTEAMS_MODIFIER(Name) OMPC_NUMTEAMS_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_NUMTEAMS_unknown
 };
 
 enum OpenMPNumThreadsClauseModifier {

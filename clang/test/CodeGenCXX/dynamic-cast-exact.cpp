@@ -125,3 +125,17 @@ namespace GH64088 {
   struct B final : A { virtual ~B() = default; };
   B *cast(A *p) { return dynamic_cast<B*>(p); }
 }
+
+namespace GH198511 {
+  // Ensure we mark the B vtable as used here, because we're going to emit a
+  // reference to it.
+  // CHECK: define {{.*}} @_ZN8GH1985111BD0
+  struct B;
+  struct A {
+    virtual ~A() = default;
+    template<class T> B *cast();
+  };
+  struct B final : A { };
+  template<class T> B *A::cast() { return dynamic_cast<B*>(this); }
+  template B *A::cast<int>();
+}

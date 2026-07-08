@@ -12,8 +12,7 @@
 define i32 @trunc_lshr_v2i32_to_v2i16(i64 %a.coerce) {
 ; CHECK-RV32-LABEL: trunc_lshr_v2i32_to_v2i16:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    psrli.dw a0, a0, 8
-; CHECK-RV32-NEXT:    pncvt.h a0, a0
+; CHECK-RV32-NEXT:    pnsrli.h a0, a0, 8
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: trunc_lshr_v2i32_to_v2i16:
@@ -32,8 +31,7 @@ define i32 @trunc_lshr_v2i32_to_v2i16(i64 %a.coerce) {
 define i32 @trunc_ashr_v2i32_to_v2i16(i64 %a.coerce) {
 ; CHECK-RV32-LABEL: trunc_ashr_v2i32_to_v2i16:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    psrli.dw a0, a0, 8
-; CHECK-RV32-NEXT:    pncvt.h a0, a0
+; CHECK-RV32-NEXT:    pnsrli.h a0, a0, 8
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: trunc_ashr_v2i32_to_v2i16:
@@ -52,8 +50,7 @@ define i32 @trunc_ashr_v2i32_to_v2i16(i64 %a.coerce) {
 define i32 @trunc_lshr_v4i16_to_v4i8(i64 %a.coerce) {
 ; CHECK-RV32-LABEL: trunc_lshr_v4i16_to_v4i8:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    psrli.dh a0, a0, 4
-; CHECK-RV32-NEXT:    pncvt.b a0, a0
+; CHECK-RV32-NEXT:    pnsrli.b a0, a0, 4
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: trunc_lshr_v4i16_to_v4i8:

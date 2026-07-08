@@ -196,7 +196,6 @@ class ValueObjectRecognizerSynthesizedValue : public ValueObject {
   CompilerType GetCompilerTypeImpl() override {
     return m_parent->GetCompilerType();
   }
-  bool IsSynthetic() override { return true; }
 
  private:
   lldb::ValueType m_type;

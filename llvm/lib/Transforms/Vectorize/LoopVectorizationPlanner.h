@@ -356,9 +356,7 @@ public:
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset,
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
-    return tryInsertInstruction(
-        new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
-                          GEPNoWrapFlags::none(), {}, DL, Name));
+    return createNoWrapPtrAdd(Ptr, Offset, GEPNoWrapFlags::none(), DL, Name);
   }
 
   VPInstruction *createNoWrapPtrAdd(VPValue *Ptr, VPValue *Offset,
@@ -395,7 +393,7 @@ public:
     VPlan &Plan = *getInsertBlock()->getPlan();
     VPValue *RuntimeEC = Plan.getConstantInt(Ty, EC.getKnownMinValue());
     if (EC.isScalable()) {
-      VPValue *VScale = createNaryOp(VPInstruction::VScale, {}, Ty);
+      VPValue *VScale = createVScale(Ty);
       RuntimeEC = EC.getKnownMinValue() == 1
                       ? VScale
                       : createOverflowingOp(Instruction::Mul,
@@ -437,6 +435,12 @@ public:
         new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL));
   }
 
+  /// Create a VScale VPInstruction.
+  VPInstruction *createVScale(Type *ResultTy,
+                              DebugLoc DL = DebugLoc::getUnknown()) {
+    return createNaryOp(VPInstruction::VScale, {}, ResultTy, {}, DL);
+  }
+
   VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
                                    DebugLoc DL) {
     if (ResultTy == SrcTy)
@@ -470,6 +474,23 @@ public:
         Opcode, Op, ResultTy, nullptr, VPIRFlags::getDefaultFlags(Opcode)));
   }
 
+  /// Create a single-scalar recipe with \p Opcode and \p Operands without
+  /// inserting it.
+  static VPSingleDefRecipe *createSingleScalarOp(unsigned Opcode,
+                                                 ArrayRef<VPValue *> Operands,
+                                                 VPValue *Mask,
+                                                 const VPIRFlags &Flags,
+                                                 const VPIRMetadata &Metadata,
+                                                 DebugLoc DL, Instruction *UV) {
+    if (Instruction::isCast(Opcode)) {
+      assert(!Mask && "Cast cannot be predicated");
+      return new VPInstructionWithType(Opcode, Operands, UV->getType(), Flags,
+                                       Metadata, DL, UV->getName(), UV);
+    }
+    return new VPReplicateRecipe(UV, Operands, /*IsSingleScalar=*/true, Mask,
+                                 Flags, Metadata, DL);
+  }
+
   VPScalarIVStepsRecipe *
   createScalarIVSteps(Instruction::BinaryOps InductionOpcode,
                       FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step,
@@ -489,6 +510,13 @@ public:
     return tryInsertInstruction(
         new VPVectorPointerRecipe(Ptr, SourceElementTy, Stride, GEPFlags, DL));
   }
+
+  /// Create a vector pointer recipe for a consecutive memory access to \p Ptr
+  /// with element type \p SourceElementTy.
+  VPSingleDefRecipe *createConsecutiveVectorPointer(VPValue *Ptr,
+                                                    Type *SourceElementTy,
+                                                    bool Reverse, bool FoldTail,
+                                                    DebugLoc DL);
 
   VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
       Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
@@ -991,6 +1019,16 @@ private:
   /// epilogue, assuming the main loop is vectorized by \p MainPlan.
   bool isCandidateForEpilogueVectorization(VPlan &MainPlan) const;
 };
+
+/// A helper function that returns true if the given type is irregular. The
+/// type is irregular if its allocated size doesn't equal the store size of an
+/// element of the corresponding vector type.
+inline bool hasIrregularType(Type *Ty, const DataLayout &DL) {
+  // Determine if an array of N elements of type Ty is "bitcast compatible"
+  // with a <N x Ty> vector.
+  // This is only true if there is no padding between the array elements.
+  return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
+}
 
 } // namespace llvm
 

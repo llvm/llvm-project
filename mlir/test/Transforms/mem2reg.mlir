@@ -401,3 +401,154 @@ func.func @promotable_through_partial_alias(%x: f32) -> f32 {
   %v = memref.load %alias[] : memref<f32>
   return %v : f32
 }
+
+// -----
+
+// `test.slot_tracker` tests `PromotableOpInterface::visitReplacedValues`.
+// It emits a `test.tracked_value` after each store to the slot.
+
+// Basic case: two unconditional stores followed by a load.
+
+// CHECK-LABEL: func.func @tracker_basic
+// CHECK-SAME: (%[[A:.*]]: i32, %[[B:.*]]: i32) -> i32
+// CHECK-NOT: test.multi_slot_alloca
+// CHECK-NOT: test.slot_tracker
+// CHECK-NOT: memref.store
+// CHECK-NOT: memref.load
+// CHECK-DAG: test.tracked_value %[[A]], "x" : i32
+// CHECK-DAG: test.tracked_value %[[B]], "x" : i32
+// CHECK: return %[[B]] : i32
+func.func @tracker_basic(%a: i32, %b: i32) -> i32 {
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  test.slot_tracker %slot, "x" : memref<i32>
+  memref.store %a, %slot[] : memref<i32>
+  memref.store %b, %slot[] : memref<i32>
+  %v = memref.load %slot[] : memref<i32>
+  return %v : i32
+}
+
+// -----
+
+// Regression test for use-of-deleted-SSA-value bug. A value loaded from
+// the slot is stored back to it.
+
+// CHECK-LABEL: func.func @tracker_load_stored_back
+// CHECK-SAME: (%[[A:.*]]: i32)
+// CHECK-NOT: test.multi_slot_alloca
+// CHECK-NOT: test.slot_tracker
+// CHECK-NOT: memref.store
+// CHECK-NOT: memref.load
+// CHECK: test.tracked_value %[[A]], "y" : i32
+// CHECK: test.tracked_value %[[A]], "y" : i32
+// CHECK: return
+func.func @tracker_load_stored_back(%a: i32) {
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  test.slot_tracker %slot, "y" : memref<i32>
+  memref.store %a, %slot[] : memref<i32>
+  %v = memref.load %slot[] : memref<i32>
+  memref.store %v, %slot[] : memref<i32>
+  return
+}
+
+// -----
+
+// CFG case: stores in different blocks merged at a load.
+
+// CHECK-LABEL: func.func @tracker_blocks
+// CHECK-SAME: (%[[A:.*]]: i32, %[[B:.*]]: i32, %[[COND:.*]]: i1) -> i32
+// CHECK-NOT: test.multi_slot_alloca
+// CHECK-NOT: test.slot_tracker
+// CHECK-NOT: memref.store
+// CHECK-NOT: memref.load
+// CHECK: cf.cond_br %[[COND]], ^[[BB1:.*]], ^[[BB2:.*]]
+// CHECK: ^[[BB1]]:
+// CHECK:   test.tracked_value %[[A]], "z" : i32
+// CHECK:   cf.br ^[[BB3:.*]](%[[A]] : i32)
+// CHECK: ^[[BB2]]:
+// CHECK:   test.tracked_value %[[B]], "z" : i32
+// CHECK:   cf.br ^[[BB3]](%[[B]] : i32)
+// CHECK: ^[[BB3]](%[[MERGE:.*]]: i32):
+// CHECK:   return %[[MERGE]] : i32
+func.func @tracker_blocks(%a: i32, %b: i32, %cond: i1) -> i32 {
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  test.slot_tracker %slot, "z" : memref<i32>
+  cf.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  memref.store %a, %slot[] : memref<i32>
+  cf.br ^bb3
+^bb2:
+  memref.store %b, %slot[] : memref<i32>
+  cf.br ^bb3
+^bb3:
+  %v = memref.load %slot[] : memref<i32>
+  return %v : i32
+}
+
+// -----
+
+// Same as `@tracker_basic`, but the tracker is placed last.
+
+// CHECK-LABEL: func.func @tracker_at_end
+// CHECK-SAME: (%[[A:.*]]: i32, %[[B:.*]]: i32) -> i32
+// CHECK-NOT: test.multi_slot_alloca
+// CHECK-NOT: test.slot_tracker
+// CHECK-NOT: memref.store
+// CHECK-NOT: memref.load
+// CHECK-DAG: test.tracked_value %[[A]], "k" : i32
+// CHECK-DAG: test.tracked_value %[[B]], "k" : i32
+// CHECK: return %[[B]] : i32
+func.func @tracker_at_end(%a: i32, %b: i32) -> i32 {
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  memref.store %a, %slot[] : memref<i32>
+  memref.store %b, %slot[] : memref<i32>
+  %v = memref.load %slot[] : memref<i32>
+  test.slot_tracker %slot, "k" : memref<i32>
+  return %v : i32
+}
+
+// -----
+
+// Nested-region case: an outer store and a conditional inner store.
+
+// CHECK-LABEL: func.func @tracker_nested_region
+// CHECK-SAME: (%[[A:.*]]: i32, %[[B:.*]]: i32, %[[COND:.*]]: i1)
+// CHECK-NOT: test.multi_slot_alloca
+// CHECK-NOT: test.slot_tracker
+// CHECK-NOT: memref.store
+// CHECK: test.tracked_value %[[A]], "w" : i32
+// CHECK: scf.if %[[COND]]
+// CHECK:   test.tracked_value %[[B]], "w" : i32
+func.func @tracker_nested_region(%a: i32, %b: i32, %cond: i1) {
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  test.slot_tracker %slot, "w" : memref<i32>
+  memref.store %a, %slot[] : memref<i32>
+  scf.if %cond {
+    memref.store %b, %slot[] : memref<i32>
+  }
+  return
+}
+
+// -----
+
+// Inverse of `@tracker_nested_region`: the tracker lives *inside* the
+// nested region.
+
+// CHECK-LABEL: func.func @tracker_inside_nested_region
+// CHECK-SAME: (%[[A:.*]]: i32, %[[B:.*]]: i32, %[[C:.*]]: i32, %[[COND:.*]]: i1)
+// CHECK-NOT: test.multi_slot_alloca
+// CHECK-NOT: test.slot_tracker
+// CHECK-NOT: memref.store
+// CHECK: test.tracked_value %[[A]], "n" : i32
+// CHECK: scf.if %[[COND]]
+// CHECK:   test.tracked_value %[[B]], "n" : i32
+// CHECK: test.tracked_value %[[C]], "n" : i32
+func.func @tracker_inside_nested_region(%a: i32, %b: i32, %c: i32, %cond: i1) {
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  memref.store %a, %slot[] : memref<i32>
+  scf.if %cond {
+    test.slot_tracker %slot, "n" : memref<i32>
+    memref.store %b, %slot[] : memref<i32>
+  }
+  memref.store %c, %slot[] : memref<i32>
+  return
+}

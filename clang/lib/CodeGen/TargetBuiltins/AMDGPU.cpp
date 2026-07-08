@@ -341,7 +341,8 @@ emitAMDGCNImageOverloadedReturnType(clang::CodeGen::CodeGenFunction &CGF,
   }
 
   llvm::Type *RetTy = IsImageStore ? CGF.VoidTy : CGF.ConvertType(E->getType());
-  llvm::CallInst *Call = CGF.Builder.CreateIntrinsic(RetTy, IntrinsicID, Args);
+  llvm::CallInst *Call =
+      CGF.Builder.CreateIntrinsicWithoutFolding(RetTy, IntrinsicID, Args);
   return Call;
 }
 
@@ -463,7 +464,7 @@ static Value *GetAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
   MDNode *Predicate = MDNode::get(Ctx, MDString::get(Ctx, Name.str()));
   std::vector<Value *> Args = {SpecId, ConstantInt::getFalse(Ctx),
                                MetadataAsValue::get(Ctx, Predicate)};
-  CallInst *Call = CGF.Builder.CreateIntrinsic(
+  Value *Call = CGF.Builder.CreateIntrinsic(
       Intrinsic::spv_named_boolean_spec_constant, Args);
 
   return Call;
@@ -1443,6 +1444,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w32:
   case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w64:
   // GFX1250 WMMA builtins
+  case AMDGPU::BI__builtin_amdgcn_wmma_f64_16x16x4_f64:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x4_f32:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_bf16:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_f16:
@@ -1643,6 +1645,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8;
       break;
     // GFX1250 WMMA builtins
+    case AMDGPU::BI__builtin_amdgcn_wmma_f64_16x16x4_f64:
+      ArgsForMatchingMatrixTypes = {5, 1};
+      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f64_16x16x4_f64;
+      break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x4_f32:
       ArgsForMatchingMatrixTypes = {3, 0};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x4_f32;

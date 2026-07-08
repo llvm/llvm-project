@@ -591,6 +591,10 @@ public:
     common::visit(
         common::visitors{
             [&](const std::list<ExplicitShapeSpec> &y) { Walk(y, ","); },
+            [&](const ExplicitShapeBoundsSpec &y) {
+              llvm_unreachable(
+                  "Unparse for ExplicitShapeBoundsSpec should not be reached");
+            },
             [&](const std::list<AssumedShapeSpec> &y) { Walk(y, ","); },
             [&](const DeferredShapeSpecList &y) { Walk(y); },
             [&](const AssumedSizeSpec &y) { Walk(y); },
@@ -2511,7 +2515,7 @@ public:
   void Unparse(const OmpObject &x) {
     common::visit( //
         common::visitors{
-            [&](const Designator &y) { Walk(y); },
+            [&](const auto &y) { Walk(y); },
             [&](const Name &y) {
               Put("/");
               Walk(y);

@@ -44,7 +44,7 @@ void test(Dtor *ptr) {
 // CIR:     cir.if %[[NOT_EMPTY]] {
 //
 // Destruct elements in reverse order.
-// CIR:       %[[ARR_IDX:.*]] = cir.alloca !cir.ptr<!rec_Dtor>, !cir.ptr<!cir.ptr<!rec_Dtor>>, ["__array_idx"]
+// CIR:       %[[ARR_IDX:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_Dtor>>
 // CIR:       cir.store %[[END]], %[[ARR_IDX]]
 // CIR:       cir.do {
 // CIR:         %[[CUR:.*]] = cir.load %[[ARR_IDX]]

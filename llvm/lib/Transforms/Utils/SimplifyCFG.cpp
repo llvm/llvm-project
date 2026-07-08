@@ -1174,6 +1174,11 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
     if (BonusInst.isTerminator())
       continue;
 
+    // Skip cloning pseudo probes into the predecessor, as it would overcount
+    // otherwise.
+    if (isa<PseudoProbeInst>(BonusInst))
+      continue;
+
     Instruction *NewBonusInst = BonusInst.clone();
 
     if (!NewBonusInst->getDebugLoc().isSameSourceLocation(PTI->getDebugLoc())) {
@@ -1524,6 +1529,9 @@ enum SkipFlags {
 };
 
 static unsigned skippedInstrFlags(Instruction *I) {
+  // Pseudo probes don't constrain reordering of other instructions.
+  if (isa<PseudoProbeInst>(I))
+    return 0;
   unsigned Flags = 0;
   if (I->mayReadFromMemory())
     Flags |= SkipReadMem;
@@ -1993,6 +2001,18 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
             // weren't hoisted.
             return isSafeToHoistInstr(I2, SkipFlagsBB2) &&
                    shouldHoistCommonInstructions(I1, I2, TTI);
+          });
+    }
+
+    // A musttail call must be immediately followed by a ret, so hoisting is
+    // only legal if its ret is hoisted with it on the next iteration. That is,
+    // no instruction has been skipped (the entire successor can be hoisted into
+    // the predecessor) and the call is directly followed by a ret.
+    if (auto *CI = dyn_cast<CallInst>(I1);
+        AllInstsAreIdentical && CI && CI->isMustTailCall()) {
+      AllInstsAreIdentical =
+          NumSkipped == 0 && all_of(SuccIterPairs, [](const SuccIterPair &P) {
+            return isa<ReturnInst>(*std::next(P.first));
           });
     }
 
@@ -3073,13 +3093,16 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
           LI->isSimple() && LI->getAlign() >= StoreToHoist->getAlign()) {
         Value *Obj = getUnderlyingObject(StorePtr);
         bool ExplicitlyDereferenceableOnly;
+        // The dereferenceability query here is only required to satisfy the
+        // writable contract, actual dereferenceability is proven by the
+        // presence of an access. As such, we can ignore frees.
         if (isWritableObject(Obj, ExplicitlyDereferenceableOnly) &&
             capturesNothing(
                 PointerMayBeCaptured(Obj, CaptureComponents::Provenance)
                     .WithoutRet) &&
             (!ExplicitlyDereferenceableOnly ||
-             isDereferenceablePointer(StorePtr, StoreTy,
-                                      LI->getDataLayout()))) {
+             isDereferenceablePointer(StorePtr, StoreTy, LI->getDataLayout(),
+                                      /*IgnoreFree=*/true))) {
           // Found a previous load, return it.
           return LI;
         }
@@ -4013,12 +4036,15 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
 
   LLVM_DEBUG(dbgs() << "FOLDING BRANCH TO COMMON DEST:\n" << *PBI << *BB);
 
-  IRBuilder<> Builder(PBI);
-  // The builder is used to create instructions to eliminate the branch in BB.
-  // If BB's terminator has !annotation metadata, add it to the new
-  // instructions.
-  Builder.CollectMetadataToCopy(BB->getTerminator(),
-                                {LLVMContext::MD_annotation});
+  IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+      BB->getContext(), ConstantFolder{},
+      IRBuilderCallbackInserter([&BB](Instruction *I) {
+        // The builder is used to create instructions to eliminate the branch in
+        // BB. If BB's terminator has !annotation metadata, add it to the new
+        // instructions.
+        I->copyMetadata(*BB->getTerminator(), LLVMContext::MD_annotation);
+      }));
+  Builder.SetInsertPoint(PBI);
 
   // If we need to invert the condition in the pred block to match, do so now.
   if (InvertPredCond) {
@@ -4124,6 +4150,7 @@ static bool isVectorOp(Instruction &I) {
 bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
                                   MemorySSAUpdater *MSSAU,
                                   const TargetTransformInfo *TTI,
+                                  AssumptionCache *AC,
                                   unsigned BonusInstThreshold) {
   BasicBlock *BB = BI->getParent();
   TargetTransformInfo::TargetCostKind CostKind =
@@ -4191,6 +4218,10 @@ bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
   unsigned NumBonusInsts = 0;
   bool SawVectorOp = false;
   const unsigned PredCount = Preds.size();
+  // Speculated instructions will be inserted before the terminator of the
+  // predecessor. Only handle the simple case of one predecessor.
+  const Instruction *CxtI =
+      PredCount == 1 ? Preds[0]->getTerminator() : nullptr;
   for (Instruction &I : *BB) {
     // Don't check the branch condition comparison itself.
     if (&I == Cond)
@@ -4198,8 +4229,11 @@ bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
     // Ignore the terminator.
     if (isa<UncondBrInst, CondBrInst>(I))
       continue;
+    // Pseudo probes aren't speculatable but can be dropped on fold.
+    if (isa<PseudoProbeInst>(I))
+      continue;
     // I must be safe to execute unconditionally.
-    if (!isSafeToSpeculativelyExecute(&I))
+    if (!isSafeToSpeculativelyExecute(&I, CxtI, AC))
       return false;
     SawVectorOp |= isVectorOp(I);
 
@@ -6780,7 +6814,8 @@ public:
   SwitchReplacement(
       Module &M, uint64_t TableSize, ConstantInt *Offset,
       const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
-      Constant *DefaultValue, const DataLayout &DL, const StringRef &FuncName);
+      Constant *DefaultValue, const DataLayout &DL,
+      const TargetTransformInfo &TTI, const StringRef &FuncName);
 
   /// Build instructions with Builder to retrieve values using Index
   /// and replace the switch.
@@ -6850,7 +6885,8 @@ private:
 SwitchReplacement::SwitchReplacement(
     Module &M, uint64_t TableSize, ConstantInt *Offset,
     const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
-    Constant *DefaultValue, const DataLayout &DL, const StringRef &FuncName)
+    Constant *DefaultValue, const DataLayout &DL,
+    const TargetTransformInfo &TTI, const StringRef &FuncName)
     : DefaultValue(DefaultValue) {
   assert(Values.size() && "Can't build lookup table without values!");
   assert(TableSize >= Values.size() && "Can't fit values in table!");
@@ -6977,7 +7013,8 @@ SwitchReplacement::SwitchReplacement(
         Range = Range.unionWith(cast<ConstantInt>(Value)->getValue());
     // TODO: handle sign extension as well?
     unsigned NeededBitWidth =
-        std::max(8u, unsigned(PowerOf2Ceil(Range.getActiveBits())));
+        std::max(TTI.getMinimumLookupTableEntryBitWidth(),
+                 unsigned(PowerOf2Ceil(Range.getActiveBits())));
     if (NeededBitWidth < IT->getBitWidth()) {
       IntegerType *DstTy = IntegerType::get(IT->getContext(), NeededBitWidth);
       for (Constant *&Value : TableContents)
@@ -7439,7 +7476,7 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
         AllHolesArePoison ? PoisonValue::get(ResultType) : DefaultResults[PHI];
     StringRef FuncName = Fn->getName();
     SwitchReplacement Replacement(*Fn->getParent(), TableSize, TableIndexOffset,
-                                  ResultList, DefaultVal, DL, FuncName);
+                                  ResultList, DefaultVal, DL, TTI, FuncName);
     PhiToReplacementMap.insert({PHI, Replacement});
   }
 
@@ -8669,7 +8706,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
   // branches to us and one of our successors, fold the comparison into the
   // predecessor and use logical operations to pick the right destination.
   if (Options.SpeculateBlocks &&
-      foldBranchToCommonDest(BI, DTU, /*MSSAU=*/nullptr, &TTI,
+      foldBranchToCommonDest(BI, DTU, /*MSSAU=*/nullptr, &TTI, Options.AC,
                              Options.BonusInstThreshold))
     return requestResimplify();
 
@@ -8877,7 +8914,7 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       if (CB->isArgOperand(&Use)) {
         unsigned ArgIdx = CB->getArgOperandNo(&Use);
         // Passing null to a nonnnull+noundef argument is undefined.
-        if (isa<ConstantPointerNull>(C) &&
+        if (isa<ConstantPointerNull>(C) && C->getType()->isPointerTy() &&
             CB->paramHasNonNullAttr(ArgIdx, /*AllowUndefOrPoison=*/false))
           return !PtrValueMayBeModified;
         // Passing undef to a noundef argument is undefined.

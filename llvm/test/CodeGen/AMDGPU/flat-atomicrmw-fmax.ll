@@ -2807,7 +2807,7 @@ define double @flat_agent_atomic_fmax_ret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_cmpx_ne_u32_e64 s1, v1
+; GFX12-NEXT:    v_cmpx_ne_u32_e32 s1, v1
 ; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execz .LBB18_4
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -2902,7 +2902,7 @@ define double @flat_agent_atomic_fmax_ret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX11-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX11-NEXT:    v_cmpx_ne_u32_e64 s1, v1
+; GFX11-NEXT:    v_cmpx_ne_u32_e32 s1, v1
 ; GFX11-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execz .LBB18_4
 ; GFX11-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -3200,7 +3200,7 @@ define double @flat_agent_atomic_fmax_ret_f64__offset12b_pos__amdgpu_no_fine_gra
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_cmpx_ne_u32_e64 s1, v5
+; GFX12-NEXT:    v_cmpx_ne_u32_e32 s1, v5
 ; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB19_3
 ; GFX12-NEXT:  ; %bb.1: ; %Flow2
@@ -3302,7 +3302,7 @@ define double @flat_agent_atomic_fmax_ret_f64__offset12b_pos__amdgpu_no_fine_gra
 ; GFX11-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX11-NEXT:    v_cmpx_ne_u32_e64 s1, v5
+; GFX11-NEXT:    v_cmpx_ne_u32_e32 s1, v5
 ; GFX11-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execnz .LBB19_3
 ; GFX11-NEXT:  ; %bb.1: ; %Flow2
@@ -3612,7 +3612,7 @@ define double @flat_agent_atomic_fmax_ret_f64__offset12b_neg__amdgpu_no_fine_gra
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_cmpx_ne_u32_e64 s1, v5
+; GFX12-NEXT:    v_cmpx_ne_u32_e32 s1, v5
 ; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB20_3
 ; GFX12-NEXT:  ; %bb.1: ; %Flow2
@@ -3715,7 +3715,7 @@ define double @flat_agent_atomic_fmax_ret_f64__offset12b_neg__amdgpu_no_fine_gra
 ; GFX11-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX11-NEXT:    v_cmpx_ne_u32_e64 s1, v5
+; GFX11-NEXT:    v_cmpx_ne_u32_e32 s1, v5
 ; GFX11-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execnz .LBB20_3
 ; GFX11-NEXT:  ; %bb.1: ; %Flow2
@@ -4021,7 +4021,7 @@ define void @flat_agent_atomic_fmax_noret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX12-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_cmpx_ne_u32_e64 s1, v1
+; GFX12-NEXT:    v_cmpx_ne_u32_e32 s1, v1
 ; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB21_3
 ; GFX12-NEXT:  ; %bb.1: ; %Flow2
@@ -4116,7 +4116,7 @@ define void @flat_agent_atomic_fmax_noret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX11-NEXT:    v_max_f64 v[6:7], v[2:3], v[2:3]
 ; GFX11-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
-; GFX11-NEXT:    v_cmpx_ne_u32_e64 s1, v1
+; GFX11-NEXT:    v_cmpx_ne_u32_e32 s1, v1
 ; GFX11-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execnz .LBB21_3
 ; GFX11-NEXT:  ; %bb.1: ; %Flow2
@@ -4410,7 +4410,7 @@ define void @flat_agent_atomic_fmax_noret_f64__offset12b_pos__amdgpu_no_fine_gra
 ; GFX12-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_cmpx_ne_u32_e64 s1, v7
+; GFX12-NEXT:    v_cmpx_ne_u32_e32 s1, v7
 ; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB22_3
 ; GFX12-NEXT:  ; %bb.1: ; %Flow2
@@ -4510,7 +4510,7 @@ define void @flat_agent_atomic_fmax_noret_f64__offset12b_pos__amdgpu_no_fine_gra
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
-; GFX11-NEXT:    v_cmpx_ne_u32_e64 s1, v7
+; GFX11-NEXT:    v_cmpx_ne_u32_e32 s1, v7
 ; GFX11-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execnz .LBB22_3
 ; GFX11-NEXT:  ; %bb.1: ; %Flow2
@@ -4815,7 +4815,7 @@ define void @flat_agent_atomic_fmax_noret_f64__offset12b_neg__amdgpu_no_fine_gra
 ; GFX12-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_cmpx_ne_u32_e64 s1, v7
+; GFX12-NEXT:    v_cmpx_ne_u32_e32 s1, v7
 ; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB23_3
 ; GFX12-NEXT:  ; %bb.1: ; %Flow2
@@ -4916,7 +4916,7 @@ define void @flat_agent_atomic_fmax_noret_f64__offset12b_neg__amdgpu_no_fine_gra
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v7, null, -1, v1, vcc_lo
 ; GFX11-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
-; GFX11-NEXT:    v_cmpx_ne_u32_e64 s1, v7
+; GFX11-NEXT:    v_cmpx_ne_u32_e32 s1, v7
 ; GFX11-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execnz .LBB23_3
 ; GFX11-NEXT:  ; %bb.1: ; %Flow2
@@ -5219,7 +5219,7 @@ define double @flat_agent_atomic_fmax_ret_f64__amdgpu_no_remote_memory(ptr %ptr,
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_cmpx_ne_u32_e64 s1, v1
+; GFX12-NEXT:    v_cmpx_ne_u32_e32 s1, v1
 ; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execz .LBB24_4
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -5314,7 +5314,7 @@ define double @flat_agent_atomic_fmax_ret_f64__amdgpu_no_remote_memory(ptr %ptr,
 ; GFX11-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX11-NEXT:    v_cmpx_ne_u32_e64 s1, v1
+; GFX11-NEXT:    v_cmpx_ne_u32_e32 s1, v1
 ; GFX11-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execz .LBB24_4
 ; GFX11-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -5643,7 +5643,7 @@ define double @flat_agent_atomic_fmax_ret_f64__amdgpu_no_fine_grained_memory__am
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_cmpx_ne_u32_e64 s1, v1
+; GFX12-NEXT:    v_cmpx_ne_u32_e32 s1, v1
 ; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execz .LBB25_4
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -5738,7 +5738,7 @@ define double @flat_agent_atomic_fmax_ret_f64__amdgpu_no_fine_grained_memory__am
 ; GFX11-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX11-NEXT:    v_cmpx_ne_u32_e64 s1, v1
+; GFX11-NEXT:    v_cmpx_ne_u32_e32 s1, v1
 ; GFX11-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execz .LBB25_4
 ; GFX11-NEXT:  ; %bb.1: ; %atomicrmw.global
