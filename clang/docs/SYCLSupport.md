@@ -92,24 +92,13 @@ data with the address space attribute or not.
 To utilize clang's existing functionality, we reuse the following OpenCL address
 space attributes for pointers:
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-
-   * - Address space attribute
-     - SYCL address_space enumeration
-   * - ``__attribute__((opencl_global))``
-     - global_space, constant_space
-   * - ``__attribute__((opencl_global_device))``
-     - global_space
-   * - ``__attribute__((opencl_global_host))``
-     - global_space
-   * - ``__attribute__((opencl_local))``
-     - local_space
-   * - ``__attribute__((opencl_private))``
-     - private_space
-
-```
+| Address space attribute                         | SYCL address_space enumeration |
+| ----------------------------------------------- | ------------------------------ |
+| `__attribute__((opencl_global))`                | global_space, constant_space   |
+| `__attribute__((opencl_global_device))`         | global_space                   |
+| `__attribute__((opencl_global_host))`           | global_space                   |
+| `__attribute__((opencl_local))`                 | local_space                    |
+| `__attribute__((opencl_private))`               | private_space                  |
 
 ```C++
 //TODO: add support for __attribute__((opencl_global_host)) and __attribute__((opencl_global_device)).

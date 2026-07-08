@@ -91,7 +91,7 @@ Many programming languages have a module or package system, and because of the v
 
 ## Using Modules
 
-To enable modules, pass the command-line flag `-fmodules`. This will make any modules-enabled software libraries available as modules as well as introducing any modules-specific syntax. Additional [command-line parameters] are described in a separate section later.
+To enable modules, pass the command-line flag `-fmodules`. This will make any modules-enabled software libraries available as modules as well as introducing any modules-specific syntax. Additional [command-line parameters](#command-line-parameters) are described in a separate section later.
 
 ### Standard C++ Modules
 
@@ -121,7 +121,7 @@ Redundant import declarations are ignored, and one is free to import modules at 
 
 At present, there is no C or C++ syntax for import declarations. Clang
 will track the modules proposal in the C++ committee. See the section
-[Includes as imports] to see how modules get imported today.
+[Includes as imports](#includes-as-imports) to see how modules get imported today.
 
 ### Includes as imports
 
@@ -154,10 +154,10 @@ directive.
 
 The crucial link between modules and headers is described by a *module map*, which describes how a collection of existing headers maps on to the (logical) structure of a module. For example, one could imagine a module `std` covering the C standard library. Each of the C standard library headers (`<stdio.h>`, `<stdlib.h>`, `<math.h>`, etc.) would contribute to the `std` module, by placing their respective APIs into the corresponding submodule (`std.io`, `std.lib`, `std.math`, etc.). Having a list of the headers that are part of the `std` module allows the compiler to build the `std` module as a standalone entity, and having the mapping from header names to (sub)modules allows the automatic translation of `#include` directives to module imports.
 
-Module maps are specified as separate files (each named `module.modulemap`) alongside the headers they describe, which allows them to be added to existing software libraries without having to change the library headers themselves (in most cases [^footnote-2]). The actual [Module map language] is described in a later section.
+Module maps are specified as separate files (each named `module.modulemap`) alongside the headers they describe, which allows them to be added to existing software libraries without having to change the library headers themselves (in most cases [^footnote-2]). The actual [Module map language](#module-map-language) is described in a later section.
 
 :::{note}
-To actually see any benefits from modules, one first has to introduce module maps for the underlying C standard library and the libraries and headers on which it depends. The section [Modularizing a Platform] describes the steps one must take to write these module maps.
+To actually see any benefits from modules, one first has to introduce module maps for the underlying C standard library and the libraries and headers on which it depends. The section [Modularizing a Platform](#modularizing-a-platform) describes the steps one must take to write these module maps.
 :::
 
 One can use module maps without modules to check the integrity of the use of header files. To do this, use the `-fimplicit-module-maps` option instead of the `-fmodules` option, or use `-fmodule-map-file=` option to explicitly specify the module map files to load.
@@ -523,7 +523,7 @@ The `framework` qualifier specifies that this module corresponds to a Darwin-sty
     Name                      Symbolic link to the shared library for the framework
 ```
 
-The `system` attribute specifies that the module is a system module. When a system module is rebuilt, all of the module's headers will be considered system headers, which suppresses warnings. This is equivalent to placing `#pragma GCC system_header` in each of the module's headers. The form of attributes is described in the section [Attributes], below.
+The `system` attribute specifies that the module is a system module. When a system module is rebuilt, all of the module's headers will be considered system headers, which suppresses warnings. This is equivalent to placing `#pragma GCC system_header` in each of the module's headers. The form of attributes is described in the section [Attributes](#attributes), below.
 
 The `extern_c` attribute specifies that the module contains C code that can be used from within C++. When such a module is built for use in C++ code, all of the module's headers will be treated as if they were contained within an implicit `extern "C"` block. An import for a module with this attribute can appear within an `extern "C"` block. No other restrictions are lifted, however: the module currently cannot be imported within an `extern "C"` block in a namespace.
 
@@ -769,7 +769,7 @@ The *string-literal* refers to a directory. When the module is built, all of the
 :::{note}
 Umbrella directory paths that use `..` to refer to directories outside of
 the module directory are deprecated in implicitly discovered module maps.
-See the note in [Header declaration] for details.
+See the note in [Header declaration](#header-declaration) for details.
 :::
 
 An *umbrella-dir-declaration* shall not refer to the same directory as the location of an umbrella *header-declaration*. In other words, only a single kind of umbrella can be specified for a given directory.
@@ -1176,7 +1176,7 @@ When writing a private module as part of a *framework*, it's recommended that:
 
 To get any benefit out of modules, one needs to introduce module maps for software libraries starting at the bottom of the stack. This typically means introducing a module map covering the operating system's headers and the C standard library headers (in `/usr/include`, for a Unix system).
 
-The module maps will be written using the [module map language], which provides the tools necessary to describe the mapping between headers and modules. Because the set of headers differs from one system to the next, the module map will likely have to be somewhat customized for, e.g., a particular distribution and version of the operating system. Moreover, the system headers themselves may require some modification, if they exhibit any anti-patterns that break modules. Such common patterns are described below.
+The module maps will be written using the [module map language](#module-map-language), which provides the tools necessary to describe the mapping between headers and modules. Because the set of headers differs from one system to the next, the module map will likely have to be somewhat customized for, e.g., a particular distribution and version of the operating system. Moreover, the system headers themselves may require some modification, if they exhibit any anti-patterns that break modules. Such common patterns are described below.
 
 **Macro-guarded copy-and-pasted definitions**
 
@@ -1249,8 +1249,8 @@ The Clang source code provides additional information about modules:
 
 [^footnote-1]: Automatic linking against the libraries of modules requires specific linker support, which is not widely available.
 
-[^footnote-2]: There are certain anti-patterns that occur in headers, particularly system headers, that cause problems for modules. The section [Modularizing a Platform] describes some of them.
+[^footnote-2]: There are certain anti-patterns that occur in headers, particularly system headers, that cause problems for modules. The section [Modularizing a Platform](#modularizing-a-platform) describes some of them.
 
 [^footnote-3]: The second instance is actually a new thread within the current process, not a separate process. However, the original compiler instance is blocked on the execution of this thread.
 
-[^footnote-4]: The preprocessing context in which the modules are parsed is actually dependent on the command-line options provided to the compiler, including the language dialect and any `-D` options. However, the compiled modules for different command-line options are kept distinct, and any preprocessor directives that occur within the translation unit are ignored. See the section on the [Configuration macros declaration] for more information.
+[^footnote-4]: The preprocessing context in which the modules are parsed is actually dependent on the command-line options provided to the compiler, including the language dialect and any `-D` options. However, the compiled modules for different command-line options are kept distinct, and any preprocessor directives that occur within the translation unit are ignored. See the section on the [Configuration macros declaration](#configuration-macros-declaration) for more information.

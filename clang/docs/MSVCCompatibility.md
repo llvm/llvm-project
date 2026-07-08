@@ -6,16 +6,13 @@
 </style>
 ```
 
-```{eval-rst}
-.. role:: none
+```{role} none
 ```
 
-```{eval-rst}
-.. role:: partial
+```{role} partial
 ```
 
-```{eval-rst}
-.. role:: good
+```{role} good
 ```
 
 # MSVC compatibility
@@ -273,4 +270,3 @@ In general the takeaway is `__m128` is a builtin type on clang while a class typ
 [consistent with visual c++]: https://msdn.microsoft.com/en-us/library/wfa0edys.aspx
 [frequently asked question]: https://clang.llvm.org/compatibility.html#dep_lookup
 [pointer to a member of a virtual base class]: https://llvm.org/PR15713
-

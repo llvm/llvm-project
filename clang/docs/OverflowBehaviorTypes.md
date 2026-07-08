@@ -151,20 +151,11 @@ variety of scenarios is detailed below.
   auto result = a + b; // result is __ob_trap int (C promotes u16->int, dominance gives trap)
   ```
 
-```{eval-rst}
-.. list-table:: Promotion Rules Summary
-   :widths: 30 70
-   :header-rows: 1
-
-   * - Operation Type
-     - Result Type
-   * - OBT + Standard Integer
-     - Standard C conversion result with OBT qualifier applied
-   * - Same Kind OBTs (both ``wrap`` or both ``trap``)
-     - Standard C conversion result with common overflow behavior
-   * - Different Kind OBTs (``wrap`` + ``trap``)
-     - Standard C conversion result with ``trap`` behavior (dominance)
-```
+| Operation Type                              | Result Type                                                     |
+| ------------------------------------------- | --------------------------------------------------------------- |
+| OBT + Standard Integer                      | Standard C conversion result with OBT qualifier applied         |
+| Same Kind OBTs (both `wrap` or both `trap`) | Standard C conversion result with common overflow behavior      |
+| Different Kind OBTs (`wrap` + `trap`)       | Standard C conversion result with `trap` behavior (dominance)   |
 
 **Overflow Behavior Dominance Rules:**
 
@@ -431,30 +422,10 @@ The `overflow_behavior` attribute interacts with sanitizers, `-ftrapv`,
 `-fwrapv`, and Sanitizer Special Case Lists (SSCL) by wholly overriding these
 global flags. The following table summarizes the interactions:
 
-```{eval-rst}
-.. list-table:: Overflow Behavior Precedence
-   :widths: 15 15 15 15 20 15
-   :header-rows: 1
-
-   * - Behavior
-     - Default(No Flags)
-     - -ftrapv
-     - -fwrapv
-     - Sanitizers
-     - SSCL
-   * - ``overflow_behavior(wrap)``
-     - Wraps
-     - Wraps
-     - Wraps
-     - No report, Wraps
-     - Overrides SSCL
-   * - ``overflow_behavior(trap)``
-     - Traps
-     - Traps
-     - Traps
-     - Reports
-     - Overrides SSCL
-```
+| Behavior                  | Default(No Flags) | -ftrapv | -fwrapv | Sanitizers       | SSCL           |
+| ------------------------- | ----------------- | ------- | ------- | ---------------- | -------------- |
+| `overflow_behavior(wrap)` | Wraps             | Wraps   | Wraps   | No report, Wraps | Overrides SSCL |
+| `overflow_behavior(trap)` | Traps             | Traps   | Traps   | Reports          | Overrides SSCL |
 
 It is important to note the distinction between signed and unsigned types. For
 unsigned integers, which wrap on overflow by default, `overflow_behavior(trap)`

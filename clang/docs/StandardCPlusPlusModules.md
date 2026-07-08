@@ -390,7 +390,7 @@ are added to the archive instead.
 
 `clang-cl` supports the same options as `clang++` for modules as detailed above;
 there is no need to prefix these options with `/clang:`. Note that `cl.exe`
-`options to emit/consume IFC files <https://devblogs.microsoft.com/cppblog/using-cpp-modules-in-msvc-from-the-command-line-part-1/>` are *not* supported.
+[options to emit/consume IFC files](https://devblogs.microsoft.com/cppblog/using-cpp-modules-in-msvc-from-the-command-line-part-1/) are *not* supported.
 The resulting precompiled modules are also not compatible for use with `cl.exe`.
 
 We recommend that build system authors use the above-mentioned `clang++` options with `clang-cl` to build modules.

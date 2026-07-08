@@ -22,7 +22,7 @@ whole-program analysis is then performed on the combined summary index.
 
 However, all transformations, including function importing, occur
 later when the modules are optimized in fully parallel backends.
-By default, [linkers] that support ThinLTO are set up to launch
+By default, [linkers](#linkers) that support ThinLTO are set up to launch
 the ThinLTO backends in threads. So the usage model is not affected
 as the distinction between the fast serial thin link step and the backends
 is transparent to the user.
@@ -198,8 +198,8 @@ Possible key-value pairs are:
 To [bootstrap clang/LLVM](https://llvm.org/docs/AdvancedBuilds.html#bootstrap-builds)
 with ThinLTO, follow these steps:
 
-1. The host [compiler] must be a version of clang that supports ThinLTO.
-2. The host [linker] must support ThinLTO (and in the case of gold, must be
+1. The host [compiler](#compiler) must be a version of clang that supports ThinLTO.
+2. The host [linker](#linker) must support ThinLTO (and in the case of gold, must be
    [configured with plugins enabled](https://llvm.org/docs/GoldPlugin.html)).
 3. Use the following additional [CMake variables](https://llvm.org/docs/CMake.html#options-and-variables)
    when configuring the bootstrap compiler build:
@@ -220,7 +220,7 @@ with ThinLTO, follow these steps:
 > - `-DCMAKE_AR=/path/to/host/llvm-ar.exe`
 
 1. To use additional linker arguments for controlling the backend
-   [parallelism] or enabling [incremental] builds of the bootstrap compiler,
+   [parallelism](#parallelism) or enabling [incremental](#incremental) builds of the bootstrap compiler,
    after configuring the build, modify the resulting CMakeCache.txt file in the
    build directory. Specify any additional linker options after
    `CMAKE_EXE_LINKER_FLAGS:STRING=`. Note the configure may fail if

@@ -64,7 +64,7 @@ particular name is consistent throughout a process.
 A **discriminator** is an arbitrary value used to **diversify** signed pointers
 so that one validly-signed pointer cannot simply be copied over another.
 A discriminator is simply opaque data of some implementation-defined size that
-is included in the signature as a salt (see [Discriminators] for details.)
+is included in the signature as a salt (see [Discriminators](#discriminators) for details.)
 
 Nearly all aspects of pointer authentication use just these two primary
 operations:
@@ -112,7 +112,7 @@ clarity of description. They are not suitable either as high-level
 interfaces or as primitives in a compiler IR because they expose raw
 pointers. Raw pointers require special attention in the language
 implementation to avoid the accidental creation of exploitable code
-sequences; see the section on [Attackable code sequences].
+sequences; see the section on [Attackable code sequences](#attackable-code-sequences).
 :::
 
 The following details are all implementation-defined:
@@ -125,7 +125,7 @@ The following details are all implementation-defined:
 
 While the use of the terms "sign" and "signed pointer" suggest the use of
 a cryptographic signature, other implementations may be possible. See
-[Alternative implementations] for an exploration of implementation options.
+[Alternative implementations](#alternative-implementations) for an exploration of implementation options.
 
 :::{admonition} Implementation example: Armv8.3
 Readers may find it helpful to know how these terms map to Armv8.3 PAuth:
@@ -229,7 +229,7 @@ authenticating code to agree about the **signing schema** for the pointer:
 - the abstract signing key with which the pointer should be signed and
 - an algorithm for computing the discriminator.
 
-As described in the section above on [Discriminators], in most situations, the
+As described in the section above on [Discriminators](#discriminators), in most situations, the
 discriminator is produced by taking a constant discriminator and optionally
 blending it with the storage address of the pointer. In these situations, the
 signing schema breaks down even more simply:
@@ -242,7 +242,7 @@ It is important that the signing schema be independently derived at all signing
 and authentication sites. Preferably, the schema should be hard-coded
 everywhere it is needed, but at the very least, it must not be derived by
 inspecting information stored along with the pointer. See the section on
-[Attacks on pointer authentication] for more information.
+[Attacks on pointer authentication](#attacks-on-pointer-authentication) for more information.
 
 ## Language features
 
@@ -283,7 +283,7 @@ when the branch is performed. This includes:
   global offset table (GOT) used to implement direct calls to functions defined
   outside of the current shared object.
 
-For more information about this, see the [Language ABI] section.
+For more information about this, see the [Language ABI](#language-abi) section.
 
 However, some aspects of the implementation are observable by the programmer or
 otherwise require special notice.
@@ -292,10 +292,10 @@ otherwise require special notice.
 
 The current implementation in Clang does not sign pointers to ordinary data by
 default. For a partial explanation of the reasoning behind this, see the
-[Theory of Operation] section.
+[Theory of operation](#theory-of-operation) section.
 
 A specific data pointer which is more security-sensitive than most can be
-signed using the [\_\_ptrauth qualifier][__ptrauth qualifier] or using the `<ptrauth.h>`
+signed using the [`__ptrauth` qualifier](#ptrauth-qualifier) or using the `<ptrauth.h>`
 intrinsics.
 
 #### C function pointers
@@ -303,10 +303,10 @@ intrinsics.
 The C standard imposes restrictions on the representation and semantics of
 function pointer types which make it difficult to achieve satisfactory
 signature diversity in the default language rules. See [Attacks on pointer
-authentication][attacks on pointer authentication] for more information about signature diversity. Programmers
+authentication](#attacks-on-pointer-authentication) for more information about signature diversity. Programmers
 should strongly consider using the `__ptrauth` qualifier to improve the
 protections for important function pointers, such as the components of of
-a hand-rolled "v-table"; see the section on the [\_\_ptrauth qualifier][__ptrauth qualifier] for
+a hand-rolled "v-table"; see the section on the [`__ptrauth` qualifier](#ptrauth-qualifier) for
 details.
 
 The value of a pointer to a C function includes a signature, even when the
@@ -348,7 +348,7 @@ These tools must be updated to correctly account for pointer authentication,
 either by stripping signatures (if security is not important for the tool, e.g.
 if it is capturing a stack trace during a crash) or properly authenticating
 them. More information about how these values are signed is available in the
-[Language ABI] section.
+[Language ABI](#language-abi) section.
 
 #### C++ virtual functions
 
@@ -412,7 +412,7 @@ The qualifier's operands are as follows:
   a constant expression with one of these two values
 - `discriminator` - a constant discriminator; must be a constant expression
 
-See [Discriminators] for more information about discriminators.
+See [Discriminators](#discriminators) for more information about discriminators.
 
 Currently the operands must be constant-evaluable even within templates. In the
 future this restriction may be lifted to allow value-dependent expressions as
@@ -432,7 +432,7 @@ a discriminator determined as follows:
   `&x`; otherwise
 - if `address` is 1 and `discriminator` is non-zero, then the discriminator
   is `ptrauth_blend_discriminator(&x, discriminator)`; see
-  [ptrauth_blend_discriminator].
+  [`ptrauth_blend_discriminator`](#ptrauth-blend-discriminator).
 
 ##### Non-triviality from address diversity
 
@@ -1042,7 +1042,7 @@ The implementation can avoid this by obeying two basic rules:
 
 ##### Register clobbering
 
-As a refinement of the section on [Attackable code sequences], if the attacker
+As a refinement of the section on [Attackable code sequences](#attackable-code-sequences), if the attacker
 has the ability to modify arbitrary *register* state at arbitrary points in the
 program, then special care must be taken.
 
@@ -1071,7 +1071,7 @@ success in doing exactly that. Even ignoring that, though, we should aim to
 protect against lucky attackers just as much as good ones.)
 
 To protect against this, saved register state must be at least partially signed
-(using something like [ptrauth_sign_generic_data]). This is required for
+(using something like [`ptrauth_sign_generic_data`](#ptrauth-sign-generic-data)). This is required for
 correctness anyway because saved thread states include security-critical
 registers such as SP, FP, PC, and LR (where applicable). Ideally, this
 signature would cover all the registers, but since saving and restoring
@@ -1101,7 +1101,7 @@ it does take extra considerations to make it secure:
 - Relative addresses must only be stored in read-only memory. A writable
   relative address can be overwritten to point nearly anywhere, making it
   inherently insecure; this danger can only be compensated for with techniques
-  for protecting arbitrary data like [ptrauth_sign_generic_data].
+  for protecting arbitrary data like [`ptrauth_sign_generic_data`](#ptrauth-sign-generic-data).
 - Relative addresses must only be accessed through signed pointers with adequate
   diversity. If an attacker can perform an `access path attack` to replace the
   pointer through which the relative address is accessed, they can easily cause
@@ -1138,7 +1138,7 @@ pointer authentication.
 - If an attacker can remap read-only program data sections to be writable, then
   any use of {ref}`relative addresses <relative-addresses>` in global data becomes insecure.
 - On platforms that use them, if an attacker can remap the memory containing
-  the [global offset tables] as writable, then any unsigned pointers in those
+  the [global offset tables](#global-offset-tables) as writable, then any unsigned pointers in those
   tables are insecure.
 
 Remapping memory in this way often requires the attacker to have already
@@ -1277,7 +1277,7 @@ the result reduced by modulo to the range of non-zero discriminators (i.e.
 ### Return addresses
 
 The kernel must ensure that attackers cannot replace LR due to an asynchronous
-exception; see [Register clobbering]. If this is done by generally protecting
+exception; see [Register clobbering](#register-clobbering). If this is done by generally protecting
 LR, then functions which don't spill LR to the stack can avoid signing it
 entirely. Otherwise, the return address must be signed; on arm64e it is signed
 with the `IB` key using the stack pointer on entry as the discriminator.
@@ -1299,10 +1299,10 @@ but more importantly, it defines away the potential for several attacks:
 - Attackers cannot change instructions, so there is no way to cause this code
   sequence to materialize a different pointer, whereas an access via the GOT
   always has *at minimum* a probabilistic chance to be the target of successful
-  [substitution attacks].
+  [substitution attacks](#substitution-attacks).
 - The GOT is a dense pool of fixed pointers at a fixed offset relative to code;
   attackers can search this pool for useful pointers that can be used in
-  [substitution attacks], whereas pointers that are only materialized directly
+  [substitution attacks](#substitution-attacks), whereas pointers that are only materialized directly
   are not so easily available.
 - Similarly, attackers can use {ref}`access path attacks <access-path-attacks>` to replace a pointer to a
   signed pointer with a pointer to the GOT if the signing schema used within the
@@ -1312,7 +1312,7 @@ but more importantly, it defines away the potential for several attacks:
 
 If this can be done for a symbol, then the compiler need only ensure that it
 materializes the signed pointer using registers that are safe against
-[register clobbering].
+[register clobbering](#register-clobbering).
 
 However, many symbols can only be accessed via the GOT, e.g. because they
 resolve to definitions outside of the current image. In this case, care must
@@ -1324,7 +1324,7 @@ be taken to ensure that using the GOT does not introduce weaknesses.
   and access-path attacks above. Storing raw pointers in this way is usually
   extremely unsafe, but for the special case of an immutable GOT entry it's fine
   because the GOT is always accessed via an address that is directly
-  materialized in code and thus provably unattackable. (But see [Remapping].)
+  materialized in code and thus provably unattackable. (But see [Remapping](#remapping).)
 - Otherwise, GOT entries which are used for producing a signed pointer constant
   must be signed. The signing schema used in the GOT need not match the target
   signing schema for the signed constant. To counteract the threats of
@@ -1335,7 +1335,7 @@ be taken to ensure that using the GOT does not introduce weaknesses.
 
 In either case, the compiler must ensure that materializing the address of a GOT
 entry as part of producing a signed pointer constant is not vulnerable to
-[register clobbering]. If the linker also generates code for this, e.g. for
+[register clobbering](#register-clobbering). If the linker also generates code for this, e.g. for
 call stubs, this generated code must take the same precautions.
 
 ### Dynamic symbol lookup
@@ -1382,7 +1382,7 @@ function pointers back and forth, or only does so through
 
 By default the pointer to a C++ virtual table is currently signed with the
 `DA` key, address diversity, and a constant discriminator equal to the string
-hash (see [ptrauth_string_discriminator]) of the mangled v-table identifier
+hash (see [`ptrauth_string_discriminator`](#ptrauth-string-discriminator)) of the mangled v-table identifier
 of the primary base class for the v-table. To support existing code or ABI
 constraints it is possible to use the `ptrauth_vtable_pointer` attribute to
 override the schema used for the v-table pointer of the base type of
@@ -1391,7 +1391,7 @@ key, address diversity mode, and any extra constant discriminator to be used.
 
 Virtual functions in a C++ virtual table are signed with the `IA` key, address
 diversity, and a constant discriminator equal to the string hash (see
-[ptrauth_string_discriminator]) of the mangled name of the function which
+[`ptrauth_string_discriminator`](#ptrauth-string-discriminator)) of the mangled name of the function which
 originally gave rise to the v-table slot.
 
 ### C++ dynamic_cast
@@ -1423,7 +1423,7 @@ and no additional diversity.
 
 A member function pointer is signed with the `IA` key, no address diversity,
 and a constant discriminator equal to the string hash
-(see [ptrauth_string_discriminator]) of the member pointer type. Address
+(see [`ptrauth_string_discriminator`](#ptrauth-string-discriminator)) of the member pointer type. Address
 diversity is not permitted by C++ for member function pointers because they must
 be trivially-copyable types.
 

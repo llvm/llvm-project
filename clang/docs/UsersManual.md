@@ -1638,48 +1638,40 @@ Clang provides a number of ways to control floating point behavior, including
 with command line options and source pragmas. This section
 describes the various floating point semantic modes and the corresponding options.
 
-```{eval-rst}
-.. csv-table:: Floating Point Semantic Modes
-  :header: "Mode", "Values"
-  :widths: 15, 30, 30
-
-  "ffp-exception-behavior", "{ignore, strict, maytrap}",
-  "fenv_access", "{off, on}", "(none)"
-  "frounding-math", "{dynamic, tonearest, downward, upward, towardzero}"
-  "ffp-contract", "{on, off, fast, fast-honor-pragmas}"
-  "fdenormal-fp-math", "{IEEE, PreserveSign, PositiveZero}"
-  "fdenormal-fp-math-fp32", "{IEEE, PreserveSign, PositiveZero}"
-  "fmath-errno", "{on, off}"
-  "fhonor-nans", "{on, off}"
-  "fhonor-infinities", "{on, off}"
-  "fsigned-zeros", "{on, off}"
-  "freciprocal-math", "{on, off}"
-  "fallow-approximate-fns", "{on, off}"
-  "fassociative-math", "{on, off}"
-  "fcomplex-arithmetic", "{basic, improved, full, promoted}"
-```
+| Mode                    | Values                                             |        |
+| ----------------------- | -------------------------------------------------- | ------ |
+| ffp-exception-behavior  | {ignore, strict, maytrap}                          |        |
+| fenv_access             | {off, on}                                          | (none) |
+| frounding-math          | {dynamic, tonearest, downward, upward, towardzero} |        |
+| ffp-contract            | {on, off, fast, fast-honor-pragmas}                |        |
+| fdenormal-fp-math       | {IEEE, PreserveSign, PositiveZero}                 |        |
+| fdenormal-fp-math-fp32  | {IEEE, PreserveSign, PositiveZero}                 |        |
+| fmath-errno             | {on, off}                                          |        |
+| fhonor-nans             | {on, off}                                          |        |
+| fhonor-infinities       | {on, off}                                          |        |
+| fsigned-zeros           | {on, off}                                          |        |
+| freciprocal-math        | {on, off}                                          |        |
+| fallow-approximate-fns  | {on, off}                                          |        |
+| fassociative-math       | {on, off}                                          |        |
+| fcomplex-arithmetic     | {basic, improved, full, promoted}                  |        |
 
 This table describes the option settings that correspond to the three
 floating point semantic models: precise (the default), strict, and fast.
 
-```{eval-rst}
-.. csv-table:: Floating Point Models
-  :header: "Mode", "Precise", "Strict", "Fast", "Aggressive"
-  :widths: 25, 25, 25, 25, 25
-
-  "except_behavior", "ignore", "strict", "ignore", "ignore"
-  "fenv_access", "off", "on", "off", "off"
-  "rounding_mode", "tonearest", "dynamic", "tonearest", "tonearest"
-  "contract", "on", "off", "fast", "fast"
-  "support_math_errno", "on", "on", "off", "off"
-  "no_honor_nans", "off", "off", "off", "on"
-  "no_honor_infinities", "off", "off", "off", "on"
-  "no_signed_zeros", "off", "off", "on", "on"
-  "allow_reciprocal", "off", "off", "on", "on"
-  "allow_approximate_fns", "off", "off", "on", "on"
-  "allow_reassociation", "off", "off", "on", "on"
-  "complex_arithmetic", "full", "full", "promoted", "basic"
-```
+| Mode                  | Precise   | Strict  | Fast      | Aggressive |
+| --------------------- | --------- | ------- | --------- | ---------- |
+| except_behavior       | ignore    | strict  | ignore    | ignore     |
+| fenv_access           | off       | on      | off       | off        |
+| rounding_mode         | tonearest | dynamic | tonearest | tonearest  |
+| contract              | on        | off     | fast      | fast       |
+| support_math_errno    | on        | on      | off       | off        |
+| no_honor_nans         | off       | off     | off       | on         |
+| no_honor_infinities   | off       | off     | off       | on         |
+| no_signed_zeros       | off       | off     | on        | on         |
+| allow_reciprocal      | off       | off     | on        | on         |
+| allow_approximate_fns | off       | off     | on        | on         |
+| allow_reassociation   | off       | off     | on        | on         |
+| complex_arithmetic    | full      | full    | promoted  | basic      |
 
 The `-ffp-model` option does not modify the `fdenormal-fp-math`
 setting, but it does have an impact on whether `crtfastmath.o` is

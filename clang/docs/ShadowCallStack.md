@@ -15,11 +15,11 @@ in the function epilog. The return address is also stored on the regular stack
 for compatibility with unwinders, but is otherwise unused.
 
 The aarch64 implementation is considered production ready, and
-an [implementation of the runtime] has been added to Android's libc
+an [implementation of the runtime][scs-runtime] has been added to Android's libc
 (bionic). An x86_64 implementation was evaluated using Chromium and was found
 to have critical performance and security deficiencies--it was removed in
 LLVM 9.0. Details on the x86_64 implementation can be found in the
-[Clang 7.0.1 documentation].
+[Clang 7.0.1 documentation][clang-701-doc].
 
 ### Comparison
 
@@ -29,12 +29,12 @@ schemes, like {doc}`SafeStack`, that mirror the entire stack and trade-off
 consuming more memory for shorter function prologs and epilogs with fewer
 memory accesses.
 
-[Return Flow Guard] is a pure software implementation of shadow call stacks
+[Return Flow Guard][rfg] is a pure software implementation of shadow call stacks
 on x86_64. Like the previous implementation of ShadowCallStack on x86_64, it is
 inherently racy due to the architecture's use of the stack for calls and
 returns.
 
-Intel [Control-flow Enforcement Technology] (CET) is a proposed hardware
+Intel [Control-flow Enforcement Technology][cet] (CET) is a proposed hardware
 extension that would add native support to use a shadow stack to store/check
 return addresses at call/return time. Being a hardware implementation, it
 would not suffer from race conditions and would not incur the overhead of
@@ -49,7 +49,7 @@ and destruction would need to be intercepted by the application.
 
 The instrumentation makes use of the platform register `x18` on AArch64,
 `x3` (`gp`) on RISC-V with software shadow stack and `ssp` on RISC-V with
-hardware shadow stack, which needs [Zicfiss] and `-fcf-protection=return`.
+hardware shadow stack, which needs [Zicfiss][zicfiss] and `-fcf-protection=return`.
 Users can choose between the software and hardware based shadow stack
 implementation on RISC-V backend by passing `-fsanitize=shadow-call-stack`
 or `Zicfiss` with `-fcf-protection=return`.
@@ -61,7 +61,7 @@ reserves `SCSReg` (currently Android, Darwin, Fuchsia and Windows) or be
 compiled with a flag to reserve that register (e.g., `-ffixed-x18`). If
 absolutely necessary, code compiled without reserving the register may be run on
 the same thread as code that uses ShadowCallStack by saving the register value
-temporarily on the stack ([example in Android]) but this should be done with
+temporarily on the stack ([example in Android][android-example]) but this should be done with
 care since it risks leaking the shadow call stack address.
 
 Because it requires a dedicated register, the ShadowCallStack feature is
@@ -90,7 +90,8 @@ call stack, meaning that references to the shadow call stack do not have
 to be stored in memory. This makes it possible to implement a runtime that
 avoids exposing the address of the shadow call stack to attackers that can
 read arbitrary memory. However, attackers could still try to exploit side
-channels exposed by the operating system [[1]] [[2]] or processor [[3]]
+channels exposed by the operating system [[1]][scs-cartography] [[2]][safestack-bypass]
+or processor [[3]][anc]
 to discover the address of the shadow call stack.
 
 Unless care is taken when allocating the shadow call stack, it may be
@@ -100,8 +101,8 @@ difficult. One way to do this is to allocate a large guard region without
 read/write permissions, randomly select a small region within it to be
 used as the address of the shadow call stack and mark only that region as
 read/write. This also mitigates somewhat against processor side channels.
-The intent is that the Android runtime [will do this], but the platform will
-first need to be [changed] to avoid using `setrlimit(RLIMIT_AS)` to limit
+The intent is that the Android runtime [will do this][android-will-do-this], but the platform will
+first need to be [changed][android-changed] to avoid using `setrlimit(RLIMIT_AS)` to limit
 memory allocations in certain processes, as this also limits the number of
 guard regions that can be allocated.
 
@@ -120,7 +121,7 @@ the address of the start of the guard region is already somewhat guessable.
 
 One way in which the address of the shadow call stack could leak is in the
 `jmp_buf` data structure used by `setjmp` and `longjmp`. The Android
-runtime [avoids this] by only storing the low bits of `SCSReg` in the
+runtime [avoids this][android-avoids-this] by only storing the low bits of `SCSReg` in the
 `jmp_buf`, which requires the address of the shadow call stack to be
 aligned to its size.
 
@@ -196,15 +197,15 @@ ldr     x30, [x18, #-8]!
 ret
 ```
 
-[[1]]: https://eyalitkin.wordpress.com/2017/09/01/cartography-lighting-up-the-shadows/
-[[2]]: https://www.blackhat.com/docs/eu-16/materials/eu-16-Goktas-Bypassing-Clangs-SafeStack.pdf
-[[3]]: https://www.vusec.net/projects/anc/
-[avoids this]: https://android.googlesource.com/platform/bionic/+/808d176e7e0dd727c7f929622ec017f6e065c582/libc/arch-arm64/bionic/setjmp.S#49
-[changed]: https://android-review.googlesource.com/c/platform/frameworks/av/+/837745
-[clang 7.0.1 documentation]: https://releases.llvm.org/7.0.1/tools/clang/docs/ShadowCallStack.html
-[control-flow enforcement technology]: https://software.intel.com/sites/default/files/managed/4d/2a/control-flow-enforcement-technology-preview.pdf
-[example in android]: https://android-review.googlesource.com/c/platform/frameworks/base/+/803717
-[implementation of the runtime]: https://android.googlesource.com/platform/bionic/+/808d176e7e0dd727c7f929622ec017f6e065c582/libc/bionic/pthread_create.cpp#128
-[return flow guard]: https://xlab.tencent.com/en/2016/11/02/return-flow-guard/
-[will do this]: https://android-review.googlesource.com/c/platform/bionic/+/891622
+[android-avoids-this]: https://android.googlesource.com/platform/bionic/+/808d176e7e0dd727c7f929622ec017f6e065c582/libc/arch-arm64/bionic/setjmp.S#49
+[android-changed]: https://android-review.googlesource.com/c/platform/frameworks/av/+/837745
+[android-example]: https://android-review.googlesource.com/c/platform/frameworks/base/+/803717
+[android-will-do-this]: https://android-review.googlesource.com/c/platform/bionic/+/891622
+[anc]: https://www.vusec.net/projects/anc/
+[cet]: https://software.intel.com/sites/default/files/managed/4d/2a/control-flow-enforcement-technology-preview.pdf
+[clang-701-doc]: https://releases.llvm.org/7.0.1/tools/clang/docs/ShadowCallStack.html
+[rfg]: https://xlab.tencent.com/en/2016/11/02/return-flow-guard/
+[safestack-bypass]: https://www.blackhat.com/docs/eu-16/materials/eu-16-Goktas-Bypassing-Clangs-SafeStack.pdf
+[scs-cartography]: https://eyalitkin.wordpress.com/2017/09/01/cartography-lighting-up-the-shadows/
+[scs-runtime]: https://android.googlesource.com/platform/bionic/+/808d176e7e0dd727c7f929622ec017f6e065c582/libc/bionic/pthread_create.cpp#128
 [zicfiss]: https://github.com/riscv/riscv-cfi/blob/main/cfi_backward.adoc

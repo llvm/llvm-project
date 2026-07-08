@@ -6,16 +6,13 @@
 </style>
 ```
 
-```{eval-rst}
-.. role:: none
+```{role} none
 ```
 
-```{eval-rst}
-.. role:: part
+```{role} part
 ```
 
-```{eval-rst}
-.. role:: good
+```{role} good
 ```
 
 ```{contents}
@@ -116,26 +113,25 @@ if they follow the ROCm installation directory structure.
 4. `ROCM_PATH` environment variable *(use with caution)*
 5. Default automatic detection (relative to Clang or at the default ROCm installation location)
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
+```{list-table}
+:header-rows: 1
 
-   * - Compiler Option
-     - Environment Variable
-     - Description
-     - Default Value
-   * - ``--rocm-path=<path>``
-     - ``ROCM_PATH``
-     - Specifies the ROCm installation path.
-     - Automatic detection
-   * - ``--hip-path=<path>``
-     - ``HIP_PATH``
-     - Specifies the HIP runtime installation path.
-     - Determined by ROCm directory structure
-   * - ``--hip-device-lib-path=<path>``
-     - ``HIP_DEVICE_LIB_PATH``
-     - Specifies the HIP device library installation path.
-     - Determined by ROCm directory structure
+* - Compiler Option
+  - Environment Variable
+  - Description
+  - Default Value
+* - `--rocm-path=<path>`
+  - `ROCM_PATH`
+  - Specifies the ROCm installation path.
+  - Automatic detection
+* - `--hip-path=<path>`
+  - `HIP_PATH`
+  - Specifies the HIP runtime installation path.
+  - Determined by ROCm directory structure
+* - `--hip-device-lib-path=<path>`
+  - `HIP_DEVICE_LIB_PATH`
+  - Specifies the HIP device library installation path.
+  - Determined by ROCm directory structure
 ```
 
 :::{note}
@@ -144,40 +140,44 @@ We recommend using the compiler options as the primary method for specifying the
 
 ## Predefined Macros
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
+```{list-table}
+:header-rows: 1
 
-   * - Macro
-     - Description
-   * - ``__CLANG_RDC__``
-     - Defined when Clang is compiling code in Relocatable Device Code (RDC) mode. RDC, enabled with the ``-fgpu-rdc`` compiler option, is necessary for linking device codes across translation units.
-   * - ``__HIP__``
-     - Defined when compiling with HIP language support, indicating that the code targets the HIP environment.
-   * - ``__HIPCC__``
-     - Alias to ``__HIP__``.
-   * - ``__HIP_DEVICE_COMPILE__``
-     - Defined during device code compilation in Clang's separate compilation process for the host and each offloading GPU architecture.
-   * - ``__HIP_MEMORY_SCOPE_SINGLETHREAD``
-     - Represents single-thread memory scope in HIP (value is 1).
-   * - ``__HIP_MEMORY_SCOPE_WAVEFRONT``
-     - Represents wavefront memory scope in HIP (value is 2).
-   * - ``__HIP_MEMORY_SCOPE_WORKGROUP``
-     - Represents workgroup memory scope in HIP (value is 3).
-   * - ``__HIP_MEMORY_SCOPE_CLUSTER``
-     - Represents cluster memory scope in HIP (value is 6).
-   * - ``__HIP_MEMORY_SCOPE_AGENT``
-     - Represents agent memory scope in HIP (value is 4).
-   * - ``__HIP_MEMORY_SCOPE_SYSTEM``
-     - Represents system-wide memory scope in HIP (value is 5).
-   * - ``__HIP_NO_IMAGE_SUPPORT__``
-     - Defined with a value of 1 when the target device lacks support for HIP image functions.
-   * - ``__HIP_NO_IMAGE_SUPPORT``
-     - Alias to ``__HIP_NO_IMAGE_SUPPORT__``. Deprecated.
-   * - ``__HIP_API_PER_THREAD_DEFAULT_STREAM__``
-     - Defined when the GPU default stream is set to per-thread mode.
-   * - ``HIP_API_PER_THREAD_DEFAULT_STREAM``
-     - Alias to ``__HIP_API_PER_THREAD_DEFAULT_STREAM__``. Deprecated.
+* - Macro
+  - Description
+* - `__CLANG_RDC__`
+  - Defined when Clang is compiling code in Relocatable Device Code (RDC)
+    mode. RDC, enabled with the `-fgpu-rdc` compiler option, is necessary for
+    linking device codes across translation units.
+* - `__HIP__`
+  - Defined when compiling with HIP language support, indicating that the code
+    targets the HIP environment.
+* - `__HIPCC__`
+  - Alias to `__HIP__`.
+* - `__HIP_DEVICE_COMPILE__`
+  - Defined during device code compilation in Clang's separate compilation
+    process for the host and each offloading GPU architecture.
+* - `__HIP_MEMORY_SCOPE_SINGLETHREAD`
+  - Represents single-thread memory scope in HIP (value is 1).
+* - `__HIP_MEMORY_SCOPE_WAVEFRONT`
+  - Represents wavefront memory scope in HIP (value is 2).
+* - `__HIP_MEMORY_SCOPE_WORKGROUP`
+  - Represents workgroup memory scope in HIP (value is 3).
+* - `__HIP_MEMORY_SCOPE_CLUSTER`
+  - Represents cluster memory scope in HIP (value is 6).
+* - `__HIP_MEMORY_SCOPE_AGENT`
+  - Represents agent memory scope in HIP (value is 4).
+* - `__HIP_MEMORY_SCOPE_SYSTEM`
+  - Represents system-wide memory scope in HIP (value is 5).
+* - `__HIP_NO_IMAGE_SUPPORT__`
+  - Defined with a value of 1 when the target device lacks support for HIP
+    image functions.
+* - `__HIP_NO_IMAGE_SUPPORT`
+  - Alias to `__HIP_NO_IMAGE_SUPPORT__`. Deprecated.
+* - `__HIP_API_PER_THREAD_DEFAULT_STREAM__`
+  - Defined when the GPU default stream is set to per-thread mode.
+* - `HIP_API_PER_THREAD_DEFAULT_STREAM`
+  - Alias to `__HIP_API_PER_THREAD_DEFAULT_STREAM__`. Deprecated.
 ```
 
 Note that some architecture specific AMDGPU macros will have default values when
@@ -327,21 +327,10 @@ To facilitate differentiation between HIP and CUDA code, as well as between devi
 
 Function pointers' support varies with the usage mode in Clang with HIP. The following table provides an overview of the support status across different use-cases and modes.
 
-```{eval-rst}
-.. list-table:: Function Pointers Support Overview
-   :widths: 25 25 25
-   :header-rows: 1
-
-   * - Use Case
-     - ``-fno-gpu-rdc`` Mode (default)
-     - ``-fgpu-rdc`` Mode
-   * - Defined and used in the same TU
-     - Supported
-     - Supported
-   * - Defined in one TU and used in another TU
-     - Not Supported
-     - Supported
-```
+| Use Case                                 | `-fno-gpu-rdc` Mode (default) | `-fgpu-rdc` Mode |
+| ---------------------------------------- | ----------------------------- | ---------------- |
+| Defined and used in the same TU          | Supported                     | Supported        |
+| Defined in one TU and used in another TU | Not Supported                | Supported        |
 
 In the `-fno-gpu-rdc` mode, the compiler calculates the resource usage of kernels based only on functions present within the same TU. This mode does not support the use of function pointers defined in a different TU due to the possibility of incorrect resource usage calculations, leading to undefined behavior.
 
@@ -764,21 +753,19 @@ The forwarding header implements two pieces of functionality:
 
 ## Predefined Macros
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
+```{list-table}
+:header-rows: 1
 
-   * - Macro
-     - Description
-   * - ``__HIPSTDPAR__``
-     - Defined when Clang is compiling code in algorithm offload mode, enabled
-       with the ``--hipstdpar`` compiler option.
-   * - ``__HIPSTDPAR_INTERPOSE_ALLOC__`` / ``__HIPSTDPAR_INTERPOSE_ALLOC_V1__``
-     - Defined only when compiling in algorithm offload mode, when the user
-       enables interposition mode with the ``--hipstdpar-interpose-alloc``
-       compiler option, indicating that all dynamic memory allocation /
-       deallocation functions should be replaced with accelerator aware
-       variants.
+* - Macro
+  - Description
+* - `__HIPSTDPAR__`
+  - Defined when Clang is compiling code in algorithm offload mode, enabled
+    with the `--hipstdpar` compiler option.
+* - `__HIPSTDPAR_INTERPOSE_ALLOC__` / `__HIPSTDPAR_INTERPOSE_ALLOC_V1__`
+  - Defined only when compiling in algorithm offload mode, when the user
+    enables interposition mode with the `--hipstdpar-interpose-alloc` compiler
+    option, indicating that all dynamic memory allocation / deallocation
+    functions should be replaced with accelerator aware variants.
 ```
 
 ## Restrictions
@@ -832,29 +819,13 @@ At the moment, C++ Standard Parallelism Offload is only available for AMD GPUs,
 when the [ROCm](https://rocm.docs.amd.com/en/latest/) stack is used, on the
 Linux operating system. Support is synthesised in the following table:
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-
-   * - `Processor <https://llvm.org/docs/AMDGPUUsage.html#amdgpu-processors>`_
-     - HMM Mode
-     - Interposition Mode
-   * - GCN GFX9 (Vega)
-     - YES
-     - YES
-   * - GCN GFX10.1 (RDNA 1)
-     - *NO*
-     - YES
-   * - GCN GFX10.3 (RDNA 2)
-     - *NO*
-     - YES
-   * - GCN GFX11 (RDNA 3)
-     - *NO*
-     - YES
-   * - GCN GFX12 (RDNA 4)
-     - *NO*
-     - YES
-```
+| [Processor](https://llvm.org/docs/AMDGPUUsage.html#amdgpu-processors) | HMM Mode | Interposition Mode |
+| ---------------------------------------------------------------------- | -------- | ------------------ |
+| GCN GFX9 (Vega)                                                        | YES      | YES                |
+| GCN GFX10.1 (RDNA 1)                                                   | *NO*     | YES                |
+| GCN GFX10.3 (RDNA 2)                                                   | *NO*     | YES                |
+| GCN GFX11 (RDNA 3)                                                     | *NO*     | YES                |
+| GCN GFX12 (RDNA 4)                                                     | *NO*     | YES                |
 
 The minimum Linux kernel version for running in HMM mode is 6.4.
 
@@ -1058,7 +1029,7 @@ consumed by `llvm-profdata` and `llvm-cov`.
 Source-based device coverage relies on the AMDGPU profile runtime, so
 the toolchain must be built with the same CMake configuration used for
 HIP offload PGO. See the *Prerequisites* subsection under
-[Profile-Guided Optimization for Device Code].
+[Profile-Guided Optimization for Device Code](#profile-guided-optimization-for-device-code).
 
 ### Example
 
