@@ -810,3 +810,11 @@ namespace TemplateRedecl2 {
   template auto A::f<int>() const;
   template void g<int>();
 } // namespace TemplateRedecl2
+
+namespace TemplateRedecl3 {
+  template <class> auto f() __attribute__((cdecl));
+  template <class T> void g() { (void)+f<T>(); };
+  template <class> auto f() { return 0; }
+  template auto f<int>();
+  template void g<int>();
+} // namespace TemplateRedecl3

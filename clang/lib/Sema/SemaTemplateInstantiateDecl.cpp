@@ -2739,7 +2739,7 @@ static void mergeFunctionDecl(Sema &SemaRef, FunctionDecl *NewFD, QualType NewT,
   SemaRef.mergeDeclAttributes(NewFD, OldFD);
 
   if (QualType OT = OldFD->getReturnType();
-      OT != cast<FunctionType>(NewT)->getReturnType()) {
+      OT != NewT->castAs<FunctionType>()->getReturnType()) {
     // If this function has a deduced return type and has already been
     // defined, copy the deduced value from the old declaration.
     if (AutoType *OldAT = OT->getContainedAutoType();
