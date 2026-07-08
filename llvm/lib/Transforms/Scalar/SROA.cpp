@@ -3467,8 +3467,7 @@ private:
     return !LI.isVolatile() && !IsPtrAdjusted;
   }
 
-  bool rewriteVectorizedStoreInst(Value *V, StoreInst &SI, Value *OldOp,
-                                  AAMDNodes AATags) {
+  bool rewriteVectorizedStoreInst(Value *V, StoreInst &SI, Value *OldOp) {
     // Capture V for the purpose of debug-info accounting once it's converted
     // to a vector store.
     Value *OrigV = V;
@@ -3491,11 +3490,8 @@ private:
       V = insertVector(IRB, Old, V, BeginIndex, "vec");
     }
     StoreInst *Store = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlign());
-    Store->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
-                             LLVMContext::MD_access_group});
-    if (AATags)
-      Store->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
-                                                  V->getType(), DL));
+    copyMetadataForSubAccess(*Store, SI, NewBeginOffset - BeginOffset,
+                             V->getType(), DL);
     Pass.DeadInsts.push_back(&SI);
 
     // NOTE: Careful to use OrigV rather than V.
@@ -3505,7 +3501,7 @@ private:
     return true;
   }
 
-  bool rewriteIntegerStore(Value *V, StoreInst &SI, AAMDNodes AATags) {
+  bool rewriteIntegerStore(Value *V, StoreInst &SI) {
     assert(IntTy && "We cannot extract an integer from the alloca");
     assert(!SI.isVolatile());
     if (DL.getTypeSizeInBits(V->getType()).getFixedValue() !=
@@ -3519,11 +3515,8 @@ private:
     }
     V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
     StoreInst *Store = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlign());
-    Store->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
-                             LLVMContext::MD_access_group});
-    if (AATags)
-      Store->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
-                                                  V->getType(), DL));
+    copyMetadataForSubAccess(*Store, SI, NewBeginOffset - BeginOffset,
+                             V->getType(), DL);
 
     migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &SI,
                      Store, Store->getPointerOperand(),
@@ -3539,7 +3532,6 @@ private:
     Value *OldOp = SI.getOperand(1);
     assert(OldOp == OldPtr);
 
-    AAMDNodes AATags = SI.getAAMetadata();
     Value *V = SI.getValueOperand();
 
     // Strip all inbounds GEPs and pointer casts to try to dig out any root
@@ -3561,9 +3553,9 @@ private:
     }
 
     if (VecTy)
-      return rewriteVectorizedStoreInst(V, SI, OldOp, AATags);
+      return rewriteVectorizedStoreInst(V, SI, OldOp);
     if (IntTy && V->getType()->isIntegerTy())
-      return rewriteIntegerStore(V, SI, AATags);
+      return rewriteIntegerStore(V, SI);
 
     StoreInst *NewSI;
     if (NewBeginOffset == NewAllocaBeginOffset &&
@@ -3581,11 +3573,8 @@ private:
       NewSI =
           IRB.CreateAlignedStore(V, NewPtr, getSliceAlign(), SI.isVolatile());
     }
-    NewSI->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
-                             LLVMContext::MD_access_group});
-    if (AATags)
-      NewSI->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
-                                                  V->getType(), DL));
+    copyMetadataForSubAccess(*NewSI, SI, NewBeginOffset - BeginOffset,
+                             V->getType(), DL);
     if (SI.isVolatile())
       NewSI->setAtomic(SI.getOrdering(), SI.getSyncScopeID());
     if (NewSI->isAtomic())

@@ -3174,6 +3174,22 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
   }
 }
 
+void llvm::copyMetadataForSubAccess(Instruction &Dest,
+                                    const Instruction &Source, uint64_t Offset,
+                                    Type *AccessTy, const DataLayout &DL) {
+  // Metadata that describes a property of the memory access itself (not the
+  // exact bytes touched) remains valid for a narrower sub-access, so copy it
+  // directly.
+  Dest.copyMetadata(Source, {LLVMContext::MD_mem_parallel_loop_access,
+                             LLVMContext::MD_access_group,
+                             LLVMContext::MD_nontemporal});
+  // The AA metadata (!tbaa, !tbaa.struct, !alias.scope, !noalias) describes the
+  // bytes accessed, so it must be narrowed to the sub-access rather than copied
+  // verbatim.
+  if (AAMDNodes AATags = Source.getAAMetadata())
+    Dest.setAAMetadata(AATags.adjustForAccess(Offset, AccessTy, DL));
+}
+
 void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   auto *ReplInst = dyn_cast<Instruction>(Repl);
   if (!ReplInst)

@@ -434,6 +434,20 @@ LLVM_ABI void combineAAMetadata(Instruction *K, const Instruction *J);
 /// replacement for the source instruction).
 LLVM_ABI void copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source);
 
+/// Copy metadata from memory-access instruction \p Source to \p Dest, where
+/// \p Dest accesses a sub-range of \p Source's memory: an access of type
+/// \p AccessTy starting at byte \p Offset into \p Source's access. This happens
+/// when a wide or aggregate load/store is split into narrower per-field
+/// accesses (e.g. InstCombine's aggregate load/store unpacking and SROA's slice
+/// rewriting). Metadata that stays valid for a sub-access is copied directly,
+/// and the AA metadata (\c !tbaa etc.) is narrowed to the sub-access via
+/// AAMDNodes::adjustForAccess. Note: \c !DIAssignID is not handled here; a 1:N
+/// split needs a distinct ID per new access (see SROA's migrateDebugInfo).
+LLVM_ABI void copyMetadataForSubAccess(Instruction &Dest,
+                                       const Instruction &Source,
+                                       uint64_t Offset, Type *AccessTy,
+                                       const DataLayout &DL);
+
 /// Patch the replacement so that it is not more restrictive than the value
 /// being replaced. It assumes that the replacement does not get moved from
 /// its original position.

@@ -1377,7 +1377,9 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
       auto EltAlign =
           commonAlignment(Align, SL->getElementOffset(i).getKnownMinValue());
       llvm::Instruction *NS = IC.Builder.CreateAlignedStore(Val, Ptr, EltAlign);
-      NS->setAAMetadata(SI.getAAMetadata());
+      copyMetadataForSubAccess(*NS, SI,
+                               SL->getElementOffset(i).getKnownMinValue(),
+                               Val->getType(), DL);
     }
 
     return true;
@@ -1423,7 +1425,8 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
       auto *Val = IC.Builder.CreateExtractValue(V, i, EltName);
       auto EltAlign = commonAlignment(Align, Offset.getKnownMinValue());
       Instruction *NS = IC.Builder.CreateAlignedStore(Val, Ptr, EltAlign);
-      NS->setAAMetadata(SI.getAAMetadata());
+      copyMetadataForSubAccess(*NS, SI, Offset.getKnownMinValue(),
+                               Val->getType(), DL);
       Offset += EltSize;
     }
 
