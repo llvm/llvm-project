@@ -18,6 +18,7 @@ body: |
     ; CHECK-NEXT: renamable $w10 = COPY killed renamable $w13
     ; CHECK-NEXT: renamable $w15 = COPY $w23
     ; CHECK-NEXT: HINT 0, implicit killed $w15
+    ; CHECK-NEXT: HINT 0, implicit $w25
     ; CHECK-NEXT: renamable $w13 = COPY killed renamable $w10
     ; CHECK-NEXT: renamable $w10 = COPY killed renamable $w11
     ; CHECK-NEXT: HINT 0, implicit killed $w10
@@ -29,7 +30,8 @@ body: |
     renamable $w15 = COPY killed renamable $w13
     HINT 0, implicit killed $w15
 
-    renamable $w13 = COPY killed renamable $w25  ; S3
+    renamable $w13 = COPY renamable $w25  ; S3
+    HINT 0, implicit $w25
 
     renamable $w25 = COPY killed renamable $w13  ; R1
     renamable $w13 = COPY killed renamable $w10  ; R2

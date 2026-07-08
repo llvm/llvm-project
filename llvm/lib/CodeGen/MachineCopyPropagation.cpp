@@ -1396,10 +1396,17 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
         // Do not fold across an unexpected COPY def of a chains copy's source.
         // The paired reload may be needed to restore the original source value.
         // More info: https://github.com/llvm/llvm-project/issues/206839
+        //
+        // Spills are checked against against the previous spill
         for (size_t I = 1; I < SC.size(); ++I) {
           if (HasUnexpectedCopySourceDef(SC[I], SC[I - 1]))
             return;
-          if (I + 1 < SC.size() && HasUnexpectedCopySourceDef(RC[I], RC[I + 1]))
+        }
+        // Reloads are checked against the next reload. The final reload is
+        // skipped as this will have no corresponding outer reload to compare
+        // against.
+        for (size_t I = 0; I + 1 < RC.size(); ++I) {
+          if (HasUnexpectedCopySourceDef(RC[I], RC[I + 1]))
             return;
         }
 
