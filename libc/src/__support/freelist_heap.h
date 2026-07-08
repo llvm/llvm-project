@@ -111,6 +111,9 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
   if (block_info.prev)
     free_store.insert(block_info.prev);
 
+#if defined(LIBC_COPT_FREELISTHEAP_PRECISE_ALLOC_SIZE)
+  block_info.block.set_next_size(BlockRef::outer_size(size));
+#endif
   block_info.block.mark_used();
   return block_info.block.usable_space();
 }

@@ -102,7 +102,11 @@ class BlockRef {
   // Masks for the contents of the next field.
   static constexpr size_t PREV_FREE_MASK = 1 << 0;
   static constexpr size_t LAST_MASK = 1 << 1;
-  static constexpr size_t SIZE_MASK = ~(PREV_FREE_MASK | LAST_MASK);
+  static constexpr size_t FLAG_MASK = PREV_FREE_MASK | LAST_MASK;
+  static constexpr size_t SIZE_MASK = ~FLAG_MASK;
+#if defined(LIBC_COPT_FREELISTHEAP_PRECISE_ALLOC_SIZE)
+  static constexpr size_t SIZE_SHIFT = 2;
+#endif
 
   // Header field offsets. The value at PREV_OFFSET is only meaningful when the
   // PREV_FREE_MASK bit is set in the next field.
@@ -110,6 +114,7 @@ class BlockRef {
   static constexpr size_t NEXT_OFFSET = PREV_OFFSET + sizeof(size_t);
 
 public:
+  static constexpr size_t PREV_FIELD_SIZE = sizeof(size_t);
   static constexpr size_t HEADER_SIZE = NEXT_OFFSET + sizeof(size_t);
 
   // To ensure block sizes have two lower unused bits, ensure usable space is
@@ -158,11 +163,17 @@ public:
   }
 
   /// @returns The total size of the block in bytes, including the header.
-  LIBC_INLINE size_t outer_size() const { return load_next() & SIZE_MASK; }
+  LIBC_INLINE size_t outer_size() const {
+    size_t sz = get_next_size();
+#if defined(LIBC_COPT_FREELISTHEAP_PRECISE_ALLOC_SIZE)
+    sz = align_up(sz, MIN_ALIGN);
+#endif
+    return sz;
+  }
 
   LIBC_INLINE static constexpr size_t outer_size(size_t inner_size) {
     // The usable region includes the prev field of the next block.
-    return inner_size - PREV_FIELD_SIZE + HEADER_SIZE;
+    return inner_size + (HEADER_SIZE - PREV_FIELD_SIZE);
   }
 
   /// @returns The number of usable bytes inside the block were it to be
@@ -170,14 +181,18 @@ public:
   LIBC_INLINE size_t inner_size() const {
     if (!next())
       return 0;
+#if defined(LIBC_COPT_FREELISTHEAP_PRECISE_ALLOC_SIZE)
+    return inner_size(get_next_size());
+#else
     return inner_size(outer_size());
+#endif
   }
 
   /// @returns The number of usable bytes inside a block with the given outer
   /// size were it to be allocated.
   LIBC_INLINE static constexpr size_t inner_size(size_t outer_size) {
     // The usable region includes the prev field of the next block.
-    return inner_size_free(outer_size) + PREV_FIELD_SIZE;
+    return outer_size - (HEADER_SIZE - PREV_FIELD_SIZE);
   }
 
   /// @returns The number of usable bytes inside the block if it remains free.
@@ -224,17 +239,25 @@ public:
   /// @returns The block immediately after this one, or a null block if this is
   /// the last block.
   LIBC_INLINE BlockRef next() const {
-    size_t next_value = load_next();
-    if (next_value & LAST_MASK)
+    size_t raw_val = load_next_raw();
+    if (raw_val & LAST_MASK)
       return BlockRef();
-    return BlockRef(nonnull_header_ptr() + (next_value & SIZE_MASK));
+    size_t sz = get_next_size();
+#if defined(LIBC_COPT_FREELISTHEAP_PRECISE_ALLOC_SIZE)
+    sz = align_up(sz, MIN_ALIGN);
+#endif
+    return BlockRef(nonnull_header_ptr() + sz);
   }
 
   /// @returns The free block immediately before this one, otherwise null.
   LIBC_INLINE BlockRef prev_free() const {
-    if (!(load_next() & PREV_FREE_MASK))
+    if (!(load_next_raw() & PREV_FREE_MASK))
       return BlockRef();
-    return BlockRef(nonnull_header_ptr() - load_prev());
+    size_t sz = get_prev_size();
+#if defined(LIBC_COPT_FREELISTHEAP_PRECISE_ALLOC_SIZE)
+    sz = align_up(sz, MIN_ALIGN);
+#endif
+    return BlockRef(nonnull_header_ptr() - sz);
   }
 
   /// @returns Whether the block is unavailable for allocation.
@@ -244,16 +267,46 @@ public:
   LIBC_INLINE void mark_used() const {
     LIBC_ASSERT(next() && "last block is always considered used");
     BlockRef next_block = next();
-    next_block.store_next(next_block.load_next() & ~PREV_FREE_MASK);
+    next_block.store_next_raw(next_block.load_next_raw() & ~PREV_FREE_MASK);
   }
 
   /// Marks this block as free.
   LIBC_INLINE void mark_free() const {
     LIBC_ASSERT(next() && "last block is always considered used");
     BlockRef next_block = next();
-    next_block.store_next(next_block.load_next() | PREV_FREE_MASK);
-    next_block.store_prev(outer_size());
+    next_block.store_next_raw(next_block.load_next_raw() | PREV_FREE_MASK);
+#if defined(LIBC_COPT_FREELISTHEAP_PRECISE_ALLOC_SIZE)
+    size_t phys_size = align_up(outer_size(), MIN_ALIGN);
+    set_next_size(phys_size);
+    next_block.set_prev_size(phys_size);
+#else
+    next_block.set_prev_size(outer_size());
+#endif
   }
+
+#if defined(LIBC_COPT_FREELISTHEAP_PRECISE_ALLOC_SIZE)
+  LIBC_INLINE void set_next_size(size_t sz) const {
+    store_next_raw((load_next_raw() & FLAG_MASK) | (sz << SIZE_SHIFT));
+  }
+  LIBC_INLINE size_t get_next_size() const {
+    return load_next_raw() >> SIZE_SHIFT;
+  }
+  LIBC_INLINE void set_prev_size(size_t sz) const {
+    store_prev_raw(sz << SIZE_SHIFT);
+  }
+  LIBC_INLINE size_t get_prev_size() const {
+    return load_prev_raw() >> SIZE_SHIFT;
+  }
+#else
+  LIBC_INLINE void set_next_size(size_t sz) const {
+    store_next_raw((load_next_raw() & FLAG_MASK) | sz);
+  }
+  LIBC_INLINE size_t get_next_size() const {
+    return load_next_raw() & SIZE_MASK;
+  }
+  LIBC_INLINE void set_prev_size(size_t sz) const { store_prev_raw(sz); }
+  LIBC_INLINE size_t get_prev_size() const { return load_prev_raw(); }
+#endif
 
   LIBC_INLINE bool is_usable_space_aligned(size_t alignment) const {
     return reinterpret_cast<uintptr_t>(usable_space()) % alignment == 0;
@@ -316,9 +369,6 @@ public:
     return align_down(ptr, usable_space_alignment) - HEADER_SIZE;
   }
 
-  /// Only for testing.
-  static constexpr size_t PREV_FIELD_SIZE = sizeof(size_t);
-
 private:
   /// Construct a block to represent a span of bytes. Overwrites only enough
   /// memory for the block header; the rest of the span is left alone.
@@ -329,7 +379,8 @@ private:
     LIBC_ASSERT(bytes.size() % MIN_ALIGN == 0 &&
                 "block size must be aligned to MIN_ALIGN");
     BlockRef block(bytes.data());
-    block.store_next(bytes.size());
+    block.store_next_raw(0);
+    block.set_next_size(bytes.size());
     return block;
   }
 
@@ -337,7 +388,8 @@ private:
     LIBC_ASSERT(reinterpret_cast<uintptr_t>(start) % alignof(size_t) == 0 &&
                 "block start must be suitably aligned");
     BlockRef last(start);
-    last.store_next(HEADER_SIZE | LAST_MASK);
+    last.store_next_raw(LAST_MASK);
+    last.set_next_size(HEADER_SIZE);
   }
 
   LIBC_INLINE cpp::byte *field_ptr(size_t offset) const {
@@ -373,12 +425,13 @@ private:
   ///   previous block is free.
   /// * If the `last` flag is set, the block is the sentinel last block. It is
   ///   summarily considered used and has no next block.
-  LIBC_INLINE size_t load_next() const { return load_field(NEXT_OFFSET); }
+  LIBC_INLINE size_t load_next_raw() const { return load_field(NEXT_OFFSET); }
+  LIBC_INLINE size_t load_prev_raw() const { return load_field(PREV_OFFSET); }
 
-  LIBC_INLINE void store_prev(size_t value) const {
+  LIBC_INLINE void store_prev_raw(size_t value) const {
     store_field(PREV_OFFSET, value);
   }
-  LIBC_INLINE void store_next(size_t value) const {
+  LIBC_INLINE void store_next_raw(size_t value) const {
     store_field(NEXT_OFFSET, value);
   }
 
@@ -507,7 +560,7 @@ optional<BlockRef> BlockRef::split(size_t new_inner_size,
   bool was_free = !used();
 
   ByteSpan new_region = region().subspan(new_outer_size);
-  store_next((load_next() & ~SIZE_MASK) | new_outer_size);
+  set_next_size(new_outer_size);
 
   BlockRef new_block = as_block(new_region);
   new_block.mark_free();
@@ -525,8 +578,8 @@ bool BlockRef::merge_next() const {
   if (used() || next_block.used())
     return false;
   size_t new_size = outer_size() + next_block.outer_size();
-  store_next((load_next() & ~SIZE_MASK) | new_size);
-  next().store_prev(new_size);
+  set_next_size(new_size);
+  next().set_prev_size(new_size);
   return true;
 }
 
