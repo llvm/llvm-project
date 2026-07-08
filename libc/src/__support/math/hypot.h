@@ -54,8 +54,9 @@ LIBC_INLINE double hypot_denorm(double a, double b) {
   // Adjust correction if needed.
   DoubleDouble r_h{0.0, r_hi};
   double correction = 0.0;
-  // 1 + rhi
   if (r_hi < 1.0) {
+    // When r_hi < 1, the output is denormal.  We mimick rounding in denormal
+    // range with 1.0 + r_hi.
     r_h = fputil::exact_add(1.0, r_hi);
     correction = 1.0;
   }
@@ -66,7 +67,7 @@ LIBC_INLINE double hypot_denorm(double a, double b) {
   // (hi + lo - r_hi^2) / (2 * r_hi)
   double r_lo = fputil::multiply_add(num_lo, r_inv, r_h.lo);
 
-  constexpr double ERR = 0x1.0p-100;
+  constexpr double ERR = 0x1.0p-102;
 
   // Ziv's rounding test.
   double upper = r_h.hi + (r_lo + ERR);
