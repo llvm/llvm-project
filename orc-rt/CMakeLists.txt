@@ -70,6 +70,46 @@ else()
   list(APPEND ORC_RT_COMPILE_FLAGS -fno-exceptions)
 endif()
 
+# --- Logging ---
+# User-settable options (everything below them is validation and derivation):
+#   ORC_RT_LOG_BACKEND  none (default) | printf | os_log
+#   ORC_RT_LOG_LEVEL    error | warning | info (default) | debug
+set(orc_rt_log_level_default "info")
+set(ORC_RT_LOG_LEVEL "${orc_rt_log_level_default}" CACHE STRING
+  "Lowest log level compiled in: error, warning, info, or debug")
+set(orc_rt_log_levels error warning info debug)
+set_property(CACHE ORC_RT_LOG_LEVEL PROPERTY STRINGS ${orc_rt_log_levels})
+
+set(ORC_RT_LOG_BACKEND "none" CACHE STRING
+  "ORC-RT logging backend: none, printf, os_log")
+set(orc_rt_log_backends none printf os_log)
+set_property(CACHE ORC_RT_LOG_BACKEND PROPERTY STRINGS ${orc_rt_log_backends})
+
+# Validate the level and derive its config.h macro symbol.
+if(NOT ORC_RT_LOG_LEVEL IN_LIST orc_rt_log_levels)
+  message(FATAL_ERROR "ORC_RT_LOG_LEVEL must be one of: ${orc_rt_log_levels}")
+endif()
+string(TOUPPER "ORC_RT_LOG_LEVEL_${ORC_RT_LOG_LEVEL}" ORC_RT_LOG_LEVEL_VALUE)
+
+# Validate the backend (os_log is Apple-only) and derive its config.h macro symbol.
+if(NOT ORC_RT_LOG_BACKEND IN_LIST orc_rt_log_backends)
+  message(FATAL_ERROR "ORC_RT_LOG_BACKEND must be one of: ${orc_rt_log_backends}")
+endif()
+if(ORC_RT_LOG_BACKEND STREQUAL "os_log" AND NOT APPLE)
+  message(FATAL_ERROR "ORC_RT_LOG_BACKEND=os_log is only supported on Apple platforms.")
+endif()
+string(TOUPPER "ORC_RT_LOG_BACKEND_${ORC_RT_LOG_BACKEND}" ORC_RT_LOG_BACKEND_VALUE)
+
+# The "none" backend compiles all logging out, so the level has no effect. Warn
+# if the user picked a non-default level under it, as their choice is ignored.
+if(ORC_RT_LOG_BACKEND STREQUAL "none" AND
+   NOT ORC_RT_LOG_LEVEL STREQUAL orc_rt_log_level_default)
+  message(WARNING
+    "ORC_RT_LOG_LEVEL is set to '${ORC_RT_LOG_LEVEL}', but ORC_RT_LOG_BACKEND is "
+    "'none', so no logging is compiled in and the level has no effect. Select a "
+    "backend (printf or os_log) to enable logging.")
+endif()
+
 # --- Generated config header ---
 # Keep this last in the section so it captures every value derived above.
 configure_file(
