@@ -242,6 +242,56 @@ Error LevelZeroPluginTy::asyncBarrierImpl(omp_interop_val_t *Interop) {
   return Plugin::success();
 }
 
+LevelZeroPluginContextTy::~LevelZeroPluginContextTy() {
+  if (OwnsZeContext && ZeContext)
+    zeContextDestroy(ZeContext);
+}
+
+Expected<std::unique_ptr<PluginContextTy>>
+LevelZeroPluginTy::createPluginContext(
+    llvm::ArrayRef<GenericDeviceTy *> Devices) {
+  if (Devices.empty())
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "createPluginContext called with no devices");
+
+  // All devices must share the same L0 driver context, since a ze_context is
+  // scoped to a single driver.
+  auto &First = static_cast<L0DeviceTy &>(*Devices[0]);
+  L0ContextTy &DriverCtx = First.getL0Context();
+  ze_driver_handle_t Driver = DriverCtx.getZeDriver();
+  for (auto *D : Devices.drop_front()) {
+    auto &L0D = static_cast<L0DeviceTy &>(*D);
+    if (&L0D.getL0Context() != &DriverCtx)
+      return Plugin::error(
+          ErrorCode::INVALID_DEVICE,
+          "all devices in an L0 context must share the same driver");
+  }
+
+  // When the user requests every device on the driver, share the driver's
+  // default ze_context so we interop cleanly with other L0 clients on the
+  // same driver. Partial device sets get their own fresh context.
+  size_t DriverDeviceCount = 0;
+  for (int32_t I = 0, N = getNumDevices(); I != N; ++I) {
+    auto &L0D = static_cast<const L0DeviceTy &>(getDevice(I));
+    if (&L0D.getL0Context() == &DriverCtx)
+      ++DriverDeviceCount;
+  }
+  const bool IsFullDriver = (Devices.size() == DriverDeviceCount);
+
+  ze_context_handle_t ZeContext = nullptr;
+  bool OwnsZeContext = false;
+  if (IsFullDriver && DriverCtx.zeDriverGetDefaultContext)
+    ZeContext = DriverCtx.zeDriverGetDefaultContext(Driver);
+  if (!ZeContext) {
+    ze_context_desc_t Desc{ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
+    CALL_ZE_RET_ERROR(zeContextCreate, Driver, &Desc, &ZeContext);
+    OwnsZeContext = true;
+  }
+
+  return std::make_unique<LevelZeroPluginContextTy>(*this, Devices, Driver,
+                                                    ZeContext, OwnsZeContext);
+}
+
 } // namespace llvm::omp::target::plugin
 
 extern "C" {

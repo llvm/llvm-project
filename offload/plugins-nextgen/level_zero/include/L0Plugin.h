@@ -21,6 +21,28 @@
 
 namespace llvm::omp::target::plugin {
 
+/// Plugin-side context for Level Zero. Owns a ze_context_handle_t that is
+/// scoped to the set of devices grouped by the user through olCreateContext.
+class LevelZeroPluginContextTy final : public PluginContextTy {
+public:
+  LevelZeroPluginContextTy(GenericPluginTy &Plugin,
+                           llvm::ArrayRef<GenericDeviceTy *> Devices,
+                           ze_driver_handle_t Driver,
+                           ze_context_handle_t ZeContext, bool OwnsZeContext)
+      : PluginContextTy(Plugin, Devices), Driver(Driver), ZeContext(ZeContext),
+        OwnsZeContext(OwnsZeContext) {}
+
+  ~LevelZeroPluginContextTy() override;
+
+  ze_driver_handle_t getZeDriver() const { return Driver; }
+  ze_context_handle_t getZeContext() const { return ZeContext; }
+
+private:
+  ze_driver_handle_t Driver;
+  ze_context_handle_t ZeContext;
+  bool OwnsZeContext;
+};
+
 /// Class implementing the LevelZero specific functionalities of the plugin.
 class LevelZeroPluginTy final : public GenericPluginTy {
 private:
@@ -67,6 +89,9 @@ public:
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override;
   GenericGlobalHandlerTy *createGlobalHandler() override;
+
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override;
 
   uint16_t getMagicElfBits() const override { return ELF::EM_INTELGT; }
   Triple::ArchType getTripleArch() const override { return Triple::spirv64; }
