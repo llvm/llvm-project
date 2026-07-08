@@ -2,14 +2,12 @@
 ; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize --disable-output \
 ; RUN: -epilogue-tail-folding-policy=prefer-fold-tail -pass-remarks-analysis=loop-vectorize 2>&1 | FileCheck %s
 
-; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize -enable-epilogue-vectorization=false \
-; RUN: --disable-output -epilogue-tail-folding-policy=prefer-fold-tail -pass-remarks-analysis=loop-vectorize 2>&1 \
-; RUN: | FileCheck %s --check-prefix=CHECK-DISABLED-EPILOG
 
 define void @test_epilogue_tf(ptr %A, i64 %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'test_epilogue_tf'
-; CHECK: LV: epilogue tail-folding is not supported yet
-; CHECK: remark: <unknown>:0:0: The epilogue-tail-folding policy prefer-fold-tail is not supported yet, fall back to a normal epilogue
+; CHECK: LV: epilogue tail-folding is enabled
+; CHECK: LV: can fold tail by masking.
+; CHECK: LV: CM instances: 2
 ;
 entry:
   br label %for.body
@@ -18,6 +16,26 @@ for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i8, ptr %A, i64 %iv
   store i8 1, ptr %arrayidx, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp ne i64 %iv.next, %n
+  br i1 %exitcond, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+define void @tf-got-disabled(ptr %A, i64 %n) {
+; CHECK-LABEL: LV: Checking a loop in 'tf-got-disabled'
+; CHECK: LV: epilogue tail-folding is enabled
+; CHECK: LV: Epilogue Tail-folding got disabled.
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep = getelementptr inbounds i32, ptr %A, i64 %iv
+  store i32 1, ptr %gep, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp ne i64 %iv.next, %n
   br i1 %exitcond, label %for.body, label %exit
