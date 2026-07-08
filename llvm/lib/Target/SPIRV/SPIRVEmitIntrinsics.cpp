@@ -3277,7 +3277,7 @@ Type *SPIRVEmitIntrinsics::deduceFunParamElementType(
   // search in function's call sites
   for (User *U : F->users()) {
     CallInst *CI = dyn_cast<CallInst>(U);
-    if (!CI || OpIdx >= CI->arg_size())
+    if (!CI || CI->getCalledFunction() != F || OpIdx >= CI->arg_size())
       continue;
     Value *OpArg = CI->getArgOperand(OpIdx);
     if (!isPointerTy(OpArg->getType()))
@@ -3352,7 +3352,7 @@ void SPIRVEmitIntrinsics::processParamTypesByFunHeader(Function *F,
     // search in function's call sites
     for (User *U : F->users()) {
       CallInst *CI = dyn_cast<CallInst>(U);
-      if (!CI || OpIdx >= CI->arg_size())
+      if (!CI || CI->getCalledFunction() != F || OpIdx >= CI->arg_size())
         continue;
       Value *OpArg = CI->getArgOperand(OpIdx);
       if (!isPointerTy(OpArg->getType()))

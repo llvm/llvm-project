@@ -6916,10 +6916,12 @@ bool SPIRVInstructionSelector::selectGlobalValue(
           STI.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)
               ? dyn_cast<Function>(GV)
               : nullptr;
-      SPIRVTypeInst ResType = GR.getOrCreateSPIRVPointerType(
-          GVType, I,
-          GVFun ? SPIRV::StorageClass::CodeSectionINTEL
-                : addressSpaceToStorageClass(GV->getAddressSpace(), STI));
+      SPIRVTypeInst ResType =
+          GVFun ? GR.getOrCreateSPIRVPointerType(
+                      GVType, I, SPIRV::StorageClass::CodeSectionINTEL)
+                : GR.getOrCreateSPIRVPointerType(
+                      IntegerType::getInt8Ty(GV->getContext()), I,
+                      SPIRV::StorageClass::Function);
       if (GVFun) {
         // References to a function via function pointers generate virtual
         // registers without a definition. We will resolve it later, during
