@@ -3533,6 +3533,13 @@ bool X86TargetLowering::convertSelectOfConstantsToMath(EVT VT) const {
   return true;
 }
 
+bool X86TargetLowering::shouldNormalizeToSelectSequence(LLVMContext &, EVT VT,
+                                                        EVT) const {
+  // With CCMP, keep and/or(setcc, setcc) trees intact so LowerSELECT can
+  // emit them as CCMP chains rather than splitting into chained selects.
+  return !(Subtarget.hasCCMP() && VT.isScalarInteger());
+}
+
 bool X86TargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                                SDValue C) const {
   // TODO: We handle scalars using custom code, but generic combining could make
@@ -25315,7 +25322,7 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
 static bool isX86LogicalCmp(SDValue Op) {
   unsigned Opc = Op.getOpcode();
   if (Opc == X86ISD::CMP || Opc == X86ISD::COMI || Opc == X86ISD::UCOMI ||
-      Opc == X86ISD::FCMP)
+      Opc == X86ISD::FCMP || Opc == X86ISD::CCMP || Opc == X86ISD::CTEST)
     return true;
   if (Op.getResNo() == 1 &&
       (Opc == X86ISD::ADD || Opc == X86ISD::SUB || Opc == X86ISD::ADC ||
@@ -25469,6 +25476,104 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
   return SDValue();
 }
 
+// Return true if Val is an integer ISD::SETCC or an AND/OR tree thereof,
+// suitable for lowering to a CCMP chain.
+static bool canEmitConjunctionForCCMP(SDValue Val) {
+  unsigned Opc = Val.getOpcode();
+  if (Opc == ISD::SETCC)
+    return Val.getOperand(0).getSimpleValueType().isInteger();
+  if (Opc == ISD::AND && Val.hasOneUse())
+    return canEmitConjunctionForCCMP(Val.getOperand(0)) &&
+           canEmitConjunctionForCCMP(Val.getOperand(1));
+  // For OR, at least one operand must be a leaf SETCC so the DCF of the right
+  // CCMP is unambiguous.
+  if (Opc == ISD::OR && Val.hasOneUse())
+    return (Val.getOperand(0).getOpcode() == ISD::SETCC ||
+            Val.getOperand(1).getOpcode() == ISD::SETCC) &&
+           canEmitConjunctionForCCMP(Val.getOperand(0)) &&
+           canEmitConjunctionForCCMP(Val.getOperand(1));
+  return false;
+}
+
+// Recursively emit a CCMP chain for an AND/OR tree of integer SETCCs.
+//   CCOp:      incoming flags value (null for the first/root comparison)
+//   Predicate: condition under which CCOp was produced (COND_INVALID at root)
+//   OutCC:     set to the condition code to test after the whole chain
+// Returns the flags-producing node (SUB or CCMP).
+//
+// AND(cc1, cc2): emit cc1 first; CCMP(cc2) fires when cc1 is true.
+//   SrcCC = cc1,  DCF forces cc2 false when cc1 is false.
+// OR(cc1, cc2):  emit cc1 first; CCMP(cc2) fires when cc1 is false.
+//   SrcCC = ~cc1, DCF forces cc2 true when cc1 is true.
+static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
+                                         SDValue CCOp, X86::CondCode Predicate,
+                                         SelectionDAG &DAG,
+                                         const X86Subtarget &Subtarget) {
+  SDLoc DL(Val);
+
+  if (Val.getOpcode() == ISD::SETCC) {
+    SDValue LHS = Val.getOperand(0), RHS = Val.getOperand(1);
+    ISD::CondCode CC = cast<CondCodeSDNode>(Val.getOperand(2))->get();
+    X86::CondCode X86CC = TranslateX86CC(CC, DL, /*IsFP=*/false, LHS, RHS, DAG);
+    assert(X86CC != X86::COND_INVALID);
+    OutCC = X86CC;
+
+    SDValue Flags = EmitCmp(LHS, RHS, X86CC, DL, DAG, Subtarget);
+    if (!CCOp)
+      return Flags;
+
+    SDNode *FlagsNode = Flags.getNode();
+    X86::CondCode DCFCode = X86::GetOppositeBranchCondition(X86CC);
+    SDValue CFlags = DAG.getTargetConstant(
+        X86::getCCMPCondFlagsFromCondCode(DCFCode), DL, MVT::i8);
+    SDValue SrcCC = DAG.getTargetConstant(Predicate, DL, MVT::i8);
+    return DAG.getNode(X86ISD::CCMP, DL, MVT::i32,
+                       {FlagsNode->getOperand(0), FlagsNode->getOperand(1),
+                        CFlags, SrcCC, CCOp});
+  }
+
+  bool IsOR = Val.getOpcode() == ISD::OR;
+  SDValue LHS = Val.getOperand(0), RHS = Val.getOperand(1);
+
+  // For OR, the right subtree must be a leaf SETCC so its DCF unambiguously
+  // forces the outcome true when skipped. OR is commutative, so swap if needed.
+  if (IsOR && RHS.getOpcode() != ISD::SETCC)
+    std::swap(LHS, RHS);
+
+  // Emit the left subtree first (provides CCOp for the right subtree's CCMP).
+  X86::CondCode LHSCC;
+  SDValue CmpL =
+      emitConjunctionForCCMPRec(LHS, LHSCC, CCOp, Predicate, DAG, Subtarget);
+
+  // For AND: right CCMP fires when left is true,  SrcCC = LHSCC.
+  // For OR:  right CCMP fires when left is false, SrcCC = !LHSCC.
+  X86::CondCode NextPred =
+      IsOR ? X86::GetOppositeBranchCondition(LHSCC) : LHSCC;
+
+  SDValue CmpR =
+      emitConjunctionForCCMPRec(RHS, OutCC, CmpL, NextPred, DAG, Subtarget);
+
+  // For OR, patch the DCF of the right leaf's CCMP to force OutCC TRUE when
+  // the CCMP is skipped (i.e. when the left condition was already true).
+  if (IsOR && CmpR.getOpcode() == X86ISD::CCMP) {
+    SDValue CFlags = DAG.getTargetConstant(
+        X86::getCCMPCondFlagsFromCondCode(OutCC), DL, MVT::i8);
+    CmpR = DAG.getNode(X86ISD::CCMP, DL, MVT::i32,
+                       {CmpR.getOperand(0), CmpR.getOperand(1), CFlags,
+                        CmpR.getOperand(3), CmpR.getOperand(4)});
+  }
+  return CmpR;
+}
+
+static SDValue emitConjunctionForCCMP(SDValue Val, X86::CondCode &OutCC,
+                                      SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget) {
+  if (!canEmitConjunctionForCCMP(Val))
+    return SDValue();
+  return emitConjunctionForCCMPRec(Val, OutCC, SDValue(), X86::COND_INVALID,
+                                   DAG, Subtarget);
+}
+
 SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   bool AddTest = true;
   SDValue Cond  = Op.getOperand(0);
@@ -25542,6 +25647,18 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (isScalarFPTypeInSSEReg(VT) && Subtarget.hasAVX512()) {
     SDValue Cmp = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v1i1, Cond);
     return DAG.getNode(X86ISD::SELECTS, DL, VT, Cmp, Op1, Op2);
+  }
+
+  // Lower select(and/or(setcc,...), T, F) as a CCMP chain.
+  if (Subtarget.hasCCMP() && !VT.isVector() &&
+      (Cond.getOpcode() == ISD::AND || Cond.getOpcode() == ISD::OR)) {
+    X86::CondCode CCMPOutCC;
+    if (SDValue Flags =
+            emitConjunctionForCCMP(Cond, CCMPOutCC, DAG, Subtarget)) {
+      SDValue X86CC = DAG.getTargetConstant(CCMPOutCC, DL, MVT::i8);
+      Cond = DAG.getNode(X86ISD::SETCC, DL, MVT::i8, X86CC, Flags);
+      AddTest = false;
+    }
   }
 
   if (Cond.getOpcode() == ISD::SETCC &&
