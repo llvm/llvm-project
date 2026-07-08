@@ -85,6 +85,18 @@ void use() {
 }
 } // namespace capture_string_view
 
+namespace multiple_capture_by_attrs {
+struct X {} x1, x2;
+void capture(std::string_view s [[clang::lifetime_capture_by(x1),
+                                  clang::lifetime_capture_by(x2)]],
+             X &x1, X &x2);
+
+void use() {
+  capture(std::string(), // expected-warning {{object whose reference is captured by 'x1' will be destroyed at the end of the full-expression}} expected-warning {{object whose reference is captured by 'x2' will be destroyed at the end of the full-expression}}
+          x1, x2);
+}
+} // namespace multiple_capture_by_attrs
+
 // ****************************************************************************
 // Capture pointer (eg: std::string*)
 // ****************************************************************************
