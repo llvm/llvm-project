@@ -10913,6 +10913,13 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
 
     AllocType = Info.Ctx.getConstantArrayType(AllocType, ArrayBound, nullptr,
                                               ArraySizeModifier::Normal, 0);
+  } else if (E->isArray()) {
+    // We have an array new-expression whose array size could not be
+    // determined, e.g. 'new int[]()', where the bound is neither given nor
+    // deducible from the initializer. This is ill-formed and already
+    // diagnosed, so bail out rather than mis-evaluating a scalar allocation
+    // as an array (which would later crash the evaluator).
+    return false;
   } else {
     assert(!AllocType->isArrayType() &&
            "array allocation with non-array new");
