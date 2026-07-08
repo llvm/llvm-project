@@ -648,12 +648,9 @@ define i16 @crc16.be.tc8.misalign(i8 %msg, i16 %checksum) {
 ; NOPCLMUL:       [[LOOP]]:
 ; NOPCLMUL-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; NOPCLMUL-NEXT:    [[CRC2:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT3:%.*]], %[[LOOP]] ]
-; NOPCLMUL-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
-; NOPCLMUL-NEXT:    [[DATA_INDEXER:%.*]] = shl i8 [[MSG]], [[IV_BITS]]
-; NOPCLMUL-NEXT:    [[CRC_INDEXER_CAST:%.*]] = trunc i16 [[CRC2]] to i8
-; NOPCLMUL-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i8 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
-; NOPCLMUL-NEXT:    [[INDEXER_HI:%.*]] = lshr i8 [[CRC_DATA_INDEXER]], 8
-; NOPCLMUL-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI]] to i64
+; NOPCLMUL-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC2]], 8
+; NOPCLMUL-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
+; NOPCLMUL-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i64
 ; NOPCLMUL-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.9, i64 [[INDEXER_EXT]]
 ; NOPCLMUL-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
 ; NOPCLMUL-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8

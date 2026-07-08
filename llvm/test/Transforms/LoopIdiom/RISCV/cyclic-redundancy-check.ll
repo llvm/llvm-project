@@ -883,12 +883,9 @@ define i16 @crc16.be.tc8.misalign(i8 %msg, i16 %checksum) {
 ; NOZBC32:       [[LOOP]]:
 ; NOZBC32-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; NOZBC32-NEXT:    [[CRC2:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT3:%.*]], %[[LOOP]] ]
-; NOZBC32-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
-; NOZBC32-NEXT:    [[DATA_INDEXER:%.*]] = shl i8 [[MSG]], [[IV_BITS]]
-; NOZBC32-NEXT:    [[CRC_INDEXER_CAST:%.*]] = trunc i16 [[CRC2]] to i8
-; NOZBC32-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i8 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
-; NOZBC32-NEXT:    [[INDEXER_HI:%.*]] = lshr i8 [[CRC_DATA_INDEXER]], 8
-; NOZBC32-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI]] to i32
+; NOZBC32-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC2]], 8
+; NOZBC32-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
+; NOZBC32-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i32
 ; NOZBC32-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.9, i32 [[INDEXER_EXT]]
 ; NOZBC32-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
 ; NOZBC32-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
@@ -907,12 +904,9 @@ define i16 @crc16.be.tc8.misalign(i8 %msg, i16 %checksum) {
 ; NOZBC64:       [[LOOP]]:
 ; NOZBC64-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; NOZBC64-NEXT:    [[CRC2:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT3:%.*]], %[[LOOP]] ]
-; NOZBC64-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
-; NOZBC64-NEXT:    [[DATA_INDEXER:%.*]] = shl i8 [[MSG]], [[IV_BITS]]
-; NOZBC64-NEXT:    [[CRC_INDEXER_CAST:%.*]] = trunc i16 [[CRC2]] to i8
-; NOZBC64-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i8 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
-; NOZBC64-NEXT:    [[INDEXER_HI:%.*]] = lshr i8 [[CRC_DATA_INDEXER]], 8
-; NOZBC64-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI]] to i64
+; NOZBC64-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC2]], 8
+; NOZBC64-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
+; NOZBC64-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i64
 ; NOZBC64-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.9, i64 [[INDEXER_EXT]]
 ; NOZBC64-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
 ; NOZBC64-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
