@@ -1517,6 +1517,64 @@ resolveDeclareVariantCallee(const semantics::Symbol &base,
   return resolution.candidates.front().variant;
 }
 
+bool genDeclareVariantCall(
+    AbstractConverter &converter, mlir::Location loc,
+    const semantics::Symbol &base,
+    llvm::function_ref<void(const semantics::Symbol *)> emitCall) {
+  const semantics::Symbol &ultimate{base.GetUltimate()};
+  const auto *details{ultimate.detailsIf<semantics::SubprogramDetails>()};
+  if (!details || details->ompDeclareVariants().empty())
+    return false;
+
+  DeclareVariantResolution resolution{resolveDeclareVariant(base, converter)};
+  if (!resolution.hasDynamicCondition)
+    return false;
+
+  fir::FirOpBuilder &builder{converter.getFirOpBuilder()};
+  semantics::SemanticsContext &semaCtx{ultimate.owner().context()};
+  lower::StatementContext stmtCtx;
+
+  // Emit a ranked if/else cascade over the candidates:
+  //   if (cond0) call variant0
+  //   else if (cond1) call variant1
+  //   else call base
+  // An unconditional candidate (should one outrank the guarded ones)
+  // terminates the cascade in place of the base fallback.
+  fir::IfOp outerIf;
+  for (const DeclareVariantCandidate &candidate : resolution.candidates) {
+    if (!candidate.condition) {
+      emitCall(candidate.variant);
+      if (outerIf)
+        builder.setInsertionPointAfter(outerIf);
+      return true;
+    }
+
+    mlir::Location condLoc{converter.genLocation(candidate.condition->source)};
+    const auto *condExpr{
+        semantics::GetExpr(semaCtx, *candidate.condition->expr)};
+    assert(condExpr && "missing expression for user condition");
+    mlir::Value condVal{
+        fir::getBase(converter.genExprValue(*condExpr, stmtCtx, &condLoc))};
+    if (condVal.getType() != builder.getI1Type())
+      condVal = builder.createConvert(condLoc, builder.getI1Type(), condVal);
+    stmtCtx.finalizeAndReset();
+
+    auto ifOp{fir::IfOp::create(builder, condLoc, condVal,
+                                /*withElseRegion=*/true)};
+    if (!outerIf)
+      outerIf = ifOp;
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    emitCall(candidate.variant);
+    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+  }
+
+  // No unconditional terminal: the innermost else calls the base.
+  emitCall(nullptr);
+  if (outerIf)
+    builder.setInsertionPointAfter(outerIf);
+  return true;
+}
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran
