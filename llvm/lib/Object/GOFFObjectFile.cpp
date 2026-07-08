@@ -17,7 +17,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstddef>
 
 #ifndef DEBUG_TYPE
 #define DEBUG_TYPE "goff"
