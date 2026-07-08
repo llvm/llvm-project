@@ -584,6 +584,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SSUBSAT, VTs, Legal);
     setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
     setOperationAction(ISD::BITREVERSE, VTs, Legal);
+    setOperationAction(ISD::VECTOR_SHUFFLE, VTs, Custom);
+    setOperationAction(ISD::VECTOR_REVERSE, VTs, Legal);
     for (MVT VT : VTs) {
       if (VT != MVT::v2i32)
         setOperationAction({ISD::ABS, ISD::ABDS, ISD::ABDU}, VT, Legal);
@@ -647,6 +649,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SSHLSAT, {MVT::v2i32, MVT::v4i16}, Custom);
       setOperationAction(ISD::BSWAP, MVT::v4i16, Legal);
       setOperationAction(ISD::BITREVERSE, {MVT::v4i16, MVT::v8i8}, Legal);
+      setOperationAction(ISD::VECTOR_SHUFFLE, P64VecVTs, Custom);
+      setOperationAction(ISD::VECTOR_REVERSE, P64VecVTs, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, P64VecVTs, Legal);
       setOperationAction(ISD::BUILD_VECTOR, P64VecVTs, Legal);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Legal);
@@ -6319,6 +6323,33 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   unsigned NumElts = VT.getVectorNumElements();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
+
+  // Select an element reverse shuffle to VECTOR_REVERSE (rev8/rev16/ppairoe.*).
+  if (Subtarget.hasStdExtP() && !Subtarget.hasVInstructions()) {
+    // Reverse of the low L lanes, higher lanes poison. L == NumElts is a plain
+    // reverse; L == NumElts/2 is a widened RV64 v4i8/v2i16 reverse.
+    ArrayRef<int> Mask = SVN->getMask();
+    auto IsLowReverse = [&](unsigned L) {
+      return V2.isUndef() &&
+             ShuffleVectorInst::isReverseMask(Mask.take_front(L), L) &&
+             all_of(Mask.drop_front(L), [](int M) { return M < 0; });
+    };
+    if (IsLowReverse(NumElts))
+      return DAG.getNode(ISD::VECTOR_REVERSE, DL, VT, V1);
+    // Widened: reversing sends the low-half lanes to the top half, so shift
+    // them back down by half the register. Only the 64-bit packed types are
+    // legal here, so the register is XLen (i64).
+    if (Subtarget.is64Bit() && VT.getSizeInBits() == 64 &&
+        IsLowReverse(NumElts / 2)) {
+      SDValue Rev = DAG.getBitcast(
+          MVT::i64, DAG.getNode(ISD::VECTOR_REVERSE, DL, VT, V1));
+      SDValue Srl =
+          DAG.getNode(ISD::SRL, DL, MVT::i64, Rev,
+                      DAG.getConstant(VT.getSizeInBits() / 2, DL, MVT::i64));
+      return DAG.getBitcast(VT, Srl);
+    }
+    return SDValue();
+  }
 
   if (VT.getVectorElementType() == MVT::i1) {
     // Lower to a vror.vi of a larger element type if possible before we promote
@@ -13566,6 +13597,25 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc DL(Op);
   MVT VecVT = Op.getSimpleValueType();
+
+  // Reverse a 64-bit packed vector on RV32 by reversing each 32-bit half and
+  // swapping them.
+  if (Subtarget.hasStdExtP() && !Subtarget.hasVInstructions()) {
+    assert(!Subtarget.is64Bit() && VecVT.getSizeInBits() == 64 &&
+           "Unexpected packed VECTOR_REVERSE type");
+    SDValue V = Op.getOperand(0);
+    if (VecVT == MVT::v2i32) {
+      // A 2-element reverse is just an element swap.
+      SDValue Lo = DAG.getExtractVectorElt(DL, MVT::i32, V, 0);
+      SDValue Hi = DAG.getExtractVectorElt(DL, MVT::i32, V, 1);
+      return DAG.getBuildVector(VecVT, DL, {Hi, Lo});
+    }
+    auto [Lo, Hi] = DAG.SplitVector(V, DL);
+    Lo = DAG.getNode(ISD::VECTOR_REVERSE, DL, Lo.getSimpleValueType(), Lo);
+    Hi = DAG.getNode(ISD::VECTOR_REVERSE, DL, Hi.getSimpleValueType(), Hi);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Hi, Lo);
+  }
+
   if (VecVT.getVectorElementType() == MVT::i1) {
     MVT WidenVT = MVT::getVectorVT(MVT::i8, VecVT.getVectorElementCount());
     SDValue Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, WidenVT, Op.getOperand(0));
@@ -19863,13 +19913,14 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
       if (VPLoad && VPLoad != VPL)
         return SDValue();
       VPLoad = VPL;
-    } else if (DAG.isSplatValue(X))
+    } else if (DAG.isSplatValue(X)) {
       continue;
-    else if (DAG.getTargetLoweringInfo().isBinOp(X.getOpcode()) &&
-             X->getNumValues() == 1)
+    } else if (DAG.getTargetLoweringInfo().isBinOp(X.getOpcode()) &&
+               X->getNumValues() == 1) {
       append_range(Worklist, X->op_values());
-    else
+    } else {
       return SDValue();
+    }
   }
   if (!VPLoad)
     return SDValue();

@@ -5538,8 +5538,8 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMf<[100, 101, 110]>]>
     Optional<I64>:$offset
   );
 
-  let results = (outs AnyTypeOf<[I32, VectorOfLengthAndType<
-                                  [2, 4, 8, 16, 32, 64, 128], [I32]>]>:$res);
+  let results = (outs VectorOfLengthAndType<
+                        [1, 2, 4, 8, 16, 32, 64, 128], [I32]>:$res);
 
   let assemblyFormat = [{
     $tmemAddr (`,` $offset^)? (`pack` $pack^)? attr-dict `:` type($res)
@@ -5598,11 +5598,9 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMf<[100, 101, 110]>]>
     llvm::LLVMContext &Context = moduleTranslation.getLLVMContext();
     auto Pack = llvm::ConstantInt::get(Context, llvm::APInt(1, $pack));
 
-    unsigned num = $_resultType->isVectorTy()
-                       ? llvm::cast<llvm::VectorType>($_resultType)
+    unsigned num = llvm::cast<llvm::VectorType>($_resultType)
                              ->getElementCount()
-                             .getFixedValue()
-                       : 1;
+                             .getFixedValue();
 
     auto ID = getTcgen05LdIntrinsicID($shape, num);
     if (ID == llvm::Intrinsic::not_intrinsic)
@@ -5717,8 +5715,7 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMf<[100, 101, 110]>]>
     Tcgen05LdStShapeAttr:$shape,
     // Arguments
     LLVM_PointerTensor:$tmemAddr,
-    AnyTypeOf<[I32, VectorOfLengthAndType<
-                      [2, 4, 8, 16, 32, 64, 128], [I32]>]>:$val,
+    VectorOfLengthAndType<[1, 2, 4, 8, 16, 32, 64, 128], [I32]>:$val,
     Optional<I64>:$offset
   );
 
@@ -5777,10 +5774,9 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMf<[100, 101, 110]>]>
     auto Unpack = llvm::ConstantInt::get(Context, llvm::APInt(1, $unpack));
 
     auto valTy = $val->getType();
-    uint32_t num = valTy->isVectorTy() ? llvm::cast<llvm::VectorType>(valTy)
+    uint32_t num = llvm::cast<llvm::VectorType>(valTy)
                                              ->getElementCount()
-                                             .getFixedValue()
-                                       : 1;
+                                             .getFixedValue();
 
     auto ID = getTcgen05StIntrinsicID($shape, num);
     if (ID == llvm::Intrinsic::not_intrinsic)
