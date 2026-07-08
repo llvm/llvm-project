@@ -5826,6 +5826,31 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     if (TypeIdx != 1) // TODO: This probably does work as expected already.
       return UnableToLegalize;
     return fewerElementsVectorMerge(MI, TypeIdx, NarrowTy);
+  case G_EXTRACT_SUBVECTOR: {
+    Register DstReg = MI.getOperand(0).getReg();
+    LLT DstTy = MRI.getType(DstReg);
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+    uint64_t InsertionPointImm = MI.getOperand(2).getImm();
+
+    // If Dst > 128 bits, then cannot legalize (yet)
+    if (DstTy.getSizeInBits() > 128)
+      return UnableToLegalize;
+    // If the extract is into a vector half its size, then convert to a copy
+    if (2 * DstTy.getNumElements() != SrcTy.getNumElements())
+      return UnableToLegalize;
+
+    // extract_subvector(large_vector) -> copy(high/low half of
+    // unmerge_values(large_vector, 2))
+    auto Unmerge = MIRBuilder.buildUnmerge(DstTy, SrcReg);
+    if (InsertionPointImm == 0)
+      MIRBuilder.buildCopy(DstReg, Unmerge.getReg(0));
+    else
+      MIRBuilder.buildCopy(DstReg, Unmerge.getReg(0));
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case G_EXTRACT_VECTOR_ELT:
   case G_INSERT_VECTOR_ELT:
     return fewerElementsVectorExtractInsertVectorElt(MI, TypeIdx, NarrowTy);

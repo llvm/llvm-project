@@ -86,48 +86,8 @@ define <16 x half> @complex_add_v16f16(<16 x half> %a, <16 x half> %b) {
 ;
 ; CHECK-GI-LABEL: complex_add_v16f16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov h4, v2.h[0]
-; CHECK-GI-NEXT:    mov h5, v0.h[0]
-; CHECK-GI-NEXT:    mov h6, v1.h[0]
-; CHECK-GI-NEXT:    mov v4.h[1], v2.h[1]
-; CHECK-GI-NEXT:    mov v5.h[1], v0.h[1]
-; CHECK-GI-NEXT:    mov v6.h[1], v1.h[1]
-; CHECK-GI-NEXT:    mov v4.h[2], v2.h[2]
-; CHECK-GI-NEXT:    mov v5.h[2], v0.h[2]
-; CHECK-GI-NEXT:    mov v6.h[2], v1.h[2]
-; CHECK-GI-NEXT:    mov v4.h[3], v2.h[3]
-; CHECK-GI-NEXT:    mov v5.h[3], v0.h[3]
-; CHECK-GI-NEXT:    mov v6.h[3], v1.h[3]
-; CHECK-GI-NEXT:    mov v4.h[4], v2.h[4]
-; CHECK-GI-NEXT:    mov v5.h[4], v0.h[4]
-; CHECK-GI-NEXT:    mov v6.h[4], v1.h[4]
-; CHECK-GI-NEXT:    mov v4.h[5], v2.h[5]
-; CHECK-GI-NEXT:    mov v5.h[5], v0.h[5]
-; CHECK-GI-NEXT:    mov v6.h[5], v1.h[5]
-; CHECK-GI-NEXT:    mov v4.h[6], v2.h[6]
-; CHECK-GI-NEXT:    mov v5.h[6], v0.h[6]
-; CHECK-GI-NEXT:    mov v6.h[6], v1.h[6]
-; CHECK-GI-NEXT:    mov v4.h[7], v2.h[7]
-; CHECK-GI-NEXT:    mov v5.h[7], v0.h[7]
-; CHECK-GI-NEXT:    mov h2, v3.h[0]
-; CHECK-GI-NEXT:    mov v6.h[7], v1.h[7]
-; CHECK-GI-NEXT:    fcadd v4.8h, v4.8h, v5.8h, #90
-; CHECK-GI-NEXT:    mov v2.h[1], v3.h[1]
-; CHECK-GI-NEXT:    mov h0, v4.h[0]
-; CHECK-GI-NEXT:    mov v2.h[2], v3.h[2]
-; CHECK-GI-NEXT:    mov v0.h[1], v4.h[1]
-; CHECK-GI-NEXT:    mov v2.h[3], v3.h[3]
-; CHECK-GI-NEXT:    mov v0.h[2], v4.h[2]
-; CHECK-GI-NEXT:    mov v2.h[4], v3.h[4]
-; CHECK-GI-NEXT:    mov v0.h[3], v4.h[3]
-; CHECK-GI-NEXT:    mov v2.h[5], v3.h[5]
-; CHECK-GI-NEXT:    mov v0.h[4], v4.h[4]
-; CHECK-GI-NEXT:    mov v2.h[6], v3.h[6]
-; CHECK-GI-NEXT:    mov v0.h[5], v4.h[5]
-; CHECK-GI-NEXT:    mov v2.h[7], v3.h[7]
-; CHECK-GI-NEXT:    mov v0.h[6], v4.h[6]
-; CHECK-GI-NEXT:    fcadd v1.8h, v2.8h, v6.8h, #90
-; CHECK-GI-NEXT:    mov v0.h[7], v4.h[7]
+; CHECK-GI-NEXT:    fcadd v0.8h, v2.8h, v0.8h, #90
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %a.real = shufflevector <16 x half> %a, <16 x half> zeroinitializer, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -142,109 +102,13 @@ entry:
 
 ; Expected to transform
 define <32 x half> @complex_add_v32f16(<32 x half> %a, <32 x half> %b) {
-; CHECK-SD-LABEL: complex_add_v32f16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fcadd v2.8h, v6.8h, v2.8h, #90
-; CHECK-SD-NEXT:    fcadd v0.8h, v4.8h, v0.8h, #90
-; CHECK-SD-NEXT:    fcadd v1.8h, v5.8h, v1.8h, #90
-; CHECK-SD-NEXT:    fcadd v3.8h, v7.8h, v3.8h, #90
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: complex_add_v32f16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov h16, v4.h[0]
-; CHECK-GI-NEXT:    mov h18, v0.h[0]
-; CHECK-GI-NEXT:    mov h17, v5.h[0]
-; CHECK-GI-NEXT:    mov h19, v1.h[0]
-; CHECK-GI-NEXT:    mov h20, v6.h[0]
-; CHECK-GI-NEXT:    mov h21, v2.h[0]
-; CHECK-GI-NEXT:    mov v16.h[1], v4.h[1]
-; CHECK-GI-NEXT:    mov v18.h[1], v0.h[1]
-; CHECK-GI-NEXT:    mov v17.h[1], v5.h[1]
-; CHECK-GI-NEXT:    mov v19.h[1], v1.h[1]
-; CHECK-GI-NEXT:    mov v20.h[1], v6.h[1]
-; CHECK-GI-NEXT:    mov v21.h[1], v2.h[1]
-; CHECK-GI-NEXT:    mov v16.h[2], v4.h[2]
-; CHECK-GI-NEXT:    mov v18.h[2], v0.h[2]
-; CHECK-GI-NEXT:    mov v17.h[2], v5.h[2]
-; CHECK-GI-NEXT:    mov v19.h[2], v1.h[2]
-; CHECK-GI-NEXT:    mov v20.h[2], v6.h[2]
-; CHECK-GI-NEXT:    mov v21.h[2], v2.h[2]
-; CHECK-GI-NEXT:    mov v16.h[3], v4.h[3]
-; CHECK-GI-NEXT:    mov v18.h[3], v0.h[3]
-; CHECK-GI-NEXT:    mov v17.h[3], v5.h[3]
-; CHECK-GI-NEXT:    mov v19.h[3], v1.h[3]
-; CHECK-GI-NEXT:    mov v20.h[3], v6.h[3]
-; CHECK-GI-NEXT:    mov v21.h[3], v2.h[3]
-; CHECK-GI-NEXT:    mov v16.h[4], v4.h[4]
-; CHECK-GI-NEXT:    mov v18.h[4], v0.h[4]
-; CHECK-GI-NEXT:    mov v17.h[4], v5.h[4]
-; CHECK-GI-NEXT:    mov v19.h[4], v1.h[4]
-; CHECK-GI-NEXT:    mov v20.h[4], v6.h[4]
-; CHECK-GI-NEXT:    mov v21.h[4], v2.h[4]
-; CHECK-GI-NEXT:    mov v16.h[5], v4.h[5]
-; CHECK-GI-NEXT:    mov v18.h[5], v0.h[5]
-; CHECK-GI-NEXT:    mov v17.h[5], v5.h[5]
-; CHECK-GI-NEXT:    mov v19.h[5], v1.h[5]
-; CHECK-GI-NEXT:    mov v20.h[5], v6.h[5]
-; CHECK-GI-NEXT:    mov v21.h[5], v2.h[5]
-; CHECK-GI-NEXT:    mov v16.h[6], v4.h[6]
-; CHECK-GI-NEXT:    mov v18.h[6], v0.h[6]
-; CHECK-GI-NEXT:    mov v17.h[6], v5.h[6]
-; CHECK-GI-NEXT:    mov v19.h[6], v1.h[6]
-; CHECK-GI-NEXT:    mov v20.h[6], v6.h[6]
-; CHECK-GI-NEXT:    mov v21.h[6], v2.h[6]
-; CHECK-GI-NEXT:    mov v16.h[7], v4.h[7]
-; CHECK-GI-NEXT:    mov v18.h[7], v0.h[7]
-; CHECK-GI-NEXT:    mov v17.h[7], v5.h[7]
-; CHECK-GI-NEXT:    mov v19.h[7], v1.h[7]
-; CHECK-GI-NEXT:    mov v20.h[7], v6.h[7]
-; CHECK-GI-NEXT:    mov v21.h[7], v2.h[7]
-; CHECK-GI-NEXT:    mov h4, v7.h[0]
-; CHECK-GI-NEXT:    fcadd v5.8h, v16.8h, v18.8h, #90
-; CHECK-GI-NEXT:    mov h16, v3.h[0]
-; CHECK-GI-NEXT:    fcadd v6.8h, v17.8h, v19.8h, #90
-; CHECK-GI-NEXT:    fcadd v17.8h, v20.8h, v21.8h, #90
-; CHECK-GI-NEXT:    mov v4.h[1], v7.h[1]
-; CHECK-GI-NEXT:    mov h0, v5.h[0]
-; CHECK-GI-NEXT:    mov v16.h[1], v3.h[1]
-; CHECK-GI-NEXT:    mov h2, v17.h[0]
-; CHECK-GI-NEXT:    mov h1, v6.h[0]
-; CHECK-GI-NEXT:    mov v4.h[2], v7.h[2]
-; CHECK-GI-NEXT:    mov v0.h[1], v5.h[1]
-; CHECK-GI-NEXT:    mov v16.h[2], v3.h[2]
-; CHECK-GI-NEXT:    mov v2.h[1], v17.h[1]
-; CHECK-GI-NEXT:    mov v1.h[1], v6.h[1]
-; CHECK-GI-NEXT:    mov v4.h[3], v7.h[3]
-; CHECK-GI-NEXT:    mov v0.h[2], v5.h[2]
-; CHECK-GI-NEXT:    mov v16.h[3], v3.h[3]
-; CHECK-GI-NEXT:    mov v2.h[2], v17.h[2]
-; CHECK-GI-NEXT:    mov v1.h[2], v6.h[2]
-; CHECK-GI-NEXT:    mov v4.h[4], v7.h[4]
-; CHECK-GI-NEXT:    mov v0.h[3], v5.h[3]
-; CHECK-GI-NEXT:    mov v16.h[4], v3.h[4]
-; CHECK-GI-NEXT:    mov v2.h[3], v17.h[3]
-; CHECK-GI-NEXT:    mov v1.h[3], v6.h[3]
-; CHECK-GI-NEXT:    mov v4.h[5], v7.h[5]
-; CHECK-GI-NEXT:    mov v0.h[4], v5.h[4]
-; CHECK-GI-NEXT:    mov v16.h[5], v3.h[5]
-; CHECK-GI-NEXT:    mov v2.h[4], v17.h[4]
-; CHECK-GI-NEXT:    mov v1.h[4], v6.h[4]
-; CHECK-GI-NEXT:    mov v4.h[6], v7.h[6]
-; CHECK-GI-NEXT:    mov v0.h[5], v5.h[5]
-; CHECK-GI-NEXT:    mov v16.h[6], v3.h[6]
-; CHECK-GI-NEXT:    mov v2.h[5], v17.h[5]
-; CHECK-GI-NEXT:    mov v1.h[5], v6.h[5]
-; CHECK-GI-NEXT:    mov v4.h[7], v7.h[7]
-; CHECK-GI-NEXT:    mov v0.h[6], v5.h[6]
-; CHECK-GI-NEXT:    mov v16.h[7], v3.h[7]
-; CHECK-GI-NEXT:    mov v2.h[6], v17.h[6]
-; CHECK-GI-NEXT:    mov v1.h[6], v6.h[6]
-; CHECK-GI-NEXT:    mov v0.h[7], v5.h[7]
-; CHECK-GI-NEXT:    fcadd v3.8h, v4.8h, v16.8h, #90
-; CHECK-GI-NEXT:    mov v2.h[7], v17.h[7]
-; CHECK-GI-NEXT:    mov v1.h[7], v6.h[7]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: complex_add_v32f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcadd v2.8h, v6.8h, v2.8h, #90
+; CHECK-NEXT:    fcadd v0.8h, v4.8h, v0.8h, #90
+; CHECK-NEXT:    fcadd v1.8h, v5.8h, v1.8h, #90
+; CHECK-NEXT:    fcadd v3.8h, v7.8h, v3.8h, #90
+; CHECK-NEXT:    ret
 entry:
   %a.real = shufflevector <32 x half> %a, <32 x half> zeroinitializer, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
   %a.imag = shufflevector <32 x half> %a, <32 x half> zeroinitializer, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
@@ -304,48 +168,8 @@ define <16 x half> @complex_add_v16f16_with_intrinsic(<16 x half> %a, <16 x half
 ;
 ; CHECK-GI-LABEL: complex_add_v16f16_with_intrinsic:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov h4, v2.h[0]
-; CHECK-GI-NEXT:    mov h5, v0.h[0]
-; CHECK-GI-NEXT:    mov h6, v1.h[0]
-; CHECK-GI-NEXT:    mov v4.h[1], v2.h[1]
-; CHECK-GI-NEXT:    mov v5.h[1], v0.h[1]
-; CHECK-GI-NEXT:    mov v6.h[1], v1.h[1]
-; CHECK-GI-NEXT:    mov v4.h[2], v2.h[2]
-; CHECK-GI-NEXT:    mov v5.h[2], v0.h[2]
-; CHECK-GI-NEXT:    mov v6.h[2], v1.h[2]
-; CHECK-GI-NEXT:    mov v4.h[3], v2.h[3]
-; CHECK-GI-NEXT:    mov v5.h[3], v0.h[3]
-; CHECK-GI-NEXT:    mov v6.h[3], v1.h[3]
-; CHECK-GI-NEXT:    mov v4.h[4], v2.h[4]
-; CHECK-GI-NEXT:    mov v5.h[4], v0.h[4]
-; CHECK-GI-NEXT:    mov v6.h[4], v1.h[4]
-; CHECK-GI-NEXT:    mov v4.h[5], v2.h[5]
-; CHECK-GI-NEXT:    mov v5.h[5], v0.h[5]
-; CHECK-GI-NEXT:    mov v6.h[5], v1.h[5]
-; CHECK-GI-NEXT:    mov v4.h[6], v2.h[6]
-; CHECK-GI-NEXT:    mov v5.h[6], v0.h[6]
-; CHECK-GI-NEXT:    mov v6.h[6], v1.h[6]
-; CHECK-GI-NEXT:    mov v4.h[7], v2.h[7]
-; CHECK-GI-NEXT:    mov v5.h[7], v0.h[7]
-; CHECK-GI-NEXT:    mov h2, v3.h[0]
-; CHECK-GI-NEXT:    mov v6.h[7], v1.h[7]
-; CHECK-GI-NEXT:    fcadd v4.8h, v4.8h, v5.8h, #90
-; CHECK-GI-NEXT:    mov v2.h[1], v3.h[1]
-; CHECK-GI-NEXT:    mov h0, v4.h[0]
-; CHECK-GI-NEXT:    mov v2.h[2], v3.h[2]
-; CHECK-GI-NEXT:    mov v0.h[1], v4.h[1]
-; CHECK-GI-NEXT:    mov v2.h[3], v3.h[3]
-; CHECK-GI-NEXT:    mov v0.h[2], v4.h[2]
-; CHECK-GI-NEXT:    mov v2.h[4], v3.h[4]
-; CHECK-GI-NEXT:    mov v0.h[3], v4.h[3]
-; CHECK-GI-NEXT:    mov v2.h[5], v3.h[5]
-; CHECK-GI-NEXT:    mov v0.h[4], v4.h[4]
-; CHECK-GI-NEXT:    mov v2.h[6], v3.h[6]
-; CHECK-GI-NEXT:    mov v0.h[5], v4.h[5]
-; CHECK-GI-NEXT:    mov v2.h[7], v3.h[7]
-; CHECK-GI-NEXT:    mov v0.h[6], v4.h[6]
-; CHECK-GI-NEXT:    fcadd v1.8h, v2.8h, v6.8h, #90
-; CHECK-GI-NEXT:    mov v0.h[7], v4.h[7]
+; CHECK-GI-NEXT:    fcadd v0.8h, v2.8h, v0.8h, #90
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %a.deinterleaved = tail call { <8 x half>, <8 x half> } @llvm.vector.deinterleave2.v16f16(<16 x half> %a)
