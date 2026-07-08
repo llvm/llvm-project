@@ -221,7 +221,7 @@ HANDLE_OTHER_INST(67, InsertValue, InsertValueInst)  // insert into aggregate
 HANDLE_OTHER_INST(68, LandingPad, LandingPadInst)  // Landing pad instruction.
 HANDLE_OTHER_INST(69, Freeze, FreezeInst) // Freeze instruction.
 HANDLE_OTHER_INST(70, BitInsert, BitInsertInst) // BitInsert Instruction.
-HANDLE_OTHER_INST(71, BitExtract, BitExtractInst) // BitExtract Instruction
+HANDLE_OTHER_INST(71, BitExtract, BitExtractInst) // BitExtract Instruction.
   LAST_OTHER_INST(71)
 
 #undef  FIRST_TERM_INST

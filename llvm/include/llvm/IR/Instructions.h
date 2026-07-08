@@ -5405,7 +5405,7 @@ public:
   }
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-  /// Return true if an bitinsert instruction can be
+  /// Return true if a bitinsert instruction can be
   /// formed with the specified operands.
   LLVM_ABI static bool isValidOperands(const Value *Base, const Value *Val,
                                        const Value *Offset);
@@ -5446,7 +5446,7 @@ public:
   }
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-  /// Return true if an bitextract instruction can be
+  /// Return true if a bitextract instruction can be
   /// formed with the specified operands.
   LLVM_ABI static bool isValidOperands(const Type *Ty, const Value *Val,
                                        const Value *Offset);
