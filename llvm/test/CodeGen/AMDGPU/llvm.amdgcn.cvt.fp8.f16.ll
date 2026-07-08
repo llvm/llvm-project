@@ -605,8 +605,10 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_hi_byte0(<2 x half> %a, i32 %sr, i32 
 ; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-SDAG-REAL16-NEXT:    v_nop
 ; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-REAL16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
-; GFX1250-SDAG-REAL16-NEXT:    v_cvt_sr_bf8_f16 v2, v0.h, v1
+; GFX1250-SDAG-REAL16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_lshrrev_b32 v0, 16, v0
+; GFX1250-SDAG-REAL16-NEXT:    v_mov_b32_e32 v4, v3
+; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_sr_bf8_f16 v2, v0.l, v1
 ; GFX1250-SDAG-REAL16-NEXT:    global_store_b32 v[4:5], v2, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
@@ -939,8 +941,10 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_hi_byte0(<2 x half> %a, i32 %sr, i32 
 ; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-SDAG-REAL16-NEXT:    v_nop
 ; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-REAL16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
-; GFX1250-SDAG-REAL16-NEXT:    v_cvt_sr_fp8_f16 v2, v0.h, v1
+; GFX1250-SDAG-REAL16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_lshrrev_b32 v0, 16, v0
+; GFX1250-SDAG-REAL16-NEXT:    v_mov_b32_e32 v4, v3
+; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_sr_fp8_f16 v2, v0.l, v1
 ; GFX1250-SDAG-REAL16-NEXT:    global_store_b32 v[4:5], v2, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
