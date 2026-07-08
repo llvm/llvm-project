@@ -101,3 +101,30 @@ body:             |
     FAKE_USE implicit %all_killed
     RET_ReallyLR
 ...
+---
+name:            expand_tuple_independent_zprs
+tracksRegLiveness: true
+isSSA: false
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: expand_tuple_independent_zprs
+    ; CHECK: [[DEF:%[0-9]+]]:zpr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:zpr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:zpr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:zpr = IMPLICIT_DEF
+    ; CHECK-NEXT: undef [[COPY_INTO_TRANSPOSED_TUPLE:%[0-9]+]].zsub0:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE [[DEF]], 4
+    ; CHECK-NEXT: [[COPY_INTO_TRANSPOSED_TUPLE:%[0-9]+]].zsub1:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE [[DEF1]], 4
+    ; CHECK-NEXT: [[COPY_INTO_TRANSPOSED_TUPLE:%[0-9]+]].zsub2:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE killed [[DEF2]], 4
+    ; CHECK-NEXT: [[COPY_INTO_TRANSPOSED_TUPLE:%[0-9]+]].zsub3:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE [[DEF3]], 4
+    ; CHECK-NEXT: FAKE_USE implicit [[COPY_INTO_TRANSPOSED_TUPLE]]
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:zpr = IMPLICIT_DEF
+    %1:zpr = IMPLICIT_DEF
+    %2:zpr = IMPLICIT_DEF
+    %3:zpr = IMPLICIT_DEF
+
+    %4:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %0, %1, killed %2, %3
+
+    FAKE_USE implicit %4
+    RET_ReallyLR
+...
