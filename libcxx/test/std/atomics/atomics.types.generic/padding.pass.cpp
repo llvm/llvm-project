@@ -136,7 +136,7 @@ void test() {
   {
     // compare_exchange_strong
     // atomic and expected are the same, including padding
-
+    std::atomic<T> a;
     T init = make<T>(10, 'a', 0x00);
     assert_padding(init, 0x00);
     a.store(init);
