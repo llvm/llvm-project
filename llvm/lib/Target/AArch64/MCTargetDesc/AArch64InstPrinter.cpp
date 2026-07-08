@@ -1157,7 +1157,7 @@ bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
   //   sysp #op1, cN, cM, #op2
   // instead of:
   //   sysp #op1, cN, cM, #op2, xzr, xzr
-  if (MI->getOperand(4).getReg() != AArch64::XZR)
+  if (MI->getOperand(4).getReg() != AArch64::XZR_XZR)
     return false;
 
   O << "\tsysp\t";
@@ -1691,7 +1691,7 @@ void AArch64InstPrinter::printGPRSeqPairsClassOperand(const MCInst *MI,
   static_assert(size == 64 || size == 32,
                 "Template parameter must be either 32 or 64");
   MCRegister Reg = MI->getOperand(OpNum).getReg();
-  if (Reg == AArch64::XZR) {
+  if (Reg == AArch64::XZR_XZR) {
     printRegName(O, AArch64::XZR);
     O << ", ";
     printRegName(O, AArch64::XZR);
