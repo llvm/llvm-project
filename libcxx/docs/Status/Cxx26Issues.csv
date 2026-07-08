@@ -161,7 +161,7 @@
 "`LWG4251 <https://wg21.link/LWG4251>`__","Move assignment for ``indirect`` unnecessarily requires copy construction","2025-11 (Kona)","","","`#171318 <https://github.com/llvm/llvm-project/issues/171318>`__",""
 "`LWG4253 <https://wg21.link/LWG4253>`__","``basic_const_iterator`` should provide ``iterator_type``","2025-11 (Kona)","","","`#171319 <https://github.com/llvm/llvm-project/issues/171319>`__",""
 "`LWG4255 <https://wg21.link/LWG4255>`__","``move_only_function`` constructor should recognize empty ``copyable_function``\s","2025-11 (Kona)","","","`#171320 <https://github.com/llvm/llvm-project/issues/171320>`__",""
-"`LWG4256 <https://wg21.link/LWG4256>`__","Incorrect constrains for ``function_ref`` constructors from ``nontype_t``","2025-11 (Kona)","|Complete|","23","`#171321 <https://github.com/llvm/llvm-project/issues/171321>`__",""
+"`LWG4256 <https://wg21.link/LWG4256>`__","Incorrect constrains for ``function_ref`` constructors from ``nontype_t``","2025-11 (Kona)","|Complete|","24","`#171321 <https://github.com/llvm/llvm-project/issues/171321>`__",""
 "`LWG4257 <https://wg21.link/LWG4257>`__","Stream insertion for ``chrono::local_time`` should be constrained","2025-11 (Kona)","","","`#171322 <https://github.com/llvm/llvm-project/issues/171322>`__",""
 "`LWG4260 <https://wg21.link/LWG4260>`__","Query objects must be default constructible","2025-11 (Kona)","","","`#171323 <https://github.com/llvm/llvm-project/issues/171323>`__",""
 "`LWG4265 <https://wg21.link/LWG4265>`__","``std::midpoint`` should not accept ``const bool``","2025-11 (Kona)","|Complete|","22","`#171324 <https://github.com/llvm/llvm-project/issues/171324>`__",""
