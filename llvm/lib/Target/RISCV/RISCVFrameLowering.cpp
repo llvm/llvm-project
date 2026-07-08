@@ -1432,6 +1432,36 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL);
 }
 
+static MCRegister getLargestFPRegisterOrZero(const RISCVSubtarget &STI,
+                                             const TargetRegisterInfo &TRI,
+                                             MCRegister Reg) {
+  if (!STI.hasStdExtF())
+    return MCRegister();
+
+  TargetRegisterClass const *LargestFPRegClass = STI.getLargestFPRegClass();
+  assert(LargestFPRegClass);
+
+  if (LargestFPRegClass->contains(Reg))
+    return Reg;
+
+  std::array<TargetRegisterClass const *, 3> RegisterClasses = {
+      &RISCV::FPR16RegClass, &RISCV::FPR32RegClass, &RISCV::FPR64RegClass};
+  std::array<unsigned, 3> SubIdx = {RISCV::sub_16, RISCV::sub_32,
+                                    RISCV::sub_64};
+
+  for (auto [RegClass, SubReg] : zip(RegisterClasses, SubIdx)) {
+    if (RegClass->contains(Reg)) {
+      if (MCRegister Super =
+              TRI.getMatchingSuperReg(Reg, SubReg, LargestFPRegClass))
+        return Super;
+    }
+  }
+
+  // Reg is bigger than what's currently available for the target, we can ignore
+  // it.
+  return MCRegister();
+}
+
 void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
                                               MachineBasicBlock &MBB) const {
   // Insertion point.
@@ -1443,14 +1473,22 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
     DL = MBBI->getDebugLoc();
 
   const MachineFunction &MF = *MBB.getParent();
-  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
   const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
   const RISCVInstrInfo &TII = *STI.getInstrInfo();
 
+  BitVector FinalRegsToZero(TRI.getNumRegs());
+
   for (MCRegister Reg : RegsToZero.set_bits()) {
-    if (TRI.isGeneralPurposeRegister(MF, Reg))
-      TII.buildClearRegister(Reg, MBB, MBBI, DL);
+    if (TRI.isGeneralPurposeRegister(MF, Reg)) {
+      FinalRegsToZero.set(Reg.id());
+    } else if (TRI.isFPRegister(Reg)) {
+      if (MCRegister MaybeReg = getLargestFPRegisterOrZero(STI, TRI, Reg))
+        FinalRegsToZero.set(MaybeReg.id());
+    }
   }
+
+  for (MCRegister Reg : FinalRegsToZero.set_bits())
+    TII.buildClearRegister(Reg, MBB, MBBI, DL);
 }
 
 StackOffset

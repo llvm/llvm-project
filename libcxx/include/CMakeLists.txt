@@ -343,6 +343,7 @@ set(files
   __configuration/language.h
   __configuration/namespace.h
   __configuration/platform.h
+  __configuration/pstl.h
   __configuration/utility.h
   __coroutine/coroutine_handle.h
   __coroutine/coroutine_traits.h
@@ -617,6 +618,7 @@ set(files
   __memory/temp_value.h
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
+  __memory/uninitialized_multidimensional_algorithms.h
   __memory/unique_ptr.h
   __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h
@@ -961,6 +963,7 @@ set(files
   __vector/comparison.h
   __vector/container_traits.h
   __vector/erase.h
+  __vector/layout.h
   __vector/pmr.h
   __vector/swap.h
   __vector/vector.h

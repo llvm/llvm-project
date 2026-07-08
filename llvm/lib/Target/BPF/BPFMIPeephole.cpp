@@ -329,19 +329,18 @@ public:
 
   // Main entry point for this pass.
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
-
     initialize(MF);
 
-    bool Changed;
-    Changed = eliminateRedundantMov();
+    bool Changed = expandStackArgPseudos();
+    if (skipFunction(MF.getFunction()))
+      return Changed;
+
+    Changed |= eliminateRedundantMov();
     if (SupportGotol)
-      Changed = adjustBranch() || Changed;
+      Changed |= adjustBranch();
     Changed |= insertMissingCallerSavedSpills();
     Changed |= removeMayGotoZero();
     Changed |= addExitAfterUnreachable();
-    Changed |= expandStackArgPseudos();
     return Changed;
   }
 };

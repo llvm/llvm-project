@@ -290,10 +290,27 @@ static bool IsReservedName(const Name &name) {
 TYPE_PARSER( //
     construct<OmpReservedIdentifier>(predicated(name, IsReservedName)))
 
-// Parse x(...)(...) as a substring instead of a function reference.
-TYPE_PARSER( //
-    construct<OmpLocator>(functionReference / !lookAhead("("_tok)) ||
-    construct<OmpLocator>(Parser<OmpReservedIdentifier>{}))
+struct LocatorParser {
+  using resultType = OmpLocator;
+  using Token = TokenStringMatch<false, false>;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    // Parse x(...)(...) as a substring instead of a function reference.
+    auto funcRef{functionReference / !lookAhead("("_tok)};
+    if (auto &&result{attempt(funcRef).Parse(state)}) {
+      return std::move(*result);
+    }
+    for (llvm::StringRef n : llvm::omp::getReservedLocatorNames()) {
+      auto match{Token(n.data(), n.size())};
+      if (auto &&result{attempt(match >= name).Parse(state)}) {
+        return OmpReservedIdentifier(std::move(*result));
+      }
+    }
+    return std::nullopt;
+  }
+};
+
+TYPE_PARSER(construct<OmpLocator>(LocatorParser{}))
 
 TYPE_PARSER( //
     construct<OmpObject>(Parser<OmpLocator>{}) ||
@@ -2586,48 +2603,21 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
 
 static constexpr DirectiveSet GetLoopDirectives() {
   using Directive = llvm::omp::Directive;
-  constexpr DirectiveSet loopDirectives{
-      unsigned(Directive::OMPD_distribute),
-      unsigned(Directive::OMPD_distribute_parallel_do),
-      unsigned(Directive::OMPD_distribute_parallel_do_simd),
-      unsigned(Directive::OMPD_distribute_simd),
-      unsigned(Directive::OMPD_do),
-      unsigned(Directive::OMPD_do_simd),
-      unsigned(Directive::OMPD_loop),
-      unsigned(Directive::OMPD_masked_taskloop),
-      unsigned(Directive::OMPD_masked_taskloop_simd),
-      unsigned(Directive::OMPD_master_taskloop),
-      unsigned(Directive::OMPD_master_taskloop_simd),
-      unsigned(Directive::OMPD_parallel_do),
-      unsigned(Directive::OMPD_parallel_do_simd),
-      unsigned(Directive::OMPD_parallel_loop),
-      unsigned(Directive::OMPD_parallel_masked_taskloop),
-      unsigned(Directive::OMPD_parallel_masked_taskloop_simd),
-      unsigned(Directive::OMPD_parallel_master_taskloop),
-      unsigned(Directive::OMPD_parallel_master_taskloop_simd),
-      unsigned(Directive::OMPD_simd),
-      unsigned(Directive::OMPD_target_loop),
-      unsigned(Directive::OMPD_target_parallel_do),
-      unsigned(Directive::OMPD_target_parallel_do_simd),
-      unsigned(Directive::OMPD_target_parallel_loop),
-      unsigned(Directive::OMPD_target_simd),
-      unsigned(Directive::OMPD_target_teams_distribute),
-      unsigned(Directive::OMPD_target_teams_distribute_parallel_do),
-      unsigned(Directive::OMPD_target_teams_distribute_parallel_do_simd),
-      unsigned(Directive::OMPD_target_teams_distribute_simd),
-      unsigned(Directive::OMPD_target_teams_loop),
-      unsigned(Directive::OMPD_taskloop),
-      unsigned(Directive::OMPD_taskloop_simd),
-      unsigned(Directive::OMPD_teams_distribute),
-      unsigned(Directive::OMPD_teams_distribute_parallel_do),
-      unsigned(Directive::OMPD_teams_distribute_parallel_do_simd),
-      unsigned(Directive::OMPD_teams_distribute_simd),
-      unsigned(Directive::OMPD_teams_loop),
-      unsigned(Directive::OMPD_fuse),
-      unsigned(Directive::OMPD_tile),
-      unsigned(Directive::OMPD_unroll),
-      unsigned(Directive::OMPD_interchange),
-  };
+  using SourceLanguage = llvm::omp::SourceLanguage;
+  DirectiveSet loopDirectives;
+
+  for (auto dirVal{llvm::to_underlying(Directive::First_)};
+      dirVal != llvm::to_underlying(Directive::Last_) + 1; ++dirVal) {
+    auto dirId{static_cast<Directive>(dirVal)};
+    auto assoc{getDirectiveAssociation(dirId)};
+    if (assoc == llvm::omp::Association::LoopNest ||
+        assoc == llvm::omp::Association::LoopSeq) {
+      auto langs{getDirectiveLanguages(dirId)};
+      if (llvm::to_underlying(langs & SourceLanguage::Fortran) != 0) {
+        loopDirectives.set(dirVal);
+      }
+    }
+  }
   return loopDirectives;
 }
 

@@ -76,7 +76,7 @@ extern int z;
 # 49 "A.c"
 
 // CHECK: # 50 "a\n.c"
-# 50 "a\012.c"
+# 50 "a\n.c"
 
 # 1 "system.h" 3
 # 2

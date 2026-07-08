@@ -3275,7 +3275,7 @@ multiclass FPToSSatI16Pat<dag lhs, int hi, int lo> {
 }
 multiclass FPToUSatI16Pat<dag lhs, int hi> {
   defm : FPToIntSatI16Pat<lhs,
-      (V_MIN_U32_e64 (V_CVT_U32_F32_e64 $src0_modifiers, $src0), (i32 hi))>;
+      (V_MIN_U32_e64 (V_CVT_U32_F32_e64 $src0_modifiers, $src0), (S_MOV_B32 (i32 hi)))>;
 }
 
 let SubtargetPredicate = isGFX11Plus in {

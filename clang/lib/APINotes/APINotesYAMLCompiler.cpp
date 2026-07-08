@@ -1043,6 +1043,18 @@ public:
                          TheNamespace.Items, SwiftVersion);
   }
 
+  std::pair<bool, std::optional<llvm::ArrayRef<llvm::StringRef>>>
+  getWhereParameters(const Function &Function) {
+    if (!Function.Where)
+      return {true, std::nullopt};
+
+    if (!Function.Where->Parameters) {
+      emitError("'Where' requires 'Parameters'");
+      return {false, std::nullopt};
+    }
+    return {true, llvm::ArrayRef<llvm::StringRef>(*Function.Where->Parameters)};
+  }
+
   template <typename FuncOrMethodInfo>
   void convertFunction(const Function &Function, FuncOrMethodInfo &FI) {
     convertAvailability(Function.Availability, FI, Function.Name);
@@ -1151,14 +1163,17 @@ public:
     }
 
     for (const auto &CXXMethod : T.Methods) {
-      if (CXXMethod.Where) {
-        emitError("'Where' is not supported by binary API notes yet");
+      auto WhereParameters = getWhereParameters(CXXMethod);
+      if (!WhereParameters.first)
         continue;
-      }
 
       CXXMethodInfo MI;
       convertFunction(CXXMethod, MI);
-      Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
+      if (WhereParameters.second)
+        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, *WhereParameters.second,
+                            MI, SwiftVersion);
+      else
+        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
     }
 
     // Convert nested tags.
@@ -1227,15 +1242,16 @@ public:
     }
 
     // Write all global functions.
-    llvm::StringSet<> KnownFunctions;
+    llvm::StringSet<> KnownNameOnlyFunctions;
     for (const auto &Function : TLItems.Functions) {
-      if (Function.Where) {
-        emitError("'Where' is not supported by binary API notes yet");
+      auto WhereParameters = getWhereParameters(Function);
+      if (!WhereParameters.first)
         continue;
-      }
 
-      // Check for duplicate global functions.
-      if (!KnownFunctions.insert(Function.Name).second) {
+      // Check for duplicate name-only global functions. Selector-aware
+      // duplicate diagnostics are handled by a later overload-matching PR.
+      if (!WhereParameters.second &&
+          !KnownNameOnlyFunctions.insert(Function.Name).second) {
         emitError(llvm::Twine("multiple definitions of global function '") +
                   Function.Name + "'");
         continue;
@@ -1243,7 +1259,11 @@ public:
 
       GlobalFunctionInfo GFI;
       convertFunction(Function, GFI);
-      Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
+      if (WhereParameters.second)
+        Writer.addGlobalFunction(Ctx, Function.Name, *WhereParameters.second,
+                                 GFI, SwiftVersion);
+      else
+        Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
     }
 
     // Write all enumerators.
