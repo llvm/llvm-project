@@ -183,8 +183,8 @@ add_unittest_framework_library(
     LibcTest
     libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.fp_bits
-    libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.printf_config
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.printf_config
     libc.test.UnitTest.string_utils
 )
 
