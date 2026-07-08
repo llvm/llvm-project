@@ -2435,6 +2435,8 @@ stack.
     > this is being used. Or are there other attributes that need to state they
     > pass an object?
 
+
+(undefined-location-description-operations)=
 ####### A.2.5.4.4.2 Undefined Location Description Operations
 
 > NOTE: This section replaces DWARF Version 5 section 2.6.1.1.1.
@@ -2449,6 +2451,7 @@ offset for an undefined location description. The `DW_OP_*piece` operations can
 implicitly specify an undefined location description, allowing any size and
 offset to be specified, and results in a part with all undefined bits.
 
+(memory-location-description-operations)=
 ####### A.2.5.4.4.3 Memory Location Description Operations
 
 > NOTE: This section replaces parts of DWARF Version 5 section 2.5.1.1, 2.5.1.2,
@@ -2657,6 +2660,8 @@ type.
     The action is the same as for `DW_OP_breg<N>`, except that R is used as the
     register number and B is used as the byte displacement.
 
+
+(register-location-description-operations)=
 ####### A.2.5.4.4.4 Register Location Description Operations
 
 > NOTE: This section replaces DWARF Version 5 section 2.6.1.1.3.
@@ -2708,6 +2713,8 @@ register, it is necessary to use `DW_OP_regval_type`, use one of the
 `DW_OP_breg*` register-based addressing operations, or use `DW_OP_deref*` on a
 register location description.</i>
 
+
+(implicit-location-description-operations)=
 ####### A.2.5.4.4.5 Implicit Location Description Operations
 
 > NOTE: This section replaces DWARF Version 5 section 2.6.1.1.4.
