@@ -439,8 +439,6 @@ std::pair<APInt, APInt> HashRecognize::genBarrettConstants(const APInt &GenPoly,
     FullGenPoly = FullGenPoly.reverseBits();
   }
 
-  // The final constants are (mu or mu') and (P(x) or P(x)'), depending on
-  // IsBigEndian.
   return {Mu, FullGenPoly};
 }
 

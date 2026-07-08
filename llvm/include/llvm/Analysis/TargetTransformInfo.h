@@ -1193,7 +1193,7 @@ public:
   /// Return true if the hardware has a fast square-root instruction.
   LLVM_ABI bool haveFastSqrt(Type *Ty) const;
 
-  /// Return true if the hardware has a fast carryless-multiplication
+  /// Return true if the hardware has a fast carry-less multiplication
   /// instruction.
   LLVM_ABI bool haveFastClmul(IntegerType *Ty) const;
 

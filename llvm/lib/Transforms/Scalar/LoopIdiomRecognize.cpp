@@ -1691,8 +1691,8 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
 
   // Step 3: C(x) = (R(x) xor T2(x)) mod x^CRCBW
   Value *CRCNext = Builder.CreateXor(CRCAlignClmul, ClmulGP, "xor.crc.mult");
-  CRCNext =
-      Info.IsBigEndian ? CRCNext : Builder.CreateLShr(CRCNext, TC, "crc.lshr");
+  if (!Info.IsBigEndian)
+    CRCNext = Builder.CreateLShr(CRCNext, TC, "crc.lshr");
 
   // Bring the result back down the the CRC bit width.
   CRCNext = Builder.CreateTrunc(CRCNext, CRCTy, "crc.next");
