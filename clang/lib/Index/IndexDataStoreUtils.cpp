@@ -240,6 +240,40 @@ SymbolPropertySet index::getSymbolProperties(uint64_t Props) {
   if (Props & INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ASYNC)
     SymbolProperties |= (SymbolPropertySet)SymbolProperty::SwiftAsync;
 
+  uint64_t SwiftAccessLevelBits =
+      INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_LESSTHANFILEPRIVATE |
+      INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_FILEPRIVATE |
+      INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_INTERNAL |
+      INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_PACKAGE |
+      INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_SPI |
+      INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_PUBLIC;
+  switch (Props & SwiftAccessLevelBits) {
+  case INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_LESSTHANFILEPRIVATE:
+    SymbolProperties |= (SymbolPropertySet)
+        SymbolProperty::SwiftAccessControlLessThanFilePrivate;
+    break;
+  case INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_FILEPRIVATE:
+    SymbolProperties |=
+        (SymbolPropertySet)SymbolProperty::SwiftAccessControlFilePrivate;
+    break;
+  case INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_INTERNAL:
+    SymbolProperties |=
+        (SymbolPropertySet)SymbolProperty::SwiftAccessControlInternal;
+    break;
+  case INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_PACKAGE:
+    SymbolProperties |=
+        (SymbolPropertySet)SymbolProperty::SwiftAccessControlPackage;
+    break;
+  case INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_SPI:
+    SymbolProperties |=
+        (SymbolPropertySet)SymbolProperty::SwiftAccessControlSPI;
+    break;
+  case INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_PUBLIC:
+    SymbolProperties |=
+        (SymbolPropertySet)SymbolProperty::SwiftAccessControlPublic;
+    break;
+  }
+
   return SymbolProperties;
 }
 
