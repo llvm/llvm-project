@@ -799,13 +799,6 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
       break;
     }
 
-    // If the symbol has a C identifier section name, we need to mark
-    // it as visible to a regular object so that LTO will keep it around
-    // to ensure the linker generates special __start_<secname> and
-    // __stop_<secname> symbols which may be used elsewhere.
-    if (isValidCIdentifier(InpSym.getSectionName()))
-      R.VisibleToRegularObj = true;
-
     if (Resolution != LDPR_RESOLVED_DYN && Resolution != LDPR_UNDEF &&
         (IsExecutable || !Res.DefaultVisibility))
       R.FinalDefinitionInLinkageUnit = true;
@@ -819,7 +812,16 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
     freeSymName(Sym);
   }
 
-  check(Lto.add(std::move(Input), Resols),
+  auto resolver = [this, &f](StringRef sectionName) {
+    // If the symbol has a C identifier section name, we need to mark
+    // it as visible to a regular object so that LTO will keep it around
+    // to ensure the linker generates special __start_<secname> and
+    // __stop_<secname> symbols which may be used elsewhere.
+    lto::SectionResolution r;
+    r.Keep = isValidCIdentifier(sectionName);
+    return r;
+  };
+  check(Lto.add(std::move(Input), Resols, resolver),
         std::string("Failed to link module ") + F.name);
 }
 
