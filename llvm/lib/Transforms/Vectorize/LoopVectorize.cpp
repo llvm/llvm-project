@@ -178,11 +178,12 @@ static cl::opt<bool> EnableEpilogueVectorization(
     "enable-epilogue-vectorization", cl::init(true), cl::Hidden,
     cl::desc("Enable vectorization of epilogue loops."));
 
-static cl::opt<unsigned> EpilogueVectorizationForceVF(
-    "epilogue-vectorization-force-VF", cl::init(1), cl::Hidden,
+static cl::opt<ElementCount> EpilogueVectorizationForceVF(
+    "epilogue-vectorization-force-VF", cl::init(ElementCount::getFixed(1)),
+    cl::Hidden,
     cl::desc("When epilogue vectorization is enabled, and a value greater than "
              "1 is specified, forces the given VF for all applicable epilogue "
-             "loops."));
+             "loops. Note: This allows all scalable VFs >= vscale x 1."));
 
 static cl::opt<unsigned> EpilogueVectorizationMinVF(
     "epilogue-vectorization-minimum-VF", cl::Hidden,
@@ -416,6 +417,13 @@ static cl::opt<bool> EnableEarlyExitVectorizationWithSideEffects(
     cl::Hidden,
     cl::desc("Enable vectorization of early exit loops with uncountable exits "
              "and side effects"));
+
+// Returns true if the epilogue VF has been set to a non-zero value other than
+// VF=1 (scalar).
+static bool hasForcedEpilogueVF() {
+  return EpilogueVectorizationForceVF.isNonZero() &&
+         EpilogueVectorizationForceVF != ElementCount::getFixed(1);
+}
 
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
@@ -3476,8 +3484,9 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
     return nullptr;
   }
 
-  if (EpilogueVectorizationForceVF > 1) {
-    if (EpilogueVectorizationForceVF >=
+  if (hasForcedEpilogueVF()) {
+    if (estimateElementCount(EpilogueVectorizationForceVF,
+                             Config.getVScaleForTuning()) >=
         IC * estimateElementCount(MainLoopVF, Config.getVScaleForTuning())) {
       // Note that the main loop leaves IC * MainLoopVF iterations iff a scalar
       // epilogue is required, but then the epilogue loop also requires a scalar
@@ -3488,10 +3497,10 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
     }
 
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization factor is forced.\n");
-    ElementCount ForcedEC = ElementCount::getFixed(EpilogueVectorizationForceVF);
-    if (hasPlanWithVF(ForcedEC)) {
-      std::unique_ptr<VPlan> Clone(getPlanFor(ForcedEC).duplicate());
-      Clone->setVF(ForcedEC);
+    if (hasPlanWithVF(EpilogueVectorizationForceVF)) {
+      std::unique_ptr<VPlan> Clone(
+          getPlanFor(EpilogueVectorizationForceVF).duplicate());
+      Clone->setVF(EpilogueVectorizationForceVF);
       return Clone;
     }
 
@@ -5547,8 +5556,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       // Collect the instructions (and their associated costs) that will be more
       // profitable to scalarize.
       CM.collectNonVectorizedAndSetWideningDecisions(UserVF);
-      ElementCount EpilogueUserVF =
-          ElementCount::getFixed(EpilogueVectorizationForceVF);
+      ElementCount EpilogueUserVF = EpilogueVectorizationForceVF;
       if (EpilogueUserVF.isVector() &&
           ElementCount::isKnownLT(EpilogueUserVF, UserVF)) {
         CM.collectNonVectorizedAndSetWideningDecisions(EpilogueUserVF);
@@ -5801,10 +5809,9 @@ LoopVectorizationPlanner::computeBestVF() {
     return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0), &FirstPlan};
   }
 
-  if (hasPlanWithVF(UserVF) && EpilogueVectorizationForceVF > 1) {
+  if (hasPlanWithVF(UserVF) && hasForcedEpilogueVF()) {
     assert(VPlans.size() == 2 && "Must have exactly 2 VPlans built");
-    assert(VPlans[0]->getSingleVF() ==
-               ElementCount::getFixed(EpilogueVectorizationForceVF) &&
+    assert(VPlans[0]->getSingleVF() == EpilogueVectorizationForceVF &&
            "expected first plan to be for the forced epilogue VF");
     assert(VPlans[1]->getSingleVF() == UserVF &&
            "expected second plan to be for the forced UserVF");
@@ -6189,29 +6196,10 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   VPValue *Ptr = VPI->getOpcode() == Instruction::Load ? VPI->getOperand(0)
                                                        : VPI->getOperand(1);
   if (Consecutive) {
-    GEPNoWrapFlags Flags = vputils::getGEPFlagsForPtr(Ptr);
-    VPSingleDefRecipe *VectorPtr;
-    if (Reverse) {
-      // When folding the tail, we may compute an address that we don't in the
-      // original scalar loop: drop the GEP no-wrap flags in this case.
-      // Otherwise preserve existing flags without no-unsigned-wrap, as we will
-      // emit negative indices.
-      GEPNoWrapFlags ReverseFlags = CM.foldTailByMasking()
-                                        ? GEPNoWrapFlags::none()
-                                        : Flags.withoutNoUnsignedWrap();
-      VectorPtr = new VPVectorEndPointerRecipe(
-          Ptr, &Plan.getVF(), getLoadStoreType(I),
-          /*Stride*/ -1, ReverseFlags, VPI->getDebugLoc());
-    } else {
-      const DataLayout &DL = I->getDataLayout();
-      auto *StrideTy = DL.getIndexType(Ptr->getUnderlyingValue()->getType());
-      VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
-      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I), StrideOne,
-                                            Flags, VPI->getDebugLoc());
-    }
     Builder.setInsertPoint(VPI);
-    Builder.insert(VectorPtr);
-    Ptr = VectorPtr;
+    Ptr = Builder.createConsecutiveVectorPointer(
+        Ptr, getLoadStoreType(I), Reverse, CM.foldTailByMasking(),
+        VPI->getDebugLoc());
   }
 
   if (Reverse && Mask)
@@ -6943,10 +6931,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // the reduction phi to operate on bools before creating the final
     // reduction result.
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
-      auto *AnyOfSelect =
-          cast<VPSingleDefRecipe>(*find_if(PhiR->users(), [](VPUser *U) {
-            return match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
-          }));
+      auto *AnyOfSelect = cast<VPSingleDefRecipe>(
+          findUserOf(PhiR, m_Select(m_VPValue(), m_VPValue(), m_VPValue())));
       VPValue *Start = PhiR->getStartValue();
       bool TrueValIsPhi = AnyOfSelect->getOperand(1) == PhiR;
       // NewVal is the non-phi operand of the select.
