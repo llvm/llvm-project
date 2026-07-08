@@ -2378,6 +2378,10 @@ void OMPClauseEnqueue::VisitOMPLoopRangeClause(const OMPLoopRangeClause *C) {
   Visitor->AddStmt(C->getCount());
 }
 
+void OMPClauseEnqueue::VisitOMPDepthClause(const OMPDepthClause *C) {
+  Visitor->AddStmt(C->getDepth());
+}
+
 void OMPClauseEnqueue::VisitOMPAllocatorClause(const OMPAllocatorClause *C) {
   Visitor->AddStmt(C->getAllocator());
 }
