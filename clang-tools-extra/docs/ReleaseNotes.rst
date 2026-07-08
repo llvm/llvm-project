@@ -541,6 +541,12 @@ Changes in existing checks
   by fixing a false positive on implicitly generated functions such as
   inherited constructors.
 
+- Improved :doc:`cppcoreguidelines-special-member-functions
+  <clang-tidy/checks/cppcoreguidelines/special-member-functions>` check by
+  fixing a false positive with the `AllowImplicitlyDeletedCopyOrMove` option
+  for classes whose copy operations are implicitly deleted by a non-copyable
+  base class.
+
 - Improved :doc:`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by adding the
   `IgnoreMacros` option. When enabled, unscoped ``enum`` declarations within

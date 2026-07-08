@@ -301,7 +301,7 @@
 "`LWG4477 <https://wg21.link/LWG4477>`__","Placement ``operator delete`` should be constexpr","2026-03 (Croydon)","|Complete|","23","`#189843 <https://github.com/llvm/llvm-project/issues/189843>`__",""
 "`LWG4478 <https://wg21.link/LWG4478>`__","``meta::has_identifier`` is not specified for annotations","2026-03 (Croydon)","","","`#189844 <https://github.com/llvm/llvm-project/issues/189844>`__",""
 "`LWG4480 <https://wg21.link/LWG4480>`__","``<stdatomic.h>`` should provide ``ATOMIC_CHAR8_T_LOCK_FREE``","2026-03 (Croydon)","","","`#189845 <https://github.com/llvm/llvm-project/issues/189845>`__",""
-"`LWG4481 <https://wg21.link/LWG4481>`__","Disallow ``chrono::duration<const T, P>``","2026-03 (Croydon)","","","`#189846 <https://github.com/llvm/llvm-project/issues/189846>`__",""
+"`LWG4481 <https://wg21.link/LWG4481>`__","Disallow ``chrono::duration<const T, P>``","2026-03 (Croydon)","|Complete|","23","`#189846 <https://github.com/llvm/llvm-project/issues/189846>`__",""
 "`LWG4483 <https://wg21.link/LWG4483>`__","Multidimensional arrays are not supported by ``meta::reflect_constant_array`` and related functions","2026-03 (Croydon)","","","`#189847 <https://github.com/llvm/llvm-project/issues/189847>`__",""
 "`LWG4485 <https://wg21.link/LWG4485>`__","Move specification for ``task::stop_token_type``","2026-03 (Croydon)","","","`#189848 <https://github.com/llvm/llvm-project/issues/189848>`__",""
 "`LWG4486 <https://wg21.link/LWG4486>`__","``integral-constant-like`` and ``constexpr-wrapper-like`` exposition-only concept duplication","2026-03 (Croydon)","","","`#189849 <https://github.com/llvm/llvm-project/issues/189849>`__",""
