@@ -179,11 +179,12 @@ func.func @atomic_write(%addr : memref<f64>) attributes {acc.routine_info = #acc
 
 acc.routine @acc_routine_atomic_update func(@atomic_update) seq
 // CHECK-LABEL: func.func @atomic_update
+// CHECK-SAME: (%[[X:.*]]: memref<f64>)
 // CHECK-NOT:   acc.atomic
-// CHECK: %[[VAL:.*]] = memref.load %arg0[] : memref<f64>
-// CHECK: %[[CMP:.*]] = arith.cmpf ogt, %[[A:.*]], %[[VAL]] fastmath<contract> : f64
-// CHECK: %[[RES:.*]] = arith.select %[[CMP]], %[[A]], %[[VAL]] : f64
-// CHECK: memref.store %[[RES]], %arg0[] : memref<f64>
+// CHECK: %[[VAL:.*]] = memref.load %[[X]][] : memref<f64>
+// CHECK: %[[CMP:.*]] = arith.cmpf ogt, %{{.*}}, %[[VAL]] fastmath<contract> : f64
+// CHECK: %[[RES:.*]] = arith.select %[[CMP]], %{{.*}}, %[[VAL]] : f64
+// CHECK: memref.store %[[RES]], %[[X]][] : memref<f64>
 func.func @atomic_update(%x : memref<f64>) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_atomic_update]>} {
   %a = arith.constant 5.0e-01 : f64
   acc.parallel {
@@ -200,12 +201,13 @@ func.func @atomic_update(%x : memref<f64>) attributes {acc.routine_info = #acc.r
 
 acc.routine @acc_routine_atomic_capture func(@atomic_capture) seq
 // CHECK-LABEL: func.func @atomic_capture
+// CHECK-SAME: (%[[X:.*]]: memref<f64>, %[[DST:.*]]: memref<f64>)
 // CHECK-NOT:   acc.atomic
-// CHECK: %[[VAL:.*]] = memref.load %arg0[] : memref<f64>
-// CHECK: %[[CMP:.*]] = arith.cmpf ogt, %[[A:.*]], %[[VAL]] fastmath<contract> : f64
-// CHECK: %[[RES:.*]] = arith.select %[[CMP]], %[[A]], %[[VAL]] : f64
-// CHECK: memref.store %[[RES]], %arg0[] : memref<f64>
-// CHECK: memref.copy %arg0, %arg1 : memref<f64> to memref<f64>
+// CHECK: %[[VAL:.*]] = memref.load %[[X]][] : memref<f64>
+// CHECK: %[[CMP:.*]] = arith.cmpf ogt, %{{.*}}, %[[VAL]] fastmath<contract> : f64
+// CHECK: %[[RES:.*]] = arith.select %[[CMP]], %{{.*}}, %[[VAL]] : f64
+// CHECK: memref.store %[[RES]], %[[X]][] : memref<f64>
+// CHECK: memref.copy %[[X]], %[[DST]] : memref<f64> to memref<f64>
 func.func @atomic_capture(%x : memref<f64>, %dst : memref<f64>) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_atomic_capture]>} {
   %a = arith.constant 5.0e-01 : f64
   acc.parallel {
