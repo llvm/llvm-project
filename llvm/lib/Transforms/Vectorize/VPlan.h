@@ -5145,6 +5145,15 @@ public:
            is_contained(ScalarPH->getPredecessors(), getMiddleBlock());
   }
 
+  /// Returns true if this VPlan's tail-folding matches \p TF.
+  /// A plan is tail-folded if it has a header mask, or if it has no scalar
+  /// tail while the TC is not evenly divisible by VF (in which case the tail
+  /// must be folded by the vector loop itself).
+  ///
+  /// This function is used to disambiguate VPlan lookup by VF when multiple
+  /// plans share the same VF but differ in tail-folding status.
+  bool isCompatibleWithTF(bool TF);
+
   /// The type of the canonical induction variable of the vector loop.
   Type *getIndexType() const { return VF.getType(); }
 };

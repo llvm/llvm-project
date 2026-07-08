@@ -1310,6 +1310,25 @@ VPIRBasicBlock *VPlan::createVPIRBasicBlock(BasicBlock *IRBB) {
   return VPIRBB;
 }
 
+bool VPlan::isCompatibleWithTF(bool TF) {
+  bool HasHeaderMask = (vputils::findHeaderMask(*this) != nullptr);
+  bool NoTail = !hasScalarTail();
+  // Check if TC is not divisible by the VF to make sure that the vplan doesn't
+  // have a tail because the tail is folded not because there is no remaining
+  // iterations.
+  bool TCNotDivisibleByVF = true;
+  if (auto *ConstTC = dyn_cast<VPConstantInt>(getTripCount())) {
+    const APInt &TC =
+        cast<ConstantInt>(ConstTC->getLiveInIRValue())->getValue();
+    TCNotDivisibleByVF = any_of(vectorFactors(), [&TC](ElementCount VF) {
+      APInt VFVal(TC.getBitWidth(), VF.getKnownMinValue());
+      return TC.urem(VFVal) != 0;
+    });
+  }
+  NoTail &= TCNotDivisibleByVF;
+  return (TF == (HasHeaderMask | NoTail));
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
 Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
@@ -1678,17 +1697,24 @@ VPBuilder::createConsecutiveVectorPointer(VPValue *Ptr, Type *SourceElementTy,
   return createVectorPointer(Ptr, SourceElementTy, StrideOne, Flags, DL);
 }
 
-VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF) const {
+VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF, bool TF) const {
   assert(count_if(VPlans,
-                  [VF](const VPlanPtr &Plan) { return Plan->hasVF(VF); }) ==
-             1 &&
+                  [VF, TF](const VPlanPtr &Plan) {
+                    return Plan->hasVF(VF) && Plan->isCompatibleWithTF(TF);
+                  }) == 1 &&
          "Multiple VPlans for VF.");
 
   for (const VPlanPtr &Plan : VPlans) {
-    if (Plan->hasVF(VF))
+    if (Plan->hasVF(VF) && Plan->isCompatibleWithTF(TF))
       return *Plan.get();
   }
   llvm_unreachable("No plan found!");
+}
+
+bool LoopVectorizationPlanner::hasPlanWithVF(ElementCount VF, bool TF) const {
+  return any_of(VPlans, [VF, TF](const VPlanPtr &Plan) {
+    return Plan->hasVF(VF) && Plan->isCompatibleWithTF(TF);
+  });
 }
 
 static void addRuntimeUnrollDisableMetaData(Loop *L) {
