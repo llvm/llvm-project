@@ -123,7 +123,7 @@ private:
 };
 
 template<class It, class EndOrSize>
-    span(It, EndOrSize) -> span<remove_reference_t<iter_reference_t<It>>, maybe-static-ext<EndOrSize>>; // since C++26
+    span(It, EndOrSize) -> span<remove_reference_t<iter_reference_t<It>>, maybe-static-ext<EndOrSize>>;
 
 template<class T, size_t N>
     span(T (&)[N]) -> span<T, N>;
