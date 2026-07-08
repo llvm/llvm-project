@@ -22,6 +22,7 @@
 #include "SPIRVTypeInst.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -6318,9 +6319,13 @@ bool SPIRVInstructionSelector::selectResourceNonUniformIndex(
 void SPIRVInstructionSelector::decorateUsesAsNonUniform(
     Register &NonUniformReg) const {
   llvm::SmallVector<Register> WorkList = {NonUniformReg};
+  llvm::SmallSet<Register, 8> Visited;
   while (WorkList.size() > 0) {
     Register CurrentReg = WorkList.back();
     WorkList.pop_back();
+
+    if (!Visited.insert(CurrentReg).second)
+      continue;
 
     bool IsDecorated = false;
     for (MachineInstr &Use : MRI->use_instructions(CurrentReg)) {
@@ -6340,7 +6345,10 @@ void SPIRVInstructionSelector::decorateUsesAsNonUniform(
     }
 
     if (!IsDecorated) {
-      buildOpDecorate(CurrentReg, *MRI->getVRegDef(CurrentReg), TII,
+      MachineInstr *DefMI = MRI->getVRegDef(CurrentReg);
+      MachineBasicBlock &MBB = *DefMI->getParent();
+      MachineInstr &InsertPt = DefMI->isPHI() ? *MBB.getFirstNonPHI() : *DefMI;
+      buildOpDecorate(CurrentReg, InsertPt, TII,
                       SPIRV::Decoration::NonUniformEXT, {});
     }
   }
