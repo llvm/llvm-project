@@ -10,8 +10,11 @@
 // atomic_init is deprecated
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
-// atomic<T>::compare_exchange_weak
-// atomic<T>::compare_exchange_strong
+// atomic<T>::atomic()
+// atomic<T>::atomic(T)
+// atomic<T>::store(T)
+// atomic<T>::exchange(T)
+// atomic_init(T)
 // libc++ maintains the invariant of the atomic to have zero for all padding bits
 
 #include <atomic>

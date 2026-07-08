@@ -133,6 +133,33 @@ void test() {
     // libc++ always maintains the invariant of the atomic to have zeros in the padding bits
     libcpp_assert_padding(loaded, 0);
   }
+  {
+    // compare_exchange_strong
+    // atomic and expected are the same, including padding
+
+    T init = make<T>(10, 'a', 0x00);
+    assert_padding(init, 0x00);
+    a.store(init);
+
+    T expected = make<T>(10, 'a', 0x00);
+    assert_padding(expected, 0x00);
+
+    T original_expected; // make a copy including padding bits
+    std::memcpy(&original_expected, &expected, sizeof(T));
+
+    T new_value = make<T>(42, 'b', 0x42);
+    assert_padding(new_value, 0x42);
+
+    bool r = a.compare_exchange_strong(expected, new_value);
+
+    assert(r);
+    assert(std::memcmp(&expected, &original_expected, sizeof(T)) == 0);
+    T loaded = a.load();
+    assert(loaded.i == 42);
+    assert(loaded.c == 'b');
+    // libc++ always maintains the invariant of the atomic to have zeros in the padding bits
+    libcpp_assert_padding(loaded, 0);
+  }
 
   {
     // compare_exchange_weak
