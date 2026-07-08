@@ -1,9 +1,9 @@
-===========================
+======================
 C++ Profiles Framework
-===========================
+======================
 
 .. contents::
-   :depth: 3
+   :depth: 2
    :local:
 
 
@@ -11,183 +11,180 @@ Introduction
 ============
 
 The C++ Profiles framework (`P3589R2
-<https://open-std.org/JTC1/SC22/WG21/docs/papers/2025/p3589r2.pdf>`_) allows a
-translation unit to opt into additional language restrictions called *profiles*.
-A profile is a named set of rules enforced by the compiler. A translation unit
-requests enforcement with ``[[profiles::enforce(...)]]``; individual
-declarations or statements can suppress enforcement with
-``[[profiles::suppress(...)]]``; and module imports can require that an imported
-module enforces a profile with ``[[profiles::require(...)]]``.
+<https://open-std.org/JTC1/SC22/WG21/docs/papers/2025/p3589r2.pdf>`_) lets a
+translation unit opt into additional language restrictions called *profiles*.
+A profile is a named set of rules enforced by the compiler, each formulated
+to keep the program free of a certain class of problems -- for example, use
+of uninitialized memory.  Three attributes control it:
+
+- ``[[profiles::enforce(...)]]`` requests enforcement of one or more profiles
+  for the translation unit.
+- ``[[profiles::suppress(...)]]`` locally exempts a declaration or statement
+  from an enforced profile, or from a single rule of it.
+- ``[[profiles::require(...)]]`` on a module import verifies that the
+  imported module advertises a profile.
 
 Profiles do not change the meaning of well-formed programs with no undefined
-behavior.  Their static semantic effects are conceptually applied only after
-translation phase 7: a profile cannot change the outcome of overload resolution
-or template instantiation, and it is not possible to SFINAE on a profile
+behavior.  Their effects are conceptually applied only after translation
+phase 7: a profile cannot change the outcome of overload resolution or
+template instantiation, and it is not possible to SFINAE on a profile
 violation.
 
-The framework is profile-agnostic.  It handles attribute parsing, enforcement
-tracking, suppression scoping, module integration, and serialization.
-Individual profiles only need to call a single API at the appropriate semantic
-check sites (``SemaProfiles::checkProfileViolation`` for parse-time checks, or
-``SemaProfiles::shouldEmitProfileViolation`` from a per-pass dispatch table for
-post-parse analyses).  Everything else -- suppression, template instantiation,
-SFINAE exclusion, module propagation, and PCH/BMI serialization -- is handled
-by the framework automatically.
+Profile names are open-ended: standard (``std::``-prefixed),
+implementation-defined, and third-party profiles are all requested with the
+same syntax, and enforcing a profile the implementation does not know is not
+an error -- it simply has no rules to enforce.  Clang currently implements
+one real profile, an initial slice of the proposed ``std::init``
+initialization profile (see `The std::init Profile (initial slice)`_).  The
+feature is experimental: attribute spellings, rule names, and diagnostics may
+change.
 
 
-Driver Flag
------------
+Usage
+=====
 
-The entire framework is gated on the ``-fprofiles`` command-line flag, which
-sets ``LangOpts.Profiles``.  The flag is C++-only (declared with
-``ShouldParseIf<cplusplus.KeyPath>`` in ``clang/include/clang/Options/Options.td``)
-and defaults to off.
+The framework is gated on the C++-only ``-fprofiles`` flag, which defaults to
+off:
 
-.. code-block:: bash
+.. code-block:: console
 
    clang++ -std=c++23 -fprofiles example.cpp
 
-Without ``-fprofiles``:
+The attributes accept both the ``[[profiles::name(...)]]`` and the
+``[[using profiles: name(...)]]`` spelling and always require an argument
+clause; see the :doc:`AttributeReference` for the per-attribute reference.
 
-- ``[[profiles::enforce]]``, ``[[profiles::suppress]]``, and
-  ``[[profiles::require]]`` are diagnosed as ``warn_attribute_ignored`` and
-  have no semantic effect.
-- Their argument clauses are **not** checked against the P3589R2 profile
-  grammar: like any standard attribute the implementation does not act on,
-  an arbitrary balanced-token argument clause -- or none at all -- is
-  accepted, so code annotated for a profiles-enabled build compiles cleanly
-  (modulo the warning) with the feature off.  P3589R2's grammar is enforced
-  only under ``-fprofiles``.
-- No profile rule check ever fires, even at sites that call
-  ``checkProfileViolation``.
-
-The framework's parse-time bookkeeping (``ProfileSuppressScope``, attribute
-custom parsing, etc.) is also no-ops when ``LangOpts.Profiles`` is false, so
-the flag is the single switch that turns the entire feature on or off.
+Without ``-fprofiles`` the attributes are ignored with a warning, and their
+argument clauses are not checked against the P3589R2 grammar -- like any
+standard attribute the implementation does not act on, an arbitrary
+balanced-token argument clause is accepted.  Code annotated for a
+profiles-enabled build therefore still compiles (modulo the warning) with the
+feature off, and no profile rule ever fires.
 
 
-Attribute Reference
-===================
+Enforcing Profiles
+==================
 
-The three attributes are spelled in the ``profiles`` scope and accept either
-the ``[[profiles::name(...)]]`` or ``[[using profiles: name(...)]]`` syntax.
-Each attribute requires an argument clause; ``[[profiles::enforce]]`` and
-``[[profiles::require]]`` with no parentheses are diagnosed.
+``[[profiles::enforce(profile-designator-list)]]`` requests enforcement of
+the named profiles for the whole translation unit.  It may appear only on an
+*empty-declaration* that precedes every other declaration at translation-unit
+scope, or on a *module-declaration* (see `Profiles and Modules`_):
 
-``[[profiles::enforce(profile-designator-list)]]``
-   Allowed only on an *empty-declaration* at translation-unit scope or on a
-   *module-declaration*.  At TU scope, it must precede every non-empty
-   declaration in the translation unit.  Each profile-designator is a
-   ``::``-separated identifier sequence optionally followed by an
-   argument-clause (e.g. ``vendor(fortify: 3)``).  Repeating the same name
-   with the same canonical designator is allowed; repeating it with a
-   different canonical designator is an error.
+.. code-block:: c++
 
-``[[profiles::suppress(profile-name [, justification: "..."] [, rule: "..."])]]``
-   Allowed on declarations and statements.  Suppresses violations of the named
-   profile (optionally narrowed to a single rule) within the appertaining
-   declaration or statement; see :ref:`profiles-token-dominion` below.  The
-   ``justification:`` argument, if present, must be a string literal; the
-   ``rule:`` argument may be a string literal or a bare token.  Both
-   arguments are recorded but otherwise opaque to the framework.
+   [[profiles::enforce(std::init)]];
+   [[profiles::enforce(vendor::hardened(fortify: 3))]];  // designator arguments
 
-``[[profiles::require(profile-designator)]]``
-   Allowed only on a *module-import-declaration*.  Diagnoses if the imported
-   module's exported enforced-profile set does not contain a designator
-   matching the requested one.  Importing a module does **not** retroactively
-   enforce its profiles in the importer.
+   #include <my/lib.h>
 
-See the auto-generated :doc:`AttributeReference` for the AttrDocs entries
-linked from these attributes.
+   int main() { /* ... */ }
+
+A *profile-designator* is a ``::``-qualified profile name, optionally
+followed by a parenthesized argument list.  The arguments are not subject to
+name lookup; their interpretation is up to the profile.  Repeating an
+enforcement with the same designator is allowed and has no effect, but
+requesting the same profile with a different designator is an error, as is an
+enforcement placed after another declaration:
+
+.. code-block:: c++
+
+   [[profiles::enforce(vendor::hardened(fortify: 3))]];
+   [[profiles::enforce(vendor::hardened(fortify: 3))]];  // OK: no effect
+   [[profiles::enforce(vendor::hardened(fortify: 2))]];  // error: same profile,
+                                                         // different designator
+   int x;
+   [[profiles::enforce(std::init)]];  // error: does not precede 'x'
 
 
-Extending the Framework
+Suppressing Enforcement
 =======================
 
-The framework is profile-agnostic: profile names are opaque strings, there is
-no central registry, and adding a new profile requires no changes to the
-framework itself.  See :doc:`ProfilesFrameworkInternals` for the
-implementation patterns and the API for adding a new profile.
+``[[profiles::suppress(profile-name)]]`` on a declaration or statement
+exempts it from the named profile's rules.  An optional ``rule:`` argument
+narrows the suppression to a single named rule, and an optional
+``justification:`` argument (a string literal) records why the suppression is
+there:
+
+.. code-block:: c++
+
+   [[profiles::enforce(std::init)]];
+
+   void fill(char *buf, int n);
+
+   int main() {
+     [[profiles::suppress(std::init,
+                          rule: "uninit_decl",
+                          justification: "buffer is filled in by fill()")]]
+     char buffer[1024];
+     fill(buffer, 1024);
+   }
+
+A suppression covers exactly the tokens of the declaration or statement it
+appertains to -- nothing more.  For a variable declaration that includes the
+initializer, so violations inside the initializer are silenced; but the
+variable is *not* marked as exempt at later uses, which appear in other
+declarations or statements and are checked normally:
+
+.. code-block:: c++
+
+   [[profiles::suppress(std::init)]] int x;  // OK: uninit_decl suppressed
+   int y = x;  // error: 'x' is read before initialization
+
+To exempt an object from a profile's checks everywhere it is used, use the
+profile's own per-object marker instead (for ``std::init``, ``[[uninit]]``).
 
 
-.. _profiles-token-dominion:
+Profiles and Modules
+====================
 
-Suppression Dominion is Token-Based
-===================================
+A module interface advertises the profiles it enforces through
+``[[profiles::enforce]]`` on its module-declaration, and importers can insist
+on that advertisement with ``[[profiles::require]]``, which may appear only
+on a module-import-declaration:
 
-A ``[[profiles::suppress(P)]]`` attribute suppresses profile ``P`` in the
-token range of the declaration or statement it appertains to -- nothing more.
-For a variable declaration that range covers the initializer expression (so
-``[[profiles::suppress(P)]] T x = init();`` silences violations inside
-``init()``), but it does *not* tag the variable as permitted-uninitialized for
-subsequent uses; those uses appear in different declarations or statements
-and are checked normally at their own source location. Profiles that need
-per-object "opt-out of this check everywhere this value is used" semantics
-(for example, the proposed ``[[uninit]]`` attribute of the
-initialization profile) must introduce their own, separate, decl-scoped
-marker.
+.. code-block:: c++
 
-This applies identically to the parse-time suppression stack and the
-post-parse Stmt-tree walker described in pattern 2.
+   // M.cppm
+   export module M [[profiles::enforce(std::init)]];
 
-The parse-time stack enforces the dominion positionally: each entry records
-the token range of the construct its attribute appertains to, and a
-violation matches an entry only if its location falls within that range (in
-translation-unit token order).  This is what keeps a live suppress scope
-from leaking into code whose tokens it does not cover.  A check can fire
-under an *unrelated* construct's scope in two ways: a template pattern
-instantiated synchronously while the scope is live (instantiated code
-retains the pattern's source locations, which lie outside the suppressed
-construct wherever the pattern is declared -- before it, or first declared
-after it), and a class or constructor finalized as a side effect of such an
-instantiation (patterns 3 and 4).  In both cases the violation's location is
-outside the entry's range, so the suppression correctly does not apply;
-conversely, a local class or lambda *defined inside* the suppressed
-construct is covered, whichever path re-enters it.
+   // user.cpp
+   import M [[profiles::require(std::init)]];  // OK: M enforces std::init
+   import N [[profiles::require(std::init)]];  // error unless N does too
 
-The range's end is recorded only when the construct was already fully
-parsed when the entry was pushed -- a completed pattern or lexical parent at
-an instantiation site, or a transformed ``AttributedStmt``.  For a construct
-still being parsed no end is recorded (its end location would be
-misleadingly early: a mid-parse class collapses to its name token, a
-body-pending function to its declarator) and the entry's
-``ProfileSuppressScope`` lifetime bounds the dominion instead.  That
-fallback is exact mid-parse: the construct's later tokens do not exist yet,
-and instantiation of a template that has no definition yet is deferred past
-the scope's death.
+``[[profiles::require]]`` only verifies the advertisement; importing an
+enforcing module does **not** enforce its profiles in the importer.
+Enforcement is always explicit and local.  A header unit participates the
+same way: an ``[[profiles::enforce(...)]];`` empty-declaration in the header
+is exported by the corresponding header unit and validated by
+``[[profiles::require]]`` on its import.
+
+Enforcement on a module interface extends to the module's implementation
+units:
+
+- A non-partition implementation unit (``module M;``) inherits the
+  interface's enforcements automatically.
+- A partition implementation unit (``module M:P;``) inherits them only on a
+  best-effort basis, because the interface's BMI is usually not built yet
+  when the partition is compiled.  Repeat the ``[[profiles::enforce]]`` there
+  for guaranteed enforcement.
+
+A declaration and its redeclarations must appear under mutually *compatible*
+profiles (P3589R2 [decl.attr.enforce]p5): redeclaring an entity from a module
+or header unit that was compiled without a compatible profile is diagnosed.
+Two profiles are compatible when they have the same name (designator
+arguments configure a profile without changing its identity), and all
+standard ``std::`` profiles are mutually compatible.
 
 
-Intentional Omissions
-=====================
-
-The following parts of P3589R2 are deliberately not implemented:
-
-- ``[[profiles::exempt(...)]]`` (P3589R2 section 1.1.6), which would exempt
-  named included source files from profile enforcement. Implementing it
-  requires bookkeeping that connects the original spelling of an ``#include``
-  to the source locations of constructs in the included file, and the feature
-  is not needed to exercise or validate the rest of the framework.
-
-
-Built-in Profiles
-=================
-
-The tree ships the ``std::init`` profile (below) plus four ``test::``
-profiles, all gated on ``-fprofiles``.  The ``test::`` profiles exist only to
-exercise the framework: they are additionally gated on the ``-cc1``-only
-``-fprofiles-test-profiles`` flag, are inert under ``-fprofiles`` alone, and
-are described in :doc:`ProfilesFrameworkInternals`.
+The ``std::init`` Profile (initial slice)
+=========================================
 
 ``std::init`` is an initial slice of the proposed initialization profile from
 Bjarne Stroustrup's "An initialization profile" (P4222R1.1), on top of P3589R2
 and P3402R3.  Paper section references (``§``) for ``std::init`` in this
 document are to P4222R1.1.
 
-
-The ``std::init`` Profile (initial slice)
------------------------------------------
-
-A slice of the proposed initialization profile.  A read of a scalar
+A read of a scalar
 ``[[uninit]]`` data member before it is assigned *is* diagnosed by R1 via
 CFG-based definite-assignment passes (paper §7.1 "initialized ... before
 use"): over the constructor body for the current object's members, and over
@@ -220,7 +217,7 @@ because R7 fires only at binding sites.
 The slice introduces two marker attributes and the rules below.
 
 Marker attributes
-~~~~~~~~~~~~~~~~~
+-----------------
 
 ``[[uninit]]`` (a standard C++11 attribute, distinct from the Clang
 vendor attribute ``[[clang::uninitialized]]``) marks a ``VarDecl`` or
@@ -270,10 +267,10 @@ profile rule carries weight only when ``std::init`` is enforced.
 - Behaviour: drives the ``ref_to_uninit`` rule (below); has no other effect.
 
 Rules
-~~~~~
+-----
 
 R1. ``uninit_read`` -- pattern 2 (CFG)
-......................................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Reads of an uninitialized variable.  Implemented as a second row in the
 existing ``CFGUninitProfiles`` table beside ``test::uninit_read``:
@@ -406,7 +403,7 @@ Details:
   exemption applies (a ``std::byte`` member is never tracked).
 
 R2. ``uninit_decl`` -- pattern 1
-.................................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 An automatic-storage variable definition whose default-initialization
 leaves it (or a scalar subobject) indeterminate must either carry
@@ -434,7 +431,7 @@ variable is instead rejected by ``static_marker`` (R9)).
   mixed type still fires for its unmarked scalars.
 
 R3. ``static_runtime_init`` -- pattern 1
-.........................................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A non-local variable whose initializer is not a constant expression must
 be ``constinit`` (which is already a hard error from the existing
@@ -448,7 +445,7 @@ be ``constinit`` (which is already a hard error from the existing
   (so the profile error takes precedence when both would fire).
 
 R4. ``uninit_with_initializer`` -- pattern 1
-............................................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``[[uninit]]`` and an initializer on the same declaration is a
 contradiction (the marker means "no initialization here").
@@ -471,7 +468,7 @@ contradiction (the marker means "no initialization here").
   the rule must not fire (e.g. ``A a [[uninit]];`` for the ``A`` above).
 
 R5. ``ctor_uninit_member`` -- pattern 4
-.......................................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A user-provided constructor must initialize every non-static data member
 via its member-initializer list or an NSDMI, unless the member is marked
@@ -511,7 +508,7 @@ a base with a user-provided default constructor is trusted.
   ``defaultInitLeavesScalarIndeterminate`` (R2).
 
 R6. ``union_marker`` -- attribute handler
-.........................................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``[[uninit]]`` on a union object or a union member is banned (paper
 §5.6): delayed initialization by assigning a member would be an erroneous
@@ -562,7 +559,7 @@ member initializer.  A uninitialized union variable is therefore diagnosed by
 uninitialized union data member by ``ctor_uninit_member``.
 
 R7. ``ref_to_uninit`` -- pattern 1
-..................................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A pointer or reference must be bound consistently with its
 ``[[ref_to_uninit]]`` marking (paper §4.3): a marked pointer/reference may only
@@ -752,7 +749,7 @@ recognizers symmetric.
   pointer-to-member analog of the call-through-function-pointer gap.
 
 R8. ``pointer_marker`` -- attribute handler
-...........................................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``[[uninit]]`` on a pointer is banned (paper §4.3): "a reference cannot
 be uninitialized.  The initialization profile requires the same for pointers."
@@ -787,7 +784,7 @@ A pointer must instead be initialized (e.g. to ``nullptr``).
   out of scope.
 
 R9. ``static_marker`` -- pattern 1
-..................................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A variable with static or thread storage duration is zero-initialized by
 language rule (paper §3), so it is an initialized object; marking it
@@ -831,7 +828,7 @@ language rule (paper §3), so it is an initialized object; marking it
   fires in every case.
 
 R10. ``uninit_write`` -- pattern 1
-..................................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A scalar store to a *proper subobject* of a named ``[[uninit]]`` entity is
 banned delayed initialization (paper §1 "reading or writing uninitialized
@@ -898,10 +895,36 @@ initialization sequence.
   writes needs construct_at modeling).
 
 Diagnostic suppression
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 
 Every rule is suppressible per-site with
 ``[[profiles::suppress(std::init)]]`` (covers all rules) or
 ``[[profiles::suppress(std::init, rule: "rule_name")]]`` (rule-targeted).
 The token-based-dominion limitation noted earlier applies: a suppress
 attribute on a ``VarDecl`` covers only that declaration's tokens.
+
+
+Test Profiles
+=============
+
+Clang also ships four ``test::`` profiles (``test::type_cast``,
+``test::uninit_read``, ``test::class_final``, and ``test::ctor_final``) that
+exist only to exercise the framework in the test suite.  They are inert
+without an additional ``-cc1``-only flag; see
+:doc:`ProfilesFrameworkInternals`.
+
+
+Not Yet Implemented
+===================
+
+``[[profiles::exempt(...)]]`` (P3589R2 §1.1.6), which would exempt named
+included source files from the enforcement of a profile, is not implemented.
+
+
+Extending the Framework
+=======================
+
+The framework is profile-agnostic: profile names are opaque strings, there is
+no central registry, and adding a new profile requires no changes to the
+framework itself.  See :doc:`ProfilesFrameworkInternals` for the
+implementation patterns and the API for adding a new profile.
