@@ -61,6 +61,14 @@ def int_dx_resource_store_rawbuffer
     : DefaultAttrsIntrinsic<
           [], [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_any_ty],
           [IntrWriteMem]>;
+// Resource atomic binary op: performs an atomic read-modify-write on a UAV
+// resource element and returns the original value. The i32 operation code
+// matches DXIL's AtomicBinOpCode enum.
+def int_dx_resource_atomicbinop
+    : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                            [llvm_any_ty, llvm_i32_ty, llvm_i32_ty,
+                             llvm_i32_ty, LLVMMatchType<0>],
+                            [IntrArgMemOnly]>;
 
 // dx.resource.load.cbufferrow encodes the number of elements returned in the
 // function name. The total size of the return should always be 128 bits.

@@ -26,6 +26,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include <optional>
 
 #define DEBUG_TYPE "dxil-resource-access"
 
@@ -226,6 +227,114 @@ static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
   case dxil::ResourceKind::Invalid:
   case dxil::ResourceKind::NumEntries:
     llvm_unreachable("Invalid resource kind for store");
+  }
+  llvm_unreachable("Unhandled case in switch");
+}
+
+static std::optional<unsigned> getAtomicBinOpCode(AtomicRMWInst::BinOp BinOp) {
+  switch (BinOp) {
+  case AtomicRMWInst::Add:
+    return 0;
+  case AtomicRMWInst::And:
+    return 1;
+  case AtomicRMWInst::Or:
+    return 2;
+  case AtomicRMWInst::Xor:
+    return 3;
+  case AtomicRMWInst::Min:
+    return 4;
+  case AtomicRMWInst::Max:
+    return 5;
+  case AtomicRMWInst::UMin:
+    return 6;
+  case AtomicRMWInst::UMax:
+    return 7;
+  case AtomicRMWInst::Xchg:
+    return 8;
+  case AtomicRMWInst::Sub:
+  case AtomicRMWInst::Nand:
+  case AtomicRMWInst::FAdd:
+  case AtomicRMWInst::FSub:
+  case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMaximum:
+  case AtomicRMWInst::FMinimum:
+  case AtomicRMWInst::FMaximumNum:
+  case AtomicRMWInst::FMinimumNum:
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
+  case AtomicRMWInst::BAD_BINOP:
+    return std::nullopt;
+  }
+  llvm_unreachable("Unhandled atomicrmw operation");
+}
+
+static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
+                              dxil::ResourceTypeInfo &RTI) {
+  std::optional<unsigned> BinOpCode = getAtomicBinOpCode(AI->getOperation());
+  if (!BinOpCode) {
+    reportFatalUsageError("DXIL resource atomicrmw operation not implemented");
+    return;
+  }
+
+  const DataLayout &DL = AI->getDataLayout();
+  IRBuilder<> Builder(AI);
+  Value *Index = II->getOperand(1);
+
+  // The offset for the rawbuffer load/store/atomic ops is always in bytes.
+  uint64_t AccessSize = 1;
+  Value *Offset =
+      traverseGEPOffsets(DL, Builder, AI->getPointerOperand(), AccessSize);
+
+  // For raw buffer (ie, HLSL's ByteAddressBuffer), we need to fold the access
+  // entirely into the index.
+  if (!RTI.isStruct()) {
+    auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
+    if (!ConstantOffset || !ConstantOffset->isZero())
+      Index = Builder.CreateAdd(Index, Offset);
+    Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
+  }
+
+  auto *BinOp = Builder.getInt32(*BinOpCode);
+  Value *V = Builder.CreateIntrinsic(
+      AI->getType(), Intrinsic::dx_resource_atomicbinop,
+      {II->getOperand(0), Index, Offset, BinOp, AI->getValOperand()});
+  AI->replaceAllUsesWith(V);
+}
+
+static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
+                                       dxil::ResourceTypeInfo &RTI) {
+  switch (RTI.getResourceKind()) {
+  case dxil::ResourceKind::TypedBuffer:
+  case dxil::ResourceKind::RawBuffer:
+  case dxil::ResourceKind::StructuredBuffer:
+    return createAtomicBinOp(II, AI, RTI);
+  case dxil::ResourceKind::Texture1D:
+  case dxil::ResourceKind::Texture2D:
+  case dxil::ResourceKind::Texture2DMS:
+  case dxil::ResourceKind::Texture3D:
+  case dxil::ResourceKind::TextureCube:
+  case dxil::ResourceKind::Texture1DArray:
+  case dxil::ResourceKind::Texture2DArray:
+  case dxil::ResourceKind::Texture2DMSArray:
+  case dxil::ResourceKind::TextureCubeArray:
+  case dxil::ResourceKind::FeedbackTexture2D:
+  case dxil::ResourceKind::FeedbackTexture2DArray:
+    reportFatalUsageError(
+        "DXIL atomicrmw not implemented for texture resources");
+    return;
+  case dxil::ResourceKind::CBuffer:
+  case dxil::ResourceKind::Sampler:
+  case dxil::ResourceKind::TBuffer:
+    reportFatalUsageError(
+        "DXIL atomicrmw not implemented for this resource type");
+    return;
+  case dxil::ResourceKind::RTAccelerationStructure:
+  case dxil::ResourceKind::Invalid:
+  case dxil::ResourceKind::NumEntries:
+    llvm_unreachable("Invalid resource kind for atomicrmw");
   }
   llvm_unreachable("Unhandled case in switch");
 }
@@ -550,6 +659,8 @@ static Instruction *getStoreLoadPointerOperand(Instruction *AI) {
     return dyn_cast<Instruction>(LI->getPointerOperand());
   if (auto *SI = dyn_cast<StoreInst>(AI))
     return dyn_cast<Instruction>(SI->getPointerOperand());
+  if (auto *RMWI = dyn_cast<AtomicRMWInst>(AI))
+    return dyn_cast<Instruction>(RMWI->getPointerOperand());
 
   return nullptr;
 }
@@ -786,6 +897,36 @@ static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
     } else if (auto *LI = dyn_cast<LoadInst>(U)) {
       createLoadIntrinsic(II, LI, RTI);
       DeadInsts.push_back(LI);
+    } else if (auto *AI = dyn_cast<AtomicRMWInst>(U)) {
+      createAtomicBinOpIntrinsic(II, AI, RTI);
+      DeadInsts.push_back(AI);
+    } else if (auto *CI = dyn_cast<CallInst>(U)) {
+      // `dx.interlocked.*` intrinsics wrap an atomicrmw and are expanded to
+      // one by DXILIntrinsicExpansion — but that pass runs after this one, so
+      // when the source of the pointer is a resource we must expand them here
+      // (and immediately process the resulting atomicrmw) instead of letting
+      // the pointer escape.
+      auto *IntrinCall = dyn_cast<IntrinsicInst>(CI);
+      std::optional<AtomicRMWInst::BinOp> Op;
+      if (IntrinCall) {
+        switch (IntrinCall->getIntrinsicID()) {
+        case Intrinsic::dx_interlocked_add:
+          Op = AtomicRMWInst::Add;
+          break;
+        default:
+          break;
+        }
+      }
+      if (!Op)
+        llvm_unreachable("Unhandled instruction - pointer escaped?");
+      IRBuilder<> Builder(IntrinCall);
+      auto *AI = Builder.CreateAtomicRMW(
+          *Op, IntrinCall->getArgOperand(0), IntrinCall->getArgOperand(1),
+          MaybeAlign(), AtomicOrdering::Monotonic);
+      IntrinCall->replaceAllUsesWith(AI);
+      createAtomicBinOpIntrinsic(II, AI, RTI);
+      DeadInsts.push_back(AI);
+      DeadInsts.push_back(IntrinCall);
     } else
       llvm_unreachable("Unhandled instruction - pointer escaped?");
   }

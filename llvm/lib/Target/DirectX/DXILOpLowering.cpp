@@ -849,6 +849,33 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerResourceAtomicBinOp(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index = CI->getArgOperand(1);
+      Value *Offset = CI->getArgOperand(2);
+      Value *BinOp = CI->getArgOperand(3);
+      Value *NewValue = CI->getArgOperand(4);
+
+      std::array<Value *, 6> Args{Handle, BinOp,           Index,
+                                  Offset, IRB.getInt32(0), NewValue};
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::AtomicBinOp, Args, CI->getName(), CI->getType());
+
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerGetDimensionsX(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -1209,6 +1236,9 @@ public:
         break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
+        break;
+      case Intrinsic::dx_resource_atomicbinop:
+        HasErrors |= lowerResourceAtomicBinOp(F);
         break;
       case Intrinsic::dx_resource_getdimensions_x:
         HasErrors |= lowerGetDimensionsX(F);
