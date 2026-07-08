@@ -716,21 +716,25 @@ static std::optional<unsigned> getInsertExtractIndex(const Value *Inst,
   static_assert(std::is_same_v<T, InsertElementInst> ||
                     std::is_same_v<T, ExtractElementInst>,
                 "unsupported T");
-  int Index = Offset;
-  if (const auto *IE = dyn_cast<T>(Inst)) {
-    const auto *VT = dyn_cast<FixedVectorType>(IE->getType());
-    if (!VT)
-      return std::nullopt;
-    const auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
-    if (!CI)
-      return std::nullopt;
-    if (CI->getValue().uge(VT->getNumElements()))
-      return std::nullopt;
-    Index *= VT->getNumElements();
-    Index += CI->getZExtValue();
-    return Index;
-  }
-  return std::nullopt;
+  const auto *IE = dyn_cast<T>(Inst);
+  if (!IE)
+    return std::nullopt;
+  // InsertElement: result is the vector, index is op 2.
+  // ExtractElement: result is scalar, vector is op 0, index is op 1.
+  constexpr bool IsInsert = std::is_same_v<T, InsertElementInst>;
+  Type *VecTy = IsInsert ? IE->getType() : IE->getOperand(0)->getType();
+  const auto *VT = dyn_cast<FixedVectorType>(VecTy);
+  if (!VT)
+    return std::nullopt;
+  const auto *CI = dyn_cast<ConstantInt>(IE->getOperand(IsInsert ? 2 : 1));
+  if (!CI)
+    return std::nullopt;
+  if (CI->getValue().uge(VT->getNumElements()))
+    return std::nullopt;
+  unsigned Index = Offset;
+  Index *= VT->getNumElements();
+  Index += CI->getZExtValue();
+  return Index;
 }
 
 /// \returns inserting or extracting index of InsertElement, ExtractElement or
@@ -743,7 +747,7 @@ static std::optional<unsigned> getElementIndex(const Value *Inst,
   if (auto Index = getInsertExtractIndex<ExtractElementInst>(Inst, Offset))
     return Index;
 
-  int Index = Offset;
+  unsigned Index = Offset;
 
   const auto *IV = dyn_cast<InsertValueInst>(Inst);
   if (!IV)

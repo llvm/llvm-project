@@ -6615,6 +6615,11 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
             RUN_VPLAN_PASS(VPlanTransforms::narrowInterleaveGroups, *Plan, TTI))
       VPlans.push_back(std::move(P));
 
+    TailFoldingStyle Style = CM.getTailFoldingStyle();
+    RUN_VPLAN_PASS(VPlanTransforms::materializeHeaderMask, *Plan,
+                   useActiveLaneMask(Style),
+                   useActiveLaneMaskForControlFlow(Style));
+
     RUN_VPLAN_PASS_NO_VERIFY(printOptimizedVPlan, *Plan);
     assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
     VPlans.push_back(std::move(Plan));
@@ -6855,13 +6860,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
 
   RUN_VPLAN_PASS(VPlanTransforms::dropPoisonGeneratingRecipes, *Plan);
 
-  if (useActiveLaneMask(Style)) {
-    // TODO: Move checks to VPlanTransforms::addActiveLaneMask once
-    // TailFoldingStyle is visible there.
-    bool ForControlFlow = useActiveLaneMaskForControlFlow(Style);
-    RUN_VPLAN_PASS(VPlanTransforms::addActiveLaneMask, *Plan, ForControlFlow);
-  }
-
   if (CM.maskPartialAliasing())
     RUN_VPLAN_PASS(VPlanTransforms::attachAliasMaskToHeaderMask, *Plan);
 
@@ -6877,7 +6875,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
   VPBasicBlock *LatchVPBB = VectorLoopRegion->getExitingBasicBlock();
   Builder.setInsertPoint(&*std::prev(std::prev(LatchVPBB->end())));
   VPBasicBlock::iterator IP = MiddleVPBB->getFirstNonPhi();
-  VPValue *HeaderMask = vputils::findHeaderMask(*Plan);
+  VPValue *HeaderMask = Plan->getVectorLoopRegion()->getHeaderMask();
   for (VPRecipeBase &R :
        Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
