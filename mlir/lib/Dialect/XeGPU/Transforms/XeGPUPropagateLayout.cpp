@@ -71,12 +71,13 @@ namespace {
 /// Given this, LayoutInfo  satisifies the following properties:
 ///  1) A LayoutInfo value can be in one of two states - `assigned` or `not
 ///  assigned`.
-///  2) Two LayoutInfo values are equal if they are both assigned or
-///  both not assigned. The concrete value of assigned state does not matter.
+///  2) Two LayoutInfo values are equal if they are both not assigned, or both
+///  assigned with the same layout.
 ///  3) The meet operator works as follows:
-///     - If current state is assigned, return the current state. (already
-///     a unique layout is assigned. don't change it)
-///     - Otherwise, return the other state.
+///     - If only one side is assigned, return that side.
+///     - If both sides are assigned, prefer the side carrying a slice layout.
+///       If both (or neither) are slice layouts, prefer the lhs (current
+///       state) so an already assigned unique layout is not changed.
 
 struct LayoutInfo {
 private:
@@ -86,10 +87,14 @@ public:
   LayoutInfo() = default;
   LayoutInfo(const xegpu::DistributeLayoutAttr &layout) : storage(layout) {}
 
-  // Two lattice values are equal if they have `some` layout. The actual
-  // content of the layout does not matter.
+  // Two lattice values are equal if they are both unassigned, or both assigned
+  // with the same layout.
   bool operator==(const LayoutInfo &other) const {
-    return this->isAssigned() == other.isAssigned();
+    if (isAssigned() != other.isAssigned())
+      return false;
+    if (!isAssigned())
+      return true;
+    return storage.isEqualTo(other.storage);
   }
 
   static LayoutInfo meet(const LayoutInfo &lhs, const LayoutInfo &rhs);
@@ -140,6 +145,10 @@ void LayoutInfo::print(raw_ostream &os) const {
 
 LayoutInfo LayoutInfo::meet(const LayoutInfo &lhs, const LayoutInfo &rhs) {
   if (!lhs.isAssigned())
+    return rhs;
+  if (!rhs.isAssigned())
+    return lhs;
+  if (!lhs.isSliceLayout() && rhs.isSliceLayout())
     return rhs;
   return lhs;
 }
