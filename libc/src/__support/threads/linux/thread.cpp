@@ -438,8 +438,8 @@ int Thread::set_name(const cpp::string_view &name) {
   if (!fd)
     return fd.error();
 
-  auto write_result = linux_syscalls::write(fd.value(), name.data(),
-                                            name.size());
+  auto write_result =
+      linux_syscalls::write(fd.value(), name.data(), name.size());
   linux_syscalls::close(fd.value());
 
   if (!write_result)

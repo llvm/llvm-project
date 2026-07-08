@@ -18,9 +18,8 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(key_t, ftok, (const char *path, int id)) {
   internal::kernel_statx_buf xbuf;
 
-  auto err = linux_syscalls::statx(AT_FDCWD, path, 0,
-                                   internal::KERNEL_STATX_BASIC_STATS_MASK,
-                                   &xbuf);
+  auto err = linux_syscalls::statx(
+      AT_FDCWD, path, 0, internal::KERNEL_STATX_BASIC_STATS_MASK, &xbuf);
 
   if (!err.has_value()) {
     libc_errno = err.error();
