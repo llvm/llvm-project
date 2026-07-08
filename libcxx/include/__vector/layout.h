@@ -217,7 +217,7 @@ private:
 #ifdef _LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED
   size_type __size_     = 0;
   size_type __capacity_ = 0;
-  [[no_unique_address]] allocator_type __alloc_;
+  _LIBCPP_NO_UNIQUE_ADDRESS allocator_type __alloc_;
 #else
   pointer __end_ = nullptr;
   _LIBCPP_COMPRESSED_PAIR(pointer, __capacity_ = nullptr, allocator_type, __alloc_);

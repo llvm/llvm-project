@@ -297,9 +297,6 @@ def FeatureAMXAVX512 : SubtargetFeature<"amx-avx512",
                                         "HasAMXAVX512", "true",
                                         "Support AMX-AVX512 instructions",
                                         [FeatureAMXTILE]>;
-def FeatureAMXTF32 : SubtargetFeature<"amx-tf32", "HasAMXTF32", "true",
-                                      "Support AMX-TF32 instructions",
-                                      [FeatureAMXTILE]>;
 def FeatureCMPCCXADD : SubtargetFeature<"cmpccxadd", "HasCMPCCXADD", "true",
                                         "Support CMPCCXADD instructions">;
 def FeatureRAOINT : SubtargetFeature<"raoint", "HasRAOINT", "true",
@@ -1281,8 +1278,7 @@ def ProcessorFeatures {
                                                   FeatureMOVRS,
                                                   FeatureAMXMOVRS,
                                                   FeatureAMXAVX512,
-                                                  FeatureAMXFP8,
-                                                  FeatureAMXTF32];
+                                                  FeatureAMXFP8];
   list<SubtargetFeature> DMRFeatures =
     !listconcat(GNRDFeatures, DMRAdditionalFeatures);
   list<SubtargetFeature> DMRAdditionalTuning = [TuningPreferLegacySetCC];

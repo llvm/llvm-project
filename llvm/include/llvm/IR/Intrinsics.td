@@ -1045,8 +1045,10 @@ def int_prefetch
                 [llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                 [IntrInaccessibleMemOrArgMemOnly,
                  ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
-                 ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>,
-                 ImmArg<ArgIndex<3>>]>;
+                 ImmArg<ArgIndex<1>>, Range<ArgIndex<1>, 0, 2>,
+                 ImmArg<ArgIndex<2>>, Range<ArgIndex<2>, 0, 4>,
+                 ImmArg<ArgIndex<3>>, Range<ArgIndex<3>, 0, 2>
+                ]>;
 def int_pcmarker      : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
 
 def int_readcyclecounter : DefaultAttrsIntrinsic<[llvm_i64_ty]>;
