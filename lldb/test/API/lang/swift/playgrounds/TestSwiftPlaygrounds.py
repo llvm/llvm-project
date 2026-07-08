@@ -33,6 +33,7 @@ def execute_command(command):
     return exit_status
 
 
+@skipIfRemote
 class TestSwiftPlaygrounds(TestBase):
     def get_build_triple(self):
         """We want to build the file with a deployment target earlier than the

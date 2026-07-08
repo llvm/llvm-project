@@ -26,62 +26,6 @@ import os.path
 
 
 class TestSwiftInterfaceNoDebugInfo(TestBase):
-    @skipEmbeddedSwift
-    @swiftTest
-    @skipIfWindows
-    def test_swift_interface(self):
-        """Test that we load and handle modules that only have textual .swiftinterface files"""
-        self.build()
-        self.do_test()
-
-    @skipEmbeddedSwift
-    @swiftTest
-    @skipIfWindows
-    def test_swift_interface_fallback(self):
-        """Test that we fall back to load from the .swiftinterface file if the .swiftmodule is invalid"""
-        self.build()
-        # Install invalid modules in the build directory first to check we
-        # still fall back to the .swiftinterface.
-        modules = ['AA.swiftmodule', 'BB.swiftmodule', 'CC.swiftmodule']
-        for module in modules:
-            open(self.getBuildArtifact(module), 'w').close()
-        self.do_test()
-
-    @skipEmbeddedSwift
-    @swiftTest
-    @skipIfWindows
-    @skipUnlessPlatform(["macosx"])
-    def test_prebuilt_cache_location(self):
-        """Verify the prebuilt cache path is correct"""
-        self.build()
-        log = self.getBuildArtifact("types.log")
-        self.runCmd('log enable lldb types -f "%s"' % log)
-
-        # Set a breakpoint in and launch the main executable so we load the
-        # ASTContext and log the prebuilt cache path
-        lldbutil.run_to_source_breakpoint(
-           self, "break here", lldb.SBFileSpec("main.swift"),
-           exe_name=self.getBuildArtifact("main"))
-        self.expect("expr 1")
-
-        # Check the prebuilt cache path in the log output
-        prefix = 'Using prebuilt Swift module cache path: '
-        expected_suffix = os.path.join('macosx', 'prebuilt-modules')
-        found = False
-
-        import io
-        with io.open(log, "r", encoding='utf-8') as logfile:
-            for line in logfile:
-                if prefix in line:
-                    self.assertTrue(line.rstrip().endswith(os.path.sep + expected_suffix), 'unexpected prebuilt cache path: ' + line)
-                    found = True
-                    break
-        self.assertTrue(found, 'prebuilt cache path log entry not found')
-
-        # Check the host toolchain has a prebuilt cache in the same subdirectory of its swift resource directory
-        prebuilt_path = os.path.join(self.get_toolchain(), 'usr', 'lib', 'swift', expected_suffix)
-        self.assertTrue(len(os.listdir(prebuilt_path)) > 0)
-
     def get_toolchain(self):
         sdkroot = self.get_sdkroot()
         # The SDK root is expected to be wihin the Xcode.app/Contents
@@ -182,6 +126,41 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
             self.assertTrue(is_old(file),
                             "Swiftmodule file was regenerated rather than reused")
 
+
+    @skipEmbeddedSwift
+    @swiftTest
+    @skipIfWindows
+    @skipUnlessPlatform(["macosx"])
+    def test_prebuilt_cache_location(self):
+        """Verify the prebuilt cache path is correct"""
+        self.build()
+        log = self.getBuildArtifact("types.log")
+        self.runCmd('log enable lldb types -f "%s"' % log)
+
+        # Set a breakpoint in and launch the main executable so we load the
+        # ASTContext and log the prebuilt cache path
+        lldbutil.run_to_source_breakpoint(
+           self, "break here", lldb.SBFileSpec("main.swift"),
+           exe_name=self.getBuildArtifact("main"))
+        self.expect("expr 1")
+
+        # Check the prebuilt cache path in the log output
+        prefix = 'Using prebuilt Swift module cache path: '
+        expected_suffix = os.path.join('macosx', 'prebuilt-modules')
+        found = False
+
+        import io
+        with io.open(log, "r", encoding='utf-8') as logfile:
+            for line in logfile:
+                if prefix in line:
+                    self.assertTrue(line.rstrip().endswith(os.path.sep + expected_suffix), 'unexpected prebuilt cache path: ' + line)
+                    found = True
+                    break
+        self.assertTrue(found, 'prebuilt cache path log entry not found')
+
+        # Check the host toolchain has a prebuilt cache in the same subdirectory of its swift resource directory
+        prebuilt_path = os.path.join(self.get_toolchain(), 'usr', 'lib', 'swift', expected_suffix)
+        self.assertTrue(len(os.listdir(prebuilt_path)) > 0)
 
 OLD_TIMESTAMP = 1390550700 # 2014-01-24T08:05:00+00:00
 

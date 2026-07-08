@@ -35,6 +35,8 @@ libMacroImpl.dylib:
 		DYLIB_ONLY=YES \
 		SWIFTFLAGS_EXTRAS="-I$(SWIFT_HOSTDIR)" \
 		LD_EXTRAS="-L$(SWIFT_HOSTDIR)" \
+		TARGET_SWIFTFLAGS="-target $(shell uname -m)-apple-macos13.0" \
+		ARCH_CFLAGS="-target $(shell uname -m)-apple-macos13.0" \
 		SWIFT_SOURCES= \
 		all
 

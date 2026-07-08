@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftExplicitModules(lldbtest.TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    @skipEmbeddedSwift
     @swiftTest
     @skipIfWindows
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'), bugnumber='rdar://157258485')

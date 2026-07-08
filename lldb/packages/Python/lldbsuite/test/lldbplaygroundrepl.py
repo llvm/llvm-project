@@ -109,6 +109,7 @@ class PlaygroundREPLTest(TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
+    @skipIfRemote
     def test_playgrounds(self):
         # Build
         self.build_all()

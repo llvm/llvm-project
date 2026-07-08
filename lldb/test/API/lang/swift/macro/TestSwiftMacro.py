@@ -37,7 +37,7 @@ class TestSwiftMacro(lldbtest.TestBase):
         self.setupPluginServerForTesting()
         main_spec = lldb.SBFileSpec('main.swift')
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'break here', main_spec
+            self, 'break here', main_spec, extra_images=['Macro']
         )
 
         # We're testing line breakpoint setting here:

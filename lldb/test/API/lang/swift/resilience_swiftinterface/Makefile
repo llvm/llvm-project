@@ -36,6 +36,6 @@ ImplA: ImplB ImplA.swift
 Postprocess:
 	$(call ECHO,"Compiling Impl.swiftinterfact to Impl.swiftmodule")
 	$(call ECHO_TO_FILE,'import Impl',trigger.swift)
-	$(SWIFT_FE) -module-cache-path cache -c trigger.swift -o trigger -I.
+	$(SWIFT_FE) $(SWIFT_FEFLAGS) -module-cache-path cache -c trigger.swift -o trigger -I.
 	mv cache/Impl*.swiftmodule Impl.swiftmodule
 	$(call RM,Impl.swiftinterface)

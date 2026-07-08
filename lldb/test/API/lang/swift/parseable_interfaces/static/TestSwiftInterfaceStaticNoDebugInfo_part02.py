@@ -26,26 +26,6 @@ import os.path
 
 
 class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
-    @skipEmbeddedSwift
-    @swiftTest
-    @skipIfWindows
-    def test_swift_interface(self):
-        """Test that we load and handle modules that only have textual .swiftinterface files"""
-        self.build()
-        self.do_test()
-
-    @skipEmbeddedSwift
-    @swiftTest
-    @skipIfWindows
-    def test_swift_interface_fallback(self):
-        """Test that we fall back to load from the .swiftinterface file if the .swiftmodule is invalid"""
-        self.build()
-        # install invalid modules in the build directory first to check we still fall back to the .swiftinterface
-        modules = ['AA.swiftmodule', 'BB.swiftmodule', 'CC.swiftmodule']
-        for module in modules:
-            open(self.getBuildArtifact(module), 'w').close()
-        self.do_test()
-
     def do_test(self):
         # The custom swift module cache location
         swift_mod_cache = self.getBuildArtifact("MCP")
@@ -120,6 +100,18 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
         for file in a_modules + b_modules:
             self.assertTrue(is_old(file), "Swiftmodule file was regenerated rather than reused")
 
+
+    @skipEmbeddedSwift
+    @swiftTest
+    @skipIfWindows
+    def test_swift_interface_fallback(self):
+        """Test that we fall back to load from the .swiftinterface file if the .swiftmodule is invalid"""
+        self.build()
+        # install invalid modules in the build directory first to check we still fall back to the .swiftinterface
+        modules = ['AA.swiftmodule', 'BB.swiftmodule', 'CC.swiftmodule']
+        for module in modules:
+            open(self.getBuildArtifact(module), 'w').close()
+        self.do_test()
 
 OLD_TIMESTAMP = 1390550700 # 2014-01-24T08:05:00+00:00
 

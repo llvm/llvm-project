@@ -35,62 +35,6 @@ class TestSwiftBackwardInteropSteppingClass(TestBase):
     @skipEmbeddedSwift
     @swiftTest
     @skipIfWindows
-    def test_method_step_in_class(self):
-        thread = self.setup('Break here for method - class')
-        self.check_step_in(thread, 'testMethod', 'SwiftClass.swiftMethod')
-
-    @skipEmbeddedSwift
-    @swiftTest
-    @skipIfWindows
-    def test_method_step_over_class(self):
-        thread = self.setup('Break here for method - class')
-        self.check_step_over(thread, 'testMethod')
-
-    @skipEmbeddedSwift
-    @swiftTest
-    @skipIfWindows
-    def test_init_step_in_class(self):
-        thread = self.setup('Break here for constructor - class')
-        self.check_step_in(thread, 'testConstructor', 'SwiftClass.init')
-
-    @skipEmbeddedSwift
-    @swiftTest
-    @skipIfWindows
-    def test_init_step_over_class(self):
-        thread = self.setup('Break here for constructor - class')
-        self.check_step_over(thread, 'testConstructor')
-
-    @skipEmbeddedSwift
-    @swiftTest
-    @skipIfWindows
-    def test_static_method_step_in_class(self):
-        thread = self.setup('Break here for static method - class')
-        self.check_step_in(thread, 'testStaticMethod', 'SwiftClass.swiftStaticMethod')
-
-    @skipEmbeddedSwift
-    @swiftTest
-    @skipIfWindows
-    def test_static_method_step_over_class(self):
-        thread = self.setup('Break here for static method - class')
-        self.check_step_over(thread, 'testStaticMethod')
-
-    @skipEmbeddedSwift
-    @swiftTest
-    @skipIfWindows
-    def test_getter_step_in_class(self):
-        thread = self.setup('Break here for getter - class')
-        self.check_step_in(thread, 'testGetter', 'SwiftClass.swiftProperty.getter')
-
-    @skipEmbeddedSwift
-    @swiftTest
-    @skipIfWindows
-    def test_getter_step_over_class(self):
-        thread = self.setup('Break here for getter - class')
-        self.check_step_over(thread, 'testGetter')
-
-    @skipEmbeddedSwift
-    @swiftTest
-    @skipIfWindows
     def test_setter_step_in_class(self):
         thread = self.setup('Break here for setter - class')
         self.check_step_in(thread, 'testSetter', 'SwiftClass.swiftProperty.setter')

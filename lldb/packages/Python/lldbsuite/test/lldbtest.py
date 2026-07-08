@@ -2144,7 +2144,7 @@ _test_variants = [
         values=test_categories.embedded_swift_categories,
         predicate=lambda m: getattr(m, "__swift_test__", False),
         setup_fn=_embedded_swift_setup,
-        attrs_to_preserve=("debug_info",),
+        attrs_to_preserve=("debug_info", "swift_module_importer"),
     ),
 ]
 
@@ -2155,8 +2155,10 @@ _test_variants = [
 # entry. Add entries here for crosses that don't exercise anything new and
 # would only inflate the matrix on remote test runs.
 _excluded_variant_combinations = [
-    # Example (uncomment + adapt when registering a real cross to drop):
-    # {"swift_module_importer": "noclang", "swift_embedded": "swiftembed"},
+    # Embedded Swift doesn't go through the ClangImporter, so toggling the
+    # importer setting doesn't change anything observable; skip the noclang
+    # cross to halve the embedded variant count.
+    {"swift_module_importer": "noclang", "swift_embedded": "swiftembed"},
 ]
 
 
@@ -2167,7 +2169,9 @@ def _is_excluded_variant_combination(method, variant_name, value_name):
         if combo.get(variant_name) != value_name:
             continue
         if all(
-            getattr(method, k, None) == v for k, v in combo.items() if k != variant_name
+            getattr(method, k, None) == v
+            for k, v in combo.items()
+            if k != variant_name
         ):
             return True
     return False

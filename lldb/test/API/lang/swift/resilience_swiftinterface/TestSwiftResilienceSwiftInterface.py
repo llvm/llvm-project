@@ -17,6 +17,7 @@ class TestSwiftResilienceSwiftInterface(TestBase):
         """
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec('main.swift'))
+            self, "break here", lldb.SBFileSpec('main.swift'),
+            extra_images=['Impl'])
 
         self.expect("expression s", substrs=["a", "100", "b", "200"])
