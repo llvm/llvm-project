@@ -20,7 +20,8 @@ namespace time_utils {
 cpp::optional<time_t> mktime_internal(const tm *tm_out) {
   // Unlike most C Library functions, mktime doesn't just die on bad input.
   // TODO(rtenneti); Handle leap seconds.
-  int64_t tm_year_from_base = tm_out->tm_year + time_constants::TIME_YEAR_BASE;
+  int64_t tm_year_from_base =
+      static_cast<int64_t>(tm_out->tm_year) + time_constants::TIME_YEAR_BASE;
 
   // Years are ints.  A 32-bit year will fit into a 64-bit time_t.
   // A 64-bit year will not.
@@ -112,7 +113,7 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
 //
 // Compute the number of months from the remaining days. Finally, adjust years
 // to be 1900 and months to be from January.
-int64_t update_from_seconds(time_t total_seconds, tm *tm) {
+ErrorOr<int> update_from_seconds(time_t total_seconds, tm *tm) {
   // Days in month starting from March in the year 2000.
   static const char daysInMonth[] = {31 /* Mar */, 30, 31, 30, 31, 31,
                                      30,           31, 30, 31, 31, 29};
@@ -125,7 +126,7 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
       static_cast<int64_t>(time_constants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
 
   if (total_seconds < time_min || total_seconds > time_max)
-    return time_utils::out_of_range();
+    return cpp::unexpected(TIME_OVERFLOW);
 
   int64_t seconds =
       total_seconds - time_constants::SECONDS_UNTIL2000_MARCH_FIRST;
@@ -191,7 +192,7 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
   }
 
   if (years > INT_MAX || years < INT_MIN)
-    return time_utils::out_of_range();
+    return cpp::unexpected(TIME_OVERFLOW);
 
   // All the data (years, month and remaining days) was calculated from
   // March, 2000. Thus adjust the data to be from January, 1900.

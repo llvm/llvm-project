@@ -62,5 +62,12 @@ with worker.run(
             builddir=llvmbuilddir,
         )
 
+    with w.step("run check-compiler-rt-amdgcn-amd-amdhsa"):
+        w.run_ninja(
+            ["check-compiler-rt-amdgcn-amd-amdhsa"],
+            add_env={"HSA_ENABLE_SDMA": "0"},
+            builddir=llvmbuilddir,
+        )
+
     with w.step("LLVM: Install", halt_on_fail=True):
         w.run_ninja(["install"], builddir=llvmbuilddir)

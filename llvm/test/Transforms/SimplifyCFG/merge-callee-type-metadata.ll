@@ -150,18 +150,18 @@ if.end:                                           ; preds = %if.else, %if.then
 
 declare ptr @_Znwm(i64)
 
-!0 = !{i64 0, !"callee_type0.generalized"}
-!1 = !{i64 0, !"callee_type1.generalized"}
-!2 = !{i64 0, !"callee_type2.generalized"}
+!0 = !{!"callee_type0.generalized"}
+!1 = !{!"callee_type1.generalized"}
+!2 = !{!"callee_type2.generalized"}
 !3 = !{!0}
 !4 = !{!2}
 !5 = !{!1, !2}
 !6 = !{!0, !2}
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK: [[META1]] = !{i64 0, !"callee_type2.generalized"}
-; CHECK: [[META2]] = !{i64 0, !"callee_type0.generalized"}
+; CHECK: [[META1]] = !{!"callee_type2.generalized"}
+; CHECK: [[META2]] = !{!"callee_type0.generalized"}
 ; CHECK: [[META3]] = !{[[META2]]}
 ; CHECK: [[META4]] = !{[[META2]], [[META1]], [[META5:![0-9]+]]}
-; CHECK: [[META5]] = !{i64 0, !"callee_type1.generalized"}
+; CHECK: [[META5]] = !{!"callee_type1.generalized"}
 ;.

@@ -575,3 +575,36 @@ gpu.module @test {
     gpu.return
   }
 }
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_collapse_replicated(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 2, 1], sg_data = [8, 8, 8]>} dense<0.000000e+00> : vector<16x8x8xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[CST]] {layout_result_0 = #xegpu.layout<sg_layout = [2, 2], sg_data = [8, 64]>} : vector<16x8x8xf16> to vector<16x64xf16>
+  gpu.func @shape_cast_collapse_replicated(%dst: memref<16x64xf16>) kernel {
+    %cst = arith.constant dense<0.000000e+00> : vector<16x8x8xf16>
+    %0 = vector.shape_cast %cst : vector<16x8x8xf16> to vector<16x64xf16>
+    %tdesc = xegpu.create_nd_tdesc %dst : memref<16x64xf16> -> !xegpu.tensor_desc<16x64xf16>
+    xegpu.store_nd %0, %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [2, 2], sg_data = [8, 64]>}> : vector<16x64xf16>, !xegpu.tensor_desc<16x64xf16>
+    gpu.return
+  }
+}
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: gpu.func @transpose_3d_order_remap(
+// CHECK: %[[TD_LD:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<32x2x32xf16> ->
+// CHECK-SAME: !xegpu.tensor_desc<32x2x32xf16, #xegpu.layout<sg_layout = [1, 2, 2], sg_data = [32, 1, 16], order = [0, 2, 1]>>
+// CHECK: %[[LD:.*]] = xegpu.load_nd %[[TD_LD]][%{{.*}}] <{layout = #xegpu.layout<sg_layout = [1, 2, 2], sg_data = [32, 1, 16], order = [0, 2, 1]>}>
+// CHECK: %[[TR:.*]] = vector.transpose %[[LD]], [1, 0, 2] {layout_result_0 = #xegpu.layout<sg_layout = [2, 1, 2], sg_data = [1, 32, 16], order = [1, 2, 0]>}
+// CHECK-SAME: : vector<32x2x32xf16> to vector<2x32x32xf16>
+  gpu.func @transpose_3d_order_remap(%src: memref<32x2x32xf16>, %dst: memref<2x32x32xf16>) kernel {
+    %c0 = arith.constant 0 : index
+    %td_in = xegpu.create_nd_tdesc %src : memref<32x2x32xf16> -> !xegpu.tensor_desc<32x2x32xf16>
+    %ld = xegpu.load_nd %td_in[%c0, %c0, %c0] : !xegpu.tensor_desc<32x2x32xf16> -> vector<32x2x32xf16>
+    %tr = vector.transpose %ld, [1, 0, 2] : vector<32x2x32xf16> to vector<2x32x32xf16>
+    %td_out = xegpu.create_nd_tdesc %dst : memref<2x32x32xf16> -> !xegpu.tensor_desc<2x32x32xf16>
+    xegpu.store_nd %tr, %td_out[%c0, %c0, %c0] <{layout = #xegpu.layout<sg_layout = [2, 1, 2], sg_data = [1, 32, 16], order = [1, 2, 0]>}> : vector<2x32x32xf16>, !xegpu.tensor_desc<2x32x32xf16>
+    gpu.return
+  }
+}

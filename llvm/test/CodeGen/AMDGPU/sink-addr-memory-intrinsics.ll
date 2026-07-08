@@ -13,14 +13,20 @@ define amdgpu_kernel void @memoryIntrinstic(ptr addrspace(3) %inptr, i1 %cond, p
 ; CHECK-NEXT:    ds_read_b64_tr_b16 v[2:3], v0 offset:8192
 ; CHECK-NEXT:    s_mov_b32 s1, 0x7060302
 ; CHECK-NEXT:    s_mov_b32 s3, 0x5040100
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_perm_b32 v0, v3, v2, s1
 ; CHECK-NEXT:    v_perm_b32 v1, v3, v2, s3
-; CHECK-NEXT:    s_cbranch_execz .LBB0_3
-; CHECK-NEXT:    s_branch .LBB0_4
+; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    s_mov_b64 s[4:5], -1
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:  .LBB0_3: ; %then
+; CHECK-NEXT:  .LBB0_3: ; %Flow
+; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; CHECK-NEXT:    s_cselect_b32 s1, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s1, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
+; CHECK-NEXT:  ; %bb.4: ; %then
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-NEXT:    ds_read_b64_tr_b16 v[2:3], v0 offset:8192
 ; CHECK-NEXT:    s_mov_b32 s0, 0x5040100
@@ -28,7 +34,7 @@ define amdgpu_kernel void @memoryIntrinstic(ptr addrspace(3) %inptr, i1 %cond, p
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_perm_b32 v0, v3, v2, s0
 ; CHECK-NEXT:    v_perm_b32 v1, v3, v2, s1
-; CHECK-NEXT:  .LBB0_4: ; %end
+; CHECK-NEXT:  .LBB0_5: ; %end
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s2
 ; CHECK-NEXT:    ds_write_b64 v2, v[0:1]
 ; CHECK-NEXT:    s_endpgm
@@ -70,11 +76,17 @@ define amdgpu_kernel void @badIntrinsicUse(ptr addrspace(3) %inptr, i1 %cond, pt
 ; CHECK-NEXT:    v_perm_b32 v0, v3, v2, s0
 ; CHECK-NEXT:    s_mov_b32 s0, 0x5040100
 ; CHECK-NEXT:    v_perm_b32 v1, v3, v2, s0
-; CHECK-NEXT:    s_cbranch_execz .LBB1_3
-; CHECK-NEXT:    s_branch .LBB1_4
+; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+; CHECK-NEXT:    s_branch .LBB1_3
 ; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    s_mov_b64 s[0:1], -1
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:  .LBB1_3: ; %then
+; CHECK-NEXT:  .LBB1_3: ; %Flow
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s0, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s0, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB1_5
+; CHECK-NEXT:  ; %bb.4: ; %then
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s3
 ; CHECK-NEXT:    ds_read_b64_tr_b16 v[2:3], v0
 ; CHECK-NEXT:    s_mov_b32 s0, 0x5040100
@@ -82,7 +94,7 @@ define amdgpu_kernel void @badIntrinsicUse(ptr addrspace(3) %inptr, i1 %cond, pt
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_perm_b32 v0, v3, v2, s0
 ; CHECK-NEXT:    v_perm_b32 v1, v3, v2, s1
-; CHECK-NEXT:  .LBB1_4: ; %end
+; CHECK-NEXT:  .LBB1_5: ; %end
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s2
 ; CHECK-NEXT:    ds_write_b64 v2, v[0:1]
 ; CHECK-NEXT:    s_endpgm
@@ -126,11 +138,17 @@ define amdgpu_kernel void @badIntrinsicUse2(ptr addrspace(3) %inptr, i1 %cond, p
 ; CHECK-NEXT:    v_perm_b32 v0, v3, v2, s0
 ; CHECK-NEXT:    s_mov_b32 s0, 0x5040100
 ; CHECK-NEXT:    v_perm_b32 v1, v3, v2, s0
-; CHECK-NEXT:    s_cbranch_execz .LBB2_3
-; CHECK-NEXT:    s_branch .LBB2_4
+; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+; CHECK-NEXT:    s_branch .LBB2_3
 ; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:    s_mov_b64 s[0:1], -1
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:  .LBB2_3: ; %then
+; CHECK-NEXT:  .LBB2_3: ; %Flow
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CHECK-NEXT:    s_cselect_b32 s0, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s0, 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB2_5
+; CHECK-NEXT:  ; %bb.4: ; %then
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    ds_read_b64_tr_b16 v[2:3], v0
 ; CHECK-NEXT:    s_mov_b32 s0, 0x5040100
@@ -138,7 +156,7 @@ define amdgpu_kernel void @badIntrinsicUse2(ptr addrspace(3) %inptr, i1 %cond, p
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_perm_b32 v0, v3, v2, s0
 ; CHECK-NEXT:    v_perm_b32 v1, v3, v2, s1
-; CHECK-NEXT:  .LBB2_4: ; %end
+; CHECK-NEXT:  .LBB2_5: ; %end
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s2
 ; CHECK-NEXT:    ds_write_b64 v2, v[0:1]
 ; CHECK-NEXT:    s_endpgm
