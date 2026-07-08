@@ -7,6 +7,8 @@
 #include <locale.h>
 #include <math.h>
 #include <poll.h>
+#define _EXT
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <variant.h>
@@ -18,3 +20,7 @@ int __poll;
 int __string;
 int __time;
 int __variant;
+
+int func(unsigned int *a, unsigned int *b) {
+  return __cs(a, b, 5);
+}
