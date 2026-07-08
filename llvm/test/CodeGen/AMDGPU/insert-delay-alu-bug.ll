@@ -117,18 +117,20 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:    s_cmp_eq_u32 s1, 0
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB2_9
 ; GFX11-NEXT:  ; %bb.6: ; %bb18.preheader
-; GFX11-NEXT:    s_load_b128 s[28:31], s[18:19], 0x44
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b64 s[0:1], s[18:19], 0x44
+; GFX11-NEXT:    s_load_b32 s9, s[18:19], 0x4c
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_mul_hi_u32 s1, s29, s28
-; GFX11-NEXT:    s_mul_i32 s0, s29, s28
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_lshr_b64 s[0:1], s[0:1], 1
+; GFX11-NEXT:    s_mul_hi_u32 s29, s1, s0
+; GFX11-NEXT:    s_mul_i32 s28, s1, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_lshr_b64 s[0:1], s[28:29], 1
 ; GFX11-NEXT:    s_mov_b32 s1, 0
 ; GFX11-NEXT:    s_or_b32 s0, s0, 1
+; GFX11-NEXT:    s_lshr_b32 s0, s0, s9
 ; GFX11-NEXT:    s_mov_b32 s9, s1
-; GFX11-NEXT:    s_lshr_b32 s0, s0, s30
 ; GFX11-NEXT:    s_mul_i32 s0, s0, s22
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_mul_i32 s0, s0, s20

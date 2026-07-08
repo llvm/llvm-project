@@ -437,3 +437,39 @@ entry:
   store i16 %add3, ptr %s3
   ret void
 }
+
+define void @fadd_fsub(ptr %p, ptr %s) {
+; CHECK-LABEL: @fadd_fsub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub <4 x float> [[TMP0]], <float -3.000000e+00, float 5.000000e+00, float 2.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[TMP0]], <float -3.000000e+00, float 5.000000e+00, float 2.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[S:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr float, ptr %p, i64 1
+  %p2 = getelementptr float, ptr %p, i64 2
+  %p3 = getelementptr float, ptr %p, i64 3
+
+  %l0 = load float, ptr %p
+  %l1 = load float, ptr %p1
+  %l2 = load float, ptr %p2
+  %l3 = load float, ptr %p3
+
+  %add0 = fsub float %l0, -3.0
+  %add1 = fadd float %l1, 5.0
+  %add2 = fadd float %l2, 2.0
+  %add3 = fadd float %l3, 3.0
+
+  %s1 = getelementptr float, ptr %s, i64 1
+  %s2 = getelementptr float, ptr %s, i64 2
+  %s3 = getelementptr float, ptr %s, i64 3
+
+  store float %add0, ptr %s
+  store float %add1, ptr %s1
+  store float %add2, ptr %s2
+  store float %add3, ptr %s3
+  ret void
+}

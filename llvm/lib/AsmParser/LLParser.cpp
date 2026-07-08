@@ -641,16 +641,49 @@ bool LLParser::parseTopLevelEntities() {
 
 /// toplevelentity
 ///   ::= 'module' 'asm' STRINGCONSTANT
+///   ::= 'module' 'asm' '(' 'property_name1:' STRINGCONSTANT ','
+///                          'property_name2:' STRINGCONSTANT ')'
+///                      STRINGCONSTANT
 bool LLParser::parseModuleAsm() {
   assert(Lex.getKind() == lltok::kw_module);
   Lex.Lex();
 
   std::string AsmStr;
-  if (parseToken(lltok::kw_asm, "expected 'module asm'") ||
-      parseStringConstant(AsmStr))
+  if (parseToken(lltok::kw_asm, "expected 'module asm'"))
     return true;
 
-  M->appendModuleInlineAsm(AsmStr);
+  Module::GlobalAsmProperties Props;
+  if (EatIfPresent(lltok::lparen)) {
+    while (true) {
+      std::string Key, Value;
+      SMLoc Loc = Lex.getLoc();
+      if (Lex.getKind() != lltok::LabelStr)
+        return error(Loc, "expected property name followed by ':'");
+
+      Key = Lex.getStrVal();
+      Lex.Lex();
+
+      if (parseStringConstant(Value))
+        return true;
+
+      if (!Props.set(Key, Value))
+        return error(Loc, "unknown property name");
+
+      if (EatIfPresent(lltok::rparen))
+        break;
+      if (parseToken(lltok::comma, "expected ',' or ')'"))
+        return true;
+    }
+  }
+
+  do {
+    std::string AsmStrPart;
+    if (parseStringConstant(AsmStrPart))
+      return true;
+    AsmStr += AsmStrPart + "\n";
+  } while (Lex.getKind() == lltok::StringConstant);
+
+  M->appendModuleInlineAsm({AsmStr, Props});
   return false;
 }
 
@@ -9962,7 +9995,11 @@ bool LLParser::addGlobalValueToIndex(
       if (!GV)
         return error(Loc, "Reference to undefined global \"" + Name + "\"");
 
-      VI = Index->getOrInsertValueInfo(GV);
+      // Be a little lenient here, to accomodate older files without GUIDs
+      // already computed and assigned as metadata.
+      GUID = GV->getGUIDOrFallback();
+
+      VI = Index->getOrInsertValueInfo(GV, GUID);
     } else {
       assert(
           (!GlobalValue::isLocalLinkage(Linkage) || !SourceFileName.empty()) &&

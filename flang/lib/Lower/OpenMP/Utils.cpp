@@ -26,7 +26,6 @@
 #include <flang/Optimizer/Builder/BoxValue.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Builder/Todo.h>
-#include <flang/Optimizer/HLFIR/HLFIROps.h>
 #include <flang/Parser/openmp-utils.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
@@ -800,6 +799,38 @@ void collectLoopRelatedInfo(
     const parser::LoopControl::Bounds *bounds =
         std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
     assert(bounds && "Expected bounds for worksharing do loop");
+    // Check for non-rectangular loops: if any bound of this loop references
+    // an iteration variable from an enclosing collapsed loop, this is a
+    // non-rectangular loop nest which is not yet supported by the
+    // OpenMPIRBuilder's collapseLoops.
+    if (!iv.empty()) {
+      auto referencesOuterIV = [&iv](const semantics::SomeExpr &expr) -> bool {
+        for (const semantics::SymbolRef &sym :
+             evaluate::GetSymbolVector(expr)) {
+          for (const semantics::Symbol *outerIV : iv) {
+            if (&sym->GetUltimate() == &outerIV->GetUltimate())
+              return true;
+          }
+        }
+        return false;
+      };
+      if (const auto *lowerExpr = semantics::GetExpr(bounds->Lower()))
+        if (referencesOuterIV(*lowerExpr))
+          TODO(currentLocation,
+               "Non-rectangular loop nests with COLLAPSE are not yet "
+               "supported");
+      if (const auto *upperExpr = semantics::GetExpr(bounds->Upper()))
+        if (referencesOuterIV(*upperExpr))
+          TODO(currentLocation,
+               "Non-rectangular loop nests with COLLAPSE are not yet "
+               "supported");
+      if (auto &step = bounds->Step())
+        if (const auto *stepExpr = semantics::GetExpr(step))
+          if (referencesOuterIV(*stepExpr))
+            TODO(currentLocation,
+                 "Non-rectangular loop nests with COLLAPSE are not yet "
+                 "supported");
+    }
     lower::StatementContext stmtCtx;
     result.loopLowerBounds.push_back(fir::getBase(
         converter.genExprValue(*semantics::GetExpr(bounds->Lower()), stmtCtx)));
@@ -1287,7 +1318,7 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
 }
 
 // ---------------------------------------------------------------------------
-// FlangOMPContext — shared OMPContext for metadirective variant-matching
+// OpenMP variant-matching context construction from an MLIR module
 // ---------------------------------------------------------------------------
 
 static llvm::Triple getOffloadTargetTriple(mlir::ModuleOp module) {
@@ -1301,29 +1332,17 @@ static llvm::Triple getOffloadTargetTriple(mlir::ModuleOp module) {
   return llvm::Triple();
 }
 
-bool FlangOMPContext::isDeviceCompilation(mlir::ModuleOp module) {
-  return llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation())
-      .getIsTargetDevice();
-}
-
-FlangOMPContext::FlangOMPContext(
+semantics::omp::OmpVariantMatchContext makeVariantMatchContext(
     mlir::ModuleOp module,
-    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits)
-    // No specific device is selected during variant matching; use an unknown
-    // device number so OMPContext does not inadvertently describe the host
-    // device (which would cause target-device selectors to match incorrectly).
-    : OMPContext(isDeviceCompilation(module), fir::getTargetTriple(module),
-                 getOffloadTargetTriple(module),
-                 /*DeviceNum=*/-1),
-      targetFeatures(fir::getTargetFeatures(module)) {
-  for (llvm::omp::TraitProperty trait : constructTraits)
-    addTrait(trait);
-}
-
-bool FlangOMPContext::matchesISATrait(llvm::StringRef rawString) const {
-  if (!targetFeatures || targetFeatures.nullOrEmpty())
-    return false;
-  return targetFeatures.contains(("+" + rawString).str());
+    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits) {
+  bool isDeviceCompilation =
+      llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation())
+          .getIsTargetDevice();
+  mlir::LLVM::TargetFeaturesAttr features = fir::getTargetFeatures(module);
+  return semantics::omp::OmpVariantMatchContext(
+      isDeviceCompilation, fir::getTargetTriple(module),
+      getOffloadTargetTriple(module),
+      features ? features.getFeaturesString() : std::string{}, constructTraits);
 }
 
 void collectEnclosingConstructTraits(

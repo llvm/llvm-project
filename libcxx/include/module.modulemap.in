@@ -948,7 +948,10 @@ module std {
       header "__charconv/to_chars_integral.h"
       export std.charconv.to_chars_result
     }
-    module to_chars_result            { header "__charconv/to_chars_result.h" }
+    module to_chars_result            {
+      header "__charconv/to_chars_result.h"
+      export std.system_error.errc
+    }
     module traits                     { header "__charconv/traits.h" }
 
     header "charconv"
@@ -1702,6 +1705,9 @@ module std {
       export std.memory.destroy
       export std.utility.pair
     }
+    module uninitialized_multidimensional_algorithms {
+      header "__memory/uninitialized_multidimensional_algorithms.h"
+    }
     module unique_ptr {
       header "__memory/unique_ptr.h"
       export std.functional.hash
@@ -2258,6 +2264,7 @@ module std {
 
       export std.format.formatter
     }
+    module layout                { header "__vector/layout.h" }
     module pmr                   {
       header "__vector/pmr.h"
 

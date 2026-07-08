@@ -1765,6 +1765,14 @@ class PatRedSumPair<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
     : Pat<(i32 (OpNode (VecVT GPRPair:$rs1), (i32 GPR:$rs2))),
           (Inst GPRPair:$rs1, GPR:$rs2)>;
 
+// Absolute difference sum, optionally accumulating into rd.
+class PatAbdSum<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
+    : Pat<(XLenVT (OpNode (VecVT GPR:$rs1), (VecVT GPR:$rs2))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
+class PatAbdSumAcc<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
+    : Pat<(XLenVT (OpNode (XLenVT GPR:$rd), (VecVT GPR:$rs1), (VecVT GPR:$rs2))),
+          (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
 class PatGprPairImm<SDPatternOperator OpNode, RVInst Inst,
                     SDPatternOperator ImmType, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), ImmType:$imm)),
@@ -2038,6 +2046,10 @@ let Predicates = [HasStdExtP] in {
   def : PatGprGpr<abds, PABD_H, XLenVecI16VT>;
   def : PatGprGpr<abdu, PABDU_H, XLenVecI16VT>;
 
+  // 8-bit absolute difference sum patterns
+  def : PatAbdSum<int_riscv_pabdsumu, PABDSUMU_B, XLenVecI8VT>;
+  def : PatAbdSumAcc<int_riscv_pabdsumau, PABDSUMAU_B, XLenVecI8VT>;
+
   // 16-bit multiply high patterns
   def : PatGprGpr<mulhs, PMULH_H, XLenVecI16VT>;
   def : PatGprGpr<mulhu, PMULHU_H, XLenVecI16VT>;
@@ -2213,9 +2225,13 @@ let append Predicates = [IsRV32] in {
   //          (PWMULSU_H GPR:$rs1, GPR:$rs2)>;
 
   // 8/16-bit bitreverse patterns
-  // FIXME: Use BREV8 with Zbkb.
+  // With Zbkb, brev8 reverses the bits within each byte directly; otherwise
+  // reverse all bits then swap the bytes back.
+  let append Predicates = [NoStdExtZbkb] in
   def : Pat<(v4i8 (bitreverse GPR:$rs)),
             (REV8_RV32 (REV_RV32 GPR:$rs))>;
+  let append Predicates = [HasStdExtZbkb] in
+  def : Pat<(v4i8 (bitreverse GPR:$rs)), (BREV8 GPR:$rs)>;
   def : Pat<(v2i16 (bitreverse GPR:$rs)),
             (PPAIROE_H (REV_RV32 GPR:$rs), (REV_RV32 GPR:$rs))>;
 
@@ -2434,9 +2450,15 @@ let append Predicates = [IsRV32] in {
 
   // 8/16-bit bitreverse patterns
   // FIXME: Custom lower?
+  // With Zbkb, brev8 reverses the bits within each byte directly.
+  let append Predicates = [NoStdExtZbkb] in
   def : Pat<(v8i8 (bitreverse GPRPair:$rs)),
             (BuildGPRPair (REV8_RV32 (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even))),
                           (REV8_RV32 (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))))>;
+  let append Predicates = [HasStdExtZbkb] in
+  def : Pat<(v8i8 (bitreverse GPRPair:$rs)),
+            (BuildGPRPair (BREV8 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)),
+                          (BREV8 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd)))>;
   def : Pat<(v4i16 (bitreverse GPRPair:$rs)),
             (PPAIROE_DH (BuildGPRPair (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)),
                                       (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))),
@@ -2650,8 +2672,12 @@ let append Predicates = [IsRV64] in {
             (PPAIROE_W (REV8_RV64 GPR:$rs), (REV8_RV64 GPR:$rs))>;
 
   // 8/16/32-bit bitreverse patterns
+  // With Zbkb, brev8 reverses the bits within each byte directly.
+  let append Predicates = [NoStdExtZbkb] in
   def : Pat<(v8i8 (bitreverse GPR:$rs)),
             (REV8_RV64 (REV_RV64 GPR:$rs))>;
+  let append Predicates = [HasStdExtZbkb] in
+  def : Pat<(v8i8 (bitreverse GPR:$rs)), (BREV8 GPR:$rs)>;
   def : Pat<(v4i16 (bitreverse GPR:$rs)),
             (REV16_RV64 (REV_RV64 GPR:$rs))>;
   def : Pat<(v2i32 (bitreverse GPR:$rs)),
