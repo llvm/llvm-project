@@ -66,7 +66,7 @@ template <typename T>
   return __ptr;
 }
 
-}
+} // namespace
 
 template <auto* _Func>
 struct __impl_ref;
