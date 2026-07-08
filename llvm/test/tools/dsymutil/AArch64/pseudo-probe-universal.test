@@ -1,3 +1,4 @@
+# REQUIRES: system-darwin
 # REQUIRES: aarch64-registered-target
 # REQUIRES: host-byteorder-little-endian
 
