@@ -347,8 +347,10 @@ define void @test_cross_function_inner_pool_callee() {
 define void @test_mismatched_pools_outer(ptr %p) {
 ; CHECK-LABEL: define void @test_mismatched_pools_outer(
 ; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[OUTER_POOL:%.*]] = call ptr @llvm.objc.autoreleasePoolPush() #[[ATTR0]]
 ; CHECK-NEXT:    [[INNER_POOL:%.*]] = call ptr @llvm.objc.autoreleasePoolPush() #[[ATTR0]]
 ; CHECK-NEXT:    call void @llvm.objc.autoreleasePoolPop(ptr [[P]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @llvm.objc.autoreleasePoolPop(ptr [[OUTER_POOL]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
   %outer_pool = call ptr @llvm.objc.autoreleasePoolPush()
