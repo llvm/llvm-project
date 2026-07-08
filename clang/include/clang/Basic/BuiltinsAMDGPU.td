@@ -313,14 +313,6 @@ def __builtin_amdgcn_ballot_w64 : AMDGPUBuiltin<"uint64_t(bool)", [Const]>;
 def __builtin_amdgcn_inverse_ballot_w32 : AMDGPUBuiltin<"bool(uint32_t)", [Const], "wavefrontsize32">;
 def __builtin_amdgcn_inverse_ballot_w64 : AMDGPUBuiltin<"bool(uint64_t)", [Const], "wavefrontsize64">;
 
-// Deprecated intrinsics in favor of __builtin_amdgn_ballot_{w32|w64}
-def __builtin_amdgcn_uicmp : AMDGPUBuiltin<"uint64_t(unsigned int, unsigned int, _Constant int)", [Const]>;
-def __builtin_amdgcn_uicmpl : AMDGPUBuiltin<"uint64_t(uint64_t, uint64_t, _Constant int)", [Const]>;
-def __builtin_amdgcn_sicmp : AMDGPUBuiltin<"uint64_t(int, int, _Constant int)", [Const]>;
-def __builtin_amdgcn_sicmpl : AMDGPUBuiltin<"uint64_t(int64_t, int64_t, _Constant int)", [Const]>;
-def __builtin_amdgcn_fcmp : AMDGPUBuiltin<"uint64_t(double, double, _Constant int)", [Const]>;
-def __builtin_amdgcn_fcmpf : AMDGPUBuiltin<"uint64_t(float, float, _Constant int)", [Const]>;
-
 //===----------------------------------------------------------------------===//
 // Flat addressing builtins.
 //===----------------------------------------------------------------------===//

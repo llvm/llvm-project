@@ -218,6 +218,16 @@ Makes programs 10x faster by doing Special New Thing.
   previously relied on the subtarget feature to enable misaligned buffer merging
   must now set the corresponding module flag to `1` (relaxed). An absent flag is
   treated as strict by the backend.
+* These intrinsics have been removed in favour of `llvm.amdgcn.ballot`:
+  * `llvm.amdgcn.icmp`
+  * `llvm.amdgcn.fcmp`
+* The corresponding builtins have been removed in favour of
+  `__builtin_amdgcn_ballot_w32` or `__builtin_amdgcn_ballot_w64`:
+  * `__builtin_amdgcn_uicmp`
+  * `__builtin_amdgcn_uicmpl`
+  * `__builtin_amdgcn_sicmpl`
+  * `__builtin_amdgcn_fcmp`
+  * `__builtin_amdgcn_fcmpf`
 
 ### Changes to the ARM Backend
 
