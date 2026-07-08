@@ -409,7 +409,8 @@ public:
            "Physical SPIR-V target must use unknown environment type");
 
     if (HostTarget) {
-      PointerWidth = PointerAlign = HostTarget->getPointerWidth(LangAS::Default);
+      PointerWidth = PointerAlign =
+          HostTarget->getPointerWidth(LangAS::Default);
     } else {
       PointerWidth = PointerAlign =
           (Triple.getArch() == llvm::Triple::spirv32) ? 32 : 64;
