@@ -282,7 +282,7 @@ define void @fold_replicating_umax_equal_live_ins(ptr noalias %dst, ptr %cond, i
 ; CHECK-NEXT:  then:
 ; CHECK-NEXT:    EMIT ir<%m> = call ir<%x>, ir<%x>, ir<@llvm.umax.i32>
 ; CHECK-NEXT:    EMIT ir<%gep> = getelementptr ir<%dst>, ir<%iv>
-; CHECK-NEXT:    EMIT store ir<%m>, ir<%gep>
+; CHECK-NEXT:    EMIT store ir<%x>, ir<%gep>
 ; CHECK-NEXT:  Successor(s): latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  latch:
