@@ -1729,6 +1729,63 @@ static const FieldDecl *getCurrentObjectMember(const Expr *E) {
   return dyn_cast<FieldDecl>(ME->getMemberDecl());
 }
 
+// A class with a user-provided constructor is trusted (paper §5.1): its
+// constructor body may have assigned a member, which local analysis cannot
+// see, so its members are not flow-tracked.
+static bool hasUserProvidedCtor(const CXXRecordDecl *RD) {
+  return llvm::any_of(RD->ctors(), [](const CXXConstructorDecl *C) {
+    return C->isUserProvided();
+  });
+}
+
+// Visit the candidate fields of RD and of its non-virtual, constructor-less
+// base classes, recursively.
+template <typename Fn>
+static void forEachCandidateUninitField(const CXXRecordDecl *RD, Fn Visit) {
+  SmallVector<const CXXRecordDecl *, 4> RecordStack(1, RD);
+  while (!RecordStack.empty()) {
+    const CXXRecordDecl *Cur = RecordStack.pop_back_val();
+    for (const FieldDecl *F : Cur->fields())
+      Visit(F);
+    for (const CXXBaseSpecifier &BS : Cur->bases()) {
+      if (BS.isVirtual())
+        continue;
+      const CXXRecordDecl *BRD = BS.getType()->getAsCXXRecordDecl();
+      if (BRD && BRD->hasDefinition() &&
+          !hasUserProvidedCtor(BRD->getDefinition()))
+        RecordStack.push_back(BRD->getDefinition());
+    }
+  }
+}
+
+// Collect the flow-trackable members of RD into Members/Index: [[uninit]]
+// built-in scalar (arithmetic or enum) members whose assignment counts as
+// initialization (§4.5), including those inherited from non-virtual,
+// constructor-less bases -- nothing can have assigned them before the
+// containing object's user code runs, so tracking them is sound. std::byte is
+// exempt (§4.5), matching R1/R2. Class-type and array members (which would
+// need construct_at flow modeling) and pointers (banned with [[uninit]] by R8)
+// are out of scope.
+static void collectTrackedUninitMembers(
+    Sema &S, const CXXRecordDecl *RD,
+    SmallVectorImpl<const FieldDecl *> &Members,
+    llvm::DenseMap<const FieldDecl *, unsigned> &Index) {
+  forEachCandidateUninitField(RD, [&](const FieldDecl *F) {
+    if (!F->hasAttr<UninitAttr>() || !F->getDeclName() ||
+        F->hasInClassInitializer())
+      return;
+    QualType T = F->getType();
+    if (!T->isIntegralOrEnumerationType() && !T->isFloatingType())
+      return;
+    if (S.Context.getBaseElementType(T)->isStdByteType())
+      return;
+    if (Index.count(F))
+      return;
+    Index[F] = Members.size();
+    Members.push_back(F);
+  });
+}
+
 // std::init constructor-body check (paper §7.1 "initialized ... before use").
 //
 // A [[uninit]] scalar data member is deliberately *not* required to be
@@ -1759,58 +1816,12 @@ static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
   if (!cfg)
     return;
 
-  // Target members: [[uninit]] built-in scalar (arithmetic or enum) members
-  // whose assignment counts as initialization (§4.5). std::byte is exempt
-  // (§4.5), matching R1/R2. Class-type and array members (which would need
-  // construct_at flow modeling) and pointers (banned with [[uninit]] by R8) are
-  // out of scope here.
-  //
-  // Members inherited from a non-virtual base with NO user-provided
-  // constructor are tracked too: nothing can have assigned them before the
-  // derived body runs, so tracking them is sound. A base with a user-provided
-  // constructor is trusted (paper §5.1) -- its constructor body may have
-  // assigned the member, which this local analysis cannot see -- and its
-  // members are left alone.
-  auto HasUserProvidedCtor = [](const CXXRecordDecl *RD) {
-    return llvm::any_of(RD->ctors(), [](const CXXConstructorDecl *C) {
-      return C->isUserProvided();
-    });
-  };
-  // Visit the candidate fields of RD and of its non-virtual, constructor-less
-  // base classes, recursively.
-  auto ForEachCandidateField = [&](const CXXRecordDecl *RD, auto &&Visit) {
-    SmallVector<const CXXRecordDecl *, 4> RecordStack(1, RD);
-    while (!RecordStack.empty()) {
-      const CXXRecordDecl *Cur = RecordStack.pop_back_val();
-      for (const FieldDecl *F : Cur->fields())
-        Visit(F);
-      for (const CXXBaseSpecifier &BS : Cur->bases()) {
-        if (BS.isVirtual())
-          continue;
-        const CXXRecordDecl *BRD = BS.getType()->getAsCXXRecordDecl();
-        if (BRD && BRD->hasDefinition() &&
-            !HasUserProvidedCtor(BRD->getDefinition()))
-          RecordStack.push_back(BRD->getDefinition());
-      }
-    }
-  };
-
+  // Target members: the shared flow-trackable filter (a base with a
+  // user-provided constructor is trusted per paper §5.1; nothing can have
+  // assigned a constructor-less base's members before this body runs).
   SmallVector<const FieldDecl *, 4> Members;
   llvm::DenseMap<const FieldDecl *, unsigned> Index;
-  ForEachCandidateField(Ctor->getParent(), [&](const FieldDecl *F) {
-    if (!F->hasAttr<UninitAttr>() || !F->getDeclName() ||
-        F->hasInClassInitializer())
-      return;
-    QualType T = F->getType();
-    if (!T->isIntegralOrEnumerationType() && !T->isFloatingType())
-      return;
-    if (S.Context.getBaseElementType(T)->isStdByteType())
-      return;
-    if (Index.count(F))
-      return;
-    Index[F] = Members.size();
-    Members.push_back(F);
-  });
+  collectTrackedUninitMembers(S, Ctor->getParent(), Members, Index);
   if (Members.empty())
     return;
   const unsigned N = Members.size();
@@ -1880,13 +1891,14 @@ static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
           const auto *BRD = CI->getBaseClass()->getAsCXXRecordDecl();
           if (!BRD || !BRD->hasDefinition())
             continue;
-          ForEachCandidateField(BRD->getDefinition(), [&](const FieldDecl *F) {
-            auto It = Index.find(F);
-            if (It == Index.end())
-              return;
-            BlockEvents.push_back({Write, It->second, CI->getInit()});
-            Gen[B->getBlockID()].set(It->second);
-          });
+          forEachCandidateUninitField(
+              BRD->getDefinition(), [&](const FieldDecl *F) {
+                auto It = Index.find(F);
+                if (It == Index.end())
+                  return;
+                BlockEvents.push_back({Write, It->second, CI->getInit()});
+                Gen[B->getBlockID()].set(It->second);
+              });
         }
         continue;
       }
