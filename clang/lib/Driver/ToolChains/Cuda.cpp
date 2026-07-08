@@ -146,7 +146,7 @@ void CudaInstallationDetector::WarnIfUnsupportedVersion() const {
 CudaInstallationDetector::CudaInstallationDetector(
     const Driver &D, const llvm::Triple &HostTriple,
     const llvm::opt::ArgList &Args)
-    : D(D) {
+    : D(D), HostTriple(HostTriple) {
   struct Candidate {
     std::string Path;
     bool StrictChecking;
@@ -301,9 +301,27 @@ CudaInstallationDetector::CudaInstallationDetector(
 
 void CudaInstallationDetector::AddCudaIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {
-  if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
-                         options::OPT_fno_offload_via_llvm, false))
+  if (HostTriple.getEnvironment() == llvm::Triple::LLVM ||
+      DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+                         options::OPT_fno_offload_via_llvm, false)) {
+    if (DriverArgs.hasFlag(options::OPT_offload_inc,
+                           options::OPT_no_offload_inc, true) &&
+        !DriverArgs.hasArg(options::OPT_nohipwrapperinc) &&
+        !DriverArgs.hasArg(options::OPT_nobuiltininc)){
+      CC1Args.append({"-include", "__clang_gpu_device_functions.h"});
+
+      SmallString<128> CudaIncludePath(D.ResourceDir);
+      llvm::sys::path::append(CudaIncludePath, "..", "..", "..");
+      llvm::sys::path::append(CudaIncludePath, "include", "offload", "cuda");
+      CC1Args.push_back("-internal-isystem");
+      CC1Args.push_back(DriverArgs.MakeArgString(CudaIncludePath));
+      CC1Args.append({"-include", "cuda_runtime.h"});
+    }
     return;
+  }
+  // if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+  //                        options::OPT_fno_offload_via_llvm, false))
+  //   return;
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
     // Add cuda_wrappers/* to our system include path.  This lets us wrap
@@ -401,7 +419,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       static_cast<const toolchains::NVPTXToolChain &>(getToolChain());
 
   bool UseLLVMOffload = Args.hasFlag(options::OPT_foffload_via_llvm,
-                         options::OPT_fno_offload_via_llvm, false);
+                                     options::OPT_fno_offload_via_llvm, false);
   assert((UseLLVMOffload || TC.getTriple().isNVPTX()) && "Wrong platform");
 
   BoundArch GPUArch;
@@ -548,7 +566,7 @@ void NVPTX::FatBinary::ConstructJob(Compilation &C, const JobAction &JA,
   const auto &TC =
       static_cast<const toolchains::CudaToolChain &>(getToolChain());
   bool UseLLVMOffload = Args.hasFlag(options::OPT_foffload_via_llvm,
-                         options::OPT_fno_offload_via_llvm, false);
+                                     options::OPT_fno_offload_via_llvm, false);
   assert((UseLLVMOffload || TC.getTriple().isNVPTX()) && "Wrong platform");
 
   ArgStringList CmdArgs;
@@ -598,7 +616,7 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
 
   bool UseLLVMOffload = Args.hasFlag(options::OPT_foffload_via_llvm,
-                         options::OPT_fno_offload_via_llvm, false);
+                                     options::OPT_fno_offload_via_llvm, false);
   assert((UseLLVMOffload || TC.getTriple().isNVPTX()) && "Wrong platform");
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
@@ -918,6 +936,17 @@ void CudaToolChain::addClangTargetOptions(
       DriverArgs.hasArg(options::OPT_S))
     return;
 
+  // For now, we don't use any Offload/OpenMP device runtime when we offload
+  // CUDA via LLVM/Offload. We should split the Offload/OpenMP device runtime
+  // and include the "generic" (or CUDA-specific) parts.
+  // When using LLVM offload path, we use __clang_gpu_device_functions.h
+  // instead of libdevice.
+  bool UseLLVMOffload = getTriple().getEnvironment() == llvm::Triple::LLVM ||
+                        DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+                                           options::OPT_fno_offload_via_llvm, false);
+  if (UseLLVMOffload)
+    return;
+
   std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(GpuArch);
   if (LibDeviceFile.empty()) {
     getDriver().Diag(diag::err_drv_no_cuda_libdevice) << GpuArch;
@@ -926,13 +955,6 @@ void CudaToolChain::addClangTargetOptions(
 
   CC1Args.push_back("-mlink-builtin-bitcode");
   CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
-
-  // For now, we don't use any Offload/OpenMP device runtime when we offload
-  // CUDA via LLVM/Offload. We should split the Offload/OpenMP device runtime
-  // and include the "generic" (or CUDA-specific) parts.
-  if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
-                         options::OPT_fno_offload_via_llvm, false))
-    return;
 
   clang::CudaVersion CudaInstallationVersion = CudaInstallation.version();
 
@@ -974,9 +996,27 @@ llvm::DenormalMode CudaToolChain::getDefaultDenormalModeForType(
 
 void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                        ArgStringList &CC1Args) const {
-  if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
-                         options::OPT_fno_offload_via_llvm, false))
+  if (getTriple().getEnvironment() == llvm::Triple::LLVM ||
+      DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+                         options::OPT_fno_offload_via_llvm, false)) {
+    if (DriverArgs.hasFlag(options::OPT_offload_inc,
+                           options::OPT_no_offload_inc, true) &&
+        !DriverArgs.hasArg(options::OPT_nohipwrapperinc) &&
+        !DriverArgs.hasArg(options::OPT_nobuiltininc)){
+      CC1Args.append({"-include", "__clang_gpu_device_functions.h"});
+
+      SmallString<128> CudaIncludePath(getDriver().ResourceDir);
+      llvm::sys::path::append(CudaIncludePath, "..", "..", "..");
+      llvm::sys::path::append(CudaIncludePath, "include", "offload", "cuda");
+      CC1Args.push_back("-internal-isystem");
+      CC1Args.push_back(DriverArgs.MakeArgString(CudaIncludePath));
+      CC1Args.append({"-include", "cuda_runtime.h"});
+    }
     return;
+  }
+  // if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+  //                        options::OPT_fno_offload_via_llvm, false))
+  //   return;
 
   // Check our CUDA version if we're going to include the CUDA headers.
   if (DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,

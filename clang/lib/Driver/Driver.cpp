@@ -1038,8 +1038,9 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   bool UseLLVMOffload = C.getInputArgs().hasArg(
       options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
 
-  IsOpenMPOffloading =
-      (IsCuda || IsHIP || IsSYCL || IsOpenMPOffloading) && UseLLVMOffload;
+  // Switch back to the actual toolchains
+  // IsOpenMPOffloading =
+  //     (IsCuda || IsHIP || IsSYCL || IsOpenMPOffloading) && UseLLVMOffload;
 
   // We currently don't support any kind of mixed offloading.
   if (IsOpenMPOffloading)
@@ -1131,7 +1132,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       llvm::errs() << "Determined TC: " << TC.getArchName() << '\n';
 
       // Emit a warning if the detected CUDA version is too new.
-      if (Kind == Action::OFK_Cuda) {
+      if (Kind == Action::OFK_Cuda && Target.getOS() == llvm::Triple::CUDA) {
         auto &CudaInstallation =
             static_cast<const toolchains::CudaToolChain &>(TC).CudaInstallation;
         if (CudaInstallation.isValid())
@@ -7058,6 +7059,7 @@ const ToolChain &Driver::getOffloadToolChain(
   assert(HostTC && "Host toolchain for offloading doesn't exit?");
   if (!TC) {
     // Detect the toolchain based off of the target operating system.
+    llvm::errs() << Target.getOS() << "\n";
     switch (Target.getOS()) {
     case llvm::Triple::CUDA:
       TC = std::make_unique<toolchains::CudaToolChain>(*this, Target, *HostTC,
@@ -7070,6 +7072,10 @@ const ToolChain &Driver::getOffloadToolChain(
       if (Kind == Action::OFK_HIP || Kind == Action::OFK_OpenMP)
         TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args,
                                                            HostTC.get(), Kind);
+      else if (Kind == Action::OFK_Cuda)
+        //TODO: [h15] figure out if this should be a new TC
+        TC = std::make_unique<toolchains::HIPAMDToolChain>(*this, Target,
+                                                           *HostTC, Args);
       break;
     default:
       break;

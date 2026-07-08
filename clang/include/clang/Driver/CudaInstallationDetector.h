@@ -22,6 +22,7 @@ private:
   const Driver &D;
   bool IsValid = false;
   CudaVersion Version = CudaVersion::UNKNOWN;
+  llvm::Triple HostTriple;
   std::string InstallPath;
   std::string BinPath;
   std::string LibDevicePath;
@@ -49,6 +50,8 @@ public:
   bool isValid() const { return IsValid; }
   /// Print information about the detected CUDA installation.
   void print(raw_ostream &OS) const;
+
+  llvm::Triple getHostTriple() const { return HostTriple;}
 
   /// Get the detected Cuda install's version.
   CudaVersion version() const {

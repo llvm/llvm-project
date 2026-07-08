@@ -953,10 +953,12 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   // before we -I or -include anything else, because we must pick up the
   // CUDA/HIP/SYCL headers from the particular CUDA/ROCm/SYCL installation,
   // rather than from e.g. /usr/local/include.
+  bool UsesLLVMOffloading = Args.hasFlag(options::OPT_foffload_via_llvm,
+                                     options::OPT_fno_offload_via_llvm, false) && getToolChain().getTriple().getEnvironment() == llvm::Triple::LLVM;
   llvm::errs() << "Is Cuda: " << JA.isOffloading(Action::OFK_Cuda) << "\n";
   llvm::errs() << "Offloading? " << JA.getOffloadingDeviceKind() << "\n";
-  if (JA.isOffloading(Action::OFK_Cuda)) {
-    llvm::errs() << "going into cuda include args\n";
+  llvm::errs() << "Triple Env: " << getToolChain().getTriple().getEnvironmentName() << "\n";
+  if (JA.isOffloading(Action::OFK_Cuda) && !UsesLLVMOffloading) {
     getToolChain().printVerboseInfo(llvm::errs());
     getToolChain().AddCudaIncludeArgs(Args, CmdArgs);
   }
@@ -985,33 +987,22 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-include");
     CmdArgs.push_back("__clang_openmp_device_functions.h");
   }
+  if (UsesLLVMOffloading && JA.isOffloading(Action::OFK_Cuda) &&
+      Args.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                   true) &&
+      !Args.hasArg(options::OPT_nohipwrapperinc) &&
+      !Args.hasArg(options::OPT_nobuiltininc) &&
+      llvm::any_of(Inputs, [](const InputInfo &I) {
+        return types::isCuda(I.getType());
+      })) {
+    CmdArgs.append({"-include", "__clang_gpu_device_functions.h"});
 
-  if (Args.hasArg(options::OPT_foffload_via_llvm) &&
-      (JA.isHostOffloading(C.getActiveOffloadKinds()) ||
-       JA.isDeviceOffloading(Action::OFK_OpenMP))) {
-    // Add llvm_wrappers/* to our system include path.  This lets us wrap
-    // standard library headers and other headers.
-    SmallString<128> P(D.ResourceDir);
-    llvm::sys::path::append(P, "include", "llvm_offload_wrappers");
-    CmdArgs.append({"-internal-isystem", Args.MakeArgString(P), "-include"});
-    if (JA.isDeviceOffloading(Action::OFK_OpenMP)) {
-      llvm::errs() << "Including offload_device\n";
-      CmdArgs.push_back("__llvm_offload_device.h");
-    } else {
-      llvm::errs() << "Including offload_host\n";
-      CmdArgs.push_back("__llvm_offload_host.h");
-    }
-    if (llvm::any_of(Inputs, [](const InputInfo &I) {
-          return types::isCuda(I.getType());
-        })) {
-      SmallString<128> OffloadCudaInclude(D.Dir);
-      llvm::sys::path::append(OffloadCudaInclude, "..", "include", "offload",
-                              "cuda");
-      CmdArgs.append({"-internal-isystem",
-                      Args.MakeArgString(OffloadCudaInclude), "-include"});
-      // CmdArgs.push_back("-include");
-      CmdArgs.push_back("cuda_runtime.h");
-    }
+    SmallString<128> OffloadCudaInclude(D.Dir);
+    llvm::sys::path::append(OffloadCudaInclude, "..", "include", "offload",
+                            "cuda");
+    CmdArgs.append({"-internal-isystem", Args.MakeArgString(OffloadCudaInclude),
+                    "-include"});
+    CmdArgs.push_back("cuda_runtime.h");
   }
 
   // Add -i* options, and automatically translate to
@@ -5212,6 +5203,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsSYCLDevice = JA.isDeviceOffloading(Action::OFK_SYCL);
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
   bool IsExtractAPI = isa<ExtractAPIJobAction>(JA);
+  bool UsesLLVMOffloading =
+      Triple.getEnvironment() == llvm::Triple::LLVM ||
+      Args.hasFlag(options::OPT_foffload_via_llvm,
+                   options::OPT_fno_offload_via_llvm, false);
   bool IsDeviceOffloadAction = !(JA.isDeviceOffloading(Action::OFK_None) ||
                                  JA.isDeviceOffloading(Action::OFK_Host));
   bool IsHostOffloadingAction =
@@ -5330,7 +5325,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (IsCuda && !IsCudaDevice) {
+  if (IsCuda && !IsCudaDevice && !UsesLLVMOffloading) {
     // We need to figure out which CUDA version we're compiling for, as that
     // determines how we load and launch GPU kernels.
     auto *CTC = static_cast<const toolchains::CudaToolChain *>(
