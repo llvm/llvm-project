@@ -1751,6 +1751,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     if (HasInt256) {
+      setOperationAction(ISD::MULHU, MVT::v4i64, Custom);
+      // Custom so the combiner keeps full products as [SU]MUL_LOHI, not
+      // MULH[SU].
+      setOperationAction(ISD::UMUL_LOHI, MVT::v4i64, Custom);
+      setOperationAction(ISD::SMUL_LOHI, MVT::v4i64, Custom);
       setOperationAction(ISD::VSELECT, MVT::v32i8, Legal);
 
       // Custom legalize 2x32 to get a little better code.
@@ -2024,6 +2029,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v32i16, HasBWI ? Legal : Custom);
     setOperationAction(ISD::MUL, MVT::v64i8,  Custom);
 
+    setOperationAction(ISD::MULHU, MVT::v8i64, Custom);
+    setOperationAction(ISD::UMUL_LOHI, MVT::v8i64, Custom);
+    setOperationAction(ISD::SMUL_LOHI, MVT::v8i64, Custom);
     setOperationAction(ISD::MULHU, MVT::v16i32, Custom);
     setOperationAction(ISD::MULHS, MVT::v16i32, Custom);
     setOperationAction(ISD::MULHS, MVT::v32i16, HasBWI ? Legal : Custom);
@@ -2106,8 +2114,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::STRICT_FP_TO_SINT, ISD::STRICT_FP_TO_UINT})
         setOperationAction(Opc,           MVT::v8i64, Custom);
 
-    if (Subtarget.hasDQI())
+    if (Subtarget.hasDQI()) {
       setOperationAction(ISD::MUL,        MVT::v8i64, Legal);
+
+      // MULHS needs vpmullq (AVX512DQ) for its low multiply to be a win.
+      setOperationAction(ISD::MULHS, MVT::v8i64, Custom);
+    }
 
     if (Subtarget.hasCDI()) {
       // NonVLX sub-targets extend 128/256 vectors to use the 512 version.
@@ -2265,6 +2277,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       }
       setOperationAction(ISD::MUL, MVT::v2i64, Legal);
       setOperationAction(ISD::MUL, MVT::v4i64, Legal);
+
+      // MULHS is only a win when the low multiply can use vpmullq; non-VLX
+      // targets handle VPMULLQ by implicit widening.
+      setOperationAction(ISD::MULHS, MVT::v4i64, Custom);
     }
 
     if (Subtarget.hasCDI()) {
@@ -3531,6 +3547,13 @@ bool X86TargetLowering::convertSelectOfConstantsToMath(EVT VT) const {
     return false;
 
   return true;
+}
+
+bool X86TargetLowering::shouldNormalizeToSelectSequence(LLVMContext &, EVT VT,
+                                                        EVT) const {
+  // With CCMP, keep and/or(setcc, setcc) trees intact so LowerSELECT can
+  // emit them as CCMP chains rather than splitting into chained selects.
+  return !(Subtarget.hasCCMP() && VT.isScalarInteger());
 }
 
 bool X86TargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
@@ -19998,6 +20021,13 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
 
   if (Subtarget.isTargetELF()) {
     TLSModel::Model model = DAG.getTarget().getTLSModel(GV);
+    // LFI does not support dlopen, so all TLS can be statically resolved. We
+    // automatically upgrade dynamic models to InitialExec because the dynamic
+    // TLS sequences are slower than necessary and interact poorly with LFI
+    // rewriting combined with rewrites from linker relaxation.
+    if (Subtarget.isLFI())
+      if (model == TLSModel::GeneralDynamic || model == TLSModel::LocalDynamic)
+        model = TLSModel::InitialExec;
     switch (model) {
       case TLSModel::GeneralDynamic:
         if (Subtarget.is64Bit()) {
@@ -21034,20 +21064,22 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   bool IsStrict = Op->isStrictFPOpcode();
   unsigned OpNo = IsStrict ? 1 : 0;
   SDValue Src = Op.getOperand(OpNo);
-  SDLoc dl(Op);
+  SDValue Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   MVT SrcVT = Src.getSimpleValueType();
   MVT DstVT = Op->getSimpleValueType(0);
-  SDValue Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
-
-  // Bail out when we don't have native conversion instructions.
-  if (DstVT == MVT::f128)
-    return SDValue();
+  SDLoc dl(Op);
 
   if (isBF16orSoftF16(DstVT, Subtarget))
     return promoteXINT_TO_FP(Op, dl, DAG);
   else if (isLegalConversion(SrcVT, DstVT, false, Subtarget))
     return Op;
+
+  if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
+    return LowerWin64_INT128_TO_FP(Op, DAG);
+
+  if (SDValue Extract = vectorizeExtractedCast(Op, dl, DAG, Subtarget))
+    return Extract;
 
   if (SDValue V = lowerFPToIntToFP(Op, dl, DAG, Subtarget))
     return V;
@@ -21055,11 +21087,9 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   if (DstVT.isVector())
     return lowerUINT_TO_FP_vec(Op, dl, DAG, Subtarget);
 
-  if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
-    return LowerWin64_INT128_TO_FP(Op, DAG);
-
-  if (SDValue Extract = vectorizeExtractedCast(Op, dl, DAG, Subtarget))
-    return Extract;
+  // Bail out when we don't have native conversion instructions.
+  if (DstVT == MVT::f128)
+    return SDValue();
 
   if (Subtarget.hasAVX512() && isScalarFPTypeInSSEReg(DstVT) &&
       (SrcVT == MVT::i32 || (SrcVT == MVT::i64 && Subtarget.is64Bit()))) {
@@ -25308,7 +25338,7 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
 static bool isX86LogicalCmp(SDValue Op) {
   unsigned Opc = Op.getOpcode();
   if (Opc == X86ISD::CMP || Opc == X86ISD::COMI || Opc == X86ISD::UCOMI ||
-      Opc == X86ISD::FCMP)
+      Opc == X86ISD::FCMP || Opc == X86ISD::CCMP || Opc == X86ISD::CTEST)
     return true;
   if (Op.getResNo() == 1 &&
       (Opc == X86ISD::ADD || Opc == X86ISD::SUB || Opc == X86ISD::ADC ||
@@ -25462,6 +25492,104 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
   return SDValue();
 }
 
+// Return true if Val is an integer ISD::SETCC or an AND/OR tree thereof,
+// suitable for lowering to a CCMP chain.
+static bool canEmitConjunctionForCCMP(SDValue Val) {
+  unsigned Opc = Val.getOpcode();
+  if (Opc == ISD::SETCC)
+    return Val.getOperand(0).getSimpleValueType().isInteger();
+  if (Opc == ISD::AND && Val.hasOneUse())
+    return canEmitConjunctionForCCMP(Val.getOperand(0)) &&
+           canEmitConjunctionForCCMP(Val.getOperand(1));
+  // For OR, at least one operand must be a leaf SETCC so the DCF of the right
+  // CCMP is unambiguous.
+  if (Opc == ISD::OR && Val.hasOneUse())
+    return (Val.getOperand(0).getOpcode() == ISD::SETCC ||
+            Val.getOperand(1).getOpcode() == ISD::SETCC) &&
+           canEmitConjunctionForCCMP(Val.getOperand(0)) &&
+           canEmitConjunctionForCCMP(Val.getOperand(1));
+  return false;
+}
+
+// Recursively emit a CCMP chain for an AND/OR tree of integer SETCCs.
+//   CCOp:      incoming flags value (null for the first/root comparison)
+//   Predicate: condition under which CCOp was produced (COND_INVALID at root)
+//   OutCC:     set to the condition code to test after the whole chain
+// Returns the flags-producing node (SUB or CCMP).
+//
+// AND(cc1, cc2): emit cc1 first; CCMP(cc2) fires when cc1 is true.
+//   SrcCC = cc1,  DCF forces cc2 false when cc1 is false.
+// OR(cc1, cc2):  emit cc1 first; CCMP(cc2) fires when cc1 is false.
+//   SrcCC = ~cc1, DCF forces cc2 true when cc1 is true.
+static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
+                                         SDValue CCOp, X86::CondCode Predicate,
+                                         SelectionDAG &DAG,
+                                         const X86Subtarget &Subtarget) {
+  SDLoc DL(Val);
+
+  if (Val.getOpcode() == ISD::SETCC) {
+    SDValue LHS = Val.getOperand(0), RHS = Val.getOperand(1);
+    ISD::CondCode CC = cast<CondCodeSDNode>(Val.getOperand(2))->get();
+    X86::CondCode X86CC = TranslateX86CC(CC, DL, /*IsFP=*/false, LHS, RHS, DAG);
+    assert(X86CC != X86::COND_INVALID);
+    OutCC = X86CC;
+
+    SDValue Flags = EmitCmp(LHS, RHS, X86CC, DL, DAG, Subtarget);
+    if (!CCOp)
+      return Flags;
+
+    SDNode *FlagsNode = Flags.getNode();
+    X86::CondCode DCFCode = X86::GetOppositeBranchCondition(X86CC);
+    SDValue CFlags = DAG.getTargetConstant(
+        X86::getCCMPCondFlagsFromCondCode(DCFCode), DL, MVT::i8);
+    SDValue SrcCC = DAG.getTargetConstant(Predicate, DL, MVT::i8);
+    return DAG.getNode(X86ISD::CCMP, DL, MVT::i32,
+                       {FlagsNode->getOperand(0), FlagsNode->getOperand(1),
+                        CFlags, SrcCC, CCOp});
+  }
+
+  bool IsOR = Val.getOpcode() == ISD::OR;
+  SDValue LHS = Val.getOperand(0), RHS = Val.getOperand(1);
+
+  // For OR, the right subtree must be a leaf SETCC so its DCF unambiguously
+  // forces the outcome true when skipped. OR is commutative, so swap if needed.
+  if (IsOR && RHS.getOpcode() != ISD::SETCC)
+    std::swap(LHS, RHS);
+
+  // Emit the left subtree first (provides CCOp for the right subtree's CCMP).
+  X86::CondCode LHSCC;
+  SDValue CmpL =
+      emitConjunctionForCCMPRec(LHS, LHSCC, CCOp, Predicate, DAG, Subtarget);
+
+  // For AND: right CCMP fires when left is true,  SrcCC = LHSCC.
+  // For OR:  right CCMP fires when left is false, SrcCC = !LHSCC.
+  X86::CondCode NextPred =
+      IsOR ? X86::GetOppositeBranchCondition(LHSCC) : LHSCC;
+
+  SDValue CmpR =
+      emitConjunctionForCCMPRec(RHS, OutCC, CmpL, NextPred, DAG, Subtarget);
+
+  // For OR, patch the DCF of the right leaf's CCMP to force OutCC TRUE when
+  // the CCMP is skipped (i.e. when the left condition was already true).
+  if (IsOR && CmpR.getOpcode() == X86ISD::CCMP) {
+    SDValue CFlags = DAG.getTargetConstant(
+        X86::getCCMPCondFlagsFromCondCode(OutCC), DL, MVT::i8);
+    CmpR = DAG.getNode(X86ISD::CCMP, DL, MVT::i32,
+                       {CmpR.getOperand(0), CmpR.getOperand(1), CFlags,
+                        CmpR.getOperand(3), CmpR.getOperand(4)});
+  }
+  return CmpR;
+}
+
+static SDValue emitConjunctionForCCMP(SDValue Val, X86::CondCode &OutCC,
+                                      SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget) {
+  if (!canEmitConjunctionForCCMP(Val))
+    return SDValue();
+  return emitConjunctionForCCMPRec(Val, OutCC, SDValue(), X86::COND_INVALID,
+                                   DAG, Subtarget);
+}
+
 SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   bool AddTest = true;
   SDValue Cond  = Op.getOperand(0);
@@ -25535,6 +25663,18 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (isScalarFPTypeInSSEReg(VT) && Subtarget.hasAVX512()) {
     SDValue Cmp = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v1i1, Cond);
     return DAG.getNode(X86ISD::SELECTS, DL, VT, Cmp, Op1, Op2);
+  }
+
+  // Lower select(and/or(setcc,...), T, F) as a CCMP chain.
+  if (Subtarget.hasCCMP() && !VT.isVector() &&
+      (Cond.getOpcode() == ISD::AND || Cond.getOpcode() == ISD::OR)) {
+    X86::CondCode CCMPOutCC;
+    if (SDValue Flags =
+            emitConjunctionForCCMP(Cond, CCMPOutCC, DAG, Subtarget)) {
+      SDValue X86CC = DAG.getTargetConstant(CCMPOutCC, DL, MVT::i8);
+      Cond = DAG.getNode(X86ISD::SETCC, DL, MVT::i8, X86CC, Flags);
+      AddTest = false;
+    }
   }
 
   if (Cond.getOpcode() == ISD::SETCC &&
@@ -30263,6 +30403,13 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
   if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !Subtarget.hasBWI())
     return splitVectorIntBinary(Op, DAG, dl);
 
+  if (VT.isVector() && VT.getVectorElementType() == MVT::i64) {
+    SDValue Lo, Hi;
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    TLI.forceExpandMultiply(DAG, dl, IsSigned, Lo, Hi, A, B);
+    return Hi;
+  }
+
   if (VT == MVT::v4i32 || VT == MVT::v8i32 || VT == MVT::v16i32) {
     assert((VT == MVT::v4i32 && Subtarget.hasSSE2()) ||
            (VT == MVT::v8i32 && Subtarget.hasInt256()) ||
@@ -34321,6 +34468,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::MUL:                return LowerMUL(Op, Subtarget, DAG);
   case ISD::MULHS:
   case ISD::MULHU:              return LowerMULH(Op, Subtarget, DAG);
+  case ISD::SMUL_LOHI:
+  case ISD::UMUL_LOHI:          return DAG.UnrollVectorOp(Op.getNode());
   case ISD::ROTL:
   case ISD::ROTR:               return LowerRotate(Op, Subtarget, DAG);
   case ISD::SRA:
@@ -38730,8 +38879,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTDPBF8PS:
   case X86::PTDPBHF8PS:
   case X86::PTDPHBF8PS:
-  case X86::PTDPHF8PS:
-  case X86::PTMMULTF32PS: {
+  case X86::PTDPHF8PS: {
     unsigned Opc;
     switch (MI.getOpcode()) {
     default: llvm_unreachable("illegal opcode!");
@@ -38748,7 +38896,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTDPBHF8PS: Opc = X86::TDPBHF8PS; break;
     case X86::PTDPHBF8PS: Opc = X86::TDPHBF8PS; break;
     case X86::PTDPHF8PS: Opc = X86::TDPHF8PS; break;
-    case X86::PTMMULTF32PS: Opc = X86::TMMULTF32PS; break;
       // clang-format on
     }
 
@@ -45095,6 +45242,32 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   }
 
   return false;
+}
+
+unsigned X86TargetLowering::getPreferredShrunkVectorSizeInBits(
+    SDValue Op, const APInt &DemandedElts) const {
+  EVT VT = Op.getValueType();
+  unsigned SizeInBits = VT.getSizeInBits();
+  unsigned NumElts = VT.getVectorNumElements();
+
+  switch (Op.getOpcode()) {
+  case ISD::FSUB:
+  case ISD::FMUL:
+    break;
+  default:
+    return 0;
+  }
+
+  // For 256/512-bit ops that are 128/256-bit ops glued together, if we do not
+  // demand any of the high elements, then narrow the op to 128/256-bits: e.g.
+  // (op ymm0, ymm1) --> insert undef, (op xmm0, xmm1), 0
+  if (SizeInBits == 512 && DemandedElts.lshr(NumElts / 4) == 0)
+    return SizeInBits / 4;
+  if ((SizeInBits == 256 || SizeInBits == 512) &&
+      DemandedElts.lshr(NumElts / 2) == 0)
+    return SizeInBits / 2;
+
+  return 0;
 }
 
 bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(

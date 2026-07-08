@@ -995,7 +995,7 @@ SPIRVTypeInst
 SPIRVGlobalRegistry::getOpTypeOpaque(const StructType *Ty,
                                      MachineIRBuilder &MIRBuilder) {
   assert(Ty->hasName());
-  const StringRef Name = Ty->hasName() ? Ty->getName() : "";
+  StringRef Name = Ty->hasName() ? Ty->getName() : "";
   Register ResVReg = createTypeVReg(MIRBuilder);
   return createConstOrTypeAtFunctionEntry(
       MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
