@@ -1,14 +1,14 @@
 # Standard C++ Modules
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
 
 The term `module` is ambiguous, as it is used to mean multiple things in
 Clang. For Clang users, a module may refer to an `Objective-C Module`,
-[Clang Module](Modules.html) (also called a `Clang Header Module`) or a
+{doc}`Clang Module <Modules>` (also called a `Clang Header Module`) or a
 `C++20 Module` (or a `Standard C++ Module`). The implementation of all
 these kinds of modules in Clang shares a lot of code, but from the perspective
 of users their semantics and command line interfaces are very different. This
@@ -1510,7 +1510,7 @@ clang module map.
 
 #### Clang Module Map Background
 
-Clang Module Map is a feature of Clang Header Modules. See [Clang Module](Modules.html)
+Clang Module Map is a feature of Clang Header Modules. See {doc}`Clang Module <Modules>`
 for full introduction of Clang Header Modules. Here we would only introduce Clang Header
 Modules to make this document self contained.
 
@@ -2048,7 +2048,7 @@ JSON file conforming to the specification described in
 Only named modules are supported currently.
 
 A compilation database is needed when using `clang-scan-deps`. See
-[JSON Compilation Database Format Specification](JSONCompilationDatabase.html)
+{doc}`JSON Compilation Database Format Specification <JSONCompilationDatabase>`
 for more information about compilation databases. Note that the `output`
 JSON attribute is necessary for `clang-scan-deps` to scan using the P1689
 format. For example:
@@ -2438,4 +2438,3 @@ optimization opportunities.
 We **wish** to support Clang modules and standard C++ modules at the same time,
 but the mixing them together is not well used/tested yet. Please file new
 GitHub issues as you find interoperability problems.
-

@@ -1,7 +1,7 @@
 # SafeStack
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -206,4 +206,3 @@ in the function `SafeStack::createStackRestorePoints`.
 Volodymyr Kuznetsov, Laszlo Szekeres, Mathias Payer, George Candea, R. Sekar, Dawn Song.
 USENIX Symposium on Operating Systems Design and Implementation
 ([OSDI](https://www.usenix.org/conference/osdi14)), Broomfield, CO, October 2014
-

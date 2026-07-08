@@ -1,7 +1,7 @@
 # ShadowCallStack
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -208,4 +208,3 @@ ret
 [return flow guard]: https://xlab.tencent.com/en/2016/11/02/return-flow-guard/
 [will do this]: https://android-review.googlesource.com/c/platform/bionic/+/891622
 [zicfiss]: https://github.com/riscv/riscv-cfi/blob/main/cfi_backward.adoc
-

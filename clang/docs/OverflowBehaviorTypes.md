@@ -1,7 +1,7 @@
 # OverflowBehaviorTypes
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -802,4 +802,3 @@ typedef float __attribute__((overflow_behavior(wrap))) wrapping_float;
 typedef struct S { int i; } __attribute__((overflow_behavior(wrap))) S_t;
 // error: 'overflow_behavior' attribute cannot be applied to non-integer type 'struct S'
 ```
-

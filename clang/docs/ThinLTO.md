@@ -1,7 +1,7 @@
 # ThinLTO
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -278,4 +278,3 @@ See [DTLTO](https://lld.llvm.org/DTLTO.html) for more information.
 
 - From LLVM project blog:
   [ThinLTO: Scalable and Incremental LTO](http://blog.llvm.org/2016/06/thinlto-scalable-and-incremental-lto.html)
-

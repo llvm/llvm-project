@@ -1,11 +1,7 @@
 # Clang Compiler User's Manual
 
-```{eval-rst}
-.. include:: <isonum.txt>
-```
-
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -203,9 +199,10 @@ options like {option}`-c`, {option}`-g`, etc.
 ```{eval-rst}
 .. option:: --warning-suppression-mappings=foo.txt
 
-   :ref:`Suppress certain diagnostics for certain files. <warning_suppression_mappings>`
+   :doc:`Suppress certain diagnostics for certain files. <WarningSuppressionMappings>`
 ```
 
+(cl_diag_formatting)=
 (cl-diag-formatting)=
 
 #### Formatting of Diagnostics
@@ -217,6 +214,7 @@ but by a program that wants consistent and easily parsable output. For
 these cases, Clang provides a wide range of options to control the exact
 output format of the diagnostics that it generates.
 
+(opt_fshow-column)=
 (opt-fshow-column)=
 
 ```{eval-rst}
@@ -242,6 +240,7 @@ output format of the diagnostics that it generates.
    line; take care if your source contains multibyte characters.
 ```
 
+(opt_fshow-source-location)=
 (opt-fshow-source-location)=
 
 ```{eval-rst}
@@ -264,6 +263,7 @@ output format of the diagnostics that it generates.
    part.
 ```
 
+(opt_fcaret-diagnostics)=
 (opt-fcaret-diagnostics)=
 
 ```{eval-rst}
@@ -351,6 +351,7 @@ output format of the diagnostics that it generates.
            t.c +3:11: warning: conversion specifies type 'char *' but the argument has type 'int'
 ```
 
+(opt_fdiagnostics-show-option)=
 (opt-fdiagnostics-show-option)=
 
 ```{eval-rst}
@@ -402,6 +403,7 @@ output format of the diagnostics that it generates.
    of these, not hundreds or thousands of them.
 ```
 
+(opt_fsave-optimization-record)=
 (opt-fsave-optimization-record)=
 
 ```{eval-rst}
@@ -501,6 +503,7 @@ output format of the diagnostics that it generates.
    record.
 ```
 
+(opt_fdiagnostics-show-hotness)=
 (opt-fdiagnostics-show-hotness)=
 
 ```{eval-rst}
@@ -543,6 +546,7 @@ output format of the diagnostics that it generates.
    :ref:`-fdiagnostics-show-hotness <opt_fdiagnostics-show-hotness>`).
 ```
 
+(opt_fdiagnostics-fixit-info)=
 (opt-fdiagnostics-fixit-info)=
 
 ```{eval-rst}
@@ -567,6 +571,7 @@ output format of the diagnostics that it generates.
    confusing for machine parsing.
 ```
 
+(opt_fdiagnostics-print-source-range-info)=
 (opt-fdiagnostics-print-source-range-info)=
 
 ```{eval-rst}
@@ -706,6 +711,7 @@ output format of the diagnostics that it generates.
 
 ```
 
+(cl_diag_warning_groups)=
 (cl-diag-warning-groups)=
 
 #### Individual Warning Groups
@@ -1276,6 +1282,7 @@ All diagnostics are mapped into one of these 6 classes:
 - Error
 - Fatal
 
+(diagnostics_categories)=
 (diagnostics-categories)=
 
 #### Diagnostic Categories
@@ -1296,6 +1303,7 @@ by running '`clang   --print-diagnostic-categories`'.
 
 TODO: -W flags, -pedantic, etc
 
+(pragma_GCC_diagnostic)=
 (pragma-gcc-diagnostic)=
 
 #### Controlling Diagnostics via Pragmas
@@ -1451,6 +1459,7 @@ include directives in the translation unit.
 #include <stdatomic.h> // Clang CRT deprecation warnings are disabled.
 ```
 
+(diagnostics_enable_everything)=
 (diagnostics-enable-everything)=
 
 #### Enabling All Diagnostics
@@ -1505,8 +1514,8 @@ functionality.
 While not strictly part of the compiler, the diagnostics from Clang's
 [static analyzer](https://clang-analyzer.llvm.org) can also be
 influenced by the user via changes to the source code. See the available
-[annotations](analyzer/user-docs/Annotations.html) and the analyzer's
-[FAQ page](analyzer/user-docs/FAQ.html#exclude-code) for more information.
+{doc}`annotations <analyzer/user-docs/Annotations>` and the analyzer's
+{ref}`FAQ page <exclude_code>` for more information.
 
 (usersmanual-precompiled-headers)=
 
@@ -2208,6 +2217,7 @@ Code that just wants to use a specific rounding mode for specific floating point
 operations can avoid most of the hazards of the dynamic floating point environment
 by using `#pragma STDC FENV_ROUND` with a value other than `FE_DYNAMIC`.
 
+(crtfastmath.o)=
 (crtfastmath-o)=
 
 #### A note about `crtfastmath.o`
@@ -2830,6 +2840,7 @@ are listed below.
    only has an effect on ELF targets.
 ```
 
+(funique_internal_linkage_names)=
 (funique-internal-linkage-names)=
 
 ```{eval-rst}
@@ -2969,6 +2980,7 @@ are listed below.
    ``aligned`` attribute, this option is ignored.
 ```
 
+(strict_aliasing)=
 (strict-aliasing)=
 
 ### Strict Aliasing
@@ -3511,7 +3523,7 @@ instrumentation:
    compiled with the build ID linker option (`--build-id` for GNU ld or LLD,
    `/build-id` for lld-link on Windows). Linux, Windows and AIX are supported.
 
-   See [this](SourceBasedCodeCoverage.html#running-the-instrumented-program) section
+   See [this](SourceBasedCodeCoverage.md#running-the-instrumented-program) section
    about the `%t`, and `%c` modifiers.
 
 3. Combine profiles from multiple runs and convert the "raw" profile format to
@@ -4141,7 +4153,7 @@ features. You can "tune" the debug info for one of several different debuggers.
 ```{eval-rst}
 .. option:: -ggdb, -glldb, -gsce, -gdbx
 
-  Tune the debug info for the ``gdb``, ``lldb``, Sony PlayStation\ |reg|
+  Tune the debug info for the ``gdb``, ``lldb``, Sony PlayStation®
   debugger, or ``dbx``, respectively. Each of these options implies **-g**.
   (Therefore, if you want both **-gline-tables-only** and debugger tuning, the
   tuning option must come first.)
@@ -4385,6 +4397,7 @@ bugs.
   local_function(1);
   ```
 
+(c_ms)=
 (c-ms)=
 
 ### Microsoft extensions
@@ -4591,6 +4604,7 @@ Some extra options are available to support special OpenCL features.
    section on the OpenCL Header <opencl_header>`.
 ```
 
+(opencl_cl_ext)=
 (opencl-cl-ext)=
 
 ```{eval-rst}
@@ -4683,6 +4697,7 @@ There is a set of concrete HW architectures that OpenCL can be compiled for.
   however {option}`-cl-ext` flag can be used to toggle individual extensions and
   features.
 
+(opencl_header)=
 (opencl-header)=
 
 ### OpenCL Header
@@ -4835,6 +4850,7 @@ CFG that modify semantics of the original program.
 `noduplicate` is kept for backwards compatibility only and it considered to be
 deprecated for future uses.
 
+(cxx_for_opencl)=
 (cxx-for-opencl)=
 
 ### C++ for OpenCL
@@ -4943,6 +4959,7 @@ However, all memory used for program scope objects should be released on
 Limited experimental support of C++ standard libraries for OpenCL is
 described in {doc}`OpenCLSupport` page.
 
+(target_features)=
 (target-features)=
 
 ## Target-Specific Features and Limitations
@@ -6449,4 +6466,3 @@ The Visual C++ Toolset has a slightly more elaborate mechanism for detection.
 Strict aliasing (TBAA) is always off by default in clang-cl whereas in clang,
 strict aliasing is turned on by default for all optimization levels. For more
 details, see {ref}`Strict aliasing <strict_aliasing>`.
-

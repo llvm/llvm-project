@@ -1,7 +1,7 @@
 # Structure Protection
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -84,4 +84,3 @@ These symbols are named as follows:
 
 `__pfp_ds_` followed by the ABI encoding of the type's RTTI object
 symbol name followed by `.` followed by the name of the field.
-

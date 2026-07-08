@@ -1,7 +1,7 @@
 # Pointer Authentication
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -156,7 +156,7 @@ Readers may find it helpful to know how these terms map to Armv8.3 PAuth:
   simply corrupt the pointer so that later uses will likely trap. Unless the
   "later use" follows immediately and cannot be recovered from (e.g. with a
   signal handler), this does not provide adequate protection against
-  [authentication oracles], so implementations must emit additional
+  {ref}`authentication oracles <authentication-oracles>`, so implementations must emit additional
   instructions to force an immediate trap. This is unnecessary if the
   processor provides the optional `FPAC` extension, which guarantees an
   immediate trap.
@@ -400,9 +400,9 @@ currently cannot be an Objective-C pointer type, a C++ reference type, or a
 block pointer type; these restrictions may be lifted in the future.
 
 The current implementation in Clang is known to not provide adequate safety
-guarantees against the creation of [signing oracles] when assigning data
+guarantees against the creation of {ref}`signing oracles <signing-oracles>` when assigning data
 pointers to `__ptrauth`-qualified gl-values. See the section on [safe
-derivation][safe derivation] for more information.
+derivation](#safe-derivation) for more information.
 
 The qualifier's operands are as follows:
 
@@ -599,7 +599,8 @@ Produce a signed pointer for the given raw pointer without applying any
 authentication or extra treatment. This operation is not required to have the
 same behavior on a null pointer that the language implementation would.
 
-This is a treacherous operation that can easily result in [signing oracles].
+This is a treacherous operation that can easily result in
+{ref}`signing oracles <signing-oracles>`.
 Programs should use it seldom and carefully.
 
 (ptrauth-auth-and-resign)=
@@ -622,7 +623,7 @@ The code sequence produced for this operation must not be directly attackable.
 However, if the discriminator values are not constant integers, their
 computations may still be attackable. In the future, Clang should be enhanced
 to guarantee non-attackability if these expressions are
-{ref}`safely-derived<Safe derivation>`.
+{ref}`safely-derived <safe-derivation>`.
 
 #### `ptrauth_auth_with_pc_and_resign`
 
@@ -630,7 +631,7 @@ to guarantee non-attackability if these expressions are
 ptrauth_auth_with_pc_and_resign(pointer, oldKey, oldDiscriminator, oldPC, newKey, newDiscriminator)
 ```
 
-Similar to {ref}`ptrauth_auth_and_resign`, but additionally requires that the
+Similar to {ref}`ptrauth_auth_and_resign <ptrauth-auth-and-resign>`, but additionally requires that the
 original signing schema includes the address of the signing instruction (i.e.
 uses `paciasppc` / `pacibsppc` instead of `paciasp` / `pacibsp`). This
 authenticates `pointer` signed with `oldKey` and `oldDiscriminator` at
@@ -778,7 +779,7 @@ higher cost.
 
 Pointer authentication works as follows. Every indirect branch in a program has
 a purpose. For every purpose, the implementation chooses a
-{ref}`signing schema<Signing schemas>`. At some place where a pointer is known
+{ref}`signing schema <signing-schemas>`. At some place where a pointer is known
 to be correct for its purpose, it is signed according to the purpose's schema.
 At every place where the pointer is needed for its purpose, it is authenticated
 according to the purpose's schema. If that authentication fails, the program is
@@ -886,7 +887,7 @@ harvested from an object with similar structure (e.g. a different implementation
 of the same interface). Using address diversity will prevent such harvesting
 entirely. However, care must be taken when sourcing the v-table pointer
 originally; do not blindly sign a pointer that is not
-{ref}`safely derived<Safe derivation>`.
+{ref}`safely derived <safe-derivation>`.
 
 (signing-oracles)=
 
@@ -905,7 +906,7 @@ treacherous patterns of code. Currently this includes:
 - assigning values to `__ptrauth`-qualified l-values.
 
 Care must be taken in these situations to ensure that the pointer being signed
-has been {ref}`safely derived<Safe derivation>` or is otherwise not possible to
+has been {ref}`safely derived <safe-derivation>` or is otherwise not possible to
 attack. (In some cases, this may be challenging without compiler support.)
 
 A diagnostic will be added in the future for implicitly dangerous patterns of
@@ -941,7 +942,7 @@ requires careful work throughout the system.
 
 Any failure to halt the program on an authentication failure is likely to be
 exploitable by attackers to create an
-{ref}`authentication oracle<Authentication oracles>`.
+{ref}`authentication oracle <authentication-oracles>`.
 
 There are several different ways to introduce this problem:
 
@@ -979,8 +980,8 @@ There are several different ways to introduce this problem:
 
 If code that is part of a pointer authentication operation is interleaved with
 code that may itself be vulnerable to attacks, an attacker may be able to use
-this to create a {ref}`signing<Signing oracles>` or
-{ref}`authentication<Authentication oracles>` oracle.
+this to create a {ref}`signing <signing-oracles>` or
+{ref}`authentication <authentication-oracles>` oracle.
 
 For example, suppose that the compiler is generating a call to a function and
 passing two arguments: a signed constant pointer and a value derived from a
@@ -1132,10 +1133,10 @@ program's memory, that can substantially weaken the protections afforded by
 pointer authentication.
 
 - If an attacker can inject their own executable code, they can also certainly
-  inject code that can be used as a {ref}`signing oracle<Signing Oracles>`.
+  inject code that can be used as a {ref}`signing oracle <signing-oracles>`.
   The same is true if they can write to the instruction stream.
 - If an attacker can remap read-only program data sections to be writable, then
-  any use of {ref}`relative addresses` in global data becomes insecure.
+  any use of {ref}`relative addresses <relative-addresses>` in global data becomes insecure.
 - On platforms that use them, if an attacker can remap the memory containing
   the [global offset tables] as writable, then any unsigned pointers in those
   tables are insecure.
@@ -1303,7 +1304,7 @@ but more importantly, it defines away the potential for several attacks:
   attackers can search this pool for useful pointers that can be used in
   [substitution attacks], whereas pointers that are only materialized directly
   are not so easily available.
-- Similarly, attackers can use [access path attacks] to replace a pointer to a
+- Similarly, attackers can use {ref}`access path attacks <access-path-attacks>` to replace a pointer to a
   signed pointer with a pointer to the GOT if the signing schema used within the
   GOT happens to be the same as the original pointer. This kind of collision
   becomes much less likely to be useful the fewer pointers are in the GOT in the
@@ -1330,7 +1331,7 @@ be taken to ensure that using the GOT does not introduce weaknesses.
   substitution attacks, it's best if GOT entries can be signed with address
   diversity. Using a good constant discriminator as well (perhaps derived from
   the symbol name) can make it less useful to use a pointer to the GOT as the
-  replacement in an {ref}`access path attack<Access path attacks>`.
+    replacement in an {ref}`access path attack <access-path-attacks>`.
 
 In either case, the compiler must ensure that materializing the address of a GOT
 entry as part of producing a signed pointer constant is not vulnerable to
@@ -1344,12 +1345,12 @@ necessary for them to define the pointer authentication semantics of the APIs
 provided to perform such lookups. While the platform may choose to reply
 unsigned pointers from such function and rely on the caller performing the
 initial signing, doing so creates the opportunity for caller side errors that
-create {ref}`signing oracles<Signing Oracles>`.
+create {ref}`signing oracles <signing-oracles>`.
 
 On arm64e the `dlsym` function is used to resolve a symbol at runtime. If the
 resolved symbol is a function or other code pointer the returned pointer is
 signed using the default function signing schema described in
-{ref}`C function pointers<C function abi>`. If the resolved symbol is not a code pointer it is
+{ref}`C function pointers <c-function-abi>`. If the resolved symbol is not a code pointer it is
 returned as an unsigned pointer.
 
 (c-function-abi)=
@@ -1469,7 +1470,7 @@ mode evalutes to.
 Block pointers are data pointers which must interoperate with the ObjC `id` type
 and therefore cannot be signed themselves. As blocks conform to the ObjC `id`
 type, they contain an `isa` pointer signed as described
-{ref}`below<Objc isa and super>`.
+{ref}`below <objc-isa-and-super>`.
 
 The invocation pointer in a block is signed with the `IA` key using address
 diversity and a constant discriminator of 0. Using a uniform discriminator is
@@ -1523,7 +1524,7 @@ that store selectors, as in the common target-action design pattern. This
 prevents attackers from overriding the selector to invoke an arbitrary different
 method, which is a major attack vector in Objective-C. Since `SEL` values are
 not normally passed around as signed pointers, there is a
-{ref}`signing oracle<Signing Oracles>` associated with the initialization of the
+{ref}`signing oracle <signing-oracles>` associated with the initialization of the
 ivar, but the use of address and constant diversity limit the risks.
 
 The implicit qualifier means that the type of the ivar does not match its
@@ -1554,7 +1555,7 @@ void f(SEL __ptrauth_objc_sel*);
 ```
 
 or less safely, and introducing the possibility of an
-{ref}`signing or authentication oracle<Signing oracles>`, an unauthenticated
+{ref}`signing or authentication oracle <signing-oracles>`, an unauthenticated
 temporary may be used as intermediate storage.
 
 ## Alternative implementations
@@ -1612,4 +1613,3 @@ with this idea:
   `auth`-and-load instruction can perform the load and `auth` in parallel;
   a processor which instead encrypted the pointer would be forced to perform
   these operations serially.
-

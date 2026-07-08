@@ -19,7 +19,7 @@
 ```
 
 ```{contents}
-:local: true
+:local:
 ```
 
 # HIP Support
@@ -1126,4 +1126,3 @@ diverges from the traditional compilation flow:
 None of the architecture specific {doc}`AMDGPU macros <AMDGPUSupport>` are
 defined when targeting SPIR-V. An alternative, more flexible mechanism to enable
 doing per target / per feature code selection will be added in the future.
-

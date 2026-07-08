@@ -1,7 +1,7 @@
 # SYCL Compiler and Runtime architecture design
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -114,4 +114,3 @@ space attributes for pointers:
 ```C++
 //TODO: add support for __attribute__((opencl_global_host)) and __attribute__((opencl_global_device)).
 ```
-

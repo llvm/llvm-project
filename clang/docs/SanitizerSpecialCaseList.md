@@ -1,7 +1,7 @@
 # Sanitizer special case list
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -169,8 +169,8 @@ and lines starting with "#" are ignored.
 
 :::{note}
 Prior to Clang 18, section names and entries described below use a variant of
-regex where `*` is translated to `.*`. Clang 18 (`D154014
-<https://reviews.llvm.org/D154014>`) switches to glob and plans to remove
+regex where `*` is translated to `.*`. Clang 18
+([D154014](https://reviews.llvm.org/D154014)) switches to glob and plans to remove
 regex support in Clang 19.
 
 For Clang 18, regex is supported if `#!special-case-list-v1` is the first
@@ -267,4 +267,3 @@ e.g. when patterns are picked in a way to ensure the prevailing one is ignored.
 `mainfile` can be useful enabling a ubsan check for a large code base when
 finding the direct stack frame triggering the failure for every failure is
 difficult.
-

@@ -19,7 +19,7 @@
 ```
 
 ```{contents}
-:local: true
+:local:
 ```
 
 # OpenCL Support
@@ -77,6 +77,7 @@ All the options in this section are frontend-only and therefore if used
 with regular clang driver they require frontend forwarding, e.g. `-cc1`
 or `-Xclang`.
 
+(opencl_finclude_default_header)=
 (opencl-finclude-default-header)=
 
 ```{eval-rst}
@@ -121,6 +122,7 @@ declarations is to use mechanism enabled by {ref}`-fdeclare-opencl-builtins
 <opencl_fdeclare_opencl_builtins>` flag that is available as an alternative
 feature.
 
+(opencl_fdeclare_opencl_builtins)=
 (opencl-fdeclare-opencl-builtins)=
 
 ```{eval-rst}
@@ -140,6 +142,7 @@ if full functionality is required.
 > $ clang -Xclang -fdeclare-opencl-builtins test.cl
 > ```
 
+(opencl_fake_address_space_map)=
 (opencl-fake-address-space-map)=
 
 ```{eval-rst}
@@ -159,6 +162,7 @@ also {ref}`the section on the address space attribute <opencl_addrsp>`).
 > $ clang -cc1 -ffake-address-space-map test.cl
 > ```
 
+(opencl_builtins)=
 (opencl-builtins)=
 
 ### OpenCL builtins
@@ -230,6 +234,7 @@ extensions. For all other targets the configuration has to be made explicitly.
 Note that the target extension support performed by clang can be overridden
 with {option}`-cl-ext` command-line flags.
 
+(opencl_ext_libs)=
 (opencl-ext-libs)=
 
 **Library functionality**
@@ -267,6 +272,7 @@ the use of types or functions. This functionality is not guaranteed to remain in
 future releases. However, any future changes should not affect backward
 compatibility.
 
+(opencl_addrsp)=
 (opencl-addrsp)=
 
 ### Address spaces attribute
@@ -292,6 +298,7 @@ to keep it and only lower to reflect physical memory segments in the late
 machine passes. The mapping between logical and target address spaces is
 specified in the Clang's source code.
 
+(cxx_for_opencl_impl)=
 (cxx-for-opencl-impl)=
 
 ## C++ for OpenCL Implementation Status
@@ -315,6 +322,7 @@ to view the full bug list.
 - Support of [destructors with non-default address spaces](https://www.khronos.org/opencl/assets/CXX_for_OpenCL.html#_construction_initialization_and_destruction)
   is incomplete (See: [D109609](https://reviews.llvm.org/D109609)).
 
+(opencl_300)=
 (opencl-300)=
 
 ## OpenCL C 3.0 Usage
@@ -377,6 +385,7 @@ implementation status.
 +------------------------------+-------------------------+-----------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------+
 ```
 
+(opencl_experimenal)=
 (opencl-experimenal)=
 
 ## Experimental features
@@ -434,4 +443,3 @@ in [Compiler Explorer](https://godbolt.org/z/5WbnTfb65).
 More OpenCL specific C++ library implementations built on top of libcxx
 are available in [libclcxx](https://github.com/KhronosGroup/libclcxx)
 project.
-

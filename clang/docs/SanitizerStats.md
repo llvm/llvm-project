@@ -1,7 +1,7 @@
 # SanitizerStats
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -20,8 +20,8 @@ At run time, set the `SANITIZER_STATS_PATH` environment variable to direct
 statistics output to a file. The file will be written on process exit.
 The following substitutions will be applied to the environment variable:
 
-> - `%b` -- The executable basename.
-> - `%p` -- The process ID.
+- `%b` -- The executable basename.
+- `%p` -- The process ID.
 
 You can also send the `SIGUSR2` signal to a process to make it write
 sanitizer statistics immediately.

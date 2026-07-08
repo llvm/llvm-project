@@ -1,7 +1,7 @@
 # Modules
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -96,7 +96,7 @@ To enable modules, pass the command-line flag `-fmodules`. This will make any mo
 ### Standard C++ Modules
 
 :::{note}
-Modules are adopted into C++20 Standard. And its semantic and command line interface are very different from the Clang C++ modules. See [StandardCPlusPlusModules](StandardCPlusPlusModules.html) for details.
+Modules are adopted into C++20 Standard. And its semantic and command line interface are very different from the Clang C++ modules. See {doc}`StandardCPlusPlusModules` for details.
 :::
 
 ### Objective-C Import declaration
@@ -1243,7 +1243,7 @@ The Clang source code provides additional information about modules:
 
 : The `ModuleMap` class in this header describes the full module map, consisting of all of the module map files that have been parsed, and providing facilities for looking up module maps and mapping between modules and headers (in both directions).
 
-[PCHInternals]
+{doc}`PCHInternals`
 
 : Information about the serialized AST format used for precompiled headers and modules. The actual implementation is in the `clangSerialization` library.
 
@@ -1254,6 +1254,3 @@ The Clang source code provides additional information about modules:
 [^footnote-3]: The second instance is actually a new thread within the current process, not a separate process. However, the original compiler instance is blocked on the execution of this thread.
 
 [^footnote-4]: The preprocessing context in which the modules are parsed is actually dependent on the command-line options provided to the compiler, including the language dialect and any `-D` options. However, the compiled modules for different command-line options are kept distinct, and any preprocessor directives that occur within the translation unit are ignored. See the section on the [Configuration macros declaration] for more information.
-
-[pchinternals]: PCHInternals.html
-
