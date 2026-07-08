@@ -23,11 +23,8 @@
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
-#include "flang/Support/Fortran.h"
 #include <map>
 #include <optional>
-#include <stack>
-#include <type_traits>
 #include <variant>
 
 using namespace Fortran::parser::literals;

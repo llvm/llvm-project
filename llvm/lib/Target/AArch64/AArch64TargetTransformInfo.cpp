@@ -2144,7 +2144,7 @@ static std::optional<Instruction *> instCombineSVEDupX(InstCombiner &IC,
 
 // xor(cmpne(%pg, %lhs, %rhs), %pg)
 // -> cmpeq(%pg, %lhs, %rhs)
-static std::optional<Instruction *> instCombineXorSVECmpNE(InstCombiner &IC,
+static std::optional<Instruction *> instCombineXorSVECmpCC(InstCombiner &IC,
                                                            IntrinsicInst &II) {
   if (!II.hasOneUse())
     return std::nullopt;
@@ -2160,15 +2160,21 @@ static std::optional<Instruction *> instCombineXorSVECmpNE(InstCombiner &IC,
   case Intrinsic::aarch64_sve_cmpne_wide:
     IID = Intrinsic::aarch64_sve_cmpeq_wide;
     break;
+  case Intrinsic::aarch64_sve_cmpeq:
+    IID = Intrinsic::aarch64_sve_cmpne;
+    break;
+  case Intrinsic::aarch64_sve_cmpeq_wide:
+    IID = Intrinsic::aarch64_sve_cmpne_wide;
+    break;
   default:
     return std::nullopt;
   }
 
   IC.Builder.SetInsertPoint(User);
-  Value *CMPEQ = IC.Builder.CreateIntrinsic(
+  Value *CMPCC = IC.Builder.CreateIntrinsic(
       IID, II.getOperand(1)->getType(),
       {II.getOperand(0), II.getOperand(1), II.getOperand(2)});
-  IC.replaceInstUsesWith(*User, CMPEQ);
+  IC.replaceInstUsesWith(*User, CMPCC);
   IC.eraseInstFromFunction(*User);
   return &II;
 }
@@ -2177,7 +2183,7 @@ static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
                                                         IntrinsicInst &II) {
   LLVMContext &Ctx = II.getContext();
 
-  if (auto Res = instCombineXorSVECmpNE(IC, II))
+  if (auto Res = instCombineXorSVECmpCC(IC, II))
     return Res;
 
   if (!isAllActivePredicate(II.getArgOperand(0)))
@@ -3182,6 +3188,9 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEDup(IC, II);
   case Intrinsic::aarch64_sve_dup_x:
     return instCombineSVEDupX(IC, II);
+  case Intrinsic::aarch64_sve_cmpeq:
+  case Intrinsic::aarch64_sve_cmpeq_wide:
+    return instCombineXorSVECmpCC(IC, II);
   case Intrinsic::aarch64_sve_cmpne:
   case Intrinsic::aarch64_sve_cmpne_wide:
     return instCombineSVECmpNE(IC, II);
@@ -4569,6 +4578,17 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::SUB:
     return LT.first; // Also works for i128
   case ISD::MUL:
+    // i128 multiply is umulh + 2*madd + mul and grows ~O(Bitwidth^2). For
+    // scalable vectors the cost of LT.first will be invalid, leading to an
+    // invalid cost overall.
+    if (Ty->getScalarSizeInBits() > 64) {
+      unsigned NumLanes = isa<FixedVectorType>(Ty)
+                              ? cast<FixedVectorType>(Ty)->getNumElements()
+                              : 1;
+      InstructionCost CostPerLane = LT.first / NumLanes;
+      return CostPerLane * CostPerLane * NumLanes;
+    }
+
     if (LT.second == MVT::v2i64) {
       // When SVE is available, then we can lower the v2i64 operation using
       // the SVE mul instruction, which has a lower cost.
@@ -5369,18 +5389,47 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
     return InstructionCost::getInvalid();
 
   if (!UseMaskForGaps && Factor <= TLI->getMaxSupportedInterleaveFactor()) {
-    unsigned MinElts = VecVTy->getElementCount().getKnownMinValue();
-    auto *SubVecTy =
-        VectorType::get(VecVTy->getElementType(),
-                        VecVTy->getElementCount().divideCoefficientBy(Factor));
+    ElementCount EC = VecVTy->getElementCount();
+    auto *SubVecTy = VectorType::get(VecVTy->getElementType(),
+                                     EC.divideCoefficientBy(Factor));
 
     // ldN/stN only support legal vector types of size 64 or 128 in bits.
     // Accesses having vector types that are a multiple of 128 bits can be
     // matched to more than one ldN/stN instruction.
     bool UseScalable;
-    if (MinElts % Factor == 0 &&
+    if (EC.isKnownMultipleOf(Factor) &&
         TLI->isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
       return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
+
+    // Cost the alternative approach for scalable vectors where the interleave
+    // factor is larger than the VF: use a contiguous load/store of the full
+    // wide vector followed by deinterleave/interleave shuffles.
+    if (VecTy->isScalableTy() && EC.isKnownMultipleOf(Factor)) {
+      if (SubVecTy->getElementCount() == ElementCount::getScalable(1))
+        return InstructionCost::getInvalid();
+
+      // Cost of the contiguous memory operation on the wide vector.
+      InstructionCost MemCost;
+      if (UseMaskForCond) {
+        unsigned IID = Opcode == Instruction::Load ? Intrinsic::masked_load
+                                                   : Intrinsic::masked_store;
+        MemCost = getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(IID, VecTy, Alignment, AddressSpace),
+            CostKind);
+      } else {
+        MemCost =
+            getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
+      }
+
+      // llvm.vector.deinterleaveN is lowered as a binary tree of deinterleave2
+      // operations. A binary tree producing Factor leaf vectors has
+      // (Factor -1) inner deinterleave2 nodes. Each deinterleave2 on a pair of
+      // SVE registers emits one uzp1 + one uzp2.
+      // Total shuffle cost: (Factor - 1) deinterleave2 operations, each
+      // processing LT.first legal vector parts,with one uzp shuffle per part.
+      auto LT = getTypeLegalizationCost(VecTy);
+      return MemCost + (Factor - 1) * LT.first;
+    }
   }
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
