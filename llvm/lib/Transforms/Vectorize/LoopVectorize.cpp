@@ -3147,6 +3147,8 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
   using RecipeVFPair = std::pair<VPRecipeBase *, ElementCount>;
   SmallVector<RecipeVFPair> InvalidCosts;
   for (const auto &Plan : VPlans) {
+    if (!Plan->isCompatibleWithTF(CM.foldTailByMasking()))
+      continue;
     for (ElementCount VF : Plan->vectorFactors()) {
       // The VPlan-based cost model is designed for computing vector cost.
       // Querying VPlan-based cost model with a scarlar VF will cause some
@@ -5521,9 +5523,9 @@ void LoopVectorizationPlanner::plan(
   // for later use by the cost model.
   Config.computeMinimalBitwidths();
 
-  SmallVector<LoopVectorizationCostModel *, 2> EnabledCMs;
-  EnabledCMs.push_back(&CM);
-
+  SmallVector<std::pair<LoopVectorizationCostModel *, VPlanPtr>, 2> EnabledCMs;
+  EnabledCMs.push_back(std::make_pair(&CM, std::move(VPlan1)));
+  FixedScalableVFPair MaxFactorsTF;
   // Make sure firstly that the epilogue of main vector loop is allowed, then
   // check if the tail-folded epilogue feature is enabled.
   if (CM.EpilogueLoweringStatus == CM_EpilogueAllowed &&
@@ -5536,9 +5538,11 @@ void LoopVectorizationPlanner::plan(
 
     // After making sure that we can get valid results of computeMaxVF, make
     // sure that tail-folding for the epilogue loop still valid.
-    if (EpilogueTailFoldingCM->computeMaxVF(UserVF, UserIC) &&
-        EpilogueTailFoldingCM->foldTailByMasking()) {
-      EnabledCMs.push_back(&*EpilogueTailFoldingCM);
+    MaxFactorsTF = EpilogueTailFoldingCM->computeMaxVF(UserVF, UserIC);
+    if (MaxFactorsTF && EpilogueTailFoldingCM->foldTailByMasking()) {
+      VPlanPtr PredicatedVPlan1 = tryToBuildVPlan1(*EpilogueTailFoldingCM);
+      EnabledCMs.push_back(
+          std::make_pair(&*EpilogueTailFoldingCM, std::move(PredicatedVPlan1)));
       LLVM_DEBUG(dbgs() << "LV: CM instances: " << EnabledCMs.size() << "\n");
     }
   }
@@ -5546,22 +5550,23 @@ void LoopVectorizationPlanner::plan(
   // Invalidate interleave groups if all blocks of loop will be predicated.
   if (!useMaskedInterleavedAccesses(TTI)) {
     for (auto &CurrentCM : EnabledCMs) {
-      if (CurrentCM->blockNeedsPredicationForAnyReason(OrigLoop->getHeader())) {
+      if (CurrentCM.first->blockNeedsPredicationForAnyReason(
+              OrigLoop->getHeader())) {
         LLVM_DEBUG(dbgs() << "LV: Invalidate all interleaved groups due to "
                           << "fold-tail by masking which requires "
                              "masked-interleaved support.\n");
-        if (CurrentCM->InterleaveInfo.invalidateGroups()) {
+        if (CurrentCM.first->InterleaveInfo.invalidateGroups()) {
           // Invalidating interleave groups also requires invalidating all
           // decisions based on them, which includes widening decisions and
           // uniform and scalar values.
-          CurrentCM->invalidateCostModelingDecisions();
+          CurrentCM.first->invalidateCostModelingDecisions();
         }
       }
     }
   }
 
   for (auto &CurrentCM : EnabledCMs) {
-    if (CurrentCM->foldTailByMasking())
+    if (CurrentCM.first->foldTailByMasking())
       Legal->prepareToFoldTailByMasking();
   }
 
@@ -5577,16 +5582,23 @@ void LoopVectorizationPlanner::plan(
              "VF needs to be a power of two");
       // Collect the instructions (and their associated costs) that will be more
       // profitable to scalarize.
-        EnabledCMs.front()->collectNonVectorizedAndSetWideningDecisions(UserVF);
+      auto PrepareCostAndPlan = [&](LoopVectorizationCostModel &CurrentCM,
+                                    VPlanPtr &InitialVPlan, ElementCount &VF) {
+        CurrentCM.collectNonVectorizedAndSetWideningDecisions(VF);
+        buildVPlans(*InitialVPlan, VF, VF, CurrentCM);
+      };
+
       ElementCount EpilogueUserVF =
           ElementCount::getFixed(EpilogueVectorizationForceVF);
       if (EpilogueUserVF.isVector() &&
           ElementCount::isKnownLT(EpilogueUserVF, UserVF)) {
-          EnabledCMs.back()->collectNonVectorizedAndSetWideningDecisions(
-              EpilogueUserVF);
-        buildVPlans(*VPlan1, EpilogueUserVF, EpilogueUserVF, CM);
+        // TODO: Relax isKnownLT to isKnownLE and let other epilogue-related
+        // functions to decide if the EpilogueUserVF is accepted or not.
+        PrepareCostAndPlan(*EnabledCMs.back().first, EnabledCMs.back().second,
+                           EpilogueUserVF);
       }
-      buildVPlans(*VPlan1, UserVF, UserVF, CM);
+      PrepareCostAndPlan(*EnabledCMs.front().first, EnabledCMs.front().second,
+                         UserVF);
       if (!VPlans.empty() && VPlans.back()->getSingleVF() == UserVF) {
         // For scalar VF, skip VPlan cost check as VPlan cost is designed for
         // vector VFs only.
@@ -5612,15 +5624,29 @@ void LoopVectorizationPlanner::plan(
        ElementCount::isKnownLE(VF, MaxFactors.ScalableVF); VF *= 2)
     VFCandidates.push_back(VF);
 
-  for (const auto &VF : VFCandidates) {
+  for (const auto &VF : VFCandidates)
     // Collect Uniform and Scalar instructions after vectorization with VF.
-    for (auto &CurrentCM : EnabledCMs) {
-      CurrentCM->collectNonVectorizedAndSetWideningDecisions(VF);
-    }
-  }
+    EnabledCMs.front().first->collectNonVectorizedAndSetWideningDecisions(VF);
 
-  buildVPlans(*VPlan1, ElementCount::getFixed(1), MaxFactors.FixedVF, CM);
-  buildVPlans(*VPlan1, ElementCount::getScalable(1), MaxFactors.ScalableVF, CM);
+  buildVPlans(*EnabledCMs.front().second, ElementCount::getFixed(1),
+              MaxFactors.FixedVF, *EnabledCMs.front().first);
+  buildVPlans(*EnabledCMs.front().second, ElementCount::getScalable(1),
+              MaxFactors.ScalableVF, *EnabledCMs.front().first);
+
+  if (EnabledCMs.size() > 1) {
+    for (auto VF = ElementCount::getFixed(1);
+         ElementCount::isKnownLE(VF, MaxFactorsTF.FixedVF); VF *= 2)
+      EnabledCMs.back().first->collectNonVectorizedAndSetWideningDecisions(VF);
+
+    for (auto VF = ElementCount::getScalable(1);
+         ElementCount::isKnownLE(VF, MaxFactorsTF.ScalableVF); VF *= 2)
+      EnabledCMs.back().first->collectNonVectorizedAndSetWideningDecisions(VF);
+
+    buildVPlans(*EnabledCMs.back().second, ElementCount::getFixed(1),
+                MaxFactorsTF.FixedVF, *EnabledCMs.back().first);
+    buildVPlans(*EnabledCMs.back().second, ElementCount::getScalable(1),
+                MaxFactorsTF.ScalableVF, *EnabledCMs.back().first);
+  }
 
   LLVM_DEBUG(printPlans(dbgs()));
 }
@@ -5911,33 +5937,32 @@ std::pair<VectorizationFactor, VPlan *> LoopVectorizationPlanner::computeBestVF(
         continue;
       }
 
-      assert(P->isCompatibleWithTF(CM.foldTailByMasking()) &&
-             "All vplans must be compatible with the CM");
-      InstructionCost Cost =
-          cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr, CM);
-      VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
+      if (P->isCompatibleWithTF(CM.foldTailByMasking())) {
+        InstructionCost Cost =
+            cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr, CM);
+        VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
 
-      if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail())) {
-        BestFactor = CurrentFactor;
-        PlanForBestVF = P.get();
+        if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail())) {
+          BestFactor = CurrentFactor;
+          PlanForBestVF = P.get();
+        }
+
+        // If profitable add it to ProfitableVF list.
+        if (isMoreProfitable(CurrentFactor, ScalarFactor, P->hasScalarTail()))
+          ProfitableVFs.push_back(CurrentFactor);
       }
-
-      // If profitable add it to ProfitableVF list.
-      if (isMoreProfitable(CurrentFactor, ScalarFactor, P->hasScalarTail()))
-        ProfitableVFs.push_back(CurrentFactor);
-
-      if (EpilogueTailFoldingCM) {
-        // Get the costs for the EpilogueTailFoldingCM:
+      // Get the costs for the EpilogueTailFoldingCM:
+      if (EpilogueTailFoldingCM &&
+          P->isCompatibleWithTF(EpilogueTailFoldingCM->foldTailByMasking())) {
         LLVM_DEBUG(dbgs() << "LV: Predicated CM, calculate costs for VF: " << VF
                           << "\n");
-        cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr,
-             *EpilogueTailFoldingCM);
-        // TODO: that cost is not accurate right now as it includes costs for
-        // unpredicated vplans instead of predicated ones. That should be fixed
-        // in future work.
-
-        // TODO: consider the VF as a profitable one when we support predicated
-        // vplans.
+        InstructionCost Cost =
+            cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr,
+                 *EpilogueTailFoldingCM);
+        VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
+        // If profitable add it to ProfitableVF list.
+        if (isMoreProfitable(CurrentFactor, ScalarFactor, P->hasScalarTail()))
+          ProfitableVFs.push_back(CurrentFactor);
       }
     }
   }
@@ -7238,6 +7263,7 @@ getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
 /// otherwise CM_EpilogueAllowed.
 static EpilogueLowering
 getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
+                        LoopVectorizationLegality &LVL,
                         OptimizationRemarkEmitter *ORE) {
   // Epilogue TF is only enabled when explicitly requested via command line.
   if (!EpilogueTailFoldingPolicy.getNumOccurrences() ||
@@ -7266,6 +7292,19 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
                          "LV: Fall back to a normal epilogue\n");
     return CM_EpilogueAllowed;
   }
+
+  bool HasReductions = !LVL.getReductionVars().empty();
+  bool HasSelectCmpReductions =
+      HasReductions &&
+      any_of(LVL.getReductionVars(), [&](auto &Reduction) -> bool {
+        const RecurrenceDescriptor &RdxDesc = Reduction.second;
+        RecurKind RK = RdxDesc.getRecurrenceKind();
+        return RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
+               RecurrenceDescriptor::isFindIVRecurrenceKind(RK) ||
+               RecurrenceDescriptor::isMinMaxRecurrenceKind(RK);
+      });
+  if (HasSelectCmpReductions)
+    return CM_EpilogueAllowed;
 
   // We can apply tail-folding on the vectorized epilogue loop.
   return CM_EpilogueNotNeededFoldTail;
@@ -8093,7 +8132,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   std::optional<InterleavedAccessInfo> TailFoldingCMIAI;
   std::optional<LoopVectorizationCostModel> EpilogueTailFoldingCM;
   EpilogueLowering EpilogueTailLoweringStatus =
-      getEpilogueTailLowering(CM, L, ORE);
+      getEpilogueTailLowering(CM, L, LVL, ORE);
   if (EpilogueTailLoweringStatus ==
       EpilogueLowering::CM_EpilogueNotNeededFoldTail) {
     LLVM_DEBUG(dbgs() << "LV: epilogue tail-folding is enabled\n");

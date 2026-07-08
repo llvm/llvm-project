@@ -21,13 +21,13 @@ target triple = "aarch64"
 ; EPILOGUE-TF-CM: LV: can fold tail by masking.
 ; EPILOGUE-TF-CM: LV: CM instances: 2
 ; EPILOGUE-TF-CM: LV: Predicated CM, calculate costs for VF: 2
-; EPILOGUE-TF-CM: Cost for VF 2: 6
+; EPILOGUE-TF-CM: Cost for VF 2: 7
 ; EPILOGUE-TF-CM: LV: Predicated CM, calculate costs for VF: 4
-; EPILOGUE-TF-CM: Cost for VF 4: 11
+; EPILOGUE-TF-CM: Cost for VF 4: 13
 ; EPILOGUE-TF-CM: LV: Predicated CM, calculate costs for VF: 8
-; EPILOGUE-TF-CM: Cost for VF 8: 21
+; EPILOGUE-TF-CM: Cost for VF 8: 25
 ; EPILOGUE-TF-CM: LV: Predicated CM, calculate costs for VF: 16
-; EPILOGUE-TF-CM: Cost for VF 16: 41
+; EPILOGUE-TF-CM: Cost for VF 16: 49
 ;
 define void @test_epilogue_tf(ptr %A, i64 %n) {
 ; CHECK-LABEL: @test_epilogue_tf
