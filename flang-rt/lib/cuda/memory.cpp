@@ -200,8 +200,8 @@ void RTDEF(CUFMemFree)(
     void *ptr, unsigned type, const char *sourceFile, int sourceLine) {
   if (!ptr)
     return;
-  // A user cudaDeviceReset() already reclaimed every allocation (device and
-  // pinned host); freeing again would fail and recreate a phantom context.
+  // After a user cudaDeviceReset(), stale device/pinned frees fail and can
+  // recreate a phantom context, so skip them.
   if (DeviceContextTornDown())
     return;
   if (type == kMemTypeDevice || type == kMemTypeManaged ||

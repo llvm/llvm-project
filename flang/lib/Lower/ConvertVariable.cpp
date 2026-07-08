@@ -1293,10 +1293,9 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                 builder->getContext(), *sym);
         cuf::FreeOp::create(*builder, loc, fir::getBase(exv), dataAttr);
       });
-      // Main-program deallocation is skipped by needDeallocationOrFinalization,
-      // so free the device data here, before the descriptor free above
-      // (cleanups run in reverse of attachment). The context guard avoids
-      // reading a torn-down managed descriptor after a user cudaDeviceReset().
+      // Main-program allocatables skip normal deallocation, so free the device
+      // data here, before the descriptor free above (cleanups run LIFO). The
+      // guard avoids reading a torn-down managed descriptor after a reset.
       if (sym->owner().kind() == Fortran::semantics::Scope::Kind::MainProgram &&
           Fortran::semantics::IsAllocatable(*sym)) {
         auto *converterPtr = &converter;
