@@ -50,6 +50,29 @@ RFCs are not required to be:
   If your resources are limited, say so, and that will be taken into account
   (and vice versa, committing to a lot of work does not guarantee acceptance).
 
+## Removal Proposal Process
+
+Removing target support also requires an RFC. Reasonable effort should be made
+to involve the original contributors and users of the target support.
+
+:::{note}
+You may propose the removal of a subset of the target. For instance, removing
+support for an operating system on architecture A, without removing support for
+that operating system on architecture B.
+:::
+
+The content of the RFC should cover the same topics as an upstreaming proposal,
+but you will be arguing for the opposite conclusion.
+
+We reserve the right to change our standards over time, so a removal proposal is
+not necessarily a refutation of each point made in the upstreaming proposal.
+For example, what was an acceptable level of testing in the past may no longer
+be acceptable.
+
+If standards change and are to be applied to existing targets, target
+stakeholders should be given the opportunity to meet those standards rather
+than going straight to removal.
+
 ## Expectations Of Upstream Code
 
 Listed below are some examples of factors considered when considering accepting
