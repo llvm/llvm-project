@@ -1733,12 +1733,16 @@ DEF_TRAVERSE_DECL(FriendDecl, {
 })
 
 DEF_TRAVERSE_DECL(FriendTemplateDecl, {
-  if (D->getFriendType())
-    TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
-  else
-    TRY_TO(TraverseDecl(D->getFriendDecl()));
-  for (unsigned I = 0, E = D->getNumTemplateParameters(); I < E; ++I) {
-    TemplateParameterList *TPL = D->getTemplateParameterList(I);
+  TemplateName Template = D->getFriendTemplateName();
+  if (Template.isNull()) {
+    if (D->getFriendType())
+      TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
+    else
+      TRY_TO(TraverseDecl(D->getFriendDecl()));
+  } else {
+    TRY_TO(TraverseTemplateName(Template));
+  }
+  for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists()) {
     for (TemplateParameterList::iterator ITPL = TPL->begin(), ETPL = TPL->end();
          ITPL != ETPL; ++ITPL) {
       TRY_TO(TraverseDecl(*ITPL));
@@ -2222,25 +2226,20 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
        handles traversal of template args and qualifier.                       \
        For explicit specializations ("template<> set<int> {...};"),            \
        we traverse template args here since there is no EID. */                \
-    if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {             \
-      assert(D->getTemplateSpecializationKind() != TSK_ImplicitInstantiation); \
-      if (D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {  \
-        TRY_TO(TraverseTemplateArgumentLocsHelper(                             \
-            ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));    \
-      }                                                                        \
-    }                                                                          \
-                                                                               \
-    if (getDerived().shouldVisitTemplateInstantiations() ||                    \
-        D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {    \
-      /* Traverse base definition for explicit specializations */              \
-      TRY_TO(Traverse##DECLKIND##Helper(D));                                   \
-    } else {                                                                   \
+    if (D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {    \
+      const auto *ArgsWritten = D->getTemplateArgsAsWritten();                 \
+      TRY_TO(TraverseTemplateArgumentLocsHelper(                               \
+          ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));      \
+    } else if (!getDerived().shouldVisitTemplateInstantiations()) {            \
       /* Returning from here skips traversing the                              \
          declaration context of the *TemplateSpecializationDecl                \
          (embedded in the DEF_TRAVERSE_DECL() macro)                           \
          which contains the instantiated members of the template. */           \
       return true;                                                             \
     }                                                                          \
+                                                                               \
+    /* Traverse base definition for explicit specializations */                \
+    TRY_TO(Traverse##DECLKIND##Helper(D));                                     \
   })
 
 DEF_TRAVERSE_TMPL_SPEC_DECL(Class, CXXRecord)
@@ -4077,6 +4076,8 @@ bool RecursiveASTVisitor<Derived>::VisitOMPMapClause(OMPMapClause *C) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPNumTeamsClause(
     OMPNumTeamsClause *C) {
+  if (auto *E = C->getModifierExpr())
+    TRY_TO(VisitStmt(E));
   TRY_TO(VisitOMPClauseList(C));
   TRY_TO(VisitOMPClauseWithPreInit(C));
   return true;

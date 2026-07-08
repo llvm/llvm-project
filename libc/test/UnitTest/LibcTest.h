@@ -180,6 +180,15 @@ protected:
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
   }
 
+  template <
+      typename ValType,
+      cpp::enable_if_t<
+          cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::wstring_view>, int> = 0>
+  bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
+            const char *RHSStr, internal::Location Loc) {
+    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
+  }
+
   template <typename ValType,
             cpp::enable_if_t<
                 cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::string>, int> = 0>

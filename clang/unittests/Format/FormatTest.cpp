@@ -14394,6 +14394,7 @@ TEST_F(FormatTest, IncorrectCodeUnbalancedBraces) {
   verifyNoCrash("struct Foo {\n"
                 "  operator foo(bar\n"
                 "};");
+  verifyNoCrash("{ operator } a");
   verifyNoCrash("decltype( {\n"
                 "  {");
 }
@@ -15423,6 +15424,15 @@ TEST_F(FormatTest, PullInlineOnlyFunctionDefinitionsIntoSingleLine) {
                MergeInlineOnly);
   verifyFormat("int f() {\n"
                "}",
+               MergeInlineOnly);
+
+  MergeInlineOnly.NamespaceIndentation = FormatStyle::NI_All;
+  verifyFormat("namespace {\n"
+               "  class Class {\n"
+               "#define MACRO 1\n"
+               "    int f() { return 1; }\n"
+               "  };\n"
+               "} // namespace",
                MergeInlineOnly);
 
   MergeInlineOnly.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
@@ -22547,6 +22557,8 @@ TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
   verifyNoCrash("        tst     %o5     ! are we doing the gray case?\n"
                 "LY52:                   ! [internal]");
   verifyNoCrash("operator foo *;");
+  verifyNoCrash(
+      "#xxxx??x<xxxxxxx||??x<xxxxxxx and xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 }
 
 TEST_F(FormatTest, FormatsTableGenCode) {
@@ -24897,6 +24909,15 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
   verifyFormat("import <Foo/Bar> /* comment */;", Style);
   verifyFormat("import <Foo/Bar>; // Trailing comment", Style);
 
+  Style.BreakStringLiterals = true;
+  Style.ColumnLimit = 20;
+  verifyFormat("export module foobar;\n"
+               "char *s = \"s1\"\n"
+               "          \"s2\";",
+               "export module foobar;\n"
+               "char *s = \"s1\" \"s2\";",
+               Style);
+
   // Somewhat gracefully handle import in pre-C++20 code.
   verifyFormat("import /* not keyword */ = val ? 2 : 1;");
   verifyFormat("_world->import<engine_module>();");
@@ -25188,6 +25209,19 @@ TEST_F(FormatTest, EnumTrailingComma) {
                "enum class MyEnum_E {\n"
                "  MY_ENUM = 0U\n"
                "};",
+               Style);
+
+  // Issue https://github.com/llvm/llvm-project/issues/205571
+  verifyFormat("#ifdef FOO\n"
+               "#else\n"
+               "#endif\n"
+               "enum {\n"
+               "  E = 1,\n"
+               "};",
+               "#ifdef FOO\n"
+               "#else\n"
+               "#endif\n"
+               "enum { E = 1 };",
                Style);
 }
 

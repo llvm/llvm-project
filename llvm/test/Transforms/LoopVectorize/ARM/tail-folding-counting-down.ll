@@ -535,15 +535,12 @@ define void @sgt_for_loop(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP1]]
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 -15
 ; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
-; DEFAULT-NEXT:    [[REVERSE:%.*]] = shufflevector <16 x i8> [[WIDE_LOAD]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[TMP1]]
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i32 -15
 ; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
-; DEFAULT-NEXT:    [[REVERSE2:%.*]] = shufflevector <16 x i8> [[WIDE_LOAD1]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; DEFAULT-NEXT:    [[TMP6:%.*]] = add <16 x i8> [[REVERSE2]], [[REVERSE]]
+; DEFAULT-NEXT:    [[REVERSE3:%.*]] = add <16 x i8> [[WIDE_LOAD1]], [[WIDE_LOAD]]
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[C]], i32 [[TMP1]]
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i32 -15
-; DEFAULT-NEXT:    [[REVERSE3:%.*]] = shufflevector <16 x i8> [[TMP6]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; DEFAULT-NEXT:    store <16 x i8> [[REVERSE3]], ptr [[TMP8]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -573,15 +570,12 @@ define void @sgt_for_loop(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-PREFER-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 -15
 ; CHECK-PREFER-NEXT:    [[REVERSE:%.*]] = shufflevector <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i1> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-PREFER-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[TMP2]], <16 x i1> [[REVERSE]], <16 x i8> poison)
-; CHECK-PREFER-NEXT:    [[REVERSE1:%.*]] = shufflevector <16 x i8> [[WIDE_MASKED_LOAD]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-PREFER-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[TMP0]]
 ; CHECK-PREFER-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i32 -15
 ; CHECK-PREFER-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[TMP4]], <16 x i1> [[REVERSE]], <16 x i8> poison)
-; CHECK-PREFER-NEXT:    [[REVERSE3:%.*]] = shufflevector <16 x i8> [[WIDE_MASKED_LOAD2]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-PREFER-NEXT:    [[TMP5:%.*]] = add <16 x i8> [[REVERSE3]], [[REVERSE1]]
+; CHECK-PREFER-NEXT:    [[REVERSE4:%.*]] = add <16 x i8> [[WIDE_MASKED_LOAD2]], [[WIDE_MASKED_LOAD]]
 ; CHECK-PREFER-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[C]], i32 [[TMP0]]
 ; CHECK-PREFER-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i32 -15
-; CHECK-PREFER-NEXT:    [[REVERSE4:%.*]] = shufflevector <16 x i8> [[TMP5]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-PREFER-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[REVERSE4]], ptr align 1 [[TMP7]], <16 x i1> [[REVERSE]])
 ; CHECK-PREFER-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-PREFER-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -612,15 +606,12 @@ define void @sgt_for_loop(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-ENABLE-TP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP1]]
 ; CHECK-ENABLE-TP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 -15
 ; CHECK-ENABLE-TP-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
-; CHECK-ENABLE-TP-NEXT:    [[REVERSE:%.*]] = shufflevector <16 x i8> [[WIDE_LOAD]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-ENABLE-TP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[TMP1]]
 ; CHECK-ENABLE-TP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i32 -15
 ; CHECK-ENABLE-TP-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
-; CHECK-ENABLE-TP-NEXT:    [[REVERSE2:%.*]] = shufflevector <16 x i8> [[WIDE_LOAD1]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-ENABLE-TP-NEXT:    [[TMP6:%.*]] = add <16 x i8> [[REVERSE2]], [[REVERSE]]
+; CHECK-ENABLE-TP-NEXT:    [[REVERSE3:%.*]] = add <16 x i8> [[WIDE_LOAD1]], [[WIDE_LOAD]]
 ; CHECK-ENABLE-TP-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[C]], i32 [[TMP1]]
 ; CHECK-ENABLE-TP-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i32 -15
-; CHECK-ENABLE-TP-NEXT:    [[REVERSE3:%.*]] = shufflevector <16 x i8> [[TMP6]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-ENABLE-TP-NEXT:    store <16 x i8> [[REVERSE3]], ptr [[TMP8]], align 1
 ; CHECK-ENABLE-TP-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-ENABLE-TP-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -676,15 +667,12 @@ define void @sgt_for_loop_i64(ptr noalias nocapture readonly %a, ptr noalias noc
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP2]]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 -15
 ; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP4]], align 1
-; DEFAULT-NEXT:    [[REVERSE:%.*]] = shufflevector <16 x i8> [[WIDE_LOAD]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[TMP2]]
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i32 -15
 ; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x i8>, ptr [[TMP6]], align 1
-; DEFAULT-NEXT:    [[REVERSE2:%.*]] = shufflevector <16 x i8> [[WIDE_LOAD1]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; DEFAULT-NEXT:    [[TMP7:%.*]] = add <16 x i8> [[REVERSE2]], [[REVERSE]]
+; DEFAULT-NEXT:    [[REVERSE3:%.*]] = add <16 x i8> [[WIDE_LOAD1]], [[WIDE_LOAD]]
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[C]], i32 [[TMP2]]
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i32 -15
-; DEFAULT-NEXT:    [[REVERSE3:%.*]] = shufflevector <16 x i8> [[TMP7]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; DEFAULT-NEXT:    store <16 x i8> [[REVERSE3]], ptr [[TMP9]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -716,15 +704,12 @@ define void @sgt_for_loop_i64(ptr noalias nocapture readonly %a, ptr noalias noc
 ; CHECK-PREFER-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP2]], i32 -15
 ; CHECK-PREFER-NEXT:    [[REVERSE:%.*]] = shufflevector <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i1> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-PREFER-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[TMP3]], <16 x i1> [[REVERSE]], <16 x i8> poison)
-; CHECK-PREFER-NEXT:    [[REVERSE1:%.*]] = shufflevector <16 x i8> [[WIDE_MASKED_LOAD]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-PREFER-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[TMP1]]
 ; CHECK-PREFER-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 -15
 ; CHECK-PREFER-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[TMP5]], <16 x i1> [[REVERSE]], <16 x i8> poison)
-; CHECK-PREFER-NEXT:    [[REVERSE3:%.*]] = shufflevector <16 x i8> [[WIDE_MASKED_LOAD2]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-PREFER-NEXT:    [[TMP6:%.*]] = add <16 x i8> [[REVERSE3]], [[REVERSE1]]
+; CHECK-PREFER-NEXT:    [[REVERSE4:%.*]] = add <16 x i8> [[WIDE_MASKED_LOAD2]], [[WIDE_MASKED_LOAD]]
 ; CHECK-PREFER-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[C]], i32 [[TMP1]]
 ; CHECK-PREFER-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i32 -15
-; CHECK-PREFER-NEXT:    [[REVERSE4:%.*]] = shufflevector <16 x i8> [[TMP6]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-PREFER-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[REVERSE4]], ptr align 1 [[TMP8]], <16 x i1> [[REVERSE]])
 ; CHECK-PREFER-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-PREFER-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -757,15 +742,12 @@ define void @sgt_for_loop_i64(ptr noalias nocapture readonly %a, ptr noalias noc
 ; CHECK-ENABLE-TP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP2]]
 ; CHECK-ENABLE-TP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 -15
 ; CHECK-ENABLE-TP-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP4]], align 1
-; CHECK-ENABLE-TP-NEXT:    [[REVERSE:%.*]] = shufflevector <16 x i8> [[WIDE_LOAD]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-ENABLE-TP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[TMP2]]
 ; CHECK-ENABLE-TP-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i32 -15
 ; CHECK-ENABLE-TP-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x i8>, ptr [[TMP6]], align 1
-; CHECK-ENABLE-TP-NEXT:    [[REVERSE2:%.*]] = shufflevector <16 x i8> [[WIDE_LOAD1]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-ENABLE-TP-NEXT:    [[TMP7:%.*]] = add <16 x i8> [[REVERSE2]], [[REVERSE]]
+; CHECK-ENABLE-TP-NEXT:    [[REVERSE3:%.*]] = add <16 x i8> [[WIDE_LOAD1]], [[WIDE_LOAD]]
 ; CHECK-ENABLE-TP-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[C]], i32 [[TMP2]]
 ; CHECK-ENABLE-TP-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i32 -15
-; CHECK-ENABLE-TP-NEXT:    [[REVERSE3:%.*]] = shufflevector <16 x i8> [[TMP7]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-ENABLE-TP-NEXT:    store <16 x i8> [[REVERSE3]], ptr [[TMP9]], align 1
 ; CHECK-ENABLE-TP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-ENABLE-TP-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -818,36 +800,139 @@ for.body:
 ; false for the inner-loop.
 ;
 define void @sgt_nested_loop(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) #0 {
-; COMMON-LABEL: define void @sgt_nested_loop(
-; COMMON-SAME: ptr noalias readonly captures(none) [[A:%.*]], ptr noalias readonly captures(none) [[B:%.*]], ptr noalias captures(none) [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:  [[ENTRY:.*:]]
-; COMMON-NEXT:    [[CMP21:%.*]] = icmp sgt i32 [[N]], 0
-; COMMON-NEXT:    br i1 [[CMP21]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
-; COMMON:       [[FOR_BODY_PREHEADER]]:
-; COMMON-NEXT:    br label %[[FOR_BODY:.*]]
-; COMMON:       [[FOR_COND_LOOPEXIT:.*]]:
-; COMMON-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[ADD:%.*]], [[N]]
-; COMMON-NEXT:    br i1 [[EXITCOND]], label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]], label %[[FOR_BODY]]
-; COMMON:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
-; COMMON-NEXT:    br label %[[FOR_COND_CLEANUP]]
-; COMMON:       [[FOR_COND_CLEANUP]]:
-; COMMON-NEXT:    ret void
-; COMMON:       [[FOR_BODY]]:
-; COMMON-NEXT:    [[I_022:%.*]] = phi i32 [ [[ADD]], %[[FOR_COND_LOOPEXIT]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
-; COMMON-NEXT:    [[ADD]] = add nuw nsw i32 [[I_022]], 1
-; COMMON-NEXT:    br label %[[FOR_BODY4:.*]]
-; COMMON:       [[FOR_BODY4]]:
-; COMMON-NEXT:    [[J_020:%.*]] = phi i32 [ [[ADD]], %[[FOR_BODY]] ], [ [[DEC:%.*]], %[[FOR_BODY4]] ]
-; COMMON-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[J_020]]
-; COMMON-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; COMMON-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[J_020]]
-; COMMON-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX5]], align 1
-; COMMON-NEXT:    [[ADD7:%.*]] = add i8 [[TMP1]], [[TMP0]]
-; COMMON-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i8, ptr [[C]], i32 [[J_020]]
-; COMMON-NEXT:    store i8 [[ADD7]], ptr [[ARRAYIDX9]], align 1
-; COMMON-NEXT:    [[DEC]] = add nsw i32 [[J_020]], -1
-; COMMON-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[J_020]], 1
-; COMMON-NEXT:    br i1 [[CMP2]], label %[[FOR_BODY4]], label %[[FOR_COND_LOOPEXIT]]
+; DEFAULT-LABEL: define void @sgt_nested_loop(
+; DEFAULT-SAME: ptr noalias readonly captures(none) [[A:%.*]], ptr noalias readonly captures(none) [[B:%.*]], ptr noalias captures(none) [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; DEFAULT-NEXT:  [[ENTRY:.*:]]
+; DEFAULT-NEXT:    [[CMP21:%.*]] = icmp sgt i32 [[N]], 0
+; DEFAULT-NEXT:    br i1 [[CMP21]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
+; DEFAULT:       [[FOR_BODY_PREHEADER]]:
+; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
+; DEFAULT:       [[FOR_COND_LOOPEXIT:.*]]:
+; DEFAULT-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[ADD:%.*]], [[N]]
+; DEFAULT-NEXT:    br i1 [[EXITCOND]], label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]], label %[[FOR_BODY]]
+; DEFAULT:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
+; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP]]
+; DEFAULT:       [[FOR_COND_CLEANUP]]:
+; DEFAULT-NEXT:    ret void
+; DEFAULT:       [[FOR_BODY]]:
+; DEFAULT-NEXT:    [[I_022:%.*]] = phi i32 [ [[ADD]], %[[FOR_COND_LOOPEXIT]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; DEFAULT-NEXT:    [[ADD]] = add nuw nsw i32 [[I_022]], 1
+; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[ADD]], 16
+; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; DEFAULT:       [[VECTOR_PH]]:
+; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[ADD]], 16
+; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i32 [[ADD]], [[N_MOD_VF]]
+; DEFAULT-NEXT:    [[TMP0:%.*]] = sub i32 [[ADD]], [[N_VEC]]
+; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
+; DEFAULT:       [[VECTOR_BODY]]:
+; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; DEFAULT-NEXT:    [[TMP1:%.*]] = sub i32 [[ADD]], [[INDEX]]
+; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP1]]
+; DEFAULT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 -15
+; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
+; DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[TMP1]]
+; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i32 -15
+; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
+; DEFAULT-NEXT:    [[TMP6:%.*]] = add <16 x i8> [[WIDE_LOAD1]], [[WIDE_LOAD]]
+; DEFAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[C]], i32 [[TMP1]]
+; DEFAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i32 -15
+; DEFAULT-NEXT:    store <16 x i8> [[TMP6]], ptr [[TMP8]], align 1
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
+; DEFAULT-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; DEFAULT-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; DEFAULT:       [[MIDDLE_BLOCK]]:
+; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[ADD]], [[N_VEC]]
+; DEFAULT-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_LOOPEXIT]], label %[[SCALAR_PH]]
+; DEFAULT:       [[SCALAR_PH]]:
+;
+; CHECK-PREFER-LABEL: define void @sgt_nested_loop(
+; CHECK-PREFER-SAME: ptr noalias readonly captures(none) [[A:%.*]], ptr noalias readonly captures(none) [[B:%.*]], ptr noalias captures(none) [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-PREFER-NEXT:  [[ENTRY:.*:]]
+; CHECK-PREFER-NEXT:    [[CMP21:%.*]] = icmp sgt i32 [[N]], 0
+; CHECK-PREFER-NEXT:    br i1 [[CMP21]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
+; CHECK-PREFER:       [[FOR_BODY_PREHEADER]]:
+; CHECK-PREFER-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK-PREFER:       [[FOR_COND_LOOPEXIT:.*]]:
+; CHECK-PREFER-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[ADD:%.*]], [[N]]
+; CHECK-PREFER-NEXT:    br i1 [[EXITCOND]], label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]], label %[[FOR_BODY]]
+; CHECK-PREFER:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
+; CHECK-PREFER-NEXT:    br label %[[FOR_COND_CLEANUP]]
+; CHECK-PREFER:       [[FOR_COND_CLEANUP]]:
+; CHECK-PREFER-NEXT:    ret void
+; CHECK-PREFER:       [[FOR_BODY]]:
+; CHECK-PREFER-NEXT:    [[I_022:%.*]] = phi i32 [ [[ADD]], %[[FOR_COND_LOOPEXIT]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-PREFER-NEXT:    [[ADD]] = add nuw nsw i32 [[I_022]], 1
+; CHECK-PREFER-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-PREFER:       [[VECTOR_PH]]:
+; CHECK-PREFER-NEXT:    [[N_RND_UP:%.*]] = add i32 [[ADD]], 15
+; CHECK-PREFER-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 16
+; CHECK-PREFER-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; CHECK-PREFER-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-PREFER:       [[VECTOR_BODY]]:
+; CHECK-PREFER-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-PREFER-NEXT:    [[TMP0:%.*]] = sub i32 [[ADD]], [[INDEX]]
+; CHECK-PREFER-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[ADD]])
+; CHECK-PREFER-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP0]]
+; CHECK-PREFER-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 -15
+; CHECK-PREFER-NEXT:    [[REVERSE:%.*]] = shufflevector <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i1> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-PREFER-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[TMP2]], <16 x i1> [[REVERSE]], <16 x i8> poison)
+; CHECK-PREFER-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[TMP0]]
+; CHECK-PREFER-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i32 -15
+; CHECK-PREFER-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[TMP4]], <16 x i1> [[REVERSE]], <16 x i8> poison)
+; CHECK-PREFER-NEXT:    [[TMP5:%.*]] = add <16 x i8> [[WIDE_MASKED_LOAD1]], [[WIDE_MASKED_LOAD]]
+; CHECK-PREFER-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[C]], i32 [[TMP0]]
+; CHECK-PREFER-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i32 -15
+; CHECK-PREFER-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[TMP5]], ptr align 1 [[TMP7]], <16 x i1> [[REVERSE]])
+; CHECK-PREFER-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
+; CHECK-PREFER-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-PREFER-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-PREFER:       [[MIDDLE_BLOCK]]:
+; CHECK-PREFER-NEXT:    br label %[[FOR_COND_LOOPEXIT]]
+;
+; CHECK-ENABLE-TP-LABEL: define void @sgt_nested_loop(
+; CHECK-ENABLE-TP-SAME: ptr noalias readonly captures(none) [[A:%.*]], ptr noalias readonly captures(none) [[B:%.*]], ptr noalias captures(none) [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-ENABLE-TP-NEXT:  [[ENTRY:.*:]]
+; CHECK-ENABLE-TP-NEXT:    [[CMP21:%.*]] = icmp sgt i32 [[N]], 0
+; CHECK-ENABLE-TP-NEXT:    br i1 [[CMP21]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
+; CHECK-ENABLE-TP:       [[FOR_BODY_PREHEADER]]:
+; CHECK-ENABLE-TP-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK-ENABLE-TP:       [[FOR_COND_LOOPEXIT:.*]]:
+; CHECK-ENABLE-TP-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[ADD:%.*]], [[N]]
+; CHECK-ENABLE-TP-NEXT:    br i1 [[EXITCOND]], label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]], label %[[FOR_BODY]]
+; CHECK-ENABLE-TP:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
+; CHECK-ENABLE-TP-NEXT:    br label %[[FOR_COND_CLEANUP]]
+; CHECK-ENABLE-TP:       [[FOR_COND_CLEANUP]]:
+; CHECK-ENABLE-TP-NEXT:    ret void
+; CHECK-ENABLE-TP:       [[FOR_BODY]]:
+; CHECK-ENABLE-TP-NEXT:    [[I_022:%.*]] = phi i32 [ [[ADD]], %[[FOR_COND_LOOPEXIT]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-ENABLE-TP-NEXT:    [[ADD]] = add nuw nsw i32 [[I_022]], 1
+; CHECK-ENABLE-TP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[ADD]], 16
+; CHECK-ENABLE-TP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-ENABLE-TP:       [[VECTOR_PH]]:
+; CHECK-ENABLE-TP-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[ADD]], 16
+; CHECK-ENABLE-TP-NEXT:    [[N_VEC:%.*]] = sub i32 [[ADD]], [[N_MOD_VF]]
+; CHECK-ENABLE-TP-NEXT:    [[TMP0:%.*]] = sub i32 [[ADD]], [[N_VEC]]
+; CHECK-ENABLE-TP-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-ENABLE-TP:       [[VECTOR_BODY]]:
+; CHECK-ENABLE-TP-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-ENABLE-TP-NEXT:    [[TMP1:%.*]] = sub i32 [[ADD]], [[INDEX]]
+; CHECK-ENABLE-TP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP1]]
+; CHECK-ENABLE-TP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 -15
+; CHECK-ENABLE-TP-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
+; CHECK-ENABLE-TP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[TMP1]]
+; CHECK-ENABLE-TP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i32 -15
+; CHECK-ENABLE-TP-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
+; CHECK-ENABLE-TP-NEXT:    [[TMP6:%.*]] = add <16 x i8> [[WIDE_LOAD1]], [[WIDE_LOAD]]
+; CHECK-ENABLE-TP-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[C]], i32 [[TMP1]]
+; CHECK-ENABLE-TP-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i32 -15
+; CHECK-ENABLE-TP-NEXT:    store <16 x i8> [[TMP6]], ptr [[TMP8]], align 1
+; CHECK-ENABLE-TP-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
+; CHECK-ENABLE-TP-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-ENABLE-TP-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-ENABLE-TP:       [[MIDDLE_BLOCK]]:
+; CHECK-ENABLE-TP-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[ADD]], [[N_VEC]]
+; CHECK-ENABLE-TP-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_LOOPEXIT]], label %[[SCALAR_PH]]
+; CHECK-ENABLE-TP:       [[SCALAR_PH]]:
 ;
 entry:
   %cmp21 = icmp sgt i32 %N, 0

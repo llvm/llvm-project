@@ -13,6 +13,7 @@
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsGPU.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsType.h"
 
 namespace mlir {
 namespace acc {

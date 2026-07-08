@@ -869,7 +869,7 @@ bool HexagonAsmParser::ParseDirectiveComm(bool IsLocal, SMLoc Loc) {
 
 // validate register against architecture
 bool HexagonAsmParser::RegisterMatchesArch(MCRegister MatchNum) const {
-  if (HexagonMCRegisterClasses[Hexagon::V62RegsRegClassID].contains(MatchNum))
+  if (getHexagonMCRegisterClass(Hexagon::V62RegsRegClassID).contains(MatchNum))
     if (!getSTI().hasFeature(Hexagon::ArchV62))
       return false;
   return true;
@@ -1559,7 +1559,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
 
       MES->switchSection(mySection);
       unsigned byteSize = is32bit ? 4 : 8;
-      getStreamer().emitCodeAlignment(Align(byteSize), &getSTI(), byteSize);
+      getStreamer().emitCodeAlignment(Align(byteSize), getSTI(), byteSize);
 
       MCSymbol *Sym;
 

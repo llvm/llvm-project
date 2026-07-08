@@ -8,19 +8,21 @@ define i32 @test(i32 %arg) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, i32 [[ARG]], i32 1
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[OP_RDX:%.*]], %[[BB1]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[OP_RDX5:%.*]], %[[BB1]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i32> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i32> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP9:%.*]] = mul <2 x i32> zeroinitializer, [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <4 x i32> <i32 poison, i32 0, i32 0, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = mul <4 x i32> zeroinitializer, [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP10]], i32 3
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> [[TMP7]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[RDX_OP:%.*]] = mul <4 x i32> [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[RDX_OP]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i32> [[TMP7]], <8 x i32> [[TMP14]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> [[TMP12]])
-; CHECK-NEXT:    [[OP_RDX]] = mul i32 0, [[TMP13]]
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = mul i32 0, [[TMP9]]
+; CHECK-NEXT:    [[OP_RDX5]] = mul i32 [[OP_RDX4]], [[TMP13]]
 ; CHECK-NEXT:    br label %[[BB1]]
 ;
 bb:

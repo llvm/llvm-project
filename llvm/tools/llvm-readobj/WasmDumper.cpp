@@ -20,17 +20,16 @@ using namespace object;
 
 namespace {
 
-const EnumEntry<unsigned> WasmSymbolTypes[] = {
-#define ENUM_ENTRY(X)                                                          \
-  { #X, wasm::WASM_SYMBOL_TYPE_##X }
+constexpr EnumStringDef<unsigned> WasmSymbolTypeDefs[] = {
+#define ENUM_ENTRY(X) {{#X}, wasm::WASM_SYMBOL_TYPE_##X}
     ENUM_ENTRY(FUNCTION), ENUM_ENTRY(DATA), ENUM_ENTRY(GLOBAL),
     ENUM_ENTRY(SECTION),  ENUM_ENTRY(TAG),  ENUM_ENTRY(TABLE),
 #undef ENUM_ENTRY
 };
+constexpr auto WasmSymbolTypes = BUILD_ENUM_STRINGS(WasmSymbolTypeDefs);
 
-const EnumEntry<uint32_t> WasmSectionTypes[] = {
-#define ENUM_ENTRY(X)                                                          \
-  { #X, wasm::WASM_SEC_##X }
+constexpr EnumStringDef<uint32_t> WasmSectionTypeDefs[] = {
+#define ENUM_ENTRY(X) {{#X}, wasm::WASM_SEC_##X}
     ENUM_ENTRY(CUSTOM),   ENUM_ENTRY(TYPE),      ENUM_ENTRY(IMPORT),
     ENUM_ENTRY(FUNCTION), ENUM_ENTRY(TABLE),     ENUM_ENTRY(MEMORY),
     ENUM_ENTRY(GLOBAL),   ENUM_ENTRY(TAG),       ENUM_ENTRY(EXPORT),
@@ -38,21 +37,18 @@ const EnumEntry<uint32_t> WasmSectionTypes[] = {
     ENUM_ENTRY(DATA),     ENUM_ENTRY(DATACOUNT),
 #undef ENUM_ENTRY
 };
+constexpr auto WasmSectionTypes = BUILD_ENUM_STRINGS(WasmSectionTypeDefs);
 
-const EnumEntry<unsigned> WasmSymbolFlags[] = {
-#define ENUM_ENTRY(X)                                                          \
-  { #X, wasm::WASM_SYMBOL_##X }
-  ENUM_ENTRY(BINDING_GLOBAL),
-  ENUM_ENTRY(BINDING_WEAK),
-  ENUM_ENTRY(BINDING_LOCAL),
-  ENUM_ENTRY(VISIBILITY_DEFAULT),
-  ENUM_ENTRY(VISIBILITY_HIDDEN),
-  ENUM_ENTRY(UNDEFINED),
-  ENUM_ENTRY(EXPORTED),
-  ENUM_ENTRY(EXPLICIT_NAME),
-  ENUM_ENTRY(NO_STRIP),
+constexpr EnumStringDef<unsigned> WasmSymbolFlagDefs[] = {
+#define ENUM_ENTRY(X) {{#X}, wasm::WASM_SYMBOL_##X}
+    ENUM_ENTRY(BINDING_GLOBAL),    ENUM_ENTRY(BINDING_WEAK),
+    ENUM_ENTRY(BINDING_LOCAL),     ENUM_ENTRY(VISIBILITY_DEFAULT),
+    ENUM_ENTRY(VISIBILITY_HIDDEN), ENUM_ENTRY(UNDEFINED),
+    ENUM_ENTRY(EXPORTED),          ENUM_ENTRY(EXPLICIT_NAME),
+    ENUM_ENTRY(NO_STRIP),
 #undef ENUM_ENTRY
 };
+constexpr auto WasmSymbolFlags = BUILD_ENUM_STRINGS(WasmSymbolFlagDefs);
 
 class WasmDumper : public ObjDumper {
 public:
@@ -156,7 +152,7 @@ void WasmDumper::printSectionHeaders() {
   for (const SectionRef &Section : Obj->sections()) {
     const WasmSection &WasmSec = Obj->getWasmSection(Section);
     DictScope SectionD(W, "Section");
-    W.printEnum("Type", WasmSec.Type, ArrayRef(WasmSectionTypes));
+    W.printEnum("Type", WasmSec.Type, EnumStrings(WasmSectionTypes));
     W.printNumber("Size", static_cast<uint64_t>(WasmSec.Content.size()));
     W.printNumber("Offset", WasmSec.Offset);
     switch (WasmSec.Type) {
@@ -221,8 +217,8 @@ void WasmDumper::printSymbol(const SymbolRef &Sym) {
   DictScope D(W, "Symbol");
   WasmSymbol Symbol = Obj->getWasmSymbol(Sym.getRawDataRefImpl());
   W.printString("Name", Symbol.Info.Name);
-  W.printEnum("Type", Symbol.Info.Kind, ArrayRef(WasmSymbolTypes));
-  W.printFlags("Flags", Symbol.Info.Flags, ArrayRef(WasmSymbolFlags));
+  W.printEnum("Type", Symbol.Info.Kind, EnumStrings(WasmSymbolTypes));
+  W.printFlags("Flags", Symbol.Info.Flags, EnumStrings(WasmSymbolFlags));
 
   if (Symbol.Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) {
     if (Symbol.Info.ImportName) {

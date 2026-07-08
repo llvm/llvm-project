@@ -3042,8 +3042,35 @@ def BTFTypeTagDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
 Clang supports the ``__attribute__((btf_type_tag("ARGUMENT")))`` attribute for
-all targets. It only has effect when ``-g`` is specified on the command line and
-is currently silently ignored when not applied to a pointer type (note: this
+all targets. It only has effect when ``-g`` is specified on the command line.
+
+The attribute can be applied to a pointer type, in which case the tag is
+associated with the pointee type, e.g.:
+
+.. code-block:: c
+
+  int __attribute__((btf_type_tag("tag"))) *p;
+
+It can also be applied to the underlying type of a typedef, in which case the
+tag follows the typedef down to its base type, e.g.:
+
+.. code-block:: c
+
+  typedef struct foo __attribute__((btf_type_tag("tag"))) foo_t;
+
+The following is the corresponding btf:
+
+.. code-block::
+
+  ...
+  [2] TYPE_TAG 'tag' type_id=4
+  [3] TYPEDEF 'foo_t' type_id=2
+  [4] STRUCT 'foo' size=4 vlen=1
+      'c' type_id=5 bits_offset=0
+  [5] INT 'int' size=4 bits_offset=0 nr_bits=32 encoding=SIGNED
+  ...
+
+The attribute is currently silently ignored in any other position (note: this
 scenario may be diagnosed in the future).
 
 The ``ARGUMENT`` string will be preserved in IR and emitted to DWARF for the
@@ -5187,6 +5214,8 @@ As ``global_device`` and ``global_host`` are a subset of
 ``global_device`` and ``global_host`` address spaces to
 ``__global/opencl_global`` address spaces (following ISO/IEC TR 18037 5.1.3
 "Address space nesting and rules for pointers").
+
+These attributes are deprecated and may be removed in a future version of Clang.
   }];
 }
 
@@ -7619,7 +7648,7 @@ already being compiled with GNU inline semantics as the implied default. It is
 unspecified which macro is defined in a C++ compilation.
 
 GNU inline semantics are the default behavior with ``-std=gnu89``,
-``-std=c89``, ``-std=c94``, or ``-fgnu89-inline``.
+``-std=c89``, ``-fgnu89-inline``, or ``-std=iso9899:199409``.
   }];
 }
 
@@ -9145,6 +9174,33 @@ point."
 }];
 }
 
+def AnnotateDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The `annotate` attribute is used to add annotations to declarations or statements,
+typically for use by static analysis tools that are not integrated into the
+core Clang compiler (e.g., Clang-Tidy checks or out-of-tree Clang-based tools).
+It is a counterpart to the `annotate_type` attribute, which serves the same
+purpose, but for types.
+
+The attribute takes a mandatory string literal argument specifying the
+annotation category and an arbitrary number of optional arguments that provide
+additional information specific to the annotation category. The optional
+arguments must be constant expressions of arbitrary type.
+
+For example:
+
+.. code-block:: c++
+
+  [[clang::annotate("category1", "foo", 1)]] void func(int val [[clang::annotate("category2")]]) {
+    [[clang::annotate("category3")]] if (val) {
+
+    }
+  }
+
+  }];
+}
+
 def AnnotateTypeDocs : Documentation {
   let Category = DocCatType;
   let Heading = "annotate_type";
@@ -10146,7 +10202,7 @@ call. The attribute accepts two optional arguments: the first argument is the
 position of the expected sentinel value, starting from the last parameter. The
 second argument describes whether the last fixed parameter is treated as a
 valid sentinel value when set to '1'.
-All arguments described above defaults to '0' when elided.
+All arguments described above default to '0' when elided.
 The attribute is also supported with blocks and in Objective-C.
 
 .. code-block:: c
@@ -10160,7 +10216,7 @@ The attribute is also supported with blocks and in Objective-C.
     foo("Another", "example", NULL);
     foo("Missing", "sentinel"); // Not OK
 
-    bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last positon
+    bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last position
     bar(1, 2, 3, nullptr, 4);   // OK: `nullptr` is valid in C23
     bar(1, 2, 3, 4, NULL);      // Not OK
 

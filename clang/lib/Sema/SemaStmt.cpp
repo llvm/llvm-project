@@ -34,6 +34,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -4223,6 +4224,11 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
         return StmtError();
       }
       RetValExp = Res.getAs<Expr>();
+
+      // A returned HLSL matrix may need its layout reconciled with the
+      // function's row_major/column_major return type.
+      if (getLangOpts().HLSL && RetValExp && RetType->isMatrixType())
+        HLSL().propagateContextualMatrixLayout(RetValExp, RetType);
 
       // If we have a related result type, we need to implicitly
       // convert back to the formal result type.  We can't pretend to

@@ -59,6 +59,9 @@ jobs:
       image: ghcr.io/llvm/ci-ubuntu-24.04:35e958d7f0b7
     needs:
       - permission-check
+    env:
+      # llvm-nm/llvm-ar/llvm-ranlib are needed for the microbenchmarks
+      NINJA_TARGETS: clang lld llvm-size llvm-nm llvm-ar llvm-ranlib
     steps:
       - name: Get pull request
         id: get-pr
@@ -116,29 +119,29 @@ jobs:
         run: cmake -B build -C $SCRIPTS_DIR/llvm.cmake llvm -GNinja
         working-directory: llvm-project
       - name: Build Clang @ head
-        run: ninja -C build
+        run: ninja -C build $NINJA_TARGETS
         working-directory: llvm-project
       - name: Configure and build test-suite @ head
         run: |
           configure-and-build.sh rva23u64-O3-head $SCRIPTS_DIR/riscv64.cmake
           configure-and-build.sh armv9-a-O3-head $SCRIPTS_DIR/aarch64.cmake
-          configure-and-build.sh x86_64-O3-head $SCRIPTS_DIR/x86_64.cmake
+          configure-and-build.sh x86-64-v3-O3-head $SCRIPTS_DIR/x86_64.cmake
         working-directory: llvm-test-suite
       - name: Build Clang @ base
-        run: git checkout $BASE_SHA && ninja -C build
+        run: git checkout $BASE_SHA && ninja -C build $NINJA_TARGETS
         working-directory: llvm-project
       - name: Configure and build test-suite @ base
         run: |
           configure-and-build.sh rva23u64-O3-base $SCRIPTS_DIR/riscv64.cmake
           configure-and-build.sh armv9-a-O3-base $SCRIPTS_DIR/aarch64.cmake
-          configure-and-build.sh x86_64-O3-base $SCRIPTS_DIR/x86_64.cmake
+          configure-and-build.sh x86-64-v3-O3-base $SCRIPTS_DIR/x86_64.cmake
         working-directory: llvm-test-suite
       - name: Compute diffs
         run: |
           mkdir diffs
           ./utils/tdiff.py -a build.rva23u64-O3-base -b build.rva23u64-O3-head -s all > diffs/rva23u64-O3.diff || true
           ./utils/tdiff.py -a build.armv9-a-O3-base -b build.armv9-a-O3-head -s all > diffs/armv9-a-O3.diff || true
-          ./utils/tdiff.py -a build.x86_64-O3-base -b build.x86_64-O3-head -s all > diffs/x86_64-O3.diff || true
+          ./utils/tdiff.py -a build.x86-64-v3-O3-base -b build.x86-64-v3-O3-head -s all > diffs/x86-64-v3-O3.diff || true
         working-directory: llvm-test-suite
       - name: Upload diffs
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0

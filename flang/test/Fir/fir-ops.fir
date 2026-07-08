@@ -805,6 +805,14 @@ func.func @llvm_ptr_load_store_coordinate(%arg0: !fir.ref<tuple<!fir.ref<!fir.bo
   return %1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
 }
 
+// CHECK-LABEL: func @load_invariant(
+// CHECK-SAME:  %[[ARG0:.*]]: !fir.ref<i32>)
+func.func @load_invariant(%arg0: !fir.ref<i32>) -> i32 {
+  // CHECK-NEXT: %[[VAL:.*]] = fir.load %[[ARG0]] {invariant} : !fir.ref<i32>
+  %0 = fir.load %arg0 {invariant} : !fir.ref<i32>
+  return %0 : i32
+}
+
 func.func @array_access_ops(%a : !fir.ref<!fir.array<?x?xf32>>) {
   %c1 = arith.constant 1 : index
   %n = arith.constant 0 : index

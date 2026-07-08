@@ -22,6 +22,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/float128.h"
 #include <memory>
+#include <optional>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
@@ -993,6 +994,7 @@ enum class fltNanEncoding {
   // behavior described in https://arxiv.org/abs/2206.02915 .
   NegativeZero,
 };
+
 /* Represents floating point arithmetic semantics.  */
 struct fltSemantics {
   /* The largest E such that 2^E is representable; this matches the
@@ -1022,6 +1024,25 @@ struct fltSemantics {
 
   /* Whether the sign bit of this semantics is the most significant bit */
   bool hasSignBitInMSB = true;
+
+  /* Whether the format supports IEEE754 denormal representation.
+     If both hasDenormals and hasZero are false exponent 0 is assumed to be a
+     regular exponent instead of being reserved. This changes the bias by +1. */
+  bool hasDenormals = true;
+
+  /* Whether the integer bit is explicitly represented between significant and
+     exponent, for example as specified by the x86 double extended precision
+     format.
+
+     For bit patterns designated as undefined under the standard the following
+     conversions will happen when converting from bits. These follow x87
+     behaviour:
+     - exponent = all 1's, integer bit 0, significand 0 ("pseudoinfinity")
+     - exponent = all 1's, integer bit 0, significand nonzero ("pseudoNaN")
+     - exponent!=0 nor all 1's, integer bit 0 ("unnormal")
+     - exponent = 0, integer bit 1 ("pseudodenormal")
+     The first three are treated as NaNs, the last one as Normal */
+  bool hasExplicitIntegerBit = false;
 };
 
 // This is a interface class that is currently forwarding functionalities from
@@ -1602,6 +1623,22 @@ public:
     return isNegative() ? INT_MIN : getExactLog2Abs();
   }
 
+  // Returns true if this value is exactly 2^N.
+  LLVM_READONLY
+  bool isPowerOf2(int N) const { return N != INT_MIN && getExactLog2() == N; }
+
+  // Returns true if this value is exactly -(2^N).
+  LLVM_READONLY
+  bool isNegPowerOf2(int N) const {
+    return N != INT_MIN && isNegative() && getExactLog2Abs() == N;
+  }
+
+  // Returns true if this value is exactly +1.0.
+  LLVM_READONLY bool isOne() const { return isPowerOf2(0); }
+
+  // Returns true if this value is exactly -1.0.
+  LLVM_READONLY bool isMinusOne() const { return isNegPowerOf2(0); }
+
   LLVM_ABI friend hash_code hash_value(const APFloat &Arg);
   friend int ilogb(const APFloat &Arg);
   friend APFloat scalbn(APFloat X, int Exp, roundingMode RM);
@@ -1762,8 +1799,9 @@ inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
 
 /// Implement IEEE 754-2019 exp functions
 LLVM_READONLY
-LLVM_ABI APFloat exp(const APFloat &X,
-                     RoundingMode RM = APFloat::rmNearestTiesToEven);
+LLVM_ABI std::optional<APFloat>
+exp(const APFloat &X, RoundingMode RM = APFloat::rmNearestTiesToEven,
+    APFloat::opStatus *Status = nullptr);
 
 inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
   V.print(OS);

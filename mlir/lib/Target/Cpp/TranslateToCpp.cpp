@@ -103,6 +103,7 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
       .Case([&](emitc::DereferenceOp op) { return 15; })
       .Case([&](emitc::DivOp op) { return 13; })
       .Case([&](emitc::GetGlobalOp op) { return 18; })
+      .Case([&](emitc::GetFieldOp op) { return 18; })
       .Case([&](emitc::LiteralOp op) { return 18; })
       .Case([&](emitc::LoadOp op) { return 16; })
       .Case([&](emitc::LogicalAndOp op) { return 4; })
@@ -476,9 +477,13 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
 static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::MemberOp memberOp) {
-  if (!emitter.isPartOfCurrentExpression(memberOp.getOperation()))
-    return success();
-
+  if (memberOp.alwaysInline()) {
+    if (!emitter.isPartOfCurrentExpression(memberOp.getOperation()))
+      return success();
+  } else {
+    if (failed(emitter.emitAssignPrefix(*memberOp.getOperation())))
+      return failure();
+  }
   if (failed(emitter.emitOperand(memberOp.getOperand())))
     return failure();
   emitter.ostream() << "." << memberOp.getMember();
