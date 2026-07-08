@@ -3906,7 +3906,7 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // If a declaration contains multiple cleanup attributes, GCC only uses
   // the last one.
-  if (auto *A = D->getAttr<CleanupAttr>()) {
+  if (const auto *A = D->getAttr<CleanupAttr>()) {
     S.Diag(A->getLoc(), diag::warn_duplicate_cleanup_attr) << A->getRange();
     D->dropAttr<CleanupAttr>();
   }
