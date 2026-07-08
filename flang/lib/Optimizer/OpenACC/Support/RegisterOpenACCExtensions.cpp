@@ -53,12 +53,6 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         PartialEntityAccessModel<fir::CoordinateOp>>(*ctx);
     fir::DeclareOp::attachInterface<PartialEntityAccessModel<fir::DeclareOp>>(
         *ctx);
-    // fir.declare's dummy_scope operand is an identity token (see
-    // fir.dummy_scope) that must not be duplicated when the declare is
-    // sunk/rematerialized into an offload region; it must instead be
-    // dropped from the sunk/cloned instance.
-    fir::DeclareOp::attachInterface<
-        OutlineIdentityOperandDeclareModel<fir::DeclareOp>>(*ctx);
 
     fir::AddrOfOp::attachInterface<AddressOfGlobalModel>(*ctx);
     fir::GlobalOp::attachInterface<GlobalVariableModel>(*ctx);
@@ -100,10 +94,6 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
             PartialEntityAccessModel<hlfir::DesignateOp>>(*ctx);
         hlfir::DeclareOp::attachInterface<
             PartialEntityAccessModel<hlfir::DeclareOp>>(*ctx);
-        // See the fir::DeclareOp registration above for why dummy_scope must
-        // be dropped rather than duplicated.
-        hlfir::DeclareOp::attachInterface<
-            OutlineIdentityOperandDeclareModel<hlfir::DeclareOp>>(*ctx);
       });
 
   // Register CUF operation interfaces
