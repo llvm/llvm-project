@@ -25475,8 +25475,15 @@ static bool canEmitConjunctionForCCMP(SDValue Val) {
   unsigned Opc = Val.getOpcode();
   if (Opc == ISD::SETCC)
     return Val.getOperand(0).getSimpleValueType().isInteger();
-  if ((Opc == ISD::AND || Opc == ISD::OR) && Val.hasOneUse())
+  if (Opc == ISD::AND && Val.hasOneUse())
     return canEmitConjunctionForCCMP(Val.getOperand(0)) &&
+           canEmitConjunctionForCCMP(Val.getOperand(1));
+  // For OR, at least one operand must be a leaf SETCC so the DCF of the right
+  // CCMP is unambiguous.
+  if (Opc == ISD::OR && Val.hasOneUse())
+    return (Val.getOperand(0).getOpcode() == ISD::SETCC ||
+            Val.getOperand(1).getOpcode() == ISD::SETCC) &&
+           canEmitConjunctionForCCMP(Val.getOperand(0)) &&
            canEmitConjunctionForCCMP(Val.getOperand(1));
   return false;
 }
@@ -25521,6 +25528,11 @@ static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
   bool IsOR = Val.getOpcode() == ISD::OR;
   SDValue LHS = Val.getOperand(0), RHS = Val.getOperand(1);
 
+  // For OR, the right subtree must be a leaf SETCC so its DCF unambiguously
+  // forces the outcome true when skipped. OR is commutative, so swap if needed.
+  if (IsOR && RHS.getOpcode() != ISD::SETCC)
+    std::swap(LHS, RHS);
+
   // Emit the left subtree first (provides CCOp for the right subtree's CCMP).
   X86::CondCode LHSCC;
   SDValue CmpL =
@@ -25534,9 +25546,8 @@ static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
   SDValue CmpR =
       emitConjunctionForCCMPRec(RHS, OutCC, CmpL, NextPred, DAG, Subtarget);
 
-  // For OR, the DCF inside the right leaf was computed as ~OutCC (forces
-  // OutCC false on skip).  We need it to force OutCC TRUE on skip instead.
-  // Patch the DCF of the last-emitted CCMP node.
+  // For OR, patch the DCF of the right leaf's CCMP to force OutCC TRUE when
+  // the CCMP is skipped (i.e. when the left condition was already true).
   if (IsOR && CmpR.getOpcode() == X86ISD::CCMP) {
     SDValue CFlags = DAG.getTargetConstant(
         X86::getCCMPCondFlagsFromCondCode(OutCC), DL, MVT::i8);
