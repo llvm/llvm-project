@@ -3,7 +3,7 @@
 // Ensure no crash when DiagnoseMissingSemiAfterTagDefinition encounters an
 // annot_template_id not followed by '::'.
 
-namespace N {
+namespace GH207992 {
 template <typename T> void foo(); // expected-note {{'foo' declared here}}
 void bar() {
   union {
