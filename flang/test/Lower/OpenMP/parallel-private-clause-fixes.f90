@@ -66,17 +66,15 @@
 ! CHECK:                 %[[VAL_16:.*]] = arith.addi %[[LOAD]], %[[VAL_15]] : i32
 ! CHECK:                 hlfir.assign %[[VAL_16]] to %[[PRIV_X_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:               }
-! CHECK:               %[[LB:.*]] = fir.convert %[[VAL_8]] : (index) -> i32
-! CHECK:               %[[UB:.*]] = fir.convert %[[VAL_10]] : (index) -> i32
-! CHECK:               %[[STEP:.*]] = fir.convert %[[VAL_11]] : (index) -> i32
-! CHECK:               %[[C0:.*]] = arith.constant 0 : i32
-! CHECK:               %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] overflow<nsw> : i32
-! CHECK:               %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEP]] overflow<nsw> : i32
-! CHECK:               %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEP]] : i32
-! CHECK:               %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : i32
-! CHECK:               %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : i32
-! CHECK:               %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] overflow<nsw> : i32
-! CHECK:               %[[VAL_12:.*]] = arith.addi %[[LB]], %[[MUL]] overflow<nsw> : i32
+! CHECK:               %[[C0:.*]] = arith.constant 0 : index
+! CHECK:               %[[DIFF:.*]] = arith.subi %[[VAL_10]], %[[VAL_8]] : index
+! CHECK:               %[[ADD:.*]] = arith.addi %[[DIFF]], %[[VAL_11]] : index
+! CHECK:               %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[VAL_11]] : index
+! CHECK:               %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : index
+! CHECK:               %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : index
+! CHECK:               %[[MUL:.*]] = arith.muli %[[SEL]], %[[VAL_11]] : index
+! CHECK:               %[[IDX:.*]] = arith.addi %[[VAL_8]], %[[MUL]] : index
+! CHECK:               %[[VAL_12:.*]] = fir.convert %[[IDX]] : (index) -> i32
 ! CHECK:               fir.store %[[VAL_12]] to %[[PRIV_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:               omp.yield
 ! CHECK:             }

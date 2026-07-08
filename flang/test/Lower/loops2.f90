@@ -15,20 +15,18 @@ contains
 ! CHECK: %[[PTR:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMtest_loop_varEi_pointer"}
 ! CHECK: %[[BOX:.*]] = fir.load %[[PTR]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
-! CHECK: fir.do_loop
+! CHECK: fir.do_loop %{{.*}} = %[[LB:.*]] to %[[UB:.*]] step %[[STEP:.*]] {
 ! CHECK:   fir.store %{{.*}} to %[[ADDR]] : !fir.ptr<i32>
 ! CHECK: }
-! CHECK: %[[LB:.*]] = fir.convert %{{.*}} : (index) -> i32
-! CHECK: %[[UB:.*]] = fir.convert %{{.*}} : (index) -> i32
-! CHECK: %[[STEP:.*]] = fir.convert %{{.*}} : (index) -> i32
-! CHECK: %[[C0:.*]] = arith.constant 0 : i32
-! CHECK: %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] overflow<nsw> : i32
-! CHECK: %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEP]] overflow<nsw> : i32
-! CHECK: %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEP]] : i32
-! CHECK: %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : i32
-! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : i32
-! CHECK: %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] overflow<nsw> : i32
-! CHECK: %[[LAST:.*]] = arith.addi %[[LB]], %[[MUL]] overflow<nsw> : i32
+! CHECK: %[[C0:.*]] = arith.constant 0 : index
+! CHECK: %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] : index
+! CHECK: %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEP]] : index
+! CHECK: %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEP]] : index
+! CHECK: %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : index
+! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : index
+! CHECK: %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] : index
+! CHECK: %[[LASTIDX:.*]] = arith.addi %[[LB]], %[[MUL]] : index
+! CHECK: %[[LAST:.*]] = fir.convert %[[LASTIDX]] : (index) -> i32
 ! CHECK: fir.store %[[LAST]] to %[[ADDR]] : !fir.ptr<i32>
   end subroutine
 
@@ -39,20 +37,18 @@ contains
 ! CHECK: %[[ALLOC:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMtest_loop_varEi_allocatable"}
 ! CHECK: %[[BOX:.*]] = fir.load %[[ALLOC]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK: fir.do_loop
+! CHECK: fir.do_loop %{{.*}} = %[[LB:.*]] to %[[UB:.*]] step %[[STEP:.*]] {
 ! CHECK:   fir.store %{{.*}} to %[[ADDR]] : !fir.heap<i32>
 ! CHECK: }
-! CHECK: %[[LB:.*]] = fir.convert %{{.*}} : (index) -> i32
-! CHECK: %[[UB:.*]] = fir.convert %{{.*}} : (index) -> i32
-! CHECK: %[[STEP:.*]] = fir.convert %{{.*}} : (index) -> i32
-! CHECK: %[[C0:.*]] = arith.constant 0 : i32
-! CHECK: %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] overflow<nsw> : i32
-! CHECK: %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEP]] overflow<nsw> : i32
-! CHECK: %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEP]] : i32
-! CHECK: %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : i32
-! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : i32
-! CHECK: %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] overflow<nsw> : i32
-! CHECK: %[[LAST:.*]] = arith.addi %[[LB]], %[[MUL]] overflow<nsw> : i32
+! CHECK: %[[C0:.*]] = arith.constant 0 : index
+! CHECK: %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] : index
+! CHECK: %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEP]] : index
+! CHECK: %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEP]] : index
+! CHECK: %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : index
+! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : index
+! CHECK: %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] : index
+! CHECK: %[[LASTIDX:.*]] = arith.addi %[[LB]], %[[MUL]] : index
+! CHECK: %[[LAST:.*]] = fir.convert %[[LASTIDX]] : (index) -> i32
 ! CHECK: fir.store %[[LAST]] to %[[ADDR]] : !fir.heap<i32>
   end subroutine
 

@@ -3205,26 +3205,26 @@ private:
 
         // End fir.do_loop. The loop carries no secondary-induction iter_arg, so
         // materialize the Fortran post-loop value lb + tripCount*step after the
-        // loop for later uses of the DO variable.
+        // loop for later uses of the DO variable. Compute it in the loop's
+        // index type (matching how the loop counts iterations) so the trip
+        // arithmetic does not overflow the DO variable's type for empty
+        // range-extreme loops.
         auto doLoopOp = mlir::cast<fir::DoLoopOp>(info.loopOp);
         builder->setInsertionPointAfter(doLoopOp);
-        mlir::Type type = info.getLoopVariableType();
-        mlir::Value lb =
-            builder->createConvert(loc, type, doLoopOp.getLowerBound());
-        mlir::Value ub =
-            builder->createConvert(loc, type, doLoopOp.getUpperBound());
-        mlir::Value st = builder->createConvert(loc, type, doLoopOp.getStep());
-        mlir::Value zero = builder->createIntegerConstant(loc, type, 0);
-        mlir::Value trip =
-            mlir::arith::SubIOp::create(*builder, loc, ub, lb, iofAttr);
-        trip = mlir::arith::AddIOp::create(*builder, loc, trip, st, iofAttr);
+        mlir::Value lb = doLoopOp.getLowerBound();
+        mlir::Value ub = doLoopOp.getUpperBound();
+        mlir::Value st = doLoopOp.getStep();
+        mlir::Type idxTy = lb.getType();
+        mlir::Value zero = builder->createIntegerConstant(loc, idxTy, 0);
+        mlir::Value trip = mlir::arith::SubIOp::create(*builder, loc, ub, lb);
+        trip = mlir::arith::AddIOp::create(*builder, loc, trip, st);
         trip = mlir::arith::DivSIOp::create(*builder, loc, trip, st);
         mlir::Value empty = mlir::arith::CmpIOp::create(
             *builder, loc, mlir::arith::CmpIPredicate::slt, trip, zero);
         trip = mlir::arith::SelectOp::create(*builder, loc, empty, zero, trip);
-        mlir::Value last =
-            mlir::arith::MulIOp::create(*builder, loc, trip, st, iofAttr);
-        last = mlir::arith::AddIOp::create(*builder, loc, lb, last, iofAttr);
+        mlir::Value last = mlir::arith::MulIOp::create(*builder, loc, trip, st);
+        last = mlir::arith::AddIOp::create(*builder, loc, lb, last);
+        last = builder->createConvert(loc, info.getLoopVariableType(), last);
         fir::StoreOp::create(*builder, loc, last, info.loopVariable);
         continue;
       }

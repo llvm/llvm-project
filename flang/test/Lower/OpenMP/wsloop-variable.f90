@@ -148,17 +148,15 @@ subroutine wsloop_variable_sub
 !CHECK:                 %[[VAL_43:.*]] = fir.convert %[[VAL_42]] : (i64) -> f32
 !CHECK:                 hlfir.assign %[[VAL_43]] to %[[VAL_21]]#0 : f32, !fir.ref<f32>
 !CHECK:               }
-!CHECK:               %[[VAL_LB:.*]] = fir.convert %[[VAL_30]] : (index) -> i64
-!CHECK:               %[[VAL_UB:.*]] = fir.convert %[[VAL_32]] : (index) -> i64
-!CHECK:               %[[VAL_ST:.*]] = fir.convert %[[VAL_34]] : (index) -> i64
-!CHECK:               %[[VAL_C0:.*]] = arith.constant 0 : i64
-!CHECK:               %[[VAL_DIFF:.*]] = arith.subi %[[VAL_UB]], %[[VAL_LB]] overflow<nsw> : i64
-!CHECK:               %[[VAL_ADD:.*]] = arith.addi %[[VAL_DIFF]], %[[VAL_ST]] overflow<nsw> : i64
-!CHECK:               %[[VAL_TRIP:.*]] = arith.divsi %[[VAL_ADD]], %[[VAL_ST]] : i64
-!CHECK:               %[[VAL_CMP:.*]] = arith.cmpi slt, %[[VAL_TRIP]], %[[VAL_C0]] : i64
-!CHECK:               %[[VAL_SEL:.*]] = arith.select %[[VAL_CMP]], %[[VAL_C0]], %[[VAL_TRIP]] : i64
-!CHECK:               %[[VAL_MUL:.*]] = arith.muli %[[VAL_SEL]], %[[VAL_ST]] overflow<nsw> : i64
-!CHECK:               %[[VAL_48:.*]] = arith.addi %[[VAL_LB]], %[[VAL_MUL]] overflow<nsw> : i64
+!CHECK:               %[[VAL_C0:.*]] = arith.constant 0 : index
+!CHECK:               %[[VAL_DIFF:.*]] = arith.subi %[[VAL_32]], %[[VAL_30]] : index
+!CHECK:               %[[VAL_ADD:.*]] = arith.addi %[[VAL_DIFF]], %[[VAL_34]] : index
+!CHECK:               %[[VAL_TRIP:.*]] = arith.divsi %[[VAL_ADD]], %[[VAL_34]] : index
+!CHECK:               %[[VAL_CMP:.*]] = arith.cmpi slt, %[[VAL_TRIP]], %[[VAL_C0]] : index
+!CHECK:               %[[VAL_SEL:.*]] = arith.select %[[VAL_CMP]], %[[VAL_C0]], %[[VAL_TRIP]] : index
+!CHECK:               %[[VAL_MUL:.*]] = arith.muli %[[VAL_SEL]], %[[VAL_34]] : index
+!CHECK:               %[[VAL_LAST:.*]] = arith.addi %[[VAL_30]], %[[VAL_MUL]] : index
+!CHECK:               %[[VAL_48:.*]] = fir.convert %[[VAL_LAST]] : (index) -> i64
 !CHECK:               fir.store %[[VAL_48]] to %[[VAL_17]]#0 : !fir.ref<i64>
 !CHECK:               omp.yield
 !CHECK:             }
