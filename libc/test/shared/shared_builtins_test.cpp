@@ -14,8 +14,8 @@ TEST(LlvmLibcSharedBuiltinsTest, AllFloat) {
   EXPECT_FP_EQ(3.0f, LIBC_NAMESPACE::shared::addsf3(1.0f, 2.0f));
   EXPECT_FP_EQ(3.0f, LIBC_NAMESPACE::shared::divsf3(6.0f, 2.0f));
   EXPECT_FP_EQ(6.0f, LIBC_NAMESPACE::shared::mulsf3(2.0f, 3.0f));
-  EXPECT_FP_EQ(2.0f, LIBC_NAMESPACE::shared::subsf3(5.0f, 3.0f));
   EXPECT_FP_EQ(-5.0, LIBC_NAMESPACE::shared::negsf2(5.0));
+  EXPECT_FP_EQ(2.0f, LIBC_NAMESPACE::shared::subsf3(5.0f, 3.0f));
 }
 
 TEST(LlvmLibcSharedBuiltinsTest, AllDouble) {

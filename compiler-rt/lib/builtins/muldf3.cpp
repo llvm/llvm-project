@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define QUAD_PRECISION
+#define DOUBLE_PRECISION
 #include "fp_lib.h"
 
 #include "fp_libc_config.h"

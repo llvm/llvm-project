@@ -1,4 +1,4 @@
-//===-- lib/adddf3.cpp - double-precision addition --------------*- C++ -*-===//
+//===-- lib/mulsf3.cpp - libc-backed __mulsf3 -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// __adddf3 implemented on top of LLVM-libc's shared::adddf3 instruction.
+// __mulsf3 implemented on top of LLVM-libc's shared::mulsf3.
 //
 //===----------------------------------------------------------------------===//
 
+#define SINGLE_PRECISION
 #include "fp_lib.h"
 
-#define DOUBLE_PRECISION
 #include "fp_libc_config.h"
 #include "int_lib.h"
-#include "shared/builtins/adddf3.h"
+#include "shared/builtins/mulsf3.h"
 
-extern "C" COMPILER_RT_ABI fp_t __adddf3(fp_t a, fp_t b) {
-  return LIBC_NAMESPACE::shared::adddf3(a, b);
+extern "C" COMPILER_RT_ABI fp_t __mulsf3(fp_t a, fp_t b) {
+  return LIBC_NAMESPACE::shared::mulsf3(a, b);
 }
