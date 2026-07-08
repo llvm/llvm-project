@@ -416,7 +416,7 @@ body:             |
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
-    ; CHECK-NEXT: $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; CHECK-NEXT: $sgpr0 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; CHECK-NEXT: S_NOP 0, implicit $vgpr0, implicit $vgpr20, implicit $vgpr40
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 $sgpr0
     ; CHECK-NEXT: SI_RETURN implicit killed $vgpr0

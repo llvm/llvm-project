@@ -78,7 +78,7 @@ TEST_F(VPInstructionTest, insertBefore) {
   VPInstruction *I1 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I3 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
 
@@ -97,7 +97,7 @@ TEST_F(VPInstructionTest, eraseFromParent) {
   VPInstruction *I1 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I3 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
 
@@ -121,7 +121,7 @@ TEST_F(VPInstructionTest, moveAfter) {
   VPInstruction *I1 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I3 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
 
@@ -135,7 +135,7 @@ TEST_F(VPInstructionTest, moveAfter) {
   CHECK_ITERATOR(VPBB1, I2, I1, I3);
 
   VPInstruction *I4 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I5 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPBasicBlock &VPBB2 = *getPlan().createVPBasicBlock("");
@@ -154,7 +154,7 @@ TEST_F(VPInstructionTest, moveBefore) {
   VPInstruction *I1 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I3 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
 
@@ -168,7 +168,7 @@ TEST_F(VPInstructionTest, moveBefore) {
   CHECK_ITERATOR(VPBB1, I2, I1, I3);
 
   VPInstruction *I4 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I5 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPBasicBlock &VPBB2 = *getPlan().createVPBasicBlock("");
@@ -1786,7 +1786,7 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   LLVMContext C;
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPInstructionWithType Op0(VPInstruction::StepVector, {}, Int32);
-  VPInstructionWithType Op1(VPInstruction::VScale, {}, Int32);
+  VPInstructionWithType Op1(VPInstruction::StepVector, {}, Int32);
   VPDoubleValueDef DoubleValueDef({&Op0, &Op1}, IntegerType::get(C, 32));
 
   // Create a new users of the defined values.
@@ -1858,40 +1858,44 @@ using VPUtilsTest = VPlanTestBase;
 
 TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
   VPlan &Plan = getPlan();
+  IntegerType *Int32 = IntegerType::get(C, 32);
+
+  // Recipes in the entry/preheader are treated as uniform if their operands
+  // are; use a separate block connected to the entry so the opcode-based
+  // uniformity checks are exercised.
+  VPBasicBlock *Body = Plan.createVPBasicBlock("body");
+  VPBlockUtils::connectBlocks(Plan.getEntry(), Body);
+  VPBuilder Builder(Body);
 
   // isSingleScalar opcode without operands.
-  std::unique_ptr<VPInstruction> VScale(
-      VPBuilder().createVScale(IntegerType::get(C, 32)));
-  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(VScale.get()));
+  VPInstruction *VScale = Builder.createVScale(Int32);
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(VScale));
 
   // isSingleScalar opcode with a uniform operand.
-  std::unique_ptr<VPInstruction> EVL(
-      new VPInstruction(VPInstruction::ExplicitVectorLength, {&Plan.getVF()}));
-  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(EVL.get()));
+  VPInstruction *EVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength,
+                                            {&Plan.getVF()});
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(EVL));
 
   // isVectorToScalar opcode with a uniform operand.
-  std::unique_ptr<VPInstruction> FirstActiveLane(
-      new VPInstructionWithType(VPInstruction::FirstActiveLane, {&Plan.getVF()},
-                                IntegerType::get(C, 32)));
-  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(FirstActiveLane.get()));
+  VPInstruction *FirstActiveLane = Builder.createNaryOp(
+      VPInstruction::FirstActiveLane, {&Plan.getVF()}, Int32);
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(FirstActiveLane));
 
   // StepVector produces a distinct value per lane and is non-uniform; use it
   // as the non-single-scalar operand in the negative cases below.
-  std::unique_ptr<VPInstruction> StepVector(new VPInstructionWithType(
-      VPInstruction::StepVector, {}, IntegerType::get(C, 32)));
-  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(StepVector.get()));
+  VPInstruction *StepVector =
+      Builder.createNaryOp(VPInstruction::StepVector, {}, Int32);
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(StepVector));
 
   // isSingleScalar opcode with a non-single-scalar operand.
-  std::unique_ptr<VPInstruction> EVLNonUniform(new VPInstruction(
-      VPInstruction::ExplicitVectorLength, {StepVector.get()}));
-  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(EVLNonUniform.get()));
+  VPInstruction *EVLNonUniform =
+      Builder.createNaryOp(VPInstruction::ExplicitVectorLength, {StepVector});
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(EVLNonUniform));
 
   // isVectorToScalar opcode with a non-single-scalar operand.
-  std::unique_ptr<VPInstruction> FirstActiveLaneNonUniform(
-      new VPInstructionWithType(VPInstruction::FirstActiveLane,
-                                {StepVector.get()}, IntegerType::get(C, 32)));
-  EXPECT_FALSE(
-      vputils::isUniformAcrossVFsAndUFs(FirstActiveLaneNonUniform.get()));
+  VPInstruction *FirstActiveLaneNonUniform =
+      Builder.createNaryOp(VPInstruction::FirstActiveLane, {StepVector}, Int32);
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(FirstActiveLaneNonUniform));
 }
 
 TEST_F(VPBasicBlockTest, VPRegionValueClonePropagatesMaterialized) {
