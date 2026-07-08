@@ -491,11 +491,16 @@ private:
   /// Early-safe return: if all (MAI, non-MAI) pairs are parallel in the CFG
   /// and every MAI def is itself a candidate, the non-MAI defs can be bridged
   /// without conflict; Check 2 is skipped.
-  /// Check 2: every use of \p Src2Reg must be dominated by at least one
-  /// non-MAI def block (where a bridge copy is inserted); otherwise %MappedReg
-  /// is undefined on some CFG path to a use.
-  bool hasSrc2BridgeConflict(ArrayRef<SlotIndex> DefIdxs,
-                             Register Src2Reg) const;
+  /// Check 2: on every path from the entry to a use of \p Src2Reg, some bridge
+  /// block in \p BridgeBlocks (a non-MAI def block of Src2Reg, where a bridge
+  /// copy is inserted) must be crossed; otherwise %MappedReg is undefined on
+  /// that path.  \p BridgeBlocks is precomputed in computeExclusionSet as the
+  /// union, over all candidates sharing Src2Reg, of the non-MAI reaching-def
+  /// blocks of their src2 — this is what rewrite() actually inserts copies
+  /// after, so a single candidate's own reaching defs are not enough.
+  bool hasSrc2BridgeConflict(
+      ArrayRef<SlotIndex> DefIdxs, Register Src2Reg,
+      const SmallPtrSetImpl<const MachineBasicBlock *> &BridgeBlocks) const;
 
   /// Returns true if reclassifying \p DstReg to AGPR would require bridge
   /// copies beyond rewrite()'s capability (full-register copies only).

@@ -2452,23 +2452,23 @@ bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
   return true;
 }
 
-bool RewriteMFMAFormStage::hasSrc2BridgeConflict(ArrayRef<SlotIndex> DefIdxs,
-                                                 Register Src2Reg) const {
+bool RewriteMFMAFormStage::hasSrc2BridgeConflict(
+    ArrayRef<SlotIndex> DefIdxs, Register Src2Reg,
+    const SmallPtrSetImpl<const MachineBasicBlock *> &BridgeBlocks) const {
   auto &MDT = DAG.LIS->getDomTree();
 
   SmallVector<MachineInstr *, 8> MAIMIs;
-  SmallPtrSet<MachineBasicBlock *, 8> BridgeCopyBlocks; // non-MAI def blocks
-
+  SmallVector<MachineInstr *, 8> NonMAIMIs;
   for (SlotIndex SI : DefIdxs) {
     MachineInstr *MI = DAG.LIS->getInstructionFromIndex(SI);
     if (TII->isMFMA(*MI))
       MAIMIs.push_back(MI);
     else
-      BridgeCopyBlocks.insert(MI->getParent());
+      NonMAIMIs.push_back(MI);
   }
 
-  if (BridgeCopyBlocks.empty())
-    return false; // All defs are MAI; no bridge copies needed.
+  if (NonMAIMIs.empty())
+    return false; // All reaching defs are MAI; no bridge copies needed.
 
   // Check 1: MAI def dominates non-MAI def (partial subreg overwrite).
   // The MFMA first writes all lanes (AGPR), then a non-MAI instruction
@@ -2476,13 +2476,6 @@ bool RewriteMFMAFormStage::hasSrc2BridgeConflict(ArrayRef<SlotIndex> DefIdxs,
   // would read an already-AGPR register and must partially update it —
   // a read-modify-write that the bridge-copy mechanism cannot implement.
   if (!MAIMIs.empty()) {
-    SmallVector<MachineInstr *, 8> NonMAIMIs;
-    for (SlotIndex SI : DefIdxs) {
-      MachineInstr *MI = DAG.LIS->getInstructionFromIndex(SI);
-      if (!TII->isMFMA(*MI))
-        NonMAIMIs.push_back(MI);
-    }
-
     for (MachineInstr *M : MAIMIs)
       for (MachineInstr *N : NonMAIMIs)
         if (MDT.dominates(M, N))
@@ -2491,45 +2484,60 @@ bool RewriteMFMAFormStage::hasSrc2BridgeConflict(ArrayRef<SlotIndex> DefIdxs,
     // Early-safe return: if every (MAI, non-MAI) pair is parallel and every
     // MAI def is itself a rewrite candidate, the rewrite is safe without
     // invoking Check 2.
-    if (!NonMAIMIs.empty()) {
-      bool AllParallelAndCandidates = true;
-      for (MachineInstr *M : MAIMIs) {
-        if (!isRewriteCandidate(M)) {
+    bool AllParallelAndCandidates = true;
+    for (MachineInstr *M : MAIMIs) {
+      if (!isRewriteCandidate(M)) {
+        AllParallelAndCandidates = false;
+        break;
+      }
+      for (MachineInstr *N : NonMAIMIs) {
+        if (MDT.dominates(N, M)) {
           AllParallelAndCandidates = false;
           break;
         }
-        for (MachineInstr *N : NonMAIMIs) {
-          if (MDT.dominates(N, M)) {
-            AllParallelAndCandidates = false;
-            break;
-          }
-        }
-        if (!AllParallelAndCandidates)
-          break;
       }
-      if (AllParallelAndCandidates)
-        return false;
+      if (!AllParallelAndCandidates)
+        break;
     }
+    if (AllParallelAndCandidates)
+      return false;
   }
 
-  // Check 2: every use of Src2Reg must be dominated by at least one
-  // bridge-copy block; otherwise %MappedReg would be undefined on some path.
+  // Check 2: every entry->use path of Src2Reg must cross a bridge block (where
+  // rewrite() inserts the bridge copy); otherwise %MappedReg is undefined on
+  // the bypassing path.  BridgeBlocks (precomputed in computeExclusionSet) is
+  // the union of non-MAI *reaching-def* blocks of Src2Reg across all candidates
+  // sharing it -- see computeExclusionSet for why the whole-register union and
+  // reaching-def (not all-def) blocks are both required.
   //
-  // use_nodbg_operands is used here (not findReachingUses) because rewrite()
-  // replaces the src2 operand of the MFMA with %MappedReg uniformly — it does
-  // not distinguish which reaching def flows to which use.  %MappedReg is
-  // defined only in bridge-copy blocks (after non-MAI defs); if any use of
-  // Src2Reg is in a block not dominated by any bridge-copy block, %MappedReg
-  // would be undefined on that path regardless of whether the use is reached
-  // by a MAI or non-MAI def.  findReachingUses(non-MAI RD) would miss uses
-  // that arrive only via MAI defs or other defs (e.g. IMPLICIT_DEF on a
-  // bypass path), causing a false negative and silent undefined-read.
+  // Bridge blocks must *jointly* cover every path: two blocks may each cover a
+  // disjoint set of paths with neither dominating the use, so a plain dominance
+  // test is too strict.  A backward walk from the use block that stops at
+  // bridge blocks decides this -- reaching entry means an uncovered path
+  // exists. All uses (use_nodbg_operands, not just src2 consumers) must be
+  // covered: a plain COPY of Src2Reg also reads %MappedReg after rewrite.
+  auto CoveredByBridgeSet = [&](const MachineBasicBlock *UseBlock) {
+    if (BridgeBlocks.contains(UseBlock))
+      return true;
+    SmallPtrSet<const MachineBasicBlock *, 16> Visited;
+    SmallVector<const MachineBasicBlock *, 16> Worklist(UseBlock->pred_begin(),
+                                                        UseBlock->pred_end());
+    while (!Worklist.empty()) {
+      const MachineBasicBlock *B = Worklist.pop_back_val();
+      if (BridgeBlocks.contains(B))
+        continue; // This path is covered; do not walk past the bridge block.
+      if (B->pred_empty())
+        return false; // Reached entry without crossing a bridge block.
+      if (!Visited.insert(B).second)
+        continue;
+      Worklist.append(B->pred_begin(), B->pred_end());
+    }
+    return true;
+  };
+
   for (const MachineOperand &UseMO : DAG.MRI.use_nodbg_operands(Src2Reg)) {
     const MachineBasicBlock *UseBlock = UseMO.getParent()->getParent();
-    bool Covered = any_of(BridgeCopyBlocks, [&](const MachineBasicBlock *B) {
-      return MDT.dominates(B, UseBlock);
-    });
-    if (!Covered)
+    if (!CoveredByBridgeSet(UseBlock))
       return true;
   }
 
@@ -2627,6 +2635,31 @@ SmallPtrSet<MachineInstr *, 16> RewriteMFMAFormStage::computeExclusionSet(
   // Exclusion propagates forward (dst→src2 chain via propagateExclusionForward)
   // and backward (MAI reaching-defs of a conflicted src2).
   SmallPtrSet<MachineInstr *, 16> ExcludedMFMAs;
+
+  // Precompute, per shared src2 register, the union of its non-MAI reaching-def
+  // blocks across all candidates -- exactly where rewrite() inserts bridge
+  // copies.  Check 2 needs the whole-register union, not one candidate's
+  // reaching defs, since a sibling candidate's def in another block also
+  // supplies a value to a shared use.  Reaching-def (not all-def) blocks are
+  // used so defs killed on a bypass path and entry IMPLICIT_DEFs stay excluded,
+  // keeping a genuine bypass reported as a conflict.
+  DenseMap<Register, SmallPtrSet<const MachineBasicBlock *, 8>>
+      Src2BridgeBlocks;
+  for (MachineInstr *MI : RewriteSet) {
+    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+    if (!Src2 || !Src2->isReg())
+      continue;
+    Register Src2Reg = Src2->getReg();
+    auto &Blocks = Src2BridgeBlocks[Src2Reg];
+    SmallVector<SlotIndex, 8> Src2Defs;
+    findReachingDefs(*Src2, DAG.LIS, Src2Defs);
+    for (SlotIndex SI : Src2Defs) {
+      MachineInstr *RD = DAG.LIS->getInstructionFromIndex(SI);
+      if (RD && !TII->isMFMA(*RD))
+        Blocks.insert(RD->getParent());
+    }
+  }
+
   for (MachineInstr *MI : RewriteSet) {
     MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
     Register DstReg = MI->getOperand(0).getReg();
@@ -2635,18 +2668,8 @@ SmallPtrSet<MachineInstr *, 16> RewriteMFMAFormStage::computeExclusionSet(
     SmallVector<SlotIndex, 8> Src2Defs;
     if (Src2->isReg()) {
       findReachingDefs(*Src2, DAG.LIS, Src2Defs);
-      LLVM_DEBUG({
-        dbgs() << "[computeExclusionSet] candidate: " << *MI;
-        dbgs() << "  src2 reaching defs (" << Src2Defs.size() << "):\n";
-        for (SlotIndex SI : Src2Defs) {
-          MachineInstr *D = DAG.LIS->getInstructionFromIndex(SI);
-          dbgs() << "    " << SI << " opcode=" << (D ? (int)D->getOpcode() : -1)
-                 << "\n";
-          if (D)
-            dbgs() << "    " << *D;
-        }
-      });
-      HasConflict = hasSrc2BridgeConflict(Src2Defs, Src2->getReg());
+      HasConflict = hasSrc2BridgeConflict(Src2Defs, Src2->getReg(),
+                                          Src2BridgeBlocks[Src2->getReg()]);
     }
     bool HasDstSubregDef = !HasConflict && hasDstSubregConflict(DstReg, MI);
 
