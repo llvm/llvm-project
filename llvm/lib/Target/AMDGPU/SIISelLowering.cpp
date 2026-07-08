@@ -18503,11 +18503,7 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
   if (F > One)
     return DCI.DAG.getConstantFP(One, SDLoc(N), N->getValueType(0));
 
-  if (SDValue Canonical =
-          getCanonicalConstantFP(DCI.DAG, SDLoc(N), N->getValueType(0), F))
-    return Canonical;
-
-  return SDValue(CSrc, 0);
+  return getCanonicalConstantFP(DCI.DAG, SDLoc(N), N->getValueType(0), F);
 }
 
 SDValue SITargetLowering::performSelectCombine(SDNode *N,
