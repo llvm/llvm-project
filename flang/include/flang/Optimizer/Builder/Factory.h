@@ -17,8 +17,6 @@
 
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "llvm/ADT/iterator_range.h"
 
 namespace mlir {
 class Location;
