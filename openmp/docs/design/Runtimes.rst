@@ -1231,7 +1231,13 @@ The command above creates a directory (as indicated by
 for each recorded kernel. This JSON file contains the description, properties,
 and original runtime parameters of the kernel. Additionally, enabling
 :ref:`LIBOMPTARGET_RECORD_REPORT` instructs the runtime to emit a summary of the
-recorded kernel instances and their associated JSON files.
+recorded kernel instances and their associated JSON files. It's worth noting
+when recording a kernel that was compiled with the ``-fopenmp-target-jit` flag
+<https://openmp.llvm.org/CommandLineArgumentReference.html#fopenmp-target-jit>`_,
+the device-side LLVM-IR module is also output as a bitcode (``.bc``) file
+that can be furher transformed with the `opt tool
+<https://llvm.org/docs/NewPassManager.html>`_ or directly inspected using
+the ``llvm-dis`` command.
 
 To replay a particular kernel, run the ``llvm-omp-kernel-replay`` command,
 passing the path to the corresponding kernel's JSON file:
@@ -1245,6 +1251,9 @@ passing the path to the corresponding kernel's JSON file:
     [llvm-omp-kernel-replay] Replay time (4): 94574421 ns
     [llvm-omp-kernel-replay] Replay time (5): 94359425 ns
     [llvm-omp-kernel-replay] Replay done, verification skipped
+
+You may optionally use the device-side IR image during the replay process via
+the ``--load-bitcode`` flag.
 
 When replaying, you can tune the execution using the following flags, among
 others:
@@ -1647,8 +1656,8 @@ is not supported anymore.
 Device Allocation
 ^^^^^^^^^^^^^^^^^
 
-The device runtime supports basic runtime allocation via the ``omp_alloc`` 
-function. Currently, this allocates global memory for all default traits. Access 
+The device runtime supports basic runtime allocation via the ``omp_alloc``
+function. Currently, this allocates global memory for all default traits. Access
 modifiers are currently not supported and return a null pointer.
 
 .. _libomptarget_device_debugging:
