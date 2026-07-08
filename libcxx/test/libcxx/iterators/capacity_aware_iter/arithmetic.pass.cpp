@@ -66,7 +66,8 @@ constexpr bool test() {
 
   // operator--()
   {
-    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i + 1));
+    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i));
+    ++iter;
 
     std::same_as<CapIter&> decltype(auto) res = --iter;
 
@@ -77,7 +78,8 @@ constexpr bool test() {
 
   // operator--(int)
   {
-    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i + 1));
+    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i));
+    ++iter;
 
     std::same_as<CapIter> decltype(auto) res = iter--;
 
@@ -121,7 +123,8 @@ constexpr bool test() {
 
   // operator-=(difference_type)
   {
-    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i + 2));
+    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i));
+    iter += 2;
 
     std::same_as<CapIter&> decltype(auto) res = iter -= 2;
 
@@ -132,7 +135,8 @@ constexpr bool test() {
 
   // operator-(__capacity_aware_iterator, difference_type)
   {
-    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i + 2));
+    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i));
+    iter += 2;
 
     std::same_as<CapIter> decltype(auto) res = iter - 2;
 

@@ -32,29 +32,29 @@ void test_bounded() {
 
   CapIter it = std::__make_capacity_aware_iterator<Iter, decltype(p), sz>(Iter(arr));
 
-  TEST_LIBCPP_ASSERT_FAILURE(it--, "__capacity_aware_iterator::operator--: Attempt to rewind iterator past the start");
+  TEST_LIBCPP_ASSERT_FAILURE(
+      it--, "__capacity_aware_iterator::operator--: Attempt to rewind an iterator past the start");
 
   TEST_LIBCPP_ASSERT_FAILURE(
-      it -= 1, "__capacity_aware_iterator::operator-=: Attempt to rewind iterator past the start");
+      it -= 1, "__capacity_aware_iterator::operator-=: Attempt to rewind an iterator past the start");
 
   TEST_LIBCPP_ASSERT_FAILURE(
-      it += -1, "__capacity_aware_iterator::operator+=: Attempt to rewind iterator past the start");
+      it += -1, "__capacity_aware_iterator::operator+=: Attempt to rewind an iterator past the start");
 
   TEST_LIBCPP_ASSERT_FAILURE(
       it += (sz + 1), "__capacity_aware_iterator::operator+=: Attempt to advance an iterator past the end");
 
   TEST_LIBCPP_ASSERT_FAILURE(
-      it += -(sz + 1), "__capacity_aware_iterator::operator+=: Attempt to rewind iterator past the start");
+      it += -(sz + 1), "__capacity_aware_iterator::operator+=: Attempt to rewind an iterator past the start");
 
   TEST_LIBCPP_ASSERT_FAILURE(
       it -= (sz + 1), "__capacity_aware_iterator::operator-=: Attempt to rewind an iterator past the start");
 
   TEST_LIBCPP_ASSERT_FAILURE(
-      it -= -(sz + 1),
-      "__capacity_aware_iterator::operator-=: Attempting to move iterator past its container's possible range");
+      it -= -(sz + 1), "__capacity_aware_iterator::operator-=: Attempt to advance an iterator past the end");
 
   TEST_LIBCPP_ASSERT_FAILURE(
-      it[sz], "__capacity_aware_iterator::operator[]: Attempt to index an iterator past the end");
+      it[sz], "__capacity_aware_iterator::operator[]: Attempt to index an iterator at or past the end");
 
   TEST_LIBCPP_ASSERT_FAILURE(
       it[-sz], "__capacity_aware_iterator::operator[]: Attempt to index an iterator past the start");

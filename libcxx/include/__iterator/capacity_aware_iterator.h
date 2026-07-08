@@ -314,7 +314,7 @@ public:
     if !consteval {
       _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           (static_cast<difference_type>(__current_) + __n) >= 0,
-          "__capacity_aware_iterator::operator+=: Attempt to rewind iterator past the start");
+          "__capacity_aware_iterator::operator+=: Attempt to rewind an iterator past the start");
       _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           static_cast<std::size_t>(__current_ + __n) <= _RangeMaxElements,
           "__capacity_aware_iterator::operator+=: Attempt to advance an iterator past the end");
@@ -346,8 +346,8 @@ public:
           (static_cast<difference_type>(__current_) + __n) >= 0,
           "__capacity_aware_iterator::operator[]: Attempt to index an iterator past the start");
       _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-          static_cast<std::size_t>(__current_ + __n) <= _RangeMaxElements,
-          "__capacity_aware_iterator::operator[]: Attempt to index an iterator past the end");
+          static_cast<std::size_t>(__current_ + __n) < _RangeMaxElements,
+          "__capacity_aware_iterator::operator[]: Attempt to index an iterator at or past the end");
     }
     return *(*this + __n);
   }
