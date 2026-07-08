@@ -39,22 +39,35 @@ void test() {
 
   // [range.lazy.split.outer]
 
-  auto c_it = as_const(v).begin();
+  auto outer_it = as_const(v).begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  (*c_it).begin().base();
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  (*c_it);
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter_move((*c_it).begin());
+  *outer_it;
 
   // [range.lazy.split.outer.value]
-  // wip
+
+  auto value = *outer_it;
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  value.begin();
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  value.end();
 
   // [range.lazy.split.outer.inner]
-  // wip
+
+  auto inner_it = value.begin();
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  inner_it.base();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::move(inner_it).base();
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  *inner_it;
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  iter_move(inner_it);
 
   // [range.lazy.split.overview]
 
