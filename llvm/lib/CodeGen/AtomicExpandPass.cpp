@@ -1961,11 +1961,11 @@ bool AtomicExpandImpl::processAtomicRMW(AtomicRMWInst *RMWI) {
     MadeChange = true;
   }
 
-  MadeChange |= tryInsertFencesForAtomic(
-      RMWI,
-      isReleaseOrStronger(RMWI->getOrdering()) ||
-          isAcquireOrStronger(RMWI->getOrdering()),
-      TLI->atomicOperationOrderAfterFenceSplit(RMWI));
+  MadeChange |=
+      tryInsertFencesForAtomic(RMWI,
+                               isReleaseOrStronger(RMWI->getOrdering()) ||
+                                   isAcquireOrStronger(RMWI->getOrdering()),
+                               TLI->atomicOperationOrderAfterFenceSplit(RMWI));
 
   // There are two different ways of expanding RMW instructions:
   // - into a load if it is idempotent
@@ -1998,7 +1998,7 @@ bool AtomicExpandImpl::expandStoreRMWToRMW(StoreRMWInst *ARI) {
   ARI->eraseFromParent();
 
   processAtomicRMW(NewRMW);
-  return true;
+  return true; // storermw→atomicrmw is itself a change
 }
 
 static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
