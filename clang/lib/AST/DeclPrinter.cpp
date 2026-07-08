@@ -70,6 +70,7 @@ namespace {
     void VisitEmptyDecl(EmptyDecl *D);
     void VisitFunctionDecl(FunctionDecl *D);
     void VisitFriendDecl(FriendDecl *D);
+    void VisitFriendTemplateDecl(FriendTemplateDecl *D);
     void VisitFieldDecl(FieldDecl *D);
     void VisitVarDecl(VarDecl *D);
     void VisitLabelDecl(LabelDecl *D);
@@ -888,30 +889,41 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
 
 void DeclPrinter::VisitFriendDecl(FriendDecl *D) {
   if (TypeSourceInfo *TSI = D->getFriendType()) {
-    unsigned NumTPLists = D->getFriendTypeNumTemplateParameterLists();
-    for (unsigned i = 0; i < NumTPLists; ++i)
-      printTemplateParameters(D->getFriendTypeTemplateParameterList(i));
     Out << "friend ";
     Out << TSI->getType().getAsString(Policy);
-  }
-  else if (FunctionDecl *FD =
-      dyn_cast<FunctionDecl>(D->getFriendDecl())) {
+  } else if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D->getFriendDecl())) {
     Out << "friend ";
     VisitFunctionDecl(FD);
-  }
-  else if (FunctionTemplateDecl *FTD =
-           dyn_cast<FunctionTemplateDecl>(D->getFriendDecl())) {
+  } else if (FunctionTemplateDecl *FTD =
+                 dyn_cast<FunctionTemplateDecl>(D->getFriendDecl())) {
     Out << "friend ";
     VisitFunctionTemplateDecl(FTD);
-  }
-  else if (ClassTemplateDecl *CTD =
-           dyn_cast<ClassTemplateDecl>(D->getFriendDecl())) {
+  } else if (ClassTemplateDecl *CTD =
+                 dyn_cast<ClassTemplateDecl>(D->getFriendDecl())) {
     Out << "friend ";
     VisitRedeclarableTemplateDecl(CTD);
   }
 
   if (D->isPackExpansion())
     Out << "...";
+}
+
+void DeclPrinter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
+  for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists())
+    printTemplateParameters(TPL);
+
+  TemplateName TN = D->getFriendTemplateName();
+  if (TN.isNull()) {
+    VisitFriendDecl(D);
+  } else {
+    Out << "friend ";
+    TN.print(Out, Policy,
+             Policy.SuppressScope ? TemplateName::Qualified::None
+                                  : TemplateName::Qualified::AsWritten);
+
+    if (D->isPackExpansion())
+      Out << "...";
+  }
 }
 
 void DeclPrinter::VisitFieldDecl(FieldDecl *D) {
@@ -1105,7 +1117,6 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     Out << *Attrs << ' ';
 
   if (D->getIdentifier()) {
-    // FIXME: Missing template parameter lists.
     D->getQualifier().print(Out, Policy);
     Out << *D;
 
