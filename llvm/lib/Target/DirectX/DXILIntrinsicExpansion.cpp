@@ -271,7 +271,7 @@ static Value *expandUsubSat(CallInst *Orig) {
 
 // Compute the high N bits of the 2N-bit unsigned product of two N-bit values
 // using only N-bit arithmetic, so we don't introduce a wider integer type that
-// may be unsupported in DXIL. 
+// may be unsupported in DXIL.
 static Value *createMulHighUnsigned(IRBuilder<> &Builder, Value *A, Value *B,
                                     Type *Ty, unsigned BW) {
   assert(BW % 2 == 0 && "high-half split needs symmetric halves");
@@ -329,8 +329,9 @@ static Value *expandMulWithOverflow(CallInst *Orig, bool Signed) {
   } else if (BW == 32) {
     // IMul/UMul return {high, low}; index 0 is the high 32 bits.
     Type *ResTy = StructType::get(Ty, Ty);
-    Intrinsic::ID ID = Signed ? Intrinsic::dx_imul : Intrinsic::dx_umul;
-    Value *Mul = Builder.CreateIntrinsic(ResTy, ID, {A, B});
+    Intrinsic::ID IntrinsicID =
+        Signed ? Intrinsic::dx_imul : Intrinsic::dx_umul;
+    Value *Mul = Builder.CreateIntrinsic(ResTy, IntrinsicID, {A, B});
     Value *Hi = Builder.CreateExtractValue(Mul, 0);
     Lo = Builder.CreateExtractValue(Mul, 1);
     if (Signed)
