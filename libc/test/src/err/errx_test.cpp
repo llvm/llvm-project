@@ -14,14 +14,10 @@
 #include "src/err/errx.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
-
 TEST(LlvmLibcErrxTest, ErrxExitCode) {
-  EXPECT_EXITS([] { errx(2, "test errx"); }, 2);
+  EXPECT_EXITS([] { LIBC_NAMESPACE::errx(2, "test errx"); }, 2);
 }
 
 TEST(LlvmLibcErrxTest, ErrxNullFormat) {
-  EXPECT_EXITS([] { errx(2, nullptr); }, 2);
+  EXPECT_EXITS([] { LIBC_NAMESPACE::errx(2, nullptr); }, 2);
 }
-
-} // namespace LIBC_NAMESPACE

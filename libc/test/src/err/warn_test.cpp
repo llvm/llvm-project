@@ -15,16 +15,12 @@
 #include "src/err/warn.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
-
 TEST(LlvmLibcWarnTest, WarnNoExit) {
   libc_errno = 0;
-  warn("test warn");
+  LIBC_NAMESPACE::warn("test warn");
 }
 
 TEST(LlvmLibcWarnTest, WarnNullFormat) {
   libc_errno = 2;
-  warn(nullptr);
+  LIBC_NAMESPACE::warn(nullptr);
 }
-
-} // namespace LIBC_NAMESPACE

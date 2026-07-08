@@ -17,13 +17,11 @@
 
 #include <stdarg.h>
 
-namespace LIBC_NAMESPACE {
-
 namespace {
 void call_vwarn(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  vwarn(fmt, args);
+  LIBC_NAMESPACE::vwarn(fmt, args);
   va_end(args);
 }
 } // namespace
@@ -37,5 +35,3 @@ TEST(LlvmLibcVwarnTest, VwarnNullFormat) {
   libc_errno = 2;
   call_vwarn(nullptr);
 }
-
-} // namespace LIBC_NAMESPACE

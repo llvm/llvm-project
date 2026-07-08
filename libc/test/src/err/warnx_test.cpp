@@ -15,13 +15,9 @@
 #include "src/err/warnx.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
-
 TEST(LlvmLibcWarnxTest, WarnxNoExit) {
   libc_errno = 1;
-  warnx("test warnx");
+  LIBC_NAMESPACE::warnx("test warnx");
 }
 
-TEST(LlvmLibcWarnxTest, WarnxNullFormat) { warnx(nullptr); }
-
-} // namespace LIBC_NAMESPACE
+TEST(LlvmLibcWarnxTest, WarnxNullFormat) { LIBC_NAMESPACE::warnx(nullptr); }
