@@ -1,228 +1,237 @@
-.. _amdgpu-execution-synchronization:
+(amdgpu-execution-synchronization)=
 
-================================
-AMDGPU Execution Synchronization
-================================
+# AMDGPU Execution Synchronization
 
-.. contents::
-   :local:
+```{contents}
+:local: true
+```
 
-.. _amdgpu-execution-synchronization-barriers:
+(amdgpu-execution-synchronization-barriers)=
 
 This document covers different ways of synchronizing execution of threads on AMD GPUs.
 
-.. note::
+:::{note}
+This document is not exhaustive. There may be more ways of synchronizing execution
+that are not covered by this document.
+:::
 
-  This document is not exhaustive. There may be more ways of synchronizing execution
-  that are not covered by this document.
-
-********
-Barriers
-********
+## Barriers
 
 This section covers execution synchronization using barrier-style primitives.
 
-.. _amdgpu-execution-synchronization-barriers-execution-model:
+(amdgpu-execution-synchronization-barriers-execution-model)=
 
-Execution Model
-===============
+### Execution Model
 
 This section contains a formal execution model that can be used to model the behavior of
 barriers on AMDGPU targets.
 
 Barriers only synchronize execution and do not affect the visibility of memory operations between threads.
-Refer to the :ref:`execution barriers memory model<amdgpu-amdhsa-execution-barriers-memory-model>`
+Refer to the {ref}`execution barriers memory model<amdgpu-amdhsa-execution-barriers-memory-model>`
 to determine how to synchronize memory operations through *barrier-executes-before*.
 
-.. note::
+:::{note}
+The barrier execution model is experimental and subject to change.
+:::
 
-  The barrier execution model is experimental and subject to change.
-
-.. rubric::  Barrier *Objects*
+```{rubric} Barrier *Objects*
+```
 
 Threads can synchronize execution by performing barrier operations on barrier *objects* as described below:
 
 Each barrier *object* has the following state:
 
-* An unsigned positive integer *expected count*: counts the number of *arrive* operations
+- An unsigned positive integer *expected count*: counts the number of *arrive* operations
   expected for this barrier *object*.
-* An unsigned non-negative integer *arrive count*: counts the number of *arrive* operations
+
+- An unsigned non-negative integer *arrive count*: counts the number of *arrive* operations
   already performed on this barrier *object*.
 
-  * The initial value of *arrive count* is zero.
-  * When an operation causes *arrive count* to be equal to *expected count*, the barrier is completed,
+  - The initial value of *arrive count* is zero.
+  - When an operation causes *arrive count* to be equal to *expected count*, the barrier is completed,
     and the *arrive count* is reset to zero.
 
-Barrier *objects* exist within a *scope* instance (see :ref:`amdgpu-amdhsa-llvm-sync-scopes-table`),
+Barrier *objects* exist within a *scope* instance (see {ref}`amdgpu-amdhsa-llvm-sync-scopes-table`),
 and thus can only be accessed by threads in the same *scope* instance.
 
-.. _amdgpu-execution-synchronization-barriers-execution-model-barrier-operations:
-.. rubric::  Barrier Operations
+(amdgpu-execution-synchronization-barriers-execution-model-barrier-operations)=
+
+```{rubric} Barrier Operations
+```
 
 Barrier operations are performed on barrier *objects*. A barrier operation is a dynamic instance
 of one of the following:
 
-* Barrier *init*
+- Barrier *init*
 
-  * Barrier *init* takes an additional unsigned positive integer argument *k*.
-  * Sets the *expected count* of the *barrier object* to *k*.
-  * Resets the *arrive count* of the *barrier object* to zero.
+  - Barrier *init* takes an additional unsigned positive integer argument *k*.
+  - Sets the *expected count* of the *barrier object* to *k*.
+  - Resets the *arrive count* of the *barrier object* to zero.
 
-* Barrier *drop*.
+- Barrier *drop*.
 
-  * Decrements *expected count* of the barrier *object* by one.
-  * A barrier *drop* cannot cause the *expected count* of the barrier *object*
+  - Decrements *expected count* of the barrier *object* by one.
+  - A barrier *drop* cannot cause the *expected count* of the barrier *object*
     to become negative; otherwise, the behavior is undefined.
 
-* Barrier *arrive*.
+- Barrier *arrive*.
 
-  * Increments the *arrive count* of the barrier *object* by one.
-  * If supported, an additional argument to *arrive* can also update the *expected count* of the
+  - Increments the *arrive count* of the barrier *object* by one.
+  - If supported, an additional argument to *arrive* can also update the *expected count* of the
     barrier *object* before the *arrive count* is incremented;
     the new *expected count* cannot be less than or equal to the *arrive count*,
     otherwise the behavior is undefined.
 
-* Barrier *wait*.
+- Barrier *wait*.
 
-  * Introduces execution dependencies between threads; this operation depends on
+  - Introduces execution dependencies between threads; this operation depends on
     other barrier operations to complete.
 
 Barrier modification operations are barrier operations that modify the barrier *object* state:
 
-* Barrier *init*.
-* Barrier *drop*.
-* Barrier *arrive*.
+- Barrier *init*.
+- Barrier *drop*.
+- Barrier *arrive*.
 
-.. rubric::  *Thread-barrier-order<BO>*
+```{rubric} *Thread-barrier-order\<BO>*
+```
 
-*Thread-barrier-order<BO>* is the subset of *program-order* that only relates barrier operations
-performed on a barrier *object* ``BO``.
+*Thread-barrier-order\<BO>* is the subset of *program-order* that only relates barrier operations
+performed on a barrier *object* `BO`.
 
-.. rubric::  *Barrier-modification-order<BO>*
+```{rubric} *Barrier-modification-order\<BO>*
+```
 
-All barrier modification operations on a barrier *object* ``BO`` occur in a strict total order called
-*barrier-modification-order<BO>*; it is the order in which ``BO`` observes barrier
-operations that change its state. For any valid *barrier-modification-order<BO>*, the
+All barrier modification operations on a barrier *object* `BO` occur in a strict total order called
+*barrier-modification-order\<BO>*; it is the order in which `BO` observes barrier
+operations that change its state. For any valid *barrier-modification-order\<BO>*, the
 following must be true:
 
-* Let ``A`` and ``B`` be two barrier modification operations where ``A -> B`` in
-  *thread-barrier-order<BO>*, then ``A -> B`` is also in *barrier-modification-order<BO>*.
-* The first element in *barrier-modification-order<BO>* is always a barrier *init*, otherwise
+- Let `A` and `B` be two barrier modification operations where `A -> B` in
+  *thread-barrier-order\<BO>*, then `A -> B` is also in *barrier-modification-order\<BO>*.
+- The first element in *barrier-modification-order\<BO>* is always a barrier *init*, otherwise
   the behavior is undefined.
 
-.. rubric::  *Barrier-participates-in*
+```{rubric} *Barrier-participates-in*
+```
 
 *Barrier-participates-in* relates barrier operations to the barrier *waits* that depend on them
-to complete. A barrier operation ``X`` *barrier-participates-in* a barrier *wait* ``W``
+to complete. A barrier operation `X` *barrier-participates-in* a barrier *wait* `W`
 if and only if all of the following is true:
 
-* ``X`` and ``W`` are both performed on the same barrier *object* ``BO``.
-* ``X`` is a barrier *arrive* or *drop* operation.
-* ``X`` does not *barrier-participate-in* another distinct barrier *wait* ``W'`` in the same thread as ``W``.
-* ``W -> X`` not in *thread-barrier-order<BO>*.
-* All dependent constraint and relations are satisfied as well. [0]_
+- `X` and `W` are both performed on the same barrier *object* `BO`.
+- `X` is a barrier *arrive* or *drop* operation.
+- `X` does not *barrier-participate-in* another distinct barrier *wait* `W'` in the same thread as `W`.
+- `W -> X` not in *thread-barrier-order\<BO>*.
+- All dependent constraint and relations are satisfied as well. [^footnote-1]
 
-For the set ``S`` consisting of all barrier operations that *barrier-participate-in* a barrier *wait* ``W`` for some
-barrier *object* ``BO``:
+For the set `S` consisting of all barrier operations that *barrier-participate-in* a barrier *wait* `W` for some
+barrier *object* `BO`:
 
-* The elements of ``S`` all exist in a continuous, uninterrupted interval of *barrier-modification-order<BO>*.
-* The *arrive count* of ``BO`` is zero before the first operation of ``S`` in *barrier-modification-order<BO>*.
-* The *arrive count* and *expected count* of ``BO`` are equal after the last operation of ``S`` in
-  *barrier-modification-order<BO>*. The *arrive count* and *expected count* of ``BO`` cannot
-  equal at any other point in ``S``.
+- The elements of `S` all exist in a continuous, uninterrupted interval of *barrier-modification-order\<BO>*.
+- The *arrive count* of `BO` is zero before the first operation of `S` in *barrier-modification-order\<BO>*.
+- The *arrive count* and *expected count* of `BO` are equal after the last operation of `S` in
+  *barrier-modification-order\<BO>*. The *arrive count* and *expected count* of `BO` cannot
+  equal at any other point in `S`.
 
-.. [0] The definition of *barrier-participates-in* (in its current state) is non-deterministic and
-       will be improved in the future: Within a valid execution, there may be multiple ways
-       to build *barrier-participates-in*, however there is only one way to build it that also satisfies all
-       other relations and constraints that depend on *barrier-participates-in* and relations derived from it.
+[^footnote-1]: The definition of *barrier-participates-in* (in its current state) is non-deterministic and
+    will be improved in the future: Within a valid execution, there may be multiple ways
+    to build *barrier-participates-in*, however there is only one way to build it that also satisfies all
+    other relations and constraints that depend on *barrier-participates-in* and relations derived from it.
 
-.. rubric:: *Barrier-executes-before*
+```{rubric} *Barrier-executes-before*
+```
 
-A barrier operation ``A`` *barrier-executes-before* another barrier operation ``B`` if any of the
+A barrier operation `A` *barrier-executes-before* another barrier operation `B` if any of the
 following is true:
 
-* ``A -> B`` in *program-order*.
-* ``A -> B`` in *barrier-participates-in*.
-* ``A`` *barrier-executes-before* some barrier operation ``X``, and ``X``
-  *barrier-executes-before* ``B``.
+- `A -> B` in *program-order*.
+- `A -> B` in *barrier-participates-in*.
+- `A` *barrier-executes-before* some barrier operation `X`, and `X`
+  *barrier-executes-before* `B`.
 
-*Barrier-executes-before* is consistent with *barrier-modification-order<BO>* for every barrier object ``BO``.
+*Barrier-executes-before* is consistent with *barrier-modification-order\<BO>* for every barrier object `BO`.
 
-.. rubric:: Barrier *drop* races
+```{rubric} Barrier *drop* races
+```
 
-For every pair of barrier *arrive* ``A`` and barrier *drop* ``D`` performed on a barrier *object*
-``BO``, such that ``A -> D`` in *thread-barrier-order<BO>*, one of the following must be true:
+For every pair of barrier *arrive* `A` and barrier *drop* `D` performed on a barrier *object*
+`BO`, such that `A -> D` in *thread-barrier-order\<BO>*, one of the following must be true:
 
-* ``A`` does not *barrier-participates-in* any barrier *wait*.
-* ``A`` *barrier-participates-in* at least one barrier *wait* ``W``
-  such that ``W -> D`` in *barrier-executes-before*.
+- `A` does not *barrier-participates-in* any barrier *wait*.
+- `A` *barrier-participates-in* at least one barrier *wait* `W`
+  such that `W -> D` in *barrier-executes-before*.
 
-.. rubric:: *barrier-phase-with*
+```{rubric} *barrier-phase-with*
+```
 
 *barrier-phase-with* is a symmetric relation over barrier operations defined as the
 transitive closure of: *barrier-participates-in* and its inverse relation.
 
-.. rubric:: Barrier phase separation
+```{rubric} Barrier phase separation
+```
 
-For every barrier operation ``A`` that *barrier-participates-in* a barrier *wait* ``W`` on a barrier *object* ``BO``:
+For every barrier operation `A` that *barrier-participates-in* a barrier *wait* `W` on a barrier *object* `BO`:
 
-* There is no barrier operation ``X`` on ``BO`` such that ``A -> X -> W`` in
-  *barrier-executes-before*, and ``X`` *barrier-phase-with* a non-empty set of operations
-  that does not include ``W``.
+- There is no barrier operation `X` on `BO` such that `A -> X -> W` in
+  *barrier-executes-before*, and `X` *barrier-phase-with* a non-empty set of operations
+  that does not include `W`.
 
-Informational Notes
-~~~~~~~~~~~~~~~~~~~
+#### Informational Notes
 
 Informally, we can deduce from the above formal model that execution barriers behave as follows:
 
-* *Barrier-executes-before* relates the dynamic instances of operations from different threads together.
-  For example, if ``A -> B`` in *barrier-executes-before*, then the execution of ``A`` must complete
-  before the execution of ``B`` can complete.
+- *Barrier-executes-before* relates the dynamic instances of operations from different threads together.
+  For example, if `A -> B` in *barrier-executes-before*, then the execution of `A` must complete
+  before the execution of `B` can complete.
 
-  * This property can also be combined with *program-order*. For example, let two (non-barrier) operations
-    ``X`` and ``Y`` where ``X -> A`` and ``B -> Y`` in *program-order*, then we know that the execution
-    of ``X`` completes before the execution of ``Y`` does.
+  - This property can also be combined with *program-order*. For example, let two (non-barrier) operations
+    `X` and `Y` where `X -> A` and `B -> Y` in *program-order*, then we know that the execution
+    of `X` completes before the execution of `Y` does.
 
-* Barriers do not complete "out-of-thin-air"; a barrier *wait* ``W`` cannot depend on a barrier operation
-  ``X`` to complete if ``W -> X`` in *barrier-executes-before*.
-* It is undefined behavior to operate on an uninitialized barrier object.
-* It is undefined behavior for a barrier *wait* to never complete.
-* It is not mandatory to *drop* a barrier after *joining* it.
-* A thread may not *arrive* and then *drop* a barrier *object* unless the barrier completes before the
+- Barriers do not complete "out-of-thin-air"; a barrier *wait* `W` cannot depend on a barrier operation
+  `X` to complete if `W -> X` in *barrier-executes-before*.
+
+- It is undefined behavior to operate on an uninitialized barrier object.
+
+- It is undefined behavior for a barrier *wait* to never complete.
+
+- It is not mandatory to *drop* a barrier after *joining* it.
+
+- A thread may not *arrive* and then *drop* a barrier *object* unless the barrier completes before the
   barrier *drop*. Incrementing the *arrive count* and decrementing the *expected count* directly
   after may cause undefined behavior.
-* *Joining* a barrier is only useful if the thread will *wait* on that same barrier *object* later.
 
-Barrier Implementations on AMDGPU Targets
-=========================================
+- *Joining* a barrier is only useful if the thread will *wait* on that same barrier *object* later.
 
-``s_barrier``
-~~~~~~~~~~~~~
+### Barrier Implementations on AMDGPU Targets
 
-``s_barrier`` are the primary barrier implementation of AMD GPUs.
+#### `s_barrier`
 
-``s_barrier`` instructions can only be used to synchronize threads at a wavefront granularity.
-``s_barrier`` instructions are convergent within a wave, and thus can only be performed
+`s_barrier` are the primary barrier implementation of AMD GPUs.
+
+`s_barrier` instructions can only be used to synchronize threads at a wavefront granularity.
+`s_barrier` instructions are convergent within a wave, and thus can only be performed
 in wave-uniform control flow.
 
-The ``s_barrier`` family of instructions is available in some form on all GFX targets,
+The `s_barrier` family of instructions is available in some form on all GFX targets,
 and has evolved over time. The sub-sections below cover the capabilities offered by every major
 iteration of this feature separately.
 
-GFX6-11
--------
+##### GFX6-11
 
 Targets from GFX6 through GFX11 included do not have the "split barrier" feature.
 The barrier *arrive* and barrier *wait* operations **cannot** be performed independently
-using ``s_barrier``.
+using `s_barrier`.
 
-There is only one *workgroup barrier* object of ``workgroup`` scope that is implicitly used
-by all ``s_barrier`` instructions.
+There is only one *workgroup barrier* object of `workgroup` scope that is implicitly used
+by all `s_barrier` instructions.
 
 The following code sequences can be used to implement the barrier operations defined by the
-:ref:`execution synchronization model<amdgpu-execution-synchronization-barriers-execution-model>` using
-``s_barrier`` on GFX6 through GFX11:
+{ref}`execution synchronization model<amdgpu-execution-synchronization-barriers-execution-model>` using
+`s_barrier` on GFX6 through GFX11:
 
+```{eval-rst}
 .. table:: s_barrier GFX6-11
     :name: amdgpu-execution-synchronization-barriers-sbarrier-gfx6-11
     :widths: 15 15 70
@@ -262,37 +271,37 @@ The following code sequences can be used to implement the barrier operations def
 
     *wait*                - *Workgroup barrier*  Not available separately, see *arrive* then *wait*
     ===================== ====================== ===========================================================
+```
 
-GFX12
------
+##### GFX12
 
-GFX12 targets have the split-barrier feature, and also allow ``s_barrier`` instructions to use
-one of multiple barrier *objects* available per workgroup. ``s_barrier`` instruction use the
+GFX12 targets have the split-barrier feature, and also allow `s_barrier` instructions to use
+one of multiple barrier *objects* available per workgroup. `s_barrier` instruction use the
 barrier ID operand to determine the barrier *object* they operate on.
 
 GFX12.5 additionally introduces new barrier *objects* that offer more flexibility for synchronizing the execution
 of a subset of waves of a workgroup, or synchronizing execution across workgroups within a workgroup cluster, via
-``s_barrier``. These are called "named barriers".
+`s_barrier`. These are called "named barriers".
 
-.. note::
+:::{note}
+Check the {ref}`the table below<amdgpu-execution-synchronization-barriers-sbarrier-ids-gfx12>` to determine
+which barrier IDs are available to `s_barrier` instructions on a given target.
+:::
 
-  Check the :ref:`the table below<amdgpu-execution-synchronization-barriers-sbarrier-ids-gfx12>` to determine
-  which barrier IDs are available to ``s_barrier`` instructions on a given target.
+(amdgpu-execution-synchronization-barriers-execution-model-gfx12-sbarrier)=
 
-.. _amdgpu-execution-synchronization-barriers-execution-model-gfx12-sbarrier:
+###### "Named Barriers" Model Extensions
 
-"Named Barriers" Model Extensions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-In order to reason about the execution of ``s_barrier`` "named barriers" on GFX12.5 and up,
+In order to reason about the execution of `s_barrier` "named barriers" on GFX12.5 and up,
 we define the following extensions to the
-:ref:`barrier execution model<amdgpu-execution-synchronization-barriers-execution-model>`:
+{ref}`barrier execution model<amdgpu-execution-synchronization-barriers-execution-model>`:
 
-.. note::
+:::{note}
+The aforementioned execution model always applies unless stated otherwise by one of the extensions below.
+:::
 
-  The aforementioned execution model always applies unless stated otherwise by one of the extensions below.
-
-.. rubric::  Barrier *Objects*
+```{rubric} Barrier *Objects*
+```
 
 There is a sub-type of barrier *objects* called *named barrier objects*.
 *Named barrier objects* inherit all the properties of barrier *objects* as defined by the barrier execution
@@ -300,50 +309,54 @@ model. They are also subject to additional constraints.
 
 Not all barrier *objects* are *named barrier objects*, and both types can coexist in an implementation.
 
-.. rubric:: Barrier Operations
+```{rubric} Barrier Operations
+```
 
 The entirety of the
-:ref:`barrier operations section<amdgpu-execution-synchronization-barriers-execution-model-barrier-operations>`
+{ref}`barrier operations section<amdgpu-execution-synchronization-barriers-execution-model-barrier-operations>`
 applies, with the following barrier operation being added:
 
-* Barrier *join*.
+- Barrier *join*.
 
-  * Allow the thread that executes the operation to *wait* on a barrier *object*.
-  * Can only be used on *named barrier objects*.
+  - Allow the thread that executes the operation to *wait* on a barrier *object*.
+  - Can only be used on *named barrier objects*.
 
-.. rubric:: *Barrier-joined-before*
+```{rubric} *Barrier-joined-before*
+```
 
-A barrier *join* ``J`` is *barrier-joined-before* a barrier operation ``X`` if and only if all
+A barrier *join* `J` is *barrier-joined-before* a barrier operation `X` if and only if all
 of the following is true:
 
-* ``J -> X`` in *thread-barrier-order<BO>*.
-* ``X`` is not a barrier *join*.
-* There is no barrier *join* or *drop* ``JD`` where ``J -> JD -> X`` in *thread-barrier-order<BO>*.
-* There is no barrier *join* ``J'`` on a distinct barrier *object* ``BO'`` such that ``J -> J' -> X`` in
+- `J -> X` in *thread-barrier-order\<BO>*.
+- `X` is not a barrier *join*.
+- There is no barrier *join* or *drop* `JD` where `J -> JD -> X` in *thread-barrier-order\<BO>*.
+- There is no barrier *join* `J'` on a distinct barrier *object* `BO'` such that `J -> J' -> X` in
   *program-order*.
 
-.. rubric:: Join and Drop Ordering
+```{rubric} Join and Drop Ordering
+```
 
-For every barrier *drop* ``D`` performed on a *named barrier object* ``BO``:
+For every barrier *drop* `D` performed on a *named barrier object* `BO`:
 
-* There is a barrier *join* ``J`` such that ``J -> D`` in *barrier-joined-before*;
+- There is a barrier *join* `J` such that `J -> D` in *barrier-joined-before*;
   otherwise, the behavior is undefined.
 
-.. rubric:: Join and Wait Ordering
+```{rubric} Join and Wait Ordering
+```
 
-For every barrier *wait* ``W`` performed on a *named barrier object* ``BO``:
+For every barrier *wait* `W` performed on a *named barrier object* `BO`:
 
-* There is a barrier *join* ``J`` such that ``J -> W`` in *barrier-joined-before*, and
-  ``J`` must *barrier-executes-before* at least one operation ``X`` that
-  *barrier-participates-in* ``W``; otherwise, the behavior is undefined.
+- There is a barrier *join* `J` such that `J -> W` in *barrier-joined-before*, and
+  `J` must *barrier-executes-before* at least one operation `X` that
+  *barrier-participates-in* `W`; otherwise, the behavior is undefined.
 
-Code Sequences
-^^^^^^^^^^^^^^
+###### Code Sequences
 
 The following code sequences can be used to implement the barrier operations defined by the
-GFX12 ``s_barrier``
-:ref:`execution synchronization model<amdgpu-execution-synchronization-barriers-execution-model-gfx12-sbarrier>`:
+GFX12 `s_barrier`
+{ref}`execution synchronization model<amdgpu-execution-synchronization-barriers-execution-model-gfx12-sbarrier>`:
 
+```{eval-rst}
 .. table:: s_barrier GFX12
     :name: amdgpu-execution-synchronization-barriers-sbarrier-gfx2
     :widths: 15 15 70
@@ -434,9 +447,11 @@ GFX12 ``s_barrier``
                                                         instruction.
     ===================== =========================== ===========================================================
 
+```
 
 The following barrier IDs are available:
 
+```{eval-rst}
 .. table:: s_barrier IDs GFX12
     :name: amdgpu-execution-synchronization-barriers-sbarrier-ids-gfx12
     :widths: 15 15 15 10 45
@@ -463,14 +478,16 @@ The following barrier IDs are available:
     ``[1, 16]``     ``workgroup``  GFX12.5      YES                     *Named barrier objects* for the shader to assign and use.
     =============== ============== ============ ======================= ==============================================================
 
+```
 
 Informally, we can note that:
 
-* All operations on the *NULL named barrier object* other than *join* are no-ops.
+- All operations on the *NULL named barrier object* other than *join* are no-ops.
 
-  * As the *NULL barrier* (barrier ID ``0``) is also a *named* barrier *object*, a thread can
+  - As the *NULL barrier* (barrier ID `0`) is also a *named* barrier *object*, a thread can
     use a *join* on the *NULL* barrier as a way to "unjoin" a *named barrier*
     (break *barrier-joined-before*) without having to use a *drop* operation.
 
-* When a thread ends, it does **not** implicitly *drop* any *named barrier objects*
-  (barrier IDs ``[0, 16]``) it has *joined*.
+- When a thread ends, it does **not** implicitly *drop* any *named barrier objects*
+  (barrier IDs `[0, 16]`) it has *joined*.
+

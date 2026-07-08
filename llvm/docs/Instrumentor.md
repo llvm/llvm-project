@@ -1,12 +1,10 @@
-==================================
-The LLVM Instrumentor Pass
-==================================
+# The LLVM Instrumentor Pass
 
-.. contents::
-   :local:
+```{contents}
+:local: true
+```
 
-Introduction
-============
+## Introduction
 
 The **Instrumentor** is a highly configurable instrumentation pass for LLVM-IR
 that allows users to insert custom runtime function calls at various program
@@ -33,30 +31,27 @@ To use the Instrumentor it is recommended to run the wizard script located at
 create a configuration file and a stub runtime which is required to be linked
 into the instrumented program.
 
-Key Features
-============
+## Key Features
 
-Configurable Instrumentation Opportunities
--------------------------------------------
+### Configurable Instrumentation Opportunities
 
 The Instrumentor supports instrumentation at multiple levels:
 
 **Instruction-level:**
-  - **Load instructions**: Instrument memory reads with access to pointer, loaded value, alignment, size, atomicity, etc.
+: - **Load instructions**: Instrument memory reads with access to pointer, loaded value, alignment, size, atomicity, etc.
   - **Store instructions**: Instrument memory writes with access to pointer, stored value, alignment, size, atomicity, etc.
   - **Alloca instructions**: Instrument stack allocations with access to size, alignment, and allocated address
 
 **Function-level:**
-  - **Function entry**: Instrument at function start with access to function name, address, arguments, etc.
+: - **Function entry**: Instrument at function start with access to function name, address, arguments, etc.
   - **Function exit**: Instrument at function return
 
 **Future extensions:**
-  - Basic block entry/exit
+: - Basic block entry/exit
   - Module-level initialization
   - Global variable access
 
-PRE and POST Instrumentation
------------------------------
+### PRE and POST Instrumentation
 
 Each instrumentation opportunity supports two positions:
 
@@ -74,8 +69,7 @@ Each instrumentation opportunity supports two positions:
   - For allocas: can inspect/modify the allocated address
   - For functions: instrument at function exit
 
-Selective Argument Passing
----------------------------
+### Selective Argument Passing
 
 For each instrumentation opportunity, users can individually enable/disable specific arguments to control:
 
@@ -96,8 +90,7 @@ For example, for load instrumentation, you can choose to pass:
 - Volatility flag
 - Unique instrumentation ID
 
-Value Replacement
------------------
+### Value Replacement
 
 The Instrumentor supports **replacing** values returned from the runtime:
 
@@ -113,18 +106,16 @@ This enables use cases like:
 - Fault injection
 - Taint tracking
 
-Instrumentation Filtering
--------------------------
+### Instrumentation Filtering
 
 The Instrumentor provides fine-grained control over what gets instrumented:
 
-- **Target regex**: Match against the target triple (e.g., ``x86_64-.*-linux``)
+- **Target regex**: Match against the target triple (e.g., `x86_64-.*-linux`)
 - **Host/GPU toggle**: Separately enable/disable CPU and GPU instrumentation
 - **Function filtering**: Exclude runtime functions from instrumentation via a regular expression
 - **Property filters**: Filter individual instrumentation points based on static properties (see Property Filtering below)
 
-Property Filtering
-------------------
+### Property Filtering
 
 The Instrumentor supports fine-grained filtering of individual instrumentation
 opportunities based on their static properties. This allows you to instrument
@@ -135,33 +126,32 @@ only specific operations that meet certain criteria, such as:
 - Functions with specific name patterns
 - Allocations above a certain size threshold
 
-Property filters are specified using the ``filter`` field in the configuration JSON for each instrumentation opportunity.
+Property filters are specified using the `filter` field in the configuration JSON for each instrumentation opportunity.
 
-Filter Syntax
-^^^^^^^^^^^^^
+#### Filter Syntax
 
 The filter expression language supports:
 
 **Integer comparisons:**
-  - ``==`` (equal)
-  - ``!=`` (not equal)
-  - ``<`` (less than)
-  - ``>`` (greater than)
-  - ``<=`` (less than or equal)
-  - ``>=`` (greater than or equal)
+: - `==` (equal)
+  - `!=` (not equal)
+  - `<` (less than)
+  - `>` (greater than)
+  - `<=` (less than or equal)
+  - `>=` (greater than or equal)
 
 **String comparisons:**
-  - ``==`` (equal, with quoted string)
-  - ``!=`` (not equal, with quoted string)
-  - ``.startswith(\"prefix\")`` (prefix check, with quoted string)
+: - `==` (equal, with quoted string)
+  - `!=` (not equal, with quoted string)
+  - `.startswith(\"prefix\")` (prefix check, with quoted string)
 
 **Pointer comparisons:**
-  - ``==null`` (null pointer check)
-  - ``!=null`` (non-null pointer check)
+: - `==null` (null pointer check)
+  - `!=null` (non-null pointer check)
 
 **Logical operators:**
-  - ``&&`` (logical AND)
-  - ``||`` (logical OR)
+: - `&&` (logical AND)
+  - `||` (logical OR)
 
 **Important notes:**
 
@@ -170,94 +160,91 @@ The filter expression language supports:
 - String literals must be enclosed in double quotes (with proper escaping)
 - Property names are specific to each instrumentation opportunity (see Available Properties below)
 
-Filter Examples
-^^^^^^^^^^^^^^^
+#### Filter Examples
 
 **Filter only atomic loads:**
 
-.. code-block:: json
-
-   {
-     "instruction_post": {
-       "load": {
-         "enabled": true,
-         "filter": "atomicity_ordering>0",
-         "pointer": true,
-         "value": true
-       }
-     }
-   }
+```json
+{
+  "instruction_post": {
+    "load": {
+      "enabled": true,
+      "filter": "atomicity_ordering>0",
+      "pointer": true,
+      "value": true
+    }
+  }
+}
+```
 
 **Filter volatile stores or acquire and release operations:**
 
-.. code-block:: json
-
-   {
-     "instruction_post": {
-       "store": {
-         "enabled": true,
-         "filter": "is_volatile==1 || atomicity_ordering==6",
-         "pointer": true,
-         "value": true
-       }
-     }
-   }
+```json
+{
+  "instruction_post": {
+    "store": {
+      "enabled": true,
+      "filter": "is_volatile==1 || atomicity_ordering==6",
+      "pointer": true,
+      "value": true
+    }
+  }
+}
+```
 
 **Filter functions by name prefix:**
 
-.. code-block:: json
-
-   {
-     "function_pre": {
-       "function": {
-         "enabled": true,
-         "filter": "name.startswith(\"test_\")",
-         "name": true
-       }
-     }
-   }
+```json
+{
+  "function_pre": {
+    "function": {
+      "enabled": true,
+      "filter": "name.startswith(\"test_\")",
+      "name": true
+    }
+  }
+}
+```
 
 **Complex filter with multiple conditions:**
 
-.. code-block:: json
+```json
+{
+  "instruction_post": {
+    "load": {
+      "enabled": true,
+      "filter": "(atomicity_ordering==4 || atomicity_ordering==7) && sync_scope_id==0",
+      "pointer": true,
+      "value": true,
+      "atomicity_ordering": true
+    }
+  }
+}
+```
 
-   {
-     "instruction_post": {
-       "load": {
-         "enabled": true,
-         "filter": "(atomicity_ordering==4 || atomicity_ordering==7) && sync_scope_id==0",
-         "pointer": true,
-         "value": true,
-         "atomicity_ordering": true
-       }
-     }
-   }
-
-Available Properties
-^^^^^^^^^^^^^^^^^^^^
+#### Available Properties
 
 The properties available for filtering depend on the instrumentation
 opportunity type but generally include all values that can be passed to the
 runtime, filtered using their respective name.
 
 **Load/Store instructions:**
-  - ``atomicity_ordering`` (integer): 0=non-atomic, 1=Unordered, 2=Monotonic, 4=Acquire, 5=Release, 6=AcquireRelease, 7=SequentiallyConsistent
-  - ``sync_scope_id`` (integer): synchronization scope identifier
-  - ``is_volatile`` (integer): 1 if volatile, 0 otherwise
-  - ``alignment`` (integer): alignment in bytes
-  - ``value_size`` (integer): size of loaded value in bytes
+: - `atomicity_ordering` (integer): 0=non-atomic, 1=Unordered, 2=Monotonic, 4=Acquire, 5=Release, 6=AcquireRelease, 7=SequentiallyConsistent
+  - `sync_scope_id` (integer): synchronization scope identifier
+  - `is_volatile` (integer): 1 if volatile, 0 otherwise
+  - `alignment` (integer): alignment in bytes
+  - `value_size` (integer): size of loaded value in bytes
 
 **Function instrumentation:**
-  - ``name`` (string): function name
-  - ``num_arguments`` (integer): number of function arguments
-  - ``is_main`` (integer): 1 if this is the main function, 0 otherwise
+: - `name` (string): function name
+  - `num_arguments` (integer): number of function arguments
+  - `is_main` (integer): 1 if this is the main function, 0 otherwise
 
 **Alloca instructions:**
-  - ``size`` (integer): allocation size in bytes (if constant)
-  - ``alignment`` (integer): allocation alignment in bytes
+: - `size` (integer): allocation size in bytes (if constant)
+  - `alignment` (integer): allocation alignment in bytes
 
-Configuration System
-====================
+## Configuration System
 
 The Instrumentor uses a JSON-based configuration system that allows users to:
 
@@ -266,115 +253,115 @@ The Instrumentor uses a JSON-based configuration system that allows users to:
 3. Load and modify existing configurations
 4. Generate runtime stub implementations
 
-Configuration File Format
--------------------------
+### Configuration File Format
 
 The configuration file is a JSON document with the following structure:
 
-.. code-block:: json
+```json
+{
+  "configuration": {
+    "runtime_prefix": "__instrumentor_",
+    "target_regex": "",
+    "host_enabled": true,
+    "gpu_enabled": true
+  },
+  "function_pre": {
+    "function": {
+      "enabled": true,
+      "address": true,
+      "name": true,
+      "id": true
+    }
+  },
+  "instruction_pre": {
+    "load": {
+      "enabled": true,
+      "pointer": true,
+      "pointer.replace": false,
+      "value_size": true,
+      "id": true
+    },
+    "store": {
+      "enabled": true,
+      "pointer": true,
+      "value": true,
+      "value_size": true
+    }
+  },
+  "instruction_post": {
+    "load": {
+      "enabled": true,
+      "value": true,
+      "value.replace": false
+    }
+  }
+}
+```
 
-   {
-     "configuration": {
-       "runtime_prefix": "__instrumentor_",
-       "target_regex": "",
-       "host_enabled": true,
-       "gpu_enabled": true
-     },
-     "function_pre": {
-       "function": {
-         "enabled": true,
-         "address": true,
-         "name": true,
-         "id": true
-       }
-     },
-     "instruction_pre": {
-       "load": {
-         "enabled": true,
-         "pointer": true,
-         "pointer.replace": false,
-         "value_size": true,
-         "id": true
-       },
-       "store": {
-         "enabled": true,
-         "pointer": true,
-         "value": true,
-         "value_size": true
-       }
-     },
-     "instruction_post": {
-       "load": {
-         "enabled": true,
-         "value": true,
-         "value.replace": false
-       }
-     }
-   }
-
-Configuration Sections
-----------------------
+### Configuration Sections
 
 **configuration**
-  Global settings that apply to all instrumentation:
 
-  - ``runtime_prefix``: Prefix for all runtime function names (default: ``__instrumentor_``)
-  - ``target_regex``: Regular expression to filter targets (empty = all targets)
-  - ``host_enabled``: Enable instrumentation for CPU targets (default: true)
-  - ``gpu_enabled``: Enable instrumentation for GPU targets (default: true)
+: Global settings that apply to all instrumentation:
+
+  - `runtime_prefix`: Prefix for all runtime function names (default: `__instrumentor_`)
+  - `target_regex`: Regular expression to filter targets (empty = all targets)
+  - `host_enabled`: Enable instrumentation for CPU targets (default: true)
+  - `gpu_enabled`: Enable instrumentation for GPU targets (default: true)
 
 **function_pre / function_post**
-  Function-level instrumentation configuration.
+
+: Function-level instrumentation configuration.
 
 **instruction_pre / instruction_post**
-  Instruction-level instrumentation configuration, with subsections for each instruction type (``load``, ``store``, ``alloca``, etc.).
 
-Argument Configuration
-----------------------
+: Instruction-level instrumentation configuration, with subsections for each instruction type (`load`, `store`, `alloca`, etc.).
+
+### Argument Configuration
 
 For each instrumentation opportunity, arguments are configured with:
 
 - **enabled**: Boolean to enable/disable the entire opportunity
 - **filter**: Optional string expression to filter instrumentation based on static properties (see Property Filtering)
-- **<argument_name>**: Boolean to enable/disable passing this argument
-- **<argument_name>.replace**: Boolean to enable value replacement (only for replaceable arguments)
-- **<argument_name>.description**: Human-readable description of the argument
+- **\<argument_name>**: Boolean to enable/disable passing this argument
+- **\<argument_name>.replace**: Boolean to enable value replacement (only for replaceable arguments)
+- **\<argument_name>.description**: Human-readable description of the argument
 
-The Configuration Wizard
-=========================
+## The Configuration Wizard
 
 The Instrumentor includes an interactive configuration wizard that simplifies the process of creating and modifying configurations.
 
-Running the Wizard
-------------------
+### Running the Wizard
 
-.. code-block:: bash
+```bash
+# Run the wizard interactively
+./llvm/utils/instrumentor-config-wizard.py
 
-   # Run the wizard interactively
-   ./llvm/utils/instrumentor-config-wizard.py
+# Specify output location
+./llvm/utils/instrumentor-config-wizard.py -o my_config.json
 
-   # Specify output location
-   ./llvm/utils/instrumentor-config-wizard.py -o my_config.json
+# Use specific opt binary
+./llvm/utils/instrumentor-config-wizard.py --opt-path /path/to/opt
 
-   # Use specific opt binary
-   ./llvm/utils/instrumentor-config-wizard.py --opt-path /path/to/opt
+# Load and modify existing configuration
+./llvm/utils/instrumentor-config-wizard.py --input existing.json -o modified.json
+```
 
-   # Load and modify existing configuration
-   ./llvm/utils/instrumentor-config-wizard.py --input existing.json -o modified.json
-
-Wizard Workflow
----------------
+### Wizard Workflow
 
 The wizard guides you through five steps:
 
 **Step 1: Select Instrumentation Types**
-  Choose which types of operations to instrument (load, store, alloca, function, etc.). This is a high-level selection - you can configure individual arguments later.
+
+: Choose which types of operations to instrument (load, store, alloca, function, etc.). This is a high-level selection - you can configure individual arguments later.
 
 **Step 2: PRE vs POST Configuration**
-  Decide whether PRE and POST instrumentation should use the same configuration or different configurations. This saves time when you want both positions to have identical settings.
+
+: Decide whether PRE and POST instrumentation should use the same configuration or different configurations. This saves time when you want both positions to have identical settings.
 
 **Step 3: Base Configuration**
-  Configure global settings:
+
+: Configure global settings:
 
   - Runtime prefix for function names
   - Target regex for filtering
@@ -382,7 +369,8 @@ The wizard guides you through five steps:
   - Enable/disable GPU instrumentation
 
 **Step 4: Configure Arguments**
-  For each enabled instrumentation type, select which arguments to pass to the runtime function. You can:
+
+: For each enabled instrumentation type, select which arguments to pass to the runtime function. You can:
 
   - Toggle individual arguments on/off
   - Enable value replacement for replaceable arguments
@@ -390,15 +378,15 @@ The wizard guides you through five steps:
   - Configure PRE and POST separately (if selected in Step 2)
 
 **Step 5: Review and Save**
-  Review your configuration and optionally generate runtime stub implementations. The wizard displays a summary and provides commands for using the configuration with ``opt`` and ``clang``.
 
-Generating Runtime Stubs
--------------------------
+: Review your configuration and optionally generate runtime stub implementations. The wizard displays a summary and provides commands for using the configuration with `opt` and `clang`.
+
+### Generating Runtime Stubs
 
 The wizard can automatically generate C stub implementations of your runtime functions:
 
 1. In Step 5, select 'g' to generate stubs
-2. Specify the output file path (default: ``<config_name>_stubs.c``)
+2. Specify the output file path (default: `<config_name>_stubs.c`)
 3. The wizard creates a C file with stub implementations that print their arguments
 
 The generated stubs are useful as:
@@ -409,352 +397,339 @@ The generated stubs are useful as:
 
 Example stub output:
 
-.. code-block:: c
+```c
+void __instrumentor_pre_load(void *pointer, int32_t pointer_as,
+                              uint64_t value_size, int32_t id) {
+  printf("load pre -- pointer: %p, pointer_as: %i, "
+         "value_size: %lu, id: %i\n",
+         pointer, pointer_as, value_size, id);
+}
+```
 
-   void __instrumentor_pre_load(void *pointer, int32_t pointer_as,
-                                 uint64_t value_size, int32_t id) {
-     printf("load pre -- pointer: %p, pointer_as: %i, "
-            "value_size: %lu, id: %i\n",
-            pointer, pointer_as, value_size, id);
-   }
+## Usage Examples
 
-Usage Examples
-==============
-
-Basic Usage with opt
---------------------
+### Basic Usage with opt
 
 **Step 1: (Optional) Generate a default configuration**
 
-.. code-block:: bash
+```bash
+opt -passes=instrumentor \
+    -instrumentor-write-config-file=config.json \
+    -disable-output \
+    input.ll
+```
 
-   opt -passes=instrumentor \
-       -instrumentor-write-config-file=config.json \
-       -disable-output \
-       input.ll
-
-This creates ``config.json`` with all available instrumentation opportunities and their arguments.
+This creates `config.json` with all available instrumentation opportunities and their arguments.
 
 **Step 2: Customize the configuration**
 
-Edit ``config.json`` manually or use the wizard (no input needed):
+Edit `config.json` manually or use the wizard (no input needed):
 
-.. code-block:: bash
-
-   ./llvm/utils/instrumentor-config-wizard.py --input config.json -o custom.json
+```bash
+./llvm/utils/instrumentor-config-wizard.py --input config.json -o custom.json
+```
 
 **Step 3: Apply instrumentation**
 
-.. code-block:: bash
-
-   opt -passes=instrumentor \
-       -instrumentor-read-config-file=custom.json \
-       input.ll -S -o instrumented.ll
+```bash
+opt -passes=instrumentor \
+    -instrumentor-read-config-file=custom.json \
+    input.ll -S -o instrumented.ll
+```
 
 The instrumented output contains calls to your runtime functions at the configured program points.
 
-Using with Clang
-----------------
+### Using with Clang
 
 To instrument during compilation:
 
-.. code-block:: bash
+```bash
+clang -mllvm -enable-instrumentor \
+      -mllvm -instrumentor-read-config-file=config.json \
+      source.c -o program
+```
 
-   clang -mllvm -enable-instrumentor \
-         -mllvm -instrumentor-read-config-file=config.json \
-         source.c -o program
-
-Complete Workflow Example
---------------------------
+### Complete Workflow Example
 
 Here's a complete example for creating a simple memory access profiler:
 
 **1. Create configuration with the wizard:**
 
-.. code-block:: bash
+```bash
+./llvm/utils/instrumentor-config-wizard.py -o memory_profiler.json
 
-   ./llvm/utils/instrumentor-config-wizard.py -o memory_profiler.json
-
-   # In the wizard:
-   # - Enable: load, store
-   # - Use same config for PRE/POST: yes
-   # - Base config: keep defaults
-   # - For load/store: enable pointer, value_size, id
-   # - Generate stubs: yes (memory_profiler_stubs.c)
+# In the wizard:
+# - Enable: load, store
+# - Use same config for PRE/POST: yes
+# - Base config: keep defaults
+# - For load/store: enable pointer, value_size, id
+# - Generate stubs: yes (memory_profiler_stubs.c)
+```
 
 **2. Implement the runtime:**
 
-.. code-block:: c
+```c
+// memory_runtime.c
+#include <stdio.h>
+#include <stdint.h>
 
-   // memory_runtime.c
-   #include <stdio.h>
-   #include <stdint.h>
+static uint64_t load_count = 0;
+static uint64_t store_count = 0;
 
-   static uint64_t load_count = 0;
-   static uint64_t store_count = 0;
+void __instrumentor_pre_load(void *pointer, uint64_t value_size,
+                               int32_t id) {
+  load_count++;
+  printf("Load from %p (size: %lu, id: %d)\n",
+         pointer, value_size, id);
+}
 
-   void __instrumentor_pre_load(void *pointer, uint64_t value_size,
-                                  int32_t id) {
-     load_count++;
-     printf("Load from %p (size: %lu, id: %d)\n",
-            pointer, value_size, id);
-   }
+void __instrumentor_pre_store(void *pointer, uint64_t value_size,
+                                int32_t id) {
+  store_count++;
+  printf("Store to %p (size: %lu, id: %d)\n",
+         pointer, value_size, id);
+}
 
-   void __instrumentor_pre_store(void *pointer, uint64_t value_size,
-                                   int32_t id) {
-     store_count++;
-     printf("Store to %p (size: %lu, id: %d)\n",
-            pointer, value_size, id);
-   }
-
-   __attribute__((destructor))
-   void print_stats(void) {
-     printf("Total loads: %lu\n", load_count);
-     printf("Total stores: %lu\n", store_count);
-   }
+__attribute__((destructor))
+void print_stats(void) {
+  printf("Total loads: %lu\n", load_count);
+  printf("Total stores: %lu\n", store_count);
+}
+```
 
 **3. Instrument and compile:**
 
-.. code-block:: bash
+```bash
+# Instrument the program
+clang -emit-llvm -S -o program.ll program.c
+opt -passes=instrumentor \
+    -instrumentor-read-config-file=memory_profiler.json \
+    program.ll -S -o program_inst.ll
 
-   # Instrument the program
-   clang -emit-llvm -S -o program.ll program.c
-   opt -passes=instrumentor \
-       -instrumentor-read-config-file=memory_profiler.json \
-       program.ll -S -o program_inst.ll
-
-   # Compile with runtime
-   clang program_inst.ll memory_runtime.c -o program
+# Compile with runtime
+clang program_inst.ll memory_runtime.c -o program
+```
 
 **4. Run and observe:**
 
-.. code-block:: bash
+```bash
+./program
+# Output includes:
+# Load from 0x7ffc12345678 (size: 4, id: 1)
+# Store to 0x7ffc12345680 (size: 8, id: 2)
+# ...
+# Total loads: 42
+# Total stores: 27
+```
 
-   ./program
-   # Output includes:
-   # Load from 0x7ffc12345678 (size: 4, id: 1)
-   # Store to 0x7ffc12345680 (size: 8, id: 2)
-   # ...
-   # Total loads: 42
-   # Total stores: 27
+## Advanced Use Cases
 
-Advanced Use Cases
-==================
-
-Stack Usage Profiling
-----------------------
+### Stack Usage Profiling
 
 Configure alloca instrumentation to track stack allocations:
 
-.. code-block:: json
-
-   {
-     "instruction_pre": {
-       "alloca": {
-         "enabled": true,
-         "size": true,
-         "alignment": true,
-         "id": true
-       }
-     },
-     "instruction_post": {
-       "alloca": {
-         "enabled": true,
-         "address": true,
-         "size": true
-       }
-     }
-   }
+```json
+{
+  "instruction_pre": {
+    "alloca": {
+      "enabled": true,
+      "size": true,
+      "alignment": true,
+      "id": true
+    }
+  },
+  "instruction_post": {
+    "alloca": {
+      "enabled": true,
+      "address": true,
+      "size": true
+    }
+  }
+}
+```
 
 Runtime implementation:
 
-.. code-block:: c
+```c
+static uint64_t total_stack_usage = 0;
+static uint64_t peak_stack_usage = 0;
+static uint64_t current_stack_usage = 0;
 
-   static uint64_t total_stack_usage = 0;
-   static uint64_t peak_stack_usage = 0;
-   static uint64_t current_stack_usage = 0;
+void __instrumentor_post_alloca(void *address, uint64_t size,
+                                  int32_t id) {
+  current_stack_usage += size;
+  total_stack_usage += size;
+  if (current_stack_usage > peak_stack_usage) {
+    peak_stack_usage = current_stack_usage;
+  }
+}
+```
 
-   void __instrumentor_post_alloca(void *address, uint64_t size,
-                                     int32_t id) {
-     current_stack_usage += size;
-     total_stack_usage += size;
-     if (current_stack_usage > peak_stack_usage) {
-       peak_stack_usage = current_stack_usage;
-     }
-   }
-
-Value Replacement for Fault Injection
---------------------------------------
+### Value Replacement for Fault Injection
 
 Use value replacement to inject faults:
 
-.. code-block:: json
-
-   {
-     "instruction_post": {
-       "load": {
-         "enabled": true,
-         "value": true,
-         "value.replace": true,
-         "pointer": true
-       }
-     }
-   }
+```json
+{
+  "instruction_post": {
+    "load": {
+      "enabled": true,
+      "value": true,
+      "value.replace": true,
+      "pointer": true
+    }
+  }
+}
+```
 
 Runtime implementation:
 
-.. code-block:: c
+```c
+// Replace every 1000th loaded value with zero
+static uint64_t load_counter = 0;
 
-   // Replace every 1000th loaded value with zero
-   static uint64_t load_counter = 0;
+uint64_t __instrumentor_post_load(uint64_t value, void *pointer) {
+  if (++load_counter % 1000 == 0) {
+    printf("Injecting fault at %p\n", pointer);
+    return 0;  // Return fault value
+  }
+  return value;  // Return original value
+}
+```
 
-   uint64_t __instrumentor_post_load(uint64_t value, void *pointer) {
-     if (++load_counter % 1000 == 0) {
-       printf("Injecting fault at %p\n", pointer);
-       return 0;  // Return fault value
-     }
-     return value;  // Return original value
-   }
-
-Function-Level Tracing
-----------------------
+### Function-Level Tracing
 
 Instrument function entry and exit:
 
-.. code-block:: json
-
-   {
-     "function_pre": {
-       "function": {
-         "enabled": true,
-         "name": true,
-         "address": true,
-         "num_arguments": true
-       }
-     },
-     "function_post": {
-       "function": {
-         "enabled": true,
-         "name": true
-       }
-     }
-   }
+```json
+{
+  "function_pre": {
+    "function": {
+      "enabled": true,
+      "name": true,
+      "address": true,
+      "num_arguments": true
+    }
+  },
+  "function_post": {
+    "function": {
+      "enabled": true,
+      "name": true
+    }
+  }
+}
+```
 
 Runtime implementation:
 
-.. code-block:: c
+```c
+static int call_depth = 0;
 
-   static int call_depth = 0;
+void __instrumentor_pre_function(char *name, void *address,
+                                   int32_t num_args, int32_t id) {
+  printf("%*sEntering %s (%p) with %d args\n",
+         call_depth * 2, "", name, address, num_args);
+  call_depth++;
+}
 
-   void __instrumentor_pre_function(char *name, void *address,
-                                      int32_t num_args, int32_t id) {
-     printf("%*sEntering %s (%p) with %d args\n",
-            call_depth * 2, "", name, address, num_args);
-     call_depth++;
-   }
+void __instrumentor_post_function(char *name, int32_t id) {
+  call_depth--;
+  printf("%*sExiting %s\n", call_depth * 2, "", name);
+}
+```
 
-   void __instrumentor_post_function(char *name, int32_t id) {
-     call_depth--;
-     printf("%*sExiting %s\n", call_depth * 2, "", name);
-   }
-
-GPU Instrumentation
--------------------
+### GPU Instrumentation
 
 The Instrumentor supports GPU targets (AMDGPU and NVPTX). Configure GPU-specific instrumentation:
 
-.. code-block:: json
-
-   {
-     "configuration": {
-       "runtime_prefix": "__gpu_runtime_",
-       "target_regex": "(amdgcn|nvptx).*",
-       "host_enabled": false,
-       "gpu_enabled": true
-     },
-     "instruction_pre": {
-       "load": {
-         "enabled": true,
-         "pointer": true,
-         "pointer_as": true
-       }
-     }
-   }
+```json
+{
+  "configuration": {
+    "runtime_prefix": "__gpu_runtime_",
+    "target_regex": "(amdgcn|nvptx).*",
+    "host_enabled": false,
+    "gpu_enabled": true
+  },
+  "instruction_pre": {
+    "load": {
+      "enabled": true,
+      "pointer": true,
+      "pointer_as": true
+    }
+  }
+}
+```
 
 Note that GPU runtime functions must be implemented with appropriate device attributes.
 
-Implementation Details
-======================
+## Implementation Details
 
-Generated Runtime Function Signatures
---------------------------------------
+### Generated Runtime Function Signatures
 
 The Instrumentor generates runtime function names following this pattern:
 
-.. code-block:: text
-
-   <runtime_prefix><position>_<opportunity_name>[_ind]
+```text
+<runtime_prefix><position>_<opportunity_name>[_ind]
+```
 
 Where:
 
-- ``<runtime_prefix>``: Configurable prefix (default: ``__instrumentor_``)
-- ``<position>``: Either ``pre`` or ``post``
-- ``<opportunity_name>``: Name of the instrumentation opportunity (``load``, ``store``, ``function``, etc.)
-- ``_ind``: Optional suffix when indirection is used (see below)
+- `<runtime_prefix>`: Configurable prefix (default: `__instrumentor_`)
+- `<position>`: Either `pre` or `post`
+- `<opportunity_name>`: Name of the instrumentation opportunity (`load`, `store`, `function`, etc.)
+- `_ind`: Optional suffix when indirection is used (see below)
 
 Examples:
 
-- ``__instrumentor_pre_load``
-- ``__instrumentor_post_store``
-- ``__instrumentor_pre_function``
-- ``__instrumentor_pre_load_ind`` (with indirection)
+- `__instrumentor_pre_load`
+- `__instrumentor_post_store`
+- `__instrumentor_pre_function`
+- `__instrumentor_pre_load_ind` (with indirection)
 
-Direct vs Indirect Arguments
------------------------------
+### Direct vs Indirect Arguments
 
 The Instrumentor uses two modes for passing arguments:
 
 **Direct mode** (default):
-  Arguments are passed by value. This is efficient but requires that all arguments fit in registers or can be passed through the stack efficiently.
+
+: Arguments are passed by value. This is efficient but requires that all arguments fit in registers or can be passed through the stack efficiently.
 
 **Indirect mode**:
-  Arguments are passed by pointer. This is used automatically when:
+
+: Arguments are passed by pointer. This is used automatically when:
 
   - Multiple replaceable arguments are enabled (requires indirection for all replaceable args)
   - An argument's value is too large (aggregate types, large values)
 
-When indirect mode is used, a separate function with the ``_ind`` suffix is generated:
+When indirect mode is used, a separate function with the `_ind` suffix is generated:
 
-.. code-block:: c
+```c
+// Direct mode
+void __instrumentor_pre_load(void *pointer, uint64_t value_size);
 
-   // Direct mode
-   void __instrumentor_pre_load(void *pointer, uint64_t value_size);
-
-   // Indirect mode (automatically generated when needed)
-   void __instrumentor_pre_load_ind(void **pointer, uint32_t pointer_size,
-                                     void *value_size, uint32_t value_size_size);
+// Indirect mode (automatically generated when needed)
+void __instrumentor_pre_load_ind(void **pointer, uint32_t pointer_size,
+                                  void *value_size, uint32_t value_size_size);
+```
 
 Users typically don't need to worry about this - the Instrumentor handles it automatically and the wizard-generated stubs show the correct signatures.
 
-Unique IDs
-----------
+### Unique IDs
 
-When the ``id`` argument is enabled, the Instrumentor assigns a unique 32-bit integer to each instrumentation call site:
+When the `id` argument is enabled, the Instrumentor assigns a unique 32-bit integer to each instrumentation call site:
 
 - PRE positions get positive IDs (1, 2, 3, ...)
 - POST positions get negative IDs (-1, -2, -3, ...)
 - IDs are consistent across multiple runs
 
-Caching
--------
+### Caching
 
 The Instrumentor caches certain argument values between PRE and POST calls when possible:
 
 - Values computed in PRE are reused in POST (e.g., pointer value)
 - This reduces overhead and ensures consistency
 
-Runtime Function Requirements
-------------------------------
+### Runtime Function Requirements
 
 Runtime functions must be:
 
@@ -766,11 +741,9 @@ Runtime functions **must not**:
 
 - Call back into instrumented code (to avoid infinite recursion)
 
-Performance Considerations
-==========================
+## Performance Considerations
 
-Overhead Factors
-----------------
+### Overhead Factors
 
 Instrumentation overhead depends on:
 
@@ -779,20 +752,23 @@ Instrumentation overhead depends on:
 3. **Runtime function complexity**: Complex runtime logic increases overhead
 4. **Frequency of instrumented operations**: Instrumenting hot loops has high impact
 
-Optimization Tips
------------------
+### Optimization Tips
 
 **Minimize arguments:**
-  Only enable arguments you actually need. Passing fewer arguments reduces overhead.
+
+: Only enable arguments you actually need. Passing fewer arguments reduces overhead.
 
 **Use PRE or POST, not both:**
-  If you only need one position, disable the other.
+
+: If you only need one position, disable the other.
 
 **Target filtering:**
-  Use ``target_regex`` to instrument only specific targets or modules.
+
+: Use `target_regex` to instrument only specific targets or modules.
 
 **Efficient runtime:**
-  Keep runtime functions simple and fast. Consider:
+
+: Keep runtime functions simple and fast. Consider:
 
   - Lock-free data structures
   - Thread-local storage
@@ -800,101 +776,107 @@ Optimization Tips
   - Sampling (instrument 1 in N calls)
 
 **Build with optimizations:**
-  Use ``-O2`` or ``-O3`` when compiling instrumented code. LLVM can optimize away some overhead.
 
-Troubleshooting
-===============
+: Use `-O2` or `-O3` when compiling instrumented code. LLVM can optimize away some overhead.
 
-Common Issues
--------------
+## Troubleshooting
+
+### Common Issues
 
 **"Could not find 'opt' binary"**
-  The wizard can't locate the opt binary.
 
-  - Specify the path: ``--opt-path /path/to/opt``
+: The wizard can't locate the opt binary.
+
+  - Specify the path: `--opt-path /path/to/opt`
 
 **"Indirection needed but not indicated"**
-  An argument value is too large for direct passing. The Instrumentor handles this automatically, but you might see this warning. It's usually harmless - the indirect version of the function will be generated.
+
+: An argument value is too large for direct passing. The Instrumentor handles this automatically, but you might see this warning. It's usually harmless - the indirect version of the function will be generated.
 
 **Infinite recursion / stack overflow**
-  Your runtime function is calling back into instrumented code. Solutions:
+
+: Your runtime function is calling back into instrumented code. Solutions:
 
   - Ensure runtime functions don't trigger more instrumentation
 
 **Linking errors**
-  Runtime functions are undefined. You must:
+
+: Runtime functions are undefined. You must:
 
   - Implement all enabled runtime functions
   - Link the runtime implementation with your program
   - Use the exact function signatures (check generated stubs)
 
 **Unexpected instrumentation**
-  More instrumentation than expected. Check:
 
-  - The ``enabled`` flag for each opportunity
-  - ``host_enabled`` / ``gpu_enabled`` settings
-  - ``target_regex`` matches your target
+: More instrumentation than expected. Check:
+
+  - The `enabled` flag for each opportunity
+  - `host_enabled` / `gpu_enabled` settings
+  - `target_regex` matches your target
   - Runtime functions aren't being instrumented (they should be automatically excluded)
-  - Property filters (``filter`` field) are correctly specified
+  - Property filters (`filter` field) are correctly specified
 
 **Less instrumentation than expected**
-  Property filters may be excluding instrumentation points:
 
-  - Check if the ``filter`` field is set for the instrumentation opportunity
+: Property filters may be excluding instrumentation points:
+
+  - Check if the `filter` field is set for the instrumentation opportunity
   - Remember that filters only apply to static (compile-time constant) properties
   - Dynamic values always pass the filter
-  - Use empty filter (``"filter": ""``) or remove the field to disable filtering
+  - Use empty filter (`"filter": ""`) or remove the field to disable filtering
   - Test your filter expression by examining the IR properties
 
 **Filter syntax errors**
-  Invalid filter expressions will be reported as errors:
 
-  - Ensure string literals are quoted: ``"name==\"foo\""`` not ``"name==foo"``
-  - Use correct operators: ``&&`` for AND, ``||`` for OR
+: Invalid filter expressions will be reported as errors:
+
+  - Ensure string literals are quoted: `"name==\"foo\""` not `"name==foo"`
+  - Use correct operators: `&&` for AND, `||` for OR
   - Property names must match exactly
   - Close all parentheses and quotes
 
-Debugging Instrumented Code
-----------------------------
+### Debugging Instrumented Code
 
 **View instrumented IR:**
 
-.. code-block:: bash
+```bash
+opt -passes=instrumentor \
+    -instrumentor-read-config-file=config.json \
+    input.ll -S -o output.ll
 
-   opt -passes=instrumentor \
-       -instrumentor-read-config-file=config.json \
-       input.ll -S -o output.ll
-
-   # Examine output.ll to see inserted calls
+# Examine output.ll to see inserted calls
+```
 
 **Print configuration:**
 
-.. code-block:: bash
+```bash
+opt -passes=instrumentor \
+    -instrumentor-write-config-file=debug_config.json \
+    input.ll -disable-output
 
-   opt -passes=instrumentor \
-       -instrumentor-write-config-file=debug_config.json \
-       input.ll -disable-output
-
-   # Examine debug_config.json to see all options
+# Examine debug_config.json to see all options
+```
 
 **Verify IR:**
-  The Instrumentor automatically verifies the module after instrumentation. If verification fails, there's a bug in the Instrumentor or the configuration is invalid.
+
+: The Instrumentor automatically verifies the module after instrumentation. If verification fails, there's a bug in the Instrumentor or the configuration is invalid.
 
 **Use debug builds:**
-  Build LLVM with assertions enabled (``-DLLVM_ENABLE_ASSERTIONS=ON``) to catch issues early.
 
-Extending the Instrumentor
-===========================
+: Build LLVM with assertions enabled (`-DLLVM_ENABLE_ASSERTIONS=ON`) to catch issues early.
+
+## Extending the Instrumentor
 
 The Instrumentor is designed to be extensible. To add new instrumentation opportunities:
 
-1. **Define the opportunity class** inheriting from ``InstrumentationOpportunity``
+1. **Define the opportunity class** inheriting from `InstrumentationOpportunity`
 2. **Implement getter/setter functions** for the arguments
 3. **Add initialization** to populate the opportunity with arguments
-4. **Register** the opportunity in ``InstrumentationConfig::populate()``
-5. **Add tests** in ``llvm/test/Transforms/Instrumentor/``
+4. **Register** the opportunity in `InstrumentationConfig::populate()`
+5. **Add tests** in `llvm/test/Transforms/Instrumentor/`
 
-See ``llvm/lib/Transforms/IPO/Instrumentor.cpp`` and ``llvm/include/llvm/Transforms/IPO/Instrumentor.h`` for examples (``LoadIO``, ``StoreIO``).
+See `llvm/lib/Transforms/IPO/Instrumentor.cpp` and `llvm/include/llvm/Transforms/IPO/Instrumentor.h` for examples (`LoadIO`, `StoreIO`).
 
 Future instrumentation opportunities being considered:
 
@@ -906,20 +888,19 @@ Future instrumentation opportunities being considered:
 - Exception handling
 - Global variable access
 
-Reference
-=========
+## Reference
 
-Command-Line Options
---------------------
+### Command-Line Options
 
-**-instrumentor-read-config-file=<path>**
-  Load instrumentation configuration from the specified JSON file.
+**-instrumentor-read-config-file=\<path>**
 
-**-instrumentor-write-config-file=<path>**
-  Write the default instrumentation configuration to the specified JSON file (useful for generating templates).
+: Load instrumentation configuration from the specified JSON file.
 
-Related Passes
---------------
+**-instrumentor-write-config-file=\<path>**
+
+: Write the default instrumentation configuration to the specified JSON file (useful for generating templates).
+
+### Related Passes
 
 The Instrumentor is more flexible but related to:
 
@@ -931,9 +912,9 @@ The Instrumentor is more flexible but related to:
 
 The Instrumentor can implement similar functionality with custom runtime code, but specialized passes may have better performance for their specific use cases.
 
-Further Reading
----------------
+### Further Reading
 
-- Source code: ``llvm/lib/Transforms/IPO/Instrumentor.cpp``
-- Header: ``llvm/include/llvm/Transforms/IPO/Instrumentor.h``
-- Configuration wizard: ``llvm/utils/instrumentor-config-wizard.py``
+- Source code: `llvm/lib/Transforms/IPO/Instrumentor.cpp`
+- Header: `llvm/include/llvm/Transforms/IPO/Instrumentor.h`
+- Configuration wizard: `llvm/utils/instrumentor-config-wizard.py`
+
