@@ -2098,6 +2098,10 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   // If this is a ::delete expression (explicit global scope), note it so we
   // emit __global_delete forwarding bodies. Only ::delete triggers this, not
   // regular delete expressions that happen to resolve to a global operator.
+  // This matches MSVC: a plain `delete`/`delete[]` that resolves to a global
+  // operator delete does NOT cause MSVC to emit a __global_delete body (even
+  // when it uses the same signature the vector deleting destructor routes
+  // through); only an explicit `::delete` does.
   if (E->isGlobalDelete() && CGM.getTarget().getCXXABI().isMicrosoft())
     CGM.noteDirectGlobalDelete();
 
