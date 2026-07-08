@@ -407,7 +407,7 @@ std::string Args::GetShellSafeArgument(const FileSpec &shell,
   // safe minimal set
   llvm::StringRef escapables = " '\"";
 
-  auto basename = shell.GetFilename().GetStringRef();
+  auto basename = shell.GetFilename();
   if (!basename.empty()) {
     for (const auto &Shell : g_Shells) {
       if (Shell.m_basename == basename) {

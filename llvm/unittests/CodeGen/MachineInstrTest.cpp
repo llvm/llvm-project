@@ -43,8 +43,9 @@ std::unique_ptr<MCContext> createMCContext(const MCAsmInfo &AsmInfo) {
   Triple TheTriple(/*ArchStr=*/"", /*VendorStr=*/"", /*OSStr=*/"",
                    /*EnvironmentStr=*/"elf");
   static MCRegisterInfo MRI;
-  static const MCSubtargetInfo STI(TheTriple, "", "", "", {}, {}, {}, nullptr,
-                                   nullptr, nullptr, nullptr, nullptr, nullptr);
+  static const MCSubtargetInfo STI(TheTriple, "", "", "", "", {}, {}, nullptr,
+                                   nullptr, nullptr, nullptr, nullptr, nullptr,
+                                   nullptr);
   return std::make_unique<MCContext>(TheTriple, AsmInfo, MRI, STI, nullptr,
                                      false);
 }
@@ -591,9 +592,9 @@ TEST(MachineInstrTest, SpliceOperands) {
   EXPECT_EQ(MI->getOperand(8).getImm(), MachineOperand::CreateImm(4).getImm());
 
   // test tied operands
-  MCRegisterClass MRC{
-      0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true};
-  TargetRegisterClass RC{&MRC, 0, 0, {}, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MCRegisterClass RC{
+      0, 0, 0,  0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true,
+      0, 0, {}, 0, 0, 0, 0, 0, 0, 0, 0};
   // MachineRegisterInfo will be very upset if these registers aren't
   // allocatable.
   assert(RC.isAllocatable() && "unusable TargetRegisterClass");

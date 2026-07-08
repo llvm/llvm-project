@@ -908,6 +908,78 @@ public:
   }
 };
 
+/// Tags to select the initialization mode of SampleProfileFuncOffsetTable.
+struct InMemoryModeT {};
+struct OnDiskModeT {};
+inline constexpr InMemoryModeT InMemoryMode{};
+inline constexpr OnDiskModeT OnDiskMode{};
+
+/// A unified wrapper representing the function offset table.
+///
+/// This class abstracts away the physical representation of the offset table,
+/// which can either be:
+///
+/// - An llvm::DenseMap mapping function GUIDs (or context hashes) to their
+///   profile offsets, populated when reading the array of offsets in
+///   context-sensitive (CS) profiles or version 103 profiles.
+///
+/// - An OnDiskIterableChainedHashTable providing the same mapping directly from
+///   the file in (non-context-sensitive) version 104 profiles.
+///
+/// It exposes a single, type-agnostic lookup interface, shielding the reader
+/// from the underlying container types. To prevent hybrid-state corruption, the
+/// table's mode is locked at construction time, and assertions prevent
+/// modification in on-disk mode.
+class SampleProfileFuncOffsetTable {
+public:
+  using OnDiskTableType =
+      llvm::OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>;
+
+  explicit SampleProfileFuncOffsetTable(InMemoryModeT,
+                                        size_t InitialCapacity = 0) {
+    InMemoryTable.reserve(InitialCapacity);
+  }
+
+  /// Insert a function GUID and its profile offset into the in-memory map.
+  /// Enforces that the on-disk table must not have been set first.
+  void insert(uint64_t GUID, uint64_t Offset) {
+    assert(!OnDiskTable &&
+           "Cannot insert in-memory elements after on-disk table has been set");
+    InMemoryTable[GUID] = Offset;
+  }
+
+  /// Instantiate the on-disk chained hash table using raw stream pointers.
+  SampleProfileFuncOffsetTable(OnDiskModeT, const uint8_t *Buckets,
+                               const uint8_t *Payload, const uint8_t *Base) {
+    OnDiskTable.reset(OnDiskTableType::Create(Buckets, Payload, Base));
+  }
+
+  /// Query the offset table for the profile offset associated with the given
+  /// GUID. Returns the offset if found, or std::nullopt if the key is missing.
+  std::optional<uint64_t> lookup(uint64_t GUID) const {
+    if (OnDiskTable) {
+      auto Iter = OnDiskTable->find(GUID);
+      if (Iter != OnDiskTable->end())
+        return *Iter;
+    } else {
+      auto Iter = InMemoryTable.find(GUID);
+      if (Iter != InMemoryTable.end())
+        return Iter->second;
+    }
+    return std::nullopt;
+  }
+
+  /// Clear the in-memory map and release the on-disk table.
+  void clear() {
+    InMemoryTable.clear();
+    OnDiskTable.reset();
+  }
+
+private:
+  llvm::DenseMap<hash_code, uint64_t> InMemoryTable;
+  std::unique_ptr<OnDiskTableType> OnDiskTable;
+};
+
 /// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase defines
 /// the basic structure of the extensible binary format.
 /// The format is organized in sections except the magic and version number
@@ -971,7 +1043,7 @@ protected:
   /// The table mapping from a function context's MD5 to the offset of its
   /// FunctionSample towards file start.
   /// At most one of FuncOffsetTable and FuncOffsetList is populated.
-  DenseMap<hash_code, uint64_t> FuncOffsetTable;
+  std::optional<SampleProfileFuncOffsetTable> FuncOffsetTable;
 
   /// The list version of FuncOffsetTable. This is used if every entry is
   /// being accessed.
@@ -983,7 +1055,9 @@ protected:
 public:
   SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,
                                    LLVMContext &C, SampleProfileFormat Format)
-      : SampleProfileReaderBinary(std::move(B), C, Format) {}
+      : SampleProfileReaderBinary(std::move(B), C, Format) {
+    FuncOffsetTable.emplace(InMemoryMode);
+  }
 
   /// Read sample profiles in extensible format from the associated file.
   std::error_code readImpl() override;

@@ -21,6 +21,18 @@
 #include <cstring>
 using namespace llvm;
 
+bool Triple::operator==(const Triple &Other) const {
+  return Arch == Other.Arch && SubArch == Other.SubArch &&
+         Vendor == Other.Vendor && OS == Other.OS &&
+         Environment == Other.Environment && ObjectFormat == Other.ObjectFormat;
+}
+
+bool Triple::operator<(const Triple &Other) const {
+  return std::tie(Arch, SubArch, Vendor, OS, Environment, ObjectFormat, Data) <
+         std::tie(Other.Arch, Other.SubArch, Other.Vendor, Other.OS,
+                  Other.Environment, Other.ObjectFormat, Other.Data);
+}
+
 StringRef Triple::getArchTypeName(ArchType Kind) {
   switch (Kind) {
   case UnknownArch:
@@ -180,6 +192,10 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
       return "arm64e";
     if (SubArch == AArch64SubArch_lfi)
       return "aarch64_lfi";
+    break;
+  case Triple::x86_64:
+    if (SubArch == X86_64SubArch_lfi)
+      return "x86_64_lfi";
     break;
   case Triple::spirv:
     switch (SubArch) {
@@ -800,7 +816,7 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
           .Cases({"i386", "i486", "i586", "i686"}, Triple::x86)
           // FIXME: Do we need to support these?
           .Cases({"i786", "i886", "i986"}, Triple::x86)
-          .Cases({"amd64", "x86_64", "x86_64h"}, Triple::x86_64)
+          .Cases({"amd64", "x86_64", "x86_64h", "x86_64_lfi"}, Triple::x86_64)
           .Cases({"powerpc", "powerpcspe", "ppc", "ppc32"}, Triple::ppc)
           .Cases({"powerpcle", "ppcle", "ppc32le"}, Triple::ppcle)
           .Cases({"powerpc64", "ppu", "ppc64"}, Triple::ppc64)
@@ -1059,6 +1075,9 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
 
   if (SubArchName == "aarch64_lfi")
     return Triple::AArch64SubArch_lfi;
+
+  if (SubArchName == "x86_64_lfi")
+    return Triple::X86_64SubArch_lfi;
 
   if (SubArchName.starts_with("spirv"))
     return StringSwitch<Triple::SubArchType>(SubArchName)
@@ -2498,7 +2517,7 @@ bool Triple::isLittleEndian() const {
 unsigned Triple::getDefaultWCharSize() const {
   if (getArch() == Triple::xcore)
     return 1;
-  if (isOSWindows() || isWindowsCygwinEnvironment() || isPS() || isUEFI())
+  if (isOSWindowsOrUEFI() || isPS())
     return 2;
   if (isOSAIX() && isArch32Bit())
     return 2;

@@ -37,6 +37,7 @@
 #include "orc-rt/Error.h"
 #include "orc-rt/ExecutorAddress.h"
 #include "orc-rt/bit.h"
+#include "orc-rt/iterator_range.h"
 #include "orc-rt/span.h"
 
 #include <cstring>
@@ -384,6 +385,33 @@ public:
       if (!TBSD::append(S, std::move(E)))
         return false;
     }
+    return true;
+  }
+};
+
+/// Serialization (but no deserialization) from iterator range.
+template <typename SPSElementTagT, typename IteratorT>
+class SPSSerializationTraits<SPSSequence<SPSElementTagT>,
+                             iterator_range<IteratorT>> {
+  static uint64_t rangeSize(const iterator_range<IteratorT> &R) {
+    return std::distance(R.begin(), R.end());
+  }
+
+public:
+  static size_t size(const iterator_range<IteratorT> &R) {
+    size_t Size = SPSArgList<uint64_t>::size(rangeSize(R));
+    for (const auto &E : R)
+      Size += SPSArgList<SPSElementTagT>::size(E);
+    return Size;
+  }
+
+  static bool serialize(SPSOutputBuffer &OB,
+                        const iterator_range<IteratorT> &R) {
+    if (!SPSArgList<uint64_t>::serialize(OB, rangeSize(R)))
+      return false;
+    for (const auto &E : R)
+      if (!SPSArgList<SPSElementTagT>::serialize(OB, E))
+        return false;
     return true;
   }
 };

@@ -33,13 +33,6 @@ if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
 endif ()
 
 flang_module_target(libomp-mod PUBLIC)
-add_dependencies(libomp-mod ${RUNTIMES_FORTRAN_BUILD_DEPS})
-if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-  set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.F90"
-    APPEND PROPERTY OBJECT_DEPENDS
-      "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__fortran_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}"
-  )
-endif ()
 
 install(FILES
   "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/omp_lib.h"

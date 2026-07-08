@@ -133,8 +133,7 @@ struct CUDAKernelTy : public GenericKernelTy {
     // Set the static block memory size required by the kernel.
     StaticBlockMemSize = SharedMemSize;
 
-    // Retrieve the size of the arguments.
-    return initArgsSize();
+    return Plugin::success();
   }
 
   /// Launch the CUDA kernel function.
@@ -164,32 +163,11 @@ struct CUDAKernelTy : public GenericKernelTy {
                               uint32_t DynBlockMemSize) const override;
 
 private:
-  /// Initialize the size of the arguments.
-  Error initArgsSize() {
-    CUresult Res;
-    size_t ArgOffset, ArgSize;
-    size_t Arg = 0;
-
-    ArgsSize = 0;
-
-    // Find the last argument to know the total size of the arguments.
-    while ((Res = cuFuncGetParamInfo(Func, Arg++, &ArgOffset, &ArgSize)) ==
-           CUDA_SUCCESS)
-      ArgsSize = ArgOffset + ArgSize;
-
-    if (Res != CUDA_ERROR_INVALID_VALUE)
-      return Plugin::check(Res, "error in cuFuncGetParamInfo: %s");
-    return Plugin::success();
-  }
-
   /// The CUDA kernel function to execute.
   CUfunction Func;
   /// The maximum amount of dynamic shared memory per thread group. By default,
   /// this is set to 48 KB.
   mutable uint32_t MaxDynBlockMemSize = 49152;
-
-  /// The size of the kernel arguments.
-  size_t ArgsSize;
 };
 
 /// Class wrapping a CUDA stream reference. These are the objects handled by the
@@ -1510,27 +1488,9 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   CUDADeviceTy &CUDADevice = static_cast<CUDADeviceTy &>(GenericDevice);
 
-  void **KernelParams = nullptr;
-  if (KernelArgs.Flags.IsPtrArgs) {
-    KernelParams = KernelArgs.ArgPtrs;
-  } else {
-    // The args size passed in LaunchParams may have tail padding,
-    // which is not accepted by the CUDA driver.
-    if (ArgsSize > LaunchParams.Size)
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "mismatch in kernel arguments");
-  }
-
   CUstream Stream;
   if (auto Err = CUDADevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
-
-  size_t ConfigArgsSize = ArgsSize;
-  // Valid only for a contiguous buffer passed through LaunchParams.
-  void *Config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, LaunchParams.Data,
-                    CU_LAUNCH_PARAM_BUFFER_SIZE,
-                    reinterpret_cast<void *>(&ConfigArgsSize),
-                    CU_LAUNCH_PARAM_END};
 
   // If we are running an RPC server we want to wake up the server thread
   // whenever there is a kernel running and let it sleep otherwise.
@@ -1558,8 +1518,8 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  DynBlockMemSize, Stream,
                                  &CoopAttr,       1};
 
-  CUresult Res = cuLaunchKernelEx(&LaunchConfig, Func, KernelParams,
-                                  KernelParams ? nullptr : Config);
+  CUresult Res = cuLaunchKernelEx(&LaunchConfig, Func, LaunchParams.Args,
+                                  /*extra=*/nullptr);
 
   // Register a callback to indicate when the kernel is complete.
   if (GenericDevice.getRPCServer())

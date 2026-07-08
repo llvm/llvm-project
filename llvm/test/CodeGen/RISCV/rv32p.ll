@@ -1690,6 +1690,78 @@ define i64 @wsubau_zext_chain_rev(i64 %acc, i32 %a, i32 %b) nounwind {
   ret i64 %sum
 }
 
+; acc + sext(a) -> wadda acc, a, 0
+define i64 @wadda_sext(i64 %acc, i32 %a) nounwind {
+; CHECK-LABEL: wadda_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wadda a0, a2, zero
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %sum = add i64 %acc, %ext_a
+  ret i64 %sum
+}
+
+; sext(a) + acc -> wadda acc, a, 0
+define i64 @wadda_sext_commuted(i64 %acc, i32 %a) nounwind {
+; CHECK-LABEL: wadda_sext_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wadda a0, a2, zero
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %sum = add i64 %ext_a, %acc
+  ret i64 %sum
+}
+
+; acc + sext(a) + sext(b) -> wadda acc, a, b
+define i64 @wadda_sext_chain(i64 %acc, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wadda_sext_chain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wadda a0, a2, a3
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %ext_b = sext i32 %b to i64
+  %sum1 = add i64 %acc, %ext_a
+  %sum2 = add i64 %sum1, %ext_b
+  ret i64 %sum2
+}
+
+; acc - sext(a) -> wsuba acc, 0, a
+define i64 @wsuba_sext(i64 %acc, i32 %a) nounwind {
+; CHECK-LABEL: wsuba_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsuba a0, zero, a2
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %sub = sub i64 %acc, %ext_a
+  ret i64 %sub
+}
+
+; (acc + sext(a)) - sext(b) -> wsuba acc, a, b
+define i64 @wsuba_sext_chain(i64 %acc, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wsuba_sext_chain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsuba a0, a2, a3
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %ext_b = sext i32 %b to i64
+  %sum = add i64 %acc, %ext_a
+  %sub = sub i64 %sum, %ext_b
+  ret i64 %sub
+}
+
+; (acc - sext(a)) + sext(b) -> wsuba acc, b, a
+define i64 @wsuba_sext_chain_rev(i64 %acc, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wsuba_sext_chain_rev:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsuba a0, a3, a2
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %ext_b = sext i32 %b to i64
+  %sub = sub i64 %acc, %ext_a
+  %sum = add i64 %sub, %ext_b
+  ret i64 %sum
+}
+
 define i64 @waddu(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: waddu:
 ; CHECK:       # %bb.0:

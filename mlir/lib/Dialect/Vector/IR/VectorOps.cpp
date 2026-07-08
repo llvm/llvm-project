@@ -6195,9 +6195,7 @@ LogicalResult vector::LoadOp::verify() {
   if (failed(verifyLoadStoreMemRefLayout(*this, resVecTy, memRefTy)))
     return failure();
 
-  // Negative strides are not supported on vector.load. The lowering to LLVM
-  // emits arithmetic operations (e.g., GEP, mul) with nuw flags that assume
-  // non-negative strides to avoid undefined behavior.
+  // Negative strides are not supported on vector.load.
   if (memref::hasNegativeStaticStride(memRefTy))
     return emitOpError("memref strides must be non-negative");
 
@@ -6247,9 +6245,7 @@ LogicalResult vector::StoreOp::verify() {
   if (failed(verifyLoadStoreMemRefLayout(*this, valueVecTy, memRefTy)))
     return failure();
 
-  // Negative strides are not supported on vector.store. The lowering to LLVM
-  // emits arithmetic operations (e.g., GEP, mul) with nuw flags that assume
-  // non-negative strides to avoid undefined behavior.
+  // Negative strides are not supported on vector.store.
   if (memref::hasNegativeStaticStride(memRefTy))
     return emitOpError("memref strides must be non-negative");
 
@@ -6296,15 +6292,6 @@ LogicalResult MaskedLoadOp::verify() {
   VectorType passVType = getPassThruVectorType();
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
-
-  if (failed(verifyLoadStoreMemRefLayout(*this, resVType, memType)))
-    return failure();
-
-  // Negative strides are not supported on vector.maskedload. The lowering to
-  // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
-  // assume non-negative strides to avoid undefined behavior.
-  if (memref::hasNegativeStaticStride(memType))
-    return emitOpError("memref strides must be non-negative");
 
   if (failed(
           verifyElementTypesMatch(*this, memType, resVType, "base", "result")))
@@ -6366,15 +6353,6 @@ LogicalResult MaskedStoreOp::verify() {
   VectorType valueVType = getVectorType();
   MemRefType memType = getMemRefType();
 
-  if (failed(verifyLoadStoreMemRefLayout(*this, valueVType, memType)))
-    return failure();
-
-  // Negative strides are not supported on vector.maskedstore. The lowering to
-  // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
-  // assume non-negative strides to avoid undefined behavior.
-  if (memref::hasNegativeStaticStride(memType))
-    return emitOpError("memref strides must be non-negative");
-
   if (failed(verifyElementTypesMatch(*this, memType, valueVType, "base",
                                      "valueToStore")))
     return failure();
@@ -6435,13 +6413,6 @@ LogicalResult GatherOp::verify() {
 
   if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
     return emitOpError("requires base to be a memref or ranked tensor type");
-
-  // Negative strides are not supported on vector.gather.
-  // The lowering to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw
-  // flags that assume non-negative strides to avoid undefined behavior.
-  if (auto memRefType = dyn_cast<MemRefType>(baseType))
-    if (memref::hasNegativeStaticStride(memRefType))
-      return emitOpError("memref strides must be non-negative");
 
   if (failed(
           verifyElementTypesMatch(*this, baseType, resVType, "base", "result")))
@@ -6556,13 +6527,6 @@ LogicalResult ScatterOp::verify() {
 
   if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
     return emitOpError("requires base to be a memref or ranked tensor type");
-
-  // Negative strides are not supported on vector.scatter.
-  // The lowering to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw
-  // flags that assume non-negative strides to avoid undefined behavior.
-  if (auto memRefType = dyn_cast<MemRefType>(baseType))
-    if (memref::hasNegativeStaticStride(memRefType))
-      return emitOpError("memref strides must be non-negative");
 
   if (failed(verifyElementTypesMatch(*this, baseType, valueVType, "base",
                                      "valueToStore")))
@@ -8258,10 +8222,14 @@ void StepOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
     return;
   }
   unsigned bitwidth = ConstantIntRanges::getStorageBitwidth(resultType);
-  APInt zero(bitwidth, 0);
-  APInt high(bitwidth, resultType.getDimSize(0) - 1);
-  ConstantIntRanges result = {zero, high, zero, high};
-  setResultRanges(getResult(), result);
+  // The result holds the sequence [0, 1, ..., N-1], with each value truncated
+  // to the result element type.
+  uint64_t maxIndex = resultType.getDimSize(0) - 1;
+  APInt umin = APInt::getZero(bitwidth);
+  APInt umax = APInt::getMaxValue(bitwidth).ugt(maxIndex)
+                   ? APInt(bitwidth, maxIndex)
+                   : APInt::getMaxValue(bitwidth);
+  setResultRanges(getResult(), ConstantIntRanges::fromUnsigned(umin, umax));
 }
 
 namespace {

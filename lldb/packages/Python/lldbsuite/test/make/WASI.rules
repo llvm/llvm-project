@@ -10,3 +10,7 @@ ARCH_CXXFLAGS += \
 ARCH_LDFLAGS += \
 	$(if $(RESOURCE_DIR),-resource-dir $(RESOURCE_DIR)) \
 	-Wl,--allow-undefined
+
+# Unlike most native linkers, wasm-ld garbage-collects unreferenced sections by
+# default, which strips globals and functions that a test wants to inspect.
+LDFLAGS += -Wl,--no-gc-sections

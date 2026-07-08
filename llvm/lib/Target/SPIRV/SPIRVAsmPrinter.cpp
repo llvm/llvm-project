@@ -37,6 +37,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -45,6 +46,20 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
+enum class SPIRVFPContractMode { On, Off, Fast };
+
+static cl::opt<SPIRVFPContractMode> SPIRVFPContract(
+    "spirv-fp-contract",
+    cl::desc("Override FP contraction policy for SPIR-V kernel entry points"),
+    cl::values(
+        clEnumValN(SPIRVFPContractMode::On, "on",
+                   "Follow IR metadata (default)"),
+        clEnumValN(SPIRVFPContractMode::Off, "off",
+                   "Force ContractionOff on all kernel entry points"),
+        clEnumValN(SPIRVFPContractMode::Fast, "fast",
+                   "Suppress ContractionOff on all kernel entry points")),
+    cl::init(SPIRVFPContractMode::On));
+
 class SPIRVAsmPrinter : public AsmPrinter {
   unsigned NLabels = 0;
   SmallPtrSet<const MachineBasicBlock *, 8> LabeledMBB;
@@ -643,8 +658,14 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       Inst.addOperand(MCOperand::createImm(EM));
       outputMCInst(Inst);
     }
-    if (ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
-        !M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {
+    // --spirv-fp-contract=off forces to emit ContractionOff for this kernel
+    // entry point, --spirv-fp-contract=fast suppresses it.
+    bool EmitContractionOff =
+        ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
+        SPIRVFPContract != SPIRVFPContractMode::Fast &&
+        (SPIRVFPContract == SPIRVFPContractMode::Off ||
+         !M.getNamedMetadata("opencl.enable.FP_CONTRACT"));
+    if (EmitContractionOff) {
       if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
         // When SPV_KHR_float_controls2 is enabled, ContractionOff is
         // deprecated. We need to use FPFastMathDefault with the appropriate
@@ -934,7 +955,7 @@ bool SPIRVAsmPrinter::doInitialization(Module &M) {
   if (!M.getModuleInlineAsm().empty()) {
     M.getContext().emitError(
         "SPIR-V does not support module-level inline assembly");
-    M.setModuleInlineAsm("");
+    M.removeModuleInlineAsm();
   }
 
   // Register the NSDI handler before calling the base class so that

@@ -2664,9 +2664,18 @@ LogicalResult TargetOp::verifyRegions() {
   if (numNestedTeams > 1)
     return emitError("target containing multiple 'omp.teams' nested ops");
 
-  if (getKernelType() == TargetExecMode::bare && numNestedTeams == 0)
-    return emitOpError()
-           << "bare kernel must contain a nested 'omp.teams' operation";
+  if (numNestedTeams == 0) {
+    switch (getKernelType()) {
+    case TargetExecMode::bare:
+      return emitOpError()
+             << "bare kernel must contain a nested 'omp.teams' operation";
+    case TargetExecMode::spmd_no_loop:
+      return emitOpError() << "spmd_no_loop kernel must contain a nested "
+                              "'omp.teams' operation";
+    default:
+      break;
+    }
+  }
 
   Operation *capturedOp =
       cast<ComposableOpInterface>(getOperation()).findCapturedOp();
@@ -3919,6 +3928,24 @@ mlir::omp ::decodeCli(Value cli) {
   }
 
   return {create, gen, cons};
+}
+
+ClauseProcBindKind
+mlir::omp::convertProcBindKind(llvm::omp::ProcBindKind kind) {
+  switch (kind) {
+  case llvm::omp::ProcBindKind::OMP_PROC_BIND_close:
+    return ClauseProcBindKind::Close;
+  case llvm::omp::ProcBindKind::OMP_PROC_BIND_master:
+    return ClauseProcBindKind::Master;
+  case llvm::omp::ProcBindKind::OMP_PROC_BIND_primary:
+    return ClauseProcBindKind::Primary;
+  case llvm::omp::ProcBindKind::OMP_PROC_BIND_spread:
+    return ClauseProcBindKind::Spread;
+  case llvm::omp::ProcBindKind::OMP_PROC_BIND_default:
+  case llvm::omp::ProcBindKind::OMP_PROC_BIND_unknown:
+    break;
+  }
+  llvm_unreachable("unexpected proc-bind kind");
 }
 
 void NewCliOp::build(::mlir::OpBuilder &odsBuilder,

@@ -2023,17 +2023,12 @@ struct VectorToElementsLowering
 };
 
 /// Conversion pattern for vector.step.
-struct VectorScalableStepOpLowering
-    : public ConvertOpToLLVMPattern<vector::StepOp> {
+struct VectorStepOpLowering : public ConvertOpToLLVMPattern<vector::StepOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(vector::StepOp stepOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto resultType = cast<VectorType>(stepOp.getType());
-    if (!resultType.isScalable()) {
-      return failure();
-    }
     Type llvmType = typeConverter->convertType(stepOp.getType());
     rewriter.replaceOpWithNewOp<LLVM::StepVectorOp>(stepOp, llvmType);
     return success();
@@ -2268,8 +2263,7 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorScalableInsertOpLowering, VectorScalableExtractOpLowering,
                MaskedReductionOpConversion, VectorInterleaveOpLowering,
                VectorDeinterleaveOpLowering, VectorFromElementsLowering,
-               VectorToElementsLowering, VectorScalableStepOpLowering>(
-      converter);
+               VectorToElementsLowering, VectorStepOpLowering>(converter);
 }
 
 namespace {
