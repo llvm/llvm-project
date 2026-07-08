@@ -1343,8 +1343,8 @@ bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
       MachineCycle *Cycle = CI->getCycle(DefMI->getParent());
       // DefMI is defined outside of cycle. There should be no live range
       // impact for this operand. Defination outside of cycle means:
-      // 1: defination is outside of cycle.
-      // 2: defination is in this cycle, but it is a PHI in the cycle header.
+      // 1: definition is outside of cycle.
+      // 2: definition is in this cycle, but it is a PHI in the cycle header.
       if (Cycle != MCycle || (DefMI->isPHI() && Cycle && Cycle->isReducible() &&
                               Cycle->getHeader() == DefMI->getParent()))
         continue;

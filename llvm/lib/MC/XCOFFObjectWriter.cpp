@@ -100,7 +100,7 @@ struct XCOFFSection {
 using CsectGroup = std::deque<XCOFFSection>;
 using CsectGroups = std::deque<CsectGroup *>;
 
-// The basic section entry defination. This Section represents a section entry
+// The basic section entry definition. This Section represents a section entry
 // in XCOFF section header table.
 struct SectionEntry {
   char Name[XCOFF::NameSize];
