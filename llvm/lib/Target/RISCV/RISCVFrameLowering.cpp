@@ -1531,7 +1531,20 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
     unsigned VTypeImm = RISCVVType::encodeVTYPE(
         VLMUL, /*SEW=*/32, /*TailAgnostic=*/false, /*MaskAgnostic=*/false);
 
-    BuildMI(MBB, MBBI, DL, TII.get(RISCV::VSETVLI), RISCV::X5)
+    MCRegister TemporaryReg = RISCV::X5;
+    for (MCRegister Reg : FinalRegsToZero.set_bits()) {
+      if (TRI.isGeneralPurposeRegister(MF, Reg)) {
+        TemporaryReg = Reg;
+        break;
+      }
+    }
+    if (MBB.getParent()
+            ->getFunction()
+            .getFnAttribute("zero-call-used-regs")
+            .getValueAsString() == "used")
+      FinalRegsToZero.set(TemporaryReg);
+
+    BuildMI(MBB, MBBI, DL, TII.get(RISCV::VSETVLI), TemporaryReg)
         .addReg(RISCV::X0)
         .addImm(VTypeImm);
   }

@@ -80,7 +80,7 @@ entry:
 define void @all_arg() "zero-call-used-regs"="all-arg" {
 ; CHECK-LABEL: all_arg:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli t0, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vmv.v.i v10, 0
@@ -129,6 +129,7 @@ define i32 @used(i32 %x) "zero-call-used-regs"="used" {
 ; CHECK-NEXT:    vsetvli t0, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    li t0, 0
 ; CHECK-NEXT:    ret
 entry:
     %tmp = insertelement <4 x i32> poison, i32 %x, i32 0
