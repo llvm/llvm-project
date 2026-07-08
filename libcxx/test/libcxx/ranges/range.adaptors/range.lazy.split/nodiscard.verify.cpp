@@ -37,7 +37,7 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(v).end();
 
-  // [range.lazy.split.outer-iterator]
+  // [range.lazy.split.outer]
 
   auto c_it = as_const(v).begin();
 
@@ -49,6 +49,12 @@ void test() {
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   iter_move((*c_it).begin());
+
+  // [range.lazy.split.outer.value]
+  // wip
+
+  // [range.lazy.split.outer.inner]
+  // wip
 
   // [range.lazy.split.overview]
 
