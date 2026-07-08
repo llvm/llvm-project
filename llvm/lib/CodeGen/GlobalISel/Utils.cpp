@@ -1542,6 +1542,8 @@ llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
 std::optional<APFloat>
 llvm::isConstantOrConstantSplatVectorFP(MachineInstr &MI,
                                         const MachineRegisterInfo &MRI) {
+  if (!MI.getOperand(0).isReg())
+    return std::nullopt;
   Register Def = MI.getOperand(0).getReg();
   if (auto FpConst = getFConstantVRegValWithLookThrough(Def, MRI))
     return FpConst->Value;
