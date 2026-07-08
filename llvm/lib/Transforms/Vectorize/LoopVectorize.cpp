@@ -2019,9 +2019,6 @@ static VPIRBasicBlock *replaceVPBBWithIRVPBB(VPBasicBlock *VPBB,
 BasicBlock *InnerLoopVectorizer::createScalarPreheader(StringRef Prefix) {
   BasicBlock *VectorPH = OrigLoop->getLoopPreheader();
   assert(VectorPH && "Invalid loop structure");
-  assert((OrigLoop->getUniqueLatchExitBlock() ||
-          Cost->requiresScalarEpilogue(VF.isVector())) &&
-         "loops not exiting via the latch without required epilogue?");
 
   // NOTE: The Plan's scalar preheader VPBB isn't replaced with a VPIRBasicBlock
   // wrapping the newly created scalar preheader here at the moment, because the
@@ -3794,7 +3791,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
 
     // At least one iteration must be scalar when this constraint holds. So the
     // maximum available iterations for interleaving is one less.
-    if (CM.requiresScalarEpilogue(VF.isVector()))
+    if (requiresScalarEpilogue(Plan, VF))
       --AvailableTC;
 
     unsigned InterleaveCountLB = bit_floor(std::max(
@@ -5947,6 +5944,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   RUN_VPLAN_PASS(VPlanTransforms::optimizeForVFAndUF, BestVPlan, BestVF, BestUF,
                  PSE);
   RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, BestVPlan);
+  // Check if scalar epilogue is required, before simplifying constant branches.
+  const bool RequiresScalarEpilogue = requiresScalarEpilogue(BestVPlan, BestVF);
   if (EpilogueVecKind == EpilogueVectorizationKind::None)
     RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, BestVPlan,
                    /*OnlyLatches=*/false);
@@ -5984,10 +5983,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   std::optional<uint64_t> MaxRuntimeStep;
   if (auto MaxVScale = getMaxVScale(*CM.TheFunction, CM.TTI))
     MaxRuntimeStep = uint64_t(*MaxVScale) * BestVF.getKnownMinValue() * BestUF;
+  assert((OrigLoop->getUniqueLatchExitBlock() || RequiresScalarEpilogue) &&
+         "loops not exiting via the latch without required epilogue?");
   VPlanTransforms::materializeVectorTripCount(
-      BestVPlan, VectorPH, CM.foldTailByMasking(),
-      CM.requiresScalarEpilogue(BestVF.isVector()), &BestVPlan.getVFxUF(),
-      MaxRuntimeStep);
+      BestVPlan, VectorPH, CM.foldTailByMasking(), RequiresScalarEpilogue,
+      &BestVPlan.getVFxUF(), MaxRuntimeStep);
   VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
   // Limit expansions to VPInstruction to when not vectorizing the epilogue.
   // Currently this code path still relies on code re-using SCEVs expanded
@@ -7117,6 +7117,17 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
   }
 }
 
+bool LoopVectorizationPlanner::requiresScalarEpilogue(VPlan &Plan,
+                                                      ElementCount VF) const {
+  // A scalar epilogue is required, if we unconditionally execute the scalar
+  // loop. Must be called before removeBranchOnConst.
+  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
+  bool Result = MiddleVPBB->getSingleSuccessor() == Plan.getScalarPreheader();
+  assert(CM.requiresScalarEpilogue(VF.isVector()) == Result &&
+         "CM.requiresScalarEpilogue and the VPlan-based check must agree");
+  return Result;
+}
+
 void LoopVectorizationPlanner::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount) const {
@@ -7125,8 +7136,7 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
           ? &MinItersBypassWeights[0]
           : nullptr;
   RUN_VPLAN_PASS(VPlanTransforms::addMinimumIterationCheck, Plan, VF, UF,
-                 MinProfitableTripCount,
-                 CM.requiresScalarEpilogue(VF.isVector()),
+                 MinProfitableTripCount, requiresScalarEpilogue(Plan, VF),
                  CM.foldTailByMasking(), OrigLoop, BranchWeights,
                  OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(),
                  PSE, Plan.getEntry());
@@ -7503,7 +7513,7 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
 /// Plan.
 static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     VPlan &MainPlan, VPlan &Plan, Loop *L, const SCEV2ValueTy &ExpandedSCEVs,
-    EpilogueLoopVectorizationInfo &EPI, LoopVectorizationCostModel &CM,
+    EpilogueLoopVectorizationInfo &EPI, LoopVectorizationPlanner &LVP,
     VFSelectionContext &Config, ScalarEvolution &SE,
     ArrayRef<VPInstruction *> ResumeValues) {
   // Build a map from the scalar-header PHI to the ResumeForEpilogue markers
@@ -7719,7 +7729,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
       estimateElementCount(EPI.EpilogueVF * EPI.EpilogueUF, VScale);
   RUN_VPLAN_PASS(
       VPlanTransforms::addMinimumVectorEpilogueIterationCheck, Plan,
-      EPI.VectorTripCount, CM.requiresScalarEpilogue(EPI.EpilogueVF.isVector()),
+      EPI.VectorTripCount, LVP.requiresScalarEpilogue(Plan, EPI.EpilogueVF),
       EPI.EpilogueVF, EPI.EpilogueUF, MainLoopStep, EpilogueLoopStep, SE);
 
   return InstsToMove;
@@ -8288,7 +8298,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     LVP.attachRuntimeChecks(BestMainPlan, Checks, HasBranchWeights);
     RUN_VPLAN_PASS(VPlanTransforms::addIterationCountCheckBlock, BestMainPlan,
                    EPI.MainLoopVF, EPI.MainLoopUF,
-                   CM.requiresScalarEpilogue(EPI.MainLoopVF.isVector()), L,
+                   LVP.requiresScalarEpilogue(BestMainPlan, EPI.MainLoopVF), L,
                    HasBranchWeights ? MinItersBypassWeights : nullptr,
                    L->getLoopPredecessor()->getTerminator()->getDebugLoc(),
                    PSE);
@@ -8323,7 +8333,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     EpilogueVectorizerEpilogueLoop EpilogILV(L, PSE, LI, DT, TTI, AC, EPI, &CM,
                                              Checks, BestEpiPlan);
     SmallVector<Instruction *> InstsToMove = preparePlanForEpilogueVectorLoop(
-        BestMainPlan, BestEpiPlan, L, ExpandedSCEVs, EPI, CM, Config,
+        BestMainPlan, BestEpiPlan, L, ExpandedSCEVs, EPI, LVP, Config,
         *PSE.getSE(), ResumeValues);
     LVP.attachRuntimeChecks(BestEpiPlan, Checks, HasBranchWeights);
     LVP.executePlan(
