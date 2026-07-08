@@ -5,8 +5,8 @@ define amdgpu_kernel void @private_load_maybe_divergent(ptr addrspace(4) %k, ptr
 ; GCN-LABEL: private_load_maybe_divergent:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_i32 s12, s12, s17
-; GCN-NEXT:    s_mov_b64 s[22:23], s[2:3]
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GCN-NEXT:    s_mov_b64 s[22:23], s[2:3]
 ; GCN-NEXT:    s_mov_b64 s[20:21], s[0:1]
 ; GCN-NEXT:    s_add_u32 s20, s20, s17
 ; GCN-NEXT:    s_addc_u32 s21, s21, 0

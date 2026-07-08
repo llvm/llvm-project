@@ -130,6 +130,18 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return __builtin_shufflevector(__rs1, __rs1, 7, 6, 5, 4, 3, 2, 1, 0);      \
   }
 
+#define __packed_abdsum(name, rty, ty, builtin)                                \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
+                                                          ty __rs2) {          \
+    return builtin(__rs1, __rs2);                                              \
+  }
+
+#define __packed_abdsum_acc(name, rty, ty, builtin)                            \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(rty __rd, ty __rs1,  \
+                                                          ty __rs2) {          \
+    return builtin(__rd, __rs1, __rs2);                                        \
+  }
+
 // clang-format off: macro call sites have no trailing semicolons, which
 // confuses clang-format into a deeply nested expression.
 
@@ -497,6 +509,16 @@ __packed_merge_builtin(pmerge_i16x4, int16x4_t, uint16x4_t, __builtin_riscv_pmer
 __packed_merge_builtin(pmerge_u32x2, uint32x2_t, uint32x2_t, __builtin_riscv_pmerge_u32x2)
 __packed_merge_builtin(pmerge_i32x2, int32x2_t, uint32x2_t, __builtin_riscv_pmerge_i32x2)
 
+/* Packed Absolute Difference Sum (32-bit) */
+__packed_abdsum(pabdsumu_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_pabdsumu_u8x4_u32)
+__packed_abdsum_acc(pabdsumau_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_pabdsumau_u8x4_u32)
+
+/* Packed Absolute Difference Sum (64-bit) */
+__packed_abdsum(pabdsumu_u8x8_u32, uint32_t, uint8x8_t, __builtin_riscv_pabdsumu_u8x8_u32)
+__packed_abdsum(pabdsumu_u8x8_u64, uint64_t, uint8x8_t, __builtin_riscv_pabdsumu_u8x8_u64)
+__packed_abdsum_acc(pabdsumau_u8x8_u32, uint32_t, uint8x8_t, __builtin_riscv_pabdsumau_u8x8_u32)
+__packed_abdsum_acc(pabdsumau_u8x8_u64, uint64_t, uint8x8_t, __builtin_riscv_pabdsumau_u8x8_u64)
+
 // clang-format on
 
 #undef __packed_splat2
@@ -521,6 +543,8 @@ __packed_merge_builtin(pmerge_i32x2, int32x2_t, uint32x2_t, __builtin_riscv_pmer
 #undef __packed_reverse2
 #undef __packed_reverse4
 #undef __packed_reverse8
+#undef __packed_abdsum
+#undef __packed_abdsum_acc
 #undef __DEFAULT_FN_ATTRS
 
 #if defined(__cplusplus)

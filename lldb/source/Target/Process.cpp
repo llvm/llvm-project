@@ -1287,7 +1287,12 @@ StateType Process::GetState() {
   if (policy.view == Policy::View::Private)
     return GetPrivateState();
 
-  if (CurrentThreadPosesAsPrivateStateThread())
+  // Once the private state thread has exited, nothing is left to consume the
+  // public state-changed event and update the public state accordingly (see
+  // Process::ProcessEventData::DoOnRemoval). The private state is always
+  // up to date, so fall back to it rather than reporting a stale public
+  // state indefinitely.
+  if (!m_current_private_state_thread_sp->IsRunning())
     return GetPrivateState();
 
   return GetPublicState();
@@ -4084,7 +4089,7 @@ bool Process::PrivateStateThread::StartupThread() {
   llvm::Expected<HostThread> private_state_thread =
       ThreadLauncher::LaunchThread(
           m_thread_name,
-          [this] { return m_process.RunPrivateStateThread(m_is_override); },
+          [this] { return m_process.RunPrivateStateThread(m_purpose); },
           8 * 1024 * 1024);
   if (!private_state_thread) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Host), private_state_thread.takeError(),
@@ -4106,8 +4111,6 @@ bool Process::PrivateStateThread::IsOnThread(const HostThread &thread) const {
 ProcessRunLock &Process::PrivateStateThread::GetRunLock() {
   Policy policy = PolicyStack::Get().Current();
   if (policy.view == Policy::View::Private)
-    return m_private_run_lock;
-  if (IsOnThread(Host::GetCurrentThread()))
     return m_private_run_lock;
   return m_public_run_lock;
 }
@@ -4152,7 +4155,7 @@ bool Process::StartPrivateStateThread(
     *backup_ptr = m_current_private_state_thread_sp;
     m_current_private_state_thread_sp.reset(new PrivateStateThread(
         *this, GetPublicState(), GetPrivateState(), thread_name,
-        /*is_override=*/true));
+        PrivateStateThread::Purpose::RunningExpression));
   } else
     m_current_private_state_thread_sp->SetThreadName(thread_name);
 
@@ -4367,12 +4370,14 @@ Status Process::HaltPrivate() {
   return error;
 }
 
-thread_result_t Process::RunPrivateStateThread(bool is_override) {
-  // Override PSTs exist solely to service RunThreadPlan expression evaluation.
-  // They must see parent frames, not provider-augmented frames.
-  std::optional<PolicyStack::Guard> policy_guard;
-  if (is_override)
-    policy_guard = PolicyStack::Get().PushPrivateState();
+thread_result_t
+Process::RunPrivateStateThread(PrivateStateThread::Purpose purpose) {
+  // All PSTs see the private reality (private state, private run lock).
+  // A PST created to run an expression additionally skips frame providers
+  // and recognizers, since that's the only reason RunThreadPlan spins up a
+  // second, temporary PST while the primary one is backed up.
+  PolicyStack::Guard policy_guard =
+      PolicyStack::Get().PushPrivateState(purpose);
 
   bool control_only = true;
 
@@ -5427,7 +5432,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // GetStackFrameList returns parent frames during event processing.
     std::optional<PolicyStack::Guard> policy_guard;
     if (backup_private_state_thread)
-      policy_guard = PolicyStack::Get().PushPrivateState();
+      policy_guard = PolicyStack::Get().PushPrivateState(
+          Policy::PrivateStatePurpose::RunningExpression);
 
     while (true) {
       // We usually want to resume the process if we get to the top of the
@@ -6149,24 +6155,6 @@ void Process::ClearPreResumeAction(PreResumeActionCallback callback, void *baton
 
 ProcessRunLock &Process::GetRunLock() {
   return m_current_private_state_thread_sp->GetRunLock();
-}
-
-bool Process::CurrentThreadIsPrivateStateThread()
-{
-  if (!m_current_private_state_thread_sp)
-    return true;
-  return m_current_private_state_thread_sp->IsOnThread(
-      Host::GetCurrentThread());
-}
-
-bool Process::CurrentThreadPosesAsPrivateStateThread() {
-  // If we haven't started up the private state thread yet, then whatever thread
-  // is fetching this event should be temporarily the private state thread.
-  if (!m_current_private_state_thread_sp ||
-      !m_current_private_state_thread_sp->IsRunning())
-    return true;
-  return m_current_private_state_thread_sp->IsOnThread(
-      Host::GetCurrentThread());
 }
 
 void Process::Flush() {
