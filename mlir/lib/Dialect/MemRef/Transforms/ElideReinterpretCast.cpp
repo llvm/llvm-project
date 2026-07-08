@@ -44,8 +44,8 @@ struct ResultNonUnitDimsAndOffsetsForRC {
   std::optional<SmallVector<int64_t>> delinearizedOffsets;
 };
 
-/// Returns source indices for a static reinterpret_cast offset of an
-/// identity-layout source.
+/// Returns delinearized offset indices for a static reinterpret_cast offset of
+/// an identity-layout source.
 static std::optional<SmallVector<int64_t>>
 delinearizeStaticRCOffset(memref::ReinterpretCastOp rc) {
   ArrayRef<int64_t> rcOffsets = rc.getStaticOffsets();
