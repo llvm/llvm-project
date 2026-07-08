@@ -609,6 +609,14 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
     if (Arch == llvm::Triple::ppc &&
         Triple.getSubArch() == llvm::Triple::PPCSubArch_spe)
       ArchName = "powerpc-sf";
+    if (Triple.isRISCV()) {
+      StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
+      if (ABIName == "ilp32" || ABIName == "lp64") {
+        ArchName += "-sf";
+      } else if (ABIName == "ilp32f" || ABIName == "lp64f") {
+        ArchName += "-sp";
+      }
+    }
 
     return "/lib/ld-musl-" + ArchName + ".so.1";
   }

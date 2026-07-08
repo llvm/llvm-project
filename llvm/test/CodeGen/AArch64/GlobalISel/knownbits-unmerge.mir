@@ -13,12 +13,12 @@ body:             |
   ; CHECK-NEXT: %x0_0:_ KnownBits:000000000000???? SignBits:12
   ; CHECK-NEXT: %x0_1:_ KnownBits:000000000000???? SignBits:12
   ; CHECK-NEXT: %result:_ KnownBits:000000000000???? SignBits:12
-   %copy_x0:_(<2 x s16>) = COPY $w0
-   %maskf:_(s16) = G_CONSTANT i16 15
-   %x0_x1:_(<2 x s16>) = G_BUILD_VECTOR %maskf, %maskf
-   %and:_(<2 x s16>) = G_AND %copy_x0, %x0_x1
-   %x0_0:_(s16), %x0_1:_(s16) = G_UNMERGE_VALUES %and
-   %result:_(s16) = COPY %x0_0
+   %copy_x0:_(<2 x i16>) = COPY $w0
+   %maskf:_(i16) = G_CONSTANT i16 15
+   %x0_x1:_(<2 x i16>) = G_BUILD_VECTOR %maskf, %maskf
+   %and:_(<2 x i16>) = G_AND %copy_x0, %x0_x1
+   %x0_0:_(i16), %x0_1:_(i16) = G_UNMERGE_VALUES %and
+   %result:_(i16) = COPY %x0_0
 ...
 ---
 name:            Vector
@@ -34,12 +34,12 @@ body:             |
   ; CHECK-NEXT: %x0_1:_ KnownBits:???????? SignBits:1
   ; CHECK-NEXT: %result1:_ KnownBits:0000???? SignBits:4
   ; CHECK-NEXT: %result2:_ KnownBits:???????? SignBits:1
-   %copy_x0:_(<4 x s8>) = COPY $w0
-   %maskff:_(s8) = G_CONSTANT i8 255
-   %maskf:_(s8) = G_CONSTANT i8 15
-   %x0_x1:_(<4 x s8>) = G_BUILD_VECTOR %maskf, %maskf, %maskff, %maskff
-   %and:_(<4 x s8>) = G_AND %copy_x0, %x0_x1
-   %x0_0:_(<2 x s8>), %x0_1:_(<2 x s8>) = G_UNMERGE_VALUES %and
-   %result1:_(<2 x s8>) = COPY %x0_0
-   %result2:_(<2 x s8>) = COPY %x0_1
+   %copy_x0:_(<4 x i8>) = COPY $w0
+   %maskff:_(i8) = G_CONSTANT i8 255
+   %maskf:_(i8) = G_CONSTANT i8 15
+   %x0_x1:_(<4 x i8>) = G_BUILD_VECTOR %maskf, %maskf, %maskff, %maskff
+   %and:_(<4 x i8>) = G_AND %copy_x0, %x0_x1
+   %x0_0:_(<2 x i8>), %x0_1:_(<2 x i8>) = G_UNMERGE_VALUES %and
+   %result1:_(<2 x i8>) = COPY %x0_0
+   %result2:_(<2 x i8>) = COPY %x0_1
 ...

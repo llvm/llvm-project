@@ -1,0 +1,71 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -passes='greedy<wwm>' -verify-regalloc -o - %s | FileCheck %s
+#
+# The gist of this test is we want something that triggers the
+# hoistSpillInsideBB spilling optimization placement, while spilling a value
+# that is defined by a copy inserted by live-range splitting within the
+# prologue of the basic block (i.e., where we do our exec masks shenanigans).
+#
+# Since the spiller cannot insert the spill code within that prologue, it
+# needs to extend the live-range through the prologue region and that test
+# captures that.
+#
+# The verify-regalloc flag makes sure the live-ranges are properly updated.
+# Before it would complain about missing live segment.
+#
+# The test looks like this at a high level:
+#
+# bb:
+#  %1 = COPY %0 #copy in the prologue
+#  ... # prologue instruction
+#  ... # high pressure point
+#  use %1
+#
+# And with hoistSpillInsideBB we will generate:
+# bb:
+#   -- # %1 = COPY %0 gets removed
+#  ... # prologue instruction
+#  store %0 # %0 liveness is extended to this point.
+#  ... # high pressure point
+#  %1_reload = load
+#  use %1_reload
+#
+# To be able to hit the problematic code in hoistSpillInsideBB, %0 needs to
+# be defined by a PHI (hence the diamond with two %0 defs in the test case)
+# and %0 and %1 need to be sibling registers (hence the %3 split-from).
+
+# CHECK-LABEL: name: prologue_kill_256
+# CHECK: SI_SPILL_WWM_V32_SAVE %0
+
+---
+name: prologue_kill_256
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  scratchRSrcReg:    '$sgpr96_sgpr97_sgpr98_sgpr99'
+  stackPtrOffsetReg: '$sgpr32'
+registers:
+  - { id: 0, class: vgpr_32, flags: [ WWM_REG ], split-from: '%2' }
+  - { id: 1, class: vgpr_32, flags: [ WWM_REG ], split-from: '%2' }
+  - { id: 2, class: vgpr_32, flags: [ WWM_REG ] }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr0_sgpr1, $scc
+    %2:vgpr_32 = KILL
+    %0:vgpr_32 = COPY %2
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    successors: %bb.2
+    liveins: $sgpr0_sgpr1
+    %0:vgpr_32 = COPY %2
+
+  bb.2:
+    liveins: $sgpr0_sgpr1
+    %1:vgpr_32 = lr-split WWM_COPY %0:vgpr_32
+    $exec = S_AND_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    KILL implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7, implicit-def $vgpr8, implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit-def $vgpr15, implicit-def $vgpr16, implicit-def $vgpr17, implicit-def $vgpr18, implicit-def $vgpr19, implicit-def $vgpr20, implicit-def $vgpr21, implicit-def $vgpr22, implicit-def $vgpr23, implicit-def $vgpr24, implicit-def $vgpr25, implicit-def $vgpr26, implicit-def $vgpr27, implicit-def $vgpr28, implicit-def $vgpr29, implicit-def $vgpr30, implicit-def $vgpr31, implicit-def $vgpr32, implicit-def $vgpr33, implicit-def $vgpr34, implicit-def $vgpr35, implicit-def $vgpr36, implicit-def $vgpr37, implicit-def $vgpr38, implicit-def $vgpr39, implicit-def $vgpr40, implicit-def $vgpr41, implicit-def $vgpr42, implicit-def $vgpr43, implicit-def $vgpr44, implicit-def $vgpr45, implicit-def $vgpr46, implicit-def $vgpr47, implicit-def $vgpr48, implicit-def $vgpr49, implicit-def $vgpr50, implicit-def $vgpr51, implicit-def $vgpr52, implicit-def $vgpr53, implicit-def $vgpr54, implicit-def $vgpr55, implicit-def $vgpr56, implicit-def $vgpr57, implicit-def $vgpr58, implicit-def $vgpr59, implicit-def $vgpr60, implicit-def $vgpr61, implicit-def $vgpr62, implicit-def $vgpr63, implicit-def $vgpr64, implicit-def $vgpr65, implicit-def $vgpr66, implicit-def $vgpr67, implicit-def $vgpr68, implicit-def $vgpr69, implicit-def $vgpr70, implicit-def $vgpr71, implicit-def $vgpr72, implicit-def $vgpr73, implicit-def $vgpr74, implicit-def $vgpr75, implicit-def $vgpr76, implicit-def $vgpr77, implicit-def $vgpr78, implicit-def $vgpr79, implicit-def $vgpr80, implicit-def $vgpr81, implicit-def $vgpr82, implicit-def $vgpr83, implicit-def $vgpr84, implicit-def $vgpr85, implicit-def $vgpr86, implicit-def $vgpr87, implicit-def $vgpr88, implicit-def $vgpr89, implicit-def $vgpr90, implicit-def $vgpr91, implicit-def $vgpr92, implicit-def $vgpr93, implicit-def $vgpr94, implicit-def $vgpr95, implicit-def $vgpr96, implicit-def $vgpr97, implicit-def $vgpr98, implicit-def $vgpr99, implicit-def $vgpr100, implicit-def $vgpr101, implicit-def $vgpr102, implicit-def $vgpr103, implicit-def $vgpr104, implicit-def $vgpr105, implicit-def $vgpr106, implicit-def $vgpr107, implicit-def $vgpr108, implicit-def $vgpr109, implicit-def $vgpr110, implicit-def $vgpr111, implicit-def $vgpr112, implicit-def $vgpr113, implicit-def $vgpr114, implicit-def $vgpr115, implicit-def $vgpr116, implicit-def $vgpr117, implicit-def $vgpr118, implicit-def $vgpr119, implicit-def $vgpr120, implicit-def $vgpr121, implicit-def $vgpr122, implicit-def $vgpr123, implicit-def $vgpr124, implicit-def $vgpr125, implicit-def $vgpr126, implicit-def $vgpr127, implicit-def $vgpr128, implicit-def $vgpr129, implicit-def $vgpr130, implicit-def $vgpr131, implicit-def $vgpr132, implicit-def $vgpr133, implicit-def $vgpr134, implicit-def $vgpr135, implicit-def $vgpr136, implicit-def $vgpr137, implicit-def $vgpr138, implicit-def $vgpr139, implicit-def $vgpr140, implicit-def $vgpr141, implicit-def $vgpr142, implicit-def $vgpr143, implicit-def $vgpr144, implicit-def $vgpr145, implicit-def $vgpr146, implicit-def $vgpr147, implicit-def $vgpr148, implicit-def $vgpr149, implicit-def $vgpr150, implicit-def $vgpr151, implicit-def $vgpr152, implicit-def $vgpr153, implicit-def $vgpr154, implicit-def $vgpr155, implicit-def $vgpr156, implicit-def $vgpr157, implicit-def $vgpr158, implicit-def $vgpr159, implicit-def $vgpr160, implicit-def $vgpr161, implicit-def $vgpr162, implicit-def $vgpr163, implicit-def $vgpr164, implicit-def $vgpr165, implicit-def $vgpr166, implicit-def $vgpr167, implicit-def $vgpr168, implicit-def $vgpr169, implicit-def $vgpr170, implicit-def $vgpr171, implicit-def $vgpr172, implicit-def $vgpr173, implicit-def $vgpr174, implicit-def $vgpr175, implicit-def $vgpr176, implicit-def $vgpr177, implicit-def $vgpr178, implicit-def $vgpr179, implicit-def $vgpr180, implicit-def $vgpr181, implicit-def $vgpr182, implicit-def $vgpr183, implicit-def $vgpr184, implicit-def $vgpr185, implicit-def $vgpr186, implicit-def $vgpr187, implicit-def $vgpr188, implicit-def $vgpr189, implicit-def $vgpr190, implicit-def $vgpr191, implicit-def $vgpr192, implicit-def $vgpr193, implicit-def $vgpr194, implicit-def $vgpr195, implicit-def $vgpr196, implicit-def $vgpr197, implicit-def $vgpr198, implicit-def $vgpr199, implicit-def $vgpr200, implicit-def $vgpr201, implicit-def $vgpr202, implicit-def $vgpr203, implicit-def $vgpr204, implicit-def $vgpr205, implicit-def $vgpr206, implicit-def $vgpr207, implicit-def $vgpr208, implicit-def $vgpr209, implicit-def $vgpr210, implicit-def $vgpr211, implicit-def $vgpr212, implicit-def $vgpr213, implicit-def $vgpr214, implicit-def $vgpr215, implicit-def $vgpr216, implicit-def $vgpr217, implicit-def $vgpr218, implicit-def $vgpr219, implicit-def $vgpr220, implicit-def $vgpr221, implicit-def $vgpr222, implicit-def $vgpr223, implicit-def $vgpr224, implicit-def $vgpr225, implicit-def $vgpr226, implicit-def $vgpr227, implicit-def $vgpr228, implicit-def $vgpr229, implicit-def $vgpr230, implicit-def $vgpr231, implicit-def $vgpr232, implicit-def $vgpr233, implicit-def $vgpr234, implicit-def $vgpr235, implicit-def $vgpr236, implicit-def $vgpr237, implicit-def $vgpr238, implicit-def $vgpr239, implicit-def $vgpr240, implicit-def $vgpr241, implicit-def $vgpr242, implicit-def $vgpr243, implicit-def $vgpr244, implicit-def $vgpr245, implicit-def $vgpr246, implicit-def $vgpr247, implicit-def $vgpr248, implicit-def $vgpr249, implicit-def $vgpr250, implicit-def $vgpr251, implicit-def $vgpr252, implicit-def $vgpr253, implicit-def $vgpr254, implicit-def $vgpr255
+    KILL %1:vgpr_32, %2:vgpr_32
+    S_ENDPGM 0
+...
+

@@ -58,4 +58,33 @@ using Test = ::testing::Test;
 #define SCUDO_NO_TEST_MAIN
 #endif
 
+#if SCUDO_ANDROID
+static void DisableDebuggerdMaybe() {
+  // Disable the debuggerd signal handler on Android, without this we can end
+  // up spending a significant amount of time creating tombstones.
+  signal(SIGSEGV, SIG_DFL);
+  signal(SIGABRT, SIG_DFL);
+}
+
+#define SCUDO_EXPECT_DEATH(X, Y)                                               \
+  EXPECT_DEATH(                                                                \
+      {                                                                        \
+        DisableDebuggerdMaybe();                                               \
+        X;                                                                     \
+      },                                                                       \
+      Y);
+#define SCUDO_ASSERT_DEATH(X, Y)                                               \
+  ASSERT_DEATH(                                                                \
+      {                                                                        \
+        DisableDebuggerdMaybe();                                               \
+        X;                                                                     \
+      },                                                                       \
+      Y);
+#else
+
+#define SCUDO_EXPECT_DEATH(X, Y) EXPECT_DEATH(X, Y);
+#define SCUDO_ASSERT_DEATH(X, Y) ASSERT_DEATH(X, Y);
+
+#endif
+
 extern bool UseQuarantine;

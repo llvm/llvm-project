@@ -254,6 +254,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"command_argument_count", &I::genCommandArgumentCount},
     {"conjg", &I::genConjg},
     {"cosd", &I::genCosd},
+    {"coshape",
+     &I::genCoshape,
+     {{{"coarray", asBox}, {"kind", asValue}}},
+     /*isElemental=*/false},
     {"cospi", &I::genCospi},
     {"count",
      &I::genCount,
@@ -515,6 +519,13 @@ static constexpr IntrinsicHandler handlers[]{
     {"ieee_unordered", &I::genIeeeUnordered},
     {"ieee_value", &I::genIeeeValue},
     {"ieor", &I::genIeor},
+    {"image_index",
+     &I::genImageIndex,
+     {{{"coarray", asBox},
+       {"sub", asBox},
+       {"team", asAddr},
+       {"team_number", asValue}}},
+     /*isElemental*/ false},
     {"index",
      &I::genIndex,
      {{{"string", asAddr},
@@ -544,6 +555,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"lbound",
      &I::genLbound,
      {{{"array", asInquired}, {"dim", asValue}, {"kind", asValue}}},
+     /*isElemental=*/false},
+    {"lcobound",
+     &I::genLcobound,
+     {{{"coarray", asBox}, {"dim", asValue}, {"kind", asValue}}},
      /*isElemental=*/false},
     {"leadz", &I::genLeadz},
     {"len",
@@ -818,7 +833,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"this_image",
      &I::genThisImage,
      {{{"coarray", asBox},
-       {"dim", asAddr},
+       {"dim", asValue},
        {"team", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"time", &I::genTime, {}, /*isElemental=*/false},
@@ -843,6 +858,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"ubound",
      &I::genUbound,
      {{{"array", asBox}, {"dim", asValue}, {"kind", asValue}}},
+     /*isElemental=*/false},
+    {"ucobound",
+     &I::genUcobound,
+     {{{"coarray", asBox}, {"dim", asValue}, {"kind", asValue}}},
      /*isElemental=*/false},
     {"umaskl", &I::genMask<mlir::arith::ShLIOp>},
     {"umaskr", &I::genMask<mlir::arith::ShRUIOp>},
@@ -3581,6 +3600,17 @@ mlir::Value IntrinsicLibrary::genCospi(mlir::Type resultType,
   return getRuntimeCallGenerator("cos", ftype)(builder, loc, {arg});
 }
 
+// COSHAPE
+fir::ExtendedValue
+IntrinsicLibrary::genCoshape(mlir::Type,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  checkCoarrayEnabled(loc, options);
+  assert(args.size() == 2);
+
+  return mif::CoshapeOp::create(builder, loc,
+                                /*coarray*/ fir::getBase(args[0]));
+}
+
 // COUNT
 fir::ExtendedValue
 IntrinsicLibrary::genCount(mlir::Type resultType,
@@ -6283,6 +6313,24 @@ mlir::Value IntrinsicLibrary::genIeor(mlir::Type resultType,
                                                      args[1]);
 }
 
+// IMAGE_INDEX
+fir::ExtendedValue
+IntrinsicLibrary::genImageIndex(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
+  checkCoarrayEnabled(loc, options);
+  assert(args.size() == 2 || args.size() == 3);
+
+  mlir::Value team;
+  if (args.size() > 2) {
+    team = fir::getBase(args[2]);
+    if (fir::isa_integer(fir::unwrapRefType(team.getType())))
+      team = fir::LoadOp::create(builder, loc, team);
+  }
+  return mif::ImageIndexOp::create(builder, loc,
+                                   /*coarray*/ fir::getBase(args[0]),
+                                   /*sub*/ fir::getBase(args[1]), team);
+}
+
 // INDEX
 fir::ExtendedValue
 IntrinsicLibrary::genIndex(mlir::Type resultType,
@@ -8297,11 +8345,21 @@ IntrinsicLibrary::genThisImage(mlir::Type resultType,
   checkCoarrayEnabled(loc, options);
   assert(args.size() >= 1 && args.size() <= 3);
   const bool coarrayIsAbsent = args.size() == 1;
+  const bool dimIsAbsent = args.size() < 3;
   mlir::Value team = fir::getBase(args[args.size() - 1]);
 
-  if (!coarrayIsAbsent)
-    TODO(loc, "coarray: this_image with coarray argument");
-  mlir::Value res = mif::ThisImageOp::create(builder, loc, team);
+  if (!coarrayIsAbsent && dimIsAbsent) {
+    mlir::Value res =
+        mif::ThisImageOp::create(builder, loc, fir::getBase(args[0]), team);
+    return res;
+  }
+  mlir::Value res;
+  if (!dimIsAbsent) {
+    mlir::Value coarray = fir::getBase(args[0]);
+    mlir::Value dim = fir::getBase(args[1]);
+    res = mif::ThisImageOp::create(builder, loc, coarray, dim, team);
+  } else
+    res = mif::ThisImageOp::create(builder, loc, team);
   return builder.createConvert(loc, resultType, res);
 }
 
@@ -8413,6 +8471,39 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
       fir::runtime::genLboundDim(builder, loc, fir::getBase(box), dim));
 }
 
+// LCOBOUND
+fir::ExtendedValue
+IntrinsicLibrary::genLcobound(mlir::Type resultType,
+                              llvm::ArrayRef<fir::ExtendedValue> args) {
+  checkCoarrayEnabled(loc, options);
+  assert(args.size() == 2 || args.size() == 3);
+
+  mlir::Value coarray = fir::getBase(args[0]);
+  const bool dimIsAbsent = args.size() == 2 || isStaticallyAbsent(args, 1);
+  if (!dimIsAbsent) {
+    mlir::Value dim = fir::getBase(args[1]);
+    return mif::LcoboundOp::create(builder, loc, resultType, coarray, dim);
+  }
+  int corank = fir::getBoxCorank(coarray.getType());
+  mlir::Type arrTy = fir::SequenceType::get(
+      {static_cast<fir::SequenceType::Extent>(corank)}, resultType);
+  mlir::Value lcobound = fir::AllocaOp::create(builder, loc, arrTy);
+
+  mlir::Type idxTy = builder.getIndexType();
+  for (int d = 1; d <= corank; ++d) {
+    mlir::Value dim = builder.createIntegerConstant(loc, resultType, d);
+    mlir::Value lcb =
+        mif::LcoboundOp::create(builder, loc, resultType, coarray, dim);
+
+    mlir::Value idx = builder.createIntegerConstant(loc, idxTy, d - 1);
+    mlir::Value gep = fir::CoordinateOp::create(
+        builder, loc, fir::ReferenceType::get(resultType), lcobound,
+        mlir::ValueRange{idx});
+    fir::StoreOp::create(builder, loc, lcb, gep);
+  }
+  return builder.createBox(loc, lcobound);
+}
+
 // UBOUND
 fir::ExtendedValue
 IntrinsicLibrary::genUbound(mlir::Type resultType,
@@ -8433,6 +8524,40 @@ IntrinsicLibrary::genUbound(mlir::Type resultType,
   return genBoundInquiry(builder, loc, resultType, args, kindPos,
                          fir::runtime::genUbound,
                          /*needAccurateLowerBound=*/true);
+}
+
+// UCOBOUND
+fir::ExtendedValue
+IntrinsicLibrary::genUcobound(mlir::Type resultType,
+                              llvm::ArrayRef<fir::ExtendedValue> args) {
+  checkCoarrayEnabled(loc, options);
+  assert(args.size() == 2 || args.size() == 3);
+
+  mlir::Value coarray = fir::getBase(args[0]);
+  const bool dimIsAbsent = args.size() == 2 || isStaticallyAbsent(args, 1);
+  if (!dimIsAbsent) {
+    mlir::Value dim = fir::getBase(args[1]);
+    return mif::UcoboundOp::create(builder, loc, resultType, coarray, dim);
+  }
+
+  int corank = fir::getBoxCorank(coarray.getType());
+  mlir::Type arrTy = fir::SequenceType::get(
+      {static_cast<fir::SequenceType::Extent>(corank)}, resultType);
+  mlir::Value ucobound = fir::AllocaOp::create(builder, loc, arrTy);
+
+  mlir::Type idxTy = builder.getIndexType();
+  for (int d = 1; d <= corank; ++d) {
+    mlir::Value dim = builder.createIntegerConstant(loc, resultType, d);
+    mlir::Value ucb =
+        mif::UcoboundOp::create(builder, loc, resultType, coarray, dim);
+
+    mlir::Value idx = builder.createIntegerConstant(loc, idxTy, d - 1);
+    mlir::Value gep = fir::CoordinateOp::create(
+        builder, loc, fir::ReferenceType::get(resultType), ucobound,
+        mlir::ValueRange{idx});
+    fir::StoreOp::create(builder, loc, ucb, gep);
+  }
+  return builder.createBox(loc, ucobound);
 }
 
 // SPACING

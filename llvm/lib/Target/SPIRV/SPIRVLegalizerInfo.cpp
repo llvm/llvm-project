@@ -159,9 +159,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   auto &allowedVectorTypes = ST.isShader() ? allShaderVectors : allVectors;
 
+  bool HasArbitraryPrecisionInts = ST.canUseExtension(
+      SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers);
   bool IsExtendedInts =
-      ST.canUseExtension(
-          SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers) ||
+      HasArbitraryPrecisionInts ||
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions) ||
       ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4);
   auto extendedScalarsAndVectors =
@@ -329,6 +330,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalFor(allIntScalarsAndVectors)
       .legalIf(extendedScalarsAndVectors);
 
+  getActionDefinitionsBuilder({G_SSHLSAT, G_USHLSAT}).lower();
+
   getActionDefinitionsBuilder(G_STRICT_FLDEXP)
       .legalForCartesianProduct(allFloatScalarsAndVectors, allIntScalars);
 
@@ -458,6 +461,13 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).lower();
 
+  // Lowering widens s64 to s128, which needs
+  // SPV_ALTERA_arbitrary_precision_integers. Mark s64 unsupported otherwise.
+  auto &MulFix = getActionDefinitionsBuilder({G_SMULFIX, G_UMULFIX});
+  if (!HasArbitraryPrecisionInts)
+    MulFix.unsupportedFor({s64});
+  MulFix.lower();
+
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
       .legalForCartesianProduct(allFloatScalarsAndVectors,
                                 allIntScalarsAndVectors);
@@ -549,7 +559,6 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_FENCE).alwaysLegal();
   getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
 
-  getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
 

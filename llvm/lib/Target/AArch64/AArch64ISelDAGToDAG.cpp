@@ -402,7 +402,6 @@ public:
   void SelectMultiVectorMoveZ(SDNode *N, unsigned NumVecs,
                               unsigned Op, unsigned MaxIdx, unsigned Scale,
                               unsigned BaseReg = 0);
-  bool SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base, SDValue &OffImm);
   /// SVE Reg+Imm addressing mode.
   template <int64_t Min, int64_t Max>
   bool SelectAddrModeIndexedSVE(SDNode *Root, SDValue N, SDValue &Base,
@@ -2532,23 +2531,6 @@ void AArch64DAGToDAGISel::SelectPredicatedStore(SDNode *N, unsigned NumVecs,
   SDNode *St = CurDAG->getMachineNode(Opc, dl, N->getValueType(0), Ops);
 
   ReplaceNode(N, St);
-}
-
-bool AArch64DAGToDAGISel::SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base,
-                                                      SDValue &OffImm) {
-  SDLoc dl(N);
-  const DataLayout &DL = CurDAG->getDataLayout();
-  const TargetLowering *TLI = getTargetLowering();
-
-  // Try to match it for the frame address
-  if (auto FINode = dyn_cast<FrameIndexSDNode>(N)) {
-    int FI = FINode->getIndex();
-    Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
-    OffImm = CurDAG->getTargetConstant(0, dl, MVT::i64);
-    return true;
-  }
-
-  return false;
 }
 
 void AArch64DAGToDAGISel::SelectPostStore(SDNode *N, unsigned NumVecs,
