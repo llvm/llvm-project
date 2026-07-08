@@ -427,6 +427,216 @@ mlir::Attribute buildRecord(ConstantEmitter &emitter, const APValue &val,
 } // namespace ConstRecordBuilder
 
 //===----------------------------------------------------------------------===//
+//                         DesignatedInitUpdateExpr
+//===----------------------------------------------------------------------===//
+
+// Forward declaration.
+static bool emitDesignatedInitUpdater(ConstantEmitter &emitter,
+                                      CIRGenModule &cgm, QualType type,
+                                      mlir::Attribute &base,
+                                      const InitListExpr *updater);
+
+/// Apply a DesignatedInitUpdateExpr's updater InitListExpr to an existing
+/// record constant. The record's fields are decomposed, modified according to
+/// the updater, and reassembled.
+static bool updateRecord(ConstantEmitter &emitter, CIRGenModule &cgm,
+                         const RecordDecl *rd, mlir::Attribute &base,
+                         const InitListExpr *updater) {
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  const CIRGenRecordLayout &cirLayout =
+      cgm.getTypes().getCIRGenRecordLayout(rd);
+  cir::RecordType recordTy = cirLayout.getCIRType();
+
+  // TODO: Handle unions if needed.
+  if (rd->isUnion()) {
+    cgm.errorNYI("updateRecord: union type");
+    return false;
+  }
+
+  // Decompose the base record into mutable elements.
+  llvm::SmallVector<mlir::Attribute> elements;
+  if (auto recAttr = mlir::dyn_cast<cir::ConstRecordAttr>(base)) {
+    for (mlir::Attribute m : recAttr.getMembers())
+      elements.push_back(m);
+  } else if (mlir::isa<cir::ZeroAttr>(base)) {
+    // Zero-initialized base: fill with per-field zero attrs.
+    elements.resize(recordTy.getNumElements());
+    for (unsigned i = 0; i < recordTy.getNumElements(); ++i)
+      elements[i] = builder.getZeroInitAttr(recordTy.getElementType(i));
+  } else if (mlir::isa<cir::ConstVectorAttr>(base) ||
+             mlir::isa<cir::PoisonAttr>(base)) {
+    cgm.errorNYI("updateRecord: ConstVectorAttr or PoisonAttr base");
+    return false;
+  } else {
+    cgm.errorNYI("updateRecord: unsupported base attribute kind");
+    return false;
+  }
+
+  // Classic codegen uses separate FieldNo (for layout) and ElementNo (for
+  // updater inits). Unnamed bitfields are not represented in the InitListExpr,
+  // so we must not increment elementNo for them.
+  unsigned elementNo = 0;
+  for (const FieldDecl *field : rd->fields()) {
+    if (field->isUnnamedBitField())
+      continue;
+
+    if (elementNo >= updater->getNumInits())
+      break;
+
+    const Expr *init = updater->getInit(elementNo);
+    ++elementNo;
+
+    if (isa<NoInitExpr>(init))
+      continue;
+
+    if (!cirLayout.hasCIRField(field))
+      continue;
+
+    unsigned fieldIdx = cirLayout.getCIRFieldNo(field);
+
+    // When the updater contains a nested InitListExpr for a sub-aggregate,
+    // it represents additional overwriting of the current value (not a new
+    // independent constant).
+    if ((field->getType()->isArrayType() || field->getType()->isRecordType())) {
+      if (auto *subILE = dyn_cast<InitListExpr>(init)) {
+        if (!emitDesignatedInitUpdater(emitter, cgm, field->getType(),
+                                       elements[fieldIdx], subILE))
+          return false;
+        continue;
+      }
+      // For non-InitListExpr aggregate inits (e.g. compound literals),
+      // fall through to the regular emission below.
+    }
+
+    mlir::Attribute eltAttr =
+        emitter.tryEmitPrivateForMemory(init, field->getType());
+    if (!eltAttr)
+      return false;
+
+    if (field->isBitField()) {
+      elements[fieldIdx] = ConstRecordBuilder::setBitfieldInit(
+          cgm, cirLayout, builder, field, elements[fieldIdx], eltAttr);
+    } else {
+      elements[fieldIdx] = eltAttr;
+    }
+  }
+
+  base = builder.getConstRecordOrZeroAttr(builder.getArrayAttr(elements),
+                                          recordTy);
+  return true;
+}
+
+/// Apply a DesignatedInitUpdateExpr's updater InitListExpr to an existing
+/// array constant. Individual array elements are modified according to
+/// the updater.
+static bool updateArray(ConstantEmitter &emitter, CIRGenModule &cgm,
+                        QualType type, mlir::Attribute &base,
+                        const InitListExpr *updater) {
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  auto cat = cgm.getASTContext().getAsConstantArrayType(type);
+  if (!cat)
+    return false;
+
+  QualType elemType = cat->getElementType();
+  uint64_t numElements = cat->getZExtSize();
+
+  // Decompose the base array into mutable elements. We only store the
+  // explicitly initialized elements; any beyond this are implicitly zero
+  // and will be represented via trailing zeros in the final ConstArrayAttr.
+  llvm::SmallVector<mlir::Attribute> elements;
+
+  if (auto arrAttr = mlir::dyn_cast<cir::ConstArrayAttr>(base)) {
+    auto eltsAttr = mlir::dyn_cast<mlir::ArrayAttr>(arrAttr.getElts());
+    if (!eltsAttr) {
+      cgm.errorNYI("updateArray: string literal array base");
+      return false;
+    }
+    elements.reserve(eltsAttr.size());
+    elements.insert(elements.begin(), eltsAttr.begin(), eltsAttr.end());
+  } else if (mlir::isa<cir::ZeroAttr>(base)) {
+    // All zeros — elements stays empty, trailing zeros covers everything.
+  } else {
+    cgm.errorNYI("updateArray: unsupported base attribute kind");
+    return false;
+  }
+
+  // Apply the filler if present.
+  mlir::Attribute filler;
+  if (const Expr *fillerExpr = updater->getArrayFiller()) {
+    if (!isa<NoInitExpr>(fillerExpr)) {
+      // Classic codegen calls tryEmitAbstractForMemory here. We haven't
+      // implemented that in CIR yet.
+      assert(!cir::MissingFeatures::constEmitterAbstractForMemory());
+      filler = emitter.tryEmitPrivateForMemory(fillerExpr, elemType);
+      if (!filler)
+        return false;
+    }
+  }
+
+  // Helper to ensure elements vector is large enough for index i, filling
+  // any gaps with zero-initialized elements.
+  mlir::Type eltTy = cgm.convertType(elemType);
+  auto ensureElementAt = [&](unsigned i) {
+    if (i >= elements.size())
+      elements.resize(i + 1, builder.getZeroInitAttr(eltTy));
+  };
+
+  unsigned numElementsToUpdate = filler ? numElements : updater->getNumInits();
+  for (unsigned i = 0; i != numElementsToUpdate; ++i) {
+    const Expr *init = nullptr;
+    if (i < updater->getNumInits())
+      init = updater->getInit(i);
+
+    if (!init && filler) {
+      ensureElementAt(i);
+      elements[i] = filler;
+    } else if (!init || isa<NoInitExpr>(init)) {
+      continue;
+    } else if (auto *childILE = dyn_cast<InitListExpr>(init)) {
+      ensureElementAt(i);
+      if (!emitDesignatedInitUpdater(emitter, cgm, elemType, elements[i],
+                                     childILE))
+        return false;
+    } else {
+      mlir::Attribute val = emitter.tryEmitPrivateForMemory(init, elemType);
+      if (!val)
+        return false;
+      ensureElementAt(i);
+      elements[i] = val;
+    }
+  }
+
+  // Rebuild the array attr. Elements beyond our vector are implicitly zero
+  // via trailing_zeros in ConstArrayAttr. Trim explicit trailing zeros.
+  cir::ArrayType desiredType =
+      mlir::cast<cir::ArrayType>(cgm.convertType(type));
+  while (!elements.empty() && builder.isNullValue(elements.back()))
+    elements.pop_back();
+
+  if (elements.empty()) {
+    base = cir::ZeroAttr::get(desiredType);
+  } else {
+    base = cir::ConstArrayAttr::get(
+        desiredType, mlir::ArrayAttr::get(builder.getContext(), elements));
+  }
+  return true;
+}
+
+/// Dispatch to the record or array update path based on type.
+static bool emitDesignatedInitUpdater(ConstantEmitter &emitter,
+                                      CIRGenModule &cgm, QualType type,
+                                      mlir::Attribute &base,
+                                      const InitListExpr *updater) {
+  if (type->isRecordType())
+    return updateRecord(emitter, cgm, type->castAsRecordDecl(), base, updater);
+
+  if (type->isArrayType())
+    return updateArray(emitter, cgm, type, base, updater);
+
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
 //                             ConstExprEmitter
 //===----------------------------------------------------------------------===//
 
@@ -637,9 +847,10 @@ public:
     if (!c)
       return {};
 
-    cgm.errorNYI(e->getBeginLoc(),
-                 "ConstExprEmitter::VisitDesignatedInitUpdateExpr");
-    return {};
+    if (!emitDesignatedInitUpdater(emitter, cgm, destType, c, e->getUpdater()))
+      return {};
+
+    return c;
   }
 
   mlir::Attribute VisitCXXConstructExpr(CXXConstructExpr *e, QualType ty) {
