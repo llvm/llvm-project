@@ -85,6 +85,53 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.strings.strcasecmp
     libc.src.strings.strncasecmp
 
+    # stdlib.h entrypoints
+    libc.src.stdlib._Exit
+    libc.src.stdlib.abort
+    libc.src.stdlib.abs
+    libc.src.stdlib.atexit
+    libc.src.stdlib.atof
+    libc.src.stdlib.atoi
+    libc.src.stdlib.atol
+    libc.src.stdlib.atoll
+    libc.src.stdlib.bsearch
+    libc.src.stdlib.div
+    libc.src.stdlib.exit
+    libc.src.stdlib.labs
+    libc.src.stdlib.ldiv
+    libc.src.stdlib.llabs
+    libc.src.stdlib.lldiv
+    libc.src.stdlib.memalignment
+    libc.src.stdlib.qsort
+    libc.src.stdlib.qsort_r
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+    libc.src.stdlib.strtod
+    libc.src.stdlib.strtod_l
+    libc.src.stdlib.strtof
+    libc.src.stdlib.strtof_l
+    libc.src.stdlib.strtol
+    libc.src.stdlib.strtol_l
+    libc.src.stdlib.strtold
+    libc.src.stdlib.strtold_l
+    libc.src.stdlib.strtoll
+    libc.src.stdlib.strtoll_l
+    libc.src.stdlib.strtoul
+    libc.src.stdlib.strtoul_l
+    libc.src.stdlib.strtoull
+    libc.src.stdlib.strtoull_l
+    libc.src.stdlib.at_quick_exit
+    libc.src.stdlib.quick_exit
+    libc.src.stdlib.getenv
+    libc.src.stdlib.system
+
+    # TODO: Implement these correctly
+    libc.src.stdlib.aligned_alloc
+    libc.src.stdlib.calloc
+    libc.src.stdlib.free
+    libc.src.stdlib.malloc
+    libc.src.stdlib.realloc
+
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

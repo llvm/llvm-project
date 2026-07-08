@@ -111,7 +111,7 @@ function(add_bitcode_entrypoint_library target_name base_target_name)
   add_executable(${target_name} ${objects})
   if(LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
       target_link_options(${target_name} PRIVATE "${LIBC_COMPILE_OPTIONS_DEFAULT}"
-                      "-nostdlib" "-emit-llvm")
+                      "-nostdlib" "-flto" "-emit-llvm")
   else()  
       target_link_options(${target_name} PRIVATE "${LIBC_COMPILE_OPTIONS_DEFAULT}"
                       "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")

@@ -15,6 +15,7 @@
 #include "llvm-gpu-loader.h"
 
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/CommandLine.h"
@@ -207,7 +208,7 @@ int main(int argc, const char **argv, const char **envp) {
     handleError(errorCodeToError(EC));
   MemoryBufferRef Image = **ImageOrErr;
 
-  ol_platform_backend_t Backend;
+  ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
   ol_init_args_t InitArgs = OL_INIT_ARGS_INIT;
 
   file_magic Magic = identify_magic(Image.getBuffer());
@@ -224,12 +225,22 @@ int main(int argc, const char **argv, const char **envp) {
     case ELF::EM_CUDA:
       Backend = OL_PLATFORM_BACKEND_CUDA;
       break;
+    case ELF::EM_INTELGT:
+      Backend = OL_PLATFORM_BACKEND_LEVEL_ZERO;
+      break;
     default:
       handleError(createStringError(
           "unhandled ELF architecture: %s",
           ELF::convertEMachineToArchName(ElfOrErr->getHeader().e_machine)
               .data()));
     }
+  } else if (Magic == file_magic::spirv_object) {
+    // SPIR-V objects are assumed to be for Level Zero for now as that is the
+    // only platform that currently supports them.
+    Backend = OL_PLATFORM_BACKEND_LEVEL_ZERO;
+  }
+
+  if (Backend != OL_PLATFORM_BACKEND_UNKNOWN) {
     InitArgs.NumPlatforms = 1;
     InitArgs.Platforms = &Backend;
   }
@@ -239,6 +250,8 @@ int main(int argc, const char **argv, const char **envp) {
                   [](const std::string &Arg) { return Arg.c_str(); });
 
   OFFLOAD_ERR(olInit(&InitArgs));
+  if (InitArgs.NumPlatforms == 0)
+    handleError(createStringError("No compatible platforms were found"));
   ol_device_handle_t Device = findDevice(Image);
   if (!Device)
     handleError(createStringError("No compatible device was found"));

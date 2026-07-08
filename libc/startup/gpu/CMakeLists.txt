@@ -33,9 +33,16 @@ function(add_startup_object name)
     set_target_properties(${fq_target_name}.exe PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR}
       RUNTIME_OUTPUT_NAME ${name}.o)
-    target_link_options(${fq_target_name}.exe PRIVATE
-                        ${LIBC_COMPILE_OPTIONS_DEFAULT}
-                        "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
+    if (LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
+      target_link_options(${fq_target_name}.exe PRIVATE
+                          ${LIBC_COMPILE_OPTIONS_DEFAULT}
+                          "-nostdlib" "-flto"
+                          )
+    else()
+      target_link_options(${fq_target_name}.exe PRIVATE
+                          ${LIBC_COMPILE_OPTIONS_DEFAULT}
+                          "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
+    endif()
   endif()
 endfunction()
 
