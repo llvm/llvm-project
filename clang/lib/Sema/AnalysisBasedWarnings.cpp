@@ -2195,22 +2195,24 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
     return;
   const unsigned N = PairField.size();
 
-  // The tracked pair index for E when it is a `V.m` access on a tracked
-  // local; ~0u otherwise. \p BaseOut receives the access's base DeclRefExpr.
-  auto LookupPair = [&](const Expr *E,
-                        const DeclRefExpr *&BaseOut) -> unsigned {
+  // A `V.m` access on a tracked local, resolved to its pair index and its
+  // base DeclRefExpr; Idx is ~0u (and Base null) when E is not one.
+  struct TrackedAccess {
+    unsigned Idx = ~0u;
+    const DeclRefExpr *Base = nullptr;
+  };
+  auto LookupPair = [&](const Expr *E) -> TrackedAccess {
     const FieldDecl *F = nullptr;
     const DeclRefExpr *DRE = getLocalMemberAccess(E, F);
     if (!DRE)
-      return ~0u;
+      return {};
     const auto *V = dyn_cast<VarDecl>(DRE->getDecl());
     if (!V)
-      return ~0u;
+      return {};
     auto It = PairIdx.find({V, F});
     if (It == PairIdx.end())
-      return ~0u;
-    BaseOut = DRE;
-    return It->second;
+      return {};
+    return {It->second, DRE};
   };
 
   // First pass: the base DeclRefExprs consumed by a recognized member read or
@@ -2227,13 +2229,13 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
       const DeclRefExpr *Base = nullptr;
       if (const auto *ICE = dyn_cast<ImplicitCastExpr>(St)) {
         if (ICE->getCastKind() == CK_LValueToRValue)
-          LookupPair(ICE->getSubExpr(), Base);
+          Base = LookupPair(ICE->getSubExpr()).Base;
       } else if (const auto *BO = dyn_cast<BinaryOperator>(St)) {
         if (BO->isAssignmentOp())
-          LookupPair(BO->getLHS(), Base);
+          Base = LookupPair(BO->getLHS()).Base;
       } else if (const auto *UO = dyn_cast<UnaryOperator>(St)) {
         if (UO->isIncrementDecrementOp())
-          LookupPair(UO->getSubExpr(), Base);
+          Base = LookupPair(UO->getSubExpr()).Base;
       }
       if (Base)
         Benign.insert(Base);
@@ -2261,17 +2263,16 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
       if (!CS)
         continue;
       const Stmt *St = CS->getStmt();
-      const DeclRefExpr *Base = nullptr;
       if (const auto *ICE = dyn_cast<ImplicitCastExpr>(St)) {
         if (ICE->getCastKind() != CK_LValueToRValue)
           continue;
-        unsigned Idx = LookupPair(ICE->getSubExpr(), Base);
+        unsigned Idx = LookupPair(ICE->getSubExpr()).Idx;
         if (Idx != ~0u)
           BlockEvents.push_back({Read, Idx, ICE});
       } else if (const auto *BO = dyn_cast<BinaryOperator>(St)) {
         if (!BO->isAssignmentOp())
           continue;
-        unsigned Idx = LookupPair(BO->getLHS(), Base);
+        unsigned Idx = LookupPair(BO->getLHS()).Idx;
         if (Idx == ~0u)
           continue;
         BlockEvents.push_back(
@@ -2280,7 +2281,7 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
       } else if (const auto *UO = dyn_cast<UnaryOperator>(St)) {
         if (!UO->isIncrementDecrementOp())
           continue;
-        unsigned Idx = LookupPair(UO->getSubExpr(), Base);
+        unsigned Idx = LookupPair(UO->getSubExpr()).Idx;
         if (Idx == ~0u)
           continue;
         BlockEvents.push_back({ReadWrite, Idx, UO});
