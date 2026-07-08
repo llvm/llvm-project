@@ -490,6 +490,10 @@ private:
   bool HasNonSpillStackObjects = false;
   bool IsStackRealigned = false;
 
+  // Set when ICache prefetch instructions have been inserted in the entry
+  // block. This tells AsmPrinter to set rsrc3 INST_PREF_SIZE to 0.
+  bool HasICachePrefetch = false;
+
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
 
@@ -1124,6 +1128,12 @@ public:
 
   void setIsStackRealigned(bool Realigned = true) {
     IsStackRealigned = Realigned;
+  }
+
+  bool hasICachePrefetch() const { return HasICachePrefetch; }
+
+  void setHasICachePrefetch(bool Prefetch = true) {
+    HasICachePrefetch = Prefetch;
   }
 
   unsigned getNumSpilledSGPRs() const {

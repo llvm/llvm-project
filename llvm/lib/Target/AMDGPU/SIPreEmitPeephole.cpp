@@ -20,12 +20,17 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "si-pre-emit-peephole"
@@ -45,12 +50,26 @@ struct ModeFieldState {
   bool isTracked() const { return PendingWrite || Value; }
 };
 
+static cl::opt<bool>
+    EnableICachePrefetch("amdgpu-icache-prefetch",
+                         cl::desc("Insert ICache prefetch instructions"),
+                         cl::init(true), cl::Hidden);
+
+namespace {
+
+// Number of prefetch instructions to insert.
+// Each can prefetch up to 31 cachelines of 128 bytes = ~4KB.
+// 16 instructions cover 64KB (the full ICache size).
+static constexpr unsigned NumPrefetchInsts = 16;
+
 class SIPreEmitPeephole {
 private:
+  const GCNSubtarget *ST = nullptr;
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
   MachineLoopInfo *MLI = nullptr;
 
+  bool insertICachePrefetch(MachineFunction &MF);
   bool optimizeVccBranch(MachineInstr &MI) const;
   void updateMLIBeforeRemovingEdge(MachineBasicBlock *From,
                                    MachineBasicBlock *To) const;
@@ -191,8 +210,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
 
   bool Changed = false;
   MachineBasicBlock &MBB = *MI.getParent();
-  const GCNSubtarget &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
-  const bool IsWave32 = ST.isWave32();
+  const bool IsWave32 = ST->isWave32();
   const unsigned CondReg = TRI->getVCC();
   const unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
   const unsigned And = IsWave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
@@ -850,6 +868,73 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
   return NewMI;
 }
 
+bool SIPreEmitPeephole::insertICachePrefetch(MachineFunction &MF) {
+  // Only run on targets that support ICache prefetching.
+  if (!ST->hasICachePrefetch())
+    return false;
+
+  // Only run for AMDHSA - this is where kernel descriptors are used
+  // and rsrc3 INST_PREF_SIZE is relevant.
+  const Triple &TT = ST->getTargetTriple();
+  if (TT.getOS() != Triple::AMDHSA)
+    return false;
+
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  // Only insert prefetch instructions for entry functions.
+  if (!MFI->isEntryFunction())
+    return false;
+
+  MachineBasicBlock &EntryBB = MF.front();
+  MachineBasicBlock::iterator InsertPt = EntryBB.begin();
+
+  // Skip past any instructions that must remain at the very beginning:
+  // - Debug values and CFI instructions
+  // - S_SETREG_IMM32_B32 instructions that set up MODE register bits
+  //   (e.g., REPLAY_MODE bit 25 from SIFrameLowering)
+  // We want the prefetches to come after all initial MODE setup.
+  while (InsertPt != EntryBB.end()) {
+    if (InsertPt->isDebugValue() || InsertPt->isCFIInstruction()) {
+      ++InsertPt;
+      continue;
+    }
+    if (InsertPt->getOpcode() == AMDGPU::S_SETREG_IMM32_B32) {
+      ++InsertPt;
+      continue;
+    }
+    break;
+  }
+
+  DebugLoc DL;
+
+  // Insert s_setreg_imm32_b32 to set MODE.SCALAR_PREFETCH_EN (bit 24).
+  // This ensures only the first wave in the WGP executes the prefetches.
+  // Insert it right before the prefetch instructions (after other MODE setup).
+  using namespace AMDGPU::Hwreg;
+  unsigned ModeRegEncoding = HwregEncoding::encode(ID_MODE, 24, 1);
+  BuildMI(EntryBB, InsertPt, DL, TII->get(AMDGPU::S_SETREG_IMM32_B32))
+      .addImm(1) // Value to set (enable)
+      .addImm(ModeRegEncoding);
+
+  // Insert 16 s_prefetch_inst_pc_rel instructions.
+  // The offset and sdata operands are placeholders - the sdata operand stores
+  // the slot index (0-15). Both will be fixed up in AMDGPUAsmPrinter based on
+  // the actual code size.
+  for (unsigned I = 0; I < NumPrefetchInsts; ++I) {
+    BuildMI(EntryBB, InsertPt, DL, TII->get(AMDGPU::S_PREFETCH_INST_PC_REL))
+        .addImm(0)                 // offset (placeholder, fixed up later)
+        .addReg(AMDGPU::SGPR_NULL) // soffset
+        .addImm(I);                // sdata (slot index, fixed up later)
+  }
+
+  // Mark that we've inserted ICache prefetch instructions.
+  // This tells AsmPrinter to set rsrc3 INST_PREF_SIZE to 0 and fix up
+  // the prefetch cacheline counts.
+  MFI->setHasICachePrefetch(true);
+
+  return true;
+}
+
 PreservedAnalyses
 llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
@@ -866,11 +951,15 @@ llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
 }
 
 bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  TII = ST.getInstrInfo();
+  ST = &MF.getSubtarget<GCNSubtarget>();
+  TII = ST->getInstrInfo();
   TRI = &TII->getRegisterInfo();
   MLI = LoopInfo;
   bool Changed = false;
+
+  // Insert ICache prefetch instructions if enabled.
+  if (EnableICachePrefetch)
+    Changed |= insertICachePrefetch(MF);
 
   MF.RenumberBlocks();
 
@@ -892,7 +981,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
       }
     }
 
-    if (!ST.hasVGPRIndexMode())
+    if (!ST->hasVGPRIndexMode())
       continue;
 
     MachineInstr *SetGPRMI = nullptr;
@@ -929,7 +1018,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   // side effects.
 
   // Perform the extra MF scans only for supported archs
-  if (!ST.hasGFX940Insts())
+  if (!ST->hasGFX940Insts())
     return Changed;
   for (MachineBasicBlock &MBB : MF) {
     // Unpack packed instructions overlapped by MFMAs. This allows the

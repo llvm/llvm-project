@@ -41,6 +41,8 @@ public:
     AGVK_AlignTo,
     AGVK_Occupancy,
     AGVK_InstPrefSize,
+    AGVK_PrefetchCachelines,
+    AGVK_PrefetchOffset,
     AGVK_Lit,
     AGVK_Lit64,
     AGVK_Min,
@@ -74,6 +76,8 @@ private:
   bool evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateOccupancy(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateInstPrefSize(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluatePrefetchCachelines(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluatePrefetchOffset(MCValue &Res, const MCAssembler *Asm) const;
 
 public:
   static const AMDGPUMCExpr *
@@ -115,6 +119,23 @@ public:
   /// FieldWidth and CacheLineSize are derived from the subtarget.
   static const AMDGPUMCExpr *createInstPrefSize(const MCExpr *CodeSizeBytes,
                                                 MCContext &Ctx);
+
+  /// Create an expression for computing cacheline count for a prefetch slot.
+  /// SlotIndex is the 0-based index of the prefetch instruction (0-15).
+  /// CodeSizeBytes is the total code size in bytes.
+  /// Returns the number of cachelines this slot should prefetch.
+  static const AMDGPUMCExpr *
+  createPrefetchCachelines(const MCExpr *SlotIndex, const MCExpr *CodeSizeBytes,
+                           MCContext &Ctx);
+
+  /// Create an expression for computing the byte offset for a prefetch slot.
+  /// SlotIndex is the 0-based index of the prefetch instruction (0-15).
+  /// CodeSizeBytes is the total code size in bytes.
+  /// Returns the cumulative byte offset where this slot should start
+  /// prefetching.
+  static const AMDGPUMCExpr *createPrefetchOffset(const MCExpr *SlotIndex,
+                                                  const MCExpr *CodeSizeBytes,
+                                                  MCContext &Ctx);
 
   static const AMDGPUMCExpr *createLit(LitModifier Lit, int64_t Value,
                                        MCContext &Ctx);

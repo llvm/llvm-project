@@ -824,6 +824,9 @@ enum ModeRegisterMasks : uint32_t {
   SRC2_VGPR_MSB = 0x3 << 18,
   VGPR_MSB_MASK = 0xff << 12, // Bits 12..19
 
+  // GFX1250 instruction prefetch
+  SCALAR_PREFETCH_EN = 1 << 24,
+
   REPLAY_MODE = 1 << 25,
   FLAT_SCRATCH_IS_NV = 1 << 26,
 };
