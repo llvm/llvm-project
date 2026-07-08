@@ -2,9 +2,10 @@
 
 // PR10415:
 //
-// CHECK:      module asm "foo1"
-// CHECK-NEXT: module asm "foo2"
-// CHECK-NEXT: module asm "foo3"
+// CHECK: module asm(target_features: "{{.*}}")
+// CHECK-NEXT: "foo1"
+// CHECK-NEXT: "foo2"
+// CHECK-NEXT: "foo3"
 __asm__ ("foo1");
 __asm__ ("foo2");
 __asm__ ("foo3");

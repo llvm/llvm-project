@@ -228,7 +228,10 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
       Builder.defineMacro("_HAS_CHAR16_T_LANGUAGE_SUPPORT", Twine(1));
 
     if (Opts.isCompatibleWithMSVC(LangOptions::MSVC2015)) {
-      if (Opts.CPlusPlus26)
+      if (Opts.CPlusPlus29)
+        // TODO update to the proper value.
+        Builder.defineMacro("_MSVC_LANG", "202700L");
+      else if (Opts.CPlusPlus26)
         // TODO update to the proper value.
         Builder.defineMacro("_MSVC_LANG", "202400L");
       else if (Opts.CPlusPlus23)

@@ -217,7 +217,14 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
         SI->getContext(), Twine(SI->getName(), ".si.unfold.false"),
         EndBlock->getParent(), EndBlock);
     NewBBs->push_back(NewBlock);
-    UncondBrInst::Create(EndBlock, NewBlock);
+    // The branch from NewBlock and the new CondBr from StartBlock collectively
+    // substitute the existing Select+Br instructions, so following the rules
+    // for updating source locations we assign each of them the merged location
+    // of the Select+Br.
+    DebugLoc SelectBranchLoc = DebugLoc::getMergedLocation(
+        StartBlockTerm->getDebugLoc(), SI->getDebugLoc());
+    Instruction *NewToEndBr = UncondBrInst::Create(EndBlock, NewBlock);
+    NewToEndBr->setDebugLoc(SelectBranchLoc);
     DTU->applyUpdates({{DominatorTree::Insert, NewBlock, EndBlock}});
 
     // StartBlock
@@ -268,6 +275,7 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
     StartBlockTerm->eraseFromParent();
     auto *BI =
         CondBrInst::Create(SI->getCondition(), EndBlock, NewBlock, StartBlock);
+    BI->setDebugLoc(SelectBranchLoc);
     if (!ProfcheckDisableMetadataFixes)
       BI->setMetadata(LLVMContext::MD_prof,
                       SI->getMetadata(LLVMContext::MD_prof));
@@ -302,10 +310,15 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
     //   |     /
     // EndBlock
     //  (Use)
-    UncondBrInst::Create(EndBlock, NewBlockF);
+    Instruction *NewFToEnd = UncondBrInst::Create(EndBlock, NewBlockF);
     // Insert the real conditional branch based on the original condition.
     auto *BI =
         CondBrInst::Create(SI->getCondition(), EndBlock, NewBlockF, NewBlockT);
+    // The branches from NewBlockT and NewBlockF are performing the Select
+    // logic, and so assume its source location.
+    DebugLoc SelectLoc = SI->getDebugLoc();
+    NewFToEnd->setDebugLoc(SelectLoc);
+    BI->setDebugLoc(SelectLoc);
     if (!ProfcheckDisableMetadataFixes)
       BI->setMetadata(LLVMContext::MD_prof,
                       SI->getMetadata(LLVMContext::MD_prof));
@@ -1409,8 +1422,9 @@ private:
         DTUpdates.push_back({DominatorTree::Delete, LastBlock, Succ});
     }
 
+    DebugLoc SwitchLoc = Switch->getDebugLoc();
     Switch->eraseFromParent();
-    UncondBrInst::Create(NextCase, LastBlock);
+    UncondBrInst::Create(NextCase, LastBlock)->setDebugLoc(SwitchLoc);
 
     DTU->applyUpdates(DTUpdates);
   }

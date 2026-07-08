@@ -2089,7 +2089,7 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
   //
   //    For example, in the following example, the instrumentation in
   //    `instrumented_1` rejects the shadow return value from `instrumented_3`
-  //    because is is not tagged as expected (`&instrumented_3` instead of
+  //    because it is not tagged as expected (`&instrumented_3` instead of
   //    `non_instrumented_2`):
   //
   //        instrumented_1()

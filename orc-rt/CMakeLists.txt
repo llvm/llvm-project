@@ -29,27 +29,34 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 include(GNUInstallDirs)
 
+# --- C++ standard ---
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
+set(CMAKE_CXX_STANDARD_REQUIRED YES)
+set(CMAKE_CXX_EXTENSIONS NO)
+
+# --- Project variables ---
+set(CMAKE_FOLDER "orc-rt")
+set(ORC_RT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(ORC_RT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
 #===============================================================================
 # Setup CMake Options
 #===============================================================================
 
+# --- Build components ---
 option(ORC_RT_INCLUDE_DOCS "Build the ORC-RT documentation." ON)
+option(ORC_RT_INCLUDE_TESTS "Build ORC-RT tests." ${LLVM_INCLUDE_TESTS})
+
+# --- Build behavior ---
 option(ORC_RT_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(ORC_RT_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(ORC_RT_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
+
+# --- Language runtime (RTTI / exceptions) ---
 option(ORC_RT_ENABLE_RTTI "Enable RTTI." ON)
 option(ORC_RT_ENABLE_EXCEPTIONS "Enable exceptions." ON)
-option(ORC_RT_INCLUDE_TESTS "Build ORC-RT tests." ${LLVM_INCLUDE_TESTS})
 
-set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
-set(CMAKE_CXX_STANDARD_REQUIRED YES)
-set(CMAKE_CXX_EXTENSIONS NO)
-set(CMAKE_FOLDER "orc-rt")
-
-set(ORC_RT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(ORC_RT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
-
-# Configure RTTI and exceptions compile flags
+# Derive the compile flags implied by the language-runtime options.
 set(ORC_RT_COMPILE_FLAGS)
 if(ORC_RT_ENABLE_RTTI)
   list(APPEND ORC_RT_COMPILE_FLAGS -frtti)
@@ -63,7 +70,8 @@ else()
   list(APPEND ORC_RT_COMPILE_FLAGS -fno-exceptions)
 endif()
 
-# Generate config header
+# --- Generated config header ---
+# Keep this last in the section so it captures every value derived above.
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/orc-rt-c/config.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/include/orc-rt-c/config.h
@@ -75,7 +83,7 @@ configure_file(
 #===============================================================================
 
 if (ORC_RT_INCLUDE_DOCS)
-    add_subdirectory(docs)
+  add_subdirectory(docs)
 endif()
 
 add_subdirectory(include)

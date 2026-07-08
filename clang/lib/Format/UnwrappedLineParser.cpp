@@ -1773,7 +1773,7 @@ void UnwrappedLineParser::parseStructuralElement(
       if (!Line->InMacroBody || CurrentLines->size() > 1)
         Line->Tokens.begin()->Tok->MustBreakBefore = true;
       FormatTok->setFinalizedType(TT_GotoLabelColon);
-      parseLabel(Style.IndentGotoLabels);
+      parseLabel(/*IsGotoLabel=*/true);
       if (HasLabel)
         *HasLabel = true;
       return;
@@ -3431,28 +3431,24 @@ void UnwrappedLineParser::parseDoWhile() {
   parseStructuralElement();
 }
 
-void UnwrappedLineParser::parseLabel(
-    FormatStyle::IndentGotoLabelStyle IndentGotoLabels) {
-  const bool IsGotoLabel = FormatTok->is(TT_GotoLabelColon);
+void UnwrappedLineParser::parseLabel(bool IsGotoLabel) {
   nextToken();
-  unsigned OldLineLevel = Line->Level;
 
-  switch (IndentGotoLabels) {
-  case FormatStyle::IGLS_NoIndent:
-    Line->Level = 0;
-    break;
-  case FormatStyle::IGLS_OuterIndent:
-    if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
-      --Line->Level;
-    break;
-  case FormatStyle::IGLS_HalfIndent:
-  case FormatStyle::IGLS_InnerIndent:
-    break;
+  const auto IndentGotoLabel = Style.IndentGotoLabels;
+  const auto OldLineLevel = Line->Level;
+  auto &Level = Line->Level;
+
+  if (IsGotoLabel && IndentGotoLabel == FormatStyle::IGLS_NoIndent)
+    Level = 0;
+
+  if (!IsGotoLabel || IndentGotoLabel == FormatStyle::IGLS_OuterIndent) {
+    if (OldLineLevel > 1 || (!Line->InPPDirective && OldLineLevel > 0))
+      --Level;
   }
 
   if (!IsGotoLabel && !Style.IndentCaseBlocks &&
       CommentsBeforeNextToken.empty() && FormatTok->is(tok::l_brace)) {
-    CompoundStatementIndenter Indenter(this, Line->Level,
+    CompoundStatementIndenter Indenter(this, Level,
                                        Style.BraceWrapping.AfterCaseLabel,
                                        Style.BraceWrapping.IndentBraces);
     parseBlock();
@@ -3462,7 +3458,7 @@ void UnwrappedLineParser::parseLabel(
         addUnwrappedLine();
         if (!Style.IndentCaseBlocks &&
             Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
-          ++Line->Level;
+          ++Level;
         }
       }
       parseStructuralElement();
@@ -3473,7 +3469,9 @@ void UnwrappedLineParser::parseLabel(
       nextToken();
     addUnwrappedLine();
   }
-  Line->Level = OldLineLevel;
+
+  Level = OldLineLevel;
+
   if (FormatTok->isNot(tok::l_brace)) {
     parseStructuralElement();
     addUnwrappedLine();

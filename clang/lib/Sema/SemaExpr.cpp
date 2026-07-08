@@ -6828,7 +6828,7 @@ static bool MayBeFunctionType(const ASTContext &Context, const Expr *E) {
       T == Context.BuiltinFnTy || T == Context.OverloadTy ||
       T->isFunctionType() || T->isFunctionReferenceType() ||
       T->isMemberFunctionPointerType() || T->isFunctionPointerType() ||
-      T->isBlockPointerType() || T->isRecordType())
+      T->isBlockPointerType() || T->isRecordType() || T->isUndeducedType())
     return true;
 
   return isa<CallExpr, DeclRefExpr, MemberExpr, CXXPseudoDestructorExpr,
@@ -15527,8 +15527,7 @@ static ExprResult convertHalfVecBinOp(Sema &S, ExprResult LHS, ExprResult RHS,
 /// is needed.
 static bool needsConversionOfHalfVec(bool OpRequiresConversion, ASTContext &Ctx,
                                      Expr *E0, Expr *E1 = nullptr) {
-  if (!OpRequiresConversion || Ctx.getLangOpts().NativeHalfType ||
-      Ctx.getTargetInfo().useFP16ConversionIntrinsics())
+  if (!OpRequiresConversion || Ctx.getLangOpts().NativeHalfType)
     return false;
 
   auto HasVectorOfHalfType = [&Ctx](Expr *E) {
