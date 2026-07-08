@@ -86,13 +86,7 @@ public:
   }
 
   bool VisitLambdaExpr(LambdaExpr *L) override {
-    // TraverseLambdaExpr directly visits the body stmt, skipping the
-    // CXXMethodDecl, which is a contributor that needs to be collected.
-    // The system-header gate fires via the delegated VisitFunctionDecl
-    // (the call operator's spelling location is the lambda's source
-    // location), so no separate gate here.
-    VisitFunctionDecl(L->getCallOperator());
-    return true;
+    return VisitFunctionDecl(L->getCallOperator());
   }
 
 private:

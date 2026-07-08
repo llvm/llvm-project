@@ -995,10 +995,7 @@ def _ssaf_no_extract_from_system_headers :
   Group<SSAF_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<
-    "Skip declarations in system headers during SSAF contributor "
-    "enumeration. By default the SSAF TU summary extractors enumerate "
-    "system-header declarations alongside user-source declarations; "
-    "this flag opts out of that enumeration.">,
+    "Skip declarations in system headers during SSAF summary extraction">,
   MarshallingInfoNegativeFlag<SSAFOpts<"ExtractFromSystemHeaders">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
