@@ -19,9 +19,9 @@
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -Wno-experimental-header-units -fsyntax-only %t/import_args_fail.cpp -fmodule-file=%t/args.pcm -verify
 //
 // The -fprofiles-test-profiles gate only controls whether test:: rules fire;
-// the designator is recorded and exported regardless (see the Driver Flag
-// section of ProfilesFramework.rst), so require validates identically under
-// plain -fprofiles.
+// the designator is recorded and exported regardless (see the Test Profiles
+// section of ProfilesFrameworkInternals.rst), so require validates identically
+// under plain -fprofiles.
 // RUN: %clang_cc1 -std=c++20 -fprofiles -emit-header-unit -xc++-user-header %t/enforced.h -o %t/enforced-noflag.pcm
 // RUN: %clang_cc1 -std=c++20 -fprofiles -Wno-experimental-header-units -fsyntax-only %t/import_ok.cpp -fmodule-file=%t/enforced-noflag.pcm -verify
 //

@@ -497,7 +497,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     // this is best-effort: inherit only when the interface is already resident;
     // never force a load and never diagnose its absence. For guaranteed
     // enforcement a partition implementation unit should repeat
-    // [[profiles::enforce]] (see ProfilesFramework.rst).
+    // [[profiles::enforce]] (see ProfilesFrameworkInternals.rst).
     if (Module *Primary = PP.getHeaderSearchInfo().getModuleMap().findModule(
             Mod->getPrimaryModuleInterfaceName()))
       for (const auto &EP : Primary->EnforcedProfileDesignators)

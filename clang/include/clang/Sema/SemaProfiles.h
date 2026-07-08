@@ -8,7 +8,8 @@
 /// \file
 /// This file declares semantic analysis for the C++ profiles framework
 /// (P3589R2) and the built-in std::init initialization profile (P4222R1.1).
-/// See clang/docs/ProfilesFramework.rst for the design.
+/// See clang/docs/ProfilesFrameworkInternals.rst for the design and
+/// clang/docs/ProfilesFramework.rst for the user-facing documentation.
 ///
 //===----------------------------------------------------------------------===//
 

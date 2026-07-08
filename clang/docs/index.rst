@@ -32,6 +32,7 @@ Using Clang as a Compiler
    DataFlowAnalysisIntro
    FunctionEffectAnalysis
    ProfilesFramework
+   ProfilesFrameworkInternals
    AddressSanitizer
    ThreadSanitizer
    MemorySanitizer
