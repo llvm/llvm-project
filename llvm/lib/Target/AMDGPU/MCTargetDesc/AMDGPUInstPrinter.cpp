@@ -178,8 +178,7 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
   }
 
   if (Imm & CPol::GLC)
-    O << ((AMDGPU::isGFX940(STI) &&
-           !(MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::SMRD)) ? " sc0"
+    O << ((AMDGPU::isGFX940(STI) && !SIInstrFlags::isSMRD(MII, *MI)) ? " sc0"
                                                                      : " glc");
   if (Imm & CPol::SLC)
     O << (AMDGPU::isGFX940(STI) ? " nt" : " slc");
@@ -275,7 +274,7 @@ void AMDGPUInstPrinter::printDim(const MCInst *MI, unsigned OpNo,
 
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByEncoding(Dim);
   if (DimInfo)
-    O << DimInfo->AsmSuffix;
+    O << AMDGPU::getMIMGDimInfoStr(DimInfo->AsmSuffix);
   else
     O << Dim;
 }
@@ -423,7 +422,7 @@ void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, unsigned Opc,
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI, raw_ostream &O) {
   auto Opcode = MI->getOpcode();
-  auto Flags = MII.get(Opcode).TSFlags;
+  auto Flags = SIInstrFlags::getTSFlags(MII, Opcode);
   if (OpNo == 0) {
     if (Flags & SIInstrFlags::VOP3 && Flags & SIInstrFlags::DPP)
       O << "_e64_dpp";

@@ -43,5 +43,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -target-cpu c86-4g-m4 -verify %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -target-cpu c86-4g-m6 -verify %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -target-cpu c86-4g-m7 -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -target-cpu c86-4g-m8 -verify %s
 //
 // expected-no-diagnostics

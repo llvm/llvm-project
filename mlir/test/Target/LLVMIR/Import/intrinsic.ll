@@ -104,6 +104,14 @@ define void @fabs_test(float %0, <8 x float> %1) {
   %4 = call <8 x float> @llvm.fabs.v8f32(<8 x float> %1)
   ret void
 }
+; CHECK-LABEL:  llvm.func @arithmetic_fence_test
+define void @arithmetic_fence_test(float %0, <8 x float> %1) {
+  ; CHECK: llvm.intr.arithmetic.fence(%{{.*}}) : (f32) -> f32
+  %3 = call float @llvm.arithmetic.fence.f32(float %0)
+  ; CHECK: llvm.intr.arithmetic.fence(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %4 = call <8 x float> @llvm.arithmetic.fence.v8f32(<8 x float> %1)
+  ret void
+}
 ; CHECK-LABEL:  llvm.func @sqrt_test
 define void @sqrt_test(float %0, <8 x float> %1) {
   ; CHECK: llvm.intr.sqrt(%{{.*}}) : (f32) -> f32
@@ -517,6 +525,9 @@ define void @masked_load_store_intrinsics(ptr %vec, <7 x i1> %mask) {
   ; CHECK:  llvm.intr.masked.store %[[VAL2]], %[[VEC]], %[[MASK]] {alignment = 8 : i32}
   ; CHECK-SAME:  vector<7xf32>, vector<7xi1> into !llvm.ptr
   call void @llvm.masked.store.v7f32.p0(<7 x float> %2, ptr %vec, i32 8, <7 x i1> %mask)
+  ; CHECK:  llvm.intr.masked.store %[[VAL2]], %[[VEC]], %[[MASK]] {alignment = 8 : i32, nontemporal}
+  ; CHECK-SAME:  vector<7xf32>, vector<7xi1> into !llvm.ptr 
+  call void @llvm.masked.store.v7f32.p0(<7 x float> %2, ptr %vec, i32 8, <7 x i1> %mask), !nontemporal !{i32 1}
   ret void
 }
 

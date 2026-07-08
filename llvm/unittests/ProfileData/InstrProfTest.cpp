@@ -1312,6 +1312,48 @@ static void addValueProfData(InstrProfRecord &Record) {
   }
 }
 
+TEST(InstrProfRecordTest, CopyAssignmentCopiesUniformCounts) {
+  InstrProfRecord Src({10, 20});
+  Src.UniformCounts = {9, 18};
+
+  InstrProfRecord Dst;
+  Dst = Src;
+
+  EXPECT_THAT(Dst.UniformCounts, ElementsAre(9, 18));
+}
+
+TEST(InstrProfRecordTest, ClearClearsUniformProfileData) {
+  InstrProfRecord Record({10, 20});
+  Record.UniformCounts = {9, 18};
+  Record.UniformityBits = {0x03};
+  Record.OffloadDeviceWaveSize = 32;
+
+  Record.Clear();
+
+  EXPECT_TRUE(Record.Counts.empty());
+  EXPECT_TRUE(Record.UniformCounts.empty());
+  EXPECT_TRUE(Record.UniformityBits.empty());
+  EXPECT_EQ(Record.OffloadDeviceWaveSize, 0);
+}
+
+TEST(InstrProfRecordTest, MergeUniformCountsRecomputesUniformity) {
+  InstrProfRecord Record({100, 100});
+  Record.UniformCounts = {100, 89};
+  Record.computeBlockUniformity();
+  EXPECT_TRUE(Record.isBlockUniform(0));
+  EXPECT_FALSE(Record.isBlockUniform(1));
+
+  InstrProfRecord Other({100, 100});
+  Other.UniformCounts = {100, 100};
+  auto Warn = [](instrprof_error) { ADD_FAILURE(); };
+  Record.merge(Other, /*Weight=*/1, Warn);
+
+  EXPECT_THAT(Record.Counts, ElementsAre(200, 200));
+  EXPECT_THAT(Record.UniformCounts, ElementsAre(200, 189));
+  EXPECT_TRUE(Record.isBlockUniform(0));
+  EXPECT_TRUE(Record.isBlockUniform(1));
+}
+
 TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   InstrProfRecord SrcRecord({1ULL << 31, 2});
   addValueProfData(SrcRecord);

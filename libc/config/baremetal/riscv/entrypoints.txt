@@ -321,6 +321,10 @@ set(TARGET_LIBC_ENTRYPOINTS
 
 set(TARGET_LIBM_ENTRYPOINTS
     # complex.h entrypoints
+    libc.src.complex.cabs
+    libc.src.complex.cabsf
+    libc.src.complex.carg
+    libc.src.complex.cargf
     libc.src.complex.creal
     libc.src.complex.crealf
     libc.src.complex.creall
@@ -610,7 +614,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.asinhf16
     libc.src.math.atan2f16
     libc.src.math.canonicalizef16
-    libc.src.math.cbrtf
+    libc.src.math.cbrtf16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
     libc.src.math.cosf16
@@ -824,6 +828,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
   libc.src.math.copysignbf16
+  libc.src.math.expbf16
   libc.src.math.fabsbf16
   libc.src.math.fdimbf16
   libc.src.math.floorbf16
@@ -871,6 +876,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
   libc.src.math.sqrtbf16
+  libc.src.math.tanbf16
   libc.src.math.truncbf16
   libc.src.math.totalorderbf16
   libc.src.math.totalordermagbf16

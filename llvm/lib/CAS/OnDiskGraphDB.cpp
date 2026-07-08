@@ -927,7 +927,7 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
           llvm::errc::illegal_byte_sequence,
           "bad record at 0x" +
               utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
-              Msg.str());
+              Msg);
     };
 
     if (Record.Data.size() != sizeof(TrieRecord))
@@ -1003,7 +1003,7 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
     auto dataError = [&](Twine Msg) {
       return createStringError(llvm::errc::illegal_byte_sequence,
                                "bad data for digest \'" + toHex(I->Hash) +
-                                   "\': " + Msg.str());
+                                   "\': " + Msg);
     };
     SmallVector<ArrayRef<uint8_t>> Refs;
     ArrayRef<char> StoredData;
@@ -1073,7 +1073,7 @@ Error OnDiskGraphDB::validateObjectID(ObjectID ExternalRef) const {
         llvm::errc::illegal_byte_sequence,
         "bad ref=0x" +
             utohexstr(ExternalRef.getOpaqueData(), /*LowerCase=*/true) + ": " +
-            Msg.str());
+            Msg);
   };
 
   if (ExternalRef.getOpaqueData() == 0)

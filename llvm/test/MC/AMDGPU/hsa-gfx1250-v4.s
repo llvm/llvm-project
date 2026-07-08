@@ -65,7 +65,7 @@
 .text
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1250"
-// ASM: .amdgcn_target "amdgcn-amd-amdhsa--gfx1250"
+// ASM: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1250"
 
 .p2align 8
 .type minimal,@function
