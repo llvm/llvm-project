@@ -143,7 +143,7 @@ namespace GH67603 {
     using C = B;
     using D = B;
     N t = 0 ? A<decltype(C())>() : A<decltype(D())>();
-    // expected-error@-1 {{rvalue of type 'A<decltype(C())>' (aka 'long')}}
+    // expected-error@-1 {{rvalue of type 'A<decltype(type-parameter-0-0())>' (aka 'long')}}
   }
   template void h<int>();
 } // namespace GH67603
@@ -266,3 +266,19 @@ namespace FunctionTypeExtInfo {
     // expected-error@-1 {{lvalue of type 'void (*)(__attribute__((swift_async_context)) B *)'}}
   } // namespace TypedefType
 } // namespace FunctionTypeExtInfo
+
+namespace Decltype {
+  N t1 = 0 ? decltype((X1*){}){} : decltype((Y1*){}){};
+  // expected-error@-1 {{rvalue of type 'decltype((int *){})' (aka 'int *')}}
+
+  using R = X1*;
+  extern R a;
+  using D1 = decltype(a);
+
+  using R = Y1*;
+  extern R a;
+  using E1 = decltype(a);
+
+  N t2 = 0 ? D1{} : E1{};
+  // expected-error@-1 {{rvalue of type 'decltype(a)' (aka 'int *')}}
+} // namespace Decltype

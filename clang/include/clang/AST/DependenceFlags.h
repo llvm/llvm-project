@@ -194,7 +194,13 @@ public:
   TypeDependence type() const {
     return translate(V, UnexpandedPack, TypeDependence::UnexpandedPack) |
            translate(V, Instantiation, TypeDependence::Instantiation) |
-           translate(V, Dependent, TypeDependence::Dependent) |
+           // There's a non-obvious choice here: Should Value dependence be
+           // translated to type dependence or not. After CWG2064, `decltype`
+           // only syntactically depends on the value of the expression. For all
+           // the other use cases where the value is dependended on
+           // semantically, this will be modeled through special purpose type
+           // nodes which are always type dependent anyway.
+           translate(V, Type, TypeDependence::Dependent) |
            translate(V, Error, TypeDependence::Error) |
            translate(V, VariablyModified, TypeDependence::VariablyModified);
   }

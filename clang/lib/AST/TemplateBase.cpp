@@ -426,13 +426,9 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
     break;
 
   case Expression: {
-    const Expr *E = getAsExpr();
-    bool IsCanonical = isCanonicalExpr();
-    ID.AddBoolean(IsCanonical);
-    if (IsCanonical)
-      E->Profile(ID, Context, true);
-    else
-      ID.AddPointer(E);
+    CanonicalizationKindOrNone Kind = getExprCanonKind();
+    ID.AddInteger(Kind.toInternalRepresentation());
+    getAsExpr()->Profile(ID, Context, Kind);
     break;
   }
 

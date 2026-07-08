@@ -502,7 +502,7 @@ namespace TestPartialSpecNTTP {
 // JSON-NEXT:           {
 // JSON-NEXT:             "kind": "TemplateArgument",
 // JSON-NEXT:             "isExpr": true,
-// JSON-NEXT:             "isCanonical": true,
+// JSON-NEXT:             "CanonicalKind": "Structural",
 // JSON-NEXT:             "inner": [
 // JSON-NEXT:               {
 // JSON-NEXT:                 "id": {{.+}},
@@ -519,7 +519,7 @@ namespace TestPartialSpecNTTP {
 // JSON-NEXT:                     "qualType": "bool"
 // JSON:          "kind": "TemplateArgument",
 // JSON-NEXT:     "isExpr": true,
-// JSON-NEXT:     "isCanonical": true,
+// JSON-NEXT:     "CanonicalKind": "Structural",
 // JSON-NEXT:     "inner": [
 // JSON-NEXT:       {
 // JSON-NEXT:         "id": {{.+}},
@@ -642,7 +642,7 @@ namespace TestPartialSpecNTTP {
 // JSON-NEXT:           {
 // JSON-NEXT:             "kind": "TemplateArgument",
 // JSON-NEXT:             "isExpr": true,
-// JSON-NEXT:             "isCanonical": true,
+// JSON-NEXT:             "CanonicalKind": "Structural",
 // JSON-NEXT:             "inner": [
 // JSON-NEXT:               {
 // JSON-NEXT:                 "id": {{.+}},
@@ -659,7 +659,7 @@ namespace TestPartialSpecNTTP {
 // JSON-NEXT:                     "qualType": "bool"
 // JSON:          "kind": "TemplateArgument",
 // JSON-NEXT:     "isExpr": true,
-// JSON-NEXT:     "isCanonical": true,
+// JSON-NEXT:     "CanonicalKind": "Structural",
 // JSON-NEXT:     "inner": [
 // JSON-NEXT:       {
 // JSON-NEXT:         "id": {{.+}},

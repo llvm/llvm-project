@@ -7075,15 +7075,14 @@ QualType TreeTransform<Derived>::TransformDecltypeType(TypeLocBuilder &TLB,
     return QualType();
 
   QualType Result = TL.getType();
-  if (getDerived().AlwaysRebuild() ||
-      E.get() != T->getUnderlyingExpr()) {
+  if (getDerived().AlwaysRebuild() || E.get() != TL.getUnderlyingExpr()) {
     Result = getDerived().RebuildDecltypeType(E.get(), TL.getDecltypeLoc());
     if (Result.isNull())
       return QualType();
   }
-  else E.get();
 
   DecltypeTypeLoc NewTL = TLB.push<DecltypeTypeLoc>(Result);
+  NewTL.setUnderlyingExpr(E.get());
   NewTL.setDecltypeLoc(TL.getDecltypeLoc());
   NewTL.setRParenLoc(TL.getRParenLoc());
   return Result;

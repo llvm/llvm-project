@@ -2,8 +2,8 @@
 
 namespace RedeclAliasTypedef {
   template<typename U> using T = int;
-  template<typename U> using T = int;
-  template<typename U> using T = T<U>;
+  template<typename U> using T = int;  // expected-note  {{previous definition}}
+  template<typename U> using T = T<U>; // expected-error {{redefinition with different types}}
 }
 
 namespace IllegalTypeIds {

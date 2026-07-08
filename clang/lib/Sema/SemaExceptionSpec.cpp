@@ -580,13 +580,10 @@ static bool CheckEquivalentExceptionSpecImpl(
   // C++14 [except.spec]p3:
   //   Two exception-specifications are compatible if [...] both have the form
   //   noexcept(constant-expression) and the constant-expressions are equivalent
-  if (OldEST == EST_DependentNoexcept && NewEST == EST_DependentNoexcept) {
-    llvm::FoldingSetNodeID OldFSN, NewFSN;
-    Old->getNoexceptExpr()->Profile(OldFSN, S.Context, true);
-    New->getNoexceptExpr()->Profile(NewFSN, S.Context, true);
-    if (OldFSN == NewFSN)
+  if (OldEST == EST_DependentNoexcept && NewEST == EST_DependentNoexcept)
+    if (S.Context.hasSameExpr(Old->getNoexceptExpr(), New->getNoexceptExpr(),
+                              CanonicalizationKind::Functional))
       return false;
-  }
 
   // Dynamic exception specifications with the same set of adjusted types
   // are compatible.

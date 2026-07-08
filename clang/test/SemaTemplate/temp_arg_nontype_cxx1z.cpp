@@ -406,14 +406,14 @@ namespace PR42362 {
 namespace QualConv {
   int *X;
   template<const int *const *P> void f() {
-    using T = decltype(P);
-    using T = const int* const*;
+    using T = decltype(P);       // expected-note  {{previous definition}}
+    using T = const int* const*; // expected-error {{redefinition with different types ('const int *const *' vs 'decltype(P)' (aka 'const int *const *'))}}
   }
   template void f<&X>();
 
   template<const int *const &R> void g() {
-    using T = decltype(R);
-    using T = const int *const &;
+    using T = decltype(R);        // expected-note  {{previous definition}}
+    using T = const int *const &; // expected-error {{redefinition with different types ('const int *const &' vs 'decltype(R)' (aka 'const int *const &'))}}
   }
   template void g<(const int *const&)X>();
 }
@@ -421,15 +421,17 @@ namespace QualConv {
 namespace FunctionConversion {
   struct a { void c(char *) noexcept; };
   template<void (a::*f)(char*)> void g() {
-    using T = decltype(f);
+    using T = decltype(f);        // expected-note  {{previous definition}}
     using T = void (a::*)(char*); // (not 'noexcept')
+    // expected-error@-1 {{redefinition with different types ('void (a::*)(char *)' vs 'decltype(f)' (aka 'void (a::*)(char *)'))}}
   }
   template void g<&a::c>();
 
   void c() noexcept;
   template<void (*p)()> void h() {
-    using T = decltype(p);
+    using T = decltype(p);// expected-note  {{previous definition}}
     using T = void (*)(); // (not 'noexcept')
+    // expected-error@-1 {{redefinition with different types ('void (*)()' vs 'decltype(p)' (aka 'void (*)()'))}}
   }
   template void h<&c>();
 }
@@ -437,8 +439,8 @@ namespace FunctionConversion {
 namespace VoidPtr {
   // Note, this is an extension in C++17 but valid in C++20.
   template<void *P> void f() {
-    using T = decltype(P);
-    using T = void*;
+    using T = decltype(P); // expected-note  {{previous definition}}
+    using T = void*;       // expected-error {{redefinition with different types ('void *' vs 'decltype(P)' (aka 'void *'))}}
   }
   int n;
   template void f<(void*)&n>();

@@ -348,6 +348,80 @@ namespace clang {
     SD_Dynamic         ///< Dynamic storage duration.
   };
 
+  /// Kinds of canonicalization.
+  ///
+  /// Canonicalization is a process for transforming (or viewing) a type or
+  /// expression in a way that ignores certain differences that don't affect
+  /// certain aspects of the semantics of the program.
+  ///
+  /// These kinds of canonicalization are used to represent certain equivalence
+  /// classes, where the classes are themselves ordered, one stronger or a
+  /// subset of the other.
+  enum class CanonicalizationKind : uint8_t {
+    /// This kind of canonicalization ignores any differences that don't affect
+    /// the semantics of the program.
+    /// This never ignores references to template parameters, but is otherwise
+    /// the same as the 'Structural' kind when these references don't occur.
+    /// This preserves enough structure to guarantee that any two types in this
+    /// equivalence class have identical results under the same template
+    /// parameter substitution. Substitution will either succeed for both and
+    /// produce 'Structural'-equivalent types, or it will fail for both, for the
+    /// same set of potential substitutions.
+    ///
+    /// This guarantees that these types will exhibit identical SFINAE behavior.
+    /// But this is a weaker guarantee than the functional equivalence proposed
+    /// in the C++ standard, which would require that types which are not
+    /// functionally-equivalent SFINAE differently in at least one way, which
+    /// is not really feasible to implement.
+    ///
+    /// This relationship follows syntactically from type to type.
+    /// For example, the underlying type of a type alias can contain
+    /// instantiation-dependent-only types which may fail substitution later.
+    /// But this underlying type exists in a separate context, and this failure
+    /// can still happen in that context when the type alias itself is
+    /// instantiated.
+    /// So functional canonicalization can ignore these
+    /// instantiation-dependent-only types, because ignoring them won't change
+    /// the behaviour of the program (it will still be invalid).
+    /// But a typedef can't be ignored completely: It can be referred to using a
+    /// qualified name, and this name qualification can contain
+    /// instantiation-dependent-only types which may fail substitution later.
+    /// This substitution failure can appear only in this spelling of the type,
+    /// so it can't be ignored under functional canonicalization.
+    ///
+    /// This is the kind of canonicalization used to determine whether two
+    /// declarations refer to the same entity, and for mangling.
+    Functional,
+    /// Like 'Functional' canonicalization, but ignores any differences that
+    /// could arise from substitution failures.
+    ///
+    /// By using this kind of canonicalization, it is implicitly assumed that
+    /// substitution for any referred template parameters will be valid.
+    ///
+    /// For a template type alias where some template parameters are unused,
+    /// any template arguments to these parameters will be ignored under this
+    /// canonicalization, unlike 'Functional' canonicalization where they would
+    /// be considered part of the type.
+    ///
+    /// This is a superset of 'Functional' canonicalization: all elements which
+    /// are equivalent under 'Functional' canonicalization are also equivalent
+    /// under 'Structural' canonicalization, but not vice versa.
+    ///
+    /// This is the kind of canonicalization used to determine whether two
+    /// template specializations refer to the same entity.
+    Structural,
+  };
+
+  /// This compares CanonicalizationKinds such that 'Structural' is greater than
+  /// 'Functional'.
+  constexpr bool operator<(CanonicalizationKind LHS, CanonicalizationKind RHS) {
+    return llvm::to_underlying(LHS) < llvm::to_underlying(RHS);
+  }
+
+  /// An optional CanonicalizationKind. Following standard convention, a nullopt
+  /// is considered lesser than any value.
+  using CanonicalizationKindOrNone = OptionalUnsigned<CanonicalizationKind>;
+
   /// Describes the nullability of a particular type.
   enum class NullabilityKind : uint8_t {
     /// Values of this type can never be null.

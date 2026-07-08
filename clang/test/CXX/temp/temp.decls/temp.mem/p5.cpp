@@ -92,7 +92,7 @@ template X0::operator B<0>() const; // expected-error {{undefined function templ
 // index expression as non-canonical is extra bad.
 template X0::operator C<int[1]>() const; // expected-error {{undefined function template 'operator C<type-parameter-0-0[V]>'}}
 #if __cplusplus >= 201103L
-template X0::operator D<int, 0>() const; // expected-error {{undefined function template 'operator D<decltype(value-parameter-0-0), value-parameter-0-0>'}}
+template X0::operator D<int, 0>() const; // expected-error {{undefined function template 'operator D<int, value-parameter-0-0>'}}
 #endif
 
 void test_X0(X0 x0, const X0 &x0c) {

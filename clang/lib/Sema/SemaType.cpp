@@ -5287,6 +5287,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
               // Reject, but continue to parse 'float(const void)'.
               if (ParamTy.hasQualifiers())
                 S.Diag(DeclType.Loc, diag::err_void_param_qualified);
+              else if (!Context.hasEquivalentType(ParamTy, Context.VoidTy))
+                S.Diag(DeclType.Loc,
+                       diag::err_void_param_not_equivalent_to_void);
 
               for (const auto *A : Param->attrs()) {
                 S.Diag(A->getLoc(), diag::warn_attribute_on_void_param)

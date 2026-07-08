@@ -139,16 +139,17 @@ void TemplateParameterList::Profile(llvm::FoldingSetNodeID &ID,
   const Expr *RC = getRequiresClause();
   ID.AddBoolean(RC != nullptr);
   if (RC)
-    RC->Profile(ID, C, /*Canonical=*/true);
+    RC->Profile(ID, C, CanonicalizationKind::Functional);
   ID.AddInteger(size());
   for (NamedDecl *D : *this) {
     if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(D)) {
       ID.AddInteger(0);
       ID.AddBoolean(NTTP->isParameterPack());
-      NTTP->getType().getCanonicalType().Profile(ID);
+      C.getCanonicalType(NTTP->getType(), CanonicalizationKind::Functional)
+          .Profile(ID);
       ID.AddBoolean(NTTP->hasPlaceholderTypeConstraint());
       if (const Expr *E = NTTP->getPlaceholderTypeConstraint())
-        E->Profile(ID, C, /*Canonical=*/true);
+        E->Profile(ID, C, CanonicalizationKind::Functional);
       continue;
     }
     if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(D)) {
@@ -156,8 +157,8 @@ void TemplateParameterList::Profile(llvm::FoldingSetNodeID &ID,
       ID.AddBoolean(TTP->isParameterPack());
       ID.AddBoolean(TTP->hasTypeConstraint());
       if (const TypeConstraint *TC = TTP->getTypeConstraint())
-        TC->getImmediatelyDeclaredConstraint()->Profile(ID, C,
-                                                        /*Canonical=*/true);
+        TC->getImmediatelyDeclaredConstraint()->Profile(
+            ID, C, CanonicalizationKind::Functional);
       continue;
     }
     const auto *TTP = cast<TemplateTemplateParmDecl>(D);

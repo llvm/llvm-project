@@ -3541,12 +3541,8 @@ static bool checkPreviousOMPAllocateAttribute(
   if (AllocatorsMatch &&
       AllocatorKind == OMPAllocateDeclAttr::OMPUserDefinedMemAlloc &&
       Allocator && PrevAllocator) {
-    const Expr *AE = Allocator->IgnoreParenImpCasts();
-    const Expr *PAE = PrevAllocator->IgnoreParenImpCasts();
-    llvm::FoldingSetNodeID AEId, PAEId;
-    AE->Profile(AEId, S.Context, /*Canonical=*/true);
-    PAE->Profile(PAEId, S.Context, /*Canonical=*/true);
-    AllocatorsMatch = AEId == PAEId;
+    AllocatorsMatch = S.Context.hasSameExpr(
+        Allocator->IgnoreParenImpCasts(), PrevAllocator->IgnoreParenImpCasts());
   }
   if (!AllocatorsMatch) {
     SmallString<256> AllocatorBuffer;
@@ -21258,13 +21254,9 @@ static bool actOnOMPReductionKindClause(
           (DeclareReductionRef.isUsable() && IsParentBOK) ||
           (IsParentBOK && BOK != ParentBOK) || IsParentReductionOp) {
         bool EmitError = true;
-        if (IsParentReductionOp && DeclareReductionRef.isUsable()) {
-          llvm::FoldingSetNodeID RedId, ParentRedId;
-          ParentReductionOp->Profile(ParentRedId, Context, /*Canonical=*/true);
-          DeclareReductionRef.get()->Profile(RedId, Context,
-                                             /*Canonical=*/true);
-          EmitError = RedId != ParentRedId;
-        }
+        if (IsParentReductionOp && DeclareReductionRef.isUsable())
+          EmitError = !Context.hasSameExpr(ParentReductionOp,
+                                           DeclareReductionRef.get());
         if (EmitError) {
           S.Diag(ReductionId.getBeginLoc(),
                  diag::err_omp_reduction_identifier_mismatch)

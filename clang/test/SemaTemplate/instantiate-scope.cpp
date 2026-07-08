@@ -8,12 +8,14 @@ template<typename ...T> struct X {
 
 template<typename T, typename U> using A = T;
 
-// FIXME: These definitions are not OK, X<A<T, decltype(...)>...> is not equivalent to X<T...>.
+// These definitions are not OK, X<A<T, decltype(...)>...> is not equivalent to X<T...>.
 template<typename ...T>
 void X<A<T, decltype(f(T()))>...>::f(int) {}
+// expected-error@-1 {{nested name specifier 'X<A<T, decltype(f(T()))>...>' for declaration does not refer into a class}}
 
 template<typename ...T>
-int X<A<T, decltype(f(T()))>...>::n = 0; // expected-error {{undeclared}}
+int X<A<T, decltype(f(T()))>...>::n = 0;
+// expected-error@-1 {{nested name specifier 'X<A<T, decltype(f(T()))>...>' for declaration does not refer into a class}}
 
 struct Y {}; void f(Y);
 
@@ -22,7 +24,7 @@ void g() {
   X<Y>().f(0);
   X<Y>::n = 1;
 
-  // FIXME: There should be no substitutiton failure since the out-of-line definitions were not valid.
+  // No substitutiton failure since the out-of-line definitions were not valid.
   X<void>().f(0);
-  X<void>::n = 1; // expected-note {{instantiation of}}
+  X<void>::n = 1;
 }

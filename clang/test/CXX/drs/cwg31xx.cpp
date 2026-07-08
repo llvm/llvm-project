@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98,cxx98-14
 // RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,cxx11-17,since-cxx11
 // RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,cxx14-17,cxx11-17,since-cxx11,since-cxx14
 // RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx14-17,cxx11-17,since-cxx11,since-cxx14,since-cxx17
@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20
 // RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20
 
-// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,cxx98-14
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,cxx98,cxx98-14
 // RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,cxx98-14,cxx11-17,since-cxx11
 // RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,cxx98-14,cxx14-17,cxx11-17,since-cxx11,since-cxx14
 // RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,cxx14-17,cxx11-17,since-cxx11,since-cxx14,since-cxx17
@@ -55,7 +55,7 @@ struct Pinned {
 
 struct Source {
   operator Pinned&&() const;
-  
+
   template<int>
   Source get() noexcept;
 };
@@ -69,13 +69,13 @@ namespace std {
   struct tuple_size<cwg3135::Source> {
     static constexpr int value = 1;
   };
-  
+
   template<>
   struct tuple_element<0, cwg3135::Source> { using type = cwg3135::Pinned; };
 } // namespace std
 
 namespace cwg3135 {
-// CWG3135: `x` is of type Pinned rather than Pinned&&. 
+// CWG3135: `x` is of type Pinned rather than Pinned&&.
 // This leads to the deleted copy ctor being called.
 auto [x] = Source{};
 // since-cxx17-error@-1 {{initializing binding of type 'Pinned' invokes deleted constructor}}
@@ -108,3 +108,22 @@ decltype([b = C(3)](){ return 4; }()) x;
 } // namespace cwg3156
 
 // cwg3172: na
+
+namespace cwg3179 { // cwg3179: 23 tentatively ready 2026-04-30
+#if __cplusplus >= 201103L
+  template<class> using void_t = void;
+  template<class T> struct S {
+    void f(void_t<T*>);
+    // expected-error@-1 {{'void' as parameter must not involve template parameters}}
+
+    using X = int(void_t<T*>);
+    // expected-error@-1 {{'void' as parameter must not involve template parameters}}
+  };
+  template<class T> void g(decltype((void)(T*)0));
+  // expected-error@-1 {{'void' as parameter must not involve template parameters}}
+#endif
+#if __cplusplus >= 202002L
+  template<class T> bool v = requires(void_t<T>) { true; };
+  // expected-error@-1 {{'void' as parameter must not involve template parameters}}
+#endif
+} // namespace cwg3179

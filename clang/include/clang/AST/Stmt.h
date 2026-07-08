@@ -1621,8 +1621,14 @@ public:
   /// other lambda expressions. When true, the lambda expressions with the same
   /// implementation will be considered to be the same. ProfileLambdaExpr should
   /// only be true when we try to merge two declarations within modules.
-  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-               bool Canonical, bool ProfileLambdaExpr = false) const;
+  /// \returns The maximum canonicalization kind this expression would have
+  /// profiled identically as.
+  /// FIXME: This is not supported for CanonKind == nullopt yet, and in that
+  /// case nullopt will always be returned.
+  CanonicalizationKindOrNone Profile(llvm::FoldingSetNodeID &ID,
+                                     const ASTContext &Context,
+                                     CanonicalizationKindOrNone CanonKind,
+                                     bool ProfileLambdaExpr = false) const;
 
   /// Calculate a unique representation for a statement that is
   /// stable across compiler invocations.

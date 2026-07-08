@@ -5097,6 +5097,8 @@ def err_void_only_param : Error<
   "'void' must be the first and only parameter if specified">;
 def err_void_param_qualified : Error<
   "'void' as parameter must not have type qualifiers">;
+def err_void_param_not_equivalent_to_void : Error<
+  "'void' as parameter must not involve template parameters">;
 def err_void_explicit_object_param : Error<
   "explicit object parameter cannot have 'void' type">;
 def err_ident_list_in_fn_declaration : Error<

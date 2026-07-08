@@ -1250,6 +1250,13 @@ getExplicitVisibilityAux(const NamedDecl *ND,
       return getVisibilityOf(InstantiatedFrom, kind);
   }
 
+  // Use the most recent declaration.
+  if (!IsMostRecent && !isa<NamespaceDecl>(ND)) {
+    const NamedDecl *MostRecent = ND->getMostRecentDecl();
+    if (MostRecent != ND)
+      return getExplicitVisibilityAux(MostRecent, kind, true);
+  }
+
   // If there wasn't explicit visibility there, and this is a
   // specialization of a class template, check for visibility
   // on the pattern.
@@ -1264,13 +1271,6 @@ getExplicitVisibilityAux(const NamedDecl *ND,
       TD = TD->getPreviousDecl();
     }
     return std::nullopt;
-  }
-
-  // Use the most recent declaration.
-  if (!IsMostRecent && !isa<NamespaceDecl>(ND)) {
-    const NamedDecl *MostRecent = ND->getMostRecentDecl();
-    if (MostRecent != ND)
-      return getExplicitVisibilityAux(MostRecent, kind, true);
   }
 
   if (const auto *Var = dyn_cast<VarDecl>(ND)) {

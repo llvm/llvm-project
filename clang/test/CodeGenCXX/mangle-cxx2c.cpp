@@ -14,13 +14,13 @@ template <int I, typename...V>
 V...[I] bar() {return {};}
 
 
-template <int I, typename... T>
+template <typename... T>
 using First = T...[0];
 
 // CHECK-LABEL: define {{.*}} @_ZN8GH1120033bazILi0EJiEEEvDy_SUBSTPACK_Li0E
 // FIXME: handle indexing of partially substituted packs
-template <int I, typename...V>
-void baz(First<I, int, V...>){};
+template <int, typename...V>
+void baz(First<int, V...>){};
 
 
 void fn() {

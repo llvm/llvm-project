@@ -69,3 +69,47 @@ namespace ConflictingRedecl {
     template<typename> struct Nested; // expected-error {{member 'Nested' has the same name as its class}}
   };
 }
+
+namespace TwoLevels {
+  template <class> struct A {
+    template <bool> A f();
+  };
+  template <class T> template <bool> A<T> A<T>::f() {}
+} // namespace TwoLevels
+
+namespace TwoLevelsAlias1 {
+  template <class> struct A;
+  template <class T> using alias = T;
+  template <class T> struct B {
+    using type = alias<T>;
+    template <class> A<type> f();
+  };
+  template <class T> template <class>
+  A<typename B<T>::type> B<T>::f() {}
+} // namespace TwoLevelsAlias
+
+namespace TwoLevelsAlias2 {
+  template <class> struct A;
+  template <class T> using alias = typename A<T>::type;
+  template <class T> struct B {
+    template <class> typename A<T>::type f();
+  };
+  template <class T> template <class> alias<T> B<T>::f() {}
+} // namespace TwoLevelsAlias2
+
+namespace TwoLevelsAlias3 {
+  template <class T> using void_t = void;
+  template <class T> struct A { // expected-note {{defined here}}
+    template <int> void_t<typename T::type> f();
+  };
+  template <class T> template <int> void A<T>::f() {} // expected-error {{does not match}}
+} // namspace TwoLevelsAlias3
+
+namespace Unique {
+  template <class T> struct A {
+    template <class> A<T> f1();
+    template <class> A<T> f2();
+  };
+  template <class T> template <class> A<T> A<T>::f1() {}
+  template <class T> template <class> A<T> A<T>::f2() {}
+} // namespace Unique

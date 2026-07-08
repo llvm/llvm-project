@@ -13952,8 +13952,8 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
 
         TypeAliasDecl *OldTD = OldDecl->getTemplatedDecl();
         if (!Invalid &&
-            !Context.hasSameType(OldTD->getUnderlyingType(),
-                                 NewTD->getUnderlyingType())) {
+            !Context.hasEquivalentType(OldTD->getUnderlyingType(),
+                                       NewTD->getUnderlyingType())) {
           // FIXME: The C++0x standard does not clearly say this is ill-formed,
           // but we can't reasonably accept it.
           Diag(NewTD->getLocation(), diag::err_redefinition_different_typedef)

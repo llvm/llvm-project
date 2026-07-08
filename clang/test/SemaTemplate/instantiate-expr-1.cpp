@@ -206,3 +206,13 @@ void foo() {
 
 void test() { foo<void>(); }
 } // namespace TestAsmCleanup
+
+namespace GH190495 {
+  template <bool> struct __all;
+  template <class> bool __is_nothrow_swappable_v;
+  template <class _Tp> struct __tuple_impl {
+    void swap() noexcept(__all<__is_nothrow_swappable_v<_Tp>>::value);
+    void swap() const
+        noexcept(__all<__is_nothrow_swappable_v<const _Tp>>::value);
+  };
+} // namespace GH190495

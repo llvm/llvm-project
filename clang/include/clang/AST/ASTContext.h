@@ -399,6 +399,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// current file before they are compared locally.
   unsigned NextStringLiteralVersion = 0;
 
+  /// A cache mapping from types to their functional canonical type.
+  mutable llvm::DenseMap<const Type *, QualType> FunctionalCanonicalTypeCache;
+
   /// MD5 hash of CUID. It is calculated when first used and cached by this
   /// data member.
   mutable std::string CUIDHash;
@@ -1580,7 +1583,14 @@ public:
                                     QualType NewResultType);
 
   /// Adjust the given function result type.
-  CanQualType getCanonicalFunctionResultType(QualType ResultType) const;
+  QualType getCanonicalFunctionResultType(QualType ResultType,
+                                          CanonicalizationKind Kind,
+                                          bool &AnyNonCanonical) const;
+  CanQualType getCanonicalFunctionResultType(QualType ResultType) const {
+    bool AnyNonCanonical = false;
+    return CanQualType::CreateUnsafe(getCanonicalFunctionResultType(
+        ResultType, CanonicalizationKind::Structural, AnyNonCanonical));
+  }
 
   /// Change the result type of a function type once it is deduced.
   void adjustDeducedFunctionResultType(FunctionDecl *FD, QualType ResultType);
@@ -2023,11 +2033,14 @@ public:
       ElaboratedTypeKeyword Keyword, TemplateName T,
       ArrayRef<TemplateArgument> CanonicalArgs) const;
 
+  /// \param Unique Whether to perform uniquing for this type. Generally
+  /// avoided, unless necessary for correctness, because it's very expensive.
   QualType
   getTemplateSpecializationType(ElaboratedTypeKeyword Keyword, TemplateName T,
                                 ArrayRef<TemplateArgument> SpecifiedArgs,
                                 ArrayRef<TemplateArgument> CanonicalArgs,
-                                QualType Underlying = QualType()) const;
+                                QualType Underlying = QualType(),
+                                bool Unique = false) const;
 
   QualType
   getTemplateSpecializationType(ElaboratedTypeKeyword Keyword, TemplateName T,
@@ -2100,7 +2113,8 @@ public:
   QualType getReferenceQualifiedType(const Expr *e) const;
 
   /// C++11 decltype.
-  QualType getDecltypeType(Expr *e, QualType UnderlyingType) const;
+  QualType getDecltypeType(Expr *E, CanonicalizationKindOrNone ExprCanonKind,
+                           QualType UnderlyingType) const;
 
   QualType getPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                bool FullySubstituted = false,
@@ -2988,7 +3002,16 @@ public:
   ///
   /// Qualifiers are stripped off, functions are turned into function
   /// pointers, and arrays decay one level into pointers.
-  CanQualType getCanonicalParamType(QualType T) const;
+  QualType getCanonicalParamType(QualType T, CanonicalizationKind Kind,
+                                 bool &AnyNonCanonical) const;
+  QualType getCanonicalParamType(QualType T, CanonicalizationKind Kind) const {
+    bool AnyNonCanonical = false;
+    return getCanonicalParamType(T, Kind, AnyNonCanonical);
+  }
+  CanQualType getCanonicalParamType(QualType T) const {
+    return CanQualType::CreateUnsafe(
+        getCanonicalParamType(T, CanonicalizationKind::Structural));
+  }
 
   /// Determine whether the given types \p T1 and \p T2 are equivalent.
   static bool hasSameType(QualType T1, QualType T2) {
@@ -2998,8 +3021,27 @@ public:
     return getCanonicalType(T1) == getCanonicalType(T2);
   }
 
+  QualType getCanonicalType(QualType QT, CanonicalizationKind Kind) const;
+  QualType getCanonicalType(QualType QT, CanonicalizationKind Kind,
+                            bool &AnyNonCanonical) const {
+    QualType R = getCanonicalType(QT, Kind);
+    AnyNonCanonical |= !R.isCanonical();
+    return R;
+  }
+
+  bool hasEquivalentType(QualType T1, QualType T2) const {
+    return hasSameType(T1, T2) &&
+           getCanonicalType(T1, CanonicalizationKind::Functional) ==
+               getCanonicalType(T2, CanonicalizationKind::Functional);
+  }
+  bool isFunctionalCanonicalType(QualType T) const {
+    return getCanonicalType(T, CanonicalizationKind::Functional) == T;
+  }
+
   /// Determine whether the given expressions \p X and \p Y are equivalent.
-  bool hasSameExpr(const Expr *X, const Expr *Y) const;
+  bool hasSameExpr(const Expr *X, const Expr *Y,
+                   CanonicalizationKindOrNone CanonKind =
+                       CanonicalizationKind::Structural) const;
 
   /// Return this type as a completely-unqualified array type,
   /// capturing the qualifiers in \p Quals.
@@ -3084,6 +3126,17 @@ public:
   CallingConv getDefaultCallingConvention(bool IsVariadic,
                                           bool IsCXXMethod) const;
 
+  NestedNameSpecifier
+  getCanonicalNestedNameSpecifier(NestedNameSpecifier NNS,
+                                  CanonicalizationKind CanonKind,
+                                  bool &AnyNonCanonical) const;
+  NestedNameSpecifier
+  getCanonicalNestedNameSpecifier(NestedNameSpecifier NNS,
+                                  CanonicalizationKind CanonKind) const {
+    bool AnyNonCanonical = false;
+    return getCanonicalNestedNameSpecifier(NNS, CanonKind, AnyNonCanonical);
+  }
+
   /// Retrieves the "canonical" template name that refers to a
   /// given template.
   ///
@@ -3102,8 +3155,16 @@ public:
   /// template name uses the shortest form of the dependent
   /// nested-name-specifier, which itself contains all canonical
   /// types, values, and templates.
-  TemplateName getCanonicalTemplateName(TemplateName Name,
-                                        bool IgnoreDeduced = false) const;
+  TemplateName getCanonicalTemplateName(TemplateName Name, bool IgnoreDeduced,
+                                        CanonicalizationKind CanonKind,
+                                        bool &AnyNonCanonical) const;
+  TemplateName getCanonicalTemplateName(
+      TemplateName Name, bool IgnoreDeduced = false,
+      CanonicalizationKind CanonKind = CanonicalizationKind::Structural) const {
+    bool AnyNonCanonical = false;
+    return getCanonicalTemplateName(Name, IgnoreDeduced, CanonKind,
+                                    AnyNonCanonical);
+  }
 
   /// Return the default argument of a template parameter, if one exists.
   const TemplateArgument *
@@ -3156,14 +3217,28 @@ public:
   /// The canonical template argument is the simplest template argument
   /// (which may be a type, value, expression, or declaration) that
   /// expresses the value of the argument.
-  TemplateArgument getCanonicalTemplateArgument(const TemplateArgument &Arg)
-    const;
+  TemplateArgument getCanonicalTemplateArgument(const TemplateArgument &Arg,
+                                                CanonicalizationKind Kind,
+                                                bool &AnyNonCanonical) const;
+  TemplateArgument getCanonicalTemplateArgument(
+      const TemplateArgument &Arg,
+      CanonicalizationKind Kind = CanonicalizationKind::Structural) const {
+    bool AnyNonCanonical = false;
+    return getCanonicalTemplateArgument(Arg, Kind, AnyNonCanonical);
+  }
 
   /// Canonicalize the given template argument list.
   ///
   /// Returns true if any arguments were non-canonical, false otherwise.
-  bool
-  canonicalizeTemplateArguments(MutableArrayRef<TemplateArgument> Args) const;
+  bool canonicalizeTemplateArguments(MutableArrayRef<TemplateArgument> Args,
+                                     CanonicalizationKind Kind,
+                                     bool &AnyNonCanonical) const;
+  bool canonicalizeTemplateArguments(
+      MutableArrayRef<TemplateArgument> Args,
+      CanonicalizationKind Kind = CanonicalizationKind::Structural) const {
+    bool AnyNonCanonical = false;
+    return canonicalizeTemplateArguments(Args, Kind, AnyNonCanonical);
+  }
 
   /// Canonicalize the given TemplateTemplateParmDecl.
   TemplateTemplateParmDecl *
@@ -3305,6 +3380,8 @@ public:
 private:
   // Helper for integer ordering
   unsigned getIntegerRank(const Type *T) const;
+
+  SplitQualType buildFunctionalCanonicalType(const Type *T) const;
 
 public:
   //===--------------------------------------------------------------------===//

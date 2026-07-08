@@ -1372,8 +1372,10 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     return true;
 
   // Is the function New an overload of the function Old?
-  QualType OldQType = SemaRef.Context.getCanonicalType(Old->getType());
-  QualType NewQType = SemaRef.Context.getCanonicalType(New->getType());
+  QualType OldQType = SemaRef.Context.getCanonicalType(
+      Old->getType(), CanonicalizationKind::Functional);
+  QualType NewQType = SemaRef.Context.getCanonicalType(
+      New->getType(), CanonicalizationKind::Functional);
 
   // Compare the signatures (C++ 1.3.10) of the two functions to
   // determine whether they are overloads. If we find any mismatch
@@ -1420,7 +1422,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     bool SameTemplateParameterList = SemaRef.TemplateParameterListsAreEqual(
         NewTemplate, NewTemplate->getTemplateParameters(), OldTemplate,
         OldTemplate->getTemplateParameters(), false, Sema::TPL_TemplateMatch);
-    bool SameReturnType = SemaRef.Context.hasSameType(
+    bool SameReturnType = SemaRef.Context.hasEquivalentType(
         Old->getDeclaredReturnType(), New->getDeclaredReturnType());
     // FIXME(GH58571): Match template parameter list even for non-constrained
     // template heads. This currently ensures that the code prior to C++20 is
@@ -1619,10 +1621,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
        NewI != NewE || OldI != OldE; ++NewI, ++OldI) {
     if (NewI == NewE || OldI == OldE)
       return true;
-    llvm::FoldingSetNodeID NewID, OldID;
-    NewI->getCond()->Profile(NewID, SemaRef.Context, true);
-    OldI->getCond()->Profile(OldID, SemaRef.Context, true);
-    if (NewID != OldID)
+    if (!SemaRef.Context.hasSameExpr(NewI->getCond(), OldI->getCond()))
       return true;
   }
 
@@ -3532,7 +3531,7 @@ void Sema::HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
   }
 
   // No extra info for same types.
-  if (Context.hasSameType(FromType, ToType)) {
+  if (Context.hasEquivalentType(FromType, ToType)) {
     PDiag << ft_default;
     return;
   }
@@ -3562,8 +3561,8 @@ void Sema::HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
   }
 
   // Handle different return type.
-  if (!Context.hasSameType(FromFunction->getReturnType(),
-                           ToFunction->getReturnType())) {
+  if (!Context.hasEquivalentType(FromFunction->getReturnType(),
+                                 ToFunction->getReturnType())) {
     PDiag << ft_return_type << ToFunction->getReturnType()
           << FromFunction->getReturnType();
     return;
@@ -3607,7 +3606,10 @@ bool Sema::FunctionParamTypesAreEqual(ArrayRef<QualType> Old,
     QualType NewType =
         Context.removePtrSizeAddrSpace((New.begin() + J)->getUnqualifiedType());
 
-    if (!Context.hasSameType(OldType, NewType)) {
+    assert(Context.isFunctionalCanonicalType(OldType));
+    assert(Context.isFunctionalCanonicalType(NewType));
+
+    if (OldType != NewType) {
       if (ArgPos)
         *ArgPos = Idx;
       return false;
@@ -3619,6 +3621,10 @@ bool Sema::FunctionParamTypesAreEqual(ArrayRef<QualType> Old,
 bool Sema::FunctionParamTypesAreEqual(const FunctionProtoType *OldType,
                                       const FunctionProtoType *NewType,
                                       unsigned *ArgPos, bool Reversed) {
+  OldType = cast<FunctionProtoType>(Context.getCanonicalType(
+      QualType(OldType, 0), CanonicalizationKind::Functional));
+  NewType = cast<FunctionProtoType>(Context.getCanonicalType(
+      QualType(NewType, 0), CanonicalizationKind::Functional));
   return FunctionParamTypesAreEqual(OldType->param_types(),
                                     NewType->param_types(), ArgPos, Reversed);
 }
@@ -3637,8 +3643,15 @@ bool Sema::FunctionNonObjectParamTypesAreEqual(const FunctionDecl *OldFunction,
   unsigned NewIgnore =
       unsigned(NewFunction->hasCXXExplicitFunctionObjectParameter());
 
-  auto *OldPT = cast<FunctionProtoType>(OldFunction->getFunctionType());
-  auto *NewPT = cast<FunctionProtoType>(NewFunction->getFunctionType());
+  QualType OldFunctionType =
+      Context.getCanonicalType(QualType(OldFunction->getFunctionType(), 0),
+                               CanonicalizationKind::Functional);
+  QualType NewFunctionType =
+      Context.getCanonicalType(QualType(NewFunction->getFunctionType(), 0),
+                               CanonicalizationKind::Functional);
+
+  auto *OldPT = cast<FunctionProtoType>(OldFunctionType);
+  auto *NewPT = cast<FunctionProtoType>(NewFunctionType);
 
   return FunctionParamTypesAreEqual(OldPT->param_types().slice(OldIgnore),
                                     NewPT->param_types().slice(NewIgnore),
@@ -10781,8 +10794,10 @@ static Comparison compareEnableIfAttrs(const Sema &S, const FunctionDecl *Cand1,
     Cand1ID.clear();
     Cand2ID.clear();
 
-    (*Cand1A)->getCond()->Profile(Cand1ID, S.getASTContext(), true);
-    (*Cand2A)->getCond()->Profile(Cand2ID, S.getASTContext(), true);
+    (*Cand1A)->getCond()->Profile(Cand1ID, S.getASTContext(),
+                                  CanonicalizationKind::Structural);
+    (*Cand2A)->getCond()->Profile(Cand2ID, S.getASTContext(),
+                                  CanonicalizationKind::Structural);
     if (Cand1ID != Cand2ID)
       return Comparison::Worse;
   }

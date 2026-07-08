@@ -1022,7 +1022,8 @@ static QualType makeConstInt(clang::ASTContext &ctxt) {
 TEST_F(TestTypeSystemClang, TestGetTypeClassDeclType) {
   clang::ASTContext &ctxt = m_ast->getASTContext();
   auto *nullptr_expr = new (ctxt) CXXNullPtrLiteralExpr(ctxt.NullPtrTy, SourceLocation());
-  QualType t = ctxt.getDecltypeType(nullptr_expr, makeConstInt(ctxt));
+  QualType t = ctxt.getDecltypeType(
+      nullptr_expr, /*ExprCanonKind=*/std::nullopt, makeConstInt(ctxt));
   EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
 }
 

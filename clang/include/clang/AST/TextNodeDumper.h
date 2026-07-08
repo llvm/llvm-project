@@ -335,6 +335,7 @@ public:
   void VisitVectorType(const VectorType *T);
   void VisitFunctionType(const FunctionType *T);
   void VisitFunctionProtoType(const FunctionProtoType *T);
+  void VisitDecltypeType(const DecltypeType *T);
   void VisitUnresolvedUsingType(const UnresolvedUsingType *T);
   void VisitUsingType(const UsingType *T);
   void VisitTypedefType(const TypedefType *T);

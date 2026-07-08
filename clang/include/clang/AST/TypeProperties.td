@@ -470,9 +470,12 @@ let Class = DecltypeType in {
   def : Property<"expression", ExprRef> {
     let Read = [{ node->getUnderlyingExpr() }];
   }
+  def : Property<"ExprCanonKind", CanonicalizationKindOrNone> {
+    let Read = [{ node->getExprCanonicalizationKind() }];
+  }
 
   def : Creator<[{
-    return ctx.getDecltypeType(expression, underlyingType);
+    return ctx.getDecltypeType(expression, ExprCanonKind, underlyingType);
   }]>;
 }
 

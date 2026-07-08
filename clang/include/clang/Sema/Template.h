@@ -728,10 +728,8 @@ enum class TemplateSubstitutionKind : char {
         ArrayRef<TemplateParameterList *> TPL,
         SmallVectorImpl<TemplateParameterList *> &InstTPL);
 
-    bool SubstQualifier(const DeclaratorDecl *OldDecl,
-                        DeclaratorDecl *NewDecl);
-    bool SubstQualifier(const TagDecl *OldDecl,
-                        TagDecl *NewDecl);
+    void SubstQualifier(const DeclaratorDecl *OldDecl, DeclaratorDecl *NewDecl);
+    void SubstQualifier(const TagDecl *OldDecl, TagDecl *NewDecl);
 
     VarTemplateSpecializationDecl *VisitVarTemplateSpecializationDecl(
         VarTemplateDecl *VarTemplate, VarDecl *FromVar,

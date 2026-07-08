@@ -27,6 +27,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Linkage.h"
+#include "clang/Basic/OptionalUnsigned.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/PointerAuthOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -2144,6 +2145,16 @@ protected:
     unsigned AttrKind : 32 - NumTypeBits;
   };
 
+  class DecltypeTypeBitfields {
+    friend class DecltypeType;
+
+    LLVM_PREFERRED_TYPE(TypeBitfields)
+    unsigned : NumTypeBits;
+
+    LLVM_PREFERRED_TYPE(CanonicalizationKindOrNone)
+    unsigned ExprCanonKind : 2;
+  };
+
   class DeducedTypeBitfields {
     friend class DeducedType;
 
@@ -2373,6 +2384,7 @@ protected:
     ArrayTypeBitfields ArrayTypeBits;
     ConstantArrayTypeBitfields ConstantArrayTypeBits;
     AttributedTypeBitfields AttributedTypeBits;
+    DecltypeTypeBitfields DecltypeTypeBits;
     DeducedTypeBitfields DeducedTypeBits;
     AutoTypeBitfields AutoTypeBits;
     TypeOfBitfields TypeOfBits;
@@ -6356,18 +6368,25 @@ public:
 };
 
 /// Represents the type `decltype(expr)` (C++11).
-class DecltypeType : public Type {
+class DecltypeType : public Type, public llvm::FoldingSetNode {
   Expr *E;
   QualType UnderlyingType;
 
 protected:
   friend class ASTContext; // ASTContext creates these.
 
-  DecltypeType(Expr *E, QualType underlyingType, QualType can = QualType());
+  DecltypeType(Expr *E, CanonicalizationKindOrNone ExprCanonKind,
+               QualType UnderlyingType, QualType CanonType = QualType());
 
 public:
   Expr *getUnderlyingExpr() const { return E; }
+
   QualType getUnderlyingType() const { return UnderlyingType; }
+
+  CanonicalizationKindOrNone getExprCanonicalizationKind() const {
+    return CanonicalizationKindOrNone::fromInternalRepresentation(
+        DecltypeTypeBits.ExprCanonKind);
+  }
 
   /// Remove a single level of sugar.
   QualType desugar() const;
@@ -6375,25 +6394,16 @@ public:
   /// Returns whether this type directly provides sugar.
   bool isSugared() const;
 
-  static bool classof(const Type *T) { return T->getTypeClass() == Decltype; }
-};
-
-/// Internal representation of canonical, dependent
-/// decltype(expr) types.
-///
-/// This class is used internally by the ASTContext to manage
-/// canonical, dependent types, only. Clients will only see instances
-/// of this class via DecltypeType nodes.
-class DependentDecltypeType : public DecltypeType, public llvm::FoldingSetNode {
-public:
-  DependentDecltypeType(Expr *E);
-
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
-    Profile(ID, Context, getUnderlyingExpr());
+    Profile(ID, Context, getUnderlyingExpr(), getExprCanonicalizationKind(),
+            getUnderlyingType());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                      Expr *E);
+                      Expr *E, CanonicalizationKindOrNone ExprCanonKind,
+                      QualType UnderlyingType);
+
+  static bool classof(const Type *T) { return T->getTypeClass() == Decltype; }
 };
 
 class PackIndexingType final
@@ -7512,7 +7522,8 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx);
   static void Profile(llvm::FoldingSetNodeID &ID, ElaboratedTypeKeyword Keyword,
                       TemplateName T, ArrayRef<TemplateArgument> Args,
-                      QualType Underlying, const ASTContext &Context);
+                      bool IsTypeAlias, QualType Underlying,
+                      const ASTContext &Context);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == TemplateSpecialization;

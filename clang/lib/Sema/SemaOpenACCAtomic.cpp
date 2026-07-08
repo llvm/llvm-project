@@ -581,11 +581,7 @@ class AtomicOperandChecker {
 
   bool CheckVarRefsSame(IDACInfo::ExprKindTy FirstKind, const Expr *FirstX,
                         IDACInfo::ExprKindTy SecondKind, const Expr *SecondX) {
-    llvm::FoldingSetNodeID First_ID, Second_ID;
-    FirstX->Profile(First_ID, SemaRef.getASTContext(), /*Canonical=*/true);
-    SecondX->Profile(Second_ID, SemaRef.getASTContext(), /*Canonical=*/true);
-
-    if (First_ID == Second_ID)
+    if (SemaRef.getASTContext().hasSameExpr(FirstX, SecondX))
       return false;
 
     PartialDiagnostic PD =

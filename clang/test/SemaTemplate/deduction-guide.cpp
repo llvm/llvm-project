@@ -854,17 +854,17 @@ CC c{};
 
 // CHECK-LABEL: Dumping GH133132::<deduction guide for CC>:
 // CHECK-NEXT:  FunctionTemplateDecl {{.+}} implicit <deduction guide for CC>
-// CHECK-NEXT:  |-NonTypeTemplateParmDecl {{.+}} 'int' depth 0 index 0 N
-// CHECK-NEXT:  | `-TemplateArgument {{.+}} expr '42'
-// CHECK-NEXT:  |   `-IntegerLiteral {{.+}} 'int' 42
-// CHECK-NEXT:  |-TemplateTypeParmDecl {{.+}} class depth 0 index 1 U
-// CHECK-NEXT:  | `-TemplateArgument type 'A<decltype(N)>'
-// CHECK-NEXT:  |   `-TemplateSpecializationType {{.+}} 'A<decltype(N)>' dependent
+// CHECK-NEXT:  |-TemplateTypeParmDecl {{.+}} class depth 0 index 0 U
+// CHECK-NEXT:  | `-TemplateArgument type 'A<decltype(N)>':'GH133132::A<int>'
+// CHECK-NEXT:  |   `-TemplateSpecializationType {{.+}} 'A<decltype(N)>' sugar instantiation_dependent
 // CHECK-NEXT:  |     |-name: 'A':'GH133132::A' qualified
 // CHECK-NEXT:  |     | `-ClassTemplateDecl {{.+}} A
-// CHECK-NEXT:  |     `-TemplateArgument type 'decltype(N)'
-// CHECK-NEXT:  |       `-DecltypeType {{.+}} 'decltype(N)' dependent
-// CHECK-NEXT:  |         `-DeclRefExpr {{.+}} 'int' NonTypeTemplateParm {{.+}} 'N' 'int'
+// CHECK-NEXT:  |     |-TemplateArgument type 'decltype(N)':'int'
+// CHECK-NEXT:  |     | `-DecltypeType {{.+}} 'decltype(N)' sugar instantiation_dependent
+// CHECK-NEXT:  |     |   |-DeclRefExpr {{.+}} 'int' NonTypeTemplateParm {{.+}} 'N' 'int'
+// CHECK-NEXT:  |     |   `-BuiltinType {{.+}} 'int'
+// CHECK-NEXT:  |     `-RecordType {{.+}} 'GH133132::A<int>' canonical
+// CHECK-NEXT:  |       `-ClassTemplateSpecialization {{.+}} 'A'
 // CHECK-NEXT:  |-TypeTraitExpr {{.+}} 'bool' __is_deducible
 // CHECK-NEXT:  | |-DeducedTemplateSpecializationType {{.+}} 'GH133132::CC' dependent
 // CHECK-NEXT:  | | `-name: 'GH133132::CC'
@@ -872,14 +872,13 @@ CC c{};
 // CHECK-NEXT:  | `-TemplateSpecializationType {{.+}} 'GH133132::A<U>' dependent
 // CHECK-NEXT:  |   |-name: 'GH133132::A'
 // CHECK-NEXT:  |   | `-ClassTemplateDecl {{.+}} A
-// CHECK-NEXT:  |   `-TemplateArgument type 'U':'type-parameter-0-1'
+// CHECK-NEXT:  |   `-TemplateArgument type 'U':'type-parameter-0-0'
 // CHECK-NEXT:  |     `-SubstTemplateTypeParmType {{.+}} 'U' sugar dependent class depth 0 index 0 _Ty
 // CHECK-NEXT:  |       |-FunctionTemplate {{.+}} '<deduction guide for A>'
-// CHECK-NEXT:  |       `-TemplateTypeParmType {{.+}} 'U' dependent depth 0 index 1
+// CHECK-NEXT:  |       `-TemplateTypeParmType {{.+}} 'U' dependent depth 0 index 0
 // CHECK-NEXT:  |         `-TemplateTypeParm {{.+}} 'U'
 // CHECK-NEXT:  |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for CC> 'auto () -> GH133132::A<U>'
 // CHECK-NEXT:  `-CXXDeductionGuideDecl {{.+}} implicit used <deduction guide for CC> 'auto () -> GH133132::A<GH133132::A<int>>' implicit_instantiation
-// CHECK-NEXT:    |-TemplateArgument integral '42'
 // CHECK-NEXT:    `-TemplateArgument type 'GH133132::A<int>'
 // CHECK-NEXT:      `-RecordType {{.+}} 'GH133132::A<int>'
 // CHECK-NEXT:        `-ClassTemplateSpecialization {{.+}} 'A'

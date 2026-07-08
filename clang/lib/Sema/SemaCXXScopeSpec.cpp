@@ -79,39 +79,60 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
   if (!EnteringContext || NNS.getKind() != NestedNameSpecifier::Kind::Type)
     return nullptr;
   const Type *NNSType = NNS.getAsType();
-
-  // Look through type alias templates, per C++0x [temp.dep.type]p1.
-  NNSType = Context.getCanonicalType(NNSType);
-  if (const auto *SpecType = dyn_cast<TemplateSpecializationType>(NNSType)) {
+  // As an extension, look through type alias templates.
+  // Shouldn't do this per P1787R6 and CWG2858.
+  if (const auto *SpecType =
+          NNSType->getAsNonAliasTemplateSpecializationType()) {
     // We are entering the context of the nested name specifier, so try to
     // match the nested name specifier to either a primary class template
     // or a class template partial specialization.
     ClassTemplateDecl *ClassTemplate = dyn_cast_or_null<ClassTemplateDecl>(
-        SpecType->getTemplateName().getAsTemplateDecl());
+        SpecType->getTemplateName().getAsTemplateDecl(
+            /*IgnoreDeduced=*/true));
     if (!ClassTemplate)
       return nullptr;
+    const auto *CanonSpecType =
+        cast<TemplateSpecializationType>(Context.getCanonicalType(
+            QualType(SpecType, 0), CanonicalizationKind::Functional));
     ClassTemplatePartialSpecializationDecl *PartialSpec = nullptr;
     ArrayRef<TemplateParameterList *> TemplateParamLists =
         SS.getTemplateParamLists();
     if (!TemplateParamLists.empty()) {
       unsigned Depth = ClassTemplate->getTemplateParameters()->getDepth();
-      auto L = llvm::find_if(TemplateParamLists,
-                             [Depth](TemplateParameterList *TPL) {
-                               return TPL->getDepth() == Depth;
-                             });
+      auto L = find_if(TemplateParamLists, [Depth](TemplateParameterList *TPL) {
+        return TPL->getDepth() == Depth;
+      });
       if (L != TemplateParamLists.end()) {
+        // FIXME: Horrid hack to get back a converted template argument
+        // list.
+        TemplateArgumentListInfo TemplateArgs;
+        for (const auto &Arg : SpecType->template_arguments())
+          TemplateArgs.addArgument(getTrivialTemplateArgumentLoc(
+              Arg, /*NTTPType=*/QualType(), SourceLocation()));
+        CheckTemplateArgumentInfo CTAI;
+        DefaultArguments DefaultArgs;
+        SFINAETrap Trap(*this);
+        [[maybe_unused]] bool Res = CheckTemplateArgumentList(
+            ClassTemplate, ClassTemplate->getTemplateParameters(),
+            SourceLocation(), TemplateArgs, DefaultArgs,
+            /*PartialTemplateArgs=*/false, CTAI);
+        assert(!Res && !Trap.hasErrorOccurred() &&
+               "template argument list should have been checked already");
+        Context.canonicalizeTemplateArguments(CTAI.SugaredConverted,
+                                              CanonicalizationKind::Functional);
+
         void *Pos = nullptr;
         PartialSpec = ClassTemplate->findPartialSpecialization(
-            SpecType->template_arguments(), *L, Pos);
+            CTAI.SugaredConverted, *L, Pos);
       }
     } else {
-      // FIXME: The fallback on the search of partial
-      // specialization using ContextType should be eventually removed since
-      // it doesn't handle the case of constrained template parameters
-      // correctly. Currently removing this fallback would change the
-      // diagnostic output for invalid code in a number of tests.
+      // FIXME: This fallback on the search of partial specialization using the
+      // specialization type should be eventually removed since it doesn't
+      // handle the case of constrained template parameters correctly.
+      // Currently removing this fallback would change the diagnostic output for
+      // invalid code in a number of tests.
       PartialSpec =
-          ClassTemplate->findPartialSpecialization(QualType(SpecType, 0));
+          ClassTemplate->findPartialSpecialization(QualType(CanonSpecType, 0));
     }
 
     if (PartialSpec) {
@@ -131,23 +152,15 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
     // into that class template definition.
     CanQualType Injected =
         ClassTemplate->getCanonicalInjectedSpecializationType(Context);
-    if (Context.hasSameType(Injected, QualType(SpecType, 0)))
-      return ClassTemplate->getTemplatedDecl();
-    return nullptr;
+    if (Injected->getTypePtr() != CanonSpecType)
+      return nullptr;
+    return ClassTemplate->getTemplatedDecl();
   }
-  if (const auto *RecordT = dyn_cast<RecordType>(NNSType)) {
+  if (auto *TT = NNSType->getAs<TagType>()) {
     // The nested name specifier refers to a member of a class template.
-    return RecordT->getDecl()->getDefinitionOrSelf();
+    return dyn_cast<CXXRecordDecl>(TT->getDecl());
   }
-
   return nullptr;
-}
-
-bool Sema::isDependentScopeSpecifier(const CXXScopeSpec &SS) {
-  if (!SS.isSet() || SS.isInvalid())
-    return false;
-
-  return SS.getScopeRep().isDependent();
 }
 
 CXXRecordDecl *Sema::getCurrentInstantiationOf(NestedNameSpecifier NNS) {
