@@ -3,7 +3,7 @@ C++ Profiles Framework Internals
 ====================================
 
 .. contents::
-   :depth: 3
+   :depth: 2
    :local:
 
 
@@ -13,587 +13,283 @@ for Clang contributors -- in particular, how to add a new profile.  For
 user-facing documentation of the feature, see :doc:`ProfilesFramework`.
 
 
-Implementing a New Profile
-==========================
+Architecture
+============
 
-Adding a new profile requires no changes to the framework itself.  A profile is
-defined entirely by:
+The framework is profile-agnostic.  Profile names are opaque strings and
+there is no central registry: a profile is "enforced" simply because the user
+wrote ``[[profiles::enforce(name)]]``, and each rule within a profile is just
+a string identifier that ``[[profiles::suppress(name, rule: "...")]]`` can
+target.  ``SemaProfiles`` owns all the bookkeeping -- attribute parsing and
+placement checking, enforcement tracking, suppression scoping, template
+instantiation, module propagation, and PCH/BMI serialization -- so a profile
+implementation consists only of its diagnostics plus calls to the framework
+at its semantic check sites.
 
-1. A **profile name** (a ``::``-separated identifier sequence such as
-   ``vendor::safety`` or ``std::type``).
-2. Zero or more **rule names** (string identifiers such as
-   ``"reinterpret_cast"``).
-3. **Diagnostics** emitted when a rule is violated.
-4. **Check sites** in the compiler where the framework is consulted.
-
-There is no central registry of profiles.  The framework treats profile names
-as opaque strings; a profile is considered "enforced" simply because the user
-wrote ``[[profiles::enforce(name)]]`` in their source.  Each rule within a
-profile is likewise just a string identifier; users can suppress individual
-rules with ``[[profiles::suppress(profile_name, rule: "rule_name")]]``.
-
-There are two implementation patterns, depending on when the rule is checked.
-
-
-Define Diagnostics
-------------------
-
-Add diagnostics to ``clang/include/clang/Basic/DiagnosticSemaKinds.td`` in the
-``// C++ Profiles framework (P3589R2)`` group.  Each diagnostic should accept
-``%0`` for the profile name, since the framework passes the profile name as
-the first diagnostic argument.  The group declares the helper class
-
-.. code-block:: text
-
-   class ProfileRuleError<string str> : Error<str> {
-     let SFINAE = SFINAE_Suppress;
-   }
-
-so that profile-rule diagnostics participate in the SFINAE machinery as
-suppressed errors -- they do not count as substitution failures and cannot
-change overload resolution, but selected specializations replay them when
-they are actually used.  Define new rules using ``ProfileRuleError`` rather
-than ``Error`` directly:
+Profile-rule diagnostics are defined with the ``ProfileRuleError`` diagnostic
+class rather than ``Error``.  It marks them SFINAE-suppressed: they do not
+count as substitution failures and cannot change overload resolution, but
+selected specializations replay them when actually used.  The framework
+passes the profile name as ``%0``:
 
 .. code-block:: text
 
    def err_profile_type_cast_reinterpret : ProfileRuleError<
      "'reinterpret_cast' is unsafe under profile '%0'">;
 
+There are four implementation patterns, keyed on when the rule can be
+checked.
 
-Pattern 1: Sema Check-Site Profile
-----------------------------------
 
-Used when the rule can be checked at a single, well-defined parse-time site
-in Sema (typically inside a ``Sema::Build*`` or ``Sema::Act*`` routine).
-``test::type_cast`` is the in-tree example.
+Pattern 1: Parse-Time Check Sites
+=================================
 
-At each such site, call ``SemaProfiles::checkProfileViolation``:
+For a rule checkable at a single semantic entry point, the entire profile
+implementation is one call at that site:
 
 .. code-block:: c++
 
    checkProfileViolation("my::profile", "my_rule", Loc,
                          diag::err_my_profile_rule);
 
-This function checks whether the profile is enforced and not suppressed.
-During template argument deduction, profile rule diagnostics are suppressed
-by Clang's normal SFINAE machinery so they cannot affect overload resolution
-or template instantiation; selected specializations replay suppressed
-diagnostics when used.  Unevaluated and discarded-statement contexts are
-skipped.  The profile name is passed as ``%0``.
+The call checks that the profile is enforced and not suppressed (via the
+parse-time suppress stack) and skips unevaluated and discarded-statement
+contexts.  ``test::type_cast`` is the in-tree example.
 
-``checkProfileViolation`` fires at parse time.  Inside a template, parse-time
-checks follow one unified model.  A *non-dependent* construct is checked on
-the template *pattern*, at definition time: TreeTransform may return such a
-node unchanged at instantiation (for some node kinds, such as casts, a
-non-dependent ``Build*`` result is reused), so deferring would silently lose
-the diagnostic.  This deliberately trades strict "as-if after phase 7" purity
-(P3589R2 §1.1) for reuse-proof diagnostics: a non-dependent violation
-diagnoses even in a never-instantiated template or in an ``if constexpr``
-branch whose discarding is not yet known at the pattern (a branch already
-known discarded -- a non-value-dependent false condition -- stays silent).
-An *instantiation-dependent* construct cannot be checked on the pattern; it
-is always rebuilt at instantiation, where the re-run ``Build*`` checks the
-substituted form, once per specialization.  A construct with non-dependent
-check operands can still be rebuilt at instantiation (a local variable, a
-call argument, or a return statement forces a rebuild, for example); the
-re-run ``Build*`` then repeats the definition-time diagnostic at the same
-location, with an ``in instantiation of ...`` note.  This repetition is
-accepted for now; ``test::type_cast``'s cast nodes are never rebuilt when
-non-dependent, so it never repeats.
-
-Under ``-fdelayed-template-parsing`` the body of a never-instantiated
-template is never parsed at all, so definition-time diagnosis of
+Inside a template, parse-time checks follow one unified model.  A
+*non-dependent* construct is checked on the template pattern, at definition
+time: instantiation may reuse such a node unchanged, so deferring would
+silently lose the diagnostic.  This deliberately trades strict "as-if after
+phase 7" purity (P3589R2 §1.1) for reuse-proof diagnostics.  An
+*instantiation-dependent* construct is always rebuilt at instantiation, where
+the re-run check sees the substituted form, once per specialization.  A
+non-dependent construct that happens to be rebuilt anyway repeats its
+definition-time diagnostic with an ``in instantiation of ...`` note -- an
+accepted duplication.  Under ``-fdelayed-template-parsing`` the body of a
+never-instantiated template is never parsed, so definition-time diagnosis of
 non-dependent violations does not occur in that mode.
 
-Suppression for parse-time check sites is consulted via the
-``ProfileSuppressStack`` maintained by the parser-side ``ProfileSuppressScope``
-RAII guards (see :ref:`profiles-internals` below).  Profile implementers do
-not need to interact with the stack directly.
+
+Pattern 2: Post-Parse / CFG-Based
+=================================
+
+For a rule that needs whole-function analysis.  Each post-parse analysis owns
+a small opt-in table of the profiles that ride it, one row per profile
+(profile name, rule name, diagnostic); the framework never learns the
+profile's name.  ``test::uninit_read`` is the in-tree example:
+
+.. code-block:: c++
+
+   constexpr CFGUninitProfileEntry CFGUninitProfiles[] = {
+       {"my::profile", /*Rule=*/"", diag::err_my_profile_rule},
+   };
+
+The analysis's pass guard ORs in ``anyProfileEnforced(Table)`` so the pass
+runs for an enforced profile even when the corresponding warning is
+silenced, and the analysis's diagnostic reporter walks the table calling
+``shouldEmitProfileViolation(Name, Rule, Stmt, AnalysisDeclContext)`` per use
+site, emitting the entry's diagnostic (and skipping the default warning) when
+it returns true.
+
+That overload is the post-parse counterpart of the parse-time suppress
+stack: by the time the analysis runs the stack has unwound, so it walks the
+AST upward from the use site -- enclosing ``AttributedStmt``\ s,
+``DeclStmt``-declared variables, and the lexical ``Decl`` chain -- for a
+matching ``[[profiles::suppress]]``.
 
 
-Pattern 2: Post-Parse / CFG-Based Profile
------------------------------------------
+Patterns 3 and 4: Class and Constructor Finalization
+====================================================
 
-Used when the rule cannot be checked at a single Sema entry point because it
-depends on whole-function analysis -- typically a CFG-based analysis run
-after a function body is complete.  ``test::uninit_read`` is the in-tree
-example: it diagnoses reads of uninitialized variables on top of Clang's
-existing CFG-based uninitialized-variables analysis.
+For rules that run once per completed class definition (pattern 3,
+``test::class_final``) or once per user-defined constructor with its complete
+member-initializer list (pattern 4, ``test::ctor_final``).  Both share one
+dispatcher and one per-pass table shape:
 
-This pattern needs three pieces, all colocated with the analysis pass (the
-framework intentionally does not learn the profile name).
+.. code-block:: c++
 
-1. **Add the profile to the analysis pass's per-pass opt-in table.**
-   Each post-parse analysis owns a small table of the profiles that ride it,
-   one row per profile (profile name, rule name, diagnostic id).  The
-   in-tree example is ``CFGUninitProfiles`` in
-   ``clang/lib/Sema/AnalysisBasedWarnings.cpp``:
+   constexpr FinalizationProfile<CXXRecordDecl> ClassFinalizationProfiles[] = {
+       {"my::profile", &runMyProfileCallback},
+   };
 
-   .. code-block:: c++
+The class hook runs from the single function every class-completion path
+funnels through (parsing, template instantiation, lambda completion); the
+constructor hook runs from the two functions every constructor's
+member-initializer list funnels through, including instantiation.  The
+dispatchers filter out dependent entities (the hooks re-fire on each
+instantiation), invalid ones, lambdas (pattern 3), and delegating
+constructors (pattern 4).  Each callback gates its diagnostics on the
+decl-aware ``shouldEmitProfileViolation`` overload, which walks the finalized
+declaration and its lexical parents for a suppression.
 
-      struct CFGUninitProfileEntry {
-        StringRef Name;
-        StringRef Rule;
-        unsigned DiagID;
-      };
-      constexpr CFGUninitProfileEntry CFGUninitProfiles[] = {
-          {"my::profile", /*Rule=*/"", diag::err_my_profile_rule},
-      };
-
-2. **Gate the analysis pass on the table.**
-   Analysis-based passes in ``AnalysisBasedWarnings.cpp::IssueWarnings`` are
-   normally run only when their corresponding warning flag is enabled.  To
-   run the pass for an enforced profile even when the underlying warning is
-   silenced, OR an ``S.anyProfileEnforced(Table)`` check (the shared
-   ``SemaProfiles::anyProfileEnforced`` gate, also used by the finalization dispatch)
-   into the existing pass guard.  The in-tree example's pass guard becomes
-   ``hasEnforcedCFGUninitProfile() || !Diags.isIgnored(...)`` (a small
-   accessor over ``S.anyProfileEnforced(CFGUninitProfiles)``).
-
-3. **Walk the table in the analysis's diagnostic reporter.**
-   For each use site the analysis would have warned about, iterate the
-   table and call
-   ``SemaProfiles::shouldEmitProfileViolation(name, rule, Stmt*, AnalysisDeclContext&)``,
-   which walks parent statements and lexical declaration contexts to honor
-   ``[[profiles::suppress]]`` on enclosing AST nodes (the post-parse
-   counterpart to ``ProfileSuppressStack``).  Emit the entry's diagnostic
-   when it returns true, and skip the default warning path.  In the
-   in-tree example (``UninitValsDiagReporter`` in
-   ``AnalysisBasedWarnings.cpp``):
-
-   .. code-block:: c++
-
-      for (const auto &U : *vec) {
-        for (const CFGUninitProfileEntry &E : CFGUninitProfiles) {
-          if (!S.shouldEmitProfileViolation(E.Name, E.Rule, U.getUser(), AC))
-            continue;
-          S.Diag(U.getUser()->getBeginLoc(), E.DiagID)
-              << E.Name << vd->getDeclName();
-          S.Diag(vd->getLocation(), diag::note_var_declared_here)
-              << vd->getDeclName();
-          return;
-        }
-      }
-
-The diagnostic itself is defined with ``ProfileRuleError`` as in pattern 1.
-
-The post-parse Stmt-walking suppression check is intentionally separate from
-the parse-time stack check: by the time CFG analysis runs, the parse stack
-has been unwound, so the framework instead walks the AST.  The Stmt-walking
-overload of ``isProfileSuppressed`` examines:
-
-- ``AttributedStmt`` ancestors of the use site.
-- ``DeclStmt`` ancestors (whose declared ``VarDecl``\ s carry the attribute,
-  not the enclosing statement).
-- The enclosing ``Decl`` chain via ``getLexicalDeclContext()``.
+The split between the two patterns matters: class finalization runs *before
+any constructor body or member-initializer list has been parsed*, so a
+pattern-3 callback must not inspect a constructor's ``inits()``.  Rules that
+depend on what a constructor initializes belong on pattern 4; rules that need
+flow analysis belong on pattern 2.
 
 
-Pattern 3: Class-Finalization Profile
--------------------------------------
+Suppression Dominion Mechanics
+==============================
 
-Used when the rule applies to a class as a whole and needs to run once after
-the class definition is complete -- for example, "every non-private field of
-this class must satisfy property X" or "this class's field set must look
-like Y."  ``test::class_final`` is the in-tree example.
+A ``[[profiles::suppress]]`` attribute's dominion is the token range of the
+construct it appertains to (the user-level rule is stated in
+:doc:`ProfilesFramework`).  The parse-time suppress stack -- pushed and
+popped by ``ProfileSuppressScope`` RAII guards in the parser and the
+template-instantiation machinery -- enforces this positionally: each entry
+records its construct's token range, and a violation matches an entry only if
+its location falls within that range.  This keeps a live suppress scope from
+leaking into code its tokens do not cover, which would otherwise happen in
+two ways: a template pattern instantiated synchronously while the scope is
+live (instantiated code retains the pattern's source locations), and a class
+or constructor finalized as a side effect of such an instantiation.
+Conversely, a local class or lambda defined *inside* the suppressed construct
+is covered, whichever path re-enters it.
 
-The dispatch point is ``SemaProfiles::checkProfileViolationsAtClassFinalization``,
-called from the end of ``Sema::CheckCompletedCXXClass`` in
-``clang/lib/Sema/SemaDeclCXX.cpp``.  ``CheckCompletedCXXClass`` is the
-single function reached from every class-completion path -- the parser
-(``ActOnFinishCXXMemberSpecification``), template instantiation
-(``InstantiateClass``), and lambda completion -- so wiring the hook there
-covers all of them with no extra plumbing.
+The range's end is recorded only when the construct was already fully parsed
+when the entry was pushed.  For a construct still being parsed no end exists
+yet (a mid-parse end location would be misleadingly early), so the entry's
+scope lifetime bounds the dominion instead -- exact mid-parse, because the
+construct's later tokens do not exist yet, and instantiation of a template
+that has no definition yet is deferred past the scope's death.
 
-The class-finalization entry point
-``checkProfileViolationsAtClassFinalization`` filters out classes the rules
-are not meant to see:
-
-- Dependent classes (``isDependentType()``).  The hook will re-fire on each
-  instantiation via the template-instantiation completion path.
-- Invalid classes (``isInvalidDecl()``).
-- Lambdas (``isLambda()``).  Closure types have no user-controlled field
-  shape, so class-finalization rules do not apply.
-
-This pattern needs two pieces, both colocated with the dispatcher.
-
-1. **Add the profile to the class-finalization opt-in table.**
-   ``ClassFinalizationProfiles`` in ``clang/lib/Sema/SemaProfiles.cpp`` is a
-   small per-pass table of profile name plus callback.  One row per profile:
-
-   .. code-block:: c++
-
-      // FinalizationProfile<Node> is shared with pattern 4.
-      template <class Node> struct FinalizationProfile {
-        StringRef Name;
-        void (*Callback)(Sema &, Node *);
-      };
-      constexpr FinalizationProfile<CXXRecordDecl> ClassFinalizationProfiles[] = {
-          {"my::profile", &runMyProfileCallback},
-      };
-
-   The shared ``dispatchFinalizationProfiles`` dispatcher (used by both
-   patterns 3 and 4) checks ``anyProfileEnforced(Table)``, iterates the
-   table, skips entries whose profile is not enforced, and invokes the
-   callback.  Each callback passes the finalized ``Decl`` (here the
-   ``CXXRecordDecl``) to the decl-aware ``shouldEmitProfileViolation``
-   overload, which walks the declaration and its lexical parents for a
-   matching ``[[profiles::suppress]]``, so suppression on the class or any
-   enclosing lexical ``Decl`` works without the dispatcher establishing a
-   suppress scope.  Finalization can run as a side effect of an *unrelated*
-   template instantiation whose ``[[profiles::suppress]]`` scope is still on
-   the transient parse-time ``ProfileSuppressStack``; because stack entries
-   are matched against the violation's location (see
-   :ref:`profiles-token-dominion`), such a scope -- whose construct's tokens
-   do not cover the finalized class -- does not suppress the callback's
-   diagnostics.
-
-2. **Emit diagnostics from the callback via**
-   ``SemaProfiles::shouldEmitProfileViolation``.  Each callback decides where on
-   the class to point and which diagnostic to use, possibly with notes:
-
-   .. code-block:: c++
-
-      void runMyProfileCallback(Sema &S, CXXRecordDecl *RD) {
-        if (!S.shouldEmitProfileViolation("my::profile", /*Rule=*/"",
-                                          RD->getLocation()))
-          return;
-        S.Diag(RD->getLocation(), diag::err_my_profile_rule)
-            << "my::profile" << RD;
-      }
-
-The diagnostic itself is defined with ``ProfileRuleError`` as in patterns 1
-and 2.
-
-Class-finalization is for **structural** rules -- those answerable from the
-class's declared members, their types, and their attributes.  The callbacks
-run while the ``CXXRecordDecl`` is being finalized (immediately before
-``CheckCompletedCXXClass`` returns), which is *before any constructor body or
-member-initializer list has been parsed* -- inline member bodies are
-late-parsed afterward, and out-of-line and template member constructors later
-still.  A class-finalization callback therefore must not inspect a
-constructor's ``inits()`` (they are empty here).  Rules that depend on what a
-constructor initializes belong on the constructor-finalization dispatch
-(pattern 4); rules that need whole-function flow analysis belong on a
-post-parse CFG pass (pattern 2).
+Suppression written on a template pattern or its lexical parents is
+re-established around instantiation, so it applies to instantiated code.  The
+reverse is not propagated: a scope live at the *point of instantiation*
+covers the trigger's tokens, not the pattern's, and the positional match
+above keeps it from suppressing checks inside a synchronously instantiated
+body, NSDMI, default argument, or marker re-check.
 
 
-Pattern 4: Constructor-Finalization Profile
--------------------------------------------
+Modules and Serialization
+=========================
 
-Used when the rule applies to a single constructor and needs that
-constructor's complete member-initializer list -- for example, "every member
-must be initialized by this constructor."  ``test::ctor_final`` is the in-tree
-example, and the ``std::init`` ``ctor_uninit_member`` rule is the real one.
+``[[profiles::enforce]]`` on a module interface declaration records the
+enforced designators on ``Module::EnforcedProfileDesignators``, which is what
+``[[profiles::require]]`` on an import validates against.  A header unit
+records enforcement the same way from the empty-declaration form P3589R2
+prescribes for headers.  A non-partition implementation unit inherits the
+interface's enforcements through its implicit import of the primary
+interface.  A partition implementation unit does not implicitly import the
+interface, whose BMI is normally built later, so inheritance there is
+best-effort: enforcements are inherited only when the interface's BMI is
+already resident, and it is never force-loaded nor its absence diagnosed -- a
+missed diagnostic, never a change to the meaning of a well-formed program.
+``[[profiles::enforce]]`` on a *non-interface* module-declaration is recorded
+only translation-unit-locally and is invisible to importers.
 
-The dispatch point is ``SemaProfiles::checkProfileViolationsAtConstructorFinalization``,
-called right after ``DiagnoseUninitializedFields`` in
-``Sema::ActOnMemInitializers`` and ``Sema::ActOnDefaultCtorInitializers`` in
-``clang/lib/Sema/SemaDeclCXX.cpp``.  Those two functions are the funnel for
-every user-defined constructor -- written or implicit member-initializer
-list, inline or out-of-line -- and template instantiation reaches the first
-of them through ``Sema::InstantiateMemInitializers``, so the hook sees every
-constructor at the point its ``inits()`` (including synthesized entries) is
-complete.
+Serialization is automatic for every profile: enforcements are written to a
+PCH as ``ENFORCED_PROFILES`` records and restored on load, and
+``Module::EnforcedProfileDesignators`` is written to a BMI as
+``SUBMODULE_ENFORCED_PROFILES`` records within each submodule block.
 
-The constructor-finalization entry point
-``checkProfileViolationsAtConstructorFinalization`` filters out constructors
-the rules are not meant to see:
-
-- Dependent constructors (``isDependentContext()``).  The hook re-fires on
-  each instantiation.
-- Invalid constructors (``isInvalidDecl()``).
-- Delegating constructors (``isDelegatingConstructor()``), which leave member
-  initialization to their target.
-
-The two pieces mirror pattern 3 and share its machinery: a per-pass opt-in
-table ``ConstructorFinalizationProfiles`` of the same
-``FinalizationProfile<Node>`` row (here
-``FinalizationProfile<CXXConstructorDecl>``), and a callback that emits via
-``SemaProfiles::shouldEmitProfileViolation``.  The same shared
-``dispatchFinalizationProfiles`` dispatcher invokes each callback, which
-passes the ``CXXConstructorDecl`` to the decl-aware
-``shouldEmitProfileViolation`` overload; that overload walks the declaration
-and its lexical parents, so ``[[profiles::suppress]]`` on the constructor,
-the class, or an enclosing lexical ``Decl`` works.  As for pattern 3, a
-transient parse-time suppress scope belonging to an unrelated construct does
-not reach these callbacks, because stack entries only match violations whose
-tokens their construct covers (see :ref:`profiles-token-dominion`).  A
-constructor body is normally instantiated lazily -- outside any unrelated
-suppress scope -- so for pattern 4 this matters rarely; the scenario it
-actually handles arises in pattern 3, where a class completes synchronously
-inside an enclosing instantiation.  A callback that should only apply to
-user-written constructors checks ``Ctor->isUserProvided()``.
-
-.. _profiles-internals:
-
-Framework Internals Reference
-=============================
-
-This section describes the framework mechanisms that profile implementers
-benefit from understanding, even though they do not interact with them directly.
-
-``ProfileSuppressScope``
-------------------------
-
-An RAII guard that pushes suppression entries onto ``Sema::ProfileSuppressStack``
-and pops them on destruction.  It is used by the parser and template
-instantiation machinery to make ``[[profiles::suppress]]`` attributes active
-during the appropriate region.  Each entry records the token range of the
-construct its attribute appertains to (the end only once the construct is
-fully parsed) and matches only violations located within it (see
-:ref:`profiles-token-dominion`).  ``checkProfileViolation`` consults
-``ProfileSuppressStack`` directly, so profile implementers never need to
-create ``ProfileSuppressScope`` objects.
-
-Stmt-Tree Suppression Walker
-----------------------------
-
-The ``isProfileSuppressed(name, rule, Stmt*, AnalysisDeclContext&)`` overload
-is the post-parse counterpart to ``ProfileSuppressStack``.  It is used by
-analyses that run after parsing (when the parse-time stack no longer
-reflects the enclosing region) and walks the AST upward from a use site to
-find any matching ``[[profiles::suppress]]`` attribute on an enclosing
-``AttributedStmt``, ``DeclStmt``-declared ``VarDecl``, or lexical
-``Decl`` parent.
-
-Template Instantiation
-----------------------
-
-During template instantiation, the framework ensures that
-``[[profiles::suppress]]`` on the template pattern and its lexical parents
-applies to instantiated code.  This is done via ``ProfileSuppressScope`` with
-``WalkLexicalParents=true`` at several sites:
-
-- ``SemaTemplateInstantiateDecl.cpp`` -- function and variable template
-  instantiation.
-- ``SemaTemplateInstantiate.cpp`` -- default member initializer instantiation.
-- ``TreeTransform.h`` -- ``TransformAttributedStmt`` (suppress on statements)
-  and ``TransformDeclStmt`` (suppress on declarations within a ``DeclStmt``).
-
-The reverse direction is *not* propagated: a suppress scope live at the
-*point of instantiation* (for example on the declaration whose initializer
-triggers it) covers the trigger's tokens, not the pattern's.  Instantiated
-code retains the pattern's source locations, so the dominion check on stack
-entries (see :ref:`profiles-token-dominion`) keeps such a scope from
-suppressing checks that fire inside a synchronously instantiated body, NSDMI,
-default argument, or instantiated marker re-check.
-
-Module Enforcement
-------------------
-
-``[[profiles::enforce(...)]]`` on a module interface declaration records the
-enforced profile designators on ``Module::EnforcedProfileDesignators``.  A
-(non-partition) module implementation unit ``module M;`` automatically inherits
-the interface's enforcements, because it implicitly imports the primary
-interface unit of ``M``.
-``[[profiles::require(...)]]`` on an import-declaration validates that the
-imported module's ``EnforcedProfileDesignators`` contains a matching designator.
-
-A *header unit* participates the same way: ``[[profiles::enforce(...)]]`` on
-an empty-declaration in the header (the form P3589R2 §2.3 prescribes for
-header units) is recorded on the header-unit module and serialized into its
-BMI, so ``[[profiles::require]]`` on an ``import "header.h";`` validates
-against it.  As with named modules, importing an enforced header unit does not
-enforce the profile in the importer.
-
-``[[profiles::enforce(...)]]`` on a *non-interface* module-declaration (a
-``module M;`` implementation unit, or a ``module M:P;`` partition
-implementation unit) is accepted but recorded only translation-unit-locally;
-it is **not** added to ``Module::EnforcedProfileDesignators`` and so is not
-visible to an importer's ``[[profiles::require]]``.
-
-A module partition implementation unit ``module M:P;`` is also a module
-implementation unit of ``M``, so the primary interface's enforcements apply to
-it as well.  However, it does **not** implicitly import the primary interface,
-and the primary interface is normally compiled *after* its partitions, so its
-BMI is usually not available when the partition implementation unit is compiled.
-Inheritance here is therefore **best-effort**: the enforcements are inherited
-only when the primary interface's BMI is already resident in the compilation
-(for example, supplied via an eager ``-fmodule-file=<path>``); the BMI is never
-force-loaded and its absence is never diagnosed.  When it is not available the
-partition implementation unit is simply not subject to the inherited profile --
-a missed diagnostic, never a change to the meaning of a well-formed program.
-For guaranteed enforcement, **repeat** ``[[profiles::enforce(...)]]`` in the
-partition implementation unit rather than relying on inheritance.  (Best-effort
-inheritance is silent when the interface BMI is absent; if the BMI *is* resident
-and enforces a profile whose designator conflicts with a locally repeated
-``enforce`` of the same name, that mismatch is still diagnosed.)
-
-Importing a module that enforces a profile does **not** enforce that profile in
-the importing translation unit.  Enforcement is always explicit and local.
 
 Redeclaration Compatibility
----------------------------
+===========================
 
-P3589R2 [decl.attr.enforce]p5: a declaration and its redeclarations must
-appear in the dominions of mutually compatible profiles.  The rule is
-**symmetric** -- when a redeclaration is merged with a previous declaration
-from another module unit, every profile whose dominion covered the previous
-declaration must have a compatible counterpart covering the redeclaration,
-and vice versa.  In particular, a profile-enforcing translation unit that
-redeclares an entity from a module (or header unit) compiled *without* a
-compatible profile is ill-formed; the paper's escape hatch for such headers
-is ``[[profiles::exempt]]`` (not yet implemented, see the Intentional
-Omissions section of :doc:`ProfilesFramework`).  The check
-(``SemaProfiles::checkRedeclarationProfileCompatibility``) runs from
-``Sema::CheckRedeclarationInModule``, the funnel for function, variable, tag,
-alias, and class-template redeclarations; it is a framework rule -- a plain
-error, not suppressible with ``[[profiles::suppress]]``, and diagnose-only
-(the redeclaration still merges).
-
-Two profiles are *compatible* if they have the same name -- designator
-arguments configure a profile without changing its identity -- or if both are
-standard (``std::``-prefixed) profiles, which P3589R2 proclaims mutually
-compatible.  No further implementation-proclaimed compatibility is modeled.
+P3589R2 [decl.attr.enforce]p5 requires a declaration and its redeclarations
+to appear in the dominions of mutually compatible profiles.
+``checkRedeclarationProfileCompatibility`` runs from the module-level
+redeclaration funnel and checks the rule symmetrically in both directions.
+It is a framework rule: a plain error, not suppressible with
+``[[profiles::suppress]]``, and diagnose-only (the redeclaration still
+merges).  Two profiles are compatible if they have the same name (designator
+arguments configure a profile without changing its identity) or if both are
+standard ``std::``-prefixed profiles.
 
 The previous declaration's dominion is approximated by its top-level module's
-exported ``EnforcedProfileDesignators``, which is exact for declarations in
-the module purview -- including purview ``extern "C"``/``extern "C++"``
-declarations (implicit global module), the common redeclarable case, since
-module-attached entities cannot be redeclared in other translation units at
-all.  Two cases have an *unknown* dominion and are skipped rather than
-guessed at (a missed diagnostic, never a wrong one):
+exported designators, which is exact for declarations in the module purview.
+Two cases have an *unknown* dominion and are skipped rather than guessed at
+(a missed diagnostic, never a wrong one): a declaration in an explicit global
+module fragment (the exported set does not cover it), and a previous
+declaration from the same module family (the exported set under-approximates
+the interface TU's dominion, which the current unit inherits anyway).  A
+textual or PCH previous declaration shares the current TU's dominion and is
+not checked; implicit template instantiations are exempt.
 
-- A declaration in an **explicit global module fragment**: it precedes the
-  module-declaration, so the exported enforcements do not cover it, and its
-  TU's empty-declaration enforces are not serialized into the BMI.
-- A previous declaration from the **same module family** (an implementation
-  or partition unit merging with its own interface): the exported set
-  under-approximates the interface TU's full dominion, and the interface's
-  enforcements are inherited into the current unit anyway, so checking would
-  false-positive on locally added profiles.
-
-A textual or PCH previous declaration is not checked at all: it shares the
-current TU's dominion (the placement rule makes a TU's dominion uniform, and
-a PCH's enforcements are restored into the including TU).  Implicit template
-instantiations are exempt, matching the module-ownership check.
-
-Serialization
--------------
-
-The framework serializes enforcement state automatically.  Profile implementers
-do not need to add any serialization code.
-
-- **PCH**: ``SemaProfiles::EnforcedProfiles`` is written as ``ENFORCED_PROFILES``
-  records in the AST bitstream and restored when the PCH is loaded.
-- **Module BMI**: ``Module::EnforcedProfileDesignators`` is written as
-  ``SUBMODULE_ENFORCED_PROFILES`` records within each submodule block.
 
 Test Profiles
 =============
 
-The built-in ``test::`` profiles exist only to
-exercise the framework and are additionally gated on the ``-fprofiles-test-profiles``
-flag, which sets ``LangOpts.ProfilesTestProfiles``.  This flag is ``-cc1``-only
-(not exposed by the driver) and is intended solely for running the test suite.
-Under ``-fprofiles`` alone, ``[[profiles::enforce(test::...)]]`` is still
-recognized (it is not ``warn_attribute_ignored``) and its designator is still
-recorded and exported across modules, but ``SemaProfiles::isProfileEnforced`` reports
-any ``test::``-prefixed profile as not enforced, so no ``test::`` rule ever
-fires.  Real profiles such as ``std::init`` are unaffected by this flag.
+The four built-in ``test::`` profiles exist only to exercise the framework in
+the test suite.  They are gated on the ``-cc1``-only
+``-fprofiles-test-profiles`` flag: under ``-fprofiles`` alone their
+designators are still parsed, recorded, and exported across modules, but
+``isProfileEnforced`` reports any ``test::``-prefixed profile as not
+enforced, so no ``test::`` rule ever fires.  Because that gate keys on the
+``test::`` prefix, a new test-only profile must also live under ``test::``.
 
-By convention:
+- ``test::type_cast`` -- pattern 1; diagnoses ``reinterpret_cast<>`` (the
+  keyword form only).
+- ``test::uninit_read`` -- pattern 2; rides the existing CFG
+  uninitialized-variables analysis.
+- ``test::class_final`` -- pattern 3; fires on completion of every non-lambda
+  class, on instantiations rather than dependent patterns.
+- ``test::ctor_final`` -- pattern 4; fires once per user-defined,
+  non-delegating constructor.
 
-- Real test profiles live under the ``test::`` namespace.  Today there are
-  four: ``test::type_cast``, ``test::uninit_read``, ``test::class_final``,
-  and ``test::ctor_final``.  Because the ``test::`` prefix is what
-  ``SemaProfiles::isProfileEnforced`` keys on to gate them behind
-  ``-fprofiles-test-profiles``, any new test-only profile must also live
-  under ``test::``.
-- The names ``test::other``, ``test::bounds``, ``test::new_profile``, and
-  ``test::not_enforced`` are deliberately *not* implemented and appear only
-  in negative tests as stand-in "some other profile" names.  Adding a real
-  profile under any of these names would invalidate those tests.
-
-The ``test::type_cast`` Profile
--------------------------------
-
-A pattern-1 (Sema check-site) profile.  Demonstrates the simple case where
-a rule can be checked from a single Sema entry point.
-
-- **Rules**: ``reinterpret_cast``.
-- **Diagnostic**: ``err_profile_type_cast_reinterpret``
-  ("'reinterpret_cast' is unsafe under profile '%0'").
-- **Check site**: ``Sema::BuildCXXNamedCast`` in ``clang/lib/Sema/SemaCast.cpp``,
-  inside the ``reinterpret_cast`` arm.  Only the ``reinterpret_cast<>`` keyword
-  form is checked; a C-style or functional cast with reinterpret semantics goes
-  through a different path and is not diagnosed.
-
-The entire profile implementation is the single call:
-
-.. code-block:: c++
-
-   checkProfileViolation("test::type_cast", "reinterpret_cast", OpLoc,
-                         diag::err_profile_type_cast_reinterpret);
+The names ``test::other``, ``test::bounds``, ``test::new_profile``, and
+``test::not_enforced`` are deliberately *not* implemented and appear in
+negative tests as "some other profile" stand-ins; adding a real profile under
+any of them would invalidate those tests.
 
 
-The ``test::uninit_read`` Profile
----------------------------------
+The std::init Implementation Map
+================================
 
-A pattern-2 (post-parse / CFG-based) profile.  Demonstrates the case where
-the rule depends on whole-function analysis and must run after parsing.
-It diagnoses reads of uninitialized variables by reusing Clang's existing
-CFG-based uninitialized-variables analysis.
+``std::init`` (documented in :doc:`ProfilesFramework`) uses all four
+patterns.  Its rules map to mechanisms as follows:
 
-- **Rules**: none (the profile has a single implicit rule, so the rule
-  string is empty).
-- **Diagnostic**: ``err_profile_uninit_read``
-  ("variable %1 is read before initialization under profile '%0'").
-  A companion ``note_var_declared_here`` is emitted at the variable's
-  declaration.
-- **Opt-in table**: ``CFGUninitProfiles`` in
-  ``clang/lib/Sema/AnalysisBasedWarnings.cpp``.  The ``IssueWarnings`` pass
-  guard consults it via ``hasEnforcedCFGUninitProfile()`` so the analysis
-  runs even when ``-Wuninitialized`` is silenced, and
-  ``UninitValsDiagReporter::diagnoseUnitializedVar`` walks it *before* the
-  default warning path -- when an entry's
-  ``SemaProfiles::shouldEmitProfileViolation`` returns true the entry's diagnostic
-  fires and the default warning is skipped entirely.
+.. list-table::
+   :header-rows: 1
+   :widths: 24 12 64
 
-The Stmt-tree suppression walker is what makes ``[[profiles::suppress]]``
-work for this profile: by the time the CFG analysis runs, the parse-time
-``ProfileSuppressStack`` has been unwound, so the helper consults the AST
-directly via ``shouldEmitProfileViolation(name, rule, Stmt*, AnalysisDeclContext&)``.
+   * - Rule
+     - Pattern
+     - Primary entry points
+   * - ``uninit_read``
+     - 2 and 1
+     - ``CFGUninitProfiles`` row for local variables;
+       ``checkInitProfileCtorBody`` and ``checkInitProfileLocalMembers``
+       (definite-assignment dataflow over ``[[uninit]]`` members);
+       ``checkInitProfileReadThrough`` at the lvalue-to-rvalue chokepoint,
+       plus compound-assignment and increment/decrement hooks
+   * - ``uninit_decl``
+     - 1
+     - ``checkInitProfileUninitDecl``
+   * - ``uninit_with_initializer``
+     - 1
+     - ``checkInitProfileUninitWithInitializer``
+   * - ``static_runtime_init``
+     - 1
+     - ``checkInitProfileStaticRuntimeInit``
+   * - ``static_marker``
+     - 1
+     - ``checkInitProfileStaticMarker``
+   * - ``union_marker``, ``pointer_marker``
+     - attribute handler (enforcement-gated)
+     - ``checkInitProfileMarkerPlacement``
+   * - ``ctor_uninit_member``
+     - 4
+     - ``ConstructorFinalizationProfiles`` row
+   * - ``ref_to_uninit``
+     - 1
+     - ``checkInitProfileRefToUninit`` behind per-site wrappers (variable
+       and member initialization, call arguments, returns, throws,
+       new-initializers, captures, object arguments)
+   * - ``uninit_write``
+     - 1
+     - ``checkInitProfileSubobjectWrite``
 
-
-The ``test::class_final`` Profile
----------------------------------
-
-A pattern-3 (class-finalization) profile.  Demonstrates the case where the
-rule applies once per completed class definition and runs from the
-class-finalization dispatch in ``Sema::CheckCompletedCXXClass``.
-
-- **Rules**: none (the profile has a single implicit rule, so the rule
-  string is empty).
-- **Diagnostic**: ``err_profile_class_final_test`` ("test profile fired on
-  completion of class %1 under profile '%0'").
-- **Opt-in table**: ``ClassFinalizationProfiles`` in
-  ``clang/lib/Sema/SemaProfiles.cpp``.
-
-Because dependent classes are filtered out by the dispatcher, the
-diagnostic fires on class template *instantiations* rather than on the
-primary template.  Lambda closures are also skipped.
-``[[profiles::suppress(test::class_final)]]`` on the class or any
-enclosing lexical ``Decl`` silences the diagnostic via the decl-aware
-``shouldEmitProfileViolation`` overload, which walks the class and its
-lexical parents for a matching suppression.
-
-
-The ``test::ctor_final`` Profile
---------------------------------
-
-A pattern-4 (constructor-finalization) profile.  Demonstrates the case where
-the rule applies once per user-defined constructor, after its
-member-initializer list is complete.
-
-- **Rules**: none (single implicit rule, empty rule string).
-- **Diagnostic**: ``err_profile_ctor_final_test`` ("test profile fired on
-  finalization of a constructor for class %1 under profile '%0'").
-- **Opt-in table**: ``ConstructorFinalizationProfiles`` in
-  ``clang/lib/Sema/SemaProfiles.cpp``.
-
-The diagnostic fires once per user-defined constructor -- written or implicit
-member-initializer list, inline or out-of-line -- and on constructor template
-*instantiations* rather than the dependent pattern.  Defaulted and implicit
-constructors (no body) and delegating constructors are skipped.
+Two helpers are shared across the rules.  ``refersToUninitializedMemory``
+classifies an expression as referring to initialized, uninitialized, or
+unknown storage purely from its syntactic form; its ``UninitAccessOpts``
+presets distinguish a *binding* source (markers count everywhere), a value
+*read*, and a scalar *store* (which differ in whether the top-level
+``[[uninit]]`` marker counts and whether ``[[ref_to_uninit]]`` storage is
+trusted).  ``defaultInitLeavesScalarIndeterminate`` answers whether a type's
+default-initialization leaves an unacknowledged scalar subobject
+indeterminate, trusting user-provided default constructors -- the paper's
+trust-the-constructor principle (P4222R1.1 §5.1), which is also why members
+of objects initialized by a user-provided constructor are deliberately not
+flow-tracked.
