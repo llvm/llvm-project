@@ -117,6 +117,55 @@ func.func @gang_static_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
   return
 }
 
+// Regression test: a loop with WORKER(N) combined with VECTOR and a
+// multi-dim TILE clause used to produce invalid IR because createInnerLoop()
+// (via uncollapseLoops()) and removeWorkerVectorFromLoop() removed the
+// worker attributes from generated inner/tile loops without also clearing
+// the worker operand value copied onto them. This left loops with a
+// non-empty worker operand list but no worker device-type attribute,
+// which the verifier rejects ('worker operands count must match worker
+// device_type count'). Check that the pass produces valid IR, with worker
+// only preserved on the outermost tile loop and vector only on the
+// outermost element loop.
+
+// CHECK-LABEL: func.func @worker_num_with_multi_dim_tile
+// CHECK:         acc.loop worker(%{{.*}} : i32) control(%[[I:.*]] : index) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+// CHECK-NOT:       worker
+// CHECK-NOT:       vector
+// CHECK:           acc.loop control(%[[J:.*]] : index) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+// CHECK-NOT:         worker
+// CHECK-NOT:         vector
+// CHECK:             acc.loop vector control({{.*}} : index) = (%[[I]] : index) to ({{.*}}) step ({{.*}}) {
+// CHECK-NOT:           worker
+// CHECK:               acc.loop control({{.*}} : index) = (%[[J]] : index) to ({{.*}}) step ({{.*}}) {
+// CHECK-NOT:             worker
+// CHECK-NOT:             vector
+// CHECK:                 acc.yield
+// CHECK:               }
+// CHECK:               acc.yield
+// CHECK:             }
+// CHECK:             acc.yield
+// CHECK:           }
+// CHECK:           acc.yield
+// CHECK:         }
+func.func @worker_num_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
+  %c0 = arith.constant 0 : index
+  %c100 = arith.constant 100 : index
+  %c50 = arith.constant 50 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
+  %cw = arith.constant 4 : i32
+  acc.loop worker(%cw : i32) vector tile({%c4 : index, %c8 : index}) control(%i : index, %j : index) = (%c0, %c0 : index, index) to (%c100, %c50 : index, index) step (%c1, %c1 : index, index) {
+    %sum = arith.addi %i, %j : index
+    %val = arith.index_castui %sum : index to i32
+    %fval = arith.sitofp %val : i32 to f32
+    memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
+    acc.yield
+  } attributes {independent = [#acc.device_type<none>]}
+  return
+}
+
 // Test unknown tile size (*) represented as -1
 // Should use default tile size (32)
 

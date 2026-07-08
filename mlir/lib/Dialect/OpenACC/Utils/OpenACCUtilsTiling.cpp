@@ -108,6 +108,9 @@ createInnerLoop(mlir::acc::LoopOp inputLoop, mlir::RewriterBase &rewriter,
   if (inputLoop.hasVector() || inputLoop.getVectorValue()) {
     elementLoop.removeWorkerAttr();
     elementLoop.removeWorkerNumOperandsDeviceTypeAttr();
+    // As above for gang, also drop the worker operand values so elementLoop
+    // does not keep a dangling worker operand with no device-type attribute.
+    elementLoop.getWorkerNumOperandsMutable().clear();
   }
   rewriter.finalizeOpModification(elementLoop);
 
