@@ -44,8 +44,7 @@ struct MemRefToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
   /// and mark dialect legal for the conversion target.
   void populateConvertToEmitCConversionPatterns(
       ConversionTarget &target, TypeConverter &typeConverter,
-      RewritePatternSet &patterns) const final {
-    populateMemRefToEmitCTypeConversion(typeConverter);
+      RewritePatternSet &patterns, std::optional<bool> lowerToCpp) const final {
     populateMemRefToEmitCConversionPatterns(patterns, typeConverter);
   }
 };
@@ -102,14 +101,16 @@ Type convertMemRefType(MemRefType opTy, const TypeConverter *typeConverter) {
 }
 
 static Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
-                                           OpBuilder &builder) {
+                                           OpBuilder &builder,
+                                           Type convertedElementType) {
   assert(isMemRefTypeLegalForEmitC(memrefType) &&
          "incompatible memref type for EmitC conversion");
+
   emitc::CallOpaqueOp elementSize = emitc::CallOpaqueOp::create(
       builder, loc, emitc::SizeTType::get(builder.getContext()),
       builder.getStringAttr("sizeof"), ValueRange{},
       ArrayAttr::get(builder.getContext(),
-                     {TypeAttr::get(memrefType.getElementType())}));
+                     {TypeAttr::get(convertedElementType)}));
 
   IndexType indexType = builder.getIndexType();
   int64_t numElements = llvm::product_of(memrefType.getShape());
@@ -186,23 +187,15 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     }
 
     Type sizeTType = emitc::SizeTType::get(rewriter.getContext());
-    Type elementType = memrefType.getElementType();
-    IndexType indexType = rewriter.getIndexType();
-    emitc::CallOpaqueOp sizeofElementOp = emitc::CallOpaqueOp::create(
-        rewriter, loc, sizeTType, rewriter.getStringAttr("sizeof"),
-        ValueRange{},
-        ArrayAttr::get(rewriter.getContext(), {TypeAttr::get(elementType)}));
-
-    int64_t numElements = 1;
-    for (int64_t dimSize : memrefType.getShape()) {
-      numElements *= dimSize;
+    Type elementType =
+        getTypeConverter()->convertType(memrefType.getElementType());
+    if (!elementType) {
+      return rewriter.notifyMatchFailure(
+          loc, "failed to convert memref element type");
     }
-    Value numElementsValue = emitc::ConstantOp::create(
-        rewriter, loc, indexType, rewriter.getIndexAttr(numElements));
-
+    IndexType indexType = rewriter.getIndexType();
     Value totalSizeBytes =
-        emitc::MulOp::create(rewriter, loc, sizeTType,
-                             sizeofElementOp.getResult(0), numElementsValue);
+        calculateMemrefTotalSizeBytes(loc, memrefType, rewriter, elementType);
 
     emitc::CallOpaqueOp allocCall;
     StringAttr allocFunctionName;
@@ -237,6 +230,37 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
   }
 };
 
+struct ConvertDealloc final : public OpConversionPattern<memref::DeallocOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::DeallocOp deallocOp, OpAdaptor operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = deallocOp.getLoc();
+    // `free` can only be emitted when the dealloc operand is recoverable as an
+    // `emitc.ptr<T>`. In the current conversion, that happens via an
+    // unrealized_conversion_cast from the pointer-backed EmitC form.
+    Value strippedPtr = stripPointerUnrealizedCast(operands.getMemref());
+    if (!strippedPtr) {
+      return rewriter.notifyMatchFailure(
+          loc, "expected pointer-backed memref for EmitC deallocation");
+    }
+
+    // The allocation APIs used by MemRefToEmitC return `void *`, and `free`
+    // expects that same pointer type. Deallocation therefore only needs the
+    // recovered base pointer cast back to `void *` before calling `free`.
+    Type opaqueVoidPtrType = emitc::PointerType::get(
+        emitc::OpaqueType::get(rewriter.getContext(), "void"));
+    Value freeArg =
+        emitc::CastOp::create(rewriter, loc, opaqueVoidPtrType, strippedPtr);
+    emitc::CallOpaqueOp freeCall = emitc::CallOpaqueOp::create(
+        rewriter, loc, TypeRange{}, rewriter.getStringAttr(freeFunctionName),
+        ValueRange{freeArg});
+    rewriter.replaceOp(deallocOp, freeCall.getResults());
+    return success();
+  }
+};
+
 struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -266,11 +290,21 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
     emitc::AddressOfOp targetPtr =
         createPointerFromEmitcArray(loc, rewriter, targetArrayValue);
 
-    emitc::CallOpaqueOp memCpyCall = emitc::CallOpaqueOp::create(
-        rewriter, loc, TypeRange{}, "memcpy",
-        ValueRange{
-            targetPtr.getResult(), srcPtr.getResult(),
-            calculateMemrefTotalSizeBytes(loc, srcMemrefType, rewriter)});
+    Type convertedElementType =
+        getTypeConverter()->convertType(srcMemrefType.getElementType());
+    if (!convertedElementType) {
+      return rewriter.notifyMatchFailure(
+          loc, "failed to convert memref element type");
+    }
+    Value totalSizeInBytes = calculateMemrefTotalSizeBytes(
+        loc, srcMemrefType, rewriter, convertedElementType);
+    emitc::CallOpaqueOp memCpyCall =
+        emitc::CallOpaqueOp::create(rewriter, loc, TypeRange{}, "memcpy",
+                                    ValueRange{
+                                        targetPtr.getResult(),
+                                        srcPtr.getResult(),
+                                        totalSizeInBytes,
+                                    });
 
     rewriter.replaceOp(copyOp, memCpyCall.getResults());
 
@@ -442,37 +476,9 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
 
 } // namespace
 
-void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
-  typeConverter.addConversion(
-      [&](MemRefType memRefType) -> std::optional<Type> {
-        if (!isMemRefTypeLegalForEmitC(memRefType)) {
-          return {};
-        }
-        Type convertedElementType =
-            typeConverter.convertType(memRefType.getElementType());
-        if (!convertedElementType)
-          return {};
-        return emitc::ArrayType::get(memRefType.getShape(),
-                                     convertedElementType);
-      });
-
-  auto materializeAsUnrealizedCast = [](OpBuilder &builder, Type resultType,
-                                        ValueRange inputs,
-                                        Location loc) -> Value {
-    if (inputs.size() != 1)
-      return Value();
-
-    return UnrealizedConversionCastOp::create(builder, loc, resultType, inputs)
-        .getResult(0);
-  };
-
-  typeConverter.addSourceMaterialization(materializeAsUnrealizedCast);
-  typeConverter.addTargetMaterialization(materializeAsUnrealizedCast);
-}
-
 void mlir::populateMemRefToEmitCConversionPatterns(
     RewritePatternSet &patterns, const TypeConverter &converter) {
-  patterns.add<ConvertAlloca, ConvertAlloc, ConvertCopy, ConvertGlobal,
-               ConvertGetGlobal, ConvertLoad, ConvertStore>(
+  patterns.add<ConvertAlloca, ConvertAlloc, ConvertCopy, ConvertDealloc,
+               ConvertGlobal, ConvertGetGlobal, ConvertLoad, ConvertStore>(
       converter, patterns.getContext());
 }

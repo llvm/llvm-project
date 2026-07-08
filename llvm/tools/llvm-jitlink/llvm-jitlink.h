@@ -78,11 +78,12 @@ struct Session {
   };
 
   orc::ExecutionSession ES;
+  std::unique_ptr<jitlink::JITLinkMemoryManager> MemoryMgr;
   std::unique_ptr<orc::DylibManager> DylibMgr;
   orc::JITDylib *MainJD = nullptr;
   orc::JITDylib *ProcessSymsJD = nullptr;
   orc::JITDylib *PlatformJD = nullptr;
-  orc::ObjectLinkingLayer ObjLayer;
+  std::unique_ptr<orc::ObjectLinkingLayer> ObjLayer;
   std::unique_ptr<LazyLinkingSupport> LazyLinking;
   orc::JITDylibSearchOrder JDSearchOrder;
   SubtargetFeatures Features;
@@ -137,7 +138,7 @@ struct Session {
            "Lazy linking requested but not available");
     return Lazy ? static_cast<orc::ObjectLayer &>(
                       LazyLinking->LazyObjLinkingLayer)
-                : static_cast<orc::ObjectLayer &>(ObjLayer);
+                : static_cast<orc::ObjectLayer &>(*ObjLayer);
   }
 
   Expected<FileInfo &> findFileInfo(StringRef FileName);

@@ -334,6 +334,112 @@ bb2:
   ret i32 %E
 }
 
+define i32 @test_phi_load_volatile(ptr %A, ptr %B) {
+; CHECK-LABEL: @test_phi_load_volatile(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A:%.*]], null
+; CHECK-NEXT:    br i1 [[C]], label [[BB1:%.*]], label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[C:%.*]] = load volatile i32, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[D:%.*]] = load volatile i32, ptr [[A]], align 4
+; CHECK-NEXT:    br label [[BB2]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[E:%.*]] = phi i32 [ [[C]], [[BB]] ], [ [[D]], [[BB1]] ]
+; CHECK-NEXT:    ret i32 [[E]]
+;
+entry:
+  %c = icmp eq ptr %A, null
+  br i1 %c, label %bb1, label %bb
+
+bb:
+  %C = load volatile i32, ptr %B
+  br label %bb2
+
+bb1:
+  %D = load volatile i32, ptr %A
+  br label %bb2
+
+bb2:
+  %E = phi i32 [ %C, %bb ], [ %D, %bb1 ]
+  ret i32 %E
+}
+
+declare void @inaccessiblemem() memory(inaccessiblemem: readwrite)
+
+define i32 @test_phi_load_volatile_inaccessiblemem_call(ptr %A, ptr %B) {
+; CHECK-LABEL: @test_phi_load_volatile_inaccessiblemem_call(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A:%.*]], null
+; CHECK-NEXT:    br i1 [[C]], label [[BB1:%.*]], label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[C:%.*]] = load volatile i32, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[D:%.*]] = load volatile i32, ptr [[A]], align 4
+; CHECK-NEXT:    call void @inaccessiblemem()
+; CHECK-NEXT:    br label [[BB2]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[E:%.*]] = phi i32 [ [[C]], [[BB]] ], [ [[D]], [[BB1]] ]
+; CHECK-NEXT:    ret i32 [[E]]
+;
+entry:
+  %c = icmp eq ptr %A, null
+  br i1 %c, label %bb1, label %bb
+
+bb:
+  %C = load volatile i32, ptr %B
+  br label %bb2
+
+bb1:
+  %D = load volatile i32, ptr %A
+  call void @inaccessiblemem()
+  br label %bb2
+
+bb2:
+  %E = phi i32 [ %C, %bb ], [ %D, %bb1 ]
+  ret i32 %E
+}
+
+define i32 @test_phi_load_volatile_non_speculatable(ptr %A, ptr %B, ptr %X) {
+; CHECK-LABEL: @test_phi_load_volatile_non_speculatable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A:%.*]], null
+; CHECK-NEXT:    br i1 [[C]], label [[BB1:%.*]], label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[C:%.*]] = load volatile i32, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[D:%.*]] = load volatile i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    br label [[BB2]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[E:%.*]] = phi i32 [ [[C]], [[BB]] ], [ [[D]], [[BB1]] ]
+; CHECK-NEXT:    [[F:%.*]] = phi i32 [ 0, [[BB]] ], [ [[Y]], [[BB1]] ]
+; CHECK-NEXT:    [[G:%.*]] = add i32 [[E]], [[F]]
+; CHECK-NEXT:    ret i32 [[G]]
+;
+entry:
+  %c = icmp eq ptr %A, null
+  br i1 %c, label %bb1, label %bb
+
+bb:
+  %C = load volatile i32, ptr %B
+  br label %bb2
+
+bb1:
+  %D = load volatile i32, ptr %A
+  %Y = load i32, ptr %X
+  br label %bb2
+
+bb2:
+  %E = phi i32 [ %C, %bb ], [ %D, %bb1 ]
+  %F = phi i32 [ 0, %bb ], [ %Y, %bb1 ]
+  %G = add i32 %E, %F
+  ret i32 %G
+}
+
 
 ; PR1777
 declare i1 @test11a()

@@ -71,7 +71,7 @@ define half @load_u16_from_u8(ptr %n){
 ; CHECK-LABEL: load_u16_from_u8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr b0, [x0]
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, ptr %n, align 1
@@ -150,7 +150,7 @@ define half @load_u16_from_u8_off1(ptr %n){
 ; CHECK-LABEL: load_u16_from_u8_off1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr b0, [x0, #1]
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 1
@@ -231,7 +231,7 @@ define half @load_u16_from_u8_off2(ptr %n){
 ; CHECK-LABEL: load_u16_from_u8_off2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr b0, [x0, #2]
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 2
@@ -312,7 +312,7 @@ define half @load_u16_from_u8_off255(ptr %n){
 ; CHECK-LABEL: load_u16_from_u8_off255:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr b0, [x0, #255]
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 255
@@ -392,7 +392,7 @@ define half @load_u16_from_u8_off256(ptr %n){
 ; CHECK-LABEL: load_u16_from_u8_off256:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr b0, [x0, #256]
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 256
@@ -473,7 +473,7 @@ define half @load_u16_from_u8_offn(ptr %n){
 ; CHECK-LABEL: load_u16_from_u8_offn:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr b0, [x0, #4095]
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 4095
@@ -559,7 +559,7 @@ define half @load_u16_from_u8_offnp1(ptr %n){
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, #4096 // =0x1000
 ; CHECK-NEXT:    ldr b0, [x0, x8]
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 4096

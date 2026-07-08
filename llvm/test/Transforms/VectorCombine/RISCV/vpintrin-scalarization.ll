@@ -1515,7 +1515,7 @@ define <vscale x 8 x half> @fadd_nxv1f16_allonesmask(<vscale x 8 x half> %x, hal
 ; VEC-COMBINE-LABEL: @fadd_nxv1f16_allonesmask(
 ; VEC-COMBINE-NEXT:    [[SPLAT:%.*]] = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
 ; VEC-COMBINE-NEXT:    [[MASK:%.*]] = shufflevector <vscale x 8 x i1> [[SPLAT]], <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-; VEC-COMBINE-NEXT:    [[TMP1:%.*]] = fadd half [[Y:%.*]], 0xH5140
+; VEC-COMBINE-NEXT:    [[TMP1:%.*]] = fadd half [[Y:%.*]], 4.200000e+01
 ; VEC-COMBINE-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x half> poison, half [[TMP1]], i64 0
 ; VEC-COMBINE-NEXT:    [[TMP2:%.*]] = shufflevector <vscale x 8 x half> [[DOTSPLATINSERT]], <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
 ; VEC-COMBINE-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x half> @llvm.vp.fadd.nxv8f16(<vscale x 8 x half> [[X:%.*]], <vscale x 8 x half> [[TMP2]], <vscale x 8 x i1> [[MASK]], i32 [[EVL:%.*]])
@@ -1526,7 +1526,7 @@ define <vscale x 8 x half> @fadd_nxv1f16_allonesmask(<vscale x 8 x half> %x, hal
 ; NO-VEC-COMBINE-NEXT:    [[MASK:%.*]] = shufflevector <vscale x 8 x i1> [[SPLAT]], <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
 ; NO-VEC-COMBINE-NEXT:    [[TMP1:%.*]] = insertelement <vscale x 8 x half> poison, half [[Y:%.*]], i64 0
 ; NO-VEC-COMBINE-NEXT:    [[TMP2:%.*]] = shufflevector <vscale x 8 x half> [[TMP1]], <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
-; NO-VEC-COMBINE-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x half> @llvm.vp.fadd.nxv8f16(<vscale x 8 x half> [[TMP2]], <vscale x 8 x half> splat (half 0xH5140), <vscale x 8 x i1> [[MASK]], i32 [[EVL:%.*]])
+; NO-VEC-COMBINE-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x half> @llvm.vp.fadd.nxv8f16(<vscale x 8 x half> [[TMP2]], <vscale x 8 x half> splat (half 4.200000e+01), <vscale x 8 x i1> [[MASK]], i32 [[EVL:%.*]])
 ; NO-VEC-COMBINE-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x half> @llvm.vp.fadd.nxv8f16(<vscale x 8 x half> [[X:%.*]], <vscale x 8 x half> [[TMP3]], <vscale x 8 x i1> [[MASK]], i32 [[EVL]])
 ; NO-VEC-COMBINE-NEXT:    ret <vscale x 8 x half> [[TMP4]]
 ;
@@ -1543,7 +1543,7 @@ define <vscale x 8 x half> @fadd_nxv8f16_anymask(<vscale x 8 x half> %x, half %y
 ; ALL-LABEL: @fadd_nxv8f16_anymask(
 ; ALL-NEXT:    [[TMP1:%.*]] = insertelement <vscale x 8 x half> poison, half [[Y:%.*]], i64 0
 ; ALL-NEXT:    [[TMP2:%.*]] = shufflevector <vscale x 8 x half> [[TMP1]], <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
-; ALL-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x half> @llvm.vp.fadd.nxv8f16(<vscale x 8 x half> [[TMP2]], <vscale x 8 x half> splat (half 0xH5140), <vscale x 8 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
+; ALL-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x half> @llvm.vp.fadd.nxv8f16(<vscale x 8 x half> [[TMP2]], <vscale x 8 x half> splat (half 4.200000e+01), <vscale x 8 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
 ; ALL-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x half> @llvm.vp.fadd.nxv8f16(<vscale x 8 x half> [[X:%.*]], <vscale x 8 x half> [[TMP3]], <vscale x 8 x i1> [[MASK]], i32 [[EVL]])
 ; ALL-NEXT:    ret <vscale x 8 x half> [[TMP4]]
 ;

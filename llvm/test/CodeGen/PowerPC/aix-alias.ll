@@ -4,7 +4,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
 ; RUN:     -mattr=-altivec -data-sections=false -xcoff-traceback-table=false < %s | \
 ; RUN:   FileCheck --check-prefix=ASM %s
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff --code-model=small -mcpu=pwr4 \
 ; RUN:     -mattr=-altivec -data-sections=false -xcoff-traceback-table=false < %s | \
 ; RUN:   FileCheck --check-prefix=ASM %s
 

@@ -15,7 +15,7 @@ define void @no_epilogue_when_narrowed_covers_all(ptr %p) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -50,4 +50,32 @@ loop:
 
 exit:
   ret void
+}
+
+; Test that epilogue vectorization does not crash when narrowInterleaveGroups
+; materializes VFxUF and the canonical IV increment step gets simplified
+; (e.g. mul to shl) by later recipe simplification passes.
+define fastcc i32 @narrow_interleave_epilogue_unknown_tc(ptr %end) {
+; CHECK-LABEL: define fastcc i32 @narrow_interleave_epilogue_unknown_tc(
+; CHECK:       vector.body:
+; CHECK:       ret i32 0
+;
+entry:
+  br label %loop
+
+loop:
+  %ptr = phi ptr [ %ptr.next, %loop ], [ null, %entry ]
+  %v0 = load i64, ptr %ptr, align 8
+  %div0 = sdiv i64 %v0, 4
+  store i64 %div0, ptr %ptr, align 8
+  %gep1 = getelementptr i8, ptr %ptr, i64 8
+  %v1 = load i64, ptr %gep1, align 8
+  %div1 = sdiv i64 %v1, 4
+  store i64 %div1, ptr %gep1, align 8
+  %ptr.next = getelementptr nusw i8, ptr %ptr, i64 16
+  %cmp = icmp ult ptr %ptr, %end
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 0
 }

@@ -19,6 +19,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
 #include "AArch64TargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
@@ -34,7 +35,9 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/Support/Debug.h"
@@ -48,11 +51,11 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
-namespace {
-
 #define GET_GICOMBINER_TYPES
 #include "AArch64GenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_TYPES
+
+namespace {
 
 /// This combine tries do what performExtractVectorEltCombine does in SDAG.
 /// Rewrite for pairwise fadd pattern
@@ -113,7 +116,7 @@ void applyExtractVecEltPairwiseAdd(
   // We want to generate two extracts of elements 0 and 1, and add them.
   LLT Ty = std::get<1>(MatchInfo);
   Register Src = std::get<2>(MatchInfo);
-  LLT s64 = LLT::scalar(64);
+  LLT s64 = LLT::integer(64);
   B.setInstrAndDebugLoc(MI);
   auto Elt0 = B.buildExtractVectorElement(Ty, Src, B.buildConstant(s64, 0));
   auto Elt1 = B.buildExtractVectorElement(Ty, Src, B.buildConstant(s64, 1));
@@ -222,7 +225,7 @@ bool matchAArch64MulConstCombine(
     return false;
 
   ApplyFn = [=](MachineIRBuilder &B, Register DstReg) {
-    auto Shift = B.buildConstant(LLT::scalar(64), ShiftAmt);
+    auto Shift = B.buildConstant(LLT::integer(64), ShiftAmt);
     auto ShiftedVal = B.buildShl(Ty, LHS, Shift);
 
     Register AddSubLHS = ShiftValUseIsLHS ? ShiftedVal.getReg(0) : LHS;
@@ -237,7 +240,8 @@ bool matchAArch64MulConstCombine(
     }
     // Shift the result.
     if (TrailingZeroes) {
-      B.buildShl(DstReg, Res, B.buildConstant(LLT::scalar(64), TrailingZeroes));
+      B.buildShl(DstReg, Res,
+                 B.buildConstant(LLT::integer(64), TrailingZeroes));
       return;
     }
     B.buildCopy(DstReg, Res.getReg(0));
@@ -328,11 +332,11 @@ void applySplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI,
   GStore &Store = cast<GStore>(MI);
   assert(MRI.getType(Store.getValueReg()).isVector() &&
          "Expected a vector store value");
-  LLT NewTy = LLT::scalar(64);
+  LLT NewTy = LLT::integer(64);
   Register PtrReg = Store.getPointerReg();
   auto Zero = B.buildConstant(NewTy, 0);
-  auto HighPtr = B.buildPtrAdd(MRI.getType(PtrReg), PtrReg,
-                               B.buildConstant(LLT::scalar(64), 8));
+  auto HighPtr =
+      B.buildPtrAdd(MRI.getType(PtrReg), PtrReg, B.buildConstant(NewTy, 8));
   auto &MF = *MI.getMF();
   auto *LowMMO = MF.getMachineMemOperand(&Store.getMMO(), 0, NewTy);
   auto *HighMMO = MF.getMachineMemOperand(&Store.getMMO(), 8, NewTy);
@@ -584,7 +588,7 @@ static void applySubAddMulReassoc(MachineInstr &MI, MachineInstr &Sub,
   MI.getOperand(1).setReg(Tmp);
   MI.getOperand(2).setReg(Mul2);
   Sub.eraseFromParent();
-  Observer.changingInstr(MI);
+  Observer.changedInstr(MI);
 }
 
 class AArch64PostLegalizerCombinerImpl : public Combiner {
@@ -630,102 +634,18 @@ AArch64PostLegalizerCombinerImpl::AArch64PostLegalizerCombinerImpl(
 {
 }
 
-class AArch64PostLegalizerCombiner : public MachineFunctionPass {
-public:
-  static char ID;
-
-  AArch64PostLegalizerCombiner(bool IsOptNone = false);
-
-  StringRef getPassName() const override {
-    return "AArch64PostLegalizerCombiner";
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-private:
-  bool IsOptNone;
-  AArch64PostLegalizerCombinerImplRuleConfig RuleConfig;
-
-
-  struct StoreInfo {
-    GStore *St = nullptr;
-    // The G_PTR_ADD that's used by the store. We keep this to cache the
-    // MachineInstr def.
-    GPtrAdd *Ptr = nullptr;
-    // The signed offset to the Ptr instruction.
-    int64_t Offset = 0;
-    LLT StoredType;
-  };
-  bool tryOptimizeConsecStores(SmallVectorImpl<StoreInfo> &Stores,
-                               CSEMIRBuilder &MIB);
-
-  bool optimizeConsecutiveMemOpAddressing(MachineFunction &MF,
-                                          CSEMIRBuilder &MIB);
+struct StoreInfo {
+  GStore *St = nullptr;
+  // The G_PTR_ADD that's used by the store. We keep this to cache the
+  // MachineInstr def.
+  GPtrAdd *Ptr = nullptr;
+  // The signed offset to the Ptr instruction.
+  int64_t Offset = 0;
+  LLT StoredType;
 };
-} // end anonymous namespace
 
-void AArch64PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesCFG();
-  getSelectionDAGFallbackAnalysisUsage(AU);
-  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
-  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
-  if (!IsOptNone) {
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<GISelCSEAnalysisWrapperPass>();
-    AU.addPreserved<GISelCSEAnalysisWrapperPass>();
-  }
-  MachineFunctionPass::getAnalysisUsage(AU);
-}
-
-AArch64PostLegalizerCombiner::AArch64PostLegalizerCombiner(bool IsOptNone)
-    : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
-  if (!RuleConfig.parseCommandLineOption())
-    report_fatal_error("Invalid rule identifier");
-}
-
-bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasFailedISel())
-    return false;
-  assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
-  const Function &F = MF.getFunction();
-  bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
-
-  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
-  const auto *LI = ST.getLegalizerInfo();
-
-  GISelValueTracking *VT =
-      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
-  MachineDominatorTree *MDT =
-      IsOptNone ? nullptr
-                : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  GISelCSEAnalysisWrapper &Wrapper =
-      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  auto *CSEInfo =
-      &Wrapper.get(getStandardCSEConfigForOpt(MF.getTarget().getOptLevel()));
-
-  CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
-                     /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
-                     F.hasMinSize());
-  // Disable fixed-point iteration to reduce compile-time
-  CInfo.MaxIterations = 1;
-  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
-  // Legalizer performs DCE, so a full DCE pass is unnecessary.
-  CInfo.EnableFullDCE = false;
-  AArch64PostLegalizerCombinerImpl Impl(MF, CInfo, *VT, CSEInfo, RuleConfig, ST,
-                                        MDT, LI);
-  bool Changed = Impl.combineMachineInstrs();
-
-  auto MIB = CSEMIRBuilder(MF);
-  MIB.setCSEInfo(CSEInfo);
-  Changed |= optimizeConsecutiveMemOpAddressing(MF, MIB);
-  return Changed;
-}
-
-bool AArch64PostLegalizerCombiner::tryOptimizeConsecStores(
-    SmallVectorImpl<StoreInfo> &Stores, CSEMIRBuilder &MIB) {
+static bool tryOptimizeConsecStores(SmallVectorImpl<StoreInfo> &Stores,
+                                    CSEMIRBuilder &MIB) {
   if (Stores.size() <= 2)
     return false;
 
@@ -750,7 +670,8 @@ bool AArch64PostLegalizerCombiner::tryOptimizeConsecStores(
   for (auto &SInfo : Stores) {
     // Compute a new pointer with the new base ptr and adjusted offset.
     MIB.setInstrAndDebugLoc(*SInfo.St);
-    auto NewOff = MIB.buildConstant(LLT::scalar(64), SInfo.Offset - BaseOffset);
+    auto NewOff =
+        MIB.buildConstant(LLT::integer(64), SInfo.Offset - BaseOffset);
     auto NewPtr = MIB.buildPtrAdd(MRI.getType(SInfo.St->getPointerReg()),
                                   NewBase, NewOff);
     if (MIB.getObserver())
@@ -770,8 +691,8 @@ static cl::opt<bool>
                               cl::desc("Enable consecutive memop optimization "
                                        "in AArch64PostLegalizerCombiner"));
 
-bool AArch64PostLegalizerCombiner::optimizeConsecutiveMemOpAddressing(
-    MachineFunction &MF, CSEMIRBuilder &MIB) {
+static bool optimizeConsecutiveMemOpAddressing(MachineFunction &MF,
+                                               CSEMIRBuilder &MIB) {
   // This combine needs to run after all reassociations/folds on pointer
   // addressing have been done, specifically those that combine two G_PTR_ADDs
   // with constant offsets into a single G_PTR_ADD with a combined offset.
@@ -908,17 +829,151 @@ bool AArch64PostLegalizerCombiner::optimizeConsecutiveMemOpAddressing(
   return Changed;
 }
 
-char AArch64PostLegalizerCombiner::ID = 0;
-INITIALIZE_PASS_BEGIN(AArch64PostLegalizerCombiner, DEBUG_TYPE,
+bool runCombiner(MachineFunction &MF, GISelCSEInfo *CSEInfo,
+                 GISelValueTracking *VT, MachineDominatorTree *MDT,
+                 const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig,
+                 bool EnableOpt, bool IsOptNone) {
+  if (MF.getProperties().hasFailedISel())
+    return false;
+  const Function &F = MF.getFunction();
+
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  const LegalizerInfo *LI = ST.getLegalizerInfo();
+
+  CombinerInfo CInfo(/*AllowIllegalOps=*/false, /*ShouldLegalizeIllegal=*/false,
+                     /*LegalizerInfo=*/LI, EnableOpt, F.hasOptSize(),
+                     F.hasMinSize());
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // Legalizer performs DCE, so a full DCE pass is unnecessary.
+  CInfo.EnableFullDCE = false;
+  AArch64PostLegalizerCombinerImpl Impl(MF, CInfo, *VT, CSEInfo, RuleConfig, ST,
+                                        MDT, LI);
+  bool Changed = Impl.combineMachineInstrs();
+
+  CSEMIRBuilder MIB(MF);
+  MIB.setCSEInfo(CSEInfo);
+  Changed |= optimizeConsecutiveMemOpAddressing(MF, MIB);
+  return Changed;
+}
+
+class AArch64PostLegalizerCombinerLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  AArch64PostLegalizerCombinerLegacy(bool IsOptNone = false);
+
+  StringRef getPassName() const override {
+    return "AArch64PostLegalizerCombiner";
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::Legalized);
+  }
+
+private:
+  bool IsOptNone;
+  AArch64PostLegalizerCombinerImplRuleConfig RuleConfig;
+};
+} // end anonymous namespace
+
+void AArch64PostLegalizerCombinerLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
+  AU.setPreservesCFG();
+  getSelectionDAGFallbackAnalysisUsage(AU);
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
+  if (!IsOptNone) {
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<GISelCSEAnalysisWrapperPass>();
+    AU.addPreserved<GISelCSEAnalysisWrapperPass>();
+  }
+  MachineFunctionPass::getAnalysisUsage(AU);
+}
+
+AArch64PostLegalizerCombinerLegacy::AArch64PostLegalizerCombinerLegacy(
+    bool IsOptNone)
+    : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
+  if (!RuleConfig.parseCommandLineOption())
+    reportFatalUsageError("Invalid rule identifier");
+}
+
+bool AArch64PostLegalizerCombinerLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (MF.getProperties().hasFailedISel())
+    return false;
+
+  GISelValueTracking *VT =
+      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
+  MachineDominatorTree *MDT =
+      IsOptNone ? nullptr
+                : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  GISelCSEAnalysisWrapper &Wrapper =
+      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+  auto *CSEInfo =
+      &Wrapper.get(getStandardCSEConfigForOpt(MF.getTarget().getOptLevel()));
+
+  bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOptLevel::None &&
+                   !skipFunction(MF.getFunction());
+
+  return runCombiner(MF, CSEInfo, VT, MDT, RuleConfig, EnableOpt, IsOptNone);
+}
+
+char AArch64PostLegalizerCombinerLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(AArch64PostLegalizerCombinerLegacy, DEBUG_TYPE,
                       "Combine AArch64 MachineInstrs after legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
-INITIALIZE_PASS_END(AArch64PostLegalizerCombiner, DEBUG_TYPE,
+INITIALIZE_PASS_END(AArch64PostLegalizerCombinerLegacy, DEBUG_TYPE,
                     "Combine AArch64 MachineInstrs after legalization", false,
                     false)
 
+AArch64PostLegalizerCombinerPass::AArch64PostLegalizerCombinerPass(
+    const AArch64TargetMachine *TM)
+    : RuleConfig(
+          std::make_unique<AArch64PostLegalizerCombinerImplRuleConfig>()),
+      TM(TM) {
+  if (!RuleConfig->parseCommandLineOption())
+    reportFatalUsageError("invalid rule identifier");
+}
+
+AArch64PostLegalizerCombinerPass::AArch64PostLegalizerCombinerPass(
+    AArch64PostLegalizerCombinerPass &&) = default;
+
+AArch64PostLegalizerCombinerPass::~AArch64PostLegalizerCombinerPass() = default;
+
+PreservedAnalyses
+AArch64PostLegalizerCombinerPass::run(MachineFunction &MF,
+                                      MachineFunctionAnalysisManager &MFAM) {
+  if (MF.getProperties().hasFailedISel())
+    return PreservedAnalyses::all();
+
+  const bool IsOptNone = TM->isGlobalISelOptNone();
+  bool EnableOpt = !IsOptNone;
+
+  GISelValueTracking *VT = &MFAM.getResult<GISelValueTrackingAnalysis>(MF);
+  MachineDominatorTree *MDT =
+      IsOptNone ? nullptr : &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  GISelCSEInfo *CSEInfo = MFAM.getResult<GISelCSEAnalysis>(MF).get();
+
+  if (!runCombiner(MF, CSEInfo, VT, MDT, *RuleConfig, EnableOpt, IsOptNone))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<GISelValueTrackingAnalysis>();
+  PA.preserve<GISelCSEAnalysis>();
+  return PA;
+}
+
 namespace llvm {
-FunctionPass *createAArch64PostLegalizerCombiner(bool IsOptNone) {
-  return new AArch64PostLegalizerCombiner(IsOptNone);
+FunctionPass *createAArch64PostLegalizerCombinerLegacy(bool IsOptNone) {
+  return new AArch64PostLegalizerCombinerLegacy(IsOptNone);
 }
 } // end namespace llvm

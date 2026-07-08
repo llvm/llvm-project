@@ -343,6 +343,50 @@ func.func @test_convert_alloca_remat() {
 
 // -----
 
+// Integer-to-integer fir.convert is not an outline rematerialization candidate.
+func.func private @use_i64(i64) -> ()
+
+func.func @test_convert_integer_widen_no_remat(%arg0: !fir.ref<i32>) {
+  %0 = fir.load %arg0 : !fir.ref<i32>
+  %1 = fir.convert %0 : (i32) -> i64
+  fir.call @use_i64(%1) : (i64) -> ()
+  acc.parallel {
+    fir.call @use_i64(%1) : (i64) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_integer_widen_no_remat
+// CHECK: fir.load
+// CHECK: %[[CVT:.*]] = fir.convert
+// CHECK: fir.call @use_i64(%[[CVT]])
+// CHECK: acc.parallel {
+// CHECK-NEXT: fir.call @use_i64(%[[CVT]])
+
+// -----
+
+// Pointer-to-pointer fir.convert is not a rematerialization candidate.
+func.func private @use_ref_f32(!fir.ref<f32>) -> ()
+
+func.func @test_convert_ptr_to_ptr_no_remat(%arg0: !fir.ref<i32>) {
+  %0 = fir.convert %arg0 : (!fir.ref<i32>) -> !fir.ref<f32>
+  fir.call @use_ref_f32(%0) : (!fir.ref<f32>) -> ()
+  acc.parallel {
+    fir.call @use_ref_f32(%0) : (!fir.ref<f32>) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_ptr_to_ptr_no_remat
+// CHECK: %[[CVT:.*]] = fir.convert %arg0
+// CHECK: fir.call @use_ref_f32(%[[CVT]])
+// CHECK: acc.parallel {
+// CHECK-NEXT: fir.call @use_ref_f32(%[[CVT]])
+
+// -----
+
 // Test that an intermediate fir.convert in a trace chain
 // (declare -> convert -> unboxchar) does not get rematerialized,
 // while a direct ptr-to-int fir.convert is correctly sunk.

@@ -51,6 +51,14 @@ public:
   static constexpr StringLiteral name = "gpu.async_token";
 };
 
+class NamedBarrierType
+    : public Type::TypeBase<NamedBarrierType, Type, TypeStorage> {
+public:
+  using Base::Base;
+
+  static constexpr StringLiteral name = "gpu.named_barrier";
+};
+
 /// MMAMatrixType storage and uniquing. Array is uniqued based on its shape
 /// and type.
 struct MMAMatrixStorageType : public TypeStorage {

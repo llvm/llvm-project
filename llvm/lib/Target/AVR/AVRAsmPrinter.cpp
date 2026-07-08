@@ -48,7 +48,7 @@ namespace {
 class AVRAsmPrinter : public AsmPrinter {
 public:
   AVRAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID), MRI(*TM.getMCRegisterInfo()) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), MRI(TM.getMCRegisterInfo()) {}
 
   StringRef getPassName() const override { return "AVR Assembly Printer"; }
 
@@ -114,13 +114,10 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
   const MachineOperand &MO = MI->getOperand(OpNum);
 
-  if (ExtraCode && ExtraCode[0]) {
+  // Operand must be a register when using 'A' ~ 'Z' extra code.
+  if (ExtraCode && ExtraCode[0] && MO.isReg()) {
     // Unknown extra code.
     if (ExtraCode[1] != 0 || ExtraCode[0] < 'A' || ExtraCode[0] > 'Z')
-      return true;
-
-    // Operand must be a register when using 'A' ~ 'Z' extra code.
-    if (!MO.isReg())
       return true;
 
     Register Reg = MO.getReg();
@@ -165,7 +162,13 @@ bool AVRAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     return true; // Unknown modifier
 
   const MachineOperand &MO = MI->getOperand(OpNum);
-  (void)MO;
+
+  // Print direct memory operands.
+  if (MO.isGlobal() || MO.isSymbol() || MO.isMCSymbol()) {
+    PrintSymbolOperand(MO, O);
+    return false;
+  }
+
   assert(MO.isReg() && "Unexpected inline asm memory operand");
 
   // TODO: We should be able to look up the alternative name for

@@ -20,6 +20,19 @@
 using namespace llvm::PatternMatchHelpers;
 
 namespace llvm {
+namespace PatternMatchHelpers {
+template <typename SCEVPtrT> struct match_bind<SCEVUseT<SCEVPtrT>> {
+  SCEVUseT<SCEVPtrT> &VR;
+
+  match_bind(SCEVUseT<SCEVPtrT> &V) : VR(V) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    VR = V;
+    return true;
+  }
+};
+} // namespace PatternMatchHelpers
+
 namespace SCEVPatternMatch {
 
 template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
@@ -69,50 +82,25 @@ inline auto m_SCEV() { return m_Isa<const SCEV>(); }
 inline auto m_SCEVConstant() { return m_Isa<const SCEVConstant>(); }
 inline auto m_SCEVVScale() { return m_Isa<const SCEVVScale>(); }
 
-template <typename Class> struct bind_ty {
-  Class *&VR;
-
-  bind_ty(Class *&V) : VR(V) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    if (auto *CV = dyn_cast<Class>(V)) {
-      VR = CV;
-      return true;
-    }
-    return false;
-  }
-};
-
-template <typename SCEVPtrT> struct bind_ty<SCEVUseT<SCEVPtrT>> {
-  SCEVUseT<SCEVPtrT> &VR;
-
-  bind_ty(SCEVUseT<SCEVPtrT> &V) : VR(V) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    VR = V;
-    return true;
-  }
-};
-
 /// Match a SCEV, capturing it if we match.
-inline bind_ty<const SCEV> m_SCEV(const SCEV *&V) { return V; }
+inline match_bind<const SCEV> m_SCEV(const SCEV *&V) { return V; }
 
 template <typename SCEVPtrT>
-inline bind_ty<SCEVUseT<SCEVPtrT>> m_SCEV(SCEVUseT<SCEVPtrT> &V) {
+inline match_bind<SCEVUseT<SCEVPtrT>> m_SCEV(SCEVUseT<SCEVPtrT> &V) {
   return V;
 }
-inline bind_ty<const SCEVConstant> m_SCEVConstant(const SCEVConstant *&V) {
+inline match_bind<const SCEVConstant> m_SCEVConstant(const SCEVConstant *&V) {
   return V;
 }
-inline bind_ty<const SCEVUnknown> m_SCEVUnknown(const SCEVUnknown *&V) {
-  return V;
-}
-
-inline bind_ty<const SCEVAddExpr> m_scev_Add(const SCEVAddExpr *&V) {
+inline match_bind<const SCEVUnknown> m_SCEVUnknown(const SCEVUnknown *&V) {
   return V;
 }
 
-inline bind_ty<const SCEVMulExpr> m_scev_Mul(const SCEVMulExpr *&V) {
+inline match_bind<const SCEVAddExpr> m_scev_Add(const SCEVAddExpr *&V) {
+  return V;
+}
+
+inline match_bind<const SCEVMulExpr> m_scev_Mul(const SCEVMulExpr *&V) {
   return V;
 }
 
@@ -390,7 +378,7 @@ struct specificloop_ty {
 
 inline specificloop_ty m_SpecificLoop(const Loop *L) { return L; }
 
-inline bind_ty<const Loop> m_Loop(const Loop *&L) { return L; }
+inline match_bind<const Loop> m_Loop(const Loop *&L) { return L; }
 
 template <typename Op0_t, typename Op1_t>
 inline SCEVAffineAddRec_match<Op0_t, Op1_t, match_isa<const Loop>>

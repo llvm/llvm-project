@@ -282,7 +282,9 @@ define void @foo() {
 ; CHECK-DAG: #[[TYPE:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32, encoding = DW_ATE_signed>
 ; CHECK-DAG: #[[FILE:.*]] = #llvm.di_file<"source.c" in "/path/to/file">
 ; CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_C99, file = #[[FILE]]>
-; CHECK-DAG: #[[SPROG:.*]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, scope = #[[CU]], name = "foo", file = #[[FILE]], line = 5, subprogramFlags = Definition>
+; CHECK-DAG: #[[NULL_TYPE:.*]] = #llvm.di_null_type
+; CHECK-DAG: #[[SRT:.*]] = #llvm.di_subroutine_type<types = #[[NULL_TYPE]]>
+; CHECK-DAG: #[[SPROG:.*]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, scope = #[[CU]], name = "foo", file = #[[FILE]], line = 5, subprogramFlags = Definition, type = #[[SRT]]>
 ; CHECK-DAG: #[[GVAR0:.*]] = #llvm.di_global_variable<scope = #[[SPROG]], name = "foo", linkageName = "foo", file = #[[FILE]], line = 7, type = #[[TYPE]], isLocalToUnit = true>
 ; CHECK-DAG: #[[GVAR1:.*]] = #llvm.di_global_variable<scope = #[[SPROG]], name = "bar", linkageName = "bar", file = #[[FILE]], line = 8, type = #[[TYPE]], isLocalToUnit = true>
 ; CHECK-DAG: #[[EXPR0:.*]] = #llvm.di_global_variable_expression<var = #[[GVAR0]], expr = <[DW_OP_LLVM_fragment(0, 16)]>>
@@ -295,11 +297,13 @@ define void @foo() {
 !0 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !1 = !DIFile(filename: "source.c", directory: "/path/to/file")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
-!3 = distinct !DISubprogram(name: "foo", scope: !2, file: !1, line: 5)
+!3 = distinct !DISubprogram(name: "foo", scope: !2, file: !1, line: 5, type: !9)
 !4 = !DIGlobalVariable(name: "foo", linkageName: "foo", scope: !3, file: !1, line: 7, type: !0, isLocal: true, isDefinition: false)
 !5 = !DIGlobalVariableExpression(var: !4, expr: !DIExpression(DW_OP_LLVM_fragment, 0, 16))
 !6 = !DIGlobalVariable(name: "bar", linkageName: "bar", scope: !3, file: !1, line: 8, type: !0, isLocal: true, isDefinition: false)
 !7 = !DIGlobalVariableExpression(var: !6, expr: !DIExpression(DW_OP_constu, 3, DW_OP_plus))
+!8 = !{null}
+!9 = !DISubroutineType(types: !8)
 !100 = !{i32 2, !"Debug Info Version", i32 3}
 !llvm.module.flags = !{!100}
 

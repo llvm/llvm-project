@@ -84,8 +84,7 @@ static gpu::GPUFuncOp genGPUFunc(OpBuilder &builder, gpu::GPUModuleOp gpuModule,
   FunctionType type = FunctionType::get(gpuModule->getContext(), argsTp, {});
   auto gpuFunc =
       gpu::GPUFuncOp::create(builder, gpuModule->getLoc(), kernelName, type);
-  gpuFunc->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
-                   builder.getUnitAttr());
+  gpuFunc.setKernel(true);
   return gpuFunc;
 }
 

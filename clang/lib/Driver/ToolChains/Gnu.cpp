@@ -306,9 +306,6 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
-  if (Args.hasArg(options::OPT_s))
-    CmdArgs.push_back("-s");
-
   if (Triple.isARM() || Triple.isThumb()) {
     bool IsBigEndian = arm::isARMBigEndian(Triple, Args);
     if (IsBigEndian)
@@ -375,6 +372,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
+  Args.addAllArgs(CmdArgs, {options::OPT_s, options::OPT_t, options::OPT_u});
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_r)) {
     if (!isAndroid && !IsIAMCU) {
@@ -435,13 +434,12 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           Args.MakeArgString(ToolChain.GetFilePath("crt_pad_segment.o")));
   }
 
-  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_u});
+  Args.addAllArgs(CmdArgs, {options::OPT_L});
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  if (D.isUsingLTO())
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = ToolChain.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
@@ -579,7 +577,10 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  Args.addAllArgs(CmdArgs, {options::OPT_T, options::OPT_t});
+  // Emit -T after -L paths so that INPUT()/GROUP() directives in the linker
+  // script resolve against the user-supplied and toolchain search paths in GNU
+  // ld.
+  Args.addAllArgs(CmdArgs, {options::OPT_T});
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this,
@@ -3066,6 +3067,7 @@ Generic_GCC::getDefaultUnwindTableLevel(const ArgList &Args) const {
   switch (getArch()) {
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be:
+  case llvm::Triple::amdgcn:
   case llvm::Triple::ppc:
   case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:
@@ -3452,11 +3454,10 @@ Generic_GCC::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 }
 
 llvm::opt::DerivedArgList *
-Generic_GCC::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                           StringRef BoundArch,
+Generic_GCC::TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                            Action::OffloadKind DeviceOffloadKind) const {
-  if (DeviceOffloadKind != Action::OFK_SYCL &&
-      DeviceOffloadKind != Action::OFK_OpenMP)
+  if (DeviceOffloadKind == Action::OFK_None ||
+      DeviceOffloadKind == Action::OFK_Host)
     return nullptr;
 
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
@@ -3481,21 +3482,22 @@ Generic_GCC::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   }
 
   // Add the bound architecture to the arguments list if present.
-  if (!BoundArch.empty()) {
-    options::ID Opt =
-        getTriple().isARM() || getTriple().isPPC() || getTriple().isAArch64()
-            ? options::OPT_mcpu_EQ
-            : options::OPT_march_EQ;
+  if (!BA.empty()) {
+    options::ID Opt = getTriple().isARM() || getTriple().isPPC() ||
+                              getTriple().isAArch64() || getTriple().isAMDGPU()
+                          ? options::OPT_mcpu_EQ
+                          : options::OPT_march_EQ;
     DAL->eraseArg(Opt);
-    DAL->AddJoinedArg(nullptr, Opts.getOption(Opt), BoundArch);
+    DAL->AddJoinedArg(nullptr, Opts.getOption(Opt), BA.ArchName);
   }
+
   return DAL;
 }
 
 void Generic_ELF::anchor() {}
 
 void Generic_ELF::addClangTargetOptions(const ArgList &DriverArgs,
-                                        ArgStringList &CC1Args,
+                                        ArgStringList &CC1Args, BoundArch BA,
                                         Action::OffloadKind) const {
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, true))

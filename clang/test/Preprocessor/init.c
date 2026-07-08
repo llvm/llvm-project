@@ -15,6 +15,15 @@
 // BLOCKS:#define __BLOCKS__ 1
 // BLOCKS:#define __block __attribute__((__blocks__(byref)))
 //
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++2d -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX29 %s
+//
+// CXX29:#define __GNUG__ 4
+// CXX29:#define __GXX_EXPERIMENTAL_CXX0X__ 1
+// CXX29:#define __GXX_RTTI 1
+// CXX29:#define __GXX_WEAK__ 1
+// CXX29:#define __cplusplus 202700L
+// CXX29:#define __private_extern__ extern
+//
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++26 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX26 %s
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++2c -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX26 %s
 //
@@ -213,6 +222,13 @@
 //
 // RUN: %clang_cc1 -ffreestanding -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix FREESTANDING %s
 // FREESTANDING:#define __STDC_HOSTED__ 0
+//
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++2d -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX29 %s
+//
+// GXX29:#define __GNUG__ 4
+// GXX29:#define __GXX_WEAK__ 1
+// GXX29:#define __cplusplus 202700L
+// GXX29:#define __private_extern__ extern
 //
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++26 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX26 %s
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++2c -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX26 %s

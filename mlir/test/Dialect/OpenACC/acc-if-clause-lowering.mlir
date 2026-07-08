@@ -374,3 +374,35 @@ func.func @test_acc_private(%arg0: memref<i32>, %cond: i1) {
   }
   return
 }
+
+// -----
+
+// Test that an acc.parallel with an if clause whose body holds an
+// acc.atomic.capture lowers cleanly: the device path keeps the capture and the
+// host fallback inlines it.
+// CHECK-LABEL: func.func @test_parallel_if_atomic_capture
+func.func @test_parallel_if_atomic_capture(%x: memref<i32>, %v: memref<i32>, %cond: i1) {
+  %c1_i32 = arith.constant 1 : i32
+  // CHECK-NOT: acc.parallel if
+  // CHECK: scf.if %{{.*}} {
+  // CHECK:   acc.parallel {
+  // CHECK:     acc.atomic.capture {
+  // CHECK:   } else {
+  // CHECK-NOT: acc.atomic.capture
+  // CHECK:     memref.load
+  // CHECK:     arith.addi
+  // CHECK:     memref.store
+  // CHECK:   }
+  acc.parallel if(%cond) {
+    acc.atomic.capture {
+      acc.atomic.update %x : memref<i32> {
+      ^bb0(%arg: i32):
+        %r = arith.addi %arg, %c1_i32 : i32
+        acc.yield %r : i32
+      }
+      acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+    }
+    acc.yield
+  }
+  return
+}

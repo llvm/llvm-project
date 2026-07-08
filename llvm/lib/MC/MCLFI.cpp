@@ -30,7 +30,7 @@ namespace llvm {
 
 cl::opt<bool> FlagEnableRewriting("lfi-enable-rewriter",
                                   cl::desc("Enable rewriting for LFI."),
-                                  cl::init(true));
+                                  cl::init(true), cl::Hidden);
 
 void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
                              const Triple &TheTriple) {
@@ -60,6 +60,10 @@ void emitLFINoteSection(MCStreamer &Streamer, MCContext &Ctx) {
   case Triple::aarch64:
     NoteName = ".note.LFI.ABI.aarch64";
     NoteArch = "aarch64";
+    break;
+  case Triple::x86_64:
+    NoteName = ".note.LFI.ABI.x86_64";
+    NoteArch = "x86_64";
     break;
   default:
     reportFatalUsageError("Unsupported architecture for LFI");

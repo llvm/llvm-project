@@ -2788,6 +2788,11 @@ public:
     Inst.setOpcode(X86::TRAP);
   }
 
+  void createBreakpoint(MCInst &Inst) const override {
+    Inst.clear();
+    Inst.setOpcode(X86::INT3);
+  }
+
   void createCondBranch(MCInst &Inst, const MCSymbol *Target, unsigned CC,
                         MCContext *Ctx) const override {
     Inst.setOpcode(X86::JCC_1);
@@ -3284,7 +3289,7 @@ public:
   }
 
   BlocksVectorTy indirectCallPromotion(
-      const MCInst &CallInst,
+      const MCInst &CallInst, MCPhysReg Reg,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &Targets,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &VtableSyms,
       const std::vector<MCInst *> &MethodFetchInsns,

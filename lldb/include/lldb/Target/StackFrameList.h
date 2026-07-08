@@ -11,10 +11,10 @@
 
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
 #include <vector>
 
 #include "lldb/Target/StackFrame.h"
+#include "llvm/Support/RWMutex.h"
 
 namespace lldb_private {
 
@@ -187,7 +187,7 @@ protected:
   /// unique lock is Clear.  All other clients take the shared lock, though
   /// if we need more frames we may swap shared for unique to fulfill that
   /// requirement.
-  mutable std::shared_mutex m_list_mutex;
+  mutable llvm::sys::RWMutex m_list_mutex;
 
   // Setting the inlined depth should be protected against other attempts to
   // change it, but since it doesn't mutate the list itself, we can limit the
@@ -243,9 +243,8 @@ protected:
 
 private:
   uint32_t SetSelectedFrameNoLock(lldb_private::StackFrame *frame);
-  lldb::StackFrameSP
-  GetFrameAtIndexNoLock(uint32_t idx,
-                        std::shared_lock<std::shared_mutex> &guard);
+  lldb::StackFrameSP GetFrameAtIndexNoLock(uint32_t idx,
+                                           llvm::sys::ScopedReader &guard);
 
   /// @{
   /// These two Fetch frames APIs and SynthesizeTailCallFrames are called in

@@ -30,6 +30,7 @@ namespace gsym {
 class FileWriter {
   llvm::raw_pwrite_stream &OS;
   llvm::endianness ByteOrder;
+  uint8_t StringOffsetSize = 4;
 
 public:
   FileWriter(llvm::raw_pwrite_stream &S, llvm::endianness B)
@@ -84,6 +85,11 @@ public:
   /// \param   ByteSize The size of the value to write in bytes. Can be 1-8.
   LLVM_ABI void writeUnsigned(uint64_t Value, size_t ByteSize);
 
+  /// Write a string table offset of StringOffsetSize bytes into the stream.
+  ///
+  /// \param   Value The string table offset to write.
+  LLVM_ABI void writeStringOffset(uint64_t Value);
+
   /// Write an array of uint8_t values into the stream at the current file
   /// position.
   ///
@@ -126,6 +132,11 @@ public:
   }
 
   llvm::endianness getByteOrder() const { return ByteOrder; }
+
+  /// Get the string offset size for this writer.
+  uint8_t getStringOffsetSize() const { return StringOffsetSize; }
+  /// Set the string offset size for this writer.
+  void setStringOffsetSize(uint8_t Size) { StringOffsetSize = Size; }
 
 private:
   FileWriter(const FileWriter &rhs) = delete;

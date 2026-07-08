@@ -46,7 +46,8 @@ struct TestPointerLikeTypeInterfacePass
 
   Pass::Option<std::string> testMode{
       *this, "test-mode",
-      llvm::cl::desc("Test mode: walk, alloc, copy, free, load, or store"),
+      llvm::cl::desc(
+          "Test mode: walk, alloc, copy, free, load, store, or cast"),
       llvm::cl::init("walk")};
 
   StringRef getArgument() const override {
@@ -79,6 +80,8 @@ private:
                    OpBuilder &builder);
   void testGenStore(Operation *op, Value result, PointerLikeType pointerType,
                     OpBuilder &builder, Value providedValue = {});
+  void testGenCast(Operation *op, Value value, Type resultType,
+                   OpBuilder &builder);
 
   struct PointerCandidate {
     Operation *op;
@@ -95,6 +98,18 @@ void TestPointerLikeTypeInterfacePass::runOnOperation() {
 
   auto func = getOperation();
   OpBuilder builder(&getContext());
+
+  if (testMode == "cast") {
+    func.walk([&](Operation *op) {
+      if (!op->hasAttr("test.cast"))
+        return;
+      auto destAttr = dyn_cast_or_null<TypeAttr>(op->getAttr("cast_dest"));
+      if (!destAttr || op->getNumResults() == 0)
+        return;
+      testGenCast(op, op->getResult(0), destAttr.getValue(), builder);
+    });
+    return;
+  }
 
   if (testMode == "alloc" || testMode == "free" || testMode == "load" ||
       testMode == "store") {
@@ -404,6 +419,51 @@ void TestPointerLikeTypeInterfacePass::testGenStore(Operation *op, Value result,
     }
   } else {
     llvm::errs() << "Failed to generate store for operation: ";
+    op->print(llvm::errs());
+    llvm::errs() << "\n";
+  }
+}
+
+void TestPointerLikeTypeInterfacePass::testGenCast(Operation *op, Value value,
+                                                   Type resultType,
+                                                   OpBuilder &builder) {
+  Location loc = op->getLoc();
+
+  OperationTracker tracker;
+  OpBuilder newBuilder(op->getContext());
+  newBuilder.setListener(&tracker);
+  newBuilder.setInsertionPointAfter(op);
+
+  PointerLikeType dispatchTy;
+  if (isa<PointerLikeType>(value.getType()))
+    dispatchTy = cast<PointerLikeType>(value.getType());
+  else if (isa<PointerLikeType>(resultType))
+    dispatchTy = cast<PointerLikeType>(resultType);
+  else {
+    llvm::errs() << "Failed genCast: neither value nor result type is "
+                    "PointerLikeType for operation: ";
+    op->print(llvm::errs());
+    llvm::errs() << "\n";
+    return;
+  }
+
+  Value castRes = dispatchTy.genCast(newBuilder, loc, value, resultType);
+
+  if (castRes) {
+    llvm::errs() << "Successfully generated cast for operation: ";
+    op->print(llvm::errs());
+    llvm::errs() << "\n";
+    llvm::errs() << "\tCast result type: ";
+    castRes.getType().print(llvm::errs());
+    llvm::errs() << "\n";
+
+    for (Operation *insertedOp : tracker.insertedOps) {
+      llvm::errs() << "\tGenerated: ";
+      insertedOp->print(llvm::errs());
+      llvm::errs() << "\n";
+    }
+  } else {
+    llvm::errs() << "Failed to generate cast for operation: ";
     op->print(llvm::errs());
     llvm::errs() << "\n";
   }

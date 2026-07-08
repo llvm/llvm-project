@@ -23,12 +23,14 @@ namespace cwg2026 { // cwg2026: 11
   constexpr int b = b;
   // since-cxx11-error@-1 {{constexpr variable 'b' must be initialized by a constant expression}}
   //   since-cxx11-note@-2 {{read of object outside its lifetime is not allowed in a constant expression}}
+  //   since-cxx11-note@-3 {{declared here}}
   [[clang::require_constant_initialization]] int c = c;
   // since-cxx11-error@-1 {{variable does not have a constant initializer}}
   //   since-cxx11-note@-2 {{required by 'require_constant_initialization' attribute here}}
   //   cxx11-note@-3 {{read of non-const variable 'c' is not allowed in a constant expression}}
   //   cxx11-note@-4 {{declared here}}
   //   since-cxx14-note@-5 {{read of object outside its lifetime is not allowed in a constant expression}}
+  //   since-cxx14-note@-6 {{declared here}}
 #endif
 
 #if __cplusplus >= 202002L
@@ -36,6 +38,7 @@ namespace cwg2026 { // cwg2026: 11
   // since-cxx20-error@-1 {{variable does not have a constant initializer}}
   //   since-cxx20-note@-2 {{required by 'constinit' specifier here}}
   //   since-cxx20-note@-3 {{read of object outside its lifetime is not allowed in a constant expression}}
+  //   since-cxx20-note@-4 {{declared here}}
 #endif
 
   void f() {
@@ -53,12 +56,14 @@ namespace cwg2026 { // cwg2026: 11
     static constexpr int f = f;
     // since-cxx11-error@-1 {{constexpr variable 'f' must be initialized by a constant expression}}
     //   since-cxx11-note@-2 {{read of object outside its lifetime is not allowed in a constant expression}}
+    //   since-cxx11-note@-3 {{declared here}}
     [[clang::require_constant_initialization]] static int g = g;
     // since-cxx11-error@-1 {{variable does not have a constant initializer}}
     //   since-cxx11-note@-2 {{required by 'require_constant_initialization' attribute here}}
     //   cxx11-note@-3 {{read of non-const variable 'g' is not allowed in a constant expression}}
     //   cxx11-note@-4 {{declared here}}
     //   since-cxx14-note@-5 {{read of object outside its lifetime is not allowed in a constant expression}}
+    //   since-cxx14-note@-6 {{declared here}}
 #endif
 
 #if __cplusplus >= 202002L
@@ -66,6 +71,7 @@ namespace cwg2026 { // cwg2026: 11
     // since-cxx20-error@-1 {{variable does not have a constant initializer}}
     //   since-cxx20-note@-2 {{required by 'constinit' specifier here}}
     //   since-cxx20-note@-3 {{read of object outside its lifetime is not allowed in a constant expression}}
+    //   since-cxx20-note@-4 {{declared here}}
 #endif
   }
 } // namespace cwg2026

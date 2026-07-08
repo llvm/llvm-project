@@ -130,7 +130,7 @@ define half @is_profitable_f16_preserve(ptr dereferenceable(8) %ptr_x, ptr deref
 ; GFX-SAME: ptr dereferenceable(8) [[PTR_X:%.*]], ptr dereferenceable(8) [[PTR_Y:%.*]], ptr dereferenceable(8) [[PTR_A:%.*]]) #[[ATTR0]] {
 ; GFX-NEXT:  [[ENTRY:.*:]]
 ; GFX-NEXT:    [[Y:%.*]] = load half, ptr [[PTR_Y]], align 8
-; GFX-NEXT:    [[CMP:%.*]] = fcmp oeq half [[Y]], 0xH0000
+; GFX-NEXT:    [[CMP:%.*]] = fcmp oeq half [[Y]], 0.000000e+00
 ; GFX-NEXT:    [[X:%.*]] = load half, ptr [[PTR_X]], align 8
 ; GFX-NEXT:    [[A_1:%.*]] = load half, ptr [[PTR_A]], align 8
 ; GFX-NEXT:    [[MUL:%.*]] = fmul contract half [[X]], [[A_1]]
@@ -169,7 +169,7 @@ define half @is_profitable_f16_ieee(ptr dereferenceable(8) %ptr_x, ptr dereferen
 ; GFX-SAME: ptr dereferenceable(8) [[PTR_X:%.*]], ptr dereferenceable(8) [[PTR_Y:%.*]], ptr dereferenceable(8) [[PTR_A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; GFX-NEXT:  [[ENTRY:.*:]]
 ; GFX-NEXT:    [[Y:%.*]] = load half, ptr [[PTR_Y]], align 8
-; GFX-NEXT:    [[CMP:%.*]] = fcmp oeq half [[Y]], 0xH0000
+; GFX-NEXT:    [[CMP:%.*]] = fcmp oeq half [[Y]], 0.000000e+00
 ; GFX-NEXT:    [[X:%.*]] = load half, ptr [[PTR_X]], align 8
 ; GFX-NEXT:    [[A_1:%.*]] = load half, ptr [[PTR_A]], align 8
 ; GFX-NEXT:    [[MUL:%.*]] = fmul contract half [[X]], [[A_1]]
@@ -208,7 +208,7 @@ define bfloat @is_profitable_bfloat_preserve(ptr dereferenceable(8) %ptr_x, ptr 
 ; GFX-SAME: ptr dereferenceable(8) [[PTR_X:%.*]], ptr dereferenceable(8) [[PTR_Y:%.*]], ptr dereferenceable(8) [[PTR_A:%.*]]) #[[ATTR0]] {
 ; GFX-NEXT:  [[ENTRY:.*:]]
 ; GFX-NEXT:    [[Y:%.*]] = load bfloat, ptr [[PTR_Y]], align 8
-; GFX-NEXT:    [[CMP:%.*]] = fcmp oeq bfloat [[Y]], 0xR0000
+; GFX-NEXT:    [[CMP:%.*]] = fcmp oeq bfloat [[Y]], 0.000000e+00
 ; GFX-NEXT:    [[X:%.*]] = load bfloat, ptr [[PTR_X]], align 8
 ; GFX-NEXT:    [[A_1:%.*]] = load bfloat, ptr [[PTR_A]], align 8
 ; GFX-NEXT:    [[MUL:%.*]] = fmul contract bfloat [[X]], [[A_1]]
@@ -217,7 +217,7 @@ define bfloat @is_profitable_bfloat_preserve(ptr dereferenceable(8) %ptr_x, ptr 
 ; GFX-NEXT:    [[COMMON_RET_OP:%.*]] = phi bfloat [ [[MUL]], %[[IF_THEN]] ], [ [[SUB:%.*]], %[[IF_ELSE]] ]
 ; GFX-NEXT:    ret bfloat [[COMMON_RET_OP]]
 ; GFX:       [[IF_THEN]]:
-; GFX-NEXT:    [[ADD:%.*]] = fadd contract bfloat 0xR3F80, [[MUL]]
+; GFX-NEXT:    [[ADD:%.*]] = fadd contract bfloat 1.000000e+00, [[MUL]]
 ; GFX-NEXT:    br label %[[COMMON_RET]]
 ; GFX:       [[IF_ELSE]]:
 ; GFX-NEXT:    [[SUB]] = fsub contract bfloat [[MUL]], [[Y]]
@@ -247,7 +247,7 @@ define bfloat @is_profitable_bfloat_ieee(ptr dereferenceable(8) %ptr_x, ptr dere
 ; GFX-SAME: ptr dereferenceable(8) [[PTR_X:%.*]], ptr dereferenceable(8) [[PTR_Y:%.*]], ptr dereferenceable(8) [[PTR_A:%.*]]) #[[ATTR1]] {
 ; GFX-NEXT:  [[ENTRY:.*:]]
 ; GFX-NEXT:    [[Y:%.*]] = load bfloat, ptr [[PTR_Y]], align 8
-; GFX-NEXT:    [[CMP:%.*]] = fcmp oeq bfloat [[Y]], 0xR0000
+; GFX-NEXT:    [[CMP:%.*]] = fcmp oeq bfloat [[Y]], 0.000000e+00
 ; GFX-NEXT:    [[X:%.*]] = load bfloat, ptr [[PTR_X]], align 8
 ; GFX-NEXT:    [[A_1:%.*]] = load bfloat, ptr [[PTR_A]], align 8
 ; GFX-NEXT:    [[MUL:%.*]] = fmul contract bfloat [[X]], [[A_1]]
@@ -256,7 +256,7 @@ define bfloat @is_profitable_bfloat_ieee(ptr dereferenceable(8) %ptr_x, ptr dere
 ; GFX-NEXT:    [[COMMON_RET_OP:%.*]] = phi bfloat [ [[MUL]], %[[IF_THEN]] ], [ [[SUB:%.*]], %[[IF_ELSE]] ]
 ; GFX-NEXT:    ret bfloat [[COMMON_RET_OP]]
 ; GFX:       [[IF_THEN]]:
-; GFX-NEXT:    [[ADD:%.*]] = fadd contract bfloat 0xR3F80, [[MUL]]
+; GFX-NEXT:    [[ADD:%.*]] = fadd contract bfloat 1.000000e+00, [[MUL]]
 ; GFX-NEXT:    br label %[[COMMON_RET]]
 ; GFX:       [[IF_ELSE]]:
 ; GFX-NEXT:    [[SUB]] = fsub contract bfloat [[MUL]], [[Y]]

@@ -2,12 +2,13 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbarm64e import Arm64eTestBase
 
 
-class TestPtrAuthExpressions(TestBase):
+class TestPtrAuthExpressions(Arm64eTestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
-    @skipUnlessArm64eSupported
     def test_static_function_pointer(self):
         """On arm64e, function pointers are automatically signed (PAC).
         Test that we can call a function through a static function pointer
@@ -31,7 +32,6 @@ class TestPtrAuthExpressions(TestBase):
             result_value="20",
         )
 
-    @skipUnlessArm64eSupported
     def test_indirect_call_through_caller(self):
         """Test that a function pointer passed to a debuggee function is
         correctly signed. The caller() function in the debuggee forces a
@@ -55,7 +55,6 @@ class TestPtrAuthExpressions(TestBase):
             result_value="21",
         )
 
-    @skipUnlessArm64eSupported
     def test_debuggee_signed_pointer(self):
         """Test that a signed function pointer stored in the debuggee's memory
         can be read and called from a user expression. The global_fp variable
@@ -74,7 +73,6 @@ class TestPtrAuthExpressions(TestBase):
             result_value="30",
         )
 
-    @skipUnlessArm64eSupported
     def test_indirect_goto(self):
         """Test that computed gotos (GCC labels-as-values) work in the
         expression evaluator on arm64e, where -fptrauth-indirect-gotos signs

@@ -106,9 +106,19 @@ struct TestFuncEraseArg
 
     for (auto func : module.getOps<FunctionOpInterface>()) {
       BitVector indicesToErase(func.getNumArguments());
-      for (auto argIndex : llvm::seq<int>(0, func.getNumArguments()))
-        if (func.getArgAttr(argIndex, "test.erase_this_arg"))
-          indicesToErase.set(argIndex);
+      bool hasUsedArg = false;
+      for (auto argIndex : llvm::seq<int>(0, func.getNumArguments())) {
+        if (!func.getArgAttr(argIndex, "test.erase_this_arg"))
+          continue;
+        indicesToErase.set(argIndex);
+        if (!func.isExternal() && !func.getArgument(argIndex).use_empty()) {
+          emitError(func->getLoc()) << "cannot erase argument " << argIndex
+                                    << " which still has uses";
+          hasUsedArg = true;
+        }
+      }
+      if (hasUsedArg)
+        return signalPassFailure();
       if (succeeded(func.eraseArguments(indicesToErase)))
         continue;
       emitError(func->getLoc()) << "failed to erase arguments";

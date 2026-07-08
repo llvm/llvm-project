@@ -4,9 +4,9 @@
 
 # GCN-LABEL: waitcnt-loop-single-basic-block
 # GCN: bb.0
-# GCN: S_WAITCNT 3952
+# GCN: S_WAITCNT .Vmcnt_0{{$}}
 # GCN-NEXT: GLOBAL_STORE_DWORD
-# GCN: S_WAITCNT 3953
+# GCN: S_WAITCNT .Vmcnt_1
 # GCN-NEXT: GLOBAL_STORE_DWORD
 
 ...

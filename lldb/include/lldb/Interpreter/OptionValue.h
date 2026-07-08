@@ -63,6 +63,7 @@ public:
     eDumpOptionRaw = (1u << 4),
     eDumpOptionCommand = (1u << 5),
     eDumpOptionDefaultValue = (1u << 6),
+    eDumpOptionOnlyChanged = (1u << 7),
     eDumpGroupValue = (eDumpOptionName | eDumpOptionType | eDumpOptionValue),
     eDumpGroupHelp =
         (eDumpOptionName | eDumpOptionType | eDumpOptionDescription),
@@ -126,7 +127,9 @@ public:
 
   virtual llvm::StringRef GetName() const { return llvm::StringRef(); }
 
-  virtual bool DumpQualifiedName(Stream &strm) const;
+  virtual bool DumpQualifiedName(
+      Stream &strm,
+      std::optional<Stream::HighlightSettings> highlight = std::nullopt) const;
 
   // Subclasses should NOT override these functions as they use the above
   // functions to implement functionality
@@ -248,6 +251,13 @@ public:
   bool OptionWasSet() const { return m_value_was_set; }
 
   void SetOptionWasSet() { m_value_was_set = true; }
+
+  /// Return true if the current value equals the default value.
+  ///
+  /// Subclasses that store a default value should override this to compare
+  /// against it. The base implementation falls back to `OptionWasSet()`, which
+  /// is a reasonable approximation for types without an explicit default.
+  virtual bool IsDefault() const { return !OptionWasSet(); }
 
   void SetParent(const lldb::OptionValueSP &parent_sp) {
     m_parent_wp = parent_sp;

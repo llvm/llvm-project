@@ -96,8 +96,7 @@ static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
          "bad FORM for location expression");
   DWARFContext &Ctx = U->getContext();
   ArrayRef<uint8_t> Expr = *FormValue.getAsBlock();
-  DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
-                     Ctx.isLittleEndian(), 0);
+  DataExtractor Data(Expr, Ctx.isLittleEndian());
   DWARFExpression DE(Data, U->getAddressByteSize(), U->getFormParams().Format);
   printDwarfExpression(&DE, OS, DumpOpts, U);
 }
@@ -482,13 +481,25 @@ bool DWARFDie::addressRangeContainsAddress(const uint64_t Address) const {
   return false;
 }
 
+// FIXME: should we return a structure akin to DISourceLanguageName here
+// encapsulates an unversioned (dwarf::SourceLanguage) and versioned
+// (dwarf::SourceLanguageName) language, and put the burden on the
+// user to determine which to use?
 std::optional<uint64_t> DWARFDie::getLanguage() const {
-  if (isValid()) {
-    if (std::optional<DWARFFormValue> LV =
-            U->getUnitDIE().find(dwarf::DW_AT_language))
-      return LV->getAsUnsignedConstant();
-  }
-  return std::nullopt;
+  if (!isValid())
+    return std::nullopt;
+
+  DWARFDie Unit = U->getUnitDIE();
+
+  if (std::optional<DWARFFormValue> LV = Unit.find(dwarf::DW_AT_language))
+    return LV->getAsUnsignedConstant();
+
+  uint16_t Name =
+      dwarf::toUnsigned(Unit.find(dwarf::DW_AT_language_name), /*Default=*/0);
+  uint32_t Version = dwarf::toUnsigned(Unit.find(dwarf::DW_AT_language_version),
+                                       /*Default=*/0);
+
+  return llvm::dwarf::toDW_LANG(static_cast<SourceLanguageName>(Name), Version);
 }
 
 Expected<DWARFLocationExpressionsVector>

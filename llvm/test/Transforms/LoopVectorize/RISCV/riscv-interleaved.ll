@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple riscv64-linux-gnu \
+; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v -debug-only=loop-vectorize --disable-output \
 ; RUN:   -scalable-vectorization=off -S < %s 2>&1 | FileCheck %s
 

@@ -1510,7 +1510,7 @@ void __kmp_init_memkind() {
   mk_hbw_preferred_hugetlb = NULL;
   mk_dax_kmem_preferred = NULL;
   kmp_mk_lib_name = "";
-#endif // !(KMP_OS_UNIX && KMP_DYNAMIC_LIB)
+#endif // !(KMP_OS_UNIX && KMP_DYNAMIC_LIB && !KMP_OS_DARWIN)
   kmp_mk_alloc = NULL;
   kmp_mk_free = NULL;
   mk_default = NULL;
@@ -1522,7 +1522,7 @@ void __kmp_init_memkind() {
 }
 
 void __kmp_fini_memkind() {
-#if KMP_OS_UNIX && KMP_DYNAMIC_LIB
+#if KMP_OS_UNIX && KMP_DYNAMIC_LIB && !KMP_OS_DARWIN
   if (__kmp_memkind_available)
     KE_TRACE(25, ("__kmp_fini_memkind: finalize memkind library\n"));
   if (h_memkind) {
@@ -1535,6 +1535,8 @@ void __kmp_fini_memkind() {
   mk_hbw_hugetlb = NULL;
   mk_hbw_preferred_hugetlb = NULL;
   mk_dax_kmem_preferred = NULL;
+#endif
+#if KMP_OS_UNIX && KMP_DYNAMIC_LIB
   kmp_mk_alloc = NULL;
   kmp_mk_free = NULL;
   mk_default = NULL;

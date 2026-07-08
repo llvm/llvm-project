@@ -34,6 +34,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/NativeFormatting.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Unicode.h"
 #include "llvm/Support/UnicodeCharRanges.h"
 #include <algorithm>
@@ -236,7 +237,7 @@ void Lexer::resetExtendedTokenMode() {
 
 /// Create_PragmaLexer: Lexer constructor - Create a new lexer object for
 /// _Pragma expansion.  This has a variety of magic semantics that this method
-/// sets up.  It returns a new'd Lexer that must be delete'd when done.
+/// sets up.
 ///
 /// On entrance to this routine, TokStartLoc is a macro location which has a
 /// spelling loc that indicates the bytes to be lexed for the token and an
@@ -249,16 +250,15 @@ void Lexer::resetExtendedTokenMode() {
 /// interface that could handle this stuff.  This would pull GetMappedTokenLoc
 /// out of the critical path of the lexer!
 ///
-Lexer *Lexer::Create_PragmaLexer(SourceLocation SpellingLoc,
-                                 SourceLocation ExpansionLocStart,
-                                 SourceLocation ExpansionLocEnd,
-                                 unsigned TokLen, Preprocessor &PP) {
+std::unique_ptr<Lexer> Lexer::Create_PragmaLexer(
+    SourceLocation SpellingLoc, SourceLocation ExpansionLocStart,
+    SourceLocation ExpansionLocEnd, unsigned TokLen, Preprocessor &PP) {
   SourceManager &SM = PP.getSourceManager();
 
   // Create the lexer as if we were going to lex the file normally.
   FileID SpellingFID = SM.getFileID(SpellingLoc);
   llvm::MemoryBufferRef InputFile = SM.getBufferOrFake(SpellingFID);
-  Lexer *L = new Lexer(SpellingFID, InputFile, PP);
+  auto L = std::make_unique<Lexer>(SpellingFID, InputFile, PP);
 
   // Now that the lexer is created, change the start/end locations so that we
   // just lex the subsection of the file that we want.  This is lexing from a
@@ -512,6 +512,29 @@ unsigned Lexer::MeasureTokenLength(SourceLocation Loc,
   if (getRawToken(Loc, TheTok, SM, LangOpts))
     return 0;
   return TheTok.getLength();
+}
+
+SourceLocation Lexer::findEndOfIdentifierContinuation(
+    SourceLocation Loc, const SourceManager &SM, const LangOptions &LangOpts) {
+  Loc = SM.getExpansionLoc(Loc);
+  const FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
+  bool Invalid = false;
+  const StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
+  if (Invalid)
+    return Loc;
+
+  const char *StrData = Buffer.data() + LocInfo.second;
+  if (StrData >= Buffer.end())
+    return Loc;
+
+  // Use the lexer continuation rules directly, without requiring identifier
+  // start at Loc.
+  Lexer TheLexer(SM.getLocForStartOfFile(LocInfo.first), LangOpts,
+                 Buffer.begin(), StrData, Buffer.end());
+  Token Tok;
+  Tok.startToken();
+  TheLexer.LexIdentifierContinue(Tok, StrData);
+  return Loc.getLocWithOffset(Tok.getLength());
 }
 
 /// Relex the token at the specified location.
@@ -920,8 +943,21 @@ bool Lexer::isAtEndOfMacroExpansion(SourceLocation loc,
 
   SourceLocation afterLoc = loc.getLocWithOffset(tokLen);
   SourceLocation expansionLoc;
-  if (!SM.isAtEndOfImmediateMacroExpansion(afterLoc, &expansionLoc))
-    return false;
+  FileID FID = SM.getFileID(loc);
+
+  if (SM.isInFileID(afterLoc, FID)) {
+    if (!SM.isAtEndOfImmediateMacroExpansion(afterLoc, &expansionLoc))
+      return false;
+  } else {
+    // During error recovery, a zero-length synthetic token might be inserted
+    // past the end of the FileID, e.g. inserting ")" when a macro-arg
+    // containing a comma should be guarded by parentheses. In this case,
+    // afterLoc reaches the `NextLocalOffset` boundary, any operations on
+    // afterLoc will be invalid!
+    const SrcMgr::SLocEntry &Entry = SM.getSLocEntry(FID);
+    assert(Entry.isExpansion() && "Should be in an expansion");
+    expansionLoc = Entry.getExpansion().getExpansionLocEnd();
+  }
 
   if (expansionLoc.isFileID()) {
     // No other macro expansions.
@@ -2243,8 +2279,28 @@ bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
   while (C != '"') {
     // Skip escaped characters.  Escaped newlines will already be processed by
     // getAndAdvanceChar.
-    if (C == '\\')
+    if (C == '\\') {
+      const char *SavedCurPtr = CurPtr;
       C = getAndAdvanceChar(CurPtr, Result);
+
+      // lex.header
+      //
+      // header-name:
+      //    ...
+      //    " q-char-sequence "
+      //    ...
+      // q-char-sequence:
+      //    q-char q-char-sequence[opt]
+      // q-char:
+      //    any member of the translation character set except new-line and
+      //    U+0022 quotation mark
+      //
+      // The implementation-defined semantics cannot be taken as causing '\' to
+      // "escape" the following " because there is no provision for " in a
+      // q-char-sequence.
+      if (ParsingFilename && C == '"')
+        CurPtr = SavedCurPtr;
+    }
 
     if (C == '\n' || C == '\r' ||             // Newline.
         (C == 0 && CurPtr-1 == BufferEnd)) {  // End of file.
@@ -4448,9 +4504,28 @@ LexStart:
 
   case '@':
     // Objective C support.
-    if (CurPtr[-1] == '@' && LangOpts.ObjC)
-      Kind = tok::at;
-    else
+    if (CurPtr[-1] == '@' && LangOpts.ObjC) {
+      FormTokenWithChars(Result, CurPtr, tok::at);
+      if (PP && Result.isAtPhysicalStartOfLine() && !LexingRawMode &&
+          !Is_PragmaLexer) {
+        Token NextPPTok;
+        NextPPTok.startToken();
+        {
+          llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
+              this->ParsingPreprocessorDirective, true);
+          auto NextTokOr = peekNextPPToken();
+          if (NextTokOr.has_value()) {
+            NextPPTok = *NextTokOr;
+          }
+        }
+        if (NextPPTok.is(tok::raw_identifier) &&
+            NextPPTok.getRawIdentifier() == "import") {
+          PP->HandleDirective(Result);
+          return false;
+        }
+      }
+      return true;
+    } else
       Kind = tok::unknown;
     break;
 
@@ -4611,6 +4686,16 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
       // With a fatal failure in the module loader, we abort parsing.
       return true;
     return false;
+  }
+  if (Result.is(tok::at) && Result.isAtStartOfLine()) {
+    auto NextTok = peekNextPPToken();
+    if (NextTok && NextTok->is(tok::raw_identifier) &&
+        NextTok->getRawIdentifier() == "import") {
+      PP->HandleDirective(Result);
+      if (PP->hadModuleLoaderFatalFailure())
+        return true;
+      return false;
+    }
   }
   if (Result.is(tok::raw_identifier)) {
     Result.setRawIdentifierData(TokPtr);

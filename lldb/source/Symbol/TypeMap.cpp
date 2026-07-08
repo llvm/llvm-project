@@ -46,30 +46,6 @@ bool TypeMap::InsertUnique(const TypeSP &type_sp) {
   return true;
 }
 
-// Find a base type by its unique ID.
-// TypeSP
-// TypeMap::FindType(lldb::user_id_t uid)
-//{
-//    iterator pos = m_types.find(uid);
-//    if (pos != m_types.end())
-//        return pos->second;
-//    return TypeSP();
-//}
-
-// Find a type by name.
-// TypeMap
-// TypeMap::FindTypes (ConstString name)
-//{
-//    // Do we ever need to make a lookup by name map? Here we are doing
-//    // a linear search which isn't going to be fast.
-//    TypeMap types(m_ast.getTargetInfo()->getTriple().getTriple().c_str());
-//    iterator pos, end;
-//    for (pos = m_types.begin(), end = m_types.end(); pos != end; ++pos)
-//        if (pos->second->GetName() == name)
-//            types.Insert (pos->second);
-//    return types;
-//}
-
 void TypeMap::Clear() { m_types.clear(); }
 
 uint32_t TypeMap::GetSize() const { return m_types.size(); }

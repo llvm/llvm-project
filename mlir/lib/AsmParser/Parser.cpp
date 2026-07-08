@@ -2555,10 +2555,15 @@ ParseResult OperationParser::parseOptionalBlockArgList(Block *owner) {
 
 ParseResult OperationParser::codeCompleteSSAUse() {
   for (IsolatedSSANameScope &scope : isolatedNameScopes) {
-    for (auto &it : scope.values) {
-      if (it.second.empty())
-        continue;
-      Value frontValue = it.second.front().value;
+    // Collect and sort SSA value names for deterministic completion ordering.
+    SmallVector<StringRef> sortedNames;
+    for (auto &it : scope.values)
+      if (!it.second.empty())
+        sortedNames.push_back(it.getKey());
+    llvm::sort(sortedNames);
+
+    for (StringRef name : sortedNames) {
+      Value frontValue = scope.values[name].front().value;
 
       std::string detailData;
       llvm::raw_string_ostream detailOS(detailData);
@@ -2579,11 +2584,11 @@ ParseResult OperationParser::codeCompleteSSAUse() {
       // FIXME: We should define a policy for packed values, e.g. with a limit
       // on the detail size, but it isn't clear what would be useful right now.
       // For now we just only emit the first type.
-      if (it.second.size() > 1)
+      if (scope.values[name].size() > 1)
         detailOS << ", ...";
 
       state.codeCompleteContext->appendSSAValueCompletion(
-          it.getKey(), std::move(detailData));
+          name, std::move(detailData));
     }
   }
 

@@ -6,6 +6,26 @@
 // RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,cxx11-23,since-cxx20,since-cxx23 %s
 // RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
 
+namespace cwg2807 { // cwg2807: 11
+
+#if __cplusplus >= 202002L
+struct s {
+  consteval ~s() {}
+  // since-cxx20-error@-1 {{destructor cannot be declared consteval}}
+};
+#endif
+
+} // namespace cwg2807
+
+namespace cwg2810 { // cwg2810: 2.7
+
+template <typename>
+void f() {
+  0xC0FFEE;
+  // expected-warning@-1 {{expression result unused}}
+}
+
+} // namespace cwg2810
 
 int main() {} // required for cwg2811
 
@@ -163,12 +183,13 @@ struct A {
   friend void Ts...[0]::f();
   template<typename U>
   friend void Ts...[0]::g();
+  // since-cxx26-error@-1 {{friend declaration does not name a member of a class template specialization}}
 
   friend struct Ts...[0]::B;
   // FIXME: The index of the pack-index-specifier is printed as a memory address in the diagnostic.
   template<typename U>
   friend struct Ts...[0]::C;
-  // since-cxx26-warning@-1 {{dependent nested name specifier 'Ts...[0]' for friend template declaration is not supported; ignoring this friend declaration}}
+  // since-cxx26-error@-1 {{friend declaration does not name a member of a class template specialization}}
 };
 
 #endif

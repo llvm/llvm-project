@@ -27,7 +27,8 @@ void *operator new(std::size_t, void *p) { return p; }
 void* operator new[] (std::size_t, void* p) {return p;}
 
 constexpr int no_lifetime_start = (*std::allocator<int>().allocate(1) = 1); // both-error {{constant expression}} \
-                                                                            // both-note {{assignment to object outside its lifetime}}
+                                                                            // both-note {{assignment to object outside its lifetime}} \
+                                                                            // both-note {{heap allocation performed here}}
 
 consteval auto ok1() {
   bool b;
@@ -119,7 +120,7 @@ static_assert(fail2() == 0); // both-error {{not an integral constant expression
                              // both-note {{in call to}}
 
 consteval int indeterminate() {
-    int * indeterminate;
+    int * indeterminate; // both-note {{declared here}}
     new (indeterminate) int(0); // both-note {{read of uninitialized object is not allowed in a constant expression}}
     return 0;
 }
@@ -178,7 +179,7 @@ static_assert(blah()); // both-error {{not an integral constant expression}} \
 
 
 constexpr int *get_indeterminate() {
-  int *evil;
+  int *evil; // both-note {{declared here}}
   return evil; // both-note {{read of uninitialized object is not allowed in a constant expression}}
 }
 
@@ -416,7 +417,7 @@ namespace PlacementNewAfterDelete {
 namespace SubObj {
   constexpr bool construct_after_lifetime_2() {
     struct A { struct B {} b; };
-    A a;
+    A a; // both-note {{declared here}}
     a.~A();
     std::construct_at<A::B>(&a.b); // both-note {{in call}}
     return true;

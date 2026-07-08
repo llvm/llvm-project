@@ -73,7 +73,7 @@ for.end15:
 ; CHECK-LABEL: case2
 ; CHECK: LV: Loop hints: force=enabled width=0 interleave=0
 ; CHECK: LV: We can vectorize this outer loop!
-; CHECK: LV: Using VF 1 to build VPlans.
+; CHECK: LV: VPlan computed VF 1.
 
 define void @case2(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) {
 entry:

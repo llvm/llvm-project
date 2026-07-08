@@ -32,8 +32,7 @@ public:
   DependencyScanningAction(
       DependencyScanningService &Service, StringRef WorkingDirectory,
       DependencyConsumer &Consumer, DependencyActionController &Controller,
-      IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-      std::optional<StringRef> ModuleName = std::nullopt)
+      IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS)
       : Service(Service), WorkingDirectory(WorkingDirectory),
         Consumer(Consumer), Controller(Controller), DepFS(std::move(DepFS)) {}
   bool runInvocation(std::string Executable,
@@ -121,11 +120,10 @@ computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
 std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
     CompilerInstance &ScanInstance,
     std::unique_ptr<DependencyOutputOptions> DepOutputOpts,
-    StringRef WorkingDirectory, DependencyConsumer &Consumer,
     DependencyScanningService &Service, CompilerInvocation &Inv,
     DependencyActionController &Controller,
     PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
-    llvm::SmallVector<StringRef> &StableDirs);
+    SmallVector<StringRef> &StableDirs);
 } // namespace dependencies
 } // namespace clang
 

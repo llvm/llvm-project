@@ -100,9 +100,12 @@ private:
 
   struct PPA1Info {
     StringRef Name;
-    MCSymbol *FnEnd = nullptr;    // Symbol marking function end.
-    MCSymbol *PPA1 = nullptr;     // Symbol marking PPA1 begin.
-    MCSymbol *EPMarker = nullptr; // Symbol marking entry point.
+    MCSymbol *Fn = nullptr;          // Symbol marking function begin.
+    MCSymbol *FnEnd = nullptr;       // Symbol marking function end.
+    MCSymbol *PPA1 = nullptr;        // Symbol marking PPA1 begin.
+    MCSymbol *EPMarker = nullptr;    // Symbol marking entry point.
+    MCSymbol *EndOfProlog = nullptr; // Symbol marking the end of the prolog.
+    MCSymbol *StackUpdate = nullptr; // Symbol marking the stack updating instr.
     MCSymbol *PersonalityRoutine = nullptr;
     MCSymbol *GCCEH = nullptr;
     int64_t OffsetFPR = 0;
@@ -170,6 +173,10 @@ private:
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
                                      SystemZMCInstLower &Lower);
   void LowerPATCHABLE_RET(const MachineInstr &MI, SystemZMCInstLower &Lower);
+  void lowerLOAD_TLS_BLOCK_ADDR(const MachineInstr &MI,
+                                SystemZMCInstLower &Lower);
+  void lowerLOAD_GLOBAL_STACKGUARD_ADDR(const MachineInstr &MI,
+                                        SystemZMCInstLower &Lower);
   void emitAttributes(Module &M);
 };
 } // end namespace llvm

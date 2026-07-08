@@ -122,7 +122,7 @@ body:             |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
     ; GCN-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GCN-NEXT: %sqrt:_(s16) = G_FSQRT [[TRUNC]]
-    ; GCN-NEXT: %one:_(s16) = contract G_FCONSTANT half 0xH3C00
+    ; GCN-NEXT: %one:_(s16) = contract G_FCONSTANT half 1.000000e+00
     ; GCN-NEXT: %rsq:_(s16) = contract G_FDIV %one, %sqrt
     ; GCN-NEXT: %ext:_(s32) = G_ANYEXT %rsq(s16)
     ; GCN-NEXT: $vgpr0 = COPY %ext(s32)
@@ -150,7 +150,7 @@ body:             |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
     ; GCN-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GCN-NEXT: %sqrt:_(s16) = G_FSQRT [[TRUNC]]
-    ; GCN-NEXT: %one:_(s16) = contract G_FCONSTANT half 0xHBC00
+    ; GCN-NEXT: %one:_(s16) = contract G_FCONSTANT half -1.000000e+00
     ; GCN-NEXT: %rsq:_(s16) = contract G_FDIV %one, %sqrt
     ; GCN-NEXT: %ext:_(s32) = G_ANYEXT %rsq(s16)
     ; GCN-NEXT: $vgpr0 = COPY %ext(s32)

@@ -1,5 +1,5 @@
 ! Test lowering of conditional expressions (Fortran 2023)
-! RUN: %flang_fc1 -emit-hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -funsigned -o - %s 2>&1 | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPtest_scalar_integer(
 ! CHECK-SAME:    %[[FLAG:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "flag"},
@@ -8,24 +8,21 @@
 subroutine test_scalar_integer(flag, x, y)
   logical :: flag
   integer :: x, y, result
-  ! CHECK: %[[TEMP:.*]] = fir.alloca i32 {bindc_name = ".cond.scalar"
   ! CHECK-DAG: %[[FLAG_DECL:.*]]:2 = hlfir.declare %[[FLAG]]
   ! CHECK-DAG: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]]
   ! CHECK-DAG: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]]
-  ! CHECK: %[[TEMP_DECL:.*]]:2 = hlfir.declare %[[TEMP]] {uniq_name = ".cond.result"}
 
   result = (flag ? x : y)
   ! CHECK: %[[FLAG_LOAD:.*]] = fir.load %[[FLAG_DECL]]#0
   ! CHECK: %[[FLAG_CONV:.*]] = fir.convert %[[FLAG_LOAD]] : (!fir.logical<4>) -> i1
-  ! CHECK: fir.if %[[FLAG_CONV]] {
+  ! CHECK: %[[RESULT:.*]] = fir.if %[[FLAG_CONV]] -> (i32) {
   ! CHECK:   %[[X_LOAD:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
-  ! CHECK:   hlfir.assign %[[X_LOAD]] to %[[TEMP_DECL]]#0 : i32, !fir.ref<i32>
+  ! CHECK:   fir.result %[[X_LOAD]] : i32
   ! CHECK: } else {
   ! CHECK:   %[[Y_LOAD:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<i32>
-  ! CHECK:   hlfir.assign %[[Y_LOAD]] to %[[TEMP_DECL]]#0 : i32, !fir.ref<i32>
+  ! CHECK:   fir.result %[[Y_LOAD]] : i32
   ! CHECK: }
-  ! CHECK: %[[LOAD:.*]] = fir.load %[[TEMP_DECL]]#0
-  ! CHECK: hlfir.assign %[[LOAD]] to %{{.*}} : i32, !fir.ref<i32>
+  ! CHECK: hlfir.assign %[[RESULT]] to %{{.*}} : i32, !fir.ref<i32>
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_scalar_real(
@@ -33,12 +30,10 @@ subroutine test_scalar_real(flag, x, y)
   logical :: flag
   real :: x, y, result
   result = (flag ? x : y)
-  ! CHECK: %[[TEMP:.*]] = fir.alloca f32 {bindc_name = ".cond.scalar"
-  ! CHECK: %[[TEMP_DECL:.*]]:2 = hlfir.declare %[[TEMP]] {uniq_name = ".cond.result"}
-  ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : f32, !fir.ref<f32>
+  ! CHECK: %[[RESULT:.*]] = fir.if {{.*}} -> (f32) {
+  ! CHECK:   fir.result {{.*}} : f32
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : f32, !fir.ref<f32>
+  ! CHECK:   fir.result {{.*}} : f32
   ! CHECK: }
 end subroutine
 
@@ -47,12 +42,10 @@ subroutine test_scalar_complex(flag, x, y)
   logical :: flag
   complex :: x, y, result
   result = (flag ? x : y)
-  ! CHECK: %[[TEMP:.*]] = fir.alloca complex<f32> {bindc_name = ".cond.scalar"
-  ! CHECK: %[[TEMP_DECL:.*]]:2 = hlfir.declare %[[TEMP]] {uniq_name = ".cond.result"}
-  ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : complex<f32>, !fir.ref<complex<f32>>
+  ! CHECK: %[[RESULT:.*]] = fir.if {{.*}} -> (complex<f32>) {
+  ! CHECK:   fir.result {{.*}} : complex<f32>
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : complex<f32>, !fir.ref<complex<f32>>
+  ! CHECK:   fir.result {{.*}} : complex<f32>
   ! CHECK: }
 end subroutine
 
@@ -60,9 +53,37 @@ end subroutine
 subroutine test_scalar_logical(flag, x, y)
   logical :: flag, x, y, result
   result = (flag ? x : y)
-  ! CHECK: %[[TEMP:.*]] = fir.alloca !fir.logical<4> {bindc_name = ".cond.scalar"
-  ! CHECK: fir.if
+  ! CHECK: %[[RESULT:.*]] = fir.if {{.*}} -> (!fir.logical<4>) {
+  ! CHECK:   fir.result {{.*}} : !fir.logical<4>
   ! CHECK: } else {
+  ! CHECK:   fir.result {{.*}} : !fir.logical<4>
+  ! CHECK: }
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_scalar_unsigned(
+subroutine test_scalar_unsigned(flag, x, y)
+  logical :: flag
+  unsigned :: x, y, result
+  result = (flag ? x : y)
+  ! CHECK: %[[RESULT:.*]] = fir.if {{.*}} -> (ui32) {
+  ! CHECK:   fir.result {{.*}} : ui32
+  ! CHECK: } else {
+  ! CHECK:   fir.result {{.*}} : ui32
+  ! CHECK: }
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_logical_literal(
+subroutine test_logical_literal(flag)
+  logical :: flag, result
+  result = (flag ? .true. : .false.)
+  ! CHECK: %[[RESULT:.*]] = fir.if {{.*}} -> (!fir.logical<4>) {
+  ! CHECK:   %[[TRUE:.*]] = arith.constant true
+  ! CHECK:   %[[CONV:.*]] = fir.convert %[[TRUE]] : (i1) -> !fir.logical<4>
+  ! CHECK:   fir.result %[[CONV]] : !fir.logical<4>
+  ! CHECK: } else {
+  ! CHECK:   %[[FALSE:.*]] = arith.constant false
+  ! CHECK:   %[[CONV:.*]] = fir.convert %[[FALSE]] : (i1) -> !fir.logical<4>
+  ! CHECK:   fir.result %[[CONV]] : !fir.logical<4>
   ! CHECK: }
 end subroutine
 
@@ -71,25 +92,19 @@ subroutine test_multi_branch(x)
   integer :: x, result
   ! Multi-branch: x > 10 ? 100 : x > 5 ? 50 : 0
   result = (x > 10 ? 100 : x > 5 ? 50 : 0)
-  ! Both outer and inner temps are hoisted to function entry.
-  ! CHECK-DAG: fir.alloca i32 {bindc_name = ".cond.scalar"
-  ! CHECK-DAG: fir.alloca i32 {bindc_name = ".cond.scalar"
-  ! Outer temp declaration and first condition: x > 10
-  ! CHECK: hlfir.declare {{.*}} {uniq_name = ".cond.result"}
+  ! Outer condition: x > 10
   ! CHECK: arith.cmpi sgt
-  ! CHECK: fir.if {{.*}} {
-  ! CHECK:   hlfir.assign {{.*}}
+  ! CHECK: %[[OUTER:.*]] = fir.if {{.*}} -> (i32) {
+  ! CHECK:   fir.result {{.*}} : i32
   ! CHECK: } else {
-  ! Inner temp for the nested conditional: x > 5 ? 50 : 0
-  ! CHECK:   hlfir.declare {{.*}} {uniq_name = ".cond.result"}
+  ! Inner conditional: x > 5 ? 50 : 0
   ! CHECK:   arith.cmpi sgt
-  ! CHECK:   fir.if {{.*}} {
-  ! CHECK:     hlfir.assign {{.*}}
+  ! CHECK:   %[[INNER:.*]] = fir.if {{.*}} -> (i32) {
+  ! CHECK:     fir.result {{.*}} : i32
   ! CHECK:   } else {
-  ! CHECK:     hlfir.assign {{.*}}
+  ! CHECK:     fir.result {{.*}} : i32
   ! CHECK:   }
-  ! CHECK:   fir.load
-  ! CHECK:   hlfir.assign {{.*}}
+  ! CHECK:   fir.result %[[INNER]] : i32
   ! CHECK: }
 end subroutine
 
@@ -176,22 +191,17 @@ subroutine test_nested_conditionals(flag1, flag2, x, y, z)
   integer :: x, y, z, result
   ! Nested: flag1 ? (flag2 ? x : y) : z
   result = (flag1 ? (flag2 ? x : y) : z)
-  ! Both outer and inner temps are hoisted to function entry.
-  ! CHECK-DAG: fir.alloca i32 {bindc_name = ".cond.scalar"
-  ! CHECK-DAG: fir.alloca i32 {bindc_name = ".cond.scalar"
-  ! Outer temp declaration and conditional
-  ! CHECK: hlfir.declare {{.*}} {uniq_name = ".cond.result"}
-  ! CHECK: fir.if {{%.*}} {
-  ! Inner temp declaration and conditional
-  ! CHECK:   hlfir.declare {{.*}} {uniq_name = ".cond.result"}
-  ! CHECK:   fir.if {{%.*}} {
-  ! CHECK:     hlfir.assign {{.*}}
+  ! Outer conditional
+  ! CHECK: %[[OUTER:.*]] = fir.if {{%.*}} -> (i32) {
+  ! Inner conditional
+  ! CHECK:   %[[INNER:.*]] = fir.if {{%.*}} -> (i32) {
+  ! CHECK:     fir.result {{.*}} : i32
   ! CHECK:   } else {
-  ! CHECK:     hlfir.assign {{.*}}
+  ! CHECK:     fir.result {{.*}} : i32
   ! CHECK:   }
-  ! CHECK:   hlfir.assign {{.*}}
+  ! CHECK:   fir.result %[[INNER]] : i32
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}}
+  ! CHECK:   fir.result {{.*}} : i32
   ! CHECK: }
 end subroutine
 
@@ -201,11 +211,11 @@ subroutine test_in_expression(flag, x, y)
   integer :: x, y, z
   ! Conditional in larger expression: (flag ? x : y) + 10
   z = (flag ? x : y) + 10
-  ! CHECK: %[[TEMP:.*]] = fir.alloca i32 {bindc_name = ".cond.scalar"
-  ! CHECK: fir.if
+  ! CHECK: %[[COND_RESULT:.*]] = fir.if {{.*}} -> (i32) {
+  ! CHECK:   fir.result {{.*}} : i32
   ! CHECK: } else {
+  ! CHECK:   fir.result {{.*}} : i32
   ! CHECK: }
-  ! CHECK: %[[COND_RESULT:.*]] = fir.load
   ! CHECK: %[[C10:.*]] = arith.constant 10
   ! CHECK: %[[SUM:.*]] = arith.addi %[[COND_RESULT]], %[[C10]]
   ! CHECK: hlfir.assign %[[SUM]]
@@ -232,17 +242,23 @@ subroutine test_different_kinds(flag)
   integer(kind=4) :: i4_1, i4_2, i4_result
   integer(kind=8) :: i8_1, i8_2, i8_result
 
-  ! Both temps allocated at function start
-  ! CHECK-DAG: %{{.*}} = fir.alloca i64 {bindc_name = ".cond.scalar"}
-  ! CHECK-DAG: %{{.*}} = fir.alloca i32 {bindc_name = ".cond.scalar"}
-
   i4_1 = 1
   i4_2 = 2
   i4_result = (flag ? i4_1 : i4_2)
+  ! CHECK: %{{.*}} = fir.if {{.*}} -> (i32) {
+  ! CHECK:   fir.result {{.*}} : i32
+  ! CHECK: } else {
+  ! CHECK:   fir.result {{.*}} : i32
+  ! CHECK: }
 
   i8_1 = 3
   i8_2 = 4
   i8_result = (flag ? i8_1 : i8_2)
+  ! CHECK: %{{.*}} = fir.if {{.*}} -> (i64) {
+  ! CHECK:   fir.result {{.*}} : i64
+  ! CHECK: } else {
+  ! CHECK:   fir.result {{.*}} : i64
+  ! CHECK: }
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_array_section(
@@ -269,5 +285,110 @@ subroutine test_noncontiguous_section(flag)
   ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
   ! CHECK: } else {
   ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
+  ! CHECK: }
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_polymorphic(
+subroutine test_polymorphic(flag, x, y)
+  type :: base_type
+    integer :: val
+  end type
+  logical :: flag
+  class(base_type), intent(in) :: x, y
+  type(base_type) :: result
+  ! Polymorphic conditional: uses fir.class (not fir.box) to carry dynamic type.
+  result = (flag ? x : y)
+  ! CHECK: %[[BOX_ALLOC:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_polymorphicTbase_type{val:i32}>>> {bindc_name = ".cond.polymorphic"
+  ! CHECK: %[[UNALLOC:.*]] = fir.zero_bits !fir.heap<!fir.type<_QFtest_polymorphicTbase_type{val:i32}>>
+  ! CHECK: %[[BOX:.*]] = fir.embox %[[UNALLOC]] : (!fir.heap<!fir.type<_QFtest_polymorphicTbase_type{val:i32}>>) -> !fir.class<!fir.heap<!fir.type<_QFtest_polymorphicTbase_type{val:i32}>>>
+  ! CHECK: fir.store %[[BOX]] to %[[BOX_ALLOC]]
+  ! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX_ALLOC]] {uniq_name = ".cond.result"}
+  ! CHECK: fir.if
+  ! CHECK:   hlfir.assign {{.*}} to %[[BOX_DECL]]#0 realloc temporary_lhs
+  ! CHECK: } else {
+  ! CHECK:   hlfir.assign {{.*}} to %[[BOX_DECL]]#0 realloc temporary_lhs
+  ! CHECK: }
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_polymorphic_array(
+subroutine test_polymorphic_array(flag, x, y)
+  type :: base_type
+    integer :: val
+  end type
+  logical :: flag
+  class(base_type), intent(in) :: x(:), y(:)
+  type(base_type), allocatable :: result(:)
+  ! Polymorphic array: uses fir.class (not fir.box) for the allocatable temp.
+  result = (flag ? x : y)
+  ! CHECK: fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QFtest_polymorphic_arrayTbase_type{val:i32}>>>> {bindc_name = ".cond.array"
+  ! CHECK: %[[PA_DECL:.*]]:2 = hlfir.declare {{.*}} {uniq_name = ".cond.result"}
+  ! CHECK: fir.if
+  ! CHECK:   hlfir.assign {{.*}} to %[[PA_DECL]]#0 realloc temporary_lhs
+  ! CHECK: } else {
+  ! CHECK:   hlfir.assign {{.*}} to %[[PA_DECL]]#0 realloc temporary_lhs
+  ! CHECK: }
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_polymorphic_char_component(
+subroutine test_polymorphic_char_component(flag, x, y)
+  type :: named_type
+    character(20) :: name
+    integer :: id
+  end type
+  logical :: flag
+  class(named_type), intent(in) :: x, y
+  type(named_type), allocatable :: result
+  result = (flag ? x : y)
+  ! The alloca type proves fir.class is used for the polymorphic temp.
+  ! CHECK: fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_polymorphic_char_componentTnamed_type{name:!fir.char<1,20>,id:i32}>>> {bindc_name = ".cond.polymorphic"
+  ! CHECK: %[[PC_DECL:.*]]:2 = hlfir.declare {{.*}} {uniq_name = ".cond.result"}
+  ! CHECK: fir.if
+  ! CHECK:   hlfir.assign {{.*}} to %[[PC_DECL]]#0 realloc temporary_lhs
+  ! CHECK: } else {
+  ! CHECK:   hlfir.assign {{.*}} to %[[PC_DECL]]#0 realloc temporary_lhs
+  ! CHECK: }
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_mixed_type_class(
+subroutine test_mixed_type_class(flag, x, y)
+  type :: base_type
+    integer :: val
+  end type
+  logical :: flag
+  type(base_type), intent(in) :: x
+  class(base_type), intent(in) :: y
+  type(base_type) :: result
+  ! Mixed TYPE(t)/CLASS(t): GetType() returns polymorphic when either branch
+  ! is polymorphic, so the result must use fir.class (not fir.box).
+  result = (flag ? x : y)
+  ! CHECK: fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_mixed_type_classTbase_type{val:i32}>>> {bindc_name = ".cond.polymorphic"
+  ! CHECK: %[[MX_DECL:.*]]:2 = hlfir.declare {{.*}} {uniq_name = ".cond.result"}
+  ! CHECK: fir.if
+  ! CHECK:   hlfir.assign {{.*}} to %[[MX_DECL]]#0 realloc temporary_lhs
+  ! CHECK: } else {
+  ! CHECK:   hlfir.assign {{.*}} to %[[MX_DECL]]#0 realloc temporary_lhs
+  ! CHECK: }
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_polymorphic_extends(
+subroutine test_polymorphic_extends(flag, x, y)
+  type :: base_type
+    integer :: val
+  end type
+  type, extends(base_type) :: extended_type
+    real :: extra
+  end type
+  logical :: flag
+  class(base_type), intent(in) :: x, y
+  type(base_type) :: result
+  ! Polymorphic with type hierarchy: x or y may hold extended_type at runtime.
+  ! The lowering must use fir.class to preserve dynamic type info.
+  result = (flag ? x : y)
+  ! CHECK: fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_polymorphic_extendsTbase_type{val:i32}>>> {bindc_name = ".cond.polymorphic"
+  ! CHECK: %[[PE_DECL:.*]]:2 = hlfir.declare {{.*}} {uniq_name = ".cond.result"}
+  ! CHECK: fir.if
+  ! CHECK:   hlfir.assign {{.*}} to %[[PE_DECL]]#0 realloc temporary_lhs
+  ! CHECK: } else {
+  ! CHECK:   hlfir.assign {{.*}} to %[[PE_DECL]]#0 realloc temporary_lhs
   ! CHECK: }
 end subroutine

@@ -1163,8 +1163,9 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
   for (CXXRecordDecl::friend_iterator I = RD->friend_begin(),
                                       E = RD->friend_end();
        I != E && Complete; ++I) {
+    FriendDecl *Friend = *I;
     // Check if friend classes and methods are complete.
-    if (TypeSourceInfo *TSI = (*I)->getFriendType()) {
+    if (TypeSourceInfo *TSI = Friend->getFriendType()) {
       // Friend classes are available as the TypeSourceInfo of the FriendDecl.
       if (CXXRecordDecl *FriendD = TSI->getType()->getAsCXXRecordDecl())
         Complete = MethodsAndNestedClassesComplete(FriendD, MNCComplete);
@@ -1173,7 +1174,7 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
     } else {
       // Friend functions are available through the NamedDecl of FriendDecl.
       if (const FunctionDecl *FD =
-          dyn_cast<FunctionDecl>((*I)->getFriendDecl()))
+              dyn_cast<FunctionDecl>(Friend->getFriendDecl()))
         Complete = FD->isDefined();
       else
         // This is a template friend, give up.
@@ -2103,13 +2104,40 @@ void Sema::emitDeferredDiags() {
     ExternalSource->ReadDeclsToCheckForDeferredDiags(
         DeclsToCheckForDeferredDiags);
 
+  // For each implicit-H+D-explicit-inst function with deferred errors but no
+  // organic device caller, drop the diagnostics and mark for a trap body.
+  auto ClassifyImplicitHDExplicitInst = [&]() {
+    if (!LangOpts.CUDAIsDevice)
+      return;
+    for (auto &Pair : DeviceDeferredDiags) {
+      const FunctionDecl *FD = Pair.first;
+      if (!SemaCUDA::isImplicitHDExplicitInstantiation(FD))
+        continue;
+      if (CUDA().DeviceKnownEmittedFns.count(FD))
+        continue;
+      bool HasError =
+          llvm::any_of(Pair.second, [&](const PartialDiagnosticAt &PDAt) {
+            return getDiagnostics().getDiagnosticLevel(PDAt.second.getDiagID(),
+                                                       PDAt.first) >=
+                   DiagnosticsEngine::Error;
+          });
+      if (!HasError)
+        continue;
+      Pair.second.clear();
+      Context.CUDADeviceInvalidFuncs.insert(FD->getCanonicalDecl());
+    }
+  };
+
   if ((DeviceDeferredDiags.empty() && !LangOpts.OpenMP) ||
-      DeclsToCheckForDeferredDiags.empty())
+      DeclsToCheckForDeferredDiags.empty()) {
+    ClassifyImplicitHDExplicitInst();
     return;
+  }
 
   DeferredDiagnosticsEmitter DDE(*this);
   for (auto *D : DeclsToCheckForDeferredDiags)
     DDE.checkRecordedDecl(D);
+  ClassifyImplicitHDExplicitInst();
   DDE.emitCollectedDiags();
 }
 

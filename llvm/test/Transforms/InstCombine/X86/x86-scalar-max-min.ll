@@ -4,7 +4,7 @@
 define <4 x float> @test_max_ss_nan(<4 x float> %a) {
 ; CHECK-LABEL: define <4 x float> @test_max_ss_nan(
 ; CHECK-SAME: <4 x float> [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse.max.ss(<4 x float> [[A]], <4 x float> <float 0x7FF8000000000000, float poison, float poison, float poison>)
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse.max.ss(<4 x float> [[A]], <4 x float> <float +qnan, float poison, float poison, float poison>)
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
   %res = call <4 x float> @llvm.x86.sse.max.ss(<4 x float> %a, <4 x float> <float 0x7FF8000000000000, float 0.0, float 0.0, float 0.0>)
@@ -14,7 +14,7 @@ define <4 x float> @test_max_ss_nan(<4 x float> %a) {
 define <4 x float> @test_min_ss_inf(<4 x float> %a) {
 ; CHECK-LABEL: define <4 x float> @test_min_ss_inf(
 ; CHECK-SAME: <4 x float> [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse.min.ss(<4 x float> [[A]], <4 x float> <float 0x7FF0000000000000, float poison, float poison, float poison>)
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse.min.ss(<4 x float> [[A]], <4 x float> <float +inf, float poison, float poison, float poison>)
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
   %res = call <4 x float> @llvm.x86.sse.min.ss(<4 x float> %a, <4 x float> <float 0x7FF0000000000000, float 0.0, float 0.0, float 0.0>)

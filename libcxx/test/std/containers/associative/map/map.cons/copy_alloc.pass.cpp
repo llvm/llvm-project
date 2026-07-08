@@ -10,7 +10,7 @@
 
 // class map
 
-// map(const map& m, const allocator_type& a);
+// map(const map& m, const allocator_type& a); // constexpr since C++26
 
 #include <cassert>
 #include <map>
@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 
 template <class Alloc>
-void test_alloc(const Alloc& new_alloc) {
+TEST_CONSTEXPR_CXX26 bool test_alloc(const Alloc& new_alloc) {
   { // Simple check
     using V   = std::pair<const int, int>;
     using Map = std::map<int, int, std::less<int>, Alloc>;
@@ -81,9 +81,10 @@ void test_alloc(const Alloc& new_alloc) {
     assert(*std::next(orig.begin(), 4) == V(5, 0));
     assert(std::next(orig.begin(), 5) == orig.end());
   }
+  return true;
 }
 
-void test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test_alloc(std::allocator<std::pair<const int, int> >());
   test_alloc(test_allocator<std::pair<const int, int> >(25)); // Make sure that the new allocator is actually used
   test_alloc(min_allocator<std::pair<const int, int> >());    // Make sure that fancy pointers work
@@ -102,10 +103,14 @@ void test() {
     assert(orig.size() == 3);
     assert(orig.key_comp() == test_less<int>(3));
   }
+
+  return true;
 }
 
 int main(int, char**) {
   test();
-
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

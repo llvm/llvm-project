@@ -18,14 +18,16 @@ define i32 @baz() #0 !dbg !7 {
 attributes #0 = {"use-sample-profile"}
 
 !llvm.dbg.cu = !{!0}
+!9 = !{null}
+!10 = !DISubroutineType(types: !9)
 !llvm.module.flags = !{!2}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1)
 !1 = !DIFile(filename: "foo.cc", directory: "/")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
-!3 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 4, unit: !0)
+!3 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 4, type: !10, unit: !0)
 !4 = !DILocation(line: 5, scope: !3)
-!5 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 8, unit: !0)
+!5 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 8, type: !10, unit: !0)
 !6 = !DILocation(line: 9, scope: !5)
-!7 = distinct !DISubprogram(name: "baz", scope: !1, file: !1, line: 12, unit: !0)
+!7 = distinct !DISubprogram(name: "baz", scope: !1, file: !1, line: 12, type: !10, unit: !0)
 !8 = !DILocation(line: 13, scope: !7)

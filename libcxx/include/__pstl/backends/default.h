@@ -12,6 +12,8 @@
 #include <__algorithm/copy_n.h>
 #include <__algorithm/equal.h>
 #include <__algorithm/fill_n.h>
+#include <__algorithm/find.h>
+#include <__algorithm/find_if.h>
 #include <__algorithm/for_each_n.h>
 #include <__algorithm/is_sorted.h>
 #include <__config>
@@ -23,6 +25,7 @@
 #include <__iterator/next.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/dispatch.h>
+#include <__type_traits/desugars_to.h>
 #include <__utility/empty.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -57,6 +60,7 @@ namespace __pstl {
 // - all_of
 // - none_of
 // - is_partitioned
+// - find_first_of
 //
 // for_each family
 // ---------------
@@ -178,6 +182,30 @@ struct __is_partitioned<__default_backend_tag, _ExecutionPolicy> {
     ++__first;
     using _NoneOf = __dispatch<__none_of, __current_configuration, _ExecutionPolicy>;
     return _NoneOf()(__policy, std::move(__first), std::move(__last), __pred);
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __find_first_of<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Predicate>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator1>
+  operator()(_Policy&& __policy,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __first2,
+             _ForwardIterator2 __last2,
+             _Predicate&& __pred) const noexcept {
+    using _FindIf = __dispatch<__find_if, __current_configuration, _ExecutionPolicy>;
+    using _Ref1   = __iterator_reference<_ForwardIterator1>;
+    using _Ref2   = __iterator_reference<_ForwardIterator2>;
+    return _FindIf()(__policy, std::move(__first1), std::move(__last1), [&](_Ref1 __element) {
+      if constexpr (__desugars_to_v<__equal_tag, _Predicate, _Ref1, _Ref2>) {
+        // bypass an equality predicate and call directly to std::find() to allow more vectorization
+        return std::find(__first2, __last2, __element) != __last2;
+      } else {
+        return std::find_if(__first2, __last2, [&](_Ref2 __value) { return __pred(__element, __value); }) != __last2;
+      }
+    });
   }
 };
 

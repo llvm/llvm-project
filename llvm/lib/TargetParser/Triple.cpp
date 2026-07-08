@@ -21,6 +21,18 @@
 #include <cstring>
 using namespace llvm;
 
+bool Triple::operator==(const Triple &Other) const {
+  return Arch == Other.Arch && SubArch == Other.SubArch &&
+         Vendor == Other.Vendor && OS == Other.OS &&
+         Environment == Other.Environment && ObjectFormat == Other.ObjectFormat;
+}
+
+bool Triple::operator<(const Triple &Other) const {
+  return std::tie(Arch, SubArch, Vendor, OS, Environment, ObjectFormat, Data) <
+         std::tie(Other.Arch, Other.SubArch, Other.Vendor, Other.OS,
+                  Other.Environment, Other.ObjectFormat, Other.Data);
+}
+
 StringRef Triple::getArchTypeName(ArchType Kind) {
   switch (Kind) {
   case UnknownArch:
@@ -130,6 +142,8 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
     return "tce";
   case tcele:
     return "tcele";
+  case tcele64:
+    return "tcele64";
   case thumb:
     return "thumb";
   case thumbeb:
@@ -178,6 +192,10 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
       return "arm64e";
     if (SubArch == AArch64SubArch_lfi)
       return "aarch64_lfi";
+    break;
+  case Triple::x86_64:
+    if (SubArch == X86_64SubArch_lfi)
+      return "x86_64_lfi";
     break;
   case Triple::spirv:
     switch (SubArch) {
@@ -493,6 +511,8 @@ StringRef Triple::getOSTypeName(OSType Kind) {
     return "firmware";
   case QURT:
     return "qurt";
+  case H2:
+    return "h2";
   }
 
   llvm_unreachable("Invalid OSType");
@@ -691,6 +711,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
       .Case("systemz", systemz)
       .Case("tce", tce)
       .Case("tcele", tcele)
+      .Case("tcele64", tcele64)
       .Case("thumb", thumb)
       .Case("thumbeb", thumbeb)
       .Case("x86", x86)
@@ -795,7 +816,7 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
           .Cases({"i386", "i486", "i586", "i686"}, Triple::x86)
           // FIXME: Do we need to support these?
           .Cases({"i786", "i886", "i986"}, Triple::x86)
-          .Cases({"amd64", "x86_64", "x86_64h"}, Triple::x86_64)
+          .Cases({"amd64", "x86_64", "x86_64h", "x86_64_lfi"}, Triple::x86_64)
           .Cases({"powerpc", "powerpcspe", "ppc", "ppc32"}, Triple::ppc)
           .Cases({"powerpcle", "ppcle", "ppc32le"}, Triple::ppcle)
           .Cases({"powerpc64", "ppu", "ppc64"}, Triple::ppc64)
@@ -841,6 +862,7 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
           .Cases({"sparcv9", "sparc64"}, Triple::sparcv9)
           .Case("tce", Triple::tce)
           .Case("tcele", Triple::tcele)
+          .Case("tcele64", Triple::tcele64)
           .Case("xcore", Triple::xcore)
           .Case("nvptx", Triple::nvptx)
           .Case("nvptx64", Triple::nvptx64)
@@ -961,6 +983,7 @@ static Triple::OSType parseOS(StringRef OSName) {
       .StartsWith("chipstar", Triple::ChipStar)
       .StartsWith("firmware", Triple::Firmware)
       .StartsWith("qurt", Triple::QURT)
+      .StartsWith("h2", Triple::H2)
       .Default(Triple::UnknownOS);
 }
 
@@ -1052,6 +1075,9 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
 
   if (SubArchName == "aarch64_lfi")
     return Triple::AArch64SubArch_lfi;
+
+  if (SubArchName == "x86_64_lfi")
+    return Triple::X86_64SubArch_lfi;
 
   if (SubArchName.starts_with("spirv"))
     return StringSwitch<Triple::SubArchType>(SubArchName)
@@ -1230,6 +1256,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::spir:
   case Triple::tce:
   case Triple::tcele:
+  case Triple::tcele64:
   case Triple::thumbeb:
   case Triple::ve:
   case Triple::xcore:
@@ -1337,6 +1364,32 @@ Triple::Triple(const Twine &ArchStr, const Twine &VendorStr, const Twine &OSStr,
   if (ObjectFormat == Triple::UnknownObjectFormat)
     ObjectFormat = getDefaultFormat(*this);
 }
+
+Triple::Triple(ArchType A, SubArchType SA, VendorType V, OSType OS)
+    : Data((getArchName(A, SA) + Twine('-') + getVendorTypeName(V) +
+            Twine('-') + getOSTypeName(OS))
+               .str()),
+      Arch(A), SubArch(SA), Vendor(V), OS(OS),
+      ObjectFormat(getDefaultFormat(*this)) {}
+
+Triple::Triple(ArchType A, SubArchType SA, VendorType V, OSType OS,
+               EnvironmentType E)
+    : Data((getArchName(A, SA) + Twine('-') + getVendorTypeName(V) +
+            Twine('-') + getOSTypeName(OS) + Twine('-') +
+            getEnvironmentTypeName(E))
+               .str()),
+      Arch(A), SubArch(SA), Vendor(V), OS(OS), Environment(E),
+      ObjectFormat(getDefaultFormat(*this)) {}
+
+Triple::Triple(ArchType A, SubArchType SA, VendorType V, OSType OS,
+               EnvironmentType E, ObjectFormatType OF)
+    : Data((getArchName(A, SA) + Twine('-') + getVendorTypeName(V) +
+            Twine('-') + getOSTypeName(OS) + Twine('-') +
+            getEnvironmentTypeName(E) + Twine('-') +
+            getObjectFormatTypeName(OF))
+               .str()),
+      Arch(A), SubArch(SA), Vendor(V), OS(OS), Environment(E),
+      ObjectFormat(OF) {}
 
 static VersionTuple parseVersionFromName(StringRef Name);
 
@@ -1710,9 +1763,12 @@ bool Triple::getMacOSXVersion(VersionTuple &Version) const {
     } else if (Version.getMajor() < 25) {
       // darwin20-24 corresponds to macOS 11-15.
       Version = VersionTuple(11 + Version.getMajor() - 20);
-    } else {
-      // darwin25 corresponds with macOS26+.
+    } else if ((Version.getMajor() == 25) || (Version.getMajor() == 26)) {
+      // darwin25-26 corresponds to macOS 26-27.
       Version = VersionTuple(Version.getMajor() + 1);
+    } else {
+      // Starting with darwin27, it naturally corresponds to the same macOS
+      // version.
     }
     break;
   case MacOSX:
@@ -1993,6 +2049,7 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::spirv:
   case llvm::Triple::spir64:
   case llvm::Triple::spirv64:
+  case llvm::Triple::tcele64:
   case llvm::Triple::systemz:
   case llvm::Triple::ve:
   case llvm::Triple::wasm64:
@@ -2133,6 +2190,9 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::spirv64:
     T.setArch(Triple::spirv32, getSubArch());
     break;
+  case Triple::tcele64:
+    T.setArch(Triple::tcele);
+    break;
   case Triple::wasm64:
     T.setArch(Triple::wasm32);
     break;
@@ -2160,7 +2220,6 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::shave:
   case Triple::sparcel:
   case Triple::tce:
-  case Triple::tcele:
   case Triple::xcore:
   case Triple::xtensa:
     T.setArch(UnknownArch);
@@ -2186,6 +2245,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::spir64:
   case Triple::spirv64:
   case Triple::systemz:
+  case Triple::tcele64:
   case Triple::ve:
   case Triple::wasm64:
   case Triple::x86_64:
@@ -2244,6 +2304,9 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::spirv32:
     T.setArch(Triple::spirv64, getSubArch());
     break;
+  case Triple::tcele:
+    T.setArch(Triple::tcele64);
+    break;
   case Triple::thumb:
     T.setArch(Triple::aarch64);
     break;
@@ -2290,6 +2353,7 @@ Triple Triple::getBigEndianArchVariant() const {
   case Triple::spirv:
   case Triple::spirv32:
   case Triple::spirv64:
+  case Triple::tcele64:
   case Triple::wasm32:
   case Triple::wasm64:
   case Triple::x86:
@@ -2435,6 +2499,7 @@ bool Triple::isLittleEndian() const {
   case Triple::spirv32:
   case Triple::spirv64:
   case Triple::tcele:
+  case Triple::tcele64:
   case Triple::thumb:
   case Triple::ve:
   case Triple::wasm32:
@@ -2452,7 +2517,7 @@ bool Triple::isLittleEndian() const {
 unsigned Triple::getDefaultWCharSize() const {
   if (getArch() == Triple::xcore)
     return 1;
-  if (isOSWindows() || isWindowsCygwinEnvironment() || isPS() || isUEFI())
+  if (isOSWindowsOrUEFI() || isPS())
     return 2;
   if (isOSAIX() && isArch32Bit())
     return 2;
@@ -2599,6 +2664,12 @@ VersionTuple Triple::getCanonicalVersionForOS(OSType OSKind,
       return VersionTuple(26, 0);
     if (!IsInValidRange)
       return Version.withMajorReplaced(Version.getMajor() + WatchOSRangeBump);
+    break;
+  }
+  case DriverKit: {
+    // DriverKit26 is canonicalized to 27.
+    if (Version.getMajor() == 26U)
+      return Version.withMajorReplaced(27);
     break;
   }
   default:
