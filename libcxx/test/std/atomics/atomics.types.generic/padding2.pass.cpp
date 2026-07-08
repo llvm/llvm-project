@@ -8,9 +8,6 @@
 // UNSUPPORTED: c++03
 // UNSUPPORTED: no-localization
 
-// atomic_init is deprecated
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
-
 // atomic<T>::compare_exchange_weak
 // atomic<T>::compare_exchange_strong
 // CAS should work on types with padding bits

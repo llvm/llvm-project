@@ -50,9 +50,8 @@ struct __cxx_atomic_base_impl {
     std::__clear_padding_if_needed(__a_value);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT : __a_value(__value) {
-    std::__clear_padding_if_needed(__a_value);
-  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT
+      : __a_value(std::__clear_padding_if_needed(__value)) {}
   _Tp __a_value;
 };
 

@@ -45,14 +45,22 @@ struct WithInternalAndTailPadding {
 static_assert(sizeof(WithInternalAndTailPadding) > sizeof(int) + 2 * sizeof(char), "");
 
 template <class T>
+void set(T& obj, int i, char c) {
+  obj.i = i;
+  obj.c = c;
+}
+
+void set(WithInternalAndTailPadding& obj, int i, char c) {
+  obj.i  = i;
+  obj.c  = c;
+  obj.c2 = c;
+}
+
+template <class T>
 T make(int i, char c, unsigned char pad_byte) {
   T obj;
   std::memset(&obj, pad_byte, sizeof(T));
-  obj.i = i;
-  obj.c = c;
-  if constexpr (std::is_same<T, WithInternalAndTailPadding>::value) {
-    obj.c2 = c;
-  }
+  set(obj, i, c);
   return obj;
 }
 
@@ -61,11 +69,7 @@ void assert_padding(const T& obj, unsigned char pad_byte) {
   alignas(T) unsigned char buf[sizeof(T)];
   std::memset(buf, pad_byte, sizeof(T));
   T& reference = *reinterpret_cast<T*>(buf);
-  reference.i  = obj.i;
-  reference.c  = obj.c;
-  if constexpr (std::is_same_v<T, WithInternalAndTailPadding>) {
-    reference.c2 = obj.c2;
-  }
+  set(reference, obj.i, obj.c);
   assert(std::memcmp(&obj, &reference, sizeof(T)) == 0);
 }
 
