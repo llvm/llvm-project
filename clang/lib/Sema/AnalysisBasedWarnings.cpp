@@ -2068,6 +2068,321 @@ static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
   }
 }
 
+// If E (stripped of parens and implicit casts, including the derived-to-base
+// cast of an inherited-member access) is a member access `V.m` on a directly
+// named variable, return the base DeclRefExpr and the field through \p F.
+// An arrow access or an access through any other expression is not a tracked
+// local's member.
+static const DeclRefExpr *getLocalMemberAccess(const Expr *E,
+                                               const FieldDecl *&F) {
+  const auto *ME = dyn_cast<MemberExpr>(E->IgnoreParenImpCasts());
+  if (!ME || ME->isArrow())
+    return nullptr;
+  const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
+  if (!FD)
+    return nullptr;
+  const auto *DRE = dyn_cast<DeclRefExpr>(ME->getBase()->IgnoreParenImpCasts());
+  if (!DRE)
+    return nullptr;
+  F = FD;
+  return DRE;
+}
+
+// If V is a local whose [[uninit]] members this pass may soundly flow-track,
+// return its class definition; null otherwise. Sound means nothing can have
+// assigned the members before V's declaration: the class (and any base
+// subtree contributing tracked members) has no user-provided constructor
+// (paper §5.1 trusts one -- its body may assign, which local analysis cannot
+// see), and the declaration ran nothing but the implicit no-op
+// default-construction. A local that is itself [[uninit]]-marked is excluded:
+// its subobject accesses are the parse-time read-through / uninit_write
+// rules' territory, and tracking it here would double-diagnose.
+static const CXXRecordDecl *getTrackedLocalAggregate(const VarDecl *V) {
+  if (!V->hasLocalStorage() || isa<ParmVarDecl>(V) || isa<DecompositionDecl>(V))
+    return nullptr;
+  if (V->isInvalidDecl() || V->hasAttr<UninitAttr>())
+    return nullptr;
+  QualType T = V->getType();
+  if (T->isReferenceType() || T->isDependentType())
+    return nullptr;
+  const CXXRecordDecl *RD = T->getAsCXXRecordDecl();
+  if (!RD || !RD->hasDefinition())
+    return nullptr;
+  RD = RD->getDefinition();
+  if (RD->isUnion() || RD->isDependentType() || hasUserProvidedCtor(RD))
+    return nullptr;
+  // Declared without a real initializer: for a record local that is the
+  // synthesized call to the implicit default constructor (`Agg a;`). Any
+  // written form -- `Agg a{}` / `= {}` (an InitListExpr), `Agg a = Agg()`
+  // (a CXXTemporaryObjectExpr), a copy (a non-default constructor) -- gives
+  // every member a value and leaves nothing to track.
+  if (const Expr *Init = V->getInit()) {
+    const auto *CCE = dyn_cast<CXXConstructExpr>(Init->IgnoreImplicit());
+    if (!CCE || isa<CXXTemporaryObjectExpr>(CCE) ||
+        !CCE->getConstructor()->isDefaultConstructor() ||
+        CCE->isListInitialization() || CCE->getParenOrBraceRange().isValid())
+      return nullptr;
+  }
+  return RD;
+}
+
+// std::init local-aggregate member check (paper §7.1 "initialized ... before
+// use", the local-variable analog of the ctor-body pass above).
+//
+// An [[uninit]] scalar member of a constructor-less aggregate local is given
+// a value by a plain member store (`a.m = e`; for a built-in type a write is
+// its initialization, §4.5) -- the §5.3 "class exposing uninitialized
+// members" pattern. A read of such a member before it is definitely assigned
+// (on every path, §1.3) is the violation. This is the flow tracking the
+// parse-time read-through rule's top-level drop relies on for locals: the
+// drop trusts a direct member read so the legal write-then-read sequence is
+// not rejected, and this pass supplies the missing read-before-write
+// diagnosis.
+//
+// Soundness over completeness: any appearance of the variable outside a
+// recognized member read or write -- &a, &a.m, a reference binding, passing a
+// to any function (construct_at, memcpy), a member call, a lambda capture --
+// conservatively marks every member assigned from that point (the address may
+// be used to initialize the object). Members of an object with a
+// user-provided constructor stay untracked (trusted, §5.1), as do objects
+// reached through parameters, references, or other objects. A backward goto
+// across the declaration re-default-initializes the object, which the
+// gen-only dataflow cannot model -- a possible missed diagnostic, matching
+// the ctor-body pass's accepted imprecision level.
+static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
+  CFG *cfg = AC.getCFG();
+  if (!cfg)
+    return;
+
+  // Harvest tracked (local, member) pairs from the CFG's (single-decl)
+  // DeclStmt elements; each variable's pairs are contiguous so an escape can
+  // set a range.
+  SmallVector<const FieldDecl *, 4> PairField;
+  llvm::DenseMap<const FieldDecl *, unsigned> FieldIdxScratch;
+  llvm::DenseMap<const VarDecl *, std::pair<unsigned, unsigned>> VarRange;
+  llvm::DenseMap<std::pair<const VarDecl *, const FieldDecl *>, unsigned>
+      PairIdx;
+  for (const CFGBlock *B : *cfg) {
+    for (const CFGElement &Elem : *B) {
+      auto CS = Elem.getAs<CFGStmt>();
+      if (!CS)
+        continue;
+      const auto *DS = dyn_cast<DeclStmt>(CS->getStmt());
+      if (!DS)
+        continue;
+      for (const Decl *Dcl : DS->decls()) {
+        const auto *V = dyn_cast<VarDecl>(Dcl);
+        if (!V || VarRange.count(V))
+          continue;
+        const CXXRecordDecl *RD = getTrackedLocalAggregate(V);
+        if (!RD)
+          continue;
+        SmallVector<const FieldDecl *, 4> Members;
+        FieldIdxScratch.clear();
+        collectTrackedUninitMembers(S, RD, Members, FieldIdxScratch);
+        if (Members.empty())
+          continue;
+        unsigned Begin = PairField.size();
+        for (const FieldDecl *F : Members) {
+          PairIdx[{V, F}] = PairField.size();
+          PairField.push_back(F);
+        }
+        VarRange[V] = {Begin, PairField.size()};
+      }
+    }
+  }
+  if (PairField.empty())
+    return;
+  const unsigned N = PairField.size();
+
+  // The tracked pair index for E when it is a `V.m` access on a tracked
+  // local; ~0u otherwise. \p BaseOut receives the access's base DeclRefExpr.
+  auto LookupPair = [&](const Expr *E,
+                        const DeclRefExpr *&BaseOut) -> unsigned {
+    const FieldDecl *F = nullptr;
+    const DeclRefExpr *DRE = getLocalMemberAccess(E, F);
+    if (!DRE)
+      return ~0u;
+    const auto *V = dyn_cast<VarDecl>(DRE->getDecl());
+    if (!V)
+      return ~0u;
+    auto It = PairIdx.find({V, F});
+    if (It == PairIdx.end())
+      return ~0u;
+    BaseOut = DRE;
+    return It->second;
+  };
+
+  // First pass: the base DeclRefExprs consumed by a recognized member read or
+  // write are benign -- they do not escape the object. A DeclRefExpr element
+  // precedes its consuming cast/operator element in a block, so the benign
+  // set must be complete before elements are classified.
+  llvm::SmallPtrSet<const DeclRefExpr *, 16> Benign;
+  for (const CFGBlock *B : *cfg) {
+    for (const CFGElement &Elem : *B) {
+      auto CS = Elem.getAs<CFGStmt>();
+      if (!CS)
+        continue;
+      const Stmt *St = CS->getStmt();
+      const DeclRefExpr *Base = nullptr;
+      if (const auto *ICE = dyn_cast<ImplicitCastExpr>(St)) {
+        if (ICE->getCastKind() == CK_LValueToRValue)
+          LookupPair(ICE->getSubExpr(), Base);
+      } else if (const auto *BO = dyn_cast<BinaryOperator>(St)) {
+        if (BO->isAssignmentOp())
+          LookupPair(BO->getLHS(), Base);
+      } else if (const auto *UO = dyn_cast<UnaryOperator>(St)) {
+        if (UO->isIncrementDecrementOp())
+          LookupPair(UO->getSubExpr(), Base);
+      }
+      if (Base)
+        Benign.insert(Base);
+    }
+  }
+
+  // Second pass: per-block ordered events. A load of `V.m` is a Read; a
+  // member store is a Write (a compound assignment or ++/-- reads the old
+  // value first); any non-benign DeclRefExpr naming a tracked local is an
+  // escape, modeled as a Write of every one of its tracked members.
+  enum EventKind { Read, Write, ReadWrite };
+  struct Event {
+    EventKind Kind;
+    unsigned Idx;
+    const Expr *E;
+  };
+  const unsigned NumBlocks = cfg->getNumBlockIDs();
+  std::vector<SmallVector<Event, 4>> Events(NumBlocks);
+  std::vector<llvm::BitVector> Gen(NumBlocks, llvm::BitVector(N, false));
+  for (const CFGBlock *B : *cfg) {
+    auto &BlockEvents = Events[B->getBlockID()];
+    auto &BlockGen = Gen[B->getBlockID()];
+    for (const CFGElement &Elem : *B) {
+      auto CS = Elem.getAs<CFGStmt>();
+      if (!CS)
+        continue;
+      const Stmt *St = CS->getStmt();
+      const DeclRefExpr *Base = nullptr;
+      if (const auto *ICE = dyn_cast<ImplicitCastExpr>(St)) {
+        if (ICE->getCastKind() != CK_LValueToRValue)
+          continue;
+        unsigned Idx = LookupPair(ICE->getSubExpr(), Base);
+        if (Idx != ~0u)
+          BlockEvents.push_back({Read, Idx, ICE});
+      } else if (const auto *BO = dyn_cast<BinaryOperator>(St)) {
+        if (!BO->isAssignmentOp())
+          continue;
+        unsigned Idx = LookupPair(BO->getLHS(), Base);
+        if (Idx == ~0u)
+          continue;
+        BlockEvents.push_back(
+            {BO->isCompoundAssignmentOp() ? ReadWrite : Write, Idx, BO});
+        BlockGen.set(Idx);
+      } else if (const auto *UO = dyn_cast<UnaryOperator>(St)) {
+        if (!UO->isIncrementDecrementOp())
+          continue;
+        unsigned Idx = LookupPair(UO->getSubExpr(), Base);
+        if (Idx == ~0u)
+          continue;
+        BlockEvents.push_back({ReadWrite, Idx, UO});
+        BlockGen.set(Idx);
+      } else if (const auto *DRE = dyn_cast<DeclRefExpr>(St)) {
+        if (Benign.count(DRE))
+          continue;
+        const auto *V = dyn_cast<VarDecl>(DRE->getDecl());
+        if (!V)
+          continue;
+        auto It = VarRange.find(V);
+        if (It == VarRange.end())
+          continue;
+        for (unsigned Idx = It->second.first; Idx != It->second.second; ++Idx) {
+          BlockEvents.push_back({Write, Idx, DRE});
+          BlockGen.set(Idx);
+        }
+      }
+    }
+  }
+
+  // Forward "definitely assigned" dataflow, identical in shape to the
+  // ctor-body pass's: nothing is assigned at function entry (a tracked local
+  // cannot be referenced before its DeclStmt anyway); a block's entry is the
+  // intersection over its predecessors' exits; unprocessed (unreachable)
+  // predecessors keep the all-assigned top, so unreachable code is never
+  // flagged.
+  std::vector<llvm::BitVector> EntryState(NumBlocks, llvm::BitVector(N, true));
+  std::vector<llvm::BitVector> ExitState(NumBlocks, llvm::BitVector(N, true));
+  const CFGBlock &CFGEntry = cfg->getEntry();
+  ForwardDataflowWorklist Worklist(*cfg, AC);
+  Worklist.enqueueBlock(&CFGEntry);
+  while (const CFGBlock *B = Worklist.dequeue()) {
+    llvm::BitVector In(N, true);
+    if (B == &CFGEntry) {
+      In = llvm::BitVector(N, false);
+    } else {
+      bool First = true;
+      for (const CFGBlock *Pred : B->preds()) {
+        if (!Pred)
+          continue;
+        if (First) {
+          In = ExitState[Pred->getBlockID()];
+          First = false;
+        } else {
+          In &= ExitState[Pred->getBlockID()];
+        }
+      }
+    }
+    EntryState[B->getBlockID()] = In;
+    In |= Gen[B->getBlockID()];
+    if (In != ExitState[B->getBlockID()]) {
+      ExitState[B->getBlockID()] = In;
+      Worklist.enqueueSuccessors(B);
+    }
+  }
+
+  // Replay each block from its fixpoint entry state and collect reads of a
+  // member that is not yet definitely assigned at that point.
+  std::vector<SmallVector<const Expr *, 2>> Offending(N);
+  for (const CFGBlock *B : *cfg) {
+    llvm::BitVector Assigned = EntryState[B->getBlockID()];
+    for (const Event &Ev : Events[B->getBlockID()]) {
+      switch (Ev.Kind) {
+      case Read:
+        if (!Assigned.test(Ev.Idx))
+          Offending[Ev.Idx].push_back(Ev.E);
+        break;
+      case Write:
+        Assigned.set(Ev.Idx);
+        break;
+      case ReadWrite:
+        if (!Assigned.test(Ev.Idx))
+          Offending[Ev.Idx].push_back(Ev.E);
+        Assigned.set(Ev.Idx);
+        break;
+      }
+    }
+  }
+
+  // Report at the first offending read (in source order) that is not
+  // suppressed, once per (local, member) pair, mirroring the ctor-body pass.
+  for (unsigned I = 0; I != N; ++I) {
+    if (Offending[I].empty())
+      continue;
+    llvm::sort(Offending[I], [&](const Expr *A, const Expr *Bx) {
+      return S.SourceMgr.isBeforeInTranslationUnit(A->getBeginLoc(),
+                                                   Bx->getBeginLoc());
+    });
+    for (const Expr *R : Offending[I]) {
+      if (!S.Profiles().shouldEmitProfileViolation("std::init", "uninit_read",
+                                                   R, AC))
+        continue;
+      S.Diag(R->getBeginLoc(), diag::err_init_member_read_before_init)
+          << "std::init" << PairField[I]->getDeclName();
+      S.Diag(PairField[I]->getLocation(), diag::note_init_uninit_member_here)
+          << PairField[I]->getDeclName();
+      break;
+    }
+  }
+}
+
 class UninitValsDiagReporter : public UninitVariablesHandler {
   Sema &S;
   AnalysisDeclContext &AC;
@@ -3292,15 +3607,18 @@ static void addNonLinearizedAlwaysAddClasses(AnalysisDeclContext &AC) {
       .setAlwaysAdd(Stmt::LambdaExprClass);
 }
 
-// std::init: diagnose a read of a [[uninit]] scalar member before it is
-// assigned in the constructor body. Shared by the normal per-function pass
-// and the post-error rerun so both paths stay in step.
-static void runCtorBodyInitCheckIfEnforced(Sema &S, const Decl *D,
-                                           AnalysisDeclContext &AC) {
+// std::init: the CFG-based std::init checks -- the constructor-body
+// read-before-init check and the local-aggregate member check (which runs
+// for every definition, constructors included: the two track disjoint
+// storage, this-members versus locals). Shared by the normal per-function
+// pass and the post-error rerun so both paths stay in step.
+static void runInitProfileCFGChecksIfEnforced(Sema &S, const Decl *D,
+                                              AnalysisDeclContext &AC) {
   if (!S.Profiles().isProfileEnforced("std::init"))
     return;
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(D))
     checkInitProfileCtorBody(S, Ctor, AC);
+  checkInitProfileLocalMembers(S, AC);
 }
 
 // Pattern-2 profiles (the CFGUninitProfiles table) ride the uninitialized-
@@ -3320,9 +3638,9 @@ static void runUninitProfileAnalysisAfterError(Sema &S, const Decl *D) {
     UninitVariablesAnalysisStats stats = {};
     runUninitializedVariablesAnalysis(*cast<DeclContext>(D), *cfg, AC, reporter,
                                       stats);
-    // Keep the constructor-body read-before-init check alive after a TU error,
-    // for parity with the normal path.
-    runCtorBodyInitCheckIfEnforced(S, D, AC);
+    // Keep the read-before-init checks (constructor members and local
+    // aggregates) alive after a TU error, for parity with the normal path.
+    runInitProfileCFGChecksIfEnforced(S, D, AC);
   }
 }
 
@@ -3831,8 +4149,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   }
 
   // std::init: diagnose a read of a [[uninit]] scalar member before it is
-  // assigned in the constructor body, reusing the CFG built above.
-  runCtorBodyInitCheckIfEnforced(S, D, AC);
+  // assigned -- in the constructor body for the current object's members, in
+  // any body for a constructor-less aggregate local's -- reusing the CFG
+  // built above.
+  runInitProfileCFGChecksIfEnforced(S, D, AC);
 
   // TODO: Enable lifetime safety analysis for other languages once it is
   // stable.

@@ -1,0 +1,243 @@
+// All violations share one TU with a leading unrelated error: the early error
+// disables the analysis-based-warnings pass for later functions, so this also
+// verifies that the local-aggregate member check keeps diagnosing through the
+// post-error rerun.
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,common -fprofiles -std=c++23 -Wno-uninitialized %s
+// RUN: %clang_cc1 -fsyntax-only -verify=no-profiles,common -std=c++23 -Wno-uninitialized %s
+
+// std::init: an [[uninit]] scalar member of a constructor-less aggregate
+// local (the paper §5.3 "class exposing uninitialized members" pattern) is
+// given a value by a plain member store; a read before the member is
+// definitely assigned on every path is diagnosed by a per-function
+// definite-assignment pass, the local-variable analog of the ctor-body check.
+
+// no-profiles-warning@+1 {{'profiles::enforce' attribute ignored}}
+[[profiles::enforce(std::init)]];
+
+namespace std { enum class byte : unsigned char {}; }
+
+int leading_unrelated_error = undeclared_identifier;
+// common-error@-1 {{use of undeclared identifier 'undeclared_identifier'}}
+
+struct Agg {
+  int m [[uninit]]; // expected-note 10 {{member 'm' declared here}}
+};
+void take_ref(Agg &);
+// The pointee is uninitialized memory, so the parameter carries the marker
+// (the unmarked spelling is the ref_to_uninit binding rule's to reject).
+void take_ptr(int *p [[ref_to_uninit]]);
+
+int test_read_before_any_write() {
+  Agg a;
+  return a.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+}
+
+int test_read_then_write() {
+  Agg a;
+  int v = a.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+  a.m = 1;
+  return v;
+}
+
+int test_branch_one_path(bool c) {
+  Agg a;
+  if (c)
+    a.m = 1;
+  return a.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+}
+
+// A compound assignment and a built-in ++/-- read the old value before
+// writing it.
+void test_compound_reads_old_value() {
+  Agg a;
+  a.m += 1; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+}
+
+void test_incdec_reads_old_value() {
+  Agg a;
+  a.m++; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+}
+
+// A loop body may run zero times, so an assignment inside it does not reach a
+// read after the loop...
+int test_loop_may_not_run(int n) {
+  Agg a;
+  for (int i = 0; i < n; ++i)
+    a.m = i;
+  return a.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+}
+
+// ...and a read at the top of the body precedes the first iteration's write.
+int test_loop_read_first_iteration(int n) {
+  Agg a;
+  int t = 0;
+  for (int i = 0; i < n; ++i) {
+    t += a.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+    a.m = i;
+  }
+  return t;
+}
+
+// sizeof neither reads the member (unevaluated) nor escapes the object.
+int test_sizeof_neither_reads_nor_escapes() {
+  Agg a;
+  (void)sizeof(a.m);
+  return a.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+}
+
+// An [[uninit]] member inherited from a constructor-less non-virtual base is
+// tracked like the class's own (nothing can have assigned it earlier).
+struct Base {
+  int bm [[uninit]]; // expected-note {{member 'bm' declared here}}
+};
+struct Derived : Base {
+  int dm = 0;
+};
+int test_base_subtree_member() {
+  Derived d;
+  return d.bm; // expected-error {{member 'bm' is read before initialization under profile 'std::init'}}
+}
+
+int test_write_then_read() {
+  Agg a;
+  a.m = 5;
+  return a.m; // OK
+}
+
+int test_branch_both_paths(bool c) {
+  Agg a;
+  if (c)
+    a.m = 1;
+  else
+    a.m = 2;
+  return a.m; // OK
+}
+
+// Any appearance of the variable outside a recognized member read or write
+// conservatively marks every member assigned: the address may be used to
+// initialize the object (construct_at, memcpy, an initializing callee).
+int test_escape_address_of_object() {
+  Agg a;
+  (void)&a;
+  return a.m; // OK: escaped
+}
+
+int test_escape_address_of_member() {
+  Agg a;
+  take_ptr(&a.m);
+  return a.m; // OK: escaped
+}
+
+int test_escape_reference_binding() {
+  Agg a;
+  take_ref(a);
+  return a.m; // OK: escaped
+}
+
+int test_escape_lambda_capture() {
+  Agg a;
+  auto init = [&] { a.m = 5; };
+  init();
+  return a.m; // OK: the capture escapes the object
+}
+
+// A class with a user-provided constructor is trusted (paper §5.1): its
+// constructor body may have assigned the member, which local analysis cannot
+// see. This pins the deliberate trust decision for non-current-object member
+// reads.
+struct Slot {
+  int y [[uninit]];
+  Slot() {}
+};
+int test_user_provided_ctor_trusted() {
+  Slot uu;
+  return uu.y; // OK: trusted
+}
+
+// A base with a user-provided constructor keeps its members untracked, even
+// under a constructor-less derived class.
+struct TrustedBase {
+  int tm [[uninit]];
+  TrustedBase() {}
+};
+struct DerivedFromTrusted : TrustedBase {};
+int test_trusted_base_member() {
+  DerivedFromTrusted d;
+  return d.tm; // OK: trusted
+}
+
+// Any written initialization gives every member a value; only the bare
+// `Agg a;` form (the implicit no-op default-construction) is tracked.
+Agg make_agg();
+int test_initialized_forms(Agg other) {
+  Agg a{};
+  Agg b = {};
+  Agg c = Agg();
+  Agg d = other;
+  Agg e = make_agg();
+  return a.m + b.m + c.m + d.m + e.m; // OK
+}
+
+// Parameters and references arrive constructed by the caller and are never
+// tracked.
+int test_parameter_untracked(Agg p, Agg &r) {
+  return p.m + r.m; // OK
+}
+
+// A local that is itself [[uninit]]-marked is the parse-time rules'
+// territory: the read-through check owns its subobject reads, and exactly one
+// diagnostic fires.
+int test_marked_local_owned_by_read_through() {
+  Agg s [[uninit]];
+  return s.m; // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+}
+
+// A static local is zero-initialized, never tracked.
+int test_static_local_untracked() {
+  static Agg a;
+  return a.m; // OK
+}
+
+// std::byte members are exempt (paper §4.5), so a byte-only aggregate has
+// nothing to track.
+struct ByteBox {
+  std::byte b [[uninit]];
+};
+std::byte test_byte_member_exempt() {
+  ByteBox x;
+  return x.b; // OK
+}
+
+void test_suppress_stmt() {
+  Agg a;
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "uninit_read")]] {
+    int v = a.m; // OK: suppressed
+    (void)v;
+  }
+}
+
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(std::init)]]
+int test_suppress_decl() {
+  Agg a;
+  return a.m; // OK: suppressed
+}
+
+// A lambda body's own locals are tracked when the lambda's call operator is
+// analyzed.
+void test_lambda_own_local() {
+  auto f = [] {
+    Agg a;
+    return a.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+  };
+  (void)f;
+}
+
+// A template function's body is analyzed per instantiation.
+template <typename T>
+int template_local_member_read() {
+  Agg a;
+  return a.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+}
+template int template_local_member_read<int>(); // expected-note {{in instantiation of function template specialization 'template_local_member_read<int>' requested here}}

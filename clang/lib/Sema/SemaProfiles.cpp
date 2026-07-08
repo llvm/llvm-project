@@ -802,14 +802,19 @@ enum class UninitStorage { Initialized, Uninitialized, Unknown };
 // How an expression is being used, for the uninit recognizers.
 //
 // DropTopLevelUninit: a *directly named* [[uninit]] entity does not count as
-// uninitialized. A value access of such an entity is the flow-based passes'
-// responsibility (the CFG uninit_read pass and the ctor-body pass credit
-// assignments), so the read-through check must not second-guess them -- and
-// for a store, writing the whole named entity IS its initialization (paper
-// §4.5: for a built-in type, a write is its initialization). The flag is
-// cleared at the first subobject step (member access, array element), where
-// no flow pass tracks the storage and only whole-object construct_at could
-// re-initialize (paper §5.4).
+// uninitialized. A value access of such an entity is owned elsewhere: a named
+// [[uninit]] object by the CFG uninit_read pass, a current-object member by
+// the ctor-body pass, an [[uninit]] member of a constructor-less aggregate
+// local by the local-aggregate pass (all three credit assignments), and a
+// marked member of an object with a user-provided constructor reached through
+// any other object is deliberately trusted (paper §5.1: its constructor body
+// may have assigned it, which local analysis cannot see). So the read-through
+// check must not second-guess them -- and for a store, writing the whole
+// named entity IS its initialization (paper §4.5: for a built-in type, a
+// write is its initialization). The flag is cleared at the first *deeper*
+// subobject step (a member's member, an array element), where no flow pass
+// tracks the storage and only whole-object construct_at could re-initialize
+// (paper §5.4).
 //
 // TrustRefToUninit: [[ref_to_uninit]] markers are ignored -- the storage
 // reached through a marked pointer/reference (or returned by a marked
@@ -1006,12 +1011,12 @@ static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E,
     // a->m reaches m through the pointer a (object *a); a.m through the
     // glvalue a. When m does not itself denote uninit storage, the subobject is
     // uninit exactly when its base is. The base recursion clears the top-level
-    // drop: the drop exists because a *directly named* [[uninit]] object and
-    // a current-object member are flow-tracked (by the CFG uninit_read pass
-    // and the ctor-body pass, which credit assignments), but neither pass
-    // tracks a subobject reached through a member access -- and member-wise
-    // delayed initialization of an [[uninit]] object is itself banned (paper
-    // §5.4; only whole-object construct_at re-initializes, which is uniformly
+    // drop: the drop exists because a directly named [[uninit]] entity's value
+    // accesses are owned by the flow passes or deliberately trusted (see the
+    // UninitAccessOpts comment above), but nothing tracks a subobject reached
+    // through a *further* member access -- and member-wise delayed
+    // initialization of an [[uninit]] object is itself banned (paper §5.4;
+    // only whole-object construct_at re-initializes, which is uniformly
     // unmodeled) -- so below the top level the marker counts for every access.
     if (DeclDenotesUninit(ME->getMemberDecl()))
       return UninitStorage::Uninitialized;

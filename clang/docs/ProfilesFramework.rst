@@ -936,6 +936,47 @@ read-then-write of that member.  Details:
   (``ref_to_uninit``) territory and is treated as neither a read nor an
   initialization by this pass.
 
+The same guarantee covers an ``[[uninit]]`` scalar member of a
+*constructor-less aggregate local* (the paper §5.3 "class exposing
+uninitialized members" pattern used with a local: ``struct Agg { int m
+[[uninit]]; }; Agg a; a.m = 5;``).  ``checkInitProfileLocalMembers`` in
+``clang/lib/Sema/AnalysisBasedWarnings.cpp`` -- the local-variable analog of
+the ctor-body pass, sharing its tracked-member filter, event/replay shape,
+suppression lookup, and post-error rerun -- runs the same forward
+definite-assignment dataflow over *every* function definition's CFG.  This is
+the flow tracking that lets the parse-time read-through preset (R7) drop the
+top-level member marker without losing the read-before-write diagnosis.
+Details:
+
+- Tracked pairs are (local variable, member): an automatic-storage,
+  non-parameter, non-reference local whose class -- with any base subtree
+  contributing tracked members -- has **no user-provided constructor** (one
+  is trusted per paper §5.1: its body may have assigned the member, which
+  local analysis cannot see) and whose declaration is the bare ``Agg a;``
+  form.  Any written initialization (``Agg a{}``, ``= {}``, ``= Agg()``, a
+  copy) gives every member a value and leaves nothing to track, as does a
+  local that is itself ``[[uninit]]``-marked -- its subobject accesses are the
+  parse-time read-through / ``uninit_write`` rules' territory.
+- A plain member store ``a.m = e`` assigns the member (§4.5); a compound
+  assignment and a built-in ``++``/``--`` read the old value first and are a
+  read-then-write, exactly as in the ctor-body pass.
+- Soundness over completeness: **any** other appearance of the variable --
+  ``&a``, ``&a.m``, a reference binding, passing ``a`` to any function
+  (``construct_at``, ``memcpy``), a member call, a lambda capture --
+  conservatively marks every tracked member assigned from that point (the
+  address may be used to initialize the object), so no legal program is
+  rejected.  A backward ``goto`` across the declaration re-default-initializes
+  the object, which the gen-only dataflow cannot model -- a possible missed
+  diagnostic, matching the ctor-body pass's accepted imprecision level.
+- Objects reached through parameters, references, or other objects are not
+  tracked; with the user-provided-constructor trust above this makes the
+  remaining "``uu.y`` read through another object" case a deliberate,
+  documented trust decision (see the read-through preset under R7).
+- Reports reuse ``err_init_member_read_before_init`` under the shared
+  ``uninit_read`` rule, so ``[[profiles::suppress(std::init, rule:
+  "uninit_read")]]`` at the read site covers it and the ``std::byte``
+  exemption applies (a ``std::byte`` member is never tracked).
+
 R2. ``uninit_decl`` -- pattern 1
 .................................
 
@@ -1218,10 +1259,17 @@ recognizers symmetric.
   (this rule), and a scalar *store* (``uninit_write``, R10, which shares the
   drop and additionally trusts the ``[[ref_to_uninit]]`` arms).
   The read preset drops the ``[[uninit]]`` marker only for the
-  *top-level* named entity -- a directly named ``[[uninit]]`` object and a
-  current-object member are flow-tracked (by the CFG ``uninit_read`` pass and
-  the ctor-body pass, which credit assignments), so their direct reads are left
-  to those passes.  A *subobject* read of a named ``[[uninit]]`` object
+  *top-level* named entity, whose direct reads are owned three ways: a
+  directly named ``[[uninit]]`` object is flow-tracked by the CFG
+  ``uninit_read`` pass, a current-object ``[[uninit]]`` member by the
+  ctor-body pass, and an ``[[uninit]]`` member of a constructor-less
+  aggregate local by the local-aggregate pass (all three credit assignments;
+  see R1).  A marked member of an object with a *user-provided* constructor
+  reached through any other object (``uu.y`` after ``Slot uu;``) is instead
+  **trusted**, deliberately: the constructor's body may have assigned the
+  member (the §5.2 pattern), which local analysis cannot see, so paper §5.1's
+  trust-the-constructor principle applies and its reads are not diagnosed
+  anywhere.  A *subobject* read of a named ``[[uninit]]`` object
   (``s.x``, ``o.agg.f``) or array (``a[0]``, ``*a``, ``s.a[i]``) is recognized
   and diagnosed here: neither flow pass tracks members or array elements, and
   subobject-wise delayed initialization of an ``[[uninit]]`` object is itself
