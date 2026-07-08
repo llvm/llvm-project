@@ -2201,9 +2201,10 @@ void RewriteInstance::splitUnmarkedTailFunctions(
 
     std::string TailName =
         "__BOLT_UNMARKED_TAILat" + Twine::utohexstr(TailStart).str();
-    if (opts::Verbosity >= 1)
-      BC->outs() << "BOLT-INFO: creating unmarked tail function " << TailName
-                 << " after " << *Pred << '\n';
+    BC->errs() << "BOLT-WARNING: detected executable code after CFI-bounded "
+               << "function " << *Pred << "; creating synthetic function "
+               << TailName
+               << ". Consider adding a symbol or FDE for this code.\n";
 
     // Inherit [TailStart, TailStart + TrailingExtent) from Pred's old extent.
     BinaryFunction *TailBF = BC->createBinaryFunction(

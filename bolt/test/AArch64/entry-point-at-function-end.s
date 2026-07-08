@@ -8,6 +8,10 @@
 # RUN: %clang %cflags %t.o -pie -Wl,-q -o %t.exe
 # RUN: llvm-bolt %t.exe -o %t.bolt --print-disasm -v=1 2>&1 | FileCheck %s
 
+# CHECK-COUNT-3: BOLT-WARNING: detected executable code after CFI-bounded function
+# CHECK-SAME: creating synthetic function __BOLT_UNMARKED_TAILat
+# CHECK-SAME: Consider adding a symbol or FDE for this code.
+
 ## Scenario 1a: FDE-only predecessor at the section start (named after .text).
 # CHECK: Binary Function ".text/{{[0-9]+}}" after disassembly
 # CHECK: Size        : 0x14
