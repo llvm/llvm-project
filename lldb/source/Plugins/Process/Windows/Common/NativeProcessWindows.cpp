@@ -50,44 +50,6 @@ using namespace llvm;
 
 namespace lldb_private {
 
-namespace {
-
-void NormalizeWindowsPath(std::string &s) {
-  for (char &c : s) {
-    if (c == '/')
-      c = '\\';
-    else
-      c = std::tolower(static_cast<unsigned char>(c));
-  }
-}
-
-bool IsSystemDLL(const FileSpec &spec) {
-  if (!spec)
-    return false;
-
-  static const std::string windows_prefix = []() {
-    std::string prefix;
-    wchar_t buf[MAX_PATH];
-    UINT len = ::GetWindowsDirectoryW(buf, MAX_PATH);
-    if (len == 0 || len >= MAX_PATH)
-      return prefix;
-    llvm::convertWideToUTF8(std::wstring_view(buf, len), prefix);
-    NormalizeWindowsPath(prefix);
-    if (!prefix.empty() && prefix.back() != '\\')
-      prefix += '\\';
-    return prefix;
-  }();
-
-  if (windows_prefix.empty())
-    return false;
-
-  std::string path = spec.GetPath();
-  NormalizeWindowsPath(path);
-  return llvm::StringRef(path).starts_with(windows_prefix);
-}
-
-} // namespace
-
 NativeProcessWindows::NativeProcessWindows(ProcessLaunchInfo &launch_info,
                                            NativeDelegate &delegate,
                                            llvm::Error &E)
@@ -635,9 +597,8 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
     return ExceptionResult::BreakInDebugger;
   }
 
-  // Any remaining STATUS_BREAKPOINT is a breakpoint instruction in the
-  // program's own code (e.g. `__debugbreak()` or `__builtin_debugtrap()`).
-  // Stop the debugger and let the user decide what to do.
+  // Our own DebugBreakProcess() injection, used to implement
+  // Halt()/Interrupt().
   if (m_pending_halt) {
     LLDB_LOG(log,
              "DebugBreakProcess injection treated as Halt SIGSTOP for tid "
@@ -662,6 +623,14 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
       injected->SetStopReason(signal_info, "interrupt");
     SetState(eStateStopped, true);
     return ExceptionResult::BreakInDebugger;
+  }
+
+  if (IsSystemModuleAddress(exception_addr)) {
+    LLDB_LOG(log,
+             "Ignoring loader/OS breakpoint at address {0:x} in a system "
+             "module.",
+             exception_addr);
+    return ExceptionResult::MaskException;
   }
 
   std::string desc = formatv("Exception {0:x8} encountered at address {1:x8}",
@@ -776,7 +745,7 @@ DllEventAction NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
     return DllEventAction::ContinueDebugLoop;
 
   // Can't resolve a breakpoint in a system DLL.
-  if (!resolved || IsSystemDLL(resolved))
+  if (!resolved || ProcessDebugger::IsSystemDLL(resolved))
     return DllEventAction::ContinueDebugLoop;
 
   NativeThreadWindows *loader_thread = GetThreadByID(thread_id);
@@ -819,7 +788,7 @@ DllEventAction NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
   if (!m_initial_stop_seen || !m_client_supports_libraries_read)
     return DllEventAction::ContinueDebugLoop;
 
-  if (!unloaded_spec || IsSystemDLL(unloaded_spec))
+  if (!unloaded_spec || ProcessDebugger::IsSystemDLL(unloaded_spec))
     return DllEventAction::ContinueDebugLoop;
 
   NativeThreadWindows *unloader_thread = GetThreadByID(thread_id);

@@ -15,6 +15,7 @@
 #include <psapi.h>
 
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Core/Address.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -97,6 +98,7 @@ ProcessSP ProcessWindows::CreateInstance(lldb::TargetSP target_sp,
 }
 
 static bool ShouldUseLLDBServer() {
+  return true;
   llvm::StringRef use_lldb_server = ::getenv("LLDB_USE_LLDB_SERVER");
   return use_lldb_server.equals_insensitive("on") ||
          use_lldb_server.equals_insensitive("yes") ||
@@ -710,7 +712,18 @@ ProcessWindows::OnDebugException(bool first_chance,
 
   ExceptionResult result = ExceptionResult::SendToApplication;
   switch (record.GetExceptionValue()) {
-  case EXCEPTION_BREAKPOINT:
+  case EXCEPTION_BREAKPOINT: {
+    const lldb::addr_t bp_addr = record.GetExceptionAddress();
+    if (first_chance && m_session_data->m_initial_stop_received &&
+        !GetBreakpointSiteList().FindByAddress(bp_addr) &&
+        IsSystemModuleAddress(bp_addr)) {
+      LLDB_LOG(
+          log,
+          "Ignoring loader/OS breakpoint at address {0:x} in a system module.",
+          bp_addr);
+      return ExceptionResult::MaskException;
+    }
+
     // Handle breakpoints at the first chance.
     result = ExceptionResult::BreakInDebugger;
 
@@ -733,6 +746,7 @@ ProcessWindows::OnDebugException(bool first_chance,
     DrainProcessStdout();
     SetPrivateState(eStateStopped);
     break;
+  }
   case EXCEPTION_SINGLE_STEP:
     result = ExceptionResult::BreakInDebugger;
     DrainProcessStdout();

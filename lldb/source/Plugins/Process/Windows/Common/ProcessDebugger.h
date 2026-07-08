@@ -29,6 +29,7 @@ class HostProcess;
 class HostThread;
 class ProcessLaunchInfo;
 class ProcessAttachInfo;
+class FileSpec;
 
 class ProcessWindowsData {
 public:
@@ -67,6 +68,10 @@ public:
   virtual void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
                              uint16_t length_lower_word);
   virtual void OnDebuggerError(const Status &error, uint32_t type);
+
+  static bool IsSystemDLL(const FileSpec &spec);
+
+  bool IsSystemModuleAddress(lldb::addr_t addr);
 
 protected:
   Status DetachProcess();
