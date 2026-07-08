@@ -71,6 +71,9 @@ Improvements and New Features
   unspecified non-null string, so user code that does not match on the exact message remains correct.
 - ``ifstream::read`` has been optimized to pass through large reads to system calls directly instead of copying them in
   chunks.
+- ``std::scoped_lock`` now carries Clang thread safety annotations when locking multiple mutexes, so
+  ``-Wthread-safety`` no longer incorrectly reports the guarded data accessed inside the block as
+  unprotected. This requires Clang 21 or later.
 
 Deprecations and Removals
 -------------------------
@@ -91,6 +94,9 @@ Potentially breaking changes
   causes programs which rely on these includes to not compile anymore. Any errors caused by this should be fixable by
   including the correct header. To ease the transition ``_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23`` can be defined, which
   includes the removed headers again. This macro will be removed in LLVM 24.
+
+- The output of ``ostream << std::thread::id`` and ``std::format("...", std::thread:id)`` changes on some platforms from
+  hexadecimal to decimal. This is done to have consistent formatting across all platforms libc++ supports.
 
 Announcements About Future Releases
 -----------------------------------

@@ -2302,8 +2302,9 @@ For example:
     - ``errnomem``: This refers to accesses to the ``errno`` variable.
     - ``target_mem#`` : These refer to target specific state that cannot be
       accessed by any other means. # is a number between 0 and 1 inclusive.
-      Note: The target_mem locations are experimental and intended for internal
-      testing only. They must not be used in production code.
+      Note: The following target_mem locations are implemented in AArch64.
+      target_mem0 represents SME ZT0 state, target_mem1 represents SME ZA
+      state.
 
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
@@ -3357,18 +3358,33 @@ Module-Level Inline Assembly
 ----------------------------
 
 Modules may contain "module-level inline asm" blocks, which corresponds
-to the GCC "file scope inline asm" blocks. These blocks are internally
-concatenated by LLVM and treated as a single unit, but may be separated
-in the ``.ll`` file if desired. The syntax is very simple:
+to the GCC "file scope inline asm" blocks:
 
 .. code-block:: llvm
 
-    module asm "inline asm code goes here"
-    module asm "more can go here"
+    module asm
+        "inline asm code goes here"
+        "more can go here"
 
-The strings can contain any character by escaping non-printable
+The sequence of string literals is internally concatenated using newlines as
+separators. The strings can contain any character by escaping non-printable
 characters. The escape sequence used is simply "\\xx" where "xx" is the
 two digit hex code for the number.
+
+Additionally, module-level inline assembly can specify an optional list of
+properties:
+
+.. code-block:: llvm
+
+    module asm(target_features: "+foo", target_cpu: "bar")
+        "inline asm code goes here"
+        "more can go here"
+
+Currently, the only supported properties are ``target_features`` and
+``target_cpu``, with the same meaning as the ``"target-features"`` and
+``"target-cpu"`` function attributes.
+
+Consecutive blocks with identical properties will be concatenated into one.
 
 Note that the assembly string *must* be parseable by LLVM's integrated assembler
 (unless it is disabled), even when emitting a ``.s`` file.
@@ -8644,6 +8660,37 @@ the irreducible loop) of 100:
 
 Irreducible loop header weights are typically based on profile data.
 
+.. _md_invariant.load:
+
+'``invariant.load``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``invariant.load`` metadata may be attached to load operations or to intrinsic
+calls that only read memory (though it is possible this may be extended in the future
+if the need arises).
+
+If an ``invariant.load``-tagged operation is executed, every memory location
+read by that operation must contain the same value at all points in the program
+where that memory is dereferenceable; otherwise, the behavior is undefined.
+
+An ``invariant.load`` tag may be placed on operations that read inaccessible
+memory or non-memory values (such as registers). These load-like operations must
+be invariant throughout the lifetime of the state being read.
+
+.. code-block:: llvm
+
+   ;; Invariant load of a pointer.
+   load i32, ptr %ptr, !invariant.load !0
+
+   ;; Invariant masked vector load.
+   call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %p, <4 x i1> %mask, <4 x i32> zeroinitializer), !invariant.load !0
+
+   ;; Invariant "load" from a register.
+   call i32 @llvm.read_register.i32(metadata !1), !invariant.load !0
+   !0 = !{}
+   !1 = !{!"reg"}
+
+
 .. _md_invariant.group:
 
 '``invariant.group``' Metadata
@@ -8741,7 +8788,7 @@ computed as follows:
   -  Reinterpret the first 8 bytes of the hash as a little-endian 64-bit integer.
 
 To avoid mismatched pointer types, generalizations are applied.
-Pointers in return and argument types are treated as equivalent as long as the qualifiers for the 
+Pointers in return and argument types are treated as equivalent as long as the qualifiers for the
 type they point to match. For example, ``char*``, ``char**``, and ``int*`` are considered equivalent
 types. However, ``char*`` and ``const char*`` are considered distinct types.
 
@@ -12160,11 +12207,7 @@ as the ``MOVNT`` instruction on x86.
 
 The optional ``!invariant.load`` metadata must reference a single
 metadata name ``<empty_node>`` corresponding to a metadata node with no
-entries. If a load instruction tagged with the ``!invariant.load``
-metadata is executed, the memory location referenced by the load has
-to contain the same value at all points in the program where the
-memory location is dereferenceable; otherwise, the behavior is
-undefined.
+entries. See :ref:`invariant.load  <md_invariant.load>` metadata.
 
 The optional ``!invariant.group`` metadata must reference a single metadata name
  ``<empty_node>`` corresponding to a metadata node with no entries.
@@ -15744,7 +15787,7 @@ knows those logical layouts are lowered to the same physical layout:
     - `{ i32, i32, i32, i32 }`
     - `[ i32 x 4 ]`
 
-This means is is valid to lower the following code to either:
+This means it is valid to lower the following code to either:
 
 .. code-block:: llvm
 

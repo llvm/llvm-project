@@ -332,6 +332,13 @@ bool AArch64ExpandPseudoImpl::expandCMP_SWAP_128(
   Register NewLoReg = MI.getOperand(6).getReg();
   Register NewHiReg = MI.getOperand(7).getReg();
 
+  auto &STI = MBB.getParent()->getSubtarget<AArch64Subtarget>();
+  bool LittleEndian = STI.isLittleEndian();
+  MachineOperand &Dest0 = LittleEndian ? DestLo : DestHi;
+  MachineOperand &Dest1 = LittleEndian ? DestHi : DestLo;
+  Register New0Reg = LittleEndian ? NewLoReg : NewHiReg;
+  Register New1Reg = LittleEndian ? NewHiReg : NewLoReg;
+
   unsigned LdxpOp, StxpOp;
 
   switch (MI.getOpcode()) {
@@ -372,8 +379,8 @@ bool AArch64ExpandPseudoImpl::expandCMP_SWAP_128(
   //     sbcs xDestHi, xDesiredHi
   //     b.ne .Ldone
   BuildMI(LoadCmpBB, MIMD, TII->get(LdxpOp))
-      .addReg(DestLo.getReg(), RegState::Define)
-      .addReg(DestHi.getReg(), RegState::Define)
+      .addReg(Dest0.getReg(), RegState::Define)
+      .addReg(Dest1.getReg(), RegState::Define)
       .addReg(AddrReg);
   BuildMI(LoadCmpBB, MIMD, TII->get(AArch64::SUBSXrs), AArch64::XZR)
       .addReg(DestLo.getReg(), getKillRegState(DestLo.isDead()))
@@ -401,8 +408,8 @@ bool AArch64ExpandPseudoImpl::expandCMP_SWAP_128(
   //     stlxp wStatus, xNewLo, xNewHi, [xAddr]
   //     cbnz wStatus, .Lloadcmp
   BuildMI(StoreBB, MIMD, TII->get(StxpOp), StatusReg)
-      .addReg(NewLoReg)
-      .addReg(NewHiReg)
+      .addReg(New0Reg)
+      .addReg(New1Reg)
       .addReg(AddrReg);
   BuildMI(StoreBB, MIMD, TII->get(AArch64::CBNZW))
       .addReg(StatusReg, getKillRegState(StatusDead))
@@ -415,8 +422,8 @@ bool AArch64ExpandPseudoImpl::expandCMP_SWAP_128(
   //     stlxp wStatus, xDestLo, xDestHi, [xAddr]
   //     cbnz wStatus, .Lloadcmp
   BuildMI(FailBB, MIMD, TII->get(StxpOp), StatusReg)
-      .addReg(DestLo.getReg())
-      .addReg(DestHi.getReg())
+      .addReg(Dest0.getReg())
+      .addReg(Dest1.getReg())
       .addReg(AddrReg);
   BuildMI(FailBB, MIMD, TII->get(AArch64::CBNZW))
       .addReg(StatusReg, getKillRegState(StatusDead))
