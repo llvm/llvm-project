@@ -145,7 +145,7 @@ void use() {
 
 namespace temporary_capturing_object {
 struct S {
-  void add(const int& x [[clang::lifetime_capture_by(this)]]);
+  void add(const int& x [[clang::lifetime_capture_by_this]]);
 };
 
 void test() {
@@ -161,8 +161,8 @@ void test() {
 // Capture by Global and Unknown.
 // ****************************************************************************
 namespace capture_by_global_unknown {
-void captureByGlobal(std::string_view s [[clang::lifetime_capture_by(global)]]);
-void captureByUnknown(std::string_view s [[clang::lifetime_capture_by(unknown)]]);
+void captureByGlobal(std::string_view s [[clang::lifetime_capture_by_global]]);
+void captureByUnknown(std::string_view s [[clang::lifetime_capture_by_unknown]]);
 
 std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
 
@@ -188,8 +188,8 @@ void use() {
 // ****************************************************************************
 namespace capture_by_this {
 struct S {
-  void captureInt(const int& x [[clang::lifetime_capture_by(this)]]);
-  void captureView(std::string_view sv [[clang::lifetime_capture_by(this)]]);
+  void captureInt(const int& x [[clang::lifetime_capture_by_this]]);
+  void captureView(std::string_view sv [[clang::lifetime_capture_by_this]]);
 };
 std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
 std::string_view getNotLifetimeBoundView(const std::string& s);
@@ -248,8 +248,8 @@ void useCaptureDefaultArg() {
 namespace containers_no_distinction {
 template<class T>
 struct MySet {
-  void insert(T&& t [[clang::lifetime_capture_by(this)]]);
-  void insert(const T& t [[clang::lifetime_capture_by(this)]]);
+  void insert(T&& t [[clang::lifetime_capture_by_this]]);
+  void insert(const T& t [[clang::lifetime_capture_by_this]]);
 };
 void user_defined_containers() {
   MySet<int> set_of_int;
@@ -269,8 +269,8 @@ template<> struct IsPointerLikeTypeImpl<std::string_view> : std::true_type {};
 template<typename T> concept IsPointerLikeType = std::is_pointer<T>::value || IsPointerLikeTypeImpl<T>::value;
 
 template<class T> struct MyVector {
-  void push_back(T&& t [[clang::lifetime_capture_by(this)]]) requires IsPointerLikeType<T>;
-  void push_back(const T& t [[clang::lifetime_capture_by(this)]]) requires IsPointerLikeType<T>;
+  void push_back(T&& t [[clang::lifetime_capture_by_this]]) requires IsPointerLikeType<T>;
+  void push_back(const T& t [[clang::lifetime_capture_by_this]]) requires IsPointerLikeType<T>;
 
   void push_back(T&& t) requires (!IsPointerLikeType<T>);
   void push_back(const T& t) requires (!IsPointerLikeType<T>);
@@ -428,13 +428,13 @@ void use() {
 
 namespace on_constructor {
 struct T {
-  T(const int& t [[clang::lifetime_capture_by(this)]]);
+  T(const int& t [[clang::lifetime_capture_by_this]]);
 };
 struct T2 {
   T2(const int& t [[clang::lifetime_capture_by(x)]], int& x);
 };
 struct T3 {
-  T3(const T& t [[clang::lifetime_capture_by(this)]]);
+  T3(const T& t [[clang::lifetime_capture_by_this]]);
 };
 
 int foo(const T& t);
