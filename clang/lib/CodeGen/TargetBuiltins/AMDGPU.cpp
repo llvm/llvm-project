@@ -775,26 +775,18 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_uicmp:
   case AMDGPU::BI__builtin_amdgcn_uicmpl:
   case AMDGPU::BI__builtin_amdgcn_sicmp:
-  case AMDGPU::BI__builtin_amdgcn_sicmpl: {
-    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
-    llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
-
-    // FIXME-GFX10: How should 32 bit mask be handled?
-    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_icmp,
-      { Builder.getInt64Ty(), Src0->getType() });
-    return Builder.CreateCall(F, { Src0, Src1, Src2 });
-  }
+  case AMDGPU::BI__builtin_amdgcn_sicmpl:
   case AMDGPU::BI__builtin_amdgcn_fcmp:
   case AMDGPU::BI__builtin_amdgcn_fcmpf: {
-    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
-    llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
+    Value *LHS = EmitScalarExpr(E->getArg(0));
+    Value *RHS = EmitScalarExpr(E->getArg(1));
+    CmpInst::Predicate Pred = static_cast<CmpInst::Predicate>(
+        cast<ConstantInt>(EmitScalarExpr(E->getArg(2)))->getZExtValue());
 
     // FIXME-GFX10: How should 32 bit mask be handled?
-    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_fcmp,
-      { Builder.getInt64Ty(), Src0->getType() });
-    return Builder.CreateCall(F, { Src0, Src1, Src2 });
+    return Builder.CreateIntrinsic(Builder.getInt64Ty(),
+                                   Intrinsic::amdgcn_ballot,
+                                   Builder.CreateCmp(Pred, LHS, RHS));
   }
   case AMDGPU::BI__builtin_amdgcn_class:
   case AMDGPU::BI__builtin_amdgcn_classf:

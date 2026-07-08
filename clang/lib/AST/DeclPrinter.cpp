@@ -1117,6 +1117,7 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     Out << *Attrs << ' ';
 
   if (D->getIdentifier()) {
+    // FIXME: Missing template parameter lists.
     D->getQualifier().print(Out, Policy);
     Out << *D;
 
