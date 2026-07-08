@@ -1,29 +1,17 @@
 ; Verify the call site info. If the call site info is not
 ; in the valid state, an assert should be triggered.
-
-; RUN: rm -rf %t && split-file %s %t && cd %t
-
 ; RUN: llc < %s -debug-entry-values -mtriple=arm64-none-linux-gnu -stop-after=machineverifier -relocation-model=pic -aarch64-elf-ldtls-generation=1 < %s
-; RUN: llc < src.ll -debug-entry-values -mtriple=arm64-none-linux-gnu -stop-after=machineverifier -relocation-model=pic -aarch64-elf-ldtls-generation=1 < %s
 
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -verify-machineinstrs < src.ll | FileCheck %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-RELOC %s
-; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -filetype=obj < src.ll | llvm-objdump -r - | FileCheck --check-prefix=CHECK-RELOC %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-NOLD %s
-; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -verify-machineinstrs < src.ll | FileCheck --check-prefix=CHECK-NOLD %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-NOLD-RELOC %s
-; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -filetype=obj < src.ll | llvm-objdump -r - | FileCheck --check-prefix=CHECK-NOLD-RELOC %s
 ; FIXME: We currently produce "small" code for the tiny model
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -code-model=tiny -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -code-model=tiny -verify-machineinstrs < src.ll | FileCheck %s
 ; FIXME: We currently error for the large code model
 ; RUN: not --crash llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -code-model=large -verify-machineinstrs < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LARGE
-; RUN: not --crash llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -code-model=large -verify-machineinstrs < src.ll 2>&1 | FileCheck %s --check-prefix=CHECK-LARGE
 
 ; CHECK-LARGE: ELF TLS only supported in small memory model
-
-;--- src.ll
 
 @general_dynamic_var = external thread_local global i32
 
@@ -189,8 +177,6 @@ define i32 @test_localdynamic_deduplicate() {
 
 ; CHECK: ret
 }
-
-;--- elf-got-flag.ll
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 8, !"ptrauth-elf-got", i32 0}

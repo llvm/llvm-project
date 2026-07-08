@@ -1,8 +1,4 @@
-; RUN: rm -rf %t && split-file %s %t && cd %t
 ; RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs -relocation-model=pic %s -o - | FileCheck %s
-; RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs -relocation-model=pic src.ll -o - | FileCheck %s
-
-;--- src.ll
 
 @var = global i32 0
 
@@ -24,8 +20,6 @@ define ptr @get_globalvaraddr() {
   %val = load i32, ptr @var
   ret ptr @var
 }
-
-;--- elf-got-flag.ll
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 8, !"ptrauth-elf-got", i32 0}

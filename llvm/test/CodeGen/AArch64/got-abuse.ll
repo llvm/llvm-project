@@ -1,9 +1,5 @@
-; RUN: rm -rf %t && split-file %s %t && cd %t
-
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=pic -o - %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=pic -o - src.ll | FileCheck %s
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=pic -filetype=obj -o - %s
-; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=pic -filetype=obj -o - src.ll
 
 ; LLVM gives well-defined semantics to this horrible construct (though C says
 ; it's undefined). Regardless, we shouldn't crash. The important feature here is
@@ -12,8 +8,6 @@
 ; support it:
 ;    + ldr wD, [xN, #:got_lo12:func]
 ;    + add xD, xN, #:got_lo12:func
-
-;--- src.ll
 
 declare void @consume(i32)
 declare void @func()
@@ -26,8 +20,6 @@ entry:
 ; CHECK-NEXT: ldr {{x[0-9]+}}, [x[[ADDRHI]], {{#?}}:got_lo12:func]
   ret void
 }
-
-;--- elf-got-flag.ll
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 8, !"ptrauth-elf-got", i32 0}

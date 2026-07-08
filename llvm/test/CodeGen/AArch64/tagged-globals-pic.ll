@@ -1,7 +1,4 @@
-; RUN: rm -rf %t && split-file %s %t && cd %t
-
 ; RUN: llc --relocation-model=pic < %s | FileCheck %s
-; RUN: llc --relocation-model=pic < src.ll | FileCheck %s
 
 ; Ensure that GlobalISel lowers correctly. GlobalISel is the default ISel for
 ; -O0 on aarch64. GlobalISel lowers the instruction sequence in the static
@@ -16,10 +13,6 @@
 
 ; RUN: llc --aarch64-enable-global-isel-at-O=0 -O0 --relocation-model=pic < %s \
 ; RUN:   | FileCheck %s
-; RUN: llc --aarch64-enable-global-isel-at-O=0 -O0 --relocation-model=pic < \
-; RUN:   src.ll | FileCheck %s
-
-;--- src.ll
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-android"
@@ -68,8 +61,6 @@ define ptr @func_addr() #0 {
 }
 
 attributes #0 = { "target-features"="+tagged-globals" }
-
-;--- elf-got-flag.ll
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 8, !"ptrauth-elf-got", i32 0}

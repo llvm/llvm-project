@@ -1,11 +1,5 @@
-; RUN: rm -rf %t && split-file %s %t && cd %t
-
 ; RUN: llc -mtriple=arm64                -relocation-model=pic -o - %s -mcpu=cyclone | FileCheck %s --check-prefix=CHECK
-; RUN: llc -mtriple=arm64                -relocation-model=pic -o - src.ll -mcpu=cyclone | FileCheck %s --check-prefix=CHECK
 ; RUN: llc -mtriple=arm64 -O0 -fast-isel -relocation-model=pic -o - %s -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST
-; RUN: llc -mtriple=arm64 -O0 -fast-isel -relocation-model=pic -o - src.ll -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST
-
-;--- src.ll
 
 @var8 = external global i8, align 1
 @var16 = external global i16, align 2
@@ -74,8 +68,6 @@ define i64 @test_default_unaligned() {
   %val = load i64, ptr @var_default
   ret i64 %val
 }
-
-;--- elf-got-flag.ll
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 8, !"ptrauth-elf-got", i32 0}
