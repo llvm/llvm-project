@@ -40,6 +40,8 @@ define <8 x i32> @test_vector_mask_v8i32(<8 x i32> %a0) {
   ret <8 x i32> %zext
 }
 
+; This must not be folded because the source and dest types of trunc/zext pair
+; do not match
 define <8 x i64> @test_negative_vector_mask_v8i32(<8 x i32> %a0) {
 ; CHECK-LABEL: define <8 x i64> @test_negative_vector_mask_v8i32(
 ; CHECK-SAME: <8 x i32> [[A0:%.*]]) {

@@ -1087,6 +1087,7 @@ define i32 @not_rotl_i32_add_less(i32 %x, i32 %y) {
   ret i32 %r
 }
 
+; PR165306
 define <8 x i64> @fold_rot_fshr_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ; CHECK-LABEL: @fold_rot_fshr_v8i64(
 ; CHECK-NEXT:    [[OR:%.*]] = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> [[X:%.*]], <8 x i64> [[X]], <8 x i64> [[Y:%.*]])
@@ -1102,6 +1103,7 @@ define <8 x i64> @fold_rot_fshr_v8i64(<8 x i64> %x, <8 x i64> %y) {
   ret <8 x i64> %or
 }
 
+; PR165306
 define i32 @fold_rot_fshl_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: @fold_rot_fshl_i32(
 ; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[Y:%.*]])
