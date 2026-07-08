@@ -147,8 +147,8 @@ public:
         rewriter.clone(op, mapping);
       auto yieldOp = cast<acc::YieldOp>(block.getTerminator());
       Value result = mapping.lookup(yieldOp.getOperand(0));
-      if (!ptrLikeType.genStore(rewriter, atomicUpdateOp.getLoc(),
-                                result, xTyped)) {
+      if (!ptrLikeType.genStore(rewriter, atomicUpdateOp.getLoc(), result,
+                                xTyped)) {
         accSupport.emitNYI(atomicUpdateOp.getLoc(),
                            "failed to generate store for atomic update");
         return failure();
