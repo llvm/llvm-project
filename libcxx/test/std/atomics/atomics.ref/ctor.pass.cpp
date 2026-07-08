@@ -22,6 +22,7 @@
 template <typename T>
 struct TestCtor {
   void operator()() const {
+    // check that the constructor is explicit
     static_assert(!std::is_convertible_v<T, std::atomic_ref<T>>);
     static_assert(std::is_constructible_v<std::atomic_ref<T>, T&>);
 
