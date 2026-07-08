@@ -64,7 +64,7 @@ endif()
 
 option(LLDB_ENABLE_FORTRAN "Enable Fortran support in LLDB" ${LLDB_DEFAULT_ENABLE_FORTRAN})
 
-# Fail early if the user forced Fortran ON but we don't have in-tree Flang
+# Fail early if the user forced Fortran ON but we don't have in-tree Flang.
 if(LLDB_ENABLE_FORTRAN AND NOT "flang" IN_LIST LLVM_ENABLE_PROJECTS)
   message(FATAL_ERROR 
     "Fortran support in LLDB requires an in-tree Flang build. "
