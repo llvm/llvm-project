@@ -1685,6 +1685,9 @@ static bool genWorkgroupQuery(const SPIRV::IncomingCall *Call,
                               SPIRV::BuiltIn::BuiltIn BuiltinValue,
                               uint64_t DefaultValue) {
   Register IndexRegister = Call->Arguments[0];
+  SPIRVTypeInst IndexRegisterType = GR->getSPIRVTypeForVReg(IndexRegister);
+  if (!IndexRegisterType || IndexRegisterType->getOpcode() != SPIRV::OpTypeInt)
+    report_fatal_error("Expect an integer <Dimindx> argument");
   const unsigned ResultWidth = Call->ReturnType->getOperand(1).getImm();
   const unsigned PointerSize = GR->getPointerSize();
   const SPIRVTypeInst PointerSizeType =
