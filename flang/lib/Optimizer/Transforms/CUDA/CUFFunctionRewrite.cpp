@@ -118,7 +118,7 @@ private:
   const llvm::StringMap<genFunctionType> genMappings_ = {
       {"on_device", &genOnDevice}};
 
-  bool deferAccRoutines_;
+  bool deferAccRoutines_ = false;
 };
 
 class CUFFunctionRewrite
