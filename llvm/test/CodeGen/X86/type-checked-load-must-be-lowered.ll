@@ -13,9 +13,3 @@ define i1 @type_checked_load(ptr %vtable) {
   %ok = extractvalue { ptr, i1 } %pair, 1
   ret i1 %ok
 }
-
-define i1 @type_checked_load_relative(ptr %vtable) {
-  %pair = call { ptr, i1 } @llvm.type.checked.load.relative(ptr %vtable, i32 4, metadata !"typeid")
-  %ok = extractvalue { ptr, i1 } %pair, 1
-  ret i1 %ok
-}
