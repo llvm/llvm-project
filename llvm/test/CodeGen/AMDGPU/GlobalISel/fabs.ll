@@ -174,8 +174,11 @@ define amdgpu_ps void @s_fabs_v2f16(<2 x half> inreg %in, ptr addrspace(1) %out)
 ;
 ; GFX12-LABEL: s_fabs_v2f16:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_and_b32 s0, s0, 0x7fff7fff
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX12-NEXT:    s_and_b32 s0, s0, 0x7fff
+; GFX12-NEXT:    s_and_b32 s1, s1, 0x7fff
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX12-NEXT:    s_endpgm
@@ -197,10 +200,13 @@ define amdgpu_ps void @s_fabs_v2f16_salu_use(<2 x half> inreg %in, i32 inreg %va
 ;
 ; GFX12-LABEL: s_fabs_v2f16_salu_use:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_and_b32 s0, s0, 0x7fff7fff
+; GFX12-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX12-NEXT:    s_and_b32 s0, s0, 0x7fff
+; GFX12-NEXT:    s_and_b32 s2, s2, 0x7fff
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, 0
+; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX12-NEXT:    s_endpgm

@@ -85,20 +85,22 @@ define amdgpu_ps void @insertelement_s_v2i8_s_s(ptr addrspace(4) inreg %ptr, i8 
 ; GFX11-TRUE16-LABEL: insertelement_s_v2i8_s_s:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
-; GFX11-TRUE16-NEXT:    s_lshl_b32 s0, s4, 8
-; GFX11-TRUE16-NEXT:    s_and_b32 s1, s4, 0xff
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
-; GFX11-TRUE16-NEXT:    s_or_b32 s0, s1, s0
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v2, v0, s[2:3]
+; GFX11-TRUE16-NEXT:    s_mov_b32 m0, s5
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-TRUE16-NEXT:    global_load_u16 v0, v0, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_xor_b32_e32 v0, s0, v2
-; GFX11-TRUE16-NEXT:    s_lshl_b32 s0, s5, 3
-; GFX11-TRUE16-NEXT:    s_lshl_b32 s0, 0xff, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_and_b32 v3, s0, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_xor_b32_e32 v2, v3, v2
-; GFX11-TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-TRUE16-NEXT:    s_bfe_u32 s1, s0, 0x100000
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
+; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s1, 8
+; GFX11-TRUE16-NEXT:    s_movreld_b32 s0, s4
+; GFX11-TRUE16-NEXT:    s_and_b32 s1, s1, 0xff
+; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, 0xff
+; GFX11-TRUE16-NEXT:    s_lshl_b32 s1, s1, 8
+; GFX11-TRUE16-NEXT:    s_or_b32 s0, s0, s1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX11-TRUE16-NEXT:    global_store_b16 v[1:2], v0, off
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: insertelement_s_v2i8_s_s:
