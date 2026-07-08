@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_EMITC_TRANSFORMS_EMITCCONVERSION_H 
-#define MLIR_DIALECT_EMITC_TRANSFORMS_EMITCCONVERSION_H 
+#ifndef MLIR_DIALECT_EMITC_TRANSFORMS_EMITCCONVERSION_H
+#define MLIR_DIALECT_EMITC_TRANSFORMS_EMITCCONVERSION_H
 
 #include "mlir/Conversion/EmitCCommon/TypeConverter.h"
 #include "mlir/Dialect/EmitC/IR/EmitCAttributes.h.inc"
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
-  void populateBuiltinModuleToEmitCPatterns(const EmitCTypeConverter &typeConverter, RewritePatternSet &patterns);
+void populateBuiltinModuleToEmitCPatterns(
+    const EmitCTypeConverter &typeConverter, RewritePatternSet &patterns);
 }
 
 #endif

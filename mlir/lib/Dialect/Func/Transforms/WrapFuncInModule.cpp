@@ -8,9 +8,9 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/Passes.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 
 namespace mlir {
 namespace func {
@@ -45,7 +45,8 @@ struct WrapFuncInModulePass
       // Move referenced global memrefs into the nested module.
       SymbolTable nestedSymbolTable(nestedModule);
       funcOp.walk([&](memref::GetGlobalOp getGlobalOp) {
-        if (auto globalOp = parentSymbolTable.lookup<memref::GlobalOp>(getGlobalOp.getName())) {
+        if (auto globalOp = parentSymbolTable.lookup<memref::GlobalOp>(
+                getGlobalOp.getName())) {
           if (!nestedSymbolTable.lookup(globalOp.getSymName())) {
             // Clone the global into the nested module.
             Operation *cloned = globalOp->clone();
@@ -68,4 +69,3 @@ struct WrapFuncInModulePass
 };
 } // namespace
 } // namespace mlir
-
