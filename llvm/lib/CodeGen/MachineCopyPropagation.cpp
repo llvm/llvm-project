@@ -1281,9 +1281,8 @@ struct SpillReloadChain {
     });
   }
   bool containsReload(const MachineInstr *MI) {
-    return any_of(Pairs, [MI](const SpillReloadPair &Pair) {
-      return Pair.Reload == MI;
-    });
+    return any_of(
+        Pairs, [MI](const SpillReloadPair &Pair) { return Pair.Reload == MI; });
   }
   void append(MachineInstr *Spill, MachineInstr *Reload) {
     Pairs.push_back({Spill, Reload});
@@ -1345,7 +1344,8 @@ class SpillageCopyEliminator {
            FoldableCurrentCopy->Destination->getReg();
   }
 
-  std::optional<SpillReloadChain *> findChainContainingReload(const MachineInstr *MI) {
+  std::optional<SpillReloadChain *>
+  findChainContainingReload(const MachineInstr *MI) {
     for (SpillReloadChain &Chain : Chains) {
       if (Chain.containsReload(MI))
         return &Chain;
@@ -1354,9 +1354,8 @@ class SpillageCopyEliminator {
   }
 
   bool isInAnyChain(MachineInstr *MI) {
-    return any_of(Chains, [MI](SpillReloadChain &Chain) {
-      return Chain.contains(MI);
-    });
+    return any_of(Chains,
+                  [MI](SpillReloadChain &Chain) { return Chain.contains(MI); });
   }
 
   bool canRewriteChainEndpoints(const DestSourcePair &InnerMostSpillCopy,
@@ -1387,9 +1386,11 @@ class SpillageCopyEliminator {
 
   void tryFoldChain(SmallVector<SpillReloadPair> &Pairs) {
 
-    assert(any_of(Pairs, [](const SpillReloadPair &Pair) {
-      return Pair.Spill != nullptr && Pair.Reload != nullptr;
-    }) && "Spill-reload should be paired");
+    assert(any_of(Pairs,
+                  [](const SpillReloadPair &Pair) {
+                    return Pair.Spill != nullptr && Pair.Reload != nullptr;
+                  }) &&
+           "Spill-reload should be paired");
 
     // We need at least 3 pairs of copies for the transformation to apply,
     // because the first outermost pair cannot be removed since we don't
@@ -1413,7 +1414,8 @@ class SpillageCopyEliminator {
         return;
     }
 
-    DestSourcePair InnerMostSpillCopy = *isCopyInstr(*Pairs.front().Spill, TII, UseCopyInstr);
+    DestSourcePair InnerMostSpillCopy =
+        *isCopyInstr(*Pairs.front().Spill, TII, UseCopyInstr);
     DestSourcePair OuterMostSpillCopy =
         *isCopyInstr(*Pairs.back().Spill, TII, UseCopyInstr);
     DestSourcePair InnerMostReloadCopy =
@@ -1484,7 +1486,8 @@ class SpillageCopyEliminator {
     //   L5: r3 = COPY r2
     // Look for a valid COPY before L5 which uses r3.
     MachineInstr *MaybePrevReload = Tracker.findLastSeenUseInCopy(Dst, TRI);
-    std::optional<SpillReloadChain *> Chain = findChainContainingReload(MaybePrevReload);
+    std::optional<SpillReloadChain *> Chain =
+        findChainContainingReload(MaybePrevReload);
     if (!Chain.has_value() ||
         (MaybePrevReload && !isChainedCopy(*MaybePrevReload, *Reload)))
       return nullptr;
@@ -1509,7 +1512,8 @@ class SpillageCopyEliminator {
     } else {
       Chain->Pairs.push_back({Spill, Reload});
     }
-    LLVM_DEBUG(dbgs() << "MCP: Chain " << Chain->Pairs.front().Reload << " now is:\n");
+    LLVM_DEBUG(dbgs() << "MCP: Chain " << Chain->Pairs.front().Reload
+                      << " now is:\n");
     LLVM_DEBUG(printSpillReloadChain(Chain));
   }
 
