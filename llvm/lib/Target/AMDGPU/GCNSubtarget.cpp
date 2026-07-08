@@ -786,6 +786,15 @@ void GCNSubtarget::adjustSchedDependency(
     return; // This is not a data dependency anymore.
   }
 
+  // DS load/store latency is variable depending on LDS contention.
+  if (InstrInfo.isDS(*DefI) &&
+      InstrInfo.getDSLatencyMultiplier(*DefI->getMF()) != 1) {
+    // For LDS instructions, we have overrides to change default latencies.
+    unsigned Latency = InstrInfo.getInstrLatency(*DefI);
+    Dep.setLatency(Latency);
+    return;
+  }
+
   if (DefI->isBundle()) {
     const SIRegisterInfo *TRI = getRegisterInfo();
     auto Reg = Dep.getReg();

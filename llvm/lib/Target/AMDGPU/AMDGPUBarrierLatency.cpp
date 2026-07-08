@@ -94,7 +94,6 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
   const unsigned BarrierSignalWaitLatency = BarrierSignalWaitLatencyOpt;
   SmallVector<SUnit *, 8> RegionTDM;
   SmallVector<SUnit *, 8> RegionAsync;
-  const TargetSchedModel *SchedModel = DAG->getSchedModel();
 
   for (SUnit &SU : DAG->SUnits) {
     const MachineInstr *MI = SU.getInstr();
@@ -117,9 +116,9 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
         if (!MI->mayLoad() || MI->mayStore())
           continue;
 
+        unsigned InstrLatency = TII->getInstrLatency(*MI);
         addLatencyToEdge(PredDep, SU,
-                         SchedModel ? SchedModel->computeInstrLatency(MI, false)
-                                    : FenceLatency);
+                         InstrLatency ? InstrLatency : FenceLatency);
       }
     } else if (Op == AMDGPU::S_BARRIER_WAIT) {
       for (SDep &PredDep : SU.Preds) {
