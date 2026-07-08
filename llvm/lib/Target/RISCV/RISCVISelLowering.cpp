@@ -15916,23 +15916,16 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 
       EVT WideVT = VT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
       SDValue Undef = DAG.getUNDEF(VT);
-      SDValue Op0 =
-          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(1), Undef);
-      SDValue Op1 =
-          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(2), Undef);
-      SDValue Res;
-      if (Opc == ISD::INTRINSIC_WO_CHAIN) {
-        SmallVector<SDValue, 5> Ops;
-        Ops.push_back(N->getOperand(0));
-        Ops.push_back(Op0);
-        Ops.push_back(Op1);
-        if (N->getNumOperands() > 3)
-          Ops.push_back(DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT,
-                                    N->getOperand(3), Undef));
-        Res = DAG.getNode(Opc, DL, WideVT, Ops);
-      } else {
-        Res = DAG.getNode(Opc, DL, WideVT, Op0, Op1);
+      SmallVector<SDValue, 4> Ops(N->ops());
+      for (SDValue &Op : Ops) {
+        if (Op.getValueType() == VT)
+          Op = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, Op, Undef);
       }
+      SDValue Res;
+      if (Opc == ISD::INTRINSIC_WO_CHAIN)
+        Res = DAG.getNode(Opc, DL, WideVT, Ops);
+      else
+        Res = DAG.getNode(Opc, DL, WideVT, ArrayRef(Ops).slice(1));
       Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
                                     DAG.getVectorIdxConstant(0, DL)));
       return;
