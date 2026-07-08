@@ -3981,7 +3981,7 @@ void RISCVInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearVR), Reg);
   } else {
     llvm::reportFatalInternalError(
-        "buildClearRegister is not implemented for vector registers");
+        "buildClearRegister is not implemented for " + TRI.getRegAsmName(Reg));
   }
 }
 
