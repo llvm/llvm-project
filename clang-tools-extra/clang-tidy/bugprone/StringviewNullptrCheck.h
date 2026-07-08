@@ -9,31 +9,22 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STRINGVIEWNULLPTRCHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STRINGVIEWNULLPTRCHECK_H
 
-#include "../utils/TransformerClangTidyCheck.h"
+#include "../ClangTidyCheck.h"
 
 namespace clang::tidy::bugprone {
 
-/// Checks for various ways that the `const CharT*` constructor of
-/// `std::basic_string_view` can be passed a null argument and replaces them
-/// with the default constructor in most cases. For the comparison operators,
-/// braced initializer list does not compile so instead a call to `.empty()` or
-/// the empty string literal are used, where appropriate.
-///
-/// This prevents code from invoking behavior which is unconditionally
-/// undefined. The single-argument `const CharT*` constructor does not check
-/// for the null case before dereferencing its input. The standard is slated to
-/// add an explicitly-deleted overload to catch some of these cases:
-/// wg21.link/p2166
-///
-/// To catch the additional cases of `NULL` (which expands to `__null`) and
-/// `0`, first run the ``modernize-use-nullptr`` check to convert the callers
-/// to `nullptr`.
+/// Finds cases where the ``const CharT*`` constructor of
+/// ``std::basic_string_view`` is passed a null pointer argument and replaces
+/// them with calls to the default constructor or construction from the empty
+/// string (``""``) as appropriate.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/stringview-nullptr.html
-class StringviewNullptrCheck : public utils::TransformerClangTidyCheck {
+class StringviewNullptrCheck : public ClangTidyCheck {
 public:
-  StringviewNullptrCheck(StringRef Name, ClangTidyContext *Context);
+  using ClangTidyCheck::ClangTidyCheck;
+  void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus17;
