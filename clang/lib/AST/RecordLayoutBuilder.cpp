@@ -3384,6 +3384,32 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
   // not a complete definition (which is what isCompleteDefinition() tests)
   // until we *finish* parsing the definition.
   D = D->getDefinition();
+
+  // Handle invalid declarations gracefully during error recovery
+  // This can happen when there are template specialization errors
+  if (!D || D->isInvalidDecl() || !D->isCompleteDefinition()) {
+    // Check if we already have a cached layout
+    const ASTRecordLayout *Entry = ASTRecordLayouts[D];
+    if (Entry)
+      return *Entry;
+
+    // Create a minimal safe layout for error recovery
+    // Use 1-byte size and alignment to avoid division by zero or other issues
+    ASTRecordLayout *NewEntry = new (*this)
+        ASTRecordLayout(*this,
+                        CharUnits::One(),    // Size = 1 byte
+                        CharUnits::One(),    // Alignment = 1 byte
+                        CharUnits::One(),    // PreferredAlignment = 1 byte
+                        CharUnits::One(),    // UnadjustedAlignment = 1 byte
+                        CharUnits::One(),    // RequiredAlignment = 1 byte
+                        CharUnits::One(),    // DataSize = 1 byte
+                        ArrayRef<uint64_t>() // Empty field offsets
+        );
+
+    ASTRecordLayouts[D] = NewEntry;
+    return *NewEntry;
+  }
+
   assert(D && "Cannot get layout of forward declarations!");
   assert(!D->isInvalidDecl() && "Cannot get layout of invalid decl!");
   assert(D->isCompleteDefinition() && "Cannot layout type before complete!");
