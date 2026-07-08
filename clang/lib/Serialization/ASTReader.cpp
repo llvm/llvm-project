@@ -276,21 +276,21 @@ void ChainedASTReaderListener::readModuleFileExtension(
 
 ASTReaderListener::~ASTReaderListener() = default;
 
-static LLVM_ATTRIBUTE_NOINLINE void diagnoseLanguageOptionFlagMismatch(
+static LLVM_ATTRIBUTE_NOINLINE bool diagnoseLanguageOptionFlagMismatch(
     DiagnosticsEngine *Diags, StringRef Description, bool SerializedValue,
     bool CurrentValue, StringRef ModuleFilename) {
   if (!Diags)
-    return;
-  Diags->Report(diag::err_ast_file_langopt_mismatch)
-      << Description << SerializedValue << CurrentValue << ModuleFilename;
+    return true;
+  return Diags->Report(diag::err_ast_file_langopt_mismatch)
+         << Description << SerializedValue << CurrentValue << ModuleFilename;
 }
 
-static LLVM_ATTRIBUTE_NOINLINE void diagnoseLanguageOptionValueMismatch(
+static LLVM_ATTRIBUTE_NOINLINE bool diagnoseLanguageOptionValueMismatch(
     DiagnosticsEngine *Diags, StringRef Description, StringRef ModuleFilename) {
   if (!Diags)
-    return;
-  Diags->Report(diag::err_ast_file_langopt_value_mismatch)
-      << Description << ModuleFilename;
+    return true;
+  return Diags->Report(diag::err_ast_file_langopt_value_mismatch)
+         << Description << ModuleFilename;
 }
 
 /// Compare the given set of language options against an existing set of
@@ -316,13 +316,11 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
          !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.Name != LangOpts.Name) {                            \
         if (Bits == 1)                                                         \
-          diagnoseLanguageOptionFlagMismatch(                                  \
+          return diagnoseLanguageOptionFlagMismatch(                           \
               Diags, Description, LangOpts.Name, ExistingLangOpts.Name,        \
               ModuleFilename);                                                 \
-        else                                                                   \
-          diagnoseLanguageOptionValueMismatch(Diags, Description,              \
-                                              ModuleFilename);                 \
-        return true;                                                           \
+        return diagnoseLanguageOptionValueMismatch(Diags, Description,         \
+                                                   ModuleFilename);            \
       }                                                                        \
     }                                                                          \
   }
@@ -333,9 +331,8 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
         (CK::Compatibility == CK::Compatible &&                                \
          !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.Name != LangOpts.Name) {                            \
-        diagnoseLanguageOptionValueMismatch(Diags, Description,                \
-                                            ModuleFilename);                   \
-        return true;                                                           \
+        return diagnoseLanguageOptionValueMismatch(Diags, Description,         \
+                                                   ModuleFilename);            \
       }                                                                        \
     }                                                                          \
   }
@@ -346,9 +343,8 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
         (CK::Compatibility == CK::Compatible &&                                \
          !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.get##Name() != LangOpts.get##Name()) {              \
-        diagnoseLanguageOptionValueMismatch(Diags, Description,                \
-                                            ModuleFilename);                   \
-        return true;                                                           \
+        return diagnoseLanguageOptionValueMismatch(Diags, Description,         \
+                                                   ModuleFilename);            \
       }                                                                        \
     }                                                                          \
   }
@@ -356,22 +352,19 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
 #include "clang/Basic/LangOptions.def"
 
   if (ExistingLangOpts.ModuleFeatures != LangOpts.ModuleFeatures) {
-    diagnoseLanguageOptionValueMismatch(Diags, "module features",
-                                        ModuleFilename);
-    return true;
+    return diagnoseLanguageOptionValueMismatch(Diags, "module features",
+                                               ModuleFilename);
   }
 
   if (ExistingLangOpts.ObjCRuntime != LangOpts.ObjCRuntime) {
-    diagnoseLanguageOptionValueMismatch(Diags, "target Objective-C runtime",
-                                        ModuleFilename);
-    return true;
+    return diagnoseLanguageOptionValueMismatch(
+        Diags, "target Objective-C runtime", ModuleFilename);
   }
 
   if (ExistingLangOpts.CommentOpts.BlockCommandNames !=
       LangOpts.CommentOpts.BlockCommandNames) {
-    diagnoseLanguageOptionValueMismatch(Diags, "block command names",
-                                        ModuleFilename);
-    return true;
+    return diagnoseLanguageOptionValueMismatch(Diags, "block command names",
+                                               ModuleFilename);
   }
 
   // Sanitizer feature mismatches are treated as compatible differences. If
