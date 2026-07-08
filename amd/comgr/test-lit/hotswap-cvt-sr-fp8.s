@@ -2,7 +2,7 @@
 // COM:
 // COM: Creates a minimal gfx1250 code object containing v_cvt_sr_fp8_f32
 // COM: with clamp (E5M3 mode), runs the hotswap rewrite, and verifies the
-// COM: replacement sequence covers: NaN detection, stochastic noise injection,
+// COM: replacement sequence covers: NaN detection, direct stochastic noise addition,
 // COM: F32->F16->UE5M3 conversion, overflow clamping, NaN override, and byte merge.
 // COM:
 // COM: Companion tests:
@@ -41,12 +41,8 @@
 // COM: --- Clamp negative ---
 // BYTE0-NEXT:  v_max_num_f32{{.*}}, 0, v1
 // COM: --- Stochastic noise injection ---
-// BYTE0-NEXT:  v_and_b32{{.*}}0x7fffff
 // BYTE0-NEXT:  v_lshrrev_b32{{.*}}, 12, v2
 // BYTE0-NEXT:  v_add
-// BYTE0-NEXT:  v_and_b32{{.*}}0x7fffff
-// BYTE0-NEXT:  v_max_num_f32{{.*}}, 0, v1
-// BYTE0-NEXT:  v_bfi_b32
 // COM: --- High-range direct path ---
 // BYTE0-NEXT:  v_cmp_le_f32{{.*}}0x47800000
 // BYTE0-NEXT:  s_mov_b32
@@ -95,12 +91,8 @@ test_cvt_sr_fp8_byte0:
 // COM: --- Clamp negative ---
 // BYTE2-NEXT:  v_max_num_f32{{.*}}, 0, v6
 // COM: --- Stochastic noise injection ---
-// BYTE2-NEXT:  v_and_b32{{.*}}0x7fffff
 // BYTE2-NEXT:  v_lshrrev_b32{{.*}}, 12, v7
 // BYTE2-NEXT:  v_add
-// BYTE2-NEXT:  v_and_b32{{.*}}0x7fffff
-// BYTE2-NEXT:  v_max_num_f32{{.*}}, 0, v6
-// BYTE2-NEXT:  v_bfi_b32
 // COM: --- High-range direct path ---
 // BYTE2-NEXT:  v_cmp_le_f32{{.*}}0x47800000
 // BYTE2-NEXT:  s_mov_b32
