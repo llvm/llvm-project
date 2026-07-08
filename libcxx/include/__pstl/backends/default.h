@@ -93,6 +93,7 @@ namespace __pstl {
 // - move
 // - copy
 // - copy_n
+// - reverse_copy
 // - rotate_copy
 //
 
