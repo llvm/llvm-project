@@ -1634,28 +1634,19 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   //
   // ClmulMuInput is an evolving variable that will eventually become the part
   // used in step 1, which can be simplified to
-  // (LHS*x^(TC-CRCBW)) xor (LHSAux ? getTCBits(LHSAux) : 0). However, due to a
-  // quirk in HashRecognize, getTCBits(LHSAux) = LHSAux*x^(TC-CRCBW), so this
-  // can be further simplified to (LHS xor (LHSAux ? LHSAux : 0))*x^(TC-CRCBW).
+  // (LHS*x^(TC-CRCBW)) xor (LHSAux ? getTCBits(LHSAux) : 0).
+  // Thanks to restrictions imposed by HashRecognize for big-endian CRC loops,
+  // getTCBits(LHSAux) = LHSAux*x^(TC-CRCBW), so this can be further simplified
+  // to (LHS xor (LHSAux ? LHSAux : 0))*x^(TC-CRCBW).
   Value *ClmulMuInput = LHS;
 
   // If auxiliary data is present, XOR it in with the CRC.
   if (Value *Data = Info.LHSAux) {
-    // The reason for the HashRecognize quirk mentioned above is that it detects
-    // (CastOrSelf LHS) xor (CastOrSelf LHSAux), which is incorrect for
-    // big-endian CRCs. This mostly allows us to handle LHS and LHSAux in the
-    // same way, regardless of bit widths, but there is an exception here:
-    // if DataBW < CRCBW, then LHSAux will always be zexted before being XORed,
-    // and the significant bit check extracts the (CRCBW-1) bit of LHSAux, which
-    // will always be zero. XORing in the data in this case gives an incorrect
-    // result, so just skip the step entirely since the XOR is with zero anyway.
-    if (!Info.IsBigEndian || Data->getType()->getIntegerBitWidth() >= CRCBW) {
-      // This is usually a zext, but DataBW may exceed ClmulBW if both CRCBW and
-      // TC are small enough.
-      Data = Builder.CreateZExtOrTrunc(Data, ClmulTy, "data.cast");
+    // This is usually a zext, but DataBW may exceed ClmulBW if both CRCBW and
+    // TC are small enough.
+    Data = Builder.CreateZExtOrTrunc(Data, ClmulTy, "data.cast");
 
-      ClmulMuInput = Builder.CreateXor(ClmulMuInput, Data, "xor.crc.data");
-    }
+    ClmulMuInput = Builder.CreateXor(ClmulMuInput, Data, "xor.crc.data");
   }
 
   // Align the current CRC with TripCount (multiply or divide by x^(TC-CRCBW)).
