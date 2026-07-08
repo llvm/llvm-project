@@ -735,9 +735,15 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const AtomicConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
   std::optional<EnterExpressionEvaluationContext> EvaluationContext;
-  EvaluationContext.emplace(
-      S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
-      Sema::ReuseLambdaContextDecl);
+  // The ConceptDecl as a ContextDecl ensures that, when evaluating constraints
+  // on transformed lambdas, we don't have extra outer template arguments.
+  if (ParentConcept)
+    EvaluationContext.emplace(
+        S, Sema::ExpressionEvaluationContext::ConstantEvaluated, ParentConcept);
+  else
+    EvaluationContext.emplace(
+        S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+        Sema::ReuseLambdaContextDecl);
 
   llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
