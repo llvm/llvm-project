@@ -105,7 +105,6 @@ int main(int, char**)
             f.open(tmp.c_str(), mode);
             assert(!f.is_open()); // since it already exists
           }
-
           {
             std::remove(tmp.c_str());
 
