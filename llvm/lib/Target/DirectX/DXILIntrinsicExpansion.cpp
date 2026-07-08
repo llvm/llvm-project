@@ -271,9 +271,7 @@ static Value *expandUsubSat(CallInst *Orig) {
 
 // Compute the high N bits of the 2N-bit unsigned product of two N-bit values
 // using only N-bit arithmetic, so we don't introduce a wider integer type that
-// may be unsupported in DXIL. This is the same half-width split used by
-// TargetLowering::expandMUL_LOHI (SelectionDAG) and
-// LegalizerHelper::narrowScalarMul (GlobalISel).
+// may be unsupported in DXIL. 
 static Value *createMulHighUnsigned(IRBuilder<> &Builder, Value *A, Value *B,
                                     Type *Ty, unsigned BW) {
   assert(BW % 2 == 0 && "high-half split needs symmetric halves");
