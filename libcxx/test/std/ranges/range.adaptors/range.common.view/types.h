@@ -11,8 +11,8 @@
 
 #include <ranges>
 
-#include "test_macros.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 
 struct DefaultConstructibleView : std::ranges::view_base {
   int* begin_ = nullptr;

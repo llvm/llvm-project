@@ -32,6 +32,10 @@ void test() {
 #if TEST_STD_VER >= 26
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   sv.reserve_hint();
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(sv).reserve_hint();
+
 #endif
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   sv.stride();
