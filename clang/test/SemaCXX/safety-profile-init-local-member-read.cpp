@@ -141,6 +141,14 @@ int test_escape_lambda_capture() {
   return a.m; // OK: the capture escapes the object
 }
 
+// Placement new takes the object's address -- the same escape as &a.
+void *operator new(__SIZE_TYPE__, void *p) noexcept;
+int test_escape_placement_new() {
+  Agg a;
+  new (&a) Agg{1};
+  return a.m; // OK: escaped
+}
+
 // A class with a user-provided constructor is trusted (paper §5.1): its
 // constructor body may have assigned the member, which local analysis cannot
 // see. This pins the deliberate trust decision for non-current-object member
@@ -196,6 +204,19 @@ int test_marked_local_owned_by_read_through() {
 int test_static_local_untracked() {
   static Agg a;
   return a.m; // OK
+}
+
+// A union local is never tracked: the harvest rejects union types (their
+// members are mutually exclusive, and [[uninit]] on a union member is banned
+// by union_marker anyway -- suppressed on the function to build the fixture).
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(std::init, rule: "union_marker")]]
+int test_union_local_untracked() {
+  union U {
+    int x [[uninit]];
+  };
+  U u = {1};
+  return u.x; // OK
 }
 
 // std::byte members are exempt (paper §4.5), so a byte-only aggregate has
