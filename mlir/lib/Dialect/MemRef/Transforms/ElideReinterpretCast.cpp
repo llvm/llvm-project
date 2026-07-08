@@ -353,6 +353,7 @@ public:
           getOrCreateIndexConstant(rcResType.getDimSize(dim)));
     }
 
+    // All indices are initialised to zero.
     SmallVector<Value> rcSrcStoreIdxs = getZeroIdxs(dstType.getRank());
     std::optional<unsigned> srcNonUnitDimPos;
     if (dimsAndOffs->delinearizedOffsets) {
@@ -365,7 +366,7 @@ public:
         rcSrcStoreIdxs[idx] = getOrCreateIndexConstant(offset);
       }
     } else {
-      // Dynamic offsets are used directly only for effectively-1D sources.
+      // Dynamic offset is used directly only for effectively-1D sources.
       assert(dimsAndOffs->nonUnitDimsPos.size() <= 1 &&
              "Expecting at most one non-unit result dimension.");
 
@@ -378,6 +379,7 @@ public:
       // FIXME: Despite what `getMixedOffsets` implies, `reinterpret_cast` takes
       // only a single offset. That should be fixed at the op definition level.
       assert(rcOffsets.size() == 1 && "Expecting single offset");
+      // Only the index corresponding to the single non-unit dim is updated.
       rcSrcStoreIdxs[*srcNonUnitDimPos] =
           getValueOrCreateConstantIndexOp(rewriter, loc, rcOffsets[0]);
     }

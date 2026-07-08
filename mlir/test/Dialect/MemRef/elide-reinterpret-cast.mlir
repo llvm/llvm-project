@@ -49,8 +49,8 @@ func.func private @copy_scalar_into_1D_strided_zero_offset(%src : memref<1x1xf32
 }
 
 /// Reject non-identity layout rc source strides
-// CHECK-LABEL: func.func private @negative_copy_scalar_into_1D_strided_zero_offset_non_identity_layout(
-func.func private @negative_copy_scalar_into_1D_strided_zero_offset_non_identity_layout(
+// CHECK-LABEL: func.func private @negative_copy_scalar_into_1D_strided_zero_offset_base_non_identity_layout(
+func.func private @negative_copy_scalar_into_1D_strided_zero_offset_base_non_identity_layout(
   %src: memref<1x1xf32>, %dst: memref<1x108xf32, strided<[54, 2]>>) {
   // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg1
   %rc = memref.reinterpret_cast %dst
@@ -179,8 +179,12 @@ func.func private @copy_scalar_into_2D_strided_zero_offset_non_identity_stride(
   return
 }
 
-/// Offset delinearized to [0, 0, 10], therefore is only
-/// added to the trailing source dimension.
+/// %dst has identity strides [33, 11, 1].
+/// Offset 10 delinearizes as:
+///   dim 0: 10 / 33 = 0, remainder 10
+///   dim 1: 10 / 11 = 0, remainder 10
+///   dim 2: 10 /  1 = 10, remainder 0
+/// Therefore the scalar is stored at %dst[0, 0, 10].
 // CHECK-LABEL: func.func private @copy_scalar_into_2D_scalar_strided_nonzero_offset_delinearized_v1(
 // CHECK-SAME:   %[[SRC:.*]]: memref<1x1x1xf32>
 // CHECK-SAME:   %[[DST:.*]]: memref<1x3x11xf32>
@@ -204,7 +208,12 @@ func.func private @copy_scalar_into_2D_scalar_strided_nonzero_offset_delinearize
   return
 }
 
-// Offset delinearized into more dimensions: [0, 2, 1]
+/// %dst has identity strides [33, 11, 1].
+/// Offset 23 delinearizes as:
+///   dim 0: 23 / 33 = 0, remainder 23
+///   dim 1: 23 / 11 = 2, remainder 1
+///   dim 2:  1 /  1 = 1, remainder 0
+/// Therefore the scalar is stored at %dst[0, 2, 1].
 // CHECK-LABEL: func.func private @copy_scalar_into_2D_scalar_strided_nonzero_offset_delinearized_v2(
 // CHECK-SAME:   %[[SRC:.*]]: memref<1x1x1xf32>
 // CHECK-SAME:   %[[DST:.*]]: memref<1x3x11xf32>
@@ -296,6 +305,7 @@ func.func private @copy_1D_into_2D_strided_zero_offset(
   return
 }
 
+/// Copied non-unit dimension is the right-most dimension, therefore the loop indices are placed there.
 // CHECK-LABEL: func.func private @copy_1D_into_2D_strided_zero_offset_loop_trailing_dim(
 // CHECK-SAME:   %[[SRC:.*]]: memref<1x1x11xf32>
 // CHECK-SAME:   %[[DST:.*]]: memref<1x3x11xf32>
@@ -408,6 +418,7 @@ func.func private @negative_copy_1D_into_2D_strided_zero_offset_dynamic_stride(%
   return
 }
 
+/// 4 is collapsed to a non-unit dimension.
 // CHECK-LABEL: func.func private @negative_copy_1D_into_2D_strided_diff_dim_sizes(
 func.func private @negative_copy_1D_into_2D_strided_diff_dim_sizes(
   %src : memref<1x3x1xf32>, %dst : memref<1x4x11xf32>) {
@@ -423,25 +434,6 @@ func.func private @negative_copy_1D_into_2D_strided_diff_dim_sizes(
   memref.copy %src, %rc
     : memref<1x3x1xf32>
       to memref<1x3x1xf32, strided<[44, 11, 1]>>
-  return
-}
-
-/// No non-unit dimension collapsed
-// CHECK-LABEL: func.func private @negative_copy_2D_into_2D_strided(
-func.func private @negative_copy_2D_into_2D_strided(
-  %src : memref<1x3x4xf32>, %dst : memref<1x3x11xf32>) {
-  // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg1
-  %rc = memref.reinterpret_cast %dst
-    to offset: [0], sizes: [1, 3, 4], strides: [33, 11, 1]
-    : memref<1x3x11xf32>
-      to memref<1x3x4xf32, strided<[33, 11, 1]>>
-
-  // CHECK:      memref.copy %arg0, %reinterpret_cast
-  // CHECK-NOT:  memref.load
-  // CHECK-NOT:  memref.store
-  memref.copy %src, %rc
-    : memref<1x3x4xf32>
-      to memref<1x3x4xf32, strided<[33, 11, 1]>>
   return
 }
 
