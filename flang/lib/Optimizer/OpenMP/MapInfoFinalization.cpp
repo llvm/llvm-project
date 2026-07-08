@@ -35,7 +35,6 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
@@ -48,7 +47,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <iterator>
-#include <numeric>
 
 #define DEBUG_TYPE "omp-map-info-finalization"
 
