@@ -5481,12 +5481,18 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
         NumLevels);
   } else {
     FunctionDecl *OrigFD = FD;
-    if (Info)
+    if (Info) {
       FD = InstantiateFunctionDeclaration(
           cast<FunctionTemplateDecl>(Info->getTemplate()->getFirstDecl()),
           Info->TemplateArguments, CallLoc);
-    else
+      // The above should always succeed for valid code, but may fail due to
+      // error recovery. For example, if both a fatal error and an uncompilable
+      // error occur, we stop instantiating templates at all.
+      if (!FD)
+        return true;
+    } else {
       FD = FD->getFirstDecl();
+    }
     if (FD != OrigFD)
       Param =
           cast<ParmVarDecl>(FD->getParamDecl(Param->getFunctionScopeIndex()));
