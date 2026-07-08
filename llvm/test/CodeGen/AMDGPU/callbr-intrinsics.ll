@@ -113,3 +113,63 @@ cont:
 kill:
   unreachable
 }
+
+define void @test_kill_unreachable_not_first(ptr %src, ptr %dst, i1 %c) {
+; CHECK-LABEL: test_kill_unreachable_not_first:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    flat_load_dword v0, v[0:1]
+; CHECK-NEXT:    v_and_b32_e32 v1, 1, v4
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; CHECK-NEXT:    s_mov_b64 s[4:5], exec
+; CHECK-NEXT:    s_andn2_b64 s[6:7], exec, vcc
+; CHECK-NEXT:    s_andn2_b64 s[4:5], s[4:5], s[6:7]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB2_2
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    s_and_b64 exec, exec, s[4:5]
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    flat_store_dword v[2:3], v0
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:    s_mov_b64 exec, 0
+; CHECK-NEXT:    s_endpgm
+;
+; GISEL-LABEL: test_kill_unreachable_not_first:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    flat_load_dword v0, v[0:1]
+; GISEL-NEXT:    v_and_b32_e32 v1, 1, v4
+; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
+; GISEL-NEXT:    s_mov_b64 s[4:5], exec
+; GISEL-NEXT:    s_andn2_b64 s[6:7], exec, vcc
+; GISEL-NEXT:    s_andn2_b64 s[4:5], s[4:5], s[6:7]
+; GISEL-NEXT:    s_cbranch_scc0 .LBB2_4
+; GISEL-NEXT:  ; %bb.1:
+; GISEL-NEXT:    s_and_b64 exec, exec, s[4:5]
+; GISEL-NEXT:  ; %bb.2: ; %cont
+; GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    flat_store_dword v[2:3], v0
+; GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GISEL-NEXT:  .LBB2_3: ; Inline asm indirect target
+; GISEL-NEXT:    ; %kill
+; GISEL-NEXT:    ; Label of block must be emitted
+; GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GISEL-NEXT:    flat_store_dword v[2:3], v0
+; GISEL-NEXT:    ; divergent unreachable
+; GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GISEL-NEXT:  .LBB2_4:
+; GISEL-NEXT:    s_mov_b64 exec, 0
+; GISEL-NEXT:    s_endpgm
+  %a = load i32, ptr %src, align 4
+  callbr void @llvm.amdgcn.kill(i1 %c) to label %cont [label %kill]
+kill:
+  store i32 0, ptr %dst, align 4
+  unreachable
+cont:
+  store i32 %a, ptr %dst, align 4
+  ret void
+}
