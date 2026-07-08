@@ -286,15 +286,12 @@ define void @alias_mask_reverse_iterate(ptr noalias %ptrA, ptr %ptrB, ptr %ptrC,
 ; CHECK-TF-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP8]], i64 [[TMP10]]
 ; CHECK-TF-NEXT:    [[REVERSE:%.*]] = call <vscale x 16 x i1> @llvm.vector.reverse.nxv16i1(<vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP11]], <vscale x 16 x i1> [[REVERSE]], <vscale x 16 x i8> poison)
-; CHECK-TF-NEXT:    [[REVERSE3:%.*]] = call <vscale x 16 x i8> @llvm.vector.reverse.nxv16i8(<vscale x 16 x i8> [[WIDE_MASKED_LOAD]])
 ; CHECK-TF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[PTRB]], i64 [[OFFSET_IDX]]
 ; CHECK-TF-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP12]], i64 [[TMP10]]
 ; CHECK-TF-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP13]], <vscale x 16 x i1> [[REVERSE]], <vscale x 16 x i8> poison)
-; CHECK-TF-NEXT:    [[REVERSE6:%.*]] = call <vscale x 16 x i8> @llvm.vector.reverse.nxv16i8(<vscale x 16 x i8> [[WIDE_MASKED_LOAD5]])
-; CHECK-TF-NEXT:    [[TMP14:%.*]] = add <vscale x 16 x i8> [[REVERSE6]], [[REVERSE3]]
+; CHECK-TF-NEXT:    [[REVERSE7:%.*]] = add <vscale x 16 x i8> [[WIDE_MASKED_LOAD5]], [[WIDE_MASKED_LOAD]]
 ; CHECK-TF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[PTRC]], i64 [[OFFSET_IDX]]
 ; CHECK-TF-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP15]], i64 [[TMP10]]
-; CHECK-TF-NEXT:    [[REVERSE7:%.*]] = call <vscale x 16 x i8> @llvm.vector.reverse.nxv16i8(<vscale x 16 x i8> [[TMP14]])
 ; CHECK-TF-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[REVERSE7]], ptr align 1 [[TMP16]], <vscale x 16 x i1> [[REVERSE]])
 ; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[IV_START]])

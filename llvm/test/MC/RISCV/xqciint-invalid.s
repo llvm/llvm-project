@@ -8,7 +8,7 @@
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.setinti 1025
 
-# CHECK: :[[@LINE+1]]:{{16: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{16: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.setinti 11, 12
 
 # CHECK: :[[@LINE+1]]:1: error: {{too few operands for instruction|invalid instruction}}
@@ -21,7 +21,7 @@ qc.setinti   10
 # CHECK-PLUS: :[[@LINE+1]]:12: error: immediate must be an integer in the range [0, 1023]
 qc.clrinti 2000
 
-# CHECK: :[[@LINE+1]]:{{16: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{16: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.clrinti 22, x4
 
 # CHECK: :[[@LINE+1]]:1: error: {{too few operands for instruction|invalid instruction}}
@@ -42,7 +42,7 @@ qc.c.clrint
 qc.c.clrint x8
 
 
-# CHECK: :[[@LINE+1]]:{{9: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{9: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.c.di 22
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)
@@ -60,7 +60,7 @@ qc.c.dir
 qc.c.dir x8
 
 
-# CHECK: :[[@LINE+1]]:{{9: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{9: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.c.ei 22
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)
@@ -78,21 +78,21 @@ qc.c.eir
 qc.c.eir x8
 
 
-# CHECK: :[[@LINE+1]]:{{19: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{19: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.c.mienter.nest 22
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)
 qc.c.mienter.nest
 
 
-# CHECK: :[[@LINE+1]]:{{14: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{14: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.c.mienter 22
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)
 qc.c.mienter
 
 
-# CHECK: :[[@LINE+1]]:{{17: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{17: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.c.mileaveret 22
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)
@@ -110,14 +110,14 @@ qc.c.setint
 qc.c.setint x8
 
 
-# CHECK: :[[@LINE+1]]:{{11: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{11: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.c.mret x8
 
 # CHECK-EXT: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)
 qc.c.mret
 
 
-# CHECK: :[[@LINE+1]]:{{12: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{12: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.c.mnret 10
 
 # CHECK-EXT: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)
