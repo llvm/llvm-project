@@ -1602,7 +1602,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     }
   }
 
-  // Write the options block.
+  // Write the options block. 
   Stream.EnterSubblock(OPTIONS_BLOCK_ID, 4);
 
   // Language options.
