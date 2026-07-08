@@ -28,6 +28,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ExpandIRInsts.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -35,6 +36,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -547,37 +549,29 @@ static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
   return true;
 }
 
-SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
-  SDLoc dl(Node);
-  EVT VT = Node->getValueType(0);
-  SDValue X = Node->getOperand(0);
-  SDValue N = Node->getOperand(1);
-  EVT ExpVT = N.getValueType();
-  EVT AsIntVT = VT.changeTypeToInteger();
-  if (AsIntVT == EVT()) // TODO: How to handle f80?
-    return SDValue();
+static void expandLdexp(IntrinsicInst *II) {
+  LLVM_DEBUG(dbgs() << "Expanding instruction: " << *II << '\n');
 
-  if (Node->getOpcode() == ISD::STRICT_FLDEXP) // TODO
-    return SDValue();
+  IRBuilder<> B(II);
+  B.SetCurrentDebugLocation(II->getDebugLoc());
+  LLVMContext &Ctx = II->getContext();
 
-  SDNodeFlags NSW;
-  NSW.setNoSignedWrap(true);
-  SDNodeFlags NUW_NSW;
-  NUW_NSW.setNoUnsignedWrap(true);
-  NUW_NSW.setNoSignedWrap(true);
+  Type *VT = II->getType();
+  Value *X = II->getArgOperand(0);
+  Value *N = II->getArgOperand(1);
+  Type *ExpVT = N->getType();
+  Type *AsIntVT = B.getIntNTy(VT->getScalarSizeInBits());
 
-  EVT SetCCVT =
-      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ExpVT);
-  const fltSemantics &FltSem = VT.getFltSemantics();
+  const fltSemantics &FltSem = VT->getFltSemantics();
 
   const APFloat::ExponentType MaxExpVal = APFloat::semanticsMaxExponent(FltSem);
   const APFloat::ExponentType MinExpVal = APFloat::semanticsMinExponent(FltSem);
   const int Precision = APFloat::semanticsPrecision(FltSem);
 
-  const SDValue MaxExp = DAG.getSignedConstant(MaxExpVal, dl, ExpVT);
-  const SDValue MinExp = DAG.getSignedConstant(MinExpVal, dl, ExpVT);
+  Constant *MaxExp = ConstantInt::getSigned(ExpVT, MaxExpVal);
+  Constant *MinExp = ConstantInt::getSigned(ExpVT, MinExpVal);
 
-  const SDValue DoubleMaxExp = DAG.getSignedConstant(2 * MaxExpVal, dl, ExpVT);
+  Constant *DoubleMaxExp = ConstantInt::getSigned(ExpVT, 2 * MaxExpVal);
 
   const APFloat One(FltSem, "1.0");
   APFloat ScaleUpK = scalbn(One, MaxExpVal, APFloat::rmNearestTiesToEven);
@@ -590,88 +584,88 @@ SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
   // MaxExp, < MinExp cases
 
   // First, handle exponents Exp > MaxExp and scale down.
-  SDValue NGtMaxExp = DAG.getSetCC(dl, SetCCVT, N, MaxExp, ISD::SETGT);
+  Value *NGtMaxExp = B.CreateICmpSGT(N, MaxExp);
 
-  SDValue DecN0 = DAG.getNode(ISD::SUB, dl, ExpVT, N, MaxExp, NSW);
-  SDValue ClampMaxVal = DAG.getConstant(3 * MaxExpVal, dl, ExpVT);
-  SDValue ClampN_Big = DAG.getNode(ISD::SMIN, dl, ExpVT, N, ClampMaxVal);
-  SDValue DecN1 =
-      DAG.getNode(ISD::SUB, dl, ExpVT, ClampN_Big, DoubleMaxExp, NSW);
+  Value *DecN0 = B.CreateNSWSub(N, MaxExp);
+  Constant *ClampMaxVal = ConstantInt::get(ExpVT, 3 * MaxExpVal);
+  Value *ClampN_Big = B.CreateBinaryIntrinsic(Intrinsic::smin, N, ClampMaxVal);
+  Value *DecN1 = B.CreateNSWSub(ClampN_Big, DoubleMaxExp);
 
-  SDValue ScaleUpTwice =
-      DAG.getSetCC(dl, SetCCVT, N, DoubleMaxExp, ISD::SETUGT);
+  Value *ScaleUpTwice = B.CreateICmpUGT(N, DoubleMaxExp);
 
-  const SDValue ScaleUpVal = DAG.getConstantFP(ScaleUpK, dl, VT);
-  SDValue ScaleUp0 = DAG.getNode(ISD::FMUL, dl, VT, X, ScaleUpVal);
-  SDValue ScaleUp1 = DAG.getNode(ISD::FMUL, dl, VT, ScaleUp0, ScaleUpVal);
+  Constant *ScaleUpVal = ConstantFP::get(Ctx, ScaleUpK);
+  Value *ScaleUp0 = B.CreateFMul(X, ScaleUpVal);
+  Value *ScaleUp1 = B.CreateFMul(ScaleUp0, ScaleUpVal);
 
-  SDValue SelectN_Big =
-      DAG.getNode(ISD::SELECT, dl, ExpVT, ScaleUpTwice, DecN1, DecN0);
-  SDValue SelectX_Big =
-      DAG.getNode(ISD::SELECT, dl, VT, ScaleUpTwice, ScaleUp1, ScaleUp0);
+  Value *SelectN_Big = B.CreateSelect(ScaleUpTwice, DecN1, DecN0);
+  Value *SelectX_Big = B.CreateSelect(ScaleUpTwice, ScaleUp1, ScaleUp0);
 
   // Now handle exponents Exp < MinExp
-  SDValue NLtMinExp = DAG.getSetCC(dl, SetCCVT, N, MinExp, ISD::SETLT);
+  Value *NLtMinExp = B.CreateICmpSLT(N, MinExp);
 
-  SDValue Increment0 = DAG.getConstant(-(MinExpVal + Precision), dl, ExpVT);
-  SDValue Increment1 = DAG.getConstant(-2 * (MinExpVal + Precision), dl, ExpVT);
+  Constant *Increment0 = ConstantInt::get(ExpVT, -(MinExpVal + Precision));
+  Constant *Increment1 = ConstantInt::get(ExpVT, -2 * (MinExpVal + Precision));
 
-  SDValue IncN0 = DAG.getNode(ISD::ADD, dl, ExpVT, N, Increment0, NUW_NSW);
+  Value *IncN0 =
+      B.CreateAdd(N, Increment0, "", /*HasNUW=*/true, /*HasNSW=*/true);
 
-  SDValue ClampMinVal =
-      DAG.getSignedConstant(3 * MinExpVal + 2 * Precision, dl, ExpVT);
-  SDValue ClampN_Small = DAG.getNode(ISD::SMAX, dl, ExpVT, N, ClampMinVal);
-  SDValue IncN1 =
-      DAG.getNode(ISD::ADD, dl, ExpVT, ClampN_Small, Increment1, NSW);
+  Constant *ClampMinVal =
+      ConstantInt::getSigned(ExpVT, 3 * MinExpVal + 2 * Precision);
+  Value *ClampN_Small =
+      B.CreateBinaryIntrinsic(Intrinsic::smax, N, ClampMinVal);
+  Value *IncN1 = B.CreateNSWAdd(ClampN_Small, Increment1);
 
-  const SDValue ScaleDownVal = DAG.getConstantFP(ScaleDownK, dl, VT);
-  SDValue ScaleDown0 = DAG.getNode(ISD::FMUL, dl, VT, X, ScaleDownVal);
-  SDValue ScaleDown1 = DAG.getNode(ISD::FMUL, dl, VT, ScaleDown0, ScaleDownVal);
+  Constant *ScaleDownVal = ConstantFP::get(Ctx, ScaleDownK);
+  Value *ScaleDown0 = B.CreateFMul(X, ScaleDownVal);
+  Value *ScaleDown1 = B.CreateFMul(ScaleDown0, ScaleDownVal);
 
-  SDValue ScaleDownTwice = DAG.getSetCC(
-      dl, SetCCVT, N,
-      DAG.getSignedConstant(2 * MinExpVal + Precision, dl, ExpVT), ISD::SETULT);
+  Value *ScaleDownTwice = B.CreateICmpULT(
+      N, ConstantInt::getSigned(ExpVT, 2 * MinExpVal + Precision));
 
-  SDValue SelectN_Small =
-      DAG.getNode(ISD::SELECT, dl, ExpVT, ScaleDownTwice, IncN1, IncN0);
-  SDValue SelectX_Small =
-      DAG.getNode(ISD::SELECT, dl, VT, ScaleDownTwice, ScaleDown1, ScaleDown0);
+  Value *SelectN_Small = B.CreateSelect(ScaleDownTwice, IncN1, IncN0);
+  Value *SelectX_Small = B.CreateSelect(ScaleDownTwice, ScaleDown1, ScaleDown0);
 
   // Now combine the two out of range exponent handling cases with the base
   // case.
-  SDValue NewX = DAG.getNode(
-      ISD::SELECT, dl, VT, NGtMaxExp, SelectX_Big,
-      DAG.getNode(ISD::SELECT, dl, VT, NLtMinExp, SelectX_Small, X));
+  Value *NewX = B.CreateSelect(NGtMaxExp, SelectX_Big,
+                               B.CreateSelect(NLtMinExp, SelectX_Small, X));
 
-  SDValue NewN = DAG.getNode(
-      ISD::SELECT, dl, ExpVT, NGtMaxExp, SelectN_Big,
-      DAG.getNode(ISD::SELECT, dl, ExpVT, NLtMinExp, SelectN_Small, N));
+  Value *NewN = B.CreateSelect(NGtMaxExp, SelectN_Big,
+                               B.CreateSelect(NLtMinExp, SelectN_Small, N));
 
-  SDValue BiasedN = DAG.getNode(ISD::ADD, dl, ExpVT, NewN, MaxExp, NSW);
+  Value *BiasedN = B.CreateNSWAdd(NewN, MaxExp);
 
-  SDValue ExponentShiftAmt =
-      DAG.getShiftAmountConstant(Precision - 1, ExpVT, dl);
-  SDValue CastExpToValTy = DAG.getZExtOrTrunc(BiasedN, dl, AsIntVT);
+  Constant *ExponentShiftAmt = ConstantInt::get(AsIntVT, Precision - 1);
+  Value *CastExpToValTy = B.CreateZExtOrTrunc(BiasedN, AsIntVT);
 
-  SDValue AsInt = DAG.getNode(ISD::SHL, dl, AsIntVT, CastExpToValTy,
-                              ExponentShiftAmt, NUW_NSW);
-  SDValue AsFP = DAG.getNode(ISD::BITCAST, dl, VT, AsInt);
-  return DAG.getNode(ISD::FMUL, dl, VT, NewX, AsFP);
+  Value *AsInt = B.CreateShl(CastExpToValTy, ExponentShiftAmt, "",
+                             /*HasNUW=*/true, /*HasNSW=*/true);
+  Value *AsFP = B.CreateBitCast(AsInt, VT);
+  Value *Result = B.CreateFMul(NewX, AsFP);
+
+  II->replaceAllUsesWith(Result);
+  if (auto *RI = dyn_cast<Instruction>(Result))
+    RI->takeName(II);
+  II->eraseFromParent();
 }
 
-SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
-  SDLoc dl(Node);
-  SDValue Val = Node->getOperand(0);
-  EVT VT = Val.getValueType();
-  EVT ExpVT = Node->getValueType(1);
-  EVT AsIntVT = VT.changeTypeToInteger();
-  if (AsIntVT == EVT()) // TODO: How to handle f80?
-    return SDValue();
+static void expandFrexp(IntrinsicInst *II) {
+  LLVM_DEBUG(dbgs() << "Expanding instruction: " << *II << '\n');
 
-  const fltSemantics &FltSem = VT.getFltSemantics();
+  IRBuilder<> B(II);
+  B.SetCurrentDebugLocation(II->getDebugLoc());
+  LLVMContext &Ctx = II->getContext();
+
+  Value *Val = II->getArgOperand(0);
+  auto *RetTy = cast<StructType>(II->getType());
+  Type *VT = Val->getType();
+  Type *ExpVT = RetTy->getElementType(1);
+  Type *AsIntVT = B.getIntNTy(VT->getScalarSizeInBits());
+
+  const fltSemantics &FltSem = VT->getFltSemantics();
   const APFloat::ExponentType MinExpVal = APFloat::semanticsMinExponent(FltSem);
   const unsigned Precision = APFloat::semanticsPrecision(FltSem);
-  const unsigned BitSize = VT.getScalarSizeInBits();
+  const unsigned BitSize = VT->getScalarSizeInBits();
 
   // TODO: Could introduce control flow and skip over the denormal handling.
 
@@ -687,17 +681,15 @@ SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
   // result_0 =  (!isfinite(val) || iszero(val)) ? val : computed_fract
   // result_1 =  (!isfinite(val) || iszero(val)) ? 0 : computed_exp
 
-  SDValue NegSmallestNormalizedInt = DAG.getConstant(
-      APFloat::getSmallestNormalized(FltSem, true).bitcastToAPInt(), dl,
-      AsIntVT);
+  Constant *NegSmallestNormalizedInt = ConstantInt::get(
+      AsIntVT, APFloat::getSmallestNormalized(FltSem, true).bitcastToAPInt());
 
-  SDValue SmallestNormalizedInt = DAG.getConstant(
-      APFloat::getSmallestNormalized(FltSem, false).bitcastToAPInt(), dl,
-      AsIntVT);
+  Constant *SmallestNormalizedInt = ConstantInt::get(
+      AsIntVT, APFloat::getSmallestNormalized(FltSem, false).bitcastToAPInt());
 
   // Masks out the exponent bits.
-  SDValue ExpMask =
-      DAG.getConstant(APFloat::getInf(FltSem).bitcastToAPInt(), dl, AsIntVT);
+  Constant *ExpMask =
+      ConstantInt::get(AsIntVT, APFloat::getInf(FltSem).bitcastToAPInt());
 
   // Mask out the exponent part of the value.
   //
@@ -706,9 +698,9 @@ SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
   FractSignMaskVal.setBit(BitSize - 1); // Set the sign bit
 
   APInt SignMaskVal = APInt::getSignedMaxValue(BitSize);
-  SDValue SignMask = DAG.getConstant(SignMaskVal, dl, AsIntVT);
+  Constant *SignMask = ConstantInt::get(AsIntVT, SignMaskVal);
 
-  SDValue FractSignMask = DAG.getConstant(FractSignMaskVal, dl, AsIntVT);
+  Constant *FractSignMask = ConstantInt::get(AsIntVT, FractSignMaskVal);
 
   const APFloat One(FltSem, "1.0");
   // Scale a possible denormal input.
@@ -716,68 +708,60 @@ SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
   APFloat ScaleUpKVal =
       scalbn(One, Precision + 1, APFloat::rmNearestTiesToEven);
 
-  SDValue ScaleUpK = DAG.getConstantFP(ScaleUpKVal, dl, VT);
-  SDValue ScaleUp = DAG.getNode(ISD::FMUL, dl, VT, Val, ScaleUpK);
+  Constant *ScaleUpK = ConstantFP::get(Ctx, ScaleUpKVal);
+  Value *ScaleUp = B.CreateFMul(Val, ScaleUpK);
 
-  EVT SetCCVT =
-      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  Value *AsInt = B.CreateBitCast(Val, AsIntVT);
 
-  SDValue AsInt = DAG.getNode(ISD::BITCAST, dl, AsIntVT, Val);
+  Value *Abs = B.CreateAnd(AsInt, SignMask);
 
-  SDValue Abs = DAG.getNode(ISD::AND, dl, AsIntVT, AsInt, SignMask);
+  Value *AddNegSmallestNormal = B.CreateAdd(Abs, NegSmallestNormalizedInt);
+  Value *DenormOrZero =
+      B.CreateICmpULE(AddNegSmallestNormal, NegSmallestNormalizedInt);
 
-  SDValue AddNegSmallestNormal =
-      DAG.getNode(ISD::ADD, dl, AsIntVT, Abs, NegSmallestNormalizedInt);
-  SDValue DenormOrZero = DAG.getSetCC(dl, SetCCVT, AddNegSmallestNormal,
-                                      NegSmallestNormalizedInt, ISD::SETULE);
+  Value *IsDenormal = B.CreateICmpULT(Abs, SmallestNormalizedInt);
 
-  SDValue IsDenormal =
-      DAG.getSetCC(dl, SetCCVT, Abs, SmallestNormalizedInt, ISD::SETULT);
+  Constant *MinExp = ConstantInt::getSigned(ExpVT, MinExpVal);
+  Constant *Zero = ConstantInt::get(ExpVT, 0);
 
-  SDValue MinExp = DAG.getSignedConstant(MinExpVal, dl, ExpVT);
-  SDValue Zero = DAG.getConstant(0, dl, ExpVT);
+  Value *ScaledAsInt = B.CreateBitCast(ScaleUp, AsIntVT);
+  Value *ScaledSelect = B.CreateSelect(IsDenormal, ScaledAsInt, AsInt);
 
-  SDValue ScaledAsInt = DAG.getNode(ISD::BITCAST, dl, AsIntVT, ScaleUp);
-  SDValue ScaledSelect =
-      DAG.getNode(ISD::SELECT, dl, AsIntVT, IsDenormal, ScaledAsInt, AsInt);
+  Value *ExpMaskScaled = B.CreateAnd(ScaledAsInt, ExpMask);
 
-  SDValue ExpMaskScaled =
-      DAG.getNode(ISD::AND, dl, AsIntVT, ScaledAsInt, ExpMask);
-
-  SDValue ScaledValue =
-      DAG.getNode(ISD::SELECT, dl, AsIntVT, IsDenormal, ExpMaskScaled, Abs);
+  Value *ScaledValue = B.CreateSelect(IsDenormal, ExpMaskScaled, Abs);
 
   // Extract the exponent bits.
-  SDValue ExponentShiftAmt =
-      DAG.getShiftAmountConstant(Precision - 1, AsIntVT, dl);
-  SDValue ShiftedExp =
-      DAG.getNode(ISD::SRL, dl, AsIntVT, ScaledValue, ExponentShiftAmt);
-  SDValue Exp = DAG.getSExtOrTrunc(ShiftedExp, dl, ExpVT);
+  Constant *ExponentShiftAmt = ConstantInt::get(AsIntVT, Precision - 1);
+  Value *ShiftedExp = B.CreateLShr(ScaledValue, ExponentShiftAmt);
+  Value *Exp = B.CreateSExtOrTrunc(ShiftedExp, ExpVT);
 
-  SDValue NormalBiasedExp = DAG.getNode(ISD::ADD, dl, ExpVT, Exp, MinExp);
-  SDValue DenormalOffset = DAG.getConstant(-Precision - 1, dl, ExpVT);
-  SDValue DenormalExpBias =
-      DAG.getNode(ISD::SELECT, dl, ExpVT, IsDenormal, DenormalOffset, Zero);
+  Value *NormalBiasedExp = B.CreateAdd(Exp, MinExp);
+  Constant *DenormalOffset = ConstantInt::get(ExpVT, -Precision - 1);
+  Value *DenormalExpBias = B.CreateSelect(IsDenormal, DenormalOffset, Zero);
 
-  SDValue MaskedFractAsInt =
-      DAG.getNode(ISD::AND, dl, AsIntVT, ScaledSelect, FractSignMask);
+  Value *MaskedFractAsInt = B.CreateAnd(ScaledSelect, FractSignMask);
   const APFloat Half(FltSem, "0.5");
-  SDValue FPHalf = DAG.getConstant(Half.bitcastToAPInt(), dl, AsIntVT);
-  SDValue Or = DAG.getNode(ISD::OR, dl, AsIntVT, MaskedFractAsInt, FPHalf);
-  SDValue MaskedFract = DAG.getNode(ISD::BITCAST, dl, VT, Or);
+  Constant *FPHalf = ConstantInt::get(AsIntVT, Half.bitcastToAPInt());
+  Value *Or = B.CreateOr(MaskedFractAsInt, FPHalf);
+  Value *MaskedFract = B.CreateBitCast(Or, VT);
 
-  SDValue ComputedExp =
-      DAG.getNode(ISD::ADD, dl, ExpVT, NormalBiasedExp, DenormalExpBias);
+  Value *ComputedExp = B.CreateAdd(NormalBiasedExp, DenormalExpBias);
 
-  SDValue Result0 =
-      DAG.getNode(ISD::SELECT, dl, VT, DenormOrZero, Val, MaskedFract);
+  Value *Result0 = B.CreateSelect(DenormOrZero, Val, MaskedFract);
 
-  SDValue Result1 =
-      DAG.getNode(ISD::SELECT, dl, ExpVT, DenormOrZero, Zero, ComputedExp);
+  Value *Result1 = B.CreateSelect(DenormOrZero, Zero, ComputedExp);
 
-  return DAG.getMergeValues({Result0, Result1}, dl);
+  // Combine the two results into the { fp, int } aggregate the intrinsic
+  // returns (the SelectionDAG expansion returns a merge_values instead).
+  Value *Res = PoisonValue::get(RetTy);
+  Res = B.CreateInsertValue(Res, Result0, {0});
+  Res = B.CreateInsertValue(Res, Result1, {1});
+
+  II->replaceAllUsesWith(Res);
+  Res->takeName(II);
+  II->eraseFromParent();
 }
-
 // clang-format off: preserve formatting of the following example
 
 /// Generate code to convert a fp number to integer, replacing FPToS(U)I with
@@ -1508,7 +1492,22 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
       MaxLegalDivRemBitWidth >= IntegerType::MAX_INT_BITS;
   bool DisableFrem = !FRemExpander::shouldExpandAnyFremType(TLI);
 
-  if (DisableExpandLargeFp && DisableFrem && DisableExpandLargeDivRem)
+  static constexpr std::array ExpandableTypes{MVT::f32, MVT::f64, MVT::f128};
+  auto NeedsExpand = [&](EVT VT, unsigned ISDOp, RTLIB::Libcall LC) {
+    // For f16/bf16 LC is UNKNOWN_LIBCALL, they are handled via promotion.
+    return LC != RTLIB::UNKNOWN_LIBCALL &&
+           TLI.getOperationAction(ISDOp, VT) == TargetLowering::Expand &&
+           Libcalls.getLibcallImpl(LC) == RTLIB::Unsupported;
+  };
+  bool DisableLdexp = none_of(ExpandableTypes, [&](MVT VT) {
+    return NeedsExpand(VT, ISD::FLDEXP, RTLIB::getLDEXP(VT));
+  });
+  bool DisableFrexp = none_of(ExpandableTypes, [&](MVT VT) {
+    return NeedsExpand(VT, ISD::FFREXP, RTLIB::getFREXP(VT));
+  });
+
+  if (DisableExpandLargeFp && DisableFrem && DisableExpandLargeDivRem &&
+      DisableLdexp && DisableFrexp)
     return false;
 
   auto ShouldHandleInst = [&](Instruction &I) {
@@ -1543,13 +1542,32 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
                  MaxLegalDivRemBitWidth;
     case Instruction::Call: {
       auto *II = dyn_cast<IntrinsicInst>(&I);
-      if (II && (II->getIntrinsicID() == Intrinsic::fptoui_sat ||
-                 II->getIntrinsicID() == Intrinsic::fptosi_sat)) {
+      if (!II)
+        return false;
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::fptoui_sat:
+      case Intrinsic::fptosi_sat:
         return !DisableExpandLargeFp &&
                cast<IntegerType>(Ty->getScalarType())->getIntegerBitWidth() >
                    MaxLegalFpConvertBitWidth;
+      case Intrinsic::ldexp: {
+        // the IEEE check skips fp80/ppcf128/vectors.
+        Type *FpTy = II->getArgOperand(0)->getType();
+        if (DisableLdexp || !FpTy->isIEEELikeFPTy())
+          return false;
+        EVT VT = EVT::getEVT(FpTy);
+        return NeedsExpand(VT, ISD::FLDEXP, RTLIB::getLDEXP(VT));
       }
-      return false;
+      case Intrinsic::frexp: {
+        Type *FpTy = II->getArgOperand(0)->getType();
+        if (DisableFrexp || !FpTy->isIEEELikeFPTy())
+          return false;
+        EVT VT = EVT::getEVT(FpTy);
+        return NeedsExpand(VT, ISD::FFREXP, RTLIB::getFREXP(VT));
+      }
+      default:
+        return false;
+      }
     }
     }
 
@@ -1617,10 +1635,21 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     }
     case Instruction::Call: {
       auto *II = cast<IntrinsicInst>(I);
-      assert(II->getIntrinsicID() == Intrinsic::fptoui_sat ||
-             II->getIntrinsicID() == Intrinsic::fptosi_sat);
-      expandFPToI(I, /*IsSaturating=*/true,
-                  /*IsSigned=*/II->getIntrinsicID() == Intrinsic::fptosi_sat);
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::ldexp:
+        expandLdexp(II);
+        break;
+      case Intrinsic::frexp:
+        expandFrexp(II);
+        break;
+      case Intrinsic::fptoui_sat:
+      case Intrinsic::fptosi_sat:
+        expandFPToI(I, /*IsSaturating=*/true,
+                    /*IsSigned=*/II->getIntrinsicID() == Intrinsic::fptosi_sat);
+        break;
+      default:
+        llvm_unreachable("unexpected intrinsic in ExpandIRInsts worklist");
+      }
       break;
     }
     }
