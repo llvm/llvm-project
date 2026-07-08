@@ -491,7 +491,7 @@ static Constant *getReturnValue(Function &F) {
 // provide the value needed to initialize the accumulator.
 static Constant *canTransformAccumulatorRecursion(Instruction *I,
                                                   CallInst *CI) {
-  auto IsPseudoAssociative = isPseudoAssociative(I);
+  bool IsPseudoAssociative = isPseudoAssociative(I);
   if ((!I->isAssociative() || !I->isCommutative()) && !IsPseudoAssociative)
     return nullptr;
 
