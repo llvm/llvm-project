@@ -41,8 +41,6 @@ pid_t fork() {
 #endif
 }
 
-void close(int fd) { linux_syscalls::close(fd); }
-
 // All exits from child_process are error exits. So, we use a simple
 // exit implementation which exits with code 127.
 void exit() {
@@ -76,7 +74,7 @@ void child_process(const char *__restrict path,
         if (actual_fd != open_act->fd) {
           bool dup2_result =
               linux_syscalls::dup2(actual_fd, open_act->fd).has_value();
-          close(actual_fd); // The old fd is not needed anymore.
+          linux_syscalls::close(actual_fd); // The old fd is not needed anymore.
           if (!dup2_result)
             exit();
         }
@@ -84,7 +82,7 @@ void child_process(const char *__restrict path,
       }
       case BaseSpawnFileAction::CLOSE: {
         auto *close_act = reinterpret_cast<SpawnFileCloseAction *>(act);
-        close(close_act->fd);
+        linux_syscalls::close(close_act->fd);
         break;
       }
       case BaseSpawnFileAction::DUP2: {
