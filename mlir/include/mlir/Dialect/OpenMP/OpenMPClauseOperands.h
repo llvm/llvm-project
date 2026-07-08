@@ -33,6 +33,12 @@ struct DeviceTypeClauseOps {
   DeclareTargetDeviceType deviceType = DeclareTargetDeviceType::any;
 };
 
+struct IndirectClauseOps {
+  /// Whether the declare target entities may be invoked indirectly (through a
+  /// function pointer) from within a target region.
+  bool indirect = false;
+};
+
 //===----------------------------------------------------------------------===//
 // Extra operation operand structures.
 //===----------------------------------------------------------------------===//
@@ -43,8 +49,8 @@ using HostEvaluatedOperands =
     detail::Clauses<CollapseClauseOps, LoopRelatedClauseOps, NumTeamsClauseOps,
                     NumThreadsClauseOps, ThreadLimitClauseOps>;
 
-// TODO: Add `indirect` clause.
-using DeclareTargetOperands = detail::Clauses<DeviceTypeClauseOps>;
+using DeclareTargetOperands =
+    detail::Clauses<DeviceTypeClauseOps, IndirectClauseOps>;
 
 /// omp.target_enter_data, omp.target_exit_data and omp.target_update take the
 /// same clauses, so we give the structure to be shared by all of them a

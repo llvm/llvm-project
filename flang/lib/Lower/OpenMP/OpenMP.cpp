@@ -1554,9 +1554,13 @@ static void getDeclareTargetInfo(
     cp.processEnter(symbolAndClause);
     cp.processLink(symbolAndClause);
     cp.processTo(symbolAndClause);
+    cp.processIndirect(clauseOps);
 
-    cp.processTODO<clause::Indirect>(converter.getCurrentLocation(),
-                                     llvm::omp::Directive::OMPD_declare_target);
+    // The `indirect` clause applies to the functions named by the directive
+    // (it requires an `enter` or `to` clause). Propagate the directive-level
+    // value to each captured symbol so it reaches the declare target attribute.
+    for (DeclareTargetCaptureInfo &sym : symbolAndClause)
+      sym.indirect = clauseOps.indirect;
   }
 }
 
@@ -1580,7 +1584,8 @@ static void collectDeferredDeclareTargets(
 
     if (!op) {
       deferredDeclareTarget.push_back({symClause.clause, clauseOps.deviceType,
-                                       symClause.automap, symClause.symbol});
+                                       symClause.automap, symClause.indirect,
+                                       symClause.symbol});
     }
   }
 }
@@ -1828,7 +1833,8 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
 static void
 markDeclareTarget(mlir::Operation *op, lower::AbstractConverter &converter,
                   mlir::omp::DeclareTargetCaptureClause captureClause,
-                  mlir::omp::DeclareTargetDeviceType deviceType, bool automap) {
+                  mlir::omp::DeclareTargetDeviceType deviceType, bool automap,
+                  bool indirect) {
   // TODO: Add support for program local variables with declare target applied
   auto declareTargetOp = llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(op);
   if (!declareTargetOp)
@@ -1838,18 +1844,32 @@ markDeclareTarget(mlir::Operation *op, lower::AbstractConverter &converter,
 
   // The function or global already has a declare target applied to it, very
   // likely through implicit capture (usage in another declare target
-  // function/subroutine). It should be marked as any if it has been assigned
-  // both host and nohost, else we skip, as there is no change
+  // function/subroutine), or because it is named by more than one declare
+  // target directive. It should be marked as any if it has been assigned both
+  // host and nohost. The `indirect` modifier is a capability: once any
+  // declaration requests it, it must stay set, so it is merged with logical OR
+  // rather than overwritten (which could drop a previous `indirect = true`).
   if (declareTargetOp.isDeclareTarget()) {
+    bool mergedIndirect =
+        declareTargetOp.getDeclareTargetIndirect() || indirect;
+
     if (declareTargetOp.getDeclareTargetDeviceType() != deviceType)
       declareTargetOp.setDeclareTarget(mlir::omp::DeclareTargetDeviceType::any,
                                        captureClause, automap,
-                                       /*implicit=*/false);
+                                       /*implicit=*/false, mergedIndirect);
+    else if (mergedIndirect != declareTargetOp.getDeclareTargetIndirect())
+      // Same device type, but a later declaration added `indirect`; update it
+      // while preserving the already-established capture clause and automap.
+      declareTargetOp.setDeclareTarget(
+          declareTargetOp.getDeclareTargetDeviceType(),
+          declareTargetOp.getDeclareTargetCaptureClause(),
+          declareTargetOp.getDeclareTargetAutomap(), /*implicit=*/false,
+          mergedIndirect);
     return;
   }
 
   declareTargetOp.setDeclareTarget(deviceType, captureClause, automap,
-                                   /*implicit=*/false);
+                                   /*implicit=*/false, indirect);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6791,7 +6811,7 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       continue;
 
     markDeclareTarget(op, converter, symClause.clause, clauseOps.deviceType,
-                      symClause.automap);
+                      symClause.automap, symClause.indirect);
   }
 }
 
@@ -8017,7 +8037,7 @@ bool Fortran::lower::markOpenMPDeferredDeclareTargetFunctions(
       deviceCodeFound = true;
 
     markDeclareTarget(op, converter, declTar.declareTargetCaptureClause,
-                      devType, declTar.automap);
+                      devType, declTar.automap, declTar.indirect);
   }
 
   return deviceCodeFound;

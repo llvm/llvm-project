@@ -146,6 +146,7 @@ public:
   processEnter(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
                  mlir::omp::IfClauseOps &result) const;
+  bool processIndirect(mlir::omp::IndirectClauseOps &result) const;
   bool
   processInReduction(mlir::Location currentLocation,
                      mlir::omp::InReductionClauseOps &result,

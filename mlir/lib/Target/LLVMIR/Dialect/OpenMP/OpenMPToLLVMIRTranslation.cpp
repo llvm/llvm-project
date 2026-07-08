@@ -9707,6 +9707,69 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Register a `declare target ... indirect` function so that the OpenMP runtime
+/// can resolve indirect calls (through a function pointer) to it from within a
+/// target region. This mirrors clang's
+/// `CGOpenMPRuntime::emitDeclareTargetFunction`.
+///
+/// On the host the function itself is registered as an indirect offload entry,
+/// which causes an offloading entry (with the indirect flag) to be emitted at
+/// module finalization. On the target device a new, externally visible global
+/// holding the address of the function is generated (so the runtime can read
+/// the device address while leaving the function's own linkage and visibility
+/// unchanged) and that global is registered instead.
+static void registerIndirectDeclareTargetFunction(
+    FunctionOpInterface funcOp, llvm::OpenMPIRBuilder *ompBuilder,
+    LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Function *llvmFunc = moduleTranslation.lookupFunction(funcOp.getName());
+  if (!llvmFunc)
+    return;
+
+  // Build the unique offload entry name using the function as the parent name,
+  // e.g. `__omp_offloading_<device>_<file>_<func>_l<line>`.
+  auto loc = funcOp->getLoc()->findInstanceOf<FileLineColLoc>();
+  auto fileInfoCallBack = [&loc]() {
+    std::string filename = "";
+    std::uint64_t lineNo = 0;
+    if (loc) {
+      filename = loc.getFilename().str();
+      lineNo = loc.getLine();
+    }
+    return std::pair<std::string, std::uint64_t>(llvm::StringRef(filename),
+                                                 lineNo);
+  };
+
+  llvm::vfs::FileSystem &vfs = moduleTranslation.getFileSystem();
+  llvm::TargetRegionEntryInfo entryInfo = ompBuilder->getTargetEntryUniqueInfo(
+      fileInfoCallBack, vfs, funcOp.getName());
+  llvm::SmallString<128> name;
+  ompBuilder->OffloadInfoManager.getTargetRegionEntryFnName(name, entryInfo);
+
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  const llvm::DataLayout &dl = llvmModule->getDataLayout();
+  // The entry tracks a pointer to the function, so its size is the store size
+  // of a pointer.
+  int64_t varSize = dl.getTypeStoreSize(
+      llvm::PointerType::getUnqual(llvmModule->getContext()));
+
+  llvm::Constant *addr = llvmFunc;
+  if (ompBuilder->Config.isTargetDevice()) {
+    llvm::PointerType *fnPtrTy = llvm::PointerType::get(
+        llvmModule->getContext(), dl.getProgramAddressSpace());
+    auto *addrGlobal = new llvm::GlobalVariable(
+        *llvmModule, fnPtrTy, /*isConstant=*/true,
+        llvm::GlobalValue::ExternalLinkage, llvmFunc, name, nullptr,
+        llvm::GlobalValue::NotThreadLocal, dl.getDefaultGlobalsAddressSpace());
+    addrGlobal->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+    addr = addrGlobal;
+  }
+
+  ompBuilder->OffloadInfoManager.registerDeviceGlobalVarEntryInfo(
+      name, addr, varSize,
+      llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect,
+      llvm::GlobalValue::WeakODRLinkage);
+}
+
 static LogicalResult
 convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
                          llvm::OpenMPIRBuilder *ompBuilder,
@@ -9721,13 +9784,25 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
   if (FunctionOpInterface funcOp = dyn_cast<FunctionOpInterface>(op)) {
     if (auto offloadMod = dyn_cast<omp::OffloadModuleInterface>(
             op->getParentOfType<ModuleOp>().getOperation())) {
-      if (!offloadMod.getIsTargetDevice())
-        return success();
-
+      bool isTargetDevice = offloadMod.getIsTargetDevice();
       omp::DeclareTargetDeviceType declareType =
           attribute.getDeviceType().getValue();
+      bool isHostFunc = declareType == omp::DeclareTargetDeviceType::host;
 
-      if (declareType == omp::DeclareTargetDeviceType::host) {
+      // A `declare target ... indirect(.true.)` function must be registered so
+      // that indirect calls to it from within a target region can be resolved
+      // by the runtime. This applies to both host and device compilation, but
+      // not to host-only functions that are about to be deleted on the device.
+      mlir::BoolAttr indirectAttr = attribute.getIndirect();
+      if (indirectAttr && indirectAttr.getValue() &&
+          !(isTargetDevice && isHostFunc))
+        registerIndirectDeclareTargetFunction(funcOp, ompBuilder,
+                                              moduleTranslation);
+
+      if (!isTargetDevice)
+        return success();
+
+      if (isHostFunc) {
         llvm::Function *llvmFunc =
             moduleTranslation.lookupFunction(funcOp.getName());
         llvmFunc->dropAllReferences();

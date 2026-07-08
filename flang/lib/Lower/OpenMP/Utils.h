@@ -53,6 +53,7 @@ namespace omp {
 struct DeclareTargetCaptureInfo {
   mlir::omp::DeclareTargetCaptureClause clause;
   bool automap = false;
+  bool indirect = false;
   const semantics::Symbol &symbol;
 
   DeclareTargetCaptureInfo(mlir::omp::DeclareTargetCaptureClause c,
