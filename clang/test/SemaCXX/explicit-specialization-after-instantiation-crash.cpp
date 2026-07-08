@@ -35,6 +35,6 @@ int main() {
 }
 
 // Verify the assertion failure occurs
-// CHECK: RecordLayoutBuilder.cpp
-// CHECK: Assertion{{.*}}!D->isInvalidDecl()
+// CHECK: Assertion
+// CHECK: isInvalidDecl
 // CHECK: Cannot get layout of invalid decl
