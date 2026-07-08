@@ -2,6 +2,8 @@
 
 declare { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float>)
 declare { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double>)
+declare { <3 x float>, <3 x float> } @llvm.sincos.v3f32(<3 x float>)
+declare void @use_sincos_struct({ <4 x float>, <4 x float> })
 
 ; v4f32 sincos -> _ZGVbN4v_sinf / _ZGVbN4v_cosf, both carrying !fpmath !0.
 define void @sincos_fpmath_v4f32(<4 x float> %x, ptr noalias %sin_out, ptr noalias %cos_out) {
@@ -45,6 +47,35 @@ define void @sincos_no_fpmath_v4f32(<4 x float> %x, ptr noalias %sin_out, ptr no
   %c = extractvalue { <4 x float>, <4 x float> } %r, 1
   store <4 x float> %s, ptr %sin_out, align 16
   store <4 x float> %c, ptr %cos_out, align 16
+  ret void
+}
+
+; A non-extractvalue user blocks the split, so llvm.sincos is left intact.
+define void @sincos_non_extractvalue_user_v4f32(<4 x float> %x, ptr noalias %sin_out) {
+; CHECK-LABEL: @sincos_non_extractvalue_user_v4f32(
+; CHECK:         call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> %x)
+; CHECK-NOT:     _ZGV
+; CHECK:         ret void
+;
+  %r = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> %x)
+  call void @use_sincos_struct({ <4 x float>, <4 x float> } %r)
+  %s = extractvalue { <4 x float>, <4 x float> } %r, 0
+  store <4 x float> %s, ptr %sin_out, align 16
+  ret void
+}
+
+; An odd vector width has no LIBMVEC sin/cos mapping, so llvm.sincos is left intact.
+define void @sincos_no_veclib_mapping_v3f32(<3 x float> %x, ptr noalias %sin_out, ptr noalias %cos_out) {
+; CHECK-LABEL: @sincos_no_veclib_mapping_v3f32(
+; CHECK:         call { <3 x float>, <3 x float> } @llvm.sincos.v3f32(<3 x float> %x)
+; CHECK-NOT:     _ZGV
+; CHECK:         ret void
+;
+  %r = call { <3 x float>, <3 x float> } @llvm.sincos.v3f32(<3 x float> %x)
+  %s = extractvalue { <3 x float>, <3 x float> } %r, 0
+  %c = extractvalue { <3 x float>, <3 x float> } %r, 1
+  store <3 x float> %s, ptr %sin_out, align 16
+  store <3 x float> %c, ptr %cos_out, align 16
   ret void
 }
 
