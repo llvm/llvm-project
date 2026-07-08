@@ -19,8 +19,15 @@ vdiv.vv v8, v8, v12
 # CHECK:      Code Region - memory
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      2
-# CHECK:      vle8.v	v8, (a0)
-# CHECK:      vluxei8.v	v8, (a0), v0
+
+# CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
+# CHECK-NEXT:  1      4     16.00   *                   vle8.v	v8, (a0)
+# CHECK-NEXT:  1      515   512.00  *                   vluxei8.v	v8, (a0), v0
+
+# CHECK:      Resource pressure by instruction:
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
+# CHECK-NEXT:  -      -      -      -      -     1.00   17.00   -     vle8.v	v8, (a0)
+# CHECK-NEXT:  -      -      -      -      -     1.00   513.00  -     vluxei8.v	v8, (a0), v0
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      3
