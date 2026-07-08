@@ -1268,8 +1268,12 @@ void SIFrameLowering::emitCSRSpillStores(
   StoreWWMRegisters(WWMCalleeSavedRegs);
   if (FuncInfo->isWholeWaveFunction()) {
     // If we have already saved some WWM CSR registers, then the EXEC is already
-    // -1 and we don't need to do anything else. Otherwise, set EXEC to -1 here.
-    if (!ScratchExecCopy || WWMCalleeSavedRegs.empty())
+    // -1 and we don't need to do anything else. Otherwise, save the original
+    // EXEC into the setup register and set EXEC to -1 here.
+    if (!ScratchExecCopy)
+      buildScratchExecCopy(LiveUnits, MF, MBB, MBBI, DL, /*IsProlog*/ true,
+                           /*EnableInactiveLanes*/ false);
+    else if (WWMCalleeSavedRegs.empty())
       EnableAllLanes();
   } else if (ScratchExecCopy) {
     // FIXME: Split block and make terminator.

@@ -91,3 +91,12 @@ add_header_library(
     libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  mulsf3
+  HDRS
+    mulsf3.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+)

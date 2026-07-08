@@ -5467,7 +5467,7 @@ def municode : Joined<["-"], "municode">, Group<m_Group>;
 def mthreads : Joined<["-"], "mthreads">, Group<m_Group>;
 def marm64x : Joined<["-"], "marm64x">, Group<m_Group>,
   Visibility<[ClangOption, CLOption]>,
-  HelpText<"Link as a hybrid ARM64X image">;
+  HelpText<"Build as a hybrid ARM64X object/image">;
 def mguard_EQ : Joined<["-"], "mguard=">, Group<m_Group>,
   HelpText<"Enable or disable Control Flow Guard checks and guard tables emission">,
   Values<"none,cf,cf-nochecks">;
@@ -7174,8 +7174,6 @@ def mamx_int8 : Flag<["-"], "mamx-int8">, Group<m_x86_Features_Group>;
 def mno_amx_int8 : Flag<["-"], "mno-amx-int8">, Group<m_x86_Features_Group>;
 def mamx_fp8 : Flag<["-"], "mamx-fp8">, Group<m_x86_Features_Group>;
 def mno_amx_fp8 : Flag<["-"], "mno-amx-fp8">, Group<m_x86_Features_Group>;
-def mamx_tf32 : Flag<["-"], "mamx-tf32">, Group<m_x86_Features_Group>;
-def mno_amx_tf32 : Flag<["-"], "mno-amx-tf32">, Group<m_x86_Features_Group>;
 def mamx_tile : Flag<["-"], "mamx-tile">, Group<m_x86_Features_Group>;
 def mno_amx_tile : Flag<["-"], "mno-amx-tile">, Group<m_x86_Features_Group>;
 def mamx_movrs: Flag<["-"], "mamx-movrs">, Group<m_x86_Features_Group>;
