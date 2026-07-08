@@ -57,7 +57,7 @@ deserializeUnsafeBufferUsageAnalysisResult(
   auto Ret = std::make_unique<UnsafeBufferUsageAnalysisResult>();
 
   Ret->UnsafeBuffers = std::move(*UnsafeBuffers);
-  return Ret;
+  return std::move(Ret);
 }
 
 JSONFormat::AnalysisResultRegistry::Add<UnsafeBufferUsageAnalysisResult>
@@ -116,7 +116,7 @@ deserializeUnsafeBufferReachableAnalysisResult(
   auto Ret = std::make_unique<UnsafeBufferReachableAnalysisResult>();
 
   Ret->Reachables = std::move(*Reachables);
-  return Ret;
+  return std::move(Ret);
 }
 
 JSONFormat::AnalysisResultRegistry::Add<UnsafeBufferReachableAnalysisResult>

@@ -230,9 +230,6 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
                                VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
                                std::optional<SinkStoreInfo> SinkInfo = {}) {
   bool CheckReads = SinkInfo.has_value();
-  if (!MemLoc.AATags.Scope)
-    return false;
-
   for (VPBasicBlock *VPBB :
        VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB)) {
     for (VPRecipeBase &R : *VPBB) {
@@ -1108,8 +1105,14 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
                                DenseMap<VPValue *, VPValue *> &EndValues,
                                PredicatedScalarEvolution &PSE) {
   VPValue *Incoming;
-  if (!match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
-    return nullptr;
+  if (!match(Op,
+             m_CombineOr(m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))) {
+    VPValue *Mask;
+    if (!match(Op, m_ExtractLane(m_LastActiveLane(m_VPValue(Mask)),
+                                 m_VPValue(Incoming))) ||
+        Mask != vputils::findHeaderMask(Plan))
+      return nullptr;
+  }
 
   VPWidenInductionRecipe *WideIV = getOptimizableIVOf(Incoming, PSE);
   if (!WideIV)
@@ -1246,14 +1249,13 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
 /// an intrinsic ID.
 static std::optional<std::pair<bool, unsigned>>
 getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
+  if (Intrinsic::ID IID = vputils::getIntrinsicID(R))
+    return std::make_pair(true, IID);
   return TypeSwitch<const VPSingleDefRecipe *,
                     std::optional<std::pair<bool, unsigned>>>(R)
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
             VPReplicateRecipe>(
           [](auto *I) { return std::make_pair(false, I->getOpcode()); })
-      .Case([](const VPWidenIntrinsicRecipe *I) {
-        return std::make_pair(true, I->getVectorIntrinsicID());
-      })
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
           [](auto *I) {
             // For recipes that do not directly map to LLVM IR instructions,
@@ -1291,6 +1293,10 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
   auto FoldToIRValue = [&]() -> Value * {
     InstSimplifyFolder Folder(DL);
     if (OpcodeOrIID->first) {
+      // VPInstructions store the called intrinsic as last operand.
+      if (isa<VPInstruction>(R))
+        Ops.pop_back();
+
       auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(&R);
       return Folder.FoldIntrinsic(OpcodeOrIID->second, Ops, R.getScalarType(),
                                   RFlags ? RFlags->getFastMathFlagsOrNone()
@@ -1578,11 +1584,17 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
 
   const APInt *APC;
   if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_APInt(APC))) &&
-      APC->isPowerOf2())
+      APC->isPowerOf2()) {
+    auto *MulR = cast<VPRecipeWithIRFlags>(Def);
+    unsigned ShiftAmt = APC->exactLogBase2();
+    VPIRFlags::WrapFlagsTy NW(MulR->hasNoUnsignedWrap(),
+                              MulR->hasNoSignedWrap() &&
+                                  ShiftAmt != APC->getBitWidth() - 1);
     return Def->replaceAllUsesWith(Builder.createNaryOp(
         Instruction::Shl,
-        {A, Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
-        *cast<VPRecipeWithIRFlags>(Def), Def->getDebugLoc()));
+        {A, Plan->getConstantInt(APC->getBitWidth(), ShiftAmt)}, NW,
+        Def->getDebugLoc()));
+  }
 
   if (CanCreateNewRecipe && match(Def, m_UDiv(m_VPValue(A), m_APInt(APC))) &&
       APC->isPowerOf2())
@@ -1736,6 +1748,14 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
     return;
   }
 
+  // Replace uses of a BuildVector by users that only use its first lane with
+  // its first operand directly.
+  if (match(Def, m_BuildVector())) {
+    Def->replaceUsesWithIf(Def->getOperand(0), [Def](VPUser &U, unsigned) {
+      return U.usesFirstLaneOnly(Def);
+    });
+  }
+
   // Look through broadcast of single-scalar when used as select conditions; in
   // that case the scalar condition can be used directly.
   if (match(Def,
@@ -1858,7 +1878,50 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
   }
 }
 
+/// Removes the permutation pattern \p Perm from any elementwise operations
+/// in the plan, by constructing a new permutation via \p Build.
+/// e.g. binop(perm(x), perm(y)) -> perm(binop(x,y)).
+template <typename Match_t, typename Builder>
+static void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
+      if (!Def || !vputils::isElementwise(Def))
+        continue;
+
+      // At least one of the ops must be a permutation.
+      if (!any_of(Def->operands(), match_fn(Perm(m_VPValue()))))
+        continue;
+
+      // All operands must be permuted or a live in (splat).
+      if (!all_of(
+              Def->operands(),
+              match_fn(m_CombineOr(m_OneUse(Perm(m_VPValue())), m_LiveIn()))))
+        continue;
+
+      VPValue *X;
+      // Remove the inner permutations.
+      for (unsigned I = 0; I < Def->getNumOperands(); I++)
+        if (match(Def->getOperand(I), Perm(m_VPValue(X))))
+          Def->setOperand(I, X);
+
+      VPSingleDefRecipe *Res = Build(Def);
+      Res->insertAfter(Def);
+      Def->replaceUsesWithIf(
+          Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
+    }
+  }
+}
+
 void VPlanTransforms::simplifyReverses(VPlan &Plan) {
+  // Pull out reverses from any elementwise op.
+  // binop(reverse(x), reverse(y)) -> reverse(binop(x,y))
+  pullOutPermutations(
+      Plan, [](const auto &X) { return m_Reverse(X); },
+      [](auto *X) { return new VPInstruction(VPInstruction::Reverse, X); });
+
+  // reverse(reverse(x)) -> x
   VPValue *X;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry())))
@@ -1989,8 +2052,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
               return false;
             // Non-constant live-ins require broadcasts, while constants do not
             // need explicit broadcasts.
-            auto *IRV = dyn_cast<VPIRValue>(Op);
-            bool LiveInNeedsBroadcast = IRV && !isa<Constant>(IRV->getValue());
+            bool LiveInNeedsBroadcast =
+                isa<VPIRValue>(Op) && !isa<VPConstant>(Op);
             auto *OpR = dyn_cast<VPReplicateRecipe>(Op);
             return LiveInNeedsBroadcast || (OpR && OpR->isSingleScalar());
           }))
@@ -2470,10 +2533,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
                              C->second == Instruction::ExtractValue)))
       return false;
 
-    // During CSE, we can only handle recipes that don't read from memory: if
-    // they read from memory, there could be an intervening write to memory
-    // before the next instance is CSE'd, leading to an incorrect result.
-    return !Def->mayReadFromMemory();
+    // During CSE, we can only handle non-memory recipes, as memory can alias.
+    return !Def->mayReadOrWriteMemory();
   }
 
   /// Hash the underlying data of \p Def.
@@ -3195,12 +3256,35 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
     }
   }
 
+  // Pull out left splices from any elementwise op.
+  // binop(splice.left(poison, x, evl), live-in)
+  // -> splice.left(poison, binop(x,live-in), evl)
+  pullOutPermutations(
+      Plan,
+      [&EVL](const auto &X) {
+        return m_Intrinsic<Intrinsic::vector_splice_left>(m_Poison(), X,
+                                                          m_Specific(EVL));
+      },
+      [&Plan, &EVL](auto *X) {
+        return new VPWidenIntrinsicRecipe(
+            Intrinsic::vector_splice_left,
+            {Plan.getPoison(X->getScalarType()), X, EVL}, X->getScalarType(),
+            {}, {}, X->getDebugLoc());
+      });
+
   // Fold the following splice patterns:
   //   splice.right(splice.left(poison, x, evl), poison, evl) -> x
   //   vector.reverse(splice.left(poison, x, evl))  -> vp.reverse(x, true, evl)
   //   splice.right(vector.reverse(x), poison, evl) -> vp.reverse(x, true, evl)
   for (VPUser *U : collectUsersRecursively(EVL)) {
     auto *R = cast<VPRecipeBase>(U);
+    // Remove potentially dead left splices from the transform above.
+    if (match(U, m_Intrinsic<Intrinsic::vector_splice_left>()) &&
+        R->getVPSingleValue()->getNumUsers() == 0) {
+      OldRecipes.push_back(R);
+      continue;
+    }
+
     VPValue *X;
     if (match(U, m_Intrinsic<Intrinsic::vector_splice_right>(
                      m_Intrinsic<Intrinsic::vector_splice_left>(
@@ -3451,8 +3535,10 @@ void VPlanTransforms::addExplicitVectorLength(
 
   // Replace all uses of the canonical IV with VPCurrentIterationPHIRecipe
   // except for the canonical IV increment.
-  CanonicalIV->replaceAllUsesWith(CurrentIteration);
-  CanonicalIVIncrement->setOperand(0, CanonicalIV);
+  CanonicalIV->replaceUsesWithIf(CurrentIteration,
+                                 [CanonicalIVIncrement](VPUser &U, unsigned) {
+                                   return &U != CanonicalIVIncrement;
+                                 });
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
 }
@@ -5100,8 +5186,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 
   auto *VectorPreheader = Plan.getVectorPreheader();
   for (VPValue *VPV : VPValues) {
-    if (vputils::onlyScalarValuesUsed(VPV) ||
-        (isa<VPIRValue>(VPV) && isa<Constant>(VPV->getLiveInIRValue())))
+    if (vputils::onlyScalarValuesUsed(VPV) || isa<VPConstant>(VPV))
       continue;
 
     // Add explicit broadcast at the insert point that dominates all users.
@@ -6545,6 +6630,9 @@ struct VPPartialReductionChain {
   /// is `1 - AccumulatorOpIdx`.
   unsigned AccumulatorOpIdx;
   unsigned ScaleFactor;
+  /// Optional blend to represent predication for the block that updates the
+  /// reduction.
+  VPBlendRecipe *Blend = nullptr;
 };
 
 static VPSingleDefRecipe *
@@ -6732,14 +6820,28 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
     ExtendedOp = NegRecipe;
   }
 
-  // Check if WidenRecipe is the final result of the reduction. If so look
-  // through selects for predicated reductions.
+  // Check if WidenRecipe is the final result of the reduction. If so, look
+  // through the Select recipe introduced by tail-folding, otherwise look
+  // through any Blend recipe introduced by predication for the block.
+  VPValue *ExitSearch =
+      Chain.Blend ? cast<VPValue>(Chain.Blend) : cast<VPValue>(WidenRecipe);
+
   VPValue *Cond = nullptr;
   VPValue *ExitValue = cast_or_null<VPInstruction>(
-      findUserOf(WidenRecipe, m_Select(m_VPValue(Cond), m_Specific(WidenRecipe),
-                                       m_Specific(RdxPhi))));
+      findUserOf(ExitSearch, m_Select(m_VPValue(Cond), m_Specific(ExitSearch),
+                                      m_Specific(RdxPhi))));
+
+  if (Chain.Blend) {
+    VPValue *BlendCond = Chain.Blend->getMask(0);
+    Cond = ExitValue ? VPBuilder(WidenRecipe)
+                           .createLogicalAnd(Cond, BlendCond,
+                                             WidenRecipe->getDebugLoc())
+                     : BlendCond;
+  }
+
   bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
-                       RdxPhi->getBackedgeValue() == ExitValue;
+                       RdxPhi->getBackedgeValue() == ExitValue ||
+                       RdxPhi->getBackedgeValue() == Chain.Blend;
   assert((!ExitValue || IsLastInChain) &&
          "if we found ExitValue, it must match RdxPhi's backedge value");
 
@@ -6754,8 +6856,10 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
       RdxUnordered{/*VFScaleFactor=*/Chain.ScaleFactor});
   PartialRed->insertBefore(WidenRecipe);
 
-  if (Cond)
+  if (ExitValue)
     ExitValue->replaceAllUsesWith(PartialRed);
+  if (Chain.Blend)
+    Chain.Blend->replaceAllUsesWith(PartialRed);
   WidenRecipe->replaceAllUsesWith(PartialRed);
 
   // For cost-model purposes, fold this into a VPExpression.
@@ -6975,6 +7079,14 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
   // Work backwards from the ExitValue examining each reduction operation.
   VPValue *CurrentValue = ExitValue;
   while (CurrentValue != RedPhiR) {
+    VPBlendRecipe *Blend = dyn_cast<VPBlendRecipe>(CurrentValue);
+    if (Blend) {
+      assert(!Blend->isNormalized() && "Expect Blend not to be normalized.");
+      CurrentValue = Blend->getIncomingValue(0);
+      if (Blend->getNumIncomingValues() != 2 || !CurrentValue->hasOneUse())
+        return std::nullopt;
+    }
+
     auto *UpdateR = dyn_cast<VPWidenRecipe>(CurrentValue);
     if (!UpdateR || !Instruction::isBinaryOp(UpdateR->getOpcode()))
       return std::nullopt;
@@ -6993,6 +7105,12 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
       std::swap(Op, PrevValue);
     }
 
+    // Look for VPBlend(reduce(PrevValue, Op), PrevValue), where
+    // reduce is equal to CurrentValue. This can be lowered as
+    // a conditional reduction by hoisting the select to the inputs.
+    if (Blend && Blend->getIncomingValue(1) != PrevValue)
+      return std::nullopt;
+
     Type *ExtSrcType = ExtendedOp->ExtendA.SrcType;
     TypeSize ExtSrcSize = ExtSrcType->getPrimitiveSizeInBits();
     if (!PHISize.hasKnownScalarFactor(ExtSrcSize))
@@ -7001,7 +7119,8 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
     VPPartialReductionChain Link(
         {UpdateR, *ExtendedOp, RK,
          PrevValue == UpdateR->getOperand(0) ? 0U : 1U,
-         static_cast<unsigned>(PHISize.getKnownScalarFactor(ExtSrcSize))});
+         static_cast<unsigned>(PHISize.getKnownScalarFactor(ExtSrcSize)),
+         Blend});
     Chain.push_back(Link);
     CurrentValue = PrevValue;
   }
@@ -7034,13 +7153,16 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   if (ChainsByPhi.empty())
     return;
 
-  // Build set of partial reduction operations for extend user validation and
-  // a map of reduction bin ops to their scale factors for scale validation.
+  // Build set of partial reduction operations and blends for user validation
+  // and a map of reduction bin ops to their scale factors for scale validation.
   SmallPtrSet<VPRecipeBase *, 4> PartialReductionOps;
+  SmallPtrSet<VPBlendRecipe *, 4> PartialReductionBlends;
   DenseMap<VPSingleDefRecipe *, unsigned> ScaledReductionMap;
   for (const auto &[_, Chains] : ChainsByPhi)
     for (const VPPartialReductionChain &Chain : Chains) {
       PartialReductionOps.insert(Chain.ExtendedOp.ExtendsUser);
+      if (Chain.Blend)
+        PartialReductionBlends.insert(Chain.Blend);
       ScaledReductionMap[Chain.ReductionBinOp] = Chain.ScaleFactor;
     }
 
@@ -7093,6 +7215,10 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
         if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(U))
           return PhiR == RedPhiR;
         auto *R = cast<VPSingleDefRecipe>(U);
+
+        if (auto *Blend = dyn_cast<VPBlendRecipe>(R))
+          return Blend == Chain.Blend || PartialReductionBlends.contains(Blend);
+
         return Chain.ScaleFactor == ScaledReductionMap.lookup_or(R, 0) ||
                match(R, m_ComputeReductionResult(
                             m_Specific(Chain.ReductionBinOp))) ||

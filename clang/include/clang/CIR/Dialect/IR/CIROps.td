@@ -4645,13 +4645,19 @@ def CIR_CopyOp : CIR_Op<"copy",[
   let arguments = (ins
       Arg<CIR_PointerType, "", [MemWrite]>:$dst,
       Arg<CIR_PointerType, "", [MemRead]>:$src,
+      OptionalAttr<I64Attr>:$dst_alignment,
+      OptionalAttr<I64Attr>:$src_alignment,
       UnitAttr:$is_volatile,
       UnitAttr:$skip_tail_padding
   );
 
-  let assemblyFormat = [{$src `to` $dst (`volatile` $is_volatile^)?
-                        (`skip_tail_padding` $skip_tail_padding^)?
-                        attr-dict `:` qualified(type($dst))
+  let assemblyFormat = [{
+    $src (`align` `(` $src_alignment^ `)`)?
+    `to`
+    $dst (`align` `(` $dst_alignment^ `)`)?
+    (`volatile` $is_volatile^)?
+    (`skip_tail_padding` $skip_tail_padding^)?
+    attr-dict `:` qualified(type($dst))
   }];
   let hasVerifier = 1;
 

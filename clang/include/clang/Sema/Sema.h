@@ -11529,7 +11529,7 @@ public:
                                   ParsedType ObjectType, bool EnteringContext,
                                   TemplateTy &Template,
                                   bool &MemberOfUnknownSpecialization,
-                                  bool Disambiguation = false);
+                                  bool AllowTypoCorrection = true);
 
   /// Try to resolve an undeclared template name as a type template.
   ///
@@ -12017,6 +12017,9 @@ public:
   /// redeclared member.
   bool CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous);
   void CompleteMemberSpecialization(NamedDecl *Member, LookupResult &Previous);
+
+  bool CheckDependentFriend(SourceLocation Loc, NestedNameSpecifier NNS,
+                            TemplateParameterList *FPL);
 
   // Explicit instantiation of a class template specialization
   DeclResult ActOnExplicitInstantiation(
@@ -12750,6 +12753,15 @@ public:
           [](bool /*OnlyInitializeNonUserDefinedConversions*/) {
             return false;
           });
+
+  /// Finish template argument deduction for a template declaration, checking
+  /// the deduced template arguments for completeness and forming the deduced
+  /// template argument list.
+  TemplateDeductionResult FinishTemplateArgumentDeduction(
+      TemplateDecl *TD, TemplateParameterList *TPL,
+      ArrayRef<TemplateArgument> PatternArgs, ArrayRef<TemplateArgument> Args,
+      SmallVectorImpl<DeducedTemplateArgument> &Deduced,
+      sema::TemplateDeductionInfo &Info, bool CopyDeducedArgs);
 
   /// Perform template argument deduction from a function call
   /// (C++ [temp.deduct.call]).
@@ -14260,11 +14272,8 @@ public:
                           LateInstantiatedAttrVec *LateAttrs = nullptr,
                           LocalInstantiationScope *OuterMostScope = nullptr);
 
-  /// In the MS ABI, we need to instantiate default arguments of dllexported
-  /// default constructors along with the constructor definition. This allows IR
-  /// gen to emit a constructor closure which calls the default constructor with
-  /// its default arguments.
-  void InstantiateDefaultCtorDefaultArgs(CXXConstructorDecl *Ctor);
+  bool BuildCtorClosureDefaultArgs(SourceLocation Loc, CXXConstructorDecl *Ctor,
+                                   bool IsCopy = false);
 
   bool InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
                                   ParmVarDecl *Param);

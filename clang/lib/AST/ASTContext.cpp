@@ -989,6 +989,8 @@ void ASTContext::cleanup() {
     A->second->~AttrVec();
   DeclAttrs.clear();
 
+  CtorClosureDefaultArgs.clear();
+
   for (const auto &Value : ModuleInitializers)
     Value.second->~PerModuleInitializers();
   ModuleInitializers.clear();
@@ -1545,6 +1547,17 @@ void ASTContext::eraseDeclAttrs(const Decl *D) {
     Pos->second->~AttrVec();
     DeclAttrs.erase(Pos);
   }
+}
+
+ArrayRef<CXXDefaultArgExpr *>
+ASTContext::getCtorClosureDefaultArgs(const CXXConstructorDecl *CD) {
+  return CtorClosureDefaultArgs.lookup(CD);
+}
+
+void ASTContext::setCtorClosureDefaultArgs(const CXXConstructorDecl *CD,
+                                           ArrayRef<CXXDefaultArgExpr *> Args) {
+  assert(!CtorClosureDefaultArgs.contains(CD));
+  CtorClosureDefaultArgs[CD] = Args;
 }
 
 ArrayRef<ExplicitInstantiationDecl *>
@@ -7946,6 +7959,12 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
   if (const auto *NAX = dyn_cast<NamespaceAliasDecl>(X)) {
     const auto *NAY = cast<NamespaceAliasDecl>(Y);
     return NAX->getNamespace()->Equals(NAY->getNamespace());
+  }
+
+  if (const auto *UX = dyn_cast<UsingEnumDecl>(X)) {
+    const auto *UY = cast<UsingEnumDecl>(Y);
+    return isSameQualifier(UX->getQualifier(), UY->getQualifier()) &&
+           declaresSameEntity(UX->getEnumDecl(), UY->getEnumDecl());
   }
 
   return false;
