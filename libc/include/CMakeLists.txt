@@ -539,6 +539,7 @@ add_header_macro(
   elf.h
   DEPENDS
     .llvm-libc-macros.elf_macros
+    .llvm-libc-macros.sys_auxv_macros
     .llvm-libc-types.Elf32_Addr
     .llvm-libc-types.Elf32_Chdr
     .llvm-libc-types.Elf32_Dyn
@@ -895,6 +896,18 @@ add_header_macro(
     .llvm-libc-types.siginfo_t
 )
 
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/net)
+
+add_header_macro(
+  net_if
+  ../libc/include/net/if.yaml
+  net/if.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.net_if_macros
+    .llvm-libc-types.struct_ifreq
+)
+
 # TODO: This should be conditional on POSIX networking being included.
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
 
@@ -917,6 +930,7 @@ add_header_macro(
     .llvm-libc-types.struct_ip_mreqn
     .llvm-libc-types.struct_ip_msfilter
     .llvm-libc-types.struct_ip_opts
+    .llvm-libc-types.struct_ipv6_mreq
     .llvm_libc_common_h
     .sys_socket
 )

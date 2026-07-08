@@ -233,6 +233,30 @@ def predsumu_u16x4_u64 : RISCVBuiltin<"uint64_t(_Vector<4, unsigned short>, uint
 def predsum_i32x2_i64 : RISCVBuiltin<"int64_t(_Vector<2, int>, int64_t)">;
 def predsumu_u32x2_u64 : RISCVBuiltin<"uint64_t(_Vector<2, unsigned int>, uint64_t)">;
 
+// Packed Merge (32-bit)
+def pmerge_u8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, unsigned char>, _Vector<4, unsigned char>, _Vector<4, unsigned char>)">;
+def pmerge_i8x4 : RISCVBuiltin<"_Vector<4, signed char>(_Vector<4, signed char>, _Vector<4, signed char>, _Vector<4, unsigned char>)">;
+def pmerge_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, unsigned short>, _Vector<2, unsigned short>, _Vector<2, unsigned short>)">;
+def pmerge_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>, _Vector<2, unsigned short>)">;
+
+// Packed Merge (64-bit)
+def pmerge_u8x8 : RISCVBuiltin<"_Vector<8, unsigned char>(_Vector<8, unsigned char>, _Vector<8, unsigned char>, _Vector<8, unsigned char>)">;
+def pmerge_i8x8 : RISCVBuiltin<"_Vector<8, signed char>(_Vector<8, signed char>, _Vector<8, signed char>, _Vector<8, unsigned char>)">;
+def pmerge_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, unsigned short>, _Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
+def pmerge_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4, short>, _Vector<4, unsigned short>)">;
+def pmerge_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned int>, _Vector<2, unsigned int>, _Vector<2, unsigned int>)">;
+def pmerge_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>, _Vector<2, unsigned int>)">;
+
+// Packed Absolute Difference Sum (32-bit)
+def pabdsumu_u8x4_u32 : RISCVBuiltin<"unsigned int(_Vector<4, unsigned char>, _Vector<4, unsigned char>)">;
+def pabdsumau_u8x4_u32 : RISCVBuiltin<"unsigned int(unsigned int, _Vector<4, unsigned char>, _Vector<4, unsigned char>)">;
+
+// Packed Absolute Difference Sum (64-bit)
+def pabdsumu_u8x8_u32 : RISCVBuiltin<"unsigned int(_Vector<8, unsigned char>, _Vector<8, unsigned char>)">;
+def pabdsumu_u8x8_u64 : RISCVBuiltin<"uint64_t(_Vector<8, unsigned char>, _Vector<8, unsigned char>)">;
+def pabdsumau_u8x8_u32 : RISCVBuiltin<"unsigned int(unsigned int, _Vector<8, unsigned char>, _Vector<8, unsigned char>)">;
+def pabdsumau_u8x8_u64 : RISCVBuiltin<"uint64_t(uint64_t, _Vector<8, unsigned char>, _Vector<8, unsigned char>)">;
+
 } // Features = "experimental-p"
 
 //===----------------------------------------------------------------------===//

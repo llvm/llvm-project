@@ -113,6 +113,7 @@ static bool CC_SkipOdd(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   return false;
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "HexagonGenCallingConv.inc"
 
 unsigned HexagonTargetLowering::getVectorTypeBreakdownForCallingConv(
@@ -1067,8 +1068,7 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   if (OpTy == MVT::v2i16 || OpTy == MVT::v4i8) {
     MVT ElemTy = OpTy.getVectorElementType();
     assert(ElemTy.isScalarInteger());
-    MVT WideTy = MVT::getVectorVT(MVT::getIntegerVT(2*ElemTy.getSizeInBits()),
-                                  OpTy.getVectorNumElements());
+    MVT WideTy = OpTy.widenIntegerElementType();
     return DAG.getSetCC(dl, ResTy,
                         DAG.getSExtOrTrunc(LHS, SDLoc(LHS), WideTy),
                         DAG.getSExtOrTrunc(RHS, SDLoc(RHS), WideTy), CC);
@@ -1125,8 +1125,7 @@ HexagonTargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (OpTy == MVT::v2i16 || OpTy == MVT::v4i8) {
     MVT ElemTy = OpTy.getVectorElementType();
     assert(ElemTy.isScalarInteger());
-    MVT WideTy = MVT::getVectorVT(MVT::getIntegerVT(2*ElemTy.getSizeInBits()),
-                                  OpTy.getVectorNumElements());
+    MVT WideTy = OpTy.widenIntegerElementType();
     // Generate (trunc (select (_, sext, sext))).
     return DAG.getSExtOrTrunc(
               DAG.getSelect(dl, WideTy, PredOp,
@@ -2856,16 +2855,15 @@ HexagonTargetLowering::getCombine(SDValue Hi, SDValue Lo, const SDLoc &dl,
 
   if (!ElemTy.isVector()) {
     assert(ElemTy.isScalarInteger());
-    MVT PairTy = MVT::getIntegerVT(2 * ElemTy.getSizeInBits());
+    MVT PairTy = ElemTy.widenIntegerElementType();
     SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, PairTy, Lo, Hi);
     return DAG.getBitcast(ResTy, Pair);
   }
 
   unsigned Width = ElemTy.getSizeInBits();
   MVT IntTy = MVT::getIntegerVT(Width);
-  MVT PairTy = MVT::getIntegerVT(2 * Width);
   SDValue Pair =
-      DAG.getNode(ISD::BUILD_PAIR, dl, PairTy,
+      DAG.getNode(ISD::BUILD_PAIR, dl, IntTy.widenIntegerElementType(),
                   {DAG.getBitcast(IntTy, Lo), DAG.getBitcast(IntTy, Hi)});
   return DAG.getBitcast(ResTy, Pair);
 }

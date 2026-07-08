@@ -1958,14 +1958,9 @@ DeclResult Sema::CheckClassTemplate(
   if (SS.isNotEmpty() && !SS.isInvalid()) {
     SemanticContext = computeDeclContext(SS, true);
     if (!SemanticContext) {
-      // FIXME: Horrible, horrible hack! We can't currently represent this
-      // in the AST, and historically we have just ignored such friend
-      // class templates, so don't complain here.
-      Diag(NameLoc, TUK == TagUseKind::Friend
-                        ? diag::warn_template_qualified_friend_ignored
-                        : diag::err_template_qualified_declarator_no_match)
+      Diag(NameLoc, diag::err_template_qualified_declarator_no_match)
           << SS.getScopeRep() << SS.getRange();
-      return TUK != TagUseKind::Friend;
+      return true;
     }
 
     if (RequireCompleteDeclContext(SS, SemanticContext))
@@ -1980,10 +1975,11 @@ DeclResult Sema::CheckClassTemplate(
         Invalid = true;
     }
 
-    if (TUK != TagUseKind::Friend && TUK != TagUseKind::Reference)
-      diagnoseQualifiedDeclaration(SS, SemanticContext, Name, NameLoc,
-                                   /*TemplateId-*/ nullptr,
-                                   /*IsMemberSpecialization*/ false);
+    if (TUK != TagUseKind::Friend && TUK != TagUseKind::Reference &&
+        diagnoseQualifiedDeclaration(SS, SemanticContext, Name, NameLoc,
+                                     /*TemplateId=*/nullptr,
+                                     IsMemberSpecialization))
+      return true;
 
     LookupQualifiedName(Previous, SemanticContext);
   } else {
@@ -11406,6 +11402,7 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
     LookupQualifiedName(Result, Ctx, SS);
   else
     LookupName(Result, CurScope);
+
   unsigned DiagID = 0;
   Decl *Referenced = nullptr;
   switch (Result.getResultKind()) {

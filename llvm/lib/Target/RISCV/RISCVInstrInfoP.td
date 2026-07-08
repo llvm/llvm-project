@@ -1765,6 +1765,14 @@ class PatRedSumPair<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
     : Pat<(i32 (OpNode (VecVT GPRPair:$rs1), (i32 GPR:$rs2))),
           (Inst GPRPair:$rs1, GPR:$rs2)>;
 
+// Absolute difference sum, optionally accumulating into rd.
+class PatAbdSum<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
+    : Pat<(XLenVT (OpNode (VecVT GPR:$rs1), (VecVT GPR:$rs2))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
+class PatAbdSumAcc<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
+    : Pat<(XLenVT (OpNode (XLenVT GPR:$rd), (VecVT GPR:$rs1), (VecVT GPR:$rs2))),
+          (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
 class PatGprPairImm<SDPatternOperator OpNode, RVInst Inst,
                     SDPatternOperator ImmType, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), ImmType:$imm)),
@@ -2038,6 +2046,10 @@ let Predicates = [HasStdExtP] in {
   def : PatGprGpr<abds, PABD_H, XLenVecI16VT>;
   def : PatGprGpr<abdu, PABDU_H, XLenVecI16VT>;
 
+  // 8-bit absolute difference sum patterns
+  def : PatAbdSum<int_riscv_pabdsumu, PABDSUMU_B, XLenVecI8VT>;
+  def : PatAbdSumAcc<int_riscv_pabdsumau, PABDSUMAU_B, XLenVecI8VT>;
+
   // 16-bit multiply high patterns
   def : PatGprGpr<mulhs, PMULH_H, XLenVecI16VT>;
   def : PatGprGpr<mulhu, PMULHU_H, XLenVecI16VT>;
@@ -2222,6 +2234,11 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v4i8 (bitreverse GPR:$rs)), (BREV8 GPR:$rs)>;
   def : Pat<(v2i16 (bitreverse GPR:$rs)),
             (PPAIROE_H (REV_RV32 GPR:$rs), (REV_RV32 GPR:$rs))>;
+
+  // Element reverse (prev): reverse the byte/halfword order of the register.
+  def : Pat<(v4i8 (vector_reverse (v4i8 GPR:$rs))), (REV8_RV32 GPR:$rs)>;
+  def : Pat<(v2i16 (vector_reverse (v2i16 GPR:$rs))),
+            (PPAIROE_H GPR:$rs, GPR:$rs)>;
 
   // Load/Store patterns
   def : StPat<store, SW, GPR, v4i8>;
@@ -2670,6 +2687,12 @@ let append Predicates = [IsRV64] in {
             (REV16_RV64 (REV_RV64 GPR:$rs))>;
   def : Pat<(v2i32 (bitreverse GPR:$rs)),
             (PPAIROE_W (REV_RV64 GPR:$rs), (REV_RV64 GPR:$rs))>;
+
+  // Element reverse (prev): reverse the byte/halfword/word order of the register.
+  def : Pat<(v8i8 (vector_reverse (v8i8 GPR:$rs))), (REV8_RV64 GPR:$rs)>;
+  def : Pat<(v4i16 (vector_reverse (v4i16 GPR:$rs))), (REV16_RV64 GPR:$rs)>;
+  def : Pat<(v2i32 (vector_reverse (v2i32 GPR:$rs))),
+            (PPAIROE_W GPR:$rs, GPR:$rs)>;
 
   // Load/Store patterns
   def : StPat<store, SD, GPR, v8i8>;

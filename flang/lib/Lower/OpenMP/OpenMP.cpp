@@ -38,7 +38,6 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "flang/Parser/characters.h"
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -50,8 +49,8 @@
 #include "flang/Utils/OpenMP.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Support/StateStack.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -5098,7 +5097,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
   collectEnclosingConstructTraits(builder.getInsertionBlock()->getParentOp(),
                                   constructTraits);
-  FlangOMPContext ompCtx(builder.getModule(), constructTraits);
+  semantics::omp::OmpVariantMatchContext ompCtx =
+      makeVariantMatchContext(builder.getModule(), constructTraits);
 
   llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
   // A null directive specification represents either the implicit `nothing`
@@ -5295,7 +5295,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
   auto selectBestCandidate =
       [](llvm::ArrayRef<unsigned> candidateIndices,
          llvm::ArrayRef<MetadirectiveCandidate> candidates,
-         const FlangOMPContext &ompCtx) -> std::optional<unsigned> {
+         const semantics::omp::OmpVariantMatchContext &ompCtx)
+      -> std::optional<unsigned> {
     if (candidateIndices.empty())
       return std::nullopt;
     if (candidateIndices.size() == 1)

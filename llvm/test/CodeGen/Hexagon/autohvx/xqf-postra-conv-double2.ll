@@ -4,7 +4,7 @@
 ; NOTE: XFAIL until Hexagon HVX IEEE→QFloat isel translation is upstreamed; remove XFAIL when that lands.
 ; RUN: llc -O2 -march=hexagon -mcpu=hexagonv81 -enable-xqf-gen=true \
 ; RUN: -hexagon-qfloat-mode=ieee -mattr=+hvxv81,+hvx-length128B \
-; RUN: -debug-only=handle-qfp 2>&1 < %s -o /dev/null | FileCheck %s
+; RUN: -enable-postra-xqf-check -debug-only=handle-qfp 2>&1 < %s -o /dev/null | FileCheck %s
 
 ; CHECK: Finding uses of:   renamable $v1 = PS_vloadrv_ai %stack.0
 ; CHECK: Collecting convert instruction with type Hi Op :  renamable $v{{[0-9]+}} = V6_vconv_hf_qf32 killed renamable $w0
