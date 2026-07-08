@@ -2523,7 +2523,6 @@ let append Predicates = [IsRV32] in {
             (EXTRACT_SUBREG GPRPair:$vec, sub_gpr_even)>;
   def : Pat<(i32 (extractelt (v2i32 GPRPair:$vec), (i32 1))),
             (EXTRACT_SUBREG GPRPair:$vec, sub_gpr_odd)>;
-
 } // append Predicates = [IsRV32]
 
 let append Predicates = [IsRV64] in {
@@ -2755,5 +2754,4 @@ let append Predicates = [IsRV64] in {
   def : Pat<(v4i16 (sext_inreg GPR:$rs1, v4i8)), (PSEXT_H_B GPR:$rs1)>;
   def : Pat<(v2i32 (sext_inreg GPR:$rs1, v2i16)), (PSEXT_W_H GPR:$rs1)>;
 } // append Predicates = [IsRV64]
-
 } // Predicates = [HasStdExtP]
