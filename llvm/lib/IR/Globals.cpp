@@ -93,6 +93,13 @@ void GlobalValue::assignGUID() {
                                     Type::getInt64Ty(getContext()), G))}));
 }
 
+void GlobalValue::reassignGUID() {
+  if (!getGUIDMetadata())
+    return;
+  eraseMetadata(LLVMContext::MD_unique_id);
+  assignGUID();
+}
+
 GlobalValue::GUID GlobalValue::getGUID() const {
   auto MaybeGUID = getGUIDIfAssigned();
   assert(MaybeGUID.has_value() &&
@@ -168,11 +175,13 @@ GlobalObject::~GlobalObject() {
   setComdat(nullptr);
 }
 
-bool GlobalValue::isInterposable() const {
+bool GlobalValue::isInterposable(bool CheckNoIPA) const {
+  if (CheckNoIPA && isNoipaFnDef())
+    return true;
   if (isInterposableLinkage(getLinkage()))
     return true;
-  return getParent() && getParent()->getSemanticInterposition() &&
-         !isDSOLocal();
+  return !isDSOLocal() && getParent() &&
+         getParent()->getSemanticInterposition();
 }
 
 bool GlobalValue::canBenefitFromLocalAlias() const {
@@ -387,6 +396,13 @@ bool GlobalValue::isNobuiltinFnDef() const {
   if (!F || F->empty())
     return false;
   return F->hasFnAttribute(Attribute::NoBuiltin);
+}
+
+bool GlobalValue::isNoipaFnDef() const {
+  const Function *F = dyn_cast<Function>(this);
+  if (!F || F->isDeclaration())
+    return false;
+  return F->hasFnAttribute(Attribute::NoIPA);
 }
 
 bool GlobalValue::isDeclaration() const {

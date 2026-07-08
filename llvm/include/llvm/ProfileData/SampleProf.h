@@ -14,6 +14,7 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROF_H
 #define LLVM_PROFILEDATA_SAMPLEPROF_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -315,13 +316,22 @@ struct LineLocation {
   uint32_t Discriminator;
 };
 
-struct LineLocationHash {
-  uint64_t operator()(const LineLocation &Loc) const {
-    return Loc.getHashCode();
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
+
+} // end namespace sampleprof
+
+template <> struct DenseMapInfo<sampleprof::LineLocation> {
+  static unsigned getHashValue(const sampleprof::LineLocation &Val) {
+    return DenseMapInfo<uint64_t>::getHashValue(Val.getHashCode());
+  }
+
+  static bool isEqual(const sampleprof::LineLocation &LHS,
+                      const sampleprof::LineLocation &RHS) {
+    return LHS == RHS;
   }
 };
 
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
+namespace sampleprof {
 
 /// Key represents type of a C++ polymorphic class type by its vtable and value
 /// represents its counter.
@@ -331,7 +341,7 @@ using TypeCountMap = std::map<FunctionId, uint64_t>;
 
 /// Write \p Map to the output stream. Keys are linearized using \p NameTable
 /// and written as ULEB128. Values are written as ULEB128 as well.
-std::error_code
+LLVM_ABI std::error_code
 serializeTypeMap(const TypeCountMap &Map,
                  const MapVector<FunctionId, uint32_t> &NameTable,
                  raw_ostream &OS);
@@ -360,7 +370,7 @@ public:
   };
 
   using SortedCallTargetSet = std::set<CallTarget, CallTargetComparator>;
-  using CallTargetMap = std::unordered_map<FunctionId, uint64_t>;
+  using CallTargetMap = DenseMap<FunctionId, uint64_t>;
   SampleRecord() = default;
 
   /// Increment the number of samples for this record by \p S.
@@ -463,9 +473,7 @@ public:
     return NumSamples == Other.NumSamples && CallTargets == Other.CallTargets;
   }
 
-  bool operator!=(const SampleRecord &Other) const {
-    return !(*this == Other);
-  }
+  bool operator!=(const SampleRecord &Other) const { return !(*this == Other); }
 
 private:
   uint64_t NumSamples = 0;
@@ -563,8 +571,8 @@ public:
 
   SampleContext(StringRef Name)
       : Func(Name), State(UnknownContext), Attributes(ContextNone) {
-        assert(!Name.empty() && "Name is empty");
-      }
+    assert(!Name.empty() && "Name is empty");
+  }
 
   SampleContext(FunctionId Func)
       : Func(Func), State(UnknownContext), Attributes(ContextNone) {}
@@ -619,8 +627,7 @@ public:
 
   // Decode context string for a frame to get function name and location.
   // `ContextStr` is in the form of `FuncName:StartLine.Discriminator`.
-  static void decodeContextString(StringRef ContextStr,
-                                  FunctionId &Func,
+  static void decodeContextString(StringRef ContextStr, FunctionId &Func,
                                   LineLocation &LineLoc) {
     // Get function name
     auto EntrySplit = ContextStr.split(':');
@@ -772,8 +779,7 @@ using BodySampleMap = std::map<LineLocation, SampleRecord>;
 using FunctionSamplesMap = std::map<FunctionId, FunctionSamples>;
 using CallsiteSampleMap = std::map<LineLocation, FunctionSamplesMap>;
 using CallsiteTypeMap = std::map<LineLocation, TypeCountMap>;
-using LocToLocMap =
-    std::unordered_map<LineLocation, LineLocation, LineLocationHash>;
+using LocToLocMap = DenseMap<LineLocation, LineLocation>;
 
 /// Representation of the samples collected for a function.
 ///
@@ -822,8 +828,7 @@ public:
 
   sampleprof_error addCalledTargetSamples(uint32_t LineOffset,
                                           uint32_t Discriminator,
-                                          FunctionId Func,
-                                          uint64_t Num,
+                                          FunctionId Func, uint64_t Num,
                                           uint64_t Weight = 1) {
     return BodySamples[LineLocation(LineOffset, Discriminator)].addCalledTarget(
         Func, Num, Weight);
@@ -853,9 +858,7 @@ public:
 
   // Remove all call site samples for inlinees. This is needed when flattening
   // a nested profile.
-  void removeAllCallsiteSamples() {
-    CallsiteSamples.clear();
-  }
+  void removeAllCallsiteSamples() { CallsiteSamples.clear(); }
 
   // Accumulate all call target samples to update the body samples.
   void updateCallsiteSamples() {
@@ -979,11 +982,11 @@ public:
   /// \p Loc with the maximum total sample count. If \p Remapper or \p
   /// FuncNameToProfNameMap is not nullptr, use them to find FunctionSamples
   /// with equivalent name as \p CalleeName.
-  LLVM_ABI const FunctionSamples *findFunctionSamplesAt(
-      const LineLocation &Loc, StringRef CalleeName,
-      SampleProfileReaderItaniumRemapper *Remapper,
-      const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-          *FuncNameToProfNameMap = nullptr) const;
+  LLVM_ABI const FunctionSamples *
+  findFunctionSamplesAt(const LineLocation &Loc, StringRef CalleeName,
+                        SampleProfileReaderItaniumRemapper *Remapper,
+                        const HashKeyMap<DenseMap, FunctionId, FunctionId>
+                            *FuncNameToProfNameMap = nullptr) const;
 
   bool empty() const { return TotalSamples == 0; }
 
@@ -1154,10 +1157,10 @@ public:
   /// corresponding function is no less than \p Threshold, add its corresponding
   /// GUID to \p S. Also traverse the BodySamples to add hot CallTarget's GUID
   /// to \p S.
-  void findInlinedFunctions(DenseSet<GlobalValue::GUID> &S,
-                            const HashKeyMap<std::unordered_map, FunctionId,
-                                             Function *>  &SymbolMap,
-                            uint64_t Threshold) const {
+  void findInlinedFunctions(
+      DenseSet<GlobalValue::GUID> &S,
+      const HashKeyMap<DenseMap, FunctionId, Function *> &SymbolMap,
+      uint64_t Threshold) const {
     if (TotalSamples <= Threshold)
       return;
     auto IsDeclaration = [](const Function *F) {
@@ -1274,7 +1277,8 @@ public:
     if (!UseMD5)
       return Func.stringRef();
 
-    assert(GUIDToFuncNameMap && "GUIDToFuncNameMap needs to be populated first");
+    assert(GUIDToFuncNameMap &&
+           "GUIDToFuncNameMap needs to be populated first");
     return GUIDToFuncNameMap->lookup(Func.getHashCode());
   }
 
@@ -1310,11 +1314,11 @@ public:
   /// If \p Remapper or \p FuncNameToProfNameMap is not nullptr, it will be used
   /// to find matching FunctionSamples with not exactly the same but equivalent
   /// name.
-  LLVM_ABI const FunctionSamples *findFunctionSamples(
-      const DILocation *DIL,
-      SampleProfileReaderItaniumRemapper *Remapper = nullptr,
-      const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-          *FuncNameToProfNameMap = nullptr) const;
+  LLVM_ABI const FunctionSamples *
+  findFunctionSamples(const DILocation *DIL,
+                      SampleProfileReaderItaniumRemapper *Remapper = nullptr,
+                      const HashKeyMap<DenseMap, FunctionId, FunctionId>
+                          *FuncNameToProfNameMap = nullptr) const;
 
   LLVM_ABI static bool ProfileIsProbeBased;
 
@@ -1341,9 +1345,7 @@ public:
 
   /// Return the GUID of the context's name. If the context is already using
   /// MD5, don't hash it again.
-  uint64_t getGUID() const {
-    return getFunction().getHashCode();
-  }
+  uint64_t getGUID() const { return getFunction().getHashCode(); }
 
   // Find all the names in the current FunctionSamples including names in
   // all the inline instances and names of call targets.
@@ -1482,8 +1484,8 @@ public:
   }
 
   size_t erase(const SampleContext &Ctx) {
-    return HashKeyMap<std::unordered_map, SampleContext, FunctionSamples>::
-        erase(Ctx);
+    return HashKeyMap<std::unordered_map, SampleContext,
+                      FunctionSamples>::erase(Ctx);
   }
 
   size_t erase(const key_type &Key) { return base_type::erase(Key); }
@@ -1525,7 +1527,7 @@ private:
 /// sure ProfileMap's key is consistent with FunctionSample's name/context.
 class SampleContextTrimmer {
 public:
-  SampleContextTrimmer(SampleProfileMap &Profiles) : ProfileMap(Profiles){};
+  SampleContextTrimmer(SampleProfileMap &Profiles) : ProfileMap(Profiles) {};
   // Trim and merge cold context profile when requested. TrimBaseProfileOnly
   // should only be effective when TrimColdContext is true. On top of
   // TrimColdContext, TrimBaseProfileOnly can be used to specify to trim all
@@ -1557,7 +1559,7 @@ public:
     FrameNode(FunctionId FName = FunctionId(),
               FunctionSamples *FSamples = nullptr,
               LineLocation CallLoc = {0, 0})
-        : FuncName(FName), FuncSamples(FSamples), CallSiteLoc(CallLoc){};
+        : FuncName(FName), FuncSamples(FSamples), CallSiteLoc(CallLoc) {};
 
     // Map line+discriminator location to child frame
     std::map<uint64_t, FrameNode> AllChildFrames;
@@ -1631,10 +1633,10 @@ private:
         Profile.addBodySamples(I.first.LineOffset, I.first.Discriminator,
                                CalleeProfile.getHeadSamplesEstimate());
         // Add callsite sample.
-        Profile.addCalledTargetSamples(
-            I.first.LineOffset, I.first.Discriminator,
-            CalleeProfile.getFunction(),
-            CalleeProfile.getHeadSamplesEstimate());
+        Profile.addCalledTargetSamples(I.first.LineOffset,
+                                       I.first.Discriminator,
+                                       CalleeProfile.getFunction(),
+                                       CalleeProfile.getHeadSamplesEstimate());
         // Update total samples.
         TotalSamples = TotalSamples >= CalleeProfile.getTotalSamples()
                            ? TotalSamples - CalleeProfile.getTotalSamples()
@@ -1704,12 +1706,6 @@ private:
 using namespace sampleprof;
 // Provide DenseMapInfo for SampleContext.
 template <> struct DenseMapInfo<SampleContext> {
-  static inline SampleContext getEmptyKey() { return SampleContext(); }
-
-  static inline SampleContext getTombstoneKey() {
-    return SampleContext(FunctionId(~1ULL));
-  }
-
   static unsigned getHashValue(const SampleContext &Val) {
     return Val.getHashCode();
   }

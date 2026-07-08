@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUCoExecSchedStrategy.h"
+#include "AMDGPUIGroupLP.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -64,13 +65,13 @@ InstructionFlavor llvm::AMDGPU::classifyFlavor(const MachineInstr &MI,
   if (SII.isTRANS(MI))
     return InstructionFlavor::TRANS;
 
-  if (SII.isVALU(MI))
+  if (SII.isVALU(MI, /*AllowLDSDMA=*/true))
     return InstructionFlavor::SingleCycleVALU;
 
   if (SII.isDS(MI))
     return InstructionFlavor::DS;
 
-  if (SII.isFLAT(MI) || SII.isFLATGlobal(MI) || SII.isFLATScratch(MI))
+  if (SII.isVMEM(MI))
     return InstructionFlavor::VMEM;
 
   if (SII.isSALU(MI))
@@ -708,8 +709,10 @@ ScheduleDAGInstrs *
 llvm::createGCNCoExecMachineScheduler(MachineSchedContext *C) {
   LLVM_DEBUG(dbgs() << "AMDGPU coexec preRA scheduler selected for "
                     << C->MF->getName() << '\n');
-  return new GCNScheduleDAGMILive(
+  ScheduleDAGMILive *DAG = new GCNScheduleDAGMILive(
       C, std::make_unique<AMDGPUCoExecSchedStrategy>(C));
+  DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
+  return DAG;
 }
 
 ScheduleDAGInstrs *

@@ -2,9 +2,6 @@
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -mattr=+fprcvt,+fullfp16 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -global-isel -global-isel-abort=2 -mattr=+fprcvt,+fullfp16 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:    warning: Instruction selection used fallback path for test_sqabs_s32
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for test_sqabs_s64
-
 define void @test_sqrshl_s32(float noundef %a, ptr %dst){
 ; CHECK-LABEL: test_sqrshl_s32:
 ; CHECK:       // %bb.0: // %entry

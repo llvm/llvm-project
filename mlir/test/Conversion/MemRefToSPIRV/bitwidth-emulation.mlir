@@ -3,7 +3,6 @@
 
 // Check that access chain indices are properly adjusted if non-32-bit types are
 // emulated via 32-bit types.
-// TODO: Test i64 types.
 module attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [Shader, Int64], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
@@ -73,6 +72,27 @@ func.func @load_i16(%arg0: memref<10xi16, #spirv.storage_class<StorageBuffer>>, 
   //     CHECK: builtin.unrealized_conversion_cast %[[SR]]
   %0 = memref.load %arg0[%index] : memref<10xi16, #spirv.storage_class<StorageBuffer>>
   return %0: i16
+}
+
+// i64 is a native type with Int64; the access chain index is used as-is without
+// the SDiv/UMod adjustment that emulated sub-32-bit types require.
+// CHECK-LABEL: @load_i64
+//       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: index)
+// INDEX64-LABEL: @load_i64
+func.func @load_i64(%arg0: memref<10xi64, #spirv.storage_class<StorageBuffer>>, %index : index) -> i64 {
+  //     CHECK: %[[ARG1_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : index to i32
+  //     CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
+  // CHECK-NOT: spirv.SDiv
+  //     CHECK: %[[PTR:.+]] = spirv.AccessChain %{{.+}}[%[[ZERO]], %[[ARG1_CAST]]] : {{.+}}, i32, i32
+  //     CHECK: spirv.Load "StorageBuffer" %[[PTR]] : i64
+  // CHECK-NOT: spirv.ShiftRightArithmetic
+
+  //   INDEX64: %[[ARG1_CAST:.+]] = builtin.unrealized_conversion_cast %{{.+}} : index to i64
+  //   INDEX64: %[[ZERO:.+]] = spirv.Constant 0 : i64
+  //   INDEX64: %[[PTR:.+]] = spirv.AccessChain %{{.+}}[%[[ZERO]], %[[ARG1_CAST]]] : {{.+}}, i64, i64
+  //   INDEX64: spirv.Load "StorageBuffer" %[[PTR]] : i64
+  %0 = memref.load %arg0[%index] : memref<10xi64, #spirv.storage_class<StorageBuffer>>
+  return %0: i64
 }
 
 // CHECK-LABEL: @load_f32
@@ -148,6 +168,25 @@ func.func @store_i16(%arg0: memref<10xi16, #spirv.storage_class<StorageBuffer>>,
   //     CHECK: spirv.AtomicAnd <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[MASK]]
   //     CHECK: spirv.AtomicOr <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[STORE_VAL]]
   memref.store %value, %arg0[%index] : memref<10xi16, #spirv.storage_class<StorageBuffer>>
+  return
+}
+
+// CHECK-LABEL: @store_i64
+//       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: index, %[[ARG2:.+]]: i64)
+// INDEX64-LABEL: @store_i64
+func.func @store_i64(%arg0: memref<10xi64, #spirv.storage_class<StorageBuffer>>, %index: index, %value: i64) {
+  //     CHECK-DAG: %[[ARG1_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : index to i32
+  //     CHECK-DAG: %[[ARG0_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
+  //     CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
+  // CHECK-NOT: spirv.AtomicAnd
+  //     CHECK: %[[PTR:.+]] = spirv.AccessChain %[[ARG0_CAST]][%[[ZERO]], %[[ARG1_CAST]]] : {{.+}}, i32, i32
+  //     CHECK: spirv.Store "StorageBuffer" %[[PTR]], %[[ARG2]] : i64
+  // CHECK-NOT: spirv.AtomicOr
+
+  //   INDEX64: %[[ZERO:.+]] = spirv.Constant 0 : i64
+  //   INDEX64: %[[PTR:.+]] = spirv.AccessChain %{{.+}}[%[[ZERO]], %{{.+}}] : {{.+}}, i64, i64
+  //   INDEX64: spirv.Store "StorageBuffer" %[[PTR]], %{{.+}} : i64
+  memref.store %value, %arg0[%index] : memref<10xi64, #spirv.storage_class<StorageBuffer>>
   return
 }
 

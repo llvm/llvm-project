@@ -848,6 +848,7 @@ enum class CCEKind {
                            ///< message.
   StaticAssertMessageData, ///< Call to data() in a static assert
                            ///< message.
+  PackIndex ///< Index of a pack indexing expression or specifier.
 };
 
 /// Enums for the diagnostics of target, target_version and target_clones.
@@ -2972,6 +2973,10 @@ private:
 
   void checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD, CallExpr *TheCall);
 
+  /// Argument-value fortify checks for libc functions that are not builtins,
+  /// dispatched by name (e.g. umask). Diagnostics belong to -Wfortify-source.
+  void checkFortifiedLibcArgument(FunctionDecl *FD, CallExpr *TheCall);
+
   /// Check the arguments to '__builtin_va_start', '__builtin_ms_va_start',
   /// or '__builtin_c23_va_start' for validity. Emit an error and return true
   /// on failure; return false on success.
@@ -3572,7 +3577,7 @@ public:
   /// correctly named definition after the renamed definition.
   llvm::SmallPtrSet<const NamedDecl *, 4> TypoCorrectedFunctionDefinitions;
 
-  /// A cache of the flags available in enumerations with the flag_bits
+  /// A cache of the flags available in enumerations with the flag_enum
   /// attribute.
   mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
 
@@ -7639,25 +7644,15 @@ public:
   ExprResult ActOnStmtExprResult(ExprResult E);
   void ActOnStmtExprError();
 
-  // __builtin_offsetof(type, identifier(.identifier|[expr])*)
-  struct OffsetOfComponent {
-    SourceLocation LocStart, LocEnd;
-    bool isBrackets; // true if [expr], false if .ident
-    union {
-      IdentifierInfo *IdentInfo;
-      Expr *E;
-    } U;
-  };
-
   /// __builtin_offsetof(type, a.b[123][456].c)
   ExprResult BuildBuiltinOffsetOf(SourceLocation BuiltinLoc,
                                   TypeSourceInfo *TInfo,
-                                  ArrayRef<OffsetOfComponent> Components,
+                                  const Designation &Desig,
                                   SourceLocation RParenLoc);
   ExprResult ActOnBuiltinOffsetOf(Scope *S, SourceLocation BuiltinLoc,
                                   SourceLocation TypeLoc,
                                   ParsedType ParsedArgTy,
-                                  ArrayRef<OffsetOfComponent> Components,
+                                  const Designation &Desig,
                                   SourceLocation RParenLoc);
 
   // __builtin_choose_expr(constExpr, expr1, expr2)
@@ -11534,7 +11529,7 @@ public:
                                   ParsedType ObjectType, bool EnteringContext,
                                   TemplateTy &Template,
                                   bool &MemberOfUnknownSpecialization,
-                                  bool Disambiguation = false);
+                                  bool AllowTypoCorrection = true);
 
   /// Try to resolve an undeclared template name as a type template.
   ///
@@ -11872,10 +11867,11 @@ public:
     return Arg;
   }
 
-  ExprResult BuildSubstNonTypeTemplateParmExpr(
-      Decl *AssociatedDecl, const NonTypeTemplateParmDecl *NTTP,
-      SourceLocation loc, TemplateArgument Replacement,
-      UnsignedOrNone PackIndex, bool Final);
+  ExprResult
+  BuildSubstNonTypeTemplateParmExpr(Decl *AssociatedDecl, unsigned Index,
+                                    QualType ParamType, SourceLocation loc,
+                                    TemplateArgument Replacement,
+                                    UnsignedOrNone PackIndex, bool Final);
 
   /// Form a template name from a name that is syntactically required to name a
   /// template, either due to use of the 'template' keyword or because a name in
@@ -12021,6 +12017,9 @@ public:
   /// redeclared member.
   bool CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous);
   void CompleteMemberSpecialization(NamedDecl *Member, LookupResult &Previous);
+
+  bool CheckDependentFriend(SourceLocation Loc, NestedNameSpecifier NNS,
+                            TemplateParameterList *FPL);
 
   // Explicit instantiation of a class template specialization
   DeclResult ActOnExplicitInstantiation(
@@ -12231,8 +12230,7 @@ public:
   /// doesn't need to live too long. It would be useful if this function
   /// could return a temporary expression.
   ExprResult BuildExpressionFromDeclTemplateArgument(
-      const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc,
-      NamedDecl *TemplateParam = nullptr);
+      const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc);
   ExprResult
   BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
                                              SourceLocation Loc);
@@ -12644,10 +12642,9 @@ public:
   ///
   /// \param Loc The source location to use for the resulting template
   /// argument.
-  TemplateArgumentLoc
-  getTrivialTemplateArgumentLoc(const TemplateArgument &Arg, QualType NTTPType,
-                                SourceLocation Loc,
-                                NamedDecl *TemplateParam = nullptr);
+  TemplateArgumentLoc getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
+                                                    QualType NTTPType,
+                                                    SourceLocation Loc);
 
   /// Get a template argument mapping the given template parameter to itself,
   /// e.g. for X in \c template<int X>, this would return an expression template
@@ -12756,6 +12753,15 @@ public:
           [](bool /*OnlyInitializeNonUserDefinedConversions*/) {
             return false;
           });
+
+  /// Finish template argument deduction for a template declaration, checking
+  /// the deduced template arguments for completeness and forming the deduced
+  /// template argument list.
+  TemplateDeductionResult FinishTemplateArgumentDeduction(
+      TemplateDecl *TD, TemplateParameterList *TPL,
+      ArrayRef<TemplateArgument> PatternArgs, ArrayRef<TemplateArgument> Args,
+      SmallVectorImpl<DeducedTemplateArgument> &Deduced,
+      sema::TemplateDeductionInfo &Info, bool CopyDeducedArgs);
 
   /// Perform template argument deduction from a function call
   /// (C++ [temp.deduct.call]).
@@ -14266,11 +14272,8 @@ public:
                           LateInstantiatedAttrVec *LateAttrs = nullptr,
                           LocalInstantiationScope *OuterMostScope = nullptr);
 
-  /// In the MS ABI, we need to instantiate default arguments of dllexported
-  /// default constructors along with the constructor definition. This allows IR
-  /// gen to emit a constructor closure which calls the default constructor with
-  /// its default arguments.
-  void InstantiateDefaultCtorDefaultArgs(CXXConstructorDecl *Ctor);
+  bool BuildCtorClosureDefaultArgs(SourceLocation Loc, CXXConstructorDecl *Ctor,
+                                   bool IsCopy = false);
 
   bool InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
                                   ParmVarDecl *Param);

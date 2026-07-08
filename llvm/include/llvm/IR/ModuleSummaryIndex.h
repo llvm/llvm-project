@@ -18,18 +18,21 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/ScaledNumber.h"
 #include "llvm/Support/StringSaver.h"
@@ -39,12 +42,12 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <map>
 #include <memory>
 #include <optional>
 #include <set>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -180,13 +183,93 @@ private:
 };
 
 /// Map from global value GUID to corresponding summary structures. Use a
-/// std::map rather than a DenseMap so that pointers to the map's value_type
-/// (which are used by ValueInfo) are not invalidated by insertion. Also it will
-/// likely incur less overhead, as the value type is not very small and the size
-/// of the map is unknown, resulting in inefficiencies due to repeated
-/// insertions and resizing.
-using GlobalValueSummaryMapTy =
-    std::map<GlobalValue::GUID, GlobalValueSummaryInfo>;
+/// DenseMap for O(1) lookup and a std::deque for storage. std::deque
+/// guarantees that pointers to elements are not invalidated by push_back,
+/// which is required because ValueInfo stores a raw pointer to elements of
+/// this container.
+class GlobalValueSummaryMap {
+public:
+  using key_type = GlobalValue::GUID;
+  using mapped_type = GlobalValueSummaryInfo;
+  using value_type = std::pair<key_type, mapped_type>;
+  using iterator = std::deque<value_type>::iterator;
+  using const_iterator = std::deque<value_type>::const_iterator;
+  using size_type = std::deque<value_type>::size_type;
+
+private:
+  /// Vector of pointers into Storage, used for key-sorted iteration.
+  using SortedEntriesVec = SmallVector<const value_type *, 0>;
+
+  DenseMap<key_type, unsigned> Map;
+  std::deque<value_type> Storage;
+
+public:
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(key_type Key, Ts &&...Args) {
+    auto Res = Map.try_emplace(Key, Storage.size());
+    if (Res.second) {
+      Storage.emplace_back(std::piecewise_construct, std::forward_as_tuple(Key),
+                           std::forward_as_tuple(std::forward<Ts>(Args)...));
+      return {std::prev(Storage.end()), true};
+    }
+    return {Storage.begin() + Res.first->second, false};
+  }
+
+  iterator find(key_type Key) {
+    auto It = Map.find(Key);
+    return It == Map.end() ? Storage.end() : Storage.begin() + It->second;
+  }
+
+  const_iterator find(key_type Key) const {
+    auto It = Map.find(Key);
+    return It == Map.end() ? Storage.end() : Storage.begin() + It->second;
+  }
+
+  iterator begin() { return Storage.begin(); }
+  const_iterator begin() const { return Storage.begin(); }
+  iterator end() { return Storage.end(); }
+  const_iterator end() const { return Storage.end(); }
+  size_type size() const { return Storage.size(); }
+  bool empty() const { return Storage.empty(); }
+
+  /// An owning range over the entries sorted by key, yielding each entry by
+  /// reference.
+  class SortedEntriesRange {
+    SortedEntriesVec Entries;
+
+  public:
+    using iterator = pointee_iterator<SortedEntriesVec::const_iterator>;
+
+    explicit SortedEntriesRange(SortedEntriesVec Entries)
+        : Entries(std::move(Entries)) {}
+
+    iterator begin() const { return iterator(Entries.begin()); }
+    iterator end() const { return iterator(Entries.end()); }
+    size_t size() const { return Entries.size(); }
+    bool empty() const { return Entries.empty(); }
+  };
+
+  /// Return an owning range over the entries sorted by key. Storage is in
+  /// insertion order; some serialization paths and tests rely on key-sorted
+  /// iteration.
+  SortedEntriesRange sortedRange() const {
+    return SortedEntriesRange(getSortedEntries());
+  }
+
+private:
+  SortedEntriesVec getSortedEntries() const {
+    SortedEntriesVec Sorted;
+    Sorted.reserve(Storage.size());
+    for (const auto &E : Storage)
+      Sorted.push_back(&E);
+    llvm::sort(Sorted, [](const auto *A, const auto *B) {
+      return A->first < B->first;
+    });
+    return Sorted;
+  }
+};
+
+using GlobalValueSummaryMapTy = GlobalValueSummaryMap;
 
 /// Struct that holds a reference to a particular GUID in a global value
 /// summary.
@@ -300,22 +383,10 @@ inline bool operator<(const ValueInfo &A, const ValueInfo &B) {
 }
 
 template <> struct DenseMapInfo<ValueInfo> {
-  static inline ValueInfo getEmptyKey() {
-    return ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-8);
-  }
-
-  static inline ValueInfo getTombstoneKey() {
-    return ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-16);
-  }
-
-  static inline bool isSpecialKey(ValueInfo V) {
-    return V == getTombstoneKey() || V == getEmptyKey();
-  }
-
   static bool isEqual(ValueInfo L, ValueInfo R) {
     // We are not supposed to mix ValueInfo(s) with different HaveGVs flag
     // in a same container.
-    assert(isSpecialKey(L) || isSpecialKey(R) || (L.haveGVs() == R.haveGVs()));
+    assert(L.haveGVs() == R.haveGVs());
     return L.getRef() == R.getRef();
   }
   static unsigned getHashValue(ValueInfo I) { return hash_value(I.getRef()); }
@@ -1130,12 +1201,6 @@ public:
 };
 
 template <> struct DenseMapInfo<FunctionSummary::VFuncId> {
-  static FunctionSummary::VFuncId getEmptyKey() { return {0, uint64_t(-1)}; }
-
-  static FunctionSummary::VFuncId getTombstoneKey() {
-    return {0, uint64_t(-2)};
-  }
-
   static bool isEqual(FunctionSummary::VFuncId L, FunctionSummary::VFuncId R) {
     return L.GUID == R.GUID && L.Offset == R.Offset;
   }
@@ -1144,14 +1209,6 @@ template <> struct DenseMapInfo<FunctionSummary::VFuncId> {
 };
 
 template <> struct DenseMapInfo<FunctionSummary::ConstVCall> {
-  static FunctionSummary::ConstVCall getEmptyKey() {
-    return {{0, uint64_t(-1)}, {}};
-  }
-
-  static FunctionSummary::ConstVCall getTombstoneKey() {
-    return {{0, uint64_t(-2)}, {}};
-  }
-
   static bool isEqual(FunctionSummary::ConstVCall L,
                       FunctionSummary::ConstVCall R) {
     return DenseMapInfo<FunctionSummary::VFuncId>::isEqual(L.VFunc, R.VFunc) &&
@@ -1332,72 +1389,77 @@ struct TypeIdSummary {
   std::map<uint64_t, WholeProgramDevirtResolution> WPDRes;
 };
 
+/// Encapsulate the names of CFI target functions. It interfaces with ThinLTO to
+/// determine efficiently which of the names need to be exported for a
+/// particular module.
 class CfiFunctionIndex {
-  DenseMap<GlobalValue::GUID, std::set<std::string, std::less<>>> Index;
-  using IndexIterator =
-      DenseMap<GlobalValue::GUID,
-               std::set<std::string, std::less<>>>::const_iterator;
-  using NestedIterator = std::set<std::string, std::less<>>::const_iterator;
+  // `Names` is the authoritative source of data. `ThinLTOToNamesIndex` is there
+  // just to efficiently retrieve which names in this index need exporting for
+  // a particular module index. We cannot guarantee the ThinLTO GUIDs are
+  // collision - free, so we associate a collection to a guid. Functions with
+  // the same name may have different GUIDs, too. So we index a list of names
+  // with the same GUID under that GUID key. We don't need the reverse because
+  // the queries from ThinLTO use GUIDs as key.
+  // Note that StringSet rehashing doesn't move keys, so we can safely store the
+  // StringRef value inserted in `Names` in ThinLTOToNamesIndex, and avoid
+  // copies.
+  // Design note: we could do away with Names and use ThinLTOToNamesIndex as
+  // index and data source, but opted against, for a small heap penalty, to
+  // avoid confusion wrt the role GUIDs play in this case: they are an artifact
+  // of the need to interface with ThinLTO, not otherwise necessary to CFI.
+  StringSet<> Names;
+
+  using InternalIndexGroup = SetVector<StringRef>;
+  DenseMap<GlobalValue::GUID, InternalIndexGroup> ThinLTOToNamesIndex;
+
+  using NestedIterator = InternalIndexGroup::const_iterator;
 
 public:
-  // Iterates keys of the DenseMap.
-  class GUIDIterator : public iterator_adaptor_base<GUIDIterator, IndexIterator,
-                                                    std::forward_iterator_tag,
-                                                    GlobalValue::GUID> {
-    using base = GUIDIterator::iterator_adaptor_base;
-
-  public:
-    GUIDIterator() = default;
-    explicit GUIDIterator(IndexIterator I) : base(I) {}
-
-    GlobalValue::GUID operator*() const { return this->wrapped()->first; }
-  };
-
   CfiFunctionIndex() = default;
-  template <typename It> CfiFunctionIndex(It B, It E) {
-    for (; B != E; ++B)
-      emplace(*B);
-  }
+  CfiFunctionIndex(const CfiFunctionIndex &) = delete;
+  CfiFunctionIndex(CfiFunctionIndex &&) = default;
 
-  std::vector<StringRef> symbols() const {
-    std::vector<StringRef> Symbols;
-    for (auto &[GUID, Syms] : Index) {
-      (void)GUID;
-      llvm::append_range(Symbols, Syms);
-    }
+  /// API used for serialization, e.g. YAML.
+  std::vector<std::pair<StringRef, GlobalValue::GUID>>
+  getSortedSymbols() const {
+    std::vector<std::pair<StringRef, GlobalValue::GUID>> Symbols;
+    for (auto &[GUID, Names] : ThinLTOToNamesIndex)
+      for (auto Name : Names)
+        Symbols.emplace_back(Name, GUID);
+    llvm::sort(Symbols);
     return Symbols;
   }
 
-  GUIDIterator guid_begin() const { return GUIDIterator(Index.begin()); }
-  GUIDIterator guid_end() const { return GUIDIterator(Index.end()); }
-  iterator_range<GUIDIterator> guids() const {
-    return make_range(guid_begin(), guid_end());
+  /// get the set of GUIDs that should also be exported because they are the
+  /// GUIDs of the cfi functions encapsulated here.
+  auto getExportedThinLTOGUIDs() const {
+    return map_range(ThinLTOToNamesIndex, [](auto I) { return I.first; });
   }
 
-  iterator_range<NestedIterator> forGuid(GlobalValue::GUID GUID) const {
-    auto I = Index.find(GUID);
-    if (I == Index.end())
+  /// get the name(s) associated with a given ThinLTO GUID. This enables
+  /// efficient identification of the subset of names that should be included in
+  /// a module summary.
+  auto getNamesForGUID(GlobalValue::GUID GUID) const {
+    auto I = ThinLTOToNamesIndex.find(GUID);
+    if (I == ThinLTOToNamesIndex.end())
       return make_range(NestedIterator{}, NestedIterator{});
     return make_range(I->second.begin(), I->second.end());
   }
 
-  template <typename... Args> void emplace(Args &&...A) {
-    StringRef S(std::forward<Args>(A)...);
-    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
-        GlobalValue::dropLLVMManglingEscape(S));
-    Index[GUID].emplace(S);
+  /// Add the function name and the GUID that ThinLTO uses for it.
+  void addSymbolWithThinLTOGUID(StringRef Name, GlobalValue::GUID GUID) {
+    auto [Iter, _] = Names.insert(Name);
+    ThinLTOToNamesIndex[GUID].insert(Iter->first());
   }
 
-  size_t count(StringRef S) const {
-    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
-        GlobalValue::dropLLVMManglingEscape(S));
-    auto I = Index.find(GUID);
-    if (I == Index.end())
-      return 0;
-    return I->second.count(S);
+  bool contains(StringRef Name) const {
+    return Names.find(Name) != Names.end();
   }
 
-  bool empty() const { return Index.empty(); }
+  bool empty() const {
+    assert(Names.empty() == ThinLTOToNamesIndex.empty());
+    return Names.empty();
+  }
 };
 
 /// 160 bits SHA1
@@ -1421,7 +1483,7 @@ using ModuleToSummariesForIndexTy =
     std::map<std::string, GVSummaryMapTy, std::less<>>;
 
 /// A set of global value summary pointers.
-using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
+using GVSummaryPtrSet = SmallPtrSet<GlobalValueSummary *, 0>;
 
 /// Map of a type GUID to type id string and summary (multimap used
 /// in case of GUID conflicts).
@@ -1564,7 +1626,7 @@ private:
 
   GlobalValueSummaryMapTy::value_type *
   getOrInsertValuePtr(GlobalValue::GUID GUID) {
-    return &*GlobalValueMap.emplace(GUID, GlobalValueSummaryInfo(HaveGVs))
+    return &*GlobalValueMap.try_emplace(GUID, GlobalValueSummaryInfo(HaveGVs))
                  .first;
   }
 
@@ -1581,7 +1643,7 @@ public:
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
-  static constexpr uint64_t BitcodeSummaryVersion = 13;
+  static constexpr uint64_t BitcodeSummaryVersion = 14;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {
@@ -1602,6 +1664,11 @@ public:
   gvsummary_iterator end() { return GlobalValueMap.end(); }
   const_gvsummary_iterator end() const { return GlobalValueMap.end(); }
   size_t size() const { return GlobalValueMap.size(); }
+
+  GlobalValueSummaryMapTy::SortedEntriesRange
+  sortedGlobalValueSummariesRange() const {
+    return GlobalValueMap.sortedRange();
+  }
 
   const std::vector<uint64_t> &stackIds() const { return StackIds; }
 

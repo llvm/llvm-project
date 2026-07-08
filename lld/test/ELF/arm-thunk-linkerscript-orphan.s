@@ -1,12 +1,19 @@
 // REQUIRES: arm
-// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
-// RUN: echo "SECTIONS { \
-// RUN:       .text_low 0x100000 : { *(.text_low) } \
-// RUN:       .text_high 0x2000000 : { *(.text_high) } \
-// RUN:       .data : { *(.data) } \
-// RUN:       }" > %t.script
-// RUN: ld.lld --script %t.script %t -o %t2
-// RUN: llvm-objdump --no-print-imm-hex -d %t2 | FileCheck %s
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi a.s -o a.o
+// RUN: ld.lld --script a.lds a.o -o exe
+// RUN: llvm-objdump --no-print-imm-hex -d exe | FileCheck %s
+
+//--- a.lds
+
+SECTIONS {
+  .text_low 0x100000 : AT(0x100000) { *(.text_low) }
+  .text_high 0x2000000 : AT(0x2000000) { *(.text_high) }
+  .data : { *(.data) }
+}
+
+//--- a.s
+
  .syntax unified
  .section .text_low, "ax", %progbits
  .thumb

@@ -601,9 +601,18 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
     case LengthModifier::AsPtrDiff:
       return ArgType::makePtrdiffT(
           ArgType(Ctx.getPointerDiffType(), "ptrdiff_t"));
+    case LengthModifier::AsIntN:
+    case LengthModifier::AsFastIntN:
+      return ArgType::makeIntNType(Ctx, LM,
+                                   CS.getKind() != ConversionSpecifier::bArg &&
+                                       CS.getKind() !=
+                                           ConversionSpecifier::BArg);
     case LengthModifier::AsAllocate:
     case LengthModifier::AsMAllocate:
     case LengthModifier::AsWide:
+    case LengthModifier::AsDecimal32:
+    case LengthModifier::AsDecimal64:
+    case LengthModifier::AsDecimal128:
       return ArgType::Invalid();
     }
 
@@ -639,9 +648,15 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
     case LengthModifier::AsPtrDiff:
       return ArgType::makePtrdiffT(
           ArgType(Ctx.getUnsignedPointerDiffType(), "unsigned ptrdiff_t"));
+    case LengthModifier::AsIntN:
+    case LengthModifier::AsFastIntN:
+      return ArgType::makeIntNType(Ctx, LM, /*Signed=*/false);
     case LengthModifier::AsAllocate:
     case LengthModifier::AsMAllocate:
     case LengthModifier::AsWide:
+    case LengthModifier::AsDecimal32:
+    case LengthModifier::AsDecimal64:
+    case LengthModifier::AsDecimal128:
       return ArgType::Invalid();
     }
 
@@ -658,9 +673,18 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
       }
     }
 
-    if (LM.getKind() == LengthModifier::AsLongDouble)
+    switch (LM.getKind()) {
+    case LengthModifier::AsLongDouble:
       return Ctx.LongDoubleTy;
-    return Ctx.DoubleTy;
+    case LengthModifier::AsDecimal32:
+      return ArgType::Unsupported("_Decimal32");
+    case LengthModifier::AsDecimal64:
+      return ArgType::Unsupported("_Decimal64");
+    case LengthModifier::AsDecimal128:
+      return ArgType::Unsupported("_Decimal128");
+    default:
+      return Ctx.DoubleTy;
+    }
   }
 
   if (CS.getKind() == ConversionSpecifier::nArg) {
@@ -684,6 +708,9 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
     case LengthModifier::AsPtrDiff:
       return ArgType::PtrTo(ArgType::makePtrdiffT(
           ArgType(Ctx.getPointerDiffType(), "ptrdiff_t")));
+    case LengthModifier::AsIntN:
+    case LengthModifier::AsFastIntN:
+      return ArgType::PtrTo(ArgType::makeIntNType(Ctx, LM, /*Signed=*/true));
     case LengthModifier::AsLongDouble:
       return ArgType(); // FIXME: Is this a known extension?
     case LengthModifier::AsAllocate:
@@ -692,6 +719,9 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
     case LengthModifier::AsInt3264:
     case LengthModifier::AsInt64:
     case LengthModifier::AsWide:
+    case LengthModifier::AsDecimal32:
+    case LengthModifier::AsDecimal64:
+    case LengthModifier::AsDecimal128:
       return ArgType::Invalid();
     case LengthModifier::AsShortLong:
       llvm_unreachable("only used for OpenCL which doesn not handle nArg");

@@ -9,11 +9,12 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_AUXV_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_AUXV_H
 
-#include "hdr/fcntl_macros.h" // For open flags
+#include "hdr/fcntl_macros.h"    // For open flags
 #include "hdr/sys_auxv_macros.h" // For AT_ macros
 #include "hdr/sys_mman_macros.h" // For mmap flags
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 #include "src/__support/threads/callonce.h"
@@ -112,20 +113,17 @@ LIBC_INLINE void Vector::fallback_initialize_unsync() {
 #endif
 
   // Attempt 2: read /proc/self/auxv.
-#ifdef SYS_openat
-  int fd = syscall_impl<int>(SYS_openat, AT_FDCWD, "/proc/self/auxv",
-                             O_RDONLY | O_CLOEXEC);
-#else
-  int fd = syscall_impl<int>(SYS_open, "/proc/self/auxv", O_RDONLY | O_CLOEXEC);
-#endif
-  if (fd < 0) {
+  ErrorOr<int> fd =
+      linux_syscalls::open("/proc/self/auxv", O_RDONLY | O_CLOEXEC, 0);
+  if (!fd) {
     linux_syscalls::munmap(vector, AUXV_MMAP_SIZE);
     return;
   }
   uint8_t *cursor = reinterpret_cast<uint8_t *>(vector);
   bool has_error = false;
   while (avaiable_size != 0) {
-    long bytes_read = syscall_impl<long>(SYS_read, fd, cursor, avaiable_size);
+    long bytes_read =
+        syscall_impl<long>(SYS_read, fd.value(), cursor, avaiable_size);
     if (bytes_read <= 0) {
       if (bytes_read == -EINTR)
         continue;
@@ -135,7 +133,7 @@ LIBC_INLINE void Vector::fallback_initialize_unsync() {
     avaiable_size -= bytes_read;
     cursor += bytes_read;
   }
-  syscall_impl<long>(SYS_close, fd);
+  syscall_impl<long>(SYS_close, fd.value());
   if (has_error) {
     linux_syscalls::munmap(vector, AUXV_MMAP_SIZE);
     return;

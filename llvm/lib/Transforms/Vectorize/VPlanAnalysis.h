@@ -19,40 +19,12 @@
 
 namespace llvm {
 
-class LLVMContext;
-class VPValue;
 class VPRecipeBase;
 class VPlan;
-class Value;
 class TargetTransformInfo;
-class Type;
 class InstructionCost;
 
 struct VPCostContext;
-
-/// An analysis for type-inference for VPValues.
-/// It infers the scalar type for a given VPValue by bottom-up traversing
-/// through defining recipes until root nodes with known types are reached (e.g.
-/// live-ins or load recipes). The types are then propagated top down through
-/// operations.
-/// Note that the analysis caches the inferred types. A new analysis object must
-/// be constructed once a VPlan has been modified in a way that invalidates any
-/// of the previously inferred types.
-class VPTypeAnalysis {
-  DenseMap<const VPValue *, Type *> CachedTypes;
-  LLVMContext &Ctx;
-  const DataLayout &DL;
-
-public:
-  VPTypeAnalysis(const VPlan &Plan)
-      : Ctx(Plan.getContext()), DL(Plan.getDataLayout()) {}
-
-  /// Infer the type of \p V. Returns the scalar type of \p V.
-  Type *inferScalarType(const VPValue *V);
-
-  /// Return the LLVMContext used by the analysis.
-  LLVMContext &getContext() { return Ctx; }
-};
 
 // Collect a VPlan's ephemeral recipes (those used only by an assume).
 void collectEphemeralRecipesForVPlan(VPlan &Plan,

@@ -436,6 +436,10 @@ void CommandInterpreter::Initialize() {
   if (cmd_obj_sp)
     AddAlias("image", cmd_obj_sp);
 
+  cmd_obj_sp = GetCommandSPExact("diagnostics report");
+  if (cmd_obj_sp)
+    AddAlias("bugreport", cmd_obj_sp);
+
   alias_arguments_vector_sp = std::make_shared<OptionArgVector>();
 
   cmd_obj_sp = GetCommandSPExact("dwim-print");
@@ -2707,8 +2711,7 @@ void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result,
     GetHomeInitFile(init_file);
 
   if (!m_skip_app_init_files) {
-    llvm::StringRef program_name =
-        HostInfo::GetProgramFileSpec().GetFilename().GetStringRef();
+    llvm::StringRef program_name = HostInfo::GetProgramFileSpec().GetFilename();
     FileSpec program_init_file;
     GetHomeInitFile(program_init_file, program_name);
     if (FileSystem::Instance().Exists(program_init_file))
@@ -2952,9 +2955,9 @@ void CommandInterpreter::HandleCommandsFromFile(
     FileSpec &cmd_file, const CommandInterpreterRunOptions &options,
     CommandReturnObject &result) {
   if (!FileSystem::Instance().Exists(cmd_file)) {
-    result.AppendErrorWithFormat(
-        "Error reading commands from file %s - file not found",
-        cmd_file.GetFilename().AsCString("<Unknown>"));
+    result.AppendErrorWithFormatv(
+        "Error reading commands from file {0} - file not found",
+        cmd_file.GetFilename().nonEmptyOr("<Unknown>"));
     return;
   }
 
@@ -2962,7 +2965,6 @@ void CommandInterpreter::HandleCommandsFromFile(
   auto input_file_up =
       FileSystem::Instance().Open(cmd_file, File::eOpenOptionReadOnly);
   if (!input_file_up) {
-    std::string error = llvm::toString(input_file_up.takeError());
     result.AppendErrorWithFormatv(
         "error: an error occurred read file '{0}': {1}\n", cmd_file_path,
         llvm::fmt_consume(input_file_up.takeError()));
@@ -3263,8 +3265,6 @@ void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
                                                 bool search_user_commands,
                                                 bool search_alias_commands,
                                                 bool search_user_mw_commands) {
-  CommandObject::CommandMap::const_iterator pos;
-
   if (search_builtin_commands)
     FindCommandsForApropos(search_word, commands_found, commands_help,
                            m_command_dict);
@@ -3284,9 +3284,15 @@ void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
 
 ExecutionContext
 CommandInterpreter::GetExecutionContext(bool adopt_dummy_target) const {
-  return (m_overriden_exe_contexts.empty() || !adopt_dummy_target)
-             ? m_debugger.GetSelectedExecutionContext(adopt_dummy_target)
-             : m_overriden_exe_contexts.top();
+  if (m_overriden_exe_contexts.empty())
+    return m_debugger.GetSelectedExecutionContext(adopt_dummy_target);
+
+  ExecutionContext candidate_context = m_overriden_exe_contexts.top();
+  Target *candidate_target = candidate_context.GetTargetPtr();
+  if (!adopt_dummy_target && candidate_target &&
+      candidate_target->IsDummyTarget())
+    return ExecutionContext();
+  return candidate_context;
 }
 
 void CommandInterpreter::OverrideExecutionContext(

@@ -29,18 +29,18 @@ define zeroext i8 @bitreverse_i8_zext_arg(i8 zeroext %x) {
 ; RV32NOZBKB-LABEL: bitreverse_i8_zext_arg:
 ; RV32NOZBKB:       # %bb.0:
 ; RV32NOZBKB-NEXT:    andi a1, a0, -16
-; RV32NOZBKB-NEXT:    slli a0, a0, 4
 ; RV32NOZBKB-NEXT:    srli a1, a1, 4
+; RV32NOZBKB-NEXT:    slli a0, a0, 4
 ; RV32NOZBKB-NEXT:    or a0, a1, a0
 ; RV32NOZBKB-NEXT:    andi a1, a0, -52
-; RV32NOZBKB-NEXT:    slli a0, a0, 2
 ; RV32NOZBKB-NEXT:    zext.b a1, a1
-; RV32NOZBKB-NEXT:    andi a0, a0, -52
+; RV32NOZBKB-NEXT:    slli a0, a0, 2
 ; RV32NOZBKB-NEXT:    srli a1, a1, 2
+; RV32NOZBKB-NEXT:    andi a0, a0, -52
 ; RV32NOZBKB-NEXT:    or a0, a1, a0
 ; RV32NOZBKB-NEXT:    andi a1, a0, -86
-; RV32NOZBKB-NEXT:    slli a0, a0, 1
 ; RV32NOZBKB-NEXT:    zext.b a1, a1
+; RV32NOZBKB-NEXT:    slli a0, a0, 1
 ; RV32NOZBKB-NEXT:    srli a1, a1, 1
 ; RV32NOZBKB-NEXT:    andi a0, a0, -86
 ; RV32NOZBKB-NEXT:    or a0, a1, a0
@@ -50,18 +50,18 @@ define zeroext i8 @bitreverse_i8_zext_arg(i8 zeroext %x) {
 ; RV64NOZBKB-LABEL: bitreverse_i8_zext_arg:
 ; RV64NOZBKB:       # %bb.0:
 ; RV64NOZBKB-NEXT:    andi a1, a0, -16
-; RV64NOZBKB-NEXT:    slli a0, a0, 4
 ; RV64NOZBKB-NEXT:    srli a1, a1, 4
+; RV64NOZBKB-NEXT:    slli a0, a0, 4
 ; RV64NOZBKB-NEXT:    or a0, a1, a0
 ; RV64NOZBKB-NEXT:    andi a1, a0, -52
-; RV64NOZBKB-NEXT:    slli a0, a0, 2
 ; RV64NOZBKB-NEXT:    zext.b a1, a1
-; RV64NOZBKB-NEXT:    andi a0, a0, -52
+; RV64NOZBKB-NEXT:    slli a0, a0, 2
 ; RV64NOZBKB-NEXT:    srli a1, a1, 2
+; RV64NOZBKB-NEXT:    andi a0, a0, -52
 ; RV64NOZBKB-NEXT:    or a0, a1, a0
 ; RV64NOZBKB-NEXT:    andi a1, a0, -86
-; RV64NOZBKB-NEXT:    slli a0, a0, 1
 ; RV64NOZBKB-NEXT:    zext.b a1, a1
+; RV64NOZBKB-NEXT:    slli a0, a0, 1
 ; RV64NOZBKB-NEXT:    srli a1, a1, 1
 ; RV64NOZBKB-NEXT:    andi a0, a0, -86
 ; RV64NOZBKB-NEXT:    or a0, a1, a0
@@ -89,19 +89,19 @@ define zeroext i8 @bitreverse_i8_plain_arg(i8 %x) {
 ; RV32NOZBKB-NEXT:    zext.b a1, a0
 ; RV32NOZBKB-NEXT:    or a0, a1, a0
 ; RV32NOZBKB-NEXT:    andi a1, a0, -16
-; RV32NOZBKB-NEXT:    slli a0, a0, 4
 ; RV32NOZBKB-NEXT:    zext.b a1, a1
 ; RV32NOZBKB-NEXT:    srli a1, a1, 4
+; RV32NOZBKB-NEXT:    slli a0, a0, 4
 ; RV32NOZBKB-NEXT:    or a0, a1, a0
 ; RV32NOZBKB-NEXT:    andi a1, a0, -52
-; RV32NOZBKB-NEXT:    slli a0, a0, 2
 ; RV32NOZBKB-NEXT:    zext.b a1, a1
-; RV32NOZBKB-NEXT:    andi a0, a0, -52
+; RV32NOZBKB-NEXT:    slli a0, a0, 2
 ; RV32NOZBKB-NEXT:    srli a1, a1, 2
+; RV32NOZBKB-NEXT:    andi a0, a0, -52
 ; RV32NOZBKB-NEXT:    or a0, a1, a0
 ; RV32NOZBKB-NEXT:    andi a1, a0, -86
-; RV32NOZBKB-NEXT:    slli a0, a0, 1
 ; RV32NOZBKB-NEXT:    zext.b a1, a1
+; RV32NOZBKB-NEXT:    slli a0, a0, 1
 ; RV32NOZBKB-NEXT:    srli a1, a1, 1
 ; RV32NOZBKB-NEXT:    andi a0, a0, -86
 ; RV32NOZBKB-NEXT:    or a0, a1, a0
@@ -113,19 +113,19 @@ define zeroext i8 @bitreverse_i8_plain_arg(i8 %x) {
 ; RV64NOZBKB-NEXT:    zext.b a1, a0
 ; RV64NOZBKB-NEXT:    or a0, a1, a0
 ; RV64NOZBKB-NEXT:    andi a1, a0, -16
-; RV64NOZBKB-NEXT:    slli a0, a0, 4
 ; RV64NOZBKB-NEXT:    zext.b a1, a1
 ; RV64NOZBKB-NEXT:    srli a1, a1, 4
+; RV64NOZBKB-NEXT:    slli a0, a0, 4
 ; RV64NOZBKB-NEXT:    or a0, a1, a0
 ; RV64NOZBKB-NEXT:    andi a1, a0, -52
-; RV64NOZBKB-NEXT:    slli a0, a0, 2
 ; RV64NOZBKB-NEXT:    zext.b a1, a1
-; RV64NOZBKB-NEXT:    andi a0, a0, -52
+; RV64NOZBKB-NEXT:    slli a0, a0, 2
 ; RV64NOZBKB-NEXT:    srli a1, a1, 2
+; RV64NOZBKB-NEXT:    andi a0, a0, -52
 ; RV64NOZBKB-NEXT:    or a0, a1, a0
 ; RV64NOZBKB-NEXT:    andi a1, a0, -86
-; RV64NOZBKB-NEXT:    slli a0, a0, 1
 ; RV64NOZBKB-NEXT:    zext.b a1, a1
+; RV64NOZBKB-NEXT:    slli a0, a0, 1
 ; RV64NOZBKB-NEXT:    srli a1, a1, 1
 ; RV64NOZBKB-NEXT:    andi a0, a0, -86
 ; RV64NOZBKB-NEXT:    or a0, a1, a0

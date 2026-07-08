@@ -248,3 +248,15 @@ subroutine omp_atomic_compare_ptr(x, e, d)
   !$omp end atomic
 
 end subroutine
+
+! Complex(4) equality with seq_cst → type-punned i64 cmpxchg seq_cst + flush
+!CHECK-LABEL: define void @atomic_compare_weak_(
+!CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]])
+!CHECK: cmpxchg weak ptr %[[X]], i32 %{{.*}}, i32 %{{.*}} seq_cst seq_cst
+!CHECK: call void @__kmpc_flush(
+subroutine atomic_compare_weak(x, e, d)
+  integer :: x, e, d
+  !$omp atomic compare weak seq_cst
+  if (x == e) x = d
+end 
+

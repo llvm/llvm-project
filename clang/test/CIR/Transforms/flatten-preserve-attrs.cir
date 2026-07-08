@@ -2,7 +2,7 @@
 // RUN: FileCheck --input-file=%t.cir %s
 
 !s32i = !cir.int<s, 32>
-!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
+!rec_SomeClass = !cir.struct<"SomeClass" {!s32i}>
 
 // Test that argument attributes on a cir.call are preserved on the resulting
 // cir.try_call after flattening.

@@ -445,6 +445,66 @@ if.end:
 
 !0 = !{!"branch_weights", i32 7, i32 13}
 !1 = !{!"branch_weights", i32 3, i32 11}
+
+; When both merged stores carry the same !invariant.group, every path already
+; asserted that its stored value was the group's invariant value, so the merged
+; store may keep !invariant.group.
+define void @merge_keeps_invariant_group_when_both(i1 %c1, i1 %c2, ptr %p, i32 %a, i32 %b) {
+; CHECK-LABEL: @merge_keeps_invariant_group_when_both(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[TMP1:%.*]], label [[TMP2:%.*]]
+; CHECK:       1:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C2]], i32 [[B:%.*]], i32 [[A:%.*]]
+; CHECK-NEXT:    store i32 [[SPEC_SELECT]], ptr [[P:%.*]], align 4, !invariant.group [[META1:![0-9]+]]
+; CHECK-NEXT:    br label [[TMP2]]
+; CHECK:       2:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c1, label %t1, label %m
+t1:
+  store i32 %a, ptr %p, !invariant.group !2
+  br label %m
+m:
+  br i1 %c2, label %t2, label %e
+t2:
+  store i32 %b, ptr %p, !invariant.group !2
+  br label %e
+e:
+  ret void
+}
+
+; When only one of the merged stores carries !invariant.group, keeping it would
+; assert the invariant on the other store's path, which never promised it. The
+; merged store must drop !invariant.group.
+define void @merge_drops_invariant_group_when_asymmetric(i1 %c1, i1 %c2, ptr %p, i32 %a, i32 %b) {
+; CHECK-LABEL: @merge_drops_invariant_group_when_asymmetric(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[TMP1:%.*]], label [[TMP2:%.*]]
+; CHECK:       1:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C2]], i32 [[B:%.*]], i32 [[A:%.*]]
+; CHECK-NEXT:    store i32 [[SPEC_SELECT]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    br label [[TMP2]]
+; CHECK:       2:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c1, label %t1, label %m
+t1:
+  store i32 %a, ptr %p, !invariant.group !2
+  br label %m
+m:
+  br i1 %c2, label %t2, label %e
+t2:
+  store i32 %b, ptr %p
+  br label %e
+e:
+  ret void
+}
+!2 = !{}
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 137, i32 143}
+; CHECK: [[META1]] = !{}
 ;.

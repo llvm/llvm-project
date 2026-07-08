@@ -320,7 +320,7 @@ define void @main() {
 ; CHECK-NEXT:   ret ptr %p
 ; CHECK-NEXT: Exiting function: identity_dereferenceable_or_null
 ; CHECK-NEXT:   %deref_or_null_mixed = call dereferenceable(1) dereferenceable_or_null(1) ptr @identity_dereferenceable_or_null(ptr dereferenceable(1) dereferenceable_or_null(1) %alloc) => ptr 0x8 [alloc]
-; CHECK-NEXT:   %fmt_n_out = alloca [6 x i8], align 1 => ptr 0xC [fmt_n_out]
+; CHECK-NEXT:   %fmt_n_out = alloca [6 x i8], align 1 => ptr 0xD [fmt_n_out]
 ; CHECK-NEXT:   store [6 x i8] c"N=%d\0A\00", ptr %fmt_n_out, align 1
 ; CHECK-NEXT: N=6
 ; CHECK-NEXT:   %res = call noundef range(i32 0, 15) i32 (ptr, ...) @printf(ptr noundef nonnull %fmt_n_out, i32 noundef range(i32 0, 15) 6) => i32 4

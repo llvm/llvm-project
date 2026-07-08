@@ -22,8 +22,8 @@ define i32 @main() nounwind {
 ; RV32I-NEXT:    addi a4, a0, -2048
 ; RV32I-NEXT:    sw a0, 0(a1)
 ; RV32I-NEXT:    addi a0, a0, 1
-; RV32I-NEXT:    addi a1, a1, 4
 ; RV32I-NEXT:    sw a4, 0(a2)
+; RV32I-NEXT:    addi a1, a1, 4
 ; RV32I-NEXT:    addi a2, a2, 4
 ; RV32I-NEXT:    bne a0, a3, .LBB0_1
 ; RV32I-NEXT:  # %bb.2: # %for.end

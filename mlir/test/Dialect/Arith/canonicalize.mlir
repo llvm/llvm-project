@@ -23,6 +23,73 @@ func.func @select_cmp_ne_select(%arg0: i64, %arg1: i64) -> i64 {
   return %1 : i64
 }
 
+// CHECK-LABEL: @select_cmp_signed_min_max
+//  CHECK-SAME:   (%[[ARG0:.+]]: i64, %[[ARG1:.+]]: i64)
+//  CHECK-DAG:    %[[MIN0:.+]] = arith.minsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN1:.+]] = arith.minsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN2:.+]] = arith.minsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN3:.+]] = arith.minsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX0:.+]] = arith.maxsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX1:.+]] = arith.maxsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX2:.+]] = arith.maxsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX3:.+]] = arith.maxsi %[[ARG0]], %[[ARG1]] : i64
+//      CHECK:    return %[[MIN0]], %[[MIN1]], %[[MIN2]], %[[MIN3]], %[[MAX0]], %[[MAX1]], %[[MAX2]], %[[MAX3]]
+func.func @select_cmp_signed_min_max(%arg0: i64, %arg1: i64) -> (i64, i64, i64, i64, i64, i64, i64, i64) {
+  %slt = arith.cmpi slt, %arg0, %arg1 : i64
+  %sle = arith.cmpi sle, %arg0, %arg1 : i64
+  %sgt = arith.cmpi sgt, %arg0, %arg1 : i64
+  %sge = arith.cmpi sge, %arg0, %arg1 : i64
+  %min0 = arith.select %slt, %arg0, %arg1 : i64
+  %min1 = arith.select %sle, %arg0, %arg1 : i64
+  %min2 = arith.select %sgt, %arg1, %arg0 : i64
+  %min3 = arith.select %sge, %arg1, %arg0 : i64
+  %max0 = arith.select %slt, %arg1, %arg0 : i64
+  %max1 = arith.select %sle, %arg1, %arg0 : i64
+  %max2 = arith.select %sgt, %arg0, %arg1 : i64
+  %max3 = arith.select %sge, %arg0, %arg1 : i64
+  return %min0, %min1, %min2, %min3, %max0, %max1, %max2, %max3 : i64, i64, i64, i64, i64, i64, i64, i64
+}
+
+// CHECK-LABEL: @select_cmp_unsigned_min_max
+//  CHECK-SAME:   (%[[ARG0:.+]]: i64, %[[ARG1:.+]]: i64)
+//  CHECK-DAG:    %[[MIN0:.+]] = arith.minui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN1:.+]] = arith.minui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN2:.+]] = arith.minui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN3:.+]] = arith.minui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX0:.+]] = arith.maxui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX1:.+]] = arith.maxui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX2:.+]] = arith.maxui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX3:.+]] = arith.maxui %[[ARG0]], %[[ARG1]] : i64
+//      CHECK:    return %[[MIN0]], %[[MIN1]], %[[MIN2]], %[[MIN3]], %[[MAX0]], %[[MAX1]], %[[MAX2]], %[[MAX3]]
+func.func @select_cmp_unsigned_min_max(%arg0: i64, %arg1: i64) -> (i64, i64, i64, i64, i64, i64, i64, i64) {
+  %ult = arith.cmpi ult, %arg0, %arg1 : i64
+  %ule = arith.cmpi ule, %arg0, %arg1 : i64
+  %ugt = arith.cmpi ugt, %arg0, %arg1 : i64
+  %uge = arith.cmpi uge, %arg0, %arg1 : i64
+  %min0 = arith.select %ult, %arg0, %arg1 : i64
+  %min1 = arith.select %ule, %arg0, %arg1 : i64
+  %min2 = arith.select %ugt, %arg1, %arg0 : i64
+  %min3 = arith.select %uge, %arg1, %arg0 : i64
+  %max0 = arith.select %ult, %arg1, %arg0 : i64
+  %max1 = arith.select %ule, %arg1, %arg0 : i64
+  %max2 = arith.select %ugt, %arg0, %arg1 : i64
+  %max3 = arith.select %uge, %arg0, %arg1 : i64
+  return %min0, %min1, %min2, %min3, %max0, %max1, %max2, %max3 : i64, i64, i64, i64, i64, i64, i64, i64
+}
+
+// CHECK-LABEL: @select_cmp_min_max_index_vector
+//  CHECK-SAME:   (%[[IDX0:.+]]: index, %[[IDX1:.+]]: index, %[[VEC0:.+]]: vector<4xi32>, %[[VEC1:.+]]: vector<4xi32>)
+//  CHECK-DAG:    %[[IDX:.+]] = arith.minsi %[[IDX0]], %[[IDX1]] : index
+//  CHECK-DAG:    %[[VEC:.+]] = arith.maxui %[[VEC0]], %[[VEC1]] : vector<4xi32>
+//      CHECK:    return %[[IDX]], %[[VEC]]
+func.func @select_cmp_min_max_index_vector(%arg0: index, %arg1: index, %arg2: vector<4xi32>, %arg3: vector<4xi32>) -> (index, vector<4xi32>) {
+  %cmp0 = arith.cmpi sle, %arg0, %arg1 : index
+  %res0 = arith.select %cmp0, %arg0, %arg1 : index
+  %cmp1 = arith.cmpi ult, %arg2, %arg3 : vector<4xi32>
+  %res1 = arith.select %cmp1, %arg3, %arg2 : vector<4xi1>, vector<4xi32>
+  return %res0, %res1 : index, vector<4xi32>
+}
+
 // CHECK-LABEL: @select_extui
 //       CHECK:   %[[res:.+]] = arith.extui %arg0 : i1 to i64
 //       CHECK:   return %[[res]]

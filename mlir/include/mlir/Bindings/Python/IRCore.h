@@ -375,7 +375,7 @@ public:
   void invalidate();
   bool isValid() { return valid; }
   PyDiagnosticSeverity getSeverity();
-  PyLocation getLocation();
+  nanobind::typed<nanobind::object, PyLocation> getLocation();
   nanobind::str getMessage();
   nanobind::typed<nanobind::tuple, PyDiagnostic> getNotes();
 

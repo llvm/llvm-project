@@ -925,13 +925,24 @@ bool ASTStructuralEquivalence::isEquivalent(
       // type of the enumeration.
       //
       // Treat the enumeration as its underlying type and use the builtin type
-      // class comparison.
+      // class comparison. If the enumeration is invalid, e.g., it could be a
+      // forward declaration of an enumeration without a fixed underlying type,
+      // we'll default to 'int' for error recovery. If one type is an
+      // enumeration, the other must be an enumeration or integral, otherwise
+      // they're not structurally equivalent. e.g., it could be an enum in one
+      // struct and a union in another.
       if (T1->getTypeClass() == Type::Enum) {
+        if (!T2->isBuiltinType() && !T2->isEnumeralType())
+          return false;
         T1 = cast<EnumType>(T1)->getDecl()->getIntegerType();
-        assert(T2->isBuiltinType() && !T1.isNull()); // Sanity check
+        if (T1.isNull())
+          T1 = Context.FromCtx.IntTy;
       } else if (T2->getTypeClass() == Type::Enum) {
+        if (!T1->isBuiltinType() && !T1->isEnumeralType())
+          return false;
         T2 = cast<EnumType>(T2)->getDecl()->getIntegerType();
-        assert(T1->isBuiltinType() && !T2.isNull()); // Sanity check
+        if (T2.isNull())
+          T2 = Context.ToCtx.IntTy;
       }
       TC = Type::Builtin;
     } else
@@ -2279,7 +2290,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
   }
 
-  return true;
+  return IsStructurallyEquivalent(Context, Params1->getRequiresClause(),
+                                  Params2->getRequiresClause());
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
@@ -2428,6 +2440,45 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return IsStructurallyEquivalent(Context, D1->getFriendDecl(),
                                     D2->getFriendDecl());
   return false;
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     FriendTemplateDecl *FTD1,
+                                     FriendTemplateDecl *FTD2) {
+  ArrayRef<TemplateParameterList *> TPL1 =
+      FTD1->getFriendTypeTemplateParameterLists();
+  ArrayRef<TemplateParameterList *> TPL2 =
+      FTD2->getFriendTypeTemplateParameterLists();
+  bool EquivalentTemplateParameterLists = llvm::equal(
+      TPL1, TPL2,
+      [&Context](TemplateParameterList *LHS, TemplateParameterList *RHS) {
+        return IsStructurallyEquivalent(Context, LHS, RHS);
+      });
+  if (!EquivalentTemplateParameterLists)
+    return false;
+
+  TemplateName TN1 = FTD1->getFriendTemplateName();
+  TemplateName TN2 = FTD2->getFriendTemplateName();
+  if (TN1.isNull() != TN2.isNull())
+    return false;
+
+  if (TN1.isNull()) {
+    if ((FTD1->getFriendType() && FTD2->getFriendDecl()) ||
+        (FTD1->getFriendDecl() && FTD2->getFriendType()))
+      return false;
+
+    if (FTD1->getFriendDecl() && FTD2->getFriendDecl())
+      return IsStructurallyEquivalent(Context, FTD1->getFriendDecl(),
+                                      FTD2->getFriendDecl());
+
+    if (FTD1->getFriendType() && FTD2->getFriendType())
+      return IsStructurallyEquivalent(Context, FTD1->getFriendType()->getType(),
+                                      FTD2->getFriendType()->getType());
+
+    return false;
+  }
+
+  return IsStructurallyEquivalent(Context, TN1, TN2);
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
@@ -2767,6 +2818,23 @@ bool StructuralEquivalenceContext::CheckCommonEquivalence(Decl *D1, Decl *D2) {
   // FIXME: Move check for identifier names into this function.
 
   return true;
+}
+
+bool StructuralEquivalenceContext::IsEquivalent(TemplateParameterList *TPL1,
+                                                TemplateParameterList *TPL2) {
+  assert(DeclsToCheck.empty());
+  assert(VisitedDecls.empty());
+
+  if (TPL1 == TPL2)
+    return true;
+
+  if (!TPL1 || !TPL2)
+    return false;
+
+  if (!::IsStructurallyEquivalent(*this, TPL1, TPL2))
+    return false;
+
+  return !Finish();
 }
 
 bool StructuralEquivalenceContext::CheckKindSpecificEquivalence(

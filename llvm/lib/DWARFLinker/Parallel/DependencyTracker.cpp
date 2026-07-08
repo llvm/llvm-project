@@ -214,7 +214,22 @@ void DependencyTracker::collectRootsToKeep(
       llvm_unreachable("Called for incorrect DIE");
     } break;
     default:
-      // Nothing to do.
+      // A forward-declared type nested in a DW_TAG_module is the module's
+      // record that the name exists, even when no full definition has been
+      // emitted. Route it through the type pool: when another CU emits a
+      // real definition for the same synthetic name, the existing
+      // decl-vs-def race resolution in allocateTypeDie + getFinalDie keeps
+      // the definition and drops this declaration at emission time. For
+      // non-ODR languages getFinalPlacementForEntry forces PlainDwarf,
+      // so the forward decl is kept in place under its module.
+      if (Entry.DieEntry->getTag() == dwarf::DW_TAG_module &&
+          dwarf::isType(CurChild->getTag()) &&
+          dwarf::toUnsigned(Entry.CU->find(CurChild, dwarf::DW_AT_declaration),
+                            0)) {
+        addActionToRootEntriesWorkList(
+            LiveRootWorklistActionTy::MarkTypeEntryRec, ChildEntry,
+            ReferencedBy);
+      }
       break;
     }
 

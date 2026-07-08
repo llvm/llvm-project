@@ -21,15 +21,17 @@
 #include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
 
+class JITDylib;
 class SymbolLookupSet;
 
-class EPCGenericDylibManager : public DylibManager {
+class LLVM_ABI EPCGenericDylibManager : public DylibManager {
 public:
   /// Function addresses for memory access.
   struct SymbolAddrs {
@@ -38,18 +40,31 @@ public:
     ExecutorAddr Resolve;
   };
 
-  /// Create an EPCGenericMemoryAccess instance from a given set of
-  /// function addrs.
-  LLVM_ABI static Expected<EPCGenericDylibManager>
+  /// Create an EPCGenericDylibManager instance by looking up the LLVM-style
+  /// SimpleExecutorDylibManager symbol names in the EPC's bootstrap table.
+  static Expected<EPCGenericDylibManager>
   CreateWithDefaultBootstrapSymbols(ExecutorProcessControl &EPC);
 
-  /// Create an EPCGenericMemoryAccess instance from a given set of
-  /// function addrs.
+  /// Create an EPCGenericDylibManager using the given implementation symbol
+  /// names. These will be looked up in the given JITDylib.
+  static Expected<EPCGenericDylibManager>
+  Create(JITDylib &JD, rt::SimpleExecutorDylibManagerSymbolNames SNs =
+                           rt::orc_rt_NativeDylibManagerSPSSymbols);
+
+  /// Create an EPCGenericDylibManager using the given implementation symbol
+  /// names. These will be looked up in the given ExecutionSession's bootstrap
+  /// JITDylib.
+  static Expected<EPCGenericDylibManager>
+  Create(ExecutionSession &ES, rt::SimpleExecutorDylibManagerSymbolNames SNs =
+                                   rt::orc_rt_NativeDylibManagerSPSSymbols);
+
+  /// Create an EPCGenericDylibManager instance from a given set of function
+  /// addrs.
   EPCGenericDylibManager(ExecutorProcessControl &EPC, SymbolAddrs SAs)
       : EPC(EPC), SAs(SAs) {}
 
   /// Loads the dylib with the given name.
-  LLVM_ABI Expected<tpctypes::DylibHandle> open(StringRef Path, uint64_t Mode);
+  Expected<tpctypes::DylibHandle> open(StringRef Path, uint64_t Mode);
 
   /// Looks up symbols within the given dylib.
   Expected<tpctypes::LookupResult> lookup(tpctypes::DylibHandle H,
@@ -73,23 +88,20 @@ public:
       unique_function<void(Expected<tpctypes::LookupResult>)>;
 
   /// Looks up symbols within the given dylib.
-  LLVM_ABI void lookupAsync(tpctypes::DylibHandle H,
-                            const SymbolLookupSet &Lookup,
-                            SymbolLookupCompleteFn Complete);
+  void lookupAsync(tpctypes::DylibHandle H, const SymbolLookupSet &Lookup,
+                   SymbolLookupCompleteFn Complete);
 
   /// Looks up symbols within the given dylib.
-  LLVM_ABI void lookupAsync(tpctypes::DylibHandle H,
-                            const RemoteSymbolLookupSet &Lookup,
-                            SymbolLookupCompleteFn Complete);
+  void lookupAsync(tpctypes::DylibHandle H, const RemoteSymbolLookupSet &Lookup,
+                   SymbolLookupCompleteFn Complete);
 
   /// Load the dynamic library at the given path and return a handle to it.
   /// If DylibPath is null this function will return the global handle for
   /// the target process.
-  LLVM_ABI Expected<tpctypes::DylibHandle>
-  loadDylib(const char *DylibPath) override;
+  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
 
   /// Search for symbols in the target process.
-  LLVM_ABI void
+  void
   lookupSymbolsAsync(tpctypes::DylibHandle H, const SymbolLookupSet &Symbols,
                      DylibManager::SymbolLookupCompleteFn Complete) override;
 

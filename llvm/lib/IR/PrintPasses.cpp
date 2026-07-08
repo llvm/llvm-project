@@ -7,13 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/PrintPasses.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
-#include <unordered_set>
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -151,18 +155,15 @@ bool llvm::forcePrintModuleIR() { return PrintModuleScope; }
 bool llvm::forcePrintFuncIR() { return LoopPrintFuncScope; }
 
 bool llvm::isPassInPrintList(StringRef PassName) {
-  static std::unordered_set<std::string> Set(FilterPasses.begin(),
-                                             FilterPasses.end());
-  return Set.empty() || Set.count(std::string(PassName));
+  static const StringSet<> Set(llvm::from_range, FilterPasses);
+  return Set.empty() || Set.contains(PassName);
 }
 
 bool llvm::isFilterPassesEmpty() { return FilterPasses.empty(); }
 
 bool llvm::isFunctionInPrintList(StringRef FunctionName) {
-  static std::unordered_set<std::string> PrintFuncNames(PrintFuncsList.begin(),
-                                                        PrintFuncsList.end());
-  return PrintFuncNames.empty() ||
-         PrintFuncNames.count(std::string(FunctionName));
+  static const StringSet<> PrintFuncNames(llvm::from_range, PrintFuncsList);
+  return PrintFuncNames.empty() || PrintFuncNames.contains(FunctionName);
 }
 
 std::error_code cleanUpTempFilesImpl(ArrayRef<std::string> FileName,
@@ -253,4 +254,50 @@ std::string llvm::doSystemDiff(StringRef Before, StringRef After,
     return "Unable to remove temporary file.";
 
   return Diff;
+}
+
+void llvm::reportChangedIR(StringRef Before, StringRef After,
+                           StringRef PassName, StringRef PassID,
+                           StringRef IRName, bool IsInteresting,
+                           bool ShouldReport) {
+  if (!ShouldReport && IsInteresting)
+    return;
+
+  if (IsInteresting && Before != After) {
+    errs() << ("*** IR Dump After " + PassName + " (" + PassID + ") on " +
+               IRName + " ***\n");
+    switch (PrintChanged) {
+    case ChangePrinter::None:
+      llvm_unreachable("");
+    case ChangePrinter::Quiet:
+    case ChangePrinter::Verbose:
+    case ChangePrinter::DotCfgQuiet:   // unimplemented
+    case ChangePrinter::DotCfgVerbose: // unimplemented
+      errs() << After;
+      break;
+    case ChangePrinter::DiffQuiet:
+    case ChangePrinter::DiffVerbose:
+    case ChangePrinter::ColourDiffQuiet:
+    case ChangePrinter::ColourDiffVerbose: {
+      bool Color = llvm::is_contained(
+          {ChangePrinter::ColourDiffQuiet, ChangePrinter::ColourDiffVerbose},
+          PrintChanged.getValue());
+      StringRef Removed = Color ? "\033[31m-%l\033[0m\n" : "-%l\n";
+      StringRef Added = Color ? "\033[32m+%l\033[0m\n" : "+%l\n";
+      StringRef NoChange = " %l\n";
+      errs() << doSystemDiff(Before, After, Removed, Added, NoChange);
+      break;
+    }
+    }
+  } else if (llvm::is_contained({ChangePrinter::Verbose,
+                                 ChangePrinter::DiffVerbose,
+                                 ChangePrinter::ColourDiffVerbose},
+                                PrintChanged.getValue())) {
+    const char *Reason =
+        IsInteresting ? " omitted because no change" : " filtered out";
+    errs() << "*** IR Dump After " << PassName;
+    if (!PassID.empty())
+      errs() << " (" << PassID << ")";
+    errs() << " on " << IRName + Reason + " ***\n";
+  }
 }

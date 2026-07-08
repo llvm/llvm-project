@@ -7,7 +7,6 @@
 ; part this test was initially designed for, make sure the "is freed" check is
 ; not sufficient on a GPU.
 target triple = "amdgcn-amd-amdhsa"
-target datalayout = "A5"
 
 declare noalias ptr @malloc(i64)
 

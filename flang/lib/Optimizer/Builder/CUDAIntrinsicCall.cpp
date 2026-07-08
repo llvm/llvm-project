@@ -14,13 +14,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/CUDAIntrinsicCall.h"
-#include "flang/Evaluate/common.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Runtime/entry-names.h"
-#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 

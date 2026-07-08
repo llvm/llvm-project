@@ -4208,7 +4208,7 @@ static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!S.checkUInt32Argument(AL, FirstArgExpr, FirstArg, 3))
     return;
 
-  // FirstArg == 0 is is always valid.
+  // FirstArg == 0 is always valid.
   if (FirstArg != 0) {
     if (Info.Kind == StrftimeFormat) {
       // If the kind is strftime, FirstArg must be 0 because strftime does not
@@ -8193,9 +8193,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLParamModifier:
     S.HLSL().handleParamModifierAttr(D, AL);
     break;
-  case ParsedAttr::AT_HLSLMatrixLayout:
-    S.HLSL().handleMatrixLayoutAttr(D, AL);
-    break;
   case ParsedAttr::AT_HLSLUnparsedSemantic:
     S.HLSL().handleSemanticAttr(D, AL);
     break;
@@ -8439,6 +8436,40 @@ static bool isKernelDecl(Decl *D) {
          D->hasAttr<CUDAGlobalAttr>();
 }
 
+static void checkAMDGPUReqdWorkGroupSize(Sema &S, Decl *D) {
+  if (!S.Context.getTargetInfo().getTriple().isAMDGPU())
+    return;
+
+  const auto *Flat = D->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
+  const auto *Reqd = D->getAttr<ReqdWorkGroupSizeAttr>();
+  if (!Flat || !Reqd)
+    return;
+
+  auto Eval = [&](Expr *E) -> std::optional<uint64_t> {
+    if (E->isValueDependent())
+      return std::nullopt;
+    std::optional<llvm::APSInt> V = E->getIntegerConstantExpr(S.Context);
+    if (!V)
+      return std::nullopt;
+    return V->getZExtValue();
+  };
+
+  std::optional<uint64_t> X = Eval(Reqd->getXDim());
+  std::optional<uint64_t> Y = Eval(Reqd->getYDim());
+  std::optional<uint64_t> Z = Eval(Reqd->getZDim());
+  std::optional<uint64_t> Min = Eval(Flat->getMin());
+  std::optional<uint64_t> Max = Eval(Flat->getMax());
+  if (!X || !Y || !Z || !Min || !Max)
+    return;
+
+  uint64_t Product = *X * *Y * *Z;
+  if (*Min != Product || *Max != Product) {
+    S.Diag(Flat->getLocation(),
+           diag::err_attribute_amdgpu_flat_work_group_size_mismatch);
+    D->setInvalidDecl();
+  }
+}
+
 void Sema::ProcessDeclAttributeList(
     Scope *S, Decl *D, const ParsedAttributesView &AttrList,
     const ProcessDeclAttributeOptions &Options) {
@@ -8502,6 +8533,7 @@ void Sema::ProcessDeclAttributeList(
       D->setInvalidDecl();
     }
   }
+  checkAMDGPUReqdWorkGroupSize(*this, D);
 
   // CUDA/HIP: restrict explicit CUDA target attributes on deduction guides.
   //

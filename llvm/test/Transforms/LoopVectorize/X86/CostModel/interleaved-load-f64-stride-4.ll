@@ -29,22 +29,22 @@ define void @test() {
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load double, ptr %in0, align 8
-; AVX2:  Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX2:  Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX2:    ir<%v0> = load from index 0
 ; AVX2:    ir<%v1> = load from index 1
 ; AVX2:    ir<%v2> = load from index 2
 ; AVX2:    ir<%v3> = load from index 3
-; AVX2:  Cost of 12 for VF 4: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX2:  Cost of 12 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX2:    ir<%v0> = load from index 0
 ; AVX2:    ir<%v1> = load from index 1
 ; AVX2:    ir<%v2> = load from index 2
 ; AVX2:    ir<%v3> = load from index 3
-; AVX2:  Cost of 28 for VF 8: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX2:  Cost of 28 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX2:    ir<%v0> = load from index 0
 ; AVX2:    ir<%v1> = load from index 1
 ; AVX2:    ir<%v2> = load from index 2
 ; AVX2:    ir<%v3> = load from index 3
-; AVX2:  Cost of 56 for VF 16: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX2:  Cost of 56 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX2:    ir<%v0> = load from index 0
 ; AVX2:    ir<%v1> = load from index 1
 ; AVX2:    ir<%v2> = load from index 2
@@ -53,17 +53,17 @@ define void @test() {
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load double, ptr %in0, align 8
-; AVX512:  Cost of 5 for VF 2: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX512:  Cost of 5 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:    ir<%v1> = load from index 1
 ; AVX512:    ir<%v2> = load from index 2
 ; AVX512:    ir<%v3> = load from index 3
-; AVX512:  Cost of 12 for VF 4: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX512:  Cost of 12 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:    ir<%v1> = load from index 1
 ; AVX512:    ir<%v2> = load from index 2
 ; AVX512:    ir<%v3> = load from index 3
-; AVX512:  Cost of 34 for VF 8: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX512:  Cost of 34 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:    ir<%v1> = load from index 1
 ; AVX512:    ir<%v2> = load from index 2

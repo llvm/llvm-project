@@ -95,6 +95,10 @@ static llvm::cl::alias includeAlias("module-directory",
 static llvm::cl::list<std::string>
     intrinsicIncludeDirs("J", llvm::cl::desc("intrinsic module search paths"));
 
+static llvm::cl::list<std::string> implicitUseModules(
+    "implicit-use-module",
+    llvm::cl::desc("implicitly USE the named module for testing"));
+
 static llvm::cl::alias
     intrinsicIncludeAlias("intrinsic-module-directory",
                           llvm::cl::desc("intrinsic module directory"),
@@ -576,6 +580,8 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     config.SkipConvertComplexPow = targetMachine.getTargetTriple().isAMDGCN();
     if (enableOpenMP)
       config.EnableOpenMP = true;
+    if (enableOpenMPDevice)
+      config.EnableOpenMPIsTargetDevice = true;
     config.NSWOnLoopVarInc = !integerWrapAround;
     fir::registerDefaultInlinerPass(config);
     fir::createDefaultFIROptimizerPassPipeline(pm, config);
@@ -689,6 +695,7 @@ int main(int argc, char **argv) {
       .set_moduleFileSuffix(moduleSuffix)
       .set_searchDirectories(includeDirs)
       .set_intrinsicModuleDirectories(intrinsicIncludeDirs)
+      .set_implicitUseModules(implicitUseModules)
       .set_warnOnNonstandardUsage(warnStdViolation)
       .set_warningsAreErrors(warnIsError);
 

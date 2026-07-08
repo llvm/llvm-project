@@ -70,8 +70,15 @@ csrrci x0, 43, %pcrel_lo(d) # CHECK: :[[@LINE]]:16: error: immediate must be an 
 ori a0, a1, %hi(foo) # CHECK: :[[@LINE]]:13: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 andi ra, sp, %pcrel_hi(123) # CHECK: :[[@LINE]]:14: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 xori a2, a3, %hi(345) # CHECK: :[[@LINE]]:14: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
-add a1, a2, (a3) # CHECK: :[[@LINE]]:13: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
-add a1, a2, foo # CHECK: :[[@LINE]]:13: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+add a1, a2, (a3)
+# CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-3]]:13: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+
+add a1, a2, foo
+# CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-3]]:13: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 ## uimm12
 csrrw a0, %lo(1), a0 # CHECK: :[[@LINE]]:11: error: immediate must be an integer in the range [0, 4095]
@@ -145,7 +152,11 @@ auipc a0, %pcrel_lo(foo) # CHECK: :[[@LINE]]:11: error: operand must be a symbol
 
 # TP-relative symbol names require a %tprel_add modifier.
 add a0, a0, tp, zero # CHECK: :[[@LINE]]:17: error: expected '%' relocation specifier
-add a0, a0, tp, %hi(foo) # CHECK: :[[@LINE]]:17: error: operand must be a symbol with %tprel_add specifier
+add a0, a0, tp, %hi(foo)
+# CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[@LINE-2]]:17: note: unexpected extra operand for instruction
+# CHECK: :[[@LINE-3]]:17: note: operand must be a symbol with %tprel_add specifier
+
 add a0, tp, a0, %tprel_add(foo) # CHECK: :[[@LINE]]:13: error: the second input operand must be tp/x4 when using %tprel_add specifier
 
 # Unrecognized operand modifier
@@ -173,14 +184,14 @@ xori sp, 22, 220 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
 sub t0, t2, 1 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
 
 # Too many operands
-sltiu s2, s3, 0x50, 0x60 # CHECK: :[[@LINE]]:21: error: invalid operand for instruction
+sltiu s2, s3, 0x50, 0x60 # CHECK: :[[@LINE]]:21: error: unexpected extra operand for instruction
 
 # Memory operand not formatted correctly
-lw a4, a5, 111 # CHECK: :[[@LINE]]:12: error: invalid operand for instruction
+lw a4, a5, 111 # CHECK: :[[@LINE]]:12: error: unexpected extra operand for instruction
 
 # Too few operands
-ori a0, a1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
-xor s2, s2 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+ori a0, a1 # CHECK: :[[@LINE]]:11: error: too few operands for instruction
+xor s2, s2 # CHECK: :[[@LINE]]:11: error: too few operands for instruction
 
 # Instruction not in the base ISA
 div a4, ra, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'M' (Integer Multiplication and Division){{$}}
@@ -201,4 +212,4 @@ bset a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following
 addi a2, ft0, 24 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
 
 # fence.tso accepts no operands
-fence.tso rw, rw # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+fence.tso rw, rw # CHECK: :[[@LINE]]:11: error: unexpected extra operand for instruction

@@ -17,6 +17,7 @@ types:
   - type_name: rsize_t
   - type_name: size_t
   - type_name: locale_t
+  - type_name: tm_gmtoff_t
 enums: []
 objects: []
 functions:

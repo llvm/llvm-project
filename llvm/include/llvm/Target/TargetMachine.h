@@ -13,6 +13,7 @@
 #ifndef LLVM_TARGET_TARGETMACHINE_H
 #define LLVM_TARGET_TARGETMACHINE_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
@@ -114,6 +115,9 @@ protected: // Can only create subclasses.
   std::unique_ptr<const MCInstrInfo> MII;
   std::unique_ptr<const MCSubtargetInfo> STI;
 
+  /// MC subtarget keyed by target features and target CPU.
+  StringMap<std::unique_ptr<const MCSubtargetInfo>> MCSubtargetMap;
+
   unsigned RequireStructuredCFG : 1;
   unsigned O0WantsFastISel : 1;
 
@@ -121,7 +125,7 @@ protected: // Can only create subclasses.
   std::optional<PGOOptions> PGOOption;
 
 public:
-  mutable TargetOptions Options;
+  TargetOptions Options;
 
   TargetMachine(const TargetMachine &) = delete;
   void operator=(const TargetMachine &) = delete;
@@ -231,17 +235,18 @@ public:
     return DL.getPointerSize(DL.getAllocaAddrSpace());
   }
 
-  /// Reset the target options based on the function's attributes.
-  // FIXME: Remove TargetOptions that affect per-function code generation
-  // from TargetMachine.
-  void resetTargetOptions(const Function &F) const;
-
   /// Return target specific asm information.
   const MCAsmInfo &getMCAsmInfo() const { return *AsmInfo; }
 
   const MCRegisterInfo &getMCRegisterInfo() const { return *MRI; }
   const MCInstrInfo *getMCInstrInfo() const { return MII.get(); }
   const MCSubtargetInfo &getMCSubtargetInfo() const { return *STI; }
+
+  /// Get the MCSubtargetInfo for the given target CPU and target features.
+  /// For use in contexts where a feature-specific MC subtarget is needed,
+  /// but no MachineFunctionis available, such as for module-level inline
+  /// assembly.
+  const MCSubtargetInfo &getMCSubtargetInfo(StringRef CPU, StringRef FS);
 
   /// Return the ExceptionHandling to use, considering TargetOptions and the
   /// Triple's default.

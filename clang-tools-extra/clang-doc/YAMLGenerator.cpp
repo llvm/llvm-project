@@ -32,24 +32,6 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(BaseRecordInfo)
 
 namespace llvm {
 
-template <typename T>
-static bool operator==(const llvm::simple_ilist<T> &LHS,
-                       const llvm::simple_ilist<T> &RHS) {
-  auto LIt = LHS.begin(), LEnd = LHS.end();
-  auto RIt = RHS.begin(), REnd = RHS.end();
-  for (; LIt != LEnd && RIt != REnd; ++LIt, ++RIt) {
-    if (!(*LIt == *RIt))
-      return false;
-  }
-  return LIt == LEnd && RIt == REnd;
-}
-
-template <typename T>
-static bool operator!=(const llvm::simple_ilist<T> &LHS,
-                       const llvm::simple_ilist<T> &RHS) {
-  return !(LHS == RHS);
-}
-
 namespace yaml {
 
 // Provide SequenceTraits for ArrayRef<T*> since YAMLTraits only provides it for
@@ -567,19 +549,19 @@ llvm::Error YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
   llvm::yaml::Output InfoYAML(OS);
   switch (I->IT) {
   case InfoType::IT_namespace:
-    InfoYAML << *static_cast<clang::doc::NamespaceInfo *>(I);
+    InfoYAML << *cast<NamespaceInfo>(I);
     break;
   case InfoType::IT_record:
-    InfoYAML << *static_cast<clang::doc::RecordInfo *>(I);
+    InfoYAML << *cast<RecordInfo>(I);
     break;
   case InfoType::IT_enum:
-    InfoYAML << *static_cast<clang::doc::EnumInfo *>(I);
+    InfoYAML << *cast<EnumInfo>(I);
     break;
   case InfoType::IT_function:
-    InfoYAML << *static_cast<clang::doc::FunctionInfo *>(I);
+    InfoYAML << *cast<FunctionInfo>(I);
     break;
   case InfoType::IT_typedef:
-    InfoYAML << *static_cast<clang::doc::TypedefInfo *>(I);
+    InfoYAML << *cast<TypedefInfo>(I);
     break;
   case InfoType::IT_concept:
   case InfoType::IT_variable:

@@ -13,8 +13,8 @@ struct Base {
 
 struct Derived : Base {};
 
-// CIR-BEFORE-DAG: !rec_Base = !cir.record
-// CIR-BEFORE-DAG: !rec_Derived = !cir.record
+// CIR-BEFORE-DAG: !rec_Base = !cir.struct
+// CIR-BEFORE-DAG: !rec_Derived = !cir.struct
 // CIR-BEFORE-DAG: #dyn_cast_info__ZTI4Base__ZTI7Derived = #cir.dyn_cast_info<src_rtti = #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>, dest_rtti = #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>, runtime_func = @__dynamic_cast, bad_cast_func = @__cxa_bad_cast, offset_hint = #cir.int<0> : !s64i>
 
 Derived *ptr_cast(Base *b) {

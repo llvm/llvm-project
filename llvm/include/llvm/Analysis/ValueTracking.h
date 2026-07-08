@@ -123,6 +123,22 @@ LLVM_ABI void adjustKnownFPClassForSelectArm(KnownFPClass &Known, Value *Cond,
                                              const SimplifyQuery &Q,
                                              unsigned Depth = 0);
 
+enum class NoCommonBitsSetResult {
+  /// Not known to have no common set bits.
+  Unknown,
+
+  /// Known to have no common set bits only if undef values are ignored.
+  OnlyIfUndefIgnored,
+
+  /// Known to have no common set bits.
+  Known,
+};
+
+/// Return how strongly LHS and RHS are known to have no common set bits.
+LLVM_ABI NoCommonBitsSetResult getNoCommonBitsSetResult(
+    const WithCache<const Value *> &LHSCache,
+    const WithCache<const Value *> &RHSCache, const SimplifyQuery &SQ);
+
 /// Return true if LHS and RHS have no common bits set.
 LLVM_ABI bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                                   const WithCache<const Value *> &RHSCache,
@@ -639,8 +655,7 @@ inline bool isValidAssumeForContext(const Instruction *I,
 }
 
 /// Returns true, if no instruction between \p Assume and \p CtxI may free
-/// memory and the function is marked as NoSync. The latter ensures the current
-/// function cannot arrange for another thread to free on its behalf.
+/// (including through synchronization).
 LLVM_ABI bool willNotFreeBetween(const Instruction *Assume,
                                  const Instruction *CtxI);
 

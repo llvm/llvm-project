@@ -24,7 +24,7 @@ namespace lldb_private::dil {
 /// the relevant information about that object (for DIL parsing and
 /// evaluating).
 lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
-                                     std::shared_ptr<StackFrame> frame_sp,
+                                     StackFrame &stack_frame,
                                      lldb::DynamicValueType use_dynamic);
 
 /// Given the name of an identifier, check to see if it matches the name of a
@@ -32,7 +32,7 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
 /// create and return an IdentifierInfo object containing all the relevant
 /// information about it.
 lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
-                                           std::shared_ptr<StackFrame> frame_sp,
+                                           StackFrame &stack_frame,
                                            lldb::TargetSP target_sp,
                                            lldb::DynamicValueType use_dynamic);
 
@@ -44,8 +44,8 @@ lldb::ValueObjectSP LookupEnumValue(llvm::StringRef name_ref,
 class Interpreter : Visitor {
 public:
   Interpreter(lldb::TargetSP target, llvm::StringRef expr,
-              std::shared_ptr<StackFrame> frame_sp,
-              lldb::DynamicValueType use_dynamic, uint32_t options);
+              StackFrame &stack_frame, lldb::DynamicValueType use_dynamic,
+              uint32_t options);
 
   /// Evaluate an ASTNode.
   /// \returns A non-null lldb::ValueObjectSP or an Error.
@@ -89,10 +89,10 @@ private:
 
   /// Perform an arithmetic conversion on two values from an arithmetic
   /// operation.
-  /// \returns The result type of an arithmetic operation.
   llvm::Expected<CompilerType> ArithmeticConversion(lldb::ValueObjectSP &lhs,
                                                     lldb::ValueObjectSP &rhs,
                                                     uint32_t location);
+
   /// Add or subtract the offset to the pointer according to the pointee type
   /// byte size.
   /// \returns A new `ValueObject` with a new pointer value.
@@ -100,17 +100,23 @@ private:
                                                     lldb::ValueObjectSP offset,
                                                     BinaryOpKind operation,
                                                     uint32_t location);
+
   llvm::Expected<lldb::ValueObjectSP> EvaluateScalarOp(BinaryOpKind kind,
                                                        lldb::ValueObjectSP lhs,
                                                        lldb::ValueObjectSP rhs,
                                                        CompilerType result_type,
                                                        uint32_t location);
   llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                      lldb::ValueObjectSP rhs, uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryAddition(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                          uint32_t location);
+
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinarySubtraction(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                             uint32_t location);
+
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryMultiplication(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                                uint32_t location);
@@ -121,9 +127,12 @@ private:
   EvaluateBinaryRemainder(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                           uint32_t location);
   llvm::Expected<CompilerType>
-  PickIntegerType(lldb::TypeSystemSP type_system,
-                  std::shared_ptr<ExecutionContextScope> ctx,
+  PickIntegerType(lldb::TypeSystemSP type_system, ExecutionContextScope &ctx,
                   const IntegerLiteralNode &literal);
+
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateAssignment(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                     uint32_t location);
 
   /// A helper function for VerifyCastType (below). This performs
   /// arithmetic-specific checks. It should only be called if the target_type
@@ -145,12 +154,11 @@ private:
   lldb::TargetSP m_target;
   llvm::StringRef m_expr;
   lldb::ValueObjectSP m_scope;
-  std::shared_ptr<StackFrame> m_exe_ctx_scope;
+  StackFrame &m_stack_frame;
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
   bool m_check_ptr_vs_member;
-  // TODO: Remove 'maybe_unused' when next PR, using this, gets submitted.
-  [[maybe_unused]] bool m_allow_var_updates;
+  bool m_allow_var_updates;
   bool m_allow_globals = true;
 };
 

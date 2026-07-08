@@ -100,6 +100,19 @@ void buildGPUPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   }
+  // Break down high-level micro-scaling (MX) ops (arith.scaling_extf and
+  // arith.scaling_truncf) into standard arith ops (extf/truncf + mulf), and
+  // expand extf/truncf on f8E8M0FNU into integer bit manipulation. This runs
+  // before the XeVM/LLVM conversions. The f4E2M1FN expansion patterns are
+  // intentionally left disabled: f4E2M1FN extf/truncf are lowered by the XeVM
+  // conversions (xevm.extf), whereas f8E8M0FNU is not supported there and so
+  // must be expanded here.
+  {
+    arith::ArithExpandOpsPassOptions arithExpandOptions;
+    arithExpandOptions.includeF8E8M0 = true;
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        arith::createArithExpandOpsPass(arithExpandOptions));
+  }
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertMathToXeVM());
   ConvertXeGPUToXeVMPassOptions xegpuToXeVMOptions;
   xegpuToXeVMOptions.use64bitIndex = options.use64bitIndex;

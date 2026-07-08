@@ -222,11 +222,12 @@ define <4 x i64> @test_256_combine(<4 x i64> %x, <4 x i64> %y, <4 x i64> %z) {
 ;
 ; AVX512-NOVL-LABEL: test_256_combine:
 ; AVX512-NOVL:       # %bb.0:
+; AVX512-NOVL-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
 ; AVX512-NOVL-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [67108863,67108863,67108863,67108863]
 ; AVX512-NOVL-NEXT:    vpand %ymm3, %ymm0, %ymm0
 ; AVX512-NOVL-NEXT:    vpand %ymm3, %ymm1, %ymm1
-; AVX512-NOVL-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0
-; AVX512-NOVL-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
+; AVX512-NOVL-NEXT:    vpmadd52luq %zmm2, %zmm1, %zmm0
+; AVX512-NOVL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NOVL-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_256_combine:
@@ -274,11 +275,13 @@ define <2 x i64> @test_128_combine(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z) {
 ;
 ; AVX512-NOVL-LABEL: test_128_combine:
 ; AVX512-NOVL:       # %bb.0:
+; AVX512-NOVL-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
 ; AVX512-NOVL-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [67108863,67108863]
 ; AVX512-NOVL-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX512-NOVL-NEXT:    vpand %xmm3, %xmm1, %xmm1
-; AVX512-NOVL-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0
-; AVX512-NOVL-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; AVX512-NOVL-NEXT:    vpmadd52luq %zmm2, %zmm1, %zmm0
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512-NOVL-NEXT:    vzeroupper
 ; AVX512-NOVL-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_128_combine:
@@ -447,22 +450,22 @@ define <16 x i64> @test_1024_combine_split(<16 x i64> %x, <16 x i64> %y, <16 x i
 ; AVX512-NOIFMA-LABEL: test_1024_combine_split:
 ; AVX512-NOIFMA:       # %bb.0:
 ; AVX512-NOIFMA-NEXT:    vpbroadcastq {{.*#+}} zmm6 = [67108863,67108863,67108863,67108863,67108863,67108863,67108863,67108863]
-; AVX512-NOIFMA-NEXT:    vpandq %zmm6, %zmm1, %zmm1
 ; AVX512-NOIFMA-NEXT:    vpandq %zmm6, %zmm0, %zmm0
-; AVX512-NOIFMA-NEXT:    vpandq %zmm6, %zmm3, %zmm3
+; AVX512-NOIFMA-NEXT:    vpandq %zmm6, %zmm1, %zmm1
 ; AVX512-NOIFMA-NEXT:    vpandq %zmm6, %zmm2, %zmm2
-; AVX512-NOIFMA-NEXT:    vextracti64x4 $1, %zmm2, %ymm6
-; AVX512-NOIFMA-NEXT:    vextracti64x4 $1, %zmm0, %ymm7
-; AVX512-NOIFMA-NEXT:    vextracti64x4 $1, %zmm4, %ymm8
+; AVX512-NOIFMA-NEXT:    vpandq %zmm6, %zmm3, %zmm3
+; AVX512-NOIFMA-NEXT:    vextracti64x4 $1, %zmm3, %ymm6
+; AVX512-NOIFMA-NEXT:    vextracti64x4 $1, %zmm1, %ymm7
+; AVX512-NOIFMA-NEXT:    vextracti64x4 $1, %zmm5, %ymm8
 ; AVX512-NOIFMA-NEXT:    {vex} vpmadd52luq %ymm6, %ymm7, %ymm8
-; AVX512-NOIFMA-NEXT:    {vex} vpmadd52luq %ymm2, %ymm0, %ymm4
-; AVX512-NOIFMA-NEXT:    vinserti64x4 $1, %ymm8, %zmm4, %zmm0
-; AVX512-NOIFMA-NEXT:    vextracti64x4 $1, %zmm3, %ymm2
-; AVX512-NOIFMA-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; AVX512-NOIFMA-NEXT:    vextracti64x4 $1, %zmm5, %ymm6
-; AVX512-NOIFMA-NEXT:    {vex} vpmadd52luq %ymm2, %ymm4, %ymm6
 ; AVX512-NOIFMA-NEXT:    {vex} vpmadd52luq %ymm3, %ymm1, %ymm5
-; AVX512-NOIFMA-NEXT:    vinserti64x4 $1, %ymm6, %zmm5, %zmm1
+; AVX512-NOIFMA-NEXT:    vextracti64x4 $1, %zmm2, %ymm1
+; AVX512-NOIFMA-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512-NOIFMA-NEXT:    vextracti64x4 $1, %zmm4, %ymm6
+; AVX512-NOIFMA-NEXT:    {vex} vpmadd52luq %ymm1, %ymm3, %ymm6
+; AVX512-NOIFMA-NEXT:    {vex} vpmadd52luq %ymm2, %ymm0, %ymm4
+; AVX512-NOIFMA-NEXT:    vinserti64x4 $1, %ymm6, %zmm4, %zmm0
+; AVX512-NOIFMA-NEXT:    vinserti64x4 $1, %ymm8, %zmm5, %zmm1
 ; AVX512-NOIFMA-NEXT:    retq
   %x_masked = and <16 x i64> %x, splat (i64 67108863)
   %y_masked = and <16 x i64> %y, splat (i64 67108863)

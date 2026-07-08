@@ -28,7 +28,7 @@ void call_with_global_ptr() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z19call_with_local_ptrv()
-// CIR:         %[[ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i, target_address_space(5)>
+// CIR:         %[[ALLOCA:.*]] = cir.alloca {{.*}}  : !cir.ptr<!s32i, target_address_space(5)>
 // CIR:         %[[CAST:.*]] = cir.cast address_space %[[ALLOCA]] : !cir.ptr<!s32i, target_address_space(5)> -> !cir.ptr<!s32i>
 // CIR:         cir.call @_Z9takes_ptrPi(%[[CAST]])
 

@@ -25,11 +25,13 @@ jobs:
             compiler:
               c_compiler: clang-23
               cpp_compiler: clang++-23
+            linker: lld-23
           - os: ubuntu-24.04-arm
             container: 'ghcr.io/llvm/arm64v8/libc-ubuntu-24.04:latest@sha256:138636a45bb70f7b51a858b282e66291cb3c5c85371afee09032a5e09b263395'
             compiler:
               c_compiler: clang-23
               cpp_compiler: clang++-23
+            linker: lld-23
           - os: windows-2022
             compiler:
               c_compiler: clang-cl
@@ -89,6 +91,7 @@ jobs:
         -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
         -DLIBC_COMPILE_OPTIONS_NATIVE=""
         -DLLVM_ENABLE_RUNTIMES=libc
+        -DLLVM_USE_LINKER="${{ matrix.linker }}"
         -G Ninja
         -S runtimes
 

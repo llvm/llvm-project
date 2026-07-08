@@ -284,10 +284,16 @@ else()
 
   # COMPILER_RT_HAS_${arch}_* defines that are shared between lib/builtins/ and test/builtins/
   foreach (arch ${BUILTIN_SUPPORTED_ARCH})
+    cmake_push_check_state()
+    list(APPEND CMAKE_REQUIRED_FLAGS
+      ${TARGET_${arch}_CFLAGS})
+    list(JOIN CMAKE_REQUIRED_FLAGS " " CMAKE_REQUIRED_FLAGS)
+
     # NOTE: The corresponding check for if(APPLE) is in CompilerRTDarwinUtils.cmake
     check_c_source_compiles("_Float16 foo(_Float16 x) { return x; }
                               int main(void) { return 0; }"
                             COMPILER_RT_HAS_${arch}_FLOAT16)
+    cmake_pop_check_state()
   endforeach()
 endif()
 

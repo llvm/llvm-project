@@ -19,7 +19,6 @@
 #include "flang/Optimizer/Builder/Runtime/Allocatable.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -27,13 +26,11 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 namespace hlfir {
 #define GEN_PASS_DEF_BUFFERIZEHLFIR
@@ -156,8 +153,21 @@ struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
     fir::FirOpBuilder builder(rewriter, module);
     if (asExpr.isMove()) {
       // Move variable storage for the hlfir.expr buffer.
-      mlir::Value bufferizedExpr = packageBufferizedExpr(
-          loc, builder, hlfir::Entity{adaptor.getVar()}, adaptor.getMustFree());
+      hlfir::Entity storage{adaptor.getVar()};
+      // An hlfir.expr has lower bounds of one. When the moved storage is a
+      // descriptor that may carry non-default lower bounds (e.g. an allocatable
+      // or pointer function result used in a structure constructor), rebox it
+      // to lower bounds of one so they are not propagated to the users of the
+      // expression. This does not copy the data.
+      if (storage.isArray() && mlir::isa<fir::BaseBoxType>(storage.getType()) &&
+          storage.mayHaveNonDefaultLowerBounds()) {
+        // A rebox without a shape operand resets the lower bounds to one.
+        storage = hlfir::Entity{fir::ReboxOp::create(
+            builder, loc, storage.getType(), storage, /*shape=*/mlir::Value{},
+            /*slice=*/mlir::Value{})};
+      }
+      mlir::Value bufferizedExpr =
+          packageBufferizedExpr(loc, builder, storage, adaptor.getMustFree());
       rewriter.replaceOp(asExpr, bufferizedExpr);
       return mlir::success();
     }

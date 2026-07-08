@@ -55,6 +55,7 @@ add_clang_library(clangCIR
   CIRGenVTables.cpp
   TargetInfo.cpp
   Targets/AMDGPU.cpp
+  Targets/NVPTX.cpp
   Targets/SPIRV.cpp
 
   DEPENDS
@@ -67,6 +68,7 @@ add_clang_library(clangCIR
   clangBasic
   clangLex
   ${dialect_libs}
+  CIRRegisterAllDialects
   CIROpenACCSupport
   CIROpenMPSupport
   MLIRCIR

@@ -134,7 +134,7 @@ static_assert(f());
 // (i.e., taking the address of below will fail because it will be an immediate function)
 template <typename T>
 constexpr void does_escalate(T p) {
-  std::is_within_lifetime(p);
+  (void)std::is_within_lifetime(p);
 }
 template <typename T, void (*)(T) = &does_escalate<T>>
 constexpr bool check_escalated(int) {

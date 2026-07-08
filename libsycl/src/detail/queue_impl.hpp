@@ -29,6 +29,8 @@ class ContextImpl;
 class DeviceImpl;
 class EventImpl;
 
+using EventImplPtr = std::shared_ptr<EventImpl>;
+
 class QueueImpl : public std::enable_shared_from_this<QueueImpl> {
   struct PrivateTag {
     explicit PrivateTag() = default;
@@ -69,13 +71,64 @@ public:
   /// Waits for completion of all commands submitted to this queue.
   void wait();
 
+  /// Enqueues a kernel to liboffload.
+  /// Kernel parameters like dependencies and range must be passed in advance by
+  /// calling setKernelParameters.
+  /// \param KernelInfo a kernel info that is uniform between different
+  /// submissions of the same kernel.
+  /// \param ArgData a pointer to kernel argument.
+  /// \param ArgSize a size of kernel argument in bytes.
+  void submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
+                        size_t ArgSize);
+
+  /// \return an event impl object that corresponds to the last kernel
+  /// submission in the calling thread.
+  EventImplPtr getLastEvent() {
+    assert(MCurrentSubmitInfo.LastEvent &&
+           "getLastEvent must be called after enqueue");
+    return MCurrentSubmitInfo.LastEvent;
+  }
+
+  /// Sets kernel parameters to be used in the next submitKernelImpl call.
+  /// Must be called prior to a submitKernelImpl call.
+  /// \param Events a collection of events that the kernel depends on.
+  /// \param Range a unified range view of the execution range.
+  void setKernelParameters(std::vector<EventImplPtr> &&Events,
+                           const detail::UnifiedRangeView &Range);
+
+  /// Submits a memory copy operation from one USM or host pointer to another.
+  ///
+  /// \param Dest is the pointer to copy to.
+  /// \param Src is the pointer to copy from.
+  /// \param NumBytes is the number of bytes to copy.
+  /// \param DepEvents is a vector of dependencies for the operation.
+  /// \return an event impl object that represents the status of the operation.
+  EventImplPtr memcpy(void *Dest, const void *Src, std::size_t NumBytes,
+                      const std::vector<EventImplPtr> &DepEvents);
+
 private:
+  void handleEventDependencies(std::vector<ol_event_handle_t> &Deps);
+  EventImplPtr createEvent();
+
+  // Queue features.
   ol_queue_handle_t MOffloadQueue = {};
   const bool MIsInorder;
   const async_handler MAsyncHandler;
   const property_list MPropList;
   DeviceImpl &MDevice;
   ContextImpl &MContext;
+
+  // Submit data.
+  struct KernelSubmitInfo {
+    EventImplPtr LastEvent;
+    ol_kernel_launch_size_args_t Range;
+    // TODO: consider storing EventImplPtr here, it will work with plain handle
+    // only because submission is done within queue::submit call. Otherwise we
+    // need to ensure that event handle is still alive by keeping our own copy
+    // of EventImpl.
+    std::vector<ol_event_handle_t> DepEvents;
+  };
+  inline static thread_local KernelSubmitInfo MCurrentSubmitInfo = {};
 };
 
 } // namespace detail

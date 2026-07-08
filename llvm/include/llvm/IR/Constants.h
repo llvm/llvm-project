@@ -216,7 +216,7 @@ public:
   /// This is just a convenience method to make client code smaller for a
   /// common code. It also correctly performs the comparison without the
   /// potential for an assertion from getZExtValue().
-  bool isZero() const { return Val.isZero(); }
+  bool isZero() const { return isNullValue(); }
 
   /// This is just a convenience method to make client code smaller for a
   /// common case. It also correctly performs the comparison without the
@@ -481,6 +481,12 @@ public:
   /// Return true if the value is a NaN.
   bool isNaN() const { return Val.isNaN(); }
 
+  /// Returns true if this value is exactly +1.0.
+  bool isOne() const { return Val.isOne(); }
+
+  /// Returns true if this value is exactly -1.0.
+  bool isMinusOne() const { return Val.isMinusOne(); }
+
   /// We don't rely on operator== working on double values, as it returns true
   /// for things that are clearly not equal, like -0.0 and 0.0.
   /// As such, this method can be used to do an exact bit-for-bit comparison of
@@ -509,7 +515,9 @@ class ConstantAggregateZero final : public ConstantData {
   friend class Constant;
 
   explicit ConstantAggregateZero(Type *Ty)
-      : ConstantData(Ty, ConstantAggregateZeroVal) {}
+      : ConstantData(Ty, ConstantAggregateZeroVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -709,7 +717,9 @@ class ConstantPointerNull final : public ConstantData {
   friend class Constant;
 
   explicit ConstantPointerNull(Type *T)
-      : ConstantData(T, Value::ConstantPointerNullVal) {}
+      : ConstantData(T, Value::ConstantPointerNullVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -1026,7 +1036,9 @@ class ConstantTokenNone final : public ConstantData {
   friend class Constant;
 
   explicit ConstantTokenNone(LLVMContext &Context)
-      : ConstantData(Type::getTokenTy(Context), ConstantTokenNoneVal) {}
+      : ConstantData(Type::getTokenTy(Context), ConstantTokenNoneVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -1047,7 +1059,9 @@ class ConstantTargetNone final : public ConstantData {
   friend class Constant;
 
   explicit ConstantTargetNone(TargetExtType *T)
-      : ConstantData(T, Value::ConstantTargetNoneVal) {}
+      : ConstantData(T, Value::ConstantTargetNoneVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -1074,7 +1088,9 @@ public:
 class BlockAddress final : public Constant {
   friend class Constant;
 
-  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{0};
+
+  BasicBlock *Block;
 
   BlockAddress(Type *Ty, BasicBlock *BB);
 
@@ -1106,7 +1122,7 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  BasicBlock *getBasicBlock() const { return cast<BasicBlock>(Op<0>().get()); }
+  BasicBlock *getBasicBlock() const { return Block; }
   Function *getFunction() const { return getBasicBlock()->getParent(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -1117,7 +1133,7 @@ public:
 
 template <>
 struct OperandTraits<BlockAddress>
-    : public FixedNumOperandTraits<BlockAddress, 1> {};
+    : public FixedNumOperandTraits<BlockAddress, 0> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BlockAddress, Value)
 

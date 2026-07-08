@@ -83,7 +83,6 @@ std::set<CtorTester *> CtorTester::Constructed;
 
 struct CtorTesterMapInfo {
   static inline CtorTester getEmptyKey() { return CtorTester(-1); }
-  static inline CtorTester getTombstoneKey() { return CtorTester(-2); }
   static unsigned getHashValue(const CtorTester &Val) {
     return Val.getValue() * 37u;
   }
@@ -476,7 +475,6 @@ TEST(DenseMapCustomTest, ReserveTest) {
 // In the latter case, "a" == 0, "b" == 1 and so on.
 struct TestDenseMapInfo {
   static inline unsigned getEmptyKey() { return ~0; }
-  static inline unsigned getTombstoneKey() { return ~0U - 1; }
   static unsigned getHashValue(const unsigned &Val) { return Val * 37U; }
   static unsigned getHashValue(const char *Val) {
     return (unsigned)(Val[0] - 'a') * 37U;
@@ -488,6 +486,47 @@ struct TestDenseMapInfo {
     return (unsigned)(LHS[0] - 'a') == RHS;
   }
 };
+
+// Hashes every key to the same home bucket, so the table degenerates into a
+// single long linear-probe cluster -- the worst case for Algorithm R
+// backward-shift erase.
+struct CollidingMapInfo {
+  static inline unsigned getEmptyKey() { return ~0U; }
+  static unsigned getHashValue(const unsigned&) { return 0; }
+  static bool isEqual(const unsigned& LHS, const unsigned& RHS) {
+    return LHS == RHS;
+  }
+};
+
+// Erase in a strided order via the pointer overload (the one LSan uses), and
+// after every erase confirm the full key set: surviving keys must be relocated
+// yet stay findable with their value, erased keys must be absent.
+TEST(DenseMapCustomTest, EraseStressColliding) {
+  DenseMap<unsigned, unsigned, CollidingMapInfo> Map;
+  const unsigned N = 200;
+  for (unsigned i = 0; i < N; ++i) Map[i] = i * 7 + 1;
+
+  std::set<unsigned> Erased;
+  unsigned Idx = 0;
+  for (unsigned Step = 0; Step < N; ++Step) {
+    Idx = (Idx + 37) % N;
+    while (Erased.count(Idx)) Idx = (Idx + 1) % N;
+    Map.erase(Map.find(Idx));
+    Erased.insert(Idx);
+    EXPECT_EQ(N - Erased.size(), Map.size());
+
+    for (unsigned K = 0; K < N; ++K) {
+      auto* B = Map.find(K);
+      if (Erased.count(K)) {
+        EXPECT_EQ(nullptr, B);
+      } else {
+        ASSERT_NE(nullptr, B);
+        EXPECT_EQ(K * 7 + 1, B->second);
+      }
+    }
+  }
+  EXPECT_TRUE(Map.empty());
+}
 
 // find_as() tests
 TEST(DenseMapCustomTest, FindAsTest) {

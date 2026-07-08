@@ -1,3 +1,5 @@
+.. _amdgpu-usage-guide:
+
 =============================
 User Guide for AMDGPU Backend
 =============================
@@ -518,6 +520,13 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     ``gfx1154``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      **GCN GFX11.7 (RDNA 4m)**
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1170``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
@@ -669,12 +678,10 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                          - ``gfx1102``                        - Packed          hazards specific to some targets
                                          - ``gfx1103``                          work-item       within this family.
                                          - ``gfx1150``                          IDs
-                                         - ``gfx1151``
+                                         - ``gfx1151``                                          Not all VGPRs can be used on:
                                          - ``gfx1152``
-                                         - ``gfx1153``                                          Not all VGPRs can be used on:
-
-                                                                                                - ``gfx1100``
-                                                                                                - ``gfx1101``
+                                         - ``gfx1153``                                          - ``gfx1100``
+                                         - ``gfx1154``                                          - ``gfx1101``
                                                                                                 - ``gfx1151``
 
                                                                                                 SALU floating point instructions
@@ -694,6 +701,12 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                 - ``gfx1103``
 
 
+     ``gfx11-7-generic``  ``amdgcn``     - ``gfx1170``     - wavefrontsize64  - Architected     No restrictions.
+                                         - ``gfx1171``     - cumode             flat scratch
+                                         - ``gfx1172``                        - Packed
+                                                                                work-item
+                                                                                IDs
+
      ``gfx12-generic``    ``amdgcn``     - ``gfx1200``     - wavefrontsize64  - Architected     No restrictions.
                                          - ``gfx1201``     - cumode             flat scratch
                                                                               - Packed
@@ -702,6 +715,12 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
 
      ``gfx12-5-generic``  ``amdgcn``     - ``gfx1250``                        - Architected     Functionally equivalent to
                                          - ``gfx1251``                          flat scratch    gfx1250.
+                                                                              - Packed
+                                                                                work-item
+                                                                                IDs
+
+     ``gfx13-generic``    ``amdgcn``     - ``gfx1310``     - wavefrontsize64  - Architected     No restrictions.
+                                                           - cumode             flat scratch
                                                                               - Packed
                                                                                 work-item
                                                                                 IDs
@@ -827,6 +846,58 @@ For example:
                                                   disabled.
 
      =============== ============================ ==================================================
+
+.. _amdgpu-module-flags:
+
+Module Flags
+------------
+
+AMDGPU-specific behaviour can be controlled via LLVM module flags (see
+`Module Flags Metadata
+<https://llvm.org/docs/LangRef.html#module-flags-metadata>`_ in the language
+reference). These flags are set by frontends and are
+consumed by the AMDGPU backend during code generation.
+
+.. list-table:: AMDGPU Module Flags
+   :name: amdgpu-module-flags-table
+   :header-rows: 1
+
+   * - Flag Name
+     - Type
+     - Merge
+     - Description
+   * - ``amdgpu.buffer.oob.mode``
+     - ``i32``
+     - Max
+     - Controls out-of-bounds semantics for untyped buffer
+       instructions (``buffer_load`` / ``buffer_store``).
+
+       - ``0`` (or absent): **any**. The module does not care about OOB
+         semantics. This is an alias of **strict** that is allowed to link
+         with any other module. Code generation is identical to **strict**.
+       - ``1``: **relaxed**. The backend may merge misaligned buffer
+         accesses for performance, even if that changes OOB behaviour, and will
+         not split vector accesses that may produce unexpected OOB accesses.
+       - ``2``: **strict**. The backend preserves per-byte OOB guarantees
+         by preventing merging of misaligned buffer accesses that could
+         straddle an OOB boundary (e.g. as required by Vulkan
+         ``robustBufferAccess2``) and by splitting vector accesses to buffer
+         fat pointers that may produce incorrect results under a robust buffer
+         access scheme. See :ref:`amdgpu-fat-buffer-oob-handling` for details.
+
+   * - ``amdgpu.tbuffer.oob.mode``
+     - ``i32``
+     - Max
+     - Same as above, but for typed buffer instructions (``tbuffer_load`` /
+       ``tbuffer_store``).
+
+.. note::
+
+   Frontends that require misaligned-access merging for performance should
+   set both flags to ``1`` (relaxed).  Frontends that require strict
+   per-byte OOB guarantees should set the flags to ``2`` (strict) as needed.
+   Modules that do not use buffer operations or are indifferent to OOB semantics
+   (e.g. device libraries) should leave the flags absent.
 
 .. _amdgpu-target-id:
 
@@ -1153,6 +1224,15 @@ supported for the ``amdgcn`` target.
 Memory Scopes
 -------------
 
+.. note::
+
+   `:ref:amdgpu-memmodel` is a work in progress to provide a complete memory
+   consistency model for AMDGPU, including newer features like *availability*,
+   *visibility* and asynchronous operations. The new model will replace the
+   model described in this section. Until then, this section should only be read
+   along with the new model; any ambiguity is likely to be settled in favour of
+   the new model.
+
 This section provides LLVM memory synchronization scopes supported by the AMDGPU
 backend memory model when the target triple OS is ``amdhsa`` (see
 :ref:`amdgpu-amdhsa-memory-model` and :ref:`amdgpu-target-triples`).
@@ -1278,6 +1358,51 @@ instruction with ``one-as`` sync scope is specified via
     ``singlethread-one-as`` Same as ``singlethread`` but only synchronizes with
                             other operations within the same address space.
     ======================= ===================================================
+
+.. _amdgpu-fat-buffer-oob-handling:
+
+Buffer Fat Pointer out of bounds (OOB) handling
+-----------------------------------------------
+
+Instructions that load from or store to buffer resources (and thus, by extension
+buffer fat pointers and buffer strided pointers) generally implement handling for
+out of bounds (OOB) memory accesses, including those that are partially OOB,
+if the buffer resource resource has the required flags set. How ordinary
+``load`` and ``store`` instructions are lowered to buffer operations is partly
+controlled by the ``amdgpu.buffer.oob.mode`` (see :ref:`amdgpu-module-flags`). If
+that flag is set to ``1`` (relaxed), no handling to improve the expected behavior
+of OOB accesses is performed, while if it is set to ``0`` (any) or ``2`` (strict),
+operations may be split to ensure correctness under stronger models of how
+out-of-bounds accesses should behave.
+
+When operating on more than 32 bits of data, the ``voffset`` used for the access
+will be range-checked for each 32-bit word independently. This check uses saturating
+arithmetic and interprets the offset as an unsigned value.
+
+The behavior described above conflicts with the ABI requirements of certain graphics
+APIs that require out of bounds accesses to be handled strictly so that accessed
+that begin out of bounds but then access in-bounds elements (such as loading a
+``<4 x i32>`` beginning at offset ``-4``) still load the three in-bounds integers
+(producing ``<0, v0, v1, v2>`` and not ``<0, 0, 0, 0>``. So, under strict OOB
+handling, such an access will be split into four ``i32`` accesses. Note this this
+can only happen for underaligned loads - such wraparound isn't possible for
+loads that are alligned to their natural size.
+
+Similarly, buffer fat pointers permit operating on types such as ``<8 x i8>`` which
+must be accessed (and bounds-checked) 4 bytes at a time. Non-word-aligned
+accesses to such types from near the end of a buffer resource (such as starting
+a load of an ``<8 x i8>`` from an offset of ``6`` on an 8-byte buffer) will treat
+the initial two bytes to be loaded/stored as out of bounds, even though, under
+a strict interpretation of the bounds-checking semantics, they would be in bounds.
+Under strict OOB handling, such a load will be split into a sequence of ``<2 x i16>``
+loads.
+
+.. note::
+
+  No attempt will be made to shrink buffer intrinsic calls (calling
+  ``llvm.amdgcn.raw.ptr.buffer.*`` directly) in order to cause them to meet the
+  requirements of strict OOB mode. However, in strict OOB mode, those intrinsics
+  will not be combined in a way that would violate the guarantees of that mode.
 
 Target Types
 ------------
@@ -1443,21 +1568,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    The format is a 64-bit concatenation of the MODE and TRAPSTS registers.
 
   :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specified state.
-  llvm.amdgcn.load.to.lds.p<1/7>                   Loads values from global memory (either in the form of a global
-                                                   a raw fat buffer pointer) to LDS. The size of the data copied can be 1, 2,
-                                                   or 4 bytes (and gfx950 also allows 12 or 16 bytes). The LDS pointer
-                                                   argument should be wavefront-uniform; the global pointer need not be.
-                                                   The LDS pointer is implicitly offset by 4 * lane_id bytes for size <= 4 bytes
-                                                   and 16 * lane_id bytes for larger sizes. This lowers to `global_load_lds`,
-                                                   `buffer_load_* ... lds`, or `global_load__* ... lds` depending on address
-                                                   space and architecture. `amdgcn.global.load.lds` has the same semantics as
-                                                   `amdgcn.load.to.lds.p1`.
-
-  llvm.amdgcn.load.async.to.lds.p<1/7>             Same as `llvm.amdgcn.load.to.lds.p<1/7>`, but the completion of this
-                                                   :ref:`asynchronous version<amdgpu-async-operations>` is not automatically tracked
-                                                   by the compiler. The user must explicitly track the completion with `asyncmark`
-                                                   operations before using their side-effects.
-
   llvm.amdgcn.readfirstlane                        Provides direct access to v_readfirstlane_b32. Returns the value in
                                                    the lowest active lane of the input operand. Currently implemented
                                                    for i16, i32, float, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>,
@@ -1818,7 +1928,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    * Flat pointer.
                                                    * :ref:`Load Atomic Ordering<amdgpu-intrinsics-c-abi-atomic-memory-ordering-operand>`.
                                                    * :ref:`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
-                                                     Note that the scope used must ensure that the L2 cache will be hit.
 
   llvm.amdgcn.global.load.monitor                  Available on GFX12.5 only.
                                                    Corresponds to ``global_load_monitor_b32/64/128`` (``.b32/64/128`` suffixes)
@@ -1828,10 +1937,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    This intrinsic has 3 operands:
 
-                                                   * Flat pointer.
+                                                   * Global pointer.
                                                    * :ref:`Load Atomic Ordering<amdgpu-intrinsics-c-abi-atomic-memory-ordering-operand>`.
                                                    * :ref:`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
-                                                     Note that the scope used must ensure that the L2 cache will be hit.
 
   llvm.amdgcn.ds.atomic.barrier.arrive.rtn.b64     Available starting GFX12.5.
                                                    Corresponds to ``ds_atomic_barrier_arrive_rtn_b64``.
@@ -1868,11 +1976,10 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 '``llvm.amdgcn.av``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The '``llvm.amdgcn.av``' intrinsics perform load and store operations on flat or
-global memory, with explicit control on how their side-effects propagate through
-the system. They take a *scope* argument as a string metadata, which indicates
-the scope within which these side-effects are guaranteed to be observable.
-[TODO: The exact semantics as a memory consistency model is a work in progress.]
+The '``llvm.amdgcn.av``' intrinsics perform
+:ref:`store-available<amdgpu-store-available>` and
+:ref:`load-visible<amdgpu-load-visible>` operations on flat or global memory
+with *scope* supplied as a metadata argument.
 
 The pointer argument can be a global pointer (``addrspace(1)``) or a flat
 pointer (``addrspace(0)``). Global pointers select ``global_load``/
@@ -1904,8 +2011,7 @@ Implementation Details
 
 This section is informational and for **internal reference only**. Users should
 not rely on the expansions described below. The only reliable user-level
-guarantees are those provided by the memory consistency model, which is
-currently a work in progress.
+guarantees are those provided by the :ref:`AMDGPU memory model<amdgpu-memmodel>`.
 
 The tables below show the cache policy bits for global pointer variants.
 Flat pointer variants use the corresponding ``flat_load``/``flat_store``
@@ -2024,6 +2130,31 @@ The 3rd operand for ``.store`` or 2nd for ``.load`` intrinsics is the
 The last operand of the intrinsic is the
 :ref:`synchronization scope<amdgpu-intrinsics-syncscope-metadata-operand>` of the operation.
 
+DMA Intrinsics
+~~~~~~~~~~~~~~
+
+DMA intrinsics transfer data between global memory and LDS without occupying
+registers. See :ref:`amdgpu-dma-operations` for full documentation.
+
+::
+
+  llvm.amdgcn.load[.async].to.lds
+  llvm.amdgcn.global.load[.async].lds
+  llvm.amdgcn.{raw|struct}[.ptr].buffer.load[.async].lds
+  llvm.amdgcn.{global|cluster}.load.async.to.lds.b{8,32,64,128}
+  llvm.amdgcn.global.store.async.from.lds.b{8,32,64,128}
+
+Tensor Intrinsics
+~~~~~~~~~~~~~~~~~
+
+Tensor intrinsics transfer data between global memory and LDS using a tensor
+descriptor. Despite the absence of ``.async`` in their names, these intrinsics
+are asynchronous. See :ref:`amdgpu-dma-operations` for full documentation.
+
+::
+
+  llvm.amdgcn.tensor.{load.to|store.from}.lds
+
 Intrinsic Operands
 ~~~~~~~~~~~~~~~~~~
 
@@ -2076,6 +2207,18 @@ Example:
   %0 = tail call i32 @llvm.amdgcn.cooperative.atomic.load.32x4B.p0(ptr %addr, i32 4, metadata !0)
 
   !0 = !{ !"agent" }
+
+.. _amdgpu_unsupported_constructs:
+
+Unsupported IR Constructs
+-------------------------
+
+The following LLVM IR constructs are not supported by the AMDGPU backend:
+
+* atomic accesses with less than natural alignment or an access size of
+  more than 64 bits
+
+This list is not exhaustive.
 
 .. _amdgpu_metadata:
 
@@ -2191,6 +2334,9 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-flat-work-group-size"="min,max"          Specify the minimum and maximum flat work group sizes that
                                                       will be specified when the kernel is dispatched. Generated
                                                       by the ``amdgpu_flat_work_group_size`` CLANG attribute [CLANG-ATTR]_.
+                                                      If the ``reqd_work_group_size`` metadata is present, the product
+                                                      of its three workgroup size dimensions must match both ``min``
+                                                      and ``max``.
                                                       The IR implied default value is 1,1024. Clang may emit this attribute
                                                       with more restrictive bounds depending on language defaults.
                                                       If the actual block or workgroup size exceeds the limit at any point during
@@ -2301,6 +2447,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-no-completion-action"                    Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
                                                       kernel argument that holds the completion action pointer. If this
                                                       attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
+
+     "amdgpu-tg-split"                                Enable threadgroup split execution mode for the function. This must be
+                                                      consistently set (or unset) for all reachable functions. This is only
+                                                      relevant on targets with the `tgsplit-support` feature.
 
      "amdgpu-lds-size"="min[,max]"                    Min is the minimum number of bytes that will be allocated in the Local
                                                       Data Store at address zero. Variables are allocated within this frame
@@ -2567,6 +2717,9 @@ As part of the AMDGPU MC layer, AMDGPU provides the following target-specific
      =================== ================= ========================================================
      ``max(arg, ...)``   1 or more         Variadic signed operation that returns the maximum
                                            value of all its arguments.
+
+     ``min(arg, ...)``   1 or more         Variadic signed operation that returns the minimum
+                                           value of all its arguments
 
      ``or(arg, ...)``    1 or more         Variadic signed operation that returns the bitwise-or
                                            result of all its arguments.
@@ -2974,7 +3127,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC``    0x054      ``gfx11-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1152``          0x055      ``gfx1152``.
      *reserved*                                 0x056      Reserved.
-     *reserved*                                 0x057      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1154``          0x057      ``gfx1154``.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1153``          0x058      ``gfx1153``.
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1251``          0x05a      ``gfx1251``
@@ -2984,6 +3137,9 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1171``          0x05e      ``gfx1171``
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
      *reserved*                                 0x060      Reserved.
+     *reserved*                                 0x061      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC``  0x062      ``gfx11-7-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC``    0x063      ``gfx13-generic``
      *reserved*                                 0x070      Reserved.
      ========================================== ========== =============================
 
@@ -7065,6 +7221,15 @@ code (see :ref:`memmodel`).
 The AMDGPU backend supports the memory synchronization scopes specified in
 :ref:`amdgpu-memory-scopes`.
 
+.. note::
+
+   `:ref:amdgpu-memmodel` is a work in progress to provide a complete memory
+   consistency model for AMDGPU, including newer features like *availability*,
+   *visibility* and asynchronous operations. The new model will replace the
+   model described in this section. Until then, this section should only be read
+   along with the new model; any ambiguity is likely to be settled in favour of
+   the new model.
+
 The code sequences used to implement the memory model specify the order of
 instructions that a single thread must execute. The ``s_waitcnt`` and cache
 management instructions such as ``buffer_wbinvl1_vol`` are defined with respect
@@ -7101,19 +7266,7 @@ operations.
 termed vector memory operations.
 
 ``global_load_lds`` or ``buffer/global_load`` instructions with the `lds` flag
-are LDS DMA loads. They interact with caches as if the loaded data were
-being loaded to registers and not to LDS, and so therefore support the same
-cache modifiers. They cannot be performed atomically. They implement volatile
-(via aux/cpol bit 31) and nontemporal (via metadata) as if they were loads
-from the global address space.
-
-The LDS DMA instructions are synchronous by default, which means that the
-compiler will automatically ensure that the corresponding operation has
-completed before its side-effects are used. The :ref:`asynchronous
-versions<amdgpu-async-operations>` of these same instructions perform the same
-operations, but without automatic tracking in the compiler; the user must
-explicitly track the completion of these instructions before using their
-side-effects.
+are :ref:`LDS DMA operations<amdgpu-dma-operations>`.
 
 Private address space uses ``buffer_load/store`` using the scratch V#
 (GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX11). Since only a single thread
@@ -7143,15 +7296,6 @@ orderings (``acquire``, ``release``, ``acq_rel``, or ``seq_cst``).
 
 The memory model does not support the region address space which is treated as
 non-atomic.
-
-Acquire memory ordering is not meaningful on store atomic instructions and is
-treated as non-atomic.
-
-Release memory ordering is not meaningful on load atomic instructions and is
-treated as non-atomic.
-
-Acquire-release memory ordering is not meaningful on load or store atomic
-instructions and is treated as acquire and release respectively.
 
 The memory order also adds the single thread optimization constraints defined in
 table
@@ -7190,7 +7334,11 @@ table
      ============ ==============================================================
 
 The code sequences used to implement the memory model are defined in the
-following sections:
+sections listed below.
+
+**Note:** The presence of :ref:`AV metadata<amdgpu-av-metadata>` can **suppress
+cache operations** (such as write-back or invalidate) that are usually part of
+these sequences.
 
 * :ref:`amdgpu-amdhsa-memory-model-gfx6-gfx9`
 * :ref:`amdgpu-amdhsa-memory-model-gfx90a`
@@ -17461,7 +17609,8 @@ For GFX125x:
 
   * In order to monitor a cache line in the L2 cache, these instructions must
     ensure that the L2 cache is always hit by setting the ``SCOPE`` of the instruction
-    appropriately.
+    appropriately. The compiler may adjust the scope of the instruction accordingly
+    to ensure this is the case.
   * For non-atomic and atomic code sequences, it is valid to replace
     ``global_load_b32/64/128`` with a ``global_load_monitor_b32/64/128`` and a
     ``flat_load_b32/64/128`` with a ``flat_load_monitor_b32/64/128``.

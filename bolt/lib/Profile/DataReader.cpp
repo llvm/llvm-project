@@ -338,8 +338,9 @@ std::error_code DataReader::parseInput() {
   if (std::error_code EC = parse())
     return EC;
 
-  Diag << "WARNING: invalid profile data detected at line " << Line
-       << ". Possibly corrupted profile.\n";
+  if (!ParsingBuf.empty())
+    Diag << "WARNING: invalid profile data detected at line " << Line
+         << ". Possibly corrupted profile.\n";
 
   buildLTONameMaps();
 

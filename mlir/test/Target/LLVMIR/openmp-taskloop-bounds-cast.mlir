@@ -22,7 +22,7 @@ llvm.func @_QPtest_taskloop_bounds() {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 

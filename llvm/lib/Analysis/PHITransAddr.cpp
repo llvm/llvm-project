@@ -129,7 +129,8 @@ static void RemoveInstInputs(Value *V,
 
 Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
                                       BasicBlock *PredBB,
-                                      const DominatorTree *DT) {
+                                      const DominatorTree *DT, Value *Cond,
+                                      bool CondVal) {
   // If this is a non-instruction value, it can't require PHI translation.
   Instruction *Inst = dyn_cast<Instruction>(V);
   if (!Inst) return V;
@@ -152,8 +153,19 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     InstInputs.erase(find(InstInputs, Inst));
 
     // If this is a PHI, go ahead and translate it.
-    if (PHINode *PN = dyn_cast<PHINode>(Inst))
-      return addAsInput(PN->getIncomingValueForBlock(PredBB));
+    if (PHINode *PN = dyn_cast<PHINode>(Inst)) {
+      Value *Incoming = PN->getIncomingValueForBlock(PredBB);
+      // If the incoming value on this edge is a select on the condition we are
+      // resolving, fold it to the requested side. This is what lets us obtain
+      // the two distinct addresses referenced by a select-dependent load along
+      // a backedge (e.g. min/max idioms).
+      if (Cond)
+        if (auto *SI = dyn_cast<SelectInst>(Incoming))
+          if (SI->getCondition() == Cond)
+            return addAsInput(CondVal ? SI->getTrueValue()
+                                      : SI->getFalseValue());
+      return addAsInput(Incoming);
+    }
 
     // If this is a non-phi value, and it is analyzable, we can incorporate it
     // into the expression by making all instruction operands be inputs.
@@ -171,7 +183,8 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
   // operands need to be phi translated, and if so, reconstruct it.
 
   if (CastInst *Cast = dyn_cast<CastInst>(Inst)) {
-    Value *PHIIn = translateSubExpr(Cast->getOperand(0), CurBB, PredBB, DT);
+    Value *PHIIn =
+        translateSubExpr(Cast->getOperand(0), CurBB, PredBB, DT, Cond, CondVal);
     if (!PHIIn) return nullptr;
     if (PHIIn == Cast->getOperand(0))
       return Cast;
@@ -202,7 +215,7 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     SmallVector<Value*, 8> GEPOps;
     bool AnyChanged = false;
     for (Value *Op : GEP->operands()) {
-      Value *GEPOp = translateSubExpr(Op, CurBB, PredBB, DT);
+      Value *GEPOp = translateSubExpr(Op, CurBB, PredBB, DT, Cond, CondVal);
       if (!GEPOp) return nullptr;
 
       AnyChanged |= GEPOp != Op;
@@ -249,7 +262,8 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     bool isNSW = cast<BinaryOperator>(Inst)->hasNoSignedWrap();
     bool isNUW = cast<BinaryOperator>(Inst)->hasNoUnsignedWrap();
 
-    Value *LHS = translateSubExpr(Inst->getOperand(0), CurBB, PredBB, DT);
+    Value *LHS =
+        translateSubExpr(Inst->getOperand(0), CurBB, PredBB, DT, Cond, CondVal);
     if (!LHS) return nullptr;
 
     // If the PHI translated LHS is an add of a constant, fold the immediates.
@@ -317,6 +331,33 @@ Value *PHITransAddr::translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
         Addr = nullptr;
 
   return Addr;
+}
+
+SelectAddr::SelectAddrs PHITransAddr::translateValue(BasicBlock *CurBB,
+                                                     BasicBlock *PredBB,
+                                                     const DominatorTree *DT,
+                                                     Value *Cond) {
+  assert(Cond && "expected a non-null select condition");
+  assert(verify() && "Invalid PHITransAddr!");
+
+  if (!DT || !DT->isReachableFromEntry(PredBB))
+    return {nullptr, nullptr};
+
+  auto TranslateSide = [&](bool CondVal) -> Value * {
+    // Work on a copy so that the original address state is preserved and the
+    // other side can be translated independently.
+    PHITransAddr Tmp(*this);
+    return Tmp.translateSubExpr(Tmp.Addr, CurBB, PredBB, DT, Cond, CondVal);
+  };
+
+  return {TranslateSide(/*CondVal=*/true), TranslateSide(/*CondVal=*/false)};
+}
+
+Value *PHITransAddr::getSelectCondition() const {
+  for (Instruction *I : InstInputs)
+    if (auto *SI = dyn_cast<SelectInst>(I))
+      return SI->getCondition();
+  return nullptr;
 }
 
 /// PHITranslateWithInsertion - PHI translate this value into the specified

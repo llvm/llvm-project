@@ -14,7 +14,6 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
 ; IF-EVL-NEXT: Live-in vp<[[BETC:%[0-9]+]]> = backedge-taken count
-; IF-EVL-NEXT: Live-in ir<%N> = original trip-count
 ; IF-EVL-EMPTY:
 ; IF-EVL:      vector.ph:
 ; IF-EVL-NEXT: Successor(s): vector loop

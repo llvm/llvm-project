@@ -450,11 +450,9 @@ FunctionPass *llvm::createSIFoldOperandsLegacyPass() {
 bool SIFoldOperandsImpl::canUseImmWithOpSel(const MachineInstr *MI,
                                             unsigned UseOpNo,
                                             int64_t ImmVal) const {
-  const uint64_t TSFlags = MI->getDesc().TSFlags;
-
-  if (!(TSFlags & SIInstrFlags::IsPacked) || (TSFlags & SIInstrFlags::IsMAI) ||
-      (TSFlags & SIInstrFlags::IsWMMA) || (TSFlags & SIInstrFlags::IsSWMMAC) ||
-      (ST->hasDOTOpSelHazard() && (TSFlags & SIInstrFlags::IsDOT)))
+  if (!SIInstrFlags::isPacked(*MI) || SIInstrFlags::isMAI(*MI) ||
+      SIInstrFlags::isWMMA(*MI) || SIInstrFlags::isSWMMAC(*MI) ||
+      (ST->hasDOTOpSelHazard() && SIInstrFlags::isDOT(*MI)))
     return false;
 
   const MachineOperand &Old = MI->getOperand(UseOpNo);
@@ -474,7 +472,7 @@ bool SIFoldOperandsImpl::canUseImmWithOpSel(const MachineInstr *MI,
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     // VOP3 packed instructions ignore op_sel source modifiers, we cannot encode
     // two different constants.
-    if ((TSFlags & SIInstrFlags::VOP3) && !(TSFlags & SIInstrFlags::VOP3P) &&
+    if (SIInstrFlags::isVOP3(*MI) && !SIInstrFlags::isVOP3P(*MI) &&
         static_cast<uint16_t>(ImmVal) != static_cast<uint16_t>(ImmVal >> 16))
       return false;
     break;
@@ -633,7 +631,7 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
     MachineBasicBlock *MBB = MI->getParent();
     auto Liveness = MBB->computeRegisterLiveness(TRI, AMDGPU::VCC, MI, 16);
     if (Liveness != MachineBasicBlock::LQR_Dead) {
-      LLVM_DEBUG(dbgs() << "Not shrinking " << MI << " due to vcc liveness\n");
+      LLVM_DEBUG(dbgs() << "Not shrinking due to live vcc: " << *MI);
       return false;
     }
 
@@ -740,8 +738,20 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
   if (New->getReg().isPhysical()) {
     Old.substPhysReg(New->getReg(), *TRI);
   } else {
+    Register OldReg = Old.getReg();
     Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
     Old.setIsUndef(New->isUndef());
+
+    // If MI is in a BUNDLE, also update header's matching implicit use.
+    if (MI->isBundledWithPred()) {
+      MachineInstr &Header = *getBundleStart(MI->getIterator());
+      for (MachineOperand &MO : Header.operands()) {
+        if (MO.getReg() == OldReg) {
+          MO.setReg(New->getReg());
+          MO.setSubReg(New->getSubReg());
+        }
+      }
+    }
   }
   return true;
 }
@@ -991,6 +1001,8 @@ const TargetRegisterClass *SIFoldOperandsImpl::getRegSeqInit(
 
   for (unsigned I = 1, E = RegSeq.getNumExplicitOperands(); I != E; I += 2) {
     MachineOperand &SrcOp = RegSeq.getOperand(I);
+    if (SrcOp.getReg().isPhysical())
+      return nullptr;
     unsigned SubRegIdx = RegSeq.getOperand(I + 1).getImm();
 
     // Only accept reg_sequence with uniform reg class inputs for simplicity.
@@ -1086,6 +1098,9 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
         TRI->getChannelFromSubReg(SubReg1))
       return {};
 
+    if (TRI->getSubRegIdxSize(SubReg0) != 32)
+      return {};
+
     int64_t MergedVal = Make_64(Op1->getImm(), Op0->getImm());
     if (I == 0)
       SplatVal64 = MergedVal;
@@ -1133,7 +1148,9 @@ bool SIFoldOperandsImpl::tryFoldRegSeqSplat(
       break;
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+    case AMDGPU::OPERAND_REG_IMM_V2FP64:
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+    case AMDGPU::OPERAND_REG_IMM_V2INT64:
       OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0_sub1);
       break;
     default:
@@ -1359,7 +1376,6 @@ void SIFoldOperandsImpl::foldOperand(
       if (MovOp == AMDGPU::V_MOV_B16_t16_e64) {
         const auto &SrcOp = UseMI->getOperand(UseOpIdx);
         MachineOperand NewSrcOp(SrcOp);
-        MachineFunction *MF = UseMI->getMF();
         UseMI->removeOperand(1);
         UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // src0_modifiers
         UseMI->addOperand(NewSrcOp);                          // src0
@@ -1380,7 +1396,7 @@ void SIFoldOperandsImpl::foldOperand(
         UseMI->getOperand(0).getReg().isVirtual() &&
         !UseMI->getOperand(1).getSubReg() &&
         OpToFold.DefMI->implicit_operands().empty()) {
-      LLVM_DEBUG(dbgs() << "Folding " << OpToFold.OpToFold << "\n into "
+      LLVM_DEBUG(dbgs() << "Folding " << *OpToFold.OpToFold << "\n into "
                         << *UseMI);
       unsigned Size = TII->getOpSize(*UseMI, 1);
       Register UseReg = OpToFold.getReg();
@@ -1816,7 +1832,6 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
   if (CopiesToReplace.empty() && FoldList.empty())
     return Changed;
 
-  MachineFunction *MF = MI.getMF();
   // Make sure we add EXEC uses to any new v_mov instructions created.
   for (MachineInstr *Copy : CopiesToReplace)
     Copy->addImplicitDefUseOperands(*MF);
