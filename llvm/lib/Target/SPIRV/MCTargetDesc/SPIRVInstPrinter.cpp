@@ -71,16 +71,14 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
     return;
   }
 
-  if (MI->getOpcode() == SPIRV::OpConstantF && NumVarOps > 2) {
-    // Wide floating-point literals (e.g. fp128) are encoded via more than two
-    // 32-bit words. Reconstruct the value and print it exactly.
+  if (MI->getOpcode() == SPIRV::OpConstantF && NumVarOps == 4) {
+    // fp128 literals
     const unsigned TotalBits = NumVarOps * 32;
     APInt Val(TotalBits, 0);
     for (unsigned I = 0; I < NumVarOps; ++I) {
       uint64_t Word = MI->getOperand(StartIndex + I).getImm();
       Val |= APInt(TotalBits, Word) << (I * 32);
     }
-    assert(TotalBits == 128 && "Unsupported floating-point literal width");
     APFloat FP(APFloat::IEEEquad(), Val);
     SmallString<40> Str;
     FP.toString(Str);
