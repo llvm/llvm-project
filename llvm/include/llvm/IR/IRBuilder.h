@@ -2554,12 +2554,8 @@ public:
   CallInst *CreateCall(FunctionType *FTy, Value *Callee, ArrayRef<Value *> Args,
                        FMFSource FMFSource, const Twine &Name = "",
                        MDNode *FPMathTag = nullptr) {
-    CallInst *CI = CallInst::Create(FTy, Callee, Args, DefaultOperandBundles);
-    if (IsFPConstrained)
-      setConstrainedFPCallAttr(CI);
-    if (isa<FPMathOperator>(CI))
-      setFPAttrs(CI, FPMathTag, FMFSource.get(FMF));
-    return Insert(CI, Name);
+    return CreateCall(FTy, Callee, Args, DefaultOperandBundles, FMFSource, Name,
+                      FPMathTag);
   }
 
   CallInst *CreateCall(FunctionType *FTy, Value *Callee, ArrayRef<Value *> Args,
