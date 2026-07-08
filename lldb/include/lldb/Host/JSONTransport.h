@@ -521,6 +521,15 @@ public:
   template <typename Params, typename Fn, typename... Args>
   void Bind(llvm::StringLiteral method, Fn &&fn, Args &&...args);
 
+  /// Bind an asynchronous handler for an incoming request. Unlike the
+  /// synchronous overload, the handler is handed a Reply it may invoke later,
+  /// which lets a handler defer its response, e.g. until after it has forwarded
+  /// the request to another transport and received the answer.
+  /// Handler should be e.g. `void peek(const PeekParams&, Reply<PeekResult>);`
+  /// PeekParams must be JSON parsable and PeekResult must be serializable.
+  template <typename Result, typename Params, typename Fn, typename... Args>
+  void BindAsync(llvm::StringLiteral method, Fn &&fn, Args &&...args);
+
   /// Bind a function object to be used for outgoing requests.
   /// e.g. `OutgoingRequest<Params, Result> Edit = bind("edit");`
   /// Params must be JSON-serializable, Result must be parsable.
@@ -867,6 +876,52 @@ llvm::Expected<T> Binder<Proto>::Parse(const llvm::json::Value &raw,
     return llvm::make_error<InvalidParams>(method.str(), context);
   }
   return std::move(result);
+}
+
+#if __cplusplus >= 202002L
+template <BindingBuilder Proto>
+#else
+template <typename Proto>
+#endif
+template <typename Result, typename Params, typename Fn, typename... Args>
+void Binder<Proto>::BindAsync(llvm::StringLiteral method, Fn &&fn,
+                              Args &&...args) {
+  assert(m_request_handlers.find(method) == m_request_handlers.end() &&
+         "request already bound");
+  // The handler is captured by value and may be invoked once per incoming
+  // request, so it is invoked as an lvalue (never forwarded) to avoid moving
+  // from it between calls.
+  if constexpr (std::is_void_v<Params>) {
+    m_request_handlers[method] =
+        [fn, args...](const Req &req,
+                      Callback<void(const Resp &)> reply) mutable {
+          Reply<Result> typed_reply =
+              [req, reply = std::move(reply)](
+                  llvm::Expected<Result> result) mutable {
+                if (!result)
+                  return reply(Proto::Make(req, result.takeError()));
+                reply(Proto::Make(req, toJSON(*result)));
+              };
+          std::invoke(fn, args..., std::move(typed_reply));
+        };
+  } else {
+    m_request_handlers[method] =
+        [method, fn, args...](const Req &req,
+                              Callback<void(const Resp &)> reply) mutable {
+          Reply<Result> typed_reply =
+              [req, reply = std::move(reply)](
+                  llvm::Expected<Result> result) mutable {
+                if (!result)
+                  return reply(Proto::Make(req, result.takeError()));
+                reply(Proto::Make(req, toJSON(*result)));
+              };
+          llvm::Expected<Params> params =
+              Parse<Params>(Proto::Extract(req), method);
+          if (!params)
+            return typed_reply(params.takeError());
+          std::invoke(fn, args..., *params, std::move(typed_reply));
+        };
+  }
 }
 
 } // namespace lldb_private::transport
