@@ -4437,12 +4437,11 @@ public:
                                                 const MachineRegisterInfo &MRI,
                                                 unsigned Depth = 0) const;
 
-  /// Determine which of the bits of FrameIndex \p FIOp are known to be 0.
-  /// Default implementation computes low bits based on alignment
-  /// information. This should preserve known bits passed into it.
-  virtual void computeKnownBitsForFrameIndex(int FIOp,
-                                             KnownBits &Known,
-                                             const MachineFunction &MF) const;
+  /// Determine known bits of a pointer to a known valid stack object.
+  /// The default implementation computes low bits based on alignment.
+  virtual void computeKnownBitsForStackObjectPointer(KnownBits &Known,
+                                                     const MachineFunction &MF,
+                                                     Align Alignment) const;
 
   /// This method can be implemented by targets that want to expose additional
   /// information about sign bits to the DAG Combiner. The DemandedElts
@@ -5133,6 +5132,10 @@ public:
     // Return true by default to get preexisting behavior.
     return true;
   }
+
+  /// Annotate a stack object pointer with known-bits assertions.
+  SDValue annotateStackObjectPointer(SDValue Ptr, SelectionDAG &DAG,
+                                     const SDLoc &DL, Align Alignment) const;
 
   /// This hook must be implemented to lower outgoing return values, described
   /// by the Outs array, into the specified DAG. The implementation should

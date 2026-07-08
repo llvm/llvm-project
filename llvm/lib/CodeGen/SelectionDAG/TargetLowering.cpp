@@ -4009,10 +4009,32 @@ void TargetLowering::computeKnownFPClassForTargetInstr(
   Known.resetAll();
 }
 
-void TargetLowering::computeKnownBitsForFrameIndex(
-  const int FrameIdx, KnownBits &Known, const MachineFunction &MF) const {
+void TargetLowering::computeKnownBitsForStackObjectPointer(
+    KnownBits &Known, const MachineFunction &, Align Alignment) const {
   // The low bits are known zero if the pointer is aligned.
-  Known.Zero.setLowBits(Log2(MF.getFrameInfo().getObjectAlign(FrameIdx)));
+  Known.Zero.setLowBits(Log2(Alignment));
+}
+
+SDValue TargetLowering::annotateStackObjectPointer(SDValue Ptr,
+                                                   SelectionDAG &DAG,
+                                                   const SDLoc &DL,
+                                                   Align Alignment) const {
+  // Materialize leading-zero stack object pointer facts as AssertZext.
+  // Alignment-derived low zero bits are not represented on the returned DAG
+  // value here.
+  EVT PtrVT = Ptr.getValueType();
+
+  unsigned RegSize = PtrVT.getScalarSizeInBits();
+  KnownBits Known(RegSize);
+  computeKnownBitsForStackObjectPointer(Known, DAG.getMachineFunction(),
+                                        Alignment);
+
+  unsigned NumZeroBits = Known.countMinLeadingZeros();
+  if (!NumZeroBits)
+    return Ptr;
+
+  EVT FromVT = EVT::getIntegerVT(*DAG.getContext(), RegSize - NumZeroBits);
+  return DAG.getNode(ISD::AssertZext, DL, PtrVT, Ptr, DAG.getValueType(FromVT));
 }
 
 Align TargetLowering::computeKnownAlignForTargetInstr(
