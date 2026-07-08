@@ -64,6 +64,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/Transforms/ACCSpecializePatterns.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -90,25 +91,21 @@ enum AccDeviceType {
 class FoldAccOnDeviceOpConversion : public OpRewritePattern<acc::OnDeviceOp> {
   using OpRewritePattern<acc::OnDeviceOp>::OpRewritePattern;
 
+  const TypesForDevice &theDeviceTypes;
+
 public:
+  FoldAccOnDeviceOpConversion(MLIRContext *context,
+                              const TypesForDevice &theDeviceTypes)
+      : OpRewritePattern<acc::OnDeviceOp>(context),
+        theDeviceTypes(theDeviceTypes) {}
+
   LogicalResult matchAndRewrite(acc::OnDeviceOp op,
                                 PatternRewriter &rewriter) const override {
     APInt constVal;
     if (!matchPattern(op.getDeviceType(), m_ConstantInt(&constVal)))
       return failure();
 
-    bool result;
-    switch (constVal.getSExtValue()) {
-    case ACC_DEVICE_HOST:
-      result = false;
-      break;
-    case ACC_DEVICE_NOT_HOST:
-      result = true;
-      break;
-    default:
-      return failure();
-    }
-
+    bool result = theDeviceTypes.contains(constVal.getSExtValue());
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(
         op, rewriter.getI1Type(), rewriter.getBoolAttr(result));
     return success();
@@ -124,8 +121,10 @@ public:
   void runOnOperation() override {
     func::FuncOp func = getOperation();
 
+    TypesForDevice types{theDeviceTypes.begin(), theDeviceTypes.end()};
+
     RewritePatternSet patterns(&getContext());
-    acc::populateACCSpecializeForDevicePatterns(patterns);
+    acc::populateACCSpecializeForDevicePatterns(patterns, types);
     GreedyRewriteConfig config;
     config.setUseTopDownTraversal(true);
 
@@ -167,7 +166,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 void mlir::acc::populateACCSpecializeForDevicePatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, const TypesForDevice &theDeviceTypes) {
   MLIRContext *context = patterns.getContext();
 
   // Declare patterns - erase declare_enter and its associated declare_exit
@@ -217,5 +216,5 @@ void mlir::acc::populateACCSpecializeForDevicePatterns(
 
   // Fold acc.on_device calls so dead-code elimination can remove host-only
   // code paths in device code.
-  patterns.insert<FoldAccOnDeviceOpConversion>(context);
+  patterns.insert<FoldAccOnDeviceOpConversion>(context, theDeviceTypes);
 }
