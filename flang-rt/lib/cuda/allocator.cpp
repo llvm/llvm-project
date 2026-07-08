@@ -204,7 +204,11 @@ void *CUFAllocPinned(std::size_t sizeInBytes,
   return p;
 }
 
-void CUFFreePinned(void *p) { cudaFreeHost(p); }
+void CUFFreePinned(void *p) {
+  if (DeviceContextTornDown())
+    return;
+  cudaFreeHost(p);
+}
 
 void *CUFAllocDevice(std::size_t sizeInBytes,
     [[maybe_unused]] std::size_t alignment, std::int64_t *asyncObject) {
@@ -224,18 +228,26 @@ void *CUFAllocDevice(std::size_t sizeInBytes,
   return p;
 }
 
+// Skip the free when a user cudaDeviceReset() already tore the primary context
+// down: cudaFree() would then recreate a phantom context and fail.
+static void freeIfContextAlive(void *p, cudaStream_t stream, bool async) {
+  if (DeviceContextTornDown())
+    return;
+  if (async)
+    CUDA_REPORT_IF_ERROR(cudaFreeAsync(p, stream));
+  else
+    CUDA_REPORT_IF_ERROR(cudaFree(p));
+}
+
 void CUFFreeDevice(void *p) {
   CriticalSection critical{lock};
-  if (DeviceContextTornDown()) {
-    return;
-  }
   int pos = findAllocation(p);
   if (pos >= 0) {
     cudaStream_t stream = deviceAllocations[pos].stream;
     eraseAllocation(pos);
-    CUDA_REPORT_IF_ERROR(cudaFreeAsync(p, stream));
+    freeIfContextAlive(p, stream, /*async=*/true);
   } else {
-    CUDA_REPORT_IF_ERROR(cudaFree(p));
+    freeIfContextAlive(p, nullptr, /*async=*/false);
   }
 }
 
@@ -248,12 +260,7 @@ void *CUFAllocManaged(std::size_t sizeInBytes,
   return reinterpret_cast<void *>(p);
 }
 
-void CUFFreeManaged(void *p) {
-  if (DeviceContextTornDown()) {
-    return;
-  }
-  CUDA_REPORT_IF_ERROR(cudaFree(p));
-}
+void CUFFreeManaged(void *p) { freeIfContextAlive(p, nullptr, /*async=*/false); }
 
 void *CUFAllocUnified(std::size_t sizeInBytes,
     [[maybe_unused]] std::size_t alignment,
