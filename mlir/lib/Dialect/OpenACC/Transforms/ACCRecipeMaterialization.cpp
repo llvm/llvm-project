@@ -44,6 +44,7 @@
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsCG.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/IR/Block.h"
@@ -379,6 +380,17 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
         b, op.getLoc(), origPtr, reductionOp.getResult());
     cloneRegionIntoAccRegion(&combinerRegion, &combineRegionOp.getRegion(),
                              /*hasResult=*/false);
+
+    // For reductions that come from parallel constructs, explicitly set the
+    // GPU parallel dimensions attribute to blockXDim since they will always be
+    // gang private. GPU parallel dimensions cannot be determined for acc.loop
+    // at this point.
+    if constexpr (std::is_same_v<AccOpTy, acc::ParallelOp>) {
+      auto gpuParDimsAttr = acc::GPUParallelDimsAttr::get(b.getContext(),
+                              {acc::GPUParallelDimAttr::blockXDim(b.getContext())});
+      acc::setParDimsAttr(reductionOp, gpuParDimsAttr);
+      acc::setParDimsAttr(combineRegionOp, gpuParDimsAttr);
+    }
 
     auto setSeqParDimsForRecipeLoops = [](Region *r) {
       r->walk([](LoopLikeOpInterface loopLike) {
