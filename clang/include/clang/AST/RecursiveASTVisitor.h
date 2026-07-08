@@ -1466,9 +1466,8 @@ DEF_TRAVERSE_TYPELOC(TypeOfType, {
 })
 
 // FIXME: location of underlying expr
-DEF_TRAVERSE_TYPELOC(DecltypeType, {
-  TRY_TO(TraverseStmt(TL.getTypePtr()->getUnderlyingExpr()));
-})
+DEF_TRAVERSE_TYPELOC(DecltypeType,
+                     { TRY_TO(TraverseStmt(TL.getUnderlyingExpr())); })
 
 DEF_TRAVERSE_TYPELOC(PackIndexingType, {
   TRY_TO(TraverseType(TL.getPattern()));

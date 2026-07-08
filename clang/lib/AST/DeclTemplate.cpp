@@ -1157,15 +1157,13 @@ ClassTemplatePartialSpecializationDecl::ClassTemplatePartialSpecializationDecl(
     SourceLocation IdLoc, TemplateParameterList *Params,
     const ASTTemplateArgumentListInfo *ArgsAsWritten,
     ClassTemplateDecl *SpecializedTemplate, ArrayRef<TemplateArgument> Args,
-    CanQualType CanonInjectedTST,
     ClassTemplatePartialSpecializationDecl *PrevDecl)
     : ClassTemplateSpecializationDecl(
           Context, ClassTemplatePartialSpecialization, TK, DC, StartLoc, IdLoc,
           // Tracking StrictPackMatch for Partial
           // Specializations is not needed.
           SpecializedTemplate, Args, /*StrictPackMatch=*/false, PrevDecl),
-      InstantiatedFromMember(nullptr, false),
-      CanonInjectedTST(CanonInjectedTST) {
+      InstantiatedFromMember(nullptr, false) {
   setSpecializationKind(TSK_ExplicitSpecialization);
   setExplicitSpecializationInfo(Params, ArgsAsWritten);
 }
@@ -1176,12 +1174,11 @@ ClassTemplatePartialSpecializationDecl::Create(
     SourceLocation IdLoc, TemplateParameterList *Params,
     const ASTTemplateArgumentListInfo *ArgsAsWritten,
     ClassTemplateDecl *SpecializedTemplate, ArrayRef<TemplateArgument> Args,
-    CanQualType CanonInjectedTST,
     ClassTemplatePartialSpecializationDecl *PrevDecl) {
   assert(!Params->empty() && "template with no template parameters");
   return new (Context, DC) ClassTemplatePartialSpecializationDecl(
       Context, TK, DC, StartLoc, IdLoc, Params, ArgsAsWritten,
-      SpecializedTemplate, Args, CanonInjectedTST, PrevDecl);
+      SpecializedTemplate, Args, PrevDecl);
 }
 
 ClassTemplatePartialSpecializationDecl *
@@ -1194,11 +1191,13 @@ CanQualType
 ClassTemplatePartialSpecializationDecl::getCanonicalInjectedSpecializationType(
     const ASTContext &Ctx) const {
   if (CanonInjectedTST.isNull()) {
+    SmallVector<TemplateArgument, 4> CanonicalArgs(getTemplateArgs().asArray());
+    Ctx.canonicalizeTemplateArguments(CanonicalArgs);
     CanonInjectedTST =
         CanQualType::CreateUnsafe(Ctx.getCanonicalTemplateSpecializationType(
             ElaboratedTypeKeyword::None,
             TemplateName(getSpecializedTemplate()->getCanonicalDecl()),
-            getTemplateArgs().asArray()));
+            CanonicalArgs));
   }
   return CanonInjectedTST;
 }

@@ -562,8 +562,12 @@ public:
     //  decltype(I) J = I;
     //  decltype(J) K = J;
     const DecltypeType *DT = dyn_cast<DecltypeType>(TL.getTypePtr());
-    while (DT && !DT->getUnderlyingType().isNull()) {
+    while (DT) {
       DeducedType = DT->getUnderlyingType();
+      if (DeducedType.isNull()) {
+        DeducedType = DT->getUnderlyingExpr()->getType();
+        break;
+      }
       DT = dyn_cast<DecltypeType>(DeducedType.getTypePtr());
     }
     return true;

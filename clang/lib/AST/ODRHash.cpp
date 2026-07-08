@@ -1015,10 +1015,6 @@ public:
     VisitType(T);
   }
 
-  void VisitDependentDecltypeType(const DependentDecltypeType *T) {
-    VisitDecltypeType(T);
-  }
-
   void VisitDeducedType(const DeducedType *T) {
     AddQualType(T->getDeducedType());
     VisitType(T);

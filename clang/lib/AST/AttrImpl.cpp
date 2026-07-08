@@ -442,7 +442,7 @@ inline void profileAttrArg<Attr *>(llvm::FoldingSetNodeID &ID,
 template <>
 inline void profileAttrArg<Expr *>(llvm::FoldingSetNodeID &ID,
                                    const ASTContext &Ctx, Expr *E) {
-  E->Profile(ID, Ctx, /*Canonical=*/true);
+  E->Profile(ID, Ctx, CanonicalizationKind::Functional);
 }
 
 template <>

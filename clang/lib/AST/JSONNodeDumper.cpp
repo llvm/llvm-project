@@ -1791,8 +1791,16 @@ void JSONNodeDumper::VisitTemplateExpansionTemplateArgument(
 void JSONNodeDumper::VisitExpressionTemplateArgument(
     const TemplateArgument &TA) {
   JOS.attribute("isExpr", true);
-  if (TA.isCanonicalExpr())
-    JOS.attribute("isCanonical", true);
+  if (auto Kind = TA.getExprCanonKind()) {
+    switch (*Kind) {
+    case CanonicalizationKind::Structural:
+      JOS.attribute("CanonicalKind", "Structural");
+      break;
+    case CanonicalizationKind::Functional:
+      JOS.attribute("CanonicalKind", "Functional");
+      break;
+    }
+  }
 }
 void JSONNodeDumper::VisitPackTemplateArgument(const TemplateArgument &TA) {
   JOS.attribute("isPack", true);

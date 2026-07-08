@@ -233,11 +233,10 @@ public:
   /// Read a template argument, advancing Idx. (inherited)
   // TemplateArgument readTemplateArgument();
   using DataStreamBasicReader::readTemplateArgument;
-  TemplateArgument readTemplateArgument(bool Canonicalize) {
+  TemplateArgument readTemplateArgument(CanonicalizationKindOrNone CanonKind) {
     TemplateArgument Arg = readTemplateArgument();
-    if (Canonicalize) {
-      Arg = getContext().getCanonicalTemplateArgument(Arg);
-    }
+    if (CanonKind)
+      Arg = getContext().getCanonicalTemplateArgument(Arg, *CanonKind);
     return Arg;
   }
 
@@ -245,8 +244,9 @@ public:
   TemplateParameterList *readTemplateParameterList();
 
   /// Read a template argument array, advancing Idx.
-  void readTemplateArgumentList(SmallVectorImpl<TemplateArgument> &TemplArgs,
-                                bool Canonicalize = false);
+  void
+  readTemplateArgumentList(SmallVectorImpl<TemplateArgument> &TemplArgs,
+                           CanonicalizationKindOrNone CanonKind = std::nullopt);
 
   /// Read a UnresolvedSet structure, advancing Idx.
   void readUnresolvedSet(LazyASTUnresolvedSet &Set);
@@ -322,6 +322,11 @@ public:
 
   UnsignedOrNone readUnsignedOrNone() {
     return UnsignedOrNone::fromInternalRepresentation(unsigned(readInt()));
+  }
+
+  CanonicalizationKindOrNone readCanonicalizationKindOrNone() {
+    return CanonicalizationKindOrNone::fromInternalRepresentation(
+        unsigned(readInt()));
   }
 
   /// Read a string, advancing Idx.

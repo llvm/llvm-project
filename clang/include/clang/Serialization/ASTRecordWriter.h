@@ -193,6 +193,10 @@ public:
     Record->push_back(Value.toInternalRepresentation());
   }
 
+  void writeCanonicalizationKindOrNone(CanonicalizationKindOrNone Value) {
+    Record->push_back(Value.toInternalRepresentation());
+  }
+
   /// Emit an integral value.
   void AddAPInt(const llvm::APInt &Value) {
     writeAPInt(Value);

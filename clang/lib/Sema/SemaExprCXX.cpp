@@ -7427,6 +7427,7 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
   case DeclSpec::TST_decltype: {
     T = BuildDecltypeType(DS.getRepAsExpr(), /*AsUnevaluated=*/false);
     DecltypeTypeLoc DecltypeTL = TLB.push<DecltypeTypeLoc>(T);
+    DecltypeTL.setUnderlyingExpr(DS.getRepAsExpr());
     DecltypeTL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
     DecltypeTL.setRParenLoc(DS.getTypeofParensRange().getEnd());
     break;

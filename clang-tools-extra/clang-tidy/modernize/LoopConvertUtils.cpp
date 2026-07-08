@@ -231,7 +231,7 @@ template <typename ContainerT>
 static bool containsExpr(ASTContext *Context, const ContainerT *Container,
                          const Expr *E) {
   llvm::FoldingSetNodeID ID;
-  E->Profile(ID, *Context, true);
+  E->Profile(ID, *Context, CanonicalizationKind::Structural);
   return llvm::any_of(*Container,
                       [&](const auto &I) { return ID == I.second; });
 }
@@ -470,7 +470,7 @@ void ForLoopIndexUseVisitor::addComponents(const ComponentVector &Components) {
 void ForLoopIndexUseVisitor::addComponent(const Expr *E) {
   llvm::FoldingSetNodeID ID;
   const Expr *Node = E->IgnoreParenImpCasts();
-  Node->Profile(ID, *Context, true);
+  Node->Profile(ID, *Context, CanonicalizationKind::Structural);
   DependentExprs.emplace_back(Node, ID);
 }
 

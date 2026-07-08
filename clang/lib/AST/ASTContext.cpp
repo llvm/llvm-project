@@ -935,7 +935,7 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       DependentAddressSpaceTypes(this_()), DependentVectorTypes(this_()),
       DependentSizedMatrixTypes(this_()),
       FunctionProtoTypes(this_(), FunctionProtoTypesLog2InitSize),
-      DependentTypeOfExprTypes(this_()), DependentDecltypeTypes(this_()),
+      DependentTypeOfExprTypes(this_()), DecltypeTypes(this_()),
       DependentPackIndexingTypes(this_()), TemplateSpecializationTypes(this_()),
       AttributedTypes(this_()), DependentBitIntTypes(this_()),
       SubstTemplateTemplateParmPacks(this_()), DeducedTemplates(this_()),
@@ -5978,10 +5978,9 @@ QualType ASTContext::getSubstTemplateTypeParmType(QualType Replacement,
   return QualType(SubstParm, 0);
 }
 
-QualType
-ASTContext::getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
-                                             unsigned Index, bool Final,
-                                             const TemplateArgument &ArgPack) {
+QualType ASTContext::getSubstTemplateTypeParmPackType(
+    Decl *AssociatedDecl, unsigned Index, bool Final,
+    const TemplateArgument &ArgPack) const {
 #ifndef NDEBUG
   for (const auto &P : ArgPack.pack_elements())
     assert(P.getKind() == TemplateArgument::Type && "Pack contains a non-type");
@@ -6347,7 +6346,7 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) const {
 
     if (NTTP->isParameterPack())
       E = new (*this) PackExpansionExpr(E, NTTP->getLocation(), std::nullopt);
-    Arg = TemplateArgument(E, /*IsCanonical=*/false);
+    Arg = TemplateArgument(E, /*CanonKind=*/std::nullopt);
   } else {
     auto *TTP = cast<TemplateTemplateParmDecl>(Param);
     TemplateName Name = getQualifiedTemplateName(
@@ -7631,8 +7630,10 @@ bool ASTContext::isSameConstraintExpr(const Expr *XCE, const Expr *YCE) const {
     return true;
 
   llvm::FoldingSetNodeID XCEID, YCEID;
-  XCE->Profile(XCEID, *this, /*Canonical=*/true, /*ProfileLambdaExpr=*/true);
-  YCE->Profile(YCEID, *this, /*Canonical=*/true, /*ProfileLambdaExpr=*/true);
+  XCE->Profile(XCEID, *this, CanonicalizationKind::Functional,
+               /*ProfileLambdaExpr=*/true);
+  YCE->Profile(YCEID, *this, CanonicalizationKind::Functional,
+               /*ProfileLambdaExpr=*/true);
   return XCEID == YCEID;
 }
 
@@ -7744,9 +7745,10 @@ bool ASTContext::isSameDefaultTemplateArgument(const NamedDecl *X,
         NTTPX->getDefaultArgument().getArgument().getAsExpr()->IgnoreImpCasts();
     Expr *DefaultArgumentY =
         NTTPY->getDefaultArgument().getArgument().getAsExpr()->IgnoreImpCasts();
+    // FIXME: This should probably use functional equivalence instead.
     llvm::FoldingSetNodeID XID, YID;
-    DefaultArgumentX->Profile(XID, *this, /*Canonical=*/true);
-    DefaultArgumentY->Profile(YID, *this, /*Canonical=*/true);
+    DefaultArgumentX->Profile(XID, *this, CanonicalizationKind::Structural);
+    DefaultArgumentY->Profile(YID, *this, CanonicalizationKind::Structural);
     return XID == YID;
   }
 
@@ -7829,8 +7831,10 @@ static bool hasSameOverloadableAttrs(const FunctionDecl *A,
     Cand1ID.clear();
     Cand2ID.clear();
 
-    (*Cand1A)->getCond()->Profile(Cand1ID, A->getASTContext(), true);
-    (*Cand2A)->getCond()->Profile(Cand2ID, B->getASTContext(), true);
+    (*Cand1A)->getCond()->Profile(Cand1ID, A->getASTContext(),
+                                  CanonicalizationKind::Structural);
+    (*Cand2A)->getCond()->Profile(Cand2ID, B->getASTContext(),
+                                  CanonicalizationKind::Structural);
 
     // Return false if any of the enable_if expressions of A and B are
     // different.
@@ -8197,8 +8201,8 @@ bool ASTContext::isSameTemplateArgument(const TemplateArgument &Arg1,
 
   case TemplateArgument::Expression: {
     llvm::FoldingSetNodeID ID1, ID2;
-    Arg1.getAsExpr()->Profile(ID1, *this, /*Canonical=*/true);
-    Arg2.getAsExpr()->Profile(ID2, *this, /*Canonical=*/true);
+    Arg1.getAsExpr()->Profile(ID1, *this, CanonicalizationKind::Structural);
+    Arg2.getAsExpr()->Profile(ID2, *this, CanonicalizationKind::Structural);
     return ID1 == ID2;
   }
 

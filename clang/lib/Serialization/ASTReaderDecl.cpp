@@ -948,7 +948,8 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
 
     // Template arguments.
     SmallVector<TemplateArgument, 8> TemplArgs;
-    Record.readTemplateArgumentList(TemplArgs, /*Canonicalize*/ true);
+    Record.readTemplateArgumentList(TemplArgs,
+                                    CanonicalizationKind::Structural);
 
     const TemplateParameterList *TemplateParams =
         Record.readBool() ? Record.readTemplateParameterList() : nullptr;
@@ -2457,7 +2458,7 @@ void ASTDeclReader::VisitImplicitConceptSpecializationDecl(
   VisitDecl(D);
   llvm::SmallVector<TemplateArgument, 4> Args;
   for (unsigned I = 0; I < D->NumTemplateArgs; ++I)
-    Args.push_back(Record.readTemplateArgument(/*Canonicalize=*/false));
+    Args.push_back(Record.readTemplateArgument());
   D->setTemplateArguments(Args);
 }
 
@@ -2560,7 +2561,7 @@ RedeclarableResult ASTDeclReader::VisitClassTemplateSpecializationDeclImpl(
   }
 
   SmallVector<TemplateArgument, 8> TemplArgs;
-  Record.readTemplateArgumentList(TemplArgs, /*Canonicalize*/ true);
+  Record.readTemplateArgumentList(TemplArgs, CanonicalizationKind::Functional);
   D->TemplateArgs = TemplateArgumentList::CreateCopy(C, TemplArgs);
   D->PointOfInstantiation = readSourceLocation();
   D->SpecializationKind = (TemplateSpecializationKind)Record.readInt();
@@ -2661,7 +2662,7 @@ RedeclarableResult ASTDeclReader::VisitVarTemplateSpecializationDeclImpl(
   }
 
   SmallVector<TemplateArgument, 8> TemplArgs;
-  Record.readTemplateArgumentList(TemplArgs, /*Canonicalize*/ true);
+  Record.readTemplateArgumentList(TemplArgs, CanonicalizationKind::Functional);
   D->TemplateArgs = TemplateArgumentList::CreateCopy(C, TemplArgs);
   D->PointOfInstantiation = readSourceLocation();
   D->SpecializationKind = (TemplateSpecializationKind)Record.readInt();

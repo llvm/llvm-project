@@ -126,7 +126,7 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
           ShouldAKA = true;
           QT = Context.getTemplateSpecializationType(
               TST->getKeyword(), TST->getTemplateName(), Args,
-              /*CanonicalArgs=*/{}, QT);
+              /*CanonicalArgs=*/{}, QT.getCanonicalType());
         }
         break;
       }
@@ -1534,8 +1534,8 @@ class TemplateDiff {
       return false;
 
     llvm::FoldingSetNodeID FromID, ToID;
-    FromExpr->Profile(FromID, Context, true);
-    ToExpr->Profile(ToID, Context, true);
+    FromExpr->Profile(FromID, Context, CanonicalizationKind::Structural);
+    ToExpr->Profile(ToID, Context, CanonicalizationKind::Structural);
     return FromID == ToID;
   }
 
@@ -2149,15 +2149,21 @@ public:
       return;
     }
 
+    TemplateDecl *FromOrigTD = FromOrigTST->getTemplateName().getAsTemplateDecl(
+        /*IgnoreDeduced=*/true);
+    TemplateDecl *ToOrigTD = ToOrigTST->getTemplateName().getAsTemplateDecl(
+        /*IgnoreDeduced=*/true);
+    // If either side does not have a template declaration, then there are no
+    // template parameters, and nothing further to diff.
+    if (!FromOrigTD || !ToOrigTD)
+      return;
+
     FromQual -= QualType(FromOrigTST, 0).getQualifiers();
     ToQual -= QualType(ToOrigTST, 0).getQualifiers();
 
     // Same base template, but different arguments.
-    Tree.SetTemplateDiff(
-        FromOrigTST->getTemplateName().getAsTemplateDecl(
-            /*IgnoreDeduced=*/true),
-        ToOrigTST->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true),
-        FromQual, ToQual, false /*FromDefault*/, false /*ToDefault*/);
+    Tree.SetTemplateDiff(FromOrigTD, ToOrigTD, FromQual, ToQual,
+                         false /*FromDefault*/, false /*ToDefault*/);
 
     DiffTemplate(FromOrigTST, ToOrigTST);
   }

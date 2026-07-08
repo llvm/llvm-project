@@ -950,7 +950,8 @@ static TemplateArgumentLoc translateTemplateArgument(Sema &SemaRef,
 
   case ParsedTemplateArgument::NonType: {
     Expr *E = Arg.getAsExpr();
-    return TemplateArgumentLoc(TemplateArgument(E, /*IsCanonical=*/false), E);
+    return TemplateArgumentLoc(TemplateArgument(E, /*CanonKind=*/std::nullopt),
+                               E);
   }
 
   case ParsedTemplateArgument::Template: {
@@ -1647,7 +1648,7 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
 
     Param->setDefaultArgument(
         Context, getTrivialTemplateArgumentLoc(
-                     TemplateArgument(Default, /*IsCanonical=*/false),
+                     TemplateArgument(Default, /*CanonKind=*/std::nullopt),
                      QualType(), SourceLocation()));
   }
 
@@ -5639,7 +5640,7 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
       // If the resulting expression is new, then use it in place of the
       // old expression in the template argument.
       if (R != E) {
-        TemplateArgument TA(R, /*IsCanonical=*/false);
+        TemplateArgument TA(R, /*CanonKind=*/std::nullopt);
         ArgLoc = TemplateArgumentLoc(TA, R);
       }
       break;
@@ -6888,7 +6889,7 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
   // Stop checking the precise nature of the argument if it is value dependent,
   // it should be checked when instantiated.
   if (Arg->isValueDependent()) {
-    SugaredConverted = TemplateArgument(ArgIn, /*IsCanonical=*/false);
+    SugaredConverted = TemplateArgument(ArgIn, /*CanonKind=*/std::nullopt);
     CanonicalConverted =
         S.Context.getCanonicalTemplateArgument(SugaredConverted);
     return false;
@@ -7077,7 +7078,7 @@ static bool CheckTemplateArgumentPointerToMember(
     if (VD->getType()->isMemberPointerType()) {
       if (isa<NonTypeTemplateParmDecl>(VD)) {
         if (Arg->isTypeDependent() || Arg->isValueDependent()) {
-          SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
+          SugaredConverted = TemplateArgument(Arg, /*CanonKind=*/std::nullopt);
           CanonicalConverted =
               S.Context.getCanonicalTemplateArgument(SugaredConverted);
         } else {
@@ -7143,7 +7144,7 @@ static bool CheckTemplateArgumentPointerToMember(
     // Okay: this is the address of a non-static member, and therefore
     // a member pointer constant.
     if (Arg->isTypeDependent() || Arg->isValueDependent()) {
-      SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
+      SugaredConverted = TemplateArgument(Arg, /*CanonKind=*/std::nullopt);
       CanonicalConverted =
           S.Context.getCanonicalTemplateArgument(SugaredConverted);
     } else {
@@ -7268,7 +7269,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
         return ExprError();
       setDeductionArg(E.get());
     }
-    SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
+    SugaredConverted = TemplateArgument(Arg, /*CanonKind=*/std::nullopt);
     CanonicalConverted = TemplateArgument(
         Context.getCanonicalTemplateArgument(SugaredConverted));
     return Arg;
@@ -7299,7 +7300,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
   // normal template rules apply: we accept the template if it would be valid
   // for any number of expansions (i.e. none).
   if (ArgPE && !StrictCheck) {
-    SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
+    SugaredConverted = TemplateArgument(Arg, /*CanonKind=*/std::nullopt);
     CanonicalConverted = TemplateArgument(
         Context.getCanonicalTemplateArgument(SugaredConverted));
     return Arg;
@@ -7325,7 +7326,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
       return Arg;
     }
     if (isa<NonTypeTemplateParmDecl>(ND)) {
-      SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
+      SugaredConverted = TemplateArgument(Arg, /*CanonKind=*/std::nullopt);
       CanonicalConverted =
           Context.getCanonicalTemplateArgument(SugaredConverted);
       return Arg;
@@ -7382,7 +7383,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
     // permitted (and expected) to be unable to determine a value.
     if (ArgResult.get()->isValueDependent()) {
       setDeductionArg(ArgResult.get());
-      SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
+      SugaredConverted = TemplateArgument(Arg, /*CanonKind=*/std::nullopt);
       CanonicalConverted =
           Context.getCanonicalTemplateArgument(SugaredConverted);
       return Arg;
@@ -7420,7 +7421,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
           Value.getLValuePath()[0].getAsArrayIndex() == 0 &&
           !Value.isLValueOnePastTheEnd() && ParamType->isPointerType()) {
         if (ArgPE) {
-          SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
+          SugaredConverted = TemplateArgument(Arg, /*CanonKind=*/std::nullopt);
           CanonicalConverted =
               Context.getCanonicalTemplateArgument(SugaredConverted);
         } else {
@@ -7451,7 +7452,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
       return Diag(StartLoc, diag::err_non_type_template_arg_addr_label_diff);
 
     if (ArgPE) {
-      SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
+      SugaredConverted = TemplateArgument(Arg, /*CanonKind=*/std::nullopt);
       CanonicalConverted =
           Context.getCanonicalTemplateArgument(SugaredConverted);
     } else {
@@ -7499,7 +7500,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
 
       // We can't check arbitrary value-dependent arguments.
       if (Arg->isValueDependent()) {
-        SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
+        SugaredConverted = TemplateArgument(Arg, /*CanonKind=*/std::nullopt);
         CanonicalConverted =
             Context.getCanonicalTemplateArgument(SugaredConverted);
         return Arg;
@@ -7588,7 +7589,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
     if (Arg->isValueDependent()) {
       // The argument is value-dependent. Create a new
       // TemplateArgument with the converted expression.
-      SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
+      SugaredConverted = TemplateArgument(Arg, /*CanonKind=*/std::nullopt);
       CanonicalConverted =
           Context.getCanonicalTemplateArgument(SugaredConverted);
       return Arg;
@@ -7759,7 +7760,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
   // Deal with parameters of type std::nullptr_t.
   if (ParamType->isNullPtrType()) {
     if (Arg->isTypeDependent() || Arg->isValueDependent()) {
-      SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
+      SugaredConverted = TemplateArgument(Arg, /*CanonKind=*/std::nullopt);
       CanonicalConverted =
           Context.getCanonicalTemplateArgument(SugaredConverted);
       return Arg;

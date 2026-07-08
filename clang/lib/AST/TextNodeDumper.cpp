@@ -1399,8 +1399,16 @@ void TextNodeDumper::VisitTemplateExpansionTemplateArgument(
 void TextNodeDumper::VisitExpressionTemplateArgument(
     const TemplateArgument &TA) {
   OS << " expr";
-  if (TA.isCanonicalExpr())
-    OS << " canonical";
+  if (auto Kind = TA.getExprCanonKind()) {
+    switch (*Kind) {
+    case CanonicalizationKind::Structural:
+      OS << " canonical";
+      break;
+    case CanonicalizationKind::Functional:
+      OS << " canonical-functional";
+      break;
+    }
+  }
   dumpTemplateArgument(TA);
 }
 
@@ -2178,6 +2186,19 @@ void TextNodeDumper::VisitFunctionProtoType(const FunctionProtoType *T) {
 
   // FIXME: Consumed parameters.
   VisitFunctionType(T);
+}
+
+void TextNodeDumper::VisitDecltypeType(const DecltypeType *T) {
+  if (auto K = T->getExprCanonicalizationKind()) {
+    switch (*K) {
+    case CanonicalizationKind::Structural:
+      OS << " structural-expr";
+      break;
+    case CanonicalizationKind::Functional:
+      OS << " functional-expr";
+      break;
+    }
+  }
 }
 
 void TextNodeDumper::VisitUnresolvedUsingType(const UnresolvedUsingType *T) {

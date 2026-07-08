@@ -253,8 +253,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
     FunctionProtoTypes;
   mutable llvm::ContextualFoldingSet<DependentTypeOfExprType, ASTContext &>
       DependentTypeOfExprTypes;
-  mutable llvm::ContextualFoldingSet<DependentDecltypeType, ASTContext &>
-      DependentDecltypeTypes;
+  mutable llvm::ContextualFoldingSet<DecltypeType, ASTContext &> DecltypeTypes;
 
   mutable llvm::ContextualFoldingSet<PackIndexingType, ASTContext &>
       DependentPackIndexingTypes;
@@ -2020,9 +2019,10 @@ public:
                                         Decl *AssociatedDecl, unsigned Index,
                                         UnsignedOrNone PackIndex,
                                         bool Final) const;
-  QualType getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
-                                            unsigned Index, bool Final,
-                                            const TemplateArgument &ArgPack);
+  QualType
+  getSubstTemplateTypeParmPackType(Decl *AssociatedDecl, unsigned Index,
+                                   bool Final,
+                                   const TemplateArgument &ArgPack) const;
   QualType getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack);
 
   QualType

@@ -2129,7 +2129,6 @@ class ClassTemplatePartialSpecializationDecl
       SourceLocation IdLoc, TemplateParameterList *Params,
       const ASTTemplateArgumentListInfo *ArgsAsWritten,
       ClassTemplateDecl *SpecializedTemplate, ArrayRef<TemplateArgument> Args,
-      CanQualType CanonInjectedTST,
       ClassTemplatePartialSpecializationDecl *PrevDecl);
 
   ClassTemplatePartialSpecializationDecl(ASTContext &C)
@@ -2142,14 +2141,12 @@ public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
 
-  static ClassTemplatePartialSpecializationDecl *
-  Create(ASTContext &Context, TagKind TK, DeclContext *DC,
-         SourceLocation StartLoc, SourceLocation IdLoc,
-         TemplateParameterList *Params,
-         const ASTTemplateArgumentListInfo *TemplateArgsAsWritten,
-         ClassTemplateDecl *SpecializedTemplate,
-         ArrayRef<TemplateArgument> Args, CanQualType CanonInjectedTST,
-         ClassTemplatePartialSpecializationDecl *PrevDecl);
+  static ClassTemplatePartialSpecializationDecl *Create(
+      ASTContext &Context, TagKind TK, DeclContext *DC, SourceLocation StartLoc,
+      SourceLocation IdLoc, TemplateParameterList *Params,
+      const ASTTemplateArgumentListInfo *TemplateArgsAsWritten,
+      ClassTemplateDecl *SpecializedTemplate, ArrayRef<TemplateArgument> Args,
+      ClassTemplatePartialSpecializationDecl *PrevDecl);
 
   static ClassTemplatePartialSpecializationDecl *
   CreateDeserialized(ASTContext &C, GlobalDeclID ID);

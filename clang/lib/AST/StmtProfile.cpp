@@ -1428,10 +1428,10 @@ void StmtProfiler::VisitConstantExpr(const ConstantExpr *S) {
 
 void StmtProfiler::VisitDeclRefExpr(const DeclRefExpr *S) {
   VisitExpr(S);
-  if (!Canonical)
+  if (!CanonKind)
     VisitNestedNameSpecifier(S->getQualifier());
   VisitDecl(S->getDecl());
-  if (!Canonical) {
+  if (!CanonKind) {
     ID.AddBoolean(S->hasExplicitTemplateArgs());
     if (S->hasExplicitTemplateArgs())
       VisitTemplateArguments(S->getTemplateArgs(), S->getNumTemplateArgs());
@@ -1585,7 +1585,7 @@ void StmtProfiler::VisitCallExpr(const CallExpr *S) {
 void StmtProfiler::VisitMemberExpr(const MemberExpr *S) {
   VisitExpr(S);
   VisitDecl(S->getMemberDecl());
-  if (!Canonical)
+  if (!CanonKind)
     VisitNestedNameSpecifier(S->getQualifier());
   ID.AddBoolean(S->isArrow());
 }

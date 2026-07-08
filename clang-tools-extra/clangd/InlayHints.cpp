@@ -400,7 +400,7 @@ public:
 
   bool VisitTypeLoc(TypeLoc TL) {
     if (const auto *DT = llvm::dyn_cast<DecltypeType>(TL.getType()))
-      if (QualType UT = DT->getUnderlyingType(); !UT->isDependentType())
+      if (QualType UT = DT->getUnderlyingType(); !UT.isNull())
         addTypeHint(TL.getSourceRange(), UT, ": ");
     return true;
   }

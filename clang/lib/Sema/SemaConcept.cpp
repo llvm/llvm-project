@@ -182,7 +182,7 @@ struct SatisfactionStackRAII {
 static bool DiagRecursiveConstraintEval(
     Sema &S, llvm::FoldingSetNodeID &ID, const NamedDecl *Templ, const Expr *E,
     const MultiLevelTemplateArgumentList *MLTAL = nullptr) {
-  E->Profile(ID, S.Context, /*Canonical=*/true);
+  E->Profile(ID, S.Context, CanonicalizationKind::Functional);
   if (MLTAL) {
     for (const auto &List : *MLTAL)
       for (const auto &TemplateArg : List.Args)
