@@ -1513,11 +1513,16 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
     } else if (TRI.isFPRegister(Reg)) {
       if (MCRegister MaybeReg = getLargestFPRegisterOrZero(STI, TRI, Reg))
         FinalRegsToZero.set(MaybeReg.id());
-    } else if (RISCV::VRRegClass.contains(Reg)) {
-      if (!STI.hasStdExtV())
+    } else if (RISCVRegisterInfo::isRVVRegClass(
+                   TRI.getMinimalPhysRegClass(Reg))) {
+      if (!STI.hasVInstructions())
         continue;
       HasVRegister = true;
-      FinalRegsToZero.set(Reg.id());
+
+      for (MCRegister SubReg : TRI.subregs_inclusive(Reg)) {
+        if (TRI.subregs(SubReg).empty())
+          FinalRegsToZero.set(SubReg.id());
+      }
     }
   }
 

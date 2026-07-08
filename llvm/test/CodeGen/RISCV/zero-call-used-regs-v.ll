@@ -152,3 +152,38 @@ entry:
     ret <4 x i32> %sum
 }
 
+define <8 x i32> @used_arg_lmul2(<8 x i32> %a, <8 x i32> %b) "zero-call-used-regs"="used-arg" {
+; CHECK-LABEL: used_arg_lmul2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v10
+; CHECK-NEXT:    vsetvli t0, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv.v.i v11, 0
+; CHECK-NEXT:    ret
+entry:
+    %sum = add <8 x i32> %a, %b
+    ret <8 x i32> %sum
+}
+
+define <32 x i32> @used_arg_lmul8(<32 x i32> %a, <32 x i32> %b) "zero-call-used-regs"="used-arg" {
+; CHECK-LABEL: used_arg_lmul8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v16
+; CHECK-NEXT:    vsetvli t0, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vmv.v.i v17, 0
+; CHECK-NEXT:    vmv.v.i v18, 0
+; CHECK-NEXT:    vmv.v.i v19, 0
+; CHECK-NEXT:    vmv.v.i v20, 0
+; CHECK-NEXT:    vmv.v.i v21, 0
+; CHECK-NEXT:    vmv.v.i v22, 0
+; CHECK-NEXT:    vmv.v.i v23, 0
+; CHECK-NEXT:    ret
+entry:
+    %sum = add <32 x i32> %a, %b
+    ret <32 x i32> %sum
+}
+
