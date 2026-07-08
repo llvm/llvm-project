@@ -873,24 +873,102 @@ expression.
   }];
 }
 
-def SYCLAddressSpaceDocs : Documentation {
-  let Category = DocCatType;
-  let Heading = "Address space attributes for SYCL";
+def SYCLAddressSpaceDocs : DocumentationCategory<"SYCL Address Spaces"> {
   let Content = [{
-The memory model for SYCL devices is derived from the OpenCL memory model. Accordingly
-SYCL defines five address spaces: global, local, private, generic and constant. The
-following attributes correspond to these address spaces:
+.. note::
 
-[[clang::sycl_global]], [[clang::sycl_local]], [[clang::sycl_private]],
-[[clang::sycl_generic]] and  [[clang::sycl_constant]] (deprecated)
+   These attributes are intended for use in the implementation of SYCL run-time
+   libraries and should not be used in any other context.
+   Programmers writing code intended to conform to the SYCL specification should
+   use the address space facilities specified in the following sections of the
+   SYCL 2020 specification.
 
-These attributes are intended for use in the implementation of SYCL run-time
-libraries. A direct declaration of pointers with address spaces is discouraged. Users
-should use the sycl::multi_ptr class to handle address space boundaries and
-interoperability.
+   * `4.7.2, "Buffers" <SYCL-2020-4.7.2_>`_
+   * `4.7.6, "Accessors" <SYCL-2020-4.7.6_>`_.
+   * `4.7.7, "Address space classes" <SYCL-2020-4.7.7_>`_.
+   * `F.7, "sycl_khr_static_addrspace_cast" <SYCL-2020-F.7_>`_.
+   * `F.8, "sycl_khr_dynamic_addrspace_cast" <SYCL-2020-F.8_>`_.
 
-More details can be found in SYCL 2020 Specification, Section 3.8.2
-"SYCL device memory model" and Section 4.7.7, "Address space classes"
+The SYCL address space attributes listed below correspond to the five address
+spaces described by
+`SYCL 2020 section 3.8.2, "SYCL device memory model" <SYCL-2020-3.8.2_>`_ and
+`SYCL 2020 section 4.7.7, "Address space classes" <SYCL-2020-4.7.7_>`_.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Address space attribute
+     - SYCL address space
+     - Description
+   * - ``[[clang::sycl_global]]``
+     - global
+     - A memory region accessible by all work-items executing on a device.
+   * - ``[[clang::sycl_local]]``
+     - local
+     - A memory region accessible by all work-items of a single work-group.
+   * - ``[[clang::sycl_private]]``
+     - private
+     - A memory region that is private to a single work-item.
+   * - ``[[clang::sycl_generic]]``
+     - generic
+     - A virtual memory region from which the global, local, and private memory
+       regions may all be accessed.
+   * - ``[[clang::sycl_constant]]``
+     - constant
+     - (*deprecated*) A memory region that holds constant data for an executing
+       kernel.
+
+The SYCL address space attributes are type attributes that may be applied to
+the object type of an object pointer or object reference type.
+A type specifier with a SYCL address space specifies a distinct type from the
+otherwise unattributed type.
+For example, ``int *`` and ``int [[clang::sycl_global]]*`` designate distinct
+pointer types which participate in overload resolution and template
+specialization.
+
+Conversions between SYCL address space attributed types are permitted as
+follows.
+
+* Types attributed with the global, local, or private address space attributes
+  are implicitly convertible to matching types with the generic address space
+  attribute.
+* Types attributed with the generic address space attribute may be converted
+  to a matching type with the global, local, or private address space attribute
+  by ``static_cast``.
+* All other conversions between matched types with either different address
+  space attributes or where one type lacks an address space attribute may be
+  performed by ``reinterpret_cast``.
+  However, dereference of the result produces undefined behavior if the
+  resulting address is not valid for the address space designated by the target
+  address space attribute.
+
+The mapping of SYCL address spaces to physical address spaces is target
+dependent.
+
+For OpenCL device targets, the SYCL address space attributes are aligned with
+the `OpenCL address space attributes <attr-opencl-addrspace_>`_ such that, e.g.,
+``int [[clang::sycl_global]]*`` and ``int [[clang::opencl_global]]*`` specify
+distinct types both of which map to the same underlying address space.
+Corresponding SYCL and OpenCL address space attributed types are implicitly
+convertible; other conversions are permitted as described above; e.g.,
+``int [[clang::sycl_global]]*`` is implicitly convertible to
+``int [[clang::opencl_generic]]*`` and ``int [[clang::opencl_generic]]*`` is
+explicitly convertible via ``static_cast`` to ``int [[clang::sycl_global]]*``.
+
+.. _attr-opencl-addrspace:
+   https://clang.llvm.org/docs/AttributeReference.html#opencl-address-spaces
+.. _SYCL-2020-3.8.2:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#_sycl_device_memory_model
+.. _SYCL-2020-4.7.2:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#subsec:buffers
+.. _SYCL-2020-4.7.6:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#subsec:accessors
+.. _SYCL-2020-4.7.7:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#_address_space_classes
+.. _SYCL-2020-F.7:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#sec:khr-static-addrspace-cast
+.. _SYCL-2020-F.8:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#sec:khr-dynamic-addrspace-cast
   }];
 }
 
