@@ -194,7 +194,7 @@
 "`P3795R2 <https://wg21.link/P3795R2>`__","Miscellaneous Reflection Cleanup","2026-03 (Croydon)","","","`#189603 <https://github.com/llvm/llvm-project/issues/189603>`__",""
 "`P3948R1 <https://wg21.link/P3948R1>`__","``constant_wrapper`` is the only tool needed for passing constant expressions via function arguments","2026-03 (Croydon)","|Complete|","24","`#189604 <https://github.com/llvm/llvm-project/issues/189604>`__",""
 "`P3978R3 <https://wg21.link/P3978R3>`__","``constant_wrapper`` should unwrap on call and subscript","2026-03 (Croydon)","|Complete|","23","`#189605 <https://github.com/llvm/llvm-project/issues/189605>`__",""
-"`P3961R1 <https://wg21.link/P3961R1>`__","Less double indirection in ``function_ref`` (RU-220)","2026-03 (Croydon)","|Complete|","23","`#189606 <https://github.com/llvm/llvm-project/issues/189606>`__",""
+"`P3961R1 <https://wg21.link/P3961R1>`__","Less double indirection in ``function_ref`` (RU-220)","2026-03 (Croydon)","|Complete|","24","`#189606 <https://github.com/llvm/llvm-project/issues/189606>`__",""
 "`P3981R2 <https://wg21.link/P3981R2>`__","Better return types in ``std::inplace_vector`` and ``std::exception_ptr_cast``","2026-03 (Croydon)","","","`#189607 <https://github.com/llvm/llvm-project/issues/189607>`__",""
 "`P4022R0 <https://wg21.link/P4022R0>`__","Remove ``try_append_range`` from ``inplace_vector`` for now","2026-03 (Croydon)","","","`#189608 <https://github.com/llvm/llvm-project/issues/189608>`__",""
 "`P4037R1 <https://wg21.link/P4037R1>`__","Supporting ``signed char`` and ``unsigned char`` in random number generation","2026-03 (Croydon)","","","`#189609 <https://github.com/llvm/llvm-project/issues/189609>`__",""
