@@ -572,9 +572,9 @@ private:
   // Stubs to keep the compiler happy while we implement the rest of the
   // translation.
 
-  // StoreRMW is lowered by AtomicExpandPass before reaching GlobalISel
+  // TODO: missing GlobalISel support
   bool translateStoreRMW(const User &U, MachineIRBuilder &MIRBuilder) {
-    return false; // Should not reach GlobalISel
+    return false;
   }
 
   bool translateResume(const User &U, MachineIRBuilder &MIRBuilder) {
