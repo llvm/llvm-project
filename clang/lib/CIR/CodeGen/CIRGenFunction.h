@@ -2807,6 +2807,10 @@ private:
   /// init; lifetime markers are then suppressed. See functionMightHaveBypass.
   bool fnHasBypassStmt = false;
 
+  bool shouldEmitLifetimeMarkersForAutoVar() const {
+    return shouldEmitLifetimeMarkers && !fnHasBypassStmt;
+  }
+
   class InlinedInheritingConstructorScope {
   public:
     InlinedInheritingConstructorScope(CIRGenFunction &cgf, GlobalDecl gd)

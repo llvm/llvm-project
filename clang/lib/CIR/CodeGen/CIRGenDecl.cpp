@@ -147,7 +147,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
       // classic's per-decl bypass analysis, drop markers for the whole
       // function if any such statement is present.
       assert(!cir::MissingFeatures::lifetimeMarkersBypass());
-      if (shouldEmitLifetimeMarkers && haveInsertPoint() && !fnHasBypassStmt) {
+      if (shouldEmitLifetimeMarkersForAutoVar() && haveInsertPoint()) {
         emission.useLifetimeMarkers = emitLifetimeStartOp(
             loc, address.getUnderlyingAllocaOp().getResult());
       }
@@ -390,10 +390,10 @@ void CIRGenFunction::emitLoopConditionVariable(
     const VarDecl &d, DeferredLoopConditionCleanup &condCleanup) {
   // A condition variable always has automatic storage duration, so this
   // mirrors the auto-var path of emitVarDecl/emitAutoVarDecl. The alloca and
-  // initializer are emitted with capturing disabled so that any cleanups they
-  // introduce get their normal cir.cleanup.scope handling; only the variable's
-  // own destructor cleanup is captured for the loop's per-iteration cleanup
-  // region.
+  // initializer is emitted with capturing disabled so that any cleanups it
+  // introduces get their normal cir.cleanup.scope handling. The variable's
+  // lifetime-end and destructor cleanups are captured for the loop's
+  // per-iteration cleanup region.
   assert(d.hasLocalStorage() && "loop condition variable is not local");
 
   // Mirror the diagnostic emitted by emitVarDecl on the automatic-storage path.
@@ -404,7 +404,10 @@ void CIRGenFunction::emitLoopConditionVariable(
                  "emitLoopConditionVariable: OpenCL local address space");
 
   CIRGenFunction::VarDeclContext varDeclCtx{*this, &d};
-  CIRGenFunction::AutoVarEmission emission = emitAutoVarAlloca(d);
+  CIRGenFunction::AutoVarEmission emission = [&] {
+    DeferredLoopConditionCleanup::CaptureScope capture(condCleanup);
+    return emitAutoVarAlloca(d);
+  }();
 
   // The condition variable's destructor is captured into the loop op's
   // per-iteration cleanup region, which structurally spans the initializer.
@@ -416,8 +419,6 @@ void CIRGenFunction::emitLoopConditionVariable(
   // completes. The flag is stored to on every iteration, so it also resets
   // correctly across iterations.
   bool needsCleanup = d.needsDestruction(getContext()) != QualType::DK_none;
-  // We will also need cleanup if lifetime markers are enabled.
-  assert(!cir::MissingFeatures::emitLifetimeMarkers());
   Address activeFlag = Address::invalid();
   if (needsCleanup) {
     mlir::Location loc = getLoc(d.getSourceRange());
@@ -436,8 +437,10 @@ void CIRGenFunction::emitLoopConditionVariable(
     builder.createFlagStore(loc, true, activeFlag.getPointer());
   }
 
-  DeferredLoopConditionCleanup::CaptureScope capture(condCleanup);
-  emitAutoVarCleanups(emission);
+  {
+    DeferredLoopConditionCleanup::CaptureScope capture(condCleanup);
+    emitAutoVarCleanups(emission);
+  }
 
   if (needsCleanup)
     initFullExprCleanupWithFlag(activeFlag);
