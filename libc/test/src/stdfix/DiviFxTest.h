@@ -124,6 +124,12 @@ public:
           ((static_cast<IntType>(1) << FXRep::INTEGRAL_LEN) - 1);
       EXPECT_EQ(func(largest_positive, static_cast<FXType>(largest_positive)),
                 static_cast<IntType>(1));
+
+      constexpr IntType largest_power_of_two = static_cast<IntType>(1)
+                                               << (FXRep::INTEGRAL_LEN - 1);
+      EXPECT_EQ(
+          func(largest_power_of_two, static_cast<FXType>(largest_power_of_two)),
+          static_cast<IntType>(1));
     }
 
     if constexpr (!has_integral) {
