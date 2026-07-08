@@ -770,20 +770,25 @@ constructors (no body) and delegating constructors are skipped.
 The ``std::init`` Profile (initial slice)
 -----------------------------------------
 
-A slice of the proposed initialization profile.  It does not yet implement
-classes that expose uninitialized memory to users (paper §5.3) or random-access
-initialization of uninitialized arrays (paper §5.5).  A read of a scalar
-``[[uninit]]`` data member before it is assigned in a constructor body *is*
-diagnosed by R1 via a CFG-based definite-assignment pass over the body (paper
-§7.1 "initialized ... before use").  Class-type and array members (which need
-``construct_at`` flow modeling), ``construct_at``/``destroy_at`` flow, and
-double-initialization / double-destruction detection remain deferred.  The
+A slice of the proposed initialization profile.  A read of a scalar
+``[[uninit]]`` data member before it is assigned *is* diagnosed by R1 via
+CFG-based definite-assignment passes (paper §7.1 "initialized ... before
+use"): over the constructor body for the current object's members, and over
+any function body for the members of a *constructor-less aggregate local* --
+the member-store slice of the paper §5.3 "classes exposing uninitialized
+memory" pattern.  The rest of §5.3 (``construct_at``-based initialization),
+random-access initialization of uninitialized arrays (paper §5.5), class-type
+and array members (which need ``construct_at`` flow modeling),
+``construct_at``/``destroy_at`` flow, and double-initialization /
+double-destruction detection remain deferred.  The
 constructor is *not* required to initialize a ``[[uninit]]`` member (paper §5.1
 excepts members with an uninitialized indicator, and §5.3 leaves such a member
 for the user): the obligation is keyed on a read before assignment, not on the
 constructor's end.  A scalar *read through* a ``[[ref_to_uninit]]``
 pointer/reference is diagnosed at the lvalue-to-rvalue conversion (R7,
-``uninit_read``); *writes* through such a pointer/reference are not yet verified
+``uninit_read``), and a member call on an object recognized as uninitialized
+storage is diagnosed at its implicit object argument (R7, ``ref_to_uninit``);
+*writes* through such a pointer/reference are not yet verified
 (the paper relegates them to ``construct_at`` or suppression).  A scalar store
 to a *subobject* of a named ``[[uninit]]`` entity, by contrast, is banned as
 delayed piecemeal initialization (R10, ``uninit_write``).
