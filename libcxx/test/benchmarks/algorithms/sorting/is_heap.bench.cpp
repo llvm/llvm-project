@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
 
             Container c(data.begin(), data.end());
 
-            for ([[maybe_unused]] auto _ : st) {
+            for (auto _ : st) {
               benchmark::DoNotOptimize(c);
               auto result = is_heap(c.begin(), c.end());
               benchmark::DoNotOptimize(result);
