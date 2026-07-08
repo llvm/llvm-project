@@ -805,10 +805,6 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     // Template arguments.
     Record.AddTemplateArgumentList(FTSInfo->TemplateArguments);
 
-    Record.push_back(FTSInfo->TemplateParameters != nullptr);
-    if (FTSInfo->TemplateParameters)
-      Record.AddTemplateParameterList(FTSInfo->TemplateParameters);
-
     // Template args as written.
     Record.push_back(FTSInfo->TemplateArgumentsAsWritten != nullptr);
     if (FTSInfo->TemplateArgumentsAsWritten)
@@ -842,10 +838,6 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     Record.push_back(DFTSInfo->getCandidates().size());
     for (FunctionTemplateDecl *FTD : DFTSInfo->getCandidates())
       Record.AddDeclRef(FTD);
-
-    Record.push_back(DFTSInfo->TemplateParameters != nullptr);
-    if (DFTSInfo->TemplateParameters)
-      Record.AddTemplateParameterList(DFTSInfo->TemplateParameters);
 
     // Templates args.
     Record.push_back(DFTSInfo->TemplateArgumentsAsWritten != nullptr);
@@ -1754,7 +1746,6 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
       if (FTSInfo->TemplateArguments->size() == 1) {
         const TemplateArgument &TA = FTSInfo->TemplateArguments->get(0);
         if (TA.getKind() == TemplateArgument::Type &&
-            !FTSInfo->TemplateParameters &&
             !FTSInfo->TemplateArgumentsAsWritten &&
             !FTSInfo->getMemberSpecializationInfo())
           AbbrevToUse = Writer.getDeclCXXMethodAbbrev(D->getTemplatedKind());
@@ -1763,8 +1754,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
                FunctionDecl::TK_DependentFunctionTemplateSpecialization) {
       DependentFunctionTemplateSpecializationInfo *DFTSInfo =
           D->getDependentSpecializationInfo();
-      if (!DFTSInfo->TemplateArgumentsAsWritten &&
-          !DFTSInfo->TemplateParameters)
+      if (!DFTSInfo->TemplateArgumentsAsWritten)
         AbbrevToUse = Writer.getDeclCXXMethodAbbrev(D->getTemplatedKind());
     }
   }
@@ -1838,9 +1828,6 @@ void ASTDeclWriter::VisitAccessSpecDecl(AccessSpecDecl *D) {
 }
 
 void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
-  // Record the number of friend type template parameter lists here
-  // so as to simplify memory allocation during deserialization.
-  Record.push_back(D->NumTPLists);
   VisitDecl(D);
   bool hasFriendDecl = isa<NamedDecl *>(D->Friend);
   Record.push_back(hasFriendDecl);
@@ -1848,26 +1835,34 @@ void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
     Record.AddDeclRef(D->getFriendDecl());
   else
     Record.AddTypeSourceInfo(D->getFriendType());
-  for (unsigned i = 0; i < D->NumTPLists; ++i)
-    Record.AddTemplateParameterList(D->getFriendTypeTemplateParameterList(i));
   Record.AddDeclRef(D->getNextFriend());
-  Record.push_back(D->UnsupportedFriend);
   Record.AddSourceLocation(D->FriendLoc);
   Record.AddSourceLocation(D->EllipsisLoc);
   Code = serialization::DECL_FRIEND;
 }
 
 void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
+  // Record the number of friend type template parameter lists here
+  // so as to simplify memory allocation during deserialization.
+  Record.push_back(D->NumTPLists);
   VisitDecl(D);
-  Record.push_back(D->getNumTemplateParameters());
-  for (unsigned i = 0, e = D->getNumTemplateParameters(); i != e; ++i)
-    Record.AddTemplateParameterList(D->getTemplateParameterList(i));
-  Record.push_back(D->getFriendDecl() != nullptr);
-  if (D->getFriendDecl())
-    Record.AddDeclRef(D->getFriendDecl());
-  else
-    Record.AddTypeSourceInfo(D->getFriendType());
-  Record.AddSourceLocation(D->getFriendLoc());
+  for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists())
+    Record.AddTemplateParameterList(TPL);
+  if (D->Template.isNull()) {
+    if (D->getFriendDecl()) {
+      Record.push_back(FTDK_Decl);
+      Record.AddDeclRef(D->getFriendDecl());
+    } else {
+      Record.push_back(FTDK_Type);
+      Record.AddTypeSourceInfo(D->getFriendType());
+    }
+  } else {
+    Record.push_back(FTDK_Template);
+    Record.AddTemplateName(D->Template);
+  }
+  Record.AddDeclRef(D->getNextFriend());
+  Record.AddSourceLocation(D->FriendLoc);
+  Record.AddSourceLocation(D->EllipsisLoc);
   Code = serialization::DECL_FRIEND_TEMPLATE;
 }
 
@@ -1951,35 +1946,28 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
   Record.AddSourceLocation(D->getPointOfInstantiation());
   Record.push_back(D->getSpecializationKind());
   Record.push_back(D->hasStrictPackMatch());
-
-  switch (D->getSpecializationKind()) {
-  case TSK_Undeclared:
-  case TSK_ImplicitInstantiation:
-  case TSK_FriendDeclaration:
-    assert(!D->getExplicitSpecializationInfo());
-    assert(!D->getExplicitInstantiationInfo());
-    break;
-  case TSK_ExplicitSpecialization: {
-    const auto *Info = D->getExplicitSpecializationInfo();
-    Record.AddTemplateParameterList(Info->TemplateParams);
-    Record.AddASTTemplateArgumentListInfo(Info->TemplateArgsAsWritten);
-    break;
-  }
-  case TSK_ExplicitInstantiationDeclaration:
-  case TSK_ExplicitInstantiationDefinition: {
-    const auto *Info = D->getExplicitInstantiationInfo();
-    Record.AddSourceLocation(Info->ExternKeywordLoc);
-    Record.AddSourceLocation(Info->TemplateKeywordLoc);
-    Record.AddASTTemplateArgumentListInfo(Info->TemplateArgsAsWritten);
-    break;
-  }
-  }
-
   Record.push_back(D->isCanonicalDecl());
+
   if (D->isCanonicalDecl()) {
     // When reading, we'll add it to the folding set of the following template.
     Record.AddDeclRef(D->getSpecializedTemplate()->getCanonicalDecl());
   }
+
+  bool ExplicitInstantiation =
+      D->getTemplateSpecializationKind() ==
+          TSK_ExplicitInstantiationDeclaration ||
+      D->getTemplateSpecializationKind() == TSK_ExplicitInstantiationDefinition;
+  Record.push_back(ExplicitInstantiation);
+  if (ExplicitInstantiation) {
+    Record.AddSourceLocation(D->getExternKeywordLoc());
+    Record.AddSourceLocation(D->getTemplateKeywordLoc());
+  }
+
+  const ASTTemplateArgumentListInfo *ArgsWritten =
+      D->getTemplateArgsAsWritten();
+  Record.push_back(!!ArgsWritten);
+  if (ArgsWritten)
+    Record.AddASTTemplateArgumentListInfo(ArgsWritten);
 
   // Mention the implicitly generated C++ deduction guide to make sure the
   // deduction guide will be rewritten as expected.
@@ -2002,7 +1990,9 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
 }
 
 void ASTDeclWriter::VisitClassTemplatePartialSpecializationDecl(
-    ClassTemplatePartialSpecializationDecl *D) {
+                                    ClassTemplatePartialSpecializationDecl *D) {
+  Record.AddTemplateParameterList(D->getTemplateParameters());
+
   VisitClassTemplateSpecializationDecl(D);
 
   // These are read/set from/to the first declaration.
@@ -2035,33 +2025,26 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
     Record.AddTemplateArgumentList(&D->getTemplateInstantiationArgs());
   }
 
+  bool ExplicitInstantiation =
+      D->getTemplateSpecializationKind() ==
+          TSK_ExplicitInstantiationDeclaration ||
+      D->getTemplateSpecializationKind() == TSK_ExplicitInstantiationDefinition;
+  Record.push_back(ExplicitInstantiation);
+  if (ExplicitInstantiation) {
+    Record.AddSourceLocation(D->getExternKeywordLoc());
+    Record.AddSourceLocation(D->getTemplateKeywordLoc());
+  }
+
+  const ASTTemplateArgumentListInfo *ArgsWritten =
+      D->getTemplateArgsAsWritten();
+  Record.push_back(!!ArgsWritten);
+  if (ArgsWritten)
+    Record.AddASTTemplateArgumentListInfo(ArgsWritten);
+
   Record.AddTemplateArgumentList(&D->getTemplateArgs());
   Record.AddSourceLocation(D->getPointOfInstantiation());
   Record.push_back(D->getSpecializationKind());
   Record.push_back(D->IsCompleteDefinition);
-
-  switch (D->getSpecializationKind()) {
-  case TSK_Undeclared:
-  case TSK_ImplicitInstantiation:
-  case TSK_FriendDeclaration:
-    assert(!D->getExplicitSpecializationInfo());
-    assert(!D->getExplicitInstantiationInfo());
-    break;
-  case TSK_ExplicitSpecialization: {
-    const auto *Info = D->getExplicitSpecializationInfo();
-    Record.AddTemplateParameterList(Info->TemplateParams);
-    Record.AddASTTemplateArgumentListInfo(Info->TemplateArgsAsWritten);
-    break;
-  }
-  case TSK_ExplicitInstantiationDeclaration:
-  case TSK_ExplicitInstantiationDefinition: {
-    const auto *Info = D->getExplicitInstantiationInfo();
-    Record.AddSourceLocation(Info->ExternKeywordLoc);
-    Record.AddSourceLocation(Info->TemplateKeywordLoc);
-    Record.AddASTTemplateArgumentListInfo(Info->TemplateArgsAsWritten);
-    break;
-  }
-  }
 
   VisitVarDecl(D);
 
@@ -2081,6 +2064,8 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
 
 void ASTDeclWriter::VisitVarTemplatePartialSpecializationDecl(
     VarTemplatePartialSpecializationDecl *D) {
+  Record.AddTemplateParameterList(D->getTemplateParameters());
+
   VisitVarTemplateSpecializationDecl(D);
 
   // These are read/set from/to the first declaration.
@@ -2457,7 +2442,6 @@ getFunctionDeclAbbrev(serialization::DeclCode Code) {
     Abv->Add(
         BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Template Argument Type
     Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Is Defaulted
-    Abv->Add(BitCodeAbbrevOp(0));                         // TemplateParams
     Abv->Add(BitCodeAbbrevOp(0)); // TemplateArgumentsAsWritten
     Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SourceLocation
     Abv->Add(BitCodeAbbrevOp(0));
@@ -2467,7 +2451,6 @@ getFunctionDeclAbbrev(serialization::DeclCode Code) {
                                    TK_DependentFunctionTemplateSpecialization) {
     // Candidates of specialization
     Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-    Abv->Add(BitCodeAbbrevOp(0)); // TemplateParams
     Abv->Add(BitCodeAbbrevOp(0)); // TemplateArgumentsAsWritten
   } else {
     llvm_unreachable("Unknown templated kind?");
