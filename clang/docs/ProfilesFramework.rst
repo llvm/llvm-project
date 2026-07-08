@@ -938,8 +938,9 @@ read-then-write of that member.  Details:
 
 The same guarantee covers an ``[[uninit]]`` scalar member of a
 *constructor-less aggregate local* (the paper §5.3 "class exposing
-uninitialized members" pattern used with a local: ``struct Agg { int m
-[[uninit]]; }; Agg a; a.m = 5;``).  ``checkInitProfileLocalMembers`` in
+uninitialized members" pattern used with a local:
+``struct Agg { int m [[uninit]]; };`` and ``Agg a; a.m = 5;``).
+``checkInitProfileLocalMembers`` in
 ``clang/lib/Sema/AnalysisBasedWarnings.cpp`` -- the local-variable analog of
 the ctor-body pass, sharing its tracked-member filter, event/replay shape,
 suppression lookup, and post-error rerun -- runs the same forward
