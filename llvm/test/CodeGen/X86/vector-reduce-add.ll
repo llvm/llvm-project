@@ -1647,43 +1647,34 @@ define i8 @test_v4i8(<4 x i8> %a0) nounwind {
 ; SSE2-LABEL: test_v4i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-NEXT:    psadbw %xmm1, %xmm0
-; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    xorps %xmm2, %xmm2
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
+; SSE2-NEXT:    psadbw %xmm1, %xmm2
+; SSE2-NEXT:    movd %xmm2, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
 ; SSE4-LABEL: test_v4i8:
 ; SSE4:       # %bb.0:
+; SSE4-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; SSE4-NEXT:    pxor %xmm1, %xmm1
-; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
-; SSE4-NEXT:    psadbw %xmm1, %xmm0
-; SSE4-NEXT:    movd %xmm0, %eax
+; SSE4-NEXT:    psadbw %xmm0, %xmm1
+; SSE4-NEXT:    movd %xmm1, %eax
 ; SSE4-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE4-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: test_v4i8:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
-; AVX1-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    # kill: def $al killed $al killed $eax
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX2-LABEL: test_v4i8:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    # kill: def $al killed $al killed $eax
-; AVX2-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: test_v4i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    # kill: def $al killed $al killed $eax
+; AVX-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512-LABEL: test_v4i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
@@ -1694,29 +1685,51 @@ define i8 @test_v4i8(<4 x i8> %a0) nounwind {
 }
 
 define i8 @test_v4i8_load(ptr %p) nounwind {
-; X86-SSE-LABEL: test_v4i8_load:
-; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    pxor %xmm1, %xmm1
-; X86-SSE-NEXT:    psadbw %xmm0, %xmm1
-; X86-SSE-NEXT:    movd %xmm1, %eax
-; X86-SSE-NEXT:    # kill: def $al killed $al killed $eax
-; X86-SSE-NEXT:    retl
+; X86-SSE2-LABEL: test_v4i8_load:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    pxor %xmm1, %xmm1
+; X86-SSE2-NEXT:    psadbw %xmm0, %xmm1
+; X86-SSE2-NEXT:    movd %xmm1, %eax
+; X86-SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; X86-SSE2-NEXT:    retl
 ;
-; X64-SSE-LABEL: test_v4i8_load:
-; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-SSE-NEXT:    pxor %xmm1, %xmm1
-; X64-SSE-NEXT:    psadbw %xmm0, %xmm1
-; X64-SSE-NEXT:    movd %xmm1, %eax
-; X64-SSE-NEXT:    # kill: def $al killed $al killed $eax
-; X64-SSE-NEXT:    retq
+; X64-SSE2-LABEL: test_v4i8_load:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-SSE2-NEXT:    pxor %xmm1, %xmm1
+; X64-SSE2-NEXT:    psadbw %xmm0, %xmm1
+; X64-SSE2-NEXT:    movd %xmm1, %eax
+; X64-SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; X64-SSE2-NEXT:    retq
+;
+; X86-SSE4-LABEL: test_v4i8_load:
+; X86-SSE4:       # %bb.0:
+; X86-SSE4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE4-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE4-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; X86-SSE4-NEXT:    pxor %xmm1, %xmm1
+; X86-SSE4-NEXT:    psadbw %xmm0, %xmm1
+; X86-SSE4-NEXT:    movd %xmm1, %eax
+; X86-SSE4-NEXT:    # kill: def $al killed $al killed $eax
+; X86-SSE4-NEXT:    retl
+;
+; X64-SSE4-LABEL: test_v4i8_load:
+; X64-SSE4:       # %bb.0:
+; X64-SSE4-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-SSE4-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; X64-SSE4-NEXT:    pxor %xmm1, %xmm1
+; X64-SSE4-NEXT:    psadbw %xmm0, %xmm1
+; X64-SSE4-NEXT:    movd %xmm1, %eax
+; X64-SSE4-NEXT:    # kill: def $al killed $al killed $eax
+; X64-SSE4-NEXT:    retq
 ;
 ; X86-AVX1-LABEL: test_v4i8_load:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; X86-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vmovd %xmm0, %eax
@@ -1726,6 +1739,7 @@ define i8 @test_v4i8_load(ptr %p) nounwind {
 ; X64-AVX1-LABEL: test_v4i8_load:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; X64-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vmovd %xmm0, %eax
@@ -1736,6 +1750,7 @@ define i8 @test_v4i8_load(ptr %p) nounwind {
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; X86-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vmovd %xmm0, %eax
@@ -1745,6 +1760,7 @@ define i8 @test_v4i8_load(ptr %p) nounwind {
 ; X64-AVX2-LABEL: test_v4i8_load:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; X64-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vmovd %xmm0, %eax
@@ -1754,6 +1770,7 @@ define i8 @test_v4i8_load(ptr %p) nounwind {
 ; AVX512-LABEL: test_v4i8_load:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
@@ -2257,6 +2274,3 @@ declare i8 @llvm.vector.reduce.add.v16i8(<16 x i8>)
 declare i8 @llvm.vector.reduce.add.v32i8(<32 x i8>)
 declare i8 @llvm.vector.reduce.add.v64i8(<64 x i8>)
 declare i8 @llvm.vector.reduce.add.v128i8(<128 x i8>)
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; X64-SSE2: {{.*}}
-; X64-SSE4: {{.*}}
