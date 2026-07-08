@@ -10,15 +10,16 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from dex.dextIR import DextIR, StepIR, ValueIR
-from dex.evaluation.StateMatch import StateMatchContext, get_active_where_matches
+from dex.evaluation.StateMatch import StateMatchContext, get_state_match
 from dex.test_script.Nodes import (
     DexRange,
     Expect,
+    ExpectAll,
     Line,
     Step,
     Then,
+    Type,
     Value,
-    ValueAll,
     Where,
 )
 from dex.test_script.Script import DexterScript, Scope
@@ -189,10 +190,10 @@ class StepExpectRewriter:
     ):
         self.step = step
         self.script = script
-        self.state_match = get_active_where_matches(script, step, state_match_context)
+        self.state_match = get_state_match(script, step, state_match_context)
         active_expects = {
             expect: where_match.frame_idx
-            for where_match in self.state_match.values()
+            for where_match in self.state_match.where_match_results.values()
             for expect in where_match.active_expects
         }
         self.expect_value_matches: Dict[Expect, ExpectedValueRewriter] = {}
@@ -257,13 +258,15 @@ class ScriptExpectRewriter:
         ):
             if expected_value is not None:
                 return
-            if isinstance(expect, ValueAll):
+            if isinstance(expect, ExpectAll):
                 self.scope_expect_rewrites[expect] = []
                 return
             if isinstance(expect, Step):
                 self.step_expect_rewrites[expect] = []
                 return
-            assert isinstance(expect, Value), f"Unexpected expect node kind {expect}"
+            assert (
+                expect.get_watched_expr() is not None
+            ), f"Unexpected expect node kind {expect}"
             self.unknown_expect_rewrites[expect] = []
 
         script.visit_script(visit_expect=collect_expects_to_rewrite)
@@ -276,14 +279,18 @@ class ScriptExpectRewriter:
         ):
             return
 
-        state_match_context = StateMatchContext()
+        def check_condition(step: StepIR, frame_idx: int, condition: str):
+            cond_value = step.frames[frame_idx].watches[condition]
+            result = cond_value.could_evaluate and cond_value.value.lower() == "true"
+            return result
 
-        # Populate the `unknown_expect_rewrites` dict, mapping each expect with an unknown value to its list of observed
-        # during this run, along with the corresponding step indices.
+        state_match_context = StateMatchContext(check_condition=check_condition)
         self.step_rewriters = [
             StepExpectRewriter(step, script, state_match_context)
             for step in dext_ir.steps
         ]
+        # Populate the expect_rewrites dicts, mapping each expect with an unknown value to its list of observed values
+        # during this run, along with the corresponding step indices.
         for step_rewriter in self.step_rewriters:
             step_idx = step_rewriter.step.step_index
             for (
@@ -389,7 +396,7 @@ def rewrite_script(
         assert isinstance(
             scope_where_children, list
         ), f"Unexpected child for state node {scope.where}: {scope_where_children}"
-        if isinstance(expect, ValueAll):
+        if isinstance(expect, ExpectAll):
             assert (
                 expect in expected_scope_rewrites
             ), "Script-rewriter error: Dexter missed rewriting !expect/all node."
@@ -426,11 +433,11 @@ def rewrite_script(
                             new_expect_parent, []
                         )
                 for var, expected_values in var_expected_values:
-                    new_expect = Value(var)
+                    new_expect = expect.get_base_expect(var)
                     new_expect_sibling_list.append(new_expect)
                     new_node_child_map[new_expect] = expected_values
             return
-        assert isinstance(expect, (Step, Value))
+        assert isinstance(expect, (Step, Type, Value))
         new_expected_value = add_expected_values.get(expect) or expected_value
         new_node_child_map[expect] = new_expected_value
         scope_where_children.append(expect)

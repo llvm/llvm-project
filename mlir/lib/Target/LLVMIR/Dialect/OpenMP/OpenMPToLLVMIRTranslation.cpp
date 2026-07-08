@@ -7784,19 +7784,25 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Lowers the FlagsAttr which is applied to the module on the device
-/// pass when offloading, this attribute contains OpenMP RTL globals that can
-/// be passed as flags to the frontend, otherwise they are set to default
+/// Lowers the FlagsAttr which is applied to the module when offloading. This
+/// attribute contains OpenMP RTL globals that can be passed as flags to the
+/// frontend, otherwise they are set to default
 static LogicalResult
 convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
                  LLVM::ModuleTranslation &moduleTranslation) {
-  if (!cast<mlir::ModuleOp>(op))
-    return failure();
+  auto offloadMod = dyn_cast<omp::OffloadModuleInterface>(op);
+  if (!offloadMod)
+    return op->emitOpError() << "omp flags attached to non offload module op";
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
-  ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
-                              attribute.getOpenmpDeviceVersion());
+  if (offloadMod.getIsTargetDevice())
+    ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
+                                attribute.getOpenmpDeviceVersion());
+
+  // The flags below are only intended to be emitted for GPU offload targets.
+  if (!offloadMod.getIsGPU())
+    return success();
 
   if (attribute.getNoGpuLib())
     return success();
@@ -8814,6 +8820,21 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
         // a deleted block.
         ompBuilder->Builder.ClearInsertionPoint();
         ompBuilder->Builder.SetCurrentDebugLocation(llvm::DebugLoc());
+      } else if (llvm::Function *llvmFunc =
+                     moduleTranslation.lookupFunction(funcOp.getName())) {
+        // Device-side declare target functions are externally visible by
+        // default so they can be referenced from other device translation
+        // units. That also prevents the offload LTO from internalizing and
+        // deleting them when they end up unused in the final device image.
+        // Such dead functions can still reference internal LDS and trigger
+        // spurious "local memory global used by non-kernel function" backend
+        // warnings. Marking them hidden keeps the symbol usable within the
+        // device image's linkage unit while letting LTO drop it when nothing
+        // references it; symbols that must stay reachable (e.g. via an offload
+        // entry that takes their address) are kept alive by that reference.
+        if (!llvmFunc->isDeclaration() && llvmFunc->hasExternalLinkage() &&
+            llvmFunc->getVisibility() == llvm::GlobalValue::DefaultVisibility)
+          llvmFunc->setVisibility(llvm::GlobalValue::HiddenVisibility);
       }
     }
     return success();

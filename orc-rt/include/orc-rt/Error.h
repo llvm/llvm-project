@@ -38,7 +38,7 @@ public:
 private:
 #if ORC_RT_ENABLE_EXCEPTIONS
   friend class Error;
-  friend Error restore_error(ErrorInfoBase &&);
+  friend Error restore_error(ErrorInfoBase &&) noexcept;
 
   virtual void throwAsException() = 0;
 
@@ -67,7 +67,7 @@ public:
     return ClassID == classID() || ParentT::isA(ClassID);
   }
 
-  static bool classof(const RTTIRoot *R) { return R->isA<ThisT>(); }
+  static bool classof(const RTTIRoot *R) noexcept { return R->isA<ThisT>(); }
 
 #if ORC_RT_ENABLE_EXCEPTIONS
   void throwAsException() override {
@@ -96,7 +96,7 @@ class ORC_RT_NODISCARD Error {
 public:
   /// Destroy this error. Aborts if error was not checked, or was checked but
   /// not handled.
-  ~Error() { assertIsChecked(); }
+  ~Error() noexcept { assertIsChecked(); }
 
   Error(const Error &) = delete;
   Error &operator=(const Error &) = delete;
@@ -205,7 +205,9 @@ Error ErrorExtends<ThisT, ParentT>::restoreError() noexcept {
       std::make_unique<ThisT>(std::move(*static_cast<ThisT *>(this))));
 }
 
-inline Error restore_error(ErrorInfoBase &&EIB) { return EIB.restoreError(); }
+inline Error restore_error(ErrorInfoBase &&EIB) noexcept {
+  return EIB.restoreError();
+}
 
 #endif // ORC_RT_ENABLE_EXCEPTIONS
 
@@ -231,7 +233,7 @@ template <typename RetT, typename ArgT> struct ErrorHandlerTraitsImpl;
 
 // Specialization for Error(ErrT&).
 template <typename ErrT> struct ErrorHandlerTraitsImpl<Error, ErrT &> {
-  static bool appliesTo(const ErrorInfoBase &E) {
+  static bool appliesTo(const ErrorInfoBase &E) noexcept {
     return E.template isA<ErrT>();
   }
   template <typename HandlerT>
@@ -243,7 +245,7 @@ template <typename ErrT> struct ErrorHandlerTraitsImpl<Error, ErrT &> {
 
 // Specialization for void(ErrT&).
 template <typename ErrT> struct ErrorHandlerTraitsImpl<void, ErrT &> {
-  static bool appliesTo(const ErrorInfoBase &E) {
+  static bool appliesTo(const ErrorInfoBase &E) noexcept {
     return E.template isA<ErrT>();
   }
   template <typename HandlerT>
@@ -257,7 +259,7 @@ template <typename ErrT> struct ErrorHandlerTraitsImpl<void, ErrT &> {
 // Specialization for Error(std::unique_ptr<ErrT>).
 template <typename ErrT>
 struct ErrorHandlerTraitsImpl<Error, std::unique_ptr<ErrT>> {
-  static bool appliesTo(const ErrorInfoBase &E) {
+  static bool appliesTo(const ErrorInfoBase &E) noexcept {
     return E.template isA<ErrT>();
   }
   template <typename HandlerT>
@@ -271,7 +273,7 @@ struct ErrorHandlerTraitsImpl<Error, std::unique_ptr<ErrT>> {
 // Specialization for void(std::unique_ptr<ErrT>).
 template <typename ErrT>
 struct ErrorHandlerTraitsImpl<void, std::unique_ptr<ErrT>> {
-  static bool appliesTo(const ErrorInfoBase &E) {
+  static bool appliesTo(const ErrorInfoBase &E) noexcept {
     return E.template isA<ErrT>();
   }
   template <typename HandlerT>
@@ -332,15 +334,15 @@ void handleAllErrors(Error E, HandlerTs &&...Handlers) {
 /// Sets the 'checked' flag on construction, resets it on destruction.
 class ErrorAsOutParameter {
 public:
-  ErrorAsOutParameter(Error *Err) : Err(Err) {
+  ErrorAsOutParameter(Error *Err) noexcept : Err(Err) {
     // Raise the checked bit if Err is success.
     if (Err)
       (void)!!*Err;
   }
 
-  ErrorAsOutParameter(Error &Err) : Err(&Err) { (void)!!Err; }
+  ErrorAsOutParameter(Error &Err) noexcept : Err(&Err) { (void)!!Err; }
 
-  ~ErrorAsOutParameter() {
+  ~ErrorAsOutParameter() noexcept {
     // Clear the checked bit.
     if (Err && !*Err)
       *Err = Error::success();
@@ -371,7 +373,7 @@ template <typename T> class ORC_RT_NODISCARD Expected {
 
 public:
   /// Create an Expected from a failure value.
-  Expected(Error Err) : HasError(true), Unchecked(true) {
+  Expected(Error Err) noexcept : HasError(true), Unchecked(true) {
     assert(Err && "Cannot create Expected<T> from Error success value");
     new (getErrorStorage()) error_type(Err.takePayload());
   }
@@ -428,14 +430,14 @@ public:
 
   /// Returns true if this Expected value is in a success state (holding a T),
   /// and false if this Expected value is in a failure state.
-  explicit operator bool() {
+  explicit operator bool() noexcept {
     Unchecked = HasError;
     return !HasError;
   }
 
   /// Returns true if this Expected value holds an Error of type error_type.
-  template <typename ErrT> bool isFailureOfType() const {
-    return HasError && (*getErrorStorage())->template isFailureOfType<ErrT>();
+  template <typename ErrT> bool isFailureOfType() const noexcept {
+    return HasError && (*getErrorStorage())->template isA<ErrT>();
   }
 
   /// Take ownership of the stored error.
@@ -447,43 +449,43 @@ public:
   /// method returns the contained error and leaves this Expected in an
   /// 'empty' state from which it may be safely destructed but not otherwise
   /// accessed.
-  Error takeError() {
+  Error takeError() noexcept {
     Unchecked = false;
     return HasError ? Error(std::move(*getErrorStorage())) : Error::success();
   }
 
   /// Returns a pointer to the stored T value.
-  pointer operator->() {
+  pointer operator->() noexcept {
     assertIsChecked();
     return toPointer(getStorage());
   }
 
   /// Returns a pointer to the stored T value.
-  const_pointer operator->() const {
+  const_pointer operator->() const noexcept {
     assertIsChecked();
     return toPointer(getStorage());
   }
 
   /// Returns a reference to the stored T value.
-  reference operator*() {
+  reference operator*() noexcept {
     assertIsChecked();
     return *getStorage();
   }
 
   /// Returns a reference to the stored T value.
-  const_reference operator*() const {
+  const_reference operator*() const noexcept {
     assertIsChecked();
     return *getStorage();
   }
 
 private:
   template <class T1>
-  static bool compareThisIfSameType(const T1 &a, const T1 &b) {
+  static bool compareThisIfSameType(const T1 &a, const T1 &b) noexcept {
     return &a == &b;
   }
 
   template <class T1, class T2>
-  static bool compareThisIfSameType(const T1 &a, const T2 &b) {
+  static bool compareThisIfSameType(const T1 &a, const T2 &b) noexcept {
     return false;
   }
 
@@ -508,35 +510,37 @@ private:
     new (this) Expected(std::move(Other));
   }
 
-  pointer toPointer(pointer Val) { return Val; }
+  pointer toPointer(pointer Val) noexcept { return Val; }
 
-  const_pointer toPointer(const_pointer Val) const { return Val; }
+  const_pointer toPointer(const_pointer Val) const noexcept { return Val; }
 
-  pointer toPointer(wrap *Val) { return &Val->get(); }
+  pointer toPointer(wrap *Val) noexcept { return &Val->get(); }
 
-  const_pointer toPointer(const wrap *Val) const { return &Val->get(); }
+  const_pointer toPointer(const wrap *Val) const noexcept {
+    return &Val->get();
+  }
 
-  storage_type *getStorage() {
+  storage_type *getStorage() noexcept {
     assert(!HasError && "Cannot get value when an error exists!");
     return reinterpret_cast<storage_type *>(&TStorage);
   }
 
-  const storage_type *getStorage() const {
+  const storage_type *getStorage() const noexcept {
     assert(!HasError && "Cannot get value when an error exists!");
     return reinterpret_cast<const storage_type *>(&TStorage);
   }
 
-  error_type *getErrorStorage() {
+  error_type *getErrorStorage() noexcept {
     assert(HasError && "Cannot get error when a value exists!");
     return reinterpret_cast<error_type *>(&ErrorStorage);
   }
 
-  const error_type *getErrorStorage() const {
+  const error_type *getErrorStorage() const noexcept {
     assert(HasError && "Cannot get error when a value exists!");
     return reinterpret_cast<const error_type *>(&ErrorStorage);
   }
 
-  void assertIsChecked() {
+  void assertIsChecked() noexcept {
     if (ORC_RT_UNLIKELY(Unchecked)) {
       fprintf(stderr,
               "Expected<T> must be checked before access or destruction.\n");
@@ -560,7 +564,7 @@ inline void consumeError(Error Err) {
 
 /// Consumes success values. It is a programmatic error to call this function
 /// on a failure value.
-inline void cantFail(Error Err) {
+inline void cantFail(Error Err) noexcept {
 #ifndef NDEBUG
   // TODO: Log unhandled error.
   if (Err)
@@ -599,7 +603,7 @@ inline std::string toString(Error Err) noexcept {
 /// Simple string error type.
 class StringError : public ErrorExtends<StringError, ErrorInfoBase> {
 public:
-  StringError(std::string ErrMsg) : ErrMsg(std::move(ErrMsg)) {}
+  StringError(std::string ErrMsg) noexcept : ErrMsg(std::move(ErrMsg)) {}
   std::string toString() const noexcept override { return ErrMsg; }
 
 private:
@@ -611,7 +615,7 @@ private:
 
 class ExceptionError : public ErrorExtends<ExceptionError, ErrorInfoBase> {
 public:
-  ExceptionError(std::exception_ptr E) : E(std::move(E)) {}
+  ExceptionError(std::exception_ptr E) noexcept : E(std::move(E)) {}
   std::string toString() const noexcept override;
   void throwAsException() override { std::rethrow_exception(E); }
 

@@ -230,10 +230,12 @@ public:
     GlobalValueId = VE.getValues().size();
     if (!Index)
       return;
-    for (const auto &GUIDSummaryLists : *Index)
+    // Sort by GUID for deterministic value ID assignment.
+    for (const auto &GUIDSummaryLists :
+         Index->sortedGlobalValueSummariesRange())
       // Examine all summaries for this GUID.
       for (auto &Summary : GUIDSummaryLists.second.getSummaryList())
-        if (auto FS = dyn_cast<FunctionSummary>(Summary.get())) {
+        if (auto *FS = dyn_cast<FunctionSummary>(Summary.get())) {
           // For each call in the function summary, see if the call
           // is to a GUID (which means it is for an indirect call,
           // otherwise we would have a Value for it). If so, synthesize
@@ -254,6 +256,7 @@ public:
 
 protected:
   void writePerModuleGlobalValueSummary();
+  void writeGUIDList();
 
 private:
   void writePerModuleFunctionSummaryRecord(
@@ -583,7 +586,8 @@ public:
             Callback({AS->getAliaseeGUID(), &AS->getAliasee()}, true);
         }
     } else {
-      for (auto &Summaries : Index)
+      // Sort by GUID for deterministic output.
+      for (const auto &Summaries : Index.sortedGlobalValueSummariesRange())
         for (auto &Summary : Summaries.second.getSummaryList())
           Callback({Summaries.first, Summary.get()}, false);
     }
@@ -1080,7 +1084,7 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
         Record.push_back(getAttrKindEncoding(Kind));
         if (Kind == Attribute::Memory) {
           // Version field for upgrading old memory effects.
-          const uint64_t Version = 1;
+          const uint64_t Version = 2;
           Record.push_back((Version << 56) | Attr.getValueAsInt());
         } else {
           Record.push_back(Attr.getValueAsInt());
@@ -1548,9 +1552,19 @@ void ModuleBitcodeWriter::writeModuleInfo() {
   const std::string &DL = M.getDataLayoutStr();
   if (!DL.empty())
     writeStringRecord(Stream, bitc::MODULE_CODE_DATALAYOUT, DL, 0 /*TODO*/);
-  if (!M.getModuleInlineAsm().empty())
-    writeStringRecord(Stream, bitc::MODULE_CODE_ASM, M.getModuleInlineAsm(),
-                      0 /*TODO*/);
+
+  for (const Module::GlobalAsmFragment &Frag : M.getModuleInlineAsm()) {
+    SmallVector<std::pair<StringRef, StringRef>> Props =
+        Frag.Props.getAsStrings();
+    for (auto [Key, Value] : Props) {
+      SmallVector<unsigned, 64> Record;
+      Record.append(Key.begin(), Key.end());
+      Record.push_back(0);
+      Record.append(Value.begin(), Value.end());
+      Stream.EmitRecord(bitc::MODULE_CODE_ASM_PROPERTY, Record);
+    }
+    writeStringRecord(Stream, bitc::MODULE_CODE_ASM, Frag.Asm, 0 /*TODO*/);
+  }
 
   // Emit information about sections and GC, computing how many there are. Also
   // compute the maximum alignment value.
@@ -1648,6 +1662,8 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Stream.EmitRecord(bitc::MODULE_CODE_SOURCE_FILENAME, Vals, FilenameAbbrev);
     Vals.clear();
   }
+
+  writeGUIDList();
 
   // Emit the global variable information.
   for (const GlobalVariable &GV : M.globals()) {
@@ -4683,7 +4699,11 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
 void ModuleBitcodeWriterBase::writeModuleLevelReferences(
     const GlobalVariable &V, SmallVector<uint64_t, 64> &NameVals,
     unsigned FSModRefsAbbrev, unsigned FSModVTableRefsAbbrev) {
-  auto VI = Index->getValueInfo(V.getGUID());
+  // Be a little lenient here, to accomodate older files without GUIDs
+  // already computed and assigned as metadata.
+  GlobalValue::GUID GUID = V.getGUIDOrFallback();
+
+  auto VI = Index->getValueInfo(GUID);
   if (!VI || VI.getSummaryList().empty()) {
     // Only declarations should not have a summary (a declaration might however
     // have a summary if the def was in module level asm).
@@ -4896,7 +4916,11 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     if (!F.hasName())
       report_fatal_error("Unexpected anonymous function when writing summary");
 
-    ValueInfo VI = Index->getValueInfo(F.getGUID());
+    // Be a little lenient here, to accomodate older files without GUIDs
+    // already computed and assigned as metadata.
+    GlobalValue::GUID GUID = F.getGUIDOrFallback();
+
+    ValueInfo VI = Index->getValueInfo(GUID);
     if (!VI || VI.getSummaryList().empty()) {
       // Only declarations should not have a summary (a declaration might
       // however have a summary if the def was in module level asm).
@@ -4928,7 +4952,9 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     if (!F.hasName())
       report_fatal_error("Unexpected anonymous function when writing summary");
 
-    ValueInfo VI = Index->getValueInfo(F.getGUID());
+    GlobalValue::GUID GUID = F.getGUIDOrFallback();
+
+    ValueInfo VI = Index->getValueInfo(GUID);
     if (!VI || VI.getSummaryList().empty()) {
       // Only declarations should not have a summary (a declaration might
       // however have a summary if the def was in module level asm).
@@ -4978,6 +5004,37 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
                       ArrayRef<uint64_t>{Index->getBlockCount()});
 
   Stream.ExitBlock();
+}
+
+void ModuleBitcodeWriterBase::writeGUIDList() {
+  const ValueEnumerator::ValueList &Vals = VE.getValues();
+  const size_t Max = Vals.size();
+
+  std::vector<GlobalValue::GUID> GUIDs(Max, 0);
+  for (const GlobalValue &GV : M.global_values()) {
+    auto MaybeGUID = GV.getGUIDIfAssigned();
+    if (!MaybeGUID)
+      continue;
+    auto GUID = *MaybeGUID;
+
+    const auto ValueID = VE.getValueID(&GV);
+    GUIDs[ValueID] = GUID;
+  }
+
+  auto Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv->Add(BitCodeAbbrevOp(bitc::MODULE_CODE_GUIDLIST));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  unsigned GUIDListAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
+  SmallVector<uint32_t> RecordVals;
+  RecordVals.reserve(Max * 2);
+  for (auto GUID : GUIDs) {
+    RecordVals.push_back(static_cast<uint32_t>(GUID >> 32));
+    RecordVals.push_back(static_cast<uint32_t>(GUID));
+  }
+
+  Stream.EmitRecord(bitc::MODULE_CODE_GUIDLIST, RecordVals, GUIDListAbbrev);
 }
 
 /// Emit the combined summary section into the combined index file.
@@ -5773,6 +5830,8 @@ void ThinLinkBitcodeWriter::writeSimplifiedModuleInfo() {
     Stream.EmitRecord(bitc::MODULE_CODE_SOURCE_FILENAME, Vals, FilenameAbbrev);
     Vals.clear();
   }
+
+  writeGUIDList();
 
   // Emit the global variable information.
   for (const GlobalVariable &GV : M.globals()) {

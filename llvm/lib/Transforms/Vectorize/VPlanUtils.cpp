@@ -171,13 +171,6 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                            PredicatedScalarEvolution &PSE,
                                            const Loop *L) {
   ScalarEvolution &SE = *PSE.getSE();
-  if (isa<VPIRValue, VPSymbolicValue>(V)) {
-    Value *LiveIn = V->getUnderlyingValue();
-    if (LiveIn && SE.isSCEVable(LiveIn->getType()))
-      return SE.getSCEV(LiveIn);
-    return SE.getCouldNotCompute();
-  }
-
   if (auto *RV = dyn_cast<VPRegionValue>(V)) {
     assert(RV == RV->getDefiningRegion()->getCanonicalIV() &&
            "RegionValue must be canonical IV");
@@ -185,6 +178,13 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       return SE.getCouldNotCompute();
     return SE.getAddRecExpr(SE.getZero(RV->getType()), SE.getOne(RV->getType()),
                             L, SCEV::FlagAnyWrap);
+  }
+
+  if (isa<VPIRValue, VPSymbolicValue>(V)) {
+    Value *LiveIn = V->getUnderlyingValue();
+    if (LiveIn && SE.isSCEVable(LiveIn->getType()))
+      return SE.getSCEV(LiveIn);
+    return SE.getCouldNotCompute();
   }
 
   // Helper to create SCEVs for binary and unary operations.
@@ -421,7 +421,7 @@ static bool preservesUniformity(unsigned Opcode) {
 
 bool vputils::isSingleScalar(const VPValue *VPV) {
   // Live-in, symbolic and region-values represent single-scalar values.
-  if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(VPV))
+  if (isa<VPIRValue, VPSymbolicValue>(VPV))
     return true;
 
   if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
@@ -458,7 +458,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
 
 bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
   // Live-ins and region values are uniform.
-  if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(V))
+  if (isa<VPIRValue, VPSymbolicValue>(V))
     return true;
 
   const VPRecipeBase *R = V->getDefiningRecipe();
@@ -694,8 +694,7 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
     VPSymbolicValue &UF = Plan.getUF();
     if (!UF.isMaterialized())
       return Step == &UF ||
-             match(Step, m_c_Mul(m_Specific(&Plan.getUF()),
-                                 m_VPInstruction<VPInstruction::VScale>()));
+             match(Step, m_c_Mul(m_Specific(&Plan.getUF()), m_VScale()));
 
     // Alias masking: step is number of active lanes of a dependence mask.
     if (match(Step, m_ZExtOrTruncOrSelf(
@@ -709,15 +708,13 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 
     // Scalable VF: step involves VScale.
     if (ConcreteUF == 1)
-      return match(Step, m_VPInstruction<VPInstruction::VScale>());
-    if (match(Step, m_c_Mul(m_SpecificInt(ConcreteUF),
-                            m_VPInstruction<VPInstruction::VScale>())))
+      return match(Step, m_VScale());
+    if (match(Step, m_c_Mul(m_SpecificInt(ConcreteUF), m_VScale())))
       return true;
     // mul(VScale, ConcreteUF) may have been simplified to
     // shl(VScale, log2(ConcreteUF)) when ConcreteUF is a power of 2.
     return isPowerOf2_32(ConcreteUF) &&
-           match(Step, m_Shl(m_VPInstruction<VPInstruction::VScale>(),
-                             m_SpecificInt(Log2_32(ConcreteUF))));
+           match(Step, m_Shl(m_VScale(), m_SpecificInt(Log2_32(ConcreteUF))));
   };
 
   VPInstruction *Increment = nullptr;
@@ -851,12 +848,28 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
   case scUnknown:
     return Builder.getPlan().getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
   case scVScale:
-    return Builder.createNaryOp(VPInstruction::VScale, {}, S->getType());
+    return Builder.createVScale(S->getType(), DL);
   case scAddExpr:
   case scMulExpr: {
-    if (S->getType()->isPointerTy())
-      return nullptr;
     auto *NAry = cast<SCEVNAryExpr>(S);
+    VPIRFlags::WrapFlagsTy WrapFlags(NAry->hasNoUnsignedWrap(),
+                                     NAry->hasNoSignedWrap());
+
+    // Expanded poiner SCEVAddExpr as a ptradd of the pointer base and the
+    // integer offset, matching SCEVExpander.
+    if (S->getType()->isPointerTy()) {
+      VPValue *Base = tryToExpand(SE.getPointerBase(S));
+      if (!Base)
+        return nullptr;
+      VPValue *Offset = tryToExpand(SE.removePointerBase(S));
+      if (!Offset)
+        return nullptr;
+      GEPNoWrapFlags GEPFlags = WrapFlags.HasNUW
+                                    ? GEPNoWrapFlags::noUnsignedWrap()
+                                    : GEPNoWrapFlags::none();
+      return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
+    }
+
     unsigned Opcode =
         S->getSCEVType() == scAddExpr ? Instruction::Add : Instruction::Mul;
     // Iterate in reverse so that constants are emitted last.
@@ -867,8 +880,6 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
         return nullptr;
       Ops.push_back(OpV);
     }
-    VPIRFlags::WrapFlagsTy WrapFlags(NAry->hasNoUnsignedWrap(),
-                                     NAry->hasNoSignedWrap());
     VPValue *Result = Ops.front();
     for (VPValue *Op : drop_begin(Ops))
       Result = Builder.createOverflowingOp(Opcode, {Result, Op}, WrapFlags, DL);
@@ -885,6 +896,29 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     return Builder.createNaryOp(Instruction::UDiv, {LHS, RHS},
                                 VPIRFlags::getDefaultFlags(Instruction::UDiv),
                                 DL);
+  }
+  case scTruncate:
+  case scZeroExtend:
+  case scSignExtend: {
+    auto *Cast = cast<SCEVCastExpr>(S);
+    VPValue *Op = tryToExpand(Cast->getOperand());
+    if (!Op)
+      return nullptr;
+    Instruction::CastOps Opcode;
+    switch (S->getSCEVType()) {
+    case scTruncate:
+      Opcode = Instruction::Trunc;
+      break;
+    case scZeroExtend:
+      Opcode = Instruction::ZExt;
+      break;
+    case scSignExtend:
+      Opcode = Instruction::SExt;
+      break;
+    default:
+      llvm_unreachable("Unhandled cast SCEV");
+    }
+    return Builder.createScalarCast(Opcode, Op, S->getType(), DL);
   }
   default:
     return nullptr;
