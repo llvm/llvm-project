@@ -1112,22 +1112,30 @@ static constexpr std::array<Builtin::Info, NumCDEBuiltins> BuiltinInfos = {
 } // namespace CDE
 } // namespace
 
-static constexpr llvm::StringTable BuiltinStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsARM.def"
-    ; // namespace clang
+namespace clang {
+namespace ARM {
 
-static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumARMBuiltins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
-#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsARM.def"
-});
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsARM.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsARM.inc"
+#undef GET_BUILTIN_INFOS
+};
+
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsARM.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) == 
+             NumARMBuiltins);
+
+} // namespace ARM
+} // namespace clang
 
 llvm::SmallVector<Builtin::InfosShard>
 ARMTargetInfo::getTargetBuiltins() const {
@@ -1137,7 +1145,8 @@ ARMTargetInfo::getTargetBuiltins() const {
        "__builtin_neon_"},
       {&MVE::BuiltinStrings, MVE::BuiltinInfos, "__builtin_arm_mve_"},
       {&CDE::BuiltinStrings, CDE::BuiltinInfos, "__builtin_arm_cde_"},
-      {&BuiltinStrings, BuiltinInfos},
+      {&ARM::BuiltinStrings, ARM::BuiltinInfos},
+      {&ARM::BuiltinStrings, ARM::PrefixedBuiltinInfos, "__builtin_arm_"},
   };
 }
 
