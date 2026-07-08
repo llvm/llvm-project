@@ -2369,9 +2369,8 @@ auto APINotesReader::lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name)
 }
 
 template <typename ParameterT>
-auto APINotesReader::lookupCXXMethodImpl(
-    ContextID CtxID, llvm::StringRef Name,
-    llvm::ArrayRef<ParameterT> Parameters)
+auto APINotesReader::lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name,
+                                         llvm::ArrayRef<ParameterT> Parameters)
     -> VersionedInfo<CXXMethodInfo> {
   if (!Implementation->CXXMethodTable)
     return std::nullopt;
