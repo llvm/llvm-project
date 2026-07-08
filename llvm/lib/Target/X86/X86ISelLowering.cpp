@@ -2827,7 +2827,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::ANY_EXTEND_VECTOR_INREG,
                        ISD::SIGN_EXTEND_VECTOR_INREG,
                        ISD::ZERO_EXTEND_VECTOR_INREG,
+                       ISD::VECREDUCE_ADD,
                        ISD::VECREDUCE_MUL,
+                       ISD::VECREDUCE_AND,
+                       ISD::VECREDUCE_OR,
+                       ISD::VECREDUCE_XOR,
+                       ISD::VECREDUCE_SMAX,
+                       ISD::VECREDUCE_SMIN,
+                       ISD::VECREDUCE_UMAX,
+                       ISD::VECREDUCE_UMIN,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
                        ISD::FP_TO_SINT,
@@ -48130,6 +48138,194 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+//===----------------------------------------------------------------------===//
+// X86 sibling-reduction interleaving.
+//
+// Fuse independent same-(opcode, element-type) reductions to share their
+// cross-lane extracts (vextracti64x4 512->256, vextracti128 256->128) -- the
+// dominant cost of a reduction. Without this each of the N reductions extracts
+// on its own; interleaving with unpck lets a single shared descent reduce all
+// N, cutting the total instruction count (one set of extracts and folds, not
+// N). Two <8 x i32> adds:
+//
+//   A                    ; [a0 a1 a2 a3 | a4 a5 a6 a7]
+//   hi = vextracti128 A  ; [a4 a5 a6 a7]              cross-lane, A only
+//   a  = add A.lo, hi    ; [a0+a4 a1+a5 a2+a6 a3+a7]
+//   ... in-lane fold     ; a[0] = sum(A); B repeats -> a second vextracti128
+//
+// unpck mixes sibling reductions into one register; one fold reduces A and B:
+//
+//   lo = unpcklo A, B    ; [a0 b0 a1 b1 | a4 b4 a5 b5]
+//   hi = unpckhi A, B    ; [a2 b2 a3 b3 | a6 b6 a7 b7]
+//   p  = add lo, hi      ; [a0+a2 b0+b2 a1+a3 b1+b3 |
+//                           a4+a6 b4+b6 a5+a7 b5+b7]  A even, B odd
+//   hi = vextracti128 p  ; [a4+a6 b4+b6 a5+a7 b5+b7]  ONE extract, shared
+//   p  = add p.lo, hi    ; [a0+a2+a4+a6 b0+b2+b4+b6
+//                           a1+a3+a5+a7 b1+b3+b5+b7]  still: a even, b odd
+//   ... in-lane fold     ; p = [sum(A) sum(B)]  in lanes 0, 1
+//
+// Appends {reduction node, lane-scalar result} pairs to Repl, one per
+// reduction in the group.
+//===----------------------------------------------------------------------===//
+static void
+emitInterleavedReductions(SelectionDAG &DAG, const SDLoc &DL,
+                          ArrayRef<SDNode *> Group, unsigned Op,
+                          SmallVectorImpl<std::pair<SDNode *, SDValue>> &Repl) {
+  unsigned N = Group.size();
+  assert(N >= 2 && isPowerOf2_32(N) &&
+         N <= 128 / Group[0]->getOperand(0).getScalarValueSizeInBits() &&
+         "group must be a pow2 that fits one 128-bit lane");
+  SmallVector<SDValue, 16> V;
+  for (SDNode *R : Group)
+    V.push_back(R->getOperand(0)); // the reduction's input vector
+
+  // Pairwise tree: each level combines adjacent pairs into one, halving the
+  // number of vectors in V until a single vector packs all inputs.
+  while (V.size() > 1) {
+    unsigned NumOps = V.size();
+    for (unsigned i = 0; i != NumOps; i += 2) {
+      SDValue L = V[i], R = V[i + 1];
+      EVT VT = L.getValueType();
+      // op(unpcklo(L,R), unpckhi(L,R)): riffle L and R together and fold, so
+      // one vector carries both (L in even lanes, R in odd).
+      V[i / 2] = DAG.getNode(Op, DL, VT, getUnpackl(DAG, DL, VT, L, R),
+                             getUnpackh(DAG, DL, VT, L, R));
+    }
+    V.resize(NumOps / 2);
+  }
+
+  // Fold down to one lane per reduction: while legal, split and op the lo/hi
+  // subvectors; then shuffle-fold within the 128-bit register.
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Packed = V[0];
+  EVT VT = Packed.getValueType();
+  for (unsigned W = VT.getVectorNumElements(); W > N; W >>= 1) {
+    EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+    if (TLI.isOperationLegalOrCustom(Op, HalfVT)) {
+      auto [Lo, Hi] = DAG.SplitVector(Packed, DL);
+      Packed = DAG.getNode(Op, DL, HalfVT, Lo, Hi);
+      VT = HalfVT;
+    } else {
+      SDValue Hi = DAG.getVectorShuffle(
+          VT, DL, Packed, DAG.getUNDEF(VT),
+          createSequentialMask(W / 2, W / 2,
+                               VT.getVectorNumElements() - W / 2));
+      Packed = DAG.getNode(Op, DL, VT, Packed, Hi);
+    }
+  }
+
+  // Each level ran op(unpcklo(L,R), unpckhi(L,R)), which interleaves L,R so
+  // lane k goes to 2k (from L, even) or 2k+1 (from R, odd) -- doubling the
+  // index and appending the L/R choice, which is bit l of r (the reduction's
+  // index in the group):
+  //
+  //     lane_l = 2 * lane_{l-1} + r_l
+  //
+  // Expanding over all l levels gives the lane as:
+  //
+  //     lane = sum_l r_l * 2^(LogN-1-l)
+  //
+  // which is exactly r with its bits reversed, i.e. reverseBits(r).
+  unsigned LogN = Log2_32(N);
+  for (unsigned r = 0; r < N; ++r) {
+    unsigned Lane = APInt(LogN, r).reverseBits().getZExtValue();
+    EVT ResVT = Group[r]->getValueType(0);
+    SDValue Out = DAG.getExtractVectorElt(DL, ResVT, Packed, Lane);
+    Repl.emplace_back(Group[r], Out);
+  }
+}
+
+// True if V (a fused reduction's input) is independent of the other reductions.
+static bool isIndependentReductionInput(SDValue V, unsigned Opc,
+                                        unsigned Depth = 4) {
+  if (V.getOpcode() == ISD::CopyFromReg || V.getNumOperands() == 0)
+    return true; // live-in register / constant / undef leaf
+  // Bail on another reduction (cycle), a load (false dependency), or too deep.
+  if (V.getOpcode() == Opc || isa<MemSDNode>(V.getNode()) || Depth == 0)
+    return false;
+  for (SDValue O : V->op_values())
+    if (!isIndependentReductionInput(O, Opc, Depth - 1))
+      return false;
+  return true;
+}
+
+// N is a VECREDUCE_* node. Fuse it with independent sibling VECREDUCE_* nodes
+// of the same opcode and input type so they share one cross-lane extract chain.
+static SDValue combineSiblingReductions(SDNode *N, SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const X86Subtarget &Subtarget) {
+  if (!Subtarget.preferUnpckOverCrossLaneExtract())
+    return SDValue();
+  if (!DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  unsigned Opc = N->getOpcode();
+  ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Opc);
+
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  // Only 256/512-bit reductions need cross-lane extracts (which fusing shares).
+  unsigned SizeInBits =
+      SrcVT.isFixedLengthVector() ? SrcVT.getFixedSizeInBits() : 0;
+  if (SizeInBits != 256 && SizeInBits != 512)
+    return SDValue();
+
+  // Only match reductions whose input is independent.
+  // Note: after fusing, each result depends on ALL fused inputs (the shared
+  // interleave consumes them together), not just its own -- a false dependency,
+  // so a late input delays every result and can lengthen the critical path,
+  // though in practice we have not seen this regress.
+  if (!isIndependentReductionInput(Src, Opc))
+    return SDValue();
+
+  // vXi8 add reductions are better lowered to PSADBW.
+  if (BinOp == ISD::ADD && SrcVT.getScalarType() == MVT::i8)
+    return SDValue();
+
+  // Gather sibling reductions with the same opcode, vector type, and an
+  // independent input. N goes first so it always lands in the first chunk.
+  SmallVector<SDNode *, 8> Work;
+  Work.push_back(N);
+  for (SDNode &M : DAG.allnodes()) {
+    if (&M == N || M.getOpcode() != Opc)
+      continue;
+    SDValue Root = M.getOperand(0);
+    if (Root.getValueType() == SrcVT && isIndependentReductionInput(Root, Opc))
+      Work.push_back(&M);
+  }
+  if (Work.size() < 2)
+    return SDValue();
+
+  // Cap each group at one 128-bit lane of elements so the interleave stays
+  // within a lane.
+  unsigned Cap = 128 / SrcVT.getScalarSizeInBits();
+
+  // Interleave the group in balanced pow2 chunks, each up to one 128-bit lane.
+  // TODO: support non-pow2 groups; a lone remainder (e.g. 3 -> {2, 1}) is
+  // reduced on its own.
+  SmallVector<std::pair<SDNode *, SDValue>, 16> Repl;
+  while (Work.size() >= 2) {
+    unsigned Take =
+        std::min<unsigned>(Cap, llvm::bit_floor<uint32_t>(Work.size()));
+    SDLoc DL(Work.front());
+    emitInterleavedReductions(
+        DAG, DL, ArrayRef<SDNode *>(Work).take_front(Take), BinOp, Repl);
+    Work.erase(Work.begin(), Work.begin() + Take);
+  }
+  if (Repl.empty())
+    return SDValue();
+
+  // Wire in the interleaved results; return N's replacement.
+  SDValue Res;
+  for (auto &P : Repl) {
+    if (P.first == N)
+      Res = P.second;
+    else
+      DCI.CombineTo(P.first, P.second);
+  }
+  return Res;
+}
+
 static SDValue combineVECREDUCE_MUL(SDNode *N, SelectionDAG &DAG,
                                     const X86Subtarget &Subtarget) {
   SDValue Src = N->getOperand(0);
@@ -63042,7 +63238,18 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VFCMULC:
   case X86ISD::VFMULC:      return combineFMulcFCMulc(N, DAG, Subtarget);
   case ISD::FNEG:           return combineFneg(N, DAG, DCI, Subtarget);
-  case ISD::VECREDUCE_MUL:  return combineVECREDUCE_MUL(N, DAG, Subtarget);
+  case ISD::VECREDUCE_MUL:
+    if (SDValue V = combineVECREDUCE_MUL(N, DAG, Subtarget))
+      return V;
+    return combineSiblingReductions(N, DAG, DCI, Subtarget);
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN: return combineSiblingReductions(N, DAG, DCI, Subtarget);
   case ISD::TRUNCATE:       return combineTruncate(N, DAG, Subtarget);
   case X86ISD::VTRUNC:      return combineVTRUNC(N, DAG, DCI);
   case X86ISD::VTRUNCS:
