@@ -279,6 +279,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   to resolve that core issue.
 - Clang now uses non-reference types for structured bindings whose initializer
   returns a prvalue. This resolves [CWG3135](https://wg21.link/cwg3135).
+- Clang now falls back to alignment-aware allocation functions for
+  non-overaligned types, implementing [CWG2282](https://wg21.link/cwg2282).
 
 ### C Language Changes
 

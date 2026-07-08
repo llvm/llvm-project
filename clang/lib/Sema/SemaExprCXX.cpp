@@ -2716,22 +2716,22 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
 
 static void diagnoseNoViableFunctionForAllocationOverloadResolution(
     Sema &S, LookupResult &R, SourceRange Range, ArrayRef<Expr *> Args,
-    OverloadCandidateSet &Candidates, OverloadCandidateSet *AlignedCandidates,
-    Expr *AlignArg) {
+    bool ArgsIncludeAlignArg, OverloadCandidateSet &Candidates,
+    OverloadCandidateSet *PrimaryCandidates, Expr *AlignArg) {
   // If this is an allocation of the form 'new (p) X' for some object
   // pointer p (or an expression that will decay to such a pointer),
   // diagnose the reason for the error.
-  if (!R.isClassLookup() && Args.size() == 2 &&
-      (Args[1]->getType()->isObjectPointerType() ||
-       Args[1]->getType()->isArrayType())) {
-    const QualType Arg1Type = Args[1]->getType();
+  if (!R.isClassLookup() && Args.size() == (ArgsIncludeAlignArg ? 3 : 2) &&
+      (Args.back()->getType()->isObjectPointerType() ||
+       Args.back()->getType()->isArrayType())) {
+    const QualType Arg1Type = Args.back()->getType();
     QualType UnderlyingType = S.Context.getBaseElementType(Arg1Type);
     if (UnderlyingType->isPointerType())
       UnderlyingType = UnderlyingType->getPointeeType();
     if (UnderlyingType.isConstQualified()) {
-      S.Diag(Args[1]->getExprLoc(),
+      S.Diag(Args.back()->getExprLoc(),
              diag::err_placement_new_into_const_qualified_storage)
-          << Arg1Type << Args[1]->getSourceRange();
+          << Arg1Type << Args.back()->getSourceRange();
       return;
     }
     S.Diag(R.getNameLoc(), diag::err_need_header_before_placement_new)
@@ -2747,25 +2747,34 @@ static void diagnoseNoViableFunctionForAllocationOverloadResolution(
   // For an aligned allocation, separately check the aligned and unaligned
   // candidates with their respective argument lists.
   SmallVector<OverloadCandidate *, 32> Cands;
-  SmallVector<OverloadCandidate *, 32> AlignedCands;
-  llvm::SmallVector<Expr *, 4> AlignedArgs;
-  if (AlignedCandidates) {
+  SmallVector<OverloadCandidate *, 32> PrimaryCands;
+  llvm::SmallVector<Expr *, 4> PrimaryArgs;
+  if (PrimaryCandidates) {
     auto IsAligned = [](OverloadCandidate &C) {
       const unsigned AlignArgOffset = 1;
       return C.Function->getNumParams() > AlignArgOffset &&
              C.Function->getParamDecl(AlignArgOffset)->getType()->isAlignValT();
     };
-    auto IsUnaligned = [&](OverloadCandidate &C) { return !IsAligned(C); };
+    auto IsPrimary = [&](OverloadCandidate &C) {
+      return ArgsIncludeAlignArg ? !IsAligned(C) : IsAligned(C);
+    };
+    auto IsFallback = [&](OverloadCandidate &C) {
+      return ArgsIncludeAlignArg ? IsAligned(C) : !IsAligned(C);
+    };
 
-    AlignedArgs.reserve(Args.size() + 1);
-    AlignedArgs.push_back(Args[0]);
-    AlignedArgs.push_back(AlignArg);
-    AlignedArgs.append(Args.begin() + 1, Args.end());
-    AlignedCands = AlignedCandidates->CompleteCandidates(
-        S, OCD_AllCandidates, AlignedArgs, R.getNameLoc(), IsAligned);
+    PrimaryArgs.reserve(Args.size() + 1);
+    PrimaryArgs.push_back(Args[0]);
+    if (ArgsIncludeAlignArg) {
+      PrimaryArgs.append(Args.begin() + 2, Args.end());
+    } else {
+      PrimaryArgs.push_back(AlignArg);
+      PrimaryArgs.append(Args.begin() + 1, Args.end());
+    }
+    PrimaryCands = PrimaryCandidates->CompleteCandidates(
+        S, OCD_AllCandidates, PrimaryArgs, R.getNameLoc(), IsPrimary);
 
     Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
-                                          R.getNameLoc(), IsUnaligned);
+                                          R.getNameLoc(), IsFallback);
   } else {
     Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
                                           R.getNameLoc());
@@ -2773,8 +2782,8 @@ static void diagnoseNoViableFunctionForAllocationOverloadResolution(
 
   S.Diag(R.getNameLoc(), diag::err_ovl_no_viable_function_in_call)
       << R.getLookupName() << Range;
-  if (AlignedCandidates)
-    AlignedCandidates->NoteCandidates(S, AlignedArgs, AlignedCands, "",
+  if (PrimaryCandidates)
+    PrimaryCandidates->NoteCandidates(S, PrimaryArgs, PrimaryCands, "",
                                       R.getNameLoc());
   Candidates.NoteCandidates(S, Args, Cands, "", R.getNameLoc());
 }
@@ -2783,7 +2792,7 @@ enum class ResolveMode { Typed, Untyped };
 static bool resolveAllocationOverloadInterior(
     Sema &S, LookupResult &R, SourceRange Range, ResolveMode Mode,
     SmallVectorImpl<Expr *> &Args, AlignedAllocationMode &PassAlignment,
-    FunctionDecl *&Operator, OverloadCandidateSet *AlignedCandidates,
+    FunctionDecl *&Operator, OverloadCandidateSet *PrimaryCandidates,
     Expr *AlignArg, bool Diagnose) {
   unsigned NonTypeArgumentOffset = 0;
   if (Mode == ResolveMode::Typed) {
@@ -2829,17 +2838,30 @@ static bool resolveAllocationOverloadInterior(
   }
 
   case OR_No_Viable_Function:
-    // C++17 [expr.new]p13:
-    //   If no matching function is found and the allocated object type has
-    //   new-extended alignment, the alignment argument is removed from the
-    //   argument list, and overload resolution is performed again.
-    if (isAlignedAllocation(PassAlignment)) {
-      PassAlignment = AlignedAllocationMode::No;
-      AlignArg = Args[NonTypeArgumentOffset + 1];
-      Args.erase(Args.begin() + NonTypeArgumentOffset + 1);
-      return resolveAllocationOverloadInterior(S, R, Range, Mode, Args,
-                                               PassAlignment, Operator,
-                                               &Candidates, AlignArg, Diagnose);
+    // C++20 [expr.new]p18:
+    //   If no matching function is found then
+    //     — if the allocated object type has new-extended alignment, the
+    //       alignment argument is removed from the argument list;
+    //     — otherwise, an argument that is the type’s alignment and has type
+    //       std::align_val_t is added into the argument list immediately after
+    //       the first argument;
+    //   and then overload resolution is performed again.
+    if (!PrimaryCandidates) {
+      if (isAlignedAllocation(PassAlignment)) {
+        PassAlignment = AlignedAllocationMode::No;
+        AlignArg = Args[NonTypeArgumentOffset + 1];
+        Args.erase(Args.begin() + NonTypeArgumentOffset + 1);
+        return resolveAllocationOverloadInterior(
+            S, R, Range, Mode, Args, PassAlignment, Operator, &Candidates,
+            AlignArg, Diagnose);
+      }
+      if (AlignArg) {
+        PassAlignment = AlignedAllocationMode::Yes;
+        Args.insert(Args.begin() + NonTypeArgumentOffset + 1, AlignArg);
+        return resolveAllocationOverloadInterior(
+            S, R, Range, Mode, Args, PassAlignment, Operator, &Candidates,
+            AlignArg, Diagnose);
+      }
     }
 
     // MSVC will fall back on trying to find a matching global operator new
@@ -2853,10 +2875,15 @@ static bool resolveAllocationOverloadInterior(
       R.clear();
       R.setLookupName(S.Context.DeclarationNames.getCXXOperatorName(OO_New));
       S.LookupQualifiedName(R, S.Context.getTranslationUnitDecl());
+      // Only try this fallback without the alignment argument.
+      if (isAlignedAllocation(PassAlignment)) {
+        PassAlignment = AlignedAllocationMode::No;
+        Args.erase(Args.begin() + NonTypeArgumentOffset + 1);
+      }
       // FIXME: This will give bad diagnostics pointing at the wrong functions.
       return resolveAllocationOverloadInterior(S, R, Range, Mode, Args,
                                                PassAlignment, Operator,
-                                               /*Candidates=*/nullptr,
+                                               /*PrimaryCandidates=*/nullptr,
                                                /*AlignArg=*/nullptr, Diagnose);
     }
     if (Mode == ResolveMode::Typed) {
@@ -2867,7 +2894,8 @@ static bool resolveAllocationOverloadInterior(
     }
     if (Diagnose)
       diagnoseNoViableFunctionForAllocationOverloadResolution(
-          S, R, Range, Args, Candidates, AlignedCandidates, AlignArg);
+          S, R, Range, Args, isAlignedAllocation(PassAlignment), Candidates,
+          PrimaryCandidates, AlignArg);
     return true;
 
   case OR_Ambiguous:
@@ -2910,10 +2938,12 @@ static void LookupGlobalDeallocationFunctions(Sema &S, SourceLocation Loc,
   }
 }
 
-static bool resolveAllocationOverload(
-    Sema &S, LookupResult &R, SourceRange Range, SmallVectorImpl<Expr *> &Args,
-    ImplicitAllocationParameters &IAP, FunctionDecl *&Operator,
-    OverloadCandidateSet *AlignedCandidates, Expr *AlignArg, bool Diagnose) {
+static bool resolveAllocationOverload(Sema &S, LookupResult &R,
+                                      SourceRange Range,
+                                      SmallVectorImpl<Expr *> &Args,
+                                      ImplicitAllocationParameters &IAP,
+                                      FunctionDecl *&Operator, Expr *AlignArg,
+                                      bool Diagnose) {
   Operator = nullptr;
   if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
     assert(S.isStdTypeIdentity(Args[0]->getType(), nullptr));
@@ -2935,7 +2965,7 @@ static bool resolveAllocationOverload(
     IAP.PassAlignment = AlignedAllocationMode::Yes;
     if (resolveAllocationOverloadInterior(
             S, R, Range, ResolveMode::Typed, Args, IAP.PassAlignment, Operator,
-            AlignedCandidates, AlignArg, Diagnose))
+            /*PrimaryCandidates=*/nullptr, AlignArg, Diagnose))
       return true;
     if (Operator)
       return false;
@@ -2950,7 +2980,7 @@ static bool resolveAllocationOverload(
   assert(!S.isStdTypeIdentity(Args[0]->getType(), nullptr));
   return resolveAllocationOverloadInterior(
       S, R, Range, ResolveMode::Untyped, Args, IAP.PassAlignment, Operator,
-      AlignedCandidates, AlignArg, Diagnose);
+      /*PrimaryCandidates=*/nullptr, AlignArg, Diagnose);
 }
 
 bool Sema::FindAllocationFunctions(
@@ -3017,14 +3047,15 @@ bool Sema::FindAllocationFunctions(
   AllocArgs.push_back(&Size);
 
   QualType AlignValT = Context.VoidTy;
-  bool IncludeAlignParam = isAlignedAllocation(IAP.PassAlignment) ||
-                           isTypeAwareAllocation(IAP.PassTypeIdentity);
-  if (IncludeAlignParam) {
+  if (getLangOpts().AlignedAllocation ||
+      isTypeAwareAllocation(IAP.PassTypeIdentity)) {
     DeclareGlobalNewDelete();
-    AlignValT = Context.getCanonicalTagType(getStdAlignValT());
+    if (EnumDecl *StdAlignValT = getStdAlignValT())
+      AlignValT = Context.getCanonicalTagType(StdAlignValT);
   }
   CXXScalarValueInitExpr Align(AlignValT, nullptr, SourceLocation());
-  if (IncludeAlignParam)
+  if (isAlignedAllocation(IAP.PassAlignment) ||
+      isTypeAwareAllocation(IAP.PassTypeIdentity))
     AllocArgs.push_back(&Align);
 
   llvm::append_range(AllocArgs, PlaceArgs);
@@ -3072,9 +3103,11 @@ bool Sema::FindAllocationFunctions(
     // We do our own custom access checks below.
     R.suppressDiagnostics();
 
-    if (resolveAllocationOverload(*this, R, Range, AllocArgs, IAP, OperatorNew,
-                                  /*Candidates=*/nullptr,
-                                  /*AlignArg=*/nullptr, Diagnose))
+    if (resolveAllocationOverload(
+            *this, R, Range, AllocArgs, IAP, OperatorNew,
+            (getLangOpts().AlignedAllocation && getStdAlignValT()) ? &Align
+                                                                   : nullptr,
+            Diagnose))
       return true;
   }
 
