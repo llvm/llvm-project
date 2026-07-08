@@ -45,8 +45,7 @@ static constexpr expf_data EXPF_DATA = {
     mathvec::EXP_MANTISSA,     // mantissa
 };
 
-LIBC_INLINE static float64x2_t exp_lookup(uint64x2_t u,
-                                          const struct expf_data &data) {
+LIBC_INLINE static float64x2_t exp_lookup(uint64x2_t u, const expf_data &data) {
   // The low 6 bits of u index the 64 element mantissa table.
   uint64_t idx0 = vgetq_lane_u64(u & data.idx_mask, 0);
   uint64_t idx1 = vgetq_lane_u64(u & data.idx_mask, 1);
@@ -67,7 +66,7 @@ LIBC_INLINE static float64x2_t exp_lookup(uint64x2_t u,
 }
 
 LIBC_INLINE static float64x2_t inline_exp(float64x2_t x,
-                                          const struct expf_data &data) {
+                                          const expf_data &data) {
   float64x2_t z = vfmaq_f64(data.shift, x, data.inv_ln2);
   float64x2_t n = vsubq_f64(z, data.shift);
 
@@ -94,7 +93,7 @@ LIBC_INLINE static float64x2_t inline_exp(float64x2_t x,
 
 LLVM_LIBC_FUNCTION(AdvSIMDFP32Vector, expf, (AdvSIMDFP32Vector x),
                    "_ZGVnN4v_expf") {
-  const struct expf_data &data = *PTR_BARRIER(&EXPF_DATA);
+  const expf_data &data = *PTR_BARRIER(&EXPF_DATA);
 
   // Splits into an upper and lower half for double-precision computation.
   float64x2_t x_d_lo = vcvt_f64_f32(vget_low_f32(x));

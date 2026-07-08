@@ -21,8 +21,8 @@ using AdvSIMDFP64Vector = LIBC_NAMESPACE::cpp::simd<double, 2>;
 // cannot be optimized based on the contents.
 #define PTR_BARRIER(ptr)                                                       \
   ({                                                                           \
-    __typeof(ptr) __ptr = (ptr);                                               \
-    __asm("" : "+r"(__ptr));                                                   \
+    decltype(ptr) __ptr = (ptr);                                               \
+    asm("" : "+r"(__ptr));                                                     \
     __ptr;                                                                     \
   })
 
