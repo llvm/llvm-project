@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -emit-llvm -fms-extensions %s -triple=x86_64-pc-windows-msvc -o - | FileCheck %s
 
-// Verify that regular delete (not ::delete) does NOT trigger __global_delete
-// forwarding body emission, but the VDD still uses __global_delete wrapper.
-// This matches MSVC behavior where only ::delete triggers forwarding bodies.
+// Verify that a plain delete (no `::`) does NOT trigger __global_delete
+// forwarding body emission, but the VDD still uses the __global_delete wrapper.
+// This matches MSVC (validated against cl.exe): a plain delete that resolves to
+// a global operator delete never emits a forwarding body; only an explicit
+// `::delete` on a class type does.
 
 struct Base {
   void* operator new(__SIZE_TYPE__);
@@ -22,10 +24,11 @@ void test() {
   delete[] p;
 }
 
-// The VDD dispatches between class and global delete using __global_delete.
+// The VDD dispatches between class and global delete: the array path uses the
+// __global_array_delete wrapper, the scalar path uses __global_delete.
 // CHECK-LABEL: define weak dso_local noundef ptr @"??_EDerived@@UEAAPEAXI@Z"
 // CHECK: dtor.call_glob_delete_after_array_destroy:
-// CHECK: call void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef %{{.*}})
+// CHECK: call void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef %{{.*}})
 // CHECK: dtor.call_glob_delete:
 // CHECK-NEXT: call void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef 8)
 // CHECK: dtor.call_class_delete:
@@ -36,9 +39,10 @@ void test() {
 // CHECK-NEXT: call void @llvm.trap()
 // CHECK-NEXT: unreachable
 
-// __global_delete should NOT have a forwarding body (no ::delete in this TU,
-// no dllexport class).
+// Neither wrapper should have a forwarding body (no `::delete` on a class
+// type in this TU, and no dllexport class).
 // CHECK-NOT: define {{.*}}void @"?__global_delete@@YAXPEAX_K@Z"
+// CHECK-NOT: define {{.*}}void @"?__global_array_delete@@YAXPEAX_K@Z"
 
 // Verify the /ALTERNATENAME linker directive.
 // CHECK: !{!"/alternatename:?__global_delete@@YAXPEAX_K@Z=?__empty_global_delete@@YAXPEAX_K@Z"}

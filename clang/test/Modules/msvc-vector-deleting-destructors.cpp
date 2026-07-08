@@ -24,8 +24,8 @@ void out_of_module_tests(Derived *p, Derived *p1) {
 // CHECK32-NEXT: %[[ARRSZ:.*]] = mul i32 8, %[[COOKIE:.*]]
 // CHECK64-NEXT: %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
 // CHECK32-NEXT: %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
-// CHECK32-NEXT:   call void @"?__global_delete@@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
-// CHECK64-NEXT:   call void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
+// CHECK32-NEXT:   call void @"?__global_array_delete@@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
+// CHECK64-NEXT:   call void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
 // CHECK: dtor.call_glob_delete:
 // CHECK32-NEXT:   call void @"?__global_delete@@YAXPAXI@Z"(ptr noundef %this1, i32 noundef 8)
 // CHECK64-NEXT:   call void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %this1, i64 noundef 16)

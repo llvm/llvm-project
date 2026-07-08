@@ -279,8 +279,8 @@ void kernelTest() {
 // X86-NEXT: %[[ARRSZ:.*]] = mul i32 4, %[[COOKIE:.*]]
 // X64-NEXT: %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
 // X86-NEXT: %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
-// X64-NEXT: call void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
-// X86-NEXT: call void @"?__global_delete@@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
+// X64-NEXT: call void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
+// X86-NEXT: call void @"?__global_array_delete@@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
 // CHECK-NEXT:   br label %dtor.continue
 
 // Test that when a class provides its own operator delete, the deleting
@@ -292,16 +292,16 @@ void kernelTest() {
 // X64-NEXT: call void @llvm.trap()
 // X64-NEXT: unreachable
 
-// Verify that when ::delete is used in the TU, a real __global_delete
-// forwarding body is emitted that calls through to the actual ::operator delete.
-// X64: define linkonce_odr void @"?__global_delete@@YAXPEAX_K@Z"(ptr %0, i64 %1)
+// Verify that when ::delete is used in the TU, a real __global_array_delete
+// forwarding body is emitted that calls through to the actual ::operator delete[].
+// X64: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr %0, i64 %1)
 // X64-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr %0, i64 %1)
 // X64-NEXT: ret void
 
 // X64-LABEL: define weak dso_local noundef ptr @"??_EKernelDerived@@UEAAPEAXI@Z"
-// Verify the array delete path in the VDD uses __global_delete.
+// Verify the array delete path in the VDD uses __global_array_delete.
 // X64: dtor.call_glob_delete_after_array_destroy:
-// X64: call void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef %{{.*}})
+// X64: call void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef %{{.*}})
 // Verify the scalar deleting dtor uses __global_delete, not ::operator delete.
 // X64: dtor.call_delete:
 // X64-NEXT:  %[[FLAGCHECK:.*]] = and i32 %should_call_delete2, 4

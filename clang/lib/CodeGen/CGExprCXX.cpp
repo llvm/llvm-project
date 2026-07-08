@@ -2095,15 +2095,22 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   const Expr *Arg = E->getArgument();
   Address Ptr = EmitPointerWithAlignment(Arg);
 
-  // If this is a ::delete expression (explicit global scope), note it so we
-  // emit __global_delete forwarding bodies. Only ::delete triggers this, not
-  // regular delete expressions that happen to resolve to a global operator.
-  // This matches MSVC: a plain `delete`/`delete[]` that resolves to a global
-  // operator delete does NOT cause MSVC to emit a __global_delete body (even
-  // when it uses the same signature the vector deleting destructor routes
-  // through); only an explicit `::delete` does.
-  if (E->isGlobalDelete() && CGM.getTarget().getCXXABI().isMicrosoft())
-    CGM.noteDirectGlobalDelete();
+  // If this is a ::delete expression (explicit global scope) on a class type
+  // with a non-trivial destructor, note it so we emit __global_delete
+  // forwarding bodies. This matches MSVC which only engages the __global_delete
+  // machinery when a deleting destructor is involved:
+  //   - a plain `delete`/`delete[]` (no `::`) never triggers it, even when it
+  //     resolves to a global operator delete;
+  //   - `::delete` on a non-class type (e.g. `::delete intPtr`) or on a class
+  //     with a trivial destructor is lowered as a plain direct operator delete
+  //     and does not trigger it;
+  //   - the destructor's virtualness and the presence of a class-level
+  //     operator delete are both irrelevant to the trigger.
+  if (E->isGlobalDelete() && CGM.getTarget().getCXXABI().isMicrosoft()) {
+    const CXXRecordDecl *RD = E->getDestroyedType()->getAsCXXRecordDecl();
+    if (RD && RD->hasDefinition() && !RD->hasTrivialDestructor())
+      CGM.noteDirectGlobalDelete();
+  }
 
   // Null check the pointer.
   //

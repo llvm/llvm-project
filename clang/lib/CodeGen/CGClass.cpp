@@ -1419,7 +1419,12 @@ static bool CanSkipVTablePointerInitialization(CodeGenFunction &CGF,
 /// program, then no definition will exist and the `/ALTERNATENAME` linker
 /// directive will cause the linker to use __empty_global_delete as the
 /// definition. __empty_global_delete is never expected to actually be called,
-/// hence it is a trap function.
+/// hence it is a trap function (a deliberate deviation from MSVC, whose empty
+/// is a no-op).
+///
+/// Array delete[] uses a parallel __global_array_delete wrapper, matching
+/// MSVC. The scalar and array wrappers of a given signature share a single
+/// __empty_global_delete fallback.
 static llvm::Constant *
 getOrCreateMSVCGlobalDeleteWrapper(CodeGenModule &CGM,
                                    const FunctionDecl *GlobOD) {
@@ -1432,22 +1437,28 @@ getOrCreateMSVCGlobalDeleteWrapper(CodeGenModule &CGM,
   auto *GlobDeleteFn = cast<llvm::Function>(GlobDeleteCallee);
   llvm::FunctionType *FnTy = GlobDeleteFn->getFunctionType();
 
-  // Derive __global_delete and __empty_global_delete mangled names.
-  // Global ::operator delete mangling:   ??3@<signature>
-  // Global ::operator delete[] mangling: ??_V@<signature>
-  // We construct:
-  //   ?__global_delete@@<signature>
-  //   ?__empty_global_delete@@<signature>
+  // Derive the wrapper and empty-fallback mangled names. MSVC uses distinct
+  // wrapper names for scalar vs array global delete, but a single shared empty
+  // fallback per signature:
+  //   Global ::operator delete   mangling: ??3@<signature>
+  //     -> wrapper ?__global_delete@@<signature>
+  //   Global ::operator delete[] mangling: ??_V@<signature>
+  //     -> wrapper ?__global_array_delete@@<signature>
+  //   shared fallback: ?__empty_global_delete@@<signature>
   StringRef GlobDeleteMangledName = GlobDeleteFn->getName();
   StringRef Signature;
-  if (GlobDeleteMangledName.starts_with("??3@"))
+  const char *WrapperBase;
+  if (GlobDeleteMangledName.starts_with("??3@")) {
     Signature = GlobDeleteMangledName.substr(4);
-  else if (GlobDeleteMangledName.starts_with("??_V@"))
+    WrapperBase = "?__global_delete@@";
+  } else if (GlobDeleteMangledName.starts_with("??_V@")) {
     Signature = GlobDeleteMangledName.substr(5);
-  else
+    WrapperBase = "?__global_array_delete@@";
+  } else {
     llvm_unreachable("unexpected global operator delete mangling");
+  }
 
-  std::string GlobalDeleteName = ("?__global_delete@@" + Signature).str();
+  std::string GlobalDeleteName = (WrapperBase + Signature).str();
   std::string EmptyGlobalDeleteName =
       ("?__empty_global_delete@@" + Signature).str();
 
@@ -1455,22 +1466,33 @@ getOrCreateMSVCGlobalDeleteWrapper(CodeGenModule &CGM,
   if (llvm::Function *Existing = M.getFunction(GlobalDeleteName))
     return Existing;
 
-  // Create __empty_global_delete fallback (trap - this path is unreachable
-  // at runtime when ::delete is never used; see the doc comment above).
-  llvm::Function *EmptyFn = llvm::Function::Create(
-      FnTy, llvm::GlobalValue::LinkOnceODRLinkage, EmptyGlobalDeleteName, &M);
-  EmptyFn->setComdat(M.getOrInsertComdat(EmptyGlobalDeleteName));
-  EmptyFn->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-  CGM.SetLLVMFunctionAttributesForDefinition(GlobOD, EmptyFn);
-  auto *BB = llvm::BasicBlock::Create(LLVMCtx, "", EmptyFn);
-  llvm::Function *TrapFn =
-      llvm::Intrinsic::getOrInsertDeclaration(&M, llvm::Intrinsic::trap);
-  auto *TrapCall = llvm::CallInst::Create(TrapFn, {}, "", BB);
-  TrapCall->setDoesNotReturn();
-  TrapCall->setDoesNotThrow();
-  new llvm::UnreachableInst(LLVMCtx, BB);
+  // Create the shared __empty_global_delete fallback if it doesn't already
+  // exist. The scalar and array wrappers of a given signature share one empty
+  // (matching MSVC, whose weak externals both point at a single
+  // __empty_global_delete). The body traps: this path is unreachable at
+  // runtime when ::delete is never used (a deliberate deviation from MSVC,
+  // whose empty is a no-op; see the doc comment above).
+  llvm::Function *EmptyFn = M.getFunction(EmptyGlobalDeleteName);
+  if (!EmptyFn) {
+    EmptyFn = llvm::Function::Create(
+        FnTy, llvm::GlobalValue::LinkOnceODRLinkage, EmptyGlobalDeleteName, &M);
+    EmptyFn->setComdat(M.getOrInsertComdat(EmptyGlobalDeleteName));
+    EmptyFn->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+    CGM.SetLLVMFunctionAttributesForDefinition(GlobOD, EmptyFn);
+    auto *BB = llvm::BasicBlock::Create(LLVMCtx, "", EmptyFn);
+    llvm::Function *TrapFn =
+        llvm::Intrinsic::getOrInsertDeclaration(&M, llvm::Intrinsic::trap);
+    auto *TrapCall = llvm::CallInst::Create(TrapFn, {}, "", BB);
+    TrapCall->setDoesNotReturn();
+    TrapCall->setDoesNotThrow();
+    new llvm::UnreachableInst(LLVMCtx, BB);
 
-  // Emit /ALTERNATENAME linker directive: if __global_delete isn't provided,
+    // Nothing directly uses the empty other than the /alternatename directive,
+    // so explicitly mark it as used.
+    appendToUsed(M, {EmptyFn});
+  }
+
+  // Emit /ALTERNATENAME linker directive: if this wrapper isn't provided,
   // fall back to the trapping __empty_global_delete.
   std::string AltOption =
       "/alternatename:" + GlobalDeleteName + "=" + EmptyGlobalDeleteName;
@@ -1478,18 +1500,15 @@ getOrCreateMSVCGlobalDeleteWrapper(CodeGenModule &CGM,
       llvm::MDNode::get(LLVMCtx, {llvm::MDString::get(LLVMCtx, AltOption)});
   M.getOrInsertNamedMetadata("llvm.linker.options")->addOperand(AltMD);
 
-  // Nothing directly uses this function other than the /alternatename
-  // directive, so explicitly mark it as used.
-  appendToUsed(M, {EmptyFn});
-
   // Return the __global_delete wrapper function to call.
   auto GlobalDeleteCallee = M.getOrInsertFunction(GlobalDeleteName, FnTy);
+  auto *GlobalDeleteFn = cast<llvm::Function>(GlobalDeleteCallee.getCallee());
 
   // Register this variant so we can emit a real forwarding body at end-of-TU
   // if this TU contains any direct use of global ::operator delete.
-  CGM.addPendingGlobalDelete(GlobalDeleteName, GlobOD);
+  CGM.addPendingGlobalDelete(GlobalDeleteFn, GlobOD);
 
-  return cast<llvm::Function>(GlobalDeleteCallee.getCallee());
+  return GlobalDeleteFn;
 }
 
 static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,

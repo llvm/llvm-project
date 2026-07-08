@@ -1034,7 +1034,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   explicit unwind version was specified.
 
 - In MSVC compatibility mode, scalar and vector deleting destructors now call
-  ``__global_delete`` instead of directly referencing ``::operator delete``.
+  ``__global_delete`` (or ``__global_array_delete`` for the array ``delete[]``
+  path) instead of directly referencing ``::operator delete``.
   This matches MSVC's behavior and fixes ``LNK2001`` linker errors in
   environments where no global ``::operator delete`` exists. When the
   translation unit contains a ``::delete`` expression, a ``__global_delete``

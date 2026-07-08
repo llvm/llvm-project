@@ -8913,10 +8913,10 @@ void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
 }
 
 void CodeGenModule::addPendingGlobalDelete(
-    StringRef GlobalDeleteName, const FunctionDecl *OperatorDeleteFD) {
-  // insert() is a no-op if this name has already been recorded, keeping the
+    llvm::Function *GlobalDeleteFn, const FunctionDecl *OperatorDeleteFD) {
+  // insert() is a no-op if this wrapper has already been recorded, keeping the
   // first FunctionDecl seen for it.
-  PendingMSVCGlobalDeletes.insert({GlobalDeleteName.str(), OperatorDeleteFD});
+  PendingMSVCGlobalDeletes.insert({GlobalDeleteFn, OperatorDeleteFD});
 }
 
 void CodeGenModule::noteDirectGlobalDelete() { HasDirectGlobalDelete = true; }
@@ -8933,8 +8933,8 @@ void CodeGenModule::emitGlobalDeleteForwardingBodies() {
     return;
 
   for (const auto &Entry : PendingMSVCGlobalDeletes) {
-    llvm::Function *GlobDelFn = getModule().getFunction(Entry.first);
-    if (!GlobDelFn || !GlobDelFn->isDeclaration())
+    llvm::Function *GlobDelFn = Entry.first;
+    if (!GlobDelFn->isDeclaration())
       continue;
 
     const FunctionDecl *OperatorDeleteFD = Entry.second;
