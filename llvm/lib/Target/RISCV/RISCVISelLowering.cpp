@@ -13258,7 +13258,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       ElementCount Idx = ContainerEC.multiplyCoefficientBy(i);
       // Index might be out-of-bound. This usually happens on large
       // VLEN where a single or a few VR registers is enough to capture
-      // the entire concat vector. In this case we can just use poison
+      // the entire concat vector. In this case we can just use undef
       // on other VECTOR_DEINTERLEAVE operands -- semantically
       // VECTOR_DEINTERLEAVE will just concat them back together later
       // anyway.
