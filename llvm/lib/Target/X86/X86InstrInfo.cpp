@@ -5363,10 +5363,11 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
   //
   // The walk never revisits a block (Visited) and never reaches a block the
   // caller already scanned: MultiPredMBB is seeded into Visited, the
-  // single-predecessor chain blocks (CmpMBB..MultiPredMBB) each have exactly one
-  // predecessor by construction (the caller only advanced through such blocks),
-  // so none can be re-entered from the dominated region, and CmpMBB lies in the
-  // successor direction. No instruction is therefore collected twice.
+  // single-predecessor chain blocks (CmpMBB..MultiPredMBB) each have exactly
+  // one predecessor by construction (the caller only advanced through such
+  // blocks), so none can be re-entered from the dominated region, and CmpMBB
+  // lies in the successor direction. No instruction is therefore collected
+  // twice.
   SmallPtrSet<MachineBasicBlock *, 8> Visited;
   SmallVector<MachineBasicBlock *, 8> Worklist;
   Visited.insert(MultiPredMBB);
@@ -5594,9 +5595,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       //   bb3:    cmp %x, C    ; <-- redundant, reuse EFLAGS from entry
       //           cmovcc ...
       if (HasNF)
-        Sub = findDominatingRedundantFlagInstr(CmpInstr, SrcReg, SrcReg2,
-                                               CmpMask, CmpValue, MBB, IsSwapped,
-                                               ImmDelta, InstsToUpdate);
+        Sub = findDominatingRedundantFlagInstr(
+            CmpInstr, SrcReg, SrcReg2, CmpMask, CmpValue, MBB, IsSwapped,
+            ImmDelta, InstsToUpdate);
       if (!Sub)
         return false;
       break;

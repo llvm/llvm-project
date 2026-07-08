@@ -88,8 +88,9 @@ unsigned getNFVariant(unsigned Opc);
 // return 0. The clobber is removable only if the EFLAGS def is dead, an NF
 // variant exists, and (for linker backward-compat) it is not an ADDrm/ADDmr
 // with relocation.
-unsigned getNFVariantIfClobberRemovable(const MachineInstr &MI,
-                                        const TargetRegisterInfo *TRI = nullptr);
+unsigned
+getNFVariantIfClobberRemovable(const MachineInstr &MI,
+                               const TargetRegisterInfo *TRI = nullptr);
 
 // Get the opcode of corresponding NonND variant.
 unsigned getNonNDVariant(unsigned Opc);
@@ -789,7 +790,8 @@ private:
       MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2,
       int64_t CmpMask, int64_t CmpValue, MachineBasicBlock *MultiPredMBB,
       bool &IsSwapped, int64_t &ImmDelta,
-      SmallVectorImpl<std::pair<MachineInstr *, unsigned>> &InstsToUpdate) const;
+      SmallVectorImpl<std::pair<MachineInstr *, unsigned>> &InstsToUpdate)
+      const;
 
   /// Commute operands of \p MI for memory fold.
   ///
