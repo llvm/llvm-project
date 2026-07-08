@@ -1645,6 +1645,15 @@ void test_member_call_silent_forms() {
   c(1);                   // OK: a static call operator uses no object argument
 }
 
+// A call through a pointer-to-member resolves no method at the call and
+// bypasses the object-argument conversion -- the pointer-to-member analog of
+// the call-through-function-pointer gap (a known gap, not an endorsement).
+void test_member_call_through_pointer_to_member() {
+  Callee s [[uninit]];
+  int (Callee::*pmf)() = &Callee::f;
+  (s.*pmf)(); // OK: known gap
+}
+
 // The object itself being unmarked keeps the trust decision: a class whose
 // *member* is [[uninit]] may still have its member functions called (its
 // constructor body may have assigned the member, paper §5.1/§5.2).

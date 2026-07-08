@@ -1318,7 +1318,10 @@ recognizers symmetric.
   ``EK_ArrayElement`` and the ``[[ref_to_uninit]]`` marking lives on the field,
   not the element -- as is a pointer/reference member reached through an
   ``IndirectFieldDecl`` (a member of an anonymous struct/union), consistent with
-  the scalar slice.
+  the scalar slice.  A member call through a pointer-to-member
+  (``(s.*pmf)()``) resolves no ``CXXMethodDecl`` at the call and bypasses the
+  object-argument conversion, so its object goes unchecked -- the
+  pointer-to-member analog of the call-through-function-pointer gap.
 
 R8. ``pointer_marker`` -- attribute handler
 ...........................................
