@@ -3000,23 +3000,23 @@ define half @v_neg_rsq_f16(half %a) {
 ; GFX89-LABEL: v_neg_rsq_f16:
 ; GFX89:       ; %bb.0:
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX89-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX89-NEXT:    v_rsq_f16_e32 v0, v0
+; GFX89-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_neg_rsq_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX10-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX10-NEXT:    v_rsq_f16_e32 v0, v0
+; GFX10-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_neg_rsq_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
+; GFX11-NEXT:    v_rsq_f16_e32 v0, v0
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract half @llvm.sqrt.f16(half %a)
   %fdiv = fdiv contract half -1.0, %sqrt
@@ -3072,26 +3072,23 @@ define { half, half } @v_rsq_f16_multi_use(half %a) {
 ; GFX89-LABEL: v_rsq_f16_multi_use:
 ; GFX89:       ; %bb.0:
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_sqrt_f16_e32 v2, v0
-; GFX89-NEXT:    v_rsq_f16_e32 v1, v0
-; GFX89-NEXT:    v_mov_b32_e32 v0, v2
+; GFX89-NEXT:    v_sqrt_f16_e32 v0, v0
+; GFX89-NEXT:    v_rcp_f16_e32 v1, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_rsq_f16_multi_use:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_sqrt_f16_e32 v2, v0
-; GFX10-NEXT:    v_rsq_f16_e32 v1, v0
-; GFX10-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10-NEXT:    v_sqrt_f16_e32 v0, v0
+; GFX10-NEXT:    v_rcp_f16_e32 v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_rsq_f16_multi_use:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_sqrt_f16_e32 v2, v0
-; GFX11-NEXT:    v_rsq_f16_e32 v1, v0
+; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11-NEXT:    v_rcp_f16_e32 v1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract half @llvm.sqrt.f16(half %a)
   %insert.0 = insertvalue { half, half } poison, half %sqrt, 0
@@ -3400,23 +3397,23 @@ define half @v_neg_rsq_f16_fabs(half %a) {
 ; GFX89-LABEL: v_neg_rsq_f16_fabs:
 ; GFX89:       ; %bb.0:
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_sqrt_f16_e64 v0, |v0|
-; GFX89-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX89-NEXT:    v_rsq_f16_e64 v0, |v0|
+; GFX89-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_neg_rsq_f16_fabs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_sqrt_f16_e64 v0, |v0|
-; GFX10-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX10-NEXT:    v_rsq_f16_e64 v0, |v0|
+; GFX10-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_neg_rsq_f16_fabs:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_sqrt_f16_e64 v0, |v0|
+; GFX11-NEXT:    v_rsq_f16_e64 v0, |v0|
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %a.fabs = call half @llvm.fabs.f16(half %a)
   %sqrt = call contract half @llvm.sqrt.f16(half %a.fabs)
@@ -3461,23 +3458,23 @@ define half @v_neg_rsq_f16_arcp(half %a) {
 ; GFX89-LABEL: v_neg_rsq_f16_arcp:
 ; GFX89:       ; %bb.0:
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX89-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX89-NEXT:    v_rsq_f16_e32 v0, v0
+; GFX89-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_neg_rsq_f16_arcp:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX10-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX10-NEXT:    v_rsq_f16_e32 v0, v0
+; GFX10-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_neg_rsq_f16_arcp:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
+; GFX11-NEXT:    v_rsq_f16_e32 v0, v0
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract half @llvm.sqrt.f16(half %a)
   %fdiv = fdiv contract arcp half -1.0, %sqrt

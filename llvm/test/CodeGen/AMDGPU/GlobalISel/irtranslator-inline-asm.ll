@@ -371,8 +371,8 @@ define void @test_indirectify_i16_value(i16 %val) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
   ; CHECK-NEXT:   G_STORE [[TRUNC]](i16), [[FRAME_INDEX]](p5) :: (store (i16) into %stack.0, addrspace 5)
   ; CHECK-NEXT:   INLINEASM &"", sideeffect mayload maystore attdialect, mem:m, [[FRAME_INDEX]](p5)

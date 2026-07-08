@@ -116,9 +116,9 @@ define amdgpu_ps ptr addrspace(3) @sgpr_return_p3i8(ptr addrspace(3) %vgpr) {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p3)
-  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[PTRTOINT]](s32)
-  ; CHECK-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
+  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY]](p3)
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[PTRTOINT]](i32)
+  ; CHECK-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](i32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0
   ret ptr addrspace(3) %vgpr
 }
@@ -146,9 +146,9 @@ define amdgpu_ps <2 x i16> @sgpr_return_v2i16(<2 x i16> %vgpr) {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr0
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x i16>)
-  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[BITCAST]](s32)
-  ; CHECK-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](<2 x i16>)
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[BITCAST]](i32)
+  ; CHECK-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](i32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0
   ret <2 x i16> %vgpr
 }

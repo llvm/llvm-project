@@ -466,8 +466,8 @@ define amdgpu_ps half @struct_buffer_load_format_i16__sgpr_rsrc__vgpr_vindex__vg
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
   ; UNPACKED-NEXT:   [[INT:%[0-9]+]]:_(i16) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.struct.buffer.load.format), [[BUILD_VECTOR]](<4 x i32>), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), 0 :: (dereferenceable load (i16), align 1, addrspace 8)
   ; UNPACKED-NEXT:   [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[INT]](i16)
-  ; UNPACKED-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[BITCAST]](f16)
-  ; UNPACKED-NEXT:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; UNPACKED-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST]](f16)
+  ; UNPACKED-NEXT:   $vgpr0 = COPY [[ANYEXT]](i32)
   ; UNPACKED-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
   ; PACKED-LABEL: name: struct_buffer_load_format_i16__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
@@ -484,8 +484,8 @@ define amdgpu_ps half @struct_buffer_load_format_i16__sgpr_rsrc__vgpr_vindex__vg
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
   ; PACKED-NEXT:   [[INT:%[0-9]+]]:_(i16) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.struct.buffer.load.format), [[BUILD_VECTOR]](<4 x i32>), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), 0 :: (dereferenceable load (i16), align 1, addrspace 8)
   ; PACKED-NEXT:   [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[INT]](i16)
-  ; PACKED-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[BITCAST]](f16)
-  ; PACKED-NEXT:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; PACKED-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST]](f16)
+  ; PACKED-NEXT:   $vgpr0 = COPY [[ANYEXT]](i32)
   ; PACKED-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
   ; GFX12-LABEL: name: struct_buffer_load_format_i16__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
@@ -503,8 +503,8 @@ define amdgpu_ps half @struct_buffer_load_format_i16__sgpr_rsrc__vgpr_vindex__vg
   ; GFX12-NEXT:   [[AMDGPU_BUFFER_LOAD_FORMAT_D16_:%[0-9]+]]:vgpr_32(s32) = G_AMDGPU_BUFFER_LOAD_FORMAT_D16 [[BUILD_VECTOR]](<4 x i32>), [[COPY4]](i32), [[COPY5]], [[COPY6]], 0, 0, -1 :: (dereferenceable load (i16), align 1, addrspace 8)
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr_16(i16) = COPY [[AMDGPU_BUFFER_LOAD_FORMAT_D16_]].lo16(s32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:vgpr_16(f16) = COPY [[COPY7]](i16)
-  ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32(s32) = COPY [[COPY8]](f16)
-  ; GFX12-NEXT:   $vgpr0 = COPY [[COPY9]](s32)
+  ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32(i32) = COPY [[COPY8]](f16)
+  ; GFX12-NEXT:   $vgpr0 = COPY [[COPY9]](i32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %val = call i16 @llvm.amdgcn.struct.buffer.load.format.i16(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   %fval = bitcast i16 %val to half

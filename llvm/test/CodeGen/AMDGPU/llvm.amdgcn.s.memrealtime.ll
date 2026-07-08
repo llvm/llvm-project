@@ -1,5 +1,5 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
 ; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 < %s 2>&1 | FileCheck -check-prefix=ERR-SDAG %s
 ; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 < %s 2>&1 | FileCheck -check-prefix=ERR-GISEL %s
 

@@ -20,8 +20,8 @@ define amdgpu_ps half @image_load_f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
   ; UNPACKED-NEXT:   [[COPY9:%[0-9]+]]:_(i32) = COPY $vgpr1
   ; UNPACKED-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](i32), [[COPY9]](i32)
   ; UNPACKED-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD_D16_:%[0-9]+]]:_(f16) = G_AMDGPU_INTRIN_IMAGE_LOAD_D16 intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x i32>), 0, 0, 0 :: (dereferenceable load (f16), addrspace 8)
-  ; UNPACKED-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AMDGPU_INTRIN_IMAGE_LOAD_D16_]](f16)
-  ; UNPACKED-NEXT:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; UNPACKED-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[AMDGPU_INTRIN_IMAGE_LOAD_D16_]](f16)
+  ; UNPACKED-NEXT:   $vgpr0 = COPY [[ANYEXT]](i32)
   ; UNPACKED-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
   ; PACKED-LABEL: name: image_load_f16
@@ -41,8 +41,8 @@ define amdgpu_ps half @image_load_f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
   ; PACKED-NEXT:   [[COPY9:%[0-9]+]]:_(i32) = COPY $vgpr1
   ; PACKED-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](i32), [[COPY9]](i32)
   ; PACKED-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD_D16_:%[0-9]+]]:_(f16) = G_AMDGPU_INTRIN_IMAGE_LOAD_D16 intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x i32>), 0, 0, 0 :: (dereferenceable load (f16), addrspace 8)
-  ; PACKED-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AMDGPU_INTRIN_IMAGE_LOAD_D16_]](f16)
-  ; PACKED-NEXT:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; PACKED-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[AMDGPU_INTRIN_IMAGE_LOAD_D16_]](f16)
+  ; PACKED-NEXT:   $vgpr0 = COPY [[ANYEXT]](i32)
   ; PACKED-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %tex = call half @llvm.amdgcn.image.load.2d.f16.i32(i32 1, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret half %tex
@@ -488,8 +488,8 @@ define amdgpu_ps half @image_load_f16_dmask_0000(<8 x i32> inreg %rsrc, i32 %s, 
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; UNPACKED-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
-  ; UNPACKED-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; UNPACKED-NEXT:   $vgpr0 = COPY [[DEF]](s32)
+  ; UNPACKED-NEXT:   [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+  ; UNPACKED-NEXT:   $vgpr0 = COPY [[DEF]](i32)
   ; UNPACKED-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
   ; PACKED-LABEL: name: image_load_f16_dmask_0000
@@ -498,8 +498,8 @@ define amdgpu_ps half @image_load_f16_dmask_0000(<8 x i32> inreg %rsrc, i32 %s, 
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; PACKED-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
-  ; PACKED-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; PACKED-NEXT:   $vgpr0 = COPY [[DEF]](s32)
+  ; PACKED-NEXT:   [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+  ; PACKED-NEXT:   $vgpr0 = COPY [[DEF]](i32)
   ; PACKED-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %tex = call half @llvm.amdgcn.image.load.2d.f16.i32(i32 0, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret half %tex
