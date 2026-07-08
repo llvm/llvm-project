@@ -1503,8 +1503,10 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
     if (TRI.isGeneralPurposeRegister(MF, Reg)) {
       FinalRegsToZero.set(getPhysicalGPR(TRI, Reg).id());
     } else if (RISCV::GPRPairRegClass.contains(Reg)) {
-      FinalRegsToZero.set(getPhysicalGPR(TRI, TRI.getSubReg(Reg, RISCV::sub_gpr_even)).id());
-      FinalRegsToZero.set(getPhysicalGPR(TRI, TRI.getSubReg(Reg, RISCV::sub_gpr_odd)).id());
+      FinalRegsToZero.set(
+          getPhysicalGPR(TRI, TRI.getSubReg(Reg, RISCV::sub_gpr_even)).id());
+      FinalRegsToZero.set(
+          getPhysicalGPR(TRI, TRI.getSubReg(Reg, RISCV::sub_gpr_odd)).id());
     } else if (TRI.isFPRegister(Reg)) {
       if (MCRegister MaybeReg = getLargestFPRegisterOrZero(STI, TRI, Reg))
         FinalRegsToZero.set(MaybeReg.id());
