@@ -10055,8 +10055,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     else {
       int NumThreads;
       if (Val.getAsInteger(10, NumThreads) || NumThreads <= 0) {
-        C.getDriver().Diag(diag::err_drv_invalid_int_value)
-            << A->getAsString(Args) << Val;
+        if (!A->isClaimed())
+          C.getDriver().Diag(diag::err_drv_invalid_int_value)
+              << A->getAsString(Args) << Val;
       } else {
         CmdArgs.push_back(
             Args.MakeArgString("--wrapper-jobs=" + Twine(NumThreads)));

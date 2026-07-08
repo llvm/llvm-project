@@ -5407,6 +5407,70 @@ Action *Driver::ConstructPhaseAction(
   llvm_unreachable("invalid phase in ConstructPhaseAction");
 }
 
+static bool isOffloadDeviceCC1JobCandidate(Command &Job) {
+  const Action &Source = Job.getSource();
+  if (!isa<CompileJobAction>(Source) && !isa<BackendJobAction>(Source))
+    return false;
+
+  if (Job.getBoundArch().empty() && !Source.getOffloadingArch().empty())
+    Job.setBoundArch(Source.getOffloadingArch());
+
+  if (Job.getBoundArch().empty())
+    return false;
+
+  const llvm::opt::ArgStringList &Args = Job.getArguments();
+  if (Args.empty() || StringRef(Args.front()) != "-cc1")
+    return false;
+
+  Action::OffloadKind OKind = Source.getOffloadingDeviceKind();
+  if (OKind != Action::OFK_None && OKind != Action::OFK_Host)
+    return true;
+
+  const llvm::Triple &Triple = Job.getCreator().getToolChain().getTriple();
+  return Triple.isAMDGPU() || Triple.isNVPTX() || Triple.isSPIROrSPIRV();
+}
+
+static std::string getOffloadDeviceCC1ParallelJobGroup(const Command &Job) {
+  const Action &Source = Job.getSource();
+  return (Twine(Action::GetOffloadKindName(Source.getOffloadingDeviceKind())) +
+          ":" + Job.getCreator().getToolChain().getTripleString() + ":" +
+          Source.getClassName() + ":" + types::getTypeName(Source.getType()))
+      .str();
+}
+
+static void claimAndDiagnoseOffloadJobs(const Driver &D, const ArgList &Args) {
+  Arg *A = Args.getLastArg(options::OPT_offload_jobs_EQ);
+  if (!A)
+    return;
+
+  StringRef Val = A->getValue();
+  if (Val.equals_insensitive("jobserver")) {
+    A->claim();
+    return;
+  }
+
+  int NumThreads;
+  if (Val.getAsInteger(10, NumThreads) || NumThreads <= 0)
+    D.Diag(diag::err_drv_invalid_int_value) << A->getAsString(Args) << Val;
+
+  A->claim();
+}
+
+static void markOffloadDeviceCC1JobsForParallelExecution(Compilation &C) {
+  bool FoundCandidate = false;
+  for (auto &Job : C.getJobs()) {
+    if (!isOffloadDeviceCC1JobCandidate(Job))
+      continue;
+
+    Job.setOffloadDeviceParallelJobGroup(
+        getOffloadDeviceCC1ParallelJobGroup(Job));
+    FoundCandidate = true;
+  }
+
+  if (FoundCandidate)
+    claimAndDiagnoseOffloadJobs(C.getDriver(), C.getArgs());
+}
+
 void Driver::BuildJobs(Compilation &C) const {
   llvm::PrettyStackTraceString CrashInfo("Building compilation jobs");
 
@@ -5505,6 +5569,8 @@ void Driver::BuildJobs(Compilation &C) const {
   if (C.getJobs().size() > 1 || CCPrintProcessStats)
     for (auto &J : C.getJobs())
       J.InProcess = false;
+
+  markOffloadDeviceCC1JobsForParallelExecution(C);
 
   if (CCPrintProcessStats) {
     C.setPostCallback([=](const Command &Cmd, int Res) {
