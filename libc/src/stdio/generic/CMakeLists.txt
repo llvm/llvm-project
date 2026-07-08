@@ -195,6 +195,8 @@ add_generic_entrypoint_object(
     libc.src.errno.errno
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
 
 add_generic_entrypoint_object(

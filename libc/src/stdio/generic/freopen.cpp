@@ -18,16 +18,14 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(::FILE *, freopen,
                    (const char *__restrict filename,
                     const char *__restrict mode, ::FILE *__restrict stream)) {
-  if (stream == nullptr) {
-    libc_errno = EINVAL;
-    return nullptr;
-  }
+  LIBC_CRASH_ON_NULLPTR(stream);
 
   auto *file = reinterpret_cast<File *>(stream);
   file->lock();

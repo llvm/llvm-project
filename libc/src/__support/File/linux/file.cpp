@@ -54,13 +54,17 @@ ErrorOr<off_t> linux_file_seek(File *f, off_t offset, int whence) {
 int linux_file_close(File *f) {
   File::remove_file(f);
   auto *lf = reinterpret_cast<LinuxFile *>(f);
+  int retval = 0;
   if (lf->get_fd() >= 0) {
+    // Linux closes the file descriptor early in the syscall, so we assume it's
+    // always closed after the call. That means we should also delete the
+    // LinuxFile on error.
     auto result = linux_syscalls::close(lf->get_fd());
     if (!result)
-      return result.error();
+      retval = result.error();
   }
   delete lf;
-  return 0;
+  return retval;
 }
 
 static int mode_flags_to_open_flags(File::ModeFlags modeflags) {
@@ -132,10 +136,18 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   int fd_flags = result.value();
 
   using OpenMode = File::OpenMode;
-  if (((fd_flags & O_ACCMODE) == O_RDONLY &&
-       (modeflags & static_cast<ModeFlags>(OpenMode::WRITE))) ||
-      ((fd_flags & O_ACCMODE) == O_WRONLY &&
-       (modeflags & static_cast<ModeFlags>(OpenMode::READ)))) {
+  using ModeFlags = File::ModeFlags;
+
+  constexpr ModeFlags REQUIRES_WRITE =
+      static_cast<ModeFlags>(OpenMode::WRITE) |
+      static_cast<ModeFlags>(OpenMode::APPEND) |
+      static_cast<ModeFlags>(OpenMode::PLUS);
+
+  constexpr ModeFlags REQUIRES_READ = static_cast<ModeFlags>(OpenMode::READ) |
+                                      static_cast<ModeFlags>(OpenMode::PLUS);
+
+  if (((fd_flags & O_ACCMODE) == O_RDONLY && (modeflags & REQUIRES_WRITE)) ||
+      ((fd_flags & O_ACCMODE) == O_WRONLY && (modeflags & REQUIRES_READ))) {
     return Error(EINVAL);
   }
 
@@ -201,11 +213,10 @@ int reopenfile(File *f, const char *path, const char *mode) {
     // file.
     if (!new_fd) {
       if (old_fd >= 0) {
-        auto close_result = linux_syscalls::close(old_fd);
-        if (!close_result) {
-          f->reset_stream_state(modeflags);
-          return close_result.error();
-        }
+        // POSIX: "Failure to close the file descriptor successfully shall be
+        // ignored"
+        linux_syscalls::close(old_fd);
+
         lf->set_fd(-1);
       }
       f->reset_stream_state(modeflags);
@@ -244,11 +255,18 @@ int reopenfile(File *f, const char *path, const char *mode) {
 
   using OpenMode = File::OpenMode;
   using ModeFlags = File::ModeFlags;
-  if (((fd_flags & O_ACCMODE) == O_RDONLY &&
-       (modeflags & static_cast<ModeFlags>(OpenMode::WRITE))) ||
-      ((fd_flags & O_ACCMODE) == O_WRONLY &&
-       (modeflags & static_cast<ModeFlags>(OpenMode::READ)))) {
-    return EINVAL;
+
+  constexpr ModeFlags REQUIRES_WRITE =
+      static_cast<ModeFlags>(OpenMode::WRITE) |
+      static_cast<ModeFlags>(OpenMode::APPEND) |
+      static_cast<ModeFlags>(OpenMode::PLUS);
+
+  constexpr ModeFlags REQUIRES_READ = static_cast<ModeFlags>(OpenMode::READ) |
+                                      static_cast<ModeFlags>(OpenMode::PLUS);
+
+  if (((fd_flags & O_ACCMODE) == O_RDONLY && (modeflags & REQUIRES_WRITE)) ||
+      ((fd_flags & O_ACCMODE) == O_WRONLY && (modeflags & REQUIRES_READ))) {
+    return EBADF;
   }
 
   bool do_seek = false;

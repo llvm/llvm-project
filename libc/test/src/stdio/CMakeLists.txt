@@ -8,6 +8,9 @@ add_libc_test(
     freopen_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.hdr.fcntl_macros
+    libc.hdr.stdio_macros
+    libc.src.__support.macros.properties.os
     libc.src.errno.errno
     libc.src.fcntl.fcntl
     libc.src.stdio.clearerr
@@ -24,6 +27,7 @@ add_libc_test(
     libc.src.unistd.close
     libc.src.wchar.fwide
     libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_test(

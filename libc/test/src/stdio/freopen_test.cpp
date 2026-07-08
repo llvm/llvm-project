@@ -38,9 +38,9 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 TEST_F(LlvmLibcFreopenTest, ReopenFile) {
-  auto FILENAME_A =
+  const auto FILENAME_A =
       libc_make_test_file_path(APPEND_LIBC_TEST("freopen_a.test"));
-  auto FILENAME_B =
+  const auto FILENAME_B =
       libc_make_test_file_path(APPEND_LIBC_TEST("freopen_b.test"));
 
   // Step 1: Open file A and write initial content.
@@ -79,7 +79,7 @@ TEST_F(LlvmLibcFreopenTest, ReopenFile) {
 }
 
 TEST_F(LlvmLibcFreopenTest, NullFilenameModeChange) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("freopen_null_filename.test"));
 
   // Step 1: Open file with write-update mode.
@@ -115,7 +115,7 @@ TEST_F(LlvmLibcFreopenTest, NullFilenameModeChange) {
 }
 
 TEST_F(LlvmLibcFreopenTest, NullFilenameInvalidModeChange) {
-  auto FILENAME = libc_make_test_file_path(
+  const auto FILENAME = libc_make_test_file_path(
       APPEND_LIBC_TEST("freopen_invalid_mode_change.test"));
 
   // Open file read-only.
@@ -128,25 +128,17 @@ TEST_F(LlvmLibcFreopenTest, NullFilenameInvalidModeChange) {
 
   // Attempt incompatible mode change (r to w with filename == nullptr).
   ASSERT_THAT(LIBC_NAMESPACE::freopen(nullptr, "w", file),
-              Fails(EINVAL, static_cast<void *>(nullptr)));
+              Fails(EBADF, static_cast<void *>(nullptr)));
 
   // Attempt incompatible mode change (r to w+ with filename == nullptr).
   ASSERT_THAT(LIBC_NAMESPACE::freopen(nullptr, "w+", file),
-              Fails(EINVAL, static_cast<void *>(nullptr)));
+              Fails(EBADF, static_cast<void *>(nullptr)));
 
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 }
 
-TEST_F(LlvmLibcFreopenTest, NullStreamFailure) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_null_stream.test"));
-
-  ASSERT_THAT(LIBC_NAMESPACE::freopen(FILENAME, "r", nullptr),
-              Fails(EINVAL, static_cast<void *>(nullptr)));
-}
-
 TEST_F(LlvmLibcFreopenTest, InvalidModeFailure) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("freopen_invalid_mode.test"));
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
@@ -155,8 +147,9 @@ TEST_F(LlvmLibcFreopenTest, InvalidModeFailure) {
   ASSERT_THAT(LIBC_NAMESPACE::freopen(FILENAME, "invalid_mode_str", file),
               Fails(EINVAL, static_cast<void *>(nullptr)));
 
-  // Per spec, original stream fd was closed on filename != nullptr freopen
-  // attempt.
+  // TODO: POSIX says "The original stream shall be closed regardless of whether
+  // the subsequent open succeeds." so this should not be valid. Correct this
+  // test.
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 }
 
@@ -187,9 +180,9 @@ TEST_F(LlvmLibcFreopenTest, NonExistentFileFailure) {
 #endif // LIBC_TARGET_OS_IS_POSIX || LIBC_TARGET_OS_IS_LINUX
 
 TEST_F(LlvmLibcFreopenTest, FlushBeforeReopenTest) {
-  auto FILENAME_A =
+  const auto FILENAME_A =
       libc_make_test_file_path(APPEND_LIBC_TEST("freopen_flush_a.test"));
-  auto FILENAME_B =
+  const auto FILENAME_B =
       libc_make_test_file_path(APPEND_LIBC_TEST("freopen_flush_b.test"));
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME_A, "w");
@@ -216,15 +209,16 @@ TEST_F(LlvmLibcFreopenTest, FlushBeforeReopenTest) {
 }
 
 TEST_F(LlvmLibcFreopenTest, ClearFlagsTest) {
-  auto FILENAME_A =
+  const auto FILENAME_A =
       libc_make_test_file_path(APPEND_LIBC_TEST("freopen_flags_a.test"));
-  auto FILENAME_B =
+  const auto FILENAME_B =
       libc_make_test_file_path(APPEND_LIBC_TEST("freopen_flags_b.test"));
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME_A, "w");
   ASSERT_FALSE(file == nullptr);
   constexpr char SHORT_DATA[] = "X";
-  ASSERT_EQ(size_t(1), LIBC_NAMESPACE::fwrite(SHORT_DATA, 1, 1, file));
+  ASSERT_EQ(static_cast<size_t>(1),
+            LIBC_NAMESPACE::fwrite(SHORT_DATA, 1, 1, file));
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 
   // Trigger EOF on file
@@ -245,7 +239,7 @@ TEST_F(LlvmLibcFreopenTest, ClearFlagsTest) {
 
 #if defined(LIBC_TARGET_OS_IS_POSIX) || defined(LIBC_TARGET_OS_IS_LINUX)
 TEST_F(LlvmLibcFreopenTest, NullFilenameBadFdTest) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("freopen_bad_fd.test"));
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
@@ -264,9 +258,9 @@ TEST_F(LlvmLibcFreopenTest, NullFilenameBadFdTest) {
 #endif // LIBC_TARGET_OS_IS_POSIX || LIBC_TARGET_OS_IS_LINUX
 
 TEST_F(LlvmLibcFreopenTest, ResetOrientationTest) {
-  auto FILENAME_A =
+  const auto FILENAME_A =
       libc_make_test_file_path(APPEND_LIBC_TEST("freopen_orient_a.test"));
-  auto FILENAME_B =
+  const auto FILENAME_B =
       libc_make_test_file_path(APPEND_LIBC_TEST("freopen_orient_b.test"));
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME_A, "w");
@@ -285,7 +279,7 @@ TEST_F(LlvmLibcFreopenTest, ResetOrientationTest) {
 
 #if defined(LIBC_TARGET_OS_IS_POSIX) || defined(LIBC_TARGET_OS_IS_LINUX)
 TEST_F(LlvmLibcFreopenTest, StdoutRedirectionTest) {
-  auto FILENAME =
+  const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("freopen_stdout.test"));
 
   int stdout_fd = LIBC_NAMESPACE::fileno(LIBC_NAMESPACE::stdout);
@@ -315,3 +309,12 @@ TEST_F(LlvmLibcFreopenTest, StdoutRedirectionTest) {
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 }
 #endif
+
+// TODO: update to death test since this crashes now.
+//  TEST_F(LlvmLibcFreopenTest, NullStreamFailure) {
+//    const auto FILENAME =
+//        libc_make_test_file_path(APPEND_LIBC_TEST("freopen_null_stream.test"));
+
+//   ASSERT_THAT(LIBC_NAMESPACE::freopen(FILENAME, "r", nullptr),
+//               Fails(EINVAL, static_cast<void *>(nullptr)));
+// }
