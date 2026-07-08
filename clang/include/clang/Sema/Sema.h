@@ -12018,6 +12018,9 @@ public:
   bool CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous);
   void CompleteMemberSpecialization(NamedDecl *Member, LookupResult &Previous);
 
+  bool CheckDependentFriend(SourceLocation Loc, NestedNameSpecifier NNS,
+                            TemplateParameterList *FPL);
+
   // Explicit instantiation of a class template specialization
   DeclResult ActOnExplicitInstantiation(
       Scope *S, SourceLocation ExternLoc, SourceLocation TemplateLoc,
@@ -12750,6 +12753,15 @@ public:
           [](bool /*OnlyInitializeNonUserDefinedConversions*/) {
             return false;
           });
+
+  /// Finish template argument deduction for a template declaration, checking
+  /// the deduced template arguments for completeness and forming the deduced
+  /// template argument list.
+  TemplateDeductionResult FinishTemplateArgumentDeduction(
+      TemplateDecl *TD, TemplateParameterList *TPL,
+      ArrayRef<TemplateArgument> PatternArgs, ArrayRef<TemplateArgument> Args,
+      SmallVectorImpl<DeducedTemplateArgument> &Deduced,
+      sema::TemplateDeductionInfo &Info, bool CopyDeducedArgs);
 
   /// Perform template argument deduction from a function call
   /// (C++ [temp.deduct.call]).
