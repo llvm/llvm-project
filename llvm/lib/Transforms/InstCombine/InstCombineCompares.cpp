@@ -6418,6 +6418,35 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
         return new ICmpInst(ICmp.getPredicate(), Builder.CreateOr(X, Y),
                             Constant::getNullValue(X->getType()));
 
+      // Narrow compare of mismatched sext/zext to a smaller type.
+      // (icmp <pred> (sext iS X to iW), (zext iU Y to iW))
+      //   -> (icmp <pred> (sext iS X to iT), (zext iU Y to iT))
+      // T = max(S, U + 1) rounded up to a power of two.
+      auto *ZextOp = cast<PossiblyNonNegInst>(ICmp.getOperand(IsZext0 ? 0 : 1));
+      if (!ICmp.isEquality() && !ZextOp->hasNonNeg()) {
+        Value *SignedSrc = IsZext0 ? Y : X;
+        Value *UnsignedSrc = IsZext0 ? X : Y;
+        unsigned SignedBits = SignedSrc->getType()->getScalarSizeInBits();
+        unsigned UnsignedBits = UnsignedSrc->getType()->getScalarSizeInBits();
+        unsigned RequiredBits = std::max(SignedBits, UnsignedBits + 1);
+        unsigned WideBits =
+            ICmp.getOperand(0)->getType()->getScalarSizeInBits();
+        unsigned NewBits = PowerOf2Ceil(RequiredBits);
+        if (NewBits < WideBits && shouldChangeType(WideBits, NewBits)) {
+          // One cast must be one-use since we are creating two new casts.
+          if (ICmp.getOperand(0)->hasOneUse() ||
+              ICmp.getOperand(1)->hasOneUse()) {
+            Type *NewTy =
+                ICmp.getOperand(0)->getType()->getWithNewBitWidth(NewBits);
+            Value *NewSigned = Builder.CreateSExt(SignedSrc, NewTy);
+            Value *NewUnsigned = Builder.CreateZExt(UnsignedSrc, NewTy);
+            Value *NewOp0 = IsZext0 ? NewUnsigned : NewSigned;
+            Value *NewOp1 = IsZext0 ? NewSigned : NewUnsigned;
+            return new ICmpInst(ICmp.getPredicate(), NewOp0, NewOp1);
+          }
+        }
+      }
+
       // If we have mismatched casts and zext has the nneg flag, we can
       //  treat the "zext nneg" as "sext". Otherwise, we cannot fold and quit.
 
