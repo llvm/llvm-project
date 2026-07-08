@@ -956,10 +956,8 @@ void CodeViewDebug::emitBuildInfo() {
   const MDNode *Node = *CUs->operands().begin(); // FIXME: Multiple CUs.
   const auto *CU = cast<DICompileUnit>(Node);
   const DIFile *MainSourceFile = CU->getFile();
-  const llvm::StringRef cwd = Asm->TM.Options.MCOptions.EmitCurrentWorkdir ?
-    MainSourceFile->getDirectory() : llvm::StringRef("");
   BuildInfoArgs[BuildInfoRecord::CurrentDirectory] =
-      getStringIdTypeIdx(TypeTable, cwd);
+      getStringIdTypeIdx(TypeTable, MainSourceFile->getDirectory());
   BuildInfoArgs[BuildInfoRecord::SourceFile] =
       getStringIdTypeIdx(TypeTable, MainSourceFile->getFilename());
   // FIXME: PDB is intentionally blank unless we implement /Zi type servers.

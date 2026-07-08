@@ -548,7 +548,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
       InputFiles.push_back(Input.getFile());
   Options.MCOptions.CommandlineArgs = flattenClangCommandLine(
       CodeGenOpts.CommandLineArgs, CodeGenOpts.MainFileName, InputFiles);
-  Options.MCOptions.EmitCurrentWorkdir = CodeGenOpts.CodeViewEmitCurrentWorkdir;
   Options.MCOptions.AsSecureLogFile = CodeGenOpts.AsSecureLogFile;
   Options.MCOptions.PPCUseFullRegisterNames =
       CodeGenOpts.PPCUseFullRegisterNames;
