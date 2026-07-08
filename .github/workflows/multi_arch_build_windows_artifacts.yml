@@ -274,7 +274,7 @@ jobs:
         run: |
           python build_tools/health_status.py
 
-      - name: Remove ununsed existing patchces									 
+      - name: Remove unused existing patches
         run: |
           rm -fv patches/amd-mainline/llvm-project/0003-HACK-Handle-ROCM-installation-layout-of-lib-llvm-bin.patch
           rm -fv patches/amd-mainline/llvm-project/0009-Add-gcc-toolset-13-prefix-detection.patch

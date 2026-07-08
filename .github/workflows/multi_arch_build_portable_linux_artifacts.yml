@@ -240,7 +240,7 @@ jobs:
         run: |
           ./build_tools/health_status.py
 
-      - name: Remove ununsed existing patchces									 
+      - name: Remove unused existing patches
         run: |
           rm -fv patches/amd-mainline/llvm-project/0001-Ensure-to-use-libamdhip64-with-major-version.patch
 
