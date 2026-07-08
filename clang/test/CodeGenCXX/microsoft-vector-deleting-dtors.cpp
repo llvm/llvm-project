@@ -284,7 +284,7 @@ void kernelTest() {
 // CHECK-NEXT:   br label %dtor.continue
 
 // Test that when a class provides its own operator delete, the deleting
-// destructor calls __global_delete (a weak external) instead of directly
+// destructor calls __global_delete instead of directly
 // referencing ::operator delete. This is critical for environments like
 // kernel mode where no global ::operator delete exists.
 // Verify __empty_global_delete traps (the code path is unreachable at runtime).
