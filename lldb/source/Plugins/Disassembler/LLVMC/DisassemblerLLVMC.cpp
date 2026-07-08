@@ -530,7 +530,7 @@ public:
           m_is_valid = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len,
                                                 pc, inst, inst_size);
           m_opcode.Clear();
-          if (inst_size != 0) {
+          if (m_is_valid && inst_size != 0) {
             if (arch.GetTriple().isRISCV())
               m_opcode.SetOpcode16_32TupleBytes(opcode_data, inst_size,
                                                 byte_order);
