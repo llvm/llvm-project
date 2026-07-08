@@ -11,8 +11,7 @@ void test_array_reduction() {
   ArrayStruct s{{1, 2}};
   auto [arr] = s;
 
-#pragma omp parallel for reduction(+:arr) // expected-error {{array-type reduct\
-ions on structured bindings are not yet supported}}                             
+#pragma omp parallel for reduction(+:arr) // expected-error {{array-type or class-type reductions on structured bindings are not yet supported}}
   for (int i = 0; i < 10; ++i) {
     arr[0] += i;
   }
