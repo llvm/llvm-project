@@ -14,6 +14,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Checker.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
@@ -38,6 +39,12 @@ static bool causingFactDominatesExpiry(LivenessKind K) {
     return false;
   }
   llvm_unreachable("unknown liveness kind");
+}
+
+static OriginList *getRValueOrigins(const Expr *E, OriginList *List) {
+  if (!List)
+    return nullptr;
+  return E->isGLValue() ? List->peelOuterOrigin() : List;
 }
 
 namespace {
@@ -275,7 +282,7 @@ public:
           SemaHelper->reportUseAfterScope(
               IssueExpr, UF->getUseExpr(), MovedExpr, ExpiryLoc,
               getAliasChain(
-                  LoanPropagation.buildOriginFlowChainWithFacts(UF, LID, Cfg)));
+                  LoanPropagation.buildOriginFlowChain(UF, LID, Cfg)));
 
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
@@ -522,19 +529,95 @@ public:
     }
   }
 
+  std::optional<LifetimeBoundParamInfo>
+  getLifetimeBoundParamInfo(const FunctionDecl *FD, unsigned I) {
+    const ParmVarDecl *PVD = nullptr;
+    if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+        Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
+      if (I == 0)
+        return implicitObjectParamIsLifetimeBound(Method)
+                   ? std::optional<LifetimeBoundParamInfo>(
+                         LifetimeBoundParamInfo(Method))
+                   : std::nullopt;
+      if ((I - 1) < Method->getNumParams())
+        PVD = Method->getParamDecl(I - 1);
+    } else if (I < FD->getNumParams()) {
+      PVD = FD->getParamDecl(I);
+    }
+
+    if (PVD && PVD->hasAttr<clang::LifetimeBoundAttr>())
+      return LifetimeBoundParamInfo(PVD);
+    return std::nullopt;
+  }
+
+  std::optional<LifetimeBoundParamInfo>
+  getLifetimeBoundParamInfo(const Expr *Call, OriginID SrcOriginID) {
+    Call = Call->IgnoreParenImpCasts();
+
+    const FunctionDecl *FD = nullptr;
+    llvm::SmallVector<const Expr *, 4> Args;
+
+    if (const auto *CCE = dyn_cast<CXXConstructExpr>(Call)) {
+      FD = CCE->getConstructor();
+      Args.append(CCE->getArgs(), CCE->getArgs() + CCE->getNumArgs());
+    } else if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(Call)) {
+      FD = MCE->getMethodDecl();
+      Args.push_back(MCE->getImplicitObjectArgument());
+      Args.append(MCE->getArgs(), MCE->getArgs() + MCE->getNumArgs());
+    } else if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(Call)) {
+      FD = OCE->getDirectCallee();
+      Args.append(OCE->getArgs(), OCE->getArgs() + OCE->getNumArgs());
+      if (FD && OCE->getOperator() == OO_Call && FD->isStatic())
+        Args.erase(Args.begin());
+    } else if (const auto *CE = dyn_cast<CallExpr>(Call)) {
+      FD = CE->getDirectCallee();
+      Args.append(CE->getArgs(), CE->getArgs() + CE->getNumArgs());
+    }
+
+    FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+    if (!FD)
+      return std::nullopt;
+
+    for (unsigned I = 0; I < Args.size(); ++I) {
+      std::optional<LifetimeBoundParamInfo> Info =
+          getLifetimeBoundParamInfo(FD, I);
+      if (!Info)
+        continue;
+
+      OriginList *ArgList = FactMgr.getOriginMgr().getOrCreateList(Args[I]);
+      if (ArgList && ArgList->getOuterOriginID() == SrcOriginID)
+        return Info;
+
+      OriginList *RValueList = getRValueOrigins(Args[I], ArgList);
+      if (RValueList && RValueList->getOuterOriginID() == SrcOriginID)
+        return Info;
+    }
+
+    return std::nullopt;
+  }
+
   /// Extract expressions from the origin flow chain for diagnostic purposes.
   ///
   /// Given a chain of origins that shows how a loan propagates, this function
   /// extracts the corresponding expressions for each origin. Origins that refer
   /// to declarations (rather than expressions) are skipped.
   llvm::SmallVector<AliasChainEntry>
-  getAliasChain(llvm::ArrayRef<const OriginFlowFact *> OriginFlowChain) {
+  getAliasChain(llvm::ArrayRef<OriginID> OriginFlowChain) {
+    llvm::SmallVector<std::pair<OriginID, AliasChainEntry>> Entries;
+    for (OriginID OID : OriginFlowChain)
+      if (const Expr *CurrExpr =
+              FactMgr.getOriginMgr().getOrigin(OID).getExpr())
+        Entries.push_back({OID, {CurrExpr, std::nullopt}});
+
+    for (unsigned I = 0; I + 1 < Entries.size(); ++I)
+      if (std::optional<LifetimeBoundParamInfo> Info =
+              getLifetimeBoundParamInfo(Entries[I].second.E,
+                                        Entries[I + 1].first))
+        Entries[I + 1].second.LifetimeBound = Info;
+
     llvm::SmallVector<AliasChainEntry> Result;
-    for (const OriginFlowFact *Flow : OriginFlowChain)
-      if (const Expr *CurrExpr = FactMgr.getOriginMgr()
-                                     .getOrigin(Flow->getSrcOriginID())
-                                     .getExpr())
-        Result.push_back({CurrExpr, FactMgr.getLifetimeBoundParamInfo(Flow)});
+    for (const auto &Entry : Entries)
+      Result.push_back(Entry.second);
     return Result;
   }
 };

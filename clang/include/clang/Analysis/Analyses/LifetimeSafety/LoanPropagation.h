@@ -56,15 +56,6 @@ public:
                                                    const LoanID TargetLoan,
                                                    const CFG *Cfg) const;
 
-  llvm::SmallVector<const OriginFlowFact *>
-  buildOriginFlowChainWithFacts(ProgramPoint StartPoint,
-                                const OriginID StartOID,
-                                const LoanID TargetLoan, const CFG *Cfg) const;
-
-  llvm::SmallVector<const OriginFlowFact *>
-  buildOriginFlowChainWithFacts(const UseFact *UF, const LoanID TargetLoan,
-                                const CFG *Cfg) const;
-
 private:
   class Impl;
   std::unique_ptr<Impl> PImpl;

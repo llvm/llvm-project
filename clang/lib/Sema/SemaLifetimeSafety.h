@@ -21,6 +21,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
+#include <cassert>
 #include <string>
 
 namespace clang::lifetimes {
@@ -681,22 +682,20 @@ private:
         continue;
       }
       if (Last.LifetimeBound) {
-        std::string LifetimeBoundSubject;
-        if (Last.LifetimeBound->IsImplicitObject) {
-          LifetimeBoundSubject = "the implicit object parameter";
-        } else {
-          LifetimeBoundSubject = "parameter ";
-          if (Last.LifetimeBound->Param &&
-              Last.LifetimeBound->Param->getIdentifier())
-            LifetimeBoundSubject +=
-                "'" + Last.LifetimeBound->Param->getNameAsString() + "'";
-          else
-            LifetimeBoundSubject += "'<unnamed>'";
+        bool IsImplicitObject = isa<const CXXMethodDecl *>(*Last.LifetimeBound);
+        std::string ParamName;
+        if (!IsImplicitObject) {
+          const auto *Param = cast<const ParmVarDecl *>(*Last.LifetimeBound);
+          assert(Param &&
+                 "lifetimebound parameter info should identify a parameter");
+          ParamName = Param->getIdentifier()
+                          ? "'" + Param->getNameAsString() + "'"
+                          : "'<unnamed>'";
         }
         S.Diag(CurrExpr->getBeginLoc(),
                diag::note_lifetime_safety_aliases_storage_lifetimebound)
             << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
-            << IssueStr << LifetimeBoundSubject;
+            << IssueStr << IsImplicitObject << ParamName;
       } else
         S.Diag(CurrExpr->getBeginLoc(),
                diag::note_lifetime_safety_aliases_storage)

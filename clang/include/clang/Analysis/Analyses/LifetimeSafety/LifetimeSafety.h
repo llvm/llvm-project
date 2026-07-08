@@ -21,6 +21,7 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
@@ -50,9 +51,12 @@ enum class WarningScope {
   IntraTU  // For warnings on functions local to a Translation Unit.
 };
 
+using LifetimeBoundParamInfo =
+    llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
+
 struct AliasChainEntry {
   const Expr *E = nullptr;
-  std::optional<internal::LifetimeBoundParamInfo> LifetimeBound;
+  std::optional<LifetimeBoundParamInfo> LifetimeBound;
 };
 
 /// Abstract interface for operations requiring Sema access.
