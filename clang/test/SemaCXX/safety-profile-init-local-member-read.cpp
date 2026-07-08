@@ -206,6 +206,26 @@ int test_static_local_untracked() {
   return a.m; // OK
 }
 
+// A member of an anonymous struct is reached through an IndirectFieldDecl
+// chain, not a direct `a.m` access, so it is not tracked -- consistent with
+// the anonymous-aggregate skips in the ctor-body pass and R5 (a known gap).
+struct HasAnon {
+  struct {
+    int m [[uninit]];
+  };
+};
+int test_anonymous_member_untracked() {
+  HasAnon a;
+  return a.m; // OK: known gap
+}
+
+// An array of aggregates is not tracked (element tracking is the deferred
+// construct_at slice).
+int test_array_of_aggregates_untracked() {
+  Agg arr[2];
+  return arr[0].m; // OK: known gap
+}
+
 // A union local is never tracked: the harvest rejects union types (their
 // members are mutually exclusive, and [[uninit]] on a union member is banned
 // by union_marker anyway -- suppressed on the function to build the fixture).

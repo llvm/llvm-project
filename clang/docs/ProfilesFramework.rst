@@ -957,7 +957,12 @@ Details:
   form.  Any written initialization (``Agg a{}``, ``= {}``, ``= Agg()``, a
   copy) gives every member a value and leaves nothing to track, as does a
   local that is itself ``[[uninit]]``-marked -- its subobject accesses are the
-  parse-time read-through / ``uninit_write`` rules' territory.
+  parse-time read-through / ``uninit_write`` rules' territory.  A member of
+  an anonymous struct or union is not tracked (its access is an
+  ``IndirectFieldDecl`` chain, not a direct ``a.m``), consistent with the
+  anonymous-aggregate skips in the ctor-body pass and R5; arrays of
+  aggregates are likewise out of scope (element tracking is the deferred
+  ``construct_at`` slice).
 - A plain member store ``a.m = e`` assigns the member (§4.5); a compound
   assignment and a built-in ``++``/``--`` read the old value first and are a
   read-then-write, exactly as in the ctor-body pass.
