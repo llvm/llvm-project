@@ -143,27 +143,33 @@ exit:
   ret void
 }
 
-; TODO-REVEC: LV does not handle stretching a nxv1i1 predicate to nxv4i1
 define void @icmp_select_scalar_cond_load(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs, ptr noalias %cond) vscale_range(1, 16) {
 ; CHECK-LABEL: define void @icmp_select_scalar_cond_load(
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]], ptr noalias [[COND:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[LHS_GEP:%.*]] = getelementptr inbounds <4 x i32>, ptr [[LHS]], i64 [[IV]]
 ; CHECK-NEXT:    [[RHS_GEP:%.*]] = getelementptr inbounds <4 x i32>, ptr [[RHS]], i64 [[IV]]
 ; CHECK-NEXT:    [[COND_GEP:%.*]] = getelementptr inbounds i8, ptr [[COND]], i64 [[IV]]
 ; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr inbounds <4 x i32>, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    [[A:%.*]] = load <4 x i32>, ptr [[LHS_GEP]], align 16
-; CHECK-NEXT:    [[B:%.*]] = load <4 x i32>, ptr [[RHS_GEP]], align 16
-; CHECK-NEXT:    [[COND_I8:%.*]] = load i8, ptr [[COND_GEP]], align 1
-; CHECK-NEXT:    [[COND_I1:%.*]] = icmp ne i8 [[COND_I8]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND_I1]], <4 x i32> [[A]], <4 x i32> [[B]]
-; CHECK-NEXT:    store <4 x i32> [[SEL]], ptr [[DST_GEP]], align 16
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[LHS_GEP]], align 16
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[RHS_GEP]], align 16
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 1 x i8>, ptr [[COND_GEP]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <vscale x 1 x i8> [[WIDE_LOAD2]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 2 x i1> @llvm.vector.interleave2.nxv2i1(<vscale x 1 x i1> [[TMP5]], <vscale x 1 x i1> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> [[TMP9]], <vscale x 2 x i1> [[TMP9]])
+; CHECK-NEXT:    [[TMP7:%.*]] = select <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[WIDE_LOAD1]]
+; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP7]], ptr [[DST_GEP]], align 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], {{!llvm.loop ![0-9]+}}
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -190,25 +196,36 @@ exit:
   ret void
 }
 
-; TODO-REVEC: LV does not handle stretching a nxv1i1 predicate to nxv4i1
 define void @icmp_select_scalar_cond_iv(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs) vscale_range(1, 16) {
 ; CHECK-LABEL: define void @icmp_select_scalar_cond_iv(
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 1 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 1 x i64> [ [[TMP1]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[LHS_GEP:%.*]] = getelementptr inbounds <4 x i32>, ptr [[LHS]], i64 [[IV]]
 ; CHECK-NEXT:    [[RHS_GEP:%.*]] = getelementptr inbounds <4 x i32>, ptr [[RHS]], i64 [[IV]]
 ; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr inbounds <4 x i32>, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    [[A:%.*]] = load <4 x i32>, ptr [[LHS_GEP]], align 16
-; CHECK-NEXT:    [[B:%.*]] = load <4 x i32>, ptr [[RHS_GEP]], align 16
-; CHECK-NEXT:    [[COND_I1:%.*]] = icmp ugt i64 [[IV]], 8
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND_I1]], <4 x i32> [[A]], <4 x i32> [[B]]
-; CHECK-NEXT:    store <4 x i32> [[SEL]], ptr [[DST_GEP]], align 16
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[LHS_GEP]], align 16
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[RHS_GEP]], align 16
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt <vscale x 1 x i64> [[VEC_IND]], splat (i64 8)
+; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 2 x i1> @llvm.vector.interleave2.nxv2i1(<vscale x 1 x i1> [[TMP5]], <vscale x 1 x i1> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> [[TMP9]], <vscale x 2 x i1> [[TMP9]])
+; CHECK-NEXT:    [[TMP7:%.*]] = select <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[WIDE_LOAD1]]
+; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP7]], ptr [[DST_GEP]], align 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP0]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 1 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], {{!llvm.loop ![0-9]+}}
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -225,6 +242,63 @@ loop:
   %cond.i1 = icmp ugt i64 %iv, 8
   %sel = select i1 %cond.i1, <4 x i32> %a, <4 x i32> %b
   store <4 x i32> %sel, ptr %dst.gep, align 16
+  %iv.next = add nuw i64 %iv, 1
+  %done = icmp eq i64 %iv.next, 1024
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; This example requires stretching a <vscale x 1 x i1> predicate 16 times to <vscale x 16 x i1>.
+define void @icmp_select_scalar_cond_stretch_x16(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs) vscale_range(1, 16) {
+; CHECK-LABEL: define void @icmp_select_scalar_cond_stretch_x16(
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 1 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 1 x i64> [ [[TMP1]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[LHS_GEP:%.*]] = getelementptr inbounds <16 x i8>, ptr [[LHS]], i64 [[IV]]
+; CHECK-NEXT:    [[RHS_GEP:%.*]] = getelementptr inbounds <16 x i8>, ptr [[RHS]], i64 [[IV]]
+; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr inbounds <16 x i8>, ptr [[DST]], i64 [[IV]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[LHS_GEP]], align 16
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 16 x i8>, ptr [[RHS_GEP]], align 16
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt <vscale x 1 x i64> [[VEC_IND]], splat (i64 8)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i1> @llvm.vector.interleave2.nxv2i1(<vscale x 1 x i1> [[TMP5]], <vscale x 1 x i1> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> [[TMP6]], <vscale x 2 x i1> [[TMP6]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> [[TMP8]], <vscale x 8 x i1> [[TMP8]])
+; CHECK-NEXT:    [[TMP10:%.*]] = select <vscale x 16 x i1> [[TMP9]], <vscale x 16 x i8> [[WIDE_LOAD]], <vscale x 16 x i8> [[WIDE_LOAD1]]
+; CHECK-NEXT:    store <vscale x 16 x i8> [[TMP10]], ptr [[DST_GEP]], align 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP0]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 1 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], {{!llvm.loop ![0-9]+}}
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %lhs.gep = getelementptr inbounds <16 x i8>, ptr %lhs, i64 %iv
+  %rhs.gep = getelementptr inbounds <16 x i8>, ptr %rhs, i64 %iv
+  %dst.gep = getelementptr inbounds <16 x i8>, ptr %dst, i64 %iv
+  %a = load <16 x i8>, ptr %lhs.gep, align 16
+  %b = load <16 x i8>, ptr %rhs.gep, align 16
+  %cond.i1 = icmp ugt i64 %iv, 8
+  %sel = select i1 %cond.i1, <16 x i8> %a, <16 x i8> %b
+  store <16 x i8> %sel, ptr %dst.gep, align 16
   %iv.next = add nuw i64 %iv, 1
   %done = icmp eq i64 %iv.next, 1024
   br i1 %done, label %exit, label %loop

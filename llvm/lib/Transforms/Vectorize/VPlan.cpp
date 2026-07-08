@@ -287,6 +287,30 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   return Extract;
 }
 
+Value *VPTransformState::getAndStretch(const VPValue *Def,
+                                       unsigned StretchFactor) {
+  Value *V = get(Def);
+
+  if (StretchFactor == 1)
+    return V;
+
+  // TODO-REVEC: Maybe model stretching through a new VectorStretch
+  // VPInstruction instead of this new getAndStretch helper? (introduced from a
+  // VPTransform pass?) This could benefit from CSE and some combines when the
+  // mask comes from an ActiveLaneMask whose step is a multiple of the
+  // StretchFactor. This would also help accounting for the cost of stretching
+  // for VPlan costing.
+  ElementCount InitialEC = getElementCount(V->getType());
+  if (InitialEC.isScalar())
+    return Builder.CreateVectorSplat(StretchFactor, V);
+
+  // Now we know that V is a vector value that needs to be stretched.
+  assert(isPowerOf2_32(StretchFactor) && "Unsupported stretch factor.");
+  for (; StretchFactor > 1; StretchFactor /= 2)
+    V = Builder.CreateVectorInterleave({V, V});
+  return V;
+}
+
 Value *VPTransformState::get(const VPValue *Def, bool NeedsSingleScalar) {
   assert(!isa<VPRegionValue>(Def) &&
          "VPRegionValue must be materialized before VPTransformState::get");

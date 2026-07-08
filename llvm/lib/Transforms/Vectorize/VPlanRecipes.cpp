@@ -823,6 +823,8 @@ Value *VPInstruction::generate(VPTransformState &State,
     llvm_unreachable("should be handled by VPPhi::execute");
   }
   case Instruction::Select: {
+    assert(!getOperand(0)->getScalarType()->isVectorTy() &&
+           "REVEC: Unexpected VPlan-created select at this stage");
     Value *Cond =
         State.get(getOperand(0), GenerateSingleScalar ||
                                      vputils::isSingleScalar(getOperand(0)));
@@ -1368,15 +1370,19 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
   case Instruction::Select: {
     SelectInst *SI = cast_or_null<SelectInst>(getUnderlyingValue());
     Type *InitialCondTy = getOperand(0)->getScalarType();
-    Type *ScalarTy = this->getScalarType();
+    Type *InitialTy = this->getScalarType();
     bool IsScalarCond = InitialCondTy->isIntegerTy(1) &&
                         getOperand(0)->isDefinedOutsideLoopRegions();
 
-    // TODO-REVEC: Support all kinds of InitialCondTy
-    if (ScalarTy->isVectorTy() &&
-        (!IsScalarCond &&
-         getElementCount(ScalarTy) != getElementCount(InitialCondTy)))
-      return InstructionCost::getInvalid();
+    // REVEC: Vector conditions might require stretching to be compatible with
+    // the select IR instruction prototype.
+    // Only pow(2) stretch factors are supported.
+    if (InitialTy->isVectorTy() && !IsScalarCond) {
+      unsigned StretchFactor = getElementCount(InitialTy).getKnownScalarFactor(
+          getElementCount(InitialCondTy));
+      if (!isPowerOf2_32(StretchFactor))
+        return InstructionCost::getInvalid();
+    }
 
     VPValue *Op0, *Op1;
     bool IsLogicalAnd =
@@ -1391,7 +1397,7 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
     IsLogicalOr |=
         match(this, m_Select(m_VPValue(Op0), m_VPValue(Op1), m_True()));
 
-    if (!IsScalarCond && ScalarTy->getScalarSizeInBits() == 1 &&
+    if (!IsScalarCond && InitialTy->getScalarSizeInBits() == 1 &&
         (IsLogicalAnd || IsLogicalOr)) {
       // select x, y, false --> x & y
       // select x, true, y --> x | y
@@ -3094,7 +3100,11 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     // data inputs.
     bool BuildScalarCond =
         vputils::isSingleScalar(CondOp) && InitialCondTy->isIntegerTy(1);
-    Value *Cond = State.get(CondOp, BuildScalarCond);
+    unsigned StretchFactor =
+        getElementCount(getScalarType())
+            .getKnownScalarFactor(getElementCount(InitialCondTy));
+    Value *Cond = BuildScalarCond ? State.get(CondOp, true)
+                                  : State.getAndStretch(CondOp, StretchFactor);
     Value *Op0 = State.get(getOperand(1));
     Value *Op1 = State.get(getOperand(2));
     Value *Sel = State.Builder.CreateSelect(Cond, Op0, Op1);
