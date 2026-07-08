@@ -585,16 +585,17 @@ void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
 
 void Instruction::dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep) {
   // !annotation and !prof metadata does not impact semantics.
-  // !range, !nonnull and !align produce poison, so they are safe to speculate.
+  // !range, !nonnull, !align and !nofpclass produce poison, so they are safe to
+  // speculate.
   // !fpmath specifies floating-point precision and does not imply UB.
   // !mem.cache_hint is a performance hint and does not imply UB.
   // !noundef and various AA metadata must be dropped, as it generally produces
   // immediate undefined behavior.
   static const unsigned KnownIDs[] = {
-      LLVMContext::MD_annotation,    LLVMContext::MD_range,
-      LLVMContext::MD_nonnull,       LLVMContext::MD_align,
-      LLVMContext::MD_fpmath,        LLVMContext::MD_prof,
-      LLVMContext::MD_mem_cache_hint};
+      LLVMContext::MD_annotation,     LLVMContext::MD_range,
+      LLVMContext::MD_nonnull,        LLVMContext::MD_align,
+      LLVMContext::MD_fpmath,         LLVMContext::MD_prof,
+      LLVMContext::MD_mem_cache_hint, LLVMContext::MD_nofpclass};
   SmallVector<unsigned> KeepIDs;
   KeepIDs.reserve(Keep.size() + std::size(KnownIDs));
   append_range(KeepIDs, (!ProfcheckDisableMetadataFixes ? KnownIDs

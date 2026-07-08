@@ -30,6 +30,7 @@
 
 using namespace llvm;
 
+#define GET_CALLING_CONV_IMPL
 #include "AMDGPUGenCallingConv.inc"
 
 static cl::opt<bool> AMDGPUBypassSlowDiv(
@@ -5561,7 +5562,7 @@ SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
 
   // XXX - Should this flush denormals?
   const APFloat &Val = CFP->getValueAPF();
-  APFloat One(Val.getSemantics(), "1.0");
+  APFloat One = APFloat::getOne(Val.getSemantics());
   return DCI.DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
 }
 

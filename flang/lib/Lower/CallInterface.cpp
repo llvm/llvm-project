@@ -17,7 +17,6 @@
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -1578,7 +1577,7 @@ Fortran::lower::CallInterface<T>::getProcedureAttrs(
     // called is recursive or not.
     if (const Fortran::semantics::Symbol *sym = side().getProcedureSymbol()) {
       // Note: By default procedures are RECURSIVE unless
-      // -fno-automatic/-save/-Msave is set. NON_RECURSIVE is is made explicit
+      // -fno-automatic/-save/-Msave is set. NON_RECURSIVE is made explicit
       // in that case in FIR.
       if (sym->attrs().test(Fortran::semantics::Attr::NON_RECURSIVE) ||
           (sym->owner().context().languageFeatures().IsEnabled(

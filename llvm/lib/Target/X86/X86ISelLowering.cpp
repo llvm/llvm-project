@@ -19998,6 +19998,13 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
 
   if (Subtarget.isTargetELF()) {
     TLSModel::Model model = DAG.getTarget().getTLSModel(GV);
+    // LFI does not support dlopen, so all TLS can be statically resolved. We
+    // automatically upgrade dynamic models to InitialExec because the dynamic
+    // TLS sequences are slower than necessary and interact poorly with LFI
+    // rewriting combined with rewrites from linker relaxation.
+    if (Subtarget.isLFI())
+      if (model == TLSModel::GeneralDynamic || model == TLSModel::LocalDynamic)
+        model = TLSModel::InitialExec;
     switch (model) {
       case TLSModel::GeneralDynamic:
         if (Subtarget.is64Bit()) {
@@ -21034,20 +21041,22 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   bool IsStrict = Op->isStrictFPOpcode();
   unsigned OpNo = IsStrict ? 1 : 0;
   SDValue Src = Op.getOperand(OpNo);
-  SDLoc dl(Op);
+  SDValue Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   MVT SrcVT = Src.getSimpleValueType();
   MVT DstVT = Op->getSimpleValueType(0);
-  SDValue Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
-
-  // Bail out when we don't have native conversion instructions.
-  if (DstVT == MVT::f128)
-    return SDValue();
+  SDLoc dl(Op);
 
   if (isBF16orSoftF16(DstVT, Subtarget))
     return promoteXINT_TO_FP(Op, dl, DAG);
   else if (isLegalConversion(SrcVT, DstVT, false, Subtarget))
     return Op;
+
+  if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
+    return LowerWin64_INT128_TO_FP(Op, DAG);
+
+  if (SDValue Extract = vectorizeExtractedCast(Op, dl, DAG, Subtarget))
+    return Extract;
 
   if (SDValue V = lowerFPToIntToFP(Op, dl, DAG, Subtarget))
     return V;
@@ -21055,11 +21064,9 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   if (DstVT.isVector())
     return lowerUINT_TO_FP_vec(Op, dl, DAG, Subtarget);
 
-  if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
-    return LowerWin64_INT128_TO_FP(Op, DAG);
-
-  if (SDValue Extract = vectorizeExtractedCast(Op, dl, DAG, Subtarget))
-    return Extract;
+  // Bail out when we don't have native conversion instructions.
+  if (DstVT == MVT::f128)
+    return SDValue();
 
   if (Subtarget.hasAVX512() && isScalarFPTypeInSSEReg(DstVT) &&
       (SrcVT == MVT::i32 || (SrcVT == MVT::i64 && Subtarget.is64Bit()))) {
@@ -38730,8 +38737,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTDPBF8PS:
   case X86::PTDPBHF8PS:
   case X86::PTDPHBF8PS:
-  case X86::PTDPHF8PS:
-  case X86::PTMMULTF32PS: {
+  case X86::PTDPHF8PS: {
     unsigned Opc;
     switch (MI.getOpcode()) {
     default: llvm_unreachable("illegal opcode!");
@@ -38748,7 +38754,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTDPBHF8PS: Opc = X86::TDPBHF8PS; break;
     case X86::PTDPHBF8PS: Opc = X86::TDPHBF8PS; break;
     case X86::PTDPHF8PS: Opc = X86::TDPHF8PS; break;
-    case X86::PTMMULTF32PS: Opc = X86::TMMULTF32PS; break;
       // clang-format on
     }
 
@@ -45095,6 +45100,32 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   }
 
   return false;
+}
+
+unsigned X86TargetLowering::getPreferredShrunkVectorSizeInBits(
+    SDValue Op, const APInt &DemandedElts) const {
+  EVT VT = Op.getValueType();
+  unsigned SizeInBits = VT.getSizeInBits();
+  unsigned NumElts = VT.getVectorNumElements();
+
+  switch (Op.getOpcode()) {
+  case ISD::FSUB:
+  case ISD::FMUL:
+    break;
+  default:
+    return 0;
+  }
+
+  // For 256/512-bit ops that are 128/256-bit ops glued together, if we do not
+  // demand any of the high elements, then narrow the op to 128/256-bits: e.g.
+  // (op ymm0, ymm1) --> insert undef, (op xmm0, xmm1), 0
+  if (SizeInBits == 512 && DemandedElts.lshr(NumElts / 4) == 0)
+    return SizeInBits / 4;
+  if ((SizeInBits == 256 || SizeInBits == 512) &&
+      DemandedElts.lshr(NumElts / 2) == 0)
+    return SizeInBits / 2;
+
+  return 0;
 }
 
 bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
@@ -55077,12 +55108,9 @@ static bool isHorizontalBinOp(unsigned HOpcode, SDValue &LHS, SDValue &RHS,
   SDValue NewLHS = A.getNode() ? A : B; // If A is 'UNDEF', use B for it.
   SDValue NewRHS = B.getNode() ? B : A; // If B is 'UNDEF', use A for it.
 
+  // Avoid 128-bit multi lane shuffles if pre-AVX2 and FP (integer will split).
   bool IsIdentityPostShuffle =
       isSequentialOrUndefInRange(PostShuffleMask, 0, NumElts, 0);
-  if (IsIdentityPostShuffle)
-    PostShuffleMask.clear();
-
-  // Avoid 128-bit multi lane shuffles if pre-AVX2 and FP (integer will split).
   if (!IsIdentityPostShuffle && !Subtarget.hasAVX2() && VT.isFloatingPoint() &&
       isMultiLaneShuffleMask(128, VT.getScalarSizeInBits(), PostShuffleMask))
     return false;
@@ -55126,6 +55154,21 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
             N->user_begin()->getOperand(1).getOpcode() == HorizOpcode);
   };
 
+  auto CanonicalizeHorizOps = [&](const SDLoc &DL, SDValue &LHS, SDValue &RHS) {
+    assert(PostShuffleMask.size() == VT.getVectorNumElements() &&
+           "Illegal shuffle mask");
+    LHS = DAG.getBitcast(VT, LHS);
+    RHS = DAG.getBitcast(VT, RHS);
+    if (VT.is256BitVector() && isUndefUpperHalf(PostShuffleMask) &&
+        !isLaneCrossingShuffleMask(128, VT.getScalarSizeInBits(),
+                                   PostShuffleMask)) {
+      LHS = extract128BitVector(LHS, 0, DAG, DL);
+      RHS = extract128BitVector(RHS, 0, DAG, DL);
+      PostShuffleMask.truncate(PostShuffleMask.size() / 2);
+    }
+    return LHS.getSimpleValueType();
+  };
+
   switch (Opcode) {
   case ISD::FADD:
   case ISD::FSUB:
@@ -55136,13 +55179,12 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
       auto HorizOpcode = IsAdd ? X86ISD::FHADD : X86ISD::FHSUB;
       if (isHorizontalBinOp(HorizOpcode, LHS, RHS, DAG, Subtarget, IsAdd,
                             PostShuffleMask, MergableHorizOp(HorizOpcode))) {
-        SDValue HorizBinOp =
-            DAG.getNode(HorizOpcode, SDLoc(N), VT, DAG.getBitcast(VT, LHS),
-                        DAG.getBitcast(VT, RHS));
-        if (!PostShuffleMask.empty())
-          HorizBinOp = DAG.getVectorShuffle(VT, SDLoc(HorizBinOp), HorizBinOp,
-                                            DAG.getUNDEF(VT), PostShuffleMask);
-        return HorizBinOp;
+        SDLoc DL(N);
+        MVT HorizVT = CanonicalizeHorizOps(DL, LHS, RHS);
+        SDValue HorizBinOp = DAG.getNode(HorizOpcode, DL, HorizVT, LHS, RHS);
+        HorizBinOp = DAG.getVectorShuffle(HorizVT, DL, HorizBinOp, HorizBinOp,
+                                          PostShuffleMask);
+        return DAG.getInsertSubvector(DL, DAG.getUNDEF(VT), HorizBinOp, 0);
       }
     }
     break;
@@ -55164,13 +55206,13 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
                                         ArrayRef<SDValue> Ops) {
           return DAG.getNode(HorizOpcode, DL, Ops[0].getValueType(), Ops);
         };
-        SDValue HorizBinOp = SplitOpsAndApply(
-            DAG, Subtarget, SDLoc(N), VT,
-            {DAG.getBitcast(VT, LHS), DAG.getBitcast(VT, RHS)}, HOpBuilder);
-        if (!PostShuffleMask.empty())
-          HorizBinOp = DAG.getVectorShuffle(VT, SDLoc(HorizBinOp), HorizBinOp,
-                                            DAG.getUNDEF(VT), PostShuffleMask);
-        return HorizBinOp;
+        SDLoc DL(N);
+        MVT HorizVT = CanonicalizeHorizOps(DL, LHS, RHS);
+        SDValue HorizBinOp = SplitOpsAndApply(DAG, Subtarget, DL, HorizVT,
+                                              {LHS, RHS}, HOpBuilder);
+        HorizBinOp = DAG.getVectorShuffle(HorizVT, DL, HorizBinOp, HorizBinOp,
+                                          PostShuffleMask);
+        return DAG.getInsertSubvector(DL, DAG.getUNDEF(VT), HorizBinOp, 0);
       }
     }
     break;
