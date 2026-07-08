@@ -2759,6 +2759,12 @@ public:
     case Intrinsic::bitreverse:
       ISD = ISD::BITREVERSE;
       break;
+    case Intrinsic::pdep:
+    case Intrinsic::pext:
+      ISD = IID == Intrinsic::pdep ? ISD::PDEP : ISD::PEXT;
+      // When not legal/custom, pdep/pext expand to a long inline sequence
+      SingleCallCost = 20;
+      break;
     case Intrinsic::ucmp:
       ISD = ISD::UCMP;
       break;
