@@ -6,7 +6,11 @@ import os
 import shutil
 from typing import Dict
 
-from lldbsuite.test.decorators import skipIfWasm, skipIfWindows
+from lldbsuite.test.decorators import (
+    skipIfTargetDoesNotSupportSharedLibraries,
+    skipIfWasm,
+    skipIfWindows,
+)
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap.dap_types import (
     DAPTestGetTargetBreakpointsArgs,
@@ -28,6 +32,7 @@ class TestDAP_setBreakpoints(DAPTestCaseBase):
         self.main_basename = "main-copy.cpp"
         self.main_path = os.path.realpath(self.getBuildArtifact(self.main_basename))
 
+    @skipIfTargetDoesNotSupportSharedLibraries()
     @skipIfWindows
     def test_source_map(self):
         """
