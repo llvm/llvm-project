@@ -636,8 +636,9 @@ TEST(raw_ostreamTest, writeToNul) {
       writeToOutput("nul",
                     [&](raw_ostream &Out) -> Error {
                       std::error_code EC;
-                      sys::fs::directory_iterator It(
-                          RootTestDirectory.path(), EC), End;
+                      sys::fs::directory_iterator It(RootTestDirectory.path(),
+                                                     EC),
+                          End;
                       EXPECT_FALSE(EC);
                       EXPECT_EQ(It, End)
                           << "unexpected temp file on disk during Write(): "
