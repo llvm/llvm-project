@@ -138,6 +138,23 @@ LIBC_INLINE double hypot(double x, double y) {
     scale_back = 0x1.0p600;
     a *= scale;
     b *= scale;
+    // Check for overflow to raise them correctly.
+#if !defined(LIBC_MATH_HAS_NO_EXCEPT)
+    // No overflow when calculating a^2 + b^2.
+    double asq = a * a;
+    double bsq = b * b;
+    double sumsq = asq + bsq;
+    // Overflow happens when:
+    //   2^600 * sqrt(a^2 + b^2) >= 2^1023 * (2 - 2^-53)
+    // Which is equivalent to:
+    //   sqrt(a^2 + b^2) >= 2^424 * (1 - 2^-54).
+    // Square both sides:
+    //   a^2 + b^2 >= 2^848 * (1 - 2^-53 + 2^-108).
+    // For a fast sufficient condition that can be done in double precision:
+    //   a^2 + b^2 >= 2^848.
+    if (sumsq >= 0x1.0p848)
+      return sumsq * scale_back;
+#endif // !LIBC_MATH_HAS_NO_EXCEPT
   } else if (LIBC_UNLIKELY(b_e <= ((FPBits::EXP_BIAS - 500) << (32 - 11)))) {
     // The smaller magnitude is below 2^-500 (or 0), need to scale up to prevent
     // underflow when squaring.

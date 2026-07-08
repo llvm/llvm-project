@@ -283,8 +283,10 @@ LIBC_INLINE T hypot(T x, T y) {
 
   y_new |= static_cast<StorageType>(out_exp) << FPBits_t::FRACTION_LEN;
 
-  if (!(round_bit || sticky_bits || (r != 0)))
-    fputil::clear_except_if_required(FE_INEXACT);
+  // TODO: We should only clear FE_INEXACT except if it's not set at the
+  // start of the function.
+  // if (!(round_bit || sticky_bits || (r != 0)))
+  //   fputil::clear_except_if_required(FE_INEXACT);
 
   return cpp::bit_cast<T>(y_new);
 }
