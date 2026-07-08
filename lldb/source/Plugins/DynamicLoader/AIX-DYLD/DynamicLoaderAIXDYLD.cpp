@@ -438,8 +438,15 @@ void DynamicLoaderAIXDYLD::DidLaunch() {
   LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s()", __FUNCTION__);
 
   ModuleSP executable = GetTargetExecutable();
-  if (!executable.get())
-    return;
+  // If executable is not available (e.g., after process rerun when modules
+  // were cleared), try to resolve it again
+  if (!executable.get()) {
+    ResolveExecutableModule(executable);
+    if (!executable.get()) {
+      LLDB_LOG(log, "failed to get target executable module");
+      return;
+    }
+  }
 
   lldb::addr_t load_addr = GetLoadAddress(executable);
   if (load_addr != LLDB_INVALID_ADDRESS) {
