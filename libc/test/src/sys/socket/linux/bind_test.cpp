@@ -20,6 +20,7 @@
 
 #include "hdr/netinet_in_macros.h"
 #include "hdr/sys_socket_macros.h"
+#include "hdr/types/sa_family_t.h"
 #include "hdr/types/struct_sockaddr_in.h"
 #include "hdr/types/struct_sockaddr_in6.h"
 #include "hdr/types/struct_sockaddr_un.h"
