@@ -27020,7 +27020,7 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   auto *L00 = dyn_cast<LoadSDNode>(A.getNode());
   auto *L01 = dyn_cast<LoadSDNode>(B.getNode());
-  if (!L00 || !L01)
+  if (!L00 || !L01 || !ISD::isNON_EXTLoad(L00) || !ISD::isNON_EXTLoad(L01))
     return SDValue();
 
   // Check if the address spaces of both loads are the same.
@@ -27073,7 +27073,6 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
 
   // Create a shuffle of the wide load.
   SmallVector<int, 32> Mask;
-  Mask.reserve(WideVT.getVectorNumElements());
   if (Base == L00) {
     llvm::append_range(Mask, M0);
     llvm::append_range(Mask, M1);
