@@ -115,7 +115,8 @@ GVNEnableSplitBackedgeInLoadPRE("enable-split-backedge-in-load-pre",
 static cl::opt<bool> GVNEnableMemDep("enable-gvn-memdep", cl::init(true));
 static cl::opt<bool> GVNEnableMemorySSA("enable-gvn-memoryssa",
                                         cl::init(false));
-
+static cl::opt<bool> GVNEnableSimpleGVNHoist("enable-simple-gvn-hoist",
+                                             cl::init(true));
 static cl::opt<unsigned> ScanUsersLimit(
     "gvn-scan-users-limit", cl::Hidden, cl::init(100),
     cl::desc("The number of memory accesses to scan in a block in reaching "
@@ -1200,6 +1201,24 @@ private:
   // List of critical edges to be split between iterations.
   SmallVector<std::pair<Instruction *, unsigned>, 4> ToSplit;
 
+  // A pair of instructions with the same value number to be hoisted and merged,
+  // together with their respective hoist barriers. A pair of insructions can be
+  // hoisted iff both their barriers (if not null) are hoisted as well. The
+  // `WeakVH` is used to track when the barrier instruction itself is hoisted.
+  struct HoistPair {
+    Instruction *ThenI = nullptr;
+    Instruction *ThenB = nullptr;
+    Instruction *ElseI = nullptr;
+    WeakVH ElseB = nullptr;
+  };
+
+  /// A mapping from value numbers to a pair of instructions. This map
+  /// stores pairs of instructions with the same value number, from two blocks
+  /// having a single common predecessor, for the duration of a single top level
+  /// iteration in `performHoist`.
+  using HoistMap = DenseMap<uint32_t, HoistPair>;
+  HoistMap HoistPairs;
+
 public:
   GVNPassImpl(GVNOptions Options) : Options(Options) {}
 
@@ -1327,6 +1346,13 @@ private:
                                  BasicBlock *Curr, unsigned int ValNo);
   bool performScalarPRE(Instruction *I);
   bool performPRE(Function &F);
+
+  void collectHoistCandidates(BasicBlock *ThenBB);
+  void matchHoistCandidates(BasicBlock *ElseBB);
+  void replaceInstruction(Instruction *I, Instruction *Repl);
+  std::pair<bool, bool> hoistPair(BasicBlock *DestBB, BasicBlock *ThenBB,
+                                  BasicBlock *ElseBB, Instruction *ThenI);
+  bool performHoist(Function &F);
 
   // Other helper routines.
 
@@ -3942,6 +3968,232 @@ bool GVNPassImpl::performPRE(Function &F) {
   return Changed;
 }
 
+// Won't reorder above these instructions.
+static bool isHoistBarrier(const Instruction &I) {
+  return I.mayWriteToMemory() || I.mayHaveSideEffects() ||
+         !isGuaranteedToTransferExecutionToSuccessor(&I);
+}
+
+static bool isHoistCandidate(const Instruction &I) {
+  if (I.mayReadOrWriteMemory())
+    return false;
+  if (!isa<CallBase>(I))
+    return true;
+  const auto &CB = cast<CallBase>(I);
+  if (CB.isMustTailCall() || CB.cannotMerge())
+    return false;
+  return true;
+}
+
+void GVNPassImpl::collectHoistCandidates(BasicBlock *BB) {
+  uint32_t Depth = 0;
+  Instruction *Barrier = nullptr;
+  for (Instruction &I : *BB) {
+    if (++Depth > MaxNumInsnsPerBlock)
+      break;
+    if (I.isTerminator())
+      break;
+    if (isa<PHINode>(I))
+      continue;
+    if (isHoistCandidate(I)) {
+      HoistPair &HP = HoistPairs[VN.lookupOrAdd(&I)];
+      HP.ThenI = &I;
+      HP.ThenB = isSafeToSpeculativelyExecute(&I) ? nullptr : Barrier;
+    }
+    Barrier = isHoistBarrier(I) ? &I : Barrier;
+  }
+}
+
+void GVNPassImpl::matchHoistCandidates(BasicBlock *BB) {
+  uint32_t Depth = 0;
+  Instruction *Barrier = nullptr;
+  for (Instruction &I : *BB) {
+    if (++Depth > MaxNumInsnsPerBlock)
+      break;
+    if (I.isTerminator())
+      break;
+    if (isa<PHINode>(I))
+      continue;
+    if (isHoistCandidate(I)) {
+      uint32_t N = VN.lookupOrAdd(&I);
+      if (auto It = HoistPairs.find(N);
+          It != HoistPairs.end() && It->second.ElseI == nullptr) {
+        It->second.ElseI = &I;
+        It->second.ElseB = isSafeToSpeculativelyExecute(&I) ? nullptr : Barrier;
+      }
+    }
+    Barrier = isHoistBarrier(I) ? &I : Barrier;
+  }
+}
+
+void GVNPassImpl::replaceInstruction(Instruction *I, Instruction *Repl) {
+  LLVM_DEBUG(dbgs() << "Simple GVNHoist: replacing" << *I << " by" << *Repl
+                    << '\n';);
+  patchReplacementInstruction(I, Repl);
+  ICF->removeUsersOf(I);
+  I->replaceAllUsesWith(Repl);
+  salvageKnowledge(I, AC);
+  salvageDebugInfo(*I);
+  if (MD)
+    MD->removeInstruction(I);
+  if (MSSAU)
+    MSSAU->removeMemoryAccess(I);
+  VN.erase(I);
+  ICF->removeInstruction(I);
+  LLVM_DEBUG(verifyRemoved(I));
+  I->eraseFromParent();
+  ++NumGVNInstr;
+}
+
+// Only hoist instructions from the "then" block.
+// Each hoisted instruction must be paired with an instruction from the "else"
+// block.
+std::pair<bool, bool> GVNPassImpl::hoistPair(BasicBlock *DestBB,
+                                             BasicBlock *ThenBB,
+                                             BasicBlock *ElseBB,
+                                             Instruction *ThenI) {
+  // If the instruction is moved out of the "then" block there's nothing to do.
+  if (ThenI->getParent() != ThenBB)
+    return {false, false};
+
+  // Instruction must have already been selected for hoisting and matched with
+  // another instruction.
+  auto It = HoistPairs.find(VN.lookupOrAdd(ThenI));
+  if (It == HoistPairs.end())
+    return {false, true};
+
+  // Do not attempt to hoist a pair twice. If `ElseI` is nullptr, it means
+  // either there was no match for `ThenI` or there was already an attempt
+  // (successful or not) to hoist the pair.
+  Instruction *ElseI = It->second.ElseI;
+  if (ElseI == nullptr)
+    return {false, true};
+  It->second.ElseI = nullptr;
+
+  assert(ElseI->getParent() == ElseBB && "Instruction already removed");
+  assert(!ThenI->mayReadOrWriteMemory() && !ElseI->mayReadOrWriteMemory() &&
+         "Memory read/write instructions must not be hoisted.");
+
+  bool Change = false;
+
+  // Hoist the `Then` barrier, if any.
+  Instruction *ThenB = It->second.ThenB;
+  if (ThenB != nullptr && ThenB->getParent() == ThenBB) {
+    auto [LocalChange, StopHoisting] = hoistPair(DestBB, ThenBB, ElseBB, ThenB);
+    Change |= LocalChange;
+    if (StopHoisting)
+      return {Change, true};
+  }
+
+  // Check the `Else` barrier instruction, if any, was deleted from the `Else`
+  // block as a result of a previous hoisting.
+  if (dyn_cast_or_null<Instruction>(It->second.ElseB) != nullptr)
+    return {Change, true};
+
+  // Hoist operands. Begin by hoisting all of the operands of the "then"
+  // instruction, then check that all of the operands of the "else" instruction
+  // strictly dominate its block.
+  for (unsigned I = 0, N = ThenI->getNumOperands(); I < N; ++I) {
+    auto *Op = dyn_cast<Instruction>(ThenI->getOperand(I));
+    if (Op == nullptr)
+      continue;
+    auto [LocalChange, StopHoisting] = hoistPair(DestBB, ThenBB, ElseBB, Op);
+    Change |= LocalChange;
+    if (StopHoisting)
+      return {Change, true};
+  }
+
+  for (unsigned I = 0, N = ElseI->getNumOperands(); I < N; ++I) {
+    auto *Op = dyn_cast<Instruction>(ElseI->getOperand(I));
+    if (Op == nullptr)
+      continue;
+    if (Op->getParent() == ElseBB)
+      return {Change, true};
+  }
+
+  // Hoist one of the instructions and replace all uses of the other with it.
+  ICF->removeInstruction(ThenI);
+  ICF->insertInstructionTo(ThenI, DestBB);
+  ThenI->moveBefore(DestBB->getTerminator()->getIterator());
+  replaceInstruction(ElseI, ThenI);
+
+  return {true, false};
+}
+
+// Determine if an instruction should be used to initiate hoisting a
+// dependency chain. The aim is to avoid separating instructions, for which it's
+// (heuristically) considered better to keep them together, as it's common that
+// they can be fused in some way. An instruction, which is denied hoisting by
+// this function can still be hoisted if it appears as a dependency (e.g
+// operand) of another hoisted instruction.
+static bool shouldNotInitiateHoisting(const Instruction *I) {
+  // Don't separate GEP's from their loads/stores.
+  if (isa<GetElementPtrInst>(I))
+    return true;
+  const bool IsBinop = isa<BinaryOperator>(I);
+  for (const User *U : I->users()) {
+    // Don't separate conditions from `br` or `select`.
+    if ((isa<CondBrInst>(U) || isa<SelectInst>(U)) && U->getOperand(0) == I)
+      return true;
+    // Don't separate a value from converting that value to a boolean by
+    // comparing it to zero.
+    if (!IsBinop)
+      continue;
+    const auto *ICmp = dyn_cast<ICmpInst>(U);
+    if (ICmp == nullptr || (ICmp->getPredicate() != CmpInst::ICMP_EQ &&
+                            ICmp->getPredicate() != CmpInst::ICMP_NE))
+      continue;
+    const auto *Zero = dyn_cast<ConstantInt>(ICmp->getOperand(1));
+    if (Zero != nullptr && Zero->isZero())
+      return true;
+  }
+  return false;
+}
+
+// Perform trivial hoisting of values from two blocks to their common
+// predecessor.
+bool GVNPassImpl::performHoist(Function &F) {
+  LLVM_DEBUG(dbgs() << "Simple GVNHoist: running on function " << F.getName()
+                    << '\n';);
+  bool Change = false;
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  for (BasicBlock *BB : RPOT) {
+    // Check we have a block of the desired shape.
+    auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+    if (!BI)
+      continue;
+
+    BasicBlock *Then = BI->getSuccessor(0);
+    BasicBlock *Else = BI->getSuccessor(1);
+
+    if (!Then->getSinglePredecessor() || !Else->getSinglePredecessor())
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Simple GVNHoist: looking at block " << BB->getName()
+                      << '\n');
+
+    // Collect all hoistable instructions from the smaller block, then match
+    // them by value number with the instructions from the other block.
+    if (Then->size() > Else->size())
+      std::swap(Then, Else);
+
+    HoistPairs.clear();
+    collectHoistCandidates(Then);
+    matchHoistCandidates(Else);
+
+    // Hoist matched pairs.
+    for (const auto &P : HoistPairs) {
+      const HoistPair &HP = P.second;
+      if (shouldNotInitiateHoisting(HP.ThenI))
+        continue;
+      auto [LocalChange, _] = hoistPair(BB, Then, Else, HP.ThenI);
+      Change |= LocalChange;
+    }
+  }
+
+  return Change;
+}
+
 /// runOnFunction - This is the main transformation entry point for a function.
 bool GVNPassImpl::run(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
                       const TargetLibraryInfo &RunTLI, AAResults &RunAA,
@@ -4000,6 +4252,11 @@ bool GVNPassImpl::run(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
       PREChanged = performPRE(F);
       Changed |= PREChanged;
     }
+  }
+
+  if (GVNEnableSimpleGVNHoist) {
+    LeaderTable.clear();
+    Changed |= performHoist(F);
   }
 
   // FIXME: Should perform GVN again after PRE does something.  PRE can move
