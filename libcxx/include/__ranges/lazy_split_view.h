@@ -188,7 +188,9 @@ private:
       _LIBCPP_HIDE_FROM_ABI value_type() = default;
       _LIBCPP_HIDE_FROM_ABI constexpr explicit value_type(__outer_iterator __i) : __i_(std::move(__i)) {}
 
-      [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __inner_iterator<_Const> begin() const { return __inner_iterator<_Const>{__i_}; }
+      [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __inner_iterator<_Const> begin() const {
+        return __inner_iterator<_Const>{__i_};
+      }
       [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr default_sentinel_t end() const noexcept { return default_sentinel; }
     };
 
