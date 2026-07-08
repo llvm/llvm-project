@@ -74,9 +74,10 @@ contains
   end subroutine
 end subroutine
 
+! A run-time (non-constant) USER condition is accepted; it is resolved at the
+! call site as an if/else cascade during lowering.
 subroutine f06(x)
   integer :: x
-!ERROR: Run-time USER condition in the MATCH clause is not yet implemented
   !$omp declare variant (sub:vsub) match (user={condition(x > 0)})
 contains
   subroutine vsub
