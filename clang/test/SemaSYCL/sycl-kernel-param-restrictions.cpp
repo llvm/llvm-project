@@ -151,33 +151,6 @@ void test(int AS) {
 
 } // namespace badref4
 
-// Test virtual bases.
-// FIXME: explicitly diagnose virtual bases within kernel parameters.
-namespace badref5 {
-// Kernel entry point template definition.
-template<typename KNT, typename T>
-[[clang::sycl_kernel_entry_point(KNT)]]
-void kernel_single_task(T t) {} //expected-note {{within parameter 't' of type 'badref5::Derived' declared here}}
-
-class Base { // expected-note {{within field of type 'Base' declared here}}}
-  int &data; // expected-error {{'int &' cannot be used as the type of a kernel parameter}}
-public:
-  Base(int &a) : data(a) {}
-};
-
-class Derived : virtual Base { // expected-note {{within base class of type 'Base' declared here}}
-public:
-  Derived(int &a) : Base(a) {}
-
-};
-
-void test() {
-  int p = 0;
-  kernel_single_task<class KN<12>>(Derived{p});
-  // expected-note-re@-1 {{in instantiation of function template specialization 'badref5::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
-}
-} // namespace badref5
-
 // Check that a struct that hold a reference and captured by reference by lambda
 // kernel object is diagnosed correctly.
 namespace badref6 {
@@ -316,7 +289,37 @@ public:
 void test() {
   int *ptr;
   kernel_single_task<class KN<24>>(Kernel()); // DOESNT DETECT
-  kernel_single_task<class KN<25>>([=]{ (void)ptr; }); // DOESNT DETECT
+  kernel_single_task<class KN<25>>([=]{ (void)ptr; });
 }
 
 } // namespace nonportable1
+
+// Test virtual bases.
+// FIXME: explicitly diagnose virtual bases within kernel parameters.
+namespace badref5 {
+// Kernel entry point template definition.
+template<typename KNT, typename T>
+[[clang::sycl_kernel_entry_point(KNT)]]
+void kernel_single_task(T t) {} //expected-note {{within parameter 't' of type 'badref5::Derived' declared here}}
+
+class Base { // expected-note {{within field of type 'Base' declared here}}}
+  int &data; // expected-error {{'int &' cannot be used as the type of a kernel parameter}}
+public:
+  Base(int &a) : data(a) {}
+};
+
+class Derived : virtual Base { // expected-note {{within base class of type 'Base' declared here}}
+public:
+  Derived(int &a) : Base(a) {}
+
+};
+
+void test() {
+  int p = 0;
+  kernel_single_task<class KN<12>>(Derived{p});
+  // expected-note-re@-1 {{in instantiation of function template specialization 'badref5::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+
+  Derived d{p};
+  kernel_single_task<class KN<30>>([=]{ (void)d; });
+}
+} // namespace badref5

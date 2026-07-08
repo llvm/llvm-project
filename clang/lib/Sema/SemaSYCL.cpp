@@ -766,12 +766,20 @@ public:
 
       IsValid = false;
       return false;
-    } /*
-    } else if (0 ) { // TODO detect virtual base class 
+    } 
+    if (CXXRecordDecl *RD = Ty->getAsCXXRecordDecl()) {
+      if (RD->getNumVBases() > 0) {
+        auto DirectParent = ObjectAccessPath.back();
+        auto *DirectFieldParent = cast<const FieldDecl *>(DirectParent);
+        SemaSYCLRef.Diag(DirectFieldParent->getLocation(),
+                         diag::err_sycl_kernel_param_has_vbase)
+            << DirectFieldParent->getType();
+        emitObjectAccessPathNotes();
 
-    } // TODO introduce warning to detect pointers 
-    // "sycl portability warning: it is user's responsibility to ensure pointers being used are USM"
-    */
+        IsValid = false;
+        return false;
+      }
+    }
     // Warn about pointer parameters in SYCL kernels if non-portable SYCL
     // warnings are enabled.
     if (Ty->isPointerType()) {
