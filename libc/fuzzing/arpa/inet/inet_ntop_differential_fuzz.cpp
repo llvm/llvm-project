@@ -38,9 +38,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   char ref_dst[BUFFER_SIZE];
   char impl_dst[BUFFER_SIZE];
 
-  // Initialize buffers with sentinel
-  memset(ref_dst, 0x5A, BUFFER_SIZE);
-  memset(impl_dst, 0x5A, BUFFER_SIZE);
+  constexpr uint8_t SENTINEL = 0x5a;
+  memset(ref_dst, SENTINEL, BUFFER_SIZE);
+  memset(impl_dst, SENTINEL, BUFFER_SIZE);
 
   // Call reference implementation
   const char *ref_res = ::inet_ntop(af, address_bytes, ref_dst, dst_size);
@@ -92,11 +92,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   // Check for out-of-bounds writes
   for (size_t i = dst_size; i < BUFFER_SIZE; ++i) {
-    if (impl_dst[i] != 0x5A) {
+    if (impl_dst[i] != SENTINEL) {
       fprintf(stderr,
-              "Out-of-bounds write detected at index %zu (expected 0x5A, got "
+              "Out-of-bounds write detected at index %zu (expected 0x%02x, got "
               "0x%02x)!\n",
-              i, (unsigned char)impl_dst[i]);
+              i, SENTINEL, static_cast<uint8_t>(impl_dst[i]));
       print_details();
       __builtin_trap();
     }
