@@ -1470,11 +1470,13 @@ const char *Prescanner::FixedFormContinuationLine(bool atNewline) {
   const char *afterWhiteSpace{SkipWhiteSpace(nextLine_)};
   const char *afterCComment{
       IsCComment(afterWhiteSpace) ? SkipCComment(afterWhiteSpace) : nullptr};
+  std::uint64_t maxLineLength{static_cast<std::uint64_t>(limit_ - nextLine_)};
+  std::uint64_t n{maxLineLength < 5 ? maxLineLength - 1 : 4};
   int trailingSpaces{0};
   for (std::uint64_t i{afterCComment
                ? static_cast<std::uint64_t>(afterCComment - nextLine_)
                : 1};
-      i <= 4 && nextLine_[i] == ' '; ++i) {
+      i <= n && nextLine_[i] == ' '; ++i) {
     ++trailingSpaces;
   }
   bool cCommentAndSpaces{
