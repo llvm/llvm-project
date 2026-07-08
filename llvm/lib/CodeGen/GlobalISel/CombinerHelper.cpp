@@ -3225,7 +3225,7 @@ bool CombinerHelper::matchCombineInsertVecElts(
   Register TmpReg;
   MatchInfo.resize(NumElts);
   while (mi_match(
-      CurrInst->getOperand(0).getReg(), MRI,
+      *CurrInst, MRI,
       m_GInsertVecElt(m_MInstr(TmpInst), m_Reg(TmpReg), m_ICst(IntImm)))) {
     if (IntImm >= NumElts || IntImm < 0)
       return false;
