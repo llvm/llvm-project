@@ -2009,8 +2009,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
               return false;
             // Non-constant live-ins require broadcasts, while constants do not
             // need explicit broadcasts.
-            auto *IRV = dyn_cast<VPIRValue>(Op);
-            bool LiveInNeedsBroadcast = IRV && !isa<Constant>(IRV->getValue());
+            bool LiveInNeedsBroadcast =
+                isa<VPIRValue>(Op) && !isa<VPConstant>(Op);
             auto *OpR = dyn_cast<VPReplicateRecipe>(Op);
             return LiveInNeedsBroadcast || (OpR && OpR->isSingleScalar());
           }))
@@ -5120,8 +5120,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 
   auto *VectorPreheader = Plan.getVectorPreheader();
   for (VPValue *VPV : VPValues) {
-    if (vputils::onlyScalarValuesUsed(VPV) ||
-        (isa<VPIRValue>(VPV) && isa<Constant>(VPV->getLiveInIRValue())))
+    if (vputils::onlyScalarValuesUsed(VPV) || isa<VPConstant>(VPV))
       continue;
 
     // Add explicit broadcast at the insert point that dominates all users.
