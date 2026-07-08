@@ -19,12 +19,9 @@
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
+class Stream;
 
 class DynamicRegisterInfo {
-protected:
-  DynamicRegisterInfo(DynamicRegisterInfo &) = default;
-  DynamicRegisterInfo &operator=(DynamicRegisterInfo &) = default;
-
 public:
   struct Register {
     ConstString name;
@@ -46,6 +43,9 @@ public:
   };
 
   DynamicRegisterInfo() = default;
+  DynamicRegisterInfo(DynamicRegisterInfo &) = default;
+  DynamicRegisterInfo &operator=(DynamicRegisterInfo &) = default;
+
 
   static std::unique_ptr<DynamicRegisterInfo>
   Create(const StructuredData::Dictionary &dict, const ArchSpec &arch);
@@ -80,7 +80,7 @@ public:
   const lldb_private::RegisterInfo *GetRegisterInfo(uint32_t kind,
                                                     uint32_t num) const;
 
-  void Dump() const;
+  void Dump(Stream &s) const;
 
   void Clear();
 

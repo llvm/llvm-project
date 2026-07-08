@@ -21,7 +21,7 @@ lb a0, 0(a1), %qc.access(extern1)
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
 # CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-RV64: [[@LINE-8]]:15: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-8]]:15: note: unexpected extra operand for instruction
 # CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 lbu a0, 0(a1), %qc.access(extern1)
@@ -32,7 +32,7 @@ lbu a0, 0(a1), %qc.access(extern1)
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
 # CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-RV64: [[@LINE-8]]:16: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-8]]:16: note: unexpected extra operand for instruction
 # CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 lh a2, 0(a3), %qc.access(extern2)
@@ -43,7 +43,7 @@ lh a2, 0(a3), %qc.access(extern2)
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
 # CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-RV64: [[@LINE-8]]:15: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-8]]:15: note: unexpected extra operand for instruction
 # CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 lhu a2, 0(a3), %qc.access(extern2)
@@ -54,7 +54,7 @@ lhu a2, 0(a3), %qc.access(extern2)
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
 # CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-RV64: [[@LINE-8]]:16: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-8]]:16: note: unexpected extra operand for instruction
 # CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 lw a4, 0(a5), %qc.access(extern4)
@@ -65,7 +65,7 @@ lw a4, 0(a5), %qc.access(extern4)
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern4
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
 # CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-RV64: [[@LINE-8]]:15: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-8]]:15: note: unexpected extra operand for instruction
 # CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 sb a0, 0(a1), %qc.access(extern1)
@@ -76,7 +76,7 @@ sb a0, 0(a1), %qc.access(extern1)
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
 # CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-RV64: [[@LINE-8]]:15: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-8]]:15: note: unexpected extra operand for instruction
 # CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 sh a2, 0(a3), %qc.access(extern2)
@@ -87,7 +87,7 @@ sh a2, 0(a3), %qc.access(extern2)
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
 # CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-RV64: [[@LINE-8]]:15: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-8]]:15: note: unexpected extra operand for instruction
 # CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 sw a4, 0(a5), %qc.access(extern4)
@@ -98,7 +98,7 @@ sw a4, 0(a5), %qc.access(extern4)
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern4
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
 # CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-RV64: [[@LINE-8]]:15: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-8]]:15: note: unexpected extra operand for instruction
 # CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 ## No c.lb
@@ -111,7 +111,7 @@ c.lbu a0, 0(a1), %qc.access(extern1)
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
 # CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-RV64: [[@LINE-8]]:18: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-8]]:18: note: unexpected extra operand for instruction
 # CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 c.lh a2, 0(a3), %qc.access(extern2)
@@ -122,7 +122,7 @@ c.lh a2, 0(a3), %qc.access(extern2)
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
 # CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-RV64: [[@LINE-8]]:17: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-8]]:17: note: unexpected extra operand for instruction
 # CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 c.lhu a2, 0(a3), %qc.access(extern2)
@@ -133,7 +133,7 @@ c.lhu a2, 0(a3), %qc.access(extern2)
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
 # CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-RV64: [[@LINE-8]]:18: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-8]]:18: note: unexpected extra operand for instruction
 # CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 c.lw a4, 0(a5), %qc.access(extern4)
@@ -144,7 +144,7 @@ c.lw a4, 0(a5), %qc.access(extern4)
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern4
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
 # CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-RV64: [[@LINE-8]]:17: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-8]]:17: note: unexpected extra operand for instruction
 # CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 c.sb a0, 0(a1), %qc.access(extern1)
@@ -155,7 +155,7 @@ c.sb a0, 0(a1), %qc.access(extern1)
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
 # CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-RV64: [[@LINE-8]]:17: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-8]]:17: note: unexpected extra operand for instruction
 # CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 c.sh a2, 0(a3), %qc.access(extern2)
@@ -166,7 +166,7 @@ c.sh a2, 0(a3), %qc.access(extern2)
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
 # CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-RV64: [[@LINE-8]]:17: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-8]]:17: note: unexpected extra operand for instruction
 # CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 c.sw a4, 0(a5), %qc.access(extern4)
@@ -177,5 +177,5 @@ c.sw a4, 0(a5), %qc.access(extern4)
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern4
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
 # CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-RV64: [[@LINE-8]]:17: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-8]]:17: note: unexpected extra operand for instruction
 # CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
