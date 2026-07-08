@@ -40,11 +40,8 @@ mlir::Value
 OpenACCIntrinsicLibrary::genACCOnDevice(mlir::Type resultType,
                                         llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 1);
-  mlir::Value deviceType = args[0];
-  if (deviceType.getType() != builder.getI32Type())
-    deviceType = builder.createConvert(loc, builder.getI32Type(), deviceType);
   mlir::Value onDevice =
-      mlir::acc::OnDeviceOp::create(builder, loc, deviceType).getResult();
+      mlir::acc::OnDeviceOp::create(builder, loc, args[0]).getResult();
   return builder.createConvert(loc, resultType, onDevice);
 }
 
