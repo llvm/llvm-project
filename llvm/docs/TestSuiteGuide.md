@@ -291,8 +291,7 @@ benchmarks. CMake can print a list of them:
   {ref}`here <OriginalDI>`).
   This requires the C and C++ compilers to be a version of Clang built with the
   feature `LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=COVERAGE_AND_ORIGIN` (see
-  {ref}`here <DebugifyCoverageTracking>`)
-  for more info).
+  {ref}`here <DebugifyCoverageTracking>` for more info).
 
 ### Common CMake Flags
 
