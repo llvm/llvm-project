@@ -12,9 +12,8 @@ define ptr @test_cmp_sink(ptr %p, ptr %freep, i32 %n) {
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movs r2, r3
 ; CHECK-NEXT:    ldr r3, [r1]
+; CHECK-NEXT:    movs r1, r3
 ; CHECK-NEXT:    cmp r3, r0
-; CHECK-NEXT:    mov r12, r3
-; CHECK-NEXT:    mov r1, r12
 ; CHECK-NEXT:    bne .LBB0_2
 ; CHECK-NEXT:  @ %bb.3: @ %exit
 ; CHECK-NEXT:    movs r0, r2

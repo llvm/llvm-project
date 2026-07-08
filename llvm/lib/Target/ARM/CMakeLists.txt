@@ -43,6 +43,7 @@ add_llvm_target(ARMCodeGen
   ARMLegalizerInfo.cpp
   ARMParallelDSP.cpp
   ARMLoadStoreOptimizer.cpp
+  ARMPostRAPeephole.cpp
   ARMLowOverheadLoops.cpp
   ARMBlockPlacement.cpp
   ARMMCInstLower.cpp
