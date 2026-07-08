@@ -6211,6 +6211,7 @@ Value *ScalarExprEmitter::VisitAtomicExpr(AtomicExpr *E) {
 /// Emit the computation of the specified expression of scalar type, ignoring
 /// the result.
 Value *CodeGenFunction::EmitScalarExpr(const Expr *E, bool IgnoreResultAssign) {
+  assert(E && "Invalid expression to emit");
   assert(E && hasScalarEvaluationKind(E->getType()) &&
          "Invalid scalar expression to emit");
 

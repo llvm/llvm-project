@@ -8,16 +8,24 @@ void foo() {
 }
 
 #ifndef VERSION52
-void bar(int N) { // expected-note {{declared here}}
+void bar(int N) { // expected-note 2 {{declared here}}
   // 1. Invalid syntax of the dims modifier.
 
 #pragma omp target teams num_teams(dims 2: 4) // expected-error {{use of undeclared identifier 'dims'}}
+  foo();
+
+#pragma omp parallel num_threads(dims 2: 4) // expected-error {{use of undeclared identifier 'dims'}}
   foo();
 
 #pragma omp target thread_limit(dim(2) 4, 5)
   // expected-error@-1 {{use of undeclared identifier 'dim'}}
   // expected-error@-2 {{expected ',' or ')' in 'thread_limit' clause}}
   // expected-error@-3 {{unexpected number of expressions in 'thread_limit' clause (expected 1, have 3)}}
+  foo();
+
+#pragma omp parallel num_threads(dim(2) 4, 5)
+  // expected-error@-1 {{use of undeclared identifier 'dim'}}
+  // expected-error@-2 {{expected ',' or ')' in 'num_threads' clause}}
   foo();
 
 #pragma omp target thread_limit(dims((2): 4, 5)
@@ -28,16 +36,35 @@ void bar(int N) { // expected-note {{declared here}}
   // expected-error@-5 {{missing ':' after thread_limit modifier}}
   foo();
 
+#pragma omp parallel num_threads(dims((2): 4, 5)
+  // expected-error@-1 {{expected ')'}}
+  // expected-error@-2 {{expected ')'}}
+  // expected-note@-3 {{to match this '('}}
+  // expected-note@-4 {{to match this '('}}
+  // expected-error@-5 {{missing ':' after num_threads modifier}}
+  foo();
+
 #pragma omp target thread_limit(dims(2)): 4, 5)
   // expected-error@-1 {{missing ':' after thread_limit modifier}}
   // expected-warning@-2 {{extra tokens at the end of '#pragma omp target' are ignored}}
   foo();
 
+#pragma omp parallel num_threads(dims(2)): 4, 5)
+  // expected-error@-1 {{missing ':' after num_threads modifier}}
+  // expected-warning@-2 {{extra tokens at the end of '#pragma omp parallel' are ignored}}
+  foo();
+
 #pragma omp target thread_limit(dims(2) 4, 5) // expected-error {{missing ':' after thread_limit modifier}}
+  foo();
+
+#pragma omp parallel num_threads(dims(2) 4, 5) // expected-error {{missing ':' after num_threads modifier}}
   foo();
 
 #pragma omp target teams distribute num_teams(dims(): 4) // expected-error {{expected expression}}
   for (int i = 0; i < 10; ++i) {}
+
+#pragma omp parallel num_threads(dims(): 4) // expected-error {{expected expression}}
+  foo();
 
   // 3. Incompatible modifiers.
 
@@ -52,6 +79,9 @@ void bar(int N) { // expected-note {{declared here}}
 #pragma omp target thread_limit(dims(1): 4, 5) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 1, have 2)}}
   foo();
 
+#pragma omp parallel num_threads(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_threads' clause (expected 2, have 1)}}
+  foo();
+
 #pragma omp target teams distribute num_teams(dims(3): 4, 5) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 3, have 2)}}
   for (int i = 0; i < 10; ++i) {}
 
@@ -61,6 +91,9 @@ void bar(int N) { // expected-note {{declared here}}
   foo();
 
 #pragma omp target thread_limit(dims(4): 1, 2, 3, 4) // expected-error {{maximum three expressions are supported in 'thread_limit' clause}}
+  foo();
+
+#pragma omp parallel num_threads(dims(4): 1, 2, 3, 4) // expected-error {{maximum three expressions are supported in 'num_threads' clause}}
   foo();
 
 #pragma omp target teams distribute thread_limit(dims(4): 1, 2, 3, 4) // expected-error {{maximum three expressions are supported in 'thread_limit' clause}}
@@ -81,13 +114,24 @@ void bar(int N) { // expected-note {{declared here}}
   // expected-note@-2 {{function parameter 'N' with unknown value cannot be used in a constant expression}}
   foo();
 
+#pragma omp parallel num_threads(dims(N): 1, 2)
+  // expected-error@-1 {{expression is not an integral constant expression}}
+  // expected-note@-2 {{function parameter 'N' with unknown value cannot be used in a constant expression}}
+  foo();
+
 #pragma omp target thread_limit(dims(2.5): 1, 2) // expected-error {{integral constant expression must have integral or unscoped enumeration type, not 'double'}}
+  foo();
+
+#pragma omp parallel num_threads(dims(2.5): 1, 2) // expected-error {{integral constant expression must have integral or unscoped enumeration type, not 'double'}}
   foo();
 
 #pragma omp target teams distribute num_teams(dims(0): 4) // expected-error {{argument to 'num_teams' clause must be a strictly positive integer value}}
   for (int i = 0; i < 10; ++i) {}
 
 #pragma omp target teams thread_limit(dims(-1): 4) // expected-error {{argument to 'thread_limit' clause must be a strictly positive integer value}}
+  foo();
+
+#pragma omp parallel num_threads(dims(0): 4) // expected-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
   foo();
 
   // 6. Coverage of directives.
@@ -197,6 +241,11 @@ void template_test() {
   // expected-error@-2 {{argument to 'thread_limit' clause must be a strictly positive integer value}}
   foo();
 
+#pragma omp parallel num_threads(dims(D): 4)
+  // expected-error@-1 {{unexpected number of expressions in 'num_threads' clause}}
+  // expected-error@-2 {{argument to 'num_threads' clause must be a strictly positive integer value}}
+  foo();
+
 #pragma omp target teams distribute num_teams(dims(D): 4, 5)
   // expected-error@-1 {{unexpected number of expressions in 'num_teams' clause}}
   // expected-error@-2 {{argument to 'num_teams' clause must be a strictly positive integer value}}
@@ -217,6 +266,9 @@ void version() {
   foo();
 
 #pragma omp target thread_limit(dims(1): 4) // expected-error {{'dims' modifier in 'thread_limit' clause requires OpenMP 6.1 or later}}
+  foo();
+
+#pragma omp target parallel num_threads(dims(1): 4) // expected-error {{'dims' modifier in 'num_threads' clause requires OpenMP 6.1 or later}}
   foo();
 }
 #endif

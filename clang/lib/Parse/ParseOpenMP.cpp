@@ -3255,7 +3255,6 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
 
   switch (CKind) {
   case OMPC_final:
-  case OMPC_num_threads:
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_collapse:
@@ -3322,7 +3321,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
         PP.LookAhead(/*N=*/0).isNot(tok::l_paren))
       Clause = ParseOpenMPClause(CKind, WrongDirective);
     else if (CKind == OMPC_grainsize || CKind == OMPC_num_tasks ||
-             CKind == OMPC_num_threads || CKind == OMPC_dyn_groupprivate)
+             CKind == OMPC_dyn_groupprivate)
       Clause = ParseOpenMPSingleExprWithArgClause(DKind, CKind, WrongDirective);
     else
       Clause = ParseOpenMPSingleExprClause(CKind, WrongDirective);
@@ -3460,6 +3459,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     break;
   case OMPC_num_teams:
   case OMPC_thread_limit:
+  case OMPC_num_threads:
     if (!FirstClause) {
       Diag(Tok, diag::err_omp_more_one_clause)
           << getOpenMPDirectiveName(DKind, OMPVersion)
@@ -4370,33 +4370,6 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
       Arg.push_back(OMPC_NUMTASKS_unknown);
       KLoc.emplace_back();
     }
-  } else if (Kind == OMPC_num_threads) {
-    // Parse optional <num_threads modifier> ':'
-    OpenMPNumThreadsClauseModifier Modifier =
-        static_cast<OpenMPNumThreadsClauseModifier>(getOpenMPSimpleClauseType(
-            Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok),
-            getLangOpts()));
-    if (getLangOpts().OpenMP >= 60) {
-      if (NextToken().is(tok::colon)) {
-        Arg.push_back(Modifier);
-        KLoc.push_back(Tok.getLocation());
-        // Parse modifier
-        ConsumeAnyToken();
-        // Parse ':'
-        ConsumeAnyToken();
-      } else {
-        if (Modifier == OMPC_NUMTHREADS_strict) {
-          Diag(Tok, diag::err_modifier_expected_colon) << "strict";
-          // Parse modifier
-          ConsumeAnyToken();
-        }
-        Arg.push_back(OMPC_NUMTHREADS_unknown);
-        KLoc.emplace_back();
-      }
-    } else {
-      Arg.push_back(OMPC_NUMTHREADS_unknown);
-      KLoc.emplace_back();
-    }
   } else {
     assert(Kind == OMPC_if);
     KLoc.push_back(Tok.getLocation());
@@ -4417,11 +4390,11 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
     }
   }
 
-  bool NeedAnExpression =
-      (Kind == OMPC_schedule && DelimLoc.isValid()) ||
-      (Kind == OMPC_dist_schedule && DelimLoc.isValid()) || Kind == OMPC_if ||
-      Kind == OMPC_device || Kind == OMPC_grainsize || Kind == OMPC_num_tasks ||
-      Kind == OMPC_num_threads || Kind == OMPC_dyn_groupprivate;
+  bool NeedAnExpression = (Kind == OMPC_schedule && DelimLoc.isValid()) ||
+                          (Kind == OMPC_dist_schedule && DelimLoc.isValid()) ||
+                          Kind == OMPC_if || Kind == OMPC_device ||
+                          Kind == OMPC_grainsize || Kind == OMPC_num_tasks ||
+                          Kind == OMPC_dyn_groupprivate;
   if (NeedAnExpression) {
     SourceLocation ELoc = Tok.getLocation();
     ExprResult LHS(
@@ -5398,6 +5371,79 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         // Could not find the colon after the expression, revert it and let this
         // function parse it as a list of expressions.
         TPA.Revert();
+      }
+    }
+  } else if (Kind == OMPC_num_threads) {
+    Data.ExtraModifierArray[0] = static_cast<int>(OMPC_NUMTHREADS_unknown);
+    Data.ExtraModifierArray[1] = static_cast<int>(OMPC_NUMTHREADS_unknown);
+
+    bool HasModifier = false;
+    while (true) {
+      if (Tok.is(tok::identifier) && Tok.getIdentifierInfo()->isStr("dims") &&
+          NextToken().is(tok::l_paren)) {
+
+        SourceLocation TLoc = Tok.getLocation();
+        ConsumeToken();
+        SourceLocation RLoc;
+
+        ExprResult ExprR =
+            ParseOpenMPParensExpr(getOpenMPClauseName(Kind), RLoc);
+
+        if (Data.ExtraModifierArray[1] != OMPC_NUMTHREADS_unknown) {
+          Diag(TLoc, diag::err_omp_duplicate_modifier)
+              << getOpenMPSimpleClauseTypeName(Kind, OMPC_NUMTHREADS_dims)
+              << getOpenMPClauseName(Kind);
+        } else if (ExprR.isUsable()) {
+          Data.ExtraModifierArray[1] = static_cast<int>(OMPC_NUMTHREADS_dims);
+          Data.ExtraModifierExprArray[1] = ExprR.get();
+          Data.ExtraModifierLocArray[1] = TLoc;
+        }
+        HasModifier = true;
+      } else {
+        OpenMPNumThreadsClauseModifier Modifier =
+            static_cast<OpenMPNumThreadsClauseModifier>(
+                getOpenMPSimpleClauseType(
+                    Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok),
+                    getLangOpts()));
+
+        // The dims modifier is a complex modifier. It must be parsed above.
+        if (Modifier == OMPC_NUMTHREADS_dims)
+          Modifier = OMPC_NUMTHREADS_unknown;
+
+        if (Modifier != OMPC_NUMTHREADS_unknown) {
+          if (Data.ExtraModifierArray[0] != OMPC_NUMTHREADS_unknown) {
+            Diag(Tok, diag::err_omp_duplicate_modifier)
+                << getOpenMPSimpleClauseTypeName(Kind, OMPC_NUMTHREADS_strict)
+                << getOpenMPClauseName(Kind);
+          } else {
+            Data.ExtraModifierArray[0] = Modifier;
+            Data.ExtraModifierLocArray[0] = Tok.getLocation();
+          }
+          ConsumeAnyToken();
+          HasModifier = true;
+        } else {
+          break;
+        }
+      }
+
+      if (Tok.is(tok::comma)) {
+        ConsumeToken();
+      } else {
+        break;
+      }
+    }
+
+    if (HasModifier) {
+      if (Tok.is(tok::colon)) {
+        ConsumeToken();
+      } else {
+        Diag(Tok, diag::err_modifier_expected_colon)
+            << getOpenMPClauseName(Kind);
+        SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
+        Data.RLoc = Tok.getLocation();
+        if (!T.consumeClose())
+          Data.RLoc = T.getCloseLocation();
+        return true;
       }
     }
   }

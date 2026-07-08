@@ -2356,8 +2356,10 @@ void OMPClauseEnqueue::VisitOMPFinalClause(const OMPFinalClause *C) {
 }
 
 void OMPClauseEnqueue::VisitOMPNumThreadsClause(const OMPNumThreadsClause *C) {
+  if (const Expr *Modifier = C->getDimsModifierExpr())
+    Visitor->AddStmt(Modifier);
+  VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
-  Visitor->AddStmt(C->getNumThreads());
 }
 
 void OMPClauseEnqueue::VisitOMPSafelenClause(const OMPSafelenClause *C) {
