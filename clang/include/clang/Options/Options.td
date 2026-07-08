@@ -4470,11 +4470,13 @@ def fstack_limit_variable_EQ : Joined<["-"], "fstack-limit-variable=">, Group<f_
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Emit a function prologue that traps when the free stack space "
            "(SP - <var>) is smaller than the frame this function needs. "
-           "<var> is a global variable holding the stack limit">,
+           "<var> is a global variable holding the stack limit. The limit "
+           "value must be 4-byte aligned">,
   MarshallingInfoString<CodeGenOpts<"StackLimitVariable">>,
   DocBrief<"Emit a function prologue that compares free stack space against the "
            "global named by <var> and executes a trap instruction on "
-           "insufficient space">;
+           "insufficient space. The value stored in <var> must be 4-byte "
+           "aligned">;
 def fstack_limit_trap_number_EQ : Joined<["-"], "fstack-limit-trap-number=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the immediate operand of the trap instruction emitted by "

@@ -3,14 +3,20 @@
 
 ; The -fstack-limit-variable=<var> prologue is emitted only for functions that
 ; carry the "stack-limit-variable"="<var>" attribute and have a non-empty stack
-; frame. It loads <var>, computes the free space (sp - limit), compares it
-; against the frame size and traps with "svc #255" when it is too small.
-; Thumb1 has no movw/movt or wide encodings, so the sequence loads the limit's
-; address from the constant pool and does the arithmetic in two low registers
-; (r2/r3). Under AAPCS arguments are assigned r0, r1, r2, r3 in order, so
-; r2/r3 are the argument registers least likely to be live on entry. Each is
-; used directly if dead and preserved with push/pop only if it still carries a
-; live argument.
+; frame. Thumb1 has no movw/movt or wide encodings and no "sub" that reads sp,
+; so the sequence loads <var> through the constant pool, computes the lowest
+; admissible sp value (limit + frame size) and compares sp against it directly
+; (ARMv6-M permits sp as the first operand of a register-register cmp),
+; trapping with "svc" when the stack is too small. Small frames need one
+; low scratch register (r3), large frames a second one (r2) to hold the frame
+; size. Under AAPCS arguments are assigned r0, r1, r2, r3 in order, so r2/r3
+; are the argument registers least likely to be live on entry. A scratch is
+; used directly if dead. The first live one is stashed in r12 with mov (no
+; stack traffic), and push/pop is a fallback used only when a large-frame
+; check requires both r2 and r3. In that fallback the check is split in two:
+; sp is first compared against the limit itself, so the push runs only when sp
+; is provably above the limit and never writes below it. (A function where r12
+; itself is live on entry is rejected. see stack-limit-variable-diagnostics.ll.)
 
 declare void @sink(ptr)
 
@@ -18,11 +24,10 @@ declare void @sink(ptr)
 define void @needs_check() #0 {
 ; CHECK-LABEL: needs_check:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mov r3, sp
-; CHECK-NEXT:    ldr r2, .LCPI0_0
-; CHECK-NEXT:    ldr r2, [r2]
-; CHECK-NEXT:    sub r3, r3, r2
-; CHECK-NEXT:    cmp r3, #72
+; CHECK-NEXT:    ldr r3, .LCPI0_0
+; CHECK-NEXT:    ldr r3, [r3]
+; CHECK-NEXT:    adds r3, #72
+; CHECK-NEXT:    cmp sp, r3
 ; CHECK-NEXT:    bhs .LBB0_2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:    svc #255
@@ -50,12 +55,11 @@ entry:
 define void @large_frame() #0 {
 ; CHECK-LABEL: large_frame:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mov r3, sp
-; CHECK-NEXT:    ldr r2, .LCPI1_0
-; CHECK-NEXT:    ldr r2, [r2]
-; CHECK-NEXT:    sub r3, r3, r2
+; CHECK-NEXT:    ldr r3, .LCPI1_0
+; CHECK-NEXT:    ldr r3, [r3]
 ; CHECK-NEXT:    ldr r2, .LCPI1_1
-; CHECK-NEXT:    cmp r3, r2
+; CHECK-NEXT:    adds r3, r3, r2
+; CHECK-NEXT:    cmp sp, r3
 ; CHECK-NEXT:    bhs .LBB1_2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:    svc #255
@@ -90,11 +94,10 @@ entry:
 define void @custom_var() #1 {
 ; CHECK-LABEL: custom_var:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mov r3, sp
-; CHECK-NEXT:    ldr r2, .LCPI2_0
-; CHECK-NEXT:    ldr r2, [r2]
-; CHECK-NEXT:    sub r3, r3, r2
-; CHECK-NEXT:    cmp r3, #72
+; CHECK-NEXT:    ldr r3, .LCPI2_0
+; CHECK-NEXT:    ldr r3, [r3]
+; CHECK-NEXT:    adds r3, #72
+; CHECK-NEXT:    cmp sp, r3
 ; CHECK-NEXT:    bhs .LBB2_2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:    svc #255
@@ -121,11 +124,10 @@ entry:
 define void @custom_trap() #2 {
 ; CHECK-LABEL: custom_trap:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mov r3, sp
-; CHECK-NEXT:    ldr r2, .LCPI3_0
-; CHECK-NEXT:    ldr r2, [r2]
-; CHECK-NEXT:    sub r3, r3, r2
-; CHECK-NEXT:    cmp r3, #72
+; CHECK-NEXT:    ldr r3, .LCPI3_0
+; CHECK-NEXT:    ldr r3, [r3]
+; CHECK-NEXT:    adds r3, #72
+; CHECK-NEXT:    cmp sp, r3
 ; CHECK-NEXT:    bhs .LBB3_2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:    svc #42
@@ -148,18 +150,18 @@ entry:
   ret void
 }
 
-; All four argument registers are live on entry, so both scratch registers
-; (r2, r3) are preserved with push/pop around the check.
+; All four argument registers are live on entry. The small frame needs only
+; one scratch register (r3), which is stashed in r12 around the check; nothing
+; is written to the stack.
 define i32 @args_live(i32 %a, i32 %b, i32 %c, i32 %d) #0 {
 ; CHECK-LABEL: args_live:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r2, r3}
-; CHECK-NEXT:    mov r3, sp
-; CHECK-NEXT:    ldr r2, .LCPI4_0
-; CHECK-NEXT:    ldr r2, [r2]
-; CHECK-NEXT:    sub r3, r3, r2
-; CHECK-NEXT:    cmp r3, #88
-; CHECK-NEXT:    pop {r2, r3}
+; CHECK-NEXT:    mov r12, r3
+; CHECK-NEXT:    ldr r3, .LCPI4_0
+; CHECK-NEXT:    ldr r3, [r3]
+; CHECK-NEXT:    adds r3, #88
+; CHECK-NEXT:    cmp sp, r3
+; CHECK-NEXT:    mov r3, r12
 ; CHECK-NEXT:    bhs .LBB4_2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:    svc #255
@@ -192,18 +194,16 @@ entry:
   ret i32 %r
 }
 
-; Three argument registers are live (r0, r1, r2); only r2 collides with the
-; scratch registers, so just r2 is preserved and r3 is used directly.
+; Three argument registers are live (r0, r1, r2). The only scratch register
+; the small frame needs (r3) is dead, so it is clobbered directly with no
+; save at all.
 define i32 @three_args(i32 %a, i32 %b, i32 %c) #0 {
 ; CHECK-LABEL: three_args:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r2}
-; CHECK-NEXT:    mov r3, sp
-; CHECK-NEXT:    ldr r2, .LCPI5_0
-; CHECK-NEXT:    ldr r2, [r2]
-; CHECK-NEXT:    sub r3, r3, r2
-; CHECK-NEXT:    cmp r3, #80
-; CHECK-NEXT:    pop {r2}
+; CHECK-NEXT:    ldr r3, .LCPI5_0
+; CHECK-NEXT:    ldr r3, [r3]
+; CHECK-NEXT:    adds r3, #80
+; CHECK-NEXT:    cmp sp, r3
 ; CHECK-NEXT:    bhs .LBB5_2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:    svc #255
@@ -230,6 +230,123 @@ entry:
   call void @sink(ptr %buf)
   %t0 = add i32 %a, %b
   %r = add i32 %t0, %c
+  ret i32 %r
+}
+
+; A large frame with three argument registers live (r0, r1, r2). Both scratch
+; registers are needed, but only r2 is live, so it is stashed in r12 and no
+; push is required.
+define i32 @large_frame_three_args(i32 %a, i32 %b, i32 %c) #0 {
+; CHECK-LABEL: large_frame_three_args:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    mov r12, r2
+; CHECK-NEXT:    ldr r3, .LCPI6_0
+; CHECK-NEXT:    ldr r3, [r3]
+; CHECK-NEXT:    ldr r2, .LCPI6_1
+; CHECK-NEXT:    adds r3, r3, r2
+; CHECK-NEXT:    cmp sp, r3
+; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    bhs .LBB6_2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:    svc #255
+; CHECK-NEXT:  .LBB6_2: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    .pad #508
+; CHECK-NEXT:    sub sp, #508
+; CHECK-NEXT:    .pad #508
+; CHECK-NEXT:    sub sp, #508
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, #16
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    add r0, sp, #8
+; CHECK-NEXT:    bl sink
+; CHECK-NEXT:    adds r0, r6, r5
+; CHECK-NEXT:    adds r0, r0, r4
+; CHECK-NEXT:    add sp, #508
+; CHECK-NEXT:    add sp, #508
+; CHECK-NEXT:    add sp, #16
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.3:
+; CHECK-NEXT:  .LCPI6_0:
+; CHECK-NEXT:    .long __stack_boundary
+; CHECK-NEXT:  .LCPI6_1:
+; CHECK-NEXT:    .long 1048 @ 0x418
+entry:
+  %buf = alloca [1024 x i8], align 1
+  call void @sink(ptr %buf)
+  %t0 = add i32 %a, %b
+  %r = add i32 %t0, %c
+  ret i32 %r
+}
+
+; A large frame with all four argument registers live. Both scratch registers
+; are needed and both are live, but r12 is a single slot, so r3 goes to r12
+; and r2 falls back to a push/pop. The check is split in two: sp is first
+; compared against the limit itself and traps if the stack is exhausted, and
+; only then is r2 pushed (provably at or above the limit) and the frame-size
+; check run. Both paths share one restore of r3 before the final branch, which
+; is bhi so that a single condition suits the flags of either comparison. The
+; frame size is rounded up to a multiple of 4 and biased by -8 (1048 -> 1040
+; here). The rationale of the bias is that checking
+; sp - 4 > limit + alignedSize - 8 is equivalent to checking
+; sp >= limit + alignedSize.
+define i32 @large_frame_args_live(i32 %a, i32 %b, i32 %c, i32 %d) #0 {
+; CHECK-LABEL: large_frame_args_live:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    mov r12, r3
+; CHECK-NEXT:    ldr r3, .LCPI7_0
+; CHECK-NEXT:    ldr r3, [r3]
+; CHECK-NEXT:    cmp sp, r3
+; CHECK-NEXT:    bls .LBB7_2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:    push {r2}
+; CHECK-NEXT:    ldr r2, .LCPI7_1
+; CHECK-NEXT:    adds r3, r3, r2
+; CHECK-NEXT:    cmp sp, r3
+; CHECK-NEXT:    pop {r2}
+; CHECK-NEXT:  .LBB7_2:
+; CHECK-NEXT:    mov r3, r12
+; CHECK-NEXT:    bhi .LBB7_4
+; CHECK-NEXT:  @ %bb.3:
+; CHECK-NEXT:    svc #255
+; CHECK-NEXT:  .LBB7_4: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    .pad #508
+; CHECK-NEXT:    sub sp, #508
+; CHECK-NEXT:    .pad #508
+; CHECK-NEXT:    sub sp, #508
+; CHECK-NEXT:    .pad #12
+; CHECK-NEXT:    sub sp, #12
+; CHECK-NEXT:    mov r4, r3
+; CHECK-NEXT:    mov r5, r2
+; CHECK-NEXT:    mov r6, r1
+; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    add r0, sp, #4
+; CHECK-NEXT:    bl sink
+; CHECK-NEXT:    adds r0, r5, r4
+; CHECK-NEXT:    adds r1, r7, r6
+; CHECK-NEXT:    adds r0, r1, r0
+; CHECK-NEXT:    add sp, #508
+; CHECK-NEXT:    add sp, #508
+; CHECK-NEXT:    add sp, #12
+; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.5:
+; CHECK-NEXT:  .LCPI7_0:
+; CHECK-NEXT:    .long __stack_boundary
+; CHECK-NEXT:  .LCPI7_1:
+; CHECK-NEXT:    .long 1040 @ 0x410
+entry:
+  %buf = alloca [1024 x i8], align 1
+  call void @sink(ptr %buf)
+  %t0 = add i32 %a, %b
+  %t1 = add i32 %c, %d
+  %r = add i32 %t0, %t1
   ret i32 %r
 }
 

@@ -4,10 +4,10 @@
 
 ; The -fstack-limit-variable=<var> prologue is emitted only for functions that
 ; carry the "stack-limit-variable"="<var>" attribute and have a non-empty stack
-; frame. It loads <var>, computes the free space (sp - limit), compares it
-; against the frame size and traps with "svc #255" when it is too small.
-; The Thumb2 sequence is identical on every Thumb2 (Cortex-M3 and later)
-; target, so both triples share the same checks.
+; frame. It loads <var>, adds the frame size to form the lowest admissible SP
+; value, compares SP against it and traps with "svc #255" when the stack is
+; too small. The Thumb2 sequence is identical on every Thumb2 (Cortex-M3 and
+; later) target, so both triples share the same checks.
 
 declare void @sink(ptr)
 
@@ -18,8 +18,8 @@ define void @needs_check() #0 {
 ; CHECK-NEXT:    movw r12, :lower16:__stack_boundary
 ; CHECK-NEXT:    movt r12, :upper16:__stack_boundary
 ; CHECK-NEXT:    ldr.w r12, [r12]
-; CHECK-NEXT:    sub.w r12, sp, r12
-; CHECK-NEXT:    cmp.w r12, #72
+; CHECK-NEXT:    add.w r12, r12, #72
+; CHECK-NEXT:    cmp sp, r12
 ; CHECK-NEXT:    it lo
 ; CHECK-NEXT:    svclo #255
 ; CHECK-NEXT:    .save {r7, lr}
@@ -44,8 +44,8 @@ define void @custom_var() #1 {
 ; CHECK-NEXT:    movw r12, :lower16:my_limit
 ; CHECK-NEXT:    movt r12, :upper16:my_limit
 ; CHECK-NEXT:    ldr.w r12, [r12]
-; CHECK-NEXT:    sub.w r12, sp, r12
-; CHECK-NEXT:    cmp.w r12, #72
+; CHECK-NEXT:    add.w r12, r12, #72
+; CHECK-NEXT:    cmp sp, r12
 ; CHECK-NEXT:    it lo
 ; CHECK-NEXT:    svclo #255
 ; CHECK-NEXT:    .save {r7, lr}
@@ -71,8 +71,8 @@ define void @large_frame() #0 {
 ; CHECK-NEXT:    movw r12, :lower16:__stack_boundary
 ; CHECK-NEXT:    movt r12, :upper16:__stack_boundary
 ; CHECK-NEXT:    ldr.w r12, [r12]
-; CHECK-NEXT:    sub.w r12, sp, r12
-; CHECK-NEXT:    cmp.w r12, #4016
+; CHECK-NEXT:    add.w r12, r12, #4016
+; CHECK-NEXT:    cmp sp, r12
 ; CHECK-NEXT:    it lo
 ; CHECK-NEXT:    svclo #255
 ; CHECK-NEXT:    .save {r7, lr}
@@ -125,8 +125,8 @@ define void @custom_trap() #2 {
 ; CHECK-NEXT:    movw r12, :lower16:__stack_boundary
 ; CHECK-NEXT:    movt r12, :upper16:__stack_boundary
 ; CHECK-NEXT:    ldr.w r12, [r12]
-; CHECK-NEXT:    sub.w r12, sp, r12
-; CHECK-NEXT:    cmp.w r12, #72
+; CHECK-NEXT:    add.w r12, r12, #72
+; CHECK-NEXT:    cmp sp, r12
 ; CHECK-NEXT:    it lo
 ; CHECK-NEXT:    svclo #42
 ; CHECK-NEXT:    .save {r7, lr}
