@@ -9868,7 +9868,7 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     ArgStringList Features;
     SmallVector<StringRef> FeatureArgs;
     getTargetFeatures(TC->getDriver(), TC->getTriple(), TCArgs, Features, false,
-                      false, Arch.ArchName);
+                      false);
     llvm::copy_if(Features, std::back_inserter(FeatureArgs),
                   [](StringRef Arg) { return !Arg.starts_with("-target"); });
 

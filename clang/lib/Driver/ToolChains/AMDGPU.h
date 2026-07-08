@@ -38,8 +38,7 @@ public:
 
 void getAMDGPUTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                              const llvm::opt::ArgList &Args,
-                             std::vector<StringRef> &Features,
-                             StringRef TcTargetID = StringRef());
+                             std::vector<StringRef> &Features);
 
 namespace dlr {
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>

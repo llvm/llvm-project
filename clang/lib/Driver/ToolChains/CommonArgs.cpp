@@ -868,8 +868,7 @@ static void getWebAssemblyTargetFeatures(const Driver &D,
 
 void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                               const ArgList &Args, ArgStringList &CmdArgs,
-                              bool ForAS, bool IsAux,
-                              const StringRef TcTargetID) {
+                              bool ForAS, bool IsAux) {
   std::vector<StringRef> Features;
   switch (Triple.getArch()) {
   default:
@@ -924,7 +923,7 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     break;
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
-    amdgpu::getAMDGPUTargetFeatures(D, Triple, Args, Features, TcTargetID);
+    amdgpu::getAMDGPUTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
