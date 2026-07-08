@@ -3290,6 +3290,21 @@ unsigned X86::getNFVariant(unsigned Opc) {
   return getNewOpcFromTable(X86NFTransformTable, Opc);
 }
 
+unsigned X86::getNFVariantIfClobberRemovable(const MachineInstr &MI,
+                                             const TargetRegisterInfo *TRI) {
+  if (!MI.registerDefIsDead(X86::EFLAGS, TRI))
+    return 0;
+  // For the instructions are ADDrm/ADDmr with relocation, we'll skip the
+  // optimization for replacing non-NF with NF. This is to keep backward
+  // compatiblity with old version of linkers without APX relocation type
+  // support on Linux OS.
+  bool IsWithReloc =
+      X86EnableAPXForRelocation ? false : isAddMemInstrWithRelocation(MI);
+  if (IsWithReloc)
+    return 0;
+  return X86::getNFVariant(MI.getOpcode());
+}
+
 unsigned X86::getNonNDVariant(unsigned Opc) {
 #if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
   // Make sure the tables are sorted.
@@ -5285,6 +5300,104 @@ static std::pair<X86::CondCode, unsigned> isUseDefConvertible(const MachineInstr
   }
 }
 
+MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
+    MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2, int64_t CmpMask,
+    int64_t CmpValue, MachineBasicBlock *MultiPredMBB, bool &IsSwapped,
+    int64_t &ImmDelta,
+    SmallVectorImpl<std::pair<MachineInstr *, unsigned>> &InstsToUpdate) const {
+  assert(Subtarget.hasNF() && "NF feature required");
+  MachineBasicBlock &CmpMBB = *CmpInstr.getParent();
+  MachineFunction &MF = *CmpMBB.getParent();
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+
+  // The caller already scanned MultiPredMBB (and any single-predecessor blocks
+  // between it and CmpMBB) without finding the producer, so the producer must
+  // live in a block that strictly dominates MultiPredMBB. Walk up the
+  // immediate-dominator chain. In each dominating block scan backward: the
+  // redundant producer ends the search; an NF-convertible clobber is stepped
+  // over (it will be collected by the path walk below) so the producer can
+  // still be found earlier in the same block or further up; any other EFLAGS
+  // clobber shadows the producer, so its flags cannot reach CmpInstr.
+  MachineDominatorTree MDT(MF);
+  MachineDomTreeNode *Node = MDT.getNode(MultiPredMBB);
+  MachineInstr *Sub = nullptr;
+  for (Node = Node ? Node->getIDom() : nullptr; Node && !Sub;
+       Node = Node->getIDom()) {
+    MachineBasicBlock *DomMBB = Node->getBlock();
+    for (MachineInstr &Inst : reverse(*DomMBB)) {
+      if (!Inst.modifiesRegister(X86::EFLAGS, TRI))
+        continue;
+      if (isRedundantFlagInstr(CmpInstr, SrcReg, SrcReg2, CmpMask, CmpValue,
+                               Inst, &IsSwapped, &ImmDelta)) {
+        // Found the producer.
+        Sub = &Inst;
+        break;
+      }
+      if (!X86::getNFVariantIfClobberRemovable(Inst, TRI))
+        // A non-convertible clobber shadows any producer further up.
+        return nullptr;
+      // NF-convertible clobber: keep scanning earlier in this block.
+    }
+    // No producer in this block: keep walking up the dominator chain.
+  }
+  if (!Sub)
+    return nullptr;
+
+  // The forward condition-code fixup in the caller (OpsToUpdate) only rewrites
+  // EFLAGS users within CmpMBB. When the producer's flags require a condition
+  // swap or an immediate adjustment, EFLAGS users elsewhere in the dominated
+  // region or in CmpMBB's successors (when EFLAGS is live-out) would also need
+  // rewriting, which is not handled here. Restrict the multi-predecessor case
+  // to producers that yield identical flags.
+  if (IsSwapped || ImmDelta != 0)
+    return nullptr;
+  MachineBasicBlock *SubMBB = Sub->getParent();
+
+  // Verify that on every path from the producer to CmpInstr all EFLAGS clobbers
+  // are NF-convertible, collecting them. The caller already handled CmpMBB, the
+  // single-predecessor chain, and MultiPredMBB itself, so start from
+  // MultiPredMBB's predecessors and walk the CFG backward up to (and including
+  // the post-producer range of) SubMBB. Because SubMBB dominates MultiPredMBB,
+  // every block that can reach MultiPredMBB is dominated by SubMBB, so the walk
+  // reaches SubMBB on every path and never escapes above it.
+  //
+  // The walk never revisits a block (Visited) and never reaches a block the
+  // caller already scanned: MultiPredMBB is seeded into Visited, the
+  // single-predecessor chain blocks (CmpMBB..MultiPredMBB) each have exactly one
+  // predecessor by construction (the caller only advanced through such blocks),
+  // so none can be re-entered from the dominated region, and CmpMBB lies in the
+  // successor direction. No instruction is therefore collected twice.
+  SmallPtrSet<MachineBasicBlock *, 8> Visited;
+  SmallVector<MachineBasicBlock *, 8> Worklist;
+  Visited.insert(MultiPredMBB);
+  for (MachineBasicBlock *Pred : MultiPredMBB->predecessors())
+    if (Visited.insert(Pred).second)
+      Worklist.push_back(Pred);
+  while (!Worklist.empty()) {
+    MachineBasicBlock *MBB = Worklist.pop_back_val();
+    // For SubMBB only the range after the producer is relevant.
+    MachineBasicBlock::iterator I =
+        (MBB == SubMBB) ? std::next(MachineBasicBlock::iterator(Sub))
+                        : MBB->begin();
+    for (MachineBasicBlock::iterator E = MBB->end(); I != E; ++I) {
+      MachineInstr &MI = *I;
+      if (!MI.modifiesRegister(X86::EFLAGS, TRI))
+        continue;
+      unsigned NewOpc = X86::getNFVariantIfClobberRemovable(MI, TRI);
+      if (!NewOpc)
+        return nullptr;
+      InstsToUpdate.push_back(std::make_pair(&MI, NewOpc));
+    }
+    if (MBB == SubMBB)
+      continue;
+    for (MachineBasicBlock *Pred : MBB->predecessors())
+      if (Visited.insert(Pred).second)
+        Worklist.push_back(Pred);
+  }
+
+  return Sub;
+}
+
 /// Check if there exists an earlier instruction that
 /// operates on the same source operands and sets flags in the same way as
 /// Compare; remove Compare if possible.
@@ -5448,17 +5561,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           continue;
         }
 
-        // For the instructions are ADDrm/ADDmr with relocation, we'll skip the
-        // optimization for replacing non-NF with NF. This is to keep backward
-        // compatiblity with old version of linkers without APX relocation type
-        // support on Linux OS.
-        bool IsWithReloc = X86EnableAPXForRelocation
-                               ? false
-                               : isAddMemInstrWithRelocation(Inst);
-
         // Try to replace non-NF with NF instructions.
-        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI) && !IsWithReloc) {
-          unsigned NewOp = X86::getNFVariant(Inst.getOpcode());
+        if (HasNF) {
+          unsigned NewOp = X86::getNFVariantIfClobberRemovable(Inst, TRI);
           if (!NewOp)
             return false;
 
@@ -5474,10 +5579,28 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (MI || Sub)
       break;
 
-    // Reached begin of basic block. Continue in predecessor if there is
-    // exactly one.
-    if (MBB->pred_size() != 1)
-      return false;
+    // Reached the begin of the basic block. If it has exactly one predecessor,
+    // continue the backward scan there. Otherwise (multiple predecessors), try
+    // to reuse EFLAGS from a dominating producer (handled below).
+    if (MBB->pred_size() != 1) {
+      // The block has multiple predecessors. We can still reuse EFLAGS from an
+      // equivalent flag producer that dominates CmpInstr, provided every path
+      // from that producer to CmpInstr only clobbers EFLAGS via instructions
+      // that have an NF (no-flags) variant (which requires APX). This handles
+      // patterns like (CMP duplicated by CodeGenPrepare across a diamond):
+      //   entry:  cmp %x, C   ; br
+      //   bb1:    imul ...     ; clobbers EFLAGS  ->  {nf} imul
+      //   bb2:    ...
+      //   bb3:    cmp %x, C    ; <-- redundant, reuse EFLAGS from entry
+      //           cmovcc ...
+      if (HasNF)
+        Sub = findDominatingRedundantFlagInstr(CmpInstr, SrcReg, SrcReg2,
+                                               CmpMask, CmpValue, MBB, IsSwapped,
+                                               ImmDelta, InstsToUpdate);
+      if (!Sub)
+        return false;
+      break;
+    }
     MBB = *MBB->pred_begin();
     From = MBB->rbegin();
   }
@@ -5683,11 +5806,25 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         .setImm(Op.second);
   }
   // Add EFLAGS to block live-ins between CmpBB and block of flags producer.
-  for (MachineBasicBlock *MBB = &CmpMBB; MBB != SubBB;
-       MBB = *MBB->pred_begin()) {
-    assert(MBB->pred_size() == 1 && "Expected exactly one predecessor");
+  // Walk the CFG backward from CmpMBB up to (but excluding) SubBB, marking
+  // EFLAGS live-in on every block in between. SubBB dominates CmpMBB (whether
+  // the producer was found by the single-predecessor backward walk or the
+  // multi-predecessor dominator search), so the walk reaches SubBB on every
+  // path and never escapes above it. A single-predecessor chain is just the
+  // degenerate case where every block has exactly one predecessor.
+  SmallPtrSet<MachineBasicBlock *, 8> Visited;
+  SmallVector<MachineBasicBlock *, 8> Worklist(1, &CmpMBB);
+  Visited.insert(&CmpMBB);
+  while (!Worklist.empty()) {
+    MachineBasicBlock *MBB = Worklist.pop_back_val();
+    // EFLAGS is produced inside SubBB, so it is not live-in there.
+    if (MBB == SubBB)
+      continue;
     if (!MBB->isLiveIn(X86::EFLAGS))
       MBB->addLiveIn(X86::EFLAGS);
+    for (MachineBasicBlock *Pred : MBB->predecessors())
+      if (Visited.insert(Pred).second)
+        Worklist.push_back(Pred);
   }
   return true;
 }
