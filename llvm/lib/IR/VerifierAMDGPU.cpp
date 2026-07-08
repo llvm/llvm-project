@@ -145,7 +145,12 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
       Check(CBI->getNumIndirectDests() == 1,
             "callbr amdgcn_kill only supports one indirect dest");
       bool Unreachable = isa<UnreachableInst>(CBI->getIndirectDest(0)->begin());
-      CallInst *CI = dyn_cast<CallInst>(CBI->getIndirectDest(0)->begin());
+      // We assume that amdgcn_unreachable is only introduced by
+      // AMDGPUUnifyDivergentExitNodes, which replaces the block's original
+      // unreachable terminator by a call to amdgcn_unreachable + a return.
+      const Instruction *Term = CBI->getIndirectDest(0)->getTerminator();
+      const CallInst *CI =
+          Term ? dyn_cast_if_present<CallInst>(Term->getPrevNode()) : nullptr;
       Check(Unreachable ||
                 (CI && CI->getIntrinsicID() == Intrinsic::amdgcn_unreachable),
             "callbr amdgcn_kill indirect dest needs to be unreachable");
