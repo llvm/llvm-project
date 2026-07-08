@@ -418,12 +418,19 @@ public:
 
 const FunctionDecl *BetterSignature(const FunctionDecl *Function,
                                     unsigned Start) {
+  auto ParaCount = Function->getNumParams();
   // Note that `redecls()` traverses in a circular order from the current decl,
   // so for consistency we have to first get the first declaration.
-  for (auto *Redecl : Function->getFirstDecl()->redecls())
+  for (auto *Redecl : Function->getFirstDecl()->redecls()) {
+    // The callers will expect to be able to use the same index from the initial
+    // function on the redeclaration. While we do not expect this to happen,
+    // this is a failsafe.
+    if (Redecl->getNumParams() > ParaCount)
+      continue;
     for (unsigned P = Start, N = Redecl->getNumParams(); P != N; ++P)
       if (Redecl->getParamDecl(P)->getIdentifier())
         return Redecl;
+  }
   return Function;
 }
 } // namespace
@@ -4189,6 +4196,8 @@ static void AddOverloadParameterChunks(
   bool FirstParameter = true;
   unsigned NumParams =
       Function ? Function->getNumParams() : Prototype->getNumParams();
+  const FunctionDecl *BetterSignatureDecl =
+      Function ? BetterSignature(Function, Start) : nullptr;
 
   for (unsigned P = Start; P != NumParams; ++P) {
     if (Function && Function->getParamDecl(P)->hasDefaultArg() && !InOptional) {
@@ -4225,8 +4234,8 @@ static void AddOverloadParameterChunks(
     std::string Placeholder;
     assert(P < Prototype->getNumParams());
     if (Function || PrototypeLoc) {
-      const ParmVarDecl *Param =
-          Function ? Function->getParamDecl(P) : PrototypeLoc.getParam(P);
+      const ParmVarDecl *Param = Function ? BetterSignatureDecl->getParamDecl(P)
+                                          : PrototypeLoc.getParam(P);
       Placeholder = FormatFunctionParameter(Policy, Param);
       if (Param->hasDefaultArg())
         Placeholder += GetDefaultValueString(Param, Context.getSourceManager(),
