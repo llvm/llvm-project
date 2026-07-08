@@ -279,6 +279,78 @@ exit:
   ret void
 }
 
+; CHECK-LABEL: ornwrr_cbz:
+; CHECK:      orn  [[R:w[0-9]+]], {{w[0-9]+}}, {{w[0-9]+}}
+; CHECK-NEXT: cbz  [[R]], {{.?LBB[0-9_]+}}
+define void @ornwrr_cbz(i32 %a, i32 %b) {
+entry:
+  %n = xor i32 %b, -1
+  %v0 = or i32 %a, %n
+  %v1 = add i32 %a, 7
+  %cond = icmp ne i32 %v0, 0
+  br i1 %cond, label %if, label %exit
+if:
+  call void @fi32(i32 %v1, i32 %v0)
+  br label %exit
+exit:
+  call void @fi32(i32 %v0, i32 %v1)
+  ret void
+}
+
+; CHECK-LABEL: ornwrr_cbnz:
+; CHECK:      orn  [[R:w[0-9]+]], {{w[0-9]+}}, {{w[0-9]+}}
+; CHECK-NEXT: cbnz [[R]], {{.?LBB[0-9_]+}}
+define void @ornwrr_cbnz(i32 %a, i32 %b) {
+entry:
+  %n = xor i32 %b, -1
+  %v0 = or i32 %a, %n
+  %v1 = add i32 %a, 7
+  %cond = icmp eq i32 %v0, 0
+  br i1 %cond, label %if, label %exit
+if:
+  call void @fi32(i32 %v1, i32 %v0)
+  br label %exit
+exit:
+  call void @fi32(i32 %v0, i32 %v1)
+  ret void
+}
+
+; CHECK-LABEL: bicwrr_cbz:
+; CHECK:      bic  [[R:w[0-9]+]], {{w[0-9]+}}, {{w[0-9]+}}
+; CHECK-NEXT: cbz  [[R]], {{.?LBB[0-9_]+}}
+define void @bicwrr_cbz(i32 %a, i32 %b) {
+entry:
+  %n = xor i32 %b, -1
+  %v0 = and i32 %a, %n
+  %v1 = add i32 %a, 7
+  %cond = icmp ne i32 %v0, 0
+  br i1 %cond, label %if, label %exit
+if:
+  call void @fi32(i32 %v1, i32 %v0)
+  br label %exit
+exit:
+  call void @fi32(i32 %v0, i32 %v1)
+  ret void
+}
+
+; CHECK-LABEL: bicwrr_cbnz:
+; CHECK:      bic  [[R:w[0-9]+]], {{w[0-9]+}}, {{w[0-9]+}}
+; CHECK-NEXT: cbnz [[R]], {{.?LBB[0-9_]+}}
+define void @bicwrr_cbnz(i32 %a, i32 %b) {
+entry:
+  %n = xor i32 %b, -1
+  %v0 = and i32 %a, %n
+  %v1 = add i32 %a, 7
+  %cond = icmp eq i32 %v0, 0
+  br i1 %cond, label %if, label %exit
+if:
+  call void @fi32(i32 %v1, i32 %v0)
+  br label %exit
+exit:
+  call void @fi32(i32 %v0, i32 %v1)
+  ret void
+}
+
 ; CHECK-LABEL: subwri_cbz:
 ; CHECK:      sub  [[R:w[0-9]+]], {{w[0-9]+}}, #13
 ; CHECK-NEXT: cbz  [[R]], {{.?LBB[0-9_]+}}
@@ -608,6 +680,78 @@ exit:
 define void @orrxrr_cbnz(i64 %a, i64 %b) {
 entry:
   %v0 = or i64 %a, %b
+  %v1 = add i64 %a, 7
+  %cond = icmp eq i64 %v0, 0
+  br i1 %cond, label %if, label %exit
+if:
+  call void @fi64(i64 %v1, i64 %v0)
+  br label %exit
+exit:
+  call void @fi64(i64 %v0, i64 %v1)
+  ret void
+}
+
+; CHECK-LABEL: ornxrr_cbz:
+; CHECK:      orn  [[R:x[0-9]+]], {{x[0-9]+}}, {{x[0-9]+}}
+; CHECK-NEXT: cbz  [[R]], {{.?LBB[0-9_]+}}
+define void @ornxrr_cbz(i64 %a, i64 %b) {
+entry:
+  %n = xor i64 %b, -1
+  %v0 = or i64 %a, %n
+  %v1 = add i64 %a, 7
+  %cond = icmp ne i64 %v0, 0
+  br i1 %cond, label %if, label %exit
+if:
+  call void @fi64(i64 %v1, i64 %v0)
+  br label %exit
+exit:
+  call void @fi64(i64 %v0, i64 %v1)
+  ret void
+}
+
+; CHECK-LABEL: ornxrr_cbnz:
+; CHECK:      orn  [[R:x[0-9]+]], {{x[0-9]+}}, {{x[0-9]+}}
+; CHECK-NEXT: cbnz [[R]], {{.?LBB[0-9_]+}}
+define void @ornxrr_cbnz(i64 %a, i64 %b) {
+entry:
+  %n = xor i64 %b, -1
+  %v0 = or i64 %a, %n
+  %v1 = add i64 %a, 7
+  %cond = icmp eq i64 %v0, 0
+  br i1 %cond, label %if, label %exit
+if:
+  call void @fi64(i64 %v1, i64 %v0)
+  br label %exit
+exit:
+  call void @fi64(i64 %v0, i64 %v1)
+  ret void
+}
+
+; CHECK-LABEL: bicxrr_cbz:
+; CHECK:      bic  [[R:x[0-9]+]], {{x[0-9]+}}, {{x[0-9]+}}
+; CHECK-NEXT: cbz  [[R]], {{.?LBB[0-9_]+}}
+define void @bicxrr_cbz(i64 %a, i64 %b) {
+entry:
+  %n = xor i64 %b, -1
+  %v0 = and i64 %a, %n
+  %v1 = add i64 %a, 7
+  %cond = icmp ne i64 %v0, 0
+  br i1 %cond, label %if, label %exit
+if:
+  call void @fi64(i64 %v1, i64 %v0)
+  br label %exit
+exit:
+  call void @fi64(i64 %v0, i64 %v1)
+  ret void
+}
+
+; CHECK-LABEL: bicxrr_cbnz:
+; CHECK:      bic  [[R:x[0-9]+]], {{x[0-9]+}}, {{x[0-9]+}}
+; CHECK-NEXT: cbnz [[R]], {{.?LBB[0-9_]+}}
+define void @bicxrr_cbnz(i64 %a, i64 %b) {
+entry:
+  %n = xor i64 %b, -1
+  %v0 = and i64 %a, %n
   %v1 = add i64 %a, 7
   %cond = icmp eq i64 %v0, 0
   br i1 %cond, label %if, label %exit

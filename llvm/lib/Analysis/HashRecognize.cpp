@@ -483,9 +483,20 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
       return "Recurrences not intertwined with XOR";
   }
 
-  // Make sure that the TC doesn't exceed the bitwidth of LHSAux, or LHS.
   Value *LHS = ConditionalRecurrence.Start;
   Value *LHSAux = SimpleRecurrence ? SimpleRecurrence.Start : nullptr;
+
+  // In the big-endian case where LHSAux is narrower than LHS, the most
+  // significant bit check will never be influenced by LHSAux. In this case,
+  // SimpleRecurrence must still be well-formed, but LHSAux is effectively dead.
+  // This also averts a possible miscompile later where LHSAux gets shifted by
+  // its entire bit width, creating poison.
+  if (*IsBigEndian && LHSAux &&
+      LHSAux->getType()->getIntegerBitWidth() <
+          LHS->getType()->getIntegerBitWidth())
+    LHSAux = nullptr;
+
+  // Make sure that the TC doesn't exceed the bitwidth of LHSAux, or LHS.
   if (TC > (LHSAux ? LHSAux->getType()->getIntegerBitWidth()
                    : LHS->getType()->getIntegerBitWidth()))
     return "Loop iterations exceed bitwidth of data";
