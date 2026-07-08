@@ -145,21 +145,18 @@ define i32 @udiv_by_3(i32 %x) nounwind {
 define i32 @udiv_by_14(i32 %x) nounwind {
 ; X64-LABEL: udiv_by_14:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    shrl %edi
-; X64-NEXT:    movl $2454267027, %eax # imm = 0x92492493
-; X64-NEXT:    imulq %rdi, %rax
-; X64-NEXT:    shrq $34, %rax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movabsq $1317624576808583168, %rcx # imm = 0x1249249250000000
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    movq %rdx, %rax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: udiv_by_14:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-BMI2-NEXT:    shrl %edi
-; X64-BMI2-NEXT:    movl $2454267027, %eax # imm = 0x92492493
-; X64-BMI2-NEXT:    imulq %rdi, %rax
-; X64-BMI2-NEXT:    shrq $34, %rax
+; X64-BMI2-NEXT:    movl %edi, %edx
+; X64-BMI2-NEXT:    movabsq $1317624576808583168, %rax # imm = 0x1249249250000000
+; X64-BMI2-NEXT:    mulxq %rax, %rax, %rax
 ; X64-BMI2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-BMI2-NEXT:    retq
 ;

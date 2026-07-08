@@ -65,11 +65,11 @@ define i32 @udiv_by_3(i32 %x) nounwind {
 define i32 @udiv_by_14(i32 %x) nounwind {
 ; CHECK-LABEL: udiv_by_14:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr w8, w0, #1
-; CHECK-NEXT:    mov w9, #9363 // =0x2493
-; CHECK-NEXT:    movk w9, #37449, lsl #16
-; CHECK-NEXT:    umull x8, w8, w9
-; CHECK-NEXT:    lsr x0, x8, #34
+; CHECK-NEXT:    mov x8, #1342177280 // =0x50000000
+; CHECK-NEXT:    mov w9, w0
+; CHECK-NEXT:    movk x8, #9362, lsl #32
+; CHECK-NEXT:    movk x8, #4681, lsl #48
+; CHECK-NEXT:    umulh x0, x9, x8
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %div = udiv i32 %x, 14
