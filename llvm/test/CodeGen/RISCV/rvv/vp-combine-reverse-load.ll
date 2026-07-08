@@ -321,20 +321,18 @@ define <vscale x 2 x float> @binop_multiuse(ptr %ptr, i32 zeroext %evl) {
 define <vscale x 2 x float> @binop_shared_splat(ptr %ptr, <vscale x 2 x float> %x, i32 zeroext %evl) {
 ; CHECK-LABEL: binop_shared_splat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a2, 260096
-; CHECK-NEXT:    fmv.w.x fa5, a2
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    li a2, -4
+; CHECK-NEXT:    addi a0, a0, -4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vle32.v v10, (a0)
-; CHECK-NEXT:    addi a0, a1, -1
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfadd.vf v10, v10, fa5
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vrsub.vx v9, v9, a0
-; CHECK-NEXT:    vrgather.vv v11, v10, v9
+; CHECK-NEXT:    vlse32.v v9, (a0), a2
+; CHECK-NEXT:    lui a0, 260096
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vf v9, v9, fa5
 ; CHECK-NEXT:    vfadd.vf v8, v8, fa5
-; CHECK-NEXT:    vfadd.vv v8, v11, v8
+; CHECK-NEXT:    vfadd.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %load = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   %fadd = fadd <vscale x 2 x float> %load, splat (float 1.0)
