@@ -1,14 +1,14 @@
 # Support for AArch64 Scalable Matrix Extension in LLVM
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## 1. Introduction
 
 The {ref}`AArch64 SME ACLE <aarch64_sme_acle>` provides a number of
 attributes for users to control PSTATE.SM and PSTATE.ZA.
-The {ref}`AArch64 SME ABI<aarch64_sme_abi>` describes the requirements for
+The {ref}`AArch64 SME ABI <aarch64_sme_abi>` describes the requirements for
 calls between functions when at least one of those functions uses PSTATE.SM or
 PSTATE.ZA.
 
@@ -133,27 +133,19 @@ table because for the caller the attribute is synonymous with 'streaming', and
 for the callee it is merely an implementation detail that is explicitly not
 exposed to the caller.
 
-```{eval-rst}
-.. table:: Combinations of calls for functions with different attributes
+**Combinations of calls for functions with different attributes**
 
-   ==== ==== =============================== ============================== ==============================
-   From To   Before call                     After call                     After exception
-   ==== ==== =============================== ============================== ==============================
-   N    N
-   N    S    SMSTART                         SMSTOP
-   N    SC
-   S    N    SMSTOP                          SMSTART                        SMSTART
-   S    S                                                                   SMSTART
-   S    SC                                                                  SMSTART
-   SC   N    If PSTATE.SM before call is 1,  If PSTATE.SM before call is 1, If PSTATE.SM before call is 1,
-             then SMSTOP                     then SMSTART                   then SMSTART
-   SC   S    If PSTATE.SM before call is 0,  If PSTATE.SM before call is 0, If PSTATE.SM before call is 1,
-             then SMSTART                    then SMSTOP                    then SMSTART
-   SC   SC                                                                  If PSTATE.SM before call is 1,
-                                                                            then SMSTART
-   ==== ==== =============================== ============================== ==============================
-
-```
+| From | To | Before call | After call | After exception |
+| --- | --- | --- | --- | --- |
+| N | N |  |  |  |
+| N | S | SMSTART | SMSTOP |  |
+| N | SC |  |  |  |
+| S | N | SMSTOP | SMSTART | SMSTART |
+| S | S |  |  | SMSTART |
+| S | SC |  |  | SMSTART |
+| SC | N | If PSTATE.SM before call is 1, then SMSTOP | If PSTATE.SM before call is 1, then SMSTART | If PSTATE.SM before call is 1, then SMSTART |
+| SC | S | If PSTATE.SM before call is 0, then SMSTART | If PSTATE.SM before call is 0, then SMSTOP | If PSTATE.SM before call is 1, then SMSTART |
+| SC | SC |  |  | If PSTATE.SM before call is 1, then SMSTART |
 
 Because changing PSTATE.SM zeroes the FP/vector registers, it is best to emit
 the `smstart` and `smstop` instructions before register allocation, so that
@@ -435,6 +427,8 @@ SelectionDAG. Any such functions handled by this pass are marked with
 
 ### AArch64 Predicate-as-Counter Type
 
+**Overview:**
+
 The predicate-as-counter type represents the type of a predicate-as-counter
 value held in an AArch64 SVE predicate register. Such a value contains
 information about the number of active lanes, the element width and a bit that
@@ -449,17 +443,18 @@ There are certain limitations on the type:
 
 The predicate-as-counter type is a scalable type.
 
+**Syntax:**
+
 ```
 target("aarch64.svcount")
 ```
 
 ## 5. References
 
-> (aarch64-sme-acle)=
+(aarch64_sme_acle)=
 
 1. [SME ACLE Pull-request](https://github.com/ARM-software/acle/pull/188)
 
-   (aarch64-sme-abi)=
+   (aarch64_sme_abi)=
 
 2. [SME ABI Pull-request](https://github.com/ARM-software/abi-aa/pull/123)
-

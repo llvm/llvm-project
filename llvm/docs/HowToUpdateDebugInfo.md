@@ -1,7 +1,7 @@
 # How to Update Debug Info: A Guide for LLVM Pass Authors
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -19,7 +19,7 @@ For more on the philosophy behind LLVM debugging information, see
 
 ## Rules for updating debug locations
 
-(whentopreservelocation)=
+(WhenToPreserveLocation)=
 
 ### When to preserve an instruction location
 
@@ -51,7 +51,7 @@ Examples of transformations that should follow this rule include:
 Examples of transformations for which this rule *does not* apply include:
 
 - LICM. E.g., if an instruction is moved from the loop body to the preheader,
-  the rule for {ref}`dropping locations<WhenToDropLocation>` applies.
+  the rule for {ref}`dropping locations <WhenToDropLocation>` applies.
 
 In addition to the rule above, a transformation should also preserve the debug
 location of an instruction that is moved between basic blocks, if the
@@ -64,7 +64,7 @@ Examples of transformations that should follow this rule include:
   in `BB1` is moved before `I2` in `BB2`, the source location of `I1`
   can be preserved if it has the same source location as `I2`.
 
-(whentomergelocation)=
+(WhenToMergeLocation)=
 
 ### When to merge instruction locations
 
@@ -116,7 +116,7 @@ Examples of transformations for which this rule *does not* apply include:
 - Block-local peepholes which delete redundant instructions, like
   `(sext (zext i8 %x to i16) to i32) => (zext i8 %x to i32)`. The inner
   `zext` is modified but remains in its block, so the rule for
-  {ref}`preserving locations<WhenToPreserveLocation>` should apply.
+  {ref}`preserving locations <WhenToPreserveLocation>` should apply.
 - Peephole optimizations which combine multiple instructions together, like
   `(add (mul A B) C) => llvm.fma.f32(A, B, C)`. Note that the result of the
   `mul` no longer appears in the program, while the result of the `add` is
@@ -125,21 +125,21 @@ Examples of transformations for which this rule *does not* apply include:
   debug locations of speculated instructions can make it seem like a condition
   is true when it's not (or vice versa), which leads to a confusing
   single-stepping experience. The rule for
-  {ref}`dropping locations<WhenToDropLocation>` should apply here.
+  {ref}`dropping locations <WhenToDropLocation>` should apply here.
 - Hoisting/sinking that would make a location reachable when it previously
   wasn't. Consider hoisting two identical instructions with the same location
   from first two cases of a switch that has three cases. Merging their
   locations would make the location from the first two cases reachable when the
   third case is taken. The rule for
-  {ref}`dropping locations<WhenToDropLocation>` applies.
+  {ref}`dropping locations <WhenToDropLocation>` applies.
 
-(whentodroplocation)=
+(WhenToDropLocation)=
 
 ### When to drop an instruction location
 
 A transformation should drop debug locations if the rules for
-{ref}`preserving<WhenToPreserveLocation>` and
-{ref}`merging<WhenToMergeLocation>` debug locations do not apply. The API to
+{ref}`preserving <WhenToPreserveLocation>` and
+{ref}`merging <WhenToMergeLocation>` debug locations do not apply. The API to
 use is `Instruction::dropLocation()`.
 
 The purpose of this rule is to prevent erratic or misleading single-stepping
@@ -152,7 +152,7 @@ to setting a line 0 location with viable scope information if no previous
 location is available.
 
 See the discussion in the section about
-{ref}`merging locations<WhenToMergeLocation>` for examples of when the rule for
+{ref}`merging locations <WhenToMergeLocation>` for examples of when the rule for
 dropping locations applies.
 
 ### When to remap a debug location
@@ -162,7 +162,7 @@ threading, `DILocation` attachments need to be remapped using `mapAtomInstance`
 and `RemapSourceAtom`. This is to support the Key Instructions debug info feature.
 See {doc}`KeyInstructionsDebugInfo` for information.
 
-(newinstlocations)=
+(NewInstLocations)=
 
 ### Setting locations for new instructions
 
@@ -176,7 +176,7 @@ reason that it does not have a valid location. These are as follows:
   code.
 - `DebugLoc::getDropped()`: This indicates that the instruction has
   intentionally had its source location removed, according to the rules for
-  {ref}`dropping locations<WhenToDropLocation>`; this is set automatically by
+  {ref}`dropping locations <WhenToDropLocation>`; this is set automatically by
   `Instruction::dropLocation()`.
 - `DebugLoc::getUnknown()`: This indicates that the instruction does not have
   a known or currently knowable source location, e.g. that it is infeasible to
@@ -278,7 +278,7 @@ Assignment Tracking.
 
 ## How to automatically convert tests into debug info tests
 
-(irdebugify)=
+(IRDebugify)=
 
 ### Mutation testing for IR-level transformations
 
@@ -385,7 +385,7 @@ $ opt -debugify < sample.ll | llc -o -
 
 There is also a MIR-level debugify pass that can be run before each backend
 pass, see:
-{ref}`Mutation testing for MIR-level transformations<MIRDebugify>`.
+{ref}`Mutation testing for MIR-level transformations <MIRDebugify>`.
 
 #### `debugify` in regression tests
 
@@ -400,7 +400,7 @@ be precise enough), moving the test to its own file is preferred.
 
 #### Using Coverage Tracking to remove false positives
 
-As described {ref}`above<WhenToDropLocation>`, there are valid reasons for
+As described {ref}`above <WhenToDropLocation>`, there are valid reasons for
 instructions to not have source locations. Therefore, when detecting missing
 source locations, it may be preferable to avoid detecting cases where the
 missing source location is intentional. For this, you can use the "coverage
@@ -408,7 +408,7 @@ tracking" feature in LLVM to prevent these from appearing in the `debugify`
 output. This is enabled in a build of LLVM by setting the CMake flag
 `-DLLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=COVERAGE`. When this has been set,
 LLVM will enable runtime tracking of
-{ref}`DebugLoc annotations<NewInstLocations>`, allowing `debugify` to ignore
+{ref}`DebugLoc annotations <NewInstLocations>`, allowing `debugify` to ignore
 instructions that have an explicitly recorded reason given for not having a
 source location.
 
@@ -431,14 +431,14 @@ enabled, so that the stacktrace can be accurately symbolized.
 
 :::{note}
 The coverage tracking feature has been designed primarily for use with the
-{ref}`original debug info preservation<OriginalDI>` mode of `debugify`, and
+{ref}`original debug info preservation <OriginalDI>` mode of `debugify`, and
 so may not be reliable in other settings. When using this mode, the
 stacktraces produced by the `COVERAGE_AND_ORIGIN` setting will be printed
 in an easy-to-read format as part of the reports generated by the
 `llvm-original-di-preservation.py` script.
 :::
 
-(originaldi)=
+(OriginalDI)=
 
 ### Test original debug info preservation in optimizations
 
@@ -495,12 +495,12 @@ $ clang -Xclang -fverify-debuginfo-preserve -Xclang -fverify-debuginfo-preserve-
 Please do note that there are some known false positives, for source locations
 and debug record checking, so that will be addressed as a future work.
 
-(mirdebugify)=
+(MIRDebugify)=
 
 ### Mutation testing for MIR-level transformations
 
 A variant of the `debugify` utility described in
-{ref}`Mutation testing for IR-level transformations<IRDebugify>` can be used
+{ref}`Mutation testing for IR-level transformations <IRDebugify>` can be used
 for MIR-level transformations as well: much like the IR-level pass,
 `mir-debugify` inserts sequentially increasing line locations to each
 `MachineInstr` in a `Module`. And the MIR-level `mir-check-debugify` is
@@ -598,4 +598,3 @@ $ llvm-lit test/CodeGen/AArch64 -Dllc="llc -debugify-and-strip-all-safe"
 ### Using LostDebugLocObserver
 
 TODO
-

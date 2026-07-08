@@ -1,7 +1,12 @@
+---
+myst:
+  footnote_transition: false
+---
+
 # Using ARM NEON instructions in big-endian mode
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -100,9 +105,16 @@ Use of `LDR` would break this lane ordering property. This doesn't preclude the 
 
 The ARM procedure call standard (AAPCS) defines the ABI for passing vectors between functions in registers. It states:
 
-> When a short vector is transferred between registers and memory, it is treated as an opaque object. That is a short vector is stored in memory as if it were stored with a single `STR` of the entire register; a short vector is loaded from memory using the corresponding `LDR` instruction. On a little-endian system, this means that element 0 will always contain the lowest addressed element of a short vector; on a big-endian system element 0 will contain the highest-addressed element of a short vector.
+> When a short vector is transferred between registers and memory, it is treated
+> as an opaque object. That is a short vector is stored in memory as if it were
+> stored with a single `STR` of the entire register; a short vector is loaded
+> from memory using the corresponding `LDR` instruction. On a little-endian
+> system, this means that element 0 will always contain the lowest addressed
+> element of a short vector; on a big-endian system element 0 will contain the
+> highest-addressed element of a short vector.
 >
-> <p class="attribution">-Procedure Call Standard for the ARM 64-bit Architecture (AArch64), 4.1.2 Short Vectors</p>
+> -- Procedure Call Standard for the ARM 64-bit Architecture (AArch64),
+> 4.1.2 Short Vectors
 
 The use of `LDR` and `STR` as the ABI defines has at least one advantage over `LD1` and `ST1`. `LDR` and `STR` are oblivious to the size of the individual lanes of a vector. `LD1` and `ST1` are not - the lane size is encoded within them. This is important across an ABI boundary because it would become necessary to know the lane width the callee expects. Consider the following code:
 
@@ -147,7 +159,7 @@ Neither approach is perfect, and choosing one boils down to choosing the lesser 
 
 There are 3 parts to the implementation:
 
-> 1. Predicate `LDR` and `STR` instructions so that they are never allowed to be selected to generate vector loads and stores. The exception is one-lane vectors [^footnote-1]; by definition, these cannot have lane ordering problems so are fine to use `LDR`/`STR`.
+> 1. Predicate `LDR` and `STR` instructions so that they are never allowed to be selected to generate vector loads and stores. The exception is one-lane vectors [^1]; by definition, these cannot have lane ordering problems so are fine to use `LDR`/`STR`.
 > 2. Create code generation patterns for bitconverts that create `REV` instructions.
 > 3. Make sure appropriate bitconverts are created so that vector values get passed over call boundaries as 1-element vectors (which is the same as if they were loaded with `LDR`).
 
@@ -195,5 +207,4 @@ ST1   v0.2d, [y]
 
 It turns out that these `REV` pairs can, in almost all cases, be squashed together into a single `REV`. For the example above, a `REV128 4s` + `REV128 2d` is actually a `REV64 4s`, as shown in the figure on the right.
 
-[^footnote-1]: One-lane vectors may seem useless as a concept, but they serve to distinguish between values held in general-purpose registers and values held in NEON/VFP registers. For example, an `i64` would live in an `x` register, but `<1 x i64>` would live in a `d` register.
-
+[^1]: One-lane vectors may seem useless as a concept, but they serve to distinguish between values held in general-purpose registers and values held in NEON/VFP registers. For example, an `i64` would live in an `x` register, but `<1 x i64>` would live in a `d` register.

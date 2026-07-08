@@ -14,34 +14,40 @@ There are three main remark types:
 
 `Passed`
 
-> Remarks that describe a successful optimization performed by the compiler.
->
-> ```
-> foo inlined into bar with (cost=always): always inline attribute
-> ```
+Remarks that describe a successful optimization performed by the compiler.
+
+**Example:**
+
+```
+foo inlined into bar with (cost=always): always inline attribute
+```
 
 `Missed`
 
-> Remarks that describe an attempt to an optimization by the compiler that
-> could not be performed.
->
-> ```
-> foo not inlined into bar because it should never be inlined
-> (cost=never): noinline function attribute
-> ```
+Remarks that describe an attempt to an optimization by the compiler that
+could not be performed.
+
+**Example:**
+
+```
+foo not inlined into bar because it should never be inlined
+(cost=never): noinline function attribute
+```
 
 `Analysis`
 
-> Remarks that describe the result of an analysis, that can bring more
-> information to the user regarding the generated code.
->
-> ```
-> 16 stack bytes in function
-> ```
->
-> ```
-> 10 instructions in function
-> ```
+Remarks that describe the result of an analysis, that can bring more
+information to the user regarding the generated code.
+
+**Example:**
+
+```
+16 stack bytes in function
+```
+
+```
+10 instructions in function
+```
 
 ## Enabling optimization remarks
 
@@ -59,25 +65,19 @@ Optimization remarks can be emitted as diagnostics. These diagnostics will be
 propagated to front-ends if desired, or emitted by tools like {doc}`llc
 <CommandGuide/llc>` or {doc}`opt <CommandGuide/opt>`.
 
-```{eval-rst}
-.. option:: -pass-remarks=<regex>
-
-  Enables optimization remarks from passes whose name match the given (POSIX)
-  regular expression.
+```{option} -pass-remarks=<regex>
+Enables optimization remarks from passes whose name match the given (POSIX)
+regular expression.
 ```
 
-```{eval-rst}
-.. option:: -pass-remarks-missed=<regex>
-
-  Enables missed optimization remarks from passes whose name match the given
-  (POSIX) regular expression.
+```{option} -pass-remarks-missed=<regex>
+Enables missed optimization remarks from passes whose name match the given
+(POSIX) regular expression.
 ```
 
-```{eval-rst}
-.. option:: -pass-remarks-analysis=<regex>
-
-  Enables optimization analysis remarks from passes whose name match the given
-  (POSIX) regular expression.
+```{option} -pass-remarks-analysis=<regex>
+Enables optimization analysis remarks from passes whose name match the given
+(POSIX) regular expression.
 ```
 
 ### Serialized remarks
@@ -98,88 +98,69 @@ following options:
 
 `Basic options`
 
-> ```{eval-rst}
-> .. option:: -pass-remarks-output=<filename>
->
->   Enables the serialization of remarks to a file specified in <filename>.
->
->   By default, the output is serialized to :ref:`YAML <yamlremarks>`.
-> ```
->
-> ```{eval-rst}
-> .. option:: -pass-remarks-format=<format>
->
->   Specifies the output format of the serialized remarks.
->
->   Supported formats:
->
->   * :ref:`yaml <yamlremarks>` (default)
->   * :ref:`bitstream <bitstreamremarks>`
-> ```
+```{option} -pass-remarks-output=<filename>
+Enables the serialization of remarks to a file specified in `<filename>`.
+
+By default, the output is serialized to {ref}`YAML <yamlremarks>`.
+```
+
+```{option} -pass-remarks-format=<format>
+Specifies the output format of the serialized remarks.
+
+Supported formats:
+
+- {ref}`yaml <yamlremarks>` (default)
+- {ref}`bitstream <bitstreamremarks>`
+```
 
 `Content configuration`
 
-> ```{eval-rst}
-> .. option:: -pass-remarks-filter=<regex>
->
->   Only passes whose name match the given (POSIX) regular expression will be
->   serialized to the final output.
-> ```
->
-> ```{eval-rst}
-> .. option:: -pass-remarks-with-hotness
->
->   With PGO, include profile count in optimization remarks.
-> ```
->
-> ```{eval-rst}
-> .. option:: -pass-remarks-hotness-threshold
->
->   The minimum profile count required for an optimization remark to be
->   emitted.
-> ```
+```{option} -pass-remarks-filter=<regex>
+Only passes whose name match the given (POSIX) regular expression will be
+serialized to the final output.
+```
+
+```{option} -pass-remarks-with-hotness
+With PGO, include profile count in optimization remarks.
+```
+
+```{option} -pass-remarks-hotness-threshold
+The minimum profile count required for an optimization remark to be
+emitted.
+```
 
 Other tools that support remarks:
 
 {program}`llvm-lto`
 
-> ```{eval-rst}
-> .. option:: -lto-pass-remarks-output=<filename>
-> ```
->
-> ```{eval-rst}
-> .. option:: -lto-pass-remarks-filter=<regex>
-> ```
->
-> ```{eval-rst}
-> .. option:: -lto-pass-remarks-format=<format>
-> ```
->
-> ```{eval-rst}
-> .. option:: -lto-pass-remarks-with-hotness
-> ```
->
-> ```{eval-rst}
-> .. option:: -lto-pass-remarks-hotness-threshold
-> ```
+```{option} -lto-pass-remarks-output=<filename>
+```
+
+```{option} -lto-pass-remarks-filter=<regex>
+```
+
+```{option} -lto-pass-remarks-format=<format>
+```
+
+```{option} -lto-pass-remarks-with-hotness
+```
+
+```{option} -lto-pass-remarks-hotness-threshold
+```
 
 {program}`gold-plugin` and {program}`lld`
 
-> ```{eval-rst}
-> .. option:: -opt-remarks-filename=<filename>
-> ```
->
-> ```{eval-rst}
-> .. option:: -opt-remarks-filter=<regex>
-> ```
->
-> ```{eval-rst}
-> .. option:: -opt-remarks-format=<format>
-> ```
->
-> ```{eval-rst}
-> .. option:: -opt-remarks-with-hotness
-> ```
+```{option} -opt-remarks-filename=<filename>
+```
+
+```{option} -opt-remarks-filter=<regex>
+```
+
+```{option} -opt-remarks-format=<format>
+```
+
+```{option} -opt-remarks-with-hotness
+```
 
 (yamlremarks)=
 
@@ -274,34 +255,34 @@ This block can contain the following records:
 
 `RECORD_META_CONTAINER_INFO`
 
-> The container version and type.
->
-> Version: u32
->
-> Type: u2
+The container version and type.
+
+Version: u32
+
+Type: u2
 
 (bitstreamremarksrecordmetaremarkversion)=
 
 `RECORD_META_REMARK_VERSION`
 
-> The version of the remark entries. This can change independently from the
-> container version.
->
-> Version: u32
+The version of the remark entries. This can change independently from the
+container version.
+
+Version: u32
 
 (bitstreamremarksrecordmetastrtab)=
 
 `RECORD_META_STRTAB`
 
-> The string table used by the remark entries. The format of the string table
-> is a sequence of strings separated by `\0`.
+The string table used by the remark entries. The format of the string table
+is a sequence of strings separated by `\0`.
 
 (bitstreamremarksrecordmetaexternalfile)=
 
 `RECORD_META_EXTERNAL_FILE`
 
-> The external remark file path that contains the remark blocks associated
-> with this metadata. This is an absolute path.
+The external remark file path that contains the remark blocks associated
+with this metadata. This is an absolute path.
 
 (bitstreamremarksremarkblock)=
 
@@ -316,74 +297,69 @@ This block can contain the following records:
 
 `RECORD_REMARK_HEADER`
 
-> The header of the remark. This contains all the mandatory information about
-> a remark.
->
-> ```{eval-rst}
-> +---------------+---------------------------+
-> | Type          | u3                        |
-> +---------------+---------------------------+
-> | Remark name   | VBR6 (string table index) |
-> +---------------+---------------------------+
-> | Pass name     | VBR6 (string table index) |
-> +---------------+---------------------------+
-> | Function name | VBR6 (string table index) |
-> +---------------+---------------------------+
-> ```
+The header of the remark. This contains all the mandatory information about
+a remark.
+
+```{list-table}
+* - Type
+  - u3
+* - Remark name
+  - VBR6 (string table index)
+* - Pass name
+  - VBR6 (string table index)
+* - Function name
+  - VBR6 (string table index)
+```
 
 `RECORD_REMARK_DEBUG_LOC`
 
-> The source location for the corresponding remark. This record is optional.
->
-> ```{eval-rst}
-> +--------+---------------------------+
-> | File   | VBR7 (string table index) |
-> +--------+---------------------------+
-> | Line   | u32                       |
-> +--------+---------------------------+
-> | Column | u32                       |
-> +--------+---------------------------+
-> ```
+The source location for the corresponding remark. This record is optional.
+
+```{list-table}
+* - File
+  - VBR7 (string table index)
+* - Line
+  - u32
+* - Column
+  - u32
+```
 
 `RECORD_REMARK_HOTNESS`
 
-> The hotness of the remark. This record is optional.
->
-> ```{eval-rst}
-> +---------------+---------------------+
-> | Hotness | VBR8 (string table index) |
-> +---------------+---------------------+
-> ```
+The hotness of the remark. This record is optional.
+
+```{list-table}
+* - Hotness
+  - VBR8 (string table index)
+```
 
 `RECORD_REMARK_ARG_WITH_DEBUGLOC`
 
-> A remark argument with an associated debug location.
->
-> ```{eval-rst}
-> +--------+---------------------------+
-> | Key    | VBR7 (string table index) |
-> +--------+---------------------------+
-> | Value  | VBR7 (string table index) |
-> +--------+---------------------------+
-> | File   | VBR7 (string table index) |
-> +--------+---------------------------+
-> | Line   | u32                       |
-> +--------+---------------------------+
-> | Column | u32                       |
-> +--------+---------------------------+
-> ```
+A remark argument with an associated debug location.
+
+```{list-table}
+* - Key
+  - VBR7 (string table index)
+* - Value
+  - VBR7 (string table index)
+* - File
+  - VBR7 (string table index)
+* - Line
+  - u32
+* - Column
+  - u32
+```
 
 `RECORD_REMARK_ARG_WITHOUT_DEBUGLOC`
 
-> A remark argument with an associated debug location.
->
-> ```{eval-rst}
-> +--------+---------------------------+
-> | Key    | VBR7 (string table index) |
-> +--------+---------------------------+
-> | Value  | VBR7 (string table index) |
-> +--------+---------------------------+
-> ```
+A remark argument with an associated debug location.
+
+```{list-table}
+* - Key
+  - VBR7 (string table index)
+* - Value
+  - VBR7 (string table index)
+```
 
 ### The remark container
 
@@ -393,43 +369,44 @@ The bitstream remark container supports multiple types:
 
 `RemarksFileExternal: a link to an external remarks file`
 
-> This container type expects only a {ref}`META_BLOCK <bitstreamremarksmetablock>` containing only:
->
-> - {ref}`RECORD_META_CONTAINER_INFO <bitstreamremarksrecordmetacontainerinfo>`
-> - {ref}`RECORD_META_STRTAB <bitstreamremarksrecordmetastrtab>`
-> - {ref}`RECORD_META_EXTERNAL_FILE <bitstreamremarksrecordmetaexternalfile>`
->
-> Typically, this is emitted in a section in the object files, allowing
-> clients to retrieve remarks and their associated metadata directly from
-> intermediate products.
->
-> The container versions of the external separate container should match in order to
-> have a well-formed file.
+This container type expects only a {ref}`META_BLOCK <bitstreamremarksmetablock>` containing only:
+
+- {ref}`RECORD_META_CONTAINER_INFO <bitstreamremarksrecordmetacontainerinfo>`
+- {ref}`RECORD_META_STRTAB <bitstreamremarksrecordmetastrtab>`
+- {ref}`RECORD_META_EXTERNAL_FILE <bitstreamremarksrecordmetaexternalfile>`
+
+Typically, this is emitted in a section in the object files, allowing
+clients to retrieve remarks and their associated metadata directly from
+intermediate products.
+
+The container versions of the external separate container should match in order to
+have a well-formed file.
 
 (bitstreamremarksfile)=
 
 `RemarksFile: a standalone remarks file`
 
-> This container type expects a {ref}`META_BLOCK <bitstreamremarksmetablock>` containing only:
->
-> - {ref}`RECORD_META_CONTAINER_INFO <bitstreamremarksrecordmetacontainerinfo>`
-> - {ref}`RECORD_META_REMARK_VERSION <bitstreamremarksrecordmetaremarkversion>`
->
-> Then, this container type expects 1 or more {ref}`REMARK_BLOCK <bitstreamremarksremarkblock>`.
-> If no remarks are emitted, the meta blocks are also not emitted, so the file is empty.
->
-> After the remark blocks, another {ref}`META_BLOCK <bitstreamremarksmetablock>` is emitted, containing:
-> \* {ref}`RECORD_META_STRTAB <bitstreamremarksrecordmetastrtab>`
->
-> When the parser reads this container type, it jumps to the end of the file
-> to read the string table before parsing the individual remarks.
->
-> Standalone remarks files can be referenced by the
-> {ref}`RECORD_META_EXTERNAL_FILE <bitstreamremarksrecordmetaexternalfile>`
-> entry in the {ref}`RemarksFileExternal
-> <bitstreamremarksfileexternal>` container.
+This container type expects a {ref}`META_BLOCK <bitstreamremarksmetablock>` containing only:
 
-% FIXME: Add complete output of :program:`llvm-bcanalyzer` on the different container types (once format changes are completed)
+- {ref}`RECORD_META_CONTAINER_INFO <bitstreamremarksrecordmetacontainerinfo>`
+- {ref}`RECORD_META_REMARK_VERSION <bitstreamremarksrecordmetaremarkversion>`
+
+Then, this container type expects 1 or more {ref}`REMARK_BLOCK <bitstreamremarksremarkblock>`.
+If no remarks are emitted, the meta blocks are also not emitted, so the file is empty.
+
+After the remark blocks, another {ref}`META_BLOCK <bitstreamremarksmetablock>` is emitted, containing:
+
+- {ref}`RECORD_META_STRTAB <bitstreamremarksrecordmetastrtab>`
+
+When the parser reads this container type, it jumps to the end of the file
+to read the string table before parsing the individual remarks.
+
+Standalone remarks files can be referenced by the
+{ref}`RECORD_META_EXTERNAL_FILE <bitstreamremarksrecordmetaexternalfile>`
+entry in the {ref}`RemarksFileExternal
+<bitstreamremarksfileexternal>` container.
+
+% FIXME: Add complete output of llvm-bcanalyzer on the different container types (once format changes are completed)
 
 ## opt-viewer
 
@@ -445,34 +422,38 @@ The tools only support the `yaml` format.
 Output a HTML page which gives visual feedback on compiler interactions with
 your program.
 
-> ```
-> $ opt-viewer.py my_yaml_file.opt.yaml
-> ```
->
-> ```
-> $ opt-viewer.py my_build_dir/
-> ```
+**Examples:**
+
+```
+$ opt-viewer.py my_yaml_file.opt.yaml
+```
+
+```
+$ opt-viewer.py my_build_dir/
+```
 
 ### opt-stats.py
 
 Output statistics about the optimization remarks in the input set.
 
-> ```
-> $ opt-stats.py my_yaml_file.opt.yaml
->
-> Total number of remarks           3
->
->
-> Top 10 remarks by pass:
->   inline                         33%
->   asm-printer                    33%
->   prolog-epilog                  33%
->
-> Top 10 remarks:
->   asm-printer/InstructionCount   33%
->   inline/NoDefinition            33%
->   prolog-epilog/StackSize        33%
-> ```
+**Example:**
+
+```
+$ opt-stats.py my_yaml_file.opt.yaml
+
+Total number of remarks           3
+
+
+Top 10 remarks by pass:
+  inline                         33%
+  asm-printer                    33%
+  prolog-epilog                  33%
+
+Top 10 remarks:
+  asm-printer/InstructionCount   33%
+  inline/NoDefinition            33%
+  prolog-epilog/StackSize        33%
+```
 
 ### opt-diff.py
 
@@ -486,10 +467,12 @@ Typically, this tool should be used to do diffs between:
 
 This diff file can be displayed using {ref}`opt-viewer.py <optviewerpy>`.
 
-> ```
-> $ opt-diff.py my_opt_yaml1.opt.yaml my_opt_yaml2.opt.yaml -o my_opt_diff.opt.yaml
-> $ opt-viewer.py my_opt_diff.opt.yaml
-> ```
+**Example:**
+
+```
+$ opt-diff.py my_opt_yaml1.opt.yaml my_opt_yaml2.opt.yaml -o my_opt_diff.opt.yaml
+$ opt-viewer.py my_opt_diff.opt.yaml
+```
 
 (remarkssection)=
 
@@ -562,4 +545,3 @@ at the cost of an extra layer of abstraction.
 % FIXME: add documentation for IR Passes
 
 % FIXME: add documentation for CodeGen Passes
-

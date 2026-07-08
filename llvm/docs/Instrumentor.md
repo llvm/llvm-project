@@ -143,7 +143,7 @@ The filter expression language supports:
 **String comparisons:**
 : - `==` (equal, with quoted string)
   - `!=` (not equal, with quoted string)
-  - `.startswith(\"prefix\")` (prefix check, with quoted string)
+  - `.startswith("prefix")` (prefix check, with quoted string)
 
 **Pointer comparisons:**
 : - `==null` (null pointer check)
@@ -323,9 +323,9 @@ For each instrumentation opportunity, arguments are configured with:
 
 - **enabled**: Boolean to enable/disable the entire opportunity
 - **filter**: Optional string expression to filter instrumentation based on static properties (see Property Filtering)
-- **\<argument_name>**: Boolean to enable/disable passing this argument
-- **\<argument_name>.replace**: Boolean to enable value replacement (only for replaceable arguments)
-- **\<argument_name>.description**: Human-readable description of the argument
+- **`<argument_name>`**: Boolean to enable/disable passing this argument
+- **`<argument_name>.replace`**: Boolean to enable value replacement (only for replaceable arguments)
+- **`<argument_name>.description`**: Human-readable description of the argument
 
 ## The Configuration Wizard
 
@@ -892,12 +892,10 @@ Future instrumentation opportunities being considered:
 
 ### Command-Line Options
 
-**-instrumentor-read-config-file=\<path>**
-
+**`-instrumentor-read-config-file=<path>`**
 : Load instrumentation configuration from the specified JSON file.
 
-**-instrumentor-write-config-file=\<path>**
-
+**`-instrumentor-write-config-file=<path>`**
 : Write the default instrumentation configuration to the specified JSON file (useful for generating templates).
 
 ### Related Passes
@@ -917,4 +915,3 @@ The Instrumentor can implement similar functionality with custom runtime code, b
 - Source code: `llvm/lib/Transforms/IPO/Instrumentor.cpp`
 - Header: `llvm/include/llvm/Transforms/IPO/Instrumentor.h`
 - Configuration wizard: `llvm/utils/instrumentor-config-wizard.py`
-

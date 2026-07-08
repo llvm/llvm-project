@@ -3,7 +3,7 @@
 # AMDGPU Asynchronous Operations
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -12,7 +12,7 @@ Asynchronous operations are operations whose completion is not tracked
 internally by the compiler. A thread that initiates one or more async operations can use
 *asyncmarks* to track their completion.
 
-- Most {ref}`DMA operations<amdgpu-dma-operations>` are asynchronous.
+- Most {ref}`DMA operations <amdgpu-dma-operations>` are asynchronous.
 
 ## Asyncmarks
 
@@ -241,12 +241,11 @@ cases. These are just examples and not meant to be an exhaustive list.
    path that reaches it.
 
    ```c++
-     void foo() {
-       ...                // no asyncmark()
-       wait.asyncmark(0); // Y
-       ...
-     }
-
-   Here, ``Y`` can be eliminated.
+   void foo() {
+     ...                // no asyncmark()
+     wait.asyncmark(0); // Y
+     ...
+   }
    ```
 
+   Here, `Y` can be eliminated.

@@ -1,7 +1,7 @@
 # ORC Design and Implementation
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -16,15 +16,15 @@ transition from OrcV1 should see Section {ref}`transitioning_orcv1_to_orcv2`.
 ORC provides a modular API for building JIT compilers. There are a number
 of use cases for such an API. For example:
 
-1\. The LLVM tutorials use a simple ORC-based JIT class to execute expressions
+1. The LLVM tutorials use a simple ORC-based JIT class to execute expressions
 compiled from a toy language: Kaleidoscope.
 
-2\. The LLVM debugger, LLDB, uses a cross-compiling JIT for expression
+2. The LLVM debugger, LLDB, uses a cross-compiling JIT for expression
 evaluation. In this use case, cross compilation allows expressions compiled
 in the debugger process to be executed on the debug target process, which may
 be on a different device/architecture.
 
-3\. In high-performance JITs (e.g. JVMs, Julia) that want to make use of LLVM's
+3. In high-performance JITs (e.g. JVMs, Julia) that want to make use of LLVM's
 optimizations within an existing JIT infrastructure.
 
 4. In interpreters and REPLs, e.g. Cling (C++) and the Swift interpreter.
@@ -37,20 +37,17 @@ of these contexts as possible.
 ORC provides the following features:
 
 **JIT-linking**
-
-: ORC provides APIs to link relocatable object files (COFF, ELF, MachO) [^footnote-1]
+: ORC provides APIs to link relocatable object files (COFF, ELF, MachO) [^1]
   into a target process at runtime. The target process may be the same process
   that contains the JIT session object and jit-linker, or may be another process
   (even one running on a different machine or architecture) that communicates
   with the JIT via RPC.
 
 **LLVM IR compilation**
-
 : ORC provides off the shelf components (IRCompileLayer, SimpleCompiler,
   ConcurrentIRCompiler) that make it easy to add LLVM IR to a JIT'd process.
 
 **Eager and lazy compilation**
-
 : By default, ORC will compile symbols as soon as they are looked up in the JIT
   session object (`ExecutionSession`). Compiling eagerly by default makes it
   easy to use ORC as an in-memory compiler for an existing JIT (similar to how
@@ -58,7 +55,6 @@ ORC provides the following features:
   compilation via lazy-reexports (see {ref}`Laziness`).
 
 **Support for Custom Compilers and Program Representations**
-
 : Clients can supply custom compilers for each symbol that they define in their
   JIT session. ORC will run the user-supplied compiler when the a definition of
   a symbol is needed. ORC is actually fully language agnostic: LLVM IR is not
@@ -66,7 +62,6 @@ ORC provides the following features:
   `MaterializationUnit` class) that is used for custom compilers.
 
 **Concurrent JIT'd code** and **Concurrent Compilation**
-
 : JIT'd code may be executed in multiple threads, may spawn new threads, and may
   re-enter the ORC (e.g. to request lazy compilation) concurrently from multiple
   threads. Compilers launched my ORC can run concurrently (provided the client
@@ -75,11 +70,9 @@ ORC provides the following features:
   have also been JIT'd and they are safe to call or use.
 
 **Removable Code**
-
 : Resources for JIT'd program representations
 
 **Orthogonality** and **Composability**
-
 : Each of the features above can be used independently. It is possible to put
   ORC components together to make a non-lazy, in-process, single threaded JIT
   or a lazy, out-of-process, concurrent JIT, or anything in between.
@@ -162,7 +155,7 @@ found at `llvm/examples/HowToUseLLJIT`.
 ORC's JIT program model aims to emulate the linking and symbol resolution
 rules used by the static and dynamic linkers. This allows ORC to JIT
 arbitrary LLVM IR, including IR produced by an ordinary static compiler (e.g.
-clang) that uses constructs like symbol linkage and visibility, and weak [^footnote-3]
+clang) that uses constructs like symbol linkage and visibility, and weak [^3]
 and common symbol definitions.
 
 To see how this works, imagine a program `foo` which links against a pair
@@ -320,8 +313,7 @@ to be re-used across JIT sessions as the JIT'd code no longer changes, only the
 absolute symbol definition does.
 
 For process and library symbols the DynamicLibrarySearchGenerator utility (See
-{ref}`How to Add Process and Library Symbols to JITDylibs
-<ProcessAndLibrarySymbols>`) can be used to automatically build absolute
+{ref}`How to Add Process and Library Symbols to JITDylibs <ProcessAndLibrarySymbols>`) can be used to automatically build absolute
 symbol mappings for you. However the absoluteSymbols function is still useful
 for making non-global objects in your JIT visible to JIT'd code. For example,
 imagine that your JIT standard library needs access to your JIT object to make
@@ -404,7 +396,7 @@ JD2.define(
 The reexports utility can be handy for composing a single JITDylib interface by
 re-exporting symbols from several other JITDylibs.
 
-(laziness)=
+(Laziness)=
 
 ## Laziness
 
@@ -456,7 +448,7 @@ A full example of how to use lazyReexports with the LLJIT class can be found at
 
 TBD.
 
-(transitioning-orcv1-to-orcv2)=
+(transitioning_orcv1_to_orcv2)=
 
 ## Transitioning from ORCv1 to ORCv2
 
@@ -471,55 +463,55 @@ prefix in LLVM 8.0, and have deprecation warnings attached in LLVM 9.0. In LLVM
 12.0 ORCv1 will be removed entirely.
 
 Transitioning from ORCv1 to ORCv2 should be easy for most clients. Most of the
-ORCv1 layers and utilities have ORCv2 counterparts [^footnote-2] that can be directly
+ORCv1 layers and utilities have ORCv2 counterparts [^2] that can be directly
 substituted. However there are some design differences between ORCv1 and ORCv2
 to be aware of:
 
-> 1. ORCv2 fully adopts the JIT-as-linker model that began with MCJIT. Modules
->    (and other program representations, e.g. Object Files) are no longer added
->    directly to JIT classes or layers. Instead, they are added to `JITDylib`
->    instances *by* layers. The `JITDylib` determines *where* the definitions
->    reside, the layers determine *how* the definitions will be compiled.
->    Linkage relationships between `JITDylibs` determine how inter-module
->    references are resolved, and symbol resolvers are no longer used. See the
->    section [Design Overview] for more details.
->
->    Unless multiple JITDylibs are needed to model linkage relationships, ORCv1
->    clients should place all code in a single JITDylib.
->    MCJIT clients should use LLJIT (see [LLJIT and LLLazyJIT]), and can place
->    code in LLJIT's default created main JITDylib (See
->    `LLJIT::getMainJITDylib()`).
->
-> 2. All JIT stacks now need an `ExecutionSession` instance. ExecutionSession
->    manages the string pool, error reporting, synchronization, and symbol
->    lookup.
->
-> 3. ORCv2 uses uniqued strings (`SymbolStringPtr` instances) rather than
->    string values in order to reduce memory overhead and improve lookup
->    performance. See the subsection [How to manage symbol strings].
->
-> 4. IR layers require ThreadSafeModule instances, rather than
->    std::unique_ptr\<Module>s. ThreadSafeModule is a wrapper that ensures that
->    Modules that use the same LLVMContext are not accessed concurrently.
->    See [How to use ThreadSafeModule and ThreadSafeContext].
->
-> 5. Symbol lookup is no longer handled by layers. Instead, there is a
->    `lookup` method on JITDylib that takes a list of JITDylibs to scan.
->
->    ```c++
->    ExecutionSession ES;
->    JITDylib &JD1 = ...;
->    JITDylib &JD2 = ...;
->
->    auto Sym = ES.lookup({&JD1, &JD2}, ES.intern("_main"));
->    ```
->
-> 6. The removeModule/removeObject methods are replaced by
->    `ResourceTracker::remove`.
->    See the subsection [How to remove code].
+1. ORCv2 fully adopts the JIT-as-linker model that began with MCJIT. Modules
+   (and other program representations, e.g. Object Files) are no longer added
+   directly to JIT classes or layers. Instead, they are added to `JITDylib`
+   instances *by* layers. The `JITDylib` determines *where* the definitions
+   reside, the layers determine *how* the definitions will be compiled.
+   Linkage relationships between `JITDylibs` determine how inter-module
+   references are resolved, and symbol resolvers are no longer used. See the
+   section [Design Overview](#design-overview) for more details.
+
+   Unless multiple JITDylibs are needed to model linkage relationships, ORCv1
+   clients should place all code in a single JITDylib.
+   MCJIT clients should use LLJIT (see [LLJIT and LLLazyJIT](#lljit-and-lllazyjit)), and can place
+   code in LLJIT's default created main JITDylib (See
+   `LLJIT::getMainJITDylib()`).
+
+2. All JIT stacks now need an `ExecutionSession` instance. ExecutionSession
+   manages the string pool, error reporting, synchronization, and symbol
+   lookup.
+
+3. ORCv2 uses uniqued strings (`SymbolStringPtr` instances) rather than
+   string values in order to reduce memory overhead and improve lookup
+   performance. See the subsection [How to manage symbol strings](#how-to-manage-symbol-strings).
+
+4. IR layers require ThreadSafeModule instances, rather than
+   `std::unique_ptr<Module>`s. ThreadSafeModule is a wrapper that ensures that
+   Modules that use the same LLVMContext are not accessed concurrently.
+   See [How to use ThreadSafeModule and ThreadSafeContext](#how-to-use-threadsafemodule-and-threadsafecontext).
+
+5. Symbol lookup is no longer handled by layers. Instead, there is a
+   `lookup` method on JITDylib that takes a list of JITDylibs to scan.
+
+   ```c++
+   ExecutionSession ES;
+   JITDylib &JD1 = ...;
+   JITDylib &JD2 = ...;
+
+   auto Sym = ES.lookup({&JD1, &JD2}, ES.intern("_main"));
+   ```
+
+6. The removeModule/removeObject methods are replaced by
+   `ResourceTracker::remove`.
+   See the subsection [How to remove code](#how-to-remove-code).
 
 For code examples and suggestions of how to use the ORCv2 APIs, please see
-the section [How-tos].
+the section [How-tos](#how-tos).
 
 ## How-tos
 
@@ -530,40 +522,40 @@ overhead, and allow symbol names to function as efficient keys. To get the
 unique `SymbolStringPtr` for a string value, call the
 `ExecutionSession::intern` method:
 
-> ```c++
-> ExecutionSession ES;
-> /// ...
-> auto MainSymbolName = ES.intern("main");
-> ```
+```c++
+ExecutionSession ES;
+/// ...
+auto MainSymbolName = ES.intern("main");
+```
 
 If you wish to perform lookup using the C/IR name of a symbol you will also
 need to apply the platform linker-mangling before interning the string. On
 Linux this mangling is a no-op, but on other platforms it usually involves
-adding a prefix to the string (e.g. '\_' on Darwin). The mangling scheme is
+adding a prefix to the string (e.g. `_` on Darwin). The mangling scheme is
 based on the DataLayout for the target. Given a DataLayout and an
 ExecutionSession, you can create a MangleAndInterner function object that
 will perform both jobs for you:
 
-> ```c++
-> ExecutionSession ES;
-> const DataLayout &DL = ...;
-> MangleAndInterner Mangle(ES, DL);
->
-> // ...
->
-> // Portable IR-symbol-name lookup:
-> auto Sym = ES.lookup({&MainJD}, Mangle("main"));
-> ```
+```c++
+ExecutionSession ES;
+const DataLayout &DL = ...;
+MangleAndInterner Mangle(ES, DL);
+
+// ...
+
+// Portable IR-symbol-name lookup:
+auto Sym = ES.lookup({&MainJD}, Mangle("main"));
+```
 
 ### How to create JITDylibs and set up linkage relationships
 
 In ORC, all symbol definitions reside in JITDylibs. JITDylibs are created by
 calling the `ExecutionSession::createJITDylib` method with a unique name:
 
-> ```c++
-> ExecutionSession ES;
-> auto &JD = ES.createJITDylib("libFoo.dylib");
-> ```
+```c++
+ExecutionSession ES;
+auto &JD = ES.createJITDylib("libFoo.dylib");
+```
 
 The JITDylib is owned by the `ExecutionEngine` instance and will be freed
 when it is destroyed.
@@ -574,15 +566,15 @@ To remove an individual module from a JITDylib it must first be added using an
 explicit `ResourceTracker`. The module can then be removed by calling
 `ResourceTracker::remove`:
 
-> ```c++
-> auto &JD = ... ;
-> auto M = ... ;
->
-> auto RT = JD.createResourceTracker();
-> Layer.add(RT, std::move(M)); // Add M to JD, tracking resources with RT
->
-> RT.remove(); // Remove M from JD.
-> ```
+```c++
+auto &JD = ... ;
+auto M = ... ;
+
+auto RT = JD.createResourceTracker();
+Layer.add(RT, std::move(M)); // Add M to JD, tracking resources with RT
+
+RT.remove(); // Remove M from JD.
+```
 
 Modules added directly to a JITDylib will be tracked by that JITDylib's default
 resource tracker.
@@ -618,73 +610,73 @@ the linker drops the definition later.
 
 Here is an example of an ASTLayer:
 
-> ```c++
-> // ... In you JIT class
-> AstLayer astLayer;
-> // ...
->
->
-> class AstMaterializationUnit : public orc::MaterializationUnit {
-> public:
->   AstMaterializationUnit(AstLayer &l, Ast &ast)
->   : llvm::orc::MaterializationUnit(l.getInterface(ast)), astLayer(l),
->   ast(ast) {};
->
->   llvm::StringRef getName() const override {
->     return "AstMaterializationUnit";
->   }
->
->   void materialize(std::unique_ptr<orc::MaterializationResponsibility> r) override {
->     astLayer.emit(std::move(r), ast);
->   };
->
-> private:
->   void discard(const llvm::orc::JITDylib &jd, const llvm::orc::SymbolStringPtr &sym) override {
->     llvm_unreachable("functions are not overridable");
->   }
->
->
->   AstLayer &astLayer;
->   Ast &ast;
-> };
->
-> class AstLayer {
->   llvhm::orc::IRLayer &baseLayer;
->   llvhm::orc::MangleAndInterner &mangler;
->
-> public:
->   AstLayer(llvm::orc::IRLayer &baseLayer, llvm::orc::MangleAndInterner &mangler)
->   : baseLayer(baseLayer), mangler(mangler){};
->
->   llvm::Error add(llvm::orc::ResourceTrackerSP &rt, Ast &ast) {
->     return rt->getJITDylib().define(std::make_unique<AstMaterializationUnit>(*this, ast), rt);
->   }
->
->   void emit(std::unique_ptr<orc::MaterializationResponsibility> mr, Ast &ast) {
->     // compileAst is just function that compiles the given AST and returns
->     // a `llvm::orc::ThreadSafeModule`
->     baseLayer.emit(std::move(mr), compileAst(ast));
->   }
->
->   llvm::orc::MaterializationUnit::Interface getInterface(Ast &ast) {
->       SymbolFlagsMap Symbols;
->       // Find all the symbols in the AST and for each of them
->       // add it to the Symbols map.
->       Symbols[mangler(someNameFromAST)] =
->         JITSymbolFlags(JITSymbolFlags::Exported | JITSymbolFlags::Callable);
->       return MaterializationUnit::Interface(std::move(Symbols), nullptr);
->   }
-> };
-> ```
+```c++
+// ... In you JIT class
+AstLayer astLayer;
+// ...
 
-Take look at the source code of [Building A JIT's Chapter 4](tutorial/BuildingAJIT4.html) for a complete example.
+
+class AstMaterializationUnit : public orc::MaterializationUnit {
+public:
+  AstMaterializationUnit(AstLayer &l, Ast &ast)
+  : llvm::orc::MaterializationUnit(l.getInterface(ast)), astLayer(l),
+  ast(ast) {};
+
+  llvm::StringRef getName() const override {
+    return "AstMaterializationUnit";
+  }
+
+  void materialize(std::unique_ptr<orc::MaterializationResponsibility> r) override {
+    astLayer.emit(std::move(r), ast);
+  };
+
+private:
+  void discard(const llvm::orc::JITDylib &jd, const llvm::orc::SymbolStringPtr &sym) override {
+    llvm_unreachable("functions are not overridable");
+  }
+
+
+  AstLayer &astLayer;
+  Ast &ast;
+};
+
+class AstLayer {
+  llvhm::orc::IRLayer &baseLayer;
+  llvhm::orc::MangleAndInterner &mangler;
+
+public:
+  AstLayer(llvm::orc::IRLayer &baseLayer, llvm::orc::MangleAndInterner &mangler)
+  : baseLayer(baseLayer), mangler(mangler){};
+
+  llvm::Error add(llvm::orc::ResourceTrackerSP &rt, Ast &ast) {
+    return rt->getJITDylib().define(std::make_unique<AstMaterializationUnit>(*this, ast), rt);
+  }
+
+  void emit(std::unique_ptr<orc::MaterializationResponsibility> mr, Ast &ast) {
+    // compileAst is just function that compiles the given AST and returns
+    // a `llvm::orc::ThreadSafeModule`
+    baseLayer.emit(std::move(mr), compileAst(ast));
+  }
+
+  llvm::orc::MaterializationUnit::Interface getInterface(Ast &ast) {
+      SymbolFlagsMap Symbols;
+      // Find all the symbols in the AST and for each of them
+      // add it to the Symbols map.
+      Symbols[mangler(someNameFromAST)] =
+        JITSymbolFlags(JITSymbolFlags::Exported | JITSymbolFlags::Callable);
+      return MaterializationUnit::Interface(std::move(Symbols), nullptr);
+  }
+};
+```
+
+Take look at the source code of {doc}`Building A JIT's Chapter 4 <tutorial/BuildingAJIT4>` for a complete example.
 
 ### How to use ThreadSafeModule and ThreadSafeContext
 
 ThreadSafeModule and ThreadSafeContext are wrappers around Modules and
 LLVMContexts respectively. A ThreadSafeModule is a pair of a
-std::unique_ptr\<Module> and a (possibly shared) ThreadSafeContext value. A
-ThreadSafeContext is a pair of a std::unique_ptr\<LLVMContext> and a lock.
+`std::unique_ptr<Module>` and a (possibly shared) ThreadSafeContext value. A
+ThreadSafeContext is a pair of a `std::unique_ptr<LLVMContext>` and a lock.
 This design serves two purposes: providing a locking scheme and lifetime
 management for LLVMContexts. The ThreadSafeContext may be locked to prevent
 accidental concurrent access by two Modules that use the same LLVMContext.
@@ -693,23 +685,23 @@ to it are destroyed, allowing the context memory to be reclaimed as soon as
 the Modules referring to it are destroyed.
 
 ThreadSafeContexts can be explicitly constructed from a
-std::unique_ptr\<LLVMContext>:
+`std::unique_ptr<LLVMContext>`:
 
-> ```c++
-> ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
-> ```
+```c++
+ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
+```
 
-ThreadSafeModules can be constructed from a pair of a std::unique_ptr\<Module>
+ThreadSafeModules can be constructed from a pair of a `std::unique_ptr<Module>`
 and a ThreadSafeContext value. ThreadSafeContext values may be shared between
 multiple ThreadSafeModules:
 
-> ```c++
-> ThreadSafeModule TSM1(
->   std::make_unique<Module>("M1", *TSCtx.getContext()), TSCtx);
->
-> ThreadSafeModule TSM2(
->   std::make_unique<Module>("M2", *TSCtx.getContext()), TSCtx);
-> ```
+```c++
+ThreadSafeModule TSM1(
+  std::make_unique<Module>("M1", *TSCtx.getContext()), TSCtx);
+
+ThreadSafeModule TSM2(
+  std::make_unique<Module>("M2", *TSCtx.getContext()), TSCtx);
+```
 
 Before using a ThreadSafeContext, clients should ensure that either the context
 is only accessible on the current thread, or that the context is locked. In the
@@ -718,69 +710,69 @@ example above (where the context is never locked) we rely on the fact that both
 going to be shared between threads then it must be locked before any accessing
 or creating any Modules attached to it. E.g.
 
-> ```c++
-> ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
->
-> DefaultThreadPool TP(NumThreads);
-> JITStack J;
->
-> for (auto &ModulePath : ModulePaths) {
->   TP.async(
->     [&]() {
->       auto Lock = TSCtx.getLock();
->       auto M = loadModuleOnContext(ModulePath, TSCtx.getContext());
->       J.addModule(ThreadSafeModule(std::move(M), TSCtx));
->     });
-> }
->
-> TP.wait();
-> ```
+```c++
+ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
+
+DefaultThreadPool TP(NumThreads);
+JITStack J;
+
+for (auto &ModulePath : ModulePaths) {
+  TP.async(
+    [&]() {
+      auto Lock = TSCtx.getLock();
+      auto M = loadModuleOnContext(ModulePath, TSCtx.getContext());
+      J.addModule(ThreadSafeModule(std::move(M), TSCtx));
+    });
+}
+
+TP.wait();
+```
 
 To make exclusive access to Modules easier to manage the ThreadSafeModule class
 provides a convenience function, `withModuleDo`, that implicitly (1) locks the
 associated context, (2) runs a given function object, (3) unlocks the context,
 and (3) returns the result generated by the function object. E.g.
 
-> ```c++
-> ThreadSafeModule TSM = getModule(...);
->
-> // Dump the module:
-> size_t NumFunctionsInModule =
->   TSM.withModuleDo(
->     [](Module &M) { // <- Context locked before entering lambda.
->       return M.size();
->     } // <- Context unlocked after leaving.
->   );
-> ```
+```c++
+ThreadSafeModule TSM = getModule(...);
+
+// Dump the module:
+size_t NumFunctionsInModule =
+  TSM.withModuleDo(
+    [](Module &M) { // <- Context locked before entering lambda.
+      return M.size();
+    } // <- Context unlocked after leaving.
+  );
+```
 
 Clients wishing to maximize possibilities for concurrent compilation will want
 to create every new ThreadSafeModule on a new ThreadSafeContext. For this
 reason a convenience constructor for ThreadSafeModule is provided that implicitly
-constructs a new ThreadSafeContext value from a std::unique_ptr\<LLVMContext>:
+constructs a new ThreadSafeContext value from a `std::unique_ptr<LLVMContext>`:
 
-> ```c++
-> // Maximize concurrency opportunities by loading every module on a
-> // separate context.
-> for (const auto &IRPath : IRPaths) {
->   auto Ctx = std::make_unique<LLVMContext>();
->   auto M = std::make_unique<Module>("M", *Ctx);
->   CompileLayer.add(MainJD, ThreadSafeModule(std::move(M), std::move(Ctx)));
-> }
-> ```
+```c++
+// Maximize concurrency opportunities by loading every module on a
+// separate context.
+for (const auto &IRPath : IRPaths) {
+  auto Ctx = std::make_unique<LLVMContext>();
+  auto M = std::make_unique<Module>("M", *Ctx);
+  CompileLayer.add(MainJD, ThreadSafeModule(std::move(M), std::move(Ctx)));
+}
+```
 
 Clients who plan to run single-threaded may choose to save memory by loading
 all modules on the same context:
 
-> ```c++
-> // Save memory by using one context for all Modules:
-> ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
-> for (const auto &IRPath : IRPaths) {
->   ThreadSafeModule TSM(parsePath(IRPath, *TSCtx.getContext()), TSCtx);
->   CompileLayer.add(MainJD, ThreadSafeModule(std::move(TSM));
-> }
-> ```
+```c++
+// Save memory by using one context for all Modules:
+ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
+for (const auto &IRPath : IRPaths) {
+  ThreadSafeModule TSM(parsePath(IRPath, *TSCtx.getContext()), TSCtx);
+  CompileLayer.add(MainJD, ThreadSafeModule(std::move(TSM));
+}
+```
 
-(processandlibrarysymbols)=
+(ProcessAndLibrarySymbols)=
 
 ## How to Add Process and Library Symbols to JITDylibs
 
@@ -793,18 +785,18 @@ so visible to the JIT linker during linking).
 One way to reflect external symbols is to add them manually using the
 absoluteSymbols function:
 
-> ```c++
-> const DataLayout &DL = getDataLayout();
-> MangleAndInterner Mangle(ES, DL);
->
-> auto &JD = ES.createJITDylib("main");
->
-> JD.define(
->   absoluteSymbols({
->     { Mangle("puts"), ExecutorAddr::fromPtr(&puts)},
->     { Mangle("gets"), ExecutorAddr::fromPtr(&getS)}
->   }));
-> ```
+```c++
+const DataLayout &DL = getDataLayout();
+MangleAndInterner Mangle(ES, DL);
+
+auto &JD = ES.createJITDylib("main");
+
+JD.define(
+  absoluteSymbols({
+    { Mangle("puts"), ExecutorAddr::fromPtr(&puts)},
+    { Mangle("gets"), ExecutorAddr::fromPtr(&getS)}
+  }));
+```
 
 Using absoluteSymbols is reasonable if the set of symbols to be reflected is
 small and fixed. On the other hand, if the set of symbols is large or variable
@@ -818,47 +810,47 @@ ORC provides the `DynamicLibrarySearchGenerator` utility for reflecting symbols
 from the process (or a specific dynamic library) for you. For example, to reflect
 the whole interface of a runtime library:
 
-> ```c++
-> const DataLayout &DL = getDataLayout();
-> auto &JD = ES.createJITDylib("main");
->
-> if (auto DLSGOrErr =
->     DynamicLibrarySearchGenerator::Load("/path/to/lib"
->                                         DL.getGlobalPrefix()))
->   JD.addGenerator(std::move(*DLSGOrErr);
-> else
->   return DLSGOrErr.takeError();
->
-> // IR added to JD can now link against all symbols exported by the library
-> // at '/path/to/lib'.
-> CompileLayer.add(JD, loadModule(...));
-> ```
+```c++
+const DataLayout &DL = getDataLayout();
+auto &JD = ES.createJITDylib("main");
+
+if (auto DLSGOrErr =
+    DynamicLibrarySearchGenerator::Load("/path/to/lib"
+                                        DL.getGlobalPrefix()))
+  JD.addGenerator(std::move(*DLSGOrErr);
+else
+  return DLSGOrErr.takeError();
+
+// IR added to JD can now link against all symbols exported by the library
+// at '/path/to/lib'.
+CompileLayer.add(JD, loadModule(...));
+```
 
 The `DynamicLibrarySearchGenerator` utility can also be constructed with a
 filter function to restrict the set of symbols that may be reflected. For
 example, to expose an allowed set of symbols from the main process:
 
-> ```c++
-> const DataLayout &DL = getDataLayout();
-> MangleAndInterner Mangle(ES, DL);
->
-> auto &JD = ES.createJITDylib("main");
->
-> DenseSet<SymbolStringPtr> AllowList({
->     Mangle("puts"),
->     Mangle("gets")
->   });
->
-> // Use GetForCurrentProcess with a predicate function that checks the
-> // allowed list.
-> JD.addGenerator(cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
->       DL.getGlobalPrefix(),
->       [&](const SymbolStringPtr &S) { return AllowList.count(S); })));
->
-> // IR added to JD can now link against any symbols exported by the process
-> // and contained in the list.
-> CompileLayer.add(JD, loadModule(...));
-> ```
+```c++
+const DataLayout &DL = getDataLayout();
+MangleAndInterner Mangle(ES, DL);
+
+auto &JD = ES.createJITDylib("main");
+
+DenseSet<SymbolStringPtr> AllowList({
+    Mangle("puts"),
+    Mangle("gets")
+  });
+
+// Use GetForCurrentProcess with a predicate function that checks the
+// allowed list.
+JD.addGenerator(cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
+      DL.getGlobalPrefix(),
+      [&](const SymbolStringPtr &S) { return AllowList.count(S); })));
+
+// IR added to JD can now link against any symbols exported by the process
+// and contained in the list.
+CompileLayer.add(JD, loadModule(...));
+```
 
 References to process or library symbols could also be hardcoded into your IR
 or object files using the symbols' raw addresses, however symbolic resolution
@@ -934,20 +926,18 @@ listed below.
    feed speculation decisions, as well as built-in tools to simplify use of
    speculative compilation.
 
-[^footnote-1]: Formats/architectures vary in terms of supported features. MachO and
+[^1]: Formats/architectures vary in terms of supported features. MachO and
     ELF tend to have better support than COFF. Patches very welcome!
 
-[^footnote-2]: The `LazyEmittingLayer`, `RemoteObjectClientLayer` and
-    `RemoteObjectServerLayer` do not have counterparts in the new
-    system. In the case of `LazyEmittingLayer` it was simply no longer
-    needed: in ORCv2, deferring compilation until symbols are looked up is
-    the default. The removal of `RemoteObjectClientLayer` and
-    `RemoteObjectServerLayer` means that JIT stacks can no longer be split
-    across processes, however this functionality appears not to have been
-    used.
+[^2]: The `LazyEmittingLayer`, `RemoteObjectClientLayer` and
+    `RemoteObjectServerLayer` do not have counterparts in the new system. In the
+    case of `LazyEmittingLayer` it was simply no longer needed: in ORCv2,
+    deferring compilation until symbols are looked up is the default. The
+    removal of `RemoteObjectClientLayer` and `RemoteObjectServerLayer` means
+    that JIT stacks can no longer be split across processes, however this
+    functionality appears not to have been used.
 
-[^footnote-3]: Weak definitions are currently handled correctly within dylibs, but if
-    multiple dylibs provide a weak definition of a symbol then each will end
-    up with its own definition (similar to how weak definitions are handled
-    in Windows DLLs). This will be fixed in the future.
-
+[^3]: Weak definitions are currently handled correctly within dylibs, but if
+    multiple dylibs provide a weak definition of a symbol then each will end up
+    with its own definition (similar to how weak definitions are handled in
+    Windows DLLs). This will be fixed in the future.

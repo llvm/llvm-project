@@ -3,7 +3,7 @@
 # AMDGPU Memory Model
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -368,21 +368,43 @@ The following properties follow from the definitions above:
 The AMDGPU memory model draws heavily on the Vulkan memory model. In
 particular, the following instructions are equivalent.
 
-```{eval-rst}
-.. csv-table::
-   :header: "LLVM", "SPIRV", "Available/Visible Semantics"
-   :widths: 20, 20, 60
+```{list-table}
+:header-rows: 1
+:widths: 20 20 60
 
-   "``load``", "``OpLoad NonPrivatePointer``", "\-"
-   "``load-visible``", "``OpLoad NonPrivatePointer``", "``MakePointerVisible``"
-   "``store``", "``OpStore NonPrivatePointer``", "\-"
-   "``store-available``", "``OpStore NonPrivatePointer``", "``MakePointerAvailable``"
-   "``load atomic``", "``OpAtomicLoad``", "``MakePointerVisible``. Also ``MakeVisible`` when order is at least ``acquire``."
-   "``load atomic !{!""amdgcn-av"", !""none""}``", "``OpAtomicLoad``", "``MakePointerVisible``"
-   "``store atomic``", "``OpAtomicStore``", "``MakePointerAvailable``. Also ``MakeAvailable`` when order is at least ``release``."
-   "``store atomic !{!""amdgcn-av"", !""none""}``", "``OpAtomicStore``", "``MakePointerAvailable``"
-   "``fence``", "``OpMemoryBarrier``", "``MakeAvailable`` when order is at least ``release``, and ``MakeVisible`` when order is at least ``acquire``."
-   "``fence !{!""amdgcn-av"", !""none""}``", "``OpMemoryBarrier``", "\-"
+   * - LLVM
+     - SPIRV
+     - Available/Visible Semantics
+   * - `load`
+     - `OpLoad NonPrivatePointer`
+     - \-
+   * - `load-visible`
+     - `OpLoad NonPrivatePointer`
+     - `MakePointerVisible`
+   * - `store`
+     - `OpStore NonPrivatePointer`
+     - \-
+   * - `store-available`
+     - `OpStore NonPrivatePointer`
+     - `MakePointerAvailable`
+   * - `load atomic`
+     - `OpAtomicLoad`
+     - `MakePointerVisible`. Also `MakeVisible` when order is at least `acquire`.
+   * - `load atomic !{!"amdgcn-av", !"none"}`
+     - `OpAtomicLoad`
+     - `MakePointerVisible`
+   * - `store atomic`
+     - `OpAtomicStore`
+     - `MakePointerAvailable`. Also `MakeAvailable` when order is at least `release`.
+   * - `store atomic !{!"amdgcn-av", !"none"}`
+     - `OpAtomicStore`
+     - `MakePointerAvailable`
+   * - `fence`
+     - `OpMemoryBarrier`
+     - `MakeAvailable` when order is at least `release`, and `MakeVisible` when order is at least `acquire`.
+   * - `fence !{!"amdgcn-av", !"none"}`
+     - `OpMemoryBarrier`
+     - \-
 ```
 
 :::{note}
@@ -398,13 +420,12 @@ by combining suitable rules such as:
 
 The AMDGPU memory model is a special case of the Vulkan memory model:
 
-1. LLVM fence/atomic ordering operations have `MakeAvailable` /
-   `MakeVisible` semantics by default, thus satisfying the availability and
-   visibility chains required in Vulkan. Hence the LLVM memory model is a
-   "strong" subset of the Vulkan memory model.
+1. LLVM fence/atomic ordering operations have `MakeAvailable` / `MakeVisible`
+   semantics by default, thus satisfying the availability and visibility chains
+   required in Vulkan. Hence the LLVM memory model is a "strong" subset of the
+   Vulkan memory model.
 2. The AMDGPU memory model described here makes it possible to opt-out of the
-   default `MakeAvailable` and `MakeVisible` semantics, and instead specify
-   it on select places including the new *load-visible* and *store-available*
+   default `MakeAvailable` and `MakeVisible` semantics, and instead specify it
+   on select places including the new *load-visible* and *store-available*
    operations. This expands the subset of the Vulkan memory model that can now
    be expressed in LLVM IR.
-

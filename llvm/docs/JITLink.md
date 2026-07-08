@@ -1,7 +1,7 @@
 # JITLink and ORC's ObjectLinkingLayer
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -13,11 +13,12 @@ what a section, symbol, and relocation are then you should find this document
 accessible. If it is not, please submit a patch ({doc}`Contributing`) or file a
 bug ({doc}`HowToSubmitABug`).
 
-JITLink is a library for {ref}`jit_linking`. It was built to support the {doc}`ORC JIT
-APIs<ORCv2>` and is most commonly accessed via ORC's ObjectLinkingLayer API. JITLink was
-developed with the aim of supporting the full set of features provided by each
-object format; including static initializers, exception handling, thread local
-variables, and language runtime registration. Supporting these features enables
+JITLink is a library for {ref}`jit_linking`. It was built to support the
+{doc}`ORC JIT APIs <ORCv2>` and is most commonly accessed via ORC's
+ObjectLinkingLayer API. JITLink was developed with the aim of supporting the
+full set of features provided by each object format; including static
+initializers, exception handling, thread local variables, and language runtime
+registration. Supporting these features enables
 ORC to execute code generated from source languages which rely on these features
 (e.g. C++ requires object format support for static initializers to support
 static constructors, eh-frame registration for exceptions, and TLV support for
@@ -109,7 +110,7 @@ or link failure. If no resources are managed by the plugin then these methods
 can be implemented as no-ops returning `Error::success()`.
 
 Plugin instances are added to an `ObjectLinkingLayer` by
-calling the `addPlugin` method [^footnote-1]. E.g.
+calling the `addPlugin` method [^1]. E.g.
 
 ```c++
 // Plugin class to print the set of defined symbols in an object when that
@@ -367,7 +368,7 @@ and utilities relevant to the linking process:
     link graph's internal allocator. This can be used to ensure that content
     created inside a pass outlives that pass's execution.
 
-(generic-link-algorithm)=
+(generic_link_algorithm)=
 
 ## Generic Link Algorithm
 
@@ -630,7 +631,7 @@ and a callback to run once an `InFlightAlloc` has been constructed.
 `JITLinkMemoryManager` implementations can (optionally) use the `JD`
 argument to manage a per-simulated-dylib memory pool (since code model
 constraints are typically imposed on a per-dylib basis, and not across
-dylibs) [^footnote-2]. The `LinkGraph` describes the object file that we need to
+dylibs) [^2]. The `LinkGraph` describes the object file that we need to
 allocate memory for. The allocator must allocate working memory for all of
 the Blocks defined in the graph, assign address space for each Block within the
 executing processes memory, and update the Blocks' addresses to reflect this
@@ -716,7 +717,7 @@ reported failures are propagated to queries pending on definitions provided by
 the failing link, and also through edges of the dependence graph to any queries
 waiting on dependent symbols.
 
-(connection-to-orc-runtime)=
+(connection_to_orc_runtime)=
 
 ## Connection to the ORC Runtime
 
@@ -735,7 +736,7 @@ which calls back to the JIT process to ask for the list of address ranges of
 `MachOPlatformPlugin`, which installs a pass to record this information for
 each object as it is linked into the target.
 
-(constructing-linkgraphs)=
+(constructing_linkgraphs)=
 
 ## Constructing LinkGraphs
 
@@ -747,16 +748,16 @@ for them by an `ObjectLinkingLayer` instance, but they can be created manually:
    `LinkGraph` from an in-memory buffer containing an object file. This is how
    `ObjectLinkingLayer` usually creates `LinkGraphs`.
 
-> 1. `createLinkGraph_<Object-Format>_<Architecture>` can be used when
->    both the object format and architecture are known ahead of time.
-> 2. `createLinkGraph_<Object-Format>` can be used when the object format is
->    known ahead of time, but the architecture is not. In this case the
->    architecture will be determined by inspection of the object header.
-> 3. `createLinkGraph` can be used when neither the object format nor
->    the architecture are known ahead of time. In this case the object header
->    will be inspected to determine both the format and architecture.
+   1. `createLinkGraph_<Object-Format>_<Architecture>` can be used when
+      both the object format and architecture are known ahead of time.
+   2. `createLinkGraph_<Object-Format>` can be used when the object format is
+      known ahead of time, but the architecture is not. In this case the
+      architecture will be determined by inspection of the object header.
+   3. `createLinkGraph` can be used when neither the object format nor
+      the architecture are known ahead of time. In this case the object header
+      will be inspected to determine both the format and architecture.
 
-(jit-linking)=
+(jit_linking)=
 
 ## JIT Linking
 
@@ -1037,11 +1038,10 @@ Support levels:
   native thread local storage may not be available yet.
 - Complete: The backend supports all relocations and object format features.
 
-```{eval-rst}
-.. list-table:: Availability and Status
-   :widths: 10 22 22 22 22
-   :header-rows: 1
-   :stub-columns: 1
+```{list-table} Availability and Status
+:widths: 10 22 22 22 22
+:header-rows: 1
+:stub-columns: 1
 
    * - Architecture
      - ELF
@@ -1095,10 +1095,10 @@ Support levels:
      -
 ```
 
-[^footnote-1]: See `llvm/examples/OrcV2Examples/LLJITWithObjectLinkingLayerPlugin` for
+[^1]: See `llvm/examples/OrcV2Examples/LLJITWithObjectLinkingLayerPlugin` for
     a full worked example.
 
-[^footnote-2]: If not for *hidden* scoped symbols we could eliminate the
+[^2]: If not for *hidden* scoped symbols we could eliminate the
     `JITLinkDylib*` argument to `JITLinkMemoryManager::allocate` and
     treat every object as a separate simulated dylib for the purposes of
     memory layout. Hidden symbols break this by generating in-range accesses
@@ -1108,4 +1108,3 @@ Support levels:
     optimizations will kick in for all intra-dylib references, which is good
     for performance (at the cost of whatever overhead is introduced by
     reserving the address-range up-front).
-

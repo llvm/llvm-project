@@ -48,13 +48,13 @@ store a runtime address from another DLL into this pointer (although runtime
 addresses are patched into the IAT). Therefore, the compiler must emit some code,
 that runs after IAT patching but before anything that might use the vtable pointers,
 and sets the vtable pointer to the address from the IAT. For the special case of
-the references to vtables for \_\_cxxabiv1::\_\_class_type_info from typeinto objects
+the references to vtables for `__cxxabiv1::__class_type_info` from typeinto objects
 there is no declaration available to the compiler so this can't be done. To allow
 programs to link we currently rely on the -auto-import switch in LLD to auto-import
-references to \_\_cxxabiv1::\_\_class_type_info pointers (see: <https://reviews.llvm.org/D43184>
+references to `__cxxabiv1::__class_type_info` pointers (see: <https://reviews.llvm.org/D43184>
 for a related discussion). This allows for linking; but, code that actually uses
 such fields will not work as they these will not be fixed up at runtime. See
-\_pei386_runtime_relocator which handles the runtime component of the autoimporting
+`_pei386_runtime_relocator` which handles the runtime component of the autoimporting
 scheme used for mingw and comments in <https://reviews.llvm.org/D43184> and
 <https://reviews.llvm.org/D89518> for more.
 
@@ -62,8 +62,8 @@ scheme used for mingw and comments in <https://reviews.llvm.org/D43184> and
 
 The procedure is:
 
-\# Build an LLVM toolchain with support for Windows Itanium.
-\# Use the toolchain from step 1. to build libc++, libc++abi, and libunwind.
+1. Build an LLVM toolchain with support for Windows Itanium.
+2. Use the toolchain from step 1. to build libc++, libc++abi, and libunwind.
 
 It is also possible to cross-compile from Linux.
 

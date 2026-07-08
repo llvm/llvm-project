@@ -15,8 +15,8 @@ extending LLVM will get involved as you need to update all the different passes
 that you intend to use with your extension, and there are `many` LLVM analyses
 and transformations, so it may be quite a bit of work.
 
-Adding an [intrinsic function] is far easier than adding an
-instruction, and is transparent to optimization passes. If your added
+Adding an {ref}`intrinsic function <intrinsic-function>` is far easier than
+adding an instruction, and is transparent to optimization passes. If your added
 functionality can be expressed as a function call, an intrinsic function is the
 method of choice for LLVM extension.
 
@@ -94,9 +94,10 @@ complicated behavior in a single node (rotate).
 
 03. `lib/CodeGen/SelectionDAG/LegalizeDAG.cpp`:
 
-    Add code to [legalize, promote, and expand](CodeGenerator.html#selectiondag_legalize) the node as necessary. At a
-    minimum, you will need to add a case statement for your node in
-    `LegalizeOp` which calls LegalizeOp on the node's operands, and returns a
+    Add code to [legalize, promote, and
+    expand](project:CodeGenerator.md#selectiondag-legalize-phase) the node as
+    necessary. At a minimum, you will need to add a case statement for your node
+    in `LegalizeOp` which calls LegalizeOp on the node's operands, and returns a
     new node if any of the operands changed as a result of being legalized. It
     is likely that not all targets supported by the SelectionDAG framework will
     natively support the new node. In this case, you must also add code in your
@@ -305,4 +306,3 @@ necessary.
 
    modify `void TypePrinting::print(Type *Ty, raw_ostream &OS)`
    to output the new derived type
-

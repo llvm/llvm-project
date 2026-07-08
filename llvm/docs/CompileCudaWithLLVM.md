@@ -1,7 +1,7 @@
 # Compiling CUDA with clang
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -221,49 +221,49 @@ Most of the differences between clang and nvcc stem from the different
 compilation models used by clang and nvcc. nvcc uses *split compilation*,
 which works roughly as follows:
 
-> - Run a preprocessor over the input `.cu` file to split it into two source
->   files: `H`, containing source code for the host, and `D`, containing
->   source code for the device.
->
-> - For each GPU architecture `arch` that we're compiling for, do:
->
->   - Compile `D` using nvcc proper. The result of this is a `ptx` file for
->     `P_arch`.
->   - Optionally, invoke `ptxas`, the PTX assembler, to generate a file,
->     `S_arch`, containing GPU machine code (SASS) for `arch`.
->
-> - Invoke `fatbin` to combine all `P_arch` and `S_arch` files into a
->   single "fat binary" file, `F`.
->
-> - Compile `H` using an external host compiler (gcc, clang, or whatever you
->   like). `F` is packaged up into a header file which is force-included into
->   `H`; nvcc generates code that calls into this header to e.g. launch
->   kernels.
+- Run a preprocessor over the input `.cu` file to split it into two source
+  files: `H`, containing source code for the host, and `D`, containing
+  source code for the device.
+
+- For each GPU architecture `arch` that we're compiling for, do:
+
+  - Compile `D` using nvcc proper. The result of this is a `ptx` file for
+    `P_arch`.
+  - Optionally, invoke `ptxas`, the PTX assembler, to generate a file,
+    `S_arch`, containing GPU machine code (SASS) for `arch`.
+
+- Invoke `fatbin` to combine all `P_arch` and `S_arch` files into a
+  single "fat binary" file, `F`.
+
+- Compile `H` using an external host compiler (gcc, clang, or whatever you
+  like). `F` is packaged up into a header file which is force-included into
+  `H`; nvcc generates code that calls into this header to e.g. launch
+  kernels.
 
 clang uses *merged parsing*. This is similar to split compilation, except all
 of the host and device code is present and must be semantically-correct in both
 compilation steps.
 
-> - For each GPU architecture `arch` that we're compiling for, do:
->
->   - Compile the input `.cu` file for device, using clang. `__host__` code
->     is parsed and must be semantically correct, even though we're not
->     generating code for the host at this time.
->
->     The output of this step is a `ptx` file `P_arch`.
->
->   - Invoke `ptxas` to generate a SASS file, `S_arch`. Note that, unlike
->     nvcc, clang always generates SASS code.
->
-> - Invoke `fatbin` to combine all `S_arch` files (and `P_arch` files if
->   PTX inclusion was requested) into a single fat binary file, `F`.
->
-> - Compile `H` using clang. `__device__` code is parsed and must be
->   semantically correct, even though we're not generating code for the device
->   at this time.
->
->   `F` is passed to this compilation, and clang includes it in a special ELF
->   section, where it can be found by tools like `cuobjdump`.
+- For each GPU architecture `arch` that we're compiling for, do:
+
+  - Compile the input `.cu` file for device, using clang. `__host__` code
+    is parsed and must be semantically correct, even though we're not
+    generating code for the host at this time.
+
+    The output of this step is a `ptx` file `P_arch`.
+
+  - Invoke `ptxas` to generate a SASS file, `S_arch`. Note that, unlike
+    nvcc, clang always generates SASS code.
+
+- Invoke `fatbin` to combine all `S_arch` files (and `P_arch` files if
+  PTX inclusion was requested) into a single fat binary file, `F`.
+
+- Compile `H` using clang. `__device__` code is parsed and must be
+  semantically correct, even though we're not generating code for the device
+  at this time.
+
+  `F` is passed to this compilation, and clang includes it in a special ELF
+  section, where it can be found by tools like `cuobjdump`.
 
 (You may ask at this point, why does clang need to parse the input file
 multiple times? Why not parse it just once, and then use the AST to generate
@@ -328,19 +328,19 @@ attributes of the caller and callee. These are used as a tiebreaker during
 overload resolution. See [IdentifyCUDAPreference](https://clang.llvm.org/doxygen/SemaCUDA_8cpp.html) for the full set of rules,
 but at a high level they are:
 
-> - D functions prefer to call other Ds. HDs are given lower priority.
->
-> - Similarly, H functions prefer to call other Hs, or `__global__` functions
->   (with equal priority). HDs are given lower priority.
->
-> - HD functions prefer to call other HDs.
->
->   When compiling for device, HDs will call Ds with lower priority than HD, and
->   will call Hs with still lower priority. If it's forced to call an H, the
->   program is malformed if we emit code for this HD function. We call this the
->   "wrong-side rule", see example below.
->
->   The rules are symmetrical when compiling for host.
+- D functions prefer to call other Ds. HDs are given lower priority.
+
+- Similarly, H functions prefer to call other Hs, or `__global__` functions
+  (with equal priority). HDs are given lower priority.
+
+- HD functions prefer to call other HDs.
+
+  When compiling for device, HDs will call Ds with lower priority than HD, and
+  will call Hs with still lower priority. If it's forced to call an H, the
+  program is malformed if we emit code for this HD function. We call this the
+  "wrong-side rule", see example below.
+
+  The rules are symmetrical when compiling for host.
 
 Some examples:
 
@@ -546,11 +546,13 @@ The team at Google published a paper in CGO 2016 detailing the optimizations
 they'd made to clang/LLVM. Note that "gpucc" is no longer a meaningful name:
 The relevant tools are now just vanilla clang/LLVM.
 
-[gpucc: An Open-Source GPGPU Compiler](http://dl.acm.org/citation.cfm?id=2854041)
+[`gpucc: An Open-Source GPGPU Compiler`](http://dl.acm.org/citation.cfm?id=2854041)
 
-Jingyue Wu, Artem Belevich, Eli Bendersky, Mark Heffernan, Chris Leary, Jacques Pienaar, Bjarke Roune, Rob Springer, Xuetian Weng, Robert Hundt
+Jingyue Wu, Artem Belevich, Eli Bendersky, Mark Heffernan, Chris Leary,
+Jacques Pienaar, Bjarke Roune, Rob Springer, Xuetian Weng, Robert Hundt
 
-*Proceedings of the 2016 International Symposium on Code Generation and Optimization (CGO 2016)*
+*Proceedings of the 2016 International Symposium on Code Generation and
+Optimization (CGO 2016)*
 
 [Slides from the CGO talk](http://wujingyue.github.io/docs/gpucc-talk.pdf)
 
@@ -560,4 +562,3 @@ Jingyue Wu, Artem Belevich, Eli Bendersky, Mark Heffernan, Chris Leary, Jacques 
 
 To obtain help on LLVM in general and its CUDA support, see [the LLVM
 community](https://llvm.org/docs/#mailing-lists).
-

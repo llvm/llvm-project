@@ -1,7 +1,7 @@
 # How To Add A Constrained Floating-Point Intrinsic
 
 ```{contents}
-:local: true
+:local:
 ```
 
 :::{warning}
@@ -99,7 +99,7 @@ lib/CodeGen/TargetLoweringBase.cpp
 ```
 
 To make debug logs readable, it is helpful to update the SelectionDAG's
-debug logger::
+debug logger:
 
 ```
 lib/CodeGen/SelectionDAG/SelectionDAGDumper.cpp
@@ -110,4 +110,3 @@ lib/CodeGen/SelectionDAG/SelectionDAGDumper.cpp
 ```
 docs/LangRef.md
 ```
-
