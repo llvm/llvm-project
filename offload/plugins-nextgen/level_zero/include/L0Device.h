@@ -143,9 +143,6 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// MemAllocator for this device.
   MemAllocatorTy MemAllocator;
 
-  /// Cache of queues for this device.
-  L0QueueCacheTy QueueCache;
-
   DeviceArchTy computeArch() const;
 
   /// Scan the device's command queue groups, selecting the default compute
@@ -163,7 +160,7 @@ public:
              const std::string_view zeId, int32_t ComputeIndex)
       : GenericDeviceTy(Plugin, DeviceId, NumDevices, SPIRVGridValues),
         L0Context(DriverInfo), zeDevice(zeDevice), zeId(zeId),
-        ComputeIndex(ComputeIndex), QueueCache(*this) {
+        ComputeIndex(ComputeIndex) {
     DeviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
     DeviceProperties.pNext = nullptr;
     ComputeProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
@@ -369,11 +366,15 @@ public:
 
   /// Create an immediate command list.
   Expected<ze_command_list_handle_t>
-  createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder = false);
+  createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder = false,
+                   ze_context_handle_t UserZeCtx = nullptr);
 
   /// Create an immediate command list for computing.
-  Expected<ze_command_list_handle_t> createImmCmdList(bool InOrder = false) {
-    return createImmCmdList(getComputeEngine(), getComputeIndex(), InOrder);
+  Expected<ze_command_list_handle_t>
+  createImmCmdList(bool InOrder = false,
+                   ze_context_handle_t UserZeCtx = nullptr) {
+    return createImmCmdList(getComputeEngine(), getComputeIndex(), InOrder,
+                            UserZeCtx);
   }
 
   /// Release an immediate command list.
@@ -382,8 +383,10 @@ public:
     return Plugin::success();
   }
 
-  Expected<L0CmdListManagerTy *> getCmdListManager(bool InOrder = false) {
-    auto CmdListOrErr = createImmCmdList(InOrder);
+  Expected<L0CmdListManagerTy *>
+  getCmdListManager(bool InOrder = false,
+                    ze_context_handle_t UserZeCtx = nullptr) {
+    auto CmdListOrErr = createImmCmdList(InOrder, UserZeCtx);
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
     return new L0CmdListManagerTy(*CmdListOrErr, L0Context);
@@ -470,7 +473,7 @@ public:
   /// Returns the Queue from an async info object, or creates a new one if
   /// the async info does not have a queue yet.
   Expected<L0QueueTy *> getOrCreateQueue(__tgt_async_info *AsyncInfo);
-  void releaseQueue(L0QueueTy *Queue) { QueueCache.releaseQueue(Queue); }
+  void releaseQueue(L0QueueTy *Queue);
 
   // Allocation related routines.
 

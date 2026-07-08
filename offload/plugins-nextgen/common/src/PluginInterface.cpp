@@ -45,9 +45,11 @@ using namespace error;
 using namespace llvm::offload::debug;
 
 AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
-                                       __tgt_async_info *AsyncInfoPtr)
+                                       __tgt_async_info *AsyncInfoPtr,
+                                       PluginContextTy *Context)
     : Device(Device),
-      AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {}
+      AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo),
+      Context(Context) {}
 
 Error AsyncInfoWrapperTy::synchronize() {
   assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
@@ -1218,12 +1220,13 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
   return Err;
 }
 
-Error GenericDeviceTy::initAsyncInfo(__tgt_async_info **AsyncInfoPtr) {
+Error GenericDeviceTy::initAsyncInfo(__tgt_async_info **AsyncInfoPtr,
+                                     PluginContextTy *Context) {
   assert(AsyncInfoPtr && "Invalid async info");
 
   *AsyncInfoPtr = new __tgt_async_info();
 
-  AsyncInfoWrapperTy AsyncInfoWrapper(*this, *AsyncInfoPtr);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, *AsyncInfoPtr, Context);
 
   auto Err = initAsyncInfoImpl(AsyncInfoWrapper);
   AsyncInfoWrapper.finalize(Err);

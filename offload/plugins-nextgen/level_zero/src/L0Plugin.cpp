@@ -255,8 +255,23 @@ Error LevelZeroPluginTy::asyncBarrierImpl(omp_interop_val_t *Interop) {
 }
 
 LevelZeroPluginContextTy::~LevelZeroPluginContextTy() {
+  // TODO: this should be moved out of the destructor and into a deinit() method
+  if (auto Err = QueueCache.deinit()) {
+    REPORT() << "Error deinitializing LevelZeroPluginContextTy queue cache: "
+             << toString(std::move(Err));
+  }
   if (OwnsZeContext && ZeContext)
     zeContextDestroy(ZeContext);
+}
+
+Expected<L0QueueTy *>
+LevelZeroPluginContextTy::takeCachedQueue(L0DeviceTy *Device) {
+  return QueueCache.getQueue(*Device);
+}
+
+void LevelZeroPluginContextTy::returnCachedQueue(L0DeviceTy *Device,
+                                                 L0QueueTy *Queue) {
+  QueueCache.releaseQueue(*Device, Queue);
 }
 
 Expected<std::unique_ptr<PluginContextTy>>

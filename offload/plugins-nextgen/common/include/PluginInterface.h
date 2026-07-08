@@ -109,7 +109,8 @@ template <typename... ArgsTy>
 /// operations when calling AsyncInfoWrapperTy::finalize(). This latter function
 /// must be called before destroying the wrapper object.
 struct AsyncInfoWrapperTy {
-  AsyncInfoWrapperTy(GenericDeviceTy &Device, __tgt_async_info *AsyncInfoPtr);
+  AsyncInfoWrapperTy(GenericDeviceTy &Device, __tgt_async_info *AsyncInfoPtr,
+                     PluginContextTy *Context = nullptr);
 
   ~AsyncInfoWrapperTy() {
     assert(!AsyncInfoPtr && "AsyncInfoWrapperTy not finalized");
@@ -117,6 +118,10 @@ struct AsyncInfoWrapperTy {
 
   /// Get the raw __tgt_async_info pointer.
   operator __tgt_async_info *() const { return AsyncInfoPtr; }
+
+  /// Optional plugin-side context this async info is scoped to; null on the
+  /// libomptarget path.
+  PluginContextTy *getContext() const { return Context; }
 
   /// Indicate whether there is queue.
   bool hasQueue() const { return (AsyncInfoPtr->Queue != nullptr); }
@@ -177,6 +182,7 @@ private:
   GenericDeviceTy &Device;
   __tgt_async_info LocalAsyncInfo;
   __tgt_async_info *AsyncInfoPtr;
+  PluginContextTy *Context = nullptr;
 };
 
 enum class DeviceInfo {
@@ -1110,8 +1116,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                      KernelExtraArgsTy *KernelExtraArgs,
                      __tgt_async_info *AsyncInfo);
 
-  /// Initialize a __tgt_async_info structure.
-  Error initAsyncInfo(__tgt_async_info **AsyncInfoPtr);
+  /// Initialize a __tgt_async_info structure. \p Context is optional and is
+  /// forwarded on the wrapper for plugin impls that need it.
+  Error initAsyncInfo(__tgt_async_info **AsyncInfoPtr,
+                      PluginContextTy *Context = nullptr);
   virtual Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
   /// Enqueue a host call to AsyncInfo
