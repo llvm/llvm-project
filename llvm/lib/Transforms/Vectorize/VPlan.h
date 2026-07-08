@@ -1235,15 +1235,18 @@ class LLVM_ABI_FOR_TEST VPInstruction : public VPRecipeWithIRFlags,
 public:
   /// VPlan opcodes, extending LLVM IR with idiomatics instructions.
   enum {
-    FirstOrderRecurrenceSplice =
-        Instruction::OtherOpsEnd + 1, // Combines the incoming and previous
-                                      // values of a first-order recurrence.
+    FirstOrderRecurrenceSplice = Instruction::OtherOpsEnd +
+        1, // Combines the incoming and previous
+           // values of a first-order recurrence.
     Not,
     // Creates a mask where each lane is active (true) whilst the current
     // counter (first operand + index) is less than the second operand. i.e.
     //    mask[i] = icmpt ult (op0 + i), op1
     // The size of the mask returned is VF * Multiplier (UF, third op).
     ActiveLaneMask,
+    // Extracts each unrolled part of a widened active lane mask when used
+    // for control flow.
+    ExtractSubvectorForPart,
     ExplicitVectorLength,
     // Represents the incoming loop-invariant alias-mask. All memory accesses
     // in the loop must stay within the active lanes.

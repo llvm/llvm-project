@@ -666,6 +666,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::WideIVStep:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::ResumeForEpilogue:
+  case VPInstruction::ExtractSubvectorForPart:
     return 2;
   case Instruction::InsertElement:
   case Instruction::Select:
@@ -801,12 +802,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     // If this part of the active lane mask is scalar, generate the CMP directly
     // to avoid unnecessary extracts.
-    if (State.VF.isScalar())
+    unsigned Multiplier = cast<VPConstantInt>(getOperand(2))->getZExtValue();
+    if (State.VF.isScalar() && Multiplier == 1)
       return Builder.CreateCmp(CmpInst::Predicate::ICMP_ULT, VIVElem0, ScalarTC,
                                Name);
 
-    ElementCount EC = State.VF.multiplyCoefficientBy(
-        cast<VPConstantInt>(getOperand(2))->getZExtValue());
+    ElementCount EC = State.VF.multiplyCoefficientBy(Multiplier);
     auto *PredTy = VectorType::get(Builder.getInt1Ty(), EC);
     return Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
                                    {PredTy, ScalarTC->getType()},
@@ -1111,6 +1112,33 @@ Value *VPInstruction::generate(VPTransformState &State) {
     }
 
     return Result;
+  }
+  case VPInstruction::ExtractSubvectorForPart: {
+    Type *DstTy = VectorType::get(getScalarType(), State.VF);
+    unsigned Part = cast<VPConstantInt>(getOperand(1))->getZExtValue();
+
+    // Return Src if it's an ActiveLaneMask with a multiplier of 1.
+    Value *Src = State.get(getOperand(0));
+    if (Part == 0 && match(getOperand(0),
+                           m_ActiveLaneMask(m_VPValue(), m_VPValue(), m_One())))
+      return Src;
+
+    // If the VF is scalar & this is an extract of an active lane mask,
+    // generate an ICMP directly.
+    VPValue *Start, *TC;
+    if (State.VF.isScalar() &&
+        match(getOperand(0),
+              m_ActiveLaneMask(m_VPValue(Start), m_VPValue(TC), m_VPValue()))) {
+      Value *StartV = State.get(Start);
+      if (Part > 0)
+        StartV = Builder.CreateAdd(State.get(Start), State.get(getOperand(1)));
+      return Builder.CreateCmp(CmpInst::Predicate::ICMP_ULT, StartV,
+                               State.get(TC));
+    }
+
+    auto *Idx = ConstantInt::get(Builder.getInt64Ty(),
+                                 State.VF.getKnownMinValue() * Part);
+    return Builder.CreateExtractVector(DstTy, Src, Idx);
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -1637,6 +1665,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
   case VPInstruction::ExtractLastActive:
+  case VPInstruction::ExtractSubvectorForPart:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
@@ -1809,6 +1838,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractPenultimateElement:
     O << "extract-penultimate-element";
+    break;
+  case VPInstruction::ExtractSubvectorForPart:
+    O << "extract-subvector-for-part";
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";

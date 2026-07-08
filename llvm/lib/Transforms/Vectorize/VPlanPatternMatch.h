@@ -447,6 +447,12 @@ m_ExtractLastLaneOfLastPart(const Op0_t &Op0) {
   return m_ExtractLastLane(m_ExtractLastPart(Op0));
 }
 
+template <typename Op0_t, typename Op1_t>
+inline VPInstruction_match<VPInstruction::ExtractSubvectorForPart, Op0_t, Op1_t>
+m_ExtractSubvectorForPart(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_VPInstruction<VPInstruction::ExtractSubvectorForPart>(Op0, Op1);
+}
+
 template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::ExtractPenultimateElement, Op0_t>
 m_ExtractPenultimateElement(const Op0_t &Op0) {
