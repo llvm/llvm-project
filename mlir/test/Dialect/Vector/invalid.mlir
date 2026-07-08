@@ -1554,6 +1554,78 @@ func.func @gather_tensor_alignment(%base: tensor<16xf32>, %indices: vector<16xi3
 
 // -----
 
+// minSize on variadics doesn't currently add a verifier entry, check that our
+// manual diagnostic works.
+func.func @gather_no_indices(%base: memref<?xf32>,
+    %mask: vector<4xi1>, %pass_thru: vector<4xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'vector.gather' op requires at least one index vector}}
+  %0 = "vector.gather"(%base, %c0, %mask, %pass_thru)
+    <{operandSegmentSizes = array<i32: 1, 1, 0, 1, 1>}>
+    : (memref<?xf32>, index, vector<4xi1>, vector<4xf32>) -> vector<4xf32>
+}
+
+// -----
+
+func.func @scatter_no_indices(%base: memref<?xf32>,
+    %mask: vector<4xi1>, %value: vector<4xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'vector.scatter' op requires at least one index vector}}
+  "vector.scatter"(%base, %c0, %mask, %value)
+    <{operandSegmentSizes = array<i32: 1, 1, 0, 1, 1>}>
+    : (memref<?xf32>, index, vector<4xi1>, vector<4xf32>) -> ()
+}
+
+// -----
+
+func.func @gather_mismatched_index_types(%base: memref<?x?xf32>,
+    %idx0: vector<4xi32>, %idx1: vector<4xi64>,
+    %mask: vector<4xi1>, %pass_thru: vector<4xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'vector.gather' op all index vectors must have the same type}}
+  %0 = "vector.gather"(%base, %c0, %c0, %idx0, %idx1, %mask, %pass_thru)
+    <{operandSegmentSizes = array<i32: 1, 2, 2, 1, 1>}>
+    : (memref<?x?xf32>, index, index, vector<4xi32>, vector<4xi64>,
+       vector<4xi1>, vector<4xf32>) -> vector<4xf32>
+}
+
+// -----
+
+func.func @scatter_mismatched_index_types(%base: memref<?x?xf32>,
+    %idx0: vector<4xi32>, %idx1: vector<4xi64>,
+    %mask: vector<4xi1>, %value: vector<4xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'vector.scatter' op all index vectors must have the same type}}
+  "vector.scatter"(%base, %c0, %c0, %idx0, %idx1, %mask, %value)
+    <{operandSegmentSizes = array<i32: 1, 2, 2, 1, 1>}>
+    : (memref<?x?xf32>, index, index, vector<4xi32>, vector<4xi64>,
+       vector<4xi1>, vector<4xf32>) -> ()
+}
+
+// -----
+
+func.func @gather_too_many_indices(%base: memref<?xf32>,
+    %idx0: vector<4xi32>, %idx1: vector<4xi32>,
+    %mask: vector<4xi1>, %pass_thru: vector<4xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'vector.gather' op number of index vectors (2) exceeds base rank (1)}}
+  %0 = vector.gather %base[%c0][%idx0, %idx1], %mask, %pass_thru
+    : memref<?xf32>, vector<4xi32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+}
+
+// -----
+
+func.func @scatter_too_many_indices(%base: memref<?xf32>,
+    %idx0: vector<4xi32>, %idx1: vector<4xi32>,
+    %mask: vector<4xi1>, %value: vector<4xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'vector.scatter' op number of index vectors (2) exceeds base rank (1)}}
+  vector.scatter %base[%c0][%idx0, %idx1], %mask, %value
+    : memref<?xf32>, vector<4xi32>, vector<4xi1>, vector<4xf32>
+}
+
+// -----
+
 func.func @scatter_to_vector(%base: vector<16xf32>, %indices: vector<16xi32>,
                              %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index

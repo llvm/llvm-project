@@ -252,17 +252,14 @@ func.func @masked_vectorize_nd_tensor_extract_with_affine_apply_gather(%6: tenso
 // CHECK-LABEL:   func.func @masked_vectorize_nd_tensor_extract_with_affine_apply_gather
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 3 : index
-// CHECK:           %[[VAL_8:.*]] = vector.create_mask %[[VAL_4]], %[[VAL_5]] : vector<1x4xi1>
-// CHECK:           %[[VAL_9:.*]] = vector.mask %[[VAL_8]] { vector.transfer_read {{.*}} {in_bounds = [true, true]} : tensor<1x3xf32>, vector<1x4xf32> } : vector<1x4xi1> -> vector<1x4xf32>
-// CHECK:           %[[VAL_11:.*]] = vector.broadcast {{.*}} : index to vector<4xindex>
-// CHECK:           %[[VAL_12:.*]] = arith.addi {{.*}} : vector<4xindex>
-// CHECK:           %[[VAL_16:.*]] = vector.broadcast {{.*}} : vector<4xindex> to vector<1x4xindex>
-// CHECK:           %[[VAL_18:.*]] = tensor.dim {{.*}} : tensor<80x16xf32>
-// CHECK:           %[[VAL_19:.*]] = vector.broadcast {{.*}} : index to vector<1x4xindex>
-// CHECK:           %[[VAL_20:.*]] = arith.muli {{.*}} : vector<1x4xindex>
-// CHECK:           %[[VAL_22:.*]] = arith.addi {{.*}} : vector<1x4xindex>
-// CHECK:           %[[VAL_23:.*]] = vector.mask %[[VAL_8]] { vector.gather {{.*}} : tensor<80x16xf32>, vector<1x4xindex>, vector<1x4xi1>, vector<1x4xf32> into vector<1x4xf32> } : vector<1x4xi1> -> vector<1x4xf32>
-// CHECK:           %[[VAL_25:.*]] = vector.mask %[[VAL_8]] { vector.transfer_write {{.*}} {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x3xf32> } : vector<1x4xi1> -> tensor<1x3xf32>
+// CHECK:           %[[VAL_6:.*]] = vector.create_mask %[[VAL_4]], %[[VAL_5]] : vector<1x4xi1>
+// CHECK:           %[[VAL_7:.*]] = vector.mask %[[VAL_6]] { vector.transfer_read {{.*}} {in_bounds = [true, true]} : tensor<1x3xf32>, vector<1x4xf32> } : vector<1x4xi1> -> vector<1x4xf32>
+// CHECK:           %[[VAL_8:.*]] = vector.broadcast {{.*}} : index to vector<4xindex>
+// CHECK:           %[[VAL_9:.*]] = arith.addi {{.*}} : vector<4xindex>
+// CHECK:           %[[VAL_10:.*]] = vector.broadcast {{.*}} : vector<4xindex> to vector<1x4xindex>
+// CHECK:           %[[CST_16:.*]] = arith.constant dense<16> : vector<1x4xindex>
+// CHECK:           %[[VAL_11:.*]] = vector.mask %[[VAL_6]] { vector.gather {{.*}}[%{{.*}}, %{{.*}}] [%[[VAL_10]], %[[CST_16]]], {{.*}} : tensor<80x16xf32>, vector<1x4xindex>, vector<1x4xi1>, vector<1x4xf32> into vector<1x4xf32> } : vector<1x4xi1> -> vector<1x4xf32>
+// CHECK:           %[[VAL_12:.*]] = vector.mask %[[VAL_6]] { vector.transfer_write {{.*}} {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x3xf32> } : vector<1x4xi1> -> tensor<1x3xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -293,7 +290,6 @@ func.func @masked_dynamic_vectorize_nd_tensor_extract_with_affine_apply_gather(%
 // CHECK-SAME:                                                                                   %[[VAL_0:.*]]: tensor<?x?xf32>,
 // CHECK-SAME:                                                                                   %[[VAL_1:.*]]: index,
 // CHECK-SAME:                                                                                   %[[VAL_2:.*]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
-// CHECK:           %[[VAL_3:.*]] = arith.constant 16 : index
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = tensor.dim %[[VAL_2]], %[[VAL_4]] : tensor<?x?xf32>
 // CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
@@ -309,16 +305,11 @@ func.func @masked_dynamic_vectorize_nd_tensor_extract_with_affine_apply_gather(%
 // CHECK:           %[[VAL_16:.*]] = arith.constant dense<0.000000e+00> : vector<1x4xf32>
 // CHECK:           %[[VAL_17:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_18:.*]] = vector.broadcast %[[VAL_14]] : vector<4xindex> to vector<1x4xindex>
-// CHECK:           %[[VAL_19:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_20:.*]] = tensor.dim %[[VAL_0]], %[[VAL_19]] : tensor<?x?xf32>
-// CHECK:           %[[VAL_21:.*]] = vector.broadcast %[[VAL_20]] : index to vector<1x4xindex>
-// CHECK:           %[[VAL_22:.*]] = arith.muli %[[VAL_18]], %[[VAL_21]] : vector<1x4xindex>
-// CHECK:           %[[VAL_23:.*]] = arith.constant dense<16> : vector<1x4xindex>
-// CHECK:           %[[VAL_24:.*]] = arith.addi %[[VAL_23]], %[[VAL_22]] : vector<1x4xindex>
-// CHECK:           %[[VAL_25:.*]] = vector.mask %[[VAL_10]] { vector.gather %[[VAL_0]]{{\[}}%[[VAL_17]], %[[VAL_17]]] {{\[}}%[[VAL_24]]], %[[VAL_15]], %[[VAL_16]] : tensor<?x?xf32>, vector<1x4xindex>, vector<1x4xi1>, vector<1x4xf32> into vector<1x4xf32> } : vector<1x4xi1> -> vector<1x4xf32>
-// CHECK:           %[[VAL_26:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_27:.*]] = vector.mask %[[VAL_10]] { vector.transfer_write %[[VAL_25]], %[[VAL_2]]{{\[}}%[[VAL_26]], %[[VAL_26]]] {in_bounds = [true, true]} : vector<1x4xf32>, tensor<?x?xf32> } : vector<1x4xi1> -> tensor<?x?xf32>
-// CHECK:           return %[[VAL_27]] : tensor<?x?xf32>
+// CHECK:           %[[CST_16:.*]] = arith.constant dense<16> : vector<1x4xindex>
+// CHECK:           %[[VAL_19:.*]] = vector.mask %[[VAL_10]] { vector.gather %[[VAL_0]]{{\[}}%[[VAL_17]], %[[VAL_17]]] {{\[}}%[[VAL_18]], %[[CST_16]]], %[[VAL_15]], %[[VAL_16]] : tensor<?x?xf32>, vector<1x4xindex>, vector<1x4xi1>, vector<1x4xf32> into vector<1x4xf32> } : vector<1x4xi1> -> vector<1x4xf32>
+// CHECK:           %[[VAL_20:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_21:.*]] = vector.mask %[[VAL_10]] { vector.transfer_write %[[VAL_19]], %[[VAL_2]]{{\[}}%[[VAL_20]], %[[VAL_20]]] {in_bounds = [true, true]} : vector<1x4xf32>, tensor<?x?xf32> } : vector<1x4xi1> -> tensor<?x?xf32>
+// CHECK:           return %[[VAL_21]] : tensor<?x?xf32>
 // CHECK:         }
 
 module attributes {transform.with_named_sequence} {
@@ -349,8 +340,6 @@ func.func @extract_masked_vectorize(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf3
 // CHECK-LABEL:   func.func @extract_masked_vectorize(
 // CHECK-SAME:                                        %[[VAL_0:.*]]: tensor<?x?xf32>,
 // CHECK-SAME:                                        %[[VAL_1:.*]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
-// CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_3:.*]] = arith.constant 2 : index
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = tensor.dim %[[VAL_1]], %[[VAL_4]] : tensor<?x?xf32>
 // CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
@@ -362,16 +351,11 @@ func.func @extract_masked_vectorize(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf3
 // CHECK:           %[[VAL_12:.*]] = arith.constant dense<true> : vector<3x3xi1>
 // CHECK:           %[[VAL_13:.*]] = arith.constant dense<0.000000e+00> : vector<3x3xf32>
 // CHECK:           %[[VAL_14:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_15:.*]] = arith.constant dense<1> : vector<3x3xindex>
-// CHECK:           %[[VAL_16:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_17:.*]] = tensor.dim %[[VAL_0]], %[[VAL_16]] : tensor<?x?xf32>
-// CHECK:           %[[VAL_18:.*]] = vector.broadcast %[[VAL_17]] : index to vector<3x3xindex>
-// CHECK:           %[[VAL_19:.*]] = arith.muli %[[VAL_15]], %[[VAL_18]] : vector<3x3xindex>
-// CHECK:           %[[VAL_20:.*]] = arith.constant dense<2> : vector<3x3xindex>
-// CHECK:           %[[VAL_21:.*]] = arith.addi %[[VAL_20]], %[[VAL_19]] : vector<3x3xindex>
-// CHECK:           %[[VAL_22:.*]] = vector.mask %[[VAL_10]] { vector.gather %[[VAL_0]]{{\[}}%[[VAL_14]], %[[VAL_14]]] {{\[}}%[[VAL_21]]], %[[VAL_12]], %[[VAL_13]] : tensor<?x?xf32>, vector<3x3xindex>, vector<3x3xi1>, vector<3x3xf32> into vector<3x3xf32> } : vector<3x3xi1> -> vector<3x3xf32>
-// CHECK:           %[[VAL_23:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_24:.*]] = vector.mask %[[VAL_10]] { vector.transfer_write %[[VAL_22]], %[[VAL_1]]{{\[}}%[[VAL_23]], %[[VAL_23]]] {in_bounds = [true, true]} : vector<3x3xf32>, tensor<?x?xf32> } : vector<3x3xi1> -> tensor<?x?xf32>
+// CHECK:           %[[CST_1:.*]] = arith.constant dense<1> : vector<3x3xindex>
+// CHECK:           %[[CST_2:.*]] = arith.constant dense<2> : vector<3x3xindex>
+// CHECK:           %[[VAL_15:.*]] = vector.mask %[[VAL_10]] { vector.gather %[[VAL_0]]{{\[}}%[[VAL_14]], %[[VAL_14]]] {{\[}}%[[CST_1]], %[[CST_2]]], %[[VAL_12]], %[[VAL_13]] : tensor<?x?xf32>, vector<3x3xindex>, vector<3x3xi1>, vector<3x3xf32> into vector<3x3xf32> } : vector<3x3xi1> -> vector<3x3xf32>
+// CHECK:           %[[VAL_16:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_17:.*]] = vector.mask %[[VAL_10]] { vector.transfer_write %[[VAL_15]], %[[VAL_1]]{{\[}}%[[VAL_16]], %[[VAL_16]]] {in_bounds = [true, true]} : vector<3x3xf32>, tensor<?x?xf32> } : vector<3x3xi1> -> tensor<?x?xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -416,7 +400,8 @@ func.func @tensor_extract_dynamic_shape(%arg1: tensor<123x321xf32>, %arg2: tenso
 // CHECK:           %[[MASK_2:.*]] = arith.constant dense<true> : vector<1x3x8xi1>
 // CHECK:           %[[FALLTHROUGH:.*]] = arith.constant dense<0.000000e+00> : vector<1x3x8xf32>
 // CHECK:           %[[C0_1:.*]] = arith.constant 0 : index
-// CHECK:           vector.mask %[[MASK]] { vector.gather %[[ARG_1]][%[[C0_1]], %[[C0_1]]] [%{{.*}}], %[[MASK_2]], %[[FALLTHROUGH]] : tensor<123x321xf32>, vector<1x3x8xindex>, vector<1x3x8xi1>, vector<1x3x8xf32> into vector<1x3x8xf32> } : vector<1x3x8xi1> -> vector<1x3x8xf32>
+// CHECK:           %[[CST_1:.*]] = arith.constant dense<1> : vector<1x3x8xindex>
+// CHECK:           vector.mask %[[MASK]] { vector.gather %[[ARG_1]][%[[C0_1]], %[[C0_1]]] [%[[CST_1]], %{{.*}}], %[[MASK_2]], %[[FALLTHROUGH]] : tensor<123x321xf32>, vector<1x3x8xindex>, vector<1x3x8xi1>, vector<1x3x8xf32> into vector<1x3x8xf32> } : vector<1x3x8xi1> -> vector<1x3x8xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {

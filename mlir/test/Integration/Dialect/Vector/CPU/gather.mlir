@@ -14,7 +14,7 @@
 /// TEST 3. Verify that `test-vector-gather-lowering` will indeed produce
 /// `vector.load`
 // REDEFINE: %{compile} = mlir-opt %s --test-vector-gather-lowering
-// RUN: %{compile} | FileCheck %s -check-prefix CHECK-IR 
+// RUN: %{compile} | FileCheck %s -check-prefix CHECK-IR
 
 func.func @gather8(%base: memref<?x?xf32>, %indices: vector<8xi32>,
               %mask: vector<8xi1>, %pass_thru: vector<8xf32>) -> vector<8xf32> {
@@ -23,6 +23,15 @@ func.func @gather8(%base: memref<?x?xf32>, %indices: vector<8xi32>,
   // CHECK-IR-COUNT-4: vector.load
   %g = vector.gather %base[%c0, %c0][%indices], %mask, %pass_thru
     : memref<?x?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+  return %g : vector<8xf32>
+}
+
+func.func @gather8_2d(%base: memref<3x3xf32, strided<[?, 1]>>,
+              %indices0: vector<8xi32>, %indices1: vector<8xi32>,
+              %mask: vector<8xi1>, %pass_thru: vector<8xf32>) -> vector<8xf32> {
+  %c0 = arith.constant 0: index
+  %g = vector.gather %base[%c0, %c0][%indices0, %indices1], %mask, %pass_thru
+    : memref<3x3xf32, strided<[?, 1]>>, vector<8xi32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
   return %g : vector<8xf32>
 }
 
@@ -101,6 +110,26 @@ func.func @entry() {
     -> (vector<8xf32>)
   vector.print %g4 : vector<8xf32>
   // CHECK: ( 0, 31, 21, 63, -7, -7, -7, 42 )
+
+  // Multi-dimensional gather tests.
+  %idxs_flat0 = arith.constant dense<0> : vector<8xi32>
+  %idxs_flat1 = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7]> : vector<8xi32>
+  %idxs_2d0 = arith.constant dense<[0, 0, 0, 1, 1, 1, 2, 2]> : vector<8xi32>
+  %idxs_2d1 = arith.constant dense<[0, 1, 2, 0, 1, 2, 0, 1]> : vector<8xi32>
+
+  %A_part = memref.subview %A [0, 0] [3, 3] [1, 1] : memref<?x?xf32> to memref<3x3xf32, strided<[?, 1]>>
+
+  %g2d1 = call @gather8_2d(%A_part, %idxs_2d0, %idxs_2d1, %all, %pass)
+    : (memref<3x3xf32, strided<[?, 1]>>, vector<8xi32>, vector<8xi32>, vector<8xi1>, vector<8xf32>)
+    -> (vector<8xf32>)
+  // CHECK: ( 0, 1, 2, 10, 11, 12, 20, 22 )
+  vector.print %g2d1 : vector<8xf32>
+
+  %g2d2 = call @gather8_2d(%A_part, %idxs_flat0, %idxs_flat1, %all, %pass)
+    : (memref<3x3xf32, strided<[?, 1]>>, vector<8xi32>, vector<8xi32>, vector<8xi1>, vector<8xf32>)
+    -> (vector<8xf32>)
+  // CHECK: ( 0, 1, 2, 3, 4, 10, 11, 12 )
+  vector.print %g2d2 : vector<8xf32>
 
   memref.dealloc %A : memref<?x?xf32>
   return

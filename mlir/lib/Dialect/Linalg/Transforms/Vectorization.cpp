@@ -894,45 +894,21 @@ tensorExtractVectorizationPrecondition(Operation *op, bool vectorizeNDExtract) {
   return success();
 }
 
-/// Calculates the offsets (`$index_vec`) for `vector.gather` operations
-/// generated from `tensor.extract`. The offset is calculated as follows
-/// (example using scalar values):
-///
-///    offset = extractOp.indices[0]
-///    for (i = 1; i < numIndices; i++)
-///      offset = extractOp.dimSize[i] * offset + extractOp.indices[i];
-///
-/// For tensor<45 x 80 x 15 x f32> and index [1, 2, 3], this leads to:
-///  offset = ( ( 1 ) * 80 +  2 ) * 15  + 3
-static Value calculateGatherOffset(RewriterBase &rewriter,
-                                   VectorizationState &state,
-                                   tensor::ExtractOp extractOp,
-                                   const IRMapping &bvm) {
-  // The vector of indices for GatherOp should be shaped as the output vector.
+/// Calculates the per-dimension index vectors for `vector.gather` operations
+/// generated from `tensor.extract`. Returns one index vector per tensor
+/// dimension, each broadcast to the canonical vector shape.
+static SmallVector<Value> calculateGatherIndices(RewriterBase &rewriter,
+                                                 VectorizationState &state,
+                                                 tensor::ExtractOp extractOp,
+                                                 const IRMapping &bvm) {
   auto indexVecType = state.getCanonicalVecType(rewriter.getIndexType());
-  auto loc = extractOp.getLoc();
 
-  Value offset = broadcastIfNeeded(
-      rewriter, bvm.lookup(extractOp.getIndices()[0]), indexVecType);
+  SmallVector<Value> indexVecs;
+  for (Value idx : extractOp.getIndices())
+    indexVecs.push_back(
+        broadcastIfNeeded(rewriter, bvm.lookup(idx), indexVecType));
 
-  const size_t numIndices = extractOp.getIndices().size();
-  for (size_t i = 1; i < numIndices; i++) {
-    Value dimIdx = arith::ConstantIndexOp::create(rewriter, loc, i);
-
-    auto dimSize = broadcastIfNeeded(
-        rewriter,
-        tensor::DimOp::create(rewriter, loc, extractOp.getTensor(), dimIdx),
-        indexVecType);
-
-    offset = arith::MulIOp::create(rewriter, loc, offset, dimSize);
-
-    auto extractOpIndex = broadcastIfNeeded(
-        rewriter, bvm.lookup(extractOp.getIndices()[i]), indexVecType);
-
-    offset = arith::AddIOp::create(rewriter, loc, extractOpIndex, offset);
-  }
-
-  return offset;
+  return indexVecs;
 }
 
 enum VectorMemoryAccessKind { ScalarBroadcast, Contiguous, Gather };
@@ -1197,12 +1173,13 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
 
   // 1. Handle gather access
   if (memAccessKind == VectorMemoryAccessKind::Gather) {
-    Value offset = calculateGatherOffset(rewriter, state, extractOp, bvm);
+    SmallVector<Value> indexVecs =
+        calculateGatherIndices(rewriter, state, extractOp, bvm);
 
     // Generate the gather load
     Operation *gatherOp = vector::GatherOp::create(
-        rewriter, loc, resultType, extractOp.getTensor(), baseIndices, offset,
-        maskConstantOp, passThruConstantOp);
+        rewriter, loc, resultType, extractOp.getTensor(), baseIndices,
+        indexVecs, maskConstantOp, passThruConstantOp);
     gatherOp = state.maskOperation(rewriter, gatherOp, linalgOp);
 
     LDBG() << "Vectorised as gather load: " << extractOp;
