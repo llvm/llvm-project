@@ -11,10 +11,10 @@
 // UNSUPPORTED: c++03, no-exceptions
 
 // TODO:
-// - throwing upon moving;
-// - initializer lists;
-// - throwing when constructing the element in place.
+// - list(list&&, const allocator_type&)
 
+// list(size_type n);
+// list(size_type n, const allocator_type& a);
 // list(size_type n, const value_type& v);
 // list(size_type n, const value_type& v, const allocator_type& a);
 // template <class InputIterator>
@@ -89,9 +89,30 @@ int main(int, char**) {
   {
     constexpr int ThrowOn = 3;
     constexpr int Size    = 5;
+    using T               = ThrowingDefault<ThrowOn>;
+    using Alloc           = std::allocator<T>;
+
+    // list(size_type n);
+    test_exception_safety_throwing_default<ThrowOn, Size>([](size_t n) {
+      std::list<T> c(n);
+      (void)c;
+    });
+
+    // list(size_type n, const allocator_type& a);
+    test_exception_safety_throwing_default<ThrowOn, Size>([](size_t n) {
+      std::list<T> c(n, Alloc());
+      (void)c;
+    });
+  }
+
+  {
+    constexpr int ThrowOn = 3;
+    constexpr int Size    = 5;
     using T               = ThrowingCopy<ThrowOn>;
     using C               = std::list<T>;
     using Alloc           = std::allocator<T>;
+
+    std::initializer_list<T> il = {1, 2, 3, 4, 5};
 
     // list(size_type n, const value_type& v);
     test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T*) {
@@ -135,6 +156,13 @@ int main(int, char**) {
     });
 #endif
 
+    // template <class InputIterator>
+    //     list(InputIterator first, InputIterator last, const allocator_type& a);
+    test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T* to) {
+      std::list<T> c(from, to, Alloc());
+      (void)c;
+    });
+
     // list(const list& x);
     test_exception_safety_throwing_copy_container<C, ThrowOn, Size>([](C&& in) {
       std::list<T> c(in);
@@ -147,10 +175,28 @@ int main(int, char**) {
       (void)c;
     });
 
+    // list(initializer_list<value_type> il);
+    test_exception_safety_throwing_copy<ThrowOn, Size>([&il](T*, T*) {
+      std::list<T> c(il);
+      (void)c;
+    });
+
+    // list(initializer_list<value_type> il, const allocator_type& a);
+    test_exception_safety_throwing_copy<ThrowOn, Size>([&il](T*, T*) {
+      std::list<T> c(il, Alloc());
+      (void)c;
+    });
+
     // list& operator=(const list& x);
     test_exception_safety_throwing_copy_container<C, ThrowOn, Size>([](C&& in) {
       std::list<T> c;
       c = in;
+    });
+
+    // list& operator=(initializer_list<value_type> il);
+    test_exception_safety_throwing_copy<ThrowOn, Size>([&il](T*, T*) {
+      std::list<T> c;
+      c = il;
     });
 
     // template <class InputIterator>

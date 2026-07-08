@@ -10,6 +10,11 @@
 
 // UNSUPPORTED: c++03, no-exceptions
 
+// TODO:
+// - forward_list(forward_list&&, const allocator_type&)
+
+// forward_list(size_type n);
+// forward_list(size_type n, const allocator_type& a);
 // forward_list(size_type n, const value_type& v);
 // forward_list(size_type n, const value_type& v, const allocator_type& a);
 // template <class InputIterator>
@@ -92,6 +97,25 @@ int main(int, char**) {
   }
 
   {
+    constexpr int ThrowOn = 3;
+    constexpr int Size    = 5;
+    using T               = ThrowingDefault<ThrowOn>;
+    using Alloc           = std::allocator<T>;
+
+    // forward_list(size_type n);
+    test_exception_safety_throwing_default<ThrowOn, Size>([](size_t n) {
+      std::forward_list<T> c(n);
+      (void)c;
+    });
+
+    // forward_list(size_type n, const allocator_type& a);
+    test_exception_safety_throwing_default<ThrowOn, Size>([](size_t n) {
+      std::forward_list<T> c(n, Alloc());
+      (void)c;
+    });
+  }
+
+  {
     constexpr int ThrowOn = 1;
     constexpr int Size    = 1;
     using T               = ThrowingMove<ThrowOn>;
@@ -142,7 +166,7 @@ int main(int, char**) {
     using C               = std::forward_list<T>;
     using Alloc           = std::allocator<T>;
 
-    std::initializer_list<T> il{1, 2, 3, 4, 5};
+    std::initializer_list<T> il = {1, 2, 3, 4, 5};
 
     // forward_list(size_type n, const value_type& v);
     test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T*) {
@@ -290,6 +314,7 @@ int main(int, char**) {
 
     { // void resize(size_type n);
       using X = ThrowingDefault<ThrowOn>;
+      X::reset();
       std::forward_list<X> c0{X{1}, X{2}, X{3}};
       std::forward_list<X> c = c0;
       try {

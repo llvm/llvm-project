@@ -104,6 +104,21 @@ template <int N>
 using ThrowingMove = ThrowingBase<0, 0, 0, N>;
 
 template <int ThrowOn, int Size, class Func>
+void test_exception_safety_throwing_default(Func&& func) {
+  using T = ThrowingDefault<ThrowOn>;
+  T::reset();
+
+  try {
+    func(Size);
+    assert(false); // The function call above should throw.
+
+  } catch (int) {
+    assert(T::default_constructed == ThrowOn);
+    assert(T::destroyed == ThrowOn - 1); // No destructor call for the partially-constructed element.
+  }
+}
+
+template <int ThrowOn, int Size, class Func>
 void test_exception_safety_throwing_copy(Func&& func) {
   using T = ThrowingCopy<ThrowOn>;
   T::reset();

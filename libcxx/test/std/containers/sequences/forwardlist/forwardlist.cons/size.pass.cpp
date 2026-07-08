@@ -21,7 +21,7 @@
 
 template <class T, class Allocator>
 void check_allocator(unsigned n, Allocator const& alloc = Allocator()) {
-#if TEST_STD_VER > 11
+#if TEST_STD_VER >= 11
   typedef std::forward_list<T, Allocator> C;
   C d(n, alloc);
   assert(d.get_allocator() == alloc);
