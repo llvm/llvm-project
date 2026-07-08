@@ -1209,7 +1209,9 @@ recognizers symmetric.
   member function instead initializes its object as an ordinary parameter,
   which the parameter site above already owns and whose parameter can carry
   the marker; a destructor call is skipped, destruction being the deferred
-  destroy_at slice), and lambda captures -- an init-capture binds
+  destroy_at slice, and so is a static call operator, which -- like a static
+  member call -- evaluates the object argument without using its value), and
+  lambda captures -- an init-capture binds
   like a variable initialization when its variable is created
   (``Sema::createLambdaInitCaptureVarDecl``), and a plain by-reference capture
   of an entity denoting uninitialized storage (an ``[[uninit]]`` variable, or

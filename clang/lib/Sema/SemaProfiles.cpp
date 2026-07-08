@@ -1163,6 +1163,13 @@ void SemaProfiles::checkInitProfileObjectArgument(const Expr *Object,
   // only the explicit s.~S() spelling would be an inconsistent sliver.
   if (isa<CXXDestructorDecl>(Method))
     return;
+  // A static call operator (C++23) has no implicit object parameter: its
+  // object argument is evaluated but its value is never used, exactly like a
+  // static member function named through an object -- whose call path never
+  // reaches this funnel. BuildCallToObjectOfClassType converts the object
+  // argument for static call operators all the same, so skip them here.
+  if (Method->isStatic())
+    return;
   // An instantiation-dependent object argument cannot be classified yet; its
   // call is always rebuilt at instantiation, re-running this funnel with the
   // substituted object. A non-dependent call fires at definition time and

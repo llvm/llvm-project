@@ -314,7 +314,9 @@ public:
   /// operators. Explicit-object member functions initialize their object as an
   /// ordinary parameter and are already checked there; a destructor call is
   /// skipped (destruction of uninitialized storage is the deferred destroy_at
-  /// slice). Defers only on an instantiation-dependent \p Object -- the call
+  /// slice), as is a static call operator (no implicit object parameter, like
+  /// a static member call). Defers only on an instantiation-dependent
+  /// \p Object -- the call
   /// is rebuilt at instantiation, re-running the funnel -- and otherwise fires
   /// at definition time, repeating if the call is rebuilt anyway (accepted).
   void checkInitProfileObjectArgument(const Expr *Object,

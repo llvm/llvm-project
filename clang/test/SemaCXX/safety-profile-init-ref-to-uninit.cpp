@@ -1623,6 +1623,14 @@ struct WithDtor {
   ~WithDtor();
 };
 
+// A static call operator has no implicit object parameter; the object
+// argument is evaluated but its value never used, exactly like a static
+// member function named through an object.
+struct StaticCall {
+  int m;
+  static int operator()(int x) { return x; }
+};
+
 void test_member_call_silent_forms() {
   Callee s [[uninit]];
   s.sf();                 // OK: a static member uses no object argument
@@ -1633,6 +1641,8 @@ void test_member_call_silent_forms() {
   make_callee().f();      // OK: unmarked call result is trusted initialized
   WithDtor d [[uninit]];
   d.~WithDtor();          // OK: destruction is the deferred destroy_at slice
+  StaticCall c [[uninit]];
+  c(1);                   // OK: a static call operator uses no object argument
 }
 
 // The object itself being unmarked keeps the trust decision: a class whose
