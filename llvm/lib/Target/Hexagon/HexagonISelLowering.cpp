@@ -1066,8 +1066,7 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   MVT OpTy = ty(LHS);
 
   if (OpTy == MVT::v2i16 || OpTy == MVT::v4i8) {
-    MVT ElemTy = OpTy.getVectorElementType();
-    assert(ElemTy.isScalarInteger());
+    assert(OpTy.getVectorElementType().isScalarInteger());
     MVT WideTy = OpTy.widenIntegerElementType();
     return DAG.getSetCC(dl, ResTy,
                         DAG.getSExtOrTrunc(LHS, SDLoc(LHS), WideTy),
@@ -1123,8 +1122,7 @@ HexagonTargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
 
   if (OpTy == MVT::v2i16 || OpTy == MVT::v4i8) {
-    MVT ElemTy = OpTy.getVectorElementType();
-    assert(ElemTy.isScalarInteger());
+    assert(OpTy.getVectorElementType().isScalarInteger());
     MVT WideTy = OpTy.widenIntegerElementType();
     // Generate (trunc (select (_, sext, sext))).
     return DAG.getSExtOrTrunc(
