@@ -11352,6 +11352,64 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_wave_shuffle:
     return lowerWaveShuffle(*this, Op.getNode(), DAG);
+  case Intrinsic::amdgcn_s_bitreplicate: {
+    // A uniform argument selects the scalar SOP1 instruction. Expand a
+    // divergent argument to VALU so each lane gets its own result.
+    if (!Op->isDivergent())
+      return SDValue();
+
+    const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+    if (TII->pseudoToMCOpcode(AMDGPU::V_PERM_B32_e64) == -1)
+      return SDValue();
+
+    // Lower divergent s_bitreplicate (bit i -> bits 2i, 2i+1) to VALU by
+    // splitting into two 16-bit halves and spreading bits via:
+    //   lo = v_perm_b32(0, src, 0x0C010C00)   // [00][B1][00][B0]
+    //   hi = v_perm_b32(0, src, 0x0C030C02)   // [00][B3][00][B2]
+    //   M4 = (x | (x << 4)) & 0x0F0F0F0F      // 4-bit spread
+    //   M2 = (M4 | (M4 << 2)) & 0x33333333    // 2-bit spread
+    //   M1 = (M2 | (M2 << 1)) & 0x55555555    // 1-bit spread
+    //   R  = M1 | (M1 << 1)                   // duplicate each bit
+    SDValue Src = Op.getOperand(1);
+    SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
+    // v_perm_b32 splits the input into 16-bit halves and spreads each half's
+    // bytes with zero-byte gaps in one instruction. Selector byte values:
+    // 0x00 to 0x03 = src byte N, 0x0C = zero byte
+    // e.g. 0x134C3A92 -> Hi: [0013][004C], Lo: [003A][0092]
+    SDValue LoByteSpread =
+        DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, Zero, Src,
+                    DAG.getConstant(0x0C010C00, DL, MVT::i32));
+    SDValue HiByteSpread =
+        DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, Zero, Src,
+                    DAG.getConstant(0x0C030C02, DL, MVT::i32));
+
+    // Spread masks: each keeps the low N bits of every 2N-bit group, clearing
+    // the garbage left by the shift+OR.
+    auto Spread = [&](SDValue In) -> SDValue {
+      auto SpreadStep = [&](SDValue X, unsigned ShAmt, uint32_t Mask) {
+        SDValue Sh = DAG.getNode(ISD::SHL, DL, MVT::i32, X,
+                                 DAG.getConstant(ShAmt, DL, MVT::i32));
+        SDValue Or = DAG.getNode(ISD::OR, DL, MVT::i32, X, Sh);
+        return DAG.getNode(ISD::AND, DL, MVT::i32, Or,
+                           DAG.getConstant(Mask, DL, MVT::i32));
+      };
+      // 4-bit spread: separate each byte into its two 4-bit halves.
+      // e.g. [003A][0092] -> [03][0A][09][02]
+      SDValue M4 = SpreadStep(In, 4, 0x0F0F0F0F);
+      // 2-bit spread: separate each 4-bit group into two 2-bit pairs.
+      SDValue M2 = SpreadStep(M4, 2, 0x33333333);
+      // 1-bit spread: separate each 2-bit pair into individual bits.
+      SDValue M1 = SpreadStep(M2, 1, 0x55555555);
+      // Duplicate: double each isolated bit.
+      SDValue Dup = DAG.getNode(ISD::SHL, DL, MVT::i32, M1,
+                                DAG.getConstant(1, DL, MVT::i32));
+      return DAG.getNode(ISD::OR, DL, MVT::i32, M1, Dup);
+    };
+
+    SDValue Lo = Spread(LoByteSpread);
+    SDValue Hi = Spread(HiByteSpread);
+    return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi);
+  }
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))

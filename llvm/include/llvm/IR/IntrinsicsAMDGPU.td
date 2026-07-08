@@ -2473,8 +2473,8 @@ def int_amdgcn_inverse_ballot :
   Intrinsic<[llvm_i1_ty], [llvm_anyint_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison]>;
 
-// Lowers to S_BITREPLICATE_B64_B32.
-// The argument must be uniform; otherwise, the result is undefined.
+// Lowers to S_BITREPLICATE_B64_B32 for a uniform argument. A divergent
+// argument is expanded to an equivalent VALU sequence.
 def int_amdgcn_s_bitreplicate :
   ClangBuiltin<"__builtin_amdgcn_s_bitreplicate">,
   DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i32_ty], [IntrNoMem, IntrConvergent]>;

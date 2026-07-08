@@ -707,7 +707,7 @@ def DocSBitReplicate : Documentation {
   let Content = [{
 Replicates each bit of the 32-bit ``src`` operand into two adjacent bits of a
 64-bit result. Bit ``i`` of the input is copied to bits ``2*i`` and ``2*i+1``
-of the output. The operand must be uniform across the wavefront. A divergent
-value gives an undefined result.
+of the output. A uniform operand lowers to ``s_bitreplicate_b64_b32``. A
+divergent operand is expanded to an equivalent VALU sequence.
 }];
 }
