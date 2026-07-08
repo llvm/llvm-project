@@ -4505,6 +4505,34 @@ static bool isCMN(SDValue Op, ISD::CondCode CC, SelectionDAG &DAG) {
           (isSignedIntSetCC(CC) && isSafeSignedCMN(Op, DAG)));
 }
 
+/// Returns how profitable it is to fold a comparison's operand's shift and/or
+/// extension operations into the comparison instruction's second operand
+/// (so_reg_imm / so_reg_reg for ARM, t2_so_reg for Thumb-2).
+static unsigned getCmpOperandFoldingProfit(SDValue Op, const ARMSubtarget &ST) {
+  // Thumb-1 CMP does not support shifted second operands.
+  if (ST.isThumb1Only() || !Op.hasOneUse())
+    return 0;
+
+  unsigned Opc = Op.getOpcode();
+  if (Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA) {
+    if (auto *ShiftAmt = dyn_cast<ConstantSDNode>(Op.getOperand(1)))
+      return ShiftAmt->getZExtValue() <= 31 ? 1 : 0;
+    // Register-controlled shift: only ARM-mode CMP/CMN (so_reg_reg) supports
+    // this; Thumb-2 t2_so_reg requires an immediate shift amount.
+    return ST.isThumb() ? 0 : 1;
+  }
+
+  if (Opc == ISD::ROTR) {
+    // Rotr constants will be normalized via mod 32, or & 31,
+    // so we do not have to bounds check.
+    if (isa<ConstantSDNode>(Op.getOperand(1)))
+      return 1;
+    return ST.isThumb() ? 0 : 1;
+  }
+
+  return 0;
+}
+
 /// Returns appropriate ARM CMP (cmp) and corresponding condition code for
 /// the given operands.
 SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
@@ -4546,12 +4574,6 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         break;
       }
     }
-  } else if ((ARM_AM::getShiftOpcForNode(LHS.getOpcode()) != ARM_AM::no_shift) &&
-             (ARM_AM::getShiftOpcForNode(RHS.getOpcode()) == ARM_AM::no_shift)) {
-    // In ARM and Thumb-2, the compare instructions can shift their second
-    // operand.
-    CC = ISD::getSetCCSwappedOperands(CC);
-    std::swap(LHS, RHS);
   }
 
   // Thumb1 has very limited immediate modes, so turning an "and" into a
@@ -4612,21 +4634,6 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 
   ARMCC::CondCodes CondCode = IntCCToARMCC(CC);
 
-  // If the RHS is a constant zero then the V (overflow) flag will never be
-  // set. This can allow us to simplify GE to PL or LT to MI, which can be
-  // simpler for other passes (like the peephole optimiser) to deal with.
-  if (isNullConstant(RHS)) {
-    switch (CondCode) {
-      default: break;
-      case ARMCC::GE:
-        CondCode = ARMCC::PL;
-        break;
-      case ARMCC::LT:
-        CondCode = ARMCC::MI;
-        break;
-    }
-  }
-
   unsigned CompareType;
   switch (CondCode) {
   default:
@@ -4651,6 +4658,36 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     CompareType = ARMISD::CMN;
     LHS = LHS.getOperand(1);
     CondCode = IntCCToARMCC(ISD::getSetCCSwappedOperands(CC));
+  }
+
+  // Prefer folding shifts / CMN into the cmp/cmn second operand (so_reg /
+  // t2_so_reg). When both sides compete, pick the higher
+  // getCmpOperandFoldingProfit. Only when RHS is not a legal icmp
+  // immediate: otherwise keep the canonical (reg, imm) form.
+  ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS.getNode());
+  if (!C || !isLegalICmpImmediate(C->getSExtValue())) {
+    if (getCmpOperandFoldingProfit(LHS, *Subtarget) >
+        getCmpOperandFoldingProfit(RHS, *Subtarget)) {
+      std::swap(LHS, RHS);
+      if (CompareType == ARMISD::CMP)
+        CondCode = ARMCC::getSwappedCondition(CondCode);
+    }
+  }
+
+  // If the RHS is a constant zero then the V (overflow) flag will never be
+  // set. This can allow us to simplify GE to PL or LT to MI, which can be
+  // simpler for other passes (like the peephole optimiser) to deal with.
+  if (isNullConstant(RHS)) {
+    switch (CondCode) {
+    default:
+      break;
+    case ARMCC::GE:
+      CondCode = ARMCC::PL;
+      break;
+    case ARMCC::LT:
+      CondCode = ARMCC::MI;
+      break;
+    }
   }
 
   ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
@@ -9815,13 +9852,11 @@ ARMTargetLowering::LowerAEABIUnalignedLoad(SDValue Op,
   Align Alignment = LD->getAlign();
   const DataLayout &DL = DAG.getDataLayout();
   bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
+  RTLIB::Libcall LC =
+      (MemVT == MVT::i32) ? RTLIB::AEABI_UREAD4 : RTLIB::AEABI_UREAD8;
 
   if (MF.getFunction().hasMinSize() && !AllowsUnaligned &&
-      Alignment <= llvm::Align(2)) {
-
-    RTLIB::Libcall LC =
-        (MemVT == MVT::i32) ? RTLIB::AEABI_UREAD4 : RTLIB::AEABI_UREAD8;
-
+      Alignment <= llvm::Align(2) && DAG.getLibcalls().getLibcallImpl(LC)) {
     MakeLibCallOptions Opts;
     SDLoc dl(Op);
 
@@ -9860,9 +9895,11 @@ SDValue ARMTargetLowering::LowerAEABIUnalignedStore(SDValue Op,
   Align Alignment = ST->getAlign();
   const DataLayout &DL = DAG.getDataLayout();
   bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
+  RTLIB::Libcall LC =
+      (MemVT == MVT::i32) ? RTLIB::AEABI_UWRITE4 : RTLIB::AEABI_UWRITE8;
 
   if (MF.getFunction().hasMinSize() && !AllowsUnaligned &&
-      Alignment <= llvm::Align(2)) {
+      Alignment <= llvm::Align(2) && DAG.getLibcalls().getLibcallImpl(LC)) {
 
     SDLoc dl(Op);
 
@@ -9870,9 +9907,6 @@ SDValue ARMTargetLowering::LowerAEABIUnalignedStore(SDValue Op,
     SDValue StoreVal = ST->getOperand(1);
     if (ST->isTruncatingStore())
       StoreVal = DAG.getNode(ISD::TRUNCATE, dl, MemVT, ST->getOperand(1));
-
-    RTLIB::Libcall LC =
-        (MemVT == MVT::i32) ? RTLIB::AEABI_UWRITE4 : RTLIB::AEABI_UWRITE8;
 
     MakeLibCallOptions Opts;
     auto CallResult =
@@ -13879,14 +13913,14 @@ static SDValue PerformSHLSimplify(SDNode *N,
   // b + ((a << 1) ^ 510)
   // b + ((a << 1) + 510)
 
-  // Many instructions can  perform the shift for free, but it requires both
+  // Many instructions can perform the shift for free, but it requires both
   // the operands to be registers. If c1 << c2 is too large, a mov immediate
   // instruction will needed. So, unfold back to the original pattern if:
   // - if c1 and c2 are small enough that they don't require mov imms.
   // - the user(s) of the node can perform an shl
 
   // No shifted operands for 16-bit instructions.
-  if (ST->isThumb() && ST->isThumb1Only())
+  if (ST->isThumb1Only())
     return SDValue();
 
   // Check that all the users could perform the shl themselves.

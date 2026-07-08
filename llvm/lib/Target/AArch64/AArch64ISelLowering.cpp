@@ -12186,32 +12186,98 @@ SDValue AArch64TargetLowering::LowerBitreverse(SDValue Op,
                      DAG.getNode(ISD::BITREVERSE, DL, VST, REVB));
 }
 
+// A CCMP folds in only a 5-bit unsigned immediate (or its negation, via CCMN);
+// any other constant must be materialized into a register first.
+static bool isLegalCondCmpImmediate(const APInt &Imm) {
+  return Imm.sgt(-32) && Imm.slt(32);
+}
+
+// True unless one of the operands is a constant that cannot be encoded as a
+// CMP/CMN immediate. A non-constant operand always lives in a register, so it
+// is fine.
+static bool hasLegalCmpImmediate(SDValue LHS, SDValue RHS) {
+  ConstantSDNode *C = dyn_cast<ConstantSDNode>(LHS);
+  if (C && !llvm::AArch64_AM::isLegalCmpImmed(C->getAPIntValue()))
+    return false;
+  C = dyn_cast<ConstantSDNode>(RHS);
+  if (C && !llvm::AArch64_AM::isLegalCmpImmed(C->getAPIntValue()))
+    return false;
+  return true;
+}
+
+// As hasLegalCmpImmediate, but for the tighter CCMP immediate form.
+static bool hasLegalCondCmpImmediate(SDValue LHS, SDValue RHS) {
+  ConstantSDNode *C = dyn_cast<ConstantSDNode>(LHS);
+  if (C && !isLegalCondCmpImmediate(C->getAPIntValue()))
+    return false;
+  C = dyn_cast<ConstantSDNode>(RHS);
+  if (C && !isLegalCondCmpImmediate(C->getAPIntValue()))
+    return false;
+  return true;
+}
+
+// True if either operand is a constant that does not fit a CCMP immediate but
+// is a legal logical immediate: folding it into the xor is a single cheap
+// instruction, yet the result still needs a scratch register for the CCMP.
+// Chaining more than two such compares costs more than the CCMP form saves.
+static bool hasCheapXorImmediateThatNeedsCondCmpReg(
+    const std::pair<SDValue, SDValue> &Pair) {
+  for (SDValue V : {Pair.first, Pair.second}) {
+    auto *C = dyn_cast<ConstantSDNode>(V);
+    if (!C || isLegalCondCmpImmediate(C->getAPIntValue()))
+      continue;
+    const APInt &Imm = C->getAPIntValue();
+    unsigned BitWidth = Imm.getBitWidth() <= 32 ? 32 : 64;
+    if (Imm.getBitWidth() <= BitWidth &&
+        AArch64_AM::isLogicalImmediate(Imm.getZExtValue(), BitWidth))
+      return true;
+  }
+  return false;
+}
+
 // Check whether the continuous comparison sequence.
 static bool
-isOrXorChain(SDValue N, unsigned &Num,
-             SmallVector<std::pair<SDValue, SDValue>, 16> &WorkList) {
-  if (Num == MaxXors)
+isOrXorChain(SDValue N, SelectionDAG &DAG, unsigned &NumLeaves,
+             unsigned &NumXors, bool &SawXor, bool RequireLegalCmpImmediates,
+             SmallVectorImpl<std::pair<SDValue, SDValue>> &WorkList) {
+  if (NumLeaves == MaxXors)
     return false;
 
   // Skip the one-use zext
   if (N->getOpcode() == ISD::ZERO_EXTEND && N->hasOneUse())
     N = N->getOperand(0);
 
-  // The leaf node must be XOR
   if (N->getOpcode() == ISD::XOR) {
+    if (RequireLegalCmpImmediates &&
+        !hasLegalCmpImmediate(N->getOperand(0), N->getOperand(1)))
+      return false;
     WorkList.push_back(std::make_pair(N->getOperand(0), N->getOperand(1)));
-    Num++;
+    NumLeaves++;
+    NumXors++;
+    SawXor = true;
     return true;
   }
 
   // All the non-leaf nodes must be OR.
-  if (N->getOpcode() != ISD::OR || !N->hasOneUse())
+  if (N->getOpcode() == ISD::OR && N->hasOneUse())
+    return isOrXorChain(N->getOperand(0), DAG, NumLeaves, NumXors, SawXor,
+                        RequireLegalCmpImmediates, WorkList) &&
+           isOrXorChain(N->getOperand(1), DAG, NumLeaves, NumXors, SawXor,
+                        RequireLegalCmpImmediates, WorkList);
+  if (N->getOpcode() == ISD::OR)
     return false;
 
-  if (isOrXorChain(N->getOperand(0), Num, WorkList) &&
-      isOrXorChain(N->getOperand(1), Num, WorkList))
-    return true;
-  return false;
+  EVT VT = N.getValueType();
+  if (!VT.isScalarInteger())
+    return false;
+
+  // A xor with zero may have been folded away before this combine sees it.
+  // Treat such leaves as comparisons with zero so the original OR/XOR form and
+  // type-legalized wide integer equality compares converge to the same SETCC
+  // tree.
+  WorkList.push_back(std::make_pair(N, DAG.getConstant(0, SDLoc(N), VT)));
+  NumLeaves++;
+  return true;
 }
 
 // Transform chains of ORs and XORs, which usually outlined by memcmp/bmp.
@@ -12229,10 +12295,50 @@ static SDValue performOrXorChainCombine(SDNode *N, SelectionDAG &DAG) {
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   // Try to express conjunction "cmp 0 (or (xor A0 A1) (xor B0 B1))" as:
   // sub A0, A1; ccmp B0, B1, 0, eq; cmp inv(Cond) flag
+  unsigned NumLeaves = 0;
   unsigned NumXors = 0;
+  bool SawXor = false;
+  bool RequireLegalCmpImmediates = any_of(N->users(), [](SDNode *User) {
+    return User->getOpcode() == ISD::BRCOND ||
+           User->getOpcode() == AArch64ISD::BRCOND;
+  });
   if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) && isNullConstant(RHS) &&
       LHS->getOpcode() == ISD::OR && LHS->hasOneUse() &&
-      isOrXorChain(LHS, NumXors, WorkList)) {
+      isOrXorChain(LHS, DAG, NumLeaves, NumXors, SawXor,
+                   RequireLegalCmpImmediates, WorkList) &&
+      SawXor) {
+    // A CCMP sequence serializes the comparisons through NZCV. Keep the
+    // default transform to short chains, but account for real XOR leaves: each
+    // one removed is a code-size and front-end win. Under size optimization,
+    // prefer the smaller CCMP form unless another guard rejects it.
+    const Function &F = DAG.getMachineFunction().getFunction();
+    unsigned Limit = 5;
+    if (NumXors >= 6) {
+      Limit = 6;
+      if (NumXors == NumLeaves)
+        Limit = std::min<unsigned>(8, NumXors);
+    }
+    if (F.hasMinSize())
+      Limit = MaxXors;
+    if (WorkList.size() > Limit)
+      return SDValue();
+
+    if (WorkList.size() > 2 &&
+        any_of(WorkList, hasCheapXorImmediateThatNeedsCondCmpReg))
+      return SDValue();
+
+    // Only the leading compare of the chain uses the wider CMP immediate; the
+    // rest become CCMPs. So a compare whose immediate is a legal CMP operand
+    // but not a legal CCMP operand is cheapest at the front.
+    auto PreferAsFirstCmp = [](const std::pair<SDValue, SDValue> &Pair) {
+      return hasLegalCmpImmediate(Pair.first, Pair.second) &&
+             !hasLegalCondCmpImmediate(Pair.first, Pair.second);
+    };
+    SmallVector<std::pair<SDValue, SDValue>, 16>::iterator First =
+        find_if(WorkList, PreferAsFirstCmp);
+    if (First != WorkList.end())
+      std::iter_swap(WorkList.begin(), First);
+
     SDValue XOR0, XOR1;
     std::tie(XOR0, XOR1) = WorkList[0];
     unsigned LogicOp = (Cond == ISD::SETEQ) ? ISD::AND : ISD::OR;

@@ -1657,6 +1657,27 @@ bool LoopVectorizationPlanner::getDecisionAndClampRange(
   return PredicateAtRangeStart;
 }
 
+VPSingleDefRecipe *
+VPBuilder::createConsecutiveVectorPointer(VPValue *Ptr, Type *SourceElementTy,
+                                          bool Reverse, bool FoldTail,
+                                          DebugLoc DL) {
+  VPlan &Plan = getPlan();
+  GEPNoWrapFlags Flags = vputils::getGEPFlagsForPtr(Ptr);
+  if (Reverse) {
+    // When folding the tail, we may compute an address that we don't in the
+    // original scalar loop: drop the GEP no-wrap flags in this case. Otherwise
+    // preserve existing flags without no-unsigned-wrap, as we will emit
+    // negative indices.
+    GEPNoWrapFlags ReverseFlags =
+        FoldTail ? GEPNoWrapFlags::none() : Flags.withoutNoUnsignedWrap();
+    return tryInsertInstruction(new VPVectorEndPointerRecipe(
+        Ptr, &Plan.getVF(), SourceElementTy, /*Stride=*/-1, ReverseFlags, DL));
+  }
+  Type *StrideTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
+  VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
+  return createVectorPointer(Ptr, SourceElementTy, StrideOne, Flags, DL);
+}
+
 VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF) const {
   assert(count_if(VPlans,
                   [VF](const VPlanPtr &Plan) { return Plan->hasVF(VF); }) ==

@@ -40,6 +40,8 @@ def SDT_LoongArchVFCVTLH_D_S : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisFP<0>,
                                                     SDTCisVec<1>, SDTCisFP<1>]>;
 def SDT_LoongArchVFTINTRZ_W_D : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<0>,
                                                      SDTCisVec<1>, SDTCisFP<1>, SDTCisSameAs<1, 2>]>;
+def SDT_LoongArchVFFINT_S_L : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisFP<0>,
+                                                  SDTCisVec<1>, SDTCisInt<1>, SDTCisSameAs<1, 2>]>;
 
 // Target nodes.
 
@@ -122,6 +124,9 @@ def loongarch_vsrar: SDNode<"LoongArchISD::VSRAR", SDT_LoongArchV2R>;
 
 // Vector double-precision convert to 32-bit integer
 def loongarch_vftintrz_w_d: SDNode<"LoongArchISD::VFTINTRZ", SDT_LoongArchVFTINTRZ_W_D>;
+
+// Vector 64-bit integer convert to single-precision
+def loongarch_vffint_s_l: SDNode<"LoongArchISD::VFFINT", SDT_LoongArchVFFINT_S_L>;
 
 def immZExt1 : ImmLeaf<GRLenVT, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<GRLenVT, [{return isUInt<2>(Imm);}]>;
@@ -2351,6 +2356,10 @@ def : Pat<(v2f64 (sint_to_fp v2i64:$vj)), (VFFINT_D_L v2i64:$vj)>;
 // VFFINT_{S_WU/D_LU}
 def : Pat<(v4f32 (uint_to_fp v4i32:$vj)), (VFFINT_S_WU v4i32:$vj)>;
 def : Pat<(v2f64 (uint_to_fp v2i64:$vj)), (VFFINT_D_LU v2i64:$vj)>;
+
+// VFFINT_S_L
+def : Pat<(v4f32 (loongarch_vffint_s_l (v2i64 LSX128:$vj), (v2i64 LSX128:$vk))),
+          (VFFINT_S_L LSX128:$vj, LSX128:$vk)>;
 
 // VFTINTRZ_{W_S/L_D}
 def : Pat<(v4i32 (fp_to_sint v4f32:$vj)), (VFTINTRZ_W_S v4f32:$vj)>;

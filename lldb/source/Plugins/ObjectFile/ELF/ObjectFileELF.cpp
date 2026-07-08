@@ -2215,8 +2215,7 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   if (m_gnu_debug_data_object_file != nullptr)
     return m_gnu_debug_data_object_file;
 
-  SectionSP section =
-      GetSectionList()->FindSectionByName(ConstString(".gnu_debugdata"));
+  SectionSP section = GetSectionList()->FindSectionByName(".gnu_debugdata");
   if (!section)
     return nullptr;
 
@@ -3265,8 +3264,7 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
   // section, nomatter if .symtab was already parsed or not. This is because
   // minidebuginfo normally removes the .symtab symbols which have their
   // matching .dynsym counterparts.
-  if (!symtab ||
-      GetSectionList()->FindSectionByName(ConstString(".gnu_debugdata"))) {
+  if (!symtab || GetSectionList()->FindSectionByName(".gnu_debugdata")) {
     Section *dynsym =
         section_list->FindSectionByType(eSectionTypeELFDynamicSymbols, true)
             .get();
@@ -3818,6 +3816,16 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #undef RISCV_DYNAMIC_TAG
     }
     break;
+
+  case llvm::ELF::EM_SPARC:
+  case llvm::ELF::EM_SPARC32PLUS:
+  case llvm::ELF::EM_SPARCV9:
+    switch (Type) {
+#define SPARC_DYNAMIC_TAG(name, value) DYNAMIC_STRINGIFY_ENUM(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef SPARC_DYNAMIC_TAG
+    }
+    break;
   }
 #undef DYNAMIC_TAG
   switch (Type) {
@@ -3828,6 +3836,7 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #define PPC_DYNAMIC_TAG(name, value)
 #define PPC64_DYNAMIC_TAG(name, value)
 #define RISCV_DYNAMIC_TAG(name, value)
+#define SPARC_DYNAMIC_TAG(name, value)
 // Also ignore marker tags such as DT_HIOS (maps to DT_VERNEEDNUM), etc.
 #define DYNAMIC_TAG_MARKER(name, value)
 #define DYNAMIC_TAG(name, value)                                               \
@@ -3841,6 +3850,7 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #undef PPC_DYNAMIC_TAG
 #undef PPC64_DYNAMIC_TAG
 #undef RISCV_DYNAMIC_TAG
+#undef SPARC_DYNAMIC_TAG
 #undef DYNAMIC_TAG_MARKER
 #undef DYNAMIC_STRINGIFY_ENUM
   default:
@@ -3938,7 +3948,7 @@ ObjectFile::Strata ObjectFileELF::CalculateStrata() {
     {
       SectionList *section_list = GetSectionList();
       if (section_list) {
-        static ConstString loader_section_name(".interp");
+        llvm::StringRef loader_section_name(".interp");
         SectionSP loader_section =
             section_list->FindSectionByName(loader_section_name);
         if (loader_section) {
