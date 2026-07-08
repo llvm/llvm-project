@@ -79,13 +79,17 @@ static bool isIsland(const BasicBlock *BB) {
 /// True if BB is an unreachable target block: it is terminated by
 /// `unreachable`, or (after exit unification) it is marked by an
 /// @llvm.amdgcn.unreachable call.
+/// We assume that amdgcn_unreachable is only introduced by
+/// AMDGPUUnifyDivergentExitNodes as the instruction directly preceeding the
+/// terminator of the block (because it replaced the unreachable terminator that
+/// had previously been there).
 static bool isUnreachableTarget(const BasicBlock &BB) {
-  if (isa<UnreachableInst>(BB.getTerminator()))
+  const Instruction *Term = BB.getTerminator();
+  if (isa<UnreachableInst>(Term))
     return true;
-  return any_of(BB, [](const Instruction &I) {
-    const auto *CB = dyn_cast<CallBase>(&I);
-    return CB && CB->getIntrinsicID() == Intrinsic::amdgcn_unreachable;
-  });
+  if (const auto *CI = dyn_cast_if_present<CallInst>(Term->getPrevNode()))
+    return CI->getIntrinsicID() == Intrinsic::amdgcn_unreachable;
+  return false;
 }
 
 namespace {
