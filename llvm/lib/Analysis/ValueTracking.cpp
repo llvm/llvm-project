@@ -4914,9 +4914,9 @@ computeKnownExponentRangeFromContext(const Value *V, const SimplifyQuery &Q) {
         Pred == FCmpInst::FCMP_TRUE || Pred == FCmpInst::FCMP_FALSE)
       continue;
 
-    APFloat::cmpResult CmpOne =
-        LimitC->compare(APFloat::getOne(LimitC->getSemantics()));
-    if (CmpOne > APFloat::cmpEqual)
+    // TOOD: Handle general constant values.
+    if (LimitC->compare(APFloat::getOne(LimitC->getSemantics())) !=
+        APFloat::cmpEqual)
       continue;
 
     // If fabs(x) <= K, K <= 1.0 => exponent min exp range
@@ -4926,10 +4926,17 @@ computeKnownExponentRangeFromContext(const Value *V, const SimplifyQuery &Q) {
         Pred == FCmpInst::FCMP_ULT || Pred == FCmpInst::FCMP_ULE ||
         Pred == FCmpInst::FCMP_OEQ || Pred == FCmpInst::FCMP_UEQ;
 
+    bool KnownStrictlyLess =
+        Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_ULT ||
+        Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE;
+
     BasicBlockEdge Edge1(BI->getParent(),
                          BI->getSuccessor(IsLessEqual ? 0 : 1));
     if (Q.DT->dominates(Edge1, Q.CxtI->getParent())) {
-      int Exp = ilogb(*LimitC);
+      // frexp returns an exponent one greater than ilogb. For a limit of 1.0
+      // this is 1; if the value is known strictly less than 1.0 the maximum
+      // exponent is instead 0.
+      int Exp = KnownStrictlyLess ? 0 : 1;
 
       // TODO: Figure out lower bound to detect no-underflow.
       return {APFloat::IEK_NaN, Exp};
