@@ -749,8 +749,7 @@ void DynamicRegisterInfo::Clear() {
   m_finalized = false;
 }
 
-void DynamicRegisterInfo::Dump() const {
-  StreamFile s(stdout, false);
+void DynamicRegisterInfo::Dump(Stream &s) const {
   const size_t num_regs = m_regs.size();
   s.Printf("%p: DynamicRegisterInfo contains %" PRIu64 " registers:\n",
            static_cast<const void *>(this), static_cast<uint64_t>(num_regs));
