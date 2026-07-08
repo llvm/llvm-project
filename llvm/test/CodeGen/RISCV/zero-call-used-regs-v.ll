@@ -188,3 +188,28 @@ entry:
     ret <32 x i32> %sum
 }
 
+define <8 x i8> @load_segmented(ptr %base, ptr %out, <8 x i8> %use_v8) "zero-call-used-regs"="used" {
+; CHECK-LABEL: load_segmented:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
+; CHECK-NEXT:    vlseg2e8.v v9, (a0)
+; CHECK-NEXT:    vs1r.v v9, (a1)
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    ret
+entry:
+  %tuple = call target("riscv.vector.tuple", <vscale x 8 x i8>, 2)
+      @llvm.riscv.vlseg2.triscv.vector.tuple_nxv8i8_2t.i64(
+          target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison,
+          ptr %base,
+          i64 0,
+          i64 3)
+
+  %v0 = call <vscale x 8 x i8> @llvm.riscv.tuple.extract.nxv8i8.triscv.vector.tuple_nxv8i8_2t(
+          target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %tuple, i32 0)
+  store <vscale x 8 x i8> %v0, ptr %out
+  ret <8 x i8> %use_v8
+}
