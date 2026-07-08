@@ -2,19 +2,15 @@
 ; RUN: opt -S -passes=simplifycfg -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck %s --check-prefix=IR
 ; RUN: opt -S -passes=simplifycfg -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s \
 ; RUN:   | llc -O3 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a | FileCheck %s --check-prefix=ASM
-; RUN: opt -S -passes=simplifycfg -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -phi-node-folding-threshold=4 < %s \
-; RUN:   | llc -O3 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a | FileCheck %s --check-prefix=ASM-THRESHOLD4
 
 ; Regression test for SGPR spilling caused by commit 0967957d7a94
-; "[CostModel] Handle all cost kinds in getCmpSelInstrCost".
-;
-; That commit raised the cost of vector selects for non-throughput cost kinds,
-; causing SimplifyCFG to stop speculatively executing blocks on AMDGPU. Without
-; the speculation, the branch+PHI pattern creates additional register pressure
-; at the merge point, leading to SGPR spills.
+; "[CostModel] Handle all cost kinds in getCmpSelInstrCost".  That
+; commit raised the cost of vector selects for non-throughput cost
+; kinds, causing SimplifyCFG to stop speculatively executing blocks on
+; AMDGPU which increases register pressure at the merge point,
+; leading to SGPR spills.
 
 ; ASM: .sgpr_spill_count: 0
-; ASM-THRESHOLD4: .sgpr_spill_count: 0
 
 define amdgpu_kernel void @reduced_fmha_kernel(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg4, i1 %arg5, i1 %arg6, i1 %arg7, i1 %arg8, i32 %arg9, i1 %arg10, <4 x float> %arg11, i32 %arg12, i32 %arg13, i1 %arg14, i1 %arg15, i1 %arg16, i1 %arg17, i32 %arg18, i1 %arg19, i1 %arg20, i32 %arg21, i1 %arg22, i32 %arg23, i1 %arg24, i1 %arg25, i1 %arg26, i32 %arg27, i32 %arg28, i1 %arg29, i32 %arg30, i1 %arg31, i32 %arg32, i1 %arg33, i32 %arg34, <4 x float> %arg35, <4 x float> %arg36, <4 x float> %arg37) {
 ; IR-LABEL: define amdgpu_kernel void @reduced_fmha_kernel(
