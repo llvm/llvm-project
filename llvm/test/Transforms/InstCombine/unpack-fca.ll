@@ -73,14 +73,14 @@ define void @storeStructOfArrayOfA(ptr %saa.ptr) {
 
 define void @storeArrayOfB(ptr %ab.ptr, [2 x %B] %ab) {
 ; CHECK-LABEL: @storeArrayOfB(
-; CHECK-NEXT:    [[AB_ELT:%.*]] = extractvalue [2 x %B] [[AB:%.*]], 0
-; CHECK-NEXT:    [[AB_ELT_ELT:%.*]] = extractvalue [[B:%.*]] [[AB_ELT]], 0
+; CHECK-NEXT:    [[AB_ELT:%.*]] = extractvalue [2 x [[B:%.*]]] [[AB:%.*]], 0
+; CHECK-NEXT:    [[AB_ELT_ELT:%.*]] = extractvalue [[B]] [[AB_ELT]], 0
 ; CHECK-NEXT:    store ptr [[AB_ELT_ELT]], ptr [[AB_PTR:%.*]], align 8
 ; CHECK-NEXT:    [[AB_PTR_REPACK3:%.*]] = getelementptr inbounds nuw i8, ptr [[AB_PTR]], i64 8
 ; CHECK-NEXT:    [[AB_ELT_ELT4:%.*]] = extractvalue [[B]] [[AB_ELT]], 1
 ; CHECK-NEXT:    store i64 [[AB_ELT_ELT4]], ptr [[AB_PTR_REPACK3]], align 8
 ; CHECK-NEXT:    [[AB_PTR_REPACK1:%.*]] = getelementptr inbounds nuw i8, ptr [[AB_PTR]], i64 16
-; CHECK-NEXT:    [[AB_ELT2:%.*]] = extractvalue [2 x %B] [[AB]], 1
+; CHECK-NEXT:    [[AB_ELT2:%.*]] = extractvalue [2 x [[B]]] [[AB]], 1
 ; CHECK-NEXT:    [[AB_ELT2_ELT:%.*]] = extractvalue [[B]] [[AB_ELT2]], 0
 ; CHECK-NEXT:    store ptr [[AB_ELT2_ELT]], ptr [[AB_PTR_REPACK1]], align 8
 ; CHECK-NEXT:    [[AB_PTR_REPACK1_REPACK5:%.*]] = getelementptr inbounds nuw i8, ptr [[AB_PTR]], i64 24
@@ -130,8 +130,8 @@ define [1 x %A] @loadArrayOfA(ptr %aa.ptr) {
 ; CHECK-LABEL: @loadArrayOfA(
 ; CHECK-NEXT:    [[DOTUNPACK_UNPACK:%.*]] = load ptr, ptr [[AA_PTR:%.*]], align 8
 ; CHECK-NEXT:    [[DOTUNPACK1:%.*]] = insertvalue [[A:%.*]] poison, ptr [[DOTUNPACK_UNPACK]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue [1 x %A] poison, [[A]] [[DOTUNPACK1]], 0
-; CHECK-NEXT:    ret [1 x %A] [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue [1 x [[A]]] poison, [[A]] [[DOTUNPACK1]], 0
+; CHECK-NEXT:    ret [1 x [[A]]] [[TMP1]]
 ;
   %1 = load [1 x %A], ptr %aa.ptr, align 8
   ret [1 x %A] %1
@@ -141,9 +141,9 @@ define { [1 x %A] } @loadStructOfArrayOfA(ptr %saa.ptr) {
 ; CHECK-LABEL: @loadStructOfArrayOfA(
 ; CHECK-NEXT:    [[DOTUNPACK_UNPACK_UNPACK:%.*]] = load ptr, ptr [[SAA_PTR:%.*]], align 8
 ; CHECK-NEXT:    [[DOTUNPACK_UNPACK2:%.*]] = insertvalue [[A:%.*]] poison, ptr [[DOTUNPACK_UNPACK_UNPACK]], 0
-; CHECK-NEXT:    [[DOTUNPACK1:%.*]] = insertvalue [1 x %A] poison, [[A]] [[DOTUNPACK_UNPACK2]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { [1 x %A] } poison, [1 x %A] [[DOTUNPACK1]], 0
-; CHECK-NEXT:    ret { [1 x %A] } [[TMP1]]
+; CHECK-NEXT:    [[DOTUNPACK1:%.*]] = insertvalue [1 x [[A]]] poison, [[A]] [[DOTUNPACK_UNPACK2]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { [1 x [[A]]] } poison, [1 x [[A]]] [[DOTUNPACK1]], 0
+; CHECK-NEXT:    ret { [1 x [[A]]] } [[TMP1]]
 ;
   %1 = load { [1 x %A] }, ptr %saa.ptr, align 8
   ret { [1 x %A] } %1
@@ -178,15 +178,15 @@ define [2 x %B] @loadArrayOfB(ptr %ab.ptr) {
 ; CHECK-NEXT:    [[DOTUNPACK_ELT3:%.*]] = getelementptr inbounds nuw i8, ptr [[AB_PTR]], i64 8
 ; CHECK-NEXT:    [[DOTUNPACK_UNPACK4:%.*]] = load i64, ptr [[DOTUNPACK_ELT3]], align 8
 ; CHECK-NEXT:    [[DOTUNPACK5:%.*]] = insertvalue [[B]] [[TMP1]], i64 [[DOTUNPACK_UNPACK4]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [2 x %B] poison, [[B]] [[DOTUNPACK5]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [2 x [[B]]] poison, [[B]] [[DOTUNPACK5]], 0
 ; CHECK-NEXT:    [[DOTELT1:%.*]] = getelementptr inbounds nuw i8, ptr [[AB_PTR]], i64 16
 ; CHECK-NEXT:    [[DOTUNPACK2_UNPACK:%.*]] = load ptr, ptr [[DOTELT1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue [[B]] poison, ptr [[DOTUNPACK2_UNPACK]], 0
 ; CHECK-NEXT:    [[DOTUNPACK2_ELT6:%.*]] = getelementptr inbounds nuw i8, ptr [[AB_PTR]], i64 24
 ; CHECK-NEXT:    [[DOTUNPACK2_UNPACK7:%.*]] = load i64, ptr [[DOTUNPACK2_ELT6]], align 8
 ; CHECK-NEXT:    [[DOTUNPACK28:%.*]] = insertvalue [[B]] [[TMP3]], i64 [[DOTUNPACK2_UNPACK7]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertvalue [2 x %B] [[TMP2]], [[B]] [[DOTUNPACK28]], 1
-; CHECK-NEXT:    ret [2 x %B] [[TMP4]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertvalue [2 x [[B]]] [[TMP2]], [[B]] [[DOTUNPACK28]], 1
+; CHECK-NEXT:    ret [2 x [[B]]] [[TMP4]]
 ;
   %1 = load [2 x %B], ptr %ab.ptr, align 8
   ret [2 x %B] %1
@@ -194,8 +194,8 @@ define [2 x %B] @loadArrayOfB(ptr %ab.ptr) {
 
 define [2000 x %B] @loadLargeArrayOfB(ptr %ab.ptr) {
 ; CHECK-LABEL: @loadLargeArrayOfB(
-; CHECK-NEXT:    [[TMP1:%.*]] = load [2000 x %B], ptr [[AB_PTR:%.*]], align 8
-; CHECK-NEXT:    ret [2000 x %B] [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load [2000 x [[B:%.*]]], ptr [[AB_PTR:%.*]], align 8
+; CHECK-NEXT:    ret [2000 x [[B]]] [[TMP1]]
 ;
   %1 = load [2000 x %B], ptr %ab.ptr, align 8
   ret [2000 x %B] %1
@@ -261,3 +261,70 @@ define void @check_alignment(ptr %u, ptr %v) {
   store %struct.U %1, ptr %v
   ret void
 }
+
+; When unpacking a multi-element struct store, the "whole access" metadata
+; (!nontemporal, !llvm.mem.parallel_loop_access) is carried onto every per-field
+; store, while the AA metadata (here !tbaa.struct) is narrowed to each field via
+; AAMDNodes::adjustForAccess, so each store gets the scalar !tbaa for its field
+; rather than the whole aggregate descriptor. The field types
+; (i32/float/double/i64/ptr) must also be preserved.
+define void @storeStructWithMetadata(ptr %p, { i32, float, double, i64, ptr } %v) {
+; CHECK-LABEL: @storeStructWithMetadata(
+; CHECK-NEXT:    [[V_ELT:%.*]] = extractvalue { i32, float, double, i64, ptr } [[V:%.*]], 0
+; CHECK-NEXT:    store i32 [[V_ELT]], ptr [[P:%.*]], align 8, !tbaa [[TBAA0:![0-9]+]], !nontemporal [[META4:![0-9]+]], !llvm.mem.parallel_loop_access [[META5:![0-9]+]]
+; CHECK-NEXT:    [[P_REPACK1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[V_ELT2:%.*]] = extractvalue { i32, float, double, i64, ptr } [[V]], 1
+; CHECK-NEXT:    store float [[V_ELT2]], ptr [[P_REPACK1]], align 4, !tbaa [[TBAA7:![0-9]+]], !nontemporal [[META4]], !llvm.mem.parallel_loop_access [[META5]]
+; CHECK-NEXT:    [[P_REPACK3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[V_ELT4:%.*]] = extractvalue { i32, float, double, i64, ptr } [[V]], 2
+; CHECK-NEXT:    store double [[V_ELT4]], ptr [[P_REPACK3]], align 8, !tbaa [[TBAA9:![0-9]+]], !nontemporal [[META4]], !llvm.mem.parallel_loop_access [[META5]]
+; CHECK-NEXT:    [[P_REPACK5:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
+; CHECK-NEXT:    [[V_ELT6:%.*]] = extractvalue { i32, float, double, i64, ptr } [[V]], 3
+; CHECK-NEXT:    store i64 [[V_ELT6]], ptr [[P_REPACK5]], align 8, !tbaa [[TBAA11:![0-9]+]], !nontemporal [[META4]], !llvm.mem.parallel_loop_access [[META5]]
+; CHECK-NEXT:    [[P_REPACK7:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 24
+; CHECK-NEXT:    [[V_ELT8:%.*]] = extractvalue { i32, float, double, i64, ptr } [[V]], 4
+; CHECK-NEXT:    store ptr [[V_ELT8]], ptr [[P_REPACK7]], align 8, !tbaa [[TBAA13:![0-9]+]], !nontemporal [[META4]], !llvm.mem.parallel_loop_access [[META5]]
+; CHECK-NEXT:    ret void
+;
+  store { i32, float, double, i64, ptr } %v, ptr %p, align 8, !tbaa.struct !0, !nontemporal !12, !llvm.mem.parallel_loop_access !13
+  ret void
+}
+
+; Same for a multi-element array store: !tbaa.struct is sliced to a per-element
+; scalar !tbaa while the whole-access metadata is copied to each store.
+define void @storeArrayWithMetadata(ptr %p, [4 x i32] %v) {
+; CHECK-LABEL: @storeArrayWithMetadata(
+; CHECK-NEXT:    [[V_ELT:%.*]] = extractvalue [4 x i32] [[V:%.*]], 0
+; CHECK-NEXT:    store i32 [[V_ELT]], ptr [[P:%.*]], align 4, !tbaa [[TBAA0]], !nontemporal [[META4]], !llvm.mem.parallel_loop_access [[META5]]
+; CHECK-NEXT:    [[P_REPACK1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[V_ELT2:%.*]] = extractvalue [4 x i32] [[V]], 1
+; CHECK-NEXT:    store i32 [[V_ELT2]], ptr [[P_REPACK1]], align 4, !tbaa [[TBAA0]], !nontemporal [[META4]], !llvm.mem.parallel_loop_access [[META5]]
+; CHECK-NEXT:    [[P_REPACK3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[V_ELT4:%.*]] = extractvalue [4 x i32] [[V]], 2
+; CHECK-NEXT:    store i32 [[V_ELT4]], ptr [[P_REPACK3]], align 4, !tbaa [[TBAA0]], !nontemporal [[META4]], !llvm.mem.parallel_loop_access [[META5]]
+; CHECK-NEXT:    [[P_REPACK5:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 12
+; CHECK-NEXT:    [[V_ELT6:%.*]] = extractvalue [4 x i32] [[V]], 3
+; CHECK-NEXT:    store i32 [[V_ELT6]], ptr [[P_REPACK5]], align 4, !tbaa [[TBAA0]], !nontemporal [[META4]], !llvm.mem.parallel_loop_access [[META5]]
+; CHECK-NEXT:    ret void
+;
+  store [4 x i32] %v, ptr %p, align 4, !tbaa.struct !14, !nontemporal !12, !llvm.mem.parallel_loop_access !13
+  ret void
+}
+
+!0 = !{i64 0, i64 4, !1, i64 4, i64 4, !4, i64 8, i64 8, !6, i64 16, i64 8, !8, i64 24, i64 8, !10}
+!1 = !{!2, !2, i64 0}
+!2 = !{!"int", !3, i64 0}
+!3 = !{!"omnipotent char", !15, i64 0}
+!4 = !{!5, !5, i64 0}
+!5 = !{!"float", !3, i64 0}
+!6 = !{!7, !7, i64 0}
+!7 = !{!"double", !3, i64 0}
+!8 = !{!9, !9, i64 0}
+!9 = !{!"long", !3, i64 0}
+!10 = !{!11, !11, i64 0}
+!11 = !{!"any pointer", !3, i64 0}
+!12 = !{i32 1}
+!13 = !{!16}
+!14 = !{i64 0, i64 4, !1, i64 4, i64 4, !1, i64 8, i64 4, !1, i64 12, i64 4, !1}
+!15 = !{!"Simple C++ TBAA"}
+!16 = distinct !{}
