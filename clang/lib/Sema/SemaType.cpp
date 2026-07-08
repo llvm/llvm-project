@@ -1084,6 +1084,24 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
         break;
       }
     }
+
+    // OpenCL C v3.0 s6.2.1: 64-bit integer types require the
+    // __opencl_c_int64 feature (cles_khr_int64 in the 1.x embedded profile).
+    if (S.getLangOpts().OpenCL &&
+        (Result == Context.LongTy || Result == Context.UnsignedLongTy ||
+         Result == Context.LongLongTy ||
+         Result == Context.UnsignedLongLongTy) &&
+        !S.getOpenCLOptions().isSupported("cles_khr_int64",
+                                          S.getLangOpts()) &&
+        !S.getOpenCLOptions().isSupported("__opencl_c_int64",
+                                          S.getLangOpts()))
+      // Note: 'long' alone has TST_unspecified, so the type specifier
+      // location can be invalid; the width specifier is always present.
+      S.Diag(DS.getTypeSpecWidthLoc(), diag::err_opencl_requires_extension)
+          << 0 << Result
+          << (S.getLangOpts().getOpenCLCompatibleVersion() >= 300
+                  ? "__opencl_c_int64"
+                  : "cles_khr_int64");
     break;
   }
   case DeclSpec::TST_bitint: {
