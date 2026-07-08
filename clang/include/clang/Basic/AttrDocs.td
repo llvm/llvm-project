@@ -898,9 +898,13 @@ and an initializer is ill-formed under the initialization profile (the
 marker contradicts the explicit initialization).
 
 On a non-static data member the marker also excuses the member from the
-profile's requirement that every constructor initialize it. (The profile
-does not yet verify that such a member is assigned in the constructor
-body; until it does, a marked member is trusted.)
+profile's requirement that every constructor initialize it. A scalar marked
+member is instead flow-checked where local analysis is sound: a read before
+it is assigned is diagnosed in the constructor's own body, and -- for a
+member of a class with no user-provided constructor -- in any function body
+that declares a bare local of that class. A marked member of an object with
+a user-provided constructor reached through any other object is trusted (the
+constructor body may have assigned it, which local analysis cannot see).
 
 The attribute cannot be applied where leaving the entity uninitialized is
 meaningless -- a reference, a function parameter, or a structured binding --
