@@ -5,10 +5,23 @@
 define void @bitset_udiv64_const_tc(ptr %words, ptr %out) {
 ; CHECK-LABEL: 'bitset_udiv64_const_tc'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
+; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.words = getelementptr inbounds i8, ptr %words, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: (441 + %out))
+; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
+; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %words High: (7 + %words))
+; CHECK-NEXT:            Member: (({0,+,1}<nuw><nsw><%loop> /u 64) + %words)<nuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -39,10 +52,23 @@ exit:
 define void @bitset_udiv64_symbolic_tc(ptr %words, ptr %out, i64 %N) {
 ; CHECK-LABEL: 'bitset_udiv64_symbolic_tc'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
+; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.words = getelementptr inbounds i8, ptr %words, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: (%N + %out))
+; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
+; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %words High: (1 + ((-1 + %N) /u 64) + %words))
+; CHECK-NEXT:            Member: (({0,+,1}<nuw><nsw><%loop> /u 64) + %words)<nuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -73,10 +99,21 @@ exit:
 define void @udiv3_symbolic_tc(ptr %a, ptr %b, i64 %N) {
 ; CHECK-LABEL: 'udiv3_symbolic_tc'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i8, ptr %a, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %b High: (%N + %b))
+; CHECK-NEXT:            Member: {%b,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %a High: (1 + ((-1 + %N) /u 3) + %a))
+; CHECK-NEXT:            Member: (({0,+,1}<nuw><nsw><%loop> /u 3) + %a)<nuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -105,10 +142,21 @@ exit:
 define void @udiv_invariant_divisor(ptr %a, ptr %b, i64 %N, i64 %d) {
 ; CHECK-LABEL: 'udiv_invariant_divisor'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i8, ptr %a, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %b High: (%N + %b))
+; CHECK-NEXT:            Member: {%b,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %a High: (1 + ((-1 + %N) /u %d) + %a))
+; CHECK-NEXT:            Member: (({0,+,1}<nuw><nsw><%loop> /u %d) + %a)<nuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
