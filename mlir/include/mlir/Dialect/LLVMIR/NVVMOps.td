@@ -3477,17 +3477,10 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
 
   string llvmBuilder = [{
     auto operands = moduleTranslation.lookupValues(opInst.getOperands());
-    // `intOverflowBehavior` is optional; an omitted attribute selects the
-    // default `wrapped` behavior. Resolve it to a fully-initialized value here
-    // so the intrinsic selector always inspects an engaged optional and never
-    // reads an empty optional's uninitialized payload (a benign read the
-    // optimizer can hoist out of the guarding `has_value()` check under -O2).
-    // An empty std::optional still reserves storage for its payload but leaves
-    // it uninitialized, and at -O2 the optimizer may if-convert the selector's
-    // `has_value() ? ... *sat ... : true` guard and speculatively load `*sat`
-    // before the guard discards it. This is not UB -- the read touches validly
-    // allocated storage and its result is never used -- but Valgrind still
-    // reports the load of uninitialized bytes.
+    // `intOverflowBehavior` is optional and defaults to `wrapped` when omitted.
+    // We initialize it to a concrete value so that the intrinsic selector never
+    // speculatively reads an empty optional's uninitialized payload (benign,
+    // but flagged by Valgrind).
     std::optional<mlir::NVVM::MMAIntOverflow> intOverflow = mlir::NVVM::MMAIntOverflow::wrapped;
     if (mlir::NVVM::MMAIntOverflowAttr satAttr = op.getIntOverflowBehaviorAttr())
       intOverflow = satAttr.getValue();
