@@ -74,6 +74,49 @@ func.func @nested_loop_tile(%arg0: memref<100x50xf32>) {
   return
 }
 
+// Regression test: a loop with GANG(STATIC: N) combined with a multi-dim
+// TILE clause used to crash with an assertion failure inside
+// LoopOp::getGangValue() because uncollapseLoops() (needed here since the
+// tile count exceeds the implicit collapse count of 1) left one of the
+// generated inner loops with a leftover gang operand but no corresponding
+// gang device-type attribute. Check that the pass completes and that gang
+// is only preserved on the outermost tile loop.
+
+// CHECK-LABEL: func.func @gang_static_with_multi_dim_tile
+// CHECK:         acc.loop gang({static=%{{.*}} : i32}) control(%[[I:.*]] : index) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+// CHECK-NOT:       gang
+// CHECK:           acc.loop control(%[[J:.*]] : index) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+// CHECK-NOT:         gang
+// CHECK:             acc.loop control({{.*}} : index) = (%[[I]] : index) to ({{.*}}) step ({{.*}}) {
+// CHECK-NOT:           gang
+// CHECK:               acc.loop control({{.*}} : index) = (%[[J]] : index) to ({{.*}}) step ({{.*}}) {
+// CHECK-NOT:             gang
+// CHECK:                 acc.yield
+// CHECK:               }
+// CHECK:               acc.yield
+// CHECK:             }
+// CHECK:             acc.yield
+// CHECK:           }
+// CHECK:           acc.yield
+// CHECK:         }
+func.func @gang_static_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
+  %c0 = arith.constant 0 : index
+  %c100 = arith.constant 100 : index
+  %c50 = arith.constant 50 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
+  %cs = arith.constant 1 : i32
+  acc.loop gang({static=%cs : i32}) tile({%c4 : index, %c8 : index}) control(%i : index, %j : index) = (%c0, %c0 : index, index) to (%c100, %c50 : index, index) step (%c1, %c1 : index, index) {
+    %sum = arith.addi %i, %j : index
+    %val = arith.index_castui %sum : index to i32
+    %fval = arith.sitofp %val : i32 to f32
+    memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
+    acc.yield
+  } attributes {independent = [#acc.device_type<none>]}
+  return
+}
+
 // Test unknown tile size (*) represented as -1
 // Should use default tile size (32)
 
