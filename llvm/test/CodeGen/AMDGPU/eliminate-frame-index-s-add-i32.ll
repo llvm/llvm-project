@@ -6,41 +6,13 @@
 define amdgpu_kernel void @kernel() {
 ; CHECK-LABEL: kernel:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
-; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
-; CHECK-NEXT:    v_pk_mov_b32 v[0:1], 0, 0
-; CHECK-NEXT:    flat_load_ubyte v0, v[0:1]
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
+; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    s_mov_b32 s4, 4
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v0
-; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; CHECK-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
-; CHECK-NEXT:    s_cbranch_execnz .LBB0_3
-; CHECK-NEXT:  ; %bb.1: ; %Flow
-; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], s[6:7]
-; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[4:5], s[4:5] op_sel:[0,1]
-; CHECK-NEXT:    s_xor_b64 exec, exec, s[6:7]
-; CHECK-NEXT:    s_cbranch_execnz .LBB0_4
-; CHECK-NEXT:  .LBB0_2: ; %end
-; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
-; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:4
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; CHECK-NEXT:    s_endpgm
-; CHECK-NEXT:  .LBB0_3: ; %then
-; CHECK-NEXT:    s_mov_b64 s[8:9], src_private_base
-; CHECK-NEXT:    s_mov_b32 s5, s9
-; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], s[6:7]
-; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[4:5], s[4:5] op_sel:[0,1]
-; CHECK-NEXT:    s_xor_b64 exec, exec, s[6:7]
-; CHECK-NEXT:    s_cbranch_execz .LBB0_2
-; CHECK-NEXT:  .LBB0_4: ; %entry.end_crit_edge
-; CHECK-NEXT:    s_mov_b64 s[8:9], src_private_base
-; CHECK-NEXT:    s_mov_b32 s5, s9
-; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[4:5], s[4:5] op_sel:[0,1]
-; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
-; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:4
+; CHECK-NEXT:    v_mov_b32_e32 v0, s5
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
+; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CHECK-NEXT:    s_endpgm
 entry:
