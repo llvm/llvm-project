@@ -3,8 +3,10 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=SI %s
 ; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefixes=GFX8 %s
 ; RUN: llc -mtriple=amdgpu10.10 < %s | FileCheck -check-prefixes=GFX10 %s
-; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16 %s
-; RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 -global-isel < %s | FileCheck -check-prefixes=GFX11-GISEL,GFX11-GISEL-TRUE16 %s
+; RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 -global-isel < %s | FileCheck -check-prefixes=GFX11-GISEL,GFX11-GISEL-FAKE16 %s
+; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11-SDAG,GFX11-SDAG-TRUE16 %s
+; RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11-SDAG,GFX11-SDAG-FAKE16 %s
 
 define amdgpu_kernel void @rotl_i32(ptr addrspace(1) %in, i32 %x, i32 %y) {
 ; R600-LABEL: rotl_i32:
@@ -63,19 +65,42 @@ define amdgpu_kernel void @rotl_i32(ptr addrspace(1) %in, i32 %x, i32 %y) {
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: rotl_i32:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_sub_i32 s3, 32, s3
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 s4, s3, 31
-; GFX11-NEXT:    s_mov_b32 s3, s2
-; GFX11-NEXT:    s_lshr_b64 s[2:3], s[2:3], s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_endpgm
+; GFX11-GISEL-TRUE16-LABEL: rotl_i32:
+; GFX11-GISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    s_sub_i32 s3, 0, s3
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, s3
+; GFX11-GISEL-TRUE16-NEXT:    v_alignbit_b32 v0, s2, s2, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-GISEL-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-GISEL-FAKE16-LABEL: rotl_i32:
+; GFX11-GISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11-GISEL-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    s_sub_i32 s3, 0, s3
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-FAKE16-NEXT:    v_alignbit_b32 v0, s2, s2, s3
+; GFX11-GISEL-FAKE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX11-SDAG-LABEL: rotl_i32:
+; GFX11-SDAG:       ; %bb.0: ; %entry
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_sub_i32 s3, 32, s3
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_and_b32 s4, s3, 31
+; GFX11-SDAG-NEXT:    s_mov_b32 s3, s2
+; GFX11-SDAG-NEXT:    s_lshr_b64 s[2:3], s[2:3], s4
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-SDAG-NEXT:    s_endpgm
 entry:
   %0 = shl i32 %x, %y
   %1 = sub i32 32, %y
@@ -165,26 +190,57 @@ define amdgpu_kernel void @rotl_v2i32(ptr addrspace(1) %in, <2 x i32> %x, <2 x i
 ; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: rotl_v2i32:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
-; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_sub_i32 s6, 32, s2
-; GFX11-NEXT:    s_sub_i32 s7, 32, s3
-; GFX11-NEXT:    s_mov_b32 s2, s1
-; GFX11-NEXT:    s_mov_b32 s3, s1
-; GFX11-NEXT:    s_mov_b32 s1, s0
-; GFX11-NEXT:    s_and_b32 s6, s6, 31
-; GFX11-NEXT:    s_and_b32 s7, s7, 31
-; GFX11-NEXT:    s_lshr_b64 s[0:1], s[0:1], s6
-; GFX11-NEXT:    s_lshr_b64 s[2:3], s[2:3], s7
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s2
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
-; GFX11-NEXT:    s_endpgm
+; GFX11-GISEL-TRUE16-LABEL: rotl_v2i32:
+; GFX11-GISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11-GISEL-TRUE16-NEXT:    s_clause 0x1
+; GFX11-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
+; GFX11-GISEL-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX11-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    s_sub_i32 s2, 0, s2
+; GFX11-GISEL-TRUE16-NEXT:    s_sub_i32 s3, 0, s3
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX11-GISEL-TRUE16-NEXT:    v_alignbit_b32 v0, s0, s0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-GISEL-TRUE16-NEXT:    v_alignbit_b32 v1, s1, s1, v1.l
+; GFX11-GISEL-TRUE16-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
+; GFX11-GISEL-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-GISEL-FAKE16-LABEL: rotl_v2i32:
+; GFX11-GISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11-GISEL-FAKE16-NEXT:    s_clause 0x1
+; GFX11-GISEL-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
+; GFX11-GISEL-FAKE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX11-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    s_sub_i32 s2, 0, s2
+; GFX11-GISEL-FAKE16-NEXT:    s_sub_i32 s3, 0, s3
+; GFX11-GISEL-FAKE16-NEXT:    v_alignbit_b32 v0, s0, s0, s2
+; GFX11-GISEL-FAKE16-NEXT:    v_alignbit_b32 v1, s1, s1, s3
+; GFX11-GISEL-FAKE16-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
+; GFX11-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX11-SDAG-LABEL: rotl_v2i32:
+; GFX11-SDAG:       ; %bb.0: ; %entry
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
+; GFX11-SDAG-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_sub_i32 s6, 32, s2
+; GFX11-SDAG-NEXT:    s_sub_i32 s7, 32, s3
+; GFX11-SDAG-NEXT:    s_mov_b32 s2, s1
+; GFX11-SDAG-NEXT:    s_mov_b32 s3, s1
+; GFX11-SDAG-NEXT:    s_mov_b32 s1, s0
+; GFX11-SDAG-NEXT:    s_and_b32 s6, s6, 31
+; GFX11-SDAG-NEXT:    s_and_b32 s7, s7, 31
+; GFX11-SDAG-NEXT:    s_lshr_b64 s[0:1], s[0:1], s6
+; GFX11-SDAG-NEXT:    s_lshr_b64 s[2:3], s[2:3], s7
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
+; GFX11-SDAG-NEXT:    s_endpgm
 entry:
   %0 = shl <2 x i32> %x, %y
   %1 = sub <2 x i32> <i32 32, i32 32>, %y
@@ -313,36 +369,76 @@ define amdgpu_kernel void @rotl_v4i32(ptr addrspace(1) %in, <4 x i32> %x, <4 x i
 ; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: rotl_v4i32:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b256 s[8:15], s[4:5], 0x34
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_sub_i32 s6, 32, s12
-; GFX11-NEXT:    s_sub_i32 s7, 32, s13
-; GFX11-NEXT:    s_sub_i32 s12, 32, s14
-; GFX11-NEXT:    s_sub_i32 s13, 32, s15
-; GFX11-NEXT:    s_mov_b32 s2, s11
-; GFX11-NEXT:    s_mov_b32 s3, s11
-; GFX11-NEXT:    s_mov_b32 s11, s10
-; GFX11-NEXT:    s_mov_b32 s4, s9
-; GFX11-NEXT:    s_mov_b32 s5, s9
-; GFX11-NEXT:    s_mov_b32 s9, s8
-; GFX11-NEXT:    s_and_b32 s13, s13, 31
-; GFX11-NEXT:    s_and_b32 s12, s12, 31
-; GFX11-NEXT:    s_and_b32 s14, s7, 31
-; GFX11-NEXT:    s_and_b32 s15, s6, 31
-; GFX11-NEXT:    s_lshr_b64 s[2:3], s[2:3], s13
-; GFX11-NEXT:    s_lshr_b64 s[6:7], s[10:11], s12
-; GFX11-NEXT:    s_lshr_b64 s[8:9], s[8:9], s15
-; GFX11-NEXT:    s_lshr_b64 s[4:5], s[4:5], s14
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v1, s4
-; GFX11-NEXT:    v_dual_mov_b32 v0, s8 :: v_dual_mov_b32 v3, s2
-; GFX11-NEXT:    v_mov_b32_e32 v2, s6
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX11-NEXT:    s_endpgm
+; GFX11-GISEL-TRUE16-LABEL: rotl_v4i32:
+; GFX11-GISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11-GISEL-TRUE16-NEXT:    s_clause 0x1
+; GFX11-GISEL-TRUE16-NEXT:    s_load_b256 s[8:15], s[4:5], 0x34
+; GFX11-GISEL-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    s_sub_i32 s2, 0, s12
+; GFX11-GISEL-TRUE16-NEXT:    s_sub_i32 s3, 0, s13
+; GFX11-GISEL-TRUE16-NEXT:    s_sub_i32 s4, 0, s14
+; GFX11-GISEL-TRUE16-NEXT:    s_sub_i32 s5, 0, s15
+; GFX11-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX11-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v3, s5
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-GISEL-TRUE16-NEXT:    v_alignbit_b32 v0, s8, s8, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    v_alignbit_b32 v1, s9, s9, v1.l
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-GISEL-TRUE16-NEXT:    v_alignbit_b32 v2, s10, s10, v2.l
+; GFX11-GISEL-TRUE16-NEXT:    v_alignbit_b32 v3, s11, s11, v3.l
+; GFX11-GISEL-TRUE16-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX11-GISEL-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-GISEL-FAKE16-LABEL: rotl_v4i32:
+; GFX11-GISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11-GISEL-FAKE16-NEXT:    s_clause 0x1
+; GFX11-GISEL-FAKE16-NEXT:    s_load_b256 s[8:15], s[4:5], 0x34
+; GFX11-GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    s_sub_i32 s2, 0, s12
+; GFX11-GISEL-FAKE16-NEXT:    s_sub_i32 s3, 0, s13
+; GFX11-GISEL-FAKE16-NEXT:    s_sub_i32 s4, 0, s14
+; GFX11-GISEL-FAKE16-NEXT:    s_sub_i32 s5, 0, s15
+; GFX11-GISEL-FAKE16-NEXT:    v_alignbit_b32 v0, s8, s8, s2
+; GFX11-GISEL-FAKE16-NEXT:    v_alignbit_b32 v1, s9, s9, s3
+; GFX11-GISEL-FAKE16-NEXT:    v_alignbit_b32 v2, s10, s10, s4
+; GFX11-GISEL-FAKE16-NEXT:    v_alignbit_b32 v3, s11, s11, s5
+; GFX11-GISEL-FAKE16-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX11-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX11-SDAG-LABEL: rotl_v4i32:
+; GFX11-SDAG:       ; %bb.0: ; %entry
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    s_load_b256 s[8:15], s[4:5], 0x34
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_sub_i32 s6, 32, s12
+; GFX11-SDAG-NEXT:    s_sub_i32 s7, 32, s13
+; GFX11-SDAG-NEXT:    s_sub_i32 s12, 32, s14
+; GFX11-SDAG-NEXT:    s_sub_i32 s13, 32, s15
+; GFX11-SDAG-NEXT:    s_mov_b32 s2, s11
+; GFX11-SDAG-NEXT:    s_mov_b32 s3, s11
+; GFX11-SDAG-NEXT:    s_mov_b32 s11, s10
+; GFX11-SDAG-NEXT:    s_mov_b32 s4, s9
+; GFX11-SDAG-NEXT:    s_mov_b32 s5, s9
+; GFX11-SDAG-NEXT:    s_mov_b32 s9, s8
+; GFX11-SDAG-NEXT:    s_and_b32 s13, s13, 31
+; GFX11-SDAG-NEXT:    s_and_b32 s12, s12, 31
+; GFX11-SDAG-NEXT:    s_and_b32 s14, s7, 31
+; GFX11-SDAG-NEXT:    s_and_b32 s15, s6, 31
+; GFX11-SDAG-NEXT:    s_lshr_b64 s[2:3], s[2:3], s13
+; GFX11-SDAG-NEXT:    s_lshr_b64 s[6:7], s[10:11], s12
+; GFX11-SDAG-NEXT:    s_lshr_b64 s[8:9], s[8:9], s15
+; GFX11-SDAG-NEXT:    s_lshr_b64 s[4:5], s[4:5], s14
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v1, s4
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, s8 :: v_dual_mov_b32 v3, s2
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v2, s6
+; GFX11-SDAG-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX11-SDAG-NEXT:    s_endpgm
 entry:
   %0 = shl <4 x i32> %x, %y
   %1 = sub <4 x i32> <i32 32, i32 32, i32 32, i32 32>, %y
@@ -448,34 +544,69 @@ define void @test_rotl_i16(ptr addrspace(1) nocapture readonly %sourceA, ptr add
 ; GFX10-NEXT:    global_store_short v[4:5], v0, off offset:8
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: test_rotl_i16:
-; GFX11-TRUE16:       ; %bb.0: ; %entry
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v2, v[2:3], off offset:48
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off offset:32
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_sub_nc_u16 v0.h, 0, v2.l
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v1.l, v2.l, v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v0.l, v0.h, v0.l
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
-; GFX11-TRUE16-NEXT:    global_store_b16 v[4:5], v0, off offset:8
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-GISEL-TRUE16-LABEL: test_rotl_i16:
+; GFX11-GISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_b16 v2, v[2:3], off offset:48
+; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off offset:32
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    v_sub_nc_u16 v0.h, 0, v2.l
+; GFX11-GISEL-TRUE16-NEXT:    v_and_b16 v1.l, v2.l, 15
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GISEL-TRUE16-NEXT:    v_and_b16 v0.h, v0.h, 15
+; GFX11-GISEL-TRUE16-NEXT:    v_lshlrev_b16 v1.l, v1.l, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b16 v0.l, v0.h, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    global_store_b16 v[4:5], v0, off offset:8
+; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-FAKE16-LABEL: test_rotl_i16:
-; GFX11-FAKE16:       ; %bb.0: ; %entry
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    global_load_u16 v2, v[2:3], off offset:48
-; GFX11-FAKE16-NEXT:    global_load_u16 v0, v[0:1], off offset:32
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-FAKE16-NEXT:    v_sub_nc_u16 v1, 0, v2
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_lshlrev_b16 v2, v2, v0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-FAKE16-NEXT:    v_lshrrev_b16 v0, v1, v0
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v0, v2, v0
-; GFX11-FAKE16-NEXT:    global_store_b16 v[4:5], v0, off offset:8
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-GISEL-FAKE16-LABEL: test_rotl_i16:
+; GFX11-GISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    global_load_u16 v2, v[2:3], off offset:48
+; GFX11-GISEL-FAKE16-NEXT:    global_load_u16 v0, v[0:1], off offset:32
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-FAKE16-NEXT:    v_sub_nc_u16 v1, 0, v2
+; GFX11-GISEL-FAKE16-NEXT:    v_and_b32_e32 v2, 15, v2
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-GISEL-FAKE16-NEXT:    v_and_b32_e32 v1, 15, v1
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    v_lshlrev_b16 v2, v2, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-FAKE16-NEXT:    v_lshrrev_b16 v0, v1, v0
+; GFX11-GISEL-FAKE16-NEXT:    v_or_b32_e32 v0, v2, v0
+; GFX11-GISEL-FAKE16-NEXT:    global_store_b16 v[4:5], v0, off offset:8
+; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-TRUE16-LABEL: test_rotl_i16:
+; GFX11-SDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v2, v[2:3], off offset:48
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off offset:32
+; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-TRUE16-NEXT:    v_sub_nc_u16 v0.h, 0, v2.l
+; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v1.l, v2.l, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b16 v0.l, v0.h, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    global_store_b16 v[4:5], v0, off offset:8
+; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-FAKE16-LABEL: test_rotl_i16:
+; GFX11-SDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-FAKE16-NEXT:    global_load_u16 v2, v[2:3], off offset:48
+; GFX11-SDAG-FAKE16-NEXT:    global_load_u16 v0, v[0:1], off offset:32
+; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-FAKE16-NEXT:    v_sub_nc_u16 v1, 0, v2
+; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-FAKE16-NEXT:    v_lshlrev_b16 v2, v2, v0
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b16 v0, v1, v0
+; GFX11-SDAG-FAKE16-NEXT:    v_or_b32_e32 v0, v2, v0
+; GFX11-SDAG-FAKE16-NEXT:    global_store_b16 v[4:5], v0, off offset:8
+; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %arrayidx = getelementptr inbounds i16, ptr addrspace(1) %sourceA, i64 16
   %a = load i16, ptr addrspace(1) %arrayidx
@@ -486,3 +617,5 @@ entry:
   store i16 %c, ptr addrspace(1) %arrayidx5
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX11-GISEL: {{.*}}
