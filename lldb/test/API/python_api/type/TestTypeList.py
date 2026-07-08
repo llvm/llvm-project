@@ -317,12 +317,16 @@ class TypeAndTypeListTestCase(TestBase):
         nested = polymorphic_type.FindDirectNestedType("Nested")
         self.DebugSBType(nested)
         self.assertEqual(nested.GetName(), "PolymorphicDerived::Nested")
+        self.assertEqual(nested.GetTypedefedType().GetName(), "float")
 
         static = polymorphic.GetStaticValue()
         self.DebugSBValue(static)
         static_type = static.GetType().GetPointeeType()
         self.DebugSBType(static_type)
-        self.assertFalse(static_type.FindDirectNestedType("Nested"))
+        nested = static_type.FindDirectNestedType("Nested")
+        self.DebugSBType(nested)
+        self.assertEqual(nested.GetName(), "PolymorphicBase::Nested")
+        self.assertEqual(nested.GetTypedefedType().GetName(), "int")
 
     def test_GetByteAlign(self):
         """Exercise SBType::GetByteAlign"""

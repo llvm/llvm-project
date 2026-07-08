@@ -64,11 +64,13 @@ struct WithNestedTypedef {
 WithNestedTypedef::TheTypedef typedefed_value;
 
 struct PolymorphicBase {
+  using Nested = int;
+  Nested get() { return {}; }
   virtual void foo() {}
 };
 
 struct PolymorphicDerived : PolymorphicBase {
-  struct Nested {};
+  using Nested = float;
   Nested get() { return {}; }
 };
 
