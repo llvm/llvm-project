@@ -1,4 +1,4 @@
-(build-concepts)=
+(build_concepts)=
 
 # Build Concepts
 
@@ -64,4 +64,3 @@ This requires a cross-compiler or a toolchain file.
 For users who are starting from scratch (e.g., with only Linux kernel headers)
 and want to generate a full C compiler and sysroot for their target. This is
 the most common path for those building entire environments to tinker in.
-

@@ -1,4 +1,4 @@
-(implementation-standard)=
+(implementation_standard)=
 
 # Convention for implementing entrypoints
 
@@ -82,4 +82,3 @@ When defining a variable, use the `LLVM_LIBC_VARIABLE` macro:
 ```
 LLVM_LIBC_VARIABLE(char **, environ) = nullptr;
 ```
-

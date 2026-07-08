@@ -1,4 +1,4 @@
-(code-style)=
+(code_style)=
 
 # The libc code style
 
@@ -147,7 +147,7 @@ if we use the default `new` and `delete` operators, the libc will end up
 depending on the C++ runtime. To avoid such a dependence, and to handle
 allocation failures gracefully, we use special `new` and `delete` operators
 defined in
-[src/\_\_support/CPP/new.h](https://github.com/llvm/llvm-project/blob/main/libc/src/__support/CPP/new.h).
+[`src/__support/CPP/new.h`](https://github.com/llvm/llvm-project/blob/main/libc/src/__support/CPP/new.h).
 Allocations and deallocations using these operators employ a pattern like
 this:
 
@@ -283,7 +283,7 @@ Having hidden visibility on the namespace ensures extern declarations in a given
 have known visibility and never generate GOT indirections. The attribute guarantees
 this independently of global compile options and build systems.
 
-(clang-tidy-checks)=
+(clang_tidy_checks)=
 
 ## Static Analysis & Clang-Tidy
 
@@ -398,4 +398,3 @@ Check name: `llvmlibc-inline-function-decl`.
 LLVM libc uses the `LIBC_INLINE` macro to tag inline function declarations in
 headers. This check enforces that any inline function declaration in a header
 begins with `LIBC_INLINE` and provides a fix-it to insert the macro.
-

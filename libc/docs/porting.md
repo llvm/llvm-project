@@ -65,7 +65,7 @@ to this file as they are implemented and tested.
 Another important piece of config information is listed in a file named
 `headers.txt`. It lists the targets for the set of public headers that are
 provided by the libc. This is relevant only if the libc is to be used in the
-{ref}`full_host_build` on the target operating system and architecture. As with
+{doc}`full_host_build` on the target operating system and architecture. As with
 the `entrypoints.txt` file, one `headers.txt` file should be listed for
 each individual target architecture if you are doing an architecture specific
 bring up. The Linux config has `headers.txt` file listed separately for the
@@ -103,10 +103,11 @@ presubmit tests read
 [the best practices](https://llvm.org/docs/CIBestPractices.html)
 
 The test configurations are at these links:
-: - [Linux Postsubmit](https://github.com/llvm/llvm-zorg/blob/main/zorg/buildbot/builders/annotated/libc-linux.py)
-  - [Windows Postsubmit](https://github.com/llvm/llvm-zorg/blob/main/zorg/buildbot/builders/annotated/libc-windows.py)
-  - [Fullbuild Presubmit](https://github.com/llvm/llvm-project/blob/main/.github/workflows/libc-fullbuild-tests.yml)
-  - [Overlay Presubmit](https://github.com/llvm/llvm-project/blob/main/.github/workflows/libc-overlay-tests.yml)
+
+- [Linux Postsubmit](https://github.com/llvm/llvm-zorg/blob/main/zorg/buildbot/builders/annotated/libc-linux.py)
+- [Windows Postsubmit](https://github.com/llvm/llvm-zorg/blob/main/zorg/buildbot/builders/annotated/libc-windows.py)
+- [Fullbuild Presubmit](https://github.com/llvm/llvm-project/blob/main/.github/workflows/libc-fullbuild-tests.yml)
+- [Overlay Presubmit](https://github.com/llvm/llvm-project/blob/main/.github/workflows/libc-overlay-tests.yml)
 
 ### Sunsetting
 
@@ -133,4 +134,3 @@ otherwise removed.
 To restart a target that was previously sunset, the new maintainers are
 encouraged to look at the commit(s) removing the target to provide a starting
 point.
-

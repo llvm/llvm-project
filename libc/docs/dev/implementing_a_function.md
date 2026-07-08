@@ -1,4 +1,4 @@
-(implementing-a-function)=
+(implementing_a_function)=
 
 # Implementing a New Function
 
@@ -57,4 +57,3 @@ Create tests to verify the implementation.
 - **File**: `libc/test/src/<header>/<func>_test.cpp`
 - Add corresponding tests using the internal testing framework.
 - Update the `CMakeLists.txt` in the test directory (`libc/test/src/<header>/CMakeLists.txt`) to include the new test target.
-

@@ -1,4 +1,4 @@
-(printf-behavior)=
+(printf_behavior)=
 
 # Printf Behavior Under All Conditions
 
@@ -81,7 +81,7 @@ When set, this flag disables the bit int length modifiers wNUM and wfNUM. The
 length modifiers will be treated as if they don't exist, so conversions using
 them will be treated as invalid. This reduces code size.
 
-(printf-no-nullptr-checks)=
+(printf_no_nullptr_checks)=
 
 #### LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 
@@ -104,9 +104,9 @@ conversions are disabled.
 
 #### LIBC_COPT_PRINTF_NO_CONVERT_FLOAT128
 
-When set, this flag disables support for \_\_float128 conversions using the "Q"
+When set, this flag disables support for `__float128` conversions using the "Q"
 length modifier (%Qa, %Qf, %Qe, %Qg). This flag has no effect on conversions
-using the "L" length modifier when long double is the same type as \_\_float128.
+using the "L" length modifier when long double is the same type as `__float128`.
 This has little to no effect on performance or binary size.
 
 ### Float Conversion Internal Flags:
@@ -132,7 +132,7 @@ behavior.
 
 When set, the float to string decimal conversion algorithm will use a larger
 table to accelerate long double conversions. This larger table is around 5MB of
-size when compiled. This flag also affects \_\_float128 conversions.
+size when compiled. This flag also affects `__float128` conversions.
 
 #### LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT
 
@@ -140,7 +140,7 @@ When set, the float to string decimal conversion algorithm will use dyadic
 floats instead of a table when performing floating point conversions. This
 results in ~50 digits of accuracy in the result, then zeroes for the remaining
 values. This may improve performance but may also cause some tests to fail. The
-flag ending in \_LD is the same, but only applies to long double decimal
+flag ending in `_LD` is the same, but only applies to long double decimal
 conversions.
 
 #### LIBC_COPT_FLOAT_TO_STR_USE_INT_CALC
@@ -165,7 +165,7 @@ conversion specification will be passed literally to the output string.
 As an example, printf("%Z") would display "%Z".
 
 If an index mode conversion is requested for index "n" and there exists a number
-in \[1,n) that does not have a conversion specified in the format string, then
+in `[1,n)` that does not have a conversion specified in the format string, then
 the conversion for index "n" is considered invalid.
 
 If a non-index mode (also referred to as sequential mode) conversion is
@@ -181,7 +181,7 @@ treated as if it was "ll" (lowercase LL). For this purpose the list of integer
 conversions is d, i, u, o, x, X, b, B, n.
 
 If a conversion specification ending in % has any options that consume arguments
-(e.g. "%\*.\*%") those arguments will be consumed as normal, but their values will
+(e.g. `"%*.*%"`) those arguments will be consumed as normal, but their values will
 be ignored.
 
 If a conversion specification ends in a null byte ('0') then it shall be
@@ -191,15 +191,15 @@ If a number passed as a field width or precision value is out of range for an
 int, then it will be treated as the largest value in the int range
 (e.g. "%-999999999999.999999999999s" is the same as "%-2147483647.2147483647s").
 
-If the field width is set to INT_MIN by using the '\*' form,
-e.g. printf("%\*d", INT_MIN, 1), it will be treated as INT_MAX, since -INT_MIN is
+If the field width is set to INT_MIN by using the `'*'` form,
+e.g. `printf("%*d", INT_MIN, 1)`, it will be treated as INT_MAX, since -INT_MIN is
 not representable as an int.
 
 If a number passed as a bit width is less than or equal to zero, the conversion
 is considered invalid. If the provided bit width is larger than the width of
 uintmax_t, it will be clamped to the width of uintmax_t.
 
-(printf-conversion)=
+(printf_conversion)=
 
 ### Conversion
 
@@ -245,10 +245,9 @@ errno = 0 and alt form is specified, the conversion will be a string conversion
 on "0" for simplicity of implementation. This matches what other libcs
 implementing this feature have done.
 
-If the compiler is detected as having support for \_\_float128, "Q" is an accepted
+If the compiler is detected as having support for `__float128`, "Q" is an accepted
 length modifier for floating point conversions (%Qa, %Qf, %Qe, %Qg), unless
 disabled by LIBC_COPT_PRINTF_NO_CONVERT_FLOAT128. A conversion using the
 "Q" length modifier will be treated as invalid in any of the following
-conditions: \_\_float128 is not supported, the "Q" length modifier is disabled, or
+conditions: `__float128` is not supported, the "Q" length modifier is disabled, or
 the conversion does not use a floating point format specifier.
-

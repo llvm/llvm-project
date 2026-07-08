@@ -1,4 +1,4 @@
-(overlay-mode)=
+(overlay_mode)=
 
 # Overlay Mode
 
@@ -109,4 +109,3 @@ is to add a CMake command as follows:
 ```cmake
 target_link_libraries(llvm-objcopy PRIVATE llvmlibc)
 ```
-

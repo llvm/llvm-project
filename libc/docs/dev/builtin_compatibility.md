@@ -1,4 +1,4 @@
-(builtin-compatibility)=
+(builtin_compatibility)=
 
 # GCC Compatibility of Builtins
 
@@ -179,4 +179,3 @@ basepoint that ships each one.
 | `__builtin_unreachable`              | {{ check }} | {{ check }} | {{ check }} | {{ check }} | {{ check }} | {{ check }} | {{ check }} | {{ check }} | {{ check }} | {{ check }} | {{ check }} | {{ check }} | {{ check }} |
 | `__builtin_vectorelements`           |             |             |             |             |             |             |             |             |             |             |             |             |             |
 | `__has_builtin`                      |             |             |             |             |             | {{ check }} | {{ check }} | {{ check }} | {{ check }} | {{ check }} | {{ check }} | {{ check }} | {{ check }} |
-

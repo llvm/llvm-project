@@ -1,4 +1,4 @@
-(source-tree-layout)=
+(source_tree_layout)=
 
 # LLVM-libc Source Tree Layout
 
@@ -111,4 +111,3 @@ in the directory `test/src/sys/mman/` as implementation of `mmap` lives in
 This directory contains utilities used by other parts of the LLVM-libc system.
 See the `README` files in the subdirectories within this directory to learn
 about the various utilities.
-
