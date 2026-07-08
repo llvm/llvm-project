@@ -741,8 +741,8 @@ let SubtargetPredicate = HasFP8ConversionInsts, OtherPredicates = [isGFX9Only] i
 }
 
 class Cvt_PK_F32_F8_Conv_Pat<SDPatternOperator node, Instruction inst> : GCNPat<
-    (v2f32 (node i32:$src)),
-    (inst $src)
+  (v2f32 (node i32:$src)),
+  (inst $src)
 >;
 
 let SubtargetPredicate = HasFP8ConversionInsts, OtherPredicates = [isGFX9Only] in {
@@ -784,11 +784,11 @@ let SubtargetPredicate = isGFX11Plus,
     OtherPredicates = [HasFP8ConversionInsts, HasOCPFP8ConversionInsts],
     mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
   let SubtargetPredicate = isGFX11PlusNot12_50 in
-    defm V_CVT_F32_FP8_OP_SEL    : VOP1Inst<"v_cvt_f32_fp8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>, cvt_from_fp8>;
+    defm V_CVT_F32_FP8_op_sel    : VOP1Inst<"v_cvt_f32_fp8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>, cvt_from_fp8>;
   let SubtargetPredicate = isGFX125xOnly in
     defm V_CVT_F32_FP8_gfx1250   : VOP1Inst<"v_cvt_f32_fp8_gfx1250", VOPProfile_Base_CVT_F_F8_ByteSel<f32, 1>, cvt_from_fp8>;
 
-  defm V_CVT_F32_BF8_OP_SEL    : VOP1Inst<"v_cvt_f32_bf8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>, cvt_from_bf8>;
+  defm V_CVT_F32_BF8_op_sel    : VOP1Inst<"v_cvt_f32_bf8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>, cvt_from_bf8>;
 
   let True16Predicate = UseFakeTrue16Insts in {
     defm V_CVT_PK_F32_FP8_fake16 : VOP1Inst<"v_cvt_pk_f32_fp8_fake16", VOPProfile_Base_CVT_PK_F32_F8_fake16>;
@@ -808,7 +808,7 @@ class Cvt_F_F8_Pat_ByteSel<SDPatternOperator node, VOP3_Pseudo inst, bit HasOpSe
 
 let OtherPredicates = [HasFP8ConversionInsts] in {
   let SubtargetPredicate = isGFX11PlusNot12_50 in
-    def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_fp8, V_CVT_F32_FP8_OP_SEL_e64>;
+    def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_fp8, V_CVT_F32_FP8_op_sel_e64>;
   let SubtargetPredicate = isGFX125xOnly in {
     def : GCNPat<(int_amdgcn_cvt_f32_fp8 i32:$src0, timm:$byte_sel),
                  (V_CVT_F32_FP8_gfx1250_e64 $src0, DSTCLAMP.NONE, (as_i32timm $byte_sel))>;
@@ -816,7 +816,7 @@ let OtherPredicates = [HasFP8ConversionInsts] in {
                  (V_CVT_F32_FP8_gfx1250_e64 $src0, DSTCLAMP.ENABLE, (as_i32timm $byte_sel))>;
   }
   let SubtargetPredicate = isGFX11Plus in
-    def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_bf8, V_CVT_F32_BF8_OP_SEL_e64>;
+    def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_bf8, V_CVT_F32_BF8_op_sel_e64>;
 }
 
 class Cvt_PK_F32_F8_Pat_OpSel<SDPatternOperator node, int index,
@@ -1209,10 +1209,10 @@ multiclass VOP1_Real_OpSelIsDPP_gfx1250_gfx13<bits<9> op> :
   VOP1_Real_OpSelIsDPP<GFX1250Gen, op>,
   VOP1_Real_OpSelIsDPP<GFX13Gen, op>;
 
-defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13_not_gfx1250<0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
+defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13_not_gfx1250<0x06c, "V_CVT_F32_FP8_op_sel", "v_cvt_f32_fp8">;
 defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name<GFX1250Gen, 0x06c, "V_CVT_F32_FP8_gfx1250", "v_cvt_f32_fp8">;
 
-defm V_CVT_F32_BF8           : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<0x06d, "V_CVT_F32_BF8_OP_SEL", "v_cvt_f32_bf8">;
+defm V_CVT_F32_BF8           : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<0x06d, "V_CVT_F32_BF8_op_sel", "v_cvt_f32_bf8">;
 
 defm V_CVT_PK_F32_FP8_fake16 : VOP1_Real_e32_with_name_gfx11_gfx12_gfx13<0x06e, "V_CVT_PK_F32_FP8_fake16", "v_cvt_pk_f32_fp8">;
 defm V_CVT_PK_F32_FP8_t16    : VOP1_Real_e32_with_name_gfx11_gfx12_gfx13<0x06e, "V_CVT_PK_F32_FP8_t16", "v_cvt_pk_f32_fp8">;

@@ -10818,38 +10818,29 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
                      DAG.getValueType(SmallVT));
 }
 
-// Pack a vector of i8 lanes into i32 via bitcast.
-// FIXME: packing loses lane-wise poison. Should we do something about it?
-SDValue SITargetLowering::packBytesToI32(SelectionDAG &DAG, const SDLoc &SL,
-                                         SDValue Src) {
-  assert(Src.getValueType() == MVT::v2i8 &&
-         "packBytesToI32 expects a v2i8 source");
-  // Widen v2i8 to v4i8 with the high half poison, then bitcast to i32. This
-  // selects to v_perm_b32, packing two i8 values into low 16 bits of an i32.
-  SDValue Wide = DAG.getNode(ISD::CONCAT_VECTORS, SL, MVT::v4i8, Src,
-                             DAG.getPOISON(MVT::v2i8));
-  return DAG.getNode(ISD::BITCAST, SL, MVT::i32, Wide);
-}
-
-SDValue SITargetLowering::lowerFromFP8ToF32(SDValue Op, bool IsBF8,
-                                            SelectionDAG &DAG) const {
+SDValue SITargetLowering::lowerFromFP8(SDValue Op, bool IsBF8,
+                                       SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
-  unsigned Opc = IsBF8 ? AMDGPUISD::CVT_PK_F32_BF8 : AMDGPUISD::CVT_PK_F32_FP8;
-  SDValue PackedI32 = packBytesToI32(DAG, SL, Src);
-  return DAG.getNode(Opc, SL, MVT::v2f32, PackedI32);
-}
-
-SDValue SITargetLowering::lowerFromFP8ToF16(SDValue Op, bool IsBF8,
-                                            SelectionDAG &DAG) const {
-  assert(Subtarget->hasFP8F16ConversionInsts() &&
+  EVT DstVT = Op.getValueType();
+  bool IsF16 = DstVT.getVectorElementType() == MVT::f16;
+  assert((!IsF16 || Subtarget->hasFP8F16ConversionInsts()) &&
          "fp8/bf8 -> f16 conversion requires FP8F16ConversionInsts");
-  SDLoc SL(Op);
-  SDValue Src = Op.getOperand(0);
-  unsigned Opc = IsBF8 ? AMDGPUISD::CVT_PK_F16_BF8 : AMDGPUISD::CVT_PK_F16_FP8;
-  SDValue PackedI32 = packBytesToI32(DAG, SL, Src);
-  SDValue PackedI16 = DAG.getNode(ISD::TRUNCATE, SL, MVT::i16, PackedI32);
-  return DAG.getNode(Opc, SL, MVT::v2f16, PackedI16);
+
+  unsigned Opc;
+  if (IsF16)
+    Opc = IsBF8 ? AMDGPUISD::CVT_PK_F16_BF8 : AMDGPUISD::CVT_PK_F16_FP8;
+  else
+    Opc = IsBF8 ? AMDGPUISD::CVT_PK_F32_BF8 : AMDGPUISD::CVT_PK_F32_FP8;
+
+  // Pack the two i8 lanes into the integer type the packed HW node reads. The
+  // f16 form takes i16 and the f32 form takes i32. v2i8 bitcasts to i16
+  // directly and the f32 node reads the low half of an any-extended i32.
+  EVT PackedVT =
+      EVT::getIntegerVT(*DAG.getContext(), DstVT.getScalarSizeInBits());
+  SDValue AsI16 = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Src);
+  SDValue Packed = DAG.getAnyExtOrTrunc(AsI16, SL, PackedVT);
+  return DAG.getNode(Opc, SL, DstVT, Packed);
 }
 
 SDValue
@@ -10877,10 +10868,8 @@ SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
   }
 
   EVT EltVT = DstVT.getVectorElementType();
-  if (EltVT == MVT::f16)
-    return lowerFromFP8ToF16(Op, IsBF8, DAG);
-  if (EltVT == MVT::f32)
-    return lowerFromFP8ToF32(Op, IsBF8, DAG);
+  if (EltVT == MVT::f16 || EltVT == MVT::f32)
+    return lowerFromFP8(Op, IsBF8, DAG);
   return SDValue();
 }
 
