@@ -93,13 +93,13 @@ public:
   }
 };
 
-class StateUpdateReporter {
+class CheckResult {
   const NonLoc ByteOffsetVal;
   bool AssumedNonNegative = false;
   std::optional<NonLoc> AssumedUpperBound = std::nullopt;
 
 public:
-  StateUpdateReporter(NonLoc ByteOffsVal) : ByteOffsetVal(ByteOffsVal) {}
+  CheckResult(NonLoc ByteOffsVal) : ByteOffsetVal(ByteOffsVal) {}
 
   void recordNonNegativeAssumption() { AssumedNonNegative = true; }
   void recordUpperBoundAssumption(NonLoc UpperBoundVal) {
@@ -499,9 +499,8 @@ static Messages getTaintMsgs(const MemSpaceRegion *Space,
                   AlsoMentionUnderflow ? "negative or " : "")};
 }
 
-std::string StateUpdateReporter::getMessage(PathSensitiveBugReport &BR,
-                                            StringRef RegName,
-                                            SizeUnit SU) const {
+std::string CheckResult::getMessage(PathSensitiveBugReport &BR,
+                                    StringRef RegName, SizeUnit SU) const {
   bool ShouldReportNonNegative = AssumedNonNegative;
   if (!providesInformationAboutInteresting(ByteOffsetVal, BR)) {
     if (AssumedUpperBound &&
@@ -552,7 +551,7 @@ std::string StateUpdateReporter::getMessage(PathSensitiveBugReport &BR,
   return std::string(Out.str());
 }
 
-bool StateUpdateReporter::providesInformationAboutInteresting(
+bool CheckResult::providesInformationAboutInteresting(
     SymbolRef Sym, PathSensitiveBugReport &BR) {
   if (!Sym)
     return false;
@@ -595,7 +594,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
 
   // The state updates will be reported as a single note tag, which will be
   // composed by this helper class.
-  StateUpdateReporter SUR(ByteOffset);
+  CheckResult Res(ByteOffset);
 
   // CHECK LOWER BOUND
   const MemSpaceRegion *Space = Reg->getMemorySpace(State);
@@ -649,7 +648,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
         }
         // ...but it can be valid as well, so the checker will (optimistically)
         // assume that it's valid and mention this in the note tag.
-        SUR.recordNonNegativeAssumption();
+        Res.recordNonNegativeAssumption();
       }
     }
 
@@ -668,7 +667,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
     // checker will first assume that the offset is non-negative, and then
     // (with this additional assumption) it will detect an overflow error.
     // In this situation the warning message should mention both possibilities.
-    bool AlsoMentionUnderflow = SUR.assumedNonNegative();
+    bool AlsoMentionUnderflow = Res.assumedNonNegative();
 
     auto [WithinUpperBound, ExceedsUpperBound] =
         compareValueToThreshold(State, ByteOffset, *KnownSize, SVB);
@@ -715,7 +714,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
       }
       // ...and it isn't tainted, so the checker will (optimistically) assume
       // that the offset is in bounds and mention this in the note tag.
-      SUR.recordUpperBoundAssumption(*KnownSize);
+      Res.recordUpperBoundAssumption(*KnownSize);
     }
 
     // Actually update the state. The "if" only fails in the extremely unlikely
@@ -729,11 +728,11 @@ NormalTransition:
   // Add a transition, reporting the state updates that we accumulated.
   const NoteTag *T = nullptr;
 
-  if (SUR.hasAssumption()) {
+  if (Res.hasAssumption()) {
     std::string RN = getRegionName(Reg->getMemorySpace(C.getState()), Reg);
     SizeUnit SU = SizeUnit::forExpr(E, C);
-    T = C.getNoteTag([SUR, RN, SU](PathSensitiveBugReport &BR) -> std::string {
-      return SUR.getMessage(BR, RN, SU);
+    T = C.getNoteTag([Res, RN, SU](PathSensitiveBugReport &BR) -> std::string {
+      return Res.getMessage(BR, RN, SU);
     });
   }
 
