@@ -211,10 +211,10 @@ class Builder:
 
         fc = configuration.fortran_compiler
         if fc:
-            build_cmd.append("FC=%s" % fc)  
+            build_cmd.append("FC=%s" % fc)
 
         return build_cmd + utils
-    
+
     def getSDKRootSpec(self):
         """
         Helper function to return the key-value string to specify the SDK root
