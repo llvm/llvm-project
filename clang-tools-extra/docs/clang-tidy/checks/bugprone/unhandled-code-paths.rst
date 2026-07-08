@@ -4,8 +4,6 @@ bugprone-unhandled-code-paths
 =============================
 
 This check discovers situations where code paths are not fully-covered.
-It furthermore suggests using ``if`` instead of ``switch`` if the code
-will be more clear.
 
 ``if-else if`` chains that miss a final ``else`` branch might lead to
 unexpected program execution and be the result of a logical error.
@@ -54,37 +52,6 @@ possible code paths.
     }
     // Other cases missing
   }
-
-
-Every ``switch`` statement should have at least two ``case`` labels
-other than a `default` label.
-Otherwise, the ``switch`` could be better expressed with an ``if`` statement.
-Degenerated ``switch`` statements without any labels are caught as well.
-
-.. code-block:: c++
-
-  // Degenerated switch that could be better written as `if`
-  int i = 42;
-  switch(i) {
-    case 1: // do something here
-    default: // do something else here
-  }
-
-  // Should rather be the following:
-  if (i == 1) {
-    // do something here
-  }
-  else {
-    // do something here
-  }
-
-
-.. code-block:: c++
-
-  // A completely degenerated switch will be diagnosed.
-  int i = 42;
-  switch(i) {}
-
 
 Options
 -------

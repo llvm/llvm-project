@@ -565,6 +565,132 @@ int32x2_t test_pssh1sadd_i32x2(int32x2_t a, int32x2_t b) {
   return __riscv_pssh1sadd_i32x2(a, b);
 }
 
+// CHECK-LABEL: test_pas_x_i16x2:
+// CHECK:       pas.hx
+int16x2_t test_pas_x_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_pas_x_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_psa_x_i16x2:
+// CHECK:       psa.hx
+int16x2_t test_psa_x_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_psa_x_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_psas_x_i16x2:
+// CHECK:       psas.hx
+int16x2_t test_psas_x_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_psas_x_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pssa_x_i16x2:
+// CHECK:       pssa.hx
+int16x2_t test_pssa_x_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_pssa_x_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_paas_x_i16x2:
+// CHECK:       paas.hx
+int16x2_t test_paas_x_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_paas_x_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pasa_x_i16x2:
+// CHECK:       pasa.hx
+int16x2_t test_pasa_x_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_pasa_x_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pas_x_i16x4:
+// RV32:        pas.dhx
+// RV64:        pas.hx
+int16x4_t test_pas_x_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_pas_x_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_psa_x_i16x4:
+// RV32:        psa.dhx
+// RV64:        psa.hx
+int16x4_t test_psa_x_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_psa_x_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_psas_x_i16x4:
+// RV32:        psas.dhx
+// RV64:        psas.hx
+int16x4_t test_psas_x_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_psas_x_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pssa_x_i16x4:
+// RV32:        pssa.dhx
+// RV64:        pssa.hx
+int16x4_t test_pssa_x_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_pssa_x_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_paas_x_i16x4:
+// RV32:        paas.dhx
+// RV64:        paas.hx
+int16x4_t test_paas_x_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_paas_x_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pasa_x_i16x4:
+// RV32:        pasa.dhx
+// RV64:        pasa.hx
+int16x4_t test_pasa_x_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_pasa_x_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pas_x_i32x2:
+// RV32:        add{{[[:space:]]}}
+// RV32:        sub{{[[:space:]]}}
+// RV64:        pas.wx
+int32x2_t test_pas_x_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_pas_x_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_psa_x_i32x2:
+// RV32:        sub{{[[:space:]]}}
+// RV32:        add{{[[:space:]]}}
+// RV64:        psa.wx
+int32x2_t test_psa_x_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_psa_x_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_psas_x_i32x2:
+// RV32:        sadd{{[[:space:]]}}
+// RV32:        ssub{{[[:space:]]}}
+// RV64:        psas.wx
+int32x2_t test_psas_x_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_psas_x_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pssa_x_i32x2:
+// RV32:        ssub{{[[:space:]]}}
+// RV32:        sadd{{[[:space:]]}}
+// RV64:        pssa.wx
+int32x2_t test_pssa_x_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_pssa_x_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_paas_x_i32x2:
+// RV32:        aadd{{[[:space:]]}}
+// RV32:        asub{{[[:space:]]}}
+// RV64:        paas.wx
+int32x2_t test_paas_x_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_paas_x_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pasa_x_i32x2:
+// RV32:        asub{{[[:space:]]}}
+// RV32:        aadd{{[[:space:]]}}
+// RV64:        pasa.wx
+int32x2_t test_pasa_x_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_pasa_x_i32x2(a, b);
+}
+
 // CHECK-LABEL: test_pmin_i8x4:
 // CHECK:       pmin.b
 int8x4_t test_pmin_i8x4(int8x4_t a, int8x4_t b) {
@@ -1841,4 +1967,325 @@ uint8x8_t test_pabdu_u8x8(uint8x8_t a, uint8x8_t b) {
 // RV64:        pabdu.h
 uint16x4_t test_pabdu_u16x4(uint16x4_t a, uint16x4_t b) {
   return __riscv_pabdu_u16x4(a, b);
+}
+
+// CHECK-LABEL: test_predsum_i8x4_i32:
+// RV32:        predsum.bs
+// RV64:        zext.w
+// RV64:        predsum.bs
+int32_t test_predsum_i8x4_i32(int8x4_t a, int32_t b) {
+  return __riscv_predsum_i8x4_i32(a, b);
+}
+
+// CHECK-LABEL: test_predsumu_u8x4_u32:
+// RV32:        predsumu.bs
+// RV64:        zext.w
+// RV64:        predsumu.bs
+uint32_t test_predsumu_u8x4_u32(uint8x4_t a, uint32_t b) {
+  return __riscv_predsumu_u8x4_u32(a, b);
+}
+
+// CHECK-LABEL: test_predsum_i16x2_i32:
+// RV32:        predsum.hs
+// RV64:        zext.w
+// RV64:        predsum.hs
+int32_t test_predsum_i16x2_i32(int16x2_t a, int32_t b) {
+  return __riscv_predsum_i16x2_i32(a, b);
+}
+
+// CHECK-LABEL: test_predsumu_u16x2_u32:
+// RV32:        predsumu.hs
+// RV64:        zext.w
+// RV64:        predsumu.hs
+uint32_t test_predsumu_u16x2_u32(uint16x2_t a, uint32_t b) {
+  return __riscv_predsumu_u16x2_u32(a, b);
+}
+
+// CHECK-LABEL: test_predsum_i8x8_i32:
+// RV32:        predsum.dbs
+// RV64:        predsum.bs
+int32_t test_predsum_i8x8_i32(int8x8_t a, int32_t b) {
+  return __riscv_predsum_i8x8_i32(a, b);
+}
+
+// CHECK-LABEL: test_predsumu_u8x8_u32:
+// RV32:        predsumu.dbs
+// RV64:        predsumu.bs
+uint32_t test_predsumu_u8x8_u32(uint8x8_t a, uint32_t b) {
+  return __riscv_predsumu_u8x8_u32(a, b);
+}
+
+// CHECK-LABEL: test_predsum_i16x4_i32:
+// RV32:        predsum.dhs
+// RV64:        predsum.hs
+int32_t test_predsum_i16x4_i32(int16x4_t a, int32_t b) {
+  return __riscv_predsum_i16x4_i32(a, b);
+}
+
+// CHECK-LABEL: test_predsumu_u16x4_u32:
+// RV32:        predsumu.dhs
+// RV64:        predsumu.hs
+uint32_t test_predsumu_u16x4_u32(uint16x4_t a, uint32_t b) {
+  return __riscv_predsumu_u16x4_u32(a, b);
+}
+
+// TODO: The trailing "mvd" is a GPRPair copy inserted because wadda clobbers
+// its rd; it may be avoidable (e.g. via convertToThreeAddress).
+// CHECK-LABEL: test_predsum_i8x8_i64:
+// RV32:        predsum.dbs
+// RV32:        wadda{{[[:space:]]}}
+// RV32:        mvd
+// RV64:        predsum.bs
+int64_t test_predsum_i8x8_i64(int8x8_t a, int64_t b) {
+  return __riscv_predsum_i8x8_i64(a, b);
+}
+
+// CHECK-LABEL: test_predsumu_u8x8_u64:
+// RV32:        predsumu.dbs
+// RV32:        waddau{{[[:space:]]}}
+// RV32:        mvd
+// RV64:        predsumu.bs
+uint64_t test_predsumu_u8x8_u64(uint8x8_t a, uint64_t b) {
+  return __riscv_predsumu_u8x8_u64(a, b);
+}
+
+// CHECK-LABEL: test_predsum_i16x4_i64:
+// RV32:        predsum.dhs
+// RV32:        wadda{{[[:space:]]}}
+// RV32:        mvd
+// RV64:        predsum.hs
+int64_t test_predsum_i16x4_i64(int16x4_t a, int64_t b) {
+  return __riscv_predsum_i16x4_i64(a, b);
+}
+
+// CHECK-LABEL: test_predsumu_u16x4_u64:
+// RV32:        predsumu.dhs
+// RV32:        waddau{{[[:space:]]}}
+// RV32:        mvd
+// RV64:        predsumu.hs
+uint64_t test_predsumu_u16x4_u64(uint16x4_t a, uint64_t b) {
+  return __riscv_predsumu_u16x4_u64(a, b);
+}
+
+// CHECK-LABEL: test_predsum_i32x2_i64:
+// RV32:        wadda{{[[:space:]]}}
+// RV32:        mvd
+// RV64:        predsum.ws
+int64_t test_predsum_i32x2_i64(int32x2_t a, int64_t b) {
+  return __riscv_predsum_i32x2_i64(a, b);
+}
+
+// CHECK-LABEL: test_predsumu_u32x2_u64:
+// RV32:        waddau{{[[:space:]]}}
+// RV32:        mvd
+// RV64:        predsumu.ws
+uint64_t test_predsumu_u32x2_u64(uint32x2_t a, uint64_t b) {
+  return __riscv_predsumu_u32x2_u64(a, b);
+}
+
+// CHECK-LABEL: test_pmerge_merge_u8x4:
+// CHECK:        merge
+uint8x4_t test_pmerge_merge_u8x4(uint8x4_t rd, uint8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_pmerge_u8x4(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvm_u8x4:
+// CHECK:        mvm
+uint8x4_t test_pmerge_mvm_u8x4(uint8x4_t rs1, uint8x4_t rd, uint8x4_t rs2) {
+  return __riscv_pmerge_u8x4(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvmn_u8x4:
+// CHECK:        mvmn
+uint8x4_t test_pmerge_mvmn_u8x4(uint8x4_t rs2, uint8x4_t rs1, uint8x4_t rd) {
+  return __riscv_pmerge_u8x4(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_merge_i8x4:
+// CHECK:        merge
+int8x4_t test_pmerge_merge_i8x4(uint8x4_t rd, int8x4_t rs1, int8x4_t rs2) {
+  return __riscv_pmerge_i8x4(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvm_i8x4:
+// CHECK:        mvm
+int8x4_t test_pmerge_mvm_i8x4(int8x4_t rs1, uint8x4_t rd, int8x4_t rs2) {
+  return __riscv_pmerge_i8x4(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvmn_i8x4:
+// CHECK:        mvmn
+int8x4_t test_pmerge_mvmn_i8x4(int8x4_t rs2, int8x4_t rs1, uint8x4_t rd) {
+  return __riscv_pmerge_i8x4(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_merge_u16x2:
+// CHECK:        merge
+uint16x2_t test_pmerge_merge_u16x2(uint16x2_t rd, uint16x2_t rs1,
+                                   uint16x2_t rs2) {
+  return __riscv_pmerge_u16x2(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvm_u16x2:
+// CHECK:        mvm
+uint16x2_t test_pmerge_mvm_u16x2(uint16x2_t rs1, uint16x2_t rd,
+                                 uint16x2_t rs2) {
+  return __riscv_pmerge_u16x2(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvmn_u16x2:
+// CHECK:        mvmn
+uint16x2_t test_pmerge_mvmn_u16x2(uint16x2_t rs2, uint16x2_t rs1,
+                                  uint16x2_t rd) {
+  return __riscv_pmerge_u16x2(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_merge_i16x2:
+// CHECK:        merge
+int16x2_t test_pmerge_merge_i16x2(uint16x2_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pmerge_i16x2(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvm_i16x2:
+// CHECK:        mvm
+int16x2_t test_pmerge_mvm_i16x2(int16x2_t rs1, uint16x2_t rd, int16x2_t rs2) {
+  return __riscv_pmerge_i16x2(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvmn_i16x2:
+// CHECK:        mvmn
+int16x2_t test_pmerge_mvmn_i16x2(int16x2_t rs2, int16x2_t rs1, uint16x2_t rd) {
+  return __riscv_pmerge_i16x2(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_merge_u8x8:
+// RV32-COUNT-2: merge
+// RV64:         merge
+uint8x8_t test_pmerge_merge_u8x8(uint8x8_t rd, uint8x8_t rs1, uint8x8_t rs2) {
+  return __riscv_pmerge_u8x8(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvm_u8x8:
+// RV32-COUNT-2: mvm
+// RV64:         mvm
+uint8x8_t test_pmerge_mvm_u8x8(uint8x8_t rs1, uint8x8_t rd, uint8x8_t rs2) {
+  return __riscv_pmerge_u8x8(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvmn_u8x8:
+// RV32-COUNT-2: mvmn
+// RV64:         mvmn
+uint8x8_t test_pmerge_mvmn_u8x8(uint8x8_t rs2, uint8x8_t rs1, uint8x8_t rd) {
+  return __riscv_pmerge_u8x8(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_merge_i8x8:
+// RV32-COUNT-2: merge
+// RV64:         merge
+int8x8_t test_pmerge_merge_i8x8(uint8x8_t rd, int8x8_t rs1, int8x8_t rs2) {
+  return __riscv_pmerge_i8x8(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvm_i8x8:
+// RV32-COUNT-2: mvm
+// RV64:         mvm
+int8x8_t test_pmerge_mvm_i8x8(int8x8_t rs1, uint8x8_t rd, int8x8_t rs2) {
+  return __riscv_pmerge_i8x8(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvmn_i8x8:
+// RV32-COUNT-2: mvmn
+// RV64:         mvmn
+int8x8_t test_pmerge_mvmn_i8x8(int8x8_t rs2, int8x8_t rs1, uint8x8_t rd) {
+  return __riscv_pmerge_i8x8(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_merge_u16x4:
+// RV32-COUNT-2: merge
+// RV64:         merge
+uint16x4_t test_pmerge_merge_u16x4(uint16x4_t rd, uint16x4_t rs1,
+                                   uint16x4_t rs2) {
+  return __riscv_pmerge_u16x4(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvm_u16x4:
+// RV32-COUNT-2: mvm
+// RV64:         mvm
+uint16x4_t test_pmerge_mvm_u16x4(uint16x4_t rs1, uint16x4_t rd,
+                                 uint16x4_t rs2) {
+  return __riscv_pmerge_u16x4(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvmn_u16x4:
+// RV32-COUNT-2: mvmn
+// RV64:         mvmn
+uint16x4_t test_pmerge_mvmn_u16x4(uint16x4_t rs2, uint16x4_t rs1,
+                                  uint16x4_t rd) {
+  return __riscv_pmerge_u16x4(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_merge_i16x4:
+// RV32-COUNT-2: merge
+// RV64:         merge
+int16x4_t test_pmerge_merge_i16x4(uint16x4_t rd, int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pmerge_i16x4(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvm_i16x4:
+// RV32-COUNT-2: mvm
+// RV64:         mvm
+int16x4_t test_pmerge_mvm_i16x4(int16x4_t rs1, uint16x4_t rd, int16x4_t rs2) {
+  return __riscv_pmerge_i16x4(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvmn_i16x4:
+// RV32-COUNT-2: mvmn
+// RV64:         mvmn
+int16x4_t test_pmerge_mvmn_i16x4(int16x4_t rs2, int16x4_t rs1, uint16x4_t rd) {
+  return __riscv_pmerge_i16x4(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_merge_u32x2:
+// RV32-COUNT-2: merge
+// RV64:         merge
+uint32x2_t test_pmerge_merge_u32x2(uint32x2_t rd, uint32x2_t rs1,
+                                   uint32x2_t rs2) {
+  return __riscv_pmerge_u32x2(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvm_u32x2:
+// RV32-COUNT-2: mvm
+// RV64:         mvm
+uint32x2_t test_pmerge_mvm_u32x2(uint32x2_t rs1, uint32x2_t rd,
+                                 uint32x2_t rs2) {
+  return __riscv_pmerge_u32x2(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvmn_u32x2:
+// RV32-COUNT-2: mvmn
+// RV64:         mvmn
+uint32x2_t test_pmerge_mvmn_u32x2(uint32x2_t rs2, uint32x2_t rs1,
+                                  uint32x2_t rd) {
+  return __riscv_pmerge_u32x2(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_merge_i32x2:
+// RV32-COUNT-2: merge
+// RV64:         merge
+int32x2_t test_pmerge_merge_i32x2(uint32x2_t rd, int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pmerge_i32x2(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvm_i32x2:
+// RV32-COUNT-2: mvm
+// RV64:         mvm
+int32x2_t test_pmerge_mvm_i32x2(int32x2_t rs1, uint32x2_t rd, int32x2_t rs2) {
+  return __riscv_pmerge_i32x2(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_pmerge_mvmn_i32x2:
+// RV32-COUNT-2: mvmn
+// RV64:         mvmn
+int32x2_t test_pmerge_mvmn_i32x2(int32x2_t rs2, int32x2_t rs1, uint32x2_t rd) {
+  return __riscv_pmerge_i32x2(rs1, rs2, rd);
 }

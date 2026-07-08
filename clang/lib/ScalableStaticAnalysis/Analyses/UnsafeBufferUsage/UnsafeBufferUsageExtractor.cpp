@@ -1,0 +1,92 @@
+//===- UnsafeBufferUsageExtractor.cpp -------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "SSAFAnalysesCommon.h"
+#include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
+#include "clang/ScalableStaticAnalysis/Analyses/EntityPointerLevel/EntityPointerLevel.h"
+#include "clang/ScalableStaticAnalysis/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
+#include "clang/ScalableStaticAnalysis/Core/TUSummary/ExtractorRegistry.h"
+#include "clang/ScalableStaticAnalysis/Core/TUSummary/TUSummaryBuilder.h"
+#include "clang/ScalableStaticAnalysis/Core/TUSummary/TUSummaryExtractor.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <memory>
+
+using namespace clang;
+using namespace ssaf;
+
+namespace clang::ssaf {
+class UnsafeBufferUsageTUSummaryExtractor : public TUSummaryExtractor {
+public:
+  UnsafeBufferUsageTUSummaryExtractor(TUSummaryBuilder &Builder)
+      : TUSummaryExtractor(Builder) {}
+
+  /// \return a non-null unique pointer to a UnsafeBufferUsageEntitySummary
+  std::unique_ptr<UnsafeBufferUsageEntitySummary>
+  extractEntitySummary(const std::vector<const NamedDecl *> &ContributorDecls,
+                       ASTContext &Ctx);
+  void HandleTranslationUnit(ASTContext &Ctx) override;
+};
+} // namespace clang::ssaf
+
+std::unique_ptr<UnsafeBufferUsageEntitySummary>
+clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
+    const std::vector<const NamedDecl *> &ContributorDecls, ASTContext &Ctx) {
+  std::set<const Expr *> UnsafePointers;
+  auto MatchAction = [&UnsafePointers, &Ctx](const DynTypedNode &Node) {
+    matchUnsafePointers(Node, Ctx, UnsafePointers);
+  };
+
+  for (const auto *Contrib : ContributorDecls)
+    findMatchesIn(Contrib, MatchAction);
+
+  EntityPointerLevelSet Results;
+
+  for (const Expr *Ptr : UnsafePointers) {
+    Expected<EntityPointerLevelSet> Translation =
+        translateEntityPointerLevel(Ptr, Ctx, *this);
+
+    if (Translation) {
+      // Filter out those temporary invalid EntityPointerLevels associated
+      // with `&E` pointers. They need no transformation of entities:
+      auto FilteredTranslation = llvm::make_filter_range(
+          *Translation, [](const EntityPointerLevel &E) -> bool {
+            return E.getPointerLevel() > 0;
+          });
+      Results.insert(FilteredTranslation.begin(), FilteredTranslation.end());
+      continue;
+    }
+    logWarningFromError(Translation.takeError());
+  }
+
+  return std::make_unique<UnsafeBufferUsageEntitySummary>(
+      UnsafeBufferUsageEntitySummary(std::move(Results)));
+}
+
+void clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
+    ASTContext &Ctx) {
+  extractAndAddSummaries(
+      *this, SummaryBuilder, Ctx,
+      [&](const std::vector<const NamedDecl *> &Decls) {
+        return extractEntitySummary(Decls, Ctx);
+      },
+      "UnsafeBufferUsage");
+}
+namespace clang::ssaf {
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+volatile int UnsafeBufferUsageExtractorAnchorSource = 0;
+} // namespace clang::ssaf
+
+static clang::ssaf::TUSummaryExtractorRegistry::Add<
+    UnsafeBufferUsageTUSummaryExtractor>
+    RegisterExtractor(UnsafeBufferUsageEntitySummary::Name,
+                      "Extract unsafe buffer pointers");

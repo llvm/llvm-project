@@ -2293,11 +2293,11 @@ LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
   // %10:_(s12) = G_MERGE_VALUES %8, %9
 
   const int GCD = std::gcd(SrcSize, WideSize);
-  LLT GCDTy = LLT::scalar(GCD);
+  LLT GCDTy = WideTy.changeElementSize(GCD);
 
   SmallVector<Register, 8> NewMergeRegs;
   SmallVector<Register, 8> Unmerges;
-  LLT WideDstTy = LLT::scalar(NumMerge * WideSize);
+  LLT WideDstTy = WideTy.changeElementSize(NumMerge * WideSize);
 
   // Decompose the original operands if they don't evenly divide.
   for (const MachineOperand &MO : llvm::drop_begin(MI.operands())) {
@@ -4309,8 +4309,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
     AnyExtTy = LLT::scalar(AnyExtSize);
     OffsetCstRes = LLT::scalar(PtrTy.getSizeInBits());
   } else {
-    AnyExtTy = EltTy.changeElementSize(AnyExtSize);
-    OffsetCstRes = EltTy.changeElementSize(PtrTy.getSizeInBits());
+    AnyExtTy = DstTy.changeElementSize(AnyExtSize);
+    OffsetCstRes = DstTy.changeElementSize(PtrTy.getSizeInBits());
   }
 
   auto LargeLoad = MIRBuilder.buildLoadInstr(TargetOpcode::G_ZEXTLOAD, AnyExtTy,
@@ -4572,7 +4572,6 @@ void LegalizerHelper::changeOpcode(MachineInstr &MI, unsigned NewOpcode) {
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   using namespace TargetOpcode;
-
   switch(MI.getOpcode()) {
   default:
     return UnableToLegalize;
@@ -4877,6 +4876,58 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerVECTOR_COMPRESS(MI);
   case G_DYN_STACKALLOC:
     return lowerDynStackAlloc(MI);
+  case G_INSERT_SUBVECTOR: {
+    if (MRI.getType(MI.getOperand(1).getReg()).isScalable() ||
+        MRI.getType(MI.getOperand(2).getReg()).isScalable())
+      return UnableToLegalize;
+
+    // Check that subvector is half size of main vector
+    Register Vector = MI.getOperand(1).getReg();
+    Register Subvector = MI.getOperand(2).getReg();
+    auto InsertionPointImm = MI.getOperand(3).getImm();
+
+    LLT VectorTy = MRI.getType(Vector);
+    LLT SubvectorTy = MRI.getType(Subvector);
+    // If so, -> concat(subvector, extract(half of vector))
+    // (Operands can be either way round depending on insertion point
+    if (VectorTy.getSizeInBits() == SubvectorTy.getSizeInBits() * 2) {
+      bool InsertInLowHalf = InsertionPointImm == 0;
+      auto Extract = MIRBuilder.buildExtractSubvector(
+          SubvectorTy, Vector,
+          (uint64_t)(InsertInLowHalf ? VectorTy.getNumElements() / 2 : 0));
+
+      auto LowHalf = InsertInLowHalf ? Subvector : Extract.getReg(0);
+      auto HighHalf = InsertInLowHalf ? Extract.getReg(0) : Subvector;
+
+      MIRBuilder.buildInstr(TargetOpcode::G_CONCAT_VECTORS, {MI.getOperand(0)},
+                            {LowHalf, HighHalf});
+      MI.eraseFromParent();
+      return Legalized;
+    }
+    // Else -> shuffle(vector, extend(subvector, size(vector)), mask)
+    else {
+      // Extend subvector to same size as vector
+      Register ExtendedSubvector = MRI.createGenericVirtualRegister(VectorTy);
+      MIRBuilder.buildPadVectorWithUndefElements(ExtendedSubvector, Subvector);
+
+      // Calculate mask required for this shuffle
+      SmallVector<int> Mask;
+      for (int i = 0; i < VectorTy.getNumElements(); i++) {
+        // If this index is within bounds, put subvector's index into mask
+        if (i >= InsertionPointImm &&
+            i < InsertionPointImm + SubvectorTy.getNumElements())
+          Mask.push_back(VectorTy.getNumElements() + i - InsertionPointImm);
+        else
+          Mask.push_back(i);
+      }
+
+      // Build shuffle
+      MIRBuilder.buildShuffleVector(MI.getOperand(0), Vector, ExtendedSubvector,
+                                    Mask);
+      MI.eraseFromParent();
+      return Legalized;
+    }
+  }
   case G_STACKSAVE:
     return lowerStackSave(MI);
   case G_STACKRESTORE:

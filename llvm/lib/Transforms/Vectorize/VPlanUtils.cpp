@@ -155,8 +155,7 @@ GEPNoWrapFlags vputils::getGEPFlagsForPtr(VPValue *Ptr) {
   while (auto *PtrVPI = dyn_cast<VPInstruction>(Ptr)) {
     unsigned Opcode = PtrVPI->getOpcode();
     if (Opcode == Instruction::GetElementPtr) {
-      if (any_of(drop_begin(PtrVPI->operands()),
-                 [](VPValue *Op) { return !match(Op, m_ZeroInt()); }))
+      if (!all_of(drop_begin(PtrVPI->operands()), match_fn(m_ZeroInt())))
         return PtrVPI->getGEPNoWrapFlags();
       Ptr = PtrVPI->getOperand(0);
       continue;
@@ -172,13 +171,6 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                            PredicatedScalarEvolution &PSE,
                                            const Loop *L) {
   ScalarEvolution &SE = *PSE.getSE();
-  if (isa<VPIRValue, VPSymbolicValue>(V)) {
-    Value *LiveIn = V->getUnderlyingValue();
-    if (LiveIn && SE.isSCEVable(LiveIn->getType()))
-      return SE.getSCEV(LiveIn);
-    return SE.getCouldNotCompute();
-  }
-
   if (auto *RV = dyn_cast<VPRegionValue>(V)) {
     assert(RV == RV->getDefiningRegion()->getCanonicalIV() &&
            "RegionValue must be canonical IV");
@@ -186,6 +178,13 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       return SE.getCouldNotCompute();
     return SE.getAddRecExpr(SE.getZero(RV->getType()), SE.getOne(RV->getType()),
                             L, SCEV::FlagAnyWrap);
+  }
+
+  if (isa<VPIRValue, VPSymbolicValue>(V)) {
+    Value *LiveIn = V->getUnderlyingValue();
+    if (LiveIn && SE.isSCEVable(LiveIn->getType()))
+      return SE.getSCEV(LiveIn);
+    return SE.getCouldNotCompute();
   }
 
   // Helper to create SCEVs for binary and unary operations.
@@ -221,9 +220,12 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
-  // Handle shl by constant: x << c is equivalent to x * (1 << c).
+  // Handle shl by constant: x << c is equivalent to x * (1 << c). A shift
+  // amount >= the bit width produces poison; do not rewrite it, as
+  // getPowerOfTwo requires the power to be in range.
   uint64_t ShiftAmt;
-  if (match(V, m_Shl(m_VPValue(LHSVal), m_ConstantInt(ShiftAmt))))
+  if (match(V, m_Shl(m_VPValue(LHSVal), m_ConstantInt(ShiftAmt))) &&
+      ShiftAmt < LHSVal->getScalarType()->getScalarSizeInBits())
     return CreateSCEV(LHSVal, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMulExpr(Ops[0],
                            SE.getPowerOfTwo(Ops[0]->getType(), ShiftAmt));
@@ -243,6 +245,14 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getURemExpr(Ops[0], Ops[1]);
     });
+  // A SRem with non-negative operands is equivalent to an URem.
+  if (match(V, m_SRem(m_VPValue(LHSVal), m_VPValue(RHSVal)))) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
+      if (!SE.isKnownNonNegative(Ops[0]) || !SE.isKnownNonNegative(Ops[1]))
+        return SE.getCouldNotCompute();
+      return SE.getURemExpr(Ops[0], Ops[1]);
+    });
+  }
   // Handle AND with constant mask: x & (2^n - 1) can be represented as x % 2^n.
   const APInt *Mask;
   if (match(V, m_c_BinaryAnd(m_VPValue(LHSVal), m_APInt(Mask))) &&
@@ -411,7 +421,7 @@ static bool preservesUniformity(unsigned Opcode) {
 
 bool vputils::isSingleScalar(const VPValue *VPV) {
   // Live-in, symbolic and region-values represent single-scalar values.
-  if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(VPV))
+  if (isa<VPIRValue, VPSymbolicValue>(VPV))
     return true;
 
   if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
@@ -448,7 +458,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
 
 bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
   // Live-ins and region values are uniform.
-  if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(V))
+  if (isa<VPIRValue, VPSymbolicValue>(V))
     return true;
 
   const VPRecipeBase *R = V->getDefiningRecipe();
@@ -684,8 +694,7 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
     VPSymbolicValue &UF = Plan.getUF();
     if (!UF.isMaterialized())
       return Step == &UF ||
-             match(Step, m_c_Mul(m_Specific(&Plan.getUF()),
-                                 m_VPInstruction<VPInstruction::VScale>()));
+             match(Step, m_c_Mul(m_Specific(&Plan.getUF()), m_VScale()));
 
     // Alias masking: step is number of active lanes of a dependence mask.
     if (match(Step, m_ZExtOrTruncOrSelf(
@@ -699,15 +708,13 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 
     // Scalable VF: step involves VScale.
     if (ConcreteUF == 1)
-      return match(Step, m_VPInstruction<VPInstruction::VScale>());
-    if (match(Step, m_c_Mul(m_SpecificInt(ConcreteUF),
-                            m_VPInstruction<VPInstruction::VScale>())))
+      return match(Step, m_VScale());
+    if (match(Step, m_c_Mul(m_SpecificInt(ConcreteUF), m_VScale())))
       return true;
     // mul(VScale, ConcreteUF) may have been simplified to
     // shl(VScale, log2(ConcreteUF)) when ConcreteUF is a power of 2.
     return isPowerOf2_32(ConcreteUF) &&
-           match(Step, m_Shl(m_VPInstruction<VPInstruction::VScale>(),
-                             m_SpecificInt(Log2_32(ConcreteUF))));
+           match(Step, m_Shl(m_VScale(), m_SpecificInt(Log2_32(ConcreteUF))));
   };
 
   VPInstruction *Increment = nullptr;
@@ -768,14 +775,12 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
       if (auto *InterleaveR = dyn_cast<VPInterleaveBase>(U))
         if (InterleaveR->getAddr() == Cur)
           return true;
-      if (auto *RepR = dyn_cast<VPReplicateRecipe>(U)) {
-        if (RepR->getOpcode() == Instruction::Load &&
-            RepR->getOperand(0) == Cur)
-          return true;
-        if (RepR->getOpcode() == Instruction::Store &&
-            RepR->getOperand(1) == Cur)
-          return true;
-      }
+      // Cur is used as the pointer of a (possibly masked) load (operand 0) or
+      // store (operand 1).
+      if (match(U, m_CombineOr(m_Unary<Instruction::Load>(m_Specific(Cur)),
+                               m_Binary<Instruction::Store>(m_VPValue(),
+                                                            m_Specific(Cur)))))
+        return true;
       if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(U))) {
         if (MemR->getAddr() == Cur && MemR->isConsecutive())
           return true;
@@ -789,10 +794,19 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
       continue;
 
     // Only traverse further through users that also define a value (and can
-    // thus have their own users walked).
-    for (VPUser *U : Cur->users())
+    // thus have their own users walked). Skip when Cur is only used as mask ,
+    // as well as loads: a loaded value does not depend on the load's operand.
+    for (VPUser *U : Cur->users()) {
+      auto *VPI = dyn_cast<VPInstruction>(U);
+      if (VPI && VPI->getMask() == Cur &&
+          none_of(VPI->operandsWithoutMask(),
+                  [Cur](VPValue *Op) { return Op == Cur; }))
+        continue;
+      if (match(U, m_VPInstruction<Instruction::Load>()))
+        continue;
       if (auto *SDR = dyn_cast<VPSingleDefRecipe>(U))
         WorkList.push_back(SDR);
+    }
   }
   return false;
 }
@@ -834,12 +848,28 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
   case scUnknown:
     return Builder.getPlan().getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
   case scVScale:
-    return Builder.createNaryOp(VPInstruction::VScale, {}, S->getType());
+    return Builder.createVScale(S->getType(), DL);
   case scAddExpr:
   case scMulExpr: {
-    if (S->getType()->isPointerTy())
-      return nullptr;
     auto *NAry = cast<SCEVNAryExpr>(S);
+    VPIRFlags::WrapFlagsTy WrapFlags(NAry->hasNoUnsignedWrap(),
+                                     NAry->hasNoSignedWrap());
+
+    // Expanded poiner SCEVAddExpr as a ptradd of the pointer base and the
+    // integer offset, matching SCEVExpander.
+    if (S->getType()->isPointerTy()) {
+      VPValue *Base = tryToExpand(SE.getPointerBase(S));
+      if (!Base)
+        return nullptr;
+      VPValue *Offset = tryToExpand(SE.removePointerBase(S));
+      if (!Offset)
+        return nullptr;
+      GEPNoWrapFlags GEPFlags = WrapFlags.HasNUW
+                                    ? GEPNoWrapFlags::noUnsignedWrap()
+                                    : GEPNoWrapFlags::none();
+      return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
+    }
+
     unsigned Opcode =
         S->getSCEVType() == scAddExpr ? Instruction::Add : Instruction::Mul;
     // Iterate in reverse so that constants are emitted last.
@@ -850,8 +880,6 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
         return nullptr;
       Ops.push_back(OpV);
     }
-    VPIRFlags::WrapFlagsTy WrapFlags(NAry->hasNoUnsignedWrap(),
-                                     NAry->hasNoSignedWrap());
     VPValue *Result = Ops.front();
     for (VPValue *Op : drop_begin(Ops))
       Result = Builder.createOverflowingOp(Opcode, {Result, Op}, WrapFlags, DL);
@@ -868,6 +896,29 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     return Builder.createNaryOp(Instruction::UDiv, {LHS, RHS},
                                 VPIRFlags::getDefaultFlags(Instruction::UDiv),
                                 DL);
+  }
+  case scTruncate:
+  case scZeroExtend:
+  case scSignExtend: {
+    auto *Cast = cast<SCEVCastExpr>(S);
+    VPValue *Op = tryToExpand(Cast->getOperand());
+    if (!Op)
+      return nullptr;
+    Instruction::CastOps Opcode;
+    switch (S->getSCEVType()) {
+    case scTruncate:
+      Opcode = Instruction::Trunc;
+      break;
+    case scZeroExtend:
+      Opcode = Instruction::ZExt;
+      break;
+    case scSignExtend:
+      Opcode = Instruction::SExt;
+      break;
+    default:
+      llvm_unreachable("Unhandled cast SCEV");
+    }
+    return Builder.createScalarCast(Opcode, Op, S->getType(), DL);
   }
   default:
     return nullptr;

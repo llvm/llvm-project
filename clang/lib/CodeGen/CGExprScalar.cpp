@@ -47,6 +47,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TypeSize.h"
@@ -1689,28 +1690,17 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   bool OBWrapInvolved =
       (DstOBT && DstOBT->isWrapKind()) || (SrcOBT && SrcOBT->isWrapKind());
 
-  // Cast from half through float if half isn't a native type.
-  if (SrcType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
-    // Cast to FP using the intrinsic if the half type itself isn't supported.
-    if (DstTy->isFloatingPointTy()) {
-      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
-        Value *BitCast = Builder.CreateBitCast(Src, CGF.CGM.HalfTy);
-        return Builder.CreateFPExt(BitCast, DstTy, "conv");
-      }
-    } else {
-      // Cast to other types through float, using either the intrinsic or FPExt,
-      // depending on whether the half type itself is supported
-      // (as opposed to operations on half, available with NativeHalfType).
+  // If half isn't a native type, cast to float for evaluation.
+  if (SrcType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType &&
+      SrcTy == CGF.CGM.HalfTy && DstTy != CGF.CGM.HalfTy) {
+    if (DstTy->isFloatingPointTy())
+      return Builder.CreateFPExt(Src, DstTy, "conv");
 
-      if (Src->getType() != CGF.CGM.HalfTy) {
-        assert(CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics());
-        Src = Builder.CreateBitCast(Src, CGF.CGM.HalfTy);
-      }
-
-      Src = Builder.CreateFPExt(Src, CGF.CGM.FloatTy, "conv");
-      SrcType = CGF.getContext().FloatTy;
-      SrcTy = CGF.FloatTy;
-    }
+    // Cast to other types through float (as opposed to operations on half,
+    // available with NativeHalfType).
+    Src = Builder.CreateFPExt(Src, CGF.CGM.FloatTy, "conv");
+    SrcType = CGF.getContext().FloatTy;
+    SrcTy = CGF.FloatTy;
   }
 
   // Ignore conversions like int -> uint.
@@ -1815,23 +1805,13 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
     EmitFloatConversionCheck(OrigSrc, OrigSrcType, Src, SrcType, DstType, DstTy,
                              Loc);
 
-  // Cast to half through float if half isn't a native type.
-  if (DstType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
+  // Cast to half from float if half isn't a native type. When __fp16 isn't
+  // native, arithmetic is evaluated as float.
+  if (DstType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType &&
+      DstTy == CGF.CGM.HalfTy) {
     // Make sure we cast in a single step if from another FP type.
-    if (SrcTy->isFloatingPointTy()) {
-      // Handle the case where the half type is represented as an integer (as
-      // opposed to operations on half, available with NativeHalfType).
-
-      // If the half type is supported, just use an fptrunc.
-      Value *Res = Builder.CreateFPTrunc(Src, CGF.CGM.HalfTy, "conv");
-      if (DstTy == CGF.CGM.HalfTy)
-        return Res;
-
-      assert(DstTy->isIntegerTy(16) &&
-             CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics() &&
-             "Only half FP requires extra conversion");
-      return Builder.CreateBitCast(Res, DstTy);
-    }
+    if (SrcTy->isFloatingPointTy())
+      return Builder.CreateFPTrunc(Src, CGF.CGM.HalfTy, "conv");
 
     DstTy = CGF.FloatTy;
   }
@@ -1843,7 +1823,6 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
 
     if (ResTy != CGF.CGM.HalfTy) {
       assert(ResTy->isIntegerTy(16) &&
-             CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics() &&
              "Only half FP requires extra conversion");
       Res = Builder.CreateBitCast(Res, ResTy);
     }
@@ -2839,6 +2818,43 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return CGF.authPointerToPointerCast(Result, E->getType(), DestTy);
   }
   case CK_AddressSpaceConversion: {
+    llvm::Type *DestLTy = ConvertType(DestTy);
+    // WebAssembly reference types are opaque target extension types so an
+    // "address space conversion" involving them is not a real pointer cast.
+    auto IsWasmFuncref = [](llvm::Type *T) {
+      auto *TET = dyn_cast<llvm::TargetExtType>(T);
+      return TET && TET->getName() == "wasm.funcref";
+    };
+    bool SrcIsFuncref = IsWasmFuncref(ConvertType(E->getType()));
+    bool DestIsFuncref = IsWasmFuncref(DestLTy);
+    if (SrcIsFuncref && DestIsFuncref) {
+      // funcref -> funcref (e.g. between differently-typed funcrefs) is the
+      // identity on the opaque reference value.
+      return Visit(E);
+    }
+    if (SrcIsFuncref && !DestIsFuncref) {
+      // funcref -> pointer: use wasm_funcref_to_ptr. This will probably crash
+      // later in codegen since we haven't implemented a way to actually get a
+      // function pointer from a funcref.
+      llvm::Function *ToPtr =
+          CGF.CGM.getIntrinsic(llvm::Intrinsic::wasm_funcref_to_ptr);
+      return CGF.Builder.CreateCall(ToPtr, {Visit(E)});
+    }
+    if (!SrcIsFuncref && DestIsFuncref) {
+      // A null function pointer converts to a null funcref (ref.null func),
+      // rather than a table lookup at index 0.
+      Expr::EvalResult NullResult;
+      if (E->EvaluateAsRValue(NullResult, CGF.getContext()) &&
+          NullResult.Val.isNullPointer()) {
+        if (NullResult.HasSideEffects)
+          Visit(E);
+        return llvm::Constant::getNullValue(DestLTy);
+      }
+      // pointer -> funcref: do a table.get from the indirect function table.
+      llvm::Function *ToFuncref =
+          CGF.CGM.getIntrinsic(llvm::Intrinsic::wasm_ptr_to_funcref);
+      return CGF.Builder.CreateCall(ToFuncref, {Visit(E)});
+    }
     Expr::EvalResult Result;
     if (E->EvaluateAsRValue(Result, CGF.getContext()) &&
         Result.Val.isNullPointer()) {
@@ -2847,12 +2863,11 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       // eliminate the useless instructions emitted during translating E.
       if (Result.HasSideEffects)
         Visit(E);
-      return CGF.CGM.getNullPointer(cast<llvm::PointerType>(
-          ConvertType(DestTy)), DestTy);
+      return CGF.CGM.getNullPointer(cast<llvm::PointerType>(DestLTy), DestTy);
     }
     // Since target may map different address spaces in AST to the same address
     // space, an address space conversion may end up as a bitcast.
-    return CGF.performAddrSpaceCast(Visit(E), ConvertType(DestTy));
+    return CGF.performAddrSpaceCast(Visit(E), DestLTy);
   }
   case CK_AtomicToNonAtomic:
   case CK_NonAtomicToAtomic:
