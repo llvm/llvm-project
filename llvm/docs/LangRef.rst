@@ -11550,7 +11550,7 @@ the bit position at which the extraction begins within ``source``.
 Semantics:
 """"""""""
 
-The result is the bit range ``source[offset : offset + bitwidth(ty))``, 
+The result is the bit range ``source[offset : offset + bitwidth(ty))``,
 reinterpreted as a value of type ``ty`` as if by a ``bitcast``.
 Bit ``0`` is the least significant bit of ``source``.
 
@@ -11562,7 +11562,7 @@ Example:
 
 .. code-block:: text
 
-      %result = bitextract i8, b32 %src, i32 24 ; Extract the last 8 bits from %src and return an 8-bit integer
+      %result = bitextract i8, b32 %src, i32 24 ; Extract the 8 most-significant bits (bits [24..31]) of %src and return an 8-bit integer
 
 .. _i_bitinsert:
 

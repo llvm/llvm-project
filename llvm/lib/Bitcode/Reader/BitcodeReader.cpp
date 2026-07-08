@@ -5663,6 +5663,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
 
     case bitc::FUNC_CODE_INST_BITEXTRACT: { // BITEXTRACT: [ty, opval, opval]
       unsigned OpNum = 0;
+      if (Record.empty())
+        return error("Record is empty for bitextract");
       unsigned TypeID = Record[OpNum++];
       Type *ResTy = getTypeByID(TypeID);
       Value *Src, *Offset;
