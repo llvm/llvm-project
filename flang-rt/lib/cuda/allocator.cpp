@@ -228,26 +228,19 @@ void *CUFAllocDevice(std::size_t sizeInBytes,
   return p;
 }
 
-// Skip the free when a user cudaDeviceReset() already tore the primary context
-// down: cudaFree() would then recreate a phantom context and fail.
-static void freeIfContextAlive(void *p, cudaStream_t stream, bool async) {
-  if (DeviceContextTornDown())
-    return;
-  if (async)
-    CUDA_REPORT_IF_ERROR(cudaFreeAsync(p, stream));
-  else
-    CUDA_REPORT_IF_ERROR(cudaFree(p));
-}
-
+// No teardown guard here: this is the hot deallocation path (cudaFreeAsync just
+// enqueues). Automatic end-of-scope frees that may run after a user
+// cudaDeviceReset() are guarded in lowering via genDeviceIsActive(); an
+// explicit deallocate after a reset is unsupported.
 void CUFFreeDevice(void *p) {
   CriticalSection critical{lock};
   int pos = findAllocation(p);
   if (pos >= 0) {
     cudaStream_t stream = deviceAllocations[pos].stream;
     eraseAllocation(pos);
-    freeIfContextAlive(p, stream, /*async=*/true);
+    CUDA_REPORT_IF_ERROR(cudaFreeAsync(p, stream));
   } else {
-    freeIfContextAlive(p, nullptr, /*async=*/false);
+    CUDA_REPORT_IF_ERROR(cudaFree(p));
   }
 }
 
@@ -261,7 +254,10 @@ void *CUFAllocManaged(std::size_t sizeInBytes,
 }
 
 void CUFFreeManaged(void *p) {
-  freeIfContextAlive(p, nullptr, /*async=*/false);
+  // Descriptor cleanup runs through here at end of scope; skip after a reset.
+  if (DeviceContextTornDown())
+    return;
+  CUDA_REPORT_IF_ERROR(cudaFree(p));
 }
 
 void *CUFAllocUnified(std::size_t sizeInBytes,
