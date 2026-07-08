@@ -269,6 +269,18 @@ InputFile *LinkerDriver::addObjectFile(COFFLinkerContext &ctx,
   std::unique_ptr<COFFObjectFile> coffObj = ObjFile::createCOFFObject(ctx, mb);
   InputFile *obj = nullptr;
 
+  // On ARM64EC, check for a hybrid object section and use it for the EC object.
+  if (ctx.symtab.isEC()) {
+    if (std::optional<MemoryBufferRef> hybridSec =
+            coffObj->findHybridObjectSection()) {
+      InputFile *hybridObj =
+          addObjectFile(ctx, *hybridSec, archiveName, offsetInArchive, lazy);
+      // For the ARM64X target, continue processing the native file.
+      if (ctx.config.machine != ARM64X)
+        return hybridObj;
+    }
+  }
+
   if (ctx.config.fatLTOObjects) {
     Expected<MemoryBufferRef> fatLTOData =
         IRObjectFile::findBitcodeInObject(*coffObj);

@@ -19,18 +19,15 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <fstream>
 #include <set>
 #include <string_view>
 #include <type_traits>
 #include <variant>
-#include <vector>
 
 namespace Fortran::semantics {
 

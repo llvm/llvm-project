@@ -159,7 +159,7 @@ def AtLeastRankOne : And<[
 
 def IsValidBlockScaledTensorType
     : CPred<"::mlir::succeeded(::mlir::OpTrait::tosa::"
-            "verifyBlockScaledTensorType($_op, $_self))">;
+            "verifyBlockScaledTensorType($_self))">;
 
 class TosaTensorOf<list<Type> allowedTypes,
                    string summary = "tosa-conformant tensor">

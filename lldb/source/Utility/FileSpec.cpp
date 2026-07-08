@@ -226,13 +226,15 @@ FileSpec::operator bool() const { return m_filename || m_directory; }
 bool FileSpec::operator!() const { return !m_directory && !m_filename; }
 
 bool FileSpec::DirectoryEquals(const FileSpec &rhs) const {
-  const bool case_sensitive = IsCaseSensitive() || rhs.IsCaseSensitive();
-  return ConstString::Equals(m_directory, rhs.m_directory, case_sensitive);
+  if (IsCaseSensitive() || rhs.IsCaseSensitive())
+    return GetDirectory() == rhs.GetDirectory();
+  return GetDirectory().equals_insensitive(rhs.GetDirectory());
 }
 
 bool FileSpec::FileEquals(const FileSpec &rhs) const {
-  const bool case_sensitive = IsCaseSensitive() || rhs.IsCaseSensitive();
-  return ConstString::Equals(m_filename, rhs.m_filename, case_sensitive);
+  if (IsCaseSensitive() || rhs.IsCaseSensitive())
+    return GetFilename() == rhs.GetFilename();
+  return GetFilename().equals_insensitive(rhs.GetFilename());
 }
 
 // Equal to operator
@@ -284,11 +286,21 @@ int FileSpec::Compare(const FileSpec &a, const FileSpec &b, bool full) {
   // of the FileSpec objects.
 
   if (full || (a.m_directory && b.m_directory)) {
-    result = ConstString::Compare(a.m_directory, b.m_directory, case_sensitive);
+    if (case_sensitive)
+      result = a.GetDirectory().compare(b.GetDirectory());
+    else
+      result = a.GetDirectory().compare_insensitive(b.GetDirectory());
+
     if (result)
       return result;
   }
-  return ConstString::Compare(a.m_filename, b.m_filename, case_sensitive);
+
+  if (case_sensitive)
+    result = a.GetFilename().compare(b.GetFilename());
+  else
+    result = a.GetFilename().compare_insensitive(b.GetFilename());
+
+  return result;
 }
 
 bool FileSpec::Equal(const FileSpec &a, const FileSpec &b, bool full) {

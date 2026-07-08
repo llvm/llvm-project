@@ -252,28 +252,34 @@ void test_fract_f64(global int* out, double a)
 }
 
 // CHECK-LABEL: @test_sicmp_i32
-// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.icmp.i64.i32(i32 %a, i32 %b, i32 32)
+// CHECK: [[CMP:%.+]] = icmp eq i32 %a, %b
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 void test_sicmp_i32(global ulong* out, int a, int b)
 {
   *out = __builtin_amdgcn_sicmp(a, b, 32);
 }
 
+// CHECK: declare i64 @llvm.amdgcn.ballot.i64(i1){{.*}} #[[$NOUNWIND_READONLY_NOPOISON:[0-9]+]]
+
 // CHECK-LABEL: @test_uicmp_i32
-// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.icmp.i64.i32(i32 %a, i32 %b, i32 32)
+// CHECK: [[CMP:%.+]] = icmp eq i32 %a, %b
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 void test_uicmp_i32(global ulong* out, uint a, uint b)
 {
   *out = __builtin_amdgcn_uicmp(a, b, 32);
 }
 
 // CHECK-LABEL: @test_sicmp_i64
-// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.icmp.i64.i64(i64 %a, i64 %b, i32 38)
+// CHECK: [[CMP:%.+]] = icmp sgt i64 %a, %b
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 void test_sicmp_i64(global ulong* out, long a, long b)
 {
   *out = __builtin_amdgcn_sicmpl(a, b, 39-1);
 }
 
 // CHECK-LABEL: @test_uicmp_i64
-// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.icmp.i64.i64(i64 %a, i64 %b, i32 35)
+// CHECK: [[CMP:%.+]] = icmp uge i64 %a, %b
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 void test_uicmp_i64(global ulong* out, ulong a, ulong b)
 {
   *out = __builtin_amdgcn_uicmpl(a, b, 30+5);
@@ -322,14 +328,16 @@ void test_wave_shuffle(global int* out, int a, int b)
 }
 
 // CHECK-LABEL: @test_fcmp_f32
-// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.fcmp.i64.f32(float %a, float %b, i32 5)
+// CHECK: [[CMP:%.+]] = fcmp ole float %a, %b
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 void test_fcmp_f32(global ulong* out, float a, float b)
 {
   *out = __builtin_amdgcn_fcmpf(a, b, 5);
 }
 
 // CHECK-LABEL: @test_fcmp_f64
-// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.fcmp.i64.f64(double %a, double %b, i32 6)
+// CHECK: [[CMP:%.+]] = fcmp one double %a, %b
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 void test_fcmp_f64(global ulong* out, double a, double b)
 {
   *out = __builtin_amdgcn_fcmp(a, b, 3+3);
@@ -1038,8 +1046,6 @@ void test_s_setprio()
 void test_read_exec(global ulong* out) {
   *out = __builtin_amdgcn_read_exec();
 }
-
-// CHECK: declare i64 @llvm.amdgcn.ballot.i64(i1){{.*}} #[[$NOUNWIND_READONLY_NOPOISON:[0-9]+]]
 
 // CHECK-LABEL: @test_read_exec_lo(
 // CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.ballot.i32(i1 true)

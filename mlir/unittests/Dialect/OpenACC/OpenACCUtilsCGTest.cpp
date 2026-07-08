@@ -84,6 +84,95 @@ TEST_F(OpenACCUtilsCGTest, getDataLayoutWithSpec) {
 }
 
 //===----------------------------------------------------------------------===//
+// ParDim utilities Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsCGTest, insertParDimOrdersAndDeduplicates) {
+  SmallVector<GPUParallelDimAttr> parDims;
+  GPUParallelDimAttr threadX = GPUParallelDimAttr::threadXDim(&context);
+  GPUParallelDimAttr blockX = GPUParallelDimAttr::blockXDim(&context);
+  GPUParallelDimAttr threadY = GPUParallelDimAttr::threadYDim(&context);
+
+  insertParDim(parDims, threadX);
+  insertParDim(parDims, blockX);
+  insertParDim(parDims, threadY);
+  insertParDim(parDims, threadX);
+
+  ASSERT_EQ(parDims.size(), 3u);
+  EXPECT_EQ(parDims[0], blockX);
+  EXPECT_EQ(parDims[1], threadY);
+  EXPECT_EQ(parDims[2], threadX);
+}
+
+TEST_F(OpenACCUtilsCGTest, removeParDimRemovesOnlyMatchingDim) {
+  GPUParallelDimAttr threadX = GPUParallelDimAttr::threadXDim(&context);
+  GPUParallelDimAttr blockX = GPUParallelDimAttr::blockXDim(&context);
+  GPUParallelDimAttr threadY = GPUParallelDimAttr::threadYDim(&context);
+  SmallVector<GPUParallelDimAttr> parDims{blockX, threadY, threadX};
+
+  removeParDim(parDims, threadX);
+  removeParDim(parDims, GPUParallelDimAttr::blockYDim(&context));
+
+  ASSERT_EQ(parDims.size(), 2u);
+  EXPECT_EQ(parDims[0], blockX);
+  EXPECT_EQ(parDims[1], threadY);
+}
+
+TEST_F(OpenACCUtilsCGTest, parDimsOperationAttributes) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  OwningOpRef<ModuleOp> otherModule = ModuleOp::create(b, loc);
+  Operation *op = module->getOperation();
+  Operation *otherOp = otherModule->getOperation();
+  GPUParallelDimsAttr seqAttr = GPUParallelDimsAttr::seq(&context);
+  GPUParallelDimsAttr blockAttr = GPUParallelDimsAttr::get(
+      &context, {GPUParallelDimAttr::blockXDim(&context)});
+
+  EXPECT_FALSE(hasParDimsAttr(op));
+  setParDimsAttr(op, seqAttr);
+  EXPECT_TRUE(hasParDimsAttr(op));
+  EXPECT_TRUE(hasSeqParDims(op));
+  EXPECT_EQ(getParDimsAttr(op), seqAttr);
+
+  updateParDimsAttr(op, blockAttr);
+  EXPECT_FALSE(hasSeqParDims(op));
+  EXPECT_EQ(getParDimsAttr(op), blockAttr);
+
+  copyParDimsAttr(op, otherOp);
+  EXPECT_EQ(getParDimsAttr(otherOp), blockAttr);
+}
+
+TEST_F(OpenACCUtilsCGTest, getParDimsAttrReadsInherentAttribute) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
+
+  GPUParallelDimsAttr blockAttr = GPUParallelDimsAttr::get(
+      &context, {GPUParallelDimAttr::blockXDim(&context)});
+  Type privateTy = PrivateType::get(&context, b.getI32Type());
+  auto privatize =
+      PrivatizeOp::create(b, loc, privateTy,
+                          /*dynamicSizes=*/ValueRange{}, blockAttr);
+
+  EXPECT_TRUE(hasParDimsAttr(privatize));
+  EXPECT_EQ(getParDimsAttr(privatize), blockAttr);
+  EXPECT_EQ(privatize.getParDimsAttr(), blockAttr);
+}
+
+TEST_F(OpenACCUtilsCGTest, setParDimsAttrSetsInherentAttribute) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
+
+  Type privateTy = PrivateType::get(&context, b.getI32Type());
+  auto privatize =
+      PrivatizeOp::create(b, loc, privateTy, /*dynamicSizes=*/ValueRange{});
+  GPUParallelDimsAttr blockAttr = GPUParallelDimsAttr::get(
+      &context, {GPUParallelDimAttr::blockXDim(&context)});
+
+  setParDimsAttr(privatize, blockAttr);
+  EXPECT_EQ(getParDimsAttr(privatize), blockAttr);
+  EXPECT_EQ(privatize.getParDimsAttr(), blockAttr);
+}
+
+//===----------------------------------------------------------------------===//
 // buildComputeRegion Tests
 //===----------------------------------------------------------------------===//
 

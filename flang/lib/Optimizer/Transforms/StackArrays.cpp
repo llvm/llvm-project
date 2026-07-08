@@ -804,17 +804,11 @@ AllocMemConversion::insertAlloca(fir::AllocMemOp &oldAlloc,
 static void
 visitFreeMemOp(fir::AllocMemOp oldAlloc,
                const std::function<void(mlir::Operation *)> &callBack) {
-  for (mlir::Operation *user : oldAlloc->getUsers()) {
-    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
-      for (mlir::Operation *user : declareOp->getUsers()) {
-        if (mlir::isa<fir::FreeMemOp>(user))
-          callBack(user);
-      }
-    }
-
-    if (mlir::isa<fir::FreeMemOp>(user))
-      callBack(user);
-  }
+  mlir::Operation *parent = oldAlloc->getParentOp();
+  parent->walk([&](fir::FreeMemOp freeOp) {
+    if (lookThroughDeclaresAndConverts(freeOp->getOperand(0)) == oldAlloc)
+      callBack(freeOp);
+  });
 }
 
 void AllocMemConversion::insertStackSaveRestore(

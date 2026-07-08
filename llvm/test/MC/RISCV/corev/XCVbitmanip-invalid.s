@@ -224,10 +224,10 @@ cv.ff1 t0, 0
 # CHECK-ERROR: invalid operand for instruction
 
 cv.ff1 t0, t1, 0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.ff1 t0, t1, t2
-# CHECK-ERROR: invalid operand for instruction 
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.fl1 t0
 # CHECK-ERROR: too few operands for instruction
@@ -236,10 +236,10 @@ cv.fl1 t0, 0
 # CHECK-ERROR: invalid operand for instruction
 
 cv.fl1 t0, t1, 0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.fl1 t0, t1, t2
-# CHECK-ERROR: invalid operand for instruction 
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.clb t0
 # CHECK-ERROR: too few operands for instruction
@@ -248,10 +248,10 @@ cv.clb t0, 0
 # CHECK-ERROR: invalid operand for instruction
 
 cv.clb t0, t1, 0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.clb t0, t1, t2
-# CHECK-ERROR: invalid operand for instruction 
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cnt t0
 # CHECK-ERROR: too few operands for instruction
@@ -260,8 +260,8 @@ cv.cnt t0, 0
 # CHECK-ERROR: invalid operand for instruction
 
 cv.cnt t0, t1, 0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 
 cv.cnt t0, t1, t2
-# CHECK-ERROR: invalid operand for instruction 
+# CHECK-ERROR: unexpected extra operand for instruction
 

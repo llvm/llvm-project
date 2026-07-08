@@ -302,6 +302,15 @@ Tool *HIPAMDToolChain::buildLinker() const {
   return new tools::AMDGCN::Linker(*this);
 }
 
+LTOKind HIPAMDToolChain::getLTOMode(const ArgList &Args,
+                                    Action::OffloadKind Kind) const {
+  if (getTriple().isAMDGCN() && getDriver().offloadDeviceOnly() &&
+      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false) &&
+      !Args.hasArg(options::OPT_foffload_lto, options::OPT_foffload_lto_EQ))
+    return LTOK_None;
+  return ToolChain::getLTOMode(Args, Kind);
+}
+
 ToolChain::CXXStdlibType
 HIPAMDToolChain::GetCXXStdlibType(const ArgList &Args) const {
   return HostTC.GetCXXStdlibType(Args);

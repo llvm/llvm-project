@@ -4527,10 +4527,13 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::FrameIndex:
-  case ISD::TargetFrameIndex:
-    TLI->computeKnownBitsForFrameIndex(cast<FrameIndexSDNode>(Op)->getIndex(),
-                                       Known, getMachineFunction());
+  case ISD::TargetFrameIndex: {
+    const MachineFunction &MF = getMachineFunction();
+    int FrameIdx = cast<FrameIndexSDNode>(Op)->getIndex();
+    TLI->computeKnownBitsForStackObjectPointer(
+        Known, MF, MF.getFrameInfo().getObjectAlign(FrameIdx));
     break;
+  }
 
   default:
     if (Opcode < ISD::BUILTIN_OP_END)

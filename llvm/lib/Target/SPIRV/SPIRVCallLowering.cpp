@@ -86,15 +86,6 @@ static uint32_t getFunctionControl(const Function &F,
   return FuncControl;
 }
 
-static ConstantInt *getConstInt(MDNode *MD, unsigned NumOp) {
-  if (MD->getNumOperands() > NumOp) {
-    auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(NumOp));
-    if (CMeta)
-      return dyn_cast<ConstantInt>(CMeta->getValue());
-  }
-  return nullptr;
-}
-
 // If the function has pointer arguments, we are forced to re-create this
 // function type from the very beginning, changing PointerType by
 // TypedPointerType for each pointer argument. Otherwise, the same `Type*`
@@ -358,13 +349,13 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         for (const MDOperand &MDOp : MD->operands()) {
           MDNode *MD2 = dyn_cast<MDNode>(MDOp);
           assert(MD2 && "Metadata operand is expected");
-          ConstantInt *Const = getConstInt(MD2, 0);
+          ConstantInt *Const = getMDOperandAsConstInt(MD2, 0);
           assert(Const && "MDOperand should be ConstantInt");
           auto Dec =
               static_cast<SPIRV::Decoration::Decoration>(Const->getZExtValue());
           std::vector<uint32_t> DecVec;
           for (unsigned j = 1; j < MD2->getNumOperands(); j++) {
-            ConstantInt *Const = getConstInt(MD2, j);
+            ConstantInt *Const = getMDOperandAsConstInt(MD2, j);
             assert(Const && "MDOperand should be ConstantInt");
             DecVec.push_back(static_cast<uint32_t>(Const->getZExtValue()));
           }

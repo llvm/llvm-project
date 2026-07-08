@@ -376,6 +376,18 @@ def SVEShiftImmR64 : ComplexPattern<i64, 1, "SelectSVEShiftImm<1, 64, true>", []
 
 def SVEShiftSplatImmR : ComplexPattern<iAny, 1, "SelectSVEShiftSplatImmR", []>;
 
+let WantsRoot = true in {
+  def am_sve_indexed_s4 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-8, 7>">;
+  def am_sve_indexed_s6 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-32, 31>">;
+  def am_sve_indexed_s9 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-256, 255>">;
+}
+
+def am_sve_regreg_lsl0 : ComplexPattern<iPTR, 2, "SelectSVERegRegAddrMode<0>", []>;
+def am_sve_regreg_lsl1 : ComplexPattern<iPTR, 2, "SelectSVERegRegAddrMode<1>", []>;
+def am_sve_regreg_lsl2 : ComplexPattern<iPTR, 2, "SelectSVERegRegAddrMode<2>", []>;
+def am_sve_regreg_lsl3 : ComplexPattern<iPTR, 2, "SelectSVERegRegAddrMode<3>", []>;
+def am_sve_regreg_lsl4 : ComplexPattern<iPTR, 2, "SelectSVERegRegAddrMode<4>", []>;
+
 def SVEAllActive : ComplexPattern<untyped, 0, "SelectAllActivePredicate", []>;
 def SVEAnyPredicate : ComplexPattern<untyped, 0, "SelectAnyPredicate", []>;
 
@@ -7379,6 +7391,14 @@ multiclass sve_mem_p_spill<string asm> {
 
   def : InstAlias<asm # "\t$Pt, [$Rn]",
                   (!cast<Instruction>(NAME) PPRorPNRAny:$Pt, GPR64sp:$Rn, 0), 1>;
+
+  // base + immediate (mul vl)
+  def : Pat<(store nxv16i1:$val, (am_sve_indexed_s9 GPR64sp:$base, simm9:$offset)),
+            (!cast<Instruction>(NAME) PPR:$val, GPR64sp:$base, simm9:$offset)>;
+
+  // base
+  def : Pat<(store nxv16i1:$val, GPR64:$base),
+            (!cast<Instruction>(NAME) PPR:$val, GPR64:$base, (i64 0))>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -8702,6 +8722,14 @@ multiclass sve_mem_p_fill<string asm> {
 
   def : InstAlias<asm # "\t$Pt, [$Rn]",
                   (!cast<Instruction>(NAME) PPRorPNRAny:$Pt, GPR64sp:$Rn, 0), 1>;
+
+  // base + immediate (mul vl)
+  def : Pat<(nxv16i1 (load  (am_sve_indexed_s9 GPR64sp:$base, simm9:$offset))),
+            (!cast<Instruction>(NAME) GPR64sp:$base, simm9:$offset)>;
+
+  // base
+  def : Pat<(nxv16i1 (load GPR64:$base)),
+            (!cast<Instruction>(NAME) GPR64:$base, (i64 0))>;
 }
 
 class sve2_mem_gldnt_vs_base<bits<5> opc, dag iops, string asm,
@@ -9902,19 +9930,6 @@ multiclass sve_int_perm_bin_perm_128_zz<bits<2> opc, bit P, string asm, SDPatter
   def : SVE_2_Op_Pat<nxv2f64,  op, nxv2f64,  nxv2f64,  !cast<Instruction>(NAME)>;
   def : SVE_2_Op_Pat<nxv8bf16, op, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME)>;
 }
-
-/// Addressing modes
-let WantsRoot = true in {
-  def am_sve_indexed_s4 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-8, 7>">;
-  def am_sve_indexed_s6 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-32, 31>">;
-  def am_sve_indexed_s9 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-256, 255>">;
-}
-
-def am_sve_regreg_lsl0 : ComplexPattern<iPTR, 2, "SelectSVERegRegAddrMode<0>", []>;
-def am_sve_regreg_lsl1 : ComplexPattern<iPTR, 2, "SelectSVERegRegAddrMode<1>", []>;
-def am_sve_regreg_lsl2 : ComplexPattern<iPTR, 2, "SelectSVERegRegAddrMode<2>", []>;
-def am_sve_regreg_lsl3 : ComplexPattern<iPTR, 2, "SelectSVERegRegAddrMode<3>", []>;
-def am_sve_regreg_lsl4 : ComplexPattern<iPTR, 2, "SelectSVERegRegAddrMode<4>", []>;
 
 // Predicated pseudo floating point two operand instructions.
 multiclass sve_fp_bin_pred_hfd<SDPatternOperator op> {

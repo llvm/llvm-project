@@ -288,7 +288,7 @@ protected:
   std::optional<StringExtractorGDBRemote> m_last_stop_packet;
   std::recursive_mutex m_last_stop_packet_mutex;
 
-  GDBRemoteDynamicRegisterInfoSP m_register_info_sp;
+  lldb::DynamicRegisterInfoSP m_register_info_sp;
   Broadcaster m_async_broadcaster;
   lldb::ListenerSP m_async_listener_sp;
   HostThread m_async_thread;

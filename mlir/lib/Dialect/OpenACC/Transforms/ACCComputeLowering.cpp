@@ -138,10 +138,6 @@ static bool isOpInSerialRegion(Operation *op) {
   return false;
 }
 
-static void setParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
-  op->setAttr(GPUParallelDimsAttr::name, attr);
-}
-
 /// Clone defining ops of constant live-in values into `region`, rewrite uses
 /// inside the region to the clones, and remove those values from
 /// `liveInValues` so they are not threaded through `acc.compute_region` ins.
@@ -170,19 +166,6 @@ static void materializeConstantLiveInsIntoRegion(Region &region,
     replaceAllUsesInRegionWith(v, newV, region);
     liveInValues.remove(v);
   }
-}
-
-/// Insert a parallel dimension into the list, maintaining order by
-/// GPUParallelDimAttr::getOrder (descending).
-static void insertParDim(SmallVectorImpl<GPUParallelDimAttr> &parDims,
-                         GPUParallelDimAttr parDim) {
-  GPUParallelDimAttr *lb = llvm::lower_bound(
-      parDims, parDim,
-      [](const GPUParallelDimAttr &a, const GPUParallelDimAttr &b) {
-        return a.getOrder() > b.getOrder();
-      });
-  if (lb == parDims.end() || *lb != parDim)
-    parDims.insert(lb, parDim);
 }
 
 /// Return the device type from which gang/worker/vector clauses should be read.

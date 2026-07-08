@@ -11,7 +11,6 @@
 
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
-#include <cinttypes>
 #include <string>
 
 namespace llvm {

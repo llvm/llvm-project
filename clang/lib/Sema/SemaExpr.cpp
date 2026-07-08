@@ -6828,7 +6828,7 @@ static bool MayBeFunctionType(const ASTContext &Context, const Expr *E) {
       T == Context.BuiltinFnTy || T == Context.OverloadTy ||
       T->isFunctionType() || T->isFunctionReferenceType() ||
       T->isMemberFunctionPointerType() || T->isFunctionPointerType() ||
-      T->isBlockPointerType() || T->isRecordType())
+      T->isBlockPointerType() || T->isRecordType() || T->isUndeducedType())
     return true;
 
   return isa<CallExpr, DeclRefExpr, MemberExpr, CXXPseudoDestructorExpr,

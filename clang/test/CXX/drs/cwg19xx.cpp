@@ -101,19 +101,19 @@ template<typename T> struct A {
   };
 };
 class X {
-  static int x;
-  // FIXME: this is ill-formed, because A<T>::B::C does not end with a simple-template-id
+  static int x; // #cwg1918-X-x
   template <typename T>
   friend class A<T>::B::C;
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::B' for friend class declaration is not supported; turning off access control for 'X'}}
+  // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
 };
 template<> struct A<int> {
   typedef struct Q B;
 };
 struct Q {
   class C {
-    // FIXME: 'f' is not a friend, so 'X::x' is not accessible
     int f() { return X::x; }
+    // expected-error@-1 {{'x' is a private member of 'cwg1918::X'}}
+    //   expected-note@#cwg1918-X-x {{implicitly declared private here}}
   };
 };
 } // namespace cwg1918
@@ -167,10 +167,9 @@ template<typename T> struct A {
 };
 class X {
   static int x;
-  // FIXME: this is ill-formed, because A<T>::B::C does not end with a simple-template-id
   template <typename T>
   friend class A<T>::B::C;
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::B' for friend class declaration is not supported; turning off access control for 'X'}}
+  // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
 };
 } // namespace cwg1945
 

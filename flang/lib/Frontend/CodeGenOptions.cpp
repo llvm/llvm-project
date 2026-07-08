@@ -12,7 +12,6 @@
 
 #include "flang/Frontend/CodeGenOptions.h"
 #include <optional>
-#include <string.h>
 
 namespace Fortran::frontend {
 

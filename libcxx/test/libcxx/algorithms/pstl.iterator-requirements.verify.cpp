@@ -90,6 +90,17 @@ void f(non_forward_iterator non_fwd, non_output_iterator non_output, std::execut
   }
 
   {
+    (void)std::find_first_of(
+        pol, it, it, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: find_first_of}}
+    (void)std::find_first_of(
+        pol, it, it, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: find_first_of}}
+    (void)std::find_first_of(
+        pol, non_fwd, non_fwd, it, it); // expected-error@*:* {{static assertion failed: find_first_of}}
+    (void)std::find_first_of(
+        pol, non_fwd, non_fwd, it, it, pred); // expected-error@*:* {{static assertion failed: find_first_of}}
+  }
+
+  {
     (void)std::for_each(pol, non_fwd, non_fwd, func); // expected-error@*:* {{static assertion failed: for_each}}
     (void)std::for_each_n(pol, non_fwd, n, func);     // expected-error@*:* {{static assertion failed: for_each_n}}
   }

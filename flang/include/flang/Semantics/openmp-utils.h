@@ -13,7 +13,6 @@
 #ifndef FORTRAN_SEMANTICS_OPENMP_UTILS_H
 #define FORTRAN_SEMANTICS_OPENMP_UTILS_H
 
-#include "flang/Common/indirection.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
@@ -29,7 +28,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -361,6 +359,12 @@ std::optional<int64_t> GetMinimumSequenceCount(
 std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
     const parser::OpenMPLoopConstruct &x, unsigned version,
     SemanticsContext *semaCtx = nullptr);
+
+/// Returns whether the loop nest associated with `x` is a doacross loop nest,
+/// i.e. its body contains an `ordered` directive carrying a doacross
+/// dependence (the `doacross` clause, or the pre-5.2 `depend(sink/source)`
+/// equivalent) that binds to `x`. Such a nest must be perfectly nested.
+bool IsDoacrossAffected(const parser::OpenMPLoopConstruct &x);
 
 struct LoopSequence {
   LoopSequence(const parser::ExecutionPartConstruct &root, unsigned version,

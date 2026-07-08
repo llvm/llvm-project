@@ -5467,7 +5467,7 @@ def municode : Joined<["-"], "municode">, Group<m_Group>;
 def mthreads : Joined<["-"], "mthreads">, Group<m_Group>;
 def marm64x : Joined<["-"], "marm64x">, Group<m_Group>,
   Visibility<[ClangOption, CLOption]>,
-  HelpText<"Link as a hybrid ARM64X image">;
+  HelpText<"Build as a hybrid ARM64X object/image">;
 def mguard_EQ : Joined<["-"], "mguard=">, Group<m_Group>,
   HelpText<"Enable or disable Control Flow Guard checks and guard tables emission">,
   Values<"none,cf,cf-nochecks">;

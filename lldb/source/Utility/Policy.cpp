@@ -31,11 +31,17 @@ Policy PolicyStack::Current() const {
 // (tests, dump comparisons); it never reads the current stack.
 Policy Policy::CreatePublicState() { return {}; }
 
-Policy Policy::CreatePrivateState() {
+Policy Policy::CreatePrivateState(PrivateStatePurpose purpose) {
   Policy p = PolicyStack::Get().Current();
   p.view = View::Private;
-  p.capabilities.can_load_frame_providers = false;
-  p.capabilities.can_run_frame_recognizers = false;
+  switch (purpose) {
+  case PrivateStatePurpose::Default:
+    break;
+  case PrivateStatePurpose::RunningExpression:
+    p.capabilities.can_load_frame_providers = false;
+    p.capabilities.can_run_frame_recognizers = false;
+    break;
+  }
   return p;
 }
 

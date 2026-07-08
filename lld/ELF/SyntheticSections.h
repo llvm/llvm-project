@@ -210,7 +210,7 @@ public:
   // primary and optional multiple secondary GOTs.
   void build();
 
-  void addConstant(const Relocation &r);
+  void addConstant(const Relocation &r) { addReloc(r); }
   void addEntry(InputFile &file, Symbol &sym, int64_t addend, RelExpr expr);
   void addDynTlsEntry(InputFile &file, Symbol &sym);
   void addTlsIndex(InputFile &file);

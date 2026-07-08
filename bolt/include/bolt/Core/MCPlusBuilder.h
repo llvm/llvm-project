@@ -2082,6 +2082,16 @@ public:
     return {};
   }
 
+  /// Create a sequence of instructions to compare contents of a register
+  /// \p Reg1 to a register \p Reg2 and jump to \p Target if they are different.
+  virtual InstructionListType createCmpJNEWithReg(MCPhysReg Reg1,
+                                                  MCPhysReg Reg2,
+                                                  const MCSymbol *Target,
+                                                  MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+    return {};
+  }
+
   /// Find memcpy size in bytes by using preceding instructions.
   /// Returns std::nullopt if size cannot be determined (no-op for most
   /// targets).
@@ -2506,7 +2516,7 @@ public:
   };
 
   virtual BlocksVectorTy indirectCallPromotion(
-      const MCInst &CallInst,
+      const MCInst &CallInst, MCPhysReg Reg,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &Targets,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &VtableSyms,
       const std::vector<MCInst *> &MethodFetchInsns,

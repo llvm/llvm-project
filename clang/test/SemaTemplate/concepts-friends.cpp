@@ -566,3 +566,61 @@ struct Test {
 };
 
 }
+
+namespace DependentFriends {
+template <class T> concept X = requires { typename T::type; }; // #DependentFriends_X
+
+struct A {
+  using type = int;
+};
+struct B {};
+
+template <class T> struct C {
+  static void f()
+    requires X<T>; // #DependentFriends_C_f
+};
+
+class D {
+  static int n;
+  template <X T> friend void C<T>::f();
+};
+
+template <class T> struct E {
+  template <X U> // #DependentFriends_E_TPL
+  static void f() // #DependentFriends_E_f
+    requires X<T>;
+};
+
+class F {
+  static int n;
+  template <X T> template <X U>
+  friend void E<T>::f()
+    requires X<T>;
+};
+
+template <class T>
+void C<T>::f() requires X<T> {
+  D::n = 0;
+}
+
+template <class T>
+template <X U>
+void E<T>::f() requires X<T> {
+  F::n = 0;
+}
+
+void test() {
+  C<A>::f();
+  C<B>::f();
+  // expected-error@-1 {{invalid reference to function 'f': constraints not satisfied}}
+  //   expected-note@#DependentFriends_C_f {{because 'DependentFriends::B' does not satisfy 'X'}}
+  //   expected-note@#DependentFriends_X {{because 'typename T::type' would be invalid: no type named 'type' in 'DependentFriends::B'}}
+
+  E<A>::f<A>();
+  E<A>::f<B>();
+  // expected-error@-1 {{no matching function for call to 'f'}}
+  //   expected-note@#DependentFriends_E_f {{candidate template ignored: constraints not satisfied}}
+  //   expected-note@#DependentFriends_E_TPL {{because 'DependentFriends::B' does not satisfy 'X'}}
+  //   expected-note@#DependentFriends_X {{because 'typename T::type' would be invalid: no type named 'type' in 'DependentFriends::B'}}
+}
+}

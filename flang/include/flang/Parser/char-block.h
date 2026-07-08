@@ -15,9 +15,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
-#include <iosfwd>
 #include <string>
-#include <utility>
 
 namespace llvm {
 class raw_ostream;

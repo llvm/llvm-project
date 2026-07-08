@@ -12,6 +12,7 @@
 
 #include "flang/Lower/Bridge.h"
 
+#include "flang/Evaluate/tools.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
 #include "flang/Lower/CallInterface.h"
@@ -49,7 +50,6 @@
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -90,6 +90,10 @@
 static llvm::cl::opt<bool> forceLoopToExecuteOnce(
     "always-execute-loop-body", llvm::cl::init(false),
     llvm::cl::desc("force the body of a loop to execute at least once"));
+
+static llvm::cl::opt<bool> enableSplitSumExpressionTreeLowering(
+    "enable-split-sum-expression-tree-lowering", llvm::cl::Hidden,
+    llvm::cl::desc("Enable experimental split sum expression tree lowering"));
 
 namespace {
 /// Information for generating a structured or unstructured increment loop.
@@ -2416,7 +2420,8 @@ private:
     Fortran::lower::omp::ReductionProcessor rp;
     bool result = rp.processReductionArguments<fir::DeclareReductionOp>(
         toLocation(), *this, info.reduceOperatorList, reduceVars,
-        reduceVarByRef, reductionDeclSymbols, info.reduceSymList);
+        reduceVarByRef, reductionDeclSymbols, info.reduceSymList,
+        /*reductionObjects=*/{}, getSymbolMap());
     if (!result)
       TODO(toLocation(), "Lowering unrecognised reduction type");
 
@@ -5569,8 +5574,18 @@ private:
 
     // Helper to generate the code evaluating the right-hand side.
     auto evaluateRhs = [&](Fortran::lower::StatementContext &stmtCtx) {
+      const Fortran::lower::SomeExpr *rhsExpr = &assign.rhs;
+      std::optional<Fortran::lower::SomeExpr> rewritten;
+      if (enableSplitSumExpressionTreeLowering &&
+          Fortran::evaluate::CanBuildSplitSumExpressionTree(assign.lhs,
+                                                            assign.rhs)) {
+        rewritten =
+            Fortran::evaluate::TryBuildSplitSumExpressionTree(assign.rhs);
+        if (rewritten)
+          rhsExpr = &*rewritten;
+      }
       hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
-          loc, *this, assign.rhs, localSymbols, stmtCtx);
+          loc, *this, *rhsExpr, localSymbols, stmtCtx);
       // Load trivial scalar RHS to allow the loads to be hoisted outside of
       // loops early if possible. This also dereferences pointer and
       // allocatable RHS: the target is being assigned from.

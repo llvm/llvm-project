@@ -640,6 +640,12 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.macros.config
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.types.off_t
+    libc.hdr.types.struct_f_owner_ex
+    libc.hdr.types.struct_flock
+    libc.hdr.types.struct_flock64
     libc.include.sys_syscall
 )
 
@@ -674,6 +680,7 @@ add_header_library(
     dup2.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fcntl
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.macros.config

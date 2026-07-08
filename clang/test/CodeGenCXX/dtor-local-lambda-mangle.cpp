@@ -10,7 +10,7 @@ struct E {
 
 E::E() {
   struct {
-    // CHECK-DAG: _ZTSN1EC13$_012anotherValueMUlvE_E
+    // CHECK-DAG: _ZTSZN1EC1EvEN3$_012anotherValueMUlvE_E
     int anotherValue = [x = 1] { return x; }();
   } obj;
 }
@@ -18,14 +18,14 @@ E::E() {
 template<typename T>
 E::E(T t) {
   struct {
-    // CHECK-DAG: _ZTSN1EC1IiEUt_12anotherValueMUlvE_E
+    // CHECK-DAG: _ZTSZN1EC1IiEET_ENUt_12anotherValueMUlvE_E
     int anotherValue = [x = 1] { return x; }();
   } obj;
 }
 
 E::~E() {
   struct {
-    // CHECK-DAG: _ZTSN1ED13$_012anotherValueMUlvE_E
+    // CHECK-DAG: _ZTSZN1ED1EvEN3$_012anotherValueMUlvE_E
     int anotherValue = [x = 2] { return x; }();
   } obj;
 }

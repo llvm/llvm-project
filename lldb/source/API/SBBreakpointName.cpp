@@ -102,7 +102,7 @@ lldb_private::BreakpointName *SBBreakpointNameImpl::GetBreakpointName() const {
   if (!target_sp)
     return nullptr;
   Status error;
-  return target_sp->FindBreakpointName(ConstString(m_name), true, error);
+  return target_sp->FindBreakpointName(m_name, true, error);
 }
 
 } // namespace lldb

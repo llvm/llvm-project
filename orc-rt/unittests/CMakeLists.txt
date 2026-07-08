@@ -28,6 +28,7 @@ add_orc_rt_unittest(CoreTests
   IntervalMapTest.cpp
   IntervalSetTest.cpp
   LockedAccessTest.cpp
+  LoggingTest.cpp
   MacroUtilsTest.cpp
   MathTest.cpp
   MemoryAccessSPSCITest.cpp

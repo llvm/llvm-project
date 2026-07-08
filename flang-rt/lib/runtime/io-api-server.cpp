@@ -305,6 +305,11 @@ extern "C" void register_rpc_callback_stub(RPCCallbackTy) {
 #pragma comment(linker, \
     "/alternatename:__tgt_register_rpc_callback=" \
     "register_rpc_callback_stub")
+#if defined(_M_ARM64EC)
+#pragma comment(linker, \
+    "/alternatename:#__tgt_register_rpc_callback=" \
+    "#register_rpc_callback_stub")
+#endif
 #endif
 
 // Used for I/O from the offloading device runtime.

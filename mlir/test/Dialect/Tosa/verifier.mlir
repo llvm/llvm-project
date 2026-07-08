@@ -1675,7 +1675,6 @@ func.func @test_cast_between_block_scaled(%arg0: tensor<4x32x!tosa.block_scaled<
 // -----
 
 func.func @test_block_scaled_cast_invalid_block_shape(%arg0: tensor<1x16x31x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<1x16x31xf32> {
-  // expected-error@+2 {{tensor type 'tensor<1x16x31x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>' blocked dimension must be a multiple of block size, got 31 and block size 32}}
   // expected-error@+1 {{'tosa.cast' op operand #0 must be tosa-conformant tensor of number values, but got 'tensor<1x16x31x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>'}}
   %0 = tosa.cast %arg0 : (tensor<1x16x31x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<1x16x31xf32>
   return %0 : tensor<1x16x31xf32>
@@ -1684,7 +1683,6 @@ func.func @test_block_scaled_cast_invalid_block_shape(%arg0: tensor<1x16x31x!tos
 // -----
 
 func.func @test_block_scaled_cast_scalar(%arg0: tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<f32> {
-  // expected-error@+2 {{tensor type 'tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>' does not support block scaling on scalar tensors}}
   // expected-error@+1 {{'tosa.cast' op operand #0 must be tosa-conformant tensor of number values, but got 'tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>'}}
   %0 = tosa.cast %arg0 : (tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<f32>
   return %0 : tensor<f32>

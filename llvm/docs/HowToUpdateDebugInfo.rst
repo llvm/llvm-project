@@ -432,13 +432,13 @@ Using Coverage Tracking to remove false positives
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 As described :ref:`above<WhenToDropLocation>`, there are valid reasons for
-instructions to not have source locations. Therefore, when detecting dropped or
-not-generated source locations, it may be preferable to avoid detecting cases
-where the missing source location is intentional. For this, you can use the
-"coverage tracking" feature in LLVM to prevent these from appearing in the
-``debugify`` output. This is enabled in a build of LLVM by setting the CMake
-flag ``-DLLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=COVERAGE``. When this has been
-set, LLVM will enable runtime tracking of
+instructions to not have source locations. Therefore, when detecting missing
+source locations, it may be preferable to avoid detecting cases where the
+missing source location is intentional. For this, you can use the "coverage
+tracking" feature in LLVM to prevent these from appearing in the ``debugify``
+output. This is enabled in a build of LLVM by setting the CMake flag
+``-DLLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=COVERAGE``. When this has been set,
+LLVM will enable runtime tracking of
 :ref:`DebugLoc annotations<NewInstLocations>`, allowing ``debugify`` to ignore
 instructions that have an explicitly recorded reason given for not having a
 source location.

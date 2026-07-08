@@ -409,14 +409,13 @@ define void @divergent_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1164DAGISEL-TRUE16-LABEL: divergent_value_i16:
 ; GFX1164DAGISEL-TRUE16:       ; %bb.0: ; %entry
 ; GFX1164DAGISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1164DAGISEL-TRUE16-NEXT:    v_mov_b16_e32 v3.h, 0
-; GFX1164DAGISEL-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v2.l
+; GFX1164DAGISEL-TRUE16-NEXT:    v_cvt_u32_u16_e32 v2, v2.l
 ; GFX1164DAGISEL-TRUE16-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1164DAGISEL-TRUE16-NEXT:    s_mov_b32 s2, 0
 ; GFX1164DAGISEL-TRUE16-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1164DAGISEL-TRUE16-NEXT:    s_ctz_i32_b64 s3, s[0:1]
 ; GFX1164DAGISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX1164DAGISEL-TRUE16-NEXT:    v_readlane_b32 s4, v3, s3
+; GFX1164DAGISEL-TRUE16-NEXT:    v_readlane_b32 s4, v2, s3
 ; GFX1164DAGISEL-TRUE16-NEXT:    s_bitset0_b64 s[0:1], s3
 ; GFX1164DAGISEL-TRUE16-NEXT:    s_max_u32 s2, s2, s4
 ; GFX1164DAGISEL-TRUE16-NEXT:    s_cmp_lg_u64 s[0:1], 0
@@ -429,14 +428,13 @@ define void @divergent_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1132DAGISEL-TRUE16-LABEL: divergent_value_i16:
 ; GFX1132DAGISEL-TRUE16:       ; %bb.0: ; %entry
 ; GFX1132DAGISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1132DAGISEL-TRUE16-NEXT:    v_mov_b16_e32 v3.h, 0
-; GFX1132DAGISEL-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v2.l
+; GFX1132DAGISEL-TRUE16-NEXT:    v_cvt_u32_u16_e32 v2, v2.l
 ; GFX1132DAGISEL-TRUE16-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX1132DAGISEL-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX1132DAGISEL-TRUE16-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1132DAGISEL-TRUE16-NEXT:    s_ctz_i32_b32 s2, s1
 ; GFX1132DAGISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX1132DAGISEL-TRUE16-NEXT:    v_readlane_b32 s3, v3, s2
+; GFX1132DAGISEL-TRUE16-NEXT:    v_readlane_b32 s3, v2, s2
 ; GFX1132DAGISEL-TRUE16-NEXT:    s_bitset0_b32 s1, s2
 ; GFX1132DAGISEL-TRUE16-NEXT:    s_max_u32 s0, s0, s3
 ; GFX1132DAGISEL-TRUE16-NEXT:    s_cmp_lg_u32 s1, 0

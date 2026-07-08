@@ -2680,6 +2680,17 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   // original binop(s). If binops have multiple uses, they won't be eliminated.
   ReducedInstCount |= SingleSrcBinOp && LHS->hasOneUser() && RHS->hasOneUser();
 
+  // For concat shuffles of i1 vectors where both binops are one-use, the
+  // transform keeps the same instruction count but canonicalises to a single
+  // wider binop, enabling downstream folds (e.g. NOT(XOR(concat(a,b),
+  // concat(c,d))) -> XNOR(concat(a,b),concat(c,d)) on AVX-512 mask regs).
+  // Restrict to BinaryOperator (not CmpInst) since narrow comparisons may
+  // be cheaper than wide ones on some targets (e.g. AVX-512 vpcmpeq).
+  ReducedInstCount |= cast<ShuffleVectorInst>(&I)->isConcat() &&
+                      I.getType()->getScalarType()->isIntegerTy(1) &&
+                      isa<BinaryOperator>(LHS) && LHS->hasOneUser() &&
+                      RHS->hasOneUser();
+
   auto *ShuffleCmpTy =
       FixedVectorType::get(BinOpTy->getElementType(), ShuffleDstTy);
   InstructionCost NewCost = TTI.getShuffleCost(

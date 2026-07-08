@@ -42,7 +42,7 @@ c.jalr  zero
 c.mv  ra, x0
 # CHECK: :[[#@LINE-1]]:11: error: register must be a GPR excluding zero (x0)
 c.add  ra, ra, x0
-# CHECK: :[[#@LINE-1]]:16: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:16: error: unexpected extra operand for instruction
 
 ## GPRNoX2
 c.lui x2, 4
@@ -93,7 +93,7 @@ c.addi t0, %hi(foo)
 ## simm6nonzero
 c.nop 32
 # CHECK: :[[#@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[#@LINE-2]]:7: note: invalid operand for instruction
+# CHECK: :[[#@LINE-2]]:7: note: unexpected extra operand for instruction
 # CHECK: :[[#@LINE-3]]:7: note: immediate must be non-zero in the range [-32, 31]
 
 ## c_lui_imm

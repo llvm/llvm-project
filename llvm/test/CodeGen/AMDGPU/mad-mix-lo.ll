@@ -2500,7 +2500,8 @@ define i32 @mixlo_zext(float %src0, float %src1, float %src2) #0 {
 ; SDAG-GFX1100-TRUE16:       ; %bb.0:
 ; SDAG-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2
-; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; SDAG-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX1100-FAKE16-LABEL: mixlo_zext:

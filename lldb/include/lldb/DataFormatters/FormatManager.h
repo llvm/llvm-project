@@ -96,13 +96,6 @@ public:
 
   void ForEachCategory(TypeCategoryMap::ForEachCallback callback);
 
-  lldb::TypeCategoryImplSP GetCategory(const char *category_name = nullptr,
-                                       bool can_create = true) {
-    if (!category_name)
-      return GetCategory(m_default_category_name);
-    return GetCategory(ConstString(category_name));
-  }
-
   lldb::TypeCategoryImplSP GetCategory(ConstString category_name,
                                        bool can_create = true);
 

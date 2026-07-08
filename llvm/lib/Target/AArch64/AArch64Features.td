@@ -1010,6 +1010,11 @@ def FeatureFixedLoadLatency4 : SubtargetFeature<
     "fixed-load-latency-4", "FixedLoadLatency", "4",
     "Use a fixed latency of 4 for loads instead of querying the scheduling model">;
 
+def FeatureLimited64bitVectorMulBandwidth : SubtargetFeature<
+    "has-limited-64bit-vector-mul-bandwidth", "HasLimited64bitVectorMulBandwidth", "true",
+    "Has limited 64bit vector multiply bandwidth compared to scalar multiply",
+    [], InlineIgnore>;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

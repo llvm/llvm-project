@@ -1,4 +1,5 @@
 // RUN: fir-opt --split-input-file --cuf-function-rewrite %s | FileCheck %s
+// RUN: fir-opt --split-input-file --cuf-function-rewrite="defer-acc-routines=true" %s | FileCheck %s --check-prefix=DEFER
 
 // Test the bind(c) name "on_device" in device context.
 gpu.module @cuda_device_mod {
@@ -137,6 +138,68 @@ func.func @_QMmtestPsub_extname_host() {
 
 // CHECK-LABEL: func.func @_QMmtestPsub_extname_host
 // CHECK: fir.if %false
+
+// A plain host function (not an OpenACC routine) is still folded to .false.
+// even with defer-acc-routines, which only defers OpenACC routine host copies.
+// DEFER-LABEL: func.func @_QMmtestPsub_extname_host
+// DEFER: fir.if %false
+
+// -----
+
+// Host copy of an OpenACC routine. Folded to .false. by default, but with
+// defer-acc-routines the call is left in place so the later device
+// specialization clones an unfolded body (each copy is folded in its own
+// host/device context by a subsequent run).
+func.func private @on_device_() -> !fir.logical<4> attributes {fir.internal_name = "_QPon_device"}
+func.func @_QMmtestPaccroutine_host() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>} {
+  %c2_i32 = arith.constant 2 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.alloca i32
+  %13 = fir.call @on_device_() fastmath<contract> : () -> !fir.logical<4>
+  %14 = fir.convert %13 : (!fir.logical<4>) -> i1
+  fir.if %14 {
+    fir.store %c1_i32 to %0 : !fir.ref<i32>
+  } else {
+    fir.store %c2_i32 to %0 : !fir.ref<i32>
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @_QMmtestPaccroutine_host
+// CHECK: fir.if %false
+
+// DEFER-LABEL: func.func @_QMmtestPaccroutine_host
+// DEFER: fir.call @on_device_()
+
+// -----
+
+// Device copy (inside gpu.module) of an OpenACC routine is always folded to
+// .true., even with defer-acc-routines, because it is already in its final
+// device placement.
+gpu.module @acc_routine_device_mod {
+  func.func private @on_device_() -> !fir.logical<4> attributes {fir.internal_name = "_QPon_device"}
+  func.func @_QMmtestPaccroutine_device() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>} {
+    %c2_i32 = arith.constant 2 : i32
+    %c1_i32 = arith.constant 1 : i32
+    %0 = fir.alloca i32
+    %13 = fir.call @on_device_() fastmath<contract> : () -> !fir.logical<4>
+    %14 = fir.convert %13 : (!fir.logical<4>) -> i1
+    fir.if %14 {
+      fir.store %c1_i32 to %0 : !fir.ref<i32>
+    } else {
+      fir.store %c2_i32 to %0 : !fir.ref<i32>
+    }
+    return
+  }
+}
+
+// CHECK-LABEL: gpu.module @acc_routine_device_mod
+// CHECK: func.func @_QMmtestPaccroutine_device
+// CHECK: fir.if %true
+
+// DEFER-LABEL: gpu.module @acc_routine_device_mod
+// DEFER: func.func @_QMmtestPaccroutine_device
+// DEFER: fir.if %true
 
 // -----
 

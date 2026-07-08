@@ -434,7 +434,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   if (!force && m_register_info_sp)
     return;
 
-  m_register_info_sp = std::make_shared<GDBRemoteDynamicRegisterInfo>();
+  m_register_info_sp = std::make_shared<DynamicRegisterInfo>();
 
   // Check if qHostInfo specified a specific packet timeout for this
   // connection. If so then lets update our setting so the user knows what the

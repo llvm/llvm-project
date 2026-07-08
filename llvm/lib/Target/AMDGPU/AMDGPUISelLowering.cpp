@@ -5549,6 +5549,16 @@ SDValue AMDGPUTargetLowering::performFAbsCombine(SDNode *N,
                                   DAG.getConstant(0x7fff, SL, SrcVT));
     return DAG.getNode(ISD::FP16_TO_FP, SL, N->getValueType(0), IntFAbs);
   }
+  case ISD::FP_ROUND: {
+    SDLoc SL(N);
+    SDValue CvtSrc = N0.getOperand(0);
+
+    // fabs (fp_round x) -> fp_round (fabs x)
+    SDValue Abs = DAG.getNode(ISD::FABS, SL, CvtSrc.getValueType(), CvtSrc,
+                              N->getFlags());
+    return DAG.getNode(ISD::FP_ROUND, SL, N->getValueType(0), Abs,
+                       N0.getOperand(1), N0->getFlags());
+  }
   default:
     return SDValue();
   }

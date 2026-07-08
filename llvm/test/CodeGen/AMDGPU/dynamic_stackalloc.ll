@@ -3159,11 +3159,10 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i16(i16 
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v1, s33
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v2, s33 offset:4
 ; GFX11-SDAG-NEXT:    s_mov_b32 exec_lo, s0
-; GFX11-SDAG-NEXT:    v_mov_b16_e32 v3.h, 0
-; GFX11-SDAG-NEXT:    v_mov_b16_e32 v3.l, v0.l
+; GFX11-SDAG-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX11-SDAG-NEXT:    s_add_i32 s32, s32, 16
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v3, 2, 15
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x7fff0, v0
 ; GFX11-SDAG-NEXT:    s_or_saveexec_b32 s0, -1
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)

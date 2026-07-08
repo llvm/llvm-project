@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_socket_macros.h"
+#include "hdr/types/sa_family_t.h"
 #include "hdr/types/struct_sockaddr_storage.h"
 #include "hdr/types/struct_sockaddr_un.h"
-
 #include "test/UnitTest/LibcTest.h"
-
-#include <sys/socket.h> // For AF_UNIX
 
 using LlvmLibcSockaddrStorageTest = LIBC_NAMESPACE::testing::Test;
 

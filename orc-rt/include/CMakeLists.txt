@@ -2,6 +2,7 @@ set(ORC_RT_HEADERS
     orc-rt-c/CoreTyspe.h
     orc-rt-c/Error.h
     orc-rt-c/Compiler.h
+    orc-rt-c/Logging.h
     orc-rt-c/WrapperFunction.h
     orc-rt-c/orc-rt.h
     orc-rt/AllocAction.h

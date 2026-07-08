@@ -221,14 +221,14 @@ define i16 @ctls_i16(i16 %x) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_ashrrev_i16 v0.h, 15, v0.l
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_xor_b16 v0.l, v0.l, v0.h
-; GFX11-NEXT:    v_mov_b16_e32 v0.h, 0
-; GFX11-NEXT:    v_clz_i32_u32_e32 v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_xor_b16 v0.l, v0.l, v0.h
+; GFX11-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_clz_i32_u32_e32 v0, v0
 ; GFX11-NEXT:    v_min_u32_e32 v0, 32, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_nc_u32_e32 v0, -16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, -1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %a = ashr i16 %x, 15

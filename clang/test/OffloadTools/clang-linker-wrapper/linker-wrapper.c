@@ -185,6 +185,22 @@ __attribute__((visibility("protected"), used)) int x;
 // AMD-TARGET-ID: clang{{.*}} -o {{.*}}.img -dumpdir a.out.amdgcn.gfx90a:xnack+.img. --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+ -Wl,--no-undefined {{.*}}.o {{.*}}.o
 // AMD-TARGET-ID: clang{{.*}} -o {{.*}}.img -dumpdir a.out.amdgcn.gfx90a:xnack-.img. --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack- -Wl,--no-undefined {{.*}}.o {{.*}}.o
 
+// RUN: llvm-offload-binary -o %t-generic.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t-generic.o -fembed-offload-object=%t-generic.out
+// RUN: llvm-offload-binary -o %t-on.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a:xnack+
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t-on.o -fembed-offload-object=%t-on.out
+// RUN: llvm-offload-binary -o %t-off.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a:xnack-
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t-off.o -fembed-offload-object=%t-off.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld %t-on.o %t-off.o %t-generic.o -o a.out 2>&1 | FileCheck %s --check-prefix=AMD-GENERIC-MERGE
+
+// AMD-GENERIC-MERGE-NOT: -mcpu=gfx90a -Wl,--no-undefined
+// AMD-GENERIC-MERGE: clang{{.*}} -o {{.*}}.img -dumpdir a.out.amdgcn.gfx90a:xnack+.img. --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+ -Wl,--no-undefined {{.*}}.o {{.*}}.o
+// AMD-GENERIC-MERGE: clang{{.*}} -o {{.*}}.img -dumpdir a.out.amdgcn.gfx90a:xnack-.img. --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack- -Wl,--no-undefined {{.*}}.o {{.*}}.o
+
 // RUN: llvm-offload-binary -o %t-lib.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=generic
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t-lib.out

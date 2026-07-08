@@ -3007,6 +3007,11 @@ bool X86TargetLowering::isEligibleForSiblingCallOpt(
   if (IsCalleeWin64 != IsCallerWin64)
     return false;
 
+  // Do not optimize vararg calls with 6 arguments for LFI since LFI reserves
+  // %r11, meaning there will not be enough registers available.
+  if (Subtarget.isLFI() && ArgLocs.size() > 5)
+    return false;
+
   // If we are using a GOT, don't generate sibling calls to non-local,
   // default-visibility symbols. Tail calling such a symbol requires using a GOT
   // relocation, which forces early binding of the symbol. This breaks code that

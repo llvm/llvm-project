@@ -16,7 +16,6 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include <cinttypes>
-#include <utility>
 
 namespace mlir {
 class Operation;

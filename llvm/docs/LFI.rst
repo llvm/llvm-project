@@ -38,10 +38,9 @@ runtime), responsible for initializing the sandbox region, loading the program,
 and servicing system call requests, or other forms of runtime calls.
 
 LFI uses an architecture-specific sandboxing scheme based on the general
-technique of Software-Based Fault Isolation (SFI). Initial support for LFI in
-LLVM is focused on the AArch64 platform, with x86-64 support planned for the
-future. The initial version of LFI for AArch64 is designed to support the
-Armv8.1 AArch64 architecture.
+technique of Software-Based Fault Isolation (SFI). LLVM currently supports LFI
+for the AArch64 and X86-64 platforms. The AArch64 version is designed to
+support the Armv8.1 AArch64 architecture.
 
 See `https://github.com/lfi-project <https://github.com/lfi-project/>`__ for
 details about the LFI project and additional software needed to run LFI
@@ -50,11 +49,11 @@ programs.
 Compiler Requirements
 +++++++++++++++++++++
 
-When building for the ``aarch64_lfi`` target, the compiler must restrict use of
-the instruction set to a subset of instructions, which are known to be safe
-from a sandboxing perspective. To do this, we apply a set of simple rewrites at
-the assembly language level to transform standard native AArch64 assembly into
-LFI-compatible AArch64 assembly.
+When building for an LFI target (``aarch64_lfi`` or ``x86_64_lfi``), the
+compiler must restrict use of the instruction set to a subset of instructions,
+which are known to be safe from a sandboxing perspective. To do this, we apply a
+set of simple rewrites at the assembly language level to transform standard
+native assembly into LFI-compatible assembly.
 
 These rewrites (also called "expansions") are applied at the very end of the
 LLVM compilation pipeline (during the assembler step). This allows the rewrites
@@ -450,6 +449,118 @@ In certain cases, guards may be hoisted outside of loops.
 |                       |    .end:                      |
 |                       |                               |
 +-----------------------+-------------------------------+
+
+X86-64
+++++++
+
+The X86-64 LFI target is ``x86_64_lfi``.
+
+Reserved Registers
+==================
+
+The X86-64 LFI target reserves the following registers:
+
+* ``r14``: always holds the sandbox base address. Also used as the runtime call
+  table pointer (the runtime call table is stored at the sandbox base).
+* ``gs``: always holds the sandbox base address (used as a segment register for
+  memory access sandboxing).
+* ``rsp``: always holds an address within the sandbox.
+* ``r15``: context register (see `Context Register`_).
+* ``r11``: scratch register.
+
+Assembly Rewrites
+=================
+
+Terminology
+~~~~~~~~~~~
+
+In the following assembly rewrites, some shorthand is used.
+
+* ``%rN`` or ``%eN``: refers to any general-purpose non-reserved register.
+* ``{a,b,c}``: matches any of ``a``, ``b``, or ``c``.
+
+Control flow
+~~~~~~~~~~~~
+
+**Note**: these rewrites have not been implemented.
+
+Memory accesses
+~~~~~~~~~~~~~~~
+
+**Note**: these rewrites have not been implemented.
+
+String instructions
+~~~~~~~~~~~~~~~~~~~
+
+**Note**: these rewrites have not been implemented.
+
+Stack modification
+~~~~~~~~~~~~~~~~~~
+
+**Note**: these rewrites have not been implemented.
+
+System instructions
+~~~~~~~~~~~~~~~~~~~
+
+System calls are rewritten into a sequence that loads the return address into
+the scratch register and jumps to the runtime call handler. The runtime call
+handler table is stored at the address pointed to by ``r14``. The ``r11``
+register stores the return address (marked by the label ``.Ltmp`` in the
+block below).
+
++-------------------+-------------------------------+
+|     Original      |           Rewritten           |
++-------------------+-------------------------------+
+| .. code-block::   | .. code-block::               |
+|                   |                               |
+|    syscall        |    leaq .Ltmp(%rip), %r11     |
+|                   |    jmpq *-8(%r14)             |
+|                   |    .Ltmp:                     |
+|                   |                               |
++-------------------+-------------------------------+
+
+Thread pointer
+~~~~~~~~~~~~~~
+
+Thread pointer accesses via the ``%fs`` segment (used for TLS) are rewritten to
+use the virtual thread pointer from the context register (``r15``) at offset 16
+(see `Context Register`_). The rewrite handles any load or store instruction
+with an ``%fs``-segment memory operand. ``Op`` represents any such instruction.
+
++--------------------------------------+----------------------------------------+
+|              Original                |              Rewritten                 |
++--------------------------------------+----------------------------------------+
+| .. code-block::                      | .. code-block::                        |
+|                                      |                                        |
+|    Op %fs:0, %rD                     |    Op 16(%r15), %rD                    |
+|                                      |                                        |
++--------------------------------------+----------------------------------------+
+| .. code-block::                      | .. code-block::                        |
+|                                      |                                        |
+|    Op %fs:(%rX), %rD                 |    movq 16(%r15), %rD                  |
+|                                      |    Op (%rD, %rX), %rD                  |
+|                                      |                                        |
++--------------------------------------+----------------------------------------+
+| .. code-block::                      | .. code-block::                        |
+|                                      |                                        |
+|    Op %rS, %fs:(%rX)                 |    movq 16(%r15), %r11                 |
+|                                      |    Op %rS, (%r11, %rX)                 |
+|                                      |                                        |
++--------------------------------------+----------------------------------------+
+| .. code-block::                      | .. code-block::                        |
+|                                      |                                        |
+|    Op %fs:N(%rX, %rY, S), %rD        |    movq 16(%r15), %r11                 |
+|                                      |    leaq (%r11, %rX), %r11              |
+|                                      |    Op N(%r11, %rY, S), %rD             |
+|                                      |                                        |
++--------------------------------------+----------------------------------------+
+| .. code-block::                      | .. code-block::                        |
+|                                      |                                        |
+|    Op %rS, %fs:N(%rX, %rY, S)        |    movq 16(%r15), %r11                 |
+|                                      |    leaq (%r11, %rX), %r11              |
+|                                      |    Op %rS, N(%r11, %rY, S)             |
+|                                      |                                        |
++--------------------------------------+----------------------------------------+
 
 References
 ++++++++++

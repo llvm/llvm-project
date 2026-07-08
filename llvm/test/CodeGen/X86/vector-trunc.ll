@@ -2018,7 +2018,7 @@ define i16 @PR66194(i8 %q) {
 ; AVX2-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
 ; AVX2-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
 ; AVX2-NEXT:    vpinsrw $7, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,1,1,1,1,1,1,1]
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
@@ -2044,7 +2044,7 @@ define i16 @PR66194(i8 %q) {
 ; AVX512-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
 ; AVX512-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
 ; AVX512-NEXT:    vpinsrw $7, %ecx, %xmm0, %xmm0
-; AVX512-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,1,1,1,1,1,1,1]
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX512-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]

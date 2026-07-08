@@ -617,8 +617,8 @@ define i32 @v_shl_i32_zext_i16(i16 %x) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0x3fff, v0.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 2, v0.l
+; GFX11-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_shl_i32_zext_i16:
@@ -751,12 +751,10 @@ define <2 x i32> @v_shl_v2i32_zext_v2i16(<2 x i16> %x) {
 ; GFX11-TRUE16-LABEL: v_shl_v2i32_zext_v2i16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3fff3fff, v0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
-; GFX11-TRUE16-NEXT:    v_pk_lshlrev_b16 v2, 2, v1 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v0.h
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.h
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3fff3fff, v0
+; GFX11-TRUE16-NEXT:    v_pk_lshlrev_b16 v1, 2, v0 op_sel_hi:[0,1]
+; GFX11-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v1.l
+; GFX11-TRUE16-NEXT:    v_cvt_u32_u16_e32 v1, v1.h
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_shl_v2i32_zext_v2i16:

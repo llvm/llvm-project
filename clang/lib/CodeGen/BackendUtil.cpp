@@ -1127,7 +1127,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (CodeGenOpts.FatLTO) {
       MPM.addPass(PB.buildFatLTODefaultPipeline(
           Level, PrepareForThinLTO,
-          PrepareForThinLTO || shouldEmitRegularLTOSummary()));
+          PrepareForThinLTO || shouldEmitRegularLTOSummary(),
+          CodeGenOpts.VerifyModule));
     } else if (PrepareForThinLTO) {
       MPM.addPass(PB.buildThinLTOPreLinkDefaultPipeline(Level));
     } else if (PrepareForLTO) {
@@ -1301,6 +1302,7 @@ void EmitAssemblyHelper::RunCodegenPipelineNewPM(
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
   CGPassBuilderOption Opt = getCGPassBuilderOption();
+  Opt.DisableVerify = !CodeGenOpts.VerifyModule;
   MachineModuleInfo MMI(TM.get());
   PassInstrumentationCallbacks PIC;
   PipelineTuningOptions PTOptions;

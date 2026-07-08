@@ -6175,6 +6175,7 @@ protected:
     result.AppendMessageWithFormatv(
         "successfully registered scripted frame provider '{0}' for target",
         m_class_options.GetName().c_str());
+    result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   OptionGroupPythonClassWithDict m_class_options;

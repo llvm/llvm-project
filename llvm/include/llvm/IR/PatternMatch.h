@@ -2045,6 +2045,22 @@ inline OneOps_match<OpTy, Instruction::Load> m_Load(const OpTy &Op) {
   return OneOps_match<OpTy, Instruction::Load>(Op);
 }
 
+/// Matches a simple (non-volatile, non-atomic) LoadInst.
+template <typename OpTy> struct LoadSimple_match {
+  OneOps_match<OpTy, Instruction::Load> Base;
+
+  LoadSimple_match(const OpTy &Op) : Base(Op) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    return Base.match(V) && cast<LoadInst>(V)->isSimple();
+  }
+};
+
+template <typename OpTy>
+inline LoadSimple_match<OpTy> m_LoadSimple(const OpTy &Op) {
+  return LoadSimple_match<OpTy>(Op);
+}
+
 /// Matches StoreInst.
 template <typename ValueOpTy, typename PointerOpTy>
 inline TwoOps_match<ValueOpTy, PointerOpTy, Instruction::Store>

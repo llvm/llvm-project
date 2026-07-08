@@ -436,8 +436,7 @@ protected:
           ExecutionContext exe_ctx(thread_sp->GetStackFrameAtIndex(0));
           Process *process = exe_ctx.GetProcessPtr();
           Policy policy = PolicyStack::Get().Current();
-          if (!policy.capabilities.can_run_breakpoint_actions ||
-              process->GetModIDRef().IsRunningExpression()) {
+          if (!policy.capabilities.can_run_breakpoint_actions) {
             // If we are in the middle of evaluating an expression, don't run
             // asynchronous breakpoint commands or expressions.  That could
             // lead to infinite recursion if the command or condition re-calls

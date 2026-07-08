@@ -84,6 +84,8 @@ int __attribute__((target("cpu=hiss,cpu=woof"))) pine_tree(void) { return 4; }
 int __attribute__((target("cpu=pwr9,cpu=pwr10"))) oak_tree(void) { return 4; }
 //expected-warning@+1 {{unknown tune CPU 'hiss' in the 'target' attribute string; 'target' attribute ignored}}
 int __attribute__((target("tune=hiss,tune=woof"))) apple_tree(void) { return 4; }
+// no warning for invalid target features
+int __attribute__((target("woof"))) cherry_tree(void) { return 4; }
 
 #else
 

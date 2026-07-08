@@ -17,7 +17,6 @@
 #include <cstddef>
 #include <cstring>
 #include <utility>
-#include <vector>
 
 namespace Fortran::parser {
 

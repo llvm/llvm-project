@@ -407,26 +407,29 @@ namespace cwg638 { // cwg638: no
   };
 
   class X {
-    typedef int type;
+    typedef int type; // #cwg638-X-type
     template<class T> friend struct A<T>::B;
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::f();
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::g();
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::C::h();
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>::C' for friend class declaration is not supported; turning off access control for 'X'}}
+    // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
   };
 
   template<> struct A<int> {
-    X::type a; // FIXME: private
+    X::type a;
+    // expected-error@-1 {{'type' is a private member of 'cwg638::X'}}
+    //   expected-note@#cwg638-X-type {{implicitly declared private here}}
     struct B {
       X::type b; // ok
     };
-    int f() { X::type c; } // FIXME: private
+    int f() { X::type c; }
+    // expected-error@-1 {{'type' is a private member of 'cwg638::X'}}
+    //   expected-note@#cwg638-X-type {{implicitly declared private here}}
     void g() { X::type d; } // ok
     struct D {
-      void h() { X::type e; } // FIXME: private
+      void h() { X::type e; }
+      // expected-error@-1 {{'type' is a private member of 'cwg638::X'}}
+      //   expected-note@#cwg638-X-type {{implicitly declared private here}}
     };
   };
 } // namespace cwg638

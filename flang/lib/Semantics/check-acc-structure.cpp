@@ -15,7 +15,6 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
-#include "llvm/Support/AtomicOrdering.h"
 
 #include <optional>
 

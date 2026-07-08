@@ -121,9 +121,6 @@ bool BPFMIPeephole::isPhiFrom32Def(MachineInstr *PhiMI)
   for (unsigned i = 1, e = PhiMI->getNumOperands(); i < e; i += 2) {
     MachineOperand &opnd = PhiMI->getOperand(i);
 
-    if (!opnd.isReg())
-      return false;
-
     MachineInstr *PhiDef = MRI->getVRegDef(opnd.getReg());
     if (!PhiDef)
       return false;

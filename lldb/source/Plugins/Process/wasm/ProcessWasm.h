@@ -87,9 +87,7 @@ private:
   friend class UnwindWasm;
   friend class ThreadWasm;
 
-  process_gdb_remote::GDBRemoteDynamicRegisterInfoSP &GetRegisterInfo() {
-    return m_register_info_sp;
-  }
+  lldb::DynamicRegisterInfoSP &GetRegisterInfo() { return m_register_info_sp; }
 
   ProcessWasm(const ProcessWasm &);
   const ProcessWasm &operator=(const ProcessWasm &) = delete;

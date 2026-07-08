@@ -1135,6 +1135,24 @@ multiclass PatXrF<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LASX256:$xj)>;
 }
 
+multiclass PatXrW<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(v16i16 (OpNode(v32i8 LASX256:$vj))),
+            (!cast<LAInst>(Inst#"_H_B") LASX256:$vj)>;
+  def : Pat<(v8i32 (OpNode(v16i16 LASX256:$vj))),
+            (!cast<LAInst>(Inst#"_W_H") LASX256:$vj)>;
+  def : Pat<(v4i64 (OpNode(v8i32 LASX256:$vj))),
+            (!cast<LAInst>(Inst#"_D_W") LASX256:$vj)>;
+}
+
+multiclass PatXrWU<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(v16i16 (OpNode(v32i8 LASX256:$vj))),
+            (!cast<LAInst>(Inst#"_HU_BU") LASX256:$vj)>;
+  def : Pat<(v8i32 (OpNode(v16i16 LASX256:$vj))),
+            (!cast<LAInst>(Inst#"_WU_HU") LASX256:$vj)>;
+  def : Pat<(v4i64 (OpNode(v8i32 LASX256:$vj))),
+            (!cast<LAInst>(Inst#"_DU_WU") LASX256:$vj)>;
+}
+
 multiclass PatXrXr<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v32i8 LASX256:$xj), (v32i8 LASX256:$xk)),
             (!cast<LAInst>(Inst#"_B") LASX256:$xj, LASX256:$xk)>;
@@ -1521,6 +1539,12 @@ defm : PatXrUimmW<loongarch_vsllwil, "XVSLLWIL">;
 
 // XVSLLWIL_{HU_BU/WU_HU/DU_WU}
 defm : PatXrUimmWU<loongarch_vsllwil_u, "XVSLLWIL">;
+
+// VEXTH_{H_B/W_H/D_W}
+defm : PatXrW<loongarch_vexth, "XVEXTH">;
+
+// VEXTH_{HU_BU/WU_HU/DU_WU}
+defm : PatXrWU<loongarch_vexth_u, "XVEXTH">;
 
 // XVCLO_{B/H/W/D}
 def : Pat<(ctlz (vnot v32i8:$xj)), (XVCLO_B v32i8:$xj)>;

@@ -11,10 +11,10 @@ body: |
   bb.1:
     liveins: $w0
 
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = G_CONSTANT i32 8
-    %2:_(s32) = G_SREM %0, %1
-    $w0 = COPY %2(s32)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = G_CONSTANT i32 8
+    %2:_(i32) = G_SREM %0, %1
+    $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 ...
 
@@ -29,10 +29,10 @@ body: |
   bb.1:
     liveins: $w0
 
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = G_CONSTANT i32 10
-    %2:_(s32) = G_SREM %0, %1
-    $w0 = COPY %2(s32)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = G_CONSTANT i32 10
+    %2:_(i32) = G_SREM %0, %1
+    $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 ...
 
@@ -47,10 +47,10 @@ body: |
   bb.1:
     liveins: $w0, $w1
 
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = COPY $w1
-    %2:_(s32) = G_SREM %0, %1
-    $w0 = COPY %2(s32)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
+    %2:_(i32) = G_SREM %0, %1
+    $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 ...
 
@@ -65,10 +65,10 @@ body: |
   bb.1:
     liveins: $w0
 
-    %0:_(s32) = G_IMPLICIT_DEF
-    %1:_(s32) = G_CONSTANT i32 8
-    %2:_(s32) = G_SREM %0, %1
-    $w0 = COPY %2(s32)
+    %0:_(i32) = G_IMPLICIT_DEF
+    %1:_(i32) = G_CONSTANT i32 8
+    %2:_(i32) = G_SREM %0, %1
+    $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 ...
 
@@ -82,10 +82,10 @@ name: srem_both_implicit_def
 body: |
   bb.1:
 
-    %0:_(s32) = G_IMPLICIT_DEF
-    %1:_(s32) = G_IMPLICIT_DEF
-    %2:_(s32) = G_SREM %0, %1
-    $w0 = COPY %2(s32)
+    %0:_(i32) = G_IMPLICIT_DEF
+    %1:_(i32) = G_IMPLICIT_DEF
+    %2:_(i32) = G_SREM %0, %1
+    $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 ...
 
@@ -99,10 +99,10 @@ name: srem_const_const
 body: |
   bb.1:
 
-    %0:_(s32) = G_CONSTANT i32 10
-    %1:_(s32) = G_CONSTANT i32 3
-    %2:_(s32) = G_SREM %0, %1
-    $w0 = COPY %2(s32)
+    %0:_(i32) = G_CONSTANT i32 10
+    %1:_(i32) = G_CONSTANT i32 3
+    %2:_(i32) = G_SREM %0, %1
+    $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 ...
 
@@ -118,10 +118,10 @@ body: |
   bb.1:
     liveins: $w0
 
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = G_CONSTANT i32 8
-    %2:_(s32) = G_SREM %0, %1
-    $w0 = COPY %2(s32)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = G_CONSTANT i32 8
+    %2:_(i32) = G_SREM %0, %1
+    $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 ...
 
@@ -136,10 +136,10 @@ body: |
   bb.1:
     liveins: $w0
 
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = G_CONSTANT i32 -8
-    %2:_(s32) = G_SREM %0, %1
-    $w0 = COPY %2(s32)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = G_CONSTANT i32 -8
+    %2:_(i32) = G_SREM %0, %1
+    $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 ...
 
@@ -153,9 +153,9 @@ name: numsignbits_srem_const_const
 body: |
   bb.1:
 
-    %0:_(s32) = G_CONSTANT i32 10
-    %1:_(s32) = G_CONSTANT i32 3
-    %2:_(s32) = G_SREM %0, %1
-    $w0 = COPY %2(s32)
+    %0:_(i32) = G_CONSTANT i32 10
+    %1:_(i32) = G_CONSTANT i32 3
+    %2:_(i32) = G_SREM %0, %1
+    $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 ...
