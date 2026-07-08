@@ -235,20 +235,19 @@ namespace rdar11147355 {
   template <class T>
   struct A {
     template <class U> class B;
-    template <class S> template <class U> friend class A<S>::B; // expected-warning {{dependent nested name specifier 'A<S>' for friend template declaration is not supported; ignoring this friend declaration}}
+    template <class S> template <class U> friend class A<S>::B;
   private:
-    int n; // expected-note {{here}}
+    int n;
   };
 
   template <class S> template <class U> class A<S>::B {
   public:
-    // FIXME: This should be permitted.
-    int f(A<S*> a) { return a.n; } // expected-error {{private}}
+    int f(A<S*> a) { return a.n; }
   };
 
   A<double>::B<double>  ab;
   A<double*> a;
-  int k = ab.f(a); // expected-note {{instantiation of}}
+  int k = ab.f(a);
 }
 
 namespace RedeclUnrelated {
@@ -339,10 +338,27 @@ class Foo {
 };
 }
 
-namespace GH101330 {
-  template <class T> struct A {
-    template <int N> friend void f() noexcept(N == 0);
-  };
-  template <int N> void f() noexcept(N == 0) {}
-  template struct A<int>;
-} // namespace GH101330
+namespace GH104057 {
+template <class T>
+struct A { // #GH104057-A
+  template <class> struct B;
+
+private:
+  static void f(); // #GH104057-A-f
+  template <class U> friend struct A<U *>::B;
+};
+
+template <class T>
+template <class U> struct A<T>::B {
+  static void g() {
+    A<int>::f();
+    // expected-error@-1 {{'f' is a private member of 'GH104057::A<int>'}}
+    //   expected-note@#GH104057-A-f {{declared private here}}
+    //   expected-note@#GH104057-A {{candidate friend template ignored: could not match 'U *' against 'double'}}
+  }
+};
+
+void test() {
+  A<double>::B<int>::g(); // expected-note {{in instantiation of member function 'GH104057::A<double>::B<int>::g' requested here}}
+}
+}
