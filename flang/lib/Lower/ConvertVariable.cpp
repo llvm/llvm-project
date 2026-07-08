@@ -1293,9 +1293,9 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                 builder->getContext(), *sym);
         cuf::FreeOp::create(*builder, loc, fir::getBase(exv), dataAttr);
       });
-      // Main-program allocatables skip normal deallocation, so free the device
-      // data here, before the descriptor free above (cleanups run LIFO). The
-      // guard avoids reading a torn-down managed descriptor after a reset.
+      // Main-program allocatables skip normal deallocation; free the data
+      // before the descriptor cleanup (LIFO), guarded so we skip a torn-down
+      // descriptor.
       if (sym->owner().kind() == Fortran::semantics::Scope::Kind::MainProgram &&
           Fortran::semantics::IsAllocatable(*sym)) {
         auto *converterPtr = &converter;
