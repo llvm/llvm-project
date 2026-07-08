@@ -7,9 +7,9 @@ define void @combine_loads_v16i8_v32i8(ptr %a) {
 ; VBITS_GE_128-LABEL: combine_loads_v16i8_v32i8:
 ; VBITS_GE_128:       // %bb.0:
 ; VBITS_GE_128-NEXT:    ldp q1, q0, [x0]
-; VBITS_GE_128-NEXT:    ext v2.16b, v1.16b, v0.16b, #2
-; VBITS_GE_128-NEXT:    ext v0.16b, v1.16b, v0.16b, #1
-; VBITS_GE_128-NEXT:    stp q0, q2, [x0]
+; VBITS_GE_128-NEXT:    ext v2.16b, v1.16b, v0.16b, #1
+; VBITS_GE_128-NEXT:    ext v0.16b, v1.16b, v0.16b, #2
+; VBITS_GE_128-NEXT:    stp q2, q0, [x0]
 ; VBITS_GE_128-NEXT:    ret
 ;
 ; VBITS_GE_256-LABEL: combine_loads_v16i8_v32i8:
@@ -93,9 +93,9 @@ define void @combine_loads_v16i8_v32i8_diff_shuffle_order(ptr %a) {
 ; VBITS_GE_128-LABEL: combine_loads_v16i8_v32i8_diff_shuffle_order:
 ; VBITS_GE_128:       // %bb.0:
 ; VBITS_GE_128-NEXT:    ldp q0, q1, [x0]
-; VBITS_GE_128-NEXT:    ext v2.16b, v1.16b, v0.16b, #2
-; VBITS_GE_128-NEXT:    ext v0.16b, v1.16b, v0.16b, #1
-; VBITS_GE_128-NEXT:    stp q0, q2, [x0]
+; VBITS_GE_128-NEXT:    ext v2.16b, v1.16b, v0.16b, #1
+; VBITS_GE_128-NEXT:    ext v0.16b, v1.16b, v0.16b, #2
+; VBITS_GE_128-NEXT:    stp q2, q0, [x0]
 ; VBITS_GE_128-NEXT:    ret
 ;
 ; VBITS_GE_256-LABEL: combine_loads_v16i8_v32i8_diff_shuffle_order:
@@ -133,9 +133,9 @@ define void @combine_loads_v8i16_v16i16(ptr %a) {
 ; VBITS_GE_128-LABEL: combine_loads_v8i16_v16i16:
 ; VBITS_GE_128:       // %bb.0:
 ; VBITS_GE_128-NEXT:    ldp q1, q0, [x0]
-; VBITS_GE_128-NEXT:    ext v2.16b, v1.16b, v0.16b, #4
-; VBITS_GE_128-NEXT:    ext v0.16b, v1.16b, v0.16b, #2
-; VBITS_GE_128-NEXT:    stp q0, q2, [x0]
+; VBITS_GE_128-NEXT:    ext v2.16b, v1.16b, v0.16b, #2
+; VBITS_GE_128-NEXT:    ext v0.16b, v1.16b, v0.16b, #4
+; VBITS_GE_128-NEXT:    stp q2, q0, [x0]
 ; VBITS_GE_128-NEXT:    ret
 ;
 ; VBITS_GE_256-LABEL: combine_loads_v8i16_v16i16:

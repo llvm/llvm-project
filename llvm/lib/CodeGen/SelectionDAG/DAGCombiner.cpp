@@ -27041,15 +27041,12 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
 
   // Check if the loads are consecutive.
   LoadSDNode *Base = nullptr;
-  LoadSDNode *Next = nullptr;
   if (DAG.areNonVolatileConsecutiveLoads(
           L01, L00, L01->getMemoryVT().getStoreSize(), /*Dist=*/1)) {
     Base = L00;
-    Next = L01;
   } else if (DAG.areNonVolatileConsecutiveLoads(
                  L00, L01, L00->getMemoryVT().getStoreSize(), /*Dist=*/1)) {
     Base = L01;
-    Next = L00;
   } else {
     return SDValue(); // not adjacent
   }
@@ -27067,6 +27064,10 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
       Base->getMemOperand(), /*Offset=*/0, WideVT.getStoreSize());
   SDValue WideLoad = DAG.getLoad(WideVT, SDLoc(N), Base->getChain(),
                                  Base->getBasePtr(), WideMMO);
+  SDValue WideMemOp = WideLoad;
+  // Redirect old chain users to the new chain.
+  DAG.makeEquivalentMemoryOrdering(L00, WideMemOp);
+  DAG.makeEquivalentMemoryOrdering(L01, WideMemOp);
   if (NeedBSwap)
     WideLoad = DAG.getNode(ISD::BSWAP, SDLoc(N), WideVT, WideLoad);
 
@@ -27078,9 +27079,9 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
     llvm::append_range(Mask, M1);
   } else {
     int Sz = L00->getMemoryVT().getVectorNumElements();
-    for (unsigned I = 0; I < Sz; ++I)
+    for (int I = 0; I < Sz; ++I)
       Mask.push_back(M0[I] < Sz ? M0[I] + Sz : M0[I] - Sz);
-    for (unsigned I = 0; I < Sz; ++I)
+    for (int I = 0; I < Sz; ++I)
       Mask.push_back(M1[I] < Sz ? M1[I] + Sz : M1[I] - Sz);
   }
   // Create a new shuffle with the new mask.
