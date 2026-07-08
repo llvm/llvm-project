@@ -47,7 +47,7 @@ T make(int i, char c, unsigned char pad_byte) {
   std::memset(&obj, pad_byte, sizeof(T));
   obj.i = i;
   obj.c = c;
-  if constexpr (std::is_same_v<T, WithInternalAndTailPadding>) {
+  if constexpr (std::is_same<T, WithInternalAndTailPadding>::value) {
     obj.c2 = c;
   }
   return obj;
