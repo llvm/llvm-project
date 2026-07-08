@@ -1,8 +1,8 @@
-(configure-options)=
+(configure_options)=
 
 # Adding new libc configure options
 
-[There are a number of configure options](../configure.html) which can be used
+{doc}`There are a number of configure options <../configure>` which can be used
 to configure the libc build. The config system is driven by a set of
 hierarchical JSON files. At the top of the hierarchy is a JSON file by name
 `config.json` in the `config` directory. This JSON file lists the libc
@@ -132,4 +132,3 @@ The CMake configure step automatically generates the user document
 options, using the information in the main `config/config.json` file.
 An update to `config/config.json` will trigger reconfiguration by CMake, which
 in turn will regenerate the documentation in `doc/configure.rst`.
-

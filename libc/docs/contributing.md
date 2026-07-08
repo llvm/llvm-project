@@ -17,7 +17,8 @@ a list of open projects that one can start with:
 2. **Cleanup code-style** - The libc project follows the general
    [LLVM style](https://llvm.org/docs/CodingStandards.html) with specific
    conventions for naming (`snake_case` for functions, `CamelCase` for
-   types). See the {ref}`code_style` page for the authoritative reference.
+   types). See the {doc}`code style <dev/code_style>` page for the
+   authoritative reference.
    Mechanical projects to move parts following old styles to the current
    conventions are welcome.
 3. **Implement Linux syscall wrappers** - A large portion of the POSIX API can
@@ -26,7 +27,8 @@ a list of open projects that one can start with:
    complexity would be to implement syscall wrappers which have not yet been
    implemented.
 4. **Update the clang-tidy lint rules and use them in the build and/or CI** -
-   The libc project has a set of clang-tidy checks (see {ref}`clang_tidy_checks`)
+   The libc project has a set of clang-tidy checks (see
+   {ref}`clang-tidy checks <clang_tidy_checks>`)
    but they are not enabled by default. They can be enabled by configuring with
    `-DLLVM_LIBC_ENABLE_LINTING=ON` (or by setting `LLVM_LIBC_CLANG_TIDY`) and
    running the `libc-lint` build target. This project is about keeping the
@@ -37,4 +39,3 @@ a list of open projects that one can start with:
 6. **Contribute a new OS/Architecture port** - You can contribute a new
    operating system or target architecture port. See {ref}`porting` for more
    information.
-

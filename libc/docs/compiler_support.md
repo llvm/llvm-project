@@ -1,4 +1,4 @@
-(compiler-support)=
+(compiler_support)=
 
 # Compiler Support
 
@@ -11,10 +11,9 @@ As such we cannot guarantee optimal performance for these functions.
 
 For platforms where only `GCC` is natively available but maximum performance
 is required it is possible to bootstrap `Clang` with `GCC` and then use
-`Clang` to build the '`` libc` ``" project.
+`Clang` to build the `libc` project.
 
 ## Minimum supported versions
 
-> - `Clang 11`
-> - `GCC 12.2`
-
+- `Clang 11`
+- `GCC 12.2`

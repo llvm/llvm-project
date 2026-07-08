@@ -1,4 +1,4 @@
-(build-and-test)=
+(build_and_test)=
 
 # Building and Testing the libc
 
@@ -68,15 +68,15 @@ and put the following in your settings.json file:
 
 1. To build with Bazel, use the following command:
 
-> ```sh
-> $> bazel build --config=generic_clang @llvm-project//libc/...
-> ```
+   ```sh
+   $> bazel build --config=generic_clang @llvm-project//libc/...
+   ```
 
 1. To run the unit tests with bazel, use the following command:
 
-> ```sh
-> $> bazel test --config=generic_clang @llvm-project//libc/...
-> ```
+   ```sh
+   $> bazel test --config=generic_clang @llvm-project//libc/...
+   ```
 
 1. The bazel target layout of `libc` is located at: [utils/bazel/llvm-project-overlay/libc/BUILD.bazel](https://github.com/llvm/llvm-project/tree/main/utils/bazel/llvm-project-overlay/libc/BUILD.bazel).
 
@@ -114,4 +114,3 @@ As an example, to build and test in a container for 32-bit Arm:
 If you are cross-compiling the libc for a different architecture, you can use an emulator
 such as QEMU to run the tests directly on your host without a container. See
 {ref}`full_cross_build` for detailed instructions on configuring CMake to use an emulator.
-

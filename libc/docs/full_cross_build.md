@@ -1,4 +1,4 @@
-(full-cross-build)=
+(full_cross_build)=
 
 # Full Cross Build
 
@@ -167,7 +167,7 @@ To build for a GPU architecture, it should only be necessary to specify the
 target triple as one of the supported GPU targets. Currently, this is either
 `nvptx64-nvidia-cuda` for NVIDIA GPUs or `amdgcn-amd-amdhsa` for AMD GPUs.
 More detailed information is provided in the {ref}`GPU
-documentation<libc_gpu_building>`.
+documentation <libc_gpu_building>`.
 
 ## Building and Testing with an Emulator
 
@@ -229,4 +229,3 @@ The standard `check-libc` target relies on the target's system C++ and C library
 headers. Because these tests aren't hermetic, they are not expected to work for
 a standalone cross-compilation build.
 :::
-

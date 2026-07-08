@@ -70,8 +70,8 @@ hand_in_hand
 :hidden: true
 :maxdepth: 1
 
-gpu/index.rst
-uefi/index.rst
+gpu/index
+uefi/index
 ```
 
 ```{toctree}
@@ -79,7 +79,7 @@ uefi/index.rst
 :hidden: true
 :maxdepth: 1
 
-headers/index.rst
+headers/index
 arch_support
 platform_support
 compiler_support
@@ -92,7 +92,7 @@ compiler_support
 
 contributing
 build_and_test
-dev/index.md
+dev/index
 porting
 Maintainers
 ```
@@ -110,4 +110,3 @@ Join the Discord <https://discord.gg/xS7Z362>
 Discord Channel <https://discord.com/channels/636084430946959380/636732994891284500>
 Buildbot <https://lab.llvm.org/buildbot/#/builders?tags=libc>
 ```
-

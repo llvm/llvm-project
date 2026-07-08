@@ -1,4 +1,4 @@
-(modular-format)=
+(modular_format)=
 
 # Modular format strings
 
@@ -18,8 +18,7 @@ involve large tables which may be wholly dead. However, due to the format
 string structure, this code is dead in a way previously invisible to the
 compiler.
 
-To address this, an clang attribute was introduced: `modular_format(<impl_fn>,
-<impl_name>, <aspects>...)`. This adds to the semantics of the existing
+To address this, an clang attribute was introduced: `modular_format(<impl_fn>, <impl_name>, <aspects>...)`. This adds to the semantics of the existing
 `format` attribute (which must also be present, if implicitly.) The first
 argument is a symbol naming a modular version of the implementation; this
 version only weakly refers to "aspects" of the implementation that may not be
@@ -62,4 +61,3 @@ set of aspect names that it needs a verdict on, and the compiler will only
 provide a verdict for those aspects. If libc asks for a verdict on an aspect
 unknown to the compiler, the aspect must be summarily considered to be
 required.
-

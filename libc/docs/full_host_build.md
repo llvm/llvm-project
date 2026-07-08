@@ -1,4 +1,4 @@
-(full-host-build)=
+(full_host_build)=
 
 # Full Host Build
 
@@ -16,7 +16,11 @@ If your build fails with an error saying the compiler can't find
 `/usr/include/asm` to `/usr/include/<HOST TRIPLE>/asm`. Installing the
 `gcc-multilib` package creates this symlink, or you can do it manually with
 this command:
-`sudo ln -s /usr/include/<HOST TRIPLE>/asm /usr/include/asm`
+
+```sh
+sudo ln -s /usr/include/<HOST TRIPLE>/asm /usr/include/asm
+```
+
 (your host triple will probably be similar to `x86_64-linux-gnu`)
 :::
 
@@ -99,10 +103,12 @@ This document describes how to set up a simple sysroot and a compiler that uses 
 scratch. These are not full cross-compilation instructions. We make a few
 assumptions:
 
-> - The host and target are the same architecture and OS. For example, building a Linux x86-64 libc on a Linux x86-64 host.
-> - The host has a working and recent Clang toolchain. Clang 21 has been tested.
-> - Your container is using Debian Testing or a derived distribution. Other distributions likely work but the package names and paths may differ.
-> - You have root access to your machine to set up the compiler wrapper.
+- The host and target are the same architecture and OS. For example, building
+  a Linux x86-64 libc on a Linux x86-64 host.
+- The host has a working and recent Clang toolchain. Clang 21 has been tested.
+- Your container is using Debian Testing or a derived distribution. Other
+  distributions likely work but the package names and paths may differ.
+- You have root access to your machine to set up the compiler wrapper.
 
 For more comprehensive instructions on setting up a sysroot, see the [official LLVM
 guide](https://llvm.org/docs/HowToCrossCompileLLVM.html#setting-up-a-sysroot).
@@ -228,7 +234,7 @@ EOF
 
 You can now use your newly built toolchain by running your wrapper.
 
-```C
+```c
 // hello.c
 #include <stdio.h>
 int main() {
@@ -243,4 +249,3 @@ Compile and run the example:
 llvm-libc-clang hello.c
 ./a.out
 ```
-

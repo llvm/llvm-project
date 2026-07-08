@@ -1,4 +1,4 @@
-(header-generation)=
+(header_generation)=
 
 # Generating Public and Internal headers
 
@@ -15,8 +15,8 @@ header definitions and extra macro and type inclusions from the .h.def file.
 ## Instructions
 
 Required Versions:
-: - Python Version: 3.8
-  - PyYAML Version: 5.1
+- Python Version: 3.8
+- PyYAML Version: 5.1
 
 1. Keep full-build mode on when building, otherwise headers will not be
    generated.
@@ -190,4 +190,3 @@ File to modify if adding something to formatting:
    ensure the expected output file
    `libc/utils/hdrgen/tests/expected_output/test_header.h` has the changes you
    are applying.
-

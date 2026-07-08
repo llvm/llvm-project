@@ -1,4 +1,4 @@
-(getting-started)=
+(getting_started)=
 
 # Getting Started
 
@@ -91,4 +91,3 @@ recommended set of flags. From here, you can visit {ref}`full_host_build`
 for advanced sysroot setup, {ref}`overlay_mode` to learn about using
 LLVM-libc to augment your system's C library, or {ref}`build_concepts`
 to understand other build scenarios.
-

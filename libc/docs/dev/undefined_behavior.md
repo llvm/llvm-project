@@ -1,4 +1,4 @@
-(undefined-behavior)=
+(undefined_behavior)=
 
 # Defining Undefined Behavior
 
@@ -16,26 +16,26 @@ guidelines and the resulting code should behave predictably even in unexpected
 situations.
 
 1. Follow the standards.
-   : 1. If there is no standard, first ask yourself if this implementation is necessary (are there users who need this functionality?). If it truly is, then match existing implementations. Creating competing designs just causes confusion (see the history of qsort_r).
+   1. If there is no standard, first ask yourself if this implementation is necessary (are there users who need this functionality?). If it truly is, then match existing implementations. Creating competing designs just causes confusion (see the history of qsort_r).
 2. Avoid giving an incorrect answer.
-   : 1. In general, correct answer > correct answer (wrong format) > no answer > crash the program >>>>>>> incorrect answer.
-     2. The C library is called frequently in performance critical situations, and so can't afford to do thorough error checking and correction.
-     3. It also cannot give the incorrect answer for any reasonable input, since it is so foundational.
-     4. This leaves crashing or address space corruption as a probable option for a libc function in an ambiguous state.
+   1. In general, correct answer > correct answer (wrong format) > no answer > crash the program >>>>>>> incorrect answer.
+   2. The C library is called frequently in performance critical situations, and so can't afford to do thorough error checking and correction.
+   3. It also cannot give the incorrect answer for any reasonable input, since it is so foundational.
+   4. This leaves crashing or address space corruption as a probable option for a libc function in an ambiguous state.
 3. Don't overcomplicate undefined situations.
-   : 1. It's better to have a slightly confusing result for an undefined input than 100 extra lines of code that are never used for a well defined input.
-     2. LLVM's libc is also used for embedded systems that care a lot about code size.
-     3. Unreasonable inputs can have unreasonable outputs.
+   1. It's better to have a slightly confusing result for an undefined input than 100 extra lines of code that are never used for a well defined input.
+   2. LLVM's libc is also used for embedded systems that care a lot about code size.
+   3. Unreasonable inputs can have unreasonable outputs.
 4. Match other implementations when it makes sense.
-   : 1. Every libc has to make these choices, and sometimes others have already found the right choice.
-     2. Be careful, just because there is a consensus doesn't make that consensus right.
+   1. Every libc has to make these choices, and sometimes others have already found the right choice.
+   2. Be careful, just because there is a consensus doesn't make that consensus right.
 5. LLVM's libc should be consistent with itself.
-   : 1. Similar inputs to the same function should yield similar results, even when the inputs are undefined.
-     2. The same input to similar functions should also yield similar results.
-     3. The same input to the same function on different platforms should yield the same result, unless there's a specific reason not to (e.g. 64 bit long vs 32 bit long).
+   1. Similar inputs to the same function should yield similar results, even when the inputs are undefined.
+   2. The same input to similar functions should also yield similar results.
+   3. The same input to the same function on different platforms should yield the same result, unless there's a specific reason not to (e.g. 64 bit long vs 32 bit long).
 6. Write down the decision.
-   : 1. Every libc has to make a decision on how to handle undefined inputs. Users should be able to find what LLVM's libc does.
-     2. While users shouldn't rely on undefined behavior, it shouldn't surprise them.
+   1. Every libc has to make a decision on how to handle undefined inputs. Users should be able to find what LLVM's libc does.
+   2. While users shouldn't rely on undefined behavior, it shouldn't surprise them.
 
 ## Approaches
 
@@ -53,7 +53,7 @@ There are some behaviors that are technically undefined, but are otherwise consi
 
 ### Interpreting the Standard's Reasoning
 
-Often the standard will imply an intended behavior through what it states is undefined, such as in the case of printf's handling of the %% conversion. The %% conversion is used to write a % character, since it's used as the start of a conversion specifier. The standard specifies that %% must be the complete conversion specifier, and any options would make the conversion undefined. The conversion specifier %10% can therefore be interpreted as a % conversion with a width of 10, but the standard implies that this is not necessary. By making the options undefined, the standard implies a desired behavior for %% with options. The implied behavior is to ignore all options and always print %. This still leaves the behavior of %\*% ambiguous, since the star normally consumes an argument to be used as the width. Since % conversions ignore the width, it would be reasonable to not read the argument in this case, but it would add additional complexity to the parsing logic. For that reason, the implementation in LLVM's libc will consume an argument for %\*%, although the value is ignored. Adding additional logic for unreasonable edge cases, such as this one, is unnecessary.
+Often the standard will imply an intended behavior through what it states is undefined, such as in the case of printf's handling of the %% conversion. The %% conversion is used to write a % character, since it's used as the start of a conversion specifier. The standard specifies that %% must be the complete conversion specifier, and any options would make the conversion undefined. The conversion specifier %10% can therefore be interpreted as a % conversion with a width of 10, but the standard implies that this is not necessary. By making the options undefined, the standard implies a desired behavior for %% with options. The implied behavior is to ignore all options and always print %. This still leaves the behavior of `%*%` ambiguous, since the star normally consumes an argument to be used as the width. Since % conversions ignore the width, it would be reasonable to not read the argument in this case, but it would add additional complexity to the parsing logic. For that reason, the implementation in LLVM's libc will consume an argument for `%*%`, although the value is ignored. Adding additional logic for unreasonable edge cases, such as this one, is unnecessary.
 
 ### Ignoring Bug-For-Bug Compatibility
 
@@ -195,4 +195,3 @@ Cyclic joining with more than two threads is not detected.
 Concurrent and repeated joinings on the same thread are faulty behaviors, because
 target thread's TLS may already be torn down. `EINVAL` may be returned if
 multiple joinings occur on the same thread but it is not guaranteed to observe.
-

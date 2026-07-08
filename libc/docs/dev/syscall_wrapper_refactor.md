@@ -1,4 +1,4 @@
-(syscall-wrapper-refactor)=
+(syscall_wrapper_refactor)=
 
 # Syscall Wrapper Refactoring
 
@@ -66,4 +66,3 @@ LIBC_INLINE ErrorOr<ssize_t> read(int fd, void *buf, size_t count) {
      `linux_syscalls::<function_name>`.
    - Update the entrypoint's `DEPENDS` in `CMakeLists.txt` to include the
      new wrapper target.
-
