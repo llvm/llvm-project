@@ -1,8 +1,6 @@
 {
   "lu_namespace": [
-    {
-      "name": "test.exe"
-    }
+    "test.exe"
   ],
   "id_table": [
     {
@@ -10,12 +8,8 @@
       "name": {
         "suffix": "",
         "namespace": [
-          {
-            "name": "test.cpp"
-          },
-          {
-            "name": "test.exe"
-          }
+          "test.cpp",
+          "test.exe"
         ]
       }
     }

@@ -71,15 +71,15 @@ JSONFormat::readTUSummaryFromObject(const Object &RootObject) {
 
   llvm::Triple T(*OptTargetTriple);
 
-  const Object *TUNamespaceObject = RootObject.getObject("tu_namespace");
-  if (!TUNamespaceObject) {
+  const Array *TUNamespaceArray = RootObject.getArray("tu_namespace");
+  if (!TUNamespaceArray) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
-                                "BuildNamespace", "tu_namespace", "object")
+                                "BuildNamespace", "tu_namespace", "array")
         .build();
   }
 
-  auto ExpectedTUNamespace = buildNamespaceFromJSON(*TUNamespaceObject);
+  auto ExpectedTUNamespace = buildNamespaceFromJSON(*TUNamespaceArray);
   if (!ExpectedTUNamespace) {
     return ErrorBuilder::wrap(ExpectedTUNamespace.takeError())
         .context(ErrorMessages::ReadingFromField, "BuildNamespace",

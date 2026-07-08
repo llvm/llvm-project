@@ -15,7 +15,22 @@
 namespace clang::ssaf {
 namespace {
 
-TEST(BuildNamespaceTest, Equality) {
+TEST(BuildNamespaceTest, DefaultConstructionIsEmpty) {
+  BuildNamespace BN;
+  EXPECT_TRUE(BN.empty());
+}
+
+TEST(BuildNamespaceTest, SingleNameConstruction) {
+  BuildNamespace BN("test.cpp");
+  EXPECT_FALSE(BN.empty());
+}
+
+TEST(BuildNamespaceTest, VectorConstruction) {
+  BuildNamespace BN(std::vector<std::string>{"a", "b", "c"});
+  EXPECT_FALSE(BN.empty());
+}
+
+TEST(BuildNamespaceTest, EqualityByNames) {
   BuildNamespace BN1("test.cpp");
   BuildNamespace BN2("test.cpp");
   BuildNamespace BN3("other.cpp");
@@ -24,87 +39,64 @@ TEST(BuildNamespaceTest, Equality) {
   EXPECT_NE(BN1, BN3);
 }
 
-// NestedBuildNamespace Tests
-
-TEST(NestedBuildNamespaceTest, DefaultConstruction) {
-  NestedBuildNamespace NBN;
-  EXPECT_TRUE(NBN.empty());
+TEST(BuildNamespaceTest, EqualityAcrossLevels) {
+  BuildNamespace Single("test.cpp");
+  BuildNamespace Multi(std::vector<std::string>{"test.cpp", "app"});
+  EXPECT_NE(Single, Multi);
 }
 
-TEST(NestedBuildNamespaceTest, SingleNamespaceConstruction) {
-  BuildNamespace BN("test.cpp");
-  NestedBuildNamespace NBN(BN);
+TEST(BuildNamespaceTest, MakeQualifiedAppendsLevels) {
+  BuildNamespace CU("test.cpp");
+  BuildNamespace LU("app");
+  auto Qualified = CU.makeQualified(LU);
 
-  EXPECT_FALSE(NBN.empty());
+  EXPECT_NE(Qualified, CU);
+  EXPECT_NE(Qualified, LU);
 }
 
-TEST(NestedBuildNamespaceTest, Equality) {
-  NestedBuildNamespace NBN1(BuildNamespace("test.cpp"));
-  NestedBuildNamespace NBN2(BuildNamespace("test.cpp"));
-  NestedBuildNamespace NBN3(BuildNamespace("other.cpp"));
-
-  EXPECT_EQ(NBN1, NBN2);
-  EXPECT_NE(NBN1, NBN3);
+TEST(BuildNamespaceTest, MakeQualifiedFromEmpty) {
+  BuildNamespace Empty;
+  BuildNamespace Named("test.cpp");
+  auto Qualified = Empty.makeQualified(Named);
+  EXPECT_EQ(Qualified, Named);
 }
 
-TEST(NestedBuildNamespaceTest, MakeQualified) {
-  NestedBuildNamespace NBN1(BuildNamespace("test.cpp"));
-  BuildNamespace LinkNS("app");
-  NestedBuildNamespace NBN2(LinkNS);
-
-  auto Qualified = NBN1.makeQualified(NBN2);
-
-  EXPECT_NE(Qualified, NBN1);
-  EXPECT_NE(Qualified, NBN2);
+TEST(BuildNamespaceTest, MakeQualifiedWithEmpty) {
+  BuildNamespace Named("test.cpp");
+  BuildNamespace Empty;
+  auto Qualified = Named.makeQualified(Empty);
+  EXPECT_EQ(Qualified, Named);
 }
 
-TEST(NestedBuildNamespaceTest, EmptyQualified) {
-  NestedBuildNamespace Empty;
-  NestedBuildNamespace NBN(BuildNamespace("test.cpp"));
-
-  auto Qualified = Empty.makeQualified(NBN);
-  EXPECT_EQ(Qualified, NBN);
+TEST(BuildNamespaceTest, StreamOutputEmpty) {
+  BuildNamespace BN;
+  std::string S;
+  llvm::raw_string_ostream(S) << BN;
+  EXPECT_EQ(S, "BuildNamespace([])");
 }
 
-TEST(BuildNamespaceTest, FormatProvider) {
-  EXPECT_EQ(llvm::formatv("{0}", BuildNamespace("test.cpp")).str(),
-            "BuildNamespace(test.cpp)");
-}
-
-TEST(NestedBuildNamespaceTest, FormatProvider) {
-  NestedBuildNamespace NBN(BuildNamespace("test.cpp"));
-  EXPECT_EQ(llvm::formatv("{0}", NBN).str(),
-            "NestedBuildNamespace([BuildNamespace(test.cpp)])");
-}
-
-TEST(BuildNamespaceTest, StreamOutput) {
+TEST(BuildNamespaceTest, StreamOutputSingle) {
   BuildNamespace BN("test.cpp");
   std::string S;
   llvm::raw_string_ostream(S) << BN;
-  EXPECT_EQ(S, "BuildNamespace(test.cpp)");
+  EXPECT_EQ(S, "BuildNamespace([test.cpp])");
 }
 
-TEST(NestedBuildNamespaceTest, StreamOutputEmpty) {
-  NestedBuildNamespace NBN;
+TEST(BuildNamespaceTest, StreamOutputMultiple) {
+  BuildNamespace BN =
+      BuildNamespace("test.cpp").makeQualified(BuildNamespace("app"));
   std::string S;
-  llvm::raw_string_ostream(S) << NBN;
-  EXPECT_EQ(S, "NestedBuildNamespace([])");
+  llvm::raw_string_ostream(S) << BN;
+  EXPECT_EQ(S, "BuildNamespace([test.cpp, app])");
 }
 
-TEST(NestedBuildNamespaceTest, StreamOutputSingle) {
-  NestedBuildNamespace NBN(BuildNamespace("test.cpp"));
-  std::string S;
-  llvm::raw_string_ostream(S) << NBN;
-  EXPECT_EQ(S, "NestedBuildNamespace([BuildNamespace(test.cpp)])");
+TEST(BuildNamespaceTest, FormatProviderEmpty) {
+  EXPECT_EQ(llvm::formatv("{0}", BuildNamespace()).str(), "BuildNamespace([])");
 }
 
-TEST(NestedBuildNamespaceTest, StreamOutputMultiple) {
-  NestedBuildNamespace NBN(BuildNamespace("test.cpp"));
-  NBN = NBN.makeQualified(NestedBuildNamespace(BuildNamespace("app")));
-  std::string S;
-  llvm::raw_string_ostream(S) << NBN;
-  EXPECT_EQ(S, "NestedBuildNamespace([BuildNamespace(test.cpp), "
-               "BuildNamespace(app)])");
+TEST(BuildNamespaceTest, FormatProviderSingle) {
+  EXPECT_EQ(llvm::formatv("{0}", BuildNamespace("test.cpp")).str(),
+            "BuildNamespace([test.cpp])");
 }
 
 } // namespace

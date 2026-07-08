@@ -181,12 +181,8 @@ private:
   static Object entityIdToJSONObject(EntityId EI);
 
   llvm::Expected<BuildNamespace>
-  buildNamespaceFromJSON(const Object &BuildNamespaceObject) const;
-  Object buildNamespaceToJSON(const BuildNamespace &BN) const;
-
-  llvm::Expected<NestedBuildNamespace>
-  nestedBuildNamespaceFromJSON(const Array &NestedBuildNamespaceArray) const;
-  Array nestedBuildNamespaceToJSON(const NestedBuildNamespace &NBN) const;
+  buildNamespaceFromJSON(const Array &BuildNamespaceArray) const;
+  Array buildNamespaceToJSON(const BuildNamespace &BN) const;
 
   llvm::Expected<EntityName>
   tuEntityNameFromJSON(const Object &EntityNameObject) const;

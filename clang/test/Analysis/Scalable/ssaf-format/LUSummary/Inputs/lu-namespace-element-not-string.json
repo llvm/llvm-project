@@ -1,8 +1,10 @@
 {
-  "tu_namespace": {},
+  "lu_namespace": [
+    42
+  ],
   "id_table": [],
   "linkage_table": [],
   "data": [],
   "target_triple": "arm64-apple-macosx",
-  "type": "TUSummary"
+  "type": "LUSummary"
 }

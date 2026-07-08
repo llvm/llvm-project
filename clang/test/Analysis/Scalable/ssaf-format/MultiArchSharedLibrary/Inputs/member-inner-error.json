@@ -9,9 +9,7 @@
     }
   ],
   "namespace": [
-    {
-      "name": "libfoo"
-    }
+    "libfoo"
   ],
   "type": "MultiArchSharedLibrary"
 }

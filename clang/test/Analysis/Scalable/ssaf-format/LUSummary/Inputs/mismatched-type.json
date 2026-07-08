@@ -3,9 +3,7 @@
   "id_table": [],
   "linkage_table": [],
   "lu_namespace": [
-    {
-      "name": "test.exe"
-    }
+    "test.exe"
   ],
   "target_triple": "arm64-apple-macosx",
   "type": "TUSummary"

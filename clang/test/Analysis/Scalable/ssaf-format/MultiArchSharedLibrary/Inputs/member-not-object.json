@@ -3,9 +3,7 @@
     "not an object"
   ],
   "namespace": [
-    {
-      "name": "libfoo"
-    }
+    "libfoo"
   ],
   "type": "MultiArchSharedLibrary"
 }

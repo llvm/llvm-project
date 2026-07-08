@@ -6,8 +6,8 @@
       "type": "StaticLibrary"
     }
   ],
-  "namespace": {
-    "name": "libfoo"
-  },
+  "namespace": [
+    "libfoo"
+  ],
   "type": "MultiArchStaticLibrary"
 }

@@ -8,9 +8,9 @@
       "data": []
     }
   ],
-  "namespace": {
-    "name": "libfoo"
-  },
+  "namespace": [
+    "libfoo"
+  ],
   "target_triple": "arm64-apple-macosx",
   "type": "StaticLibrary"
 }

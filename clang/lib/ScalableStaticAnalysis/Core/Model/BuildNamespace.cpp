@@ -11,8 +11,10 @@
 
 namespace clang::ssaf {
 
+bool BuildNamespace::empty() const { return Names.empty(); }
+
 bool BuildNamespace::operator==(const BuildNamespace &Other) const {
-  return Name == Other.Name;
+  return Names == Other.Names;
 }
 
 bool BuildNamespace::operator!=(const BuildNamespace &Other) const {
@@ -20,31 +22,12 @@ bool BuildNamespace::operator!=(const BuildNamespace &Other) const {
 }
 
 bool BuildNamespace::operator<(const BuildNamespace &Other) const {
-  return Name < Other.Name;
-}
-
-bool NestedBuildNamespace::empty() const { return Namespaces.empty(); }
-
-bool NestedBuildNamespace::operator==(const NestedBuildNamespace &Other) const {
-  return Namespaces == Other.Namespaces;
-}
-
-bool NestedBuildNamespace::operator!=(const NestedBuildNamespace &Other) const {
-  return !(*this == Other);
-}
-
-bool NestedBuildNamespace::operator<(const NestedBuildNamespace &Other) const {
-  return Namespaces < Other.Namespaces;
+  return Names < Other.Names;
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const BuildNamespace &BN) {
-  return OS << "BuildNamespace(" << BN.Name << ")";
-}
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const NestedBuildNamespace &NBN) {
-  OS << "NestedBuildNamespace([";
-  llvm::interleaveComma(NBN.Namespaces, OS);
+  OS << "BuildNamespace([";
+  llvm::interleaveComma(BN.Names, OS);
   OS << "])";
   return OS;
 }

@@ -36,7 +36,7 @@ public:
   /// \param TargetTriple The target triple of the link unit. Every linked TU
   ///        must report the same triple.
   /// \param LUNamespace The namespace identifying this link unit.
-  EntityLinker(llvm::Triple TargetTriple, NestedBuildNamespace LUNamespace)
+  EntityLinker(llvm::Triple TargetTriple, BuildNamespace LUNamespace)
       : Output(std::move(TargetTriple), std::move(LUNamespace)) {}
 
   /// Links a TU summary into a LU summary.
@@ -64,7 +64,7 @@ private:
   /// \returns The resolved LU EntityId.
   EntityId resolveEntity(const EntityName &OldName,
                          const EntityLinkage &Linkage,
-                         const NestedBuildNamespace &TUNamespace);
+                         const BuildNamespace &TUNamespace);
 
   /// Resolves each TU EntityId to its corresponding LU EntityId.
   ///

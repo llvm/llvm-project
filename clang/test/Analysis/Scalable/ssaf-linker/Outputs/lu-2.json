@@ -232,9 +232,7 @@
       "id": 0,
       "name": {
         "namespace": [
-          {
-            "name": "lu-2"
-          }
+          "lu-2"
         ],
         "suffix": "",
         "usr": "c:@F@shared_ext#"
@@ -244,12 +242,8 @@
       "id": 1,
       "name": {
         "namespace": [
-          {
-            "name": "tu2.cpp"
-          },
-          {
-            "name": "lu-2"
-          }
+          "tu2.cpp",
+          "lu-2"
         ],
         "suffix": "",
         "usr": "c:@F@shared_int#"
@@ -259,12 +253,8 @@
       "id": 2,
       "name": {
         "namespace": [
-          {
-            "name": "tu2.cpp"
-          },
-          {
-            "name": "lu-2"
-          }
+          "tu2.cpp",
+          "lu-2"
         ],
         "suffix": "",
         "usr": "c:@F@shared_none#"
@@ -274,9 +264,7 @@
       "id": 3,
       "name": {
         "namespace": [
-          {
-            "name": "lu-2"
-          }
+          "lu-2"
         ],
         "suffix": "",
         "usr": "c:@F@unique_ext_tu2#"
@@ -286,12 +274,8 @@
       "id": 4,
       "name": {
         "namespace": [
-          {
-            "name": "tu2.cpp"
-          },
-          {
-            "name": "lu-2"
-          }
+          "tu2.cpp",
+          "lu-2"
         ],
         "suffix": "",
         "usr": "c:@F@unique_int_tu2#"
@@ -301,12 +285,8 @@
       "id": 5,
       "name": {
         "namespace": [
-          {
-            "name": "tu2.cpp"
-          },
-          {
-            "name": "lu-2"
-          }
+          "tu2.cpp",
+          "lu-2"
         ],
         "suffix": "",
         "usr": "c:@F@unique_none_tu2#"
@@ -352,9 +332,7 @@
     }
   ],
   "lu_namespace": [
-    {
-      "name": "lu-2"
-    }
+    "lu-2"
   ],
   "target_triple": "arm64-apple-macosx",
   "type": "LUSummary"

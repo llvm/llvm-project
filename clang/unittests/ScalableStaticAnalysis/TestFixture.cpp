@@ -33,10 +33,6 @@ void PrintTo(const EntityLinkage &EL, std::ostream *OS) { *OS << asString(EL); }
 
 void PrintTo(const EntityName &EN, std::ostream *OS) { *OS << asString(EN); }
 
-void PrintTo(const NestedBuildNamespace &NBN, std::ostream *OS) {
-  *OS << asString(NBN);
-}
-
 void PrintTo(const SummaryName &SN, std::ostream *OS) { *OS << asString(SN); }
 
 } // namespace clang::ssaf

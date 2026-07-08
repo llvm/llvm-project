@@ -1,7 +1,7 @@
 {
-  "tu_namespace": {
-    "name": "test.cpp"
-  },
+  "tu_namespace": [
+    "test.cpp"
+  ],
   "id_table": [],
   "linkage_table": [],
   "data": [

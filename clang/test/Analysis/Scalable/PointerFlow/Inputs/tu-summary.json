@@ -85,8 +85,8 @@
     }
   ],
   "target_triple": "arm64-apple-macosx",
-  "tu_namespace": {
-    "name": "Mock.cpp"
-  },
+  "tu_namespace": [
+    "Mock.cpp"
+  ],
   "type": "TUSummary"
 }

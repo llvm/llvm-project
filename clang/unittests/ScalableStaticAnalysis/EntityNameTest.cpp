@@ -17,8 +17,8 @@ namespace clang::ssaf {
 namespace {
 
 TEST(EntityNameTest, Equality) {
-  NestedBuildNamespace NBN1(BuildNamespace("test.cpp"));
-  NestedBuildNamespace NBN2(BuildNamespace("test.cpp"));
+  BuildNamespace NBN1(BuildNamespace("test.cpp"));
+  BuildNamespace NBN2(BuildNamespace("test.cpp"));
 
   EntityName EN1("c:@F@foo", "", NBN1);
   EntityName EN2("c:@F@foo", "", NBN2);
@@ -29,7 +29,7 @@ TEST(EntityNameTest, Equality) {
 }
 
 TEST(EntityNameTest, EqualityWithDifferentSuffix) {
-  NestedBuildNamespace NBN(BuildNamespace("test.cpp"));
+  BuildNamespace NBN(BuildNamespace("test.cpp"));
 
   EntityName EN1("c:@F@foo", "1", NBN);
   EntityName EN2("c:@F@foo", "2", NBN);
@@ -38,8 +38,8 @@ TEST(EntityNameTest, EqualityWithDifferentSuffix) {
 }
 
 TEST(EntityNameTest, EqualityWithDifferentNamespace) {
-  NestedBuildNamespace NBN1(BuildNamespace("test1.cpp"));
-  NestedBuildNamespace NBN2(BuildNamespace("test2.cpp"));
+  BuildNamespace NBN1(BuildNamespace("test1.cpp"));
+  BuildNamespace NBN2(BuildNamespace("test2.cpp"));
 
   EntityName EN1("c:@F@foo", "", NBN1);
   EntityName EN2("c:@F@foo", "", NBN2);
@@ -48,10 +48,10 @@ TEST(EntityNameTest, EqualityWithDifferentNamespace) {
 }
 
 TEST(EntityNameTest, MakeQualified) {
-  NestedBuildNamespace NBN1(BuildNamespace("test.cpp"));
+  BuildNamespace NBN1(BuildNamespace("test.cpp"));
   EntityName EN("c:@F@foo", "", NBN1);
 
-  NestedBuildNamespace NBN2(BuildNamespace("app"));
+  BuildNamespace NBN2(BuildNamespace("app"));
 
   auto Qualified = EN.makeQualified(NBN2);
 
@@ -59,29 +59,28 @@ TEST(EntityNameTest, MakeQualified) {
 }
 
 TEST(EntityNameTest, FormatProvider) {
-  NestedBuildNamespace NBN(BuildNamespace("test.cpp"));
+  BuildNamespace NBN(BuildNamespace("test.cpp"));
   EntityName EN("c:@F@foo", "", NBN);
-  EXPECT_EQ(llvm::formatv("{0}", EN).str(),
-            "EntityName(c:@F@foo, , "
-            "NestedBuildNamespace([BuildNamespace(test.cpp)]))");
+  EXPECT_EQ(llvm::formatv("{0}", EN).str(), "EntityName(c:@F@foo, , "
+                                            "BuildNamespace([test.cpp]))");
 }
 
 TEST(EntityNameTest, StreamOutputNoSuffix) {
-  NestedBuildNamespace NBN(BuildNamespace("test.cpp"));
+  BuildNamespace NBN(BuildNamespace("test.cpp"));
   EntityName EN("c:@F@foo", "", NBN);
   std::string S;
   llvm::raw_string_ostream(S) << EN;
   EXPECT_EQ(S, "EntityName(c:@F@foo, , "
-               "NestedBuildNamespace([BuildNamespace(test.cpp)]))");
+               "BuildNamespace([test.cpp]))");
 }
 
 TEST(EntityNameTest, StreamOutputWithSuffix) {
-  NestedBuildNamespace NBN(BuildNamespace("test.cpp"));
+  BuildNamespace NBN(BuildNamespace("test.cpp"));
   EntityName EN("c:@F@foo", "1", NBN);
   std::string S;
   llvm::raw_string_ostream(S) << EN;
   EXPECT_EQ(S, "EntityName(c:@F@foo, 1, "
-               "NestedBuildNamespace([BuildNamespace(test.cpp)]))");
+               "BuildNamespace([test.cpp]))");
 }
 
 } // namespace

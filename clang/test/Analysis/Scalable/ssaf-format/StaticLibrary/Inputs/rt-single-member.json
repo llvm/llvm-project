@@ -5,15 +5,15 @@
       "id_table": [],
       "linkage_table": [],
       "target_triple": "arm64-apple-macosx",
-      "tu_namespace": {
-        "name": "a.cpp"
-      },
+      "tu_namespace": [
+        "a.cpp"
+      ],
       "type": "TUSummary"
     }
   ],
-  "namespace": {
-    "name": "libfoo"
-  },
+  "namespace": [
+    "libfoo"
+  ],
   "target_triple": "arm64-apple-macosx",
   "type": "StaticLibrary"
 }

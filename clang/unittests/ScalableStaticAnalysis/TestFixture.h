@@ -42,7 +42,6 @@ void PrintTo(const BuildNamespace &BN, std::ostream *OS);
 void PrintTo(const EntityId &E, std::ostream *OS);
 void PrintTo(const EntityLinkage &EL, std::ostream *OS);
 void PrintTo(const EntityName &EN, std::ostream *OS);
-void PrintTo(const NestedBuildNamespace &NBN, std::ostream *OS);
 void PrintTo(const SummaryName &N, std::ostream *OS);
 
 } // namespace clang::ssaf

@@ -2,9 +2,9 @@
   "members": [
     {
       "members": [],
-      "namespace": {
-        "name": "libfoo"
-      },
+      "namespace": [
+        "libfoo"
+      ],
       "target_triple": "arm64-apple-macosx",
       "type": "StaticLibrary"
     },
@@ -15,21 +15,21 @@
           "id_table": [],
           "linkage_table": [],
           "target_triple": "x86_64-apple-macosx",
-          "tu_namespace": {
-            "name": "a.cpp"
-          },
+          "tu_namespace": [
+            "a.cpp"
+          ],
           "type": "TUSummary"
         }
       ],
-      "namespace": {
-        "name": "libfoo"
-      },
+      "namespace": [
+        "libfoo"
+      ],
       "target_triple": "x86_64-apple-macosx",
       "type": "StaticLibrary"
     }
   ],
-  "namespace": {
-    "name": "libfoo"
-  },
+  "namespace": [
+    "libfoo"
+  ],
   "type": "MultiArchStaticLibrary"
 }

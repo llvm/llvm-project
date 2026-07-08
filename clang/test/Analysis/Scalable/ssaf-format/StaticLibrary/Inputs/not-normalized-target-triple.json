@@ -1,8 +1,8 @@
 {
   "type": "StaticLibrary",
   "target_triple": "arm64-macosx-apple",
-  "namespace": {
-    "name": "libfoo"
-  },
+  "namespace": [
+    "libfoo"
+  ],
   "members": []
 }

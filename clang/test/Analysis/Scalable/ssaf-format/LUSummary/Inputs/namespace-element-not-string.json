@@ -1,9 +1,5 @@
 {
-  "lu_namespace": [
-    {
-      "name": "test.exe"
-    }
-  ],
+  "lu_namespace": ["test.exe"],
   "id_table": [
     {
       "id": 0,
@@ -11,7 +7,7 @@
         "usr": "c:@F@foo",
         "suffix": "",
         "namespace": [
-          "invalid"
+          42
         ]
       }
     }

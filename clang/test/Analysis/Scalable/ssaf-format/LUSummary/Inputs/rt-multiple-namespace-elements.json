@@ -3,15 +3,9 @@
   "id_table": [],
   "linkage_table": [],
   "lu_namespace": [
-    {
-      "name": "a.cpp"
-    },
-    {
-      "name": "b.cpp"
-    },
-    {
-      "name": "libtest.so"
-    }
+    "a.cpp",
+    "b.cpp",
+    "libtest.so"
   ],
   "target_triple": "arm64-apple-macosx",
   "type": "LUSummary"

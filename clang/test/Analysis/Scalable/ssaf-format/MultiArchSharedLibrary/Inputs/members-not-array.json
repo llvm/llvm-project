@@ -1,9 +1,7 @@
 {
   "members": {},
   "namespace": [
-    {
-      "name": "libfoo"
-    }
+    "libfoo"
   ],
   "type": "MultiArchSharedLibrary"
 }

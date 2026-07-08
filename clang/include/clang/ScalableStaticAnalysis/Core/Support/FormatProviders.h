@@ -53,13 +53,6 @@ template <> struct format_provider<clang::ssaf::BuildNamespace> {
   }
 };
 
-template <> struct format_provider<clang::ssaf::NestedBuildNamespace> {
-  static void format(const clang::ssaf::NestedBuildNamespace &Val,
-                     raw_ostream &OS, StringRef Style) {
-    OS << Val;
-  }
-};
-
 template <> struct format_provider<clang::ssaf::EntityName> {
   static void format(const clang::ssaf::EntityName &Val, raw_ostream &OS,
                      StringRef Style) {

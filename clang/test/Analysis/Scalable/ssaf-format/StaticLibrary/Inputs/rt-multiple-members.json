@@ -5,9 +5,9 @@
       "id_table": [],
       "linkage_table": [],
       "target_triple": "arm64-apple-macosx",
-      "tu_namespace": {
-        "name": "a.cpp"
-      },
+      "tu_namespace": [
+        "a.cpp"
+      ],
       "type": "TUSummary"
     },
     {
@@ -15,9 +15,9 @@
       "id_table": [],
       "linkage_table": [],
       "target_triple": "arm64-apple-macosx",
-      "tu_namespace": {
-        "name": "b.cpp"
-      },
+      "tu_namespace": [
+        "b.cpp"
+      ],
       "type": "TUSummary"
     },
     {
@@ -25,15 +25,15 @@
       "id_table": [],
       "linkage_table": [],
       "target_triple": "arm64-apple-macosx",
-      "tu_namespace": {
-        "name": "c.cpp"
-      },
+      "tu_namespace": [
+        "c.cpp"
+      ],
       "type": "TUSummary"
     }
   ],
-  "namespace": {
-    "name": "libmulti"
-  },
+  "namespace": [
+    "libmulti"
+  ],
   "target_triple": "arm64-apple-macosx",
   "type": "StaticLibrary"
 }

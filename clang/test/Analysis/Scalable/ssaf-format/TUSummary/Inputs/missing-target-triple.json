@@ -2,8 +2,8 @@
   "data": [],
   "id_table": [],
   "linkage_table": [],
-  "tu_namespace": {
-    "name": "test.cpp"
-  },
+  "tu_namespace": [
+    "test.cpp"
+  ],
   "type": "TUSummary"
 }

@@ -1,7 +1,7 @@
 {
-  "tu_namespace": {
-    "name": "tu1.cpp"
-  },
+  "tu_namespace": [
+    "tu1.cpp"
+  ],
   "id_table": [
     {
       "id": 0,

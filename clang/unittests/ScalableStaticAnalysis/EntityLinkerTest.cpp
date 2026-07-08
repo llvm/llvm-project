@@ -88,7 +88,7 @@ protected:
 
   EntityId addEntity(TUSummaryEncoding &TU, llvm::StringRef USR,
                      EntityLinkage Linkage) {
-    EntityName Name(USR, "", NestedBuildNamespace());
+    EntityName Name(USR, "", BuildNamespace());
     EntityId Id = getIdTable(TU).getId(Name);
     getLinkageTable(TU).insert({Id, Linkage});
     return Id;
@@ -194,7 +194,7 @@ MATCHER_P(SummaryDataHasSize, ExpectedSize,
 // ============================================================================
 
 TEST_F(EntityLinkerTest, CreatesEmptyLinker) {
-  NestedBuildNamespace LUNamespace({BuildNamespace("LU")});
+  BuildNamespace LUNamespace("LU");
 
   EntityLinker Linker(llvm::Triple("arm64-apple-macosx"), LUNamespace);
 
@@ -205,7 +205,7 @@ TEST_F(EntityLinkerTest, CreatesEmptyLinker) {
 }
 
 TEST_F(EntityLinkerTest, LinksEmptyTranslationUnit) {
-  NestedBuildNamespace LUNamespace({BuildNamespace("LU")});
+  BuildNamespace LUNamespace("LU");
 
   EntityLinker Linker(llvm::Triple("arm64-apple-macosx"), LUNamespace);
 
@@ -220,7 +220,7 @@ TEST_F(EntityLinkerTest, LinksEmptyTranslationUnit) {
 }
 
 TEST_F(EntityLinkerTest, LinksOneTranslationUnit) {
-  NestedBuildNamespace LUNamespace({BuildNamespace("LU")});
+  BuildNamespace LUNamespace("LU");
 
   EntityLinker Linker(llvm::Triple("arm64-apple-macosx"), LUNamespace);
 
@@ -250,8 +250,8 @@ TEST_F(EntityLinkerTest, LinksOneTranslationUnit) {
   const auto &LinkageTable = getLinkageTable(Output);
   const auto &Data = getData(Output);
 
-  NestedBuildNamespace LocalNamespace =
-      NestedBuildNamespace(TUNamespace).makeQualified(LUNamespace);
+  BuildNamespace LocalNamespace =
+      BuildNamespace(TUNamespace).makeQualified(LUNamespace);
 
   EntityName LU_A_Name("A", "", LocalNamespace);
   EntityName LU_B_Name("B", "", LocalNamespace);
@@ -319,7 +319,7 @@ TEST_F(EntityLinkerTest, LinksOneTranslationUnit) {
 }
 
 TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
-  NestedBuildNamespace LUNamespace({BuildNamespace("LU")});
+  BuildNamespace LUNamespace("LU");
 
   EntityLinker Linker(llvm::Triple("arm64-apple-macosx"), LUNamespace);
 
@@ -412,11 +412,11 @@ TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
   const auto &LinkageTable = getLinkageTable(Output);
   const auto &Data = getData(Output);
 
-  NestedBuildNamespace TU1LocalNamespace =
-      NestedBuildNamespace(TU1Namespace).makeQualified(LUNamespace);
+  BuildNamespace TU1LocalNamespace =
+      BuildNamespace(TU1Namespace).makeQualified(LUNamespace);
 
-  NestedBuildNamespace TU2LocalNamespace =
-      NestedBuildNamespace(TU2Namespace).makeQualified(LUNamespace);
+  BuildNamespace TU2LocalNamespace =
+      BuildNamespace(TU2Namespace).makeQualified(LUNamespace);
 
   // None linkage entities use local namespace (TU scoped)
   EntityName LU_TU1_X_Name("X", "", TU1LocalNamespace);
@@ -610,7 +610,7 @@ TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
 }
 
 TEST_F(EntityLinkerTest, RejectsDuplicateTUSummary) {
-  NestedBuildNamespace LUNamespace({BuildNamespace("LU")});
+  BuildNamespace LUNamespace("LU");
 
   EntityLinker Linker(llvm::Triple("arm64-apple-macosx"), LUNamespace);
 
@@ -623,14 +623,13 @@ TEST_F(EntityLinkerTest, RejectsDuplicateTUSummary) {
   ASSERT_THAT_ERROR(
       Linker.link(std::move(TU2)),
       llvm::FailedWithMessage(HasSubstr("failed to link TU summary: duplicate "
-                                        "BuildNamespace(TU)")));
+                                        "BuildNamespace([TU])")));
 }
 
 // Reproduces a crash when linking internal-linkage entities
 // (e.g. "static inline" functions) that share the same USR across TUs.
 TEST_F(EntityLinkerTest, InternalLinkageWithEmptyNamespaceAcrossTUs) {
-  EntityLinker Linker(llvm::Triple("arm64-apple-macosx"),
-                      NestedBuildNamespace{BuildNamespace("LU")});
+  EntityLinker Linker(llvm::Triple("arm64-apple-macosx"), BuildNamespace("LU"));
 
   auto TU1 = createTUSummaryEncoding("TU1");
   addEntity(*TU1, "some_static_inline", InternalLinkage);
@@ -644,8 +643,8 @@ TEST_F(EntityLinkerTest, InternalLinkageWithEmptyNamespaceAcrossTUs) {
   const auto Output = std::move(Linker).takeOutput();
   const auto &IdTable = getIdTable(Output);
 
-  NestedBuildNamespace TU1NS{{BuildNamespace("TU1"), BuildNamespace("LU")}};
-  NestedBuildNamespace TU2NS{{BuildNamespace("TU2"), BuildNamespace("LU")}};
+  BuildNamespace TU1NS(std::vector<std::string>{"TU1", "LU"});
+  BuildNamespace TU2NS(std::vector<std::string>{"TU2", "LU"});
   EntityName ExpectedTU1Name("some_static_inline", "", TU1NS);
   EntityName ExpectedTU2Name("some_static_inline", "", TU2NS);
 

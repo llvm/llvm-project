@@ -3,8 +3,8 @@
   "id_table": [],
   "linkage_table": [],
   "target_triple": "arm64-apple-macosx",
-  "tu_namespace": {
-    "name": "libtest.so"
-  },
+  "tu_namespace": [
+    "libtest.so"
+  ],
   "type": "TUSummary"
 }

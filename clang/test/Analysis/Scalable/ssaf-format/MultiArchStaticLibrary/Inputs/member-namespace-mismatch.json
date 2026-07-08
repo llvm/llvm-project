@@ -2,15 +2,15 @@
   "members": [
     {
       "members": [],
-      "namespace": {
-        "name": "libbar"
-      },
+      "namespace": [
+        "libbar"
+      ],
       "target_triple": "arm64-apple-macosx",
       "type": "StaticLibrary"
     }
   ],
-  "namespace": {
-    "name": "libfoo"
-  },
+  "namespace": [
+    "libfoo"
+  ],
   "type": "MultiArchStaticLibrary"
 }

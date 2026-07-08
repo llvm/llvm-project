@@ -7,9 +7,7 @@
           "id": 0,
           "name": {
             "namespace": [
-              {
-                "name": "libfoo"
-              }
+              "libfoo"
             ],
             "suffix": "",
             "usr": "c:@F@foo"
@@ -25,9 +23,7 @@
         }
       ],
       "lu_namespace": [
-        {
-          "name": "libfoo"
-        }
+        "libfoo"
       ],
       "target_triple": "arm64-apple-macosx",
       "type": "LUSummary"
@@ -39,9 +35,7 @@
           "id": 0,
           "name": {
             "namespace": [
-              {
-                "name": "libfoo"
-              }
+              "libfoo"
             ],
             "suffix": "",
             "usr": "c:@F@foo"
@@ -57,18 +51,14 @@
         }
       ],
       "lu_namespace": [
-        {
-          "name": "libfoo"
-        }
+        "libfoo"
       ],
       "target_triple": "x86_64-apple-macosx",
       "type": "LUSummary"
     }
   ],
   "namespace": [
-    {
-      "name": "libfoo"
-    }
+    "libfoo"
   ],
   "type": "MultiArchSharedLibrary"
 }

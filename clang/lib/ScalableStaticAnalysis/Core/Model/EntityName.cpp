@@ -11,7 +11,7 @@
 namespace clang::ssaf {
 
 EntityName::EntityName(llvm::StringRef USR, llvm::StringRef Suffix,
-                       NestedBuildNamespace Namespace)
+                       BuildNamespace Namespace)
     : USR(USR.str()), Suffix(Suffix), Namespace(std::move(Namespace)) {}
 
 bool EntityName::operator==(const EntityName &Other) const {
@@ -26,7 +26,7 @@ bool EntityName::operator<(const EntityName &Other) const {
   return asTuple() < Other.asTuple();
 }
 
-EntityName EntityName::makeQualified(NestedBuildNamespace Namespace) const {
+EntityName EntityName::makeQualified(BuildNamespace Namespace) const {
   auto Copy = *this;
   Copy.Namespace = Copy.Namespace.makeQualified(Namespace);
 

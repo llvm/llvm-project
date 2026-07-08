@@ -137,9 +137,7 @@
       "id": 1,
       "name": {
         "namespace": [
-          {
-            "name": "test.cpp"
-          }
+          "test.cpp"
         ],
         "suffix": "",
         "usr": "c:@F@bar"
@@ -149,9 +147,7 @@
       "id": 2,
       "name": {
         "namespace": [
-          {
-            "name": "test.cpp"
-          }
+          "test.cpp"
         ],
         "suffix": "",
         "usr": "c:@F@baz"
@@ -161,9 +157,7 @@
       "id": 0,
       "name": {
         "namespace": [
-          {
-            "name": "test.cpp"
-          }
+          "test.cpp"
         ],
         "suffix": "",
         "usr": "c:@F@foo"
@@ -173,9 +167,7 @@
       "id": 4,
       "name": {
         "namespace": [
-          {
-            "name": "test.cpp"
-          }
+          "test.cpp"
         ],
         "suffix": "",
         "usr": "c:@F@quux"
@@ -185,9 +177,7 @@
       "id": 3,
       "name": {
         "namespace": [
-          {
-            "name": "test.cpp"
-          }
+          "test.cpp"
         ],
         "suffix": "",
         "usr": "c:@F@qux"
@@ -227,9 +217,7 @@
     }
   ],
   "lu_namespace": [
-    {
-      "name": "test.cpp"
-    }
+    "test.cpp"
   ],
   "target_triple": "arm64-apple-macosx",
   "type": "LUSummary"

@@ -5,17 +5,13 @@
       "id_table": [],
       "linkage_table": [],
       "lu_namespace": [
-        {
-          "name": "libfoo"
-        }
+        "libfoo"
       ],
       "target_triple": "arm64-apple-macosx"
     }
   ],
   "namespace": [
-    {
-      "name": "libfoo"
-    }
+    "libfoo"
   ],
   "type": "MultiArchSharedLibrary"
 }

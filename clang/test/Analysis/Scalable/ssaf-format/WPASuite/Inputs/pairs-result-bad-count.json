@@ -4,9 +4,7 @@
       "id": 0,
       "name": {
         "namespace": [
-          {
-            "name": "test.exe"
-          }
+          "test.exe"
         ],
         "suffix": "",
         "usr": "c:@F@foo"
@@ -16,9 +14,7 @@
       "id": 1,
       "name": {
         "namespace": [
-          {
-            "name": "test.exe"
-          }
+          "test.exe"
         ],
         "suffix": "",
         "usr": "c:@F@bar"
