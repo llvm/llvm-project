@@ -47829,6 +47829,11 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
     if (Rdx.getValueType() == MVT::v8i16) {
       Rdx = DAG.getNode(X86ISD::PACKUS, DL, MVT::v16i8, Rdx,
                         DAG.getUNDEF(MVT::v8i16));
+    } else if (NumElts == 4) {
+      // v4i16 fits into the bottom v8i8 64-bits and is cheaper to truncate.
+      Rdx = DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i16, Rdx);
+      Rdx = DAG.getBitcast(MVT::v8i8, Rdx);
+      Rdx = WidenToV16I8(Rdx);
     } else {
       EVT ByteVT = VecVT.changeVectorElementType(*DAG.getContext(), MVT::i8);
       Rdx = DAG.getNode(ISD::TRUNCATE, DL, ByteVT, Rdx);
