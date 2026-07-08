@@ -3564,7 +3564,7 @@ static bool isFreeConcat(ArrayRef<InstLane> Item, TTI::TargetCostKind CostKind,
 }
 
 static Value *
-generateNewInstTree(ArrayRef<InstLane> Item, Use *From, FixedVectorType *Ty,
+generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
                     const DenseSet<std::pair<Value *, Use *>> &IdentityLeafs,
                     const DenseSet<std::pair<Value *, Use *>> &SplatLeafs,
                     const DenseSet<std::pair<Value *, Use *>> &ConcatLeafs,
@@ -3638,7 +3638,7 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From, FixedVectorType *Ty,
             NewItem.push_back(lookThroughShuffles(Op, Lane * R + J));
         }
       }
-      Value *Op = generateNewInstTree(NewItem, &BitCast->getOperandUse(0), Ty,
+      Value *Op = generateNewInstTree(NewItem, &BitCast->getOperandUse(0),
                                       IdentityLeafs, SplatLeafs, ConcatLeafs,
                                       Builder, TTI);
       return Builder.CreateBitCast(
@@ -3655,7 +3655,7 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From, FixedVectorType *Ty,
       continue;
     }
     Ops[Idx] = generateNewInstTree(generateInstLaneVectorFromOperand(Item, Idx),
-                                   &I->getOperandUse(Idx), Ty, IdentityLeafs,
+                                   &I->getOperandUse(Idx), IdentityLeafs,
                                    SplatLeafs, ConcatLeafs, Builder, TTI);
   }
 
@@ -3944,7 +3944,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   // If we got this far, we know the shuffles are superfluous and can be
   // removed. Scan through again and generate the new tree of instructions.
   Builder.SetInsertPoint(&I);
-  Value *V = generateNewInstTree(Start, &*I.use_begin(), Ty, IdentityLeafs,
+  Value *V = generateNewInstTree(Start, &*I.use_begin(), IdentityLeafs,
                                  SplatLeafs, ConcatLeafs, Builder, &TTI);
   replaceValue(I, *V);
   return true;
