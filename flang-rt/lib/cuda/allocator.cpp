@@ -226,18 +226,15 @@ void *CUFAllocDevice(std::size_t sizeInBytes,
 
 void CUFFreeDevice(void *p) {
   CriticalSection critical{lock};
+  if (DeviceContextTornDown()) {
+    return;
+  }
   int pos = findAllocation(p);
   if (pos >= 0) {
     cudaStream_t stream = deviceAllocations[pos].stream;
     eraseAllocation(pos);
-    if (DeviceContextTornDown()) {
-      return;
-    }
     CUDA_REPORT_IF_ERROR(cudaFreeAsync(p, stream));
   } else {
-    if (DeviceContextTornDown()) {
-      return;
-    }
     CUDA_REPORT_IF_ERROR(cudaFree(p));
   }
 }
