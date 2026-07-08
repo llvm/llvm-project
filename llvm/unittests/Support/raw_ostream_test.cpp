@@ -623,6 +623,34 @@ TEST(raw_ostreamTest, writeToDevNull) {
   EXPECT_TRUE(DevNullIsUsed);
 }
 
+#ifdef _WIN32
+TEST(raw_ostreamTest, writeToNul) {
+  // raw_null_ostream never touches the filesystem, so no "nul.temp-stream-*"
+  // file should exist in the CWD while Write() runs.
+  llvm::unittest::TempDir RootTestDirectory("writeToNul", /*Unique=*/true);
+  SmallString<128> SavedCWD;
+  ASSERT_FALSE(sys::fs::current_path(SavedCWD));
+  ASSERT_FALSE(sys::fs::set_current_path(RootTestDirectory.path()));
+
+  EXPECT_THAT_ERROR(
+      writeToOutput("nul",
+                    [&](raw_ostream &Out) -> Error {
+                      std::error_code EC;
+                      sys::fs::directory_iterator It(
+                          RootTestDirectory.path(), EC), End;
+                      EXPECT_FALSE(EC);
+                      EXPECT_EQ(It, End)
+                          << "unexpected temp file on disk during Write(): "
+                          << It->path();
+                      Out << "HelloWorld";
+                      return Error::success();
+                    }),
+      Succeeded());
+
+  ASSERT_FALSE(sys::fs::set_current_path(SavedCWD));
+}
+#endif
+
 TEST(raw_ostreamTest, nullStreamZeroBufferSize) {
   raw_ostream &NullStream = nulls();
   EXPECT_EQ(NullStream.GetBufferSize(), 0u);
