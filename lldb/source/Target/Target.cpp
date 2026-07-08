@@ -6349,9 +6349,6 @@ std::recursive_mutex &Target::GetAPIMutex() {
   if (policy.view == Policy::View::Private)
     return m_private_mutex;
 
-  if (GetProcessSP() && GetProcessSP()->CurrentThreadIsPrivateStateThread())
-    return m_private_mutex;
-
   return m_mutex;
 }
 
