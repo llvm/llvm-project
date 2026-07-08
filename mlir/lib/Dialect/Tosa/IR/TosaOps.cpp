@@ -740,8 +740,7 @@ LogicalResult mlir::tosa::mxint8Type::convertFromAttribute(
 // TOSA block scaling utilities.
 //===----------------------------------------------------------------------===//
 
-LogicalResult OpTrait::tosa::verifyBlockScaledTensorType(Operation &op,
-                                                         mlir::Type type) {
+LogicalResult OpTrait::tosa::verifyBlockScaledTensorType(mlir::Type type) {
   const auto tensorType = llvm::cast<ShapedType>(type);
   const BlockScaledType elemType =
       llvm::dyn_cast<BlockScaledType>(tensorType.getElementType());
@@ -752,9 +751,7 @@ LogicalResult OpTrait::tosa::verifyBlockScaledTensorType(Operation &op,
     return success();
 
   if (tensorType.getRank() == 0)
-    return op.emitError()
-           << "tensor type " << type
-           << " does not support block scaling on scalar tensors";
+    return failure();
 
   const int64_t blockedDimension = tensorType.getShape().back();
   if (ShapedType::isDynamic(blockedDimension))
@@ -763,10 +760,7 @@ LogicalResult OpTrait::tosa::verifyBlockScaledTensorType(Operation &op,
   const uint32_t blockSize =
       BlockShapeAttr::getBlockShapeValue(elemType.getBlockShape());
   if (blockedDimension % blockSize != 0)
-    return op.emitError()
-           << "tensor type " << type
-           << " blocked dimension must be a multiple of block size, got "
-           << blockedDimension << " and block size " << blockSize;
+    return failure();
 
   return success();
 }
