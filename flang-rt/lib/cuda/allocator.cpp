@@ -19,7 +19,37 @@
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Support/Fortran.h"
 
+#include "cuda_runtime.h"
+
 namespace Fortran::runtime::cuda {
+
+bool DeviceContextTornDown() {
+  int device{0};
+  if (cudaGetDevice(&device) != cudaSuccess) {
+    return true;
+  }
+  // Driver API reports primary-context state WITHOUT lazily creating one
+  // (unlike the runtime API); resolve it via cudart to avoid a libcuda link.
+  // Only the current device is checked (single-device assumption).
+  using GetStateFn = int (*)(int, unsigned *, int *);
+  static GetStateFn getState{[]() -> GetStateFn {
+    void *fn{nullptr};
+    if (cudaGetDriverEntryPoint("cuDevicePrimaryCtxGetState", &fn,
+            cudaEnableDefault, nullptr) != cudaSuccess) {
+      return nullptr;
+    }
+    return reinterpret_cast<GetStateFn>(fn);
+  }()};
+  if (!getState) {
+    return false;
+  }
+  unsigned flags{0};
+  int active{0};
+  if (getState(device, &flags, &active) != 0 /*CUDA_SUCCESS*/) {
+    return true;
+  }
+  return active == 0;
+}
 
 struct DeviceAllocation {
   void *ptr;
@@ -141,6 +171,8 @@ void RTDEF(CUFRegisterAllocator)() {
       kUnifiedAllocatorPos, {&CUFAllocUnified, CUFFreeUnified});
 }
 
+bool RTDEF(CUFDeviceIsActive)() { return !DeviceContextTornDown(); }
+
 cudaStream_t RTDECL(CUFGetAssociatedStream)(void *p) {
   int pos = findAllocation(p);
   if (pos >= 0) {
@@ -198,9 +230,15 @@ void CUFFreeDevice(void *p) {
   if (pos >= 0) {
     cudaStream_t stream = deviceAllocations[pos].stream;
     eraseAllocation(pos);
-    CUDA_REPORT_IF_ERROR_ALLOW_TEARDOWN(cudaFreeAsync(p, stream));
+    if (DeviceContextTornDown()) {
+      return;
+    }
+    CUDA_REPORT_IF_ERROR(cudaFreeAsync(p, stream));
   } else {
-    CUDA_REPORT_IF_ERROR_ALLOW_TEARDOWN(cudaFree(p));
+    if (DeviceContextTornDown()) {
+      return;
+    }
+    CUDA_REPORT_IF_ERROR(cudaFree(p));
   }
 }
 
@@ -214,7 +252,10 @@ void *CUFAllocManaged(std::size_t sizeInBytes,
 }
 
 void CUFFreeManaged(void *p) {
-  CUDA_REPORT_IF_ERROR_ALLOW_TEARDOWN(cudaFree(p));
+  if (DeviceContextTornDown()) {
+    return;
+  }
+  CUDA_REPORT_IF_ERROR(cudaFree(p));
 }
 
 void *CUFAllocUnified(std::size_t sizeInBytes,

@@ -33,33 +33,6 @@ static constexpr unsigned kDeviceToDevice = 2;
     terminator.Crash("'%s' failed with '%s'", #expr, name); \
   }(expr)
 
-// Like CUDA_REPORT_IF_ERROR, but tolerates a cudaDeviceReset() or runtime
-// teardown having already freed the allocation, so CUF frees stay a no-op.
-#define CUDA_REPORT_IF_ERROR_ALLOW_TEARDOWN(expr) \
-  [](cudaError_t err) { \
-    if (err == cudaSuccess || err == cudaErrorCudartUnloading || \
-        err == cudaErrorInvalidValue) \
-      return; \
-    const char *name = cudaGetErrorName(err); \
-    if (!name) \
-      name = "<unknown>"; \
-    Fortran::runtime::Terminator terminator{__FILE__, __LINE__}; \
-    terminator.Crash("'%s' failed with '%s'", #expr, name); \
-  }(expr)
-
-// _LOC variant of CUDA_REPORT_IF_ERROR_ALLOW_TEARDOWN.
-#define CUDA_REPORT_IF_ERROR_ALLOW_TEARDOWN_LOC(expr, file, line) \
-  [](cudaError_t err, const char *sourceFile, int sourceLine) { \
-    if (err == cudaSuccess || err == cudaErrorCudartUnloading || \
-        err == cudaErrorInvalidValue) \
-      return; \
-    const char *name = cudaGetErrorName(err); \
-    if (!name) \
-      name = "<unknown>"; \
-    Fortran::runtime::Terminator terminator{sourceFile, sourceLine}; \
-    terminator.Crash("'%s' failed with '%s'", #expr, name); \
-  }(expr, file, line)
-
 #define CUDA_REPORT_IF_ERROR_LOC(expr, file, line) \
   [](cudaError_t err, const char *sourceFile, int sourceLine) { \
     if (err == cudaSuccess) \
@@ -70,5 +43,12 @@ static constexpr unsigned kDeviceToDevice = 2;
     Fortran::runtime::Terminator terminator{sourceFile, sourceLine}; \
     terminator.Crash("'%s' failed with '%s'", #expr, name); \
   }(expr, sourceFile, sourceLine)
+
+namespace Fortran::runtime::cuda {
+/// True when the current device's primary context was torn down (e.g. user
+/// cudaDeviceReset()). Frees must then be skipped: cudaFree() would lazily
+/// recreate a phantom context that also breaks later teardown frees.
+bool DeviceContextTornDown();
+} // namespace Fortran::runtime::cuda
 
 #endif // FORTRAN_RUNTIME_CUDA_COMMON_H_

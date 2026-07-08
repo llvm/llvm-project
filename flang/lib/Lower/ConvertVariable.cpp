@@ -32,6 +32,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
+#include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
@@ -1292,6 +1293,27 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                 builder->getContext(), *sym);
         cuf::FreeOp::create(*builder, loc, fir::getBase(exv), dataAttr);
       });
+      // Main-program deallocation is skipped by needDeallocationOrFinalization,
+      // so free the device data here, before the descriptor free above (cleanups
+      // run in reverse of attachment). The context guard avoids reading a
+      // torn-down managed descriptor after a user cudaDeviceReset().
+      if (sym->owner().kind() ==
+              Fortran::semantics::Scope::Kind::MainProgram &&
+          Fortran::semantics::IsAllocatable(*sym)) {
+        auto *converterPtr = &converter;
+        converter.getFctCtx().attachCleanup([converterPtr, loc, exv, sym]() {
+          fir::FirOpBuilder &b = converterPtr->getFirOpBuilder();
+          mlir::Value active = fir::runtime::cuda::genDeviceIsActive(b, loc);
+          b.genIfThen(loc, active)
+              .genThen([&]() {
+                if (const fir::MutableBoxValue *mutableBox =
+                        exv.getBoxOf<fir::MutableBoxValue>())
+                  Fortran::lower::genDeallocateIfAllocated(*converterPtr,
+                                                           *mutableBox, loc, sym);
+              })
+              .end();
+        });
+      }
     }
   }
 
