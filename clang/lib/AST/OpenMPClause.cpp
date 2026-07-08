@@ -1057,6 +1057,22 @@ OMPPartialClause *OMPPartialClause::CreateEmpty(const ASTContext &C) {
   return new (C) OMPPartialClause();
 }
 
+OMPDepthClause *OMPDepthClause::Create(const ASTContext &C,
+                                       SourceLocation StartLoc,
+                                       SourceLocation LParenLoc,
+                                       SourceLocation EndLoc, Expr *Depth) {
+  OMPDepthClause *Clause = CreateEmpty(C);
+  Clause->setLocStart(StartLoc);
+  Clause->setLParenLoc(LParenLoc);
+  Clause->setLocEnd(EndLoc);
+  Clause->setDepth(Depth);
+  return Clause;
+}
+
+OMPDepthClause *OMPDepthClause::CreateEmpty(const ASTContext &C) {
+  return new (C) OMPDepthClause();
+}
+
 OMPLoopRangeClause *
 OMPLoopRangeClause::Create(const ASTContext &C, SourceLocation StartLoc,
                            SourceLocation LParenLoc, SourceLocation FirstLoc,
@@ -2068,6 +2084,15 @@ void OMPClausePrinter::VisitOMPPermutationClause(OMPPermutationClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPFullClause(OMPFullClause *Node) { OS << "full"; }
+
+void OMPClausePrinter::VisitOMPDepthClause(OMPDepthClause *Node) {
+  OS << "depth";
+  if (Expr *Depth = Node->getDepth()) {
+    OS << '(';
+    Depth->printPretty(OS, nullptr, Policy, 0);
+    OS << ')';
+  }
+}
 
 void OMPClausePrinter::VisitOMPPartialClause(OMPPartialClause *Node) {
   OS << "partial";

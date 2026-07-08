@@ -3569,6 +3569,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPPartialClause(OMPPartialClause *C) {
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPDepthClause(OMPDepthClause *C) {
+  TRY_TO(TraverseStmt(C->getDepth()));
+  return true;
+}
+
+template <typename Derived>
 bool
 RecursiveASTVisitor<Derived>::VisitOMPCollapseClause(OMPCollapseClause *C) {
   TRY_TO(TraverseStmt(C->getNumForLoops()));
