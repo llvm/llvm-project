@@ -139,6 +139,7 @@ public:
       }
 
       std::lock_guard<PoolMutex> lock(pool.m_mutex);
+      pool.used_bytes += string_ref.size();
       StringPoolEntryType &entry =
           *pool.m_string_map
                .insert(std::make_pair(string_ref, nullptr), string_hash)
@@ -160,13 +161,15 @@ public:
 
       // Make or update string pool entry with the mangled counterpart
       StringPool &map = pool.m_string_map;
-      StringPoolEntryType &entry =
-          *map.try_emplace_with_hash(demangled, demangled_hash).first;
+      auto [entry, inserted] =
+          map.try_emplace_with_hash(demangled, demangled_hash);
+      if (inserted)
+        pool.used_bytes += demangled.size();
 
-      entry.second = mangled_ccstr;
+      entry->second = mangled_ccstr;
 
       // Extract the const version of the demangled_cstr
-      demangled_ccstr = entry.getKeyData();
+      demangled_ccstr = entry->getKeyData();
     }
 
     {
@@ -196,6 +199,7 @@ public:
       std::shared_lock<PoolMutex> lock(pool.m_mutex);
       const Allocator &alloc = pool.m_string_map.getAllocator();
       stats.bytes_total += alloc.getTotalMemory();
+      stats.bytes_used += pool.used_bytes;
     }
     return stats;
   }
@@ -204,6 +208,9 @@ protected:
   struct PoolEntry {
     mutable PoolMutex m_mutex;
     StringPool m_string_map;
+    /// The exact number of bytes used by this pool.
+    /// This excludes alignment, padding and redzones.
+    std::size_t used_bytes = 0;
   };
 
   std::array<PoolEntry, 256> m_string_pools;

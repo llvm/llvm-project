@@ -52,10 +52,6 @@ public:
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
 
-  bool isMachineVerifierClean() const override {
-    return false;
-  }
-
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
 
   Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,

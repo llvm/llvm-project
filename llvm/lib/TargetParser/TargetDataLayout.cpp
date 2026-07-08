@@ -18,7 +18,7 @@ static StringRef getManglingComponent(const Triple &T) {
     return "-m:l";
   if (T.isOSBinFormatMachO())
     return "-m:o";
-  if ((T.isOSWindows() || T.isUEFI()) && T.isOSBinFormatCOFF())
+  if (T.isOSWindowsOrUEFI() && T.isOSBinFormatCOFF())
     return T.getArch() == Triple::x86 ? "-m:x" : "-m:w";
   if (T.isOSBinFormatXCOFF())
     return "-m:a";

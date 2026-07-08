@@ -42,7 +42,7 @@ void f(span_b input) {
   }
 }
 
-// CHECK-LABEL: define dso_local void @"?f@@YAXVspan_b@@@Z"(ptr noundef dead_on_return %input)
+// CHECK-LABEL: define dso_local void @"?f@@YAXVspan_b@@@Z"(ptr noundef align 8 dead_on_return %input)
 // CHECK: entry:
 // CHECK:   %input.spill = alloca ptr, align 8
 // CHECK:   call void (...) @llvm.localescape(ptr %input.spill)

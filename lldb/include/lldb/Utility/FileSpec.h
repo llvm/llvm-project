@@ -231,7 +231,7 @@ public:
   ///
   /// \return
   ///     A const reference to the directory string object.
-  const ConstString &GetDirectory() const { return m_directory; }
+  llvm::StringRef GetDirectory() const { return m_directory; }
 
   /// Directory string set accessor.
   ///
@@ -246,7 +246,7 @@ public:
   ///
   /// \return
   ///     A const reference to the filename string object.
-  const ConstString &GetFilename() const { return m_filename; }
+  llvm::StringRef GetFilename() const { return m_filename; }
 
   /// Filename string set accessor.
   ///
@@ -462,10 +462,8 @@ template <> struct format_provider<lldb_private::FileSpec> {
 template <> struct DenseMapInfo<lldb_private::FileSpec> {
   static unsigned getHashValue(lldb_private::FileSpec file_spec) {
     return llvm::hash_combine(
-        DenseMapInfo<lldb_private::ConstString>::getHashValue(
-            file_spec.GetDirectory()),
-        DenseMapInfo<lldb_private::ConstString>::getHashValue(
-            file_spec.GetFilename()),
+        DenseMapInfo<llvm::StringRef>::getHashValue(file_spec.GetDirectory()),
+        DenseMapInfo<llvm::StringRef>::getHashValue(file_spec.GetFilename()),
         DenseMapInfo<llvm::sys::path::Style>::getHashValue(
             file_spec.GetPathStyle()));
   }

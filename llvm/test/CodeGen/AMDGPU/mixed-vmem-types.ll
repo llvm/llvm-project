@@ -35,8 +35,10 @@ define amdgpu_cs void @mixed_vmem_types_sampler_reads(i32 inreg %globalTable, i3
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, s0, s2
 ; GFX11-NEXT:    s_and_b32 s0, s0, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s0, s0, exec_lo
+; GFX11-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[24:27], 0
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -72,8 +74,10 @@ define amdgpu_cs void @mixed_vmem_types_sampler_reads(i32 inreg %globalTable, i3
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s0, s0, s2
 ; GFX12-NEXT:    s_and_b32 s0, s0, vcc_lo
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_and_b32 s0, s0, exec_lo
+; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    buffer_store_b32 v0, off, s[24:27], null
 ; GFX12-NEXT:    s_endpgm
 ;

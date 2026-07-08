@@ -30,6 +30,7 @@
 
 using namespace llvm;
 
+#define GET_CALLING_CONV_IMPL
 #include "AMDGPUGenCallingConv.inc"
 
 static cl::opt<bool> AMDGPUBypassSlowDiv(
@@ -1546,16 +1547,20 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
   const GlobalValue *GV = G->getGlobal();
 
   if (!MFI->isModuleEntryFunction()) {
-    auto IsNamedBarrier = AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV));
-    if (std::optional<uint32_t> Address =
-            AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(*GV)) {
+    bool IsNamedBarrier = AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV));
+    std::optional<uint32_t> Address =
+        AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(*GV);
+    if (!Address && IsNamedBarrier)
+      llvm_unreachable("named barrier should have an assigned address");
+    if (Address) {
       if (IsNamedBarrier) {
         unsigned BarCnt = cast<GlobalVariable>(GV)->getGlobalSize(DL) / 16;
         MFI->recordNumNamedBarriers(Address.value(), BarCnt);
       }
-      return DAG.getConstant(*Address, SDLoc(Op), Op.getValueType());
-    } else if (IsNamedBarrier) {
-      llvm_unreachable("named barrier should have an assigned address");
+      // A constant byte offset (e.g. from a GEP into an array of named
+      // barriers) folds directly into the fixed LDS address.
+      return DAG.getConstant(*Address + G->getOffset(), SDLoc(Op),
+                             Op.getValueType());
     }
   }
 
@@ -1582,15 +1587,14 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
       return DAG.getPOISON(Op.getValueType());
     }
 
-    // XXX: What does the value of G->getOffset() mean?
-    assert(G->getOffset() == 0 &&
-         "Do not know what to do with an non-zero offset");
-
     // TODO: We could emit code to handle the initialization somewhere.
     // We ignore the initializer for now and legalize it to allow selection.
     // The initializer will anyway get errored out during assembly emission.
     unsigned Offset = MFI->allocateLDSGlobal(DL, *cast<GlobalVariable>(GV));
-    return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
+    // A constant byte offset (e.g. from a GEP into an array of named barriers)
+    // folds directly into the allocated LDS address.
+    return DAG.getConstant(Offset + G->getOffset(), SDLoc(Op),
+                           Op.getValueType());
   }
   return SDValue();
 }
@@ -5379,6 +5383,12 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     return Res;
   }
   case AMDGPUISD::FMED3: {
+    // med3 sorts a NaN input as smaller than everything regardless of its sign,
+    // so negating all operands does not sign-flip the median when an input may
+    // be NaN.
+    if (!N0->getFlags().hasNoNaNs())
+      return SDValue();
+
     SDValue Ops[3];
     for (unsigned I = 0; I < 3; ++I)
       Ops[I] = DAG.getNode(ISD::FNEG, SL, VT, N0->getOperand(I), N0->getFlags());
@@ -5539,6 +5549,16 @@ SDValue AMDGPUTargetLowering::performFAbsCombine(SDNode *N,
                                   DAG.getConstant(0x7fff, SL, SrcVT));
     return DAG.getNode(ISD::FP16_TO_FP, SL, N->getValueType(0), IntFAbs);
   }
+  case ISD::FP_ROUND: {
+    SDLoc SL(N);
+    SDValue CvtSrc = N0.getOperand(0);
+
+    // fabs (fp_round x) -> fp_round (fabs x)
+    SDValue Abs = DAG.getNode(ISD::FABS, SL, CvtSrc.getValueType(), CvtSrc,
+                              N->getFlags());
+    return DAG.getNode(ISD::FP_ROUND, SL, N->getValueType(0), Abs,
+                       N0.getOperand(1), N0->getFlags());
+  }
   default:
     return SDValue();
   }
@@ -5552,7 +5572,7 @@ SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
 
   // XXX - Should this flush denormals?
   const APFloat &Val = CFP->getValueAPF();
-  APFloat One(Val.getSemantics(), "1.0");
+  APFloat One = APFloat::getOne(Val.getSemantics());
   return DCI.DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
 }
 

@@ -14,8 +14,6 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
-#include "flang/Optimizer/Support/FatalError.h"
-#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeRange.h"
 #include "llvm/ADT/TypeSwitch.h"

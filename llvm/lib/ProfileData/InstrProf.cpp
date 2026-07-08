@@ -962,8 +962,8 @@ void InstrProfRecord::computeBlockUniformity() {
   for (size_t I = 0, E = Counts.size(); I < E; ++I) {
     uint64_t TotalCount = Counts[I];
     uint64_t UniformCount = UniformCounts[I];
-    bool IsUniform =
-        TotalCount == 0 || (double)UniformCount / TotalCount >= 0.9;
+    uint64_t MinUniformCount = TotalCount - TotalCount / 10;
+    bool IsUniform = UniformCount >= MinUniformCount;
     if (!IsUniform)
       UniformityBits[I / 8] &= ~(1 << (I % 8));
   }

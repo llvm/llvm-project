@@ -136,9 +136,6 @@ public:
     auto R = children<DirectedNodeT>(N);
     VectRet Res = VectRet(detail::reverse_if<!InverseEdge>(R));
 
-    // Remove nullptr children for clang.
-    llvm::erase(Res, nullptr);
-
     auto &Children = (InverseEdge != InverseGraph) ? Pred : Succ;
     auto It = Children.find(N);
     if (It == Children.end())

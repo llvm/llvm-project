@@ -8,7 +8,7 @@ define void @add_intmin_converted_to_sub(ptr %p, i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_intmin_converted_to_sub(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw <2 x i32> [[TMP2]], <i32 -2147483648, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = sub <2 x i32> [[TMP2]], <i32 -2147483648, i32 7>
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -26,7 +26,7 @@ define void @sub_intmin_converted_to_add(ptr %p, i32 %x, i32 %y) {
 ; CHECK-LABEL: @sub_intmin_converted_to_add(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP2]], <i32 -2147483648, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP2]], <i32 -2147483648, i32 7>
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
