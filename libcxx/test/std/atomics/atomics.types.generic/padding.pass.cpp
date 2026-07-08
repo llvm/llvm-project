@@ -196,7 +196,7 @@ int main(int, char**) {
 // TODO(LLVM-23): Switch to XFAIL: clang-22
 #if __has_builtin(__builtin_clear_padding)
   test();
-#endif // __has_builtin(__builtin_clear_padding)
+#endif
 
   return 0;
 }

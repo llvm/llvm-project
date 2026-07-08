@@ -36,12 +36,14 @@ struct __needs_clear_padding
            _Not<is_same<_Tp, double>>> {};
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __clear_padding_if_needed(_Tp& __obj) noexcept {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp& __clear_padding_if_needed(_Tp& __obj) noexcept {
   if constexpr (__needs_clear_padding<__remove_cvref_t<_Tp>>::value) {
     if (!__builtin_is_constant_evaluated()) {
       __builtin_clear_padding(std::addressof(__obj));
     }
   }
+  // return __obj as c++11 does not constexpr function to return void
+  return __obj;
 }
 
 template <class _Tp, class _Up, class _CasFunc>
@@ -64,7 +66,10 @@ _LIBCPP_HIDE_FROM_ABI bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up 
 #else // __has_builtin(__builtin_clear_padding)
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __clear_padding_if_needed(_Tp&) _NOEXCEPT {}
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp& __clear_padding_if_needed(_Tp& __obj) _NOEXCEPT {
+  // return __obj as c++11 does not constexpr function to return void
+  return __obj;
+}
 
 template <class _Tp, class _Up, class _CasFunc>
 _LIBCPP_HIDE_FROM_ABI bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up __value, _CasFunc&& __cas_func) {
