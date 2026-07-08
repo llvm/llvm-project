@@ -59,15 +59,6 @@ void mlir::registerConvertMemRefToEmitCInterface(DialectRegistry &registry) {
 // Conversion Patterns
 //===----------------------------------------------------------------------===//
 
-Type convertMemRefType(MemRefType opTy, const TypeConverter *typeConverter) {
-  Type resultTy;
-  if (opTy.getRank() == 0)
-    resultTy = typeConverter->convertType(mlir::getElementTypeOrSelf(opTy));
-  else
-    resultTy = typeConverter->convertType(opTy);
-  return resultTy;
-}
-
 namespace {
 struct ConvertAlloca final : public OpConversionPattern<memref::AllocaOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -88,18 +79,20 @@ struct ConvertAlloca final : public OpConversionPattern<memref::AllocaOp> {
           op.getLoc(), "cannot transform alloca with alignment requirement");
     }
 
-    auto resultTy = convertMemRefType(op.getType(), getTypeConverter());
+    Type resultTy = getTypeConverter()->convertType(op.getType());
     if (!resultTy)
       return rewriter.notifyMatchFailure(op.getLoc(), "cannot convert type");
 
     auto noInit = emitc::OpaqueAttr::get(getContext(), "");
     // Rank-0 path
     if (op.getType().getRank() == 0) {
+      auto pointerTy = dyn_cast<emitc::PointerType>(resultTy);
+      assert(pointerTy && "expected rank-0 MemRef to convert to pointer");
+      Type elemTy = pointerTy.getPointee();
       auto var = emitc::VariableOp::create(
-          rewriter, op.getLoc(), emitc::LValueType::get(resultTy), noInit);
+          rewriter, op.getLoc(), emitc::LValueType::get(elemTy), noInit);
 
-      auto ptr = emitc::AddressOfOp::create(rewriter, op.getLoc(),
-                                            emitc::PointerType::get(resultTy),
+      auto ptr = emitc::AddressOfOp::create(rewriter, op.getLoc(), resultTy,
                                             var.getResult());
 
       rewriter.replaceOp(op, ptr.getResult());
@@ -153,7 +146,7 @@ createPointerFromEmitcArray(Location loc, OpBuilder &builder,
   return ptr;
 }
 
-static Value getPointerOrStripUnrealizedCast(Value v) {
+static Value getMemRefPointer(Value v) {
   if (isa<emitc::PointerType>(v.getType()))
     return v;
 
@@ -256,7 +249,7 @@ struct ConvertDealloc final : public OpConversionPattern<memref::DeallocOp> {
     Location loc = deallocOp.getLoc();
     // `free` can only be emitted when the dealloc operand is recoverable as an
     // `emitc.ptr<T>`.
-    Value ptr = getPointerOrStripUnrealizedCast(operands.getMemref());
+    Value ptr = getMemRefPointer(operands.getMemref());
     if (!ptr) {
       return rewriter.notifyMatchFailure(
           loc, "expected pointer-backed memref for EmitC deallocation");
@@ -304,8 +297,8 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
       if (!elementType)
         return rewriter.notifyMatchFailure(loc, "cannot convert element type");
 
-      Value srcPtr = getPointerOrStripUnrealizedCast(operands.getSource());
-      Value targetPtr = getPointerOrStripUnrealizedCast(operands.getTarget());
+      Value srcPtr = getMemRefPointer(operands.getSource());
+      Value targetPtr = getMemRefPointer(operands.getTarget());
       if (!srcPtr || !targetPtr)
         return rewriter.notifyMatchFailure(loc, "expected pointer operands");
 
@@ -376,7 +369,7 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
                        "currently not supported");
     }
 
-    Type resultTy = convertMemRefType(opTy, getTypeConverter());
+    Type resultTy = getTypeConverter()->convertType(opTy);
 
     if (!resultTy) {
       return rewriter.notifyMatchFailure(op.getLoc(),
@@ -397,6 +390,9 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
 
     Attribute initialValue = operands.getInitialValueAttr();
     if (opTy.getRank() == 0) {
+      auto pointerTy = dyn_cast<emitc::PointerType>(resultTy);
+      assert(pointerTy && "expected rank-0 MemRef to convert to pointer");
+      resultTy = pointerTy.getPointee();
       // special case for `variable : memref<i32> = dense<-1>`
       if (std::optional<Attribute> initValueAttr = op.getInitialValue()) {
         if (auto elementsAttr = llvm::dyn_cast<ElementsAttr>(*initValueAttr)) {
@@ -423,7 +419,7 @@ struct ConvertGetGlobal final
                   ConversionPatternRewriter &rewriter) const override {
 
     MemRefType opTy = op.getType();
-    Type resultTy = convertMemRefType(opTy, getTypeConverter());
+    Type resultTy = getTypeConverter()->convertType(opTy);
 
     if (!resultTy) {
       return rewriter.notifyMatchFailure(op.getLoc(),
@@ -431,11 +427,13 @@ struct ConvertGetGlobal final
     }
 
     if (opTy.getRank() == 0) {
-      emitc::LValueType lvalueType = emitc::LValueType::get(resultTy);
+      auto pointerTy = dyn_cast<emitc::PointerType>(resultTy);
+      assert(pointerTy && "expected rank-0 MemRef to convert to pointer");
+      Type elemTy = pointerTy.getPointee();
+      emitc::LValueType lvalueType = emitc::LValueType::get(elemTy);
       emitc::GetGlobalOp globalLValue = emitc::GetGlobalOp::create(
           rewriter, op.getLoc(), lvalueType, operands.getNameAttr());
-      emitc::PointerType pointerType = emitc::PointerType::get(resultTy);
-      rewriter.replaceOpWithNewOp<emitc::AddressOfOp>(op, pointerType,
+      rewriter.replaceOpWithNewOp<emitc::AddressOfOp>(op, resultTy,
                                                       globalLValue);
       return success();
     }
@@ -459,7 +457,7 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
 
     auto arrayValue =
         dyn_cast<TypedValue<emitc::ArrayType>>(operands.getMemref());
-    Value ptr = getPointerOrStripUnrealizedCast(operands.getMemref());
+    Value ptr = getMemRefPointer(operands.getMemref());
     if (!ptr && arrayValue) {
       auto subscript = emitc::SubscriptOp::create(rewriter, loc, arrayValue,
                                                   operands.getIndices());
@@ -493,7 +491,7 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
     Location loc = op.getLoc();
     auto arrayValue =
         dyn_cast<TypedValue<emitc::ArrayType>>(operands.getMemref());
-    Value ptr = getPointerOrStripUnrealizedCast(operands.getMemref());
+    Value ptr = getMemRefPointer(operands.getMemref());
     if (!ptr && arrayValue) {
       auto subscript = emitc::SubscriptOp::create(rewriter, loc, arrayValue,
                                                   operands.getIndices());
