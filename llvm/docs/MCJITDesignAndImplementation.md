@@ -175,4 +175,3 @@ Finally, MCJIT calls the memory manager's finalizeMemory method. In this
 method, the memory manager will invalidate the target code cache, if
 necessary, and apply final permissions to the memory pages it has
 allocated for code and data memory.
-

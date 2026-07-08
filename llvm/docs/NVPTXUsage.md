@@ -173,7 +173,7 @@ the form `sm_XYz` where:
 If `X1Y1 <= X2Y2`, then GPU capabilities of `sm_X1Y1` are included in
 `sm_X2Y2`. For example, take `sm_90` (9 represents `X`, 0 represents
 `Y`, and no feature suffix) and `sm_103` architectures (10 represents `X`,
-3 represents `Y`, and no feature suffix). Since 90 \<= 103, `sm_90` is
+3 represents `Y`, and no feature suffix). Since 90 <= 103, `sm_90` is
 compatible with `sm_103`.
 
 The family-specific variants have `f` feature suffix and they follow
@@ -1007,26 +1007,23 @@ The following table describes the rounding modes used across these intrinsics:
 
 (narrow-fp-rounding-modes)=
 
-```{eval-rst}
-.. table:: Narrow Floating-Point Conversion Rounding Modes
-   :widths: 30 60
+```{list-table} Narrow Floating-Point Conversion Rounding Modes
+:widths: 30 60
+:header-rows: 1
 
-   +-----------------------+---------------------------------------------------+
-   | Rounding Mode         | Description                                       |
-   +=======================+===================================================+
-   |``rn`` (default)       | Round to nearest, with ties to even               |
-   +-----------------------+---------------------------------------------------+
-   |``rz``                 | Round towards zero                                |
-   +-----------------------+---------------------------------------------------+
-   |``rp``                 | Round towards positive infinity                   |
-   +-----------------------+---------------------------------------------------+
-   |``rs``                 | Stochastic rounding which is achieved through the |
-   |                       | use of the supplied random bits (``%rnd_bits``).  |
-   |                       | The result s rounded in the direction towards     |
-   |                       | zero or away from zero based on the carry out of  |
-   |                       | the integer addition of the of mantissa from      |
-   |                       | the input.                                        |
-   +-----------------------+---------------------------------------------------+
+   * - Rounding Mode
+     - Description
+   * - `rn` (default)
+     - Round to nearest, with ties to even
+   * - `rz`
+     - Round towards zero
+   * - `rp`
+     - Round towards positive infinity
+   * - `rs`
+     - Stochastic rounding which is achieved through the use of the supplied
+       random bits (`%rnd_bits`). The result s rounded in the direction towards
+       zero or away from zero based on the carry out of the integer addition of
+       the of mantissa from the input.
 ```
 
 (scale-factor)=
@@ -1529,8 +1526,8 @@ operands, selecting based on the third operand.
 ##### Semantics:
 
 The bytes in the first two source operands are numbered from 0 to 7:
-{%hi, %lo} = {{b7, b6, b5, b4}, {b3, b2, b1, b0}}. For each byte in the target
-register, a 4-bit selection value is defined.
+`{%hi, %lo} = {{b7, b6, b5, b4}, {b3, b2, b1, b0}}`. For each byte in the
+target register, a 4-bit selection value is defined.
 
 The 3 lsbs of the selection value specify which of the 8 source bytes should be
 moved into the target position. The msb defines if the byte value should be
@@ -1576,7 +1573,7 @@ of the permutation is defined as follows:
 +------------+----------------+--------------+
 |    Mode    | %selector[1:0] |    Output    |
 +------------+----------------+--------------+
-| '``f4e``'  | 0              | {3, 2, 1, 0} |
+| ``f4e``    | 0              | {3, 2, 1, 0} |
 |            +----------------+--------------+
 |            | 1              | {4, 3, 2, 1} |
 |            +----------------+--------------+
@@ -1584,7 +1581,7 @@ of the permutation is defined as follows:
 |            +----------------+--------------+
 |            | 3              | {6, 5, 4, 3} |
 +------------+----------------+--------------+
-| '``b4e``'  | 0              | {5, 6, 7, 0} |
+| ``b4e``    | 0              | {5, 6, 7, 0} |
 |            +----------------+--------------+
 |            | 1              | {6, 7, 0, 1} |
 |            +----------------+--------------+
@@ -1592,7 +1589,7 @@ of the permutation is defined as follows:
 |            +----------------+--------------+
 |            | 3              | {0, 1, 2, 3} |
 +------------+----------------+--------------+
-| '``rc8``'  | 0              | {0, 0, 0, 0} |
+| ``rc8``    | 0              | {0, 0, 0, 0} |
 |            +----------------+--------------+
 |            | 1              | {1, 1, 1, 1} |
 |            +----------------+--------------+
@@ -1600,7 +1597,7 @@ of the permutation is defined as follows:
 |            +----------------+--------------+
 |            | 3              | {3, 3, 3, 3} |
 +------------+----------------+--------------+
-| '``ecl``'  | 0              | {3, 2, 1, 0} |
+| ``ecl``    | 0              | {3, 2, 1, 0} |
 |            +----------------+--------------+
 |            | 1              | {3, 2, 1, 1} |
 |            +----------------+--------------+
@@ -1608,7 +1605,7 @@ of the permutation is defined as follows:
 |            +----------------+--------------+
 |            | 3              | {3, 3, 3, 3} |
 +------------+----------------+--------------+
-| '``ecr``'  | 0              | {0, 0, 0, 0} |
+| ``ecr``    | 0              | {0, 0, 0, 0} |
 |            +----------------+--------------+
 |            | 1              | {1, 1, 1, 0} |
 |            +----------------+--------------+
@@ -1616,7 +1613,7 @@ of the permutation is defined as follows:
 |            +----------------+--------------+
 |            | 3              | {3, 2, 1, 0} |
 +------------+----------------+--------------+
-| '``rc16``' | 0              | {1, 0, 1, 0} |
+| ``rc16``   | 0              | {1, 0, 1, 0} |
 |            +----------------+--------------+
 |            | 1              | {3, 2, 3, 2} |
 |            +----------------+--------------+
@@ -2649,7 +2646,7 @@ The `tcgen05.commit` is an asynchronous instruction which makes the mbarrier
 object (`%mbar`) track the completion of all prior asynchronous tcgen05
 operations. The `.mc` variants allow signaling on the mbarrier objects of
 multiple CTAs (specified by `%mc`) in the cluster. The `.cg1` and `.cg2`
-variants generate `` `cta_group::1 `` and `cta_group::2` flavors of the
+variants generate `cta_group::1` and `cta_group::2` flavors of the
 instruction respectively.
 
 For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit).
@@ -2858,7 +2855,7 @@ declare void @llvm.nvvm.tcgen05.st.16x32bx2.<num>(ptr addrspace(6) %tmem_addr, <
 
 This group of intrinsics asynchronously store data from the source vector into
 the Tensor Memory at the location specified by the 32-bit address operand
-'tmem_addr\` collectively across all threads of the warps.
+`tmem_addr` collectively across all threads of the warps.
 
 All the threads in the warp must specify the same value of `tmem_addr`, which
 must be the base address of the collective load operation. Otherwise, the
@@ -2947,25 +2944,29 @@ intrinsic specifies the nature of the re-use
 There are three kinds of matrix descriptors used by the tcgen05 family of
 instructions:
 
-```{eval-rst}
-+----------------------------+-----------------------------------------------------------------------------------------------------------+-------------+
-| Descriptor                 | Description                                                                                               | Size (bits) |
-+============================+===========================================================================================================+=============+
-| Shared Memory Descriptor   | Describes properties of multiplicand matrix                                                               |             |
-|                            | in shared memory, including its location                                                                  |             |
-|                            | within the CTA's shared memory.                                                                           |     64      |
-|                            | `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-shared-memory-descriptor>`__    |             |
-+----------------------------+-----------------------------------------------+-------------+---------------------------------------------+-------------+
-| Instruction Descriptor     | Describes shapes, types, and details of                                                                   |             |
-|                            | all matrices and the MMA operation.                                                                       |     32      |
-|                            | `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-zero-column-mask-descriptor>`__ |             |
-+----------------------------+-----------------------------------------------+-------------+---------------------------------------------+-------------+
-| Zero-Column Mask Descriptor| Generates a mask specifying which columns of                                                              |             |
-|                            | B matrix are zeroed in the MMA operation,                                                                 |             |
-|                            | regardless of values in shared memory.                                                                    |     64      |
-|                            | Total mask size = N bits                                                                                  |             |
-|                            | `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__      |             |
-+----------------------------+-----------------------------------------------+-------------+---------------------------------------------+-------------+
+```{list-table}
+:widths: 28 60 12
+:header-rows: 1
+
+   * - Descriptor
+     - Description
+     - Size (bits)
+   * - Shared Memory Descriptor
+     - Describes properties of multiplicand matrix in shared memory, including
+       its location within the CTA's shared memory.
+       [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-shared-memory-descriptor)
+     - 64
+   * - Instruction Descriptor
+     - Describes shapes, types, and details of all matrices and the MMA
+       operation.
+       [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-zero-column-mask-descriptor)
+     - 32
+   * - Zero-Column Mask Descriptor
+     - Generates a mask specifying which columns of B matrix are zeroed in the
+       MMA operation, regardless of values in shared memory. Total mask size =
+       N bits
+       [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor)
+     - 64
 ```
 
 `tcgen05.mma` can be used for general matrix multiplication or for convolution
@@ -3569,7 +3570,7 @@ declare void @llvm.nvvm.pm.event.mask(i16 immarg %mask_val)
 ##### Overview:
 
 The '`llvm.nvvm.pm.event.mask`' intrinsic triggers one or more performance
-monitor events. Each bit in the 16-bit immediate operand `` %mask_val` `` controls
+monitor events. Each bit in the 16-bit immediate operand `%mask_val` controls
 an event.
 
 For more information on the pmevent instructions, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent).
@@ -3710,7 +3711,7 @@ The following sets the ftz flag to 1.
 ```
 
 (`i32 4` indicates that the value set here overrides the value in another
-module we link with. See the `LangRef <LangRef.html#module-flags-metadata>`
+module we link with. See the [LangRef](project:LangRef.md#module-flags-metadata)
 for details.)
 
 ## Executing PTX
@@ -3907,7 +3908,7 @@ users to write IR functions that can load/store memory using the same
 instructions. Intrinsics are provided to convert pointers between the generic
 and non-generic address spaces.
 
-See {ref}`address_spaces` and {ref}`nvptx_intrinsics` for more information.
+See {ref}`address-spaces` and {ref}`nvptx-intrinsics` for more information.
 
 ### Running the Kernel
 
@@ -4250,4 +4251,3 @@ BB0_30:                                 // %__nv_powf.exit
   ret;
 }
 ```
-

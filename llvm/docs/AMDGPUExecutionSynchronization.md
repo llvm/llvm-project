@@ -34,8 +34,8 @@ to determine how to synchronize memory operations through *barrier-executes-befo
 The barrier execution model is experimental and subject to change.
 :::
 
-```{rubric} Barrier *Objects*
-```
+:::{rubric} Barrier *Objects*
+:::
 
 Threads can synchronize execution by performing barrier operations on barrier *objects* as described below:
 
@@ -56,8 +56,8 @@ and thus can only be accessed by threads in the same *scope* instance.
 
 (amdgpu-execution-synchronization-barriers-execution-model-barrier-operations)=
 
-```{rubric} Barrier Operations
-```
+:::{rubric} Barrier Operations
+:::
 
 Barrier operations are performed on barrier *objects*. A barrier operation is a dynamic instance
 of one of the following:
@@ -93,27 +93,27 @@ Barrier modification operations are barrier operations that modify the barrier *
 - Barrier *drop*.
 - Barrier *arrive*.
 
-```{rubric} *Thread-barrier-order\<BO>*
-```
+:::{rubric} `Thread-barrier-order<BO>`
+:::
 
-*Thread-barrier-order\<BO>* is the subset of *program-order* that only relates barrier operations
+`Thread-barrier-order<BO>` is the subset of *program-order* that only relates barrier operations
 performed on a barrier *object* `BO`.
 
-```{rubric} *Barrier-modification-order\<BO>*
-```
+:::{rubric} `Barrier-modification-order<BO>`
+:::
 
 All barrier modification operations on a barrier *object* `BO` occur in a strict total order called
-*barrier-modification-order\<BO>*; it is the order in which `BO` observes barrier
-operations that change its state. For any valid *barrier-modification-order\<BO>*, the
+`barrier-modification-order<BO>`; it is the order in which `BO` observes barrier
+operations that change its state. For any valid `barrier-modification-order<BO>`, the
 following must be true:
 
 - Let `A` and `B` be two barrier modification operations where `A -> B` in
-  *thread-barrier-order\<BO>*, then `A -> B` is also in *barrier-modification-order\<BO>*.
-- The first element in *barrier-modification-order\<BO>* is always a barrier *init*, otherwise
+  `thread-barrier-order<BO>`, then `A -> B` is also in `barrier-modification-order<BO>`.
+- The first element in `barrier-modification-order<BO>` is always a barrier *init*, otherwise
   the behavior is undefined.
 
-```{rubric} *Barrier-participates-in*
-```
+:::{rubric} *Barrier-participates-in*
+:::
 
 *Barrier-participates-in* relates barrier operations to the barrier *waits* that depend on them
 to complete. A barrier operation `X` *barrier-participates-in* a barrier *wait* `W`
@@ -122,25 +122,25 @@ if and only if all of the following is true:
 - `X` and `W` are both performed on the same barrier *object* `BO`.
 - `X` is a barrier *arrive* or *drop* operation.
 - `X` does not *barrier-participate-in* another distinct barrier *wait* `W'` in the same thread as `W`.
-- `W -> X` not in *thread-barrier-order\<BO>*.
-- All dependent constraint and relations are satisfied as well. [^footnote-1]
+- `W -> X` not in `thread-barrier-order<BO>`.
+- All dependent constraint and relations are satisfied as well. [^0]
 
 For the set `S` consisting of all barrier operations that *barrier-participate-in* a barrier *wait* `W` for some
 barrier *object* `BO`:
 
-- The elements of `S` all exist in a continuous, uninterrupted interval of *barrier-modification-order\<BO>*.
-- The *arrive count* of `BO` is zero before the first operation of `S` in *barrier-modification-order\<BO>*.
+- The elements of `S` all exist in a continuous, uninterrupted interval of `barrier-modification-order<BO>`.
+- The *arrive count* of `BO` is zero before the first operation of `S` in `barrier-modification-order<BO>`.
 - The *arrive count* and *expected count* of `BO` are equal after the last operation of `S` in
-  *barrier-modification-order\<BO>*. The *arrive count* and *expected count* of `BO` cannot
+  `barrier-modification-order<BO>`. The *arrive count* and *expected count* of `BO` cannot
   equal at any other point in `S`.
 
-[^footnote-1]: The definition of *barrier-participates-in* (in its current state) is non-deterministic and
+[^0]: The definition of *barrier-participates-in* (in its current state) is non-deterministic and
     will be improved in the future: Within a valid execution, there may be multiple ways
     to build *barrier-participates-in*, however there is only one way to build it that also satisfies all
     other relations and constraints that depend on *barrier-participates-in* and relations derived from it.
 
-```{rubric} *Barrier-executes-before*
-```
+:::{rubric} *Barrier-executes-before*
+:::
 
 A barrier operation `A` *barrier-executes-before* another barrier operation `B` if any of the
 following is true:
@@ -150,26 +150,26 @@ following is true:
 - `A` *barrier-executes-before* some barrier operation `X`, and `X`
   *barrier-executes-before* `B`.
 
-*Barrier-executes-before* is consistent with *barrier-modification-order\<BO>* for every barrier object `BO`.
+*Barrier-executes-before* is consistent with `barrier-modification-order<BO>` for every barrier object `BO`.
 
-```{rubric} Barrier *drop* races
-```
+:::{rubric} Barrier *drop* races
+:::
 
 For every pair of barrier *arrive* `A` and barrier *drop* `D` performed on a barrier *object*
-`BO`, such that `A -> D` in *thread-barrier-order\<BO>*, one of the following must be true:
+`BO`, such that `A -> D` in `thread-barrier-order<BO>`, one of the following must be true:
 
 - `A` does not *barrier-participates-in* any barrier *wait*.
 - `A` *barrier-participates-in* at least one barrier *wait* `W`
   such that `W -> D` in *barrier-executes-before*.
 
-```{rubric} *barrier-phase-with*
-```
+:::{rubric} *barrier-phase-with*
+:::
 
 *barrier-phase-with* is a symmetric relation over barrier operations defined as the
 transitive closure of: *barrier-participates-in* and its inverse relation.
 
-```{rubric} Barrier phase separation
-```
+:::{rubric} Barrier phase separation
+:::
 
 For every barrier operation `A` that *barrier-participates-in* a barrier *wait* `W` on a barrier *object* `BO`:
 
@@ -231,46 +231,57 @@ The following code sequences can be used to implement the barrier operations def
 {ref}`execution synchronization model<amdgpu-execution-synchronization-barriers-execution-model>` using
 `s_barrier` on GFX6 through GFX11:
 
-```{eval-rst}
-.. table:: s_barrier GFX6-11
-    :name: amdgpu-execution-synchronization-barriers-sbarrier-gfx6-11
-    :widths: 15 15 70
+```{list-table} s_barrier GFX6-11
+:name: amdgpu-execution-synchronization-barriers-sbarrier-gfx6-11
+:widths: 15 15 70
+:header-rows: 1
 
-    ===================== ====================== ===========================================================
-    Barrier Operation(s)  Barrier *Object*       AMDGPU Machine Code
-    ===================== ====================== ===========================================================
-    **Init and Drop**
-    --------------------------------------------------------------------------------------------------------
-    *init*                - *Workgroup barrier*  Automatically initialized by the hardware when a workgroup
-                                                 is launched. The *expected count* of this barrier is set
-                                                 to the number of waves in the workgroup.
+   * - Barrier Operation(s)
+     - Barrier *Object*
+     - AMDGPU Machine Code
+   * - **Init and Drop**
+     -
+     -
+   * - *init*
+     - *Workgroup barrier*
+     - Automatically initialized by the hardware when a workgroup is launched.
+       The *expected count* of this barrier is set to the number of waves in the
+       workgroup.
+   * - *drop*
+     - *Workgroup barrier*
+     - When a thread ends, it automatically *drops* this barrier *object* if it
+       had previously *joined* it.
+   * - **Arrive and Wait**
+     -
+     -
+   * - *arrive* then *wait*
+     - *Workgroup barrier*
+     - **BackOffBarrier**
 
-    *drop*                - *Workgroup barrier*  When a thread ends, it automatically *drops* this barrier
-                                                 *object* if it had previously *joined* it.
+       `s_barrier`
 
-    **Arrive and Wait**
-    --------------------------------------------------------------------------------------------------------
-    *arrive* then *wait*  - *Workgroup barrier*  | **BackOffBarrier**
-                                                 | ``s_barrier``
-                                                 | **No BackOffBarrier**
-                                                 | ``s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)``
-                                                 | ``s_waitcnt_vscnt null, 0x0``
-                                                 | ``s_barrier``
+       **No BackOffBarrier**
 
-                                                 - If the target does not have the BackOffBarrier feature,
-                                                   then there cannot be any outstanding memory operations
-                                                   before issuing the ``s_barrier`` instruction.
-                                                 - The waitcnts can independently be moved earlier, or
-                                                   removed entirely as long as the associated
-                                                   counter remains at zero before issuing the
-                                                   ``s_barrier`` instruction.
-                                                 - The ``s_barrier`` instruction cannot complete
-                                                   before all waves of the workgroup have launched.
+       `s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)`
 
-    *arrive*              - *Workgroup barrier*  Not available separately, see *arrive* then *wait*
+       `s_waitcnt_vscnt null, 0x0`
 
-    *wait*                - *Workgroup barrier*  Not available separately, see *arrive* then *wait*
-    ===================== ====================== ===========================================================
+       `s_barrier`
+
+       - If the target does not have the BackOffBarrier feature, then there
+         cannot be any outstanding memory operations before issuing the
+         `s_barrier` instruction.
+       - The waitcnts can independently be moved earlier, or removed entirely
+         as long as the associated counter remains at zero before issuing the
+         `s_barrier` instruction.
+       - The `s_barrier` instruction cannot complete before all waves of the
+         workgroup have launched.
+   * - *arrive*
+     - *Workgroup barrier*
+     - Not available separately, see *arrive* then *wait*
+   * - *wait*
+     - *Workgroup barrier*
+     - Not available separately, see *arrive* then *wait*
 ```
 
 ##### GFX12
@@ -300,8 +311,8 @@ we define the following extensions to the
 The aforementioned execution model always applies unless stated otherwise by one of the extensions below.
 :::
 
-```{rubric} Barrier *Objects*
-```
+:::{rubric} Barrier *Objects*
+:::
 
 There is a sub-type of barrier *objects* called *named barrier objects*.
 *Named barrier objects* inherit all the properties of barrier *objects* as defined by the barrier execution
@@ -309,8 +320,8 @@ model. They are also subject to additional constraints.
 
 Not all barrier *objects* are *named barrier objects*, and both types can coexist in an implementation.
 
-```{rubric} Barrier Operations
-```
+:::{rubric} Barrier Operations
+:::
 
 The entirety of the
 {ref}`barrier operations section<amdgpu-execution-synchronization-barriers-execution-model-barrier-operations>`
@@ -321,28 +332,28 @@ applies, with the following barrier operation being added:
   - Allow the thread that executes the operation to *wait* on a barrier *object*.
   - Can only be used on *named barrier objects*.
 
-```{rubric} *Barrier-joined-before*
-```
+:::{rubric} *Barrier-joined-before*
+:::
 
 A barrier *join* `J` is *barrier-joined-before* a barrier operation `X` if and only if all
 of the following is true:
 
-- `J -> X` in *thread-barrier-order\<BO>*.
+- `J -> X` in `thread-barrier-order<BO>`.
 - `X` is not a barrier *join*.
-- There is no barrier *join* or *drop* `JD` where `J -> JD -> X` in *thread-barrier-order\<BO>*.
+- There is no barrier *join* or *drop* `JD` where `J -> JD -> X` in `thread-barrier-order<BO>`.
 - There is no barrier *join* `J'` on a distinct barrier *object* `BO'` such that `J -> J' -> X` in
   *program-order*.
 
-```{rubric} Join and Drop Ordering
-```
+:::{rubric} Join and Drop Ordering
+:::
 
 For every barrier *drop* `D` performed on a *named barrier object* `BO`:
 
 - There is a barrier *join* `J` such that `J -> D` in *barrier-joined-before*;
   otherwise, the behavior is undefined.
 
-```{rubric} Join and Wait Ordering
-```
+:::{rubric} Join and Wait Ordering
+:::
 
 For every barrier *wait* `W` performed on a *named barrier object* `BO`:
 
@@ -356,128 +367,169 @@ The following code sequences can be used to implement the barrier operations def
 GFX12 `s_barrier`
 {ref}`execution synchronization model<amdgpu-execution-synchronization-barriers-execution-model-gfx12-sbarrier>`:
 
-```{eval-rst}
-.. table:: s_barrier GFX12
-    :name: amdgpu-execution-synchronization-barriers-sbarrier-gfx2
-    :widths: 15 15 70
+```{list-table} s_barrier GFX12
+:name: amdgpu-execution-synchronization-barriers-sbarrier-gfx2
+:widths: 15 15 70
+:header-rows: 1
 
-    ===================== =========================== ===========================================================
-    Barrier Operation(s)  Barrier ID                  AMDGPU Machine Code
-    ===================== =========================== ===========================================================
-    **Init, Join and Drop**
-    -------------------------------------------------------------------------------------------------------------
-    *init*                - ``-2``, ``-1``            Automatically initialized by the hardware when a workgroup
-                                                      is launched. The *expected count* of this barrier is set
-                                                      to the number of waves in the workgroup.
+   * - Barrier Operation(s)
+     - Barrier ID
+     - AMDGPU Machine Code
+   * - **Init, Join and Drop**
+     -
+     -
+   * - *init*
+     - `-2`, `-1`
+     - Automatically initialized by the hardware when a workgroup is launched.
+       The *expected count* of this barrier is set to the number of waves in the
+       workgroup.
+   * - *init*
+     - `-4`, `-3`
+     - Automatically initialized by the hardware when a workgroup is launched
+       as part of a workgroup cluster. The *expected count* of this barrier is
+       set to the number of workgroups in the workgroup cluster.
+   * - *init*
+     - `0`
+     - Automatically initialized by the hardware and always available. This
+       barrier *object* is opaque and immutable as all operations other than
+       barrier *join* are no-ops.
+   * - *init*
+     - `[1, 16]`
+     - `s_barrier_init <N>`
 
-    *init*                - ``-4``, ``-3``            Automatically initialized by the hardware when a workgroup
-                                                      is launched as part of a workgroup cluster.
-                                                      The *expected count* of this barrier is set to the number
-                                                      of workgroups in the workgroup cluster.
+       - `<N>` is an immediate constant, or stored in the lower half of `m0`.
+       - The value to set as the *expected count* of the barrier is stored in
+         the upper half of `m0`.
+   * - *join*
+     - `-2`, `-1`
 
-    *init*                - ``0``                     Automatically initialized by the hardware and always
-                                                      available. This barrier *object* is opaque and immutable
-                                                      as all operations other than barrier *join* are no-ops.
+       `-4`, `-3`
+     - N/A
+   * - *join*
+     - `0`
 
-    *init*                - ``[1, 16]``               | ``s_barrier_init <N>``
+       `[1, 16]`
+     - `s_barrier_join <N>`
 
-                                                      - ``<N>`` is an immediate constant, or stored in the lower
-                                                        half of ``m0``.
-                                                      - The value to set as the *expected count* of the barrier
-                                                        is stored in the upper half of ``m0``.
+       - `<N>` is an immediate constant, or stored in the lower half of `m0`.
+   * - *drop*
+     - `0`
 
-    *join*                - ``-2``, ``-1``            N/A
-                          - ``-4``, ``-3``
+       `[1, 16]`
+     - `s_barrier_leave`
 
-    *join*                - ``0``                     | ``s_barrier_join <N>``
-                          - ``[1, 16]``
-                                                      - ``<N>`` is an immediate constant, or stored in the lower
-                                                        half of ``m0``.
+       - `s_barrier_leave` takes no operand. It can only be used to *drop* a
+         *named* barrier *object* `BO` if `BO` was previously *joined* using
+         `s_barrier_join`.
+       - *Drops* the *named* barrier *object* `BO` if and only if there is a
+         barrier *join* `J` such that `J` is *barrier-joined-before* this
+         barrier *drop* operation.
+   * - *drop*
+     - `-2`, `-1`
 
-    *drop*                - ``0``                     | ``s_barrier_leave``
-                          - ``[1, 16]``
-                                                      - ``s_barrier_leave`` takes no operand. It can only be used
-                                                        to *drop* a *named* barrier *object* ``BO`` if ``BO`` was
-                                                        previously *joined* using ``s_barrier_join``.
-                                                      - *Drops* the *named* barrier *object* ``BO`` if and only if
-                                                        there is a barrier *join* ``J`` such that ``J`` is
-                                                        *barrier-joined-before* this barrier
-                                                        *drop* operation.
+       `-4`, `-3`
+     - When a thread ends, it automatically *drops* this barrier *object* if it
+       had previously *joined* it.
+   * - **Arrive and Wait**
+     -
+     -
+   * - *arrive*
+     - `-4`, `-3`
 
-    *drop*                - ``-2``, ``-1``            When a thread ends, it automatically *drops* this barrier
-                          - ``-4``, ``-3``            *object* if it had previously *joined* it.
+       `-2`, `-1`
 
-    **Arrive and Wait**
-    -------------------------------------------------------------------------------------------------------------
+       `0`
 
-    *arrive*              - ``-4``, ``-3``            | ``s_barrier_signal <N>``
-                          - ``-2``, ``-1``            | Or
-                          - ``0``                     | ``s_barrier_signal_isfirst <N>``
-                          - ``[1, 16]``
-                                                      - ``<N>`` is an immediate constant, or stored in bits ``[4:0]`` of ``m0``.
-                                                      - The ``_isfirst`` variant sets ``SCC=1`` if this wave is the first
-                                                        to signal the barrier, otherwise ``SCC=0``.
-                                                      - For barrier *objects* ``[1, 16]``: When using ``m0`` as an operand,
-                                                        if there is a non-zero value contained in the bits ``[22:16]`` of ``m0``,
-                                                        the *expected count* of the barrier *object* is set to that value before
-                                                        the *arrive count* of the barrier *object* is incremented.
-                                                        The new *expected count* value must be greater than or equal to the
-                                                        *arrive count*, otherwise the behavior is undefined.
-                                                      - For barrier *objects* ``-4`` and ``-3``
-                                                        (``cluster`` barriers): only one wave
-                                                        per workgroup may arrive at the barrier on behalf of
-                                                        its entire workgroup. However, any wave within the workgroup
-                                                        cluster can then *wait* on this barrier *object*.
-                                                      - This is a no-op on the *NULL barrier*
-                                                        (barrier *object* ``0``).
+       `[1, 16]`
+     - `s_barrier_signal <N>`
 
-    *wait*                - ``-4``, ``-3``            ``s_barrier_wait <N>``.
-                          - ``-2``, ``-1``
-                          - ``0``                     - ``<N>`` is an immediate constant.
-                          - ``[1, 16]``               - For barrier *objects* ``-2`` and ``-1``: This instruction
-                                                        cannot complete before all waves of the
-                                                        workgroup have launched.
-                                                      - For barrier *objects* ``-4`` and ``-3`` (``cluster`` barriers):
-                                                        This instruction cannot complete before all waves of the
-                                                        workgroup cluster have launched.
-                                                      - This is a no-op on the *NULL barrier* (barrier *object* ``0``).
-                                                      - For *named barrier objects*, this instruction always waits on the
-                                                        last *named barrier object* that the thread has *joined*, even
-                                                        if it is different from the *barrier object* passed to the
-                                                        instruction.
-    ===================== =========================== ===========================================================
+       Or
 
+       `s_barrier_signal_isfirst <N>`
+
+       - `<N>` is an immediate constant, or stored in bits `[4:0]` of `m0`.
+       - The `_isfirst` variant sets `SCC=1` if this wave is the first to signal
+         the barrier, otherwise `SCC=0`.
+       - For barrier *objects* `[1, 16]`: When using `m0` as an operand, if
+         there is a non-zero value contained in the bits `[22:16]` of `m0`, the
+         *expected count* of the barrier *object* is set to that value before
+         the *arrive count* of the barrier *object* is incremented. The new
+         *expected count* value must be greater than or equal to the
+         *arrive count*, otherwise the behavior is undefined.
+       - For barrier *objects* `-4` and `-3` (`cluster` barriers): only one wave
+         per workgroup may arrive at the barrier on behalf of its entire
+         workgroup. However, any wave within the workgroup cluster can then
+         *wait* on this barrier *object*.
+       - This is a no-op on the *NULL barrier* (barrier *object* `0`).
+   * - *wait*
+     - `-4`, `-3`
+
+       `-2`, `-1`
+
+       `0`
+
+       `[1, 16]`
+     - `s_barrier_wait <N>`.
+
+       - `<N>` is an immediate constant.
+       - For barrier *objects* `-2` and `-1`: This instruction cannot complete
+         before all waves of the workgroup have launched.
+       - For barrier *objects* `-4` and `-3` (`cluster` barriers): This
+         instruction cannot complete before all waves of the workgroup cluster
+         have launched.
+       - This is a no-op on the *NULL barrier* (barrier *object* `0`).
+       - For *named barrier objects*, this instruction always waits on the last
+         *named barrier object* that the thread has *joined*, even if it is
+         different from the *barrier object* passed to the instruction.
 ```
 
 The following barrier IDs are available:
 
-```{eval-rst}
-.. table:: s_barrier IDs GFX12
-    :name: amdgpu-execution-synchronization-barriers-sbarrier-ids-gfx12
-    :widths: 15 15 15 10 45
+```{list-table} s_barrier IDs GFX12
+:name: amdgpu-execution-synchronization-barriers-sbarrier-ids-gfx12
+:widths: 15 15 15 10 45
+:header-rows: 1
 
-    =============== ============== ============ ======================= ==============================================================
-    Barrier ID      Scope          Availability *Named barrier object*? Description
-    =============== ============== ============ ======================= ==============================================================
-    ``-4``          ``cluster``    GFX12.5      NO                      *Cluster trap barrier*; *cluster barrier object* for use by
-                                                                        all workgroups of a workgroup cluster. Dedicated for the trap
-                                                                        handler and only available in privileged execution mode
-                                                                        (not accessible by the shader).
-
-    ``-3``          ``cluster``    GFX12.5      NO                      *Cluster user barrier*; *cluster barrier object* for use by
-                                                                        all workgroups of a workgroup cluster.
-
-    ``-2``          ``workgroup``  GFX12 (all)  NO                      *Workgroup trap barrier*, dedicated for the trap handler and
-                                                                        only available in privileged execution mode
-                                                                        (not accessible by the shader).
-
-    ``-1``          ``workgroup``  GFX12 (all)  NO                      *Workgroup barrier*.
-
-    ``0``           ``workgroup``  GFX12.5      YES                     *NULL barrier*.
-
-    ``[1, 16]``     ``workgroup``  GFX12.5      YES                     *Named barrier objects* for the shader to assign and use.
-    =============== ============== ============ ======================= ==============================================================
-
+   * - Barrier ID
+     - Scope
+     - Availability
+     - *Named barrier object*?
+     - Description
+   * - `-4`
+     - `cluster`
+     - GFX12.5
+     - NO
+     - *Cluster trap barrier*; *cluster barrier object* for use by all
+       workgroups of a workgroup cluster. Dedicated for the trap handler and
+       only available in privileged execution mode (not accessible by the
+       shader).
+   * - `-3`
+     - `cluster`
+     - GFX12.5
+     - NO
+     - *Cluster user barrier*; *cluster barrier object* for use by all
+       workgroups of a workgroup cluster.
+   * - `-2`
+     - `workgroup`
+     - GFX12 (all)
+     - NO
+     - *Workgroup trap barrier*, dedicated for the trap handler and only
+       available in privileged execution mode (not accessible by the shader).
+   * - `-1`
+     - `workgroup`
+     - GFX12 (all)
+     - NO
+     - *Workgroup barrier*.
+   * - `0`
+     - `workgroup`
+     - GFX12.5
+     - YES
+     - *NULL barrier*.
+   * - `[1, 16]`
+     - `workgroup`
+     - GFX12.5
+     - YES
+     - *Named barrier objects* for the shader to assign and use.
 ```
 
 Informally, we can note that:
@@ -490,4 +542,3 @@ Informally, we can note that:
 
 - When a thread ends, it does **not** implicitly *drop* any *named barrier objects*
   (barrier IDs `[0, 16]`) it has *joined*.
-

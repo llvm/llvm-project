@@ -336,4 +336,3 @@ mismatches between the M-profile objects from compiler-rt and the A-profile
 objects from the test. The lld linker does not check the profile
 BuildAttribute so it can be used to link the tests by adding `-fuse-ld=lld` to the
 `COMPILER_RT_TEST_COMPILER_CFLAGS`.
-
