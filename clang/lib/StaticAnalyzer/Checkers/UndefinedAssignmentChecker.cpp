@@ -73,6 +73,20 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
         }
       }
 
+      if (const auto *MD =
+              dyn_cast<CXXMethodDecl>(C.getStackFrame()->getDecl())) {
+        if ((MD->isCopyAssignmentOperator() ||
+             MD->isMoveAssignmentOperator()) &&
+            MD->isDefaulted() && B->isAssignmentOp()) {
+          OS << "Value assigned to field '"
+             << cast<MemberExpr>(B->getRHS()->IgnoreImpCasts())
+                    ->getMemberDecl()
+                    ->getName()
+             << "' in " << (!MD->isImplicit() ? "default" : "implicit")
+             << " assignment operator is uninitialized";
+          break;
+        }
+      }
       ex = B->getRHS();
       break;
     }
