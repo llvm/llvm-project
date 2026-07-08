@@ -408,9 +408,8 @@ static APInt floorDivideGF2(APInt Dividend, APInt Divisor) {
 }
 
 // Generate the constants for performing a Polynomial (GF(2)) Barrett Reduction
-// according to Intel's Fast CRC Computation white paper
-// with some adjustments to account for the fact that bit width and trip count
-// can vary.
+// according to Intel's Fast CRC Computation white paper with some adjustments
+// to account for the fact that bit width and trip count can vary.
 std::pair<APInt, APInt> HashRecognize::genBarrettConstants(const APInt &GenPoly,
                                                            unsigned TripCount,
                                                            bool IsBigEndian) {
@@ -432,8 +431,9 @@ std::pair<APInt, APInt> HashRecognize::genBarrettConstants(const APInt &GenPoly,
       floorDivideGF2(APInt::getOneBitSet(DivBW, BW + TripCount), FullGenPoly)
           .trunc(TripCount + 1);
 
-  // In the bit-reflected case, mu and P(x) must be bit-reflected across their
-  // respective widths for the corresponding Barrett reduction steps.
+  // In the bit-reflected (little-endian) case, mu and P(x) must be
+  // bit-reflected across their respective widths for the corresponding Barrett
+  // reduction steps.
   if (!IsBigEndian) {
     Mu = Mu.reverseBits();
     FullGenPoly = FullGenPoly.reverseBits();
