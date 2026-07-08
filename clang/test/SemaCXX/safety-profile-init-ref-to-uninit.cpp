@@ -1578,6 +1578,7 @@ struct Callee {
   operator int() const;
   int *operator->();
   int operator()(int);
+  int &operator[](int);
 };
 
 void test_member_call_on_uninit_object() {
@@ -1601,6 +1602,7 @@ void test_member_operators_on_uninit_object() {
   (void)(s == t); // expected-error {{calling member function 'operator==' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
   int v = s;      // expected-error {{calling member function 'operator int' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
   s(1);           // expected-error {{calling member function 'operator()' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+  s[0] = 1;       // expected-error {{calling member function 'operator[]' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
   (void)v;
 }
 
@@ -1635,6 +1637,8 @@ void test_member_call_silent_forms() {
   Callee s [[uninit]];
   s.sf();                 // OK: a static member uses no object argument
   (void)sizeof(s.f());    // OK: unevaluated
+  using Unevaluated = decltype(s.f()); // OK: unevaluated
+  (void)Unevaluated{};
   Callee t{};
   t.f();                  // OK: initialized object
   Callee{}.f();           // OK: a prvalue object is not uninitialized storage
