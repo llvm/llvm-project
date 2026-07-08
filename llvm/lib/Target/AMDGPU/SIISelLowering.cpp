@@ -8664,15 +8664,8 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     return SrcVT == MVT::v2f32 ? Op : splitFP_ROUNDVectorOp(Op, DAG);
   }
 
-  if (SrcVT.getScalarType() != MVT::f64) {
-    if (IsStrict && DstVT.getScalarType() == MVT::bf16) {
-      SDLoc DL(Op);
-      SDValue Result = DAG.getNode(ISD::FP_ROUND, DL, DstVT, Src,
-                                   DAG.getTargetConstant(0, DL, MVT::i32));
-      return DAG.getMergeValues({Result, Op.getOperand(0)}, DL);
-    }
+  if (SrcVT.getScalarType() != MVT::f64)
     return Op;
-  }
 
   SDLoc DL(Op);
   if (DstVT == MVT::f16) {
@@ -8703,11 +8696,12 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   // hardware f32 -> bf16 instruction.
   EVT F32VT = SrcVT.changeElementType(*DAG.getContext(), MVT::f32);
   SDValue Rod = expandRoundInexactToOdd(F32VT, Src, DL, DAG);
-  SDValue Result = DAG.getNode(ISD::FP_ROUND, DL, DstVT, Rod,
-                               DAG.getTargetConstant(0, DL, MVT::i32));
   if (IsStrict)
-    return DAG.getMergeValues({Result, Op.getOperand(0)}, DL);
-  return Result;
+    return DAG.getNode(
+        ISD::STRICT_FP_ROUND, DL, {DstVT, MVT::Other},
+        {Op.getOperand(0), Rod, DAG.getTargetConstant(0, DL, MVT::i32)});
+  return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Rod,
+                     DAG.getTargetConstant(0, DL, MVT::i32));
 }
 
 SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
