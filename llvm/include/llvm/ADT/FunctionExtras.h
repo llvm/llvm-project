@@ -205,6 +205,7 @@ protected:
     else // Trivial callable stored inline => memcpy.
       memcpy(&Storage.Inline, &RHS.Storage.Inline, InlineStorageSize);
 
+    RHS.CallPtr = nullptr;
     RHS.DestroyMovePtr = nullptr; // Moved everything out of RHS.
 #ifndef NDEBUG
     // In debug builds, we also scribble across the rest of the storage.
