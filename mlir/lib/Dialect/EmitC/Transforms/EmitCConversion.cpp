@@ -19,19 +19,33 @@
 struct ModuleOpConversion final : mlir::OpConversionPattern<mlir::ModuleOp> {
   using Base::Base;
 
-  llvm::LogicalResult matchAndRewrite(mlir::ModuleOp moduleOp, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) const override {
-    for (mlir::ModuleOp nestedModuleOp : llvm::make_early_inc_range(moduleOp.getOps<mlir::ModuleOp>())) {
-      auto funcOps = nestedModuleOp.getOps<mlir::func::FuncOp>();
-      if (!funcOps.empty()) {
-        rewriter.setInsertionPoint(nestedModuleOp);
-        mlir::emitc::ClassOp classOp = mlir::emitc::ClassOp::create(rewriter, nestedModuleOp->getLoc(), nestedModuleOp.getSymNameAttr());
-        mlir::Block *classBlock = rewriter.createBlock(&classOp.getBody());
-        for (mlir::Operation &op : llvm::make_early_inc_range(nestedModuleOp.getBody()->without_terminator())) {
-          op.moveBefore(classBlock, classBlock->end());
-        }
-        rewriter.eraseOp(nestedModuleOp);
-      }
+  llvm::LogicalResult matchAndRewrite(
+      mlir::ModuleOp moduleOp, 
+      OpAdaptor adaptor, 
+      mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Operation *parentOp = moduleOp->getParentOp();
+    if (!parentOp || !llvm::isa<mlir::ModuleOp>(parentOp)) {
+      return llvm::failure();
     }
+
+    auto funcOps = moduleOp.getOps<mlir::func::FuncOp>();
+    if (funcOps.empty()) {
+      return llvm::failure();
+    }
+
+    mlir::emitc::ClassOp classOp = mlir::emitc::ClassOp::create(
+        rewriter, 
+        moduleOp.getLoc(), 
+        moduleOp.getSymNameAttr()
+    );
+
+    mlir::Block *classBlock = rewriter.createBlock(&classOp.getBody());
+
+    for (mlir::Operation &op : llvm::make_early_inc_range(moduleOp.getBody()->without_terminator())) {
+      rewriter.moveOpBefore(&op, classBlock, classBlock->end());
+    }
+
+    rewriter.eraseOp(moduleOp);
 
     return llvm::success();
   }
