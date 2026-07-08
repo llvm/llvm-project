@@ -202,6 +202,9 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy` ``-store-check-profile`` by generating valid
   JSON when the source file path contains characters that require JSON escaping.
 
+- Improved :program:`clang-tidy` by preserving literal backslash characters in
+  POSIX source paths.
+
 - Ensured that :program:`clang-tidy` and the clang compiler uses the same logic
   for the suppression of compiler diagnostics in system headers and expansions
   of macros defined in system headers. Previously the default setting of tidy
@@ -537,6 +540,12 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
   by fixing a false positive on implicitly generated functions such as
   inherited constructors.
+
+- Improved :doc:`cppcoreguidelines-special-member-functions
+  <clang-tidy/checks/cppcoreguidelines/special-member-functions>` check by
+  fixing a false positive with the `AllowImplicitlyDeletedCopyOrMove` option
+  for classes whose copy operations are implicitly deleted by a non-copyable
+  base class.
 
 - Improved :doc:`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by adding the

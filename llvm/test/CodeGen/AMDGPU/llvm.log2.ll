@@ -92,9 +92,9 @@ define amdgpu_kernel void @s_log2_f32(ptr addrspace(1) %out, float %in) {
 ; VI-GISEL-NEXT:    v_log_f32_e32 v0, v0
 ; VI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s2, 0x42000000, 0
+; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    v_subrev_f32_e32 v2, s2, v0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; VI-GISEL-NEXT:    s_endpgm
 ;
@@ -304,12 +304,12 @@ define amdgpu_kernel void @s_log2_v2f32(ptr addrspace(1) %out, <2 x float> %in) 
 ; VI-SDAG-NEXT:    s_cselect_b32 s3, 32, 0
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s3
-; VI-SDAG-NEXT:    v_log_f32_e32 v3, v3
 ; VI-SDAG-NEXT:    v_ldexp_f32 v1, s2, v1
+; VI-SDAG-NEXT:    v_log_f32_e32 v3, v3
 ; VI-SDAG-NEXT:    v_log_f32_e32 v4, v1
 ; VI-SDAG-NEXT:    v_sub_f32_e32 v1, v3, v2
-; VI-SDAG-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-SDAG-NEXT:    v_sub_f32_e32 v0, v4, v0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-SDAG-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    s_endpgm
@@ -626,14 +626,14 @@ define amdgpu_kernel void @s_log2_v3f32(ptr addrspace(1) %out, <3 x float> %in) 
 ; VI-SDAG-NEXT:    s_cselect_b32 s1, 32, 0
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; VI-SDAG-NEXT:    v_ldexp_f32 v1, s0, v1
 ; VI-SDAG-NEXT:    v_log_f32_e32 v3, v3
 ; VI-SDAG-NEXT:    v_log_f32_e32 v5, v5
-; VI-SDAG-NEXT:    v_ldexp_f32 v1, s0, v1
 ; VI-SDAG-NEXT:    v_log_f32_e32 v6, v1
 ; VI-SDAG-NEXT:    v_sub_f32_e32 v2, v3, v2
 ; VI-SDAG-NEXT:    v_sub_f32_e32 v1, v5, v4
-; VI-SDAG-NEXT:    v_mov_b32_e32 v3, s4
 ; VI-SDAG-NEXT:    v_sub_f32_e32 v0, v6, v0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v3, s4
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v4, s5
 ; VI-SDAG-NEXT:    flat_store_dwordx3 v[3:4], v[0:2]
 ; VI-SDAG-NEXT:    s_endpgm
@@ -1051,16 +1051,16 @@ define amdgpu_kernel void @s_log2_v4f32(ptr addrspace(1) %out, <4 x float> %in) 
 ; VI-SDAG-NEXT:    s_cselect_b32 s1, 32, 0
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; VI-SDAG-NEXT:    v_ldexp_f32 v1, s0, v1
 ; VI-SDAG-NEXT:    v_log_f32_e32 v3, v3
 ; VI-SDAG-NEXT:    v_log_f32_e32 v5, v5
-; VI-SDAG-NEXT:    v_ldexp_f32 v1, s0, v1
 ; VI-SDAG-NEXT:    v_log_f32_e32 v7, v7
 ; VI-SDAG-NEXT:    v_log_f32_e32 v8, v1
 ; VI-SDAG-NEXT:    v_sub_f32_e32 v3, v3, v2
 ; VI-SDAG-NEXT:    v_sub_f32_e32 v2, v5, v4
-; VI-SDAG-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-SDAG-NEXT:    v_sub_f32_e32 v1, v7, v6
 ; VI-SDAG-NEXT:    v_sub_f32_e32 v0, v8, v0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-SDAG-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-SDAG-NEXT:    s_endpgm

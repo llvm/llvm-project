@@ -302,6 +302,15 @@ Tool *HIPAMDToolChain::buildLinker() const {
   return new tools::AMDGCN::Linker(*this);
 }
 
+LTOKind HIPAMDToolChain::getLTOMode(const ArgList &Args,
+                                    Action::OffloadKind Kind) const {
+  if (getTriple().isAMDGCN() && getDriver().offloadDeviceOnly() &&
+      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false) &&
+      !Args.hasArg(options::OPT_foffload_lto, options::OPT_foffload_lto_EQ))
+    return LTOK_None;
+  return ToolChain::getLTOMode(Args, Kind);
+}
+
 ToolChain::CXXStdlibType
 HIPAMDToolChain::GetCXXStdlibType(const ArgList &Args) const {
   return HostTC.GetCXXStdlibType(Args);
@@ -324,6 +333,15 @@ void HIPAMDToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
 
 void HIPAMDToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args) const {
+  if (getTriple().getEnvironment() == llvm::Triple::LLVM) {
+    if (DriverArgs.hasFlag(options::OPT_offload_inc,
+                           options::OPT_no_offload_inc, true) &&
+        !DriverArgs.hasArg(options::OPT_nohipwrapperinc) &&
+        !DriverArgs.hasArg(options::OPT_nobuiltininc))
+      CC1Args.append({"-include", "__clang_gpu_device_functions.h"});
+    return;
+  }
+
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
