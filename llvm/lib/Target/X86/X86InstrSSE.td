@@ -4250,6 +4250,19 @@ def MOVPQIto64mr : RS2I<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, VR128:$src),
 } // ExeDomain = SSEPackedInt
 
 //===---------------------------------------------------------------------===//
+// If the upper 32 bits of v2i64 elements are zero, we can use (v)movd instead.
+let AddedComplexity = 10 in {
+  let Predicates = [UseAVX] in {
+    def : Pat<(i64 (extractelt (X86upperzero<v2i64, VR128>:$src), (iPTR 0))),
+              (SUBREG_TO_REG (VMOVPDI2DIrr VR128:$src), sub_32bit)>;
+  }
+  let Predicates = [UseSSE2] in {
+    def : Pat<(i64 (extractelt (X86upperzero<v2i64, VR128>:$src), (iPTR 0))),
+              (SUBREG_TO_REG (MOVPDI2DIrr VR128:$src), sub_32bit)>;
+  }
+}
+
+//===---------------------------------------------------------------------===//
 // Bitcast FR64 <-> GR64
 //
 let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {

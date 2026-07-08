@@ -2664,9 +2664,18 @@ LogicalResult TargetOp::verifyRegions() {
   if (numNestedTeams > 1)
     return emitError("target containing multiple 'omp.teams' nested ops");
 
-  if (getKernelType() == TargetExecMode::bare && numNestedTeams == 0)
-    return emitOpError()
-           << "bare kernel must contain a nested 'omp.teams' operation";
+  if (numNestedTeams == 0) {
+    switch (getKernelType()) {
+    case TargetExecMode::bare:
+      return emitOpError()
+             << "bare kernel must contain a nested 'omp.teams' operation";
+    case TargetExecMode::spmd_no_loop:
+      return emitOpError() << "spmd_no_loop kernel must contain a nested "
+                              "'omp.teams' operation";
+    default:
+      break;
+    }
+  }
 
   Operation *capturedOp =
       cast<ComposableOpInterface>(getOperation()).findCapturedOp();

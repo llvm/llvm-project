@@ -38,8 +38,14 @@ namespace detail {
 /// polymorphically over pass objects.
 template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
 struct PassConcept {
+  PassConcept() = default;
+
   // Boiler plate necessary for the container of derived classes.
   virtual ~PassConcept() = default;
+
+  // Passes are immovable.
+  PassConcept(const PassConcept &) = delete;
+  PassConcept &operator=(const PassConcept &) = delete;
 
   /// The polymorphic API which runs the pass over a given IR entity.
   ///
@@ -71,22 +77,8 @@ struct PassConcept {
 /// be a copyable object.
 template <typename IRUnitT, typename PassT, typename AnalysisManagerT,
           typename... ExtraArgTs>
-struct PassModel : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
+struct PassModel final : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
   explicit PassModel(PassT Pass) : Pass(std::move(Pass)) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  PassModel(const PassModel &Arg) : Pass(Arg.Pass) {}
-  PassModel(PassModel &&Arg) : Pass(std::move(Arg.Pass)) {}
-
-  friend void swap(PassModel &LHS, PassModel &RHS) {
-    using std::swap;
-    swap(LHS.Pass, RHS.Pass);
-  }
-
-  PassModel &operator=(PassModel RHS) {
-    swap(*this, RHS);
-    return *this;
-  }
 
   PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM,
                         ExtraArgTs... ExtraArgs) override {

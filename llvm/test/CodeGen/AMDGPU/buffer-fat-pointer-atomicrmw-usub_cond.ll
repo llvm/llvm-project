@@ -39,7 +39,7 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_fin
 ; GFX11-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v5, v2
 ; GFX11-NEXT:    v_cndmask_b32_e32 v4, v5, v0, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
+; GFX11-NEXT:    v_dual_mov_b32 v1, v5 :: v_dual_mov_b32 v0, v4
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v3, s[0:3], 0 offen offset:1024 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl1_inv
@@ -138,7 +138,7 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_rem
 ; GFX11-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v5, v2
 ; GFX11-NEXT:    v_cndmask_b32_e32 v4, v5, v0, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
+; GFX11-NEXT:    v_dual_mov_b32 v1, v5 :: v_dual_mov_b32 v0, v4
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v3, s[0:3], 0 offen offset:1024 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl1_inv
@@ -188,7 +188,7 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_fin
 ; GFX11-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v5, v2
 ; GFX11-NEXT:    v_cndmask_b32_e32 v4, v5, v0, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
+; GFX11-NEXT:    v_dual_mov_b32 v1, v5 :: v_dual_mov_b32 v0, v4
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v3, s[0:3], 0 offen offset:1024 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl1_inv
@@ -243,7 +243,7 @@ define i32 @buffer_fat_ptr_system_atomic_usub_cond_ret_u32__offset__amdgpu_no_fi
 ; GFX11-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v5, v2
 ; GFX11-NEXT:    v_cndmask_b32_e32 v4, v5, v0, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
+; GFX11-NEXT:    v_dual_mov_b32 v1, v5 :: v_dual_mov_b32 v0, v4
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v3, s[0:3], 0 offen offset:1024 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl1_inv

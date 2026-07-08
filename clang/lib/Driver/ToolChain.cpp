@@ -289,17 +289,17 @@ static void getAArch64MultilibFlags(const Driver &D,
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
   for (const auto &Ext : AArch64::Extensions)
-    if (!Ext.UserVisibleName.empty())
-      if (FeatureSet.contains(Ext.PosTargetFeature))
-        MArch.push_back(Ext.UserVisibleName.str());
+    if (Ext.UserVisibleName.value())
+      if (FeatureSet.contains(AArch64::StrTab[Ext.PosTargetFeature]))
+        MArch.push_back(AArch64::StrTab[Ext.UserVisibleName].str());
   for (const auto &Ext : AArch64::Extensions)
-    if (!Ext.UserVisibleName.empty())
-      if (FeatureSet.contains(Ext.NegTargetFeature))
-        MArch.push_back(("no" + Ext.UserVisibleName).str());
+    if (Ext.UserVisibleName.value())
+      if (FeatureSet.contains(AArch64::StrTab[Ext.NegTargetFeature]))
+        MArch.push_back(("no" + AArch64::StrTab[Ext.UserVisibleName]).str());
   StringRef ArchName;
   for (const auto &ArchInfo : AArch64::ArchInfos)
-    if (FeatureSet.contains(ArchInfo->ArchFeature))
-      ArchName = ArchInfo->Name;
+    if (FeatureSet.contains(AArch64::StrTab[ArchInfo.ArchFeature]))
+      ArchName = AArch64::StrTab[ArchInfo.Name];
   if (!ArchName.empty()) {
     MArch.insert(MArch.begin(), ("-march=" + ArchName).str());
     Result.push_back(llvm::join(MArch, "+"));

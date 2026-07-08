@@ -81,7 +81,7 @@ void TextDiagnosticPrinter::printLocForRemarks(
     llvm::sys::path::make_preferred(absPath);
 
     // Used for changing only the bold attribute
-    if (diagOpts.ShowColors)
+    if (diagOpts.showColors(os.has_colors()))
       os.changeColor(llvm::raw_ostream::SAVEDCOLOR, true);
 
     // Print path, file name, line and column
@@ -112,12 +112,12 @@ void TextDiagnosticPrinter::HandleDiagnostic(
   llvm::StringRef diagMsg;
   printLocForRemarks(diagMessageStream, diagMsg);
 
-  Fortran::frontend::TextDiagnostic::printDiagnosticLevel(os, level,
-                                                          diagOpts.ShowColors);
+  Fortran::frontend::TextDiagnostic::printDiagnosticLevel(
+      os, level, diagOpts.showColors(os.has_colors()));
   Fortran::frontend::TextDiagnostic::printDiagnosticMessage(
       os,
       /*IsSupplemental=*/level == clang::DiagnosticsEngine::Note, diagMsg,
-      diagOpts.ShowColors);
+      diagOpts.showColors(os.has_colors()));
 
   os.flush();
 }

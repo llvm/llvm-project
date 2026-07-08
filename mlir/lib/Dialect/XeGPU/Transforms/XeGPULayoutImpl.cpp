@@ -461,20 +461,32 @@ xegpu::inferBroadcastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   SmallVector<int64_t> bcastDims;
   size_t dimDiff = resShape.size() - srcShape.size();
   auto bcastSourceLayout = resLayout;
+
+  // Right-aligned source in result, look for stretched unit dims.
   for (size_t i = dimDiff; i < resShape.size(); i++) {
     if ((srcShape[i - dimDiff] == 1) && (resShape[i] != 1))
       bcastDims.push_back(i);
   }
 
-  // the sg_layout and lane_layout for unit dimensions are preserved so it can
-  // be propagate to producer op so potentially used by the multi-reduction op.
+  // Case UnitDimStretch (e.g., 1x4 -> 4x4): the source layout data field must
+  // be 1.
   if (!bcastDims.empty())
     bcastSourceLayout = bcastSourceLayout.setUnitDimData(bcastDims);
 
-  if (dimDiff > 0) {
+  // Case RankDiff:
+  if (dimDiff) {
     SmallVector<int64_t> sliceDims;
-    for (size_t i = 0; i < dimDiff; i++)
-      sliceDims.push_back(i);
+    bool isOuterDimDiffUnitDims = llvm::all_of(
+        resShape.take_front(dimDiff), [&](int64_t dim) { return dim == 1; });
+    if (dimDiff && bcastDims.size() == dimDiff && isOuterDimDiffUnitDims) {
+      // Case RankDiffInnerDims (e.g., 1x4 -> 1x16x4):
+      //  slice the expanded inner dims
+      sliceDims.assign(bcastDims.begin(), bcastDims.end());
+    } else {
+      // Case RankDiffOuterDims (e.g., 1x4 -> 1x1x4):
+      //  slice the outer dims
+      llvm::append_range(sliceDims, llvm::seq<int64_t>(0, dimDiff));
+    }
     bcastSourceLayout = xegpu::SliceAttr::get(
         resLayout.getContext(), bcastSourceLayout,
         DenseI64ArrayAttr::get(resLayout.getContext(), sliceDims));
@@ -1991,31 +2003,40 @@ xegpu::completeDpasLaneLayoutFromInstData(xegpu::DistributeLayoutAttr aLayout,
   if (!uArchInstruction)
     return std::nullopt;
   auto subgroupSize = uArch->getSubgroupSize();
-
-  auto [laneLayoutA, laneDataA] = compute2DBlockIOLaneLayoutAndData(
-      aTy.getShape(), subgroupSize,
-      aTy.getElementType().getIntOrFloatBitWidth(),
-      uArchInstruction->getPackedFormatBitSizeA());
-  auto [laneLayoutB, laneDataB] = compute2DBlockIOLaneLayoutAndData(
-      bTy.getShape(), subgroupSize,
-      bTy.getElementType().getIntOrFloatBitWidth(),
-      uArchInstruction->getPackedFormatBitSizeB(), /*vnni=*/true);
-  auto [laneLayoutCD, laneDataCD] = compute2DBlockIOLaneLayoutAndData(
-      cdTy.getShape(), subgroupSize,
-      cdTy.getElementType().getIntOrFloatBitWidth(),
-      cdTy.getElementType().getIntOrFloatBitWidth());
+  llvm::SmallVector<int64_t> laneLayoutA, laneDataA, laneLayoutB, laneDataB,
+      laneLayoutCD, laneDataCD;
   SmallVector<int64_t> instDataA = aLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> instDataB = bLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> instDataCD = cdLayout.getEffectiveInstDataAsInt();
+
+  if (isa<xegpu::uArch::Xe2, xegpu::uArch::Xe3>(uArch)) {
+    std::tie(laneLayoutA, laneDataA) = compute2DBlockIOLaneLayoutAndData(
+        aTy.getShape(), subgroupSize,
+        aTy.getElementType().getIntOrFloatBitWidth(),
+        uArchInstruction->getPackedFormatBitSizeA());
+    std::tie(laneLayoutB, laneDataB) = compute2DBlockIOLaneLayoutAndData(
+        bTy.getShape(), subgroupSize,
+        bTy.getElementType().getIntOrFloatBitWidth(),
+        uArchInstruction->getPackedFormatBitSizeB(), /*vnni=*/true);
+    std::tie(laneLayoutCD, laneDataCD) = compute2DBlockIOLaneLayoutAndData(
+        cdTy.getShape(), subgroupSize,
+        cdTy.getElementType().getIntOrFloatBitWidth(),
+        cdTy.getElementType().getIntOrFloatBitWidth());
+  } else {
+    assert(false && "Unsupported uArch for DPAS lane layout completion");
+  }
+
   if (!isValidLaneLayout(instDataA, laneLayoutA, laneDataA) ||
       !isValidLaneLayout(instDataB, laneLayoutB, laneDataB) ||
       !isValidLaneLayout(instDataCD, laneLayoutCD, laneDataCD))
     return std::nullopt;
   return std::make_tuple(
-      buildInstDataLayoutWithLane(context, instDataA, laneLayoutA, laneDataA),
-      buildInstDataLayoutWithLane(context, instDataB, laneLayoutB, laneDataB),
-      buildInstDataLayoutWithLane(context, instDataCD, laneLayoutCD,
-                                  laneDataCD));
+      buildInstDataLayoutWithLane(context, instDataA, laneLayoutA, laneDataA,
+                                  aLayout.getOrder()),
+      buildInstDataLayoutWithLane(context, instDataB, laneLayoutB, laneDataB,
+                                  bLayout.getOrder()),
+      buildInstDataLayoutWithLane(context, instDataCD, laneLayoutCD, laneDataCD,
+                                  cdLayout.getOrder()));
 }
 
 /// Like completeDpasLaneLayoutFromInstData, but for dpas_mx: also re-derives

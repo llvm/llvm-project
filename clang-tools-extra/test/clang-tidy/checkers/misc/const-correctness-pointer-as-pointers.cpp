@@ -56,6 +56,38 @@ void *return_non_const() {
   return a;
 }
 
+void *return_as_void_pointer() {
+  int i = 0;
+  int *p_local0 = &i;
+  // CHECK-NOT: warning
+  return p_local0;
+}
+
+const void *return_as_const_void_pointer() {
+  int i = 0;
+  int *p_local0 = &i;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'p_local0' of type 'int *' can be declared 'const'
+  // CHECK-FIXES: int  const*p_local0 = &i;
+  return p_local0;
+}
+
+void take_void_pointer(void *);
+void pass_as_void_pointer() {
+  int i = 0;
+  int *p_local0 = &i;
+  // CHECK-NOT: warning
+  take_void_pointer(p_local0);
+}
+
+void take_const_void_pointer(const void *);
+void pass_as_const_void_pointer() {
+  int i = 0;
+  int *p_local0 = &i;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'p_local0' of type 'int *' can be declared 'const'
+  // CHECK-FIXES: int  const*p_local0 = &i;
+  take_const_void_pointer(p_local0);
+}
+
 void function_pointer_basic() {
   void (*const fp)() = nullptr;
   fp();
