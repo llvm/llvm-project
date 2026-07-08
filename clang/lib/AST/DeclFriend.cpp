@@ -13,11 +13,9 @@
 
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/Basic/LLVM.h"
+#include "clang/AST/ExternalASTSource.h"
 #include <cassert>
 #include <cstddef>
 
@@ -25,16 +23,9 @@ using namespace clang;
 
 void FriendDecl::anchor() {}
 
-FriendDecl *FriendDecl::getNextFriendSlowCase() {
-  return cast_or_null<FriendDecl>(
-                           NextFriend.get(getASTContext().getExternalSource()));
-}
-
-FriendDecl *
-FriendDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
-                   FriendUnion Friend, SourceLocation FriendL,
-                   SourceLocation EllipsisLoc,
-                   ArrayRef<TemplateParameterList *> FriendTypeTPLists) {
+FriendDecl *FriendDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
+                               FriendUnion Friend, SourceLocation FriendL,
+                               SourceLocation EllipsisLoc) {
 #ifndef NDEBUG
   if (const auto *D = dyn_cast<NamedDecl *>(Friend)) {
     assert(isa<FunctionDecl>(D) ||
@@ -46,29 +37,52 @@ FriendDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
     // to the original declaration when instantiating members.
     assert(D->getFriendObjectKind() ||
            (cast<CXXRecordDecl>(DC)->getTemplateSpecializationKind()));
-    // These template parameters are for friend types only.
-    assert(FriendTypeTPLists.empty());
   }
 #endif
 
-  std::size_t Extra =
-      FriendDecl::additionalSizeToAlloc<TemplateParameterList *>(
-          FriendTypeTPLists.size());
-  auto *FD = new (C, DC, Extra)
-      FriendDecl(DC, L, Friend, FriendL, EllipsisLoc, FriendTypeTPLists);
+  auto *FD =
+      new (C, DC) FriendDecl(Decl::Friend, DC, L, Friend, FriendL, EllipsisLoc);
   cast<CXXRecordDecl>(DC)->pushFriendDecl(FD);
   return FD;
 }
 
-FriendDecl *FriendDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
-                                           unsigned FriendTypeNumTPLists) {
-  std::size_t Extra =
-      additionalSizeToAlloc<TemplateParameterList *>(FriendTypeNumTPLists);
-  return new (C, ID, Extra) FriendDecl(EmptyShell(), FriendTypeNumTPLists);
+FriendDecl *FriendDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
+  return new (C, ID) FriendDecl(Decl::Friend, EmptyShell());
+}
+
+FriendDecl *FriendDecl::getNextFriendSlowCase() {
+  return cast_or_null<FriendDecl>(
+      NextFriend.get(getASTContext().getExternalSource()));
 }
 
 FriendDecl *CXXRecordDecl::getFirstFriend() const {
   ExternalASTSource *Source = getParentASTContext().getExternalSource();
   Decl *First = data().FirstFriend.get(Source);
   return First ? cast<FriendDecl>(First) : nullptr;
+}
+
+SourceRange FriendDecl::getSourceRange() const {
+  if (TypeSourceInfo *TInfo = getFriendType()) {
+    SourceLocation EndL =
+        isPackExpansion() ? getEllipsisLoc() : TInfo->getTypeLoc().getEndLoc();
+    return SourceRange(getFriendLoc(), EndL);
+  }
+
+  if (isPackExpansion())
+    return SourceRange(getFriendLoc(), getEllipsisLoc());
+
+  if (NamedDecl *ND = getFriendDecl()) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(ND))
+      return FD->getSourceRange();
+    if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(ND))
+      return FTD->getSourceRange();
+    if (const auto *CTD = dyn_cast<ClassTemplateDecl>(ND))
+      return CTD->getSourceRange();
+    if (const auto *DD = dyn_cast<DeclaratorDecl>(ND)) {
+      if (DD->getOuterLocStart() != DD->getInnerLocStart())
+        return DD->getSourceRange();
+    }
+    return SourceRange(getFriendLoc(), ND->getEndLoc());
+  }
+  return SourceRange(getFriendLoc(), getLocation());
 }
