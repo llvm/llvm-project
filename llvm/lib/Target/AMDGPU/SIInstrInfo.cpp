@@ -68,7 +68,7 @@ static cl::opt<SIInstrInfo::DSLatencyMode> DSLatency(
     "amdgpu-ds-latency-mode", cl::desc("LDS latency mode (LDS contention)"),
     cl::values(
         clEnumValN(SIInstrInfo::DSLatencyMode::Fast, "fast",
-                   "Use default/pinned latency (no contention)"),
+                   "Use default/pinged latency (no contention)"),
         clEnumValN(SIInstrInfo::DSLatencyMode::Loaded, "loaded",
                    "Use loaded latency (moderate contention, 3x latency)"),
         clEnumValN(SIInstrInfo::DSLatencyMode::Overloaded, "overloaded",
