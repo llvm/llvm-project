@@ -150,6 +150,24 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  sockatmark_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    sockatmark_test.cpp
+  DEPENDS
+    libc.hdr.sys_socket_macros
+    libc.src.errno.errno
+    libc.src.sys.socket.sockatmark
+    libc.src.sys.socket.socketpair
+    libc.src.unistd.close
+    libc.src.unistd.pipe
+    libc.src.__support.CPP.scope
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
   sockname_test
   SUITE
     libc_sys_socket_unittests

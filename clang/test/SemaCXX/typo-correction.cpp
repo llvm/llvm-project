@@ -799,3 +799,9 @@ namespace GH204561 {
 
   template int x<int &>;
 } // namespace GH204561
+
+namespace GH206992 {
+  template <class> struct F {};
+  ::~F<void> {};
+  // expected-error@-1 {{destructor name 'F' does not refer to a template}}
+}; // namespace GH206992

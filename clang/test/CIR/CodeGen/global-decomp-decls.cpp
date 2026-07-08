@@ -23,7 +23,7 @@ auto [t1, t2, t3] = t;
 // CIR: cir.func internal private @__cxx_global_var_init{{.*}}()
 // CIR:  %[[SB:.*]] = cir.get_global @_ZDC2t12t22t3E : !cir.ptr<!rec_Type>
 // CIR:  %[[T:.*]] = cir.get_global @t : !cir.ptr<!rec_Type>
-// CIR:  cir.copy %[[T]] to %[[SB]] : !cir.ptr<!rec_Type>
+// CIR:  cir.copy %[[T]] align(4) to %[[SB]] align(4) : !cir.ptr<!rec_Type>
 
 // LLVM: define internal void @__cxx_global_var_init{{.*}}()
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}@_ZDC2t12t22t3E, ptr {{.*}}@t, i64 12, i1 false)
@@ -54,7 +54,7 @@ auto [dt1, dt2, dt3] = dt;
 // CIR: cir.func internal private @__cxx_global_var_init{{.*}}() {
 // CIR:   %[[SB:.*]] = cir.get_global @_ZDC3dt13dt23dt3E : !cir.ptr<!rec_DtorType>
 // CIR:   %[[DT:.*]] = cir.get_global @dt : !cir.ptr<!rec_DtorType>
-// CIR:   cir.copy %[[DT]] to %[[SB]] : !cir.ptr<!rec_DtorType>
+// CIR:   cir.copy %[[DT]] align(4) to %[[SB]] align(4) : !cir.ptr<!rec_DtorType>
 // CIR:   %[[SB:.*]] = cir.get_global @_ZDC3dt13dt23dt3E : !cir.ptr<!rec_DtorType>
 // CIR:   %[[DTOR_PTR:.*]] = cir.get_global @_ZN8DtorTypeD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_DtorType>)>>
 // CIR:   %[[DTOR_PTR_CAST:.*]] = cir.cast bitcast %[[DTOR_PTR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_DtorType>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>

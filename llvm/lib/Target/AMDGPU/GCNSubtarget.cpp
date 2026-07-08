@@ -474,7 +474,7 @@ GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
   unsigned VGPROcc = getOccupancyWithNumVGPRs(NumVGPRs, DynamicVGPRBlockSize);
 
   // Maximum occupancy may be further limited by high SGPR/VGPR usage.
-  MaxOcc = std::min(MaxOcc, std::min(SGPROcc, VGPROcc));
+  MaxOcc = std::min({MaxOcc, SGPROcc, VGPROcc});
   return {std::min(MinOcc, MaxOcc), MaxOcc};
 }
 
@@ -635,7 +635,7 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
     // Clamp values to be inbounds of our limits, and ensure min <= max.
 
     MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
-    MinNumAGPRs = std::min(std::min(MinNumAGPRs, TotalNumAGPRs), MaxNumAGPRs);
+    MinNumAGPRs = std::min({MinNumAGPRs, TotalNumAGPRs, MaxNumAGPRs});
 
     MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, NumArchVGPRs);
     MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);
