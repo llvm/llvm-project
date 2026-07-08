@@ -564,8 +564,6 @@ class TailRecursionEliminator {
   // The instruction doing the accumulating.
   Instruction *AccumulatorRecursionInstr = nullptr;
 
-  // The base case return value. It exists only if the accumulator
-  // operation is pseudo-associative.
   Constant *AccumulatorInitialValue = nullptr;
 
   TailRecursionEliminator(Function &F, const TargetTransformInfo *TTI,
