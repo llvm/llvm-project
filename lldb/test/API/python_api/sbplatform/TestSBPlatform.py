@@ -1,7 +1,6 @@
 """Test the SBPlatform APIs."""
 
 import os
-import socket
 import stat
 from pathlib import Path
 import lldbgdbserverutils
