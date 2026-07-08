@@ -182,6 +182,12 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
+
+  // Waterfall expansion may introduce Phi nodes and -verify-machineinstrs will
+  // fail.
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties().setNoPHIs();
+  }
 };
 
 } // end anonymous namespace
@@ -382,6 +388,7 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
     SMovOp = AMDGPU::S_MOV_B32;
     break;
+  case AMDGPU::V_MOV_B64_e32:
   case AMDGPU::V_MOV_B64_PSEUDO:
     SMovOp = AMDGPU::S_MOV_B64_IMM_PSEUDO;
     break;
@@ -1008,7 +1015,8 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
       }
     } else if (Inst->getNumExplicitDefs() != 0) {
       Register Reg = Inst->getOperand(0).getReg();
-      if (Reg.isVirtual() && TRI->isSGPRReg(*MRI, Reg) && !TII->isVALU(*Inst)) {
+      if (Reg.isVirtual() && TRI->isSGPRReg(*MRI, Reg) &&
+          !TII->isVALU(*Inst, /*AllowLDSDMA=*/true)) {
         for (auto &U : MRI->use_instructions(Reg))
           Users.push_back(&U);
       }

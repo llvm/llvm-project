@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z196 -O0 -start-before=prologepilog \
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z196 -O0 -start-before=prolog-epilog \
 # RUN:   -o - %s | FileCheck %s
 #
 # Test that a COPY to CC gets implemented with a tmlh or tmhh depending on

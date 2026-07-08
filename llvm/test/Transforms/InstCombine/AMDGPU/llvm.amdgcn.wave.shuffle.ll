@@ -8,13 +8,11 @@
 define i32 @test_wave_shuffle_self_select(i32 %val) {
 ; CHECK-W32-LABEL: define i32 @test_wave_shuffle_self_select(
 ; CHECK-W32-SAME: i32 [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-W32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 228, i32 15, i32 15, i1 true)
-; CHECK-W32-NEXT:    ret i32 [[RES]]
+; CHECK-W32-NEXT:    ret i32 [[VAL]]
 ;
 ; CHECK-W64-LABEL: define i32 @test_wave_shuffle_self_select(
 ; CHECK-W64-SAME: i32 [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-W64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL]], i32 228, i32 15, i32 15, i1 true)
-; CHECK-W64-NEXT:    ret i32 [[RES]]
+; CHECK-W64-NEXT:    ret i32 [[VAL]]
 ;
 ; CHECK-NO-WAVE-SIZE-LABEL: define i32 @test_wave_shuffle_self_select(
 ; CHECK-NO-WAVE-SIZE-SAME: i32 [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {

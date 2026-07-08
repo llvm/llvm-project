@@ -497,11 +497,11 @@ LOCAL_LABEL(ddiv_underflow):
   // was rounded up), or negative if the quotient was rounded down. But we must
   // also distinguish the third case of the residual being exactly zero.
   add     xh, xh, #0x60000000     // apply IEEE 754 exponent bias for __dunder
-  orrs    r12, r6, r8             // set r12=0 and Z=1 if quotient was exact
-  movne   r12, #1                 // otherwise, set r12 = +1
-  orrne   r12, r12, r6, asr #31   // and change to -1 if residual is negative
+  orrs    r2, r6, r8              // set r2=0 and Z=1 if quotient was exact
+  mvnne   r2, r6, asr #31         // otherwise, r2 = {-1,0} for {+,-} residual
+  orrne   r2, r2, #1              // and then turn that into {-1,+1}
   pop     {r4,r5,r6,r7,r8,lr}     // pop all locally saved registers
-  b       SYMBOL_NAME(__compiler_rt_dunder)                // and tailcall __dunder to finish
+  b       SYMBOL_NAME(__compiler_rt_dunder) // and tailcall dunder to finish
 
 LOCAL_LABEL(ddiv_zerodenorm):
   // We come here if either input had exponent 0, so there's at least one zero

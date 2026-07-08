@@ -104,14 +104,14 @@ public:
         PrettyOutput(PrettyOutput) {}
 
   /// The following methods are used to send a message to the LSP client.
-  LLVM_ABI_FOR_TEST void notify(StringRef Method, llvm::json::Value Params);
-  LLVM_ABI_FOR_TEST void call(StringRef Method, llvm::json::Value Params,
-                              llvm::json::Value Id);
-  LLVM_ABI_FOR_TEST void reply(llvm::json::Value Id,
-                               llvm::Expected<llvm::json::Value> Result);
+  LLVM_ABI void notify(StringRef Method, llvm::json::Value Params);
+  LLVM_ABI void call(StringRef Method, llvm::json::Value Params,
+                     llvm::json::Value Id);
+  LLVM_ABI void reply(llvm::json::Value Id,
+                      llvm::Expected<llvm::json::Value> Result);
 
   /// Start executing the JSON-RPC transport.
-  LLVM_ABI_FOR_TEST llvm::Error run(MessageHandler &Handler);
+  LLVM_ABI llvm::Error run(MessageHandler &Handler);
 
 private:
   /// Dispatches the given incoming json message to the message handler.

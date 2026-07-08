@@ -92,26 +92,14 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
   };
   if (const auto *Rep = dyn_cast<VPReplicateRecipe>(R))
     if (Rep->getOpcode() == Instruction::Call)
-      // The mask is always the last operand if predicated.
+      // The callee is the last operand, excluding the mask if predicated.
       return GetCalleeIntrinsic(
-          Rep->getOperand(Rep->getNumOperands() - 1 - Rep->isPredicated()));
+          Rep->getOperand(Rep->getNumOperandsWithoutMask() - 1));
   if (const auto *VPI = dyn_cast<VPInstruction>(R))
     if (VPI->getOpcode() == Instruction::Call)
       return GetCalleeIntrinsic(VPI->getOperand(VPI->getNumOperands() - 1));
   return Intrinsic::not_intrinsic;
 }
-
-/// Returns the VPValue representing the uncountable exit comparison used by
-/// AnyOf if the recipes it depends on can be traced back to live-ins and
-/// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
-/// generating the values for the comparison. The recipes are stored in
-/// \p Recipes, and recipes forming an address for a load are also added to
-/// \p GEPs.
-LLVM_ABI_FOR_TEST
-std::optional<VPValue *>
-getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
-                             SmallVectorImpl<VPInstruction *> &GEPs,
-                             VPBasicBlock *LatchVPBB);
 
 /// Return a MemoryLocation for \p R with noalias metadata populated from
 /// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of

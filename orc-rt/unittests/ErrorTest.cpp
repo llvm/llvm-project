@@ -370,6 +370,28 @@ TEST(ErrorTest, ExpectedInFailureMode) {
   consumeError(std::move(E));
 }
 
+// Check Expected<T>::isFailureOfType classifies success and failure values
+// correctly, including polymorphic matches through the RTTI hierarchy.
+TEST(ErrorTest, ExpectedIsFailureOfType) {
+  // Success value: isFailureOfType returns false for any type.
+  Expected<int> Success(42);
+  EXPECT_FALSE(Success.isFailureOfType<CustomError>());
+  EXPECT_FALSE(Success.isFailureOfType<CustomSubError>());
+  EXPECT_TRUE(!!Success);
+
+  // Failure with base type: matches only the base type.
+  Expected<int> WithBase = make_error<CustomError>(42);
+  EXPECT_TRUE(WithBase.isFailureOfType<CustomError>());
+  EXPECT_FALSE(WithBase.isFailureOfType<CustomSubError>());
+  consumeError(WithBase.takeError());
+
+  // Failure with derived type: matches both derived and base via isA.
+  Expected<int> WithDerived = make_error<CustomSubError>(43, "sub");
+  EXPECT_TRUE(WithDerived.isFailureOfType<CustomError>());
+  EXPECT_TRUE(WithDerived.isFailureOfType<CustomSubError>());
+  consumeError(WithDerived.takeError());
+}
+
 // Check that an Expected instance with an error value doesn't allow access to
 // operator*.
 // Test runs in debug mode only.

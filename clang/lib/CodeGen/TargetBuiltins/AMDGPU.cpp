@@ -341,7 +341,8 @@ emitAMDGCNImageOverloadedReturnType(clang::CodeGen::CodeGenFunction &CGF,
   }
 
   llvm::Type *RetTy = IsImageStore ? CGF.VoidTy : CGF.ConvertType(E->getType());
-  llvm::CallInst *Call = CGF.Builder.CreateIntrinsic(RetTy, IntrinsicID, Args);
+  llvm::CallInst *Call =
+      CGF.Builder.CreateIntrinsicWithoutFolding(RetTy, IntrinsicID, Args);
   return Call;
 }
 
@@ -463,7 +464,7 @@ static Value *GetAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
   MDNode *Predicate = MDNode::get(Ctx, MDString::get(Ctx, Name.str()));
   std::vector<Value *> Args = {SpecId, ConstantInt::getFalse(Ctx),
                                MetadataAsValue::get(Ctx, Predicate)};
-  CallInst *Call = CGF.Builder.CreateIntrinsic(
+  Value *Call = CGF.Builder.CreateIntrinsic(
       Intrinsic::spv_named_boolean_spec_constant, Args);
 
   return Call;

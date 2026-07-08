@@ -722,7 +722,10 @@ public:
     return InstructionCost::getInvalid();
   }
 
-  virtual unsigned getMaxInterleaveFactor(ElementCount VF) const { return 1; }
+  virtual unsigned getMaxInterleaveFactor(ElementCount VF,
+                                          bool HasUnorderedReductions) const {
+    return 1;
+  }
 
   virtual InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -946,6 +949,12 @@ public:
     case Intrinsic::coro_alloc:
     case Intrinsic::coro_begin:
     case Intrinsic::coro_begin_custom_abi:
+    case Intrinsic::coro_dead:
+    case Intrinsic::coro_id:
+    case Intrinsic::coro_id_async:
+    case Intrinsic::coro_id_retcon:
+    case Intrinsic::coro_id_retcon_once:
+    case Intrinsic::coro_noop:
     case Intrinsic::coro_free:
     case Intrinsic::coro_end:
     case Intrinsic::coro_frame:
@@ -1164,7 +1173,7 @@ public:
   virtual bool preferEpilogueVectorization(ElementCount Iters) const {
     // We consider epilogue vectorization unprofitable for targets that
     // don't consider interleaving beneficial (eg. MVE).
-    return getMaxInterleaveFactor(Iters) > 1;
+    return getMaxInterleaveFactor(Iters, false) > 1;
   }
 
   virtual bool shouldConsiderVectorizationRegPressure() const { return false; }

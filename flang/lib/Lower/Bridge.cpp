@@ -49,7 +49,6 @@
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -596,6 +595,16 @@ public:
           },
           u);
     }
+
+    // Declare any `acc routine` bind(name) targets not otherwise declared, so a
+    // live symbol exists for later passes. No-op for targets already lowered in
+    // this unit.
+    if (getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::OpenACC))
+      createBuilderOutsideOfFuncOpAndDo([&]() {
+        Fortran::lower::materializeOpenACCRoutineBindTargets(*this,
+                                                             getModuleOp());
+      });
 
     // Once all the code has been translated, create global runtime type info
     // data structures for the derived types that have been processed, as well
@@ -3661,6 +3670,13 @@ private:
     const Fortran::parser::OpenACCCombinedConstruct *accCombined =
         std::get_if<Fortran::parser::OpenACCCombinedConstruct>(&acc.u);
 
+    // TODO: Determining curEval here re-walks the nested evaluations to the
+    // collapse/DO CONCURRENT depth that the construct absorbs, mirroring the
+    // descent genOpenACCConstruct already performs (visitLoopControl in
+    // OpenACC.cpp). That duplication is fragile and couples this code to
+    // genOpenACCConstruct's internals. Move the responsibility for determining
+    // curEval into genOpenACCConstruct -- where the absorbed evaluations are
+    // actually decided -- and return it from there.
     Fortran::lower::pft::Evaluation *curEval = &getEval();
     // Determine collapse depth/force and loopCount
     bool collapseForce = false;
@@ -3689,11 +3705,15 @@ private:
 
       if (curEval->lowerAsStructured()) {
         curEval = &curEval->getFirstNestedEvaluation();
-        for (uint64_t i = 1; i < loopCount; i++) {
-          if (!curEval->hasNestedEvaluations())
-            break;
-          curEval = &*std::next(curEval->getNestedEvaluations().begin());
-        }
+        // A DO CONCURRENT holds all controls in one construct; the per-level
+        // descent would overshoot into its body and drop it.
+        const auto *outerDo = curEval->getIf<Fortran::parser::DoConstruct>();
+        if (!(outerDo && outerDo->IsDoConcurrent()))
+          for (uint64_t i = 1; i < loopCount; i++) {
+            if (!curEval->hasNestedEvaluations())
+              break;
+            curEval = &*std::next(curEval->getNestedEvaluations().begin());
+          }
       }
     }
 
@@ -5363,9 +5383,14 @@ private:
     mlir::Value rhsVal = getRefFromValue(rhs.getBase());
     mlir::Value lhsVal = getRefFromValue(lhs.getBase());
     // Get shape from the rhs if available otherwise get it from lhs.
-    mlir::Value shape = getShapeFromDecl(rhs.getBase());
-    if (!shape)
-      shape = getShapeFromDecl(lhs.getBase());
+    mlir::Value shape;
+    if (fir::isa_ref_type(rhsVal.getType()) ||
+        fir::isa_ref_type(lhsVal.getType())) {
+      if (mlir::Value rhsShape = getShapeFromDecl(rhs.getBase()))
+        shape = rhsShape;
+      else
+        shape = getShapeFromDecl(lhs.getBase());
+    }
 
     // device = host
     if (lhsIsDevice && !rhsIsDevice) {
@@ -5422,8 +5447,13 @@ private:
       }
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
-      cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
-                                  transferKindAttr, hasManagedOrUnifedSymbols);
+      if (fir::isa_trivial(rhsVal.getType())) {
+        fir::StoreOp::create(builder, loc, rhsVal, lhsVal);
+      } else {
+        cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
+                                    transferKindAttr,
+                                    hasManagedOrUnifedSymbols);
+      }
       return;
     }
 
@@ -6597,7 +6627,9 @@ private:
             !Fortran::semantics::IsAllocatable(sym) &&
             Fortran::semantics::IsSaved(sym)) {
           mlir::Location loc = toLocation();
-          TODO(loc, "non-ALLOCATABLE SAVE Coarray outside the main program.");
+          TODO(
+              loc,
+              "coarray: non-ALLOCATABLE SAVE coarray outside the main program");
         }
       }
       Fortran::lower::defineModuleVariable(*this, var);

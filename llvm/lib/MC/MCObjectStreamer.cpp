@@ -615,7 +615,7 @@ void MCObjectStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                           bool PrologueEnd, bool IsStmt,
                                           StringRef FileName, SMLoc Loc) {
   // Validate the directive.
-  if (!checkCVLocSection(FunctionId, FileNo, Loc))
+  if (!checkCVLocSection(FunctionId, Loc))
     return;
 
   // Emit a label at the current position and record it in the CodeViewContext.
@@ -683,12 +683,12 @@ void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
 }
 
 void MCObjectStreamer::emitCodeAlignment(Align Alignment,
-                                         const MCSubtargetInfo *STI,
+                                         const MCSubtargetInfo &STI,
                                          unsigned MaxBytesToEmit) {
   auto *F = getCurrentFragment();
   emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
   F->u.align.EmitNops = true;
-  F->STI = STI;
+  F->STI = &STI;
 }
 
 void MCObjectStreamer::emitPrefAlign(Align Alignment, const MCSymbol &End,
