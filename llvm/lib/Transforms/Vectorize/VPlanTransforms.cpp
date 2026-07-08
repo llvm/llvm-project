@@ -6639,17 +6639,20 @@ struct VPPartialReductionChain {
   VPBlendRecipe *Blend = nullptr;
 };
 
-// Return the incoming index of the reduction update in the Blend.
-static unsigned getBlendReductionIndex(VPBlendRecipe *Blend,
-                                       VPWidenRecipe *ReductionBinOp) {
+// Return the incoming index of the single-use value in the blend, which is
+// expected to be the predicated reduction update.
+static std::optional<unsigned>
+getBlendReductionUpdateValueIdx(VPBlendRecipe *Blend) {
   assert(Blend && !Blend->isNormalized() &&
          Blend->getNumIncomingValues() == 2 &&
          "Expected a non-normalized blend with two incoming values");
-  if (Blend->getIncomingValue(0) == ReductionBinOp)
-    return 0;
-  assert(Blend->getIncomingValue(1) == ReductionBinOp &&
-         "Expected blend to contain the reduction update");
-  return 1;
+  bool FirstIncomingHasOneUse = Blend->getIncomingValue(0)->hasOneUse();
+
+  // Only the update value should have one use (the blend). The previous
+  // value should always have at least two uses, the blend and the reduction.
+  if (FirstIncomingHasOneUse == Blend->getIncomingValue(1)->hasOneUse())
+    return std::nullopt;
+  return FirstIncomingHasOneUse ? 0 : 1;
 }
 
 static VPSingleDefRecipe *
@@ -6849,8 +6852,12 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
                                       m_Specific(RdxPhi))));
 
   if (Chain.Blend) {
-    VPValue *BlendCond =
-        Chain.Blend->getMask(getBlendReductionIndex(Chain.Blend, WidenRecipe));
+    std::optional<unsigned> BlendReductionIdx =
+        getBlendReductionUpdateValueIdx(Chain.Blend);
+    assert(BlendReductionIdx &&
+           Chain.Blend->getIncomingValue(*BlendReductionIdx) == WidenRecipe &&
+           "Expected blend to contain the reduction update");
+    VPValue *BlendCond = Chain.Blend->getMask(*BlendReductionIdx);
     Cond = ExitValue ? VPBuilder(WidenRecipe)
                            .createLogicalAnd(Cond, BlendCond,
                                              WidenRecipe->getDebugLoc())
@@ -7098,18 +7105,17 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
   VPValue *CurrentValue = ExitValue;
   while (CurrentValue != RedPhiR) {
     VPBlendRecipe *Blend = dyn_cast<VPBlendRecipe>(CurrentValue);
-    unsigned BlendReductionIdx = 0;
+    std::optional<unsigned> BlendReductionIdx;
     if (Blend) {
       assert(!Blend->isNormalized() && "Expect Blend not to be normalized.");
       if (Blend->getNumIncomingValues() != 2)
         return std::nullopt;
 
-      bool Incoming0HasOneUse = Blend->getIncomingValue(0)->hasOneUse();
-      if (Incoming0HasOneUse == Blend->getIncomingValue(1)->hasOneUse())
+      BlendReductionIdx = getBlendReductionUpdateValueIdx(Blend);
+      if (!BlendReductionIdx)
         return std::nullopt;
 
-      BlendReductionIdx = Incoming0HasOneUse ? 0 : 1;
-      CurrentValue = Blend->getIncomingValue(BlendReductionIdx);
+      CurrentValue = Blend->getIncomingValue(*BlendReductionIdx);
     }
 
     auto *UpdateR = dyn_cast<VPWidenRecipe>(CurrentValue);
@@ -7133,7 +7139,7 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
     // Look for VPBlend(reduce(PrevValue, Op), PrevValue), where
     // reduce is equal to CurrentValue. This can be lowered as
     // a conditional reduction by hoisting the select to the inputs.
-    if (Blend && Blend->getIncomingValue(1 - BlendReductionIdx) != PrevValue)
+    if (Blend && Blend->getIncomingValue(1 - *BlendReductionIdx) != PrevValue)
       return std::nullopt;
 
     Type *ExtSrcType = ExtendedOp->ExtendA.SrcType;
