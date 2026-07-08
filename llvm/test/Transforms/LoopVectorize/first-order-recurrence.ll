@@ -2617,9 +2617,9 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; UNROLL-NO-IC-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP47:%.*]], %[[PRED_UDIV_CONTINUE20]] ]
 ; UNROLL-NO-IC-NEXT:    [[VEC_IV:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_UDIV_CONTINUE20]] ]
 ; UNROLL-NO-IC-NEXT:    [[VEC_IV4:%.*]] = add nuw <4 x i32> [[VEC_IV]], splat (i32 4)
-; UNROLL-NO-IC-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[Y]], [[INDEX]]
 ; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i32> [[VEC_IV]], [[BROADCAST_SPLAT6]]
 ; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = icmp ule <4 x i32> [[VEC_IV4]], [[BROADCAST_SPLAT6]]
+; UNROLL-NO-IC-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[Y]], [[INDEX]]
 ; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP2]], i64 0
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP4]], label %[[PRED_UDIV_IF:.*]], label %[[PRED_UDIV_CONTINUE:.*]]
 ; UNROLL-NO-IC:       [[PRED_UDIV_IF]]:
@@ -2726,11 +2726,11 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; UNROLL-NO-VF-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP15:%.*]], %[[PRED_UDIV_CONTINUE4]] ]
 ; UNROLL-NO-VF-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[PRED_UDIV_CONTINUE4]] ]
 ; UNROLL-NO-VF-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[PRED_UDIV_CONTINUE4]] ]
-; UNROLL-NO-VF-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[Y]], [[INDEX]]
 ; UNROLL-NO-VF-NEXT:    [[VEC_IV:%.*]] = add i32 [[INDEX]], 0
 ; UNROLL-NO-VF-NEXT:    [[VEC_IV2:%.*]] = add i32 [[INDEX]], 1
 ; UNROLL-NO-VF-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[VEC_IV]], [[TRIP_COUNT_MINUS_1]]
 ; UNROLL-NO-VF-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[VEC_IV2]], [[TRIP_COUNT_MINUS_1]]
+; UNROLL-NO-VF-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[Y]], [[INDEX]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP2]], label %[[PRED_UDIV_IF:.*]], label %[[PRED_UDIV_CONTINUE:.*]]
 ; UNROLL-NO-VF:       [[PRED_UDIV_IF]]:
 ; UNROLL-NO-VF-NEXT:    [[TMP5:%.*]] = udiv i32 219220132, [[OFFSET_IDX]]
@@ -2777,8 +2777,8 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[PRED_UDIV_CONTINUE8]] ]
 ; SINK-AFTER-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP24:%.*]], %[[PRED_UDIV_CONTINUE8]] ]
 ; SINK-AFTER-NEXT:    [[VEC_IV:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_UDIV_CONTINUE8]] ]
-; SINK-AFTER-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[Y]], [[INDEX]]
 ; SINK-AFTER-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i32> [[VEC_IV]], [[BROADCAST_SPLAT2]]
+; SINK-AFTER-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[Y]], [[INDEX]]
 ; SINK-AFTER-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP2]], i64 0
 ; SINK-AFTER-NEXT:    br i1 [[TMP3]], label %[[PRED_UDIV_IF:.*]], label %[[PRED_UDIV_CONTINUE:.*]]
 ; SINK-AFTER:       [[PRED_UDIV_IF]]:
@@ -2868,6 +2868,12 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, %[[VECTOR_PH]] ], [ [[TMP43:%.*]], %[[PRED_STORE_CONTINUE29]] ]
 ; UNROLL-NO-IC-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP46:%.*]], %[[PRED_STORE_CONTINUE29]] ]
 ; UNROLL-NO-IC-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP47:%.*]], %[[PRED_STORE_CONTINUE29]] ]
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[INDEX]], i64 0
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; UNROLL-NO-IC-NEXT:    [[VEC_IV:%.*]] = add nuw <4 x i32> [[BROADCAST_SPLAT3]], <i32 0, i32 1, i32 2, i32 3>
+; UNROLL-NO-IC-NEXT:    [[VEC_IV4:%.*]] = add nuw <4 x i32> [[BROADCAST_SPLAT3]], <i32 4, i32 5, i32 6, i32 7>
+; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = icmp ule <4 x i32> [[VEC_IV]], [[BROADCAST_SPLAT]]
+; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = icmp ule <4 x i32> [[VEC_IV4]], [[BROADCAST_SPLAT]]
 ; UNROLL-NO-IC-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[Y]], [[INDEX]]
 ; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = add i32 [[OFFSET_IDX]], -1
 ; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX]], -2
@@ -2876,12 +2882,6 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = add i32 [[OFFSET_IDX]], -5
 ; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = add i32 [[OFFSET_IDX]], -6
 ; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = add i32 [[OFFSET_IDX]], -7
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[INDEX]], i64 0
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[VEC_IND:%.*]] = add nuw <4 x i32> [[BROADCAST_SPLAT3]], <i32 0, i32 1, i32 2, i32 3>
-; UNROLL-NO-IC-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i32> [[BROADCAST_SPLAT3]], <i32 4, i32 5, i32 6, i32 7>
-; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = icmp ule <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = icmp ule <4 x i32> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP10]], i64 0
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP12]], label %[[PRED_UDIV_IF:.*]], label %[[PRED_UDIV_CONTINUE:.*]]
 ; UNROLL-NO-IC:       [[PRED_UDIV_IF]]:
@@ -3035,12 +3035,12 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-VF-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[PRED_STORE_CONTINUE6]] ]
 ; UNROLL-NO-VF-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[PRED_STORE_CONTINUE6]] ]
 ; UNROLL-NO-VF-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[PRED_STORE_CONTINUE6]] ]
-; UNROLL-NO-VF-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[Y]], [[INDEX]]
-; UNROLL-NO-VF-NEXT:    [[TMP3:%.*]] = add i32 [[OFFSET_IDX]], -1
 ; UNROLL-NO-VF-NEXT:    [[VEC_IV:%.*]] = add i32 [[INDEX]], 0
 ; UNROLL-NO-VF-NEXT:    [[VEC_IV2:%.*]] = add i32 [[INDEX]], 1
 ; UNROLL-NO-VF-NEXT:    [[TMP4:%.*]] = icmp ule i32 [[VEC_IV]], [[TRIP_COUNT_MINUS_1]]
 ; UNROLL-NO-VF-NEXT:    [[TMP5:%.*]] = icmp ule i32 [[VEC_IV2]], [[TRIP_COUNT_MINUS_1]]
+; UNROLL-NO-VF-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[Y]], [[INDEX]]
+; UNROLL-NO-VF-NEXT:    [[TMP3:%.*]] = add i32 [[OFFSET_IDX]], -1
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP4]], label %[[PRED_UDIV_IF:.*]], label %[[PRED_UDIV_CONTINUE:.*]]
 ; UNROLL-NO-VF:       [[PRED_UDIV_IF]]:
 ; UNROLL-NO-VF-NEXT:    [[TMP6:%.*]] = udiv i32 219220132, [[OFFSET_IDX]]
@@ -3098,11 +3098,11 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[PRED_STORE_CONTINUE12]] ]
 ; SINK-AFTER-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP24:%.*]], %[[PRED_STORE_CONTINUE12]] ]
 ; SINK-AFTER-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE12]] ]
+; SINK-AFTER-NEXT:    [[TMP6:%.*]] = icmp ule <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; SINK-AFTER-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[Y]], [[INDEX]]
 ; SINK-AFTER-NEXT:    [[TMP3:%.*]] = add i32 [[OFFSET_IDX]], -1
 ; SINK-AFTER-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX]], -2
 ; SINK-AFTER-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX]], -3
-; SINK-AFTER-NEXT:    [[TMP6:%.*]] = icmp ule <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; SINK-AFTER-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i64 0
 ; SINK-AFTER-NEXT:    br i1 [[TMP7]], label %[[PRED_UDIV_IF:.*]], label %[[PRED_UDIV_CONTINUE:.*]]
 ; SINK-AFTER:       [[PRED_UDIV_IF]]:
