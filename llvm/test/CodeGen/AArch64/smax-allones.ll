@@ -93,8 +93,7 @@ define i64 @smax_zero_i64(i64 %x) {
 define i32 @smin_allones_i32(i32 %x) {
 ; NOCSSC-LABEL: smin_allones_i32:
 ; NOCSSC:       // %bb.0:
-; NOCSSC-NEXT:    cmn w0, #1
-; NOCSSC-NEXT:    csinv w0, w0, wzr, lt
+; NOCSSC-NEXT:    orn w0, w0, w0, asr #31
 ; NOCSSC-NEXT:    ret
 ;
 ; CSSC-LABEL: smin_allones_i32:
@@ -108,8 +107,7 @@ define i32 @smin_allones_i32(i32 %x) {
 define i64 @smin_allones_i64(i64 %x) {
 ; NOCSSC-LABEL: smin_allones_i64:
 ; NOCSSC:       // %bb.0:
-; NOCSSC-NEXT:    cmn x0, #1
-; NOCSSC-NEXT:    csinv x0, x0, xzr, lt
+; NOCSSC-NEXT:    orn x0, x0, x0, asr #63
 ; NOCSSC-NEXT:    ret
 ;
 ; CSSC-LABEL: smin_allones_i64:

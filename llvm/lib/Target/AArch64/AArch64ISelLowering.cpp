@@ -12646,6 +12646,24 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
       return DAG.getNode(ISD::AND, DL, VT, LHS, Shift);
     }
 
+    // Check for SMAX(lhs, -1) and SMIN(lhs, -1) patterns.
+    // (SELECT_CC setgt, lhs, -1, lhs, -1) -> (OR lhs, (SRA lhs, typesize-1))
+    // (SELECT_CC setlt, lhs, -1, lhs, -1) -> (ORN lhs, (SRA lhs, typesize-1))
+    // Both require less instructions than compare and conditional select.
+    if ((CC == ISD::SETGT || CC == ISD::SETLT) && LHS == TVal && RHSC &&
+        RHSC->isAllOnes() && CFVal && CFVal->isAllOnes() &&
+        LHS.getValueType() == RHS.getValueType()) {
+      EVT VT = LHS.getValueType();
+      SDValue Shift =
+          DAG.getNode(ISD::SRA, DL, VT, LHS,
+                      DAG.getConstant(VT.getSizeInBits() - 1, DL, VT));
+
+      if (CC == ISD::SETLT)
+        Shift = DAG.getNOT(DL, Shift, VT);
+
+      return DAG.getNode(ISD::OR, DL, VT, LHS, Shift);
+    }
+
     // Check for sign bit test patterns that can use TST optimization.
     // (SELECT_CC setlt, sign_extend_inreg, 0, tval, fval)
     //                          -> TST %operand, sign_bit; CSEL
