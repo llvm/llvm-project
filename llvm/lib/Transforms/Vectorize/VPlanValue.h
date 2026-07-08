@@ -291,7 +291,7 @@ struct VPIRValue : public VPValue {
 };
 
 /// An overlay on VPIRValue for VPValues that wrap a Constant. May be an
-/// integer, floating-point, or even a vector constant.
+/// integer, floating-point, or a vector constant.
 struct VPConstant : public VPIRValue {
   VPConstant(Constant *C) : VPIRValue(C) {}
 
