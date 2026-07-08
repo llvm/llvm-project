@@ -1232,12 +1232,12 @@ for each recorded kernel. This JSON file contains the description, properties,
 and original runtime parameters of the kernel. Additionally, enabling
 :ref:`LIBOMPTARGET_RECORD_REPORT` instructs the runtime to emit a summary of the
 recorded kernel instances and their associated JSON files. It's worth noting
-when recording a kernel that was compiled with the ``-fopenmp-target-jit` flag
+when recording a kernel that was compiled with the `-fopenmp-target-jit flag
 <https://openmp.llvm.org/CommandLineArgumentReference.html#fopenmp-target-jit>`_,
-the device-side LLVM-IR module is also output as a bitcode (``.bc``) file
-that can be furher transformed with the `opt tool
-<https://llvm.org/docs/NewPassManager.html>`_ or directly inspected using
-the ``llvm-dis`` command.
+the device-side LLVM-IR module is also output as a bitcode (``.bc``) file that
+can be further transformed with the `opt tool
+<https://llvm.org/docs/NewPassManager.html>`_ or directly inspected using the
+``llvm-dis`` command.
 
 To replay a particular kernel, run the ``llvm-omp-kernel-replay`` command,
 passing the path to the corresponding kernel's JSON file:
