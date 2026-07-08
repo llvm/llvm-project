@@ -1558,7 +1558,7 @@ def : PatGprShiftMaskXLen<sra, SRA>;
 // fourth operand to emit a relocation on a symbol relating to this instruction.
 // The relocation does not affect any bits of the instruction itself but is used
 // as a hint to the linker.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0 in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0 in
 def PseudoAddTPRel : Pseudo<(outs GPR:$rd),
                             (ins GPR:$rs1, GPR:$rs2, tprel_add_symbol:$src), [],
                             "add", "$rd, $rs1, $rs2, $src">;
@@ -1568,7 +1568,6 @@ def PseudoAddTPRel : Pseudo<(outs GPR:$rd),
 // The relocation does not affect any bits of the instruction itself but is used
 // as a hint to the linker.
 def PseudoAddBaseIdx : PseudoBaseIdx<"add">;
-}
 
 /// FrameIndex calculations
 

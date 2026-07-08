@@ -371,7 +371,7 @@ class PseudoBaseIdx<string opcodestr>
              (ins GPR:$rs1, GPR:$rs2, base_idx_add_symbol:$src), [], opcodestr,
              "$rd, $rs1, $rs2, $src"> {
   let hasSideEffects = 0;
-  let mayLoad = 1;
+  let mayLoad = 0;
   let mayStore = 0;
   let isCodeGenOnly = 0;
 }

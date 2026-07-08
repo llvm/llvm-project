@@ -328,7 +328,7 @@ void RISCVMCCodeEmitter::expandAddTPRel(const MCInst &MI,
 static unsigned getAddOpAndFixups(unsigned AddOp) {
   switch (AddOp) {
   default:
-    llvm_unreachable("Unexpected ADD or SHXADD Opcode on GP-relative!");
+    llvm_unreachable("Unexpected ADD or SHXADD Opcode on base+idx!");
   case RISCV::PseudoAddBaseIdx:
     return RISCV::ADD;
   case RISCV::PseudoAddUWBaseIdx:
@@ -348,21 +348,21 @@ static unsigned getAddOpAndFixups(unsigned AddOp) {
   }
 }
 
-// Pseudo ADD/SHXADD (base-index variant) to a simple ADD or SHXADD with the
-// correct relocation.
+// Expand pseudo ADD/SHXADD (base-index variant) to a simple ADD or SHXADD with
+// the correct relocation.
 void RISCVMCCodeEmitter::expandAddBaseIdx(const MCInst &MI,
                                           SmallVectorImpl<char> &CB,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
-  MCOperand DestReg = MI.getOperand(0);
+  const MCOperand &Dest = MI.getOperand(0);
   // At link time rs2 of the add/shXadd may be rewritten to gp (or zero for
   // abs-near) when the symbol can be reached via gp-relative addressing.
-  MCOperand Src1 = MI.getOperand(1);
-  MCOperand Src2 = MI.getOperand(2);
+  const MCOperand &Src1 = MI.getOperand(1);
+  const MCOperand &Src2 = MI.getOperand(2);
 
-  MCOperand SrcSymbol = MI.getOperand(3);
+  const MCOperand &SrcSymbol = MI.getOperand(3);
   assert(SrcSymbol.isExpr() &&
-         "Expected expression as third input to GP-relative add");
+         "Expected expression as third input to base+idx add");
 
   const auto *Expr = dyn_cast<MCSpecifierExpr>(SrcSymbol.getExpr());
   assert(Expr && (Expr->getSpecifier() == ELF::R_RISCV_BASE_IDX_ADD) &&
@@ -380,7 +380,7 @@ void RISCVMCCodeEmitter::expandAddBaseIdx(const MCInst &MI,
 
   // Emit a normal ADD or SHXADD instruction with the given operands.
   MCInst TmpInst = MCInstBuilder(BuildOpcode)
-                       .addOperand(DestReg)
+                       .addOperand(Dest)
                        .addOperand(Src1)
                        .addOperand(Src2);
   uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
