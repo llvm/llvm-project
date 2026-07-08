@@ -37,7 +37,7 @@ program omp_doCollapse
 
   !ERROR: This construct requires a perfect nest of depth 2, but the associated nest is a perfect nest of depth 1
   !BECAUSE: COLLAPSE clause was specified with argument 2
-  !ERROR: At most one COLLAPSE clause can appear on the SIMD directive
+  !ERROR: At most one COLLAPSE clause can appear on SIMD directive
   !$omp simd collapse(2) collapse(1)
   do i = 1, 4
     j = j + i + 1

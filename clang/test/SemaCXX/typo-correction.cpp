@@ -786,4 +786,22 @@ void function() {
 }
 }
 
+namespace GH204561 {
+  template <class> struct A {
+    int B { 0; // expected-error {{expected '}'}} expected-note {{to match this '{'}}
+  };
+  template struct A<int>;
 
+  template <class> int x = 0; // expected-note {{'x' declared here}}
+  template <> template <class U> int A<int>::x<U &> = 4;
+  // expected-error@-1 {{no template named 'x' in 'GH204561::A<int>'; did you mean simply 'x'?}}
+  // expected-error@-2 {{extraneous template parameter list in template specialization}}
+
+  template int x<int &>;
+} // namespace GH204561
+
+namespace GH206992 {
+  template <class> struct F {};
+  ::~F<void> {};
+  // expected-error@-1 {{destructor name 'F' does not refer to a template}}
+}; // namespace GH206992

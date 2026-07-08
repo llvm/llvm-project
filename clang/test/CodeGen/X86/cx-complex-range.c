@@ -460,10 +460,10 @@ _Complex _Float16 divf16(_Complex _Float16 a, _Complex _Float16 b) {
 // FULL-NEXT:    [[MUL_R:%.*]] = fsub float [[MUL_AC]], [[MUL_BD]]
 // FULL-NEXT:    [[MUL_I:%.*]] = fadd float [[MUL_AD]], [[MUL_BC]]
 // FULL-NEXT:    [[ISNAN_CMP:%.*]] = fcmp uno float [[MUL_R]], [[MUL_R]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2:![0-9]+]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1:![0-9]+]]
 // FULL:       complex_mul_imag_nan:
 // FULL-NEXT:    [[ISNAN_CMP4:%.*]] = fcmp uno float [[MUL_I]], [[MUL_I]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP4]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP4]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL:       complex_mul_libcall:
 // FULL-NEXT:    [[CALL:%.*]] = call <2 x float> @__mulsc3(float noundef [[EXT]], float noundef [[EXT1]], float noundef [[EXT2]], float noundef [[EXT3]]) #[[ATTR1]]
 // FULL-NEXT:    store <2 x float> [[CALL]], ptr [[COERCE]], align 4
@@ -687,10 +687,10 @@ _Complex _Float16 divf16(_Complex _Float16 a, _Complex _Float16 b) {
 // FULL_FAST-NEXT:    [[MUL_R:%.*]] = fsub reassoc nnan ninf nsz arcp afn float [[MUL_AC]], [[MUL_BD]]
 // FULL_FAST-NEXT:    [[MUL_I:%.*]] = fadd reassoc nnan ninf nsz arcp afn float [[MUL_AD]], [[MUL_BC]]
 // FULL_FAST-NEXT:    [[ISNAN_CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno float [[MUL_R]], [[MUL_R]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2:![0-9]+]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1:![0-9]+]]
 // FULL_FAST:       complex_mul_imag_nan:
 // FULL_FAST-NEXT:    [[ISNAN_CMP4:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno float [[MUL_I]], [[MUL_I]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP4]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP4]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_libcall:
 // FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) <2 x float> @__mulsc3(float noundef nofpclass(nan inf) [[EXT]], float noundef nofpclass(nan inf) [[EXT1]], float noundef nofpclass(nan inf) [[EXT2]], float noundef nofpclass(nan inf) [[EXT3]]) #[[ATTR1]]
 // FULL_FAST-NEXT:    store <2 x float> [[CALL]], ptr [[COERCE]], align 4
@@ -1064,7 +1064,7 @@ _Complex _Float16 mulf16(_Complex _Float16 a, _Complex _Float16 b) {
 // PRMTD-NEXT:    ret <2 x half> [[TMP33]]
 //
 // X86WINPRMTD-LABEL: define dso_local i32 @f1(
-// X86WINPRMTD-SAME: i32 noundef [[A_COERCE:%.*]], ptr noundef dead_on_return [[B:%.*]], i32 noundef [[C_COERCE:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: i32 noundef [[A_COERCE:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]], i32 noundef [[C_COERCE:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[RETVAL:%.*]] = alloca { half, half }, align 2
 // X86WINPRMTD-NEXT:    [[A:%.*]] = alloca { half, half }, align 2
@@ -1424,7 +1424,7 @@ _Complex _Float16 f1(_Complex _Float16 a, _Complex long double b, _Complex _Floa
   return (_Complex _Float16)(b / c) / a;
 }
 //.
-// FULL: [[PROF2]] = !{!"branch_weights", i32 1, i32 1048575}
+// FULL: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 //.
-// FULL_FAST: [[PROF2]] = !{!"branch_weights", i32 1, i32 1048575}
+// FULL_FAST: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 //.

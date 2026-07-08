@@ -534,8 +534,8 @@ define <4 x i64> @single_zext(<4 x i32> %x) {
 
 define <4 x i64> @not_zext(<4 x i32> %x) {
 ; CHECK-LABEL: @not_zext(
-; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[REVSHUF:%.*]] to <4 x i64>
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[REVSHUF]] to <4 x i64>
 ; CHECK-NEXT:    ret <4 x i64> [[ZEXT]]
 ;
   %zext = zext <4 x i32> %x to <4 x i64>
@@ -745,10 +745,7 @@ define <4 x i64> @zext_add_chain(<4 x i32> %x) {
 define <8 x i8> @intrinsics_minmax(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: @intrinsics_minmax(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.smin.v8i8(<8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i8> @llvm.smax.v8i8(<8 x i8> [[TMP1]], <8 x i8> [[B]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i8> @llvm.umin.v8i8(<8 x i8> [[TMP2]], <8 x i8> [[B]])
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i8> @llvm.umax.v8i8(<8 x i8> [[TMP3]], <8 x i8> [[B]])
-; CHECK-NEXT:    ret <8 x i8> [[R]]
+; CHECK-NEXT:    ret <8 x i8> [[B]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %at = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
@@ -922,8 +919,7 @@ define <4 x i8> @singleop(<4 x i8> %a, <4 x i8> %b) {
 
 define <4 x i64> @cast_mismatched_types(<4 x i32> %x) {
 ; CHECK-LABEL: @cast_mismatched_types(
-; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[X]] to <4 x i64>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[X:%.*]] to <4 x i64>
 ; CHECK-NEXT:    ret <4 x i64> [[ZEXT]]
 ;
   %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <2 x i32> <i32 0, i32 2>

@@ -312,20 +312,13 @@ bool Constant::isElementWiseEqual(Value *Y) const {
 static bool
 containsUndefinedElement(const Constant *C,
                          function_ref<bool(const Constant *)> HasFn) {
-  if (auto *VTy = dyn_cast<VectorType>(C->getType())) {
+  if (C->getType()->isVectorTy()) {
     if (HasFn(C))
       return true;
     if (isa<ConstantAggregateZero>(C))
       return false;
-    if (isa<ScalableVectorType>(C->getType()))
-      return false;
 
-    for (unsigned i = 0, e = cast<FixedVectorType>(VTy)->getNumElements();
-         i != e; ++i) {
-      if (Constant *Elem = C->getAggregateElement(i))
-        if (HasFn(Elem))
-          return true;
-    }
+    return C->containsMatchingVectorElement(HasFn);
   }
 
   return false;
@@ -351,11 +344,22 @@ bool Constant::containsConstantExpression() const {
   if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
     return false;
 
-  if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
-    for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i)
-      if (isa<ConstantExpr>(getAggregateElement(i)))
-        return true;
+  return containsMatchingVectorElement(IsaPred<ConstantExpr>);
+}
+
+bool Constant::containsMatchingVectorElement(
+    function_ref<bool(Constant *)> PredFn) const {
+  auto *FVTy = dyn_cast<FixedVectorType>(getType());
+  if (!FVTy)
+    return false;
+
+  unsigned NumElts = FVTy->getNumElements();
+  for (unsigned I = 0; I != NumElts; ++I) {
+    Constant *Elem = getAggregateElement(I);
+    if (Elem && PredFn(Elem))
+      return true;
   }
+
   return false;
 }
 

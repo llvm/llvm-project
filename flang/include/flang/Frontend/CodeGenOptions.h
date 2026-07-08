@@ -22,8 +22,6 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>

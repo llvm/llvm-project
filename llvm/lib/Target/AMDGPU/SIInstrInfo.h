@@ -34,7 +34,8 @@ class MachineDominatorTree;
 class MachineRegisterInfo;
 class RegScavenger;
 class SIMachineFunctionInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class ScheduleHazardRecognizer;
 
 constexpr unsigned DefaultMemoryClusterDWordsLimit = 8;
@@ -306,17 +307,6 @@ public:
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
-  const TargetRegisterClass *getPreferredSelectRegClass(
-                               unsigned Size) const;
-
-  Register insertNE(MachineBasicBlock *MBB,
-                    MachineBasicBlock::iterator I, const DebugLoc &DL,
-                    Register SrcReg, int Value) const;
-
-  Register insertEQ(MachineBasicBlock *MBB,
-                    MachineBasicBlock::iterator I, const DebugLoc &DL,
-                    Register SrcReg, int Value)  const;
-
 private:
   void storeRegToStackSlotImpl(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI, Register SrcReg,
@@ -442,11 +432,6 @@ public:
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
                     Register DstReg, ArrayRef<MachineOperand> Cond,
                     Register TrueReg, Register FalseReg) const override;
-
-  void insertVectorSelect(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator I, const DebugLoc &DL,
-                          Register DstReg, ArrayRef<MachineOperand> Cond,
-                          Register TrueReg, Register FalseReg) const;
 
   bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
                       Register &SrcReg2, int64_t &CmpMask,
@@ -750,7 +735,7 @@ public:
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
 
   /// \returns true for FLAT instructions that can access LDS.
-  bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
+  bool mayAccessLDSThroughFlat(const MachineInstr &MI, bool TgSplit) const;
 
   static bool isBlockLoadStore(uint32_t Opcode) {
     switch (Opcode) {
@@ -1574,8 +1559,6 @@ public:
 
   void insertNoops(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    unsigned Quantity) const override;
-
-  void insertReturn(MachineBasicBlock &MBB) const;
 
   /// Build instructions that simulate the behavior of a `s_trap 2` instructions
   /// for hardware (namely, gfx11) that runs in PRIV=1 mode. There, s_trap is

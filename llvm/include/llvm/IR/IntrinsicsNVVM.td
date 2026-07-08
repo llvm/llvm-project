@@ -2137,21 +2137,6 @@ let IntrProperties = [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillRetur
   def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty, llvm_i32_ty]>;
 }
 
-// Represents an explicit hole in the LLVM IR type system. It may be inserted by
-// the compiler in cases where a pointer is of the wrong type. In the backend
-// this intrinsic will be folded away and not equate to any instruction. It
-// should not be used by any frontend and should only be considered well defined
-// when added in the following cases:
-//
-//  - NVPTXLowerArgs: When wrapping a byval pointer argument to a kernel
-//    function to convert the address space from generic (0) to param (101).
-//    This accounts for the fact that the parameter symbols will occupy this
-//    space when lowered during ISel.
-//
-def int_nvvm_internal_addrspace_wrap :
-  NVVMPureIntrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty],
-                [NoUndef<ArgIndex<0>>, NoUndef<RetIndex>]>;
-
 // Move intrinsics, used in nvvm internally
 
 let IntrProperties = [IntrNoMem] in {
@@ -3238,6 +3223,27 @@ let IntrProperties = [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<0>>,
 }
 
 //
+// Asynchronous store intrinsics
+//
+
+def int_nvvm_st_async :
+  DefaultAttrsIntrinsic<[],
+    [llvm_shared_cluster_ptr_ty, llvm_anyint_ty, llvm_shared_cluster_ptr_ty],
+    [WriteOnly<ArgIndex<0>>, IntrArgMemOnly]>;
+
+foreach scope = ["_sys", "_gpu"] in {
+  def int_nvvm_st_async # scope :
+    DefaultAttrsIntrinsic<[],
+      [llvm_global_ptr_ty, llvm_anyint_ty, llvm_i1_ty],
+      [WriteOnly<ArgIndex<0>>, ImmArg<ArgIndex<2>>,
+       ArgInfo<ArgIndex<2>, [ArgName<"isMultimem">]>]>;
+}
+
+def int_nvvm_st_async_mmio_sys :
+  DefaultAttrsIntrinsic<[],
+    [llvm_global_ptr_ty, llvm_anyint_ty], [WriteOnly<ArgIndex<0>>]>;
+
+//
 // clusterlaunchcontorl Intrinsics
 //
 
@@ -3422,7 +3428,7 @@ let IntrProperties = [IntrArgMemOnly, IntrWriteMem, NoCapture<ArgIndex<0>>] in {
 }
 
 let IntrProperties = [IntrArgMemOnly, ImmArg<ArgIndex<1>>, IntrWriteMem,
-                      NoCapture<ArgIndex<0>>] in {
+                      NoCapture<ArgIndex<0>>, Range<ArgIndex<1>, 0, 5>] in {
   def int_nvvm_tensormap_replace_global_stride :
     DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty, llvm_i64_ty], []>;
   foreach tmap_field = ["box_dim", "global_dim", "element_stride"] in {

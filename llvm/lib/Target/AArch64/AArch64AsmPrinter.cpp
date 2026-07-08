@@ -510,7 +510,7 @@ void AArch64AsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
   //   ;DATA: higher 32 bits of the address of the trampoline
   //   LDP X0, X30, [SP], #16 ; pop X0 and the link register from the stack
   //
-  OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(4), getSubtargetInfo());
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
   OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();
@@ -3203,7 +3203,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
         CurrentPatchableFunctionEntrySym == CurrentFnBegin &&
         MI == &MF->front().front()) {
       int64_t Imm = MI->getOperand(0).getImm();
-      if ((Imm & 32) && (Imm & 6)) {
+      if (Imm == 32 || Imm == 34 || Imm == 36 || Imm == 38) {
         MCInst Inst;
         MCInstLowering.Lower(MI, Inst);
         EmitToStreamer(*OutStreamer, Inst);

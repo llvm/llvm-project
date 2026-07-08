@@ -108,7 +108,6 @@ public:
     Parser.Line->PPLevel = PreBlockLine->PPLevel;
     Parser.Line->InPPDirective = PreBlockLine->InPPDirective;
     Parser.Line->InMacroBody = PreBlockLine->InMacroBody;
-    Parser.Line->IsModuleOrImportDecl = PreBlockLine->IsModuleOrImportDecl;
     Parser.Line->UnbracedBodyLevel = PreBlockLine->UnbracedBodyLevel;
   }
 
@@ -1508,23 +1507,54 @@ void UnwrappedLineParser::parseStructuralElement(
     return;
   }
   switch (FormatTok->Tok.getKind()) {
-  case tok::kw_asm:
+  case tok::kw_asm: {
+    // Track whether to skip formatting inline asm by finalizing the tokens
+    // in the block. Formatting is skipped inside of braces by default.
+    // A style option could be added to also skip formatting inside parens.
+    bool DoNotFormat = false;
+    tok::TokenKind OpenType;
+    tok::TokenKind CloseType;
     nextToken();
+    while (FormatTok &&
+           FormatTok->isOneOf(tok::kw_volatile, tok::kw_inline, tok::kw_goto)) {
+      nextToken();
+    }
+    if (!FormatTok)
+      break;
     if (FormatTok->is(tok::l_brace)) {
       FormatTok->setFinalizedType(TT_InlineASMBrace);
+      OpenType = tok::l_brace;
+      CloseType = tok::r_brace;
+      DoNotFormat = true;
+    } else if (FormatTok->is(tok::l_paren)) {
+      OpenType = tok::l_paren;
+      CloseType = tok::r_paren;
+      FormatTok->setFinalizedType(TT_InlineASMParen);
+    } else {
+      break;
+    }
+    if (DoNotFormat) {
+      FormatToken *OpenTok = FormatTok;
+      int NestLevel = 0;
       nextToken();
       while (FormatTok && !eof()) {
-        if (FormatTok->is(tok::r_brace)) {
-          FormatTok->setFinalizedType(TT_InlineASMBrace);
-          nextToken();
-          addUnwrappedLine();
-          break;
+        if (FormatTok->is(OpenType)) {
+          ++NestLevel;
+        } else if (FormatTok->is(CloseType)) {
+          --NestLevel;
+          if (NestLevel < 1) {
+            FormatTok->setFinalizedType(OpenTok->getType());
+            nextToken();
+            addUnwrappedLine();
+            break;
+          }
         }
         FormatTok->Finalized = true;
         nextToken();
       }
     }
     break;
+  }
   case tok::kw_namespace:
     parseNamespace();
     return;
@@ -1743,7 +1773,7 @@ void UnwrappedLineParser::parseStructuralElement(
       if (!Line->InMacroBody || CurrentLines->size() > 1)
         Line->Tokens.begin()->Tok->MustBreakBefore = true;
       FormatTok->setFinalizedType(TT_GotoLabelColon);
-      parseLabel(Style.IndentGotoLabels);
+      parseLabel(/*IsGotoLabel=*/true);
       if (HasLabel)
         *HasLabel = true;
       return;
@@ -3401,28 +3431,24 @@ void UnwrappedLineParser::parseDoWhile() {
   parseStructuralElement();
 }
 
-void UnwrappedLineParser::parseLabel(
-    FormatStyle::IndentGotoLabelStyle IndentGotoLabels) {
-  const bool IsGotoLabel = FormatTok->is(TT_GotoLabelColon);
+void UnwrappedLineParser::parseLabel(bool IsGotoLabel) {
   nextToken();
-  unsigned OldLineLevel = Line->Level;
 
-  switch (IndentGotoLabels) {
-  case FormatStyle::IGLS_NoIndent:
-    Line->Level = 0;
-    break;
-  case FormatStyle::IGLS_OuterIndent:
-    if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
-      --Line->Level;
-    break;
-  case FormatStyle::IGLS_HalfIndent:
-  case FormatStyle::IGLS_InnerIndent:
-    break;
+  const auto IndentGotoLabel = Style.IndentGotoLabels;
+  const auto OldLineLevel = Line->Level;
+  auto &Level = Line->Level;
+
+  if (IsGotoLabel && IndentGotoLabel == FormatStyle::IGLS_NoIndent)
+    Level = 0;
+
+  if (!IsGotoLabel || IndentGotoLabel == FormatStyle::IGLS_OuterIndent) {
+    if (OldLineLevel > 1 || (!Line->InPPDirective && OldLineLevel > 0))
+      --Level;
   }
 
   if (!IsGotoLabel && !Style.IndentCaseBlocks &&
       CommentsBeforeNextToken.empty() && FormatTok->is(tok::l_brace)) {
-    CompoundStatementIndenter Indenter(this, Line->Level,
+    CompoundStatementIndenter Indenter(this, Level,
                                        Style.BraceWrapping.AfterCaseLabel,
                                        Style.BraceWrapping.IndentBraces);
     parseBlock();
@@ -3432,7 +3458,7 @@ void UnwrappedLineParser::parseLabel(
         addUnwrappedLine();
         if (!Style.IndentCaseBlocks &&
             Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
-          ++Line->Level;
+          ++Level;
         }
       }
       parseStructuralElement();
@@ -3443,7 +3469,9 @@ void UnwrappedLineParser::parseLabel(
       nextToken();
     addUnwrappedLine();
   }
-  Line->Level = OldLineLevel;
+
+  Level = OldLineLevel;
+
   if (FormatTok->isNot(tok::l_brace)) {
     parseStructuralElement();
     addUnwrappedLine();
@@ -4718,6 +4746,7 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
   Line->FirstStartColumn = 0;
   Line->IsContinuation = false;
   Line->SeenDecltypeAuto = false;
+  Line->IsModuleOrImportDecl = false;
 
   if (ClosesWhitesmithsBlock && AdjustLevel == LineLevel::Remove)
     --Line->Level;

@@ -641,8 +641,10 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; NOSTRIDED-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 4
 ; NOSTRIDED-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; NOSTRIDED-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP5]], 1
 ; NOSTRIDED-NEXT:    [[TMP6:%.*]] = sub i64 [[P21]], [[P3]]
-; NOSTRIDED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
+; NOSTRIDED-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], 1
+; NOSTRIDED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP7]], [[TMP8]]
 ; NOSTRIDED-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NOSTRIDED:       [[VECTOR_PH]]:
 ; NOSTRIDED-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -685,7 +687,7 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED-UF2-NEXT:    [[P21:%.*]] = ptrtoaddr ptr [[P2]] to i64
 ; NOSTRIDED-UF2-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; NOSTRIDED-UF2-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
-; NOSTRIDED-UF2-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 12)
+; NOSTRIDED-UF2-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 16)
 ; NOSTRIDED-UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
 ; NOSTRIDED-UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; NOSTRIDED-UF2:       [[VECTOR_SCEVCHECK]]:
@@ -695,8 +697,10 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED-UF2-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; NOSTRIDED-UF2-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; NOSTRIDED-UF2-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 8
+; NOSTRIDED-UF2-NEXT:    [[TMP15:%.*]] = sub i64 [[TMP4]], 1
 ; NOSTRIDED-UF2-NEXT:    [[TMP5:%.*]] = sub i64 [[P21]], [[P3]]
-; NOSTRIDED-UF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], [[TMP4]]
+; NOSTRIDED-UF2-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP5]], 1
+; NOSTRIDED-UF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], [[TMP15]]
 ; NOSTRIDED-UF2-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NOSTRIDED-UF2:       [[VECTOR_PH]]:
 ; NOSTRIDED-UF2-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
