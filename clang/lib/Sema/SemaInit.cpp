@@ -1600,8 +1600,8 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
           // variable/argument/return is left to its own site, which already
           // handles a braced source via the recognizer. No Decl is passed: the
           // init list can appear in a template independently of whether the
-          // aggregate is one, so deferral comes from the dependent-context
-          // guard in checkInitProfileRefToUninit and suppression from the
+          // aggregate is one, so checkInitProfileRefToUninit defers on an
+          // instantiation-dependent source and suppression comes from the
           // parse-time stack. (A reference field is routed to
           // CheckReferenceType above.)
           if (!Result.isInvalid() &&
@@ -1913,8 +1913,8 @@ void InitListChecker::CheckReferenceType(const InitializedEntity &Entity,
   // an NSDMI) has a null parent and is checked at its own Decl-aware site, so
   // the parent guard prevents a double diagnostic there. No Decl is passed: the
   // init list can appear in a template independently of whether the aggregate
-  // is one, so deferral comes from the dependent-context guard in
-  // checkInitProfileRefToUninit and suppression from the parse-time stack.
+  // is one, so checkInitProfileRefToUninit defers on an instantiation-dependent
+  // source and suppression comes from the parse-time stack.
   if (!VerifyOnly && !Result.isInvalid() &&
       Entity.getKind() == InitializedEntity::EK_Member && Entity.getParent())
     SemaRef.Profiles().checkInitProfileRefToUninitBinding(Src->getExprLoc(),
