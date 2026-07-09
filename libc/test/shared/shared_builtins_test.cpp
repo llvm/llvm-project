@@ -40,30 +40,41 @@ TEST(LlvmLibcSharedBuiltinsTest, AllFloat128) {
 #endif // LIBC_TYPES_HAS_FLOAT128
 
 TEST(LlvmLibcSharedBuiltinsTest, FloatToIntConversion) {
-  EXPECT_EQ(int64_t(12), LIBC_NAMESPACE::shared::fixsfdi(12.5f));
-  EXPECT_EQ(int32_t(12), LIBC_NAMESPACE::shared::fixsfsi(12.5f));
+  using shared = LIBC_NAMESPACE::shared;
+
+  EXPECT_EQ(int64_t(12), shared::fixsfdi(12.5f));
+  EXPECT_EQ(int32_t(12), shared::fixsfsi(12.5f));
 #ifdef LIBC_TYPES_HAS_INT128
-  EXPECT_EQ(static_cast<__int128_t>(12),
-            LIBC_NAMESPACE::shared::fixsfti(12.5f));
+  EXPECT_EQ(static_cast<__int128_t>(12), shared::fixsfti(12.5f));
 #endif // LIBC_TYPES_HAS_INT128
-  EXPECT_EQ(uint64_t(12), LIBC_NAMESPACE::shared::fixunssfdi(12.5f));
-  EXPECT_EQ(uint32_t(12), LIBC_NAMESPACE::shared::fixunssfsi(12.5f));
+}
+
+TEST(LlvmLibcSharedBuiltinsTest, FloatToUIntConversion) {
+  using shared = LIBC_NAMESPACE::shared;
+
+  EXPECT_EQ(uint64_t(12), shared::fixunssfdi(12.5f));
+  EXPECT_EQ(uint32_t(12), shared::fixunssfsi(12.5f));
 #ifdef LIBC_TYPES_HAS_INT128
-  EXPECT_EQ(static_cast<__uint128_t>(12),
-            LIBC_NAMESPACE::shared::fixunssfti(12.5f));
+  EXPECT_EQ(static_cast<__uint128_t>(12), shared::fixunssfti(12.5f));
 #endif // LIBC_TYPES_HAS_INT128
 }
 
 TEST(LlvmLibcSharedBuiltinsTest, DoubleToIntConversion) {
-  EXPECT_EQ(int64_t(12), LIBC_NAMESPACE::shared::fixdfdi(12.5));
-  EXPECT_EQ(int32_t(12), LIBC_NAMESPACE::shared::fixdfsi(12.5));
+  using shared = LIBC_NAMESPACE::shared;
+
+  EXPECT_EQ(int64_t(12), shared::fixdfdi(12.5));
+  EXPECT_EQ(int32_t(12), shared::fixdfsi(12.5));
 #ifdef LIBC_TYPES_HAS_INT128
-  EXPECT_EQ(static_cast<__int128_t>(12), LIBC_NAMESPACE::shared::fixdfti(12.5));
+  EXPECT_EQ(static_cast<__int128_t>(12), shared::fixdfti(12.5));
 #endif // LIBC_TYPES_HAS_INT128
-  EXPECT_EQ(uint64_t(12), LIBC_NAMESPACE::shared::fixunsdfdi(12.5));
-  EXPECT_EQ(uint32_t(12), LIBC_NAMESPACE::shared::fixunsdfsi(12.5));
+}
+
+TEST(LlvmLibcSharedBuiltinsTest, DoubleToUIntConversion) {
+  using shared = LIBC_NAMESPACE::shared;
+
+  EXPECT_EQ(uint64_t(12), shared::fixunsdfdi(12.5));
+  EXPECT_EQ(uint32_t(12), shared::fixunsdfsi(12.5));
 #ifdef LIBC_TYPES_HAS_INT128
-  EXPECT_EQ(static_cast<__uint128_t>(12),
-            LIBC_NAMESPACE::shared::fixunsdfti(12.5));
+  EXPECT_EQ(static_cast<__uint128_t>(12), shared::fixunsdfti(12.5));
 #endif // LIBC_TYPES_HAS_INT128
 }
