@@ -332,16 +332,22 @@ endif()
 set(LIBOMP_USE_CANCEL_THREADS "${LIBOMP_HAVE_PTHREAD_CANCEL}" CACHE BOOL
   "Enable thread cancellation via pthread_cancel?")
 
-# Shared library can be switched to a static library
+# Shared and static libraries can be enabled at the same time.
 set(LIBOMP_ENABLE_SHARED TRUE CACHE BOOL
-  "Shared library instead of static library?")
+  "Build the OpenMP runtime as a shared library.")
+set(LIBOMP_ENABLE_STATIC FALSE CACHE BOOL
+  "Build the OpenMP runtime as a static library.")
 
 if(WASM)
   libomp_warning_say("The WebAssembly build currently only supports static libraries; forcing LIBOMP_ENABLE_SHARED to false")
   set(LIBOMP_ENABLE_SHARED FALSE)
 endif()
 
-if(WIN32 AND NOT LIBOMP_ENABLE_SHARED)
+if(NOT LIBOMP_ENABLE_SHARED AND NOT LIBOMP_ENABLE_STATIC)
+  set(LIBOMP_ENABLE_STATIC TRUE)
+endif()
+
+if(WIN32 AND LIBOMP_ENABLE_STATIC)
   libomp_error_say("Static libraries requested but not available on Windows")
 endif()
 

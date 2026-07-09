@@ -171,6 +171,20 @@ add_library(obj.omp OBJECT ${LIBOMP_SOURCE_FILES})
 set_property(TARGET obj.omp PROPERTY FOLDER "OpenMP/Libraries")
 set_property(TARGET obj.omp PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+if(LIBOMP_ENABLE_SHARED AND LIBOMP_ENABLE_STATIC)
+  set(LIBOMP_BUILD_SHARED_AND_STATIC TRUE)
+else()
+  set(LIBOMP_BUILD_SHARED_AND_STATIC FALSE)
+endif()
+
+if(LIBOMP_BUILD_SHARED_AND_STATIC)
+  add_library(obj.omp.static OBJECT ${LIBOMP_SOURCE_FILES})
+  set_property(TARGET obj.omp.static PROPERTY FOLDER "OpenMP/Libraries")
+  set_property(TARGET obj.omp.static PROPERTY POSITION_INDEPENDENT_CODE ON)
+  target_compile_definitions(obj.omp.static PRIVATE KMP_DYNAMIC_LIB=0)
+  set(LIBOMP_STATIC_LIB_FILE ${LIBOMP_LIB_NAME}${CMAKE_STATIC_LIBRARY_SUFFIX})
+endif()
+
 libomp_get_ldflags(LIBOMP_CONFIGURED_LDFLAGS)
 libomp_get_libflags(LIBOMP_CONFIGURED_LIBFLAGS)
 
@@ -181,12 +195,24 @@ if(NOT OPENMP_ENABLE_LIBOMP_PROFILING)
   set_property(TARGET omp PROPERTY FOLDER "OpenMP/Libraries")
   # Linking command will include libraries in LIBOMP_CONFIGURED_LIBFLAGS
   target_link_libraries(omp ${LIBOMP_CONFIGURED_LIBFLAGS} ${LIBOMP_DL_LIBS})
+  if(LIBOMP_BUILD_SHARED_AND_STATIC)
+    add_library(omp_static STATIC $<TARGET_OBJECTS:obj.omp.static>)
+    set_property(TARGET omp_static PROPERTY FOLDER "OpenMP/Libraries")
+    target_link_libraries(omp_static ${LIBOMP_CONFIGURED_LIBFLAGS} ${LIBOMP_DL_LIBS})
+  endif()
 else()
   add_llvm_library(omp ${LIBOMP_LIBRARY_KIND} $<TARGET_OBJECTS:obj.omp> PARTIAL_SOURCES_INTENDED
     LINK_LIBS ${LIBOMP_CONFIGURED_LIBFLAGS} ${LIBOMP_DL_LIBS}
     LINK_COMPONENTS Support
     BUILDTREE_ONLY
     )
+  if(LIBOMP_BUILD_SHARED_AND_STATIC)
+    add_llvm_library(omp_static STATIC $<TARGET_OBJECTS:obj.omp.static> PARTIAL_SOURCES_INTENDED
+      LINK_LIBS ${LIBOMP_CONFIGURED_LIBFLAGS} ${LIBOMP_DL_LIBS}
+      LINK_COMPONENTS Support
+      BUILDTREE_ONLY
+      )
+  endif()
   # libomp must be a C++ library such that it can link libLLVMSupport
   set(LIBOMP_LINKER_LANGUAGE CXX)
 endif()
@@ -205,6 +231,12 @@ if(LIBOMP_USE_HWLOC)
     INTERFACE
     "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
     "$<INSTALL_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>")
+  if(LIBOMP_BUILD_SHARED_AND_STATIC)
+    target_include_directories(obj.omp.static
+      PRIVATE
+      "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
+      "$<INSTALL_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>")
+  endif()
 endif()
 
 if(OPENMP_MSVC_NAME_SCHEME)
@@ -242,6 +274,12 @@ else()
     LINK_FLAGS "${LIBOMP_CONFIGURED_LDFLAGS}"
     LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
   )
+  if(LIBOMP_BUILD_SHARED_AND_STATIC)
+    set_target_properties(omp_static PROPERTIES
+      PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_STATIC_LIB_FILE}"
+      LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
+    )
+  endif()
 endif()
 
 # Get the library's location within the build tree for the unit tester
@@ -290,6 +328,15 @@ if(NOT WIN32)
         WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
       )
     endif()
+    if(LIBOMP_BUILD_SHARED_AND_STATIC)
+      add_custom_command(TARGET omp_static POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_STATIC_LIB_FILE}
+          libiomp5${CMAKE_STATIC_LIBRARY_SUFFIX}
+        COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_STATIC_LIB_FILE}
+          libgomp${CMAKE_STATIC_LIBRARY_SUFFIX}
+        WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
+      )
+    endif()
   endif()
 endif()
 
@@ -304,6 +351,9 @@ set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
 add_custom_target(libomp-needed-headers DEPENDS kmp_i18n_id.inc kmp_i18n_default.inc)
 set_target_properties(libomp-needed-headers PROPERTIES FOLDER "OpenMP/Sourcegenning")
 add_dependencies(obj.omp libomp-needed-headers)
+if(LIBOMP_BUILD_SHARED_AND_STATIC)
+  add_dependencies(obj.omp.static libomp-needed-headers)
+endif()
 
 # Windows specific build rules
 if(WIN32)
@@ -409,6 +459,12 @@ set(export_to_llvmexports)
 get_target_export_arg(omp LLVM export_to_llvmexports)
 set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS omp)
 
+set(export_to_static_llvmexports)
+if(LIBOMP_BUILD_SHARED_AND_STATIC)
+  get_target_export_arg(omp_static LLVM export_to_static_llvmexports)
+  set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS omp_static)
+endif()
+
 # Install rules
 # We want to install libomp in ${DESTDIR}/${CMAKE_INSTALL_FULL_LIBDIR}
 # We want to install headers in ${DESTDIR}/${CMAKE_INSTALL_FULL_INCLUDEDIR}
@@ -430,6 +486,9 @@ if(WIN32)
 else()
 
   install(TARGETS omp ${export_to_llvmexports} ${LIBOMP_INSTALL_KIND} DESTINATION "${OPENMP_INSTALL_LIBDIR}" COMPONENT openmp)
+  if(LIBOMP_BUILD_SHARED_AND_STATIC)
+    install(TARGETS omp_static ${export_to_static_llvmexports} ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}" COMPONENT openmp)
+  endif()
 
   if(LIBOMP_INSTALL_ALIASES)
     # Create aliases (symlinks) of the library for backwards compatibility
@@ -450,6 +509,13 @@ else()
       install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_FILE}\"
         \"${VERSIONED_LIBGOMP_NAME}\" WORKING_DIRECTORY
         \"\$ENV{DESTDIR}${outdir}\")" COMPONENT openmp)
+    endif()
+    if(LIBOMP_BUILD_SHARED_AND_STATIC)
+      foreach(alias IN LISTS LIBOMP_ALIASES)
+        install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_STATIC_LIB_FILE}\"
+          \"${alias}${CMAKE_STATIC_LIBRARY_SUFFIX}\" WORKING_DIRECTORY
+          \"\$ENV{DESTDIR}${outdir}\")" COMPONENT openmp)
+      endforeach()
     endif()
   endif()
 endif()

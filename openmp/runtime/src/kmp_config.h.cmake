@@ -65,7 +65,11 @@
 #cmakedefine01 LIBOMP_USE_HWLOC
 #define KMP_USE_HWLOC LIBOMP_USE_HWLOC
 #cmakedefine01 LIBOMP_ENABLE_SHARED
+// Shared and static libraries need different code, so KMP_DYNAMIC_LIB may be
+// set per object library on the command line. Only set it here if not set yet.
+#ifndef KMP_DYNAMIC_LIB
 #define KMP_DYNAMIC_LIB LIBOMP_ENABLE_SHARED
+#endif
 #define KMP_ARCH_STR "@LIBOMP_LEGAL_ARCH@"
 #define KMP_LIBRARY_FILE "@LIBOMP_LIB_FILE@"
 #define KMP_VERSION_MAJOR @LIBOMP_VERSION_MAJOR@
