@@ -119,6 +119,18 @@ struct MachinePointerInfo {
 };
 
 
+/// LLVM IR metadata carried by a MachineMemOperand.
+struct MMOMetadata {
+  AAMDNodes AAInfo;
+  const MDNode *Ranges = nullptr;
+  const MDNode *MemCacheHint = nullptr;
+
+  MMOMetadata() = default;
+  MMOMetadata(const AAMDNodes &AAInfo, const MDNode *Ranges = nullptr,
+              const MDNode *MemCacheHint = nullptr)
+      : AAInfo(AAInfo), Ranges(Ranges), MemCacheHint(MemCacheHint) {}
+};
+
 //===----------------------------------------------------------------------===//
 /// A description of a memory reference used in the backend.
 /// Instead of holding a StoreInst or LoadInst, this class holds the address
@@ -129,18 +141,6 @@ struct MachinePointerInfo {
 ///
 class MachineMemOperand {
 public:
-  /// LLVM IR metadata carried by a MachineMemOperand.
-  struct Metadata {
-    AAMDNodes AAInfo;
-    const MDNode *Ranges;
-    const MDNode *MemCacheHint;
-
-    Metadata() : Ranges(nullptr), MemCacheHint(nullptr) {}
-    Metadata(const AAMDNodes &AAInfo, const MDNode *Ranges = nullptr,
-             const MDNode *MemCacheHint = nullptr)
-        : AAInfo(AAInfo), Ranges(Ranges), MemCacheHint(MemCacheHint) {}
-  };
-
   /// Flags values. These may be or'd together.
   enum Flags : uint16_t {
     // No flags set.
@@ -198,21 +198,21 @@ private:
 
 public:
   /// Construct a MachineMemOperand object with the specified PtrInfo, flags,
-  /// size, and base alignment. For atomic operations the synchronization scope
-  /// and atomic ordering requirements must also be specified. For cmpxchg
-  /// atomic operations the atomic ordering requirements when store does not
-  /// occur must also be specified.
+  /// size, base alignment, and metadata. For atomic operations the
+  /// synchronization scope and atomic ordering requirements must also be
+  /// specified. For cmpxchg atomic operations the atomic ordering requirements
+  /// when store does not occur must also be specified.
   LLVM_ABI
   MachineMemOperand(
       MachinePointerInfo PtrInfo, Flags Flags, LocationSize TS, Align A,
-      MachineMemOperand::Metadata MMOMetadata = MachineMemOperand::Metadata(),
+      MMOMetadata Metadata = MMOMetadata(),
       SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   LLVM_ABI
   MachineMemOperand(
       MachinePointerInfo PtrInfo, Flags Flags, LLT Type, Align A,
-      MachineMemOperand::Metadata MMOMetadata = MachineMemOperand::Metadata(),
+      MMOMetadata Metadata = MMOMetadata(),
       SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);

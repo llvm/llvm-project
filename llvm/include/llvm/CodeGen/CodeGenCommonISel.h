@@ -228,6 +228,8 @@ findSplitPointForStackProtector(MachineBasicBlock *BB,
 /// simpler test.
 LLVM_ABI FPClassTest invertFPClassTestIfSimpler(FPClassTest Test, bool UseFCmp);
 
+/// Return the cache hint metadata node for memory operand \p OperandNo on \p I,
+/// or nullptr when the instruction has no hint for that operand.
 LLVM_ABI const MDNode *getMemCacheHintMetadata(const Instruction &I,
                                                unsigned OperandNo = 0);
 

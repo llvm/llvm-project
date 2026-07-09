@@ -566,7 +566,7 @@ void MachineFunction::deleteMachineBasicBlock(MachineBasicBlock *MBB) {
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
     MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
-    Align BaseAlignment, MachineMemOperand::Metadata MMOMetadata,
+    Align BaseAlignment, MMOMetadata Metadata,
     SyncScope::ID SSID, AtomicOrdering Ordering,
     AtomicOrdering FailureOrdering) {
   assert((!Size.hasValue() ||
@@ -574,17 +574,17 @@ MachineMemOperand *MachineFunction::getMachineMemOperand(
          "Unexpected an unknown size to be represented using "
          "LocationSize::beforeOrAfter()");
   return new (Allocator)
-      MachineMemOperand(PtrInfo, F, Size, BaseAlignment, MMOMetadata, SSID,
+      MachineMemOperand(PtrInfo, F, Size, BaseAlignment, Metadata, SSID,
                         Ordering, FailureOrdering);
 }
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
     MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LLT MemTy,
-    Align BaseAlignment, MachineMemOperand::Metadata MMOMetadata,
+    Align BaseAlignment, MMOMetadata Metadata,
     SyncScope::ID SSID, AtomicOrdering Ordering,
     AtomicOrdering FailureOrdering) {
   return new (Allocator)
-      MachineMemOperand(PtrInfo, F, MemTy, BaseAlignment, MMOMetadata, SSID,
+      MachineMemOperand(PtrInfo, F, MemTy, BaseAlignment, Metadata, SSID,
                         Ordering, FailureOrdering);
 }
 
@@ -598,7 +598,7 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
          "LocationSize::beforeOrAfter()");
   return new (Allocator) MachineMemOperand(
       PtrInfo, MMO->getFlags(), Size, MMO->getBaseAlign(),
-      MachineMemOperand::Metadata(AAMDNodes(), /*Ranges=*/nullptr,
+      MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr,
                                   MMO->getMemCacheHint()),
       MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
       MMO->getFailureOrdering());
@@ -608,7 +608,7 @@ MachineMemOperand *MachineFunction::getMachineMemOperand(
     const MachineMemOperand *MMO, const MachinePointerInfo &PtrInfo, LLT Ty) {
   return new (Allocator) MachineMemOperand(
       PtrInfo, MMO->getFlags(), Ty, MMO->getBaseAlign(),
-      MachineMemOperand::Metadata(AAMDNodes(), /*Ranges=*/nullptr,
+      MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr,
                                   MMO->getMemCacheHint()),
       MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
       MMO->getFailureOrdering());
@@ -629,7 +629,7 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
   // are anymore.
   return new (Allocator) MachineMemOperand(
       PtrInfo.getWithOffset(Offset), MMO->getFlags(), Ty, Alignment,
-      MachineMemOperand::Metadata(MMO->getAAInfo(), /*Ranges=*/nullptr,
+      MMOMetadata(MMO->getAAInfo(), /*Ranges=*/nullptr,
                                   MMO->getMemCacheHint()),
       MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
       MMO->getFailureOrdering());
@@ -644,7 +644,7 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
 
   return new (Allocator) MachineMemOperand(
       MPI, MMO->getFlags(), MMO->getSize(), MMO->getBaseAlign(),
-      MachineMemOperand::Metadata(AAInfo, MMO->getRanges(),
+      MMOMetadata(AAInfo, MMO->getRanges(),
                                   MMO->getMemCacheHint()),
       MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
       MMO->getFailureOrdering());
@@ -655,7 +655,7 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
                                       MachineMemOperand::Flags Flags) {
   return new (Allocator) MachineMemOperand(
       MMO->getPointerInfo(), Flags, MMO->getSize(), MMO->getBaseAlign(),
-      MachineMemOperand::Metadata(MMO->getAAInfo(), MMO->getRanges(),
+      MMOMetadata(MMO->getAAInfo(), MMO->getRanges(),
                                   MMO->getMemCacheHint()),
       MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
       MMO->getFailureOrdering());

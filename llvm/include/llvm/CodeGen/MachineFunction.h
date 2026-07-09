@@ -1115,37 +1115,37 @@ public:
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LLT MemTy,
       Align BaseAlignment,
-      MachineMemOperand::Metadata MMOMetadata = MachineMemOperand::Metadata(),
+      MMOMetadata Metadata = MMOMetadata(),
       SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
       Align BaseAlignment,
-      MachineMemOperand::Metadata MMOMetadata = MachineMemOperand::Metadata(),
+      MMOMetadata Metadata = MMOMetadata(),
       SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, uint64_t Size,
       Align BaseAlignment,
-      MachineMemOperand::Metadata MMOMetadata = MachineMemOperand::Metadata(),
+      MMOMetadata Metadata = MMOMetadata(),
       SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
     return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
-                                BaseAlignment, MMOMetadata, SSID, Ordering,
+                                BaseAlignment, Metadata, SSID, Ordering,
                                 FailureOrdering);
   }
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, TypeSize Size,
       Align BaseAlignment,
-      MachineMemOperand::Metadata MMOMetadata = MachineMemOperand::Metadata(),
+      MMOMetadata Metadata = MMOMetadata(),
       SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
     return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
-                                BaseAlignment, MMOMetadata, SSID, Ordering,
+                                BaseAlignment, Metadata, SSID, Ordering,
                                 FailureOrdering);
   }
 

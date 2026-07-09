@@ -1419,7 +1419,7 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
     auto *MMO = MF->getMachineMemOperand(
         MachinePointerInfo(LI.getPointerOperand()), Flags,
         MRI->getType(Regs[0]), getMemOpAlign(LI),
-        MachineMemOperand::Metadata(AAInfo,
+        MMOMetadata(AAInfo,
                                     LI.getMetadata(LLVMContext::MD_range)),
         LI.getSyncScopeID(), LI.getOrdering());
     MIRBuilder.buildLoad(Regs[0], Base, *MMO);

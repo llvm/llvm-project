@@ -1171,13 +1171,13 @@ MachinePointerInfo MachinePointerInfo::getUnknownStack(MachineFunction &MF) {
 
 MachineMemOperand::MachineMemOperand(MachinePointerInfo PtrInfo, Flags F,
                                      LLT Type, Align A,
-                                     MachineMemOperand::Metadata MMOMetadata,
+                                     MMOMetadata Metadata,
                                      SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
                                      AtomicOrdering FailureOrdering)
     : PtrInfo(PtrInfo), MemoryType(Type), FlagVals(F), BaseAlign(A),
-      AAInfo(MMOMetadata.AAInfo), Ranges(MMOMetadata.Ranges),
-      MemCacheHint(MMOMetadata.MemCacheHint) {
+      AAInfo(Metadata.AAInfo), Ranges(Metadata.Ranges),
+      MemCacheHint(Metadata.MemCacheHint) {
   assert((PtrInfo.V.isNull() || isa<const PseudoSourceValue *>(PtrInfo.V) ||
           isa<PointerType>(cast<const Value *>(PtrInfo.V)->getType())) &&
          "invalid pointer value");
@@ -1193,7 +1193,7 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo PtrInfo, Flags F,
 
 MachineMemOperand::MachineMemOperand(MachinePointerInfo PtrInfo, Flags F,
                                      LocationSize TS, Align BaseAlignment,
-                                     MachineMemOperand::Metadata MMOMetadata,
+                                     MMOMetadata Metadata,
                                      SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
                                      AtomicOrdering FailureOrdering)
@@ -1203,7 +1203,7 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo PtrInfo, Flags F,
           : TS.isScalable()
               ? LLT::scalable_vector(1, 8 * TS.getValue().getKnownMinValue())
               : LLT::scalar(8 * TS.getValue().getKnownMinValue()),
-          BaseAlignment, MMOMetadata, SSID, Ordering, FailureOrdering) {}
+          BaseAlignment, Metadata, SSID, Ordering, FailureOrdering) {}
 
 void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
   // The Value and Offset may differ due to CSE. But the flags and size

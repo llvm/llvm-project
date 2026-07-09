@@ -20,7 +20,7 @@ define i64 @test_load_cache_hint_i64(ptr addrspace(1) %p) {
 ; CHECK-LABEL: test_load_cache_hint_i64(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    ld.global.L2::cache_hint.b64 %rd3, [%rd1], %rd2;
-  %v = load i64, ptr addrspace(1) %p, !mem.cache_hint !1
+  %v = load i64, ptr addrspace(1) %p, !mem.cache_hint !0
   ret i64 %v
 }
 
@@ -28,7 +28,7 @@ define float @test_load_cache_hint_f32(ptr addrspace(1) %p) {
 ; CHECK-LABEL: test_load_cache_hint_f32(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    ld.global.L2::cache_hint.b32 %r1, [%rd1], %rd2;
-  %v = load float, ptr addrspace(1) %p, !mem.cache_hint !2
+  %v = load float, ptr addrspace(1) %p, !mem.cache_hint !0
   ret float %v
 }
 
@@ -36,7 +36,7 @@ define void @test_store_cache_hint_i32(ptr addrspace(1) %p, i32 %v) {
 ; CHECK-LABEL: test_store_cache_hint_i32(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    st.global.L2::cache_hint.b32 [%rd1], %r1, %rd2;
-  store i32 %v, ptr addrspace(1) %p, !mem.cache_hint !3
+  store i32 %v, ptr addrspace(1) %p, !mem.cache_hint !1
   ret void
 }
 
@@ -44,7 +44,7 @@ define void @test_store_cache_hint_i64(ptr addrspace(1) %p, i64 %v) {
 ; CHECK-LABEL: test_store_cache_hint_i64(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    st.global.L2::cache_hint.b64 [%rd1], %rd3, %rd2;
-  store i64 %v, ptr addrspace(1) %p, !mem.cache_hint !4
+  store i64 %v, ptr addrspace(1) %p, !mem.cache_hint !1
   ret void
 }
 
@@ -52,7 +52,7 @@ define void @test_store_cache_hint_f32(ptr addrspace(1) %p, float %v) {
 ; CHECK-LABEL: test_store_cache_hint_f32(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    st.global.L2::cache_hint.b32 [%rd1], %r1, %rd2;
-  store float %v, ptr addrspace(1) %p, !mem.cache_hint !5
+  store float %v, ptr addrspace(1) %p, !mem.cache_hint !1
   ret void
 }
 
@@ -64,7 +64,7 @@ define <2 x i32> @test_load_cache_hint_v2i32(ptr addrspace(1) %p) {
 ; CHECK-LABEL: test_load_cache_hint_v2i32(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    ld.global.L2::cache_hint.v2.b32 {%r1, %r2}, [%rd1], %rd2;
-  %v = load <2 x i32>, ptr addrspace(1) %p, !mem.cache_hint !6
+  %v = load <2 x i32>, ptr addrspace(1) %p, !mem.cache_hint !0
   ret <2 x i32> %v
 }
 
@@ -72,7 +72,7 @@ define <4 x i32> @test_load_cache_hint_v4i32(ptr addrspace(1) %p) {
 ; CHECK-LABEL: test_load_cache_hint_v4i32(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    ld.global.L2::cache_hint.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1], %rd2;
-  %v = load <4 x i32>, ptr addrspace(1) %p, !mem.cache_hint !7
+  %v = load <4 x i32>, ptr addrspace(1) %p, !mem.cache_hint !0
   ret <4 x i32> %v
 }
 
@@ -80,7 +80,7 @@ define <2 x i64> @test_load_cache_hint_v2i64(ptr addrspace(1) %p) {
 ; CHECK-LABEL: test_load_cache_hint_v2i64(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    ld.global.L2::cache_hint.v2.b64 {%rd3, %rd4}, [%rd1], %rd2;
-  %v = load <2 x i64>, ptr addrspace(1) %p, !mem.cache_hint !8
+  %v = load <2 x i64>, ptr addrspace(1) %p, !mem.cache_hint !0
   ret <2 x i64> %v
 }
 
@@ -88,7 +88,7 @@ define <2 x float> @test_load_cache_hint_v2f32(ptr addrspace(1) %p) {
 ; CHECK-LABEL: test_load_cache_hint_v2f32(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    ld.global.L2::cache_hint.v2.b32 {%r1, %r2}, [%rd1], %rd2;
-  %v = load <2 x float>, ptr addrspace(1) %p, !mem.cache_hint !9
+  %v = load <2 x float>, ptr addrspace(1) %p, !mem.cache_hint !0
   ret <2 x float> %v
 }
 
@@ -96,7 +96,7 @@ define <2 x double> @test_load_cache_hint_v2f64(ptr addrspace(1) %p) {
 ; CHECK-LABEL: test_load_cache_hint_v2f64(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    ld.global.L2::cache_hint.v2.b64 {%rd3, %rd4}, [%rd1], %rd2;
-  %v = load <2 x double>, ptr addrspace(1) %p, !mem.cache_hint !10
+  %v = load <2 x double>, ptr addrspace(1) %p, !mem.cache_hint !0
   ret <2 x double> %v
 }
 
@@ -104,7 +104,7 @@ define void @test_store_cache_hint_v2i32(ptr addrspace(1) %p, <2 x i32> %v) {
 ; CHECK-LABEL: test_store_cache_hint_v2i32(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    st.global.L2::cache_hint.v2.b32 [%rd1], {%r1, %r2}, %rd2;
-  store <2 x i32> %v, ptr addrspace(1) %p, !mem.cache_hint !11
+  store <2 x i32> %v, ptr addrspace(1) %p, !mem.cache_hint !1
   ret void
 }
 
@@ -112,7 +112,7 @@ define void @test_store_cache_hint_v4i32(ptr addrspace(1) %p, <4 x i32> %v) {
 ; CHECK-LABEL: test_store_cache_hint_v4i32(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    st.global.L2::cache_hint.v4.b32 [%rd1], {%r1, %r2, %r3, %r4}, %rd2;
-  store <4 x i32> %v, ptr addrspace(1) %p, !mem.cache_hint !12
+  store <4 x i32> %v, ptr addrspace(1) %p, !mem.cache_hint !1
   ret void
 }
 
@@ -120,7 +120,7 @@ define void @test_store_cache_hint_v2i64(ptr addrspace(1) %p, <2 x i64> %v) {
 ; CHECK-LABEL: test_store_cache_hint_v2i64(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    st.global.L2::cache_hint.v2.b64 [%rd1], {%rd3, %rd4}, %rd2;
-  store <2 x i64> %v, ptr addrspace(1) %p, !mem.cache_hint !13
+  store <2 x i64> %v, ptr addrspace(1) %p, !mem.cache_hint !1
   ret void
 }
 
@@ -128,7 +128,7 @@ define void @test_store_cache_hint_v2f32(ptr addrspace(1) %p, <2 x float> %v) {
 ; CHECK-LABEL: test_store_cache_hint_v2f32(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    st.global.L2::cache_hint.v2.b32 [%rd1], {%r1, %r2}, %rd2;
-  store <2 x float> %v, ptr addrspace(1) %p, !mem.cache_hint !14
+  store <2 x float> %v, ptr addrspace(1) %p, !mem.cache_hint !1
   ret void
 }
 
@@ -136,7 +136,7 @@ define void @test_store_cache_hint_v2f64(ptr addrspace(1) %p, <2 x double> %v) {
 ; CHECK-LABEL: test_store_cache_hint_v2f64(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    st.global.L2::cache_hint.v2.b64 [%rd1], {%rd3, %rd4}, %rd2;
-  store <2 x double> %v, ptr addrspace(1) %p, !mem.cache_hint !15
+  store <2 x double> %v, ptr addrspace(1) %p, !mem.cache_hint !1
   ret void
 }
 
@@ -148,7 +148,7 @@ define i32 @test_generic_load_cache_hint_i32(ptr %p) {
 ; CHECK-LABEL: test_generic_load_cache_hint_i32(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    ld.L2::cache_hint.b32 %r1, [%rd1], %rd2;
-  %v = load i32, ptr %p, !mem.cache_hint !48
+  %v = load i32, ptr %p, !mem.cache_hint !0
   ret i32 %v
 }
 
@@ -156,7 +156,7 @@ define void @test_generic_store_cache_hint_i32(ptr %p, i32 %v) {
 ; CHECK-LABEL: test_generic_store_cache_hint_i32(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    st.L2::cache_hint.b32 [%rd1], %r1, %rd2;
-  store i32 %v, ptr %p, !mem.cache_hint !49
+  store i32 %v, ptr %p, !mem.cache_hint !1
   ret void
 }
 
@@ -169,7 +169,7 @@ define i32 @test_load_cache_hint_with_l1(ptr addrspace(1) %p) {
 ; CHECK-LABEL: test_load_cache_hint_with_l1(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    ld.global.L1::evict_first.L2::cache_hint.b32 %r1, [%rd1], %rd2;
-  %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !16
+  %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !3
   ret i32 %v
 }
 
@@ -178,7 +178,7 @@ define i32 @test_load_cache_hint_with_l2_eviction(ptr addrspace(1) %p) {
 ; CHECK-LABEL: test_load_cache_hint_with_l2_eviction(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    ld.global.L2::cache_hint.b32 %r1, [%rd1], %rd2;
-  %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !17
+  %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !5
   ret i32 %v
 }
 
@@ -187,7 +187,7 @@ define i32 @test_load_cache_hint_with_prefetch(ptr addrspace(1) %p) {
 ; CHECK-LABEL: test_load_cache_hint_with_prefetch(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    ld.global.L2::cache_hint.L2::128B.b32 %r1, [%rd1], %rd2;
-  %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !18
+  %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !7
   ret i32 %v
 }
 
@@ -196,7 +196,7 @@ define i32 @test_load_cache_hint_with_all(ptr addrspace(1) %p) {
 ; CHECK-LABEL: test_load_cache_hint_with_all(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    ld.global.L1::evict_last.L2::cache_hint.L2::256B.b32 %r1, [%rd1], %rd2;
-  %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !19
+  %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !9
   ret i32 %v
 }
 
@@ -205,7 +205,7 @@ define void @test_store_cache_hint_with_l1(ptr addrspace(1) %p, i32 %v) {
 ; CHECK-LABEL: test_store_cache_hint_with_l1(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    st.global.L1::evict_unchanged.L2::cache_hint.b32 [%rd1], %r1, %rd2;
-  store i32 %v, ptr addrspace(1) %p, !mem.cache_hint !20
+  store i32 %v, ptr addrspace(1) %p, !mem.cache_hint !11
   ret void
 }
 
@@ -214,7 +214,7 @@ define void @test_store_cache_hint_with_all(ptr addrspace(1) %p, i32 %v) {
 ; CHECK-LABEL: test_store_cache_hint_with_all(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    st.global.L1::no_allocate.L2::cache_hint.b32 [%rd1], %r1, %rd2;
-  store i32 %v, ptr addrspace(1) %p, !mem.cache_hint !21
+  store i32 %v, ptr addrspace(1) %p, !mem.cache_hint !13
   ret void
 }
 
@@ -223,7 +223,7 @@ define <2 x i32> @test_load_cache_hint_v2i32_with_l1(ptr addrspace(1) %p) {
 ; CHECK-LABEL: test_load_cache_hint_v2i32_with_l1(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    ld.global.L1::evict_first.L2::cache_hint.v2.b32 {%r1, %r2}, [%rd1], %rd2;
-  %v = load <2 x i32>, ptr addrspace(1) %p, !mem.cache_hint !22
+  %v = load <2 x i32>, ptr addrspace(1) %p, !mem.cache_hint !15
   ret <2 x i32> %v
 }
 
@@ -232,7 +232,7 @@ define void @test_store_cache_hint_v2i32_with_all(ptr addrspace(1) %p, <2 x i32>
 ; CHECK-LABEL: test_store_cache_hint_v2i32_with_all(
 ; CHECK:    mov.b64 %rd2, 12345;
 ; CHECK:    st.global.L1::evict_last.L2::cache_hint.v2.b32 [%rd1], {%r1, %r2}, %rd2;
-  store <2 x i32> %v, ptr addrspace(1) %p, !mem.cache_hint !23
+  store <2 x i32> %v, ptr addrspace(1) %p, !mem.cache_hint !17
   ret void
 }
 
@@ -240,54 +240,22 @@ define void @test_store_cache_hint_v2i32_with_all(ptr addrspace(1) %p, <2 x i32>
 ; Metadata definitions
 ;-----------------------------------------------------------------------------
 
-!0 = !{i32 0, !24}
-!24 = !{!"nvvm.l2_cache_hint", i64 12345}
-!1 = !{i32 0, !25}
-!25 = !{!"nvvm.l2_cache_hint", i64 12345}
-!2 = !{i32 0, !26}
-!26 = !{!"nvvm.l2_cache_hint", i64 12345}
-!3 = !{i32 1, !27}
-!27 = !{!"nvvm.l2_cache_hint", i64 12345}
-!4 = !{i32 1, !28}
-!28 = !{!"nvvm.l2_cache_hint", i64 12345}
-!5 = !{i32 1, !29}
-!29 = !{!"nvvm.l2_cache_hint", i64 12345}
-!6 = !{i32 0, !30}
-!30 = !{!"nvvm.l2_cache_hint", i64 12345}
-!7 = !{i32 0, !31}
-!31 = !{!"nvvm.l2_cache_hint", i64 12345}
-!8 = !{i32 0, !32}
-!32 = !{!"nvvm.l2_cache_hint", i64 12345}
-!9 = !{i32 0, !33}
-!33 = !{!"nvvm.l2_cache_hint", i64 12345}
-!10 = !{i32 0, !34}
-!34 = !{!"nvvm.l2_cache_hint", i64 12345}
-!11 = !{i32 1, !35}
-!35 = !{!"nvvm.l2_cache_hint", i64 12345}
-!12 = !{i32 1, !36}
-!36 = !{!"nvvm.l2_cache_hint", i64 12345}
-!13 = !{i32 1, !37}
-!37 = !{!"nvvm.l2_cache_hint", i64 12345}
-!14 = !{i32 1, !38}
-!38 = !{!"nvvm.l2_cache_hint", i64 12345}
-!15 = !{i32 1, !39}
-!39 = !{!"nvvm.l2_cache_hint", i64 12345}
-!16 = !{i32 0, !40}
-!40 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l1_eviction", !"first"}
-!17 = !{i32 0, !41}
-!41 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l2_eviction", !"last"}
-!18 = !{i32 0, !42}
-!42 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l2_prefetch_size", !"128B"}
-!19 = !{i32 0, !43}
-!43 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first", !"nvvm.l2_prefetch_size", !"256B"}
-!20 = !{i32 1, !44}
-!44 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l1_eviction", !"unchanged"}
-!21 = !{i32 1, !45}
-!45 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l1_eviction", !"no_allocate", !"nvvm.l2_eviction", !"last"}
-!22 = !{i32 0, !46}
-!46 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l1_eviction", !"first"}
-!23 = !{i32 1, !47}
-!47 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first", !"nvvm.l2_prefetch_size", !"64B"}
-!48 = !{i32 0, !50}
-!49 = !{i32 1, !50}
-!50 = !{!"nvvm.l2_cache_hint", i64 12345}
+!0 = !{i32 0, !2}
+!1 = !{i32 1, !2}
+!2 = !{!"nvvm.l2_cache_hint", i64 12345}
+!3 = !{i32 0, !4}
+!4 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l1_eviction", !"first"}
+!5 = !{i32 0, !6}
+!6 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l2_eviction", !"last"}
+!7 = !{i32 0, !8}
+!8 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l2_prefetch_size", !"128B"}
+!9 = !{i32 0, !10}
+!10 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first", !"nvvm.l2_prefetch_size", !"256B"}
+!11 = !{i32 1, !12}
+!12 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l1_eviction", !"unchanged"}
+!13 = !{i32 1, !14}
+!14 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l1_eviction", !"no_allocate", !"nvvm.l2_eviction", !"last"}
+!15 = !{i32 0, !16}
+!16 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l1_eviction", !"first"}
+!17 = !{i32 1, !18}
+!18 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first", !"nvvm.l2_prefetch_size", !"64B"}

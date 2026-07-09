@@ -1560,38 +1560,24 @@ public:
     refineAlignment(ArrayRef(NewMMO));
   }
 
-  /// Refine range metadata for all MMOs. The NewMMOs array must parallel
-  /// memoperands(). For each pair, if ranges differ, the stored range is
-  /// cleared.
-  void refineRanges(ArrayRef<MachineMemOperand *> NewMMOs) {
+  /// Refine LLVM IR metadata for all MMOs. The NewMMOs array must parallel
+  /// memoperands(). For each pair, if metadata differs, the stored metadata is
+  /// cleared conservatively.
+  void refineMMOMetadata(ArrayRef<MachineMemOperand *> NewMMOs) {
     ArrayRef<MachineMemOperand *> MMOs = memoperands();
     assert(NewMMOs.size() == MMOs.size() && "MMO count mismatch");
-    // FIXME: Union the ranges instead?
     for (auto [MMO, NewMMO] : zip(MMOs, NewMMOs)) {
+      // FIXME: Union the ranges instead?
       if (MMO->getRanges() && MMO->getRanges() != NewMMO->getRanges())
         MMO->clearRanges();
-    }
-  }
-
-  void refineRanges(MachineMemOperand *NewMMO) {
-    refineRanges(ArrayRef(NewMMO));
-  }
-
-  /// Refine cache hint metadata for all MMOs. The NewMMOs array must parallel
-  /// memoperands(). For each pair, if cache hints differ, the stored hint is
-  /// cleared.
-  void refineMemCacheHints(ArrayRef<MachineMemOperand *> NewMMOs) {
-    ArrayRef<MachineMemOperand *> MMOs = memoperands();
-    assert(NewMMOs.size() == MMOs.size() && "MMO count mismatch");
-    for (auto [MMO, NewMMO] : zip(MMOs, NewMMOs)) {
       if (MMO->getMemCacheHint() &&
           MMO->getMemCacheHint() != NewMMO->getMemCacheHint())
         MMO->clearMemCacheHint();
     }
   }
 
-  void refineMemCacheHints(MachineMemOperand *NewMMO) {
-    refineMemCacheHints(ArrayRef(NewMMO));
+  void refineMMOMetadata(MachineMemOperand *NewMMO) {
+    refineMMOMetadata(ArrayRef(NewMMO));
   }
 
   const SDValue &getChain() const { return getOperand(0); }
