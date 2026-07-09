@@ -7727,19 +7727,44 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
   case Intrinsic::type_test:
   case Intrinsic::public_type_test:
-    reportFatalUsageError("llvm.type.test intrinsic must be lowered by the "
-                          "LowerTypeTests pass before code generation");
-    return;
-
   case Intrinsic::type_checked_load:
-  case Intrinsic::type_checked_load_relative:
-    // This likely indicates a misconfiguration where LowerTypeTests did not
-    // run but should have, for instance when devirtualization is enabled
-    // but LTO does not actually run.
-    reportFatalUsageError(
-        "llvm.type.checked.load intrinsic must be lowered by the "
-        "LowerTypeTests pass before code generation");
+  case Intrinsic::type_checked_load_relative: {
+    // These intrinsics are expected to be lowered by the LowerTypeTests pass
+    // before code generation. Surviving until here usually indicates a
+    // misconfiguration, for instance when devirtualization is enabled but LTO
+    // does not actually run.
+    const char *Name = [&] {
+      switch (Intrinsic) {
+      case Intrinsic::type_test:
+        return "llvm.type.test";
+      case Intrinsic::public_type_test:
+        return "llvm.public.type.test";
+      case Intrinsic::type_checked_load:
+        return "llvm.type.checked.load";
+      default:
+        return "llvm.type.checked.load.relative";
+      }
+    }();
+
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        *I.getFunction(),
+        Twine(Name) + " intrinsic must be lowered by the LowerTypeTests pass "
+                      "before code generation",
+        sdl.getDebugLoc()));
+
+    // Lower the result to poison so that compilation can continue and collect
+    // any further diagnostics.
+    if (!I.getType()->isVoidTy()) {
+      SmallVector<EVT, 4> ValueVTs;
+      ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
+                      I.getType(), ValueVTs);
+      SmallVector<SDValue, 4> Results;
+      for (EVT VT : ValueVTs)
+        Results.push_back(DAG.getPOISON(VT));
+      setValue(&I, DAG.getMergeValues(Results, sdl));
+    }
     return;
+  }
 
   case Intrinsic::assume:
   case Intrinsic::experimental_noalias_scope_decl:
