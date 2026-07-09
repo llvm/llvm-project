@@ -24,14 +24,16 @@ function(get_triple_cmake_system_name triple out_var)
     return()
   endif()
 
-  # The environment tokens take precedence over the OS mapping (e.g. an
-  # "android" or "cygnus" environment on top of a "linux"/"windows" OS
-  # determines the CMake system name).
+  # The environment tokens take precedence over the OS mapping (e.g. a
+  # "cygnus" environment on top of a "windows" OS determines the CMake system
+  # name).
+  #
+  # FIXME: Not mapping the android environment to
+  # CMAKE_SYSTEM_NAME=Android, which would then make cmake require an
+  # NDK. Existing android cross builds seem to rely on an assumed
+  # linux host.
   foreach(_c IN LISTS _components)
-    if("${_c}" MATCHES "^android")
-      set(${out_var} "Android" PARENT_SCOPE)
-      return()
-    elseif("${_c}" MATCHES "^cygnus|^cygwin")
+    if("${_c}" MATCHES "^cygnus|^cygwin")
       # "cygnus" is the environment in a normalized triple
       # (e.g. x86_64-pc-windows-cygnus); "cygwin" is the OS component in the
       # un-normalized form (e.g. x86_64-pc-cygwin).
