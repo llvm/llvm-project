@@ -1,19 +1,21 @@
-.. title:: Clang HLSL Documentation
+# Clang HLSL Documentation
 
-.. toctree::
-   :maxdepth: 1
+```{toctree}
+:maxdepth: 1
 
-   HLSLSupport
+HLSLSupport
+```
 
-HLSL Design and Implementation
-==============================
+# HLSL Design and Implementation
 
-.. toctree::
-   :maxdepth: 1
+```{toctree}
+:maxdepth: 1
 
-   ExpectedDifferences
-   HLSLIRReference
-   ResourceTypes
-   EntryFunctions
-   FunctionCalls
-   AvailabilityDiagnostics
+ExpectedDifferences
+HLSLIRReference
+ResourceTypes
+EntryFunctions
+FunctionCalls
+AvailabilityDiagnostics
+```
+
