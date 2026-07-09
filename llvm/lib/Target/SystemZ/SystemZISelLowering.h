@@ -156,6 +156,12 @@ public:
     return true;
   }
 
+  bool isProfitableToCombineMinNumMaxNum(EVT VT) const override {
+    // We have instructions for pseudo min/max, no need to convert them to
+    // minnum/maxnum.
+    return false;
+  }
+
   // This function currently returns cost for srl/ipm/cc sequence for merging.
   CondMergingParams
   getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
