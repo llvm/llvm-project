@@ -79,14 +79,15 @@ struct StaticDiagInfoRec {
   uint16_t WarnNoWerror : 1;
   LLVM_PREFERRED_TYPE(bool)
   uint16_t WarnShowInSystemHeader : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  uint16_t WarnShowInSystemMacro : 1;
+
   LLVM_PREFERRED_TYPE(diag::Group)
   uint16_t OptionGroupIndex : 14;
   LLVM_PREFERRED_TYPE(bool)
-  uint16_t WarnShowInSystemMacro : 1;
-  LLVM_PREFERRED_TYPE(bool)
   uint16_t Deferrable : 1;
 
-  uint16_t DescriptionOffsetLow;
+  uint16_t DescriptionOffsetLow : 16;
   uint16_t DescriptionOffsetHigh : 4;
   uint16_t DescriptionLen : 12;
 
@@ -172,8 +173,8 @@ const StaticDiagInfoRec StaticDiagInfo[] = {
       CATEGORY,                                                                \
       NOWERROR,                                                                \
       SHOWINSYSHEADER,                                                         \
-      GROUP,                                                                   \
       SHOWINSYSMACRO,                                                          \
+      GROUP,                                                                   \
       DEFERRABLE,                                                              \
       uint16_t(DIAG_DESC_OFFSET_##ENUM),                                       \
       uint16_t(DIAG_DESC_OFFSET_##ENUM >> 16),                                 \
