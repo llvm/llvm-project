@@ -47,47 +47,6 @@ private:
   /// Cluster synchronization scope ID (single address space).
   SyncScope::ID ClusterOneAddressSpaceSSID;
 
-  /// In AMDGPU target synchronization scopes are inclusive, meaning a
-  /// larger synchronization scope is inclusive of a smaller synchronization
-  /// scope.
-  ///
-  /// \returns \p SSID's inclusion ordering, or "std::nullopt" if \p SSID is not
-  /// supported by the AMDGPU target.
-  std::optional<uint8_t>
-  getSyncScopeInclusionOrdering(SyncScope::ID SSID) const {
-    if (SSID == SyncScope::SingleThread ||
-        SSID == getSingleThreadOneAddressSpaceSSID())
-      return 0;
-    else if (SSID == getWavefrontSSID() ||
-             SSID == getWavefrontOneAddressSpaceSSID())
-      return 1;
-    else if (SSID == getWorkgroupSSID() ||
-             SSID == getWorkgroupOneAddressSpaceSSID())
-      return 2;
-    else if (SSID == getClusterSSID() ||
-             SSID == getClusterOneAddressSpaceSSID())
-      return 3;
-    else if (SSID == getAgentSSID() ||
-             SSID == getAgentOneAddressSpaceSSID())
-      return 4;
-    else if (SSID == SyncScope::System ||
-             SSID == getSystemOneAddressSpaceSSID())
-      return 5;
-
-    return std::nullopt;
-  }
-
-  /// \returns True if \p SSID is restricted to single address space, false
-  /// otherwise
-  bool isOneAddressSpace(SyncScope::ID SSID) const {
-    return SSID == getClusterOneAddressSpaceSSID() ||
-           SSID == getSingleThreadOneAddressSpaceSSID() ||
-           SSID == getWavefrontOneAddressSpaceSSID() ||
-           SSID == getWorkgroupOneAddressSpaceSSID() ||
-           SSID == getAgentOneAddressSpaceSSID() ||
-           SSID == getSystemOneAddressSpaceSSID();
-  }
-
 public:
   AMDGPUMachineModuleInfo(const MachineModuleInfo &MMI);
 
@@ -143,45 +102,45 @@ public:
   /// supported by the AMDGPU target.
   std::optional<SyncScope::ID> getMergedSyncScopeID(SyncScope::ID A,
                                                     SyncScope::ID B) const {
-    const auto &AIO = getSyncScopeInclusionOrdering(A);
-    const auto &BIO = getSyncScopeInclusionOrdering(B);
-    if (!AIO || !BIO)
+    // Ordered from smallest to largest scope. Level is the index.
+    // Cross-AS and one-AS scopes share the same inclusion ordering level.
+    // Level | Cross-AS scope   | One-AS scope
+    // ------+------------------+----------------------
+    //   0   | singlethread     | singlethread-one-as
+    //   1   | wavefront        | wavefront-one-as
+    //   2   | workgroup        | workgroup-one-as
+    //   3   | cluster          | cluster-one-as
+    //   4   | agent            | agent-one-as
+    //   5   | system           | one-as
+    const SyncScope::ID CrossAS[] = {
+        SyncScope::SingleThread, getWavefrontSSID(), getWorkgroupSSID(),
+        getClusterSSID(),        getAgentSSID(),     SyncScope::System};
+    const SyncScope::ID OneAS[] = {
+        getSingleThreadOneAddressSpaceSSID(), getWavefrontOneAddressSpaceSSID(),
+        getWorkgroupOneAddressSpaceSSID(),    getClusterOneAddressSpaceSSID(),
+        getAgentOneAddressSpaceSSID(),        getSystemOneAddressSpaceSSID()};
+
+    // Returns {level, isOneAS} for a given scope, or nullopt if unsupported.
+    auto GetLevelAndOneAS =
+        [&](SyncScope::ID SSID)
+        -> std::optional<std::pair<unsigned, bool>> {
+      for (unsigned I = 0; I < std::size(CrossAS); ++I) {
+        if (CrossAS[I] == SSID)
+          return std::make_pair(I, false);
+        if (OneAS[I] == SSID)
+          return std::make_pair(I, true);
+      }
+      return std::nullopt;
+    };
+
+    auto AI = GetLevelAndOneAS(A);
+    auto BI = GetLevelAndOneAS(B);
+    if (!AI || !BI)
       return std::nullopt;
 
-    uint8_t Level = std::max(*AIO, *BIO);
+    unsigned Level = std::max(AI->first, BI->first);
     // If either scope is cross-AS, the result must be cross-AS.
-    if (isOneAddressSpace(A) && isOneAddressSpace(B)) {
-      switch (Level) {
-      case 0:
-        return SyncScope::SingleThread;
-      case 1:
-        return getWavefrontOneAddressSpaceSSID();
-      case 2:
-        return getWorkgroupOneAddressSpaceSSID();
-      case 3:
-        return getClusterOneAddressSpaceSSID();
-      case 4:
-        return getAgentOneAddressSpaceSSID();
-      case 5:
-        return getSystemOneAddressSpaceSSID();
-      }
-    } else {
-      switch (Level) {
-      case 0:
-        return SyncScope::SingleThread;
-      case 1:
-        return getWavefrontSSID();
-      case 2:
-        return getWorkgroupSSID();
-      case 3:
-        return getClusterSSID();
-      case 4:
-        return getAgentSSID();
-      case 5:
-        return SyncScope::System;
-      }
-    }
-    return std::nullopt;
+    return (AI->second && BI->second) ? OneAS[Level] : CrossAS[Level];
   }
 };
 
