@@ -24,9 +24,11 @@ public:
 
 } // namespace
 
-namespace clang {
-namespace ento {
-namespace lifetimemodeling {
+namespace clang::ento::lifetime_modeling {
+bool isBoundToLifetimeSourceSet(ProgramStateRef State, SVal Val) {
+  return State->get<LifetimeBoundMap>(Val) != nullptr;
+}
+
 std::vector<const MemRegion *> getLifetimeSourceSet(ProgramStateRef State,
                                                     SVal Val) {
   std::vector<const MemRegion *> StoreRegion;
@@ -41,9 +43,7 @@ bool isDeallocated(ProgramStateRef State, const MemRegion *Region) {
   return State->contains<DeallocatedSourceSet>(Region);
 }
 
-} // namespace lifetimemodeling
-} // namespace ento
-} // namespace clang
+} // namespace clang::ento::lifetime_modeling
 
 static ProgramStateRef bindValues(ProgramStateRef State, SVal RetVal,
                                   const MemRegion *Source) {
