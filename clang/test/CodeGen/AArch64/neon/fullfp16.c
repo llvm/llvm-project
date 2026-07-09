@@ -175,6 +175,92 @@ float16_t test_vrsqrtsh_f16(float16_t a, float16_t b) {
 }
 
 //===------------------------------------------------------===//
+// 2.5.1.2.3.  Reciprocal step
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vrecpsh_f16
+float16_t test_vrecpsh_f16(float16_t a, float16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.frecps"
+
+// LLVM-SAME: half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]])
+// LLVM: [[RECPS:%.*]] = call half @llvm.aarch64.neon.frecps.f16(half [[A]], half [[B]])
+// LLVM: ret half [[RECPS]]
+  return vrecpsh_f16(a, b);
+}
+
+//===------------------------------------------------------===//
+// 2.5.1.3.  Rounding
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vrndh_f16
+float16_t test_vrndh_f16(float16_t a) {
+// CIR: cir.trunc
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.trunc.f16(half [[A]])
+// LLVM:  ret half [[RND]]
+  return vrndh_f16(a);
+}
+
+// ALL-LABEL: test_vrndah_f16
+float16_t test_vrndah_f16(float16_t a) {
+// CIR: cir.round
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.round.f16(half [[A]])
+// LLVM:  ret half [[RND]]
+  return vrndah_f16(a);
+}
+
+// ALL-LABEL: test_vrndih_f16
+float16_t test_vrndih_f16(float16_t a) {
+// CIR: cir.nearbyint
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.nearbyint.f16(half [[A]])
+// LLVM:  ret half [[RND]]
+  return vrndih_f16(a);
+}
+
+// ALL-LABEL: test_vrndmh_f16
+float16_t test_vrndmh_f16(float16_t a) {
+// CIR: cir.floor
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.floor.f16(half [[A]])
+// LLVM:  ret half [[RND]]
+  return vrndmh_f16(a);
+}
+
+// ALL-LABEL: test_vrndnh_f16
+float16_t test_vrndnh_f16(float16_t a) {
+// CIR: cir.roundeven
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.roundeven.f16(half [[A]])
+// LLVM:  ret half [[RND]]
+  return vrndnh_f16(a);
+}
+
+// ALL-LABEL: test_vrndph_f16
+float16_t test_vrndph_f16(float16_t a) {
+// CIR: cir.ceil
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.ceil.f16(half [[A]])
+// LLVM:  ret half [[RND]]
+  return vrndph_f16(a);
+}
+
+// ALL-LABEL: test_vrndxh_f16
+float16_t test_vrndxh_f16(float16_t a) {
+// CIR: cir.rint
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.rint.f16(half [[A]])
+// LLVM:  ret half [[RND]]
+  return vrndxh_f16(a);
+}
+
+//===------------------------------------------------------===//
 // 2.5.4.1. Negate
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vnegh_f16
