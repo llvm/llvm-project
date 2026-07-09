@@ -7387,11 +7387,11 @@ static void emitCommonOMPTeamsDirective(CodeGenFunction &CGF,
       break;
     }
   }
-  if (IfCond && CGF.CGM.getLangOpts().OpenMP > 51) {
+  if (IfCond && CGF.CGM.getLangOpts().OpenMP >= 52) {
     auto &&SerialLeague = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
-      // OpenMP 6.0, 12.2, teams Construct
+      // OpenMP 5.2, 10.2, teams Construct
       // When an if clause is present on a teams construct and the if clause
-      // expression evaluates to false, the number of formed teams is one.
+      // expression evaluates to false, the number of created teams is one.
       const llvm::APInt One(32, 1);
       IntegerLiteral NumTeams(
           CGF.getContext(), One,
