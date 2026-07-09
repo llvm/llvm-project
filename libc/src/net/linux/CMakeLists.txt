@@ -56,11 +56,11 @@ add_header_library(
     libc.hdr.types.struct_if_nameindex
     libc.src.__support.CPP.new
     libc.src.__support.CPP.scope
+    libc.src.__support.CPP.span
     libc.src.__support.alloc_checker
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.string.memory_utils.inline_memcpy
-    libc.src.string.memory_utils.inline_memset
     libc.src.string.string_utils
 )
 
@@ -74,6 +74,7 @@ add_entrypoint_object(
     .if_nameindex_internal
     libc.hdr.types.struct_if_nameindex
     libc.src.__support.OSUtil.linux.network_syscall_policy
+    libc.src.__support.common
     libc.src.__support.error_or
     libc.src.errno.errno
 )
@@ -85,6 +86,8 @@ add_entrypoint_object(
   HDRS
     ../if_freenameindex.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.hdr.types.struct_if_nameindex
     libc.src.__support.CPP.new
+    libc.src.__support.common
 )

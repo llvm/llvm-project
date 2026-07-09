@@ -22,11 +22,11 @@
 #include "hdr/types/struct_if_nameindex.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/scope.h"
+#include "src/__support/CPP/span.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-#include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h"
 
 #include <linux/netlink.h>
@@ -95,9 +95,10 @@ template <typename Policy> ErrorOr<struct if_nameindex *> if_nameindex() {
     auto *ifm = reinterpret_cast<struct ifinfomsg *>(NLMSG_DATA(nh));
     size_t attrlen = nh->nlmsg_len - NLMSG_LENGTH(sizeof(struct ifinfomsg));
 
+    cpp::span<uint8_t> ifm_payload(reinterpret_cast<uint8_t *>(ifm),
+                                   nh->nlmsg_len - NLMSG_LENGTH(0));
     auto *rta = reinterpret_cast<struct rtattr *>(
-        reinterpret_cast<uint8_t *>(ifm) +
-        NLMSG_ALIGN(sizeof(struct ifinfomsg)));
+        ifm_payload.subspan(NLMSG_ALIGN(sizeof(struct ifinfomsg))).data());
     for (; RTA_OK(rta, attrlen); rta = RTA_NEXT(rta, attrlen)) {
       if (rta->rta_type == IFLA_IFNAME) {
         size_t rta_payload_len = RTA_PAYLOAD(rta);
@@ -109,20 +110,24 @@ template <typename Policy> ErrorOr<struct if_nameindex *> if_nameindex() {
         AllocChecker ac;
         uint8_t *buffer = new (ac) uint8_t[total_size];
         if (!ac)
-          return Error(ENOMEM);
+          return Error(ENOBUFS);
 
-        auto *result = reinterpret_cast<struct if_nameindex *>(buffer);
-        char *string_ptr = reinterpret_cast<char *>(result + 2);
+        cpp::span<uint8_t> buffer_span(buffer, total_size);
+        cpp::span<struct if_nameindex> result(
+            reinterpret_cast<struct if_nameindex *>(buffer_span.data()), 2);
+        cpp::span<char> string_span(
+            reinterpret_cast<char *>(result.end()),
+            reinterpret_cast<char *>(buffer_span.end()));
 
         result[0].if_index = index;
-        result[0].if_name = string_ptr;
-        inline_memcpy(string_ptr, name_data, name_len);
-        string_ptr[name_len] = '\0';
+        result[0].if_name = string_span.data();
+        inline_memcpy(string_span.data(), name_data, name_len);
+        string_span[name_len] = '\0';
 
         result[1].if_index = 0;
         result[1].if_name = nullptr;
 
-        return result;
+        return result.data();
       }
     }
   }
@@ -130,10 +135,11 @@ template <typename Policy> ErrorOr<struct if_nameindex *> if_nameindex() {
   AllocChecker ac;
   uint8_t *buffer = new (ac) uint8_t[sizeof(struct if_nameindex)];
   if (!ac)
-    return Error(ENOMEM);
-  auto *result = reinterpret_cast<struct if_nameindex *>(buffer);
+    return Error(ENOBUFS);
+  cpp::span<struct if_nameindex> result(
+      reinterpret_cast<struct if_nameindex *>(buffer), 1);
   result[0] = {};
-  return result;
+  return result.data();
 }
 
 } // namespace net

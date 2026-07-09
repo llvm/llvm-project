@@ -42,7 +42,7 @@ add_libc_unittest(
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.tuple
-    libc.src.__support.CPP.utility
+    libc.src.__support.CPP.type_traits
     libc.src.__support.error_or
     libc.src.__support.fixedvector
     libc.src.net.if_freenameindex

@@ -19,6 +19,10 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+/// Frees the memory allocated by if_nameindex().
+///
+/// \param ptr Pointer to the array of if_nameindex structures returned by
+///        if_nameindex(). If ptr is nullptr, this function does nothing.
 void if_freenameindex(struct if_nameindex *ptr);
 
 } // namespace LIBC_NAMESPACE_DECL

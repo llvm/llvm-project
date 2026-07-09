@@ -20,6 +20,9 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, if_freenameindex, (struct if_nameindex * ptr)) {
+  // ptr was allocated in net::if_nameindex() as a single contiguous uint8_t[]
+  // buffer holding both the if_nameindex struct array and the interface name
+  // strings.
   delete[] reinterpret_cast<uint8_t *>(ptr);
 }
 

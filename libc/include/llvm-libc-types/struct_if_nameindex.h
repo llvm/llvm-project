@@ -14,6 +14,7 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_IF_NAMEINDEX_H
 #define LLVM_LIBC_TYPES_STRUCT_IF_NAMEINDEX_H
 
+/// Structure storing a network interface index and its corresponding name.
 struct if_nameindex {
   unsigned int if_index;
   char *if_name;

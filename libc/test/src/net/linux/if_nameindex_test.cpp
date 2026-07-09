@@ -128,12 +128,17 @@ struct LlvmLibcIfNameIndexTest
     ASSERT_EQ(policy_data.sendto_calls.size(), size_t(1));
     ASSERT_EQ(get<0>(policy_data.sendto_calls[0]), FAKE_SOCKET);
     ASSERT_EQ(get<2>(policy_data.sendto_calls[0]), 0);
-    ASSERT_GE(policy_data.sendto_data.size(), sizeof(nlmsghdr));
-    const nlmsghdr *nlh =
-        reinterpret_cast<const nlmsghdr *>(policy_data.sendto_data.data());
+    ASSERT_EQ(policy_data.sendto_data.size(),
+              static_cast<size_t>(NLMSG_LENGTH(sizeof(ifinfomsg))));
+    auto *nlh =
+        reinterpret_cast<struct nlmsghdr *>(policy_data.sendto_data.data());
+    ASSERT_EQ(nlh->nlmsg_len,
+              static_cast<uint32_t>(NLMSG_LENGTH(sizeof(ifinfomsg))));
     ASSERT_EQ(nlh->nlmsg_type, static_cast<uint16_t>(RTM_GETLINK));
     ASSERT_EQ(nlh->nlmsg_flags,
               static_cast<uint16_t>(NLM_F_REQUEST | NLM_F_DUMP));
+    auto *ifm = reinterpret_cast<struct ifinfomsg *>(NLMSG_DATA(nlh));
+    ASSERT_EQ(ifm->ifi_family, static_cast<unsigned char>(AF_UNSPEC));
   }
 };
 
@@ -151,6 +156,8 @@ struct LlvmLibcIfNameIndexSocketTest : public LlvmLibcIfNameIndexTest {
 
     ASSERT_EQ(policy_data.close_calls.size(), size_t(1));
     ASSERT_EQ(policy_data.close_calls[0], FAKE_SOCKET);
+    ASSERT_TRUE(policy_data.sendto_results.empty());
+    ASSERT_TRUE(policy_data.recv_results.empty());
     LlvmLibcIfNameIndexTest::TearDown();
   }
 };
@@ -367,6 +374,22 @@ TEST_F(LlvmLibcIfNameIndexSocketTest, TruncatedIfInfoMsgPacket) {
   LIBC_NAMESPACE::if_freenameindex(list);
 }
 
+TEST_F(LlvmLibcIfNameIndexSocketTest, TruncatedNetlinkHeaderPacket) {
+  uint8_t pkt_buf[4] = {1, 2, 3, 4};
+  policy_data.recv_results.push_back(
+      span<const uint8_t>(pkt_buf, sizeof(pkt_buf)));
+
+  auto res = LIBC_NAMESPACE::net::if_nameindex<Policy>();
+  ASSERT_TRUE(res.has_value());
+  struct if_nameindex *list = res.value();
+  ASSERT_NE(list, static_cast<struct if_nameindex *>(nullptr));
+  ASSERT_EQ(list[0].if_index, 0u);
+  ASSERT_EQ(list[0].if_name, static_cast<char *>(nullptr));
+
+  validate_dump_request();
+  LIBC_NAMESPACE::if_freenameindex(list);
+}
+
 TEST_F(LlvmLibcIfNameIndexSocketTest, CloseFailure) {
   uint8_t pkt_buf[128];
   size_t len = build_nlmsg_done_packet(pkt_buf);
@@ -511,4 +534,8 @@ TEST_F(LlvmLibcIfNameIndexLiveTest, LiveOSIntegration) {
   ASSERT_TRUE(found_valid);
 
   LIBC_NAMESPACE::if_freenameindex(list);
+}
+
+TEST_F(LlvmLibcIfNameIndexLiveTest, FreeNullptr) {
+  LIBC_NAMESPACE::if_freenameindex(nullptr);
 }

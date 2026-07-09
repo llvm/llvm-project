@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/net/if_nameindex.h"
+#include "hdr/types/struct_if_nameindex.h"
 #include "src/__support/OSUtil/linux/network_syscall_policy.h"
+#include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/libc_errno.h"
 #include "src/net/linux/if_nameindex.h"
