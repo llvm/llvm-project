@@ -74,7 +74,9 @@ struct A { float x; }; // expected-error {{incompatible definitions}} expected-n
 // RUN: sed -e "s|DIR|%/t|g" %t/overlay.json.template > %t/overlay.json
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -j 1 > %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=name,clang-module-deps,command-line,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t
 // CHECK:      {
 // CHECK:        "modules": [
 // CHECK:          {

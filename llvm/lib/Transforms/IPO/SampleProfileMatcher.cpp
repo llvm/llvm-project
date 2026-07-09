@@ -19,8 +19,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/LongestCommonSequence.h"
 
-#include <unordered_set>
-
 using namespace llvm;
 using namespace sampleprof;
 
@@ -364,6 +362,67 @@ void SampleProfileMatcher::runStaleProfileMatching(
       longestCommonSequence(FilteredIRAnchorsList, FilteredProfileAnchorList,
                             RunCGMatching /* Match unused functions */);
 
+  // Scan through the matched anchors to make sure functions and profiles are
+  // 1:1 mapped. If the profile has already been mapped to another function
+  // during previous fuzzy matching, create a new profile with the same sample
+  // counts and assumed to be pre-inlined.
+  for (const auto &IR : IRAnchors) {
+    bool ProfileConflicted = false;
+    const auto &Loc = IR.first;
+    Function *Callee = M.getFunction(IR.second.stringRef());
+    if (!Callee)
+      continue;
+    FunctionId ProfAnchor;
+    auto AnchorLoc = MatchedAnchors.find(Loc);
+    if (AnchorLoc == MatchedAnchors.end()) {
+      // Search within the module and find if we have conflicts in pre-matched
+      // profiles for this anchor
+      auto PreMatched = FuncToProfileNameMap.find(Callee);
+      if (PreMatched == FuncToProfileNameMap.end())
+        continue;
+      ProfAnchor = PreMatched->second;
+    } else {
+      const auto &Prof = ProfileAnchors.find(AnchorLoc->second);
+      if (Prof == ProfileAnchors.end())
+        continue;
+      ProfAnchor = Prof->second;
+    }
+
+    // Conflicting profile previously matched
+    auto Cached = MatchedAnchorCache.find(ProfAnchor);
+    if (Cached == MatchedAnchorCache.end())
+      MatchedAnchorCache[ProfAnchor] = Callee;
+    else if (Cached->second != Callee)
+      ProfileConflicted = true;
+
+    if (ProfileConflicted) {
+      // Create a flattened profile using the IR function name to avoid profile
+      // name conflicts
+      const auto *FSForMatching = getFlattenedSamplesFor(ProfAnchor);
+      if (!FSForMatching)
+        FSForMatching = Reader.getSamplesFor(ProfAnchor.stringRef());
+      if (!FSForMatching)
+        continue;
+
+      FunctionId NewAnchor(
+          FunctionSamples::getCanonicalFnName(IR.second.stringRef()));
+      auto R = FuncProfileMatchCache.find({Callee, NewAnchor});
+      if (R != FuncProfileMatchCache.end() && R->second)
+        continue;
+      FunctionSamples &NewFS = FlattenedProfiles.create(NewAnchor);
+      NewFS.merge(*FSForMatching);
+      FuncToProfileNameMap[Callee] = NewAnchor;
+      FuncProfileMatchCache[{Callee, NewAnchor}] = true;
+
+      // Update profile in the sample profile reader
+      SampleProfileMap &Profiles = Reader.getProfiles();
+      SampleContext FContext(NewAnchor);
+      auto Res = Profiles.try_emplace(FContext.getHashCode(), FContext, NewFS);
+      FunctionSamples &FProfile = Res.first->second;
+      FProfile.setContext(FContext);
+    }
+  }
+
   // CFG level matching:
   // Apply the callsite matchings to infer matching for the basic
   // block(non-callsite) locations and write the result to
@@ -467,7 +526,7 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     if (IRCalleeId == ProfCalleeId) {
       auto It = CallsiteMatchStates.find(ProfileLoc);
       if (It == CallsiteMatchStates.end())
-        CallsiteMatchStates.emplace(ProfileLoc, MatchState::InitialMatch);
+        CallsiteMatchStates.try_emplace(ProfileLoc, MatchState::InitialMatch);
       else if (IsPostMatch) {
         if (It->second == MatchState::InitialMatch)
           It->second = MatchState::UnchangedMatch;
@@ -484,7 +543,7 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     assert(!I.second.stringRef().empty() && "Callees should not be empty");
     auto It = CallsiteMatchStates.find(Loc);
     if (It == CallsiteMatchStates.end())
-      CallsiteMatchStates.emplace(Loc, MatchState::InitialMismatch);
+      CallsiteMatchStates.try_emplace(Loc, MatchState::InitialMismatch);
     else if (IsPostMatch) {
       // Update the state if it's not matched(UnchangedMatch or
       // RecoveredMismatch).
@@ -594,7 +653,7 @@ void SampleProfileMatcher::countMismatchCallsites(const FunctionSamples &FS) {
 
 void SampleProfileMatcher::countCallGraphRecoveredSamples(
     const FunctionSamples &FS,
-    std::unordered_set<FunctionId> &CallGraphRecoveredProfiles) {
+    DenseSet<FunctionId> &CallGraphRecoveredProfiles) {
   if (CallGraphRecoveredProfiles.count(FS.getFunction())) {
     NumCallGraphRecoveredFuncSamples += FS.getTotalSamples();
     return;
@@ -611,7 +670,7 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
   if (!ReportProfileStaleness && !PersistProfileStaleness)
     return;
 
-  std::unordered_set<FunctionId> CallGraphRecoveredProfiles;
+  DenseSet<FunctionId> CallGraphRecoveredProfiles;
   if (SalvageUnusedProfile) {
     for (const auto &I : FuncToProfileNameMap) {
       CallGraphRecoveredProfiles.insert(I.second);
@@ -712,9 +771,7 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
   // TODO: Support MD5 profile.
   if (FunctionSamples::UseMD5)
     return;
-  StringSet<> NamesInProfile;
-  for (FunctionId Name : Reader.getNameTable())
-    NamesInProfile.insert(Name.stringRef());
+  SampleProfileNameSet NamesInProfile(Reader);
 
   for (auto &F : M) {
     // Skip declarations, as even if the function can be matched, we have
@@ -730,7 +787,7 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
     // For extended binary, functions fully inlined may not be loaded in the
     // top-level profile, so check the NameTable which has the all symbol names
     // in profile.
-    if (NamesInProfile.count(CanonFName))
+    if (NamesInProfile.contains(CanonFName))
       continue;
 
     // For extended binary, non-profiled function symbols are in the profile
@@ -840,6 +897,7 @@ void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
       continue;
 
     FuncToProfileNameMap[OrphanFunc] = ProfId;
+    MatchedAnchorCache[ProfId] = OrphanFunc;
     if (const auto *FS = Reader.getSamplesFor(ProfId.stringRef()))
       NewlyLoadedProfiles.create(FS->getFunction()).merge(*FS);
     MatchCount++;

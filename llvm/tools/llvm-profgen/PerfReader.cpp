@@ -218,7 +218,7 @@ void VirtualUnwinder::collectSamplesFromFrame(UnwindState::ProfiledFrame *Cur,
   std::shared_ptr<ContextKey> Key = Stack.getContextKey();
   if (Key == nullptr)
     return;
-  auto Ret = CtxCounterMap->emplace(Hashable<ContextKey>(Key), SampleCounter());
+  auto Ret = CtxCounterMap->try_emplace(Hashable<ContextKey>(Key));
   SampleCounter &SCounter = Ret.first->second;
   for (auto &I : Cur->RangeSamples)
     SCounter.recordRangeCount(std::get<0>(I), std::get<1>(I), std::get<2>(I));
@@ -486,12 +486,12 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
 
     // Collect the PIDs
     TraceStream TraceIt(PerfTraceFile);
-    std::unordered_set<int32_t> PIDSet;
+    DenseSet<int32_t> PIDSet;
     while (!TraceIt.isAtEoF()) {
       MMapEvent MMap;
       if (isMMapEvent(TraceIt.getCurrentLine()) &&
           extractMMapEventForBinary(Binary, TraceIt.getCurrentLine(), MMap)) {
-        auto It = PIDSet.emplace(MMap.PID);
+        auto It = PIDSet.insert(MMap.PID);
         if (It.second && (!PIDFilter || MMap.PID == *PIDFilter)) {
           if (!PIDs.empty()) {
             PIDs.append(",");
@@ -996,12 +996,11 @@ void UnsymbolizedProfileReader::readUnsymbolizedProfile(StringRef FileName) {
     // Read context stack for CS profile.
     if (Line.starts_with("[")) {
       ProfileIsCS = true;
-      auto I = ContextStrSet.insert(Line.str());
-      SampleContext::createCtxVectorFromStr(*I.first, Key->Context);
+      auto I = ContextStrSet.insert(Line);
+      SampleContext::createCtxVectorFromStr(I.first->getKey(), Key->Context);
       TraceIt.advance();
     }
-    auto Ret =
-        SampleCounters.emplace(Hashable<ContextKey>(Key), SampleCounter());
+    auto Ret = SampleCounters.try_emplace(Hashable<ContextKey>(Key));
     readSampleCounters(TraceIt, Ret.first->second);
   }
 }
@@ -1053,7 +1052,7 @@ void PerfScriptReader::generateUnsymbolizedProfile() {
          "Sample counter map should be empty before raw profile generation");
   std::shared_ptr<StringBasedCtxKey> Key =
       std::make_shared<StringBasedCtxKey>();
-  SampleCounters.emplace(Hashable<ContextKey>(Key), SampleCounter());
+  SampleCounters.try_emplace(Hashable<ContextKey>(Key));
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
     computeCounterFromLBR(Sample, Item.second);
@@ -1265,9 +1264,7 @@ void PerfScriptReader::warnTruncatedStack() {
 }
 
 void PerfScriptReader::warnInvalidRange() {
-  std::unordered_map<std::pair<uint64_t, uint64_t>, uint64_t,
-                     pair_hash<uint64_t, uint64_t>>
-      Ranges;
+  DenseMap<std::pair<uint64_t, uint64_t>, uint64_t> Ranges;
 
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
@@ -1466,7 +1463,7 @@ void ETMReader::parseETMTraces() {
   // Initialize the SampleCounters map with a single empty context key
   // to aggregate all instruction hits into a global bucket.
   auto Key = std::make_shared<StringBasedCtxKey>();
-  Counters.emplace(Hashable<ContextKey>(Key), SampleCounter());
+  Counters.try_emplace(Hashable<ContextKey>(Key));
 
   // The protocol utilizes a 0x80 byte as an initial synchronization header.
   // Perform a manual search for this sync point to discard any leading

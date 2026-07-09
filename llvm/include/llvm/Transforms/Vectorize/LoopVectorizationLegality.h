@@ -353,16 +353,6 @@ public:
   /// Returns True if V is a Phi node of an induction variable in this loop.
   LLVM_ABI bool isInductionPhi(const Value *V) const;
 
-  /// Returns a pointer to the induction descriptor, if \p Phi is an integer or
-  /// floating point induction.
-  LLVM_ABI const InductionDescriptor *
-  getIntOrFpInductionDescriptor(PHINode *Phi) const;
-
-  /// Returns a pointer to the induction descriptor, if \p Phi is pointer
-  /// induction.
-  LLVM_ABI const InductionDescriptor *
-  getPointerInductionDescriptor(PHINode *Phi) const;
-
   /// Returns True if V is a cast that is part of an induction def-use chain,
   /// and had been proven to be redundant under a runtime guard (in other
   /// words, the cast has the same SCEV expression as the induction phi).
@@ -532,7 +522,7 @@ private:
   /// the new code path being implemented for outer loop vectorization
   /// (should be functional for inner loop vectorization) based on VPlan.
   /// If false, good old LV code.
-  bool canVectorizeLoopCFG(Loop *Lp, bool UseVPlanNativePath);
+  bool canVectorizeLoopCFG(Loop *Lp, bool UseVPlanNativePath) const;
 
   /// Check if a single basic block loop is vectorizable.
   /// At this point we know that this is a loop with a constant trip count

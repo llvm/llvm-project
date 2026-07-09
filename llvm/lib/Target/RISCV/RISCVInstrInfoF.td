@@ -199,7 +199,7 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class FPLoad_r<bits<3> funct3, string opcodestr, DAGOperand rty,
                SchedWrite sw>
     : RVInstI<funct3, OPC_LOAD_FP, (outs rty:$rd),
-              (ins GPRMem:$rs1, simm12_lo:$imm12),
+              (ins BasePtr:$rs1, simm12_lo:$imm12),
               opcodestr, "$rd, ${imm12}(${rs1})">,
       Sched<[sw, ReadFMemBase]>;
 
@@ -207,7 +207,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class FPStore_r<bits<3> funct3, string opcodestr, DAGOperand rty,
                 SchedWrite sw>
     : RVInstS<funct3, OPC_STORE_FP, (outs),
-              (ins rty:$rs2, GPRMem:$rs1, simm12_lo:$imm12),
+              (ins rty:$rs2, BasePtr:$rs1, simm12_lo:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">,
       Sched<[sw, ReadFStoreData, ReadFMemBase]>;
 
@@ -866,3 +866,8 @@ def : Pat<(any_uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_S_WU_INX $rs1, 
 def : Pat<(any_sint_to_fp (i64 GPR:$rs1)), (FCVT_S_L_INX $rs1, FRM_DYN)>;
 def : Pat<(any_uint_to_fp (i64 GPR:$rs1)), (FCVT_S_LU_INX $rs1, FRM_DYN)>;
 } // Predicates = [HasStdExtZfinx, IsRV64]
+
+// Used by -fzero-call-used-regs to zero out registers.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoClearFPR32 : Pseudo<(outs FPR32:$rd), (ins), []>,
+                       PseudoInstExpansion<(FMV_W_X FPR32:$rd, X0)>;

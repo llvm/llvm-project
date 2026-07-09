@@ -1131,6 +1131,9 @@ void JSONNodeDumper::VisitExplicitInstantiationDecl(
   case TSK_ImplicitInstantiation:
     JOS.attribute("templateSpecializationKind", "implicit_instantiation");
     break;
+  case TSK_FriendDeclaration:
+    JOS.attribute("templateSpecializationKind", "friend_declaration");
+    break;
   case TSK_ExplicitSpecialization:
     JOS.attribute("templateSpecializationKind", "explicit_specialization");
     break;

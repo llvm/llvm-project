@@ -49,7 +49,8 @@ class MipsFunctionInfo;
 class MipsSubtarget;
 class MipsTargetMachine;
 class TargetLibraryInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 
   //===--------------------------------------------------------------------===//
   // TargetLowering Implementation

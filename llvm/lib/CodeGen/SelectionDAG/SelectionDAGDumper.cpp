@@ -220,6 +220,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::STRICT_FMAXIMUM:            return "strict_fmaximum";
   case ISD::FMINIMUMNUM:                return "fminimumnum";
   case ISD::FMAXIMUMNUM:                return "fmaximumnum";
+  case ISD::PSEUDO_FMIN:                return "pseudo_fmin";
+  case ISD::PSEUDO_FMAX:                return "pseudo_fmax";
+  case ISD::STRICT_PSEUDO_FMIN:         return "strict_pseudo_fmin";
+  case ISD::STRICT_PSEUDO_FMAX:         return "strict_pseudo_fmax";
   case ISD::FNEG:                       return "fneg";
   case ISD::FSQRT:                      return "fsqrt";
   case ISD::STRICT_FSQRT:               return "strict_fsqrt";
@@ -307,6 +311,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::CLMUL:                      return "clmul";
   case ISD::CLMULR:                     return "clmulr";
   case ISD::CLMULH:                     return "clmulh";
+  case ISD::PEXT:                       return "pext";
+  case ISD::PDEP:                       return "pdep";
   case ISD::FADD:                       return "fadd";
   case ISD::STRICT_FADD:                return "strict_fadd";
   case ISD::FSUB:                       return "fsub";
@@ -436,6 +442,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FP_TO_BF16:                 return "fp_to_bf16";
   case ISD::STRICT_FP_TO_BF16:          return "strict_fp_to_bf16";
   case ISD::CONVERT_FROM_ARBITRARY_FP:  return "convert_from_arbitrary_fp";
+  case ISD::CONVERT_TO_ARBITRARY_FP:    return "convert_to_arbitrary_fp";
   case ISD::LROUND:                     return "lround";
   case ISD::STRICT_LROUND:              return "strict_lround";
   case ISD::LLROUND:                    return "llround";

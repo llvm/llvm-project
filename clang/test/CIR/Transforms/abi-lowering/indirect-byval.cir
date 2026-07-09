@@ -1,0 +1,242 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {!s64i, !s64i, !s64i, !s64i}>
+
+#byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8 } ]
+}
+
+#byval_arg_ext_return = {
+  return = { kind = "extend", coerced_type = !cir.int<s, 32>,
+             sign_extend = true },
+  args   = [ { kind = "indirect", indirect_align = 8 } ]
+}
+
+#byval_ignore_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8 },
+             { kind = "ignore" } ]
+}
+
+#two_byval = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8 },
+             { kind = "indirect", indirect_align = 8 } ]
+}
+
+#sret_byval = {
+  return = { kind = "indirect", indirect_align = 8 },
+  args   = [ { kind = "indirect", indirect_align = 8 } ]
+}
+
+#byref_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The byval arg becomes a pointer with llvm.byval, llvm.align, llvm.noalias,
+  // and llvm.noundef.  A load is inserted at entry so the body sees the
+  // original value type.
+  cir.func @takes_big(%arg0: !rec_Big) -> !s32i
+      attributes { test_classify = #byval_arg } {
+    %r = cir.const #cir.int<0> : !s32i
+    cir.return %r : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @takes_big(%[[ARG:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.align = 8 : i64
+  // CHECK-SAME:     llvm.byval = !rec_Big
+  // CHECK-SAME:     llvm.noalias
+  // CHECK-SAME:     llvm.noundef
+  // CHECK:        %{{.*}} = cir.load %[[ARG]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK-NEXT:   %{{.*}} = cir.const #cir.int<0> : !s32i
+
+  // byval composes with an Extend return: the pointer parameter carries all
+  // four byval attrs and the return value carries llvm.signext.
+  cir.func @takes_big_ext(%arg0: !rec_Big) -> !s32i
+      attributes { test_classify = #byval_arg_ext_return } {
+    %r = cir.const #cir.int<0> : !s32i
+    cir.return %r : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @takes_big_ext(%{{.*}}: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byval = !rec_Big
+  // CHECK-SAME:     llvm.noalias
+  // CHECK-SAME:     llvm.noundef
+  // CHECK-SAME:   ) -> (!s32i {llvm.signext})
+
+  // byval composes with an Ignored second argument: the ignored arg is dropped
+  // from the signature and the byval slot is the only argument.
+  cir.func @takes_big_ignore(%arg0: !rec_Big, %arg1: !s32i) -> !s32i
+      attributes { test_classify = #byval_ignore_arg } {
+    %r = cir.const #cir.int<0> : !s32i
+    cir.return %r : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @takes_big_ignore(%{{.*}}: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byval = !rec_Big
+  // CHECK-SAME:     llvm.noalias
+  // CHECK-SAME:     llvm.noundef
+  // CHECK-SAME:   ) -> !s32i
+  // CHECK-NOT:    !s32i {{.*}}!s32i
+
+  // A forward declaration: signature is rewritten but no body to touch.
+  cir.func private @takes_big_decl(%arg0: !rec_Big) -> !s32i
+      attributes { test_classify = #byval_arg }
+
+  // CHECK:      cir.func{{.*}} @takes_big_decl(!cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byval = !rec_Big
+  // CHECK-SAME:     llvm.noalias
+  // CHECK-SAME:     llvm.noundef
+
+  // Caller: byval argument is copied into a fresh alloca; the pointer is
+  // passed with llvm.byval, llvm.noalias, and llvm.noundef on the call
+  // operand, matching classic CodeGen's -fpass-by-value-is-noalias output.
+  cir.func @caller(%s: !rec_Big) -> !s32i
+      attributes { test_classify = #passthrough } {
+    %r = cir.call @takes_big(%s) : (!rec_Big) -> !s32i
+    cir.return %r : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @caller(%[[S:.*]]: !rec_Big) -> !s32i
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %[[S]], %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %{{.*}} = cir.call @takes_big(%[[SLOT]]) :
+  // CHECK-SAME:     llvm.byval = !rec_Big
+  // CHECK-SAME:     llvm.noalias
+  // CHECK-SAME:     llvm.noundef
+
+  // A body that actually uses the byval arg value: the existing use in
+  // cir.return is rerouted through the load inserted at entry.
+  cir.func @takes_big_uses_arg(%arg0: !rec_Big) -> !rec_Big
+      attributes { test_classify = #byval_arg } {
+    cir.return %arg0 : !rec_Big
+  }
+
+  // CHECK:      cir.func{{.*}} @takes_big_uses_arg(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byval = !rec_Big
+  // CHECK-SAME:     llvm.noalias
+  // CHECK-SAME:     llvm.noundef
+  // CHECK:        %[[LOADED:.*]] = cir.load %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK-NEXT:   cir.return %[[LOADED]] : !rec_Big
+
+  // Two byval arguments: each gets its own alloca at the call site, and both
+  // block args are changed to pointers with loads at the callee entry.
+  cir.func @two_byval(%a: !rec_Big, %b: !rec_Big) -> !rec_Big
+      attributes { test_classify = #two_byval } {
+    cir.return %b : !rec_Big
+  }
+
+  // Both byval slots carry the full attribute set.  Match in appearance order.
+  // CHECK:      cir.func{{.*}} @two_byval(
+  // CHECK-SAME:     !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byval = !rec_Big
+  // CHECK-SAME:     llvm.noalias
+  // CHECK-SAME:     llvm.noundef
+  // CHECK-SAME:     !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byval = !rec_Big
+  // CHECK-SAME:     llvm.noalias
+  // CHECK-SAME:     llvm.noundef
+
+  cir.func @caller_two(%s: !rec_Big, %t: !rec_Big) -> !rec_Big
+      attributes { test_classify = #passthrough } {
+    %r = cir.call @two_byval(%s, %t) : (!rec_Big, !rec_Big) -> !rec_Big
+    cir.return %r : !rec_Big
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_two
+  // CHECK:        %[[A:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %{{.*}}, %[[A]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %[[B:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %{{.*}}, %[[B]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %{{.*}} = cir.call @two_byval(%[[A]], %[[B]]) :
+  // CHECK-SAME:     llvm.byval = !rec_Big
+  // CHECK-SAME:     llvm.noalias
+  // CHECK-SAME:     llvm.noundef
+  // CHECK-SAME:     !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byval = !rec_Big
+  // CHECK-SAME:     llvm.noalias
+  // CHECK-SAME:     llvm.noundef
+
+  // sret return + byval arg: the sret pointer is prepended at slot 0 and the
+  // byval arg shifts to slot 1 (sretOffset = 1).  The byval slot carries all
+  // four byval attrs; the sret slot carries its own standard set.
+  cir.func @byval_and_sret(%arg0: !rec_Big) -> !rec_Big
+      attributes { test_classify = #sret_byval } {
+    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %z = cir.const #cir.zero : !rec_Big
+    cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+    cir.return %1 : !rec_Big
+  }
+
+  // CHECK:      cir.func{{.*}} @byval_and_sret(
+  // CHECK-SAME:     llvm.sret = !rec_Big
+  // CHECK-SAME:     !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byval = !rec_Big
+  // CHECK-SAME:     llvm.noalias
+  // CHECK-SAME:     llvm.noundef
+  // CHECK-NOT:    -> !rec_Big
+  // CHECK:        cir.store %{{.*}}, %{{.*}} : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.return
+
+  // byref callee definition: the parameter gets llvm.byref instead of
+  // llvm.byval.  noalias and noundef are NOT added (byref passes the
+  // original, which may alias and may carry padding).  The body
+  // transformation (ptr + load at entry) is identical to byval.
+  cir.func @takes_big_byref(%arg0: !rec_Big) -> !rec_Big
+      attributes { test_classify = #byref_arg } {
+    cir.return %arg0 : !rec_Big
+  }
+
+  // CHECK:      cir.func{{.*}} @takes_big_byref(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.align = 8 : i64
+  // CHECK-SAME:     llvm.byref = !rec_Big
+  // CHECK-NOT:    llvm.noalias
+  // CHECK-NOT:    llvm.noundef
+  // CHECK:        %[[L:.*]] = cir.load %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK-NEXT:   cir.return %[[L]] : !rec_Big
+
+  // byref forward declaration: signature gets llvm.byref, no body.
+  cir.func private @takes_big_byref_decl(%arg0: !rec_Big) -> !rec_Big
+      attributes { test_classify = #byref_arg }
+
+  // CHECK:      cir.func{{.*}} @takes_big_byref_decl(!cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byref = !rec_Big
+  // CHECK-NOT:    llvm.noalias
+  // CHECK-NOT:    llvm.noundef
+
+  // byref call site: same alloca+store pattern as byval, but the pointer
+  // carries llvm.byref (and no llvm.noalias / llvm.noundef since byref
+  // does not assert exclusive ownership of the storage).
+  cir.func @caller_byref(%s: !rec_Big) -> !rec_Big
+      attributes { test_classify = #passthrough } {
+    %r = cir.call @takes_big_byref(%s) : (!rec_Big) -> !rec_Big
+    cir.return %r : !rec_Big
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_byref(%[[S:.*]]: !rec_Big) -> !rec_Big
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "byref" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.store %[[S]], %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %{{.*}} = cir.call @takes_big_byref(%[[SLOT]]) :
+  // CHECK-SAME:     llvm.byref = !rec_Big
+  // CHECK-NOT:    llvm.noalias
+  // CHECK-NOT:    llvm.noundef
+
+}

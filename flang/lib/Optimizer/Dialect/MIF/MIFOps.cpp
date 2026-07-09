@@ -11,12 +11,18 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/Dialect/MIF/MIFDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/SmallVector.h"
-#include <tuple>
+
+template <class T>
+static llvm::LogicalResult checkCorank(T op) {
+  mlir::Type coarrayType = fir::unwrapRefType(op.getCoarray().getType());
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(coarrayType))
+    if (boxTy.isCoarray())
+      return mlir::success();
+  return op.emitOpError("`coarray` must have a corank.");
+}
 
 // Function used to check if a type has POINTER or ALLOCATABLE component.
 // Currently an allocation of coarray with this kind of component are not yet
@@ -66,20 +72,33 @@ llvm::LogicalResult mif::NumImagesOp::verify() {
 
 void mif::ThisImageOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result, mlir::Value coarray,
+                             mlir::Value dim, mlir::Value team) {
+  mlir::Type resultTy = builder.getI64Type();
+  build(builder, result, resultTy, coarray, dim, team);
+}
+
+void mif::ThisImageOp::build(mlir::OpBuilder &builder,
+                             mlir::OperationState &result, mlir::Value coarray,
                              mlir::Value team) {
-  build(builder, result, coarray, /*dim*/ mlir::Value{}, team);
+  mlir::Type i64Ty = builder.getI64Type();
+  mlir::Type resultTy = fir::BoxType::get(
+      fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i64Ty));
+  build(builder, result, resultTy, coarray, /*dim*/ mlir::Value{}, team);
 }
 
 void mif::ThisImageOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result, mlir::Value team) {
-  build(builder, result, /*coarray*/ mlir::Value{}, /*dim*/ mlir::Value{},
-        team);
+  mlir::Type resultTy = builder.getI32Type();
+  build(builder, result, resultTy, /*coarray*/ mlir::Value{},
+        /*dim*/ mlir::Value{}, team);
 }
 
 llvm::LogicalResult mif::ThisImageOp::verify() {
   if (getDim() && !getCoarray())
     return emitOpError(
         "`dim` must be provied at the same time as the `coarray` argument.");
+  if (getCoarray())
+    return checkCorank(*this);
   return mlir::success();
 }
 
@@ -266,6 +285,66 @@ llvm::LogicalResult mif::AllocCoarrayOp::verify() {
     if (!seqTy.getElementType().isInteger(64))
       return emitOpError("ucobounds need to be a boxed array of I64 elements.");
 
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// LcoboundOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult mif::LcoboundOp::verify() {
+  if (getCoarray())
+    return checkCorank(*this);
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// UcoboundOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult mif::UcoboundOp::verify() {
+  if (getCoarray())
+    return checkCorank(*this);
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// CoshapeOp
+//===----------------------------------------------------------------------===//
+
+void mif::CoshapeOp::build(mlir::OpBuilder &builder,
+                           mlir::OperationState &result, mlir::Value coarray) {
+  mlir::Type i64Ty = builder.getI64Type();
+  mlir::Type resultTy = fir::BoxType::get(
+      fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i64Ty));
+  build(builder, result, resultTy, coarray);
+}
+
+llvm::LogicalResult mif::CoshapeOp::verify() {
+  if (getCoarray())
+    return checkCorank(*this);
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ImageIndexOp
+//===----------------------------------------------------------------------===//
+
+void mif::ImageIndexOp::build(mlir::OpBuilder &builder,
+                              mlir::OperationState &result, mlir::Value coarray,
+                              mlir::Value sub, mlir::Value teamArg) {
+  bool isTeamNumber =
+      teamArg && fir::unwrapPassByRefType(teamArg.getType()).isInteger();
+  if (!isTeamNumber)
+    build(builder, result, coarray, sub, teamArg, /*team*/ mlir::Value{});
+  else
+    build(builder, result, coarray, sub, /*team_number*/ mlir::Value{},
+          teamArg);
+}
+
+llvm::LogicalResult mif::ImageIndexOp::verify() {
+  if (getCoarray())
+    return checkCorank(*this);
   return mlir::success();
 }
 
