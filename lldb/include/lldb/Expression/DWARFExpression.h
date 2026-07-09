@@ -96,6 +96,12 @@ public:
 
   bool ContainsThreadLocalStorage(const Delegate *dwarf_cu) const;
 
+  /// Return true if this expression produces a DWARF implicit or
+  /// composite location description that LLDB cannot write a new
+  /// value back to. Scans the opcodes without evaluating the
+  /// expression.
+  bool IsImplicit(const Delegate *dwarf_cu) const;
+
   bool LinkThreadLocalStorage(
       const Delegate *dwarf_cu,
       std::function<lldb::addr_t(lldb::addr_t file_addr)> const

@@ -430,7 +430,7 @@ void XeGPUBlockingPass::runOnOperation() {
     // `layout_result_N` lands on the wrong (renumbered) result, corrupting the
     // count invariant and leaving the loop illegal.
     op->walk([](Operation *loopOp) {
-      if (!isa<scf::ForOp, scf::WhileOp, scf::ConditionOp>(loopOp))
+      if (!isa<scf::ForOp, scf::WhileOp, scf::ConditionOp, scf::IfOp>(loopOp))
         return;
       SmallVector<StringRef> toRemove;
       for (const NamedAttribute &attr : loopOp->getAttrs()) {

@@ -1955,7 +1955,7 @@ const ObjCObjectPointerType *Type::getAsObjCInterfacePointerType() const {
   return nullptr;
 }
 
-CXXRecordDecl *Type::getPointeeCXXRecordDecl() const {
+const CXXRecordDecl *Type::getPointeeCXXRecordDecl() const {
   QualType PointeeType;
   if (const auto *PT = getAsCanonical<PointerType>())
     PointeeType = PT->getPointeeType();
