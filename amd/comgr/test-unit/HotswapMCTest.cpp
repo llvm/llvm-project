@@ -795,6 +795,130 @@ TEST(KernelEntryTrampoline, ClampsInstPrefSizeAndAvoidsPrefetchGuard) {
   EXPECT_EQ(KDs[0].EntryOffset, static_cast<int64_t>(StubVAddr - *KdVAddr));
 }
 
+// Count symbols named \p Name in the .symtab of the ELF held in \p Buf.
+// Returns ~0u if the ELF or its symbol table cannot be parsed, so a mis-parse
+// surfaces as a failed expectation rather than a silent zero.
+static unsigned countSymtabSymbolsNamed(llvm::WritableMemoryBuffer &Buf,
+                                        llvm::StringRef Name) {
+  using ELFT = llvm::object::ELF64LE;
+  llvm::Expected<llvm::object::ELFFile<ELFT>> FileOrErr =
+      llvm::object::ELFFile<ELFT>::create(llvm::StringRef(
+          reinterpret_cast<const char *>(Buf.getBufferStart()),
+          Buf.getBufferSize()));
+  if (!FileOrErr) {
+    llvm::consumeError(FileOrErr.takeError());
+    return ~0u;
+  }
+  llvm::object::ELFFile<ELFT> &File = *FileOrErr;
+  llvm::Expected<ELFT::ShdrRange> Secs = File.sections();
+  if (!Secs) {
+    llvm::consumeError(Secs.takeError());
+    return ~0u;
+  }
+  const ELFT::Shdr *Symtab = nullptr;
+  for (const ELFT::Shdr &Sh : *Secs)
+    if (Sh.sh_type == llvm::ELF::SHT_SYMTAB) {
+      Symtab = &Sh;
+      break;
+    }
+  if (!Symtab)
+    return 0;
+  llvm::Expected<ELFT::SymRange> Syms = File.symbols(Symtab);
+  llvm::Expected<llvm::StringRef> Str = File.getStringTableForSymtab(*Symtab);
+  if (!Syms || !Str) {
+    if (!Syms)
+      llvm::consumeError(Syms.takeError());
+    if (!Str)
+      llvm::consumeError(Str.takeError());
+    return ~0u;
+  }
+  unsigned Count = 0;
+  for (const ELFT::Sym &Sym : *Syms) {
+    llvm::Expected<llvm::StringRef> N = Sym.getName(*Str);
+    if (!N) {
+      llvm::consumeError(N.takeError());
+      continue;
+    }
+    if (*N == Name)
+      ++Count;
+  }
+  return Count;
+}
+
+// Covers: the entry-trampoline rewrite is idempotent -- a second pass over an
+// already-rewritten code object installs no new stub, and therefore defines no
+// duplicate `<kernel>.stub` symbol. This backs the idempotency claim made by
+// the change that adds stub symbols.
+//
+// How: run the full first pass on a synthetic gfx1250 object
+// (appendKernelEntryTrampolines -> growWithTrampolines ->
+// rewriteKernelEntryDescriptorOffsets -> addKernelEntryTrampolineSymbols) and
+// confirm exactly one "kernel.stub" symbol. Then re-parse that output and run
+// appendKernelEntryTrampolines again: because the descriptor already targets
+// the appended stub, the second pass must report zero new stubs and produce no
+// fixups, so the symbol pass never runs. Feeding those empty fixups to
+// addKernelEntryTrampolineSymbols returns nullptr (no new buffer), and
+// "kernel.stub" remains defined exactly once -- i.e. no duplicate name.
+TEST(KernelEntryTrampoline, SecondPassAddsNoDuplicateStubSymbol) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> Text = assembleSingleInst("s_endpgm", S);
+  ASSERT_EQ(Text.size(), MinInstSize);
+
+  comgr_test::KernelDescriptorElf Obj = comgr_test::makeKernelDescriptorElf(Text);
+
+  // -- First pass: append one stub, grow .text, rewrite the descriptor, and
+  //    attach the stub symbol. --
+  llvm::Expected<ElfView> View1 =
+      ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
+  ASSERT_TRUE((bool)View1) << llvm::toString(View1.takeError());
+  const unsigned TextIdx = View1->textSectionIndex();
+  const uint64_t TextAddr = View1->textAddr();
+  const uint64_t OldTextSize = View1->textSize();
+
+  std::vector<Trampoline> Growth1;
+  std::vector<KernelEntryTrampolineFixup> Fixups1;
+  std::optional<uint32_t> Count1 = appendKernelEntryTrampolines(
+      *View1, S, /*MaxSgprs=*/106, Growth1, Fixups1);
+  ASSERT_TRUE(Count1.has_value());
+  ASSERT_EQ(*Count1, 1u);
+
+  std::unique_ptr<llvm::WritableMemoryBuffer> Grown =
+      View1->growWithTrampolines(Growth1, S.SNopBytes);
+  ASSERT_NE(Grown, nullptr);
+  ASSERT_TRUE(
+      rewriteKernelEntryDescriptorOffsets(*Grown, OldTextSize, S.Cpu, Fixups1));
+  std::unique_ptr<llvm::WritableMemoryBuffer> Pass1 =
+      addKernelEntryTrampolineSymbols(*Grown, TextIdx, TextAddr, OldTextSize,
+                                      Fixups1);
+  ASSERT_NE(Pass1, nullptr);
+  ASSERT_EQ(countSymtabSymbolsNamed(*Pass1, "kernel.stub"), 1u);
+
+  // -- Second pass over the already-rewritten object. --
+  uint8_t *Pass1Data = reinterpret_cast<uint8_t *>(Pass1->getBufferStart());
+  llvm::Expected<ElfView> View2 =
+      ElfView::create(Pass1Data, Pass1->getBufferSize());
+  ASSERT_TRUE((bool)View2) << llvm::toString(View2.takeError());
+
+  std::vector<Trampoline> Growth2;
+  std::vector<KernelEntryTrampolineFixup> Fixups2;
+  std::optional<uint32_t> Count2 = appendKernelEntryTrampolines(
+      *View2, S, /*MaxSgprs=*/106, Growth2, Fixups2);
+  ASSERT_TRUE(Count2.has_value());
+  // The descriptor already targets a stub, so nothing new is installed.
+  EXPECT_EQ(*Count2, 0u);
+  EXPECT_TRUE(Fixups2.empty());
+
+  // With no fixups the symbol pass is a no-op (returns nullptr, keeping the
+  // existing buffer), so no second "kernel.stub" can be defined.
+  std::unique_ptr<llvm::WritableMemoryBuffer> Pass2 =
+      addKernelEntryTrampolineSymbols(*Pass1, TextIdx, TextAddr,
+                                      View2->textSize(), Fixups2);
+  EXPECT_EQ(Pass2, nullptr);
+  EXPECT_EQ(countSymtabSymbolsNamed(*Pass1, "kernel.stub"), 1u);
+}
+
 TEST(KernelEntryTrampoline, AlignsStubByVirtualAddress) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
