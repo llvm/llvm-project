@@ -43,6 +43,20 @@ tls2:
   .int32  2
   .size tls2, 4
 
+.section  .data.bar,"",@
+.globl  bar
+.p2align  2
+bar:
+  .int32  42
+  .size bar, 4
+
+.section  .bss.foo,"",@
+.globl  foo
+.p2align  2
+foo:
+  .int32  0
+  .size foo, 4
+
 .section  .custom_section.target_features,"",@
   .int8 2
   .int8 43
@@ -58,6 +72,24 @@ tls2:
 # CHECK-NEXT:     - Minimum:         0x2
 # CHECK-NOT:       Shared
 
+# Only TLS needs a passive data segment; .data stays active and .bss gets no
+# segment at all since memory is only instantiated once and starts zeroed.
+# CHECK:        - Type:            DATACOUNT
+# CHECK-NEXT:     Count:           2
+
+# CHECK:        - Type:            DATA{{$}}
+# CHECK-NEXT:     Segments:
+# CHECK-NEXT:       - SectionOffset:   3
+# CHECK-NEXT:         InitFlags:       1
+# CHECK-NEXT:         Content:         '0100000002000000'
+# CHECK-NEXT:       - SectionOffset:   18
+# CHECK-NEXT:         InitFlags:       0
+# CHECK-NEXT:         Offset:
+# CHECK-NEXT:           Opcode:          I32_CONST
+# CHECK-NEXT:           Value:           {{[0-9]+}}
+# CHECK-NEXT:         Content:         2A000000
+# CHECK-NEXT:   - Type:            CUSTOM
+
 # Globals should use the libcall ABI naming, not the global ABI.
 # CHECK:      GlobalNames:
 # CHECK-NEXT:      - Index:           0
@@ -70,6 +102,9 @@ tls2:
 # CHECK-NEXT:        Name:            __tls_align
 
 # DIS-LABEL: <__wasm_init_memory>:
+# DIS:         memory.init     0, 0
+# DIS-NOT:     memory.fill
+# DIS-NOT:     memory.init
 
 # DIS-LABEL: <_start>:
 # DIS-EMPTY:
