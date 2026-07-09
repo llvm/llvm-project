@@ -964,10 +964,10 @@ public:
   void RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp,
                                 llvm::StringRef name);
 
-  BreakpointName *FindBreakpointName(ConstString name, bool can_create,
+  BreakpointName *FindBreakpointName(llvm::StringRef name, bool can_create,
                                      Status &error);
 
-  void DeleteBreakpointName(ConstString name);
+  void DeleteBreakpointName(llvm::StringRef name);
 
   void ConfigureBreakpointName(BreakpointName &bp_name,
                                const BreakpointOptions &options,

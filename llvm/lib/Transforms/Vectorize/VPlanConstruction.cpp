@@ -1358,14 +1358,9 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
 
   Header->splitAt(Header->getFirstNonPhi());
 
-  // Create the header mask, insert it in the header and branch on it.
-  auto *IV = new VPWidenCanonicalIVRecipe(
-      LoopRegion->getCanonicalIV(),
-      VPIRFlags::WrapFlagsTy(LoopRegion->hasCanonicalIVNUW(), false));
+  // Abstract header mask, materialized into concrete recipes later.
+  VPValue *HeaderMask = LoopRegion->createHeaderMask();
   VPBuilder Builder(Header, Header->getFirstNonPhi());
-  Builder.insert(IV);
-  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-  VPValue *HeaderMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
   Builder.createNaryOp(VPInstruction::BranchOnCond, HeaderMask);
 
   VPBasicBlock *OrigLatch = LoopRegion->getExitingBasicBlock();
@@ -1825,7 +1820,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   if (Phis.empty())
     return true;
 
-  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
+  VPValue *HeaderMask = Plan.getVectorLoopRegion()->getHeaderMask();
   for (VPReductionPHIRecipe *PhiR : Phis) {
     // Find the condition for the select/blend.
     VPValue *BackedgeSelect = PhiR->getBackedgeValue();

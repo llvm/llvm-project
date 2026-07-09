@@ -2805,6 +2805,8 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     if (Symbol)
       SymbolIndex[Symbol] = getRelocationSymbol(InputFile, Rel);
 
+    // Check if this relocation targets an address within a function. This
+    // happens with indirect goto.
     const uint64_t ReferencedAddress = SymbolAddress + Addend;
     BinaryFunction *Func =
         BC->getBinaryFunctionContainingAddress(ReferencedAddress);
@@ -2814,7 +2816,10 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
         if (!Func->isInConstantIsland(ReferencedAddress)) {
           if (const uint64_t ReferenceOffset =
                   ReferencedAddress - Func->getAddress()) {
-            Func->addEntryPointAtOffset(ReferenceOffset);
+            assert(!BC->getBinaryFunctionContainingAddress(Rel.getOffset()) &&
+                   "Relative relocation to code only from data");
+            Func->registerInternalRefDataRelocation(ReferenceOffset,
+                                                    Rel.getOffset());
           }
         } else {
           BC->errs() << "BOLT-ERROR: referenced address at 0x"
@@ -6239,13 +6244,17 @@ uint64_t RewriteInstance::getNewFunctionOrDataAddress(uint64_t OldAddress) {
   if (const BinaryFunction *BF =
           BC->getBinaryFunctionContainingAddress(OldAddress)) {
     if (BF->isEmitted()) {
-      // If OldAddress is the another entry point of
-      // the function, then BOLT could get the new address.
-      if (BF->isMultiEntry()) {
-        for (const BinaryBasicBlock &BB : *BF)
-          if (BB.isEntryPoint() &&
-              (BF->getAddress() + BB.getOffset()) == OldAddress)
+      // If OldAddress is another entry point of the function or the target of
+      // an indirect goto, then BOLT could get the new address.
+      bool HasInternalRelocationTarget =
+          BF->hasInternalReferenceAt(OldAddress - BF->getAddress());
+      if (HasInternalRelocationTarget || BF->isMultiEntry()) {
+        for (const BinaryBasicBlock &BB : *BF) {
+          const uint64_t BBAddr = BF->getAddress() + BB.getOffset();
+          if ((HasInternalRelocationTarget || BB.isEntryPoint()) &&
+              BBAddr == OldAddress)
             return BB.getOutputStartAddress();
+        }
       }
       BC->errs() << "BOLT-ERROR: unable to get new address corresponding to "
                     "input address 0x"
