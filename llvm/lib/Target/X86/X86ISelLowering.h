@@ -354,6 +354,9 @@ namespace llvm {
                                                     TargetLoweringOpt &TLO,
                                                     unsigned Depth) const;
 
+    unsigned getPreferredShrunkVectorSizeInBits(
+        SDValue Op, const APInt &DemandedElts) const override;
+
     bool SimplifyDemandedBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedBits,
                                            const APInt &DemandedElts,
@@ -566,6 +569,9 @@ namespace llvm {
 
     bool convertSelectOfConstantsToMath(EVT VT) const override;
 
+    bool shouldNormalizeToSelectSequence(LLVMContext &Context, EVT VT,
+                                         EVT CCVT) const override;
+
     bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                 SDValue C) const override;
 
@@ -636,13 +642,12 @@ namespace llvm {
                            const LibcallLoweringInfo &Libcalls) const override;
 
     bool useLoadStackGuardNode(const Module &M) const override;
-    bool useStackGuardXorFP() const override;
+    bool useStackGuardMixFP() const override;
     void
     insertSSPDeclarations(Module &M,
                           const LibcallLoweringInfo &Libcalls) const override;
-    SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
+    SDValue emitStackGuardMixFP(SelectionDAG &DAG, SDValue Val,
                                 const SDLoc &DL) const override;
-
 
     /// Return true if the target stores SafeStack pointer at a fixed offset in
     /// some non-standard address space, and populates the address space and

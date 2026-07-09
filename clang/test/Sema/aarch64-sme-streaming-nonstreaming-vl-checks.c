@@ -1,9 +1,9 @@
 // Case 1: No vscale flags — should only produce warnings
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +bf16 -target-feature +sme -target-feature +sme2 -target-feature +sve -Waarch64-sme-attributes -fsyntax-only -verify=expected-noflags %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sme2 -target-feature +sve -Waarch64-sme-attributes -fsyntax-only -verify=expected-noflags %s
 
 // Case 2: Explicit mismatch in vscale flags — should produce errors for 
 // streaming and non-streaming callers
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +bf16 -target-feature +sme -target-feature +sme2 -target-feature +sve -Waarch64-sme-attributes -fsyntax-only -mvscale-min=1 -mvscale-max=1 -mvscale-streaming-min=2 -mvscale-streaming-max=2 -verify=expected-flags %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sme2 -target-feature +sve -Waarch64-sme-attributes -fsyntax-only -mvscale-min=1 -mvscale-max=1 -mvscale-streaming-min=2 -mvscale-streaming-max=2 -verify=expected-flags %s
 
 void sme_streaming_with_vl_arg(__SVInt8_t a) __arm_streaming;
 

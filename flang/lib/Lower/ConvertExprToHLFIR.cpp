@@ -33,6 +33,7 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/IR/IRMapping.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <optional>
 
@@ -144,7 +145,8 @@ public:
       const Fortran::semantics::Symbol &componentSym, mlir::Type fieldType,
       bool isVolatile) {
     if (mayHaveNonDefaultLowerBounds(componentSym)) {
-      mlir::Type boxType = fir::BoxType::get(fieldType, isVolatile);
+      mlir::Type boxType =
+          fir::BoxType::get(fieldType, isVolatile, componentSym.Corank());
       return std::make_tuple(boxType,
                              fir::FortranVariableFlagsEnum::contiguous);
     }
@@ -973,11 +975,20 @@ private:
   mlir::Location loc;
 };
 
+static mlir::Value
+findOverriddenExprValue(const Fortran::lower::ExprToValueMap &map,
+                        const Fortran::lower::SomeExpr &expr);
+
 hlfir::EntityWithAttributes HlfirDesignatorBuilder::genDesignatorExpr(
     const Fortran::lower::SomeExpr &designatorExpr,
     bool vectorSubscriptDesignatorToValue) {
   // Expr<SomeType> plumbing to unwrap Designator<T> and call
   // gen(Designator<T>.u).
+  if (const Fortran::lower::ExprToValueMap *map =
+          getConverter().getExprOverrides()) {
+    if (mlir::Value value = findOverriddenExprValue(*map, designatorExpr))
+      return hlfir::EntityWithAttributes{value};
+  }
   return Fortran::common::visit(
       [&](const auto &x) -> hlfir::EntityWithAttributes {
         using T = std::decay_t<decltype(x)>;
@@ -1550,6 +1561,30 @@ static bool hasDeferredCharacterLength(const Fortran::semantics::Symbol &sym) {
          type->characterTypeSpec().length().isDeferred();
 }
 
+static mlir::Value
+findOverriddenExprValue(const Fortran::lower::ExprToValueMap &map,
+                        const Fortran::lower::SomeExpr &expr) {
+  if (auto match = map.find(&expr); match != map.end())
+    return match->second;
+
+  // The map uses pointer identity, but the some expressions
+  // (e.g. a(2)) may appear at multiple AST nodes with different addresses.
+  // Fall back to structural comparison via ArrayRef::operator==.
+  for (auto [key, value] : map) {
+    if (Fortran::lower::isEqual(key, &expr))
+      return value;
+    auto keyRef = Fortran::evaluate::ExtractDataRef(*key);
+    auto exprRef = Fortran::evaluate::ExtractDataRef(expr);
+    if (keyRef && exprRef) {
+      auto *keyArray = std::get_if<Fortran::evaluate::ArrayRef>(&keyRef->u);
+      auto *exprArray = std::get_if<Fortran::evaluate::ArrayRef>(&exprRef->u);
+      if (keyArray && exprArray && *keyArray == *exprArray)
+        return value;
+    }
+  }
+  return {};
+}
+
 /// Lower Expr to HLFIR.
 class HlfirBuilder {
 public:
@@ -1563,12 +1598,12 @@ public:
     if (const Fortran::lower::ExprToValueMap *map =
             getConverter().getExprOverrides()) {
       if constexpr (std::is_same_v<T, Fortran::evaluate::SomeType>) {
-        if (auto match = map->find(&expr); match != map->end())
-          return hlfir::EntityWithAttributes{match->second};
+        if (mlir::Value value = findOverriddenExprValue(*map, expr))
+          return hlfir::EntityWithAttributes{value};
       } else {
         Fortran::lower::SomeExpr someExpr = toEvExpr(expr);
-        if (auto match = map->find(&someExpr); match != map->end())
-          return hlfir::EntityWithAttributes{match->second};
+        if (mlir::Value value = findOverriddenExprValue(*map, someExpr))
+          return hlfir::EntityWithAttributes{value};
       }
     }
     return Fortran::common::visit([&](const auto &x) { return gen(x); },
@@ -1610,6 +1645,12 @@ private:
   template <typename T>
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Designator<T> &designator) {
+    if (const Fortran::lower::ExprToValueMap *map =
+            getConverter().getExprOverrides()) {
+      Fortran::lower::SomeExpr someExpr = toEvExpr(designator);
+      if (mlir::Value value = findOverriddenExprValue(*map, someExpr))
+        return hlfir::EntityWithAttributes{value};
+    }
     return HlfirDesignatorBuilder(getLoc(), getConverter(), getSymMap(),
                                   getStmtCtx())
         .gen(designator.u);
@@ -2315,9 +2356,10 @@ hlfir::EntityWithAttributes Fortran::lower::convertExprToHLFIR(
 fir::ExtendedValue Fortran::lower::convertToBox(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     hlfir::Entity entity, Fortran::lower::StatementContext &stmtCtx,
-    mlir::Type fortranType) {
+    mlir::Type fortranType, unsigned corank) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  auto [exv, cleanup] = hlfir::convertToBox(loc, builder, entity, fortranType);
+  auto [exv, cleanup] =
+      hlfir::convertToBox(loc, builder, entity, fortranType, corank);
   if (cleanup)
     stmtCtx.attachCleanup(*cleanup);
   return exv;

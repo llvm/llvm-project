@@ -2515,7 +2515,7 @@ public:
   void Unparse(const OmpObject &x) {
     common::visit( //
         common::visitors{
-            [&](const Designator &y) { Walk(y); },
+            [&](const auto &y) { Walk(y); },
             [&](const Name &y) {
               Put("/");
               Walk(y);

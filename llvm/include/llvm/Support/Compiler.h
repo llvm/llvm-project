@@ -358,6 +358,15 @@
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE inline
 #endif
 
+/// LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG - Like
+/// LLVM_ATTRIBUTE_ALWAYS_INLINE but disabled in debug builds to avoid stack
+/// overflow with deep recursion.
+#if defined(NDEBUG)
+#define LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG LLVM_ATTRIBUTE_ALWAYS_INLINE
+#else
+#define LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG inline
+#endif
+
 /// LLVM_ATTRIBUTE_NO_DEBUG - On compilers where we have a directive to do
 /// so, mark a method "no debug" because debug info makes the debugger
 /// experience worse.

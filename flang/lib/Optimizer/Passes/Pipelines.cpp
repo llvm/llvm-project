@@ -10,6 +10,7 @@
 /// common to flang and the test tools.
 
 #include "flang/Optimizer/Passes/Pipelines.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
@@ -351,6 +352,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
   if (enableOpenMP != EnableOpenMP::None) {
     pm.addPass(flangomp::createLowerWorkshare());
     pm.addPass(flangomp::createLowerWorkdistribute());
+    pm.addPass(flangomp::createHostOpFilteringPass());
   }
   if (enableOpenMP == EnableOpenMP::Simd)
     pm.addPass(flangomp::createSimdOnlyPass());

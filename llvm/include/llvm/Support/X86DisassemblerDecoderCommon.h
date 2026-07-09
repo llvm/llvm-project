@@ -26,14 +26,9 @@ namespace llvm::X86Disassembler {
 #define TWOBYTE_SYM x86DisassemblerTwoByteOpcodes
 #define THREEBYTE38_SYM x86DisassemblerThreeByte38Opcodes
 #define THREEBYTE3A_SYM x86DisassemblerThreeByte3AOpcodes
-#define XOP8_MAP_SYM x86DisassemblerXOP8Opcodes
-#define XOP9_MAP_SYM x86DisassemblerXOP9Opcodes
-#define XOPA_MAP_SYM x86DisassemblerXOPAOpcodes
-#define THREEDNOW_MAP_SYM x86Disassembler3DNowOpcodes
-#define MAP4_SYM x86DisassemblerMap4Opcodes
-#define MAP5_SYM x86DisassemblerMap5Opcodes
-#define MAP6_SYM x86DisassemblerMap6Opcodes
-#define MAP7_SYM x86DisassemblerMap7Opcodes
+#define SPARSE_OPCODE_DECISIONS_SYM x86DisassemblerSparseOpcodeDecisions
+#define SPARSE_OPCODE_DECISION_INDICES_SYM                                     \
+  x86DisassemblerSparseOpcodeDecisionIndices
 
 #define INSTRUCTIONS_STR "x86DisassemblerInstrSpecifiers"
 #define CONTEXTS_STR "x86DisassemblerContexts"
@@ -41,14 +36,9 @@ namespace llvm::X86Disassembler {
 #define TWOBYTE_STR "x86DisassemblerTwoByteOpcodes"
 #define THREEBYTE38_STR "x86DisassemblerThreeByte38Opcodes"
 #define THREEBYTE3A_STR "x86DisassemblerThreeByte3AOpcodes"
-#define XOP8_MAP_STR "x86DisassemblerXOP8Opcodes"
-#define XOP9_MAP_STR "x86DisassemblerXOP9Opcodes"
-#define XOPA_MAP_STR "x86DisassemblerXOPAOpcodes"
-#define THREEDNOW_MAP_STR "x86Disassembler3DNowOpcodes"
-#define MAP4_STR "x86DisassemblerMap4Opcodes"
-#define MAP5_STR "x86DisassemblerMap5Opcodes"
-#define MAP6_STR "x86DisassemblerMap6Opcodes"
-#define MAP7_STR "x86DisassemblerMap7Opcodes"
+#define SPARSE_OPCODE_DECISIONS_STR "x86DisassemblerSparseOpcodeDecisions"
+#define SPARSE_OPCODE_DECISION_INDICES_STR                                     \
+  "x86DisassemblerSparseOpcodeDecisionIndices"
 
 // Attributes of an instruction that must be known before the opcode can be
 // processed correctly.  Most of these indicate the presence of particular
