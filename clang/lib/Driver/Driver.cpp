@@ -59,6 +59,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
@@ -5418,8 +5419,7 @@ static bool isOffloadDeviceCC1JobCandidate(Command &Job) {
   if (Job.getBoundArch().empty())
     return false;
 
-  const llvm::opt::ArgStringList &Args = Job.getArguments();
-  if (Args.empty() || StringRef(Args.front()) != "-cc1")
+  if (StringRef(Job.getCreator().getName()) != "clang")
     return false;
 
   Action::OffloadKind OKind = Source.getOffloadingDeviceKind();
@@ -5432,6 +5432,10 @@ static bool isOffloadDeviceCC1JobCandidate(Command &Job) {
 
 static std::string getOffloadDeviceCC1ParallelJobGroup(const Command &Job) {
   const Action &Source = Job.getSource();
+  // This key groups device cc1 jobs that can run in parallel. Jobs may differ
+  // by offload arch, but must have the same offload kind, target triple,
+  // action kind, and output type. For example, HIP compile jobs for gfx900 and
+  // gfx906 can share a group, but HIP and OpenMP jobs cannot.
   return (Twine(Action::GetOffloadKindName(Source.getOffloadingDeviceKind())) +
           ":" + Job.getCreator().getToolChain().getTripleString() + ":" +
           Source.getClassName() + ":" + types::getTypeName(Source.getType()))
@@ -5439,21 +5443,15 @@ static std::string getOffloadDeviceCC1ParallelJobGroup(const Command &Job) {
 }
 
 static void claimAndDiagnoseOffloadJobs(const Driver &D, const ArgList &Args) {
-  Arg *A = Args.getLastArg(options::OPT_offload_jobs_EQ);
-  if (!A)
+  auto OffloadJobs = tools::parseOffloadJobs(Args);
+  if (!OffloadJobs.A)
     return;
 
-  StringRef Val = A->getValue();
-  if (Val.equals_insensitive("jobserver")) {
-    A->claim();
-    return;
-  }
+  if (!OffloadJobs.isValid())
+    D.Diag(diag::err_drv_invalid_int_value)
+        << OffloadJobs.A->getAsString(Args) << OffloadJobs.Value;
 
-  int NumThreads;
-  if (Val.getAsInteger(10, NumThreads) || NumThreads <= 0)
-    D.Diag(diag::err_drv_invalid_int_value) << A->getAsString(Args) << Val;
-
-  A->claim();
+  OffloadJobs.A->claim();
 }
 
 static void markOffloadDeviceCC1JobsForParallelExecution(Compilation &C) {

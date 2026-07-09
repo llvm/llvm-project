@@ -9,6 +9,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Action.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/ToolChain.h"
@@ -238,14 +239,9 @@ static bool ActionFailed(const Action *A,
 }
 
 static bool ActionDependsOn(const Action *A, const Action *Other) {
-  if (A == Other)
-    return true;
-
-  for (const auto *Input : A->inputs())
-    if (ActionDependsOn(Input, Other))
-      return true;
-
-  return false;
+  return A == Other || llvm::any_of(A->inputs(), [&](const Action *Input) {
+           return ActionDependsOn(Input, Other);
+         });
 }
 
 static bool ActionsAreIndependent(const Action *A, const Action *B) {
@@ -276,19 +272,17 @@ getParallelOffloadJobsStrategy(const ArgList &Args, unsigned NumJobs) {
   if (NumJobs < 2)
     return std::nullopt;
 
-  Arg *A = Args.getLastArg(options::OPT_offload_jobs_EQ);
-  if (!A)
+  auto OffloadJobs = tools::parseOffloadJobs(Args);
+  if (!OffloadJobs.isValid())
     return std::nullopt;
 
-  StringRef Val = A->getValue();
-  if (Val.equals_insensitive("jobserver"))
+  if (OffloadJobs.K == tools::OffloadJobsOpt::Kind::Jobserver)
     return llvm::jobserver_concurrency();
 
-  unsigned NumThreads;
-  if (Val.getAsInteger(10, NumThreads) || NumThreads < 2)
+  if (OffloadJobs.NumThreads < 2)
     return std::nullopt;
 
-  return llvm::hardware_concurrency(std::min(NumThreads, NumJobs));
+  return llvm::hardware_concurrency(std::min(OffloadJobs.NumThreads, NumJobs));
 }
 
 struct ParallelJobResult {
