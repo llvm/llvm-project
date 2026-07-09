@@ -684,7 +684,7 @@ public:
 /// the contents of a certain portion with a string or an integer.
 class SimpleBinaryPatcher : public BinaryPatcher {
 private:
-  std::vector<std::pair<uint32_t, std::string>> Patches;
+  std::vector<std::pair<uint64_t, std::string>> Patches;
 
   /// Adds a patch to replace the contents of \p ByteSize bytes with the integer
   /// \p NewValue encoded in little-endian, with the least-significant byte

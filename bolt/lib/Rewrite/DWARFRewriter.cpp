@@ -501,6 +501,8 @@ createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
 static void emitUnit(DIEBuilder &DIEBldr, DIEStreamer &Streamer,
                      DWARFUnit &Unit) {
   DIE *UnitDIE = DIEBldr.getUnitDIEbyUnit(Unit);
+  Streamer.getAsmPrinter().OutContext.setDwarfFormat(
+      Unit.getFormParams().Format);
   Streamer.emitUnit(Unit, *UnitDIE);
 }
 
@@ -523,8 +525,6 @@ static void emitDWOBuilder(const std::string &DWOName,
   std::unique_ptr<DIEStreamer> Streamer =
       createDIEStreamer(*TheTriple, *ObjOS, "DwoStreamerInitAug2",
                         DWODIEBuilder, GDBIndexSection);
-  Streamer->getAsmPrinter().OutContext.setDwarfFormat(
-      CU.getFormParams().Format);
   if (SplitCU.getContext().getMaxDWOVersion() >= 5) {
     for (DWARFUnit *CU : DWODIEBuilder.getDWARF5TUVector())
       emitUnit(DWODIEBuilder, *Streamer, *CU);
@@ -2023,8 +2023,6 @@ void DWARFRewriter::finalizeCompileUnits(DIEBuilder &DIEBlder,
   }
   // generate debug_info and CUMap
   for (DWARFUnit *CU : CUs) {
-    Streamer.getAsmPrinter().OutContext.setDwarfFormat(
-        CU->getFormParams().Format);
     emitUnit(DIEBlder, Streamer, *CU);
     const uint64_t StartOffset = CUOffset;
     DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*CU);

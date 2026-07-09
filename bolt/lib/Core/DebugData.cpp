@@ -238,8 +238,8 @@ getDWARF5Header(const LocListsRangelistsHeader &Header) {
 
 struct OffsetEntry {
   uint32_t Index;
-  uint32_t StartOffset;
-  uint32_t EndOffset;
+  uint64_t StartOffset;
+  uint64_t EndOffset;
 };
 template <typename DebugVector, typename ListEntry, typename DebugAddressEntry>
 static bool emitWithBase(raw_ostream &OS, const DebugVector &Entries,
@@ -259,8 +259,8 @@ static bool emitWithBase(raw_ostream &OS, const DebugVector &Entries,
     // In case rnglists or loclists are not sorted.
     if (Base > Entry.LowPC)
       break;
-    uint32_t StartOffset = Entry.LowPC - Base;
-    uint32_t EndOffset = Entry.HighPC - Base;
+    uint64_t StartOffset = Entry.LowPC - Base;
+    uint64_t EndOffset = Entry.HighPC - Base;
     if (encodeULEB128(EndOffset, TempBuffer) > 2)
       break;
     Offsets.push_back({Index, StartOffset, EndOffset});
@@ -861,7 +861,7 @@ void SimpleBinaryPatcher::addLE32Patch(uint64_t Offset, uint32_t NewValue,
 std::string SimpleBinaryPatcher::patchBinary(StringRef BinaryContents) {
   std::string BinaryContentsStr = std::string(BinaryContents);
   for (const auto &Patch : Patches) {
-    uint32_t Offset = Patch.first;
+    uint64_t Offset = Patch.first;
     const std::string &ByteSequence = Patch.second;
     assert(Offset + ByteSequence.size() <= BinaryContents.size() &&
            "Applied patch runs over binary size.");
