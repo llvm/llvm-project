@@ -1,0 +1,52 @@
+name: llvmdocs
+on:
+  push:
+    branches:
+      - users/rnk/markdown-docs
+
+jobs:
+  build-and-publish:
+    runs-on: llvmdev
+    steps:
+      # Manual shallow clone: REQUIRE_SIGNIN_VIEW blocks anonymous clones and
+      # this avoids depending on actions/checkout working in host mode.
+      - name: Clone branch
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          rm -rf src
+          git clone --depth 1 --branch "${GITHUB_REF_NAME}" \
+            "https://token:${TOKEN}@forgejo.stasiaarts.com/${GITHUB_REPOSITORY}.git" src
+
+      - name: Build docs
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install cmake ninja
+          .venv/bin/pip install --require-hashes -r src/llvm/docs/requirements.txt
+          export PATH="$PWD/.venv/bin:$PATH"
+          cmake -G Ninja -S src/llvm -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_PROJECTS=clang \
+            -DLLVM_ENABLE_SPHINX=ON \
+            -DSPHINX_OUTPUT_HTML=ON \
+            -DSPHINX_WARNINGS_AS_ERRORS=OFF
+          ninja -C build docs-llvm-html docs-clang-html
+
+      # Same layout as docker-configs/llvmdocs/rebuild_and_deploy.sh: LLVM docs
+      # at / and Clang docs under /clang/docs/.
+      - name: Build and push image
+        run: |
+          TAG="$(date +%s)-$(git -C src rev-parse --short HEAD)"
+          IMAGE="registry.stasiaarts.com/llvmdocs:${TAG}"
+          rm -rf stage layer.tgz
+          mkdir -p stage/usr/share/nginx
+          cp -a build/docs/html stage/usr/share/nginx/html
+          mkdir -p stage/usr/share/nginx/html/clang/docs
+          cp -a build/tools/clang/docs/html/. stage/usr/share/nginx/html/clang/docs/
+          tar -czf layer.tgz -C stage .
+          crane append \
+            --base docker.io/library/nginx:1.27-alpine \
+            --new_layer layer.tgz \
+            --new_tag "$IMAGE"
+          rm -rf stage layer.tgz
+          echo "pushed $IMAGE"
