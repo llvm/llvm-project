@@ -24,7 +24,6 @@
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_pointer.h>
-#include <__utility/declval.h>
 #include <__utility/move.h>
 
 #include <cstdint>
@@ -192,10 +191,9 @@ consteval bool __range_fits_in_alignment(std::size_t __num_elems) {
 // A specialization of capacity_aware_iterator where we store a runtime count of the current position inside
 // the unused bottom bits of a pointer to T. Only applies if capacity can fit inside those bits.
 template <class _Iter, class _Tag, size_t _RangeMaxElements>
-  requires(std::is_pointer_v<_Iter> &&
-           std::__range_fits_in_alignment<decltype(* std::declval<_Iter>())>(_RangeMaxElements))
+  requires(std::is_pointer_v<_Iter> && std::__range_fits_in_alignment<std::iter_value_t<_Iter>>(_RangeMaxElements))
 class __capacity_aware_iterator<_Iter, _Tag, _RangeMaxElements> {
-  constexpr static std::size_t __bits_ = std::countr_zero(alignof(decltype(*std::declval<_Iter>())));
+  constexpr static std::size_t __bits_ = std::countr_zero(alignof(std::iter_value_t<_Iter>));
 
   union {
     _Iter __ptr_;
