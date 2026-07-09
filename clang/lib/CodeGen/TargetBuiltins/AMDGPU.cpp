@@ -341,7 +341,8 @@ emitAMDGCNImageOverloadedReturnType(clang::CodeGen::CodeGenFunction &CGF,
   }
 
   llvm::Type *RetTy = IsImageStore ? CGF.VoidTy : CGF.ConvertType(E->getType());
-  llvm::CallInst *Call = CGF.Builder.CreateIntrinsic(RetTy, IntrinsicID, Args);
+  llvm::CallInst *Call =
+      CGF.Builder.CreateIntrinsicWithoutFolding(RetTy, IntrinsicID, Args);
   return Call;
 }
 
@@ -463,7 +464,7 @@ static Value *GetAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
   MDNode *Predicate = MDNode::get(Ctx, MDString::get(Ctx, Name.str()));
   std::vector<Value *> Args = {SpecId, ConstantInt::getFalse(Ctx),
                                MetadataAsValue::get(Ctx, Predicate)};
-  CallInst *Call = CGF.Builder.CreateIntrinsic(
+  Value *Call = CGF.Builder.CreateIntrinsic(
       Intrinsic::spv_named_boolean_spec_constant, Args);
 
   return Call;
@@ -774,26 +775,18 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_uicmp:
   case AMDGPU::BI__builtin_amdgcn_uicmpl:
   case AMDGPU::BI__builtin_amdgcn_sicmp:
-  case AMDGPU::BI__builtin_amdgcn_sicmpl: {
-    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
-    llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
-
-    // FIXME-GFX10: How should 32 bit mask be handled?
-    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_icmp,
-      { Builder.getInt64Ty(), Src0->getType() });
-    return Builder.CreateCall(F, { Src0, Src1, Src2 });
-  }
+  case AMDGPU::BI__builtin_amdgcn_sicmpl:
   case AMDGPU::BI__builtin_amdgcn_fcmp:
   case AMDGPU::BI__builtin_amdgcn_fcmpf: {
-    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
-    llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
+    Value *LHS = EmitScalarExpr(E->getArg(0));
+    Value *RHS = EmitScalarExpr(E->getArg(1));
+    CmpInst::Predicate Pred = static_cast<CmpInst::Predicate>(
+        cast<ConstantInt>(EmitScalarExpr(E->getArg(2)))->getZExtValue());
 
     // FIXME-GFX10: How should 32 bit mask be handled?
-    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_fcmp,
-      { Builder.getInt64Ty(), Src0->getType() });
-    return Builder.CreateCall(F, { Src0, Src1, Src2 });
+    return Builder.CreateIntrinsic(Builder.getInt64Ty(),
+                                   Intrinsic::amdgcn_ballot,
+                                   Builder.CreateCmp(Pred, LHS, RHS));
   }
   case AMDGPU::BI__builtin_amdgcn_class:
   case AMDGPU::BI__builtin_amdgcn_classf:

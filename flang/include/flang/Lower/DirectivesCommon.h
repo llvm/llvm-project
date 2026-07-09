@@ -18,7 +18,6 @@
 #ifndef FORTRAN_LOWER_DIRECTIVES_COMMON_H
 #define FORTRAN_LOWER_DIRECTIVES_COMMON_H
 
-#include "flang/Common/idioms.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Bridge.h"
@@ -33,11 +32,7 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Parser/parse-tree.h"
-#include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Value.h"
 #include <list>
 #include <type_traits>

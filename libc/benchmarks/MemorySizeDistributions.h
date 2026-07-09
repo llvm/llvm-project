@@ -25,8 +25,8 @@ namespace libc_benchmarks {
 /// A simple POD exposing caracteristics of a memory function size
 /// distributions. The underlying data is immutable.
 struct MemorySizeDistribution {
-  StringRef Name;                 // The name of the distribution.
-  ArrayRef<double> Probabilities; // Size indexed array of probabilities.
+  StringRef name;                 // The name of the distribution.
+  ArrayRef<double> probabilities; // Size indexed array of probabilities.
 };
 
 /// Returns a list of memmove size distributions.

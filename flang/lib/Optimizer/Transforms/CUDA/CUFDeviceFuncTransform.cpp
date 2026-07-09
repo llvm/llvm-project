@@ -11,19 +11,15 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/Index/IR/IndexDialect.h"
-#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSet.h"
 
@@ -40,6 +36,52 @@ class CUFDeviceFuncTransform
     : public fir::impl::CUFDeviceFuncTransformBase<CUFDeviceFuncTransform> {
   using CUFDeviceFuncTransformBase<
       CUFDeviceFuncTransform>::CUFDeviceFuncTransformBase;
+
+  static bool isPointerLikeKernelArg(mlir::Type argType) {
+    return mlir::isa<fir::ReferenceType, fir::BaseBoxType>(argType);
+  }
+
+  // Decorate INTENT(IN) kernel arguments like C "const __restrict__". NVPTX
+  // only tags loads as invariant (and lowers them to ld.global.nc) when a
+  // kernel pointer parameter is both readonly and noalias; see
+  // NVPTXTagInvariantLoads.
+  static void setIntentInKernelArgAttrs(mlir::func::FuncOp funcOp,
+                                        gpu::GPUFuncOp deviceFuncOp) {
+    mlir::UnitAttr unitAttr = mlir::UnitAttr::get(funcOp.getContext());
+
+    auto markArg = [&](unsigned argIndex) {
+      if (argIndex >= deviceFuncOp.getNumArguments())
+        return;
+      mlir::Type argType = deviceFuncOp.getArgumentTypes()[argIndex];
+      if (!isPointerLikeKernelArg(argType))
+        return;
+      deviceFuncOp.setArgAttr(
+          argIndex, mlir::LLVM::LLVMDialect::getReadonlyAttrName(), unitAttr);
+      deviceFuncOp.setArgAttr(
+          argIndex, mlir::LLVM::LLVMDialect::getNoAliasAttrName(), unitAttr);
+    };
+
+    funcOp.walk([&](fir::DeclareOp declareOp) {
+      auto var =
+          mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
+      if (!var.isIntentIn())
+        return;
+      if (auto attrs = var.getFortranAttrs())
+        if (fir::bitEnumContainsAny(*attrs,
+                                    fir::FortranVariableFlagsEnum::value))
+          return;
+      if (std::optional<uint32_t> dummyArgNo = declareOp.getDummyArgNo()) {
+        // Dummy argument numbers are 1-based in FIR.
+        markArg(*dummyArgNo - 1);
+        return;
+      }
+      if (auto blockArg =
+              mlir::dyn_cast<mlir::BlockArgument>(declareOp.getMemref()))
+        if (blockArg.getOwner()->isEntryBlock() &&
+            blockArg.getOwner()->getParentOp() == funcOp)
+          markArg(blockArg.getArgNumber());
+    });
+  }
 
   static gpu::GPUFuncOp createGPUFuncOp(mlir::func::FuncOp funcOp,
                                         bool isGlobal, int computeCap) {
@@ -67,6 +109,9 @@ class CUFDeviceFuncTransform
     auto deviceFuncOp =
         gpu::GPUFuncOp::create(builder, loc, funcOp.getName(), type,
                                mlir::TypeRange{}, mlir::TypeRange{});
+    if (mlir::ArrayAttr argAttrs = funcOp.getAllArgAttrs())
+      deviceFuncOp.setAllArgAttrs(argAttrs);
+    setIntentInKernelArgAttrs(funcOp, deviceFuncOp);
     if (isGlobal)
       deviceFuncOp.setKernel(true);
 
@@ -101,8 +146,10 @@ class CUFDeviceFuncTransform
       auto maxntid =
           builder.getDenseI32ArrayAttr({static_cast<int32_t>(maxTPB), 1, 1});
       deviceFuncOp->setAttr(NVVM::NVVMDialect::getMaxntidAttrName(), maxntid);
-      deviceFuncOp->setAttr(NVVM::NVVMDialect::getMinctasmAttrName(),
-                            launchBoundsAttr.getMinBPM());
+      // The minimum-blocks-per-multiprocessor operand is optional.
+      if (launchBoundsAttr.getMinBPM())
+        deviceFuncOp->setAttr(NVVM::NVVMDialect::getMinctasmAttrName(),
+                              launchBoundsAttr.getMinBPM());
       if (computeCap >= 90 && launchBoundsAttr.getUpperBoundClusterSize())
         deviceFuncOp->setAttr(NVVM::NVVMDialect::getClusterMaxBlocksAttrName(),
                               launchBoundsAttr.getUpperBoundClusterSize());

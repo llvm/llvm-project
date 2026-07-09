@@ -164,7 +164,7 @@ TEST(NVPTXPackedRegister, Compact_DW_OP_regx_NoMRI) {
 
   std::string Result;
   raw_string_ostream OS(Result);
-  DataExtractor DE(Enc, true, 8);
+  DataExtractor DE(Enc, true);
   DWARFExpression Expr(DE, 8);
 
   printDwarfExpressionCompact(&Expr, OS, nullptr);
@@ -179,7 +179,7 @@ TEST(NVPTXPackedRegister, Full_DW_OP_regx_NoMRI) {
 
   std::string Result;
   raw_string_ostream OS(Result);
-  DataExtractor DE(Enc, true, 8);
+  DataExtractor DE(Enc, true);
   DWARFExpression Expr(DE, 8);
 
   DIDumpOptions DumpOpts;
@@ -195,7 +195,7 @@ TEST(NVPTXPackedRegister, Full_DW_OP_regx_CallbackMiss) {
 
   std::string Result;
   raw_string_ostream OS(Result);
-  DataExtractor DE(Enc, true, 8);
+  DataExtractor DE(Enc, true);
   DWARFExpression Expr(DE, 8);
 
   DIDumpOptions DumpOpts;

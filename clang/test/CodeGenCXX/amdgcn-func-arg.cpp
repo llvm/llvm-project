@@ -39,7 +39,7 @@ void func_with_ref_arg(A &a);
 void func_with_ref_arg(B &b);
 
 // CHECK-LABEL: define dso_local void @_Z22func_with_indirect_arg1A(
-// CHECK-SAME: ptr addrspace(5) noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: ptr addrspace(5) noundef align 4 [[A:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_INDIRECT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[P:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -63,7 +63,7 @@ void func_with_indirect_arg(A a) {
 // CHECK-NEXT:    call void @_ZN1AC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[A_ASCAST]]) #[[ATTR5]]
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[AGG_TMP_ASCAST]], ptr align 4 [[A_ASCAST]], i64 4, i1 false)
 // CHECK-NEXT:    [[AGG_TMP_ASCAST_ASCAST:%.*]] = addrspacecast ptr [[AGG_TMP_ASCAST]] to ptr addrspace(5)
-// CHECK-NEXT:    call void @_Z22func_with_indirect_arg1A(ptr addrspace(5) noundef [[AGG_TMP_ASCAST_ASCAST]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @_Z22func_with_indirect_arg1A(ptr addrspace(5) noundef align 4 [[AGG_TMP_ASCAST_ASCAST]]) #[[ATTR5]]
 // CHECK-NEXT:    call void @_ZN1AD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[AGG_TMP_ASCAST]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @_Z17func_with_ref_argR1A(ptr noundef nonnull align 4 dereferenceable(4) [[A_ASCAST]]) #[[ATTR5]]
 // CHECK-NEXT:    call void @_ZN1AD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[A_ASCAST]]) #[[ATTR6]]
@@ -82,7 +82,7 @@ void test_indirect_arg_auto() {
 // CHECK-NEXT:    [[AGG_TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[AGG_TMP]] to ptr
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[AGG_TMP_ASCAST]], ptr align 4 addrspacecast (ptr addrspace(1) @g_a to ptr), i64 4, i1 false)
 // CHECK-NEXT:    [[AGG_TMP_ASCAST_ASCAST:%.*]] = addrspacecast ptr [[AGG_TMP_ASCAST]] to ptr addrspace(5)
-// CHECK-NEXT:    call void @_Z22func_with_indirect_arg1A(ptr addrspace(5) noundef [[AGG_TMP_ASCAST_ASCAST]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @_Z22func_with_indirect_arg1A(ptr addrspace(5) noundef align 4 [[AGG_TMP_ASCAST_ASCAST]]) #[[ATTR5]]
 // CHECK-NEXT:    call void @_ZN1AD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[AGG_TMP_ASCAST]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @_Z17func_with_ref_argR1A(ptr noundef nonnull align 4 dereferenceable(4) addrspacecast (ptr addrspace(1) @g_a to ptr)) #[[ATTR5]]
 // CHECK-NEXT:    ret void

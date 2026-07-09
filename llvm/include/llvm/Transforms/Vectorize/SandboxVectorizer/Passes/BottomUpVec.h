@@ -98,7 +98,9 @@ class LLVM_ABI BottomUpVec final : public RegionPass {
   bool tryVectorize(ArrayRef<Value *> Seeds, LegalityAnalysis &Legality);
 
 public:
-  BottomUpVec() : RegionPass("bottom-up-vec") {}
+  BottomUpVec(StringRef AuxArg) : RegionPass("bottom-up-vec") {
+    assert(AuxArg.empty() && "This pass ignores aux arg!");
+  }
   bool runOnRegion(Region &Rgn, const Analyses &A) final;
 };
 

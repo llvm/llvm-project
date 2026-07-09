@@ -157,9 +157,8 @@ public:
   /// This allows a pass to explicitly set edge probabilities for a block. It
   /// can be used when updating the CFG to update the branch probability
   /// information.
-  LLVM_ABI void
-  setEdgeProbability(const BasicBlock *Src,
-                     const SmallVectorImpl<BranchProbability> &Probs);
+  LLVM_ABI void setEdgeProbability(const BasicBlock *Src,
+                                   ArrayRef<BranchProbability> Probs);
 
   /// Copy outgoing edge probabilities from \p Src to \p Dst.
   ///

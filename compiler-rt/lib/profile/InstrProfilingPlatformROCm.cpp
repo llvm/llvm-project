@@ -8,7 +8,6 @@
 
 extern "C" {
 #include "InstrProfiling.h"
-#include "InstrProfilingInternal.h"
 #include "InstrProfilingPort.h"
 }
 
@@ -32,6 +31,11 @@ extern "C" {
 #include <dlfcn.h>
 #include <pthread.h>
 #endif
+
+#include "InstrProfilingPlatformROCmInternal.h"
+
+// shortcut to shared helper names
+using namespace __prof_rocm;
 
 /* Serialize one-time HIP loader resolution and DynamicModules mutations.
  * Inline to avoid a sanitizer_common dependency. */
@@ -62,11 +66,7 @@ static void unlockDynamicModules(void) {
 }
 #endif
 
-struct OffloadSectionShadowGroup;
-static int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
-                                   const OffloadSectionShadowGroup *Sections);
-
-static int isVerboseMode() {
+int __prof_rocm::isVerboseMode() {
   static int IsVerbose = -1;
   if (IsVerbose == -1)
     IsVerbose = getenv("LLVM_PROFILE_VERBOSE") != nullptr;
@@ -265,13 +265,17 @@ static BOOL CALLBACK ensureHipLoadedCb(PINIT_ONCE, PVOID, PVOID *) {
 }
 #endif
 
-static void ensureHipLoaded(void) {
+void __prof_rocm::ensureHipLoaded(void) {
 #ifdef _WIN32
   InitOnceExecuteOnce(&HipLoadedOnce, ensureHipLoadedCb, NULL, NULL);
 #else
   pthread_once(&HipLoadedOnce, doEnsureHipLoaded);
 #endif
 }
+
+// Accessor for the HSA drain: true once the loaded HIP runtime exposes
+// hipMemcpy. Kept here so pHipMemcpy stays file-private to this TU.
+int __prof_rocm::hipMemcpyAvailable() { return pHipMemcpy != nullptr; }
 
 /* -------------------------------------------------------------------------- */
 /*  Public wrappers that forward to the loaded HIP symbols                   */
@@ -295,10 +299,11 @@ static int hipMemcpy(void *dest, const void *src, size_t len,
 
 /* Device section symbols must be registered with CLR first; otherwise
  * hipMemcpy may take a CPU path and crash. */
-static int memcpyDeviceToHost(void *Dst, const void *Src, size_t Size) {
+int __prof_rocm::memcpyDeviceToHost(void *Dst, const void *Src, size_t Size) {
   return hipMemcpy(Dst, Src, Size, 2 /* DToH */);
 }
 
+[[maybe_unused]]
 static int hipModuleGetGlobal(void **DevPtr, size_t *Bytes, void *Module,
                               const char *Name) {
   ensureHipLoaded();
@@ -498,16 +503,10 @@ static int registerPrfSymbol(const char *Name, void *UserData) {
     return 0; /* continue */
   }
 
-  if (MI->NumTUs >= MI->CapTUs) {
-    int NewCap = MI->CapTUs ? MI->CapTUs * 2 : 4;
-    OffloadDynamicTUInfo *New = (OffloadDynamicTUInfo *)realloc(
-        MI->TUs, NewCap * sizeof(OffloadDynamicTUInfo));
-    if (!New) {
-      PROF_ERR("%s\n", "failed to grow TU array");
-      return 0;
-    }
-    MI->TUs = New;
-    MI->CapTUs = NewCap;
+  if (growArray((void **)&MI->TUs, &MI->CapTUs, MI->NumTUs + 1, 4,
+                sizeof(*MI->TUs))) {
+    PROF_ERR("%s\n", "failed to grow TU array");
+    return 0;
   }
   OffloadDynamicTUInfo *TU = &MI->TUs[MI->NumTUs++];
   TU->DeviceVar = DeviceVar;
@@ -535,16 +534,10 @@ __llvm_profile_offload_register_dynamic_module(int ModuleLoadRc, void **Ptr,
     PROF_NOTE("Registering loaded module %d: rc=%d, module=%p, image=%p\n",
               NumDynamicModules, ModuleLoadRc, *Ptr, Image);
 
-  if (NumDynamicModules >= CapDynamicModules) {
-    int NewCap = CapDynamicModules ? CapDynamicModules * 2 : 64;
-    OffloadDynamicModuleInfo *New = (OffloadDynamicModuleInfo *)realloc(
-        DynamicModules, NewCap * sizeof(OffloadDynamicModuleInfo));
-    if (!New) {
-      unlockDynamicModules();
-      return;
-    }
-    DynamicModules = New;
-    CapDynamicModules = NewCap;
+  if (growArray((void **)&DynamicModules, &CapDynamicModules,
+                NumDynamicModules + 1, 64, sizeof(*DynamicModules))) {
+    unlockDynamicModules();
+    return;
   }
 
   OffloadDynamicModuleInfo *MI = &DynamicModules[NumDynamicModules++];
@@ -624,19 +617,6 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
   unlockDynamicModules();
 }
 
-/* Grow a void* array, doubling capacity (or starting at InitCap). */
-static int growPtrArray(void ***Arr, int *Num, int *Cap, int InitCap) {
-  if (*Num < *Cap)
-    return 0;
-  int NewCap = *Cap ? *Cap * 2 : InitCap;
-  void **New = (void **)realloc(*Arr, NewCap * sizeof(void *));
-  if (!New)
-    return -1;
-  *Arr = New;
-  *Cap = NewCap;
-  return 0;
-}
-
 static void **OffloadShadowVariables = nullptr;
 static int NumShadowVariables = 0;
 static int CapShadowVariables = 0;
@@ -644,6 +624,7 @@ static int CapShadowVariables = 0;
 struct OffloadSectionShadow {
   void *Data;
   void *Counters;
+  void *UniformCounters;
   void *Names;
 };
 
@@ -658,41 +639,20 @@ static OffloadSectionShadowGroup *OffloadSectionShadowGroups = nullptr;
 static int CapSectionShadowGroups = 0;
 
 static int ensureSectionShadowGroupCapacity(void) {
-  if (CapSectionShadowGroups >= CapShadowVariables)
-    return 0;
-  OffloadSectionShadowGroup *New = (OffloadSectionShadowGroup *)realloc(
-      OffloadSectionShadowGroups, CapShadowVariables * sizeof(*New));
-  if (!New)
-    return -1;
-  __builtin_memset(New + CapSectionShadowGroups, 0,
-                   (CapShadowVariables - CapSectionShadowGroups) *
-                       sizeof(*New));
-  OffloadSectionShadowGroups = New;
-  CapSectionShadowGroups = CapShadowVariables;
-  return 0;
+  return growArray((void **)&OffloadSectionShadowGroups,
+                   &CapSectionShadowGroups, CapShadowVariables,
+                   CapShadowVariables, sizeof(*OffloadSectionShadowGroups));
 }
 
 static int ensureSectionShadowCapacity(OffloadSectionShadowGroup *Group,
                                        int MinCapacity) {
-  if (Group->CapShadows >= MinCapacity)
-    return 0;
-  int NewCap = Group->CapShadows ? Group->CapShadows * 2 : 4;
-  while (NewCap < MinCapacity)
-    NewCap *= 2;
-  OffloadSectionShadow *New =
-      (OffloadSectionShadow *)realloc(Group->Shadows, NewCap * sizeof(*New));
-  if (!New)
-    return -1;
-  __builtin_memset(New + Group->CapShadows, 0,
-                   (NewCap - Group->CapShadows) * sizeof(*New));
-  Group->Shadows = New;
-  Group->CapShadows = NewCap;
-  return 0;
+  return growArray((void **)&Group->Shadows, &Group->CapShadows, MinCapacity, 4,
+                   sizeof(*Group->Shadows));
 }
 
 extern "C" void __llvm_profile_offload_register_shadow_variable(void *ptr) {
-  if (growPtrArray(&OffloadShadowVariables, &NumShadowVariables,
-                   &CapShadowVariables, 64))
+  if (growArray((void **)&OffloadShadowVariables, &CapShadowVariables,
+                NumShadowVariables + 1, 64, sizeof(*OffloadShadowVariables)))
     return;
   if (ensureSectionShadowGroupCapacity())
     return;
@@ -707,17 +667,18 @@ __llvm_profile_offload_register_section_shadow_variable(void *ptr) {
   if (NumShadowVariables == 0)
     return;
 
-  /* Match CGCUDANV.cpp: data, counters, then names for each kernel. */
+  /* Match CGCUDANV.cpp: data, counters, uniform counters, then names for each
+   * kernel. */
   OffloadSectionShadowGroup *Group =
       &OffloadSectionShadowGroups[NumShadowVariables - 1];
-  int ShadowIndex = Group->NumSections / 3;
+  int ShadowIndex = Group->NumSections / 4;
   if (ensureSectionShadowCapacity(Group, ShadowIndex + 1))
     return;
   if (ShadowIndex >= Group->NumShadows)
     Group->NumShadows = ShadowIndex + 1;
 
   OffloadSectionShadow *Shadow = &Group->Shadows[ShadowIndex];
-  switch (Group->NumSections % 3) {
+  switch (Group->NumSections % 4) {
   case 0:
     Shadow->Data = ptr;
     break;
@@ -725,6 +686,9 @@ __llvm_profile_offload_register_section_shadow_variable(void *ptr) {
     Shadow->Counters = ptr;
     break;
   case 2:
+    Shadow->UniformCounters = ptr;
+    break;
+  case 3:
     Shadow->Names = ptr;
     break;
   }
@@ -733,22 +697,55 @@ __llvm_profile_offload_register_section_shadow_variable(void *ptr) {
 
 namespace {
 
-// free()-based scope guard. Use .release() to transfer ownership.
-struct UniqueFree {
-  void *Ptr;
-  explicit UniqueFree(void *P = nullptr) : Ptr(P) {}
-  ~UniqueFree() { free(Ptr); }
-  UniqueFree(const UniqueFree &) = delete;
-  UniqueFree &operator=(const UniqueFree &) = delete;
-  char *get() const { return static_cast<char *>(Ptr); }
-  void reset(void *P) {
-    free(Ptr);
-    Ptr = P;
+struct ProfileSectionCopy {
+  const char *Name;
+  const void *DevBegin;
+  size_t Size;
+  const void *&CachedDevBegin;
+  char *&CachedHost;
+  size_t &CachedSize;
+  UniqueFree Owner;
+  char *HostBegin = nullptr;
+  bool Reused = false;
+
+  ProfileSectionCopy(const char *Name, const void *DevBegin, size_t Size,
+                     const void *&CachedDevBegin, char *&CachedHost,
+                     size_t &CachedSize)
+      : Name(Name), DevBegin(DevBegin), Size(Size),
+        CachedDevBegin(CachedDevBegin), CachedHost(CachedHost),
+        CachedSize(CachedSize) {}
+
+  ProfileSectionCopy(const ProfileSectionCopy &) = delete;
+  ProfileSectionCopy &operator=(const ProfileSectionCopy &) = delete;
+
+  int prepare() {
+    if (Size == 0)
+      return 0;
+    if (DevBegin == CachedDevBegin && Size == CachedSize) {
+      HostBegin = CachedHost;
+      Reused = true;
+      if (isVerboseMode())
+        PROF_NOTE("Reusing cached %s section (%zu bytes)\n", Name, Size);
+    } else {
+      HostBegin = static_cast<char *>(malloc(Size));
+      Owner.reset(HostBegin);
+    }
+    return HostBegin ? 0 : -1;
   }
-  void *release() {
-    void *P = Ptr;
-    Ptr = nullptr;
-    return P;
+
+  int copy() {
+    if (Size == 0 || Reused)
+      return 0;
+    return memcpyDeviceToHost(HostBegin, DevBegin, Size);
+  }
+
+  void commitCache() {
+    if (Reused || Size == 0)
+      return;
+    CachedDevBegin = DevBegin;
+    CachedHost = HostBegin;
+    CachedSize = Size;
+    Owner.release();
   }
 };
 
@@ -766,29 +763,33 @@ static int getRegisteredSectionBounds(void *Shadow, void **DevicePtr,
 struct RegisteredSectionRange {
   const void *Data;
   const void *Counters;
+  const void *UniformCounters;
   const void *Names;
   size_t DataSize;
   size_t CountersSize;
+  size_t UniformCountersSize;
   size_t NamesSize;
   size_t DataOffset;
   size_t CountersOffset;
+  size_t UniformCountersOffset;
   size_t NamesOffset;
 };
 
 static int
 hasCompleteSectionShadows(const OffloadSectionShadowGroup *Sections) {
-  if (!Sections || Sections->NumShadows == 0 || Sections->NumSections % 3 != 0)
+  if (!Sections || Sections->NumShadows == 0 || Sections->NumSections % 4 != 0)
     return 0;
   for (int I = 0; I < Sections->NumShadows; ++I) {
     if (!Sections->Shadows[I].Data || !Sections->Shadows[I].Counters ||
-        !Sections->Shadows[I].Names)
+        !Sections->Shadows[I].UniformCounters || !Sections->Shadows[I].Names)
       return 0;
   }
   return 1;
 }
 
-static int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
-                                   const OffloadSectionShadowGroup *Sections) {
+int __prof_rocm::processDeviceOffloadPrf(
+    void *DeviceOffloadPrf, const char *Target,
+    const OffloadSectionShadowGroup *Sections) {
   __llvm_profile_gpu_sections HostSections;
 
   if (hipMemcpy(&HostSections, DeviceOffloadPrf, sizeof(HostSections),
@@ -800,13 +801,17 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
   const void *DevCntsBegin = HostSections.CountersStart;
   const void *DevDataBegin = HostSections.DataStart;
   const void *DevNamesBegin = HostSections.NamesStart;
+  const void *DevUniformCntsBegin = HostSections.UniformCountersStart;
   const void *DevCntsEnd = HostSections.CountersStop;
   const void *DevDataEnd = HostSections.DataStop;
   const void *DevNamesEnd = HostSections.NamesStop;
+  const void *DevUniformCntsEnd = HostSections.UniformCountersStop;
 
   size_t CountersSize = (const char *)DevCntsEnd - (const char *)DevCntsBegin;
   size_t DataSize = (const char *)DevDataEnd - (const char *)DevDataBegin;
   size_t NamesSize = (const char *)DevNamesEnd - (const char *)DevNamesBegin;
+  size_t UniformCountersSize =
+      (const char *)DevUniformCntsEnd - (const char *)DevUniformCntsBegin;
 
   int UseRegisteredSections = hasCompleteSectionShadows(Sections);
   RegisteredSectionRange *RegisteredRanges = nullptr;
@@ -814,19 +819,15 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
 
   if (isVerboseMode())
     PROF_NOTE("Section pointers: Cnts=[%p,%p]=%zu Data=[%p,%p]=%zu "
-              "Names=[%p,%p]=%zu\n",
+              "Names=[%p,%p]=%zu UCnts=[%p,%p]=%zu\n",
               DevCntsBegin, DevCntsEnd, CountersSize, DevDataBegin, DevDataEnd,
-              DataSize, DevNamesBegin, DevNamesEnd, NamesSize);
+              DataSize, DevNamesBegin, DevNamesEnd, NamesSize,
+              DevUniformCntsBegin, DevUniformCntsEnd, UniformCountersSize);
 
   if (CountersSize == 0 || DataSize == 0)
     return 0;
 
   int ret = -1;
-  int NamesReused = 0, CntsReused = 0, DataReused = 0;
-
-  char *HostDataBegin = nullptr;
-  char *HostCountersBegin = nullptr;
-  char *HostNamesBegin = nullptr;
 
   /* Sections using linker-defined __start_/__stop_ bounds are shared across
      TU structs in RDC mode. Deduplicate by caching the last copied range. */
@@ -842,8 +843,22 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
   static char *CachedHostData = nullptr;
   static size_t CachedDataSize = 0;
 
-  // Owns freshly malloc'd buffers; release() transfers ownership to the cache.
-  UniqueFree CntsOwner, DataOwner, NamesOwner, RegisteredRangeOwner;
+  static const void *CachedDevUCntsBegin = nullptr;
+  static char *CachedHostUCnts = nullptr;
+  static size_t CachedUCntsSize = 0;
+
+  ProfileSectionCopy Cnts("counters", DevCntsBegin, CountersSize,
+                          CachedDevCntsBegin, CachedHostCnts, CachedCntsSize);
+  ProfileSectionCopy Data("data", DevDataBegin, DataSize, CachedDevDataBegin,
+                          CachedHostData, CachedDataSize);
+  ProfileSectionCopy Names("names", DevNamesBegin, NamesSize,
+                           CachedDevNamesBegin, CachedHostNames,
+                           CachedNamesSize);
+  ProfileSectionCopy UCnts("ucnts", DevUniformCntsBegin, UniformCountersSize,
+                           CachedDevUCntsBegin, CachedHostUCnts,
+                           CachedUCntsSize);
+
+  UniqueFree RegisteredRangeOwner;
 
   if (UseRegisteredSections) {
     NumRegisteredRanges = Sections->NumShadows;
@@ -859,18 +874,23 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
 
     size_t RegisteredDataSize = 0;
     size_t RegisteredCountersSize = 0;
+    size_t RegisteredUniformCountersSize = 0;
     size_t RegisteredNamesSize = 0;
     for (int I = 0; I < NumRegisteredRanges; ++I) {
       void *Data = nullptr;
       void *Counters = nullptr;
+      void *UniformCounters = nullptr;
       void *Names = nullptr;
       size_t ThisDataSize = 0;
       size_t ThisCountersSize = 0;
+      size_t ThisUniformCountersSize = 0;
       size_t ThisNamesSize = 0;
       OffloadSectionShadow *Shadow = &Sections->Shadows[I];
       if (getRegisteredSectionBounds(Shadow->Data, &Data, &ThisDataSize) != 0 ||
           getRegisteredSectionBounds(Shadow->Counters, &Counters,
                                      &ThisCountersSize) != 0 ||
+          getRegisteredSectionBounds(Shadow->UniformCounters, &UniformCounters,
+                                     &ThisUniformCountersSize) != 0 ||
           getRegisteredSectionBounds(Shadow->Names, &Names, &ThisNamesSize) !=
               0) {
         PROF_ERR("%s\n", "failed to get registered section bounds");
@@ -879,14 +899,18 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
 
       RegisteredRanges[I].Data = Data;
       RegisteredRanges[I].Counters = Counters;
+      RegisteredRanges[I].UniformCounters = UniformCounters;
       RegisteredRanges[I].Names = Names;
       RegisteredRanges[I].DataSize = ThisDataSize;
       RegisteredRanges[I].CountersSize = ThisCountersSize;
+      RegisteredRanges[I].UniformCountersSize = ThisUniformCountersSize;
       RegisteredRanges[I].NamesSize = ThisNamesSize;
       RegisteredRanges[I].DataOffset = RegisteredDataSize;
       RegisteredRanges[I].CountersOffset = RegisteredCountersSize;
+      RegisteredRanges[I].UniformCountersOffset = RegisteredUniformCountersSize;
       RegisteredDataSize += ThisDataSize;
       RegisteredCountersSize += ThisCountersSize;
+      RegisteredUniformCountersSize += ThisUniformCountersSize;
 
       int ReuseNames = 0;
       for (int J = 0; J < I; ++J) {
@@ -905,26 +929,33 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
 
     DataSize = RegisteredDataSize;
     CountersSize = RegisteredCountersSize;
+    UniformCountersSize = RegisteredUniformCountersSize;
     NamesSize = RegisteredNamesSize;
-    HostDataBegin = (char *)malloc(DataSize);
-    HostCountersBegin = (char *)malloc(CountersSize);
-    HostNamesBegin = NamesSize ? (char *)malloc(NamesSize) : nullptr;
-    DataOwner.reset(HostDataBegin);
-    CntsOwner.reset(HostCountersBegin);
-    NamesOwner.reset(HostNamesBegin);
-    if ((DataSize > 0 && !HostDataBegin) ||
-        (CountersSize > 0 && !HostCountersBegin) ||
-        (NamesSize > 0 && !HostNamesBegin)) {
+    Data.HostBegin = DataSize ? (char *)malloc(DataSize) : nullptr;
+    Cnts.HostBegin = CountersSize ? (char *)malloc(CountersSize) : nullptr;
+    UCnts.HostBegin =
+        UniformCountersSize ? (char *)malloc(UniformCountersSize) : nullptr;
+    Names.HostBegin = NamesSize ? (char *)malloc(NamesSize) : nullptr;
+    Data.Owner.reset(Data.HostBegin);
+    Cnts.Owner.reset(Cnts.HostBegin);
+    UCnts.Owner.reset(UCnts.HostBegin);
+    Names.Owner.reset(Names.HostBegin);
+    if ((DataSize > 0 && !Data.HostBegin) ||
+        (CountersSize > 0 && !Cnts.HostBegin) ||
+        (UniformCountersSize > 0 && !UCnts.HostBegin) ||
+        (NamesSize > 0 && !Names.HostBegin)) {
       PROF_ERR("%s\n", "failed to allocate host memory for device sections");
       return -1;
     }
 
     for (int I = 0; I < NumRegisteredRanges; ++I) {
       RegisteredSectionRange *R = &RegisteredRanges[I];
-      if (memcpyDeviceToHost(HostDataBegin + R->DataOffset, R->Data,
+      if (memcpyDeviceToHost(Data.HostBegin + R->DataOffset, R->Data,
                              R->DataSize) != 0 ||
-          memcpyDeviceToHost(HostCountersBegin + R->CountersOffset, R->Counters,
-                             R->CountersSize) != 0) {
+          memcpyDeviceToHost(Cnts.HostBegin + R->CountersOffset, R->Counters,
+                             R->CountersSize) != 0 ||
+          memcpyDeviceToHost(UCnts.HostBegin + R->UniformCountersOffset,
+                             R->UniformCounters, R->UniformCountersSize) != 0) {
         PROF_ERR("%s\n", "failed to copy profile sections from device");
         return -1;
       }
@@ -938,105 +969,54 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
         }
       }
       if (CopyNames && R->NamesSize > 0 &&
-          memcpyDeviceToHost(HostNamesBegin + R->NamesOffset, R->Names,
+          memcpyDeviceToHost(Names.HostBegin + R->NamesOffset, R->Names,
                              R->NamesSize) != 0) {
         PROF_ERR("%s\n", "failed to copy profile sections from device");
         return -1;
       }
     }
   } else {
-    if (CountersSize > 0 && DevCntsBegin == CachedDevCntsBegin &&
-        CountersSize == CachedCntsSize) {
-      HostCountersBegin = CachedHostCnts;
-      CntsReused = 1;
-      if (isVerboseMode())
-        PROF_NOTE("Reusing cached counters section (%zu bytes)\n",
-                  CountersSize);
-    } else if (CountersSize > 0) {
-      HostCountersBegin = (char *)malloc(CountersSize);
-      CntsOwner.reset(HostCountersBegin);
-    }
-
-    if (DataSize > 0 && DevDataBegin == CachedDevDataBegin &&
-        DataSize == CachedDataSize) {
-      HostDataBegin = CachedHostData;
-      DataReused = 1;
-      if (isVerboseMode())
-        PROF_NOTE("Reusing cached data section (%zu bytes)\n", DataSize);
-    } else if (DataSize > 0) {
-      HostDataBegin = (char *)malloc(DataSize);
-      DataOwner.reset(HostDataBegin);
-    }
-
-    if (NamesSize > 0 && DevNamesBegin == CachedDevNamesBegin &&
-        NamesSize == CachedNamesSize) {
-      HostNamesBegin = CachedHostNames;
-      NamesReused = 1;
-      if (isVerboseMode())
-        PROF_NOTE("Reusing cached names section (%zu bytes)\n", NamesSize);
-    } else if (NamesSize > 0) {
-      HostNamesBegin = (char *)malloc(NamesSize);
-      NamesOwner.reset(HostNamesBegin);
-    }
-
-    if ((DataSize > 0 && !HostDataBegin) ||
-        (CountersSize > 0 && !HostCountersBegin) ||
-        (NamesSize > 0 && !HostNamesBegin)) {
+    if (Cnts.prepare() != 0 || Data.prepare() != 0 || Names.prepare() != 0 ||
+        UCnts.prepare() != 0) {
       PROF_ERR("%s\n", "failed to allocate host memory for device sections");
       return -1;
     }
 
-    if ((DataSize > 0 && !DataReused &&
-         memcpyDeviceToHost(HostDataBegin, DevDataBegin, DataSize) != 0) ||
-        (CountersSize > 0 && !CntsReused &&
-         memcpyDeviceToHost(HostCountersBegin, DevCntsBegin, CountersSize) !=
-             0) ||
-        (NamesSize > 0 && !NamesReused &&
-         memcpyDeviceToHost(HostNamesBegin, DevNamesBegin, NamesSize) != 0)) {
+    if (Data.copy() != 0 || Cnts.copy() != 0 || Names.copy() != 0 ||
+        UCnts.copy() != 0) {
       PROF_ERR("%s\n", "failed to copy profile sections from device");
       return -1;
     }
 
     /* Cache buffers so RDC-mode multi-shadow drains can reuse them.
      * release() prevents the scope guards from freeing what the cache owns. */
-    if (!CntsReused && CountersSize > 0) {
-      CachedDevCntsBegin = DevCntsBegin;
-      CachedHostCnts = HostCountersBegin;
-      CachedCntsSize = CountersSize;
-      CntsOwner.release();
-    }
-    if (!DataReused && DataSize > 0) {
-      CachedDevDataBegin = DevDataBegin;
-      CachedHostData = HostDataBegin;
-      CachedDataSize = DataSize;
-      DataOwner.release();
-    }
-    if (!NamesReused && NamesSize > 0) {
-      CachedDevNamesBegin = DevNamesBegin;
-      CachedHostNames = HostNamesBegin;
-      CachedNamesSize = NamesSize;
-      NamesOwner.release();
-    }
+    Cnts.commitCache();
+    Data.commitCache();
+    Names.commitCache();
+    UCnts.commitCache();
   }
 
   if (isVerboseMode())
-    PROF_NOTE("Copied device sections: Counters=%zu, Data=%zu, Names=%zu\n",
-              CountersSize, DataSize, NamesSize);
+    PROF_NOTE("Copied device sections: Counters=%zu, Data=%zu, Names=%zu, "
+              "UniformCounters=%zu\n",
+              CountersSize, DataSize, NamesSize, UniformCountersSize);
 
   // Arrange buffer as [Data][Padding][Counters][Names] to match the layout
   // expected by lprofWriteDataImpl (CountersDelta = CountersBegin - DataBegin).
   const uint64_t NumData = DataSize / sizeof(__llvm_profile_data);
   const uint64_t NumBitmapBytes = 0;
+  const uint64_t NumUniformCounters = UniformCountersSize / sizeof(uint64_t);
   const uint64_t VTableSectionSize = 0;
   const uint64_t VNamesSize = 0;
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
-      PaddingBytesAfterBitmapBytes, PaddingBytesAfterNames,
-      PaddingBytesAfterVTable, PaddingBytesAfterVNames;
+      PaddingBytesAfterBitmapBytes, PaddingBytesAfterUniformCounters,
+      PaddingBytesAfterNames, PaddingBytesAfterVTable, PaddingBytesAfterVNames;
 
   if (__llvm_profile_get_padding_sizes_for_counters(
-          DataSize, CountersSize, NumBitmapBytes, NamesSize, VTableSectionSize,
-          VNamesSize, &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
-          &PaddingBytesAfterBitmapBytes, &PaddingBytesAfterNames,
+          DataSize, CountersSize, NumBitmapBytes, NumUniformCounters, NamesSize,
+          VTableSectionSize, VNamesSize, &PaddingBytesBeforeCounters,
+          &PaddingBytesAfterCounters, &PaddingBytesAfterBitmapBytes,
+          &PaddingBytesAfterUniformCounters, &PaddingBytesAfterNames,
           &PaddingBytesAfterVTable, &PaddingBytesAfterVNames) != 0) {
     PROF_ERR("%s\n", "failed to get padding sizes");
     return -1;
@@ -1057,51 +1037,76 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
       ContiguousBuffer + DataSize + PaddingBytesBeforeCounters;
   char *BufNamesBegin = BufCountersBegin + CountersSize;
 
-  __builtin_memcpy(BufDataBegin, HostDataBegin, DataSize);
-  __builtin_memcpy(BufCountersBegin, HostCountersBegin, CountersSize);
-  __builtin_memcpy(BufNamesBegin, HostNamesBegin, NamesSize);
+  __builtin_memcpy(BufDataBegin, Data.HostBegin, DataSize);
+  __builtin_memcpy(BufCountersBegin, Cnts.HostBegin, CountersSize);
+  __builtin_memcpy(BufNamesBegin, Names.HostBegin, NamesSize);
 
-  // CounterPtr is a device-relative offset; relocate it for the file layout
-  // where the Data section precedes Counters.
+  // CounterPtr and UniformCounterPtr are device-relative offsets; relocate
+  // them for the file layout where the Data section precedes the Counters and
+  // UniformCounters sections. Uniform counters are copied in linker (section)
+  // order and located via their relative pointer, exactly like the regular
+  // counters: llvm-profdata reads them through UniformCounterPtr (decrementing
+  // UniformCountersDelta per record, just like CountersDelta) and does not
+  // assume data-record order, so no reordering is needed.
+  ptrdiff_t UCFileOffset = DataSize + PaddingBytesBeforeCounters +
+                           CountersSize + PaddingBytesAfterCounters +
+                           NumBitmapBytes + PaddingBytesAfterBitmapBytes;
   __llvm_profile_data *RelocatedData = (__llvm_profile_data *)BufDataBegin;
   for (uint64_t i = 0; i < NumData; ++i) {
-    if (RelocatedData[i].CounterPtr) {
-      ptrdiff_t DeviceCounterPtrOffset = (ptrdiff_t)RelocatedData[i].CounterPtr;
-      size_t DataRecordOffset = i * sizeof(__llvm_profile_data);
-      const char *RangeDevDataBegin = (const char *)DevDataBegin;
-      const char *RangeDevCountersBegin = (const char *)DevCntsBegin;
-      size_t RangeCountersOffset = 0;
-      if (UseRegisteredSections) {
-        int FoundRange = 0;
-        for (int R = 0; R < NumRegisteredRanges; ++R) {
-          RegisteredSectionRange *Range = &RegisteredRanges[R];
-          if (DataRecordOffset < Range->DataOffset ||
-              DataRecordOffset >= Range->DataOffset + Range->DataSize)
-            continue;
-          RangeDevDataBegin = (const char *)Range->Data;
-          RangeDevCountersBegin = (const char *)Range->Counters;
-          RangeCountersOffset = Range->CountersOffset;
-          DataRecordOffset -= Range->DataOffset;
-          FoundRange = 1;
-          break;
-        }
-        if (!FoundRange) {
-          PROF_ERR("%s\n", "failed to locate profile data record range");
-          return -1;
-        }
+    size_t DataRecordOffset = i * sizeof(__llvm_profile_data);
+    const char *RangeDevDataBegin = (const char *)DevDataBegin;
+    const char *RangeDevCountersBegin = (const char *)DevCntsBegin;
+    const char *RangeDevUCntsBegin = (const char *)DevUniformCntsBegin;
+    size_t RangeCountersOffset = 0;
+    size_t RangeUCntsOffset = 0;
+    if (UseRegisteredSections) {
+      int FoundRange = 0;
+      for (int R = 0; R < NumRegisteredRanges; ++R) {
+        RegisteredSectionRange *Range = &RegisteredRanges[R];
+        if (DataRecordOffset < Range->DataOffset ||
+            DataRecordOffset >= Range->DataOffset + Range->DataSize)
+          continue;
+        RangeDevDataBegin = (const char *)Range->Data;
+        RangeDevCountersBegin = (const char *)Range->Counters;
+        RangeDevUCntsBegin = (const char *)Range->UniformCounters;
+        RangeCountersOffset = Range->CountersOffset;
+        RangeUCntsOffset = Range->UniformCountersOffset;
+        DataRecordOffset -= Range->DataOffset;
+        FoundRange = 1;
+        break;
       }
-      const char *DeviceDataStructAddr = RangeDevDataBegin + DataRecordOffset;
+      if (!FoundRange) {
+        PROF_ERR("%s\n", "failed to locate profile data record range");
+        return -1;
+      }
+    }
+    const char *DeviceDataStructAddr = RangeDevDataBegin + DataRecordOffset;
+    if (RelocatedData[i].CounterPtr) {
       const char *DeviceCountersAddr =
-          DeviceDataStructAddr + DeviceCounterPtrOffset;
+          DeviceDataStructAddr + (ptrdiff_t)RelocatedData[i].CounterPtr;
       ptrdiff_t OffsetIntoCountersSection =
           DeviceCountersAddr - RangeDevCountersBegin;
-
       ptrdiff_t NewRelativeOffset =
           DataSize + PaddingBytesBeforeCounters + RangeCountersOffset +
           OffsetIntoCountersSection - (i * sizeof(__llvm_profile_data));
       __builtin_memcpy((char *)RelocatedData + i * sizeof(__llvm_profile_data) +
                            offsetof(__llvm_profile_data, CounterPtr),
                        &NewRelativeOffset, sizeof(NewRelativeOffset));
+    }
+    if (UCnts.HostBegin && RelocatedData[i].UniformCounterPtr) {
+      const char *DeviceUCAddr =
+          DeviceDataStructAddr + (ptrdiff_t)RelocatedData[i].UniformCounterPtr;
+      ptrdiff_t OffsetIntoUCSection = DeviceUCAddr - RangeDevUCntsBegin;
+      ptrdiff_t NewUCRelativeOffset = UCFileOffset + RangeUCntsOffset +
+                                      OffsetIntoUCSection -
+                                      (i * sizeof(__llvm_profile_data));
+      __builtin_memcpy((char *)RelocatedData + i * sizeof(__llvm_profile_data) +
+                           offsetof(__llvm_profile_data, UniformCounterPtr),
+                       &NewUCRelativeOffset, sizeof(NewUCRelativeOffset));
+    } else {
+      __builtin_memset((char *)RelocatedData + i * sizeof(__llvm_profile_data) +
+                           offsetof(__llvm_profile_data, UniformCounterPtr),
+                       0, sizeof(RelocatedData[i].UniformCounterPtr));
     }
     __builtin_memset((char *)RelocatedData + i * sizeof(__llvm_profile_data) +
                          offsetof(__llvm_profile_data, BitmapPtr),
@@ -1114,13 +1119,20 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
   ret = __llvm_write_custom_profile(
       Target, (__llvm_profile_data *)BufDataBegin,
       (__llvm_profile_data *)(BufDataBegin + DataSize), BufCountersBegin,
-      BufCountersBegin + CountersSize, BufNamesBegin, BufNamesBegin + NamesSize,
-      nullptr);
+      BufCountersBegin + CountersSize, UCnts.HostBegin,
+      UCnts.HostBegin ? UCnts.HostBegin + UniformCountersSize : nullptr,
+      BufNamesBegin, BufNamesBegin + NamesSize, nullptr);
 
   if (ret != 0) {
     PROF_ERR("%s\n", "failed to write device profile using shared API");
-  } else if (isVerboseMode()) {
-    PROF_NOTE("%s\n", "Successfully wrote device profile using shared API");
+  } else {
+#if defined(__linux__) && !defined(_WIN32)
+    // Dedup against the supplemental HSA pass: this section is now drained, so
+    // the HSA walk must not drain the same device code object again.
+    profRecordDrainedBounds(DevDataBegin, DevCntsBegin, DevNamesBegin);
+#endif
+    if (isVerboseMode())
+      PROF_NOTE("%s\n", "Successfully wrote device profile using shared API");
   }
 
   return ret;
@@ -1152,13 +1164,11 @@ static int isHipAvailable(void) {
 /*  Collect device-side profile data                                          */
 /* -------------------------------------------------------------------------- */
 
-extern "C" int __llvm_profile_hip_collect_device_data(void) {
-  if (NumShadowVariables == 0 && NumDynamicModules == 0)
-    return 0;
-
-  if (!isHipAvailable())
-    return 0;
-
+/* Host-shadow drain: static-linked kernels (host __hipRegisterVar shadows) and
+ * intercepted dynamic modules. The caller gates this on
+ * (NumShadowVariables || NumDynamicModules) && isHipAvailable(); pure
+ * device-linked programs (RCCL) are handled by the supplemental HSA pass. */
+static int collectHostShadowData(void) {
   int Ret = 0;
 
   /* Shadow variables (static-linked kernels): drain from every device. */
@@ -1172,6 +1182,18 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
           PROF_NOTE("Skipping unused device %d\n", Dev);
         continue;
       }
+#if defined(__linux__) && !defined(_WIN32)
+      /* When no kernel launch was tracked at all, shouldCollectDevice() falls
+       * back to collect-all, which can fault/hang reading a non-resident
+       * device's sections on a multi-GPU host. On Linux the supplemental HSA
+       * drain covers those cases safely. */
+      if (!__atomic_load_n(&AnyDeviceUsed, __ATOMIC_ACQUIRE)) {
+        if (isVerboseMode())
+          PROF_NOTE("No tracked launch; deferring device %d to HSA drain\n",
+                    Dev);
+        continue;
+      }
+#endif
       if (hipSetDevice(Dev) != 0) {
         if (isVerboseMode())
           PROF_NOTE("Failed to set device %d, skipping\n", Dev);
@@ -1182,8 +1204,9 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
         PROF_NOTE("Collecting static profile data from device %d (%s)\n", Dev,
                   ArchName);
       for (int i = 0; i < NumShadowVariables; ++i) {
-        /* RDC-mode multi-shadow drains need a distinct profraw per TU;
-         * single-TU programs keep the bare arch target. */
+        /* Stable name per shadow so a repeated drain (explicit collect plus the
+         * atexit drain) overwrites its own profraw rather than emitting a
+         * second one: bare arch for a single TU, arch.<i> for RDC multi-TU. */
         const char *Target = ArchName;
         char TargetWithIdx[64];
         if (NumShadowVariables > 1) {
@@ -1214,6 +1237,22 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
     }
   }
   unlockDynamicModules();
+
+  return Ret;
+}
+
+extern "C" int __llvm_profile_hip_collect_device_data(void) {
+  int Ret = 0;
+
+  if ((NumShadowVariables != 0 || NumDynamicModules != 0) && isHipAvailable() &&
+      collectHostShadowData() != 0)
+    Ret = -1;
+
+#if defined(__linux__) && !defined(_WIN32)
+  /* Supplemental HSA-introspection drain */
+  if (drainDevicesViaHsa() != 0)
+    Ret = -1;
+#endif
 
   if (Ret != 0)
     PROF_WARN("%s\n", "failed to collect device profile data");
@@ -1268,6 +1307,8 @@ static int recordHipMultiDeviceLaunchResult(int Rc,
   return Rc;
 }
 
+// interceptors must have external linkage
+// NOLINTBEGIN(misc-use-internal-linkage)
 INTERCEPTOR(int, hipLaunchKernel, const void *Function, HipDim3 GridDim,
             HipDim3 BlockDim, void **Args, size_t SharedMemBytes,
             HipStream Stream) {
@@ -1398,6 +1439,7 @@ INTERCEPTOR(int, hipModuleUnload, void *module) {
   __llvm_profile_offload_unregister_dynamic_module(module);
   return REAL(hipModuleUnload)(module);
 }
+// NOLINTEND(misc-use-internal-linkage)
 
 __attribute__((constructor)) static void installHipInterceptors() {
   /* Avoid interception unless the HIP runtime is already loaded. */

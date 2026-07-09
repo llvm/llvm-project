@@ -162,15 +162,6 @@ template <typename T> static bool isSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
   return true;
 }
 
-/// Return true if \p C0 is a strict subset of \p C1. Note that both arrays are
-/// expected to be sorted.
-template <typename T>
-static bool isStrictSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
-  if (C0.size() >= C1.size())
-    return false;
-  return isSubset<T>(C0, C1);
-}
-
 static bool isStrictSubset(const VariantMatchInfo &VMI0,
                            const VariantMatchInfo &VMI1) {
   // If all required traits are a strict subset and the ordered vectors storing

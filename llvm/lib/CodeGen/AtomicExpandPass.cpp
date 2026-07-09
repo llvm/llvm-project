@@ -174,24 +174,26 @@ public:
 struct ReplacementIRBuilder
     : IRBuilder<InstSimplifyFolder, IRBuilderCallbackInserter> {
   MDNode *MMRAMD = nullptr;
+  MDNode *PCSectionsMD = nullptr;
 
   // Preserves the DebugLoc from I, and preserves still valid metadata.
   // Enable StrictFP builder mode when appropriate.
   explicit ReplacementIRBuilder(Instruction *I, const DataLayout &DL)
-      : IRBuilder(I->getContext(), InstSimplifyFolder(DL),
-                  IRBuilderCallbackInserter(
-                      [this](Instruction *I) { addMMRAMD(I); })) {
+      : IRBuilder(
+            I->getContext(), InstSimplifyFolder(DL),
+            IRBuilderCallbackInserter([this](Instruction *I) { addMD(I); })) {
     SetInsertPoint(I);
-    this->CollectMetadataToCopy(I, {LLVMContext::MD_pcsections});
     if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
       this->setIsFPConstrained(true);
 
     MMRAMD = I->getMetadata(LLVMContext::MD_mmra);
+    PCSectionsMD = I->getMetadata(LLVMContext::MD_pcsections);
   }
 
-  void addMMRAMD(Instruction *I) {
+  void addMD(Instruction *I) {
     if (canInstructionHaveMMRAs(*I))
       I->setMetadata(LLVMContext::MD_mmra, MMRAMD);
+    I->setMetadata(LLVMContext::MD_pcsections, PCSectionsMD);
   }
 };
 
@@ -561,10 +563,7 @@ LoadInst *AtomicExpandImpl::convertAtomicLoadToIntegerType(LoadInst *LI) {
 
   Value *Addr = LI->getPointerOperand();
 
-  auto *NewLI = Builder.CreateLoad(NewTy, Addr);
-  NewLI->setAlignment(LI->getAlign());
-  NewLI->setVolatile(LI->isVolatile());
-  NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
+  auto *NewLI = Builder.CreateLoad(NewTy, Addr, LI->getProperties());
   LLVM_DEBUG(dbgs() << "Replaced " << *LI << " with " << *NewLI << "\n");
 
   Value *NewVal = LI->getType()->isPtrOrPtrVectorTy()
@@ -711,14 +710,13 @@ StoreInst *AtomicExpandImpl::convertAtomicStoreToIntegerType(StoreInst *SI) {
   auto *M = SI->getModule();
   Type *NewTy = getCorrespondingIntegerType(SI->getValueOperand()->getType(),
                                             M->getDataLayout());
-  Value *NewVal = Builder.CreateBitCast(SI->getValueOperand(), NewTy);
+  Value *NewVal = SI->getValueOperand()->getType()->isPtrOrPtrVectorTy()
+                      ? Builder.CreatePtrToInt(SI->getValueOperand(), NewTy)
+                      : Builder.CreateBitCast(SI->getValueOperand(), NewTy);
 
   Value *Addr = SI->getPointerOperand();
 
-  StoreInst *NewSI = Builder.CreateStore(NewVal, Addr);
-  NewSI->setAlignment(SI->getAlign());
-  NewSI->setVolatile(SI->isVolatile());
-  NewSI->setAtomic(SI->getOrdering(), SI->getSyncScopeID());
+  StoreInst *NewSI = Builder.CreateStore(NewVal, Addr, SI->getProperties());
   LLVM_DEBUG(dbgs() << "Replaced " << *SI << " with " << *NewSI << "\n");
   SI->eraseFromParent();
   return NewSI;
@@ -2191,7 +2189,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   if (ValueOperand) {
     if (UseSizedLibcall) {
       Value *IntValue =
-          Builder.CreateBitOrPointerCast(ValueOperand, SizedIntTy);
+          Builder.CreateBitPreservingCastChain(DL, ValueOperand, SizedIntTy);
       Args.push_back(IntValue);
     } else {
       AllocaValue = AllocaBuilder.CreateAlloca(ValueOperand->getType());

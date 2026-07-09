@@ -53,11 +53,16 @@ struct PtrView {
   bool inUnion() const { return getInlineDesc()->InUnion; };
   bool inArray() const { return getFieldDesc()->IsArray; }
   bool inPrimitiveArray() const { return getFieldDesc()->isPrimitiveArray(); }
+  const Block *block() const { return Pointee; }
 
   unsigned getEvalID() { return Pointee->getEvalID(); }
 
   bool isRoot() const {
     return Base == Pointee->getDescriptor()->getMetadataSize();
+  }
+
+  bool isConst() const {
+    return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
   }
 
   InlineDescriptor *getInlineDesc() const {
@@ -134,6 +139,13 @@ struct PtrView {
     if (!Desc->IsArray)
       return *this;
     return PtrView{Pointee, Next, Offset};
+  }
+
+  [[nodiscard]] PtrView stripBaseCasts() const {
+    PtrView V = *this;
+    while (V.isBaseClass())
+      V = V.getBase();
+    return V;
   }
 
   [[nodiscard]] PtrView getArray() const {
@@ -670,7 +682,11 @@ public:
   bool isTypeidPointer() const { return StorageKind == Storage::Typeid; }
 
   /// Returns the record descriptor of a class.
-  const Record *getRecord() const { return view().getRecord(); }
+  const Record *getRecord() const {
+    if (!isBlockPointer())
+      return nullptr;
+    return view().getRecord();
+  }
   /// Returns the element record type, if this is a non-primive array.
   const Record *getElemRecord() const { return view().getElemRecord(); }
   /// Returns the field information.
@@ -753,7 +769,7 @@ public:
   bool isConst() const {
     if (isIntegralPointer())
       return true;
-    return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
+    return view().isConst();
   }
   bool isConstInMutable() const {
     if (!isBlockPointer())
@@ -980,10 +996,7 @@ public:
   /// The result is either a root pointer or something
   /// that isn't a base class anymore.
   [[nodiscard]] Pointer stripBaseCasts() const {
-    PtrView V = view();
-    while (V.isBaseClass())
-      V = V.getBase();
-    return Pointer(V);
+    return Pointer(view().stripBaseCasts());
   }
 
   /// Compare two pointers.
@@ -1030,6 +1043,9 @@ public:
   /// regarding the AST record layout.
   std::optional<size_t>
   computeOffsetForComparison(const ASTContext &ASTCtx) const;
+  /// Compute the pointer offset as given by the ASTRecordLayout.
+  /// Returns the result in bytes.
+  std::optional<size_t> computeLayoutOffset(const ASTContext &ASTCtx) const;
 
 private:
   friend class Block;
@@ -1098,14 +1114,14 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
       std::reverse(Indices.begin(), Indices.end());
       OS << Indices;
     }
-  } else if (P.isArrayRoot())
+  } else if (P.isBlockPointer() && P.isArrayRoot())
     OS << " arrayroot";
 
   if (P.isBlockPointer() && P.block() && P.block()->isDummy())
     OS << " dummy";
   if (!P.isLive())
     OS << " dead";
-  if (P.isBaseClass())
+  if (P.isBlockPointer() && P.isBaseClass())
     OS << " base-class";
   return OS;
 }
