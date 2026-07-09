@@ -19,6 +19,8 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
+// #include <iostream>
+
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
@@ -81,7 +83,7 @@ LIBC_INLINE double hypot_denorm(double a, double b) {
     DoubleDouble r = fputil::exact_add(r_h.hi, r_lo);
     r.hi -= correction;
     // Raise underflow if needed:
-    if ((r.hi < 1.0 && r.lo != 0.0) || (r.hi == 1.0 && r.lo < 0.0))
+    if (r.hi < 1.0 && r.lo != 0.0)
       fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
 
     return r.hi * SCALE_BACK;
