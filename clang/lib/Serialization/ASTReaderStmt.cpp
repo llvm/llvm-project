@@ -1422,7 +1422,7 @@ void ASTStmtReader::VisitVAArgExpr(VAArgExpr *E) {
   E->setWrittenTypeInfo(readTypeSourceInfo());
   E->setBuiltinLoc(readSourceLocation());
   E->setRParenLoc(readSourceLocation());
-  E->setIsMicrosoftABI(Record.readInt());
+  E->setVarargABI(static_cast<clang::VAArgExpr::VarArgKind>(Record.readInt()));
 }
 
 void ASTStmtReader::VisitSourceLocExpr(SourceLocExpr *E) {
