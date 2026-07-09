@@ -167,7 +167,10 @@ COPY llvm/utils/git/requirements.txt requirements.txt
 RUN pip install --require-hashes -r requirements.txt --break-system-packages && \
     rm requirements.txt
 
-RUN apt-get update && apt-get install -y libz3-4
+RUN apt-get update && \
+    apt-get install -y libz3-4 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY --from=ids-builder /ids/build/bin/idt \
                         /usr/bin/idt
