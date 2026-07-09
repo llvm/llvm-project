@@ -2220,11 +2220,6 @@ public:
     return Op == getOperand(1);
   }
 
-  /// Return the HistogramUpdateKind for the given update instruction, or
-  /// std::nullopt if the instruction is not a supported histogram update.
-  static std::optional<HistogramUpdateKind>
-  getUpdateKindForInstruction(Instruction *I);
-
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe
