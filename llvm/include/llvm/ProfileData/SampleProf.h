@@ -33,7 +33,6 @@
 #include <cstdint>
 #include <list>
 #include <map>
-#include <set>
 #include <sstream>
 #include <string>
 #include <system_error>
@@ -386,7 +385,7 @@ public:
     }
   };
 
-  using SortedCallTargetSet = std::set<CallTarget, CallTargetComparator>;
+  using SortedCallTargetSet = SmallVector<CallTarget>;
   using CallTargetMap = DenseMap<FunctionId, uint64_t>;
   SampleRecord() = default;
 
@@ -443,7 +442,7 @@ public:
 
   uint64_t getSamples() const { return NumSamples; }
   const CallTargetMap &getCallTargets() const { return CallTargets; }
-  const SortedCallTargetSet getSortedCallTargets() const {
+  SortedCallTargetSet getSortedCallTargets() const {
     return sortCallTargets(CallTargets);
   }
 
@@ -455,12 +454,9 @@ public:
   }
 
   /// Sort call targets in descending order of call frequency.
-  static const SortedCallTargetSet
-  sortCallTargets(const CallTargetMap &Targets) {
-    SortedCallTargetSet SortedTargets;
-    for (const auto &[Target, Frequency] : Targets) {
-      SortedTargets.emplace(Target, Frequency);
-    }
+  static SortedCallTargetSet sortCallTargets(const CallTargetMap &Targets) {
+    auto SortedTargets = llvm::to_vector_of<CallTarget>(Targets);
+    llvm::sort(SortedTargets, CallTargetComparator());
     return SortedTargets;
   }
 
