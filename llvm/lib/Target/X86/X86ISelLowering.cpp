@@ -8069,7 +8069,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
       unsigned LaneStride = Trial / BaseSizeInBits;
       bool AllMatch = true;
       for (unsigned K = 1; K < NumElems && AllMatch; ++K) {
-        AllMatch = ByteOffsets[K] == 0 &&
+        AllMatch = AllMatch && ByteOffsets[K] == 0 &&
                    DAG.areNonVolatileConsecutiveLoads(
                        Loads[K], LDBase, BaseSizeInBytes, K * LaneStride);
       }
@@ -8085,6 +8085,9 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
       // zero padding above.
       MVT TruncDstVT = MVT::getVectorVT(SrcEltVT, 128 / BaseSizeInBits);
       unsigned TruncDstLanes = TruncDstVT.getVectorNumElements();
+      MVT ConcatVT = MVT::getVectorVT(SrcEltVT, NumElems);
+      if (NumElems > TruncDstLanes && !TLI.isTypeLegal(ConcatVT))
+        return SDValue();
       // Try wider register sizes first.
       for (unsigned WideRegBits : {512u, 256u, 128u}) {
         unsigned LanesPerWideLoad = WideRegBits / WideEltBits;
@@ -8139,11 +8142,6 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
         }
         if (Pieces.size() == 1)
           return DAG.getBitcast(VT, Pieces[0]);
-
-        MVT ConcatVT =
-            MVT::getVectorVT(SrcEltVT, Pieces.size() * TruncDstLanes);
-        if (!TLI.isTypeLegal(ConcatVT))
-          continue;
 
         SDValue Result = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Pieces);
         return DAG.getBitcast(VT, Result);
