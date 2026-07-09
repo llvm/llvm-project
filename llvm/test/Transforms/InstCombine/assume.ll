@@ -862,6 +862,24 @@ define void @nonnull_gep_not_inbounds(ptr %p, i64 %i) {
   ret void
 }
 
+define void @nonnull_move_fixpoint(ptr %ptr) {
+; CHECK-LABEL: @nonnull_move_fixpoint(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR:%.*]]) ]
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[PTR2:%.*]] = load ptr, ptr [[PTR]], align 8
+; CHECK-NEXT:    store i32 0, ptr [[PTR2]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ptr2 = load ptr, ptr %ptr, align 8
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  br label %bb
+
+bb:
+  store i32 0, ptr %ptr2, align 4
+  ret void
+}
+
 define void @always_true_assumption() {
 ; CHECK-LABEL: @always_true_assumption(
 ; CHECK-NEXT:    ret void

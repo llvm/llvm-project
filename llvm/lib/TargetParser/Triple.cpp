@@ -14,9 +14,11 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <cassert>
 #include <cstring>
 using namespace llvm;
@@ -44,8 +46,8 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
     return "aarch64_32";
   case aarch64_be:
     return "aarch64_be";
-  case amdgcn:
-    return "amdgcn";
+  case amdgpu:
+    return "amdgpu";
   case amdil64:
     return "amdil64";
   case amdil:
@@ -193,6 +195,10 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
     if (SubArch == AArch64SubArch_lfi)
       return "aarch64_lfi";
     break;
+  case Triple::x86_64:
+    if (SubArch == X86_64SubArch_lfi)
+      return "x86_64_lfi";
+    break;
   case Triple::spirv:
     switch (SubArch) {
     case Triple::SPIRVSubArch_v10:
@@ -240,6 +246,51 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
       break;
     }
     break;
+  case Triple::amdgpu: {
+    if (SubArch < Triple::FirstAMDGPUSubArch ||
+        SubArch > Triple::LastAMDGPUSubArch)
+      break;
+
+    static const StringLiteral AMDGPUSubArchNames[Triple::LastAMDGPUSubArch -
+                                                  Triple::FirstAMDGPUSubArch +
+                                                  1] = {
+        "amdgpu6",     "amdgpu6.00",  "amdgpu6.01",  "amdgpu6.02",
+
+        "amdgpu7",     "amdgpu7.00",  "amdgpu7.01",  "amdgpu7.02",
+        "amdgpu7.03",  "amdgpu7.04",  "amdgpu7.05",
+
+        "amdgpu8",     "amdgpu8.01",  "amdgpu8.02",  "amdgpu8.03",
+        "amdgpu8.05",
+
+        "amdgpu8.10",
+
+        "amdgpu9",     "amdgpu9.00",  "amdgpu9.02",  "amdgpu9.04",
+        "amdgpu9.06",  "amdgpu9.09",  "amdgpu9.0c",
+
+        "amdgpu9.08",  "amdgpu9.0a",
+
+        "amdgpu9.4",   "amdgpu9.42",  "amdgpu9.50",
+
+        "amdgpu10.1",  "amdgpu10.10", "amdgpu10.11", "amdgpu10.12",
+        "amdgpu10.13",
+
+        "amdgpu10.3",  "amdgpu10.30", "amdgpu10.31", "amdgpu10.32",
+        "amdgpu10.33", "amdgpu10.34", "amdgpu10.35", "amdgpu10.36",
+
+        "amdgpu11",    "amdgpu11.00", "amdgpu11.01", "amdgpu11.02",
+        "amdgpu11.03", "amdgpu11.50", "amdgpu11.51", "amdgpu11.52",
+        "amdgpu11.53", "amdgpu11.54",
+
+        "amdgpu11.7",  "amdgpu11.70", "amdgpu11.71", "amdgpu11.72",
+
+        "amdgpu12",    "amdgpu12.00", "amdgpu12.01",
+
+        "amdgpu12.5",  "amdgpu12.50", "amdgpu12.51",
+
+        "amdgpu13",    "amdgpu13.10"};
+
+    return AMDGPUSubArchNames[SubArch - Triple::FirstAMDGPUSubArch];
+  }
   default:
     break;
   }
@@ -286,7 +337,8 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case hexagon:
     return "hexagon";
 
-  case amdgcn:
+  // Intrinsics use amdgcn prefix.
+  case amdgpu:
     return "amdgcn";
   case r600:
     return "r600";
@@ -693,8 +745,9 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
       .Case("ppc32le", ppcle)
       .Case("ppcle", ppcle)
       .Case("ppc64le", ppc64le)
+      .Case("amdgpu", amdgpu)
+      .Case("amdgcn", amdgpu) // Legacy name
       .Case("r600", r600)
-      .Case("amdgcn", amdgcn)
       .Case("riscv32", riscv32)
       .Case("riscv64", riscv64)
       .Case("riscv32be", riscv32be)
@@ -812,7 +865,7 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
           .Cases({"i386", "i486", "i586", "i686"}, Triple::x86)
           // FIXME: Do we need to support these?
           .Cases({"i786", "i886", "i986"}, Triple::x86)
-          .Cases({"amd64", "x86_64", "x86_64h"}, Triple::x86_64)
+          .Cases({"amd64", "x86_64", "x86_64h", "x86_64_lfi"}, Triple::x86_64)
           .Cases({"powerpc", "powerpcspe", "ppc", "ppc32"}, Triple::ppc)
           .Cases({"powerpcle", "ppcle", "ppc32le"}, Triple::ppcle)
           .Cases({"powerpc64", "ppu", "ppc64"}, Triple::ppc64)
@@ -845,8 +898,9 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
           .Cases({"mips64el", "mipsn32el", "mipsisa64r6el", "mips64r6el",
                   "mipsn32r6el"},
                  Triple::mips64el)
+          .StartsWith("amdgpu", Triple::amdgpu)
+          .Case("amdgcn", Triple::amdgpu)
           .Case("r600", Triple::r600)
-          .Case("amdgcn", Triple::amdgcn)
           .Case("riscv32", Triple::riscv32)
           .Case("riscv64", Triple::riscv64)
           .Case("riscv32be", Triple::riscv32be)
@@ -1055,7 +1109,7 @@ static Triple::ObjectFormatType parseFormat(StringRef EnvironmentName) {
       .Default(Triple::UnknownObjectFormat);
 }
 
-static Triple::SubArchType parseSubArch(StringRef SubArchName) {
+Triple::SubArchType Triple::parseSubArch(StringRef SubArchName) {
   if (SubArchName.starts_with("mips") &&
       (SubArchName.ends_with("r6el") || SubArchName.ends_with("r6")))
     return Triple::MipsSubArch_r6;
@@ -1071,6 +1125,9 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
 
   if (SubArchName == "aarch64_lfi")
     return Triple::AArch64SubArch_lfi;
+
+  if (SubArchName == "x86_64_lfi")
+    return Triple::X86_64SubArch_lfi;
 
   if (SubArchName.starts_with("spirv"))
     return StringSwitch<Triple::SubArchType>(SubArchName)
@@ -1096,6 +1153,77 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
         .EndsWith("v1.8", Triple::DXILSubArch_v1_8)
         .EndsWith("v1.9", Triple::DXILSubArch_v1_9)
         .Default(Triple::NoSubArch);
+
+  if (SubArchName.consume_front("amdgpu")) {
+    return StringSwitch<Triple::SubArchType>(SubArchName)
+        .Case("6", Triple::AMDGPUSubArch6)
+        .Case("6.00", Triple::AMDGPUSubArch600)
+        .Case("6.01", Triple::AMDGPUSubArch601)
+        .Case("6.02", Triple::AMDGPUSubArch602)
+        .Case("7", Triple::AMDGPUSubArch7)
+        .Case("7.00", Triple::AMDGPUSubArch700)
+        .Case("7.01", Triple::AMDGPUSubArch701)
+        .Case("7.02", Triple::AMDGPUSubArch702)
+        .Case("7.03", Triple::AMDGPUSubArch703)
+        .Case("7.04", Triple::AMDGPUSubArch704)
+        .Case("7.05", Triple::AMDGPUSubArch705)
+        .Case("8", Triple::AMDGPUSubArch8)
+        .Case("8.01", Triple::AMDGPUSubArch801)
+        .Case("8.02", Triple::AMDGPUSubArch802)
+        .Case("8.03", Triple::AMDGPUSubArch803)
+        .Case("8.05", Triple::AMDGPUSubArch805)
+        .Case("8.10", Triple::AMDGPUSubArch810)
+        .Case("9", Triple::AMDGPUSubArch9)
+        .Case("9.00", Triple::AMDGPUSubArch900)
+        .Case("9.02", Triple::AMDGPUSubArch902)
+        .Case("9.04", Triple::AMDGPUSubArch904)
+        .Case("9.06", Triple::AMDGPUSubArch906)
+        .Case("9.08", Triple::AMDGPUSubArch908)
+        .Case("9.09", Triple::AMDGPUSubArch909)
+        .Case("9.0a", Triple::AMDGPUSubArch90A)
+        .Case("9.0c", Triple::AMDGPUSubArch90C)
+        .Case("9.4", Triple::AMDGPUSubArch9_4)
+        .Case("9.5", Triple::AMDGPUSubArch9_4)
+        .Case("9.42", Triple::AMDGPUSubArch942)
+        .Case("9.50", Triple::AMDGPUSubArch950)
+        .Case("10", Triple::AMDGPUSubArch10_1)
+        .Case("10.1", Triple::AMDGPUSubArch10_1)
+        .Case("10.10", Triple::AMDGPUSubArch1010)
+        .Case("10.11", Triple::AMDGPUSubArch1011)
+        .Case("10.12", Triple::AMDGPUSubArch1012)
+        .Case("10.13", Triple::AMDGPUSubArch1013)
+        .Case("10.3", Triple::AMDGPUSubArch10_3)
+        .Case("10.30", Triple::AMDGPUSubArch1030)
+        .Case("10.31", Triple::AMDGPUSubArch1031)
+        .Case("10.32", Triple::AMDGPUSubArch1032)
+        .Case("10.33", Triple::AMDGPUSubArch1033)
+        .Case("10.34", Triple::AMDGPUSubArch1034)
+        .Case("10.35", Triple::AMDGPUSubArch1035)
+        .Case("10.36", Triple::AMDGPUSubArch1036)
+        .Case("11", Triple::AMDGPUSubArch11)
+        .Case("11.00", Triple::AMDGPUSubArch1100)
+        .Case("11.01", Triple::AMDGPUSubArch1101)
+        .Case("11.02", Triple::AMDGPUSubArch1102)
+        .Case("11.03", Triple::AMDGPUSubArch1103)
+        .Case("11.50", Triple::AMDGPUSubArch1150)
+        .Case("11.51", Triple::AMDGPUSubArch1151)
+        .Case("11.52", Triple::AMDGPUSubArch1152)
+        .Case("11.53", Triple::AMDGPUSubArch1153)
+        .Case("11.54", Triple::AMDGPUSubArch1154)
+        .Case("11.7", Triple::AMDGPUSubArch11_7)
+        .Case("11.70", Triple::AMDGPUSubArch1170)
+        .Case("11.71", Triple::AMDGPUSubArch1171)
+        .Case("11.72", Triple::AMDGPUSubArch1172)
+        .Case("12", Triple::AMDGPUSubArch12)
+        .Case("12.00", Triple::AMDGPUSubArch1200)
+        .Case("12.01", Triple::AMDGPUSubArch1201)
+        .Case("12.5", Triple::AMDGPUSubArch12_5)
+        .Case("12.50", Triple::AMDGPUSubArch1250)
+        .Case("12.51", Triple::AMDGPUSubArch1251)
+        .Case("13", Triple::AMDGPUSubArch13)
+        .Case("13.10", Triple::AMDGPUSubArch1310)
+        .Default(Triple::NoSubArch);
+  }
 
   StringRef ARMSubArch = ARM::getCanonicalArchName(SubArchName);
 
@@ -1209,7 +1337,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
       return T.isOSDarwin() ? Triple::MachO : Triple::ELF;
     }
   case Triple::aarch64_be:
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::amdil64:
   case Triple::amdil:
   case Triple::arc:
@@ -2024,7 +2152,7 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
 
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be:
-  case llvm::Triple::amdgcn:
+  case llvm::Triple::amdgpu:
   case llvm::Triple::amdil64:
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
@@ -2086,7 +2214,7 @@ Triple Triple::get32BitArchVariant() const {
   Triple T(*this);
   switch (getArch()) {
   case Triple::UnknownArch:
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::avr:
   case Triple::bpfeb:
   case Triple::bpfel:
@@ -2220,7 +2348,7 @@ Triple Triple::get64BitArchVariant() const {
 
   case Triple::aarch64:
   case Triple::aarch64_be:
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::amdil64:
   case Triple::bpfeb:
   case Triple::bpfel:
@@ -2323,7 +2451,7 @@ Triple Triple::getBigEndianArchVariant() const {
     return T;
   switch (getArch()) {
   case Triple::UnknownArch:
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::amdil64:
   case Triple::amdil:
   case Triple::avr:
@@ -2458,7 +2586,7 @@ bool Triple::isLittleEndian() const {
   switch (getArch()) {
   case Triple::aarch64:
   case Triple::aarch64_32:
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::amdil64:
   case Triple::amdil:
   case Triple::arm:
@@ -2538,6 +2666,14 @@ bool Triple::isCompatibleWith(const Triple &Other) const {
              getObjectFormat() == Other.getObjectFormat();
   }
 
+  if (getArch() == Triple::amdgpu && Other.getArch() == Triple::amdgpu) {
+    if (getOS() != Other.getOS() || getVendor() != Other.getVendor() ||
+        getEnvironment() != Other.getEnvironment() ||
+        getObjectFormat() != Other.getObjectFormat())
+      return false;
+    return AMDGPU::isSubArchCompatible(*this, Other);
+  }
+
   // If vendor is apple, ignore the version number (the environment field)
   // and the object format.
   if (getVendor() == Triple::Apple)
@@ -2554,9 +2690,12 @@ bool Triple::isCompatibleWith(const Triple &Other) const {
 
 std::string Triple::merge(const Triple &Other) const {
   // If vendor is apple, pick the triple with the larger version number.
-  if (getVendor() == Triple::Apple)
-    if (Other.isOSVersionLT(*this))
-      return str();
+  if (getVendor() == Triple::Apple && Other.isOSVersionLT(*this))
+    return str();
+
+  if (isAMDGCN() && Other.isAMDGCN() && getOS() == Other.getOS() &&
+      getVendor() == Other.getVendor())
+    return AMDGPU::mergeSubArch(*this, Other);
 
   return Other.str();
 }

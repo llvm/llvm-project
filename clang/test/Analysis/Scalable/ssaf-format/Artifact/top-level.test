@@ -40,4 +40,4 @@
 // RUN: not clang-ssaf-format --type auto --encoding %S/Inputs/unknown-type.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=ENCODING-UNKNOWN-TYPE
 // ENCODING-UNKNOWN-TYPE:      clang-ssaf-format: error: reading ArtifactEncoding from file '{{.*}}unknown-type.json'
-// ENCODING-UNKNOWN-TYPE-NEXT: unknown value 'Mystery' for field 'type': expected 'TUSummary', 'LUSummary', 'StaticLibrary', or 'MultiArchStaticLibrary'
+// ENCODING-UNKNOWN-TYPE-NEXT: unknown value 'Mystery' for field 'type': expected 'TUSummary', 'LUSummary', 'StaticLibrary', 'MultiArchStaticLibrary', or 'MultiArchSharedLibrary'

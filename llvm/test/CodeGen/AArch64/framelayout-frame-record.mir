@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-linux-gnu -start-before prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -start-before prolog-epilog %s -o - | FileCheck %s
 
 ---
 name: TestFrameRecordLocation
