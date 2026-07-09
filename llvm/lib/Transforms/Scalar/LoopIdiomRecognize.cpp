@@ -260,6 +260,7 @@ private:
                                   const SCEV *BECount);
   bool avoidLIRForMultiBlockLoop(bool IsMemset = false,
                                  bool IsLoopMemset = false);
+  bool optimizeCRCLoop(const PolynomialInfo &Info);
   bool optimizeCRCLoopUsingClmul(const PolynomialInfo &Info);
   bool optimizeCRCLoopUsingTableLookup(const PolynomialInfo &Info);
 
@@ -400,13 +401,10 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
     MadeChange |= runOnLoopBlock(BB, BECount, ExitBlocks);
   }
 
-  // Optimize a CRC loop if HashRecognize found one, but don't generate a lookup
-  // table if we're optimizing for size.
+  // Attempt to optimize a CRC loop if one is detected by HashRecognize.
   if (!DisableLIRP::HashRecognize)
     if (auto Res = HashRecognize(*CurLoop, *SE).getResult())
-      MadeChange |=
-          optimizeCRCLoopUsingClmul(*Res) ||
-          (!ApplyCodeSizeHeuristics && optimizeCRCLoopUsingTableLookup(*Res));
+      MadeChange |= optimizeCRCLoop(*Res);
 
   return MadeChange;
 }
@@ -1576,6 +1574,15 @@ bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
   return false;
 }
 
+bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
+  // FIXME: Once intrinsic cost modeling is more reliable for clmul, that should
+  // be used to determine which optimization to use. Until then, only apply the
+  // clmul optimization when optimizing for size, since a lookup table is not
+  // viable in that case.
+  return ApplyCodeSizeHeuristics ? optimizeCRCLoopUsingClmul(Info)
+                                 : optimizeCRCLoopUsingTableLookup(Info);
+}
+
 // The algorithm used in this optimization is a Polynomial (GF(2)) Barrett
 // Reduction based on Intel's "Fast CRC Computation for Generic Polynomials
 // Using PCLMULQDQ Instruction" white paper (December 2009).
@@ -1594,10 +1601,10 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   auto *ClmulTy = IntegerType::get(Ctx, ClmulBW);
 
   // This optimization should only be applied if clmul for the required width is
-  // a fast operation on the target.
+  // a fast operation on the target, and only for significant trip counts.
   // TODO: If clmul exists on the target but not for the required width, it
   // might be possible to split into multiple iterations of this.
-  if (!TTI->haveFastClmul(ClmulTy))
+  if (TC <= 8 || !TTI->haveFastClmul(ClmulTy))
     return false;
 
   // First, generate the constants required for GF(2) Barrett reduction.
