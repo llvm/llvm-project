@@ -1,6 +1,7 @@
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/LifetimeModeling.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
@@ -10,12 +11,33 @@ using namespace ento;
 namespace {
 class ReportDanglingPtrDeref : public Checker<check::Location> {
 public:
+  class ReportDanglingPtrDerefBRVisitor : public BugReporterVisitor {
+    SVal BoundRegion;
+    const MemRegion *SourceRegion;
+
+  public:
+    ReportDanglingPtrDerefBRVisitor(SVal Region, const MemRegion *Source)
+        : BoundRegion(Region), SourceRegion(Source) {}
+
+    void Profile(llvm::FoldingSetNodeID &ID) const override {
+      static int X = 0;
+      ID.AddPointer(&X);
+      BoundRegion.Profile(ID);
+      SourceRegion->Profile(ID);
+    }
+
+    PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                     BugReporterContext &BRC,
+                                     PathSensitiveBugReport &BR) override;
+  };
+
   void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const;
   void reportUseAfterScope(const MemRegion *Region, ExplodedNode *N,
                            CheckerContext &C) const;
   const BugType BugMsg{this, "ReportDanglingPtrDeref", "LifetimeBound"};
 };
+
 } // namespace
 
 void ReportDanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
@@ -23,8 +45,9 @@ void ReportDanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
   ProgramStateRef State = C.getState();
 
   if (const MemRegion *LocRegion = Loc.getAsRegion()) {
-    if (lifetimemodeling::isDeallocated(State, LocRegion)) {
-      if (ExplodedNode *N = C.generateNonFatalErrorNode())
+    if (lifetime_modeling::isDeallocated(State, LocRegion)) {
+      if (ExplodedNode *N =
+              C.generateNonFatalErrorNode(C.getState(), C.getPredecessor()))
         reportUseAfterScope(LocRegion, N, C);
     }
   }
@@ -40,6 +63,28 @@ void ReportDanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
           .str(),
       N);
   C.emitReport(std::move(BR));
+}
+
+PathDiagnosticPieceRef
+ReportDanglingPtrDeref::ReportDanglingPtrDerefBRVisitor::VisitNode(
+    const ExplodedNode *N, BugReporterContext &BRC,
+    PathSensitiveBugReport &BR) {
+  if (!lifetime_modeling::isBoundToLifetimeSourceSet(N->getState(),
+                                                     BoundRegion) ||
+      lifetime_modeling::isBoundToLifetimeSourceSet(
+          N->getFirstPred()->getState(), BoundRegion))
+    return nullptr;
+
+  const Stmt *S = N->getStmtForDiagnostics();
+  if (!S)
+    return nullptr;
+
+  PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
+  return std::make_shared<PathDiagnosticEventPiece>(
+      Pos,
+      (llvm::Twine("'") + SourceRegion->getString() + "' is destroyed here")
+          .str(),
+      true);
 }
 
 void ento::registerReportDanglingPtrDeref(CheckerManager &Mgr) {
