@@ -43,6 +43,8 @@ public:
   constexpr FreeListHeap(span<cpp::byte> region)
       : begin(region.begin()), end(region.end()) {}
 
+  bool adopt(span<cpp::byte> mem);
+
   void *allocate(size_t size);
   void *aligned_allocate(size_t alignment, size_t size);
   // NOTE: All pointers passed to free must come from one of the other
@@ -88,6 +90,18 @@ LIBC_INLINE void FreeListHeap::init() {
   free_store.set_range({0, cpp::bit_ceil(block.inner_size())});
   free_store.insert(block);
   is_initialized = true;
+}
+
+LIBC_INLINE bool FreeListHeap::adopt(span<cpp::byte> mem) {
+  if (!is_initialized)
+    init();
+  LIBC_ASSERT(end == mem.begin() && "Adopted region must be contiguous");
+  auto result = BlockRef::init(mem);
+  if (!result.has_value())
+    return false;
+  end = mem.end();
+  free_store.insert(*result);
+  return true;
 }
 
 LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {

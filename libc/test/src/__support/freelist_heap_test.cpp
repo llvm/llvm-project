@@ -366,3 +366,28 @@ TEST_FOR_EACH_ALLOCATOR(AllocationSize, 2048) {
   allocator.free(ptr);
   EXPECT_EQ(allocator.allocation_size(ptr), size_t(0));
 }
+
+TEST(LlvmLibcFreeListHeap, Adopt) {
+  constexpr size_t N = 2048;
+  byte buf[N * 2] = {byte(0)};
+  span<byte> buf1(&buf[0], N);
+  span<byte> buf2(&buf[N], N);
+
+  FreeListHeap allocator(buf1);
+  void *ptr1 = allocator.allocate(1500);
+  EXPECT_NE(ptr1, static_cast<void *>(nullptr));
+
+  // Initial buffer is now almost full; allocating another 1500 bytes should fail.
+  void *ptr_fail = allocator.allocate(1500);
+  EXPECT_EQ(ptr_fail, static_cast<void *>(nullptr));
+
+  // Adopt the second buffer into the heap.
+  EXPECT_TRUE(allocator.adopt(buf2));
+
+  // Now allocating 1500 bytes should succeed from the adopted buffer.
+  void *ptr2 = allocator.allocate(1500);
+  EXPECT_NE(ptr2, static_cast<void *>(nullptr));
+
+  allocator.free(ptr1);
+  allocator.free(ptr2);
+}
