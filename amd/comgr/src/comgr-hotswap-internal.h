@@ -100,6 +100,10 @@ struct Trampoline {
 // the same 256-byte alignment expected by AMDGPU kernel descriptors.
 static constexpr uint64_t KernelEntryStubStride = 256;
 static constexpr uint64_t KernelEntryInstPrefUnitBytes = 128;
+static_assert(KernelEntryStubStride % KernelEntryInstPrefUnitBytes == 0,
+              "entry-stub stride must be an integral prefetch span");
+static constexpr uint32_t KernelEntryStubInstPrefLines =
+    KernelEntryStubStride / KernelEntryInstPrefUnitBytes;
 
 struct KernelDescriptorInfo {
   std::string KernelName;
@@ -111,6 +115,8 @@ struct NopSled {
   uint64_t Start = 0;
   uint64_t End = 0;
   uint64_t WritePos = 0;
+  uint64_t FunctionStart = 0;
+  uint64_t FunctionEnd = 0;
 };
 
 // -- Rewrite rule -------------------------------------------------------------
@@ -230,6 +236,11 @@ public:
   /// Returns "" if no matching function symbol exists.
   std::string findKernelAtAddress(uint64_t TextAddress) const;
 
+  /// Find the section-relative `.text` range of the function containing
+  /// \p TextOffset, or std::nullopt if no sized function symbol covers it.
+  std::optional<FunctionTextRange>
+  findFunctionTextRangeAtOffset(uint64_t TextOffset) const;
+
   /// Pointer to the kernel_descriptor for \p KernelName inside the buffer,
   /// or nullptr if not found.
   uint8_t *findKernelDescriptor(llvm::StringRef KernelName);
@@ -255,6 +266,11 @@ public:
   std::optional<uint32_t>
   getKernelDescriptorInstPrefSize(llvm::StringRef KernelName,
                                   llvm::StringRef TargetCpu) const;
+
+  /// Rewrite COMPUTE_PGM_RSRC3.INST_PREF_SIZE for \p KernelName.
+  bool updateKernelDescriptorInstPrefSize(llvm::StringRef KernelName,
+                                          llvm::StringRef TargetCpu,
+                                          uint32_t InstPrefLines);
 
   /// Read the VGPR count from the kernel descriptor for \p KernelName.
   /// Returns std::nullopt if the descriptor is not found.
@@ -729,6 +745,7 @@ struct KernelEntryTrampolineFixup {
   std::string KernelName;
   uint64_t StubTextOffset = 0;
   unsigned RequiredSgprs = 0;
+  uint32_t InstPrefLines = 0;
 };
 
 /// Build a 256-byte, entry-aligned HotSwap kernel-entry stub at
@@ -764,10 +781,11 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
     std::vector<Trampoline> &Growth,
     std::vector<KernelEntryTrampolineFixup> &OutFixups);
 
-/// Apply descriptor entry-offset rewrites recorded by
-/// appendKernelEntryTrampolines after the ELF has been grown.
+/// Apply descriptor rewrites recorded by appendKernelEntryTrampolines after
+/// the ELF has been grown.
 bool rewriteKernelEntryDescriptorOffsets(
     llvm::WritableMemoryBuffer &OutBuf, uint64_t OldTextSize,
+    llvm::StringRef TargetCpu,
     llvm::ArrayRef<KernelEntryTrampolineFixup> Fixups);
 
 // -- Function declarations (GFX1250 hotswap policy layer) ---------------------

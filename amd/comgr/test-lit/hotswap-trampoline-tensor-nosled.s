@@ -15,33 +15,41 @@
 
 // RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
 
-// COM: Kernel 1 (dead SGPR, no sled): original tensor_load replaced by
-// COM: s_branch forward. Trampoline body appended in alignment padding.
+// COM: Kernel 1 (dead SGPR, no in-function sled): original tensor_load
+// COM: replaced by s_branch forward. Inter-function alignment padding is not a
+// COM: borrowable sled, so trampoline bodies are appended after the original
+// COM: functions.
 // DISASM-LABEL: <test_tensor_trampoline>:
+// DISASM-NEXT: s_branch
+// DISASM-NEXT: s_nop 0
+// DISASM-NEXT: s_nop 0
+// DISASM-NEXT: s_endpgm
 // DISASM-NOT: tensor_load_to_lds
-// DISASM: s_branch
-// DISASM: s_endpgm
 
-// COM: Dead-SGPR trampoline body: s_pack_hh + tensor_load + branch-back.
-// DISASM: s_pack_hh_b32_b16
-// DISASM: tensor_load_to_lds
-// DISASM: s_branch
+// COM: Kernel 2 (live SGPR, no in-function sled): the original tensor_load is
+// COM: replaced by s_branch forward to its appended trampoline body.
+// DISASM-LABEL: <test_tensor_trampoline_live>:
+// DISASM-NEXT: s_branch
+// DISASM-NEXT: s_nop 0
+// DISASM-NEXT: s_nop 0
+// DISASM-NEXT: s_mov_b32
+// DISASM-NEXT: s_endpgm
+// DISASM-NOT: tensor_load_to_lds
+
+// COM: Dead-SGPR trampoline body: s_pack_hh + tensor_load + branch-back,
+// COM: appended after the original functions.
+// DISASM-NEXT: s_pack_hh_b32_b16
+// DISASM-NEXT: tensor_load_to_lds
+// DISASM-NEXT: s_branch
 
 // COM: Live-SGPR trampoline body (for kernel 2): also placed in the
-// COM: padding region. save + pack + tensor + restore + branch-back.
-// DISASM: s_mov_b32 [[SCRATCH:s[0-9]+]], s4
+// COM: appended trampoline region. save + pack + tensor + restore +
+// COM: branch-back.
+// DISASM-NEXT: s_mov_b32 [[SCRATCH:s[0-9]+]], s4
 // DISASM-NEXT: s_pack_hh_b32_b16 s4, 0, s4
 // DISASM-NEXT: tensor_load_to_lds
 // DISASM-NEXT: s_mov_b32 s4, [[SCRATCH]]
 // DISASM-NEXT: s_branch
-
-// COM: Kernel 2 (live SGPR, no sled): the original tensor_load is
-// COM: replaced by s_branch backward to the trampoline body above.
-// DISASM-LABEL: <test_tensor_trampoline_live>:
-// DISASM-NOT: tensor_load_to_lds
-// DISASM: s_branch
-// DISASM: s_mov_b32
-// DISASM: s_endpgm
 
 // COM: Idempotency
 // RUN: hotswap-rewrite %t.out.elf \

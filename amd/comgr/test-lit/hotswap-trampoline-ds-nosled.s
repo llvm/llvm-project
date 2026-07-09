@@ -22,10 +22,13 @@
 // DISASM: s_wait_dscnt 0x0
 // DISASM: s_endpgm
 
-// COM: Trampoline body appended after .text: expanded DS loads + branch-back.
+// COM: Trampoline body appended after .text: expanded DS loads + branch-back,
+// COM: followed by an executable prefetch guard sized from inst_pref_size.
 // DISASM: ds_load_b32 v0
 // DISASM: ds_load_b32 v1
 // DISASM: s_branch
+// DISASM-NEXT: s_code_end
+// DISASM-NEXT: s_code_end
 
 // COM: Idempotency
 // RUN: hotswap-rewrite %t.out.elf \
@@ -51,4 +54,5 @@ test_ds_trampoline:
 .amdhsa_kernel test_ds_trampoline
   .amdhsa_next_free_vgpr 3
   .amdhsa_next_free_sgpr 1
+  .amdhsa_inst_pref_size 2
 .end_amdhsa_kernel

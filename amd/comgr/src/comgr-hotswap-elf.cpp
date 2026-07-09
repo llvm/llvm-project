@@ -279,7 +279,10 @@ NopSled *findNearestSled(std::vector<NopSled> &Sleds, uint64_t Offset,
   NopSled *Best = nullptr;
   uint64_t BestDist = std::numeric_limits<uint64_t>::max();
   for (NopSled &Sled : Sleds) {
-    if (Sled.WritePos > Sled.End || Needed > Sled.End - Sled.WritePos)
+    if (Offset < Sled.FunctionStart || Offset >= Sled.FunctionEnd)
+      continue;
+    uint64_t UsableEnd = std::min(Sled.End, Sled.FunctionEnd);
+    if (Sled.WritePos > UsableEnd || Needed > UsableEnd - Sled.WritePos)
       continue;
     uint64_t Dist = Sled.WritePos > Offset ? Sled.WritePos - Offset
                                            : Offset - Sled.WritePos;
@@ -452,6 +455,38 @@ std::string ElfView::findKernelAtAddress(uint64_t TextAddress) const {
   log() << "hotswap: findKernelAtAddress: no function symbol covers address 0x"
         << utohexstr(TextAddress) << " in .text.\n";
   return "";
+}
+
+std::optional<ElfView::FunctionTextRange>
+ElfView::findFunctionTextRangeAtOffset(uint64_t TextOffset) const {
+  for (const ELFT::Shdr &SymShdr : Sections) {
+    if (SymShdr.sh_type != ELF::SHT_SYMTAB &&
+        SymShdr.sh_type != ELF::SHT_DYNSYM)
+      continue;
+
+    Expected<ELFT::SymRange> SymsOrErr = File.symbols(&SymShdr);
+    if (!SymsOrErr) {
+      consumeError(SymsOrErr.takeError());
+      continue;
+    }
+
+    for (const ELFT::Sym &Sym : *SymsOrErr) {
+      if (Sym.getType() != ELF::STT_FUNC && Sym.getType() != ELF::STT_GNU_IFUNC)
+        continue;
+      if (Sym.st_shndx != TextSectionIndex || Sym.st_size == 0)
+        continue;
+      if (Sym.st_value < textAddr())
+        continue;
+
+      uint64_t Start = Sym.st_value - textAddr();
+      if (Sym.st_size > std::numeric_limits<uint64_t>::max() - Start)
+        continue;
+      uint64_t End = Start + Sym.st_size;
+      if (TextOffset >= Start && TextOffset < End)
+        return ElfView::FunctionTextRange{Start, End};
+    }
+  }
+  return std::nullopt;
 }
 
 // -- ElfView::findKernelDescriptor --------------------------------------------
@@ -681,6 +716,44 @@ ElfView::getKernelDescriptorInstPrefSize(StringRef KernelName,
         << "target CPU '" << TargetCpu << "' for kernel '" << KernelName
         << "'.\n";
   return std::nullopt;
+}
+
+bool ElfView::updateKernelDescriptorInstPrefSize(StringRef KernelName,
+                                                 StringRef TargetCpu,
+                                                 uint32_t InstPrefLines) {
+  namespace hsa = amdhsa;
+  uint8_t *Kd = findKernelDescriptor(KernelName);
+  if (!Kd) {
+    log() << "hotswap: error: updateKernelDescriptorInstPrefSize: kernel "
+          << "descriptor symbol '" << KernelName << ".kd' not found.\n";
+    return false;
+  }
+
+  if (!TargetCpu.starts_with("gfx12")) {
+    log() << "hotswap: error: updateKernelDescriptorInstPrefSize: unsupported "
+          << "target CPU '" << TargetCpu << "' for kernel '" << KernelName
+          << "'.\n";
+    return false;
+  }
+
+  uint32_t MaxInstPrefLines = static_cast<uint32_t>(
+      hsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE >>
+      hsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_SHIFT);
+  if (InstPrefLines > MaxInstPrefLines) {
+    log() << "hotswap: error: updateKernelDescriptorInstPrefSize: value "
+          << InstPrefLines << " exceeds the gfx12 descriptor encoding limit.\n";
+    return false;
+  }
+
+  uint32_t Rsrc3 = 0;
+  std::memcpy(&Rsrc3,
+              Kd + offsetof(hsa::kernel_descriptor_t, compute_pgm_rsrc3),
+              sizeof(Rsrc3));
+  AMDHSA_BITS_SET(Rsrc3, hsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE,
+                  InstPrefLines);
+  std::memcpy(Kd + offsetof(hsa::kernel_descriptor_t, compute_pgm_rsrc3),
+              &Rsrc3, sizeof(Rsrc3));
+  return true;
 }
 
 // -- ElfView::getKernelVgprCount ----------------------------------------------

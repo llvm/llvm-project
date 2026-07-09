@@ -76,6 +76,23 @@ TEST(ElfView, FindKernelAtAddressResolvesNearestPrecedingForZeroSizeSymbol) {
   EXPECT_EQ(ViewOrErr->findKernelAtAddress(0x0FF0), "");
 }
 
+// -- findNearestSled ----------------------------------------------------------
+
+TEST(FindNearestSled, SkipsSledsOutsideInstructionFunctionRange) {
+  std::vector<NopSled> Sleds;
+  // {Start, End, WritePos, FunctionStart, FunctionEnd}
+  Sleds.push_back({/*Start=*/0, /*End=*/32, /*WritePos=*/0,
+                   /*FunctionStart=*/0, /*FunctionEnd=*/32});
+  Sleds.push_back({/*Start=*/96, /*End=*/128, /*WritePos=*/96,
+                   /*FunctionStart=*/96, /*FunctionEnd=*/160});
+
+  NopSled *Sled = findNearestSled(Sleds, 108, 8);
+  ASSERT_NE(Sled, nullptr);
+  EXPECT_EQ(Sled->Start, 96u);
+
+  EXPECT_EQ(findNearestSled(Sleds, 64, 8), nullptr);
+}
+
 // -- ElfView::getKernelStaticLdsSize ------------------------------------------
 
 TEST(ElfView, GetKernelStaticLdsSizeReturnsNulloptWhenKdMissing) {

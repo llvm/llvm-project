@@ -458,8 +458,13 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
     return std::nullopt;
   }
 
-  std::vector<KernelDescriptorInfo> Work;
-  uint32_t MaxInstPrefLines = 0;
+  struct WorkItem {
+    KernelDescriptorInfo KD;
+    uint32_t StubInstPrefLines = 0;
+  };
+
+  std::vector<WorkItem> Work;
+  uint32_t MaxStubInstPrefLines = 0;
   for (const KernelDescriptorInfo &KD : Descriptors) {
     std::optional<bool> AlreadyHasEntryStub =
         descriptorAlreadyTargetsEntryStub(Elf, KD, LS, EntryStubPrefix);
@@ -467,12 +472,17 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
       return std::nullopt;
     if (*AlreadyHasEntryStub)
       continue;
-    std::optional<uint32_t> InstPrefLines =
+    std::optional<uint32_t> OriginalInstPrefLines =
         Elf.getKernelDescriptorInstPrefSize(KD.KernelName, LS.Cpu);
-    if (!InstPrefLines)
+    if (!OriginalInstPrefLines)
       return std::nullopt;
-    MaxInstPrefLines = std::max(MaxInstPrefLines, *InstPrefLines);
-    Work.push_back(KD);
+    // Entry stubs are 256-byte aligned and fit inside one stride, so clamp the
+    // descriptor prefetch to the stub stride. Deferred non-entry trampolines
+    // keep using the original descriptor prefetch guard.
+    uint32_t StubInstPrefLines =
+        std::min(*OriginalInstPrefLines, KernelEntryStubInstPrefLines);
+    MaxStubInstPrefLines = std::max(MaxStubInstPrefLines, StubInstPrefLines);
+    Work.push_back({KD, StubInstPrefLines});
   }
   if (Work.empty())
     return 0;
@@ -502,7 +512,8 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
     return std::nullopt;
   AppendOffset = StubStart;
 
-  for (const KernelDescriptorInfo &KD : Work) {
+  for (const WorkItem &Item : Work) {
+    const KernelDescriptorInfo &KD = Item.KD;
     std::optional<uint64_t> StubTextEnd = checkedAddUint64(
         Elf.textSize(), AppendOffset,
         (Twine("entry trampoline append offset for '") + KD.KernelName + "'")
@@ -533,7 +544,8 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
     Trampoline T;
     T.Bytes.assign(Stub.begin(), Stub.end());
     LocalGrowth.push_back(std::move(T));
-    LocalFixups.push_back({KD.KernelName, AppendOffset, *ScratchSgpr + 2});
+    LocalFixups.push_back({KD.KernelName, AppendOffset, *ScratchSgpr + 2,
+                           Item.StubInstPrefLines});
     std::optional<uint64_t> NewAppendOffset = checkedAddUint64(
         AppendOffset, KernelEntryStubStride,
         (Twine("entry trampoline append offset after '") + KD.KernelName + "'")
@@ -544,7 +556,7 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
   }
 
   const uint64_t GuardBytes =
-      computeKernelEntryPrefetchGuardBytes(MaxInstPrefLines);
+      computeKernelEntryPrefetchGuardBytes(MaxStubInstPrefLines);
   if (GuardBytes != 0) {
     SmallVector<uint8_t> CodeEnd = getCodeEndBytes(LS);
     if (CodeEnd.empty() ||
@@ -572,7 +584,7 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
 }
 
 bool rewriteKernelEntryDescriptorOffsets(
-    WritableMemoryBuffer &OutBuf, uint64_t OldTextSize,
+    WritableMemoryBuffer &OutBuf, uint64_t OldTextSize, StringRef TargetCpu,
     ArrayRef<KernelEntryTrampolineFixup> Fixups) {
   if (Fixups.empty())
     return true;
@@ -624,7 +636,9 @@ bool rewriteKernelEntryDescriptorOffsets(
         OutElf.updateKernelDescriptorEntryOffset(Fixup.KernelName, *NewOffset);
     bool UpdatedSgprs = OutElf.updateKernelDescriptorSgprCount(
         Fixup.KernelName, Fixup.RequiredSgprs);
-    Ok = UpdatedEntry && UpdatedSgprs && Ok;
+    bool UpdatedInstPref = OutElf.updateKernelDescriptorInstPrefSize(
+        Fixup.KernelName, TargetCpu, Fixup.InstPrefLines);
+    Ok = UpdatedEntry && UpdatedSgprs && UpdatedInstPref && Ok;
   }
   return Ok;
 }

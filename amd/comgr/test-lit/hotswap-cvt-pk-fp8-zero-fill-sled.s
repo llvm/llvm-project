@@ -1,10 +1,9 @@
-// COM: Test v_cvt_pk_fp8_f32 CLAMP=1 literal sources using zero-fill padding.
+// COM: Test v_cvt_pk_fp8_f32 CLAMP=1 literal sources with zero-fill padding.
 // COM:
-// COM: Generated hipblasLt initializer kernels can leave zero-filled alignment
-// COM: gaps between function-symbol ranges. Those gaps are writable .text
-// COM: space even though they are not decoded as s_nop instructions, and they
-// COM: are often the only local landing zones large enough for the expanded
-// COM: literal-source FP8 pack replacement.
+// COM: Zero-filled alignment gaps between function-symbol ranges are writable
+// COM: .text bytes, but they are not decoded s_nop instructions inside the
+// COM: source function. The rewriter should leave them alone and append a
+// COM: trampoline instead of branching into the zero bytes.
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib %s -o %t.elf
 
@@ -15,7 +14,7 @@
 // API: REWRITE: SUCCESS
 // API: IDEMPOTENT: YES
 
-// RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=ZERO %s
+// RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1250"
 .text
@@ -40,22 +39,25 @@ test_cvt_pk_fp8_zero_fill_after:
 .Ltest_cvt_pk_fp8_zero_fill_after_end:
 .size test_cvt_pk_fp8_zero_fill_after, .Ltest_cvt_pk_fp8_zero_fill_after_end-test_cvt_pk_fp8_zero_fill_after
 
-// ZERO-LABEL: <test_cvt_pk_fp8_zero_fill_source>:
-// ZERO-NEXT:  s_branch{{.*}}test_cvt_pk_fp8_zero_fill_sled
-// ZERO-NEXT:  s_nop
-// ZERO-NEXT:  s_nop
-// ZERO-NEXT:  s_endpgm
-// ZERO-LABEL: <test_cvt_pk_fp8_zero_fill_sled>:
-// ZERO:       s_mov_b32
-// ZERO-NEXT:  v_mov_b32{{.*}}0x477f0000
-// ZERO-NEXT:  v_mov_b32{{.*}}0x477f0000
-// ZERO-NEXT:  v_and_b32{{.*}}0x7fffffff
-// ZERO:       v_lshl_or_b32
-// ZERO-NEXT:  v_bfi_b32 v4,
-// ZERO-NEXT:  s_mov_b32
-// ZERO-NEXT:  s_branch{{.*}}<test_cvt_pk_fp8_zero_fill_source+0xc>
-// ZERO-LABEL: <test_cvt_pk_fp8_zero_fill_after>:
-// ZERO-NEXT:  s_endpgm
+// DISASM-LABEL: <test_cvt_pk_fp8_zero_fill_source>:
+// DISASM-NEXT:  s_branch{{.*}}<test_cvt_pk_fp8_zero_fill_after+0x4>
+// DISASM-NEXT:  s_nop
+// DISASM-NEXT:  s_nop
+// DISASM-NEXT:  s_endpgm
+// DISASM-LABEL: <test_cvt_pk_fp8_zero_fill_sled>:
+// DISASM-NOT:   s_mov_b32
+// DISASM-NOT:   v_mov_b32{{.*}}0x477f0000
+// DISASM-NOT:   v_lshl_or_b32
+// DISASM-LABEL: <test_cvt_pk_fp8_zero_fill_after>:
+// DISASM-NEXT:  s_endpgm
+// DISASM-NEXT:  s_mov_b32
+// DISASM-NEXT:  v_mov_b32{{.*}}0x477f0000
+// DISASM-NEXT:  v_mov_b32{{.*}}0x477f0000
+// DISASM-NEXT:  v_and_b32{{.*}}0x7fffffff
+// DISASM:       v_lshl_or_b32
+// DISASM-NEXT:  v_bfi_b32 v4,
+// DISASM-NEXT:  s_mov_b32
+// DISASM-NEXT:  s_branch{{.*}}<test_cvt_pk_fp8_zero_fill_source+0xc>
 
 .rodata
 .p2align 8

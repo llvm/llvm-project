@@ -24,6 +24,7 @@
 // API: RESULT: SUCCESS
 
 // RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
+// RUN: %llvm-objdump -s -j .rodata %t.out.elf | %FileCheck --check-prefix=RODATA %s
 // RUN: %llvm-readelf --notes %t.out.elf | %FileCheck --check-prefix=METADATA %s
 
 // DISASM-LABEL: <entry_tramp_kernel>:
@@ -38,6 +39,9 @@
 // DISASM-NEXT: s_add_co_u32 s8
 // DISASM-NEXT: s_add_co_ci_u32 s9
 // DISASM-NEXT: s_set_pc_i64 s[8:9]
+
+// RODATA: Contents of section .rodata
+// RODATA: {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} 20000000
 
 // METADATA: .name:           entry_tramp_kernel
 // METADATA: .sgpr_count:     10
