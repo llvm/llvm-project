@@ -2660,7 +2660,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         }
 
         if (replaced_modules.empty())
-          m_images.Append(module_sp, notify);
+          m_images.AppendIfNeeded(module_sp, notify);
 
         for (ModuleSP &old_module_sp : replaced_modules) {
           auto old_module_wp = old_module_sp->weak_from_this();
