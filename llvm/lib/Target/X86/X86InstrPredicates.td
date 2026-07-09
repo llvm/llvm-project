@@ -98,6 +98,7 @@ def HasBF16      : Predicate<"Subtarget->hasBF16()">;
 def HasFP16      : Predicate<"Subtarget->hasFP16()">;
 def HasAVXVNNIINT16 : Predicate<"Subtarget->hasAVXVNNIINT16()">;
 def HasAVXVNNIINT8 : Predicate<"Subtarget->hasAVXVNNIINT8()">;
+def NoAVXVNNIINT8 : Predicate<"!Subtarget->hasAVXVNNIINT8()">;
 def HasAVXVNNI : Predicate <"Subtarget->hasAVXVNNI()">;
 def NoVLX_Or_NoVNNI : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasVNNI()">;
 

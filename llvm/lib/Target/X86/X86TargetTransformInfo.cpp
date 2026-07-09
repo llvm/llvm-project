@@ -5911,6 +5911,89 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                             TTI::VectorInstrContext::None);
 }
 
+InstructionCost X86TTIImpl::getPartialReductionCost(
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+    TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
+  if (Opcode != Instruction::Add || CostKind != TTI::TCK_RecipThroughput ||
+      OpAExtend == TTI::PR_None || OpBExtend == TTI::PR_None || !BinOp ||
+      *BinOp != Instruction::Mul) {
+    return InstructionCost::getInvalid();
+  }
+
+  if (InputTypeA != InputTypeB)
+    return InstructionCost::getInvalid();
+
+  const unsigned AccumBits = AccumType->getScalarSizeInBits();
+  const unsigned InputBits = InputTypeA->getScalarSizeInBits();
+
+  const unsigned Ratio = AccumBits / InputBits;
+  if (VF.getKnownMinValue() <= Ratio)
+    // There would be no partial results in this case
+    return InstructionCost::getInvalid();
+
+  if (!((AccumBits == 32 && InputBits == 8) ||
+        (AccumBits == 32 && InputBits == 16)))
+    return InstructionCost::getInvalid();
+
+  bool SupportedBySubTarget = false;
+  if (InputBits == 8) {
+    bool IsSUMLA = (OpAExtend != OpBExtend);
+
+    if (IsSUMLA) {
+      SupportedBySubTarget = ST->hasAVX10_2() || ST->hasAVXVNNIINT8() ||
+                             ST->hasVNNI() || ST->hasAVXVNNI();
+    } else {
+      // Covers both SMLA and UMLA
+      SupportedBySubTarget = ST->hasAVX10_2() || ST->hasAVXVNNIINT8();
+    }
+  } else {
+    bool IsSMLA =
+        (OpAExtend == TTI::PR_SignExtend && OpBExtend == TTI::PR_SignExtend);
+
+    if (IsSMLA) {
+      SupportedBySubTarget =
+          ST->hasAVX10_2() || ST->hasVNNI() || ST->hasAVXVNNI();
+    } else {
+      // Covers both SUMLA and UMLA
+      SupportedBySubTarget = ST->hasAVX10_2() || ST->hasAVXVNNIINT16();
+    }
+  }
+
+  if (!SupportedBySubTarget)
+    return InstructionCost::getInvalid();
+
+  VectorType *InputVectorType = VectorType::get(InputTypeA, VF);
+  VectorType *AccumVectorType =
+      VectorType::get(AccumType, VF.divideCoefficientBy(Ratio));
+
+  auto TC = TLI->getTypeConversion(AccumVectorType->getContext(),
+                                   EVT::getEVT(AccumVectorType));
+  if (TC.first != TargetLowering::TypeLegal &&
+      TC.first != TargetLowering::TypeSplitVector)
+    return InstructionCost::getInvalid();
+
+  if (TLI->getTypeAction(AccumVectorType->getContext(), TC.second) !=
+      TargetLowering::TypeLegal)
+    return InstructionCost::getInvalid();
+
+  const std::pair<InstructionCost, MVT> InputTypeLegalizationCost =
+      getTypeLegalizationCost(InputVectorType);
+
+  InstructionCost CostPerInstr = TTI::TCC_Basic;
+  if (InputTypeLegalizationCost.second.getSizeInBits() == 512) {
+    // Perform the cost adjustment only for the instructions sets that
+    // actually provide 512-bit version of the VNNI instructions.
+    if (ST->hasAVX10_2() || ST->hasVNNI())
+      CostPerInstr = 2 * TTI::TCC_Basic;
+    else
+      return InstructionCost::getInvalid();
+  }
+
+  return InputTypeLegalizationCost.first * CostPerInstr;
+}
+
 InstructionCost X86TTIImpl::getMinMaxCost(Intrinsic::ID IID, Type *Ty,
                                           TTI::TargetCostKind CostKind,
                                           FastMathFlags FMF) const {

@@ -2714,6 +2714,64 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i128, Custom);
   }
 
+  // VNNI provides VPDPBUSD (byte unsigned x signed) and VPDPWSSD (word
+  // signed x signed).
+  if (Subtarget.hasVNNI()) {
+    if (Subtarget.hasVLX()) {
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32,
+                                MVT::v16i8, Legal);
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v8i32,
+                                MVT::v32i8, Legal);
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v4i32,
+                                MVT::v8i16, Legal);
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v8i32,
+                                MVT::v16i16, Legal);
+    }
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v16i32,
+                              MVT::v64i8, Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v16i32,
+                              MVT::v32i16, Legal);
+  } else if (Subtarget.hasAVXVNNI()) {
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32, MVT::v16i8,
+                              Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v8i32, MVT::v32i8,
+                              Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v4i32, MVT::v8i16,
+                              Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v8i32, MVT::v16i16,
+                              Legal);
+  }
+
+  // AVXVNNIINT8 provides VPDPBSSD, VPDPBUUD, VPDPBSUD (128/256 VEX).
+  if (Subtarget.hasAVXVNNIINT8()) {
+    for (auto Op : {ISD::PARTIAL_REDUCE_SMLA, ISD::PARTIAL_REDUCE_UMLA,
+                    ISD::PARTIAL_REDUCE_SUMLA}) {
+      setPartialReduceMLAAction(Op, MVT::v4i32, MVT::v16i8, Legal);
+      setPartialReduceMLAAction(Op, MVT::v8i32, MVT::v32i8, Legal);
+    }
+  }
+
+  // AVXVNNIINT16 provides VPDPWSUD, VPDPWUUD, VPDPWUSD (128/256 VEX).
+  if (Subtarget.hasAVXVNNIINT16()) {
+    for (auto Op : {ISD::PARTIAL_REDUCE_UMLA, ISD::PARTIAL_REDUCE_SUMLA}) {
+      setPartialReduceMLAAction(Op, MVT::v4i32, MVT::v8i16, Legal);
+      setPartialReduceMLAAction(Op, MVT::v8i32, MVT::v16i16, Legal);
+    }
+  }
+
+  // AVX10.2 provides all variants at all widths including 512-bit.
+  if (Subtarget.hasAVX10_2()) {
+    for (auto Op : {ISD::PARTIAL_REDUCE_SMLA, ISD::PARTIAL_REDUCE_UMLA,
+                    ISD::PARTIAL_REDUCE_SUMLA}) {
+      setPartialReduceMLAAction(Op, MVT::v4i32, MVT::v16i8, Legal);
+      setPartialReduceMLAAction(Op, MVT::v8i32, MVT::v32i8, Legal);
+      setPartialReduceMLAAction(Op, MVT::v16i32, MVT::v64i8, Legal);
+      setPartialReduceMLAAction(Op, MVT::v4i32, MVT::v8i16, Legal);
+      setPartialReduceMLAAction(Op, MVT::v8i32, MVT::v16i16, Legal);
+      setPartialReduceMLAAction(Op, MVT::v16i32, MVT::v32i16, Legal);
+    }
+  }
+
   // On 32 bit MSVC, `fmodf(f32)` is not defined - only `fmod(f64)`
   // is. We should promote the value to 64-bits to solve this.
   // This is what the CRT headers do - `fmodf` is an inline header

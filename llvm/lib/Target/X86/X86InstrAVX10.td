@@ -46,6 +46,54 @@ defm VPDPWUUD   : VNNI_common<0xd2, "vpdpwuud", X86vpdpwuud, SchedWriteVecIMul, 
 defm VPDPWUUDS  : VNNI_common<0xd3, "vpdpwuuds", X86vpdpwuuds, SchedWriteVecIMul, 1,
                               [HasAVX10_2], [HasAVX10_2]>, PS;
 
+let Predicates = [HasAVX10_2] in {
+// Partial reduction patterns: byte (i8 -> i32)
+// 128-bit
+def : Pat<(v4i32 (partial_reduce_smla (v4i32 VR128X:$src1), (v16i8 VR128X:$src2), (v16i8 VR128X:$src3))),
+          (VPDPBSSDZ128rr VR128X:$src1, VR128X:$src2, VR128X:$src3)>;
+def : Pat<(v4i32 (partial_reduce_umla (v4i32 VR128X:$src1), (v16i8 VR128X:$src2), (v16i8 VR128X:$src3))),
+          (VPDPBUUDZ128rr VR128X:$src1, VR128X:$src2, VR128X:$src3)>;
+def : Pat<(v4i32 (partial_reduce_sumla (v4i32 VR128X:$src1), (v16i8 VR128X:$src2), (v16i8 VR128X:$src3))),
+          (VPDPBSUDZ128rr VR128X:$src1, VR128X:$src2, VR128X:$src3)>;
+// 256-bit
+def : Pat<(v8i32 (partial_reduce_smla (v8i32 VR256X:$src1), (v32i8 VR256X:$src2), (v32i8 VR256X:$src3))),
+          (VPDPBSSDZ256rr VR256X:$src1, VR256X:$src2, VR256X:$src3)>;
+def : Pat<(v8i32 (partial_reduce_umla (v8i32 VR256X:$src1), (v32i8 VR256X:$src2), (v32i8 VR256X:$src3))),
+          (VPDPBUUDZ256rr VR256X:$src1, VR256X:$src2, VR256X:$src3)>;
+def : Pat<(v8i32 (partial_reduce_sumla (v8i32 VR256X:$src1), (v32i8 VR256X:$src2), (v32i8 VR256X:$src3))),
+          (VPDPBSUDZ256rr VR256X:$src1, VR256X:$src2, VR256X:$src3)>;
+// 512-bit
+def : Pat<(v16i32 (partial_reduce_smla (v16i32 VR512:$src1), (v64i8 VR512:$src2), (v64i8 VR512:$src3))),
+          (VPDPBSSDZrr VR512:$src1, VR512:$src2, VR512:$src3)>;
+def : Pat<(v16i32 (partial_reduce_umla (v16i32 VR512:$src1), (v64i8 VR512:$src2), (v64i8 VR512:$src3))),
+          (VPDPBUUDZrr VR512:$src1, VR512:$src2, VR512:$src3)>;
+def : Pat<(v16i32 (partial_reduce_sumla (v16i32 VR512:$src1), (v64i8 VR512:$src2), (v64i8 VR512:$src3))),
+          (VPDPBSUDZrr VR512:$src1, VR512:$src2, VR512:$src3)>;
+
+// Partial reduction patterns: word (i16 -> i32)
+// 128-bit
+def : Pat<(v4i32 (partial_reduce_smla (v4i32 VR128X:$src1), (v8i16 VR128X:$src2), (v8i16 VR128X:$src3))),
+          (VPDPWSSDZ128rr VR128X:$src1, VR128X:$src2, VR128X:$src3)>;
+def : Pat<(v4i32 (partial_reduce_umla (v4i32 VR128X:$src1), (v8i16 VR128X:$src2), (v8i16 VR128X:$src3))),
+          (VPDPWUUDZ128rr VR128X:$src1, VR128X:$src2, VR128X:$src3)>;
+def : Pat<(v4i32 (partial_reduce_sumla (v4i32 VR128X:$src1), (v8i16 VR128X:$src2), (v8i16 VR128X:$src3))),
+          (VPDPWSUDZ128rr VR128X:$src1, VR128X:$src2, VR128X:$src3)>;
+// 256-bit
+def : Pat<(v8i32 (partial_reduce_smla (v8i32 VR256X:$src1), (v16i16 VR256X:$src2), (v16i16 VR256X:$src3))),
+          (VPDPWSSDZ256rr VR256X:$src1, VR256X:$src2, VR256X:$src3)>;
+def : Pat<(v8i32 (partial_reduce_umla (v8i32 VR256X:$src1), (v16i16 VR256X:$src2), (v16i16 VR256X:$src3))),
+          (VPDPWUUDZ256rr VR256X:$src1, VR256X:$src2, VR256X:$src3)>;
+def : Pat<(v8i32 (partial_reduce_sumla (v8i32 VR256X:$src1), (v16i16 VR256X:$src2), (v16i16 VR256X:$src3))),
+          (VPDPWSUDZ256rr VR256X:$src1, VR256X:$src2, VR256X:$src3)>;
+// 512-bit
+def : Pat<(v16i32 (partial_reduce_smla (v16i32 VR512:$src1), (v32i16 VR512:$src2), (v32i16 VR512:$src3))),
+          (VPDPWSSDZrr VR512:$src1, VR512:$src2, VR512:$src3)>;
+def : Pat<(v16i32 (partial_reduce_umla (v16i32 VR512:$src1), (v32i16 VR512:$src2), (v32i16 VR512:$src3))),
+          (VPDPWUUDZrr VR512:$src1, VR512:$src2, VR512:$src3)>;
+def : Pat<(v16i32 (partial_reduce_sumla (v16i32 VR512:$src1), (v32i16 VR512:$src2), (v32i16 VR512:$src3))),
+          (VPDPWSUDZrr VR512:$src1, VR512:$src2, VR512:$src3)>;
+} // Predicates = [HasAVX10_2]
+
 // VMPSADBW
 defm VMPSADBW : avx512_common_3Op_rm_imm8<0x42, X86Vmpsadbw, "vmpsadbw", SchedWritePSADBW,
                                           avx512vl_i16_info, avx512vl_i8_info,

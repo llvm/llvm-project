@@ -12662,6 +12662,32 @@ let Predicates = [HasVNNI,HasVLX] in {
             (VPDPWSSDZ128rm VR128X:$src1, VR128X:$src2, addr:$src3)>;
 }
 
+// Partial reduction patterns for VNNI EVEX (when AVX10.2 is not available).
+// VPDPBUSD: byte unsigned x signed. SUMLA = (signed, unsigned) so swap.
+let Predicates = [HasVNNI, HasVLX, NoAVX10_2] in {
+  def : Pat<(v4i32 (partial_reduce_sumla (v4i32 VR128X:$src1),
+                    (v16i8 VR128X:$src2), (v16i8 VR128X:$src3))),
+            (VPDPBUSDZ128rr VR128X:$src1, VR128X:$src3, VR128X:$src2)>;
+  def : Pat<(v8i32 (partial_reduce_sumla (v8i32 VR256X:$src1),
+                    (v32i8 VR256X:$src2), (v32i8 VR256X:$src3))),
+            (VPDPBUSDZ256rr VR256X:$src1, VR256X:$src3, VR256X:$src2)>;
+  // VPDPWSSD: word signed x signed.
+  def : Pat<(v4i32 (partial_reduce_smla (v4i32 VR128X:$src1),
+                    (v8i16 VR128X:$src2), (v8i16 VR128X:$src3))),
+            (VPDPWSSDZ128rr VR128X:$src1, VR128X:$src2, VR128X:$src3)>;
+  def : Pat<(v8i32 (partial_reduce_smla (v8i32 VR256X:$src1),
+                    (v16i16 VR256X:$src2), (v16i16 VR256X:$src3))),
+            (VPDPWSSDZ256rr VR256X:$src1, VR256X:$src2, VR256X:$src3)>;
+}
+let Predicates = [HasVNNI, NoAVX10_2] in {
+  def : Pat<(v16i32 (partial_reduce_sumla (v16i32 VR512:$src1),
+                    (v64i8 VR512:$src2), (v64i8 VR512:$src3))),
+            (VPDPBUSDZrr VR512:$src1, VR512:$src3, VR512:$src2)>;
+  def : Pat<(v16i32 (partial_reduce_smla (v16i32 VR512:$src1),
+                    (v32i16 VR512:$src2), (v32i16 VR512:$src3))),
+            (VPDPWSSDZrr VR512:$src1, VR512:$src2, VR512:$src3)>;
+}
+
 //===----------------------------------------------------------------------===//
 // Bit Algorithms
 //===----------------------------------------------------------------------===//

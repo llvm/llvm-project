@@ -7473,6 +7473,26 @@ let Predicates = [HasAVXVNNI, NoVLX_Or_NoVNNI] in {
             (VPDPWSSDrm VR128:$src1, VR128:$src2, addr:$src3)>;
 }
 
+// Partial reduction patterns for AVXVNNI VEX (when EVEX VNNI not available).
+let Predicates = [HasAVXVNNI, NoVLX_Or_NoVNNI, NoAVXVNNIINT8] in {
+  // VPDPBUSD: SUMLA with operand swap (instruction is unsigned x signed).
+  def : Pat<(v4i32 (partial_reduce_sumla (v4i32 VR128:$src1),
+                    (v16i8 VR128:$src2), (v16i8 VR128:$src3))),
+            (VPDPBUSDrr VR128:$src1, VR128:$src3, VR128:$src2)>;
+  def : Pat<(v8i32 (partial_reduce_sumla (v8i32 VR256:$src1),
+                    (v32i8 VR256:$src2), (v32i8 VR256:$src3))),
+            (VPDPBUSDYrr VR256:$src1, VR256:$src3, VR256:$src2)>;
+}
+let Predicates = [HasAVXVNNI, NoVLX_Or_NoVNNI] in {
+  // VPDPWSSD: SMLA direct.
+  def : Pat<(v4i32 (partial_reduce_smla (v4i32 VR128:$src1),
+                    (v8i16 VR128:$src2), (v8i16 VR128:$src3))),
+            (VPDPWSSDrr VR128:$src1, VR128:$src2, VR128:$src3)>;
+  def : Pat<(v8i32 (partial_reduce_smla (v8i32 VR256:$src1),
+                    (v16i16 VR256:$src2), (v16i16 VR256:$src3))),
+            (VPDPWSSDYrr VR256:$src1, VR256:$src2, VR256:$src3)>;
+}
+
 //===----------------------------------------------------------------------===//
 // VPERMIL - Permute Single and Double Floating-Point Values
 //
@@ -8343,6 +8363,31 @@ let Predicates = [HasAVXVNNIINT8] in {
                                    0>, VEX_L, T8, XS;
 }
 
+// Partial reduction patterns for AVXVNNIINT8 VEX.
+let Predicates = [HasAVXVNNIINT8] in {
+  // VPDPBSSD: SMLA byte.
+  def : Pat<(v4i32 (partial_reduce_smla (v4i32 VR128:$src1),
+                    (v16i8 VR128:$src2), (v16i8 VR128:$src3))),
+            (VPDPBSSDrr VR128:$src1, VR128:$src2, VR128:$src3)>;
+  def : Pat<(v8i32 (partial_reduce_smla (v8i32 VR256:$src1),
+                    (v32i8 VR256:$src2), (v32i8 VR256:$src3))),
+            (VPDPBSSDYrr VR256:$src1, VR256:$src2, VR256:$src3)>;
+  // VPDPBUUD: UMLA byte.
+  def : Pat<(v4i32 (partial_reduce_umla (v4i32 VR128:$src1),
+                    (v16i8 VR128:$src2), (v16i8 VR128:$src3))),
+            (VPDPBUUDrr VR128:$src1, VR128:$src2, VR128:$src3)>;
+  def : Pat<(v8i32 (partial_reduce_umla (v8i32 VR256:$src1),
+                    (v32i8 VR256:$src2), (v32i8 VR256:$src3))),
+            (VPDPBUUDYrr VR256:$src1, VR256:$src2, VR256:$src3)>;
+  // VPDPBSUD: SUMLA byte (operands match SUMLA order directly).
+  def : Pat<(v4i32 (partial_reduce_sumla (v4i32 VR128:$src1),
+                    (v16i8 VR128:$src2), (v16i8 VR128:$src3))),
+            (VPDPBSUDrr VR128:$src1, VR128:$src2, VR128:$src3)>;
+  def : Pat<(v8i32 (partial_reduce_sumla (v8i32 VR256:$src1),
+                    (v32i8 VR256:$src2), (v32i8 VR256:$src3))),
+            (VPDPBSUDYrr VR256:$src1, VR256:$src2, VR256:$src3)>;
+}
+
 // AVX-NE-CONVERT
 multiclass AVX_NE_CONVERT_BASE<bits<8> Opcode, string OpcodeStr,
                   X86MemOperand MemOp128, X86MemOperand MemOp256> {
@@ -8531,4 +8576,22 @@ let Predicates = [HasAVXVNNIINT16] in {
   defm VPDPWUUDSY : avx_dotprod_rm<0xd3,"vpdpwuuds", v8i32, VR256, loadv8i32,
                                    i256mem, X86vpdpwuuds, SchedWriteVecIMul.YMM,
                                    1>, VEX_L, T8;
+}
+
+// Partial reduction patterns for AVXVNNIINT16 VEX.
+let Predicates = [HasAVXVNNIINT16] in {
+  // VPDPWUUD: UMLA word.
+  def : Pat<(v4i32 (partial_reduce_umla (v4i32 VR128:$src1),
+                    (v8i16 VR128:$src2), (v8i16 VR128:$src3))),
+            (VPDPWUUDrr VR128:$src1, VR128:$src2, VR128:$src3)>;
+  def : Pat<(v8i32 (partial_reduce_umla (v8i32 VR256:$src1),
+                    (v16i16 VR256:$src2), (v16i16 VR256:$src3))),
+            (VPDPWUUDYrr VR256:$src1, VR256:$src2, VR256:$src3)>;
+  // VPDPWSUD: SUMLA word (operands match SUMLA order directly).
+  def : Pat<(v4i32 (partial_reduce_sumla (v4i32 VR128:$src1),
+                    (v8i16 VR128:$src2), (v8i16 VR128:$src3))),
+            (VPDPWSUDrr VR128:$src1, VR128:$src2, VR128:$src3)>;
+  def : Pat<(v8i32 (partial_reduce_sumla (v8i32 VR256:$src1),
+                    (v16i16 VR256:$src2), (v16i16 VR256:$src3))),
+            (VPDPWSUDYrr VR256:$src1, VR256:$src2, VR256:$src3)>;
 }
