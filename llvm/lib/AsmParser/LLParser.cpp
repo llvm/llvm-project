@@ -9218,7 +9218,7 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
 
   if (Operation == AtomicRMWInst::Xchg) {
     if (!ValTy->isIntOrIntVectorTy() && !ValTy->isFPOrFPVectorTy() &&
-        !ValTy->isPtrOrPtrVectorTy() && isa<FixedVectorType>(ValTy)) {
+        !ValTy->isPtrOrPtrVectorTy()) {
       return error(
           ValLoc,
           "atomicrmw " + AtomicRMWInst::getOperationName(Operation) +
