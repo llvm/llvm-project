@@ -6097,7 +6097,7 @@ defm zos_ppa1_name : BoolMOption<"zos-ppa1-name",
   CodeGenOpts<"ZOSPPA1Name">, DefaultTrue,
   PosFlag<SetTrue, [], [], "Emit the function name in PPA1 on z/OS">,
   NegFlag<SetFalse, [], [], "Do not emit the function name in PPA1 on z/OS">,
-  BothFlags<[], [ClangOption, CC1Option]>>;
+  BothFlags<[TargetSpecific], [ClangOption, CC1Option]>>;
 
 def mno_warn_nonportable_cfstrings : Flag<["-"], "mno-warn-nonportable-cfstrings">, Group<m_Group>;
 def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>;
