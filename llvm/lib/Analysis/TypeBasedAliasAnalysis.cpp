@@ -815,8 +815,15 @@ AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
       M->getOperand(1) && mdconst::hasa<ConstantInt>(M->getOperand(1)) &&
       mdconst::extract<ConstantInt>(M->getOperand(1))->getValue() ==
           AccessSize &&
-      M->getOperand(2) && isa<MDNode>(M->getOperand(2)))
-    New.TBAA = cast<MDNode>(M->getOperand(2));
+      M->getOperand(2) && isa<MDNode>(M->getOperand(2))) {
+    // Only promote the field to a !tbaa tag if it is a well-formed struct-path
+    // access tag (operand 0 is a type node and it has at least 3 operands, as
+    // required by the verifier). A !tbaa.struct field can otherwise hold a bare
+    // type node, which is not a valid !tbaa tag.
+    MDNode *Tag = cast<MDNode>(M->getOperand(2));
+    if (Tag->getNumOperands() >= 3 && isa<MDNode>(Tag->getOperand(0)))
+      New.TBAA = Tag;
+  }
 
   New.TBAAStruct = nullptr;
   return New;

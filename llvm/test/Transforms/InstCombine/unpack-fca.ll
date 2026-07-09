@@ -311,6 +311,23 @@ define void @storeArrayWithMetadata(ptr %p, [4 x i32] %v) {
   ret void
 }
 
+; A malformed !tbaa.struct whose fields are bare type nodes (not struct-path
+; access tags) must not be promoted to an invalid old-style !tbaa on the split
+; stores. The AA metadata is conservatively dropped rather than producing IR the
+; verifier would reject.
+define void @storeMalformedTBAAStruct(ptr %p, { i32, i32 } %v) {
+; CHECK-LABEL: @storeMalformedTBAAStruct(
+; CHECK-NEXT:    [[V_ELT:%.*]] = extractvalue { i32, i32 } [[V:%.*]], 0
+; CHECK-NEXT:    store i32 [[V_ELT]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[P_REPACK1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[V_ELT2:%.*]] = extractvalue { i32, i32 } [[V]], 1
+; CHECK-NEXT:    store i32 [[V_ELT2]], ptr [[P_REPACK1]], align 4
+; CHECK-NEXT:    ret void
+;
+  store { i32, i32 } %v, ptr %p, align 4, !tbaa.struct !17
+  ret void
+}
+
 !0 = !{i64 0, i64 4, !1, i64 4, i64 4, !4, i64 8, i64 8, !6, i64 16, i64 8, !8, i64 24, i64 8, !10}
 !1 = !{!2, !2, i64 0}
 !2 = !{!"int", !3, i64 0}
@@ -328,3 +345,5 @@ define void @storeArrayWithMetadata(ptr %p, [4 x i32] %v) {
 !14 = !{i64 0, i64 4, !1, i64 4, i64 4, !1, i64 8, i64 4, !1, i64 12, i64 4, !1}
 !15 = !{!"Simple C++ TBAA"}
 !16 = distinct !{}
+; Fields are bare type nodes (operand 0 is a string), not struct-path tags.
+!17 = !{i64 0, i64 4, !2, i64 4, i64 4, !2}
