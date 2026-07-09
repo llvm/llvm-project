@@ -1293,6 +1293,25 @@ cc_library(
 )
 
 cc_library(
+    name = "tooling_headers",
+    hdrs = glob([
+        "include/clang/Tooling/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":ast_matchers",
+        ":basic",
+        ":dependency_scanning",
+        ":frontend",
+        ":support",
+        ":tooling_core",
+        "//llvm:Option",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "tooling",
     srcs = glob([
         "lib/Tooling/*.cpp",
@@ -2708,6 +2727,7 @@ cc_library(
         ":scalable_static_analysis_core",
         ":support",
         ":tooling_core",
+        ":tooling_headers",
         "//llvm:Support",
     ],
 )

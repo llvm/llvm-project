@@ -156,6 +156,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   nested template types (for example, ones containing local lambdas) could
   produce very large writable `.data` sections. Emitted RTTI name strings
   change only for types whose name exceeds the length limit. (#GH206313)
+- Fixed Itanium mangling for lambdas in default member initializers of local
+  classes to use `<local-name>` encoding, preventing mangling collisions between
+  distinct local classes.
 
 ### AST Dumping Potentially Breaking Changes
 
@@ -566,6 +569,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   allowing it to be disabled independently with `-Wno-unused-but-set-global`.
   (#GH148361)
 
+- `-Wunused-template` is now part of `-Wunused` (which is enabled by `-Wall`).
+  It diagnoses unused function and variable templates with internal linkage,
+  which in a header is a latent ODR hazard. It can be disabled with
+  `-Wno-unused-template`. (#GH202945)
+
 - Added `-Wlifetime-safety` to enable lifetime safety analysis,
   a CFG-based intra-procedural analysis that detects use-after-free and related
   temporal safety bugs. See the
@@ -828,6 +836,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed an alias template CTAD crash.
 - Correctly diagnose uses of `co_await` / `co_yield` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+- Fixed clang incorrectly rejecting several cases of out-of-line definitions. (#GH101330)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed crash instantiating class member specializations.
