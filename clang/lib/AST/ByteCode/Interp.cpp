@@ -2468,7 +2468,8 @@ bool MarkDestroyed(InterpState &S, CodePtr OpPC) {
 
 bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
                           std::optional<uint64_t> ArraySize) {
-  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  Pointer &Orig = S.Stk.peek<Pointer>();
+  Pointer Ptr = Orig;
 
   auto directBaseIsUnion = [](const Pointer &Ptr) -> bool {
     if (Ptr.isArrayElement())
@@ -2541,15 +2542,18 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
     AllocType = NewExpr->getAllocatedType();
   }
 
-  if (AllocType->isArrayType() && Ptr.isArrayElement() && Ptr.getIndex() == 0) {
+  if (AllocType->isArrayType() && Ptr.isArrayElement() &&
+      Ptr.expand().getIndex() == 0) {
     // The destination of placement new is pointing to the first element
     // of an array.  There's a special case in [expr.const]: "[...] if T is an
     // array type, to the first element of such an object [...]".  Handle
     // that case here by using the base of the Pointer.
     QualType AllocElementType =
         ASTCtx.getAsArrayType(AllocType)->getElementType();
-    if (ASTCtx.hasSimilarType(AllocElementType, StorageType))
-      StorageType = Ptr.getArray().getType();
+    if (ASTCtx.hasSimilarType(AllocElementType, StorageType)) {
+      StorageType = Ptr.expand().getArray().getType();
+      Orig = Orig.expand();
+    }
   }
 
   if (!ASTCtx.hasSimilarType(AllocType, StorageType)) {

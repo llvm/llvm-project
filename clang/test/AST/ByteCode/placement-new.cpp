@@ -255,13 +255,11 @@ namespace records {
   constexpr bool record7() {
     S ss[3][3];
 
-    // FIXME: Wrong diagnostic
-    new (&ss[1]) S[3]{1,2,3}; // expected-note {{placement new would change type of storage from 'S[3][3]' to 'S[3]'}}
+    new (&ss[1]) S[3]{1,2,3};
 
     return ss[1][0].f == 1 && ss[1][1].f == 2 && ss[1][2].f == 3;
   }
-  static_assert(record7()); // expected-error {{not an integral constant expression}} \
-                            // expected-note {{in call to}}
+  static_assert(record7());
 
   /// Destructor is NOT called.
   struct A {
