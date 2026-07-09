@@ -6319,7 +6319,7 @@ bool SPIRVInstructionSelector::selectResourceNonUniformIndex(
 void SPIRVInstructionSelector::decorateUsesAsNonUniform(
     Register &NonUniformReg) const {
   llvm::SmallVector<std::pair<Register, MachineInstr *>> WorkList = {
-      {NonUniformReg, nullptr}};
+      {NonUniformReg, MRI->getVRegDef(NonUniformReg)}};
   llvm::SmallSet<Register, 8> Visited;
   while (WorkList.size() > 0) {
     auto [CurrentReg, DefMI] = WorkList.pop_back_val();
@@ -6345,8 +6345,6 @@ void SPIRVInstructionSelector::decorateUsesAsNonUniform(
     }
 
     if (!IsDecorated) {
-      if (!DefMI)
-        DefMI = MRI->getVRegDef(CurrentReg);
       MachineBasicBlock &MBB = *DefMI->getParent();
       MachineInstr &InsertPt = DefMI->isPHI() ? *MBB.getFirstNonPHI() : *DefMI;
       buildOpDecorate(CurrentReg, InsertPt, TII,
