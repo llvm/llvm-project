@@ -16,9 +16,9 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
-#include "src/__support/str_to_integer.h"
 #include "src/__support/printf_core/core_structs.h"
 #include "src/__support/printf_core/printf_config.h"
+#include "src/__support/str_to_integer.h"
 
 #include <stddef.h>
 
