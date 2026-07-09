@@ -1,0 +1,95 @@
+REQUIRES: ld.lld
+
+## Check that DTLTO serializes LTO configuration state into the remote Clang
+## command line.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: %clang --target=x86_64-unknown-linux-gnu -flto=thin -c test.c -o test.o
+RUN: %clang --target=x86_64-pc-windows-msvc -flto=thin -c test.c -o coff.o
+RUN: touch profile.prof
+
+DEFINE: %{base} = not llvm-lto2 run \
+DEFINE:   -dtlto-distributor=%python \
+DEFINE:   -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
+DEFINE:   -dtlto-compiler=%clang \
+DEFINE:   -o test.out
+
+DEFINE: %{command} = %{base} \
+DEFINE:   test.o \
+DEFINE:   -r=test.o,foo,px
+
+DEFINE: %{command-coff} = %{base} \
+DEFINE:   coff.o \
+DEFINE:   -r=coff.o,foo,px
+
+DEFINE: %{lld} = not ld.lld test.o \
+DEFINE:   -o test.elf \
+DEFINE:   --thinlto-distributor=%python \
+DEFINE:   --thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
+DEFINE:   --thinlto-remote-compiler=%clang
+
+ARGS: "args": [
+
+## Optimization level.
+RUN: %{command} -O0 2>&1 | FileCheck %s --check-prefixes=ARGS,O0,ERR
+RUN: %{command} -O3 2>&1 | FileCheck %s --check-prefixes=ARGS,O3,ERR
+O0: "-O0"
+O3: "-O3"
+
+## Address-significance table, function sections, and data sections.
+RUN: %{command} -addrsig -function-sections -data-sections 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,SECTIONS,ERR
+SECTIONS: "-faddrsig"
+SECTIONS: "-ffunction-sections"
+SECTIONS: "-fdata-sections"
+
+RUN: %{command} 2>&1 | FileCheck %s --check-prefixes=ARGS,NO-SECTIONS,ERR
+NO-SECTIONS-NOT: "-faddrsig"
+NO-SECTIONS-NOT: "-ffunction-sections"
+NO-SECTIONS-NOT: "-fdata-sections"
+
+## PIC is forwarded as -fpic for ELF targets but not for COFF targets because
+## Clang does not accept -fpic for every target.
+RUN: %{command} -relocation-model=pic 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,PIC,ERR
+PIC: "-fpic"
+
+RUN: %{command} -relocation-model=static 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,NO-PIC,ERR
+NO-PIC-NOT: "-fpic"
+
+RUN: %{command-coff} -relocation-model=pic -O3 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=COFF-PIC,ERR
+COFF-PIC-NOT: "-fpic"
+
+## Sample profile forwarding and common-input serialization.
+RUN: %{command} -lto-sample-profile-file=profile.prof 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,SAMPLE,ERR
+SAMPLE: "-fprofile-sample-use=profile.prof"
+SAMPLE: "inputs": [
+SAMPLE: "profile.prof"
+
+RUN: %{command} 2>&1 | FileCheck %s --check-prefixes=ARGS,NO-SAMPLE,ERR
+NO-SAMPLE-NOT: "-fprofile-sample-use=profile.prof"
+NO-SAMPLE-NOT: "profile.prof"
+
+## PGO warning mismatch control is an LLD-driver option rather than an
+## llvm-lto2 option, so check it through the ELF linker.
+RUN: %{lld} --no-lto-pgo-warn-mismatch 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,PGO-WARN,ERR
+PGO-WARN: "-mllvm"
+PGO-WARN-NEXT: "-no-pgo-warn-mismatch"
+
+RUN: %{lld} 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,NO-PGO-WARN,ERR
+NO-PGO-WARN-NOT: "-no-pgo-warn-mismatch"
+
+## The validate.py distributor prints the DTLTO JSON and then exits without
+## producing native objects, so each llvm-lto2 command is expected to fail after
+## the JSON has been emitted. We check that we saw the expected failure mode
+## and not some other failure.
+ERR: DTLTO backend compilation: cannot open native object file:
+
+#--- test.c
+void foo(void) {}
