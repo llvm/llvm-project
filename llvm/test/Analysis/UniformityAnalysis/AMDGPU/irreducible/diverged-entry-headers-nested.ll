@@ -127,7 +127,7 @@ exit:
 ;;
 ;; CHECK-LABEL: UniformityInfo for function 'headers_b_t':
 ;; CHECK: CYCLES ASSUMED DIVERGENT:
-;; CHECK:   depth=2: entries(T P) S Q R
+;; CHECK:   depth=2: entries(T P) Q R S
 ;; CHECK-NOT: CYCLES WITH DIVERGENT EXIT:
 
 define amdgpu_kernel void @headers_b_t(i32 %a, i32 %b, i32 %c) {
@@ -185,7 +185,7 @@ exit:
 ;;
 ;; CHECK-LABEL: UniformityInfo for function 'headers_a_t':
 ;; CHECK: CYCLES ASSUMED DIVERGENT:
-;; CHECK:   depth=1: entries(A B) D T S Q P R C
+;; CHECK:   depth=1: entries(A B) D C T P Q R S
 ;; CHECK-NOT: CYCLES WITH DIVERGENT EXIT:
 
 define amdgpu_kernel void @headers_a_t(i32 %a, i32 %b, i32 %c) {
