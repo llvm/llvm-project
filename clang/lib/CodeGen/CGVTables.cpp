@@ -992,8 +992,7 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
   // insignificant either when no RTTI is emitted or for a weak vtable on a
   // target that may duplicate vtables. In those cases the vtable can be marked
   // unnamed_addr.
-  bool VTableMayBeDuplicated = CGM.mayVTableBeDuplicated(VTable->getLinkage());
-  if (!CGM.shouldEmitRTTI() || VTableMayBeDuplicated)
+  if (!CGM.shouldEmitRTTI() || CGM.mayVTableBeDuplicated(VTable->getLinkage()))
     VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   llvm::Constant *RTTI = CGM.GetAddrOfRTTIDescriptor(
