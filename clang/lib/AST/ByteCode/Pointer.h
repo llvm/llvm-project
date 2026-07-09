@@ -949,7 +949,7 @@ public:
     if (BS.Base < sizeof(InlineDescriptor))
       return Lifetime::Started;
 
-    if (getFieldDesc()->isPrimitiveArray() && !isArrayRoot()) {
+    if (inArray() && !isArrayRoot()) {
       InitMapPtr &IM = getInitMap();
 
       if (!IM.hasInitMap()) {
