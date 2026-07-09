@@ -140,10 +140,10 @@ void MCAsmInfoGOFF::printSwitchToSection(const MCSection &Section,
   case GOFF::ESD_ST_ElementDefinition: {
     printSwitchToSection(*Sec.getParent(), Subsection, T, OS);
     if (!Sec.Emitted) {
-      emitCATTR(OS, Sec.getName(), Sec.EDAttributes.Rmode,
-                Sec.getEDAlignment(), Sec.EDAttributes.LoadBehavior,
-                GOFF::ESD_EXE_Unspecified, Sec.EDAttributes.IsReadOnly, 0,
-                Sec.EDAttributes.FillByteValue, StringRef());
+      emitCATTR(OS, Sec.getName(), Sec.EDAttributes.Rmode, Sec.getEDAlignment(),
+                Sec.EDAttributes.LoadBehavior, GOFF::ESD_EXE_Unspecified,
+                Sec.EDAttributes.IsReadOnly, 0, Sec.EDAttributes.FillByteValue,
+                StringRef());
       if (auto *BeginSym = static_cast<MCSymbolGOFF *>(Sec.getBeginSymbol())) {
         if (BeginSym->getADA())
           emitXATTR(OS, BeginSym->getName(), BeginSym->getADA(),
