@@ -20,7 +20,6 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
 #include "llvm/Support/raw_ostream.h"
-#include <forward_list>
 
 namespace Fortran::parser {
 class CharBlock;

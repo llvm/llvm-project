@@ -58,6 +58,18 @@ def FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO :
   let hasSideEffects = 0;
 }
 
+// Expanded form of FORM_TRANSPOSED_REG_TUPLE. Each FORM_TRANSPOSED_REG_TUPLE is
+// expanded to copies immediately before register allocation. This ensures the
+// live ranges of each member of the tuple are correctly modelled during
+// register allocation. These pseudos are used to guide the hints in
+// AArch64RegisterInfo::getRegAllocationHints().
+def COPY_INTO_TRANSPOSED_TUPLE :
+  Pseudo<(outs ZPR:$tup), (ins ZPR:$zn, imm0_31: $size), []>, Sched<[]>{
+  let hasSideEffects = 0;
+  let isAsCheapAsAMove = 1;
+  let isReMaterializable = 1;
+}
+
 def SDTZALoadStore : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisInt<2>]>;
 // SME ZA loads and stores
 def AArch64SMELdr : SDNode<"AArch64ISD::SME_ZA_LDR", SDTZALoadStore,

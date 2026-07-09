@@ -176,6 +176,14 @@ private:
 //                                LoadInst Class
 //===----------------------------------------------------------------------===//
 
+/// A structure representing the properties of a load or store instruction.
+struct LoadStoreInstProperties {
+  bool IsVolatile;
+  Align Alignment;
+  AtomicOrdering Ordering;
+  SyncScope::ID SSID;
+};
+
 /// An instruction for reading from memory. This uses the SubclassData field in
 /// Value to store whether or not the load is volatile.
 class LoadInst : public UnaryInstruction {
@@ -204,6 +212,9 @@ public:
   LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
                     Align Align, AtomicOrdering Order,
                     SyncScope::ID SSID = SyncScope::System,
+                    InsertPosition InsertBefore = nullptr);
+  LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr,
+                    const LoadStoreInstProperties &Props,
                     InsertPosition InsertBefore = nullptr);
 
   /// Return true if this is a load from a volatile memory location.
@@ -247,6 +258,19 @@ public:
                  SyncScope::ID SSID = SyncScope::System) {
     setOrdering(Ordering);
     setSyncScopeID(SSID);
+  }
+
+  /// Returns the properties of this load instruction.
+  LoadStoreInstProperties getProperties() const {
+    return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID()};
+  }
+
+  /// Sets the properties of this load instruction.
+  void setProperties(const LoadStoreInstProperties &Props) {
+    setVolatile(Props.IsVolatile);
+    setAlignment(Props.Alignment);
+    setOrdering(Props.Ordering);
+    setSyncScopeID(Props.SSID);
   }
 
   bool isSimple() const { return !isAtomic() && !isVolatile(); }
@@ -322,6 +346,9 @@ public:
                      AtomicOrdering Order,
                      SyncScope::ID SSID = SyncScope::System,
                      InsertPosition InsertBefore = nullptr);
+  LLVM_ABI StoreInst(Value *Val, Value *Ptr,
+                     const LoadStoreInstProperties &Props,
+                     InsertPosition InsertBefore = nullptr);
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -371,6 +398,19 @@ public:
                  SyncScope::ID SSID = SyncScope::System) {
     setOrdering(Ordering);
     setSyncScopeID(SSID);
+  }
+
+  /// Returns the properties of this store instruction.
+  LoadStoreInstProperties getProperties() const {
+    return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID()};
+  }
+
+  /// Sets the properties of this store instruction.
+  void setProperties(const LoadStoreInstProperties &Props) {
+    setVolatile(Props.IsVolatile);
+    setAlignment(Props.Alignment);
+    setOrdering(Props.Ordering);
+    setSyncScopeID(Props.SSID);
   }
 
   bool isSimple() const { return !isAtomic() && !isVolatile(); }

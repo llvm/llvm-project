@@ -457,7 +457,7 @@ def SetLocal : AccessOpcode {
   let NeedsOpPC = 0;
 }
 
-def EndLifetimePop : Opcode;
+def PseudoDtor : Opcode;
 def EndLifetime : Opcode;
 def MarkDestroyed : Opcode;
 def StartThisLifetime : Opcode {
