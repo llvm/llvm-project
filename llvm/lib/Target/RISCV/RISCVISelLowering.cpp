@@ -19925,14 +19925,14 @@ static SDValue performReverseEVLCombine(SDNode *N,
   SmallVector<SDValue> Worklist = {Op};
   while (!Worklist.empty()) {
     SDValue X = Worklist.pop_back_val();
+    if (DAG.isSplatValue(X))
+      continue;
     if (!X.hasOneUser())
       return SDValue();
     if (auto *VPL = dyn_cast<VPLoadSDNode>(X)) {
       if (VPLoad && VPLoad != VPL)
         return SDValue();
       VPLoad = VPL;
-    } else if (DAG.isSplatValue(X)) {
-      continue;
     } else if (DAG.getTargetLoweringInfo().isBinOp(X.getOpcode()) &&
                X->getNumValues() == 1) {
       append_range(Worklist, X->op_values());
