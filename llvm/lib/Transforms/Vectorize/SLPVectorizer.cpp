@@ -253,6 +253,11 @@ static cl::opt<bool> NonVectReductions(
     cl::desc(
         "Use  non-vectorizable instructions as potential reduction roots."));
 
+static cl::opt<bool> VectorizePoorThroughput(
+    "slp-vectorize-poor-throughput", cl::init(true), cl::Hidden,
+    cl::desc("Use poor-throughput instructions (e.g. fdiv, frem, fsqrt) as "
+             "standalone vectorization seeds."));
+
 /// True when \p slp-vectorize-non-power-of-2 is enabled and \p NumElts is a
 /// supported non-power-of-2 width: \p NumElts + 1 must be a power of two
 /// (e.g. 3 or 7 lanes, i.e. almost a full power-of-2 register).
@@ -711,21 +716,25 @@ static std::optional<unsigned> getInsertExtractIndex(const Value *Inst,
   static_assert(std::is_same_v<T, InsertElementInst> ||
                     std::is_same_v<T, ExtractElementInst>,
                 "unsupported T");
-  int Index = Offset;
-  if (const auto *IE = dyn_cast<T>(Inst)) {
-    const auto *VT = dyn_cast<FixedVectorType>(IE->getType());
-    if (!VT)
-      return std::nullopt;
-    const auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
-    if (!CI)
-      return std::nullopt;
-    if (CI->getValue().uge(VT->getNumElements()))
-      return std::nullopt;
-    Index *= VT->getNumElements();
-    Index += CI->getZExtValue();
-    return Index;
-  }
-  return std::nullopt;
+  const auto *IE = dyn_cast<T>(Inst);
+  if (!IE)
+    return std::nullopt;
+  // InsertElement: result is the vector, index is op 2.
+  // ExtractElement: result is scalar, vector is op 0, index is op 1.
+  constexpr bool IsInsert = std::is_same_v<T, InsertElementInst>;
+  Type *VecTy = IsInsert ? IE->getType() : IE->getOperand(0)->getType();
+  const auto *VT = dyn_cast<FixedVectorType>(VecTy);
+  if (!VT)
+    return std::nullopt;
+  const auto *CI = dyn_cast<ConstantInt>(IE->getOperand(IsInsert ? 2 : 1));
+  if (!CI)
+    return std::nullopt;
+  if (CI->getValue().uge(VT->getNumElements()))
+    return std::nullopt;
+  unsigned Index = Offset;
+  Index *= VT->getNumElements();
+  Index += CI->getZExtValue();
+  return Index;
 }
 
 /// \returns inserting or extracting index of InsertElement, ExtractElement or
@@ -738,7 +747,7 @@ static std::optional<unsigned> getElementIndex(const Value *Inst,
   if (auto Index = getInsertExtractIndex<ExtractElementInst>(Inst, Offset))
     return Index;
 
-  int Index = Offset;
+  unsigned Index = Offset;
 
   const auto *IV = dyn_cast<InsertValueInst>(Inst);
   if (!IV)
@@ -2649,34 +2658,36 @@ public:
     // tree entry node in the different lane.
 
     /// Loads from consecutive memory addresses, e.g. load(A[i]), load(A[i+1]).
-    static const int ScoreConsecutiveLoads = 4;
+    static constexpr int ScoreConsecutiveLoads = 40;
     /// The same load multiple times. This should have a better score than
     /// `ScoreSplat` because it in x86 for a 2-lane vector we can represent it
     /// with `movddup (%reg), xmm0` which has a throughput of 0.5 versus 0.5 for
     /// a vector load and 1.0 for a broadcast.
-    static const int ScoreSplatLoads = 3;
+    static constexpr int ScoreSplatLoads = 30;
     /// Loads from reversed memory addresses, e.g. load(A[i+1]), load(A[i]).
-    static const int ScoreReversedLoads = 3;
+    static constexpr int ScoreReversedLoads = 30;
     /// A load candidate for masked gather.
-    static const int ScoreMaskedGatherCandidate = 1;
+    static constexpr int ScoreMaskedGatherCandidate = 10;
     /// ExtractElementInst from same vector and consecutive indexes.
-    static const int ScoreConsecutiveExtracts = 4;
+    static constexpr int ScoreConsecutiveExtracts = 40;
     /// ExtractElementInst from same vector and reversed indices.
-    static const int ScoreReversedExtracts = 3;
+    static constexpr int ScoreReversedExtracts = 30;
     /// Constants.
-    static const int ScoreConstants = 2;
+    static constexpr int ScoreConstants = 15;
+    /// Same constants.
+    static constexpr int ScoreSameConstants = 17;
     /// Instructions with the same opcode.
-    static const int ScoreSameOpcode = 2;
+    static constexpr int ScoreSameOpcode = 20;
     /// Instructions with alt opcodes (e.g, add + sub).
-    static const int ScoreAltOpcodes = 1;
+    static constexpr int ScoreAltOpcodes = 10;
     /// Identical instructions (a.k.a. splat or broadcast).
-    static const int ScoreSplat = 1;
+    static constexpr int ScoreSplat = 10;
     /// Matching with an undef is preferable to failing.
-    static const int ScoreUndef = 1;
+    static constexpr int ScoreUndef = 10;
     /// Score for failing to find a decent match.
-    static const int ScoreFail = 0;
+    static constexpr int ScoreFail = 0;
     /// Score if all users are vectorized.
-    static const int ScoreAllUserVectorized = 1;
+    static constexpr int ScoreAllUserVectorized = 10;
 
     /// \returns the score of placing \p V1 and \p V2 in consecutive lanes.
     /// \p U1 and \p U2 are the users of \p V1 and \p V2.
@@ -2710,6 +2721,10 @@ public:
                AllUsersAreInternal(V1, V2)))
             return LookAheadHeuristics::ScoreSplatLoads;
         }
+        if (isa<UndefValue>(V1))
+          return LookAheadHeuristics::ScoreUndef;
+        if (isConstant(V1))
+          return LookAheadHeuristics::ScoreSameConstants;
         return LookAheadHeuristics::ScoreSplat;
       }
 
@@ -2761,7 +2776,7 @@ public:
       // Consider constants and buildvector compatible.
       if ((C1 && isa<InsertElementInst>(V2)) ||
           (C2 && isa<InsertElementInst>(V1)))
-        return LookAheadHeuristics::ScoreConstants;
+        return LookAheadHeuristics::ScoreSameOpcode;
 
       // Extracts from consecutive indexes of the same vector better score as
       // the extracts could be optimized away.
@@ -3112,7 +3127,9 @@ public:
     /// Score scaling factor for fully compatible instructions but with
     /// different number of external uses. Allows better selection of the
     /// instructions with less external uses.
-    static const int ScoreScaleFactor = 10;
+    static constexpr int ScoreScaleFactor = 10;
+    /// Scale factor for constants only.
+    static constexpr int ScoreConstantScaleFactor = 6;
 
     /// \Returns the look-ahead score, which tells us how much the sub-trees
     /// rooted at \p LHS and \p RHS match, the more they match the higher the
@@ -3130,7 +3147,8 @@ public:
           LookAhead.getScoreAtLevelRec(LHS, RHS, /*U1=*/nullptr, /*U2=*/nullptr,
                                        /*CurrLevel=*/1, MainAltOps);
       if (Score) {
-        int SplatScore = getSplatScore(Lane, OpIdx, Idx, UsedLanes);
+        int SplatScore =
+            getSplatScore(Lane, OpIdx, Idx, UsedLanes) * ScoreScaleFactor;
         if (Score <= -SplatScore) {
           // Failed score.
           Score = 0;
@@ -3141,7 +3159,10 @@ public:
           // uses. It does not affect actual selection of the best
           // compatible operand in general, just allows to select the
           // operand with all vectorized uses.
-          Score *= ScoreScaleFactor;
+          const int SF = (LHS == RHS && isConstant(LHS))
+                             ? ScoreConstantScaleFactor
+                             : ScoreScaleFactor;
+          Score *= SF;
           Score += getExternalUseScore(Lane, OpIdx, Idx);
           IsUsed = true;
         }
@@ -10750,8 +10771,8 @@ buildIntrinsicArgTypes(const CallInst *CI, const Intrinsic::ID ID,
 /// function (if possible) calls. Returns invalid cost for the corresponding
 /// calls, if they cannot be vectorized/will be scalarized.
 static std::pair<InstructionCost, InstructionCost>
-getVectorCallCosts(CallInst *CI, Type *VecTy, TargetTransformInfo *TTI,
-                   TargetLibraryInfo *TLI, ArrayRef<Type *> ArgTys) {
+getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
+                   const TargetLibraryInfo *TLI, ArrayRef<Type *> ArgTys) {
   auto Shape = VFShape::get(CI->getFunctionType(),
                             ElementCount::getFixed(getNumElements(VecTy)),
                             false /*HasGlobalPred*/);
@@ -10792,6 +10813,124 @@ getVectorCallCosts(CallInst *CI, Type *VecTy, TargetTransformInfo *TTI,
   }
 
   return {IntrinsicCost, LibCost};
+}
+
+/// \returns the reciprocal-throughput cost of \p I widened to \p VF lanes (an
+/// arithmetic op or a vectorizable call).
+static InstructionCost getVectorOpCost(Instruction *I, unsigned VF,
+                                       const TargetTransformInfo &TTI,
+                                       const TargetLibraryInfo &TLI) {
+  assert((isa<BinaryOperator, CallInst>(I)) &&
+         "getVectorOpCost expects an arithmetic op or a vectorizable call.");
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  Type *VecTy = getWidenedType(I->getType(), VF);
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI);
+    SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(CI, ID, VF, 0, &TTI);
+    auto [IntrCost, LibCost] =
+        getVectorCallCosts(CI, VecTy, &TTI, &TLI, ArgTys);
+    return std::min(IntrCost, LibCost);
+  }
+  return TTI.getArithmeticInstrCost(I->getOpcode(), VecTy, CostKind);
+}
+
+/// Packs a type's kind and scalar width into one key, so an opcode/intrinsic
+/// id reused across scalar widths (e.g. fdiv float vs. fdiv double) is cached
+/// per width instead of sharing one verdict.
+static unsigned getPoorThroughputTypeKey(Type *Ty) {
+  return (static_cast<unsigned>(Ty->getTypeID()) << 16) |
+         Ty->getScalarSizeInBits();
+}
+
+namespace {
+/// Memoizes opcode / intrinsic / callee kinds already ruled out as seeds.
+struct PoorThroughputOpCache {
+  SmallDenseSet<std::pair<unsigned, unsigned>> CheapOpcodes;
+  SmallDenseSet<std::pair<Intrinsic::ID, unsigned>> CheapIntrinsics;
+  // Keyed on the callee alone: a Function's signature is fixed, so its type
+  // never varies between calls.
+  SmallDenseSet<const Function *> CheapCallees;
+};
+
+/// Groups poor-throughput seeds for tryToVectorizeSequence.
+struct SeedGroupKey {
+  unsigned Opcode = 0;
+  Intrinsic::ID IntrID = Intrinsic::not_intrinsic;
+  StringRef CalleeName;
+
+  bool operator==(const SeedGroupKey &O) const {
+    return Opcode == O.Opcode && IntrID == O.IntrID &&
+           CalleeName == O.CalleeName;
+  }
+  bool operator!=(const SeedGroupKey &O) const { return !(*this == O); }
+  bool less(const SeedGroupKey &O) const {
+    if (Opcode != O.Opcode)
+      return Opcode < O.Opcode;
+    if (IntrID != O.IntrID)
+      return IntrID < O.IntrID;
+    return CalleeName < O.CalleeName;
+  }
+};
+
+static SeedGroupKey getSeedGroupKey(const Instruction *I,
+                                    const TargetLibraryInfo &TLI) {
+  SeedGroupKey K;
+  K.Opcode = I->getOpcode();
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    K.IntrID = getVectorIntrinsicIDForCall(CI, &TLI);
+    if (const Function *F = CI->getCalledFunction())
+      K.CalleeName = F->getName();
+  }
+  return K;
+}
+} // namespace
+
+/// Returns true if \p I is an expensive scalar op whose vector form is cheaper
+/// per lane (e.g. fdiv, frem, fsqrt).
+static bool isPoorThroughputOp(Instruction *I, const TargetTransformInfo &TTI,
+                               const TargetLibraryInfo &TLI,
+                               PoorThroughputOpCache &Cache) {
+  if (!isa<BinaryOperator, CallInst>(I))
+    return false;
+  Type *Ty = I->getType();
+  if ((Ty->isVectorTy() && !SLPReVec) || Ty->isAggregateType() ||
+      !isValidElementType(Ty))
+    return false;
+  auto Analyze = [&]() {
+    constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+    InstructionCost ScalarCost = TTI.getInstructionCost(I, CostKind);
+    if (ScalarCost < TTI::TCC_Expensive)
+      return false;
+    constexpr unsigned MinVF = 2;
+    return getVectorOpCost(I, MinVF, TTI, TLI) < ScalarCost * MinVF;
+  };
+  auto CheckCached = [&](bool IsCheap, llvm::function_ref<void()> MarkCheap) {
+    if (IsCheap)
+      return false;
+    if (Analyze())
+      return true;
+    MarkCheap();
+    return false;
+  };
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    if (any_of(CI->args(), [](const Value *Arg) {
+          return !isValidElementType(Arg->getType());
+        }))
+      return false;
+    if (Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI)) {
+      auto Key = std::make_pair(ID, getPoorThroughputTypeKey(Ty));
+      return CheckCached(Cache.CheapIntrinsics.contains(Key),
+                         [&] { Cache.CheapIntrinsics.insert(Key); });
+    }
+    const Function *Callee = CI->getCalledFunction();
+    if (!Callee)
+      return Analyze();
+    return CheckCached(Cache.CheapCallees.contains(Callee),
+                       [&] { Cache.CheapCallees.insert(Callee); });
+  }
+  auto Key = std::make_pair(I->getOpcode(), getPoorThroughputTypeKey(Ty));
+  return CheckCached(Cache.CheapOpcodes.contains(Key),
+                     [&] { Cache.CheapOpcodes.insert(Key); });
 }
 
 /// Find the innermost loop starting from \p L, for which at least a single
@@ -11893,12 +12032,12 @@ class InstructionsCompatibilityAnalysis {
   /// elements.
   static bool isSupportedOpcode(const unsigned Opcode) {
     return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
-           Opcode == Instruction::LShr || Opcode == Instruction::Shl ||
-           Opcode == Instruction::SDiv || Opcode == Instruction::UDiv ||
-           Opcode == Instruction::And || Opcode == Instruction::Or ||
-           Opcode == Instruction::Xor || Opcode == Instruction::FAdd ||
-           Opcode == Instruction::FSub || Opcode == Instruction::FMul ||
-           Opcode == Instruction::FDiv;
+           Opcode == Instruction::Mul || Opcode == Instruction::LShr ||
+           Opcode == Instruction::Shl || Opcode == Instruction::SDiv ||
+           Opcode == Instruction::UDiv || Opcode == Instruction::And ||
+           Opcode == Instruction::Or || Opcode == Instruction::Xor ||
+           Opcode == Instruction::FAdd || Opcode == Instruction::FSub ||
+           Opcode == Instruction::FMul || Opcode == Instruction::FDiv;
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -12520,6 +12659,7 @@ public:
       switch (MainOpcode) {
       case Instruction::Add:
       case Instruction::Sub:
+      case Instruction::Mul:
       case Instruction::LShr:
       case Instruction::Shl:
       case Instruction::SDiv:
@@ -13188,6 +13328,13 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     // Last chance to try to vectorize alternate node.
     if (S.isAltShuffle() && ReuseShuffleIndices.empty() && TrySplitNode(S))
       return;
+    // Last chance to try to vectorize copyable node.
+    if (S.areInstructionsWithCopyableElements() &&
+        ReuseShuffleIndices.empty()) {
+      InstructionsState AltS = getSameOpcode(VL, *TLI);
+      if (AltS && AltS.isAltShuffle() && TrySplitNode(AltS))
+        return;
+    }
     newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     NonScheduledFirst.insert(VL.front());
     if (S.getOpcode() == Instruction::Load &&
@@ -19822,6 +19969,24 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                                      ArrayRef<Value *> VectorizedVals,
                                      InstructionCost ReductionCost,
                                      Instruction *RdxRoot) {
+  // A poor-throughput entry's real vector-vs-scalar savings (fdiv/frem/fsqrt)
+  // are already folded into TreeCost like any other entry, including all
+  // shuffle/insert/extract overhead elsewhere in the tree. So bypassing the
+  // instruction-count veto below just has to trust that already-complete
+  // TreeCost instead of guessing at extra savings: heavy gather/shuffle
+  // overhead raises TreeCost too, and will still block the bypass.
+  auto BypassesInstCountCheck = [&]() {
+    if (!VectorizePoorThroughput || TreeCost >= -SLPCostThreshold)
+      return false;
+    PoorThroughputOpCache Cache;
+    return any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &Ptr) {
+      const TreeEntry &TE = *Ptr;
+      return TE.hasState() && !DeletedNodes.contains(&TE) && !TE.isGather() &&
+             !TransformedToGatherNodes.contains(&TE) &&
+             TE.State != TreeEntry::CombinedVectorize &&
+             isPoorThroughputOp(TE.getMainOp(), *TTI, *TLI, Cache);
+    });
+  };
   // Reject vectorization if the vector code would produce more instructions
   // than the scalar code. The cost model may underestimate overhead from
   // shuffles, inserts, and extracts.
@@ -19837,7 +20002,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     unsigned NumVector = getNumVectorInsts();
     LLVM_DEBUG(dbgs() << "SLP: Inst count check: vector=" << NumVector
                       << " scalar=" << NumScalar << "\n");
-    if (NumVector > NumScalar) {
+    if (NumVector > NumScalar && !BypassesInstCountCheck()) {
       LLVM_DEBUG(dbgs() << "SLP: Rejecting tree: vector inst count "
                         << NumVector << " > scalar inst count " << NumScalar
                         << ".\n");
@@ -23470,6 +23635,20 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           if (SI->getOpcode() == Opcode ||
               !is_contained({Instruction::Add, Instruction::Sub},
                             SI->getOpcode()))
+            return false;
+          return any_of(SI->operands(), [](Value *Op) {
+            const auto *CI = dyn_cast<ConstantInt>(Op);
+            return CI && CI->getValue().isMinSignedValue();
+          });
+        }))
+      I->setHasNoSignedWrap(/*b=*/false);
+    // mul nsw X, INT_MIN is not equivalent to shl nsw X, BW-1, because shl nsw
+    // poisons when the sign bit is shifted out of a positive value. When a mul
+    // lane is converted to shl with shift amount BW-1, nsw must be dropped.
+    if (!MinBWs.contains(E) && Opcode == Instruction::Shl &&
+        any_of(UniqueInsts, [&](Value *V) {
+          auto *SI = cast<Instruction>(V);
+          if (SI->getOpcode() != Instruction::Mul)
             return false;
           return any_of(SI->operands(), [](Value *Op) {
             const auto *CI = dyn_cast<ConstantInt>(Op);
@@ -28749,7 +28928,8 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
 }
 
 bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
-                                           bool MaxVFOnly) {
+                                           bool MaxVFOnly,
+                                           bool LimitToRegisterVF) {
   if (VL.size() < 2)
     return false;
 
@@ -28789,6 +28969,9 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   unsigned MaxVF = std::max<unsigned>(
       getFloorFullVectorNumberOfElements(*TTI, ScalarTy, VL.size()), MinVF);
   MaxVF = std::min(R.getMaximumVF(Sz, S.getOpcode()), MaxVF);
+  // Standalone poor-throughput seeds only need one register worth of lanes.
+  if (LimitToRegisterVF && Sz != 0)
+    MaxVF = std::min(MaxVF, std::max(MinVF, R.getMaxVecRegSize() / Sz));
   if (MaxVF < 2) {
     R.getORE()->emit([&]() {
       return OptimizationRemarkMissed(SV_NAME, "SmallVF", I0)
@@ -32691,6 +32874,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   // Stores are processed after all other instructions/roots.
   SmallSetVector<StoreInst *, 8> PostProcessStores;
   SmallSetVector<Instruction *, 8> FMACandidates;
+  SmallSetVector<Instruction *, 8> PoorThroughputSeeds;
+  PoorThroughputOpCache PoorThroughputCache;
   auto VectorizeInsertsAndCmps = [&](bool AtTerminator) {
     bool Changed = vectorizeInserts(PostProcessInserts, BB, R, FMACandidates);
     if (AtTerminator) {
@@ -32838,6 +33023,9 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       PostProcessStores.insert(SI);
     else if (isNonVectorizableInst(&*It, TLI))
       PostProcessInsts.insert(&*It);
+    else if (VectorizePoorThroughput &&
+             isPoorThroughputOp(&*It, *TTI, *TLI, PoorThroughputCache))
+      PoorThroughputSeeds.insert(&*It);
   }
 
   // Late post-process: run operand-chain vectorization for stores.
@@ -32889,6 +33077,57 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   }
   assert(Empty.empty() &&
          "No new FMA candidates expected during AllowFMACandidates retry.");
+
+  if (PoorThroughputSeeds.size() >= 2) {
+    SmallVector<Value *> Seeds;
+    SmallDenseMap<Value *, SeedGroupKey> SeedKeys;
+    for (Instruction *I : PoorThroughputSeeds) {
+      if (R.isDeleted(I) || !isValidElementType(getValueType(I)))
+        continue;
+      // Skip seeds a user already resolved: a deleted user was folded into
+      // some other vector by an earlier pass, and I's role there is already
+      // decided, so retrying I here is almost always a wasted attempt.
+      if (any_of(I->users(), [&](User *U) {
+            auto *UI = dyn_cast<Instruction>(U);
+            return UI && (R.isDeleted(UI) || R.isVectorized(UI));
+          }))
+        continue;
+      SeedKeys.try_emplace(I, getSeedGroupKey(I, *TLI));
+      Seeds.push_back(I);
+    }
+    auto SeedSorter = [&](Value *V1, Value *V2) {
+      if (V1 == V2)
+        return false;
+      auto *I1 = cast<Instruction>(V1);
+      auto *I2 = cast<Instruction>(V2);
+      Type *T1 = I1->getType();
+      Type *T2 = I2->getType();
+      if (T1->getTypeID() != T2->getTypeID())
+        return T1->getTypeID() < T2->getTypeID();
+      if (T1->getScalarSizeInBits() != T2->getScalarSizeInBits())
+        return T1->getScalarSizeInBits() < T2->getScalarSizeInBits();
+      const SeedGroupKey &K1 = SeedKeys.at(V1);
+      const SeedGroupKey &K2 = SeedKeys.at(V2);
+      if (K1 != K2)
+        return K1.less(K2);
+      return I1->comesBefore(I2);
+    };
+    auto AreCompatibleSeeds = [&](ArrayRef<Value *> VL, Value *V) {
+      if (VL.empty() || VL.back() == V)
+        return true;
+      return cast<Instruction>(VL.back())->getType() ==
+                 cast<Instruction>(V)->getType() &&
+             SeedKeys.at(VL.back()) == SeedKeys.at(V);
+    };
+    if (Seeds.size() >= 2)
+      Changed |= tryToVectorizeSequence<Value>(
+          Seeds, SeedSorter, AreCompatibleSeeds,
+          [this, &R](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
+            return tryToVectorizeList(Candidates, R, MaxVFOnly,
+                                      /*LimitToRegisterVF=*/true);
+          },
+          /*MaxVFOnly=*/false, R);
+  }
 
   return Changed;
 }

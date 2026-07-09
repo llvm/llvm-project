@@ -116,8 +116,8 @@ define amdgpu_kernel void @flat_atomic_usub_cond_rtn_u32(ptr %addr, i32 %in, ptr
 ; GFX9-SDAG-NEXT:    v_subrev_u32_e32 v0, s6, v1
 ; GFX9-SDAG-NEXT:    s_addc_u32 s9, s1, 0
 ; GFX9-SDAG-NEXT:    v_cmp_le_u32_e32 vcc, s6, v1
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v3, s9
 ; GFX9-SDAG-NEXT:    flat_atomic_cmpswap v0, v[2:3], v[0:1] glc
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -172,8 +172,8 @@ define amdgpu_kernel void @flat_atomic_usub_cond_rtn_u32(ptr %addr, i32 %in, ptr
 ; GFX9-GISEL-NEXT:    v_subrev_u32_e32 v0, s6, v1
 ; GFX9-GISEL-NEXT:    s_addc_u32 s9, s1, 0
 ; GFX9-GISEL-NEXT:    v_cmp_le_u32_e32 vcc, s6, v1
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, s9
 ; GFX9-GISEL-NEXT:    flat_atomic_cmpswap v0, v[2:3], v[0:1] glc
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

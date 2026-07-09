@@ -1980,10 +1980,11 @@ DeclResult Sema::CheckClassTemplate(
         Invalid = true;
     }
 
-    if (TUK != TagUseKind::Friend && TUK != TagUseKind::Reference)
-      diagnoseQualifiedDeclaration(SS, SemanticContext, Name, NameLoc,
-                                   /*TemplateId-*/ nullptr,
-                                   /*IsMemberSpecialization*/ false);
+    if (TUK != TagUseKind::Friend && TUK != TagUseKind::Reference &&
+        diagnoseQualifiedDeclaration(SS, SemanticContext, Name, NameLoc,
+                                     /*TemplateId=*/nullptr,
+                                     IsMemberSpecialization))
+      return true;
 
     LookupQualifiedName(Previous, SemanticContext);
   } else {

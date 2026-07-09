@@ -5770,6 +5770,14 @@ void Verifier::visitInstruction(Instruction &I) {
           "invariant.group metadata is only for loads and stores", &I);
   }
 
+  if (I.hasMetadata(LLVMContext::MD_invariant_load)) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    Check(isa<LoadInst>(I) || (II && II->onlyReadsMemory()),
+          "invariant.load metadata is only for loads and readonly "
+          "intrinsic calls",
+          &I);
+  }
+
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_nonnull)) {
     Check(I.getType()->isPointerTy(), "nonnull applies only to pointer types",
           &I);
@@ -6958,6 +6966,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         cast<MetadataAsValue>(Call.getArgOperand(0))->getMetadata());
     Check(MD->getNumOperands() == 1 && isa<MDString>(MD->getOperand(0)),
           "llvm.write_volatile_register metadata must be a single MDString",
+          &Call);
+    break;
+  }
+  case Intrinsic::ptrauth_auth_with_pc_and_resign: {
+    // Verify that the auth key is IA (0) or IB (1), not DA (2) or DB (3)
+    auto *AuthKey = cast<ConstantInt>(Call.getArgOperand(1));
+    uint64_t Key = AuthKey->getZExtValue();
+    Check(Key == 0 || Key == 1,
+          "ptrauth.auth.with.pc.and.resign key must be IA (0) or IB (1)",
           &Call);
     break;
   }

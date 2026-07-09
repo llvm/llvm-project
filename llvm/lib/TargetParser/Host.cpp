@@ -567,6 +567,9 @@ StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
       .Case("eswin,eic770x", "sifive-p550")
       .Case("sifive,u74-mc", "sifive-u74")
       .Case("sifive,bullet0", "sifive-u74")
+      .Case("spacemit,x60", "spacemit-x60")
+      .Case("spacemit,x100", "spacemit-x100")
+      .Case("spacemit,a100", "spacemit-a100")
       .Default("");
 }
 
@@ -2261,7 +2264,6 @@ StringMap<bool> sys::getHostCPUFeatures() {
   bool HasLeaf1E = MaxLevel >= 0x1e &&
                    !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
   Features["amx-fp8"] = HasLeaf1E && ((EAX >> 4) & 1) && HasAMXSave;
-  Features["amx-tf32"] = HasLeaf1E && ((EAX >> 6) & 1) && HasAMXSave;
   Features["amx-avx512"] = HasLeaf1E && ((EAX >> 7) & 1) && HasAMXSave;
   Features["amx-movrs"] = HasLeaf1E && ((EAX >> 8) & 1) && HasAMXSave;
 

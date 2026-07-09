@@ -5081,6 +5081,12 @@ def PtrauthAuthAndResign : Builtin {
   let Prototype = "void*(void*,int,void*,int,void*)";
 }
 
+def PtrauthAuthWithPCAndResign : Builtin {
+  let Spellings = ["__builtin_ptrauth_auth_with_pc_and_resign"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void*(void*,int,void*,void*,int,void*)";
+}
+
 def PtrauthAuthLoadRelativeAndSign : Builtin {
   let Spellings = ["__builtin_ptrauth_auth_load_relative_and_sign"];
   let Attributes = [CustomTypeChecking, NoThrow];

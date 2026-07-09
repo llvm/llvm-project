@@ -576,14 +576,14 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    s_cselect_b64 s[16:17], -1, 0
 ; GFX908-NEXT:    s_cmp_gt_i32 s3, -1
 ; GFX908-NEXT:    v_mov_b32_e32 v4, s10
-; GFX908-NEXT:    v_mov_b32_e32 v6, s10
-; GFX908-NEXT:    v_mov_b32_e32 v8, s10
 ; GFX908-NEXT:    v_mov_b32_e32 v5, s11
 ; GFX908-NEXT:    s_cselect_b64 s[20:21], -1, 0
+; GFX908-NEXT:    v_mov_b32_e32 v6, s10
 ; GFX908-NEXT:    v_mov_b32_e32 v7, s11
+; GFX908-NEXT:    v_mov_b32_e32 v8, s10
 ; GFX908-NEXT:    v_mov_b32_e32 v9, s11
-; GFX908-NEXT:    v_mov_b32_e32 v11, v5
 ; GFX908-NEXT:    s_mov_b64 s[18:19], s[12:13]
+; GFX908-NEXT:    v_mov_b32_e32 v11, v5
 ; GFX908-NEXT:    v_mov_b32_e32 v10, v4
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_readfirstlane_b32 s9, v2
