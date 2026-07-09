@@ -222,8 +222,8 @@ DEBUG_COUNTER(DebugInstrumentInstruction, "msan-instrument-instruction",
               "Controls which instruction to instrument");
 
 static const unsigned kOriginSize = 4;
-static const Align kMinOriginAlignment = Align(4);
-static const Align kShadowTLSAlignment = Align(8);
+static constexpr Align kMinOriginAlignment = Align(4);
+static constexpr Align kShadowTLSAlignment = Align(8);
 
 // These constants must be kept in sync with the ones in msan.h.
 // TODO: increase size to match SVE/SVE2/SME/SME2 limits
