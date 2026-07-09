@@ -202,6 +202,9 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy` ``-store-check-profile`` by generating valid
   JSON when the source file path contains characters that require JSON escaping.
 
+- Improved :program:`clang-tidy` by preserving literal backslash characters in
+  POSIX source paths.
+
 - Ensured that :program:`clang-tidy` and the clang compiler uses the same logic
   for the suppression of compiler diagnostics in system headers and expansions
   of macros defined in system headers. Previously the default setting of tidy
@@ -534,9 +537,19 @@ Changes in existing checks
   detail.
 
 - Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
-  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
-  by fixing a false positive on implicitly generated functions such as
-  inherited constructors.
+  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check:
+
+  - Fixed a false positive on implicitly generated functions such as
+    inherited constructors.
+
+  - Added `AllowImplicitMove` option to not warn when an rvalue reference
+    parameter is returned without an explicit ``std::move``.
+
+- Improved :doc:`cppcoreguidelines-special-member-functions
+  <clang-tidy/checks/cppcoreguidelines/special-member-functions>` check by
+  fixing a false positive with the `AllowImplicitlyDeletedCopyOrMove` option
+  for classes whose copy operations are implicitly deleted by a non-copyable
+  base class.
 
 - Improved :doc:`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by adding the
@@ -570,6 +583,9 @@ Changes in existing checks
 
   - Fixed false positives when pointers were later passed or bound through
     ``const``-qualified pointer references.
+
+  - Fixed false positive where a pointer returned as a non-const ``void *``
+    was incorrectly diagnosed as allowing its pointee to be made ``const``.
 
 - Improved :doc:`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` by avoiding false positives when

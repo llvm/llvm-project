@@ -2901,7 +2901,7 @@ void SITargetLowering::allocateSpecialEntryInputVGPRs(
 
 // Try to allocate a VGPR at the end of the argument list, or if no argument
 // VGPRs are left allocating a stack slot.
-// If \p Mask is is given it indicates bitfield position in the register.
+// If \p Mask is given it indicates bitfield position in the register.
 // If \p Arg is given use it with new ]p Mask instead of allocating new.
 static ArgDescriptor allocateVGPR32Input(CCState &CCInfo, unsigned Mask = ~0u,
                                          ArgDescriptor Arg = ArgDescriptor()) {
@@ -3730,15 +3730,8 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
-
-      // FIXME: This helps when the return is a real sret. If it is a
-      // automatically inserted sret (i.e. CanLowerReturn returns false), an
-      // extra copy is inserted in SelectionDAGBuilder which obscures this.
-      unsigned NumBits =
-          32 - getSubtarget()->getKnownHighZeroBitsForFrameIndex();
-      Val = DAG.getNode(
-          ISD::AssertZext, DL, VT, Val,
-          DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), NumBits)));
+      Val = annotateStackObjectPointer(Val, DAG, DL,
+                                       Arg.Flags.getNonZeroMemAlign());
     }
 
     Val = convertABITypeToValueType(DAG, Val, VA, DL);
@@ -12004,10 +11997,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         SDValue M0Val;
         M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, Op->getOperand(2),
                             DAG.getShiftAmountConstant(4, MVT::i32, DL));
-        M0Val = SDValue(
-            DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, M0Val,
-                               DAG.getTargetConstant(0x3F, DL, MVT::i32)),
-            0);
+        M0Val = DAG.getNode(ISD::AND, DL, MVT::i32, M0Val,
+                            DAG.getConstant(0x3F, DL, MVT::i32));
         Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
       } else
         Ops.push_back(copyToM0(DAG, Chain, DL, Op->getOperand(2)).getValue(0));
@@ -12644,22 +12635,17 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue BarID;
     BarID = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
                         DAG.getShiftAmountConstant(4, MVT::i32, DL));
-    BarID =
-        SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, BarID,
-                                   DAG.getTargetConstant(0x3F, DL, MVT::i32)),
-                0);
+    BarID = DAG.getNode(ISD::AND, DL, MVT::i32, BarID,
+                        DAG.getConstant(0x3F, DL, MVT::i32));
     // Member count should be put into M0[ShAmt:+6]
     // Barrier ID should be put into M0[5:0]
-    M0Val =
-        SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, CntOp,
-                                   DAG.getTargetConstant(0x3F, DL, MVT::i32)),
-                0);
+    SDValue MemberCnt = DAG.getNode(ISD::AND, DL, MVT::i32, CntOp,
+                                    DAG.getConstant(0x3F, DL, MVT::i32));
     constexpr unsigned ShAmt = 16;
-    M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, CntOp,
+    M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, MemberCnt,
                         DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
 
-    M0Val = SDValue(
-        DAG.getMachineNode(AMDGPU::S_OR_B32, DL, MVT::i32, M0Val, BarID), 0);
+    M0Val = DAG.getNode(ISD::OR, DL, MVT::i32, M0Val, BarID);
 
     Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
 
@@ -12710,10 +12696,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       SDValue M0Val;
       M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
                           DAG.getShiftAmountConstant(4, MVT::i32, DL));
-      M0Val =
-          SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, M0Val,
-                                     DAG.getTargetConstant(0x3F, DL, MVT::i32)),
-                  0);
+      M0Val = DAG.getNode(ISD::AND, DL, MVT::i32, M0Val,
+                          DAG.getConstant(0x3F, DL, MVT::i32));
       Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
     }
 
@@ -18508,7 +18492,7 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
     return DCI.DAG.getConstantFP(Zero, SDLoc(N), N->getValueType(0));
   }
 
-  APFloat One(F.getSemantics(), "1.0");
+  APFloat One = APFloat::getOne(F.getSemantics());
   if (F > One)
     return DCI.DAG.getConstantFP(One, SDLoc(N), N->getValueType(0));
 
@@ -19260,10 +19244,8 @@ MachineSDNode *SITargetLowering::buildRSRC(SelectionDAG &DAG, const SDLoc &DL,
   SDValue PtrLo = DAG.getTargetExtractSubreg(AMDGPU::sub0, DL, MVT::i32, Ptr);
   SDValue PtrHi = DAG.getTargetExtractSubreg(AMDGPU::sub1, DL, MVT::i32, Ptr);
   if (RsrcDword1) {
-    PtrHi =
-        SDValue(DAG.getMachineNode(AMDGPU::S_OR_B32, DL, MVT::i32, PtrHi,
-                                   DAG.getConstant(RsrcDword1, DL, MVT::i32)),
-                0);
+    PtrHi = DAG.getNode(ISD::OR, DL, MVT::i32, PtrHi,
+                        DAG.getConstant(RsrcDword1, DL, MVT::i32));
   }
 
   SDValue DataLo =
@@ -19738,9 +19720,9 @@ void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       Op, Known, DemandedElts, DAG, Depth);
 }
 
-void SITargetLowering::computeKnownBitsForFrameIndex(
-    const int FI, KnownBits &Known, const MachineFunction &MF) const {
-  TargetLowering::computeKnownBitsForFrameIndex(FI, Known, MF);
+void SITargetLowering::computeKnownBitsForStackObjectPointer(
+    KnownBits &Known, const MachineFunction &MF, Align Alignment) const {
+  TargetLowering::computeKnownBitsForStackObjectPointer(Known, MF, Alignment);
 
   // Set the high bits to zero based on the maximum allowed scratch size per
   // wave. We can't use vaddr in MUBUF instructions if we don't know the address

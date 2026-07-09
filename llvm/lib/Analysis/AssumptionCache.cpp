@@ -12,9 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -131,9 +133,11 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   // an assertion failure. Avoid this by counting the number of expected
   // matches.
 #ifndef NDEBUG
+  SmallDenseSet<std::pair<Value *, unsigned>, 16> Seen;
   DenseMap<Value *, int> ExpectedMatches;
   for (auto &AV : Affected)
-    if (AffectedValues.find_as(AV.Assume) != AffectedValues.end())
+    if (Seen.insert({AV.Assume, AV.Index}).second &&
+        AffectedValues.find_as(AV.Assume) != AffectedValues.end())
       ExpectedMatches[AV.Assume]++;
 #endif
 
@@ -279,9 +283,28 @@ PreservedAnalyses AssumptionPrinterPass::run(Function &F,
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
 
   OS << "Cached assumptions for function: " << F.getName() << "\n";
-  for (auto &VH : AC.assumptions())
-    if (VH)
-      OS << "  " << *cast<CallInst>(VH)->getArgOperand(0) << "\n";
+  for (auto &VH : AC.assumptions()) {
+    if (!VH)
+      continue;
+
+    auto *Assume = cast<CallInst>(VH);
+    if (!Assume->hasOperandBundles()) {
+      OS << "  " << *Assume->getArgOperand(0) << "\n";
+      continue;
+    }
+
+    assert(match(Assume->getArgOperand(0), m_One()) &&
+           "assume must have trivial cond");
+    OS << "  [ ";
+    ListSeparator LS;
+    for (const OperandBundleUse &BU : Assume->operand_bundles()) {
+      OS << LS << '"' << BU.getTagName() << "\"(";
+      interleaveComma(BU.Inputs, OS,
+                      [&](const Use &Input) { Input->printAsOperand(OS); });
+      OS << ')';
+    }
+    OS << " ]\n";
+  }
 
   return PreservedAnalyses::all();
 }

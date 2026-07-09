@@ -370,9 +370,9 @@ def SPselectreg : SDNode<"SPISD::SELECT_REG", SDTSPselectreg>;
 // bits of the memory pointed by Ptr, possibly byte swapping it as necessary
 // to account for its in-memory endianness. Type can be i16, i32, or i64.
 def SPloadbig    : SDNode<"SPISD::LOAD_BIG", SDTSPloadbig,
-                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+                           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def SPloadlittle : SDNode<"SPISD::LOAD_LITTLE", SDTSPloadlittle,
-                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+                           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 // CHAIN = STORE_BIG/LITTLE CHAIN, GPRC, Ptr, Type
 // These are endianness-adjusted store instructions. They store the low "Type"

@@ -10,7 +10,7 @@ qc.psyscalli 1024
 # CHECK: :[[@LINE+1]]:1: error: {{too few operands for instruction|invalid instruction}}
 qc.psyscalli
 
-# CHECK: :[[@LINE+1]]:{{18: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{18: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.psyscalli 23, x0
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
@@ -23,44 +23,44 @@ qc.pputci 256
 # CHECK: :[[@LINE+1]]:1: error: {{too few operands for instruction|invalid instruction}}
 qc.pputci
 
-# CHECK: :[[@LINE+1]]:{{16: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{16: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.pputci 200, x8
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
 qc.pputci  255
 
 
-# CHECK: :[[@LINE+1]]:{{13: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{13: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.c.ptrace x0
 
-# CHECK: :[[@LINE+1]]:{{13: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{13: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.c.ptrace 1
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
 qc.c.ptrace
 
 
-# CHECK: :[[@LINE+1]]:{{14: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{14: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.pcoredump 12
 
-# CHECK: :[[@LINE+1]]:{{14: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{14: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.pcoredump x4
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
 qc.pcoredump
 
 
-# CHECK: :[[@LINE+1]]:{{11: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{11: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.ppregs x1
 
-# CHECK: :[[@LINE+1]]:{{11: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{11: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.ppregs 23
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
 qc.ppregs
 
 
-# CHECK: :[[@LINE+1]]:{{15: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{15: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.ppreg x10, x2
 
 # CHECK: :[[@LINE+1]]:1: error: {{too few operands for instruction|invalid instruction}}
@@ -73,7 +73,7 @@ qc.ppreg 23
 qc.ppreg   a0
 
 
-# CHECK: :[[@LINE+1]]:{{14: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{14: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.pputc x7, x3
 
 # CHECK: :[[@LINE+1]]:1: error: {{too few operands for instruction|invalid instruction}}
@@ -86,7 +86,7 @@ qc.pputc 34
 qc.pputc   t2
 
 
-# CHECK: :[[@LINE+1]]:{{15: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{15: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.pputs x15, x18
 
 # CHECK: :[[@LINE+1]]:1: error: {{too few operands for instruction|invalid instruction}}
@@ -99,7 +99,7 @@ qc.pputs 45
 qc.pputs   a5
 
 
-# CHECK: :[[@LINE+1]]:{{15: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{15: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.pexit x26, x23
 
 # CHECK: :[[@LINE+1]]:1: error: {{too few operands for instruction|invalid instruction}}
@@ -112,7 +112,7 @@ qc.pexit 78
 qc.pexit   s10
 
 
-# CHECK: :[[@LINE+1]]:{{18: error: invalid operand for instruction|1: error: invalid instruction}}
+# CHECK: :[[@LINE+1]]:{{18: error: unexpected extra operand for instruction|1: error: invalid instruction}}
 qc.psyscall x11, x5
 
 # CHECK: :[[@LINE+1]]:1: error: {{too few operands for instruction|invalid instruction}}

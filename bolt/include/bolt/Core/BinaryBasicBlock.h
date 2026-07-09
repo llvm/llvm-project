@@ -980,7 +980,13 @@ template <> struct GraphTraits<bolt::BinaryBasicBlock *> {
     return N->succ_begin();
   }
   static inline ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+  static unsigned getNumber(const bolt::BinaryBasicBlock *BB) {
+    return BB->getIndex();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<bolt::BinaryBasicBlock *>,
+              "GraphTraits getNumber() not detected");
 
 template <> struct GraphTraits<const bolt::BinaryBasicBlock *> {
   using NodeRef = const bolt::BinaryBasicBlock *;
@@ -991,7 +997,13 @@ template <> struct GraphTraits<const bolt::BinaryBasicBlock *> {
     return N->succ_begin();
   }
   static inline ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+  static unsigned getNumber(const bolt::BinaryBasicBlock *BB) {
+    return BB->getIndex();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<const bolt::BinaryBasicBlock *>,
+              "GraphTraits getNumber() not detected");
 
 template <> struct GraphTraits<Inverse<bolt::BinaryBasicBlock *>> {
   using NodeRef = bolt::BinaryBasicBlock *;
@@ -1003,7 +1015,13 @@ template <> struct GraphTraits<Inverse<bolt::BinaryBasicBlock *>> {
     return N->pred_begin();
   }
   static inline ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+  static unsigned getNumber(const bolt::BinaryBasicBlock *BB) {
+    return BB->getIndex();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<bolt::BinaryBasicBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 template <> struct GraphTraits<Inverse<const bolt::BinaryBasicBlock *>> {
   using NodeRef = const bolt::BinaryBasicBlock *;
@@ -1015,7 +1033,13 @@ template <> struct GraphTraits<Inverse<const bolt::BinaryBasicBlock *>> {
     return N->pred_begin();
   }
   static inline ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+  static unsigned getNumber(const bolt::BinaryBasicBlock *BB) {
+    return BB->getIndex();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<const bolt::BinaryBasicBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 } // namespace llvm
 

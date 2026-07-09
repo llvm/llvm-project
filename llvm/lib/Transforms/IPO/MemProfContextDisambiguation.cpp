@@ -2296,7 +2296,7 @@ uint64_t IndexCallsiteContextGraph::getLastStackId(IndexCall &Call) {
   return Index.getStackIdAtIndex(CallsiteContext.back());
 }
 
-static const std::string MemProfCloneSuffix = ".memprof.";
+static const char MemProfCloneSuffix[] = ".memprof.";
 
 static std::string getMemProfFuncName(Twine Base, unsigned CloneNo) {
   // We use CloneNo == 0 to refer to the original version, which doesn't get
@@ -2524,7 +2524,11 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
   // by MemProfTopNImportant. Must be a std::map (not DenseMap) because keys
   // must be sorted.
   std::map<uint64_t, uint32_t> TotalSizeToContextIdTopNCold;
-  for (auto &I : Index) {
+  // Sort by GUID for deterministic graph construction order.
+  // TODO: This sort has a measurable cost on the thin link when memprof is
+  // enabled. Investigate gating it behind an option that is only enabled for
+  // tests that check internal state.
+  for (const auto &I : Index.sortedGlobalValueSummariesRange()) {
     auto VI = Index.getValueInfo(I);
     if (GUIDsToSkip.contains(VI.getGUID()))
       continue;
