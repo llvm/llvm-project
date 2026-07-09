@@ -39,6 +39,7 @@ public:
 
   virtual std::optional<bool> isUnsafePtr(QualType,
                                           bool ignoreARC = false) const = 0;
+  virtual bool isSafePtr(QualType) const = 0;
   virtual const char *typeName() const = 0;
   virtual const char *invariant() const = 0;
 
@@ -90,26 +91,39 @@ public:
   }
 
   void visitMember(const FieldDecl *Member, const RecordDecl *RD) const {
+    visitMemberDecl(Member, RD);
+  }
+
+  template <typename DeclType, typename ParentDeclType>
+  bool visitMemberDecl(DeclType *Member, const ParentDeclType *D) const {
     auto QT = Member->getType();
     const Type *MemberType = QT.getTypePtrOrNull();
 
+    bool IsPtrToSafePtr = false;
     while (MemberType) {
       auto IsUnsafePtr = isUnsafePtr(QT);
       if (IsUnsafePtr && *IsUnsafePtr)
         break;
-      if (!MemberType->isPointerType())
-        return;
+      if (!MemberType->isPointerType() && !MemberType->isReferenceType())
+        return false;
       QT = MemberType->getPointeeType();
+      if (isSafePtr(QT) && !isExplicitlyAllowedUnsafePtr(MemberType)) {
+        IsPtrToSafePtr = true;
+        break;
+      }
       MemberType = QT.getTypePtrOrNull();
     }
 
     if (!MemberType)
-      return;
+      return false;
 
     if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl())
-      reportBug(Member, MemberType, MemberCXXRD, RD);
+      reportBug(Member, MemberType, MemberCXXRD, D, IsPtrToSafePtr);
     else if (auto *ObjCDecl = getObjCDecl(MemberType))
-      reportBug(Member, MemberType, ObjCDecl, RD);
+      reportBug(Member, MemberType, ObjCDecl, D, IsPtrToSafePtr);
+    else
+      return false;
+    return true;
   }
 
   ObjCInterfaceDecl *getObjCDecl(const Type *TypePtr) const {
@@ -156,21 +170,8 @@ public:
     if (IvarDeclsToIgnore.contains(Ivar))
       return;
 
-    auto QT = Ivar->getType();
-    const Type *IvarType = QT.getTypePtrOrNull();
-    if (!IvarType)
-      return;
-
-    auto IsUnsafePtr = isUnsafePtr(QT);
-    if (!IsUnsafePtr || !*IsUnsafePtr)
-      return;
-
-    IvarDeclsToIgnore.insert(Ivar);
-
-    if (auto *MemberCXXRD = IvarType->getPointeeCXXRecordDecl())
-      reportBug(Ivar, IvarType, MemberCXXRD, CD);
-    else if (auto *ObjCDecl = getObjCDecl(IvarType))
-      reportBug(Ivar, IvarType, ObjCDecl, CD);
+    if (visitMemberDecl(Ivar, CD))
+      IvarDeclsToIgnore.insert(Ivar);
   }
 
   void visitObjCPropertyDecl(const ObjCContainerDecl *CD,
@@ -184,14 +185,14 @@ public:
         return;
     }
 
-    auto [IsUnsafe, PropType] = isPropImplUnsafePtr(PD);
+    auto [IsUnsafe, PropType, IsPtrToSafePtr] = isPropImplUnsafePtr(PD);
     if (!IsUnsafe)
       return;
 
     if (auto *MemberCXXRD = PropType->getPointeeCXXRecordDecl())
-      reportBug(PD, PropType, MemberCXXRD, CD);
+      reportBug(PD, PropType, MemberCXXRD, CD, IsPtrToSafePtr);
     else if (auto *ObjCDecl = getObjCDecl(PropType))
-      reportBug(PD, PropType, ObjCDecl, CD);
+      reportBug(PD, PropType, ObjCDecl, CD, IsPtrToSafePtr);
   }
 
   void visitPropImpl(const ObjCContainerDecl *CD,
@@ -208,25 +209,25 @@ public:
         return;
       IvarDeclsToIgnore.insert(IvarDecl);
     }
-    auto [IsUnsafe, PropType] = isPropImplUnsafePtr(PropDecl);
+    auto [IsUnsafe, PropType, IsPtrToSafePtr] = isPropImplUnsafePtr(PropDecl);
     if (!IsUnsafe)
       return;
 
     if (auto *MemberCXXRD = PropType->getPointeeCXXRecordDecl())
-      reportBug(PropDecl, PropType, MemberCXXRD, CD);
+      reportBug(PropDecl, PropType, MemberCXXRD, CD, IsPtrToSafePtr);
     else if (auto *ObjCDecl = getObjCDecl(PropType))
-      reportBug(PropDecl, PropType, ObjCDecl, CD);
+      reportBug(PropDecl, PropType, ObjCDecl, CD, IsPtrToSafePtr);
   }
 
-  std::pair<bool, const Type *>
+  std::tuple<bool, const Type *, bool>
   isPropImplUnsafePtr(const ObjCPropertyDecl *PD) const {
     if (!PD)
-      return {false, nullptr};
+      return {false, nullptr, false};
 
     auto QT = PD->getType();
     const Type *PropType = QT.getTypePtrOrNull();
     if (!PropType)
-      return {false, nullptr};
+      return {false, nullptr, false};
 
     // "assign" property doesn't retain even under ARC so treat it as unsafe.
     bool ignoreARC =
@@ -235,7 +236,22 @@ public:
         PD->getPropertyAttributes() & ObjCPropertyAttribute::kind_weak;
     bool HasSafeAttr = PD->isRetaining() || IsWeak;
     auto IsUnsafePtr = isUnsafePtr(QT, ignoreARC);
-    return {IsUnsafePtr && *IsUnsafePtr && !HasSafeAttr, PropType};
+    if (IsUnsafePtr && *IsUnsafePtr)
+      return {!HasSafeAttr, PropType, false};
+
+    while (PropType->isPointerType() || PropType->isReferenceType()) {
+      auto PointeeQT = PropType->getPointeeType();
+      if (isSafePtr(PointeeQT))
+        return {true, PropType, true};
+      PropType = PointeeQT.getTypePtrOrNull();
+      if (!PropType)
+        break;
+      auto IsUnsafePtr = isUnsafePtr(PointeeQT);
+      if (IsUnsafePtr && *IsUnsafePtr)
+        return {true, PropType, false};
+    }
+
+    return {false, nullptr, false};
   }
 
   bool shouldSkipDecl(const RecordDecl *RD) const {
@@ -274,8 +290,8 @@ public:
 
   template <typename DeclType, typename PointeeType, typename ParentDeclType>
   void reportBug(const DeclType *Member, const Type *MemberType,
-                 const PointeeType *Pointee,
-                 const ParentDeclType *ClassCXXRD) const {
+                 const PointeeType *Pointee, const ParentDeclType *ClassCXXRD,
+                 bool IsPtrToSafe = false) const {
     assert(Member);
     assert(MemberType);
     assert(Pointee);
@@ -297,7 +313,7 @@ public:
       Os << " is a ";
     else
       Os << " contains a ";
-    if (printPointer(Os, MemberType) == PrintDeclKind::Pointer) {
+    if (printPointer(Os, MemberType, IsPtrToSafe) == PrintDeclKind::Pointer) {
       auto Typedef = MemberType->getAs<TypedefType>();
       assert(Typedef);
       printQuotedQualifiedName(Os, Typedef->getDecl());
@@ -314,11 +330,21 @@ public:
 
   enum class PrintDeclKind { Pointee, Pointer };
   virtual PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
-                                     const Type *T) const {
+                                     const Type *T, bool IsPtrToSafe) const {
     T = T->getUnqualifiedDesugaredType();
     bool IsPtr = isa<PointerType>(T) || isa<ObjCObjectPointerType>(T);
-    Os << (IsPtr ? "raw pointer" : "reference") << " to " << typeName() << " ";
+    Os << "raw " << (IsPtr ? "pointer" : "reference") << " to ";
+    if (!IsPtrToSafe)
+      Os << typeName() << " ";
     return PrintDeclKind::Pointee;
+  }
+
+  void printTypeName(llvm::raw_ostream &Os, const Type *T) const {
+    if (auto *RD = T->getAsRecordDecl())
+      RD->getNameForDiagnostic(Os, RD->getASTContext().getPrintingPolicy(),
+                               /*Qualified=*/true);
+    else
+      Os << typeName();
   }
 };
 
@@ -331,6 +357,8 @@ public:
   std::optional<bool> isUnsafePtr(QualType QT, bool) const final {
     return isUncountedPtr(QT.getCanonicalType());
   }
+
+  bool isSafePtr(QualType QT) const final { return isRefPtrType(QT); }
 
   const char *typeName() const final { return "ref-countable type"; }
 
@@ -348,6 +376,8 @@ public:
   std::optional<bool> isUnsafePtr(QualType QT, bool) const final {
     return isUncheckedPtr(QT.getCanonicalType());
   }
+
+  bool isSafePtr(QualType QT) const final { return isCheckedPtrType(QT); }
 
   const char *typeName() const final { return "CheckedPtr capable type"; }
 
@@ -371,19 +401,22 @@ public:
     return RTC->isUnretained(QT, ignoreARC);
   }
 
+  bool isSafePtr(QualType QT) const final { return isRetainPtrOrOSPtrType(QT); }
+
   const char *typeName() const final { return "retainable type"; }
 
   const char *invariant() const final {
     return "member variables must be a RetainPtr or OSObjectPtr";
   }
 
-  PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
-                             const Type *T) const final {
+  PrintDeclKind printPointer(llvm::raw_svector_ostream &Os, const Type *T,
+                             bool IsPtrToSafe) const final {
+    // FIXME: Support IsPtrToSafe.
     if (!isa<ObjCObjectPointerType>(T) && T->getAs<TypedefType>()) {
       Os << typeName() << " ";
       return PrintDeclKind::Pointer;
     }
-    return RawPtrRefMemberChecker::printPointer(Os, T);
+    return RawPtrRefMemberChecker::printPointer(Os, T, IsPtrToSafe);
   }
 };
 
