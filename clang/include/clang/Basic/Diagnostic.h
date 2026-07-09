@@ -907,14 +907,26 @@ public:
   /// \param FormatString A fixed diagnostic format string that will be hashed
   /// and mapped to a unique DiagID.
   template <unsigned N>
-  // FIXME: this API should almost never be used; custom diagnostics do not
-  // have an associated diagnostic group and thus cannot be controlled by users
-  // like other diagnostics. The number of times this API is used in Clang
-  // should only ever be reduced, not increased.
-  // [[deprecated("Use a CustomDiagDesc instead of a Level")]]
+  // A diagnostic created here belongs to no diagnostic group, so users cannot
+  // control it with -W flags. Prefer the overload below that takes a group
+  // name whenever the diagnostic should be user-controllable; uses of this
+  // ungrouped form in Clang should only ever be reduced, not increased.
+  // [[deprecated("Pass a group name, or use a CustomDiagDesc instead of a "
+  //              "Level")]]
   unsigned getCustomDiagID(Level L, const char (&FormatString)[N]) {
     return Diags->getCustomDiagID((DiagnosticIDs::Level)L,
                                   StringRef(FormatString, N - 1));
+  }
+
+  /// Compute the diagnostic ID for a plugin diagnostic in the runtime warning
+  /// group \p Group (by convention "<plugin>-plugin"). Unlike the overload
+  /// above, the diagnostic can be controlled by the user with -W<group> /
+  /// -Wno-<group> / -Werror=<group>, like a built-in warning.
+  template <unsigned N>
+  unsigned getCustomDiagID(Level L, const char (&FormatString)[N],
+                           StringRef Group) {
+    return Diags->getCustomDiagID((DiagnosticIDs::Level)L,
+                                  StringRef(FormatString, N - 1), Group);
   }
 
   /// Converts a diagnostic argument (as an intptr_t) into the string

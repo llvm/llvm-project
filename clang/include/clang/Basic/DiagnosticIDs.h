@@ -17,6 +17,8 @@
 #include "clang/Basic/DiagnosticCategories.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
@@ -212,11 +214,16 @@ public:
     unsigned HasGroup : 1;
     diag::Group Group;
     std::string Description;
+    // Runtime-named diagnostic group for plugin diagnostics (by convention
+    // "<plugin>-plugin"), empty when the diagnostic is not part of one. Unlike
+    // Group above, this is not a member of the static (TableGen'd) group table.
+    std::string DynGroupName;
 
     auto get_as_tuple() const {
       return std::tuple(DefaultSeverity, DiagClass, ShowInSystemHeader,
                         ShowInSystemMacro, HasGroup, Group,
-                        std::string_view{Description});
+                        std::string_view{Description},
+                        std::string_view{DynGroupName});
     }
 
   public:
@@ -224,18 +231,22 @@ public:
                    unsigned Class = CLASS_WARNING,
                    bool ShowInSystemHeader = false,
                    bool ShowInSystemMacro = false,
-                   std::optional<diag::Group> Group = std::nullopt)
+                   std::optional<diag::Group> Group = std::nullopt,
+                   std::string DynGroupName = {})
         : DefaultSeverity(static_cast<unsigned>(DefaultSeverity)),
           DiagClass(Class), ShowInSystemHeader(ShowInSystemHeader),
           ShowInSystemMacro(ShowInSystemMacro), HasGroup(Group != std::nullopt),
           Group(Group.value_or(diag::Group{})),
-          Description(std::move(Description)) {}
+          Description(std::move(Description)),
+          DynGroupName(std::move(DynGroupName)) {}
 
     std::optional<diag::Group> GetGroup() const {
       if (HasGroup)
         return Group;
       return std::nullopt;
     }
+
+    StringRef GetDynGroup() const { return DynGroupName; }
 
     diag::Severity GetDefaultSeverity() const {
       return static_cast<diag::Severity>(DefaultSeverity);
@@ -273,6 +284,48 @@ private:
       GIs[i] = {{}, false};
     return GIs;
   }();
+
+  /// State for a runtime-registered plugin diagnostic group. Plugins name a
+  /// group "<plugin>-plugin"; it is not in the static (TableGen'd) table, so it
+  /// is kept here keyed by name. A group can be named by a -W flag before the
+  /// plugin that owns it is loaded, so severity is recorded here and applied to
+  /// members as they register (see getCustomDiagID, setGroupSeverity).
+  struct DynamicGroupInfo {
+    // Severity a -W/-Werror flag set for this group's warnings and errors, and
+    // the one a -R flag set for its remarks; a group may hold both. A
+    // default-constructed severity means the flavor was left untouched.
+    diag::Severity WarnSeverity = diag::Severity();
+    diag::Severity RemarkSeverity = diag::Severity();
+    bool CreatedByFlag = false;   // named by a -W/-R flag
+    bool ClaimedByPlugin = false; // declared or used by a loaded plugin
+    llvm::SmallVector<unsigned, 4> Members; // custom diag IDs in this group
+
+    diag::Severity severityFor(diag::Flavor F) const {
+      return F == diag::Flavor::Remark ? RemarkSeverity : WarnSeverity;
+    }
+  };
+  llvm::StringMap<DynamicGroupInfo> DynamicGroups;
+
+  /// A plugin group name is the umbrella "plugin", a "<plugin>-plugin" group,
+  /// or a "<plugin>-plugin-<sub>..." subgroup of one.
+  static bool isPluginGroupName(StringRef Name) {
+    return Name == "plugin" || Name.ends_with("-plugin") ||
+           Name.contains("-plugin-");
+  }
+
+  /// Whether the plugin group named \p Ctrl controls diagnostics in plugin
+  /// group \p G: "plugin" controls every plugin group; otherwise \p Ctrl
+  /// controls itself and every dash-separated subgroup ("example-plugin"
+  /// controls "example-plugin-loop"). Used for both -Wno-<group> suppression
+  /// and a grouped diagnostic's default mapping.
+  static bool pluginGroupControls(StringRef Ctrl, StringRef G) {
+    if (Ctrl == "plugin")
+      return true;
+    if (Ctrl == G)
+      return true;
+    return G.starts_with(Ctrl) && G.size() > Ctrl.size() &&
+           G[Ctrl.size()] == '-';
+  }
 
 public:
   DiagnosticIDs();
@@ -324,6 +377,61 @@ public:
       llvm_unreachable("Fully covered switch above!");
     }());
   }
+
+  /// Return an ID for a plugin diagnostic that belongs to the runtime warning
+  /// group \p Group (by convention "<plugin>-plugin"). Unlike the two-argument
+  /// form above, the resulting diagnostic *can* be controlled by the user with
+  /// -W<group> / -Wno-<group> / -Werror=<group>, just like a built-in warning.
+  unsigned getCustomDiagID(Level Level, StringRef Message, StringRef Group) {
+    unsigned Class = CLASS_WARNING;
+    diag::Severity Sev = diag::Severity::Warning;
+    switch (Level) {
+    case DiagnosticIDs::Level::Ignored:
+      Sev = diag::Severity::Ignored;
+      break;
+    case DiagnosticIDs::Level::Note:
+      Sev = diag::Severity::Fatal;
+      Class = CLASS_NOTE;
+      break;
+    case DiagnosticIDs::Level::Remark:
+      Sev = diag::Severity::Remark;
+      Class = CLASS_REMARK;
+      break;
+    case DiagnosticIDs::Level::Warning:
+      Sev = diag::Severity::Warning;
+      break;
+    case DiagnosticIDs::Level::Error:
+      Sev = diag::Severity::Error;
+      Class = CLASS_ERROR;
+      break;
+    case DiagnosticIDs::Level::Fatal:
+      Sev = diag::Severity::Fatal;
+      Class = CLASS_ERROR;
+      break;
+    }
+    // If Group names a built-in (static) group, join it directly so it is
+    // controlled like any other member of that group; otherwise it is a runtime
+    // plugin group kept in the dynamic registry.
+    std::optional<diag::Group> StaticGroup = getGroupForWarningOption(Group);
+    return getCustomDiagID(CustomDiagDesc(
+        Sev, std::string(Message), Class,
+        /*ShowInSystemHeader=*/false, /*ShowInSystemMacro=*/false, StaticGroup,
+        StaticGroup ? std::string() : std::string(Group)));
+  }
+
+  /// Ensure a runtime plugin group named \p Name exists, so a -W flag can
+  /// target it before the plugin that owns it is loaded. Returns true if
+  /// \p Name is a plugin group name (and is now registered); false for any
+  /// other option, which the caller should treat as unknown.
+  bool ensureDynamicPluginGroup(StringRef Name);
+
+  /// Record that a loaded plugin owns the group \p Name, so a -W<name> that
+  /// referenced it is not later reported as an unknown warning option.
+  void registerPluginGroup(StringRef Name);
+
+  /// After all plugins have loaded, report every plugin group that was named by
+  /// a -W flag but that no plugin ever claimed -- i.e. a misspelled option.
+  void reportUnclaimedPluginGroups(DiagnosticsEngine &Diags) const;
 
   //===--------------------------------------------------------------------===//
   // Diagnostic classification and reporting interfaces.
@@ -384,7 +492,9 @@ public:
   /// Given a diagnostic group ID, return its documentation.
   static StringRef getWarningOptionDocumentation(diag::Group GroupID);
 
-  void setGroupSeverity(StringRef Group, diag::Severity);
+  void setGroupSeverity(StringRef Group, diag::Severity,
+                        diag::Flavor Flavor = diag::Flavor::WarningOrError,
+                        bool CommandLine = true);
   void setGroupNoWarningsAsError(StringRef Group, bool);
 
   /// Given a group ID, returns the flag that toggles the group.

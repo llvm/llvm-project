@@ -25,17 +25,53 @@ namespace {
 class PrintFunctionsConsumer : public ASTConsumer {
   CompilerInstance &Instance;
   std::set<std::string> ParsedTemplates;
+  // Diagnostics in the plugin's own "print-fns-plugin" group, or 0 if the
+  // corresponding argument was not passed. Registering the IDs up front (rather
+  // than lazily on first use) makes them members of the group before the source
+  // is parsed, so a `#pragma clang diagnostic` referring to the group can be
+  // applied to them.
+  unsigned WarnID = 0;
+  unsigned RemarkID = 0;
+  unsigned ErrorID = 0;
 
 public:
   PrintFunctionsConsumer(CompilerInstance &Instance,
-                         std::set<std::string> ParsedTemplates)
-      : Instance(Instance), ParsedTemplates(ParsedTemplates) {}
+                         std::set<std::string> ParsedTemplates,
+                         bool WarnOnDecls, bool RemarkOnDecls,
+                         bool ErrorOnDecls)
+      : Instance(Instance), ParsedTemplates(ParsedTemplates) {
+    DiagnosticsEngine &Diags = Instance.getDiagnostics();
+    if (RemarkOnDecls)
+      RemarkID = Diags.getCustomDiagID(DiagnosticsEngine::Remark,
+                                       "saw top-level declaration '%0'",
+                                       "print-fns-plugin");
+    if (WarnOnDecls)
+      WarnID = Diags.getCustomDiagID(DiagnosticsEngine::Warning,
+                                     "suspicious top-level declaration '%0'",
+                                     "print-fns-plugin");
+    if (ErrorOnDecls)
+      ErrorID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                      "forbidden top-level declaration '%0'",
+                                      "print-fns-plugin");
+  }
 
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
     for (DeclGroupRef::iterator i = DG.begin(), e = DG.end(); i != e; ++i) {
       const Decl *D = *i;
-      if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
-        llvm::errs() << "top-level-decl: \"" << ND->getNameAsString() << "\"\n";
+      const NamedDecl *ND = dyn_cast<NamedDecl>(D);
+      if (!ND)
+        continue;
+      llvm::errs() << "top-level-decl: \"" << ND->getNameAsString() << "\"\n";
+      // A user controls the warning with -Wno-print-fns-plugin and the remark
+      // with -Rno-print-fns-plugin (or the -Wplugin / -Wno-plugin umbrella),
+      // while the error keeps its severity -- group flags never silence errors.
+      DiagnosticsEngine &Diags = Instance.getDiagnostics();
+      if (RemarkID)
+        Diags.Report(ND->getLocation(), RemarkID) << ND->getNameAsString();
+      if (WarnID)
+        Diags.Report(ND->getLocation(), WarnID) << ND->getNameAsString();
+      if (ErrorID)
+        Diags.Report(ND->getLocation(), ErrorID) << ND->getNameAsString();
     }
 
     return true;
@@ -78,10 +114,15 @@ public:
 
 class PrintFunctionNamesAction : public PluginASTAction {
   std::set<std::string> ParsedTemplates;
+  bool WarnOnDecls = false;
+  bool RemarkOnDecls = false;
+  bool ErrorOnDecls = false;
+
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  llvm::StringRef) override {
-    return std::make_unique<PrintFunctionsConsumer>(CI, ParsedTemplates);
+    return std::make_unique<PrintFunctionsConsumer>(
+        CI, ParsedTemplates, WarnOnDecls, RemarkOnDecls, ErrorOnDecls);
   }
 
   bool ParseArgs(const CompilerInstance &CI,
@@ -91,7 +132,13 @@ protected:
 
       // Example error handling.
       DiagnosticsEngine &D = CI.getDiagnostics();
-      if (args[i] == "-an-error") {
+      if (args[i] == "-warn-decls") {
+        WarnOnDecls = true;
+      } else if (args[i] == "-remark-decls") {
+        RemarkOnDecls = true;
+      } else if (args[i] == "-error-decls") {
+        ErrorOnDecls = true;
+      } else if (args[i] == "-an-error") {
         unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
                                             "invalid argument '%0'");
         D.Report(DiagID) << args[i];
