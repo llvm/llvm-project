@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c11 -emit-llvm -o - -triple x86_64-unknown-linux %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o - -triple x86_64-unknown-linux %s | FileCheck %s
 
 // Tests for issue #207785.
 
