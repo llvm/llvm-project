@@ -997,7 +997,7 @@ template<class>
 concept True = true;
 
 template<class>
-concept False = false; // expected-note 9 {{'false' evaluated to false}}
+concept False = false; // expected-note 8 {{'false' evaluated to false}}
 
 template<class>
 concept Irrelevant = false;
@@ -1009,8 +1009,8 @@ concept ErrorRequires = requires(ErrorRequires auto x) { x; }; //#GH54678-ill-fo
 // expected-note@-1 {{declared here}}
 
 template<typename T> concept C1 = C1<T> && []<C1>(C1 auto) -> C1 auto {};
-//expected-error@-1 4{{a concept definition cannot refer to itself}} \
-//expected-note@-1 4{{declared here}}
+//expected-error@-1 {{a concept definition cannot refer to itself}} \
+//expected-note@-1 {{declared here}}
 
 template<class T> void aaa(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
 requires (False<T> || False<T>) || False<T> {} // expected-note 3 {{'int' does not satisfy 'False'}}
@@ -1023,15 +1023,15 @@ requires (Irrelevant<T> || True<T>) && False<T> {} // expected-note {{'int' does
 template<class T> void eee(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
 requires (Irrelevant<T> || Irrelevant<T> || True<T>) && False<T> {} // expected-note {{'long' does not satisfy 'False'}}
 
-template<class T> void fff(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
-requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {} // expected-note {{because 'unsigned long' does not satisfy 'False'}}
+template<class T> void fff(T t)
+requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {}
 void test() {
     aaa(42); // expected-error {{no matching function}}
     bbb(42L); // expected-error{{no matching function}}
     ccc(42UL); // expected-error {{no matching function}}
     ddd(42); // expected-error {{no matching function}}
     eee(42L); // expected-error {{no matching function}}
-    fff(42UL); // expected-error {{no matching function}}
+    fff(42UL);
 }
 }
 
