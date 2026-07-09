@@ -12,7 +12,6 @@ define i64 @remove_redundant_cmp_lzcnt_i64(i64 %0) {
 ; CHECK-LABEL: remove_redundant_cmp_lzcnt_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lzcntq %rdi, %rax
-; CHECK-NEXT:    cmpq $1, %rdi
 ; CHECK-NEXT:    adcq $0, %rax
 ; CHECK-NEXT:    retq
   %2 = tail call i64 @llvm.ctlz.i64(i64 %0, i1 false)
@@ -26,7 +25,6 @@ define i32 @remove_redundant_cmp_lzcnt_i32(i32 %0) {
 ; CHECK-LABEL: remove_redundant_cmp_lzcnt_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lzcntl %edi, %eax
-; CHECK-NEXT:    cmpl $1, %edi
 ; CHECK-NEXT:    adcl $0, %eax
 ; CHECK-NEXT:    retq
   %2 = tail call i32 @llvm.ctlz.i32(i32 %0, i1 false)
@@ -40,7 +38,6 @@ define i16 @remove_redundant_cmp_lzcnt_i16(i16 %0) {
 ; CHECK-LABEL: remove_redundant_cmp_lzcnt_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lzcntw %di, %ax
-; CHECK-NEXT:    cmpw $1, %di
 ; CHECK-NEXT:    adcw $0, %ax
 ; CHECK-NEXT:    retq
   %2 = tail call i16 @llvm.ctlz.i16(i16 %0, i1 false)
@@ -86,7 +83,6 @@ define i64 @remove_redundant_cmp_tzcnt_i64(i64 %0) {
 ; CHECK-LABEL: remove_redundant_cmp_tzcnt_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tzcntq %rdi, %rax
-; CHECK-NEXT:    cmpq $1, %rdi
 ; CHECK-NEXT:    adcq $0, %rax
 ; CHECK-NEXT:    retq
   %2 = tail call i64 @llvm.cttz.i64(i64 %0, i1 false)
@@ -100,7 +96,6 @@ define i32 @remove_redundant_cmp_tzcnt_i32(i32 %0) {
 ; CHECK-LABEL: remove_redundant_cmp_tzcnt_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tzcntl %edi, %eax
-; CHECK-NEXT:    cmpl $1, %edi
 ; CHECK-NEXT:    adcl $0, %eax
 ; CHECK-NEXT:    retq
   %2 = tail call i32 @llvm.cttz.i32(i32 %0, i1 false)
