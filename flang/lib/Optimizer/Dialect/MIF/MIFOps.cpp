@@ -345,6 +345,9 @@ void mif::ImageIndexOp::build(mlir::OpBuilder &builder,
 llvm::LogicalResult mif::ImageIndexOp::verify() {
   if (getCoarray())
     return checkCorank(*this);
+  mlir::Type subTy = getSub().getType();
+  if (!fir::getFortranElementType(subTy).isInteger(64))
+    return emitOpError("sub should be a boxed array of I64 elements.");
   return mlir::success();
 }
 

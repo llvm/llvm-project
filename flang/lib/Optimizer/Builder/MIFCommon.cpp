@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/MIFCommon.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -56,4 +59,24 @@ std::string mif::getFullUniqName(mlir::Value addr) {
     return getFullUniqName(c.getRef());
   }
   return "";
+}
+
+mlir::Value mif::genImageIndex(fir::FirOpBuilder &builder, mlir::Location loc,
+                               mlir::Value coarray, mlir::Value sub,
+                               mlir::Value team) {
+  mlir::Type newSubType =
+      fir::changeElementType(sub.getType(), builder.getI64Type(), false);
+  if (newSubType == sub.getType())
+    return mif::ImageIndexOp::create(builder, loc, coarray, sub, team);
+  auto subCastAndCleanup = hlfir::genTypeAndKindConvert(
+      loc, builder, hlfir::Entity{sub}, newSubType, true);
+  auto [exv, cleanup] =
+      hlfir::convertToBox(loc, builder, subCastAndCleanup.first, newSubType);
+  auto imageIndex =
+      mif::ImageIndexOp::create(builder, loc, coarray, fir::getBase(exv), team);
+  if (cleanup)
+    (*cleanup)();
+  if (subCastAndCleanup.second)
+    (*subCastAndCleanup.second)();
+  return imageIndex;
 }
