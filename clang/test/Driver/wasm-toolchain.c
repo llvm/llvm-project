@@ -18,6 +18,7 @@
 // RUN:   | FileCheck -check-prefix=LINK %s
 // LINK: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK: wasm-ld{{.*}}" "-L/foo/lib" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
+// LINK-NOT: "-Bstatic"
 
 // A basic C link command-line with optimization with unknown OS.
 
@@ -31,7 +32,7 @@
 // RUN: %clang -### --target=wasm32-wasi --sysroot=/foo %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=LINK_KNOWN %s
 // LINK_KNOWN: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
-// LINK_KNOWN: wasm-ld{{.*}}" "-L/foo/lib/wasm32-wasi" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
+// LINK_KNOWN: wasm-ld{{.*}}" "-m" "wasm32" "-Bstatic" {{.*}} "-L/foo/lib/wasm32-wasi" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
 
 // -shared should be passed through to `wasm-ld` and include crt1-reactor.o with a known OS.
 

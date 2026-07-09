@@ -84,10 +84,7 @@ struct Config {
   bool stripAll;
   bool stripDebug;
   bool stackFirst;
-  // Static linking is currently the default under WebAssembly.  This may
-  // change as some point in the future if dynamic linking becomes more widely
-  // used.
-  bool isStatic = true;
+  bool isStatic = false;
   bool thinLTOEmitImportsFiles;
   bool thinLTOEmitIndexFiles;
   bool thinLTOIndexOnly;
