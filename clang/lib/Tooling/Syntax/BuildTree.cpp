@@ -726,14 +726,14 @@ public:
   TraverseClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *C) {
     if (!RecursiveASTVisitor::TraverseClassTemplateSpecializationDecl(C))
       return false;
-    if (C->isExplicitSpecialization())
+    const auto *Info = C->getExplicitInstantiationInfo();
+    if (!Info)
       return true; // we are only interested in explicit instantiations.
     auto *Declaration =
         cast<syntax::SimpleDeclaration>(handleFreeStandingTagDecl(C));
     foldExplicitTemplateInstantiation(
-        Builder.getTemplateRange(C),
-        Builder.findToken(C->getExternKeywordLoc()),
-        Builder.findToken(C->getTemplateKeywordLoc()), Declaration, C);
+        Builder.getTemplateRange(C), Builder.findToken(Info->ExternKeywordLoc),
+        Builder.findToken(Info->TemplateKeywordLoc), Declaration, C);
     return true;
   }
 
@@ -756,7 +756,7 @@ public:
   bool WalkUpFromTagDecl(TagDecl *C) {
     // FIXME: build the ClassSpecifier node.
     if (!C->isFreeStanding()) {
-      assert(C->getNumTemplateParameterLists() == 0);
+      assert(C->getTemplateParameterLists().empty());
       return true;
     }
     handleFreeStandingTagDecl(C);
@@ -778,10 +778,11 @@ public:
           foldTemplateDeclaration(R, TemplateKW, DeclarationRange, nullptr);
       DeclarationRange = R;
     };
-    if (auto *S = dyn_cast<ClassTemplatePartialSpecializationDecl>(C))
-      ConsumeTemplateParameters(*S->getTemplateParameters());
-    for (unsigned I = C->getNumTemplateParameterLists(); 0 < I; --I)
-      ConsumeTemplateParameters(*C->getTemplateParameterList(I - 1));
+    if (auto *S = dyn_cast<ClassTemplateSpecializationDecl>(C))
+      if (const auto *Info = S->getExplicitSpecializationInfo())
+        ConsumeTemplateParameters(*Info->TemplateParams);
+    for (TemplateParameterList *TPL : C->getTemplateParameterLists())
+      ConsumeTemplateParameters(*TPL);
     return Result;
   }
 

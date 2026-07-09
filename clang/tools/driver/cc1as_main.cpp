@@ -389,6 +389,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
         llvm::StringSwitch<EmitDwarfUnwindType>(A->getValue())
             .Case("always", EmitDwarfUnwindType::Always)
             .Case("no-compact-unwind", EmitDwarfUnwindType::NoCompactUnwind)
+            .Case("dwarf-only", EmitDwarfUnwindType::DwarfOnly)
             .Case("default", EmitDwarfUnwindType::Default);
   }
 
@@ -506,7 +507,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
            << Opts.CPU << FS.empty() << FS;
   }
 
-  MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  MCContext Ctx(Triple(Opts.Triple), *MAI, *MRI, *STI, &SrcMgr);
 
   bool PIC = false;
   if (Opts.RelocationModel == "static") {

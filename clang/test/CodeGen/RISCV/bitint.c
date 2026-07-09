@@ -143,27 +143,27 @@ _BitInt(32) test_bitint_32_add_default(_BitInt(32) a, _BitInt(32) b) {
 // RISCV64-NEXT:    ret i65 [[ADD]]
 //
 // RISCV32-LABEL: define {{[^@]+}}@test_bitint_65_add_unsigned
-// RISCV32-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+// RISCV32-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // RISCV32-NEXT:  entry:
-// RISCV32-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA10:![0-9]+]]
+// RISCV32-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA9:![0-9]+]]
 // RISCV32-NEXT:    [[A:%.*]] = trunc i128 [[TMP2]] to i65
-// RISCV32-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA10]]
+// RISCV32-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA9]]
 // RISCV32-NEXT:    [[B:%.*]] = trunc i128 [[TMP3]] to i65
 // RISCV32-NEXT:    [[ADD:%.*]] = add i65 [[B]], [[A]]
 // RISCV32-NEXT:    [[STOREDV4:%.*]] = zext i65 [[ADD]] to i128
-// RISCV32-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA10]]
+// RISCV32-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA9]]
 // RISCV32-NEXT:    ret void
 //
 // RISCV32_INT128-LABEL: define {{[^@]+}}@test_bitint_65_add_unsigned
-// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // RISCV32_INT128-NEXT:  entry:
-// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA10:![0-9]+]]
+// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA9:![0-9]+]]
 // RISCV32_INT128-NEXT:    [[A:%.*]] = trunc i128 [[TMP2]] to i65
-// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA10]]
+// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA9]]
 // RISCV32_INT128-NEXT:    [[B:%.*]] = trunc i128 [[TMP3]] to i65
 // RISCV32_INT128-NEXT:    [[ADD:%.*]] = add i65 [[B]], [[A]]
 // RISCV32_INT128-NEXT:    [[STOREDV4:%.*]] = zext i65 [[ADD]] to i128
-// RISCV32_INT128-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA10]]
+// RISCV32_INT128-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA9]]
 // RISCV32_INT128-NEXT:    ret void
 //
 unsigned _BitInt(65) test_bitint_65_add_unsigned(unsigned _BitInt(65) a, unsigned _BitInt(65) b) {
@@ -177,27 +177,27 @@ unsigned _BitInt(65) test_bitint_65_add_unsigned(unsigned _BitInt(65) a, unsigne
 // RISCV64-NEXT:    ret i65 [[ADD]]
 //
 // RISCV32-LABEL: define {{[^@]+}}@test_bitint_65_add_signed
-// RISCV32-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32-NEXT:  entry:
-// RISCV32-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA10]]
+// RISCV32-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA9]]
 // RISCV32-NEXT:    [[A:%.*]] = trunc i128 [[TMP2]] to i65
-// RISCV32-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA10]]
+// RISCV32-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA9]]
 // RISCV32-NEXT:    [[B:%.*]] = trunc i128 [[TMP3]] to i65
 // RISCV32-NEXT:    [[ADD:%.*]] = add nsw i65 [[B]], [[A]]
 // RISCV32-NEXT:    [[STOREDV4:%.*]] = sext i65 [[ADD]] to i128
-// RISCV32-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA10]]
+// RISCV32-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA9]]
 // RISCV32-NEXT:    ret void
 //
 // RISCV32_INT128-LABEL: define {{[^@]+}}@test_bitint_65_add_signed
-// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32_INT128-NEXT:  entry:
-// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA10]]
+// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA9]]
 // RISCV32_INT128-NEXT:    [[A:%.*]] = trunc i128 [[TMP2]] to i65
-// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA10]]
+// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA9]]
 // RISCV32_INT128-NEXT:    [[B:%.*]] = trunc i128 [[TMP3]] to i65
 // RISCV32_INT128-NEXT:    [[ADD:%.*]] = add nsw i65 [[B]], [[A]]
 // RISCV32_INT128-NEXT:    [[STOREDV4:%.*]] = sext i65 [[ADD]] to i128
-// RISCV32_INT128-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA10]]
+// RISCV32_INT128-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA9]]
 // RISCV32_INT128-NEXT:    ret void
 //
 signed _BitInt(65) test_bitint_65_add_signed(signed _BitInt(65) a, signed _BitInt(65) b) {
@@ -211,27 +211,27 @@ signed _BitInt(65) test_bitint_65_add_signed(signed _BitInt(65) a, signed _BitIn
 // RISCV64-NEXT:    ret i65 [[ADD]]
 //
 // RISCV32-LABEL: define {{[^@]+}}@test_bitint_65_add_default
-// RISCV32-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32-NEXT:  entry:
-// RISCV32-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA10]]
+// RISCV32-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA9]]
 // RISCV32-NEXT:    [[A:%.*]] = trunc i128 [[TMP2]] to i65
-// RISCV32-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA10]]
+// RISCV32-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA9]]
 // RISCV32-NEXT:    [[B:%.*]] = trunc i128 [[TMP3]] to i65
 // RISCV32-NEXT:    [[ADD:%.*]] = add nsw i65 [[B]], [[A]]
 // RISCV32-NEXT:    [[STOREDV4:%.*]] = sext i65 [[ADD]] to i128
-// RISCV32-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA10]]
+// RISCV32-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA9]]
 // RISCV32-NEXT:    ret void
 //
 // RISCV32_INT128-LABEL: define {{[^@]+}}@test_bitint_65_add_default
-// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32_INT128-NEXT:  entry:
-// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA10]]
+// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA9]]
 // RISCV32_INT128-NEXT:    [[A:%.*]] = trunc i128 [[TMP2]] to i65
-// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA10]]
+// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA9]]
 // RISCV32_INT128-NEXT:    [[B:%.*]] = trunc i128 [[TMP3]] to i65
 // RISCV32_INT128-NEXT:    [[ADD:%.*]] = add nsw i65 [[B]], [[A]]
 // RISCV32_INT128-NEXT:    [[STOREDV4:%.*]] = sext i65 [[ADD]] to i128
-// RISCV32_INT128-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA10]]
+// RISCV32_INT128-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA9]]
 // RISCV32_INT128-NEXT:    ret void
 //
 _BitInt(65) test_bitint_65_add_default(_BitInt(65) a, _BitInt(65) b) {
@@ -246,27 +246,27 @@ _BitInt(65) test_bitint_65_add_default(_BitInt(65) a, _BitInt(65) b) {
 // RISCV64-NEXT:    ret i77 [[ADD]]
 //
 // RISCV32-LABEL: define {{[^@]+}}@test_bitint_77_add_unsigned
-// RISCV32-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32-NEXT:  entry:
-// RISCV32-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA12:![0-9]+]]
+// RISCV32-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA11:![0-9]+]]
 // RISCV32-NEXT:    [[A:%.*]] = trunc i128 [[TMP2]] to i77
-// RISCV32-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA12]]
+// RISCV32-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA11]]
 // RISCV32-NEXT:    [[B:%.*]] = trunc i128 [[TMP3]] to i77
 // RISCV32-NEXT:    [[ADD:%.*]] = add i77 [[B]], [[A]]
 // RISCV32-NEXT:    [[STOREDV4:%.*]] = zext i77 [[ADD]] to i128
-// RISCV32-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA12]]
+// RISCV32-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA11]]
 // RISCV32-NEXT:    ret void
 //
 // RISCV32_INT128-LABEL: define {{[^@]+}}@test_bitint_77_add_unsigned
-// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32_INT128-NEXT:  entry:
-// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA12:![0-9]+]]
+// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA11:![0-9]+]]
 // RISCV32_INT128-NEXT:    [[A:%.*]] = trunc i128 [[TMP2]] to i77
-// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA12]]
+// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA11]]
 // RISCV32_INT128-NEXT:    [[B:%.*]] = trunc i128 [[TMP3]] to i77
 // RISCV32_INT128-NEXT:    [[ADD:%.*]] = add i77 [[B]], [[A]]
 // RISCV32_INT128-NEXT:    [[STOREDV4:%.*]] = zext i77 [[ADD]] to i128
-// RISCV32_INT128-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA12]]
+// RISCV32_INT128-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA11]]
 // RISCV32_INT128-NEXT:    ret void
 //
 unsigned _BitInt(77) test_bitint_77_add_unsigned(unsigned _BitInt(77) a, unsigned _BitInt(77) b) {
@@ -280,27 +280,27 @@ unsigned _BitInt(77) test_bitint_77_add_unsigned(unsigned _BitInt(77) a, unsigne
 // RISCV64-NEXT:    ret i77 [[ADD]]
 //
 // RISCV32-LABEL: define {{[^@]+}}@test_bitint_77_add_signed
-// RISCV32-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32-NEXT:  entry:
-// RISCV32-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA12]]
+// RISCV32-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA11]]
 // RISCV32-NEXT:    [[A:%.*]] = trunc i128 [[TMP2]] to i77
-// RISCV32-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA12]]
+// RISCV32-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA11]]
 // RISCV32-NEXT:    [[B:%.*]] = trunc i128 [[TMP3]] to i77
 // RISCV32-NEXT:    [[ADD:%.*]] = add nsw i77 [[B]], [[A]]
 // RISCV32-NEXT:    [[STOREDV4:%.*]] = sext i77 [[ADD]] to i128
-// RISCV32-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA12]]
+// RISCV32-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA11]]
 // RISCV32-NEXT:    ret void
 //
 // RISCV32_INT128-LABEL: define {{[^@]+}}@test_bitint_77_add_signed
-// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32_INT128-NEXT:  entry:
-// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA12]]
+// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA11]]
 // RISCV32_INT128-NEXT:    [[A:%.*]] = trunc i128 [[TMP2]] to i77
-// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA12]]
+// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA11]]
 // RISCV32_INT128-NEXT:    [[B:%.*]] = trunc i128 [[TMP3]] to i77
 // RISCV32_INT128-NEXT:    [[ADD:%.*]] = add nsw i77 [[B]], [[A]]
 // RISCV32_INT128-NEXT:    [[STOREDV4:%.*]] = sext i77 [[ADD]] to i128
-// RISCV32_INT128-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA12]]
+// RISCV32_INT128-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA11]]
 // RISCV32_INT128-NEXT:    ret void
 //
 signed _BitInt(77) test_bitint_77_add_signed(signed _BitInt(77) a, signed _BitInt(77) b) {
@@ -314,27 +314,27 @@ signed _BitInt(77) test_bitint_77_add_signed(signed _BitInt(77) a, signed _BitIn
 // RISCV64-NEXT:    ret i77 [[ADD]]
 //
 // RISCV32-LABEL: define {{[^@]+}}@test_bitint_77_add_default
-// RISCV32-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32-NEXT:  entry:
-// RISCV32-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA12]]
+// RISCV32-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA11]]
 // RISCV32-NEXT:    [[A:%.*]] = trunc i128 [[TMP2]] to i77
-// RISCV32-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA12]]
+// RISCV32-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA11]]
 // RISCV32-NEXT:    [[B:%.*]] = trunc i128 [[TMP3]] to i77
 // RISCV32-NEXT:    [[ADD:%.*]] = add nsw i77 [[B]], [[A]]
 // RISCV32-NEXT:    [[STOREDV4:%.*]] = sext i77 [[ADD]] to i128
-// RISCV32-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA12]]
+// RISCV32-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA11]]
 // RISCV32-NEXT:    ret void
 //
 // RISCV32_INT128-LABEL: define {{[^@]+}}@test_bitint_77_add_default
-// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32_INT128-NEXT:  entry:
-// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA12]]
+// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[TBAA11]]
 // RISCV32_INT128-NEXT:    [[A:%.*]] = trunc i128 [[TMP2]] to i77
-// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA12]]
+// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP1]], align 8, !tbaa [[TBAA11]]
 // RISCV32_INT128-NEXT:    [[B:%.*]] = trunc i128 [[TMP3]] to i77
 // RISCV32_INT128-NEXT:    [[ADD:%.*]] = add nsw i77 [[B]], [[A]]
 // RISCV32_INT128-NEXT:    [[STOREDV4:%.*]] = sext i77 [[ADD]] to i128
-// RISCV32_INT128-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA12]]
+// RISCV32_INT128-NEXT:    store i128 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA11]]
 // RISCV32_INT128-NEXT:    ret void
 //
 _BitInt(77) test_bitint_77_add_default(_BitInt(77) a, _BitInt(77) b) {
@@ -344,39 +344,39 @@ _BitInt(77) test_bitint_77_add_default(_BitInt(77) a, _BitInt(77) b) {
 // BitInt(200) tests - requires BitInt larger than 128 bits support
 
 // RISCV64-LABEL: define {{[^@]+}}@test_bitint_200_add_unsigned
-// RISCV64-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+// RISCV64-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // RISCV64-NEXT:  entry:
-// RISCV64-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA10:![0-9]+]]
+// RISCV64-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA9:![0-9]+]]
 // RISCV64-NEXT:    [[A:%.*]] = trunc i256 [[TMP2]] to i200
-// RISCV64-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA10]]
+// RISCV64-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA9]]
 // RISCV64-NEXT:    [[B:%.*]] = trunc i256 [[TMP3]] to i200
 // RISCV64-NEXT:    [[ADD:%.*]] = add i200 [[B]], [[A]]
 // RISCV64-NEXT:    [[STOREDV4:%.*]] = zext i200 [[ADD]] to i256
-// RISCV64-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA10]]
+// RISCV64-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA9]]
 // RISCV64-NEXT:    ret void
 //
 // RISCV32-LABEL: define {{[^@]+}}@test_bitint_200_add_unsigned
-// RISCV32-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32-NEXT:  entry:
-// RISCV32-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA14:![0-9]+]]
+// RISCV32-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA13:![0-9]+]]
 // RISCV32-NEXT:    [[A:%.*]] = trunc i256 [[TMP2]] to i200
-// RISCV32-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA14]]
+// RISCV32-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA13]]
 // RISCV32-NEXT:    [[B:%.*]] = trunc i256 [[TMP3]] to i200
 // RISCV32-NEXT:    [[ADD:%.*]] = add i200 [[B]], [[A]]
 // RISCV32-NEXT:    [[STOREDV4:%.*]] = zext i200 [[ADD]] to i256
-// RISCV32-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA14]]
+// RISCV32-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA13]]
 // RISCV32-NEXT:    ret void
 //
 // RISCV32_INT128-LABEL: define {{[^@]+}}@test_bitint_200_add_unsigned
-// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32_INT128-NEXT:  entry:
-// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA14:![0-9]+]]
+// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA13:![0-9]+]]
 // RISCV32_INT128-NEXT:    [[A:%.*]] = trunc i256 [[TMP2]] to i200
-// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA14]]
+// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA13]]
 // RISCV32_INT128-NEXT:    [[B:%.*]] = trunc i256 [[TMP3]] to i200
 // RISCV32_INT128-NEXT:    [[ADD:%.*]] = add i200 [[B]], [[A]]
 // RISCV32_INT128-NEXT:    [[STOREDV4:%.*]] = zext i200 [[ADD]] to i256
-// RISCV32_INT128-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA14]]
+// RISCV32_INT128-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA13]]
 // RISCV32_INT128-NEXT:    ret void
 //
 unsigned _BitInt(200) test_bitint_200_add_unsigned(unsigned _BitInt(200) a, unsigned _BitInt(200) b) {
@@ -384,39 +384,39 @@ unsigned _BitInt(200) test_bitint_200_add_unsigned(unsigned _BitInt(200) a, unsi
 }
 
 // RISCV64-LABEL: define {{[^@]+}}@test_bitint_200_add_signed
-// RISCV64-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV64-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV64-NEXT:  entry:
-// RISCV64-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA10]]
+// RISCV64-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA9]]
 // RISCV64-NEXT:    [[A:%.*]] = trunc i256 [[TMP2]] to i200
-// RISCV64-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA10]]
+// RISCV64-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA9]]
 // RISCV64-NEXT:    [[B:%.*]] = trunc i256 [[TMP3]] to i200
 // RISCV64-NEXT:    [[ADD:%.*]] = add nsw i200 [[B]], [[A]]
 // RISCV64-NEXT:    [[STOREDV4:%.*]] = sext i200 [[ADD]] to i256
-// RISCV64-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA10]]
+// RISCV64-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA9]]
 // RISCV64-NEXT:    ret void
 //
 // RISCV32-LABEL: define {{[^@]+}}@test_bitint_200_add_signed
-// RISCV32-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32-NEXT:  entry:
-// RISCV32-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA14]]
+// RISCV32-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA13]]
 // RISCV32-NEXT:    [[A:%.*]] = trunc i256 [[TMP2]] to i200
-// RISCV32-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA14]]
+// RISCV32-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA13]]
 // RISCV32-NEXT:    [[B:%.*]] = trunc i256 [[TMP3]] to i200
 // RISCV32-NEXT:    [[ADD:%.*]] = add nsw i200 [[B]], [[A]]
 // RISCV32-NEXT:    [[STOREDV4:%.*]] = sext i200 [[ADD]] to i256
-// RISCV32-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA14]]
+// RISCV32-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA13]]
 // RISCV32-NEXT:    ret void
 //
 // RISCV32_INT128-LABEL: define {{[^@]+}}@test_bitint_200_add_signed
-// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32_INT128-NEXT:  entry:
-// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA14]]
+// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA13]]
 // RISCV32_INT128-NEXT:    [[A:%.*]] = trunc i256 [[TMP2]] to i200
-// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA14]]
+// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA13]]
 // RISCV32_INT128-NEXT:    [[B:%.*]] = trunc i256 [[TMP3]] to i200
 // RISCV32_INT128-NEXT:    [[ADD:%.*]] = add nsw i200 [[B]], [[A]]
 // RISCV32_INT128-NEXT:    [[STOREDV4:%.*]] = sext i200 [[ADD]] to i256
-// RISCV32_INT128-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA14]]
+// RISCV32_INT128-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA13]]
 // RISCV32_INT128-NEXT:    ret void
 //
 signed _BitInt(200) test_bitint_200_add_signed(signed _BitInt(200) a, signed _BitInt(200) b) {
@@ -424,39 +424,39 @@ signed _BitInt(200) test_bitint_200_add_signed(signed _BitInt(200) a, signed _Bi
 }
 
 // RISCV64-LABEL: define {{[^@]+}}@test_bitint_200_add_default
-// RISCV64-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV64-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV64-NEXT:  entry:
-// RISCV64-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA10]]
+// RISCV64-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA9]]
 // RISCV64-NEXT:    [[A:%.*]] = trunc i256 [[TMP2]] to i200
-// RISCV64-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA10]]
+// RISCV64-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA9]]
 // RISCV64-NEXT:    [[B:%.*]] = trunc i256 [[TMP3]] to i200
 // RISCV64-NEXT:    [[ADD:%.*]] = add nsw i200 [[B]], [[A]]
 // RISCV64-NEXT:    [[STOREDV4:%.*]] = sext i200 [[ADD]] to i256
-// RISCV64-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA10]]
+// RISCV64-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA9]]
 // RISCV64-NEXT:    ret void
 //
 // RISCV32-LABEL: define {{[^@]+}}@test_bitint_200_add_default
-// RISCV32-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32-NEXT:  entry:
-// RISCV32-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA14]]
+// RISCV32-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA13]]
 // RISCV32-NEXT:    [[A:%.*]] = trunc i256 [[TMP2]] to i200
-// RISCV32-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA14]]
+// RISCV32-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA13]]
 // RISCV32-NEXT:    [[B:%.*]] = trunc i256 [[TMP3]] to i200
 // RISCV32-NEXT:    [[ADD:%.*]] = add nsw i200 [[B]], [[A]]
 // RISCV32-NEXT:    [[STOREDV4:%.*]] = sext i200 [[ADD]] to i256
-// RISCV32-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA14]]
+// RISCV32-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA13]]
 // RISCV32-NEXT:    ret void
 //
 // RISCV32_INT128-LABEL: define {{[^@]+}}@test_bitint_200_add_default
-// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // RISCV32_INT128-NEXT:  entry:
-// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA14]]
+// RISCV32_INT128-NEXT:    [[TMP2:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA13]]
 // RISCV32_INT128-NEXT:    [[A:%.*]] = trunc i256 [[TMP2]] to i200
-// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA14]]
+// RISCV32_INT128-NEXT:    [[TMP3:%.*]] = load i256, ptr [[TMP1]], align 8, !tbaa [[TBAA13]]
 // RISCV32_INT128-NEXT:    [[B:%.*]] = trunc i256 [[TMP3]] to i200
 // RISCV32_INT128-NEXT:    [[ADD:%.*]] = add nsw i200 [[B]], [[A]]
 // RISCV32_INT128-NEXT:    [[STOREDV4:%.*]] = sext i200 [[ADD]] to i256
-// RISCV32_INT128-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA14]]
+// RISCV32_INT128-NEXT:    store i256 [[STOREDV4]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA13]]
 // RISCV32_INT128-NEXT:    ret void
 //
 _BitInt(200) test_bitint_200_add_default(_BitInt(200) a, _BitInt(200) b) {
@@ -466,25 +466,25 @@ _BitInt(200) test_bitint_200_add_default(_BitInt(200) a, _BitInt(200) b) {
 // Float <-> BitInt(200) conversions
 
 // RISCV64-LABEL: define {{[^@]+}}@test_bitint_200_to_float
-// RISCV64-SAME: (ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// RISCV64-SAME: (ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // RISCV64-NEXT:  entry:
-// RISCV64-NEXT:    [[TMP1:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA10]]
+// RISCV64-NEXT:    [[TMP1:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA9]]
 // RISCV64-NEXT:    [[I:%.*]] = trunc i256 [[TMP1]] to i200
 // RISCV64-NEXT:    [[CONV:%.*]] = sitofp i200 [[I]] to float
 // RISCV64-NEXT:    ret float [[CONV]]
 //
 // RISCV32-LABEL: define {{[^@]+}}@test_bitint_200_to_float
-// RISCV32-SAME: (ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// RISCV32-SAME: (ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // RISCV32-NEXT:  entry:
-// RISCV32-NEXT:    [[TMP1:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA14]]
+// RISCV32-NEXT:    [[TMP1:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA13]]
 // RISCV32-NEXT:    [[I:%.*]] = trunc i256 [[TMP1]] to i200
 // RISCV32-NEXT:    [[CONV:%.*]] = sitofp i200 [[I]] to float
 // RISCV32-NEXT:    ret float [[CONV]]
 //
 // RISCV32_INT128-LABEL: define {{[^@]+}}@test_bitint_200_to_float
-// RISCV32_INT128-SAME: (ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// RISCV32_INT128-SAME: (ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // RISCV32_INT128-NEXT:  entry:
-// RISCV32_INT128-NEXT:    [[TMP1:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA14]]
+// RISCV32_INT128-NEXT:    [[TMP1:%.*]] = load i256, ptr [[TMP0]], align 8, !tbaa [[TBAA13]]
 // RISCV32_INT128-NEXT:    [[I:%.*]] = trunc i256 [[TMP1]] to i200
 // RISCV32_INT128-NEXT:    [[CONV:%.*]] = sitofp i200 [[I]] to float
 // RISCV32_INT128-NEXT:    ret float [[CONV]]
@@ -495,27 +495,27 @@ float test_bitint_200_to_float(_BitInt(200) i) {
 }
 
 // RISCV64-LABEL: define {{[^@]+}}@test_float_to_bitint_200
-// RISCV64-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], float noundef [[F:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// RISCV64-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], float noundef [[F:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // RISCV64-NEXT:  entry:
 // RISCV64-NEXT:    [[CONV:%.*]] = fptosi float [[F]] to i200
 // RISCV64-NEXT:    [[STOREDV:%.*]] = sext i200 [[CONV]] to i256
-// RISCV64-NEXT:    store i256 [[STOREDV]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA10]]
+// RISCV64-NEXT:    store i256 [[STOREDV]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA9]]
 // RISCV64-NEXT:    ret void
 //
 // RISCV32-LABEL: define {{[^@]+}}@test_float_to_bitint_200
-// RISCV32-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], float noundef [[F:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// RISCV32-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], float noundef [[F:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // RISCV32-NEXT:  entry:
 // RISCV32-NEXT:    [[CONV:%.*]] = fptosi float [[F]] to i200
 // RISCV32-NEXT:    [[STOREDV:%.*]] = sext i200 [[CONV]] to i256
-// RISCV32-NEXT:    store i256 [[STOREDV]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA14]]
+// RISCV32-NEXT:    store i256 [[STOREDV]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA13]]
 // RISCV32-NEXT:    ret void
 //
 // RISCV32_INT128-LABEL: define {{[^@]+}}@test_float_to_bitint_200
-// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], float noundef [[F:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// RISCV32_INT128-SAME: (ptr dead_on_unwind noalias nofree writable writeonly sret(i256) align 8 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], float noundef [[F:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // RISCV32_INT128-NEXT:  entry:
 // RISCV32_INT128-NEXT:    [[CONV:%.*]] = fptosi float [[F]] to i200
 // RISCV32_INT128-NEXT:    [[STOREDV:%.*]] = sext i200 [[CONV]] to i256
-// RISCV32_INT128-NEXT:    store i256 [[STOREDV]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA14]]
+// RISCV32_INT128-NEXT:    store i256 [[STOREDV]], ptr [[AGG_RESULT]], align 8, !tbaa [[TBAA13]]
 // RISCV32_INT128-NEXT:    ret void
 //
 _BitInt(200) test_float_to_bitint_200(float f) {

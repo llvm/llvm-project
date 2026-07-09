@@ -57,7 +57,6 @@ define i32 @sext_of_non_memory_op(ptr %src, i32 %offset, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
-; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP1]], 6
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP43:%.*]] = shl nuw i64 [[TMP9]], 3
@@ -70,11 +69,11 @@ define i32 @sext_of_non_memory_op(ptr %src, i32 %offset, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP1]], 6
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP12]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]

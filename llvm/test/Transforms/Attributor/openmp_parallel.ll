@@ -33,7 +33,7 @@ define dso_local void @func(ptr nocapture %a, ptr %b, i32 %N) local_unnamed_addr
 ;
 ; CGSCC: Function Attrs: nounwind uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@func
-; CGSCC-SAME: (ptr nofree captures(none) [[A:%.*]], ptr nofree [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (ptr captures(none) [[A:%.*]], ptr [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 ; CGSCC-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
@@ -76,7 +76,7 @@ define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid
 ; TUNIT-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 ; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_IS_LAST]]) #[[ATTR3]]
 ; TUNIT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
+; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4, !invariant.load [[META1:![0-9]+]]
 ; TUNIT-NEXT:    call void @__kmpc_for_static_init_4(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP0]], i32 noundef 34, ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 noundef 1, i32 noundef 1)
 ; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 ; TUNIT-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[TMP1]], 197
@@ -95,7 +95,7 @@ define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid
 ; TUNIT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[OMP_INNER_FOR_BODY]] ], [ [[TMP5]], [[OMP_INNER_FOR_BODY_LR_PH]] ]
 ; TUNIT-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; TUNIT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i64 [[INDVARS_IV_NEXT]]
-; TUNIT-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; TUNIT-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !invariant.load [[META1]]
 ; TUNIT-NEXT:    [[CONV7:%.*]] = fadd float [[TMP7]], 1.000000e+00
 ; TUNIT-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i64 [[INDVARS_IV_NEXT]]
 ; TUNIT-NEXT:    store float [[CONV7]], ptr [[ARRAYIDX9]], align 4
@@ -119,7 +119,7 @@ define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid
 ; CGSCC-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[N]], align 4
+; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[N]], align 4, !invariant.load [[META1:![0-9]+]]
 ; CGSCC-NEXT:    [[SUB2:%.*]] = add nsw i32 [[TMP0]], -2
 ; CGSCC-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP0]], 1
 ; CGSCC-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -132,7 +132,7 @@ define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid
 ; CGSCC-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 ; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_IS_LAST]]) #[[ATTR3]]
 ; CGSCC-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
+; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4, !invariant.load [[META1]]
 ; CGSCC-NEXT:    call void @__kmpc_for_static_init_4(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP1]], i32 noundef 34, ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 noundef 1, i32 noundef 1)
 ; CGSCC-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 ; CGSCC-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[TMP2]], [[SUB2]]
@@ -142,8 +142,8 @@ define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid
 ; CGSCC-NEXT:    [[CMP513:%.*]] = icmp sgt i32 [[TMP3]], [[COND]]
 ; CGSCC-NEXT:    br i1 [[CMP513]], label [[OMP_LOOP_EXIT:%.*]], label [[OMP_INNER_FOR_BODY_LR_PH:%.*]]
 ; CGSCC:       omp.inner.for.body.lr.ph:
-; CGSCC-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B]], align 8
-; CGSCC-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[A]], align 8
+; CGSCC-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B]], align 8, !invariant.load [[META1]]
+; CGSCC-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[A]], align 8, !invariant.load [[META1]]
 ; CGSCC-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP3]] to i64
 ; CGSCC-NEXT:    [[TMP7:%.*]] = sext i32 [[COND]] to i64
 ; CGSCC-NEXT:    br label [[OMP_INNER_FOR_BODY:%.*]]
@@ -151,7 +151,7 @@ define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid
 ; CGSCC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[OMP_INNER_FOR_BODY]] ], [ [[TMP6]], [[OMP_INNER_FOR_BODY_LR_PH]] ]
 ; CGSCC-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CGSCC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i64 [[INDVARS_IV_NEXT]]
-; CGSCC-NEXT:    [[TMP8:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; CGSCC-NEXT:    [[TMP8:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !invariant.load [[META1]]
 ; CGSCC-NEXT:    [[CONV7:%.*]] = fadd float [[TMP8]], 1.000000e+00
 ; CGSCC-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i64 [[INDVARS_IV_NEXT]]
 ; CGSCC-NEXT:    store float [[CONV7]], ptr [[ARRAYIDX9]], align 4
@@ -261,12 +261,14 @@ attributes #2 = { nounwind }
 ; CGSCC: attributes #[[ATTR3]] = { memory(readwrite) }
 ;.
 ; TUNIT: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; TUNIT: [[META1:![0-9]+]] = !{[[META2:![0-9]+]]}
-; TUNIT: [[META2]] = !{i64 2, i64 -1, i64 -1, i1 true}
+; TUNIT: [[META1]] = !{}
+; TUNIT: [[META2:![0-9]+]] = !{[[META3:![0-9]+]]}
+; TUNIT: [[META3]] = !{i64 2, i64 -1, i64 -1, i1 true}
 ;.
 ; CGSCC: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; CGSCC: [[META1:![0-9]+]] = !{[[META2:![0-9]+]]}
-; CGSCC: [[META2]] = !{i64 2, i64 -1, i64 -1, i1 true}
+; CGSCC: [[META1]] = !{}
+; CGSCC: [[META2:![0-9]+]] = !{[[META3:![0-9]+]]}
+; CGSCC: [[META3]] = !{i64 2, i64 -1, i64 -1, i1 true}
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}

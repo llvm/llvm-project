@@ -17,14 +17,8 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "flang/Runtime/CUDA/allocatable.h"
 #include "flang/Runtime/CUDA/common.h"
-#include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/CUDA/memory.h"
-#include "flang/Runtime/CUDA/pointer.h"
-#include "flang/Runtime/allocatable.h"
-#include "flang/Runtime/allocator-registry-consts.h"
-#include "flang/Support/Fortran.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -72,6 +66,14 @@ static mlir::Value createConvertOp(mlir::PatternRewriter &rewriter,
   return val;
 }
 
+// Scalar CUDA constants use separate host-visible and device constant globals.
+// Host-to-device assignments keep them in sync.
+static bool isScalarCudaConstantGlobal(fir::GlobalOp global) {
+  return global && global.getDataAttr() &&
+         *global.getDataAttr() == cuf::DataAttribute::Constant &&
+         fir::isa_trivial(fir::unwrapRefType(global.getType()));
+}
+
 struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -90,6 +92,8 @@ struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
       }
       if (auto global = symTab.lookup<fir::GlobalOp>(
               addrOfOp.getSymbol().getRootReference().getValue())) {
+        if (isScalarCudaConstantGlobal(global))
+          return failure();
         if (cuf::isRegisteredDeviceGlobal(global)) {
           rewriter.setInsertionPointAfter(addrOfOp);
           mlir::Value devAddr = cuf::DeviceAddressOp::create(
@@ -280,6 +284,44 @@ struct CUFDataTransferOpConversion
 
       mlir::Value dst = op.getDst();
       mlir::Value src = op.getSrc();
+      // Scalar CUDA constants keep a host shadow for host reads. Host-to-device
+      // assignments also update the device constant symbol.
+      auto getAddrOf = [](mlir::Value val) -> fir::AddrOfOp {
+        if (auto declareOp = val.getDefiningOp<fir::DeclareOp>())
+          return declareOp.getMemref().getDefiningOp<fir::AddrOfOp>();
+        if (auto declareOp = val.getDefiningOp<hlfir::DeclareOp>())
+          return declareOp.getMemref().getDefiningOp<fir::AddrOfOp>();
+        return {};
+      };
+      if (op.getTransferKind() == cuf::DataTransferKind::DeviceHost) {
+        if (fir::AddrOfOp addrOfOp = getAddrOf(src)) {
+          auto global = symtab.lookup<fir::GlobalOp>(
+              addrOfOp.getSymbol().getRootReference().getValue());
+          if (isScalarCudaConstantGlobal(global) &&
+              fir::isa_ref_type(dst.getType())) {
+            mlir::Value hostValue = fir::LoadOp::create(builder, loc, src);
+            hostValue = createConvertOp(rewriter, loc, dstTy, hostValue);
+            fir::StoreOp::create(builder, loc, hostValue, dst);
+            rewriter.eraseOp(op);
+            return mlir::success();
+          }
+        }
+      }
+      if (op.getTransferKind() == cuf::DataTransferKind::HostDevice) {
+        if (fir::AddrOfOp addrOfOp = getAddrOf(dst)) {
+          auto global = symtab.lookup<fir::GlobalOp>(
+              addrOfOp.getSymbol().getRootReference().getValue());
+          if (isScalarCudaConstantGlobal(global)) {
+            mlir::Value hostValue = src;
+            if (fir::isa_ref_type(src.getType()))
+              hostValue = fir::LoadOp::create(builder, loc, src);
+            hostValue = createConvertOp(rewriter, loc, dstTy, hostValue);
+            fir::StoreOp::create(builder, loc, hostValue, addrOfOp);
+            dst = cuf::DeviceAddressOp::create(rewriter, loc, dst.getType(),
+                                               addrOfOp.getSymbol());
+          }
+        }
+      }
       // Materialize the src if constant.
       if (matchPattern(src.getDefiningOp(), mlir::m_Constant())) {
         mlir::Value temp = builder.createTemporary(loc, srcTy);
@@ -534,6 +576,8 @@ public:
         if (auto global = symtab.lookup<fir::GlobalOp>(
                 addrOfOp.getSymbol().getRootReference().getValue())) {
           if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(global.getType())))
+            return true;
+          if (isScalarCudaConstantGlobal(global))
             return true;
           if (cuf::isRegisteredDeviceGlobal(global))
             return false;

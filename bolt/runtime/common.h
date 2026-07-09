@@ -162,7 +162,7 @@ struct timespec {
 #error "For AArch64/ARM64,X86_64 AND RISCV64 only."
 #endif
 
-constexpr uint32_t BufSize = 10240;
+constexpr uint32_t BufSize = 32768U;
 
 // Helper functions for writing strings to the .fdata file. We intentionally
 // avoid using libc names to make it clear it is our impl.

@@ -4850,11 +4850,11 @@ void test_float(void) {
   // (emulated)
   vd = vec_ctd(vsl, 31);
   // CHECK: [[VAL:%[^ ]+]] = sitofp <2 x i64> %{{.*}} to <2 x double>
-  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double 0x3E00000000000000)
+  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double f0x3E00000000000000)
   // (emulated)
   vd = vec_ctd(vul, 31);
   // CHECK: [[VAL:%[^ ]+]] = uitofp <2 x i64> %{{.*}} to <2 x double>
-  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double 0x3E00000000000000)
+  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double f0x3E00000000000000)
   // (emulated)
 
   vsl = vec_ctsl(vd, 0);
@@ -4872,11 +4872,11 @@ void test_float(void) {
   // CHECK: fptoui <2 x double> [[VAL]] to <2 x i64>
   // (emulated)
   vsl = vec_ctsl(vd, 31);
-  // CHECK: [[VAL:%[^ ]+]] = fmul <2 x double> %{{.*}}, splat (double 0x41E0000000000000)
+  // CHECK: [[VAL:%[^ ]+]] = fmul <2 x double> %{{.*}}, splat (double f0x41E0000000000000)
   // CHECK: fptosi <2 x double> [[VAL]] to <2 x i64>
   // (emulated)
   vul = vec_ctul(vd, 31);
-  // CHECK: [[VAL:%[^ ]+]] = fmul <2 x double> %{{.*}}, splat (double 0x41E0000000000000)
+  // CHECK: [[VAL:%[^ ]+]] = fmul <2 x double> %{{.*}}, splat (double f0x41E0000000000000)
   // CHECK: fptoui <2 x double> [[VAL]] to <2 x i64>
   // (emulated)
 

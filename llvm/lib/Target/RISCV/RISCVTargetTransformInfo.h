@@ -364,6 +364,9 @@ public:
 
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment) const override;
 
+  bool isLegalBroadcastLoad(Type *ElementTy,
+                            ElementCount NumElements) const override;
+
   /// \returns How the target needs this vector-predicated operation to be
   /// transformed.
   TargetTransformInfo::VPLegalization
@@ -374,14 +377,11 @@ public:
         Intrinsic::experimental_vp_strided_store,
         Intrinsic::experimental_vp_reverse,
         Intrinsic::experimental_vp_splice,
-        Intrinsic::vp_add,
         Intrinsic::vp_cttz_elts,
         Intrinsic::vp_gather,
-        Intrinsic::vp_is_fpclass,
         Intrinsic::vp_load,
         Intrinsic::vp_load_ff,
         Intrinsic::vp_merge,
-        Intrinsic::vp_mul,
         Intrinsic::vp_reduce_add,
         Intrinsic::vp_reduce_and,
         Intrinsic::vp_reduce_fadd,
@@ -399,15 +399,10 @@ public:
         Intrinsic::vp_reduce_xor,
         Intrinsic::vp_scatter,
         Intrinsic::vp_sdiv,
-        Intrinsic::vp_select,
-        Intrinsic::vp_sext,
         Intrinsic::vp_srem,
         Intrinsic::vp_store,
-        Intrinsic::vp_sub,
-        Intrinsic::vp_trunc,
         Intrinsic::vp_udiv,
-        Intrinsic::vp_urem,
-        Intrinsic::vp_zext};
+        Intrinsic::vp_urem};
     if (!ST->hasVInstructions() ||
         (PI.getIntrinsicID() == Intrinsic::vp_reduce_mul &&
          cast<VectorType>(PI.getArgOperand(1)->getType())
@@ -440,22 +435,35 @@ public:
     case RecurKind::UMax:
     case RecurKind::FMin:
     case RecurKind::FMax:
+    case RecurKind::FindIV:
     case RecurKind::FindLast:
       return true;
     case RecurKind::AnyOf:
     case RecurKind::FAdd:
+    case RecurKind::FSub:
     case RecurKind::FMulAdd:
       // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
       // expanded.
       if (Ty->isBFloatTy() || (Ty->isHalfTy() && !ST->hasVInstructionsF16()))
         return false;
       return true;
-    default:
+    case RecurKind::Mul:
+    case RecurKind::FMul:
+    case RecurKind::FMinNum:
+    case RecurKind::FMaxNum:
+    case RecurKind::FMinimum:
+    case RecurKind::FMaximum:
+    case RecurKind::FMinimumNum:
+    case RecurKind::FMaximumNum:
+    case RecurKind::FAddChainWithSubs:
       return false;
+    case RecurKind::None:
+      llvm_unreachable("Unknown reduction kind.");
     }
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override {
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override {
     // Don't interleave if the loop has been vectorized with scalable vectors.
     if (VF.isScalable())
       return 1;

@@ -11,14 +11,25 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 from lldbgdbserverutils import get_lldb_server_exe
 
 
+class CaptureTee:
+    """Accumulate everything pexpect reads, for inspecting the bytes emitted
+    during a resize. Handles both str- and bytes-mode spawns."""
+
+    def __init__(self):
+        self.data = b""
+
+    def write(self, s):
+        self.data += s if isinstance(s, bytes) else s.encode("latin-1", "replace")
+        return len(s)
+
+    def flush(self):
+        pass
+
+
 # PExpect uses many timeouts internally and doesn't play well
 # under ASAN on a loaded machine..
 @skipIfAsan
 class TestStatusline(PExpectTest):
-    # Change this value to something smaller to make debugging this test less
-    # tedious.
-    TIMEOUT = 60
-
     TERMINAL_HEIGHT = 10
     TERMINAL_WIDTH = 60
 
@@ -42,7 +53,7 @@ class TestStatusline(PExpectTest):
     def test(self):
         """Basic test for the statusline."""
         self.build()
-        self.launch(timeout=self.TIMEOUT)
+        self.launch()
         self.do_setup()
 
         # Enable the statusline and check for the control character and that we
@@ -79,7 +90,7 @@ class TestStatusline(PExpectTest):
     def test_no_color(self):
         """Basic test for the statusline with colors disabled."""
         self.build()
-        self.launch(use_colors=False, timeout=self.TIMEOUT)
+        self.launch(use_colors=False)
         self.do_setup()
 
         # Enable the statusline and check for the "reverse video" control character.
@@ -94,9 +105,7 @@ class TestStatusline(PExpectTest):
         """Regression test for lock inversion between the statusline mutex and
         the output mutex."""
         self.build()
-        self.launch(
-            extra_args=["-o", "settings set use-color false"], timeout=self.TIMEOUT
-        )
+        self.launch(extra_args=["-o", "settings set use-color false"])
         self.child.expect("(lldb)")
         self.resize()
 
@@ -107,7 +116,7 @@ class TestStatusline(PExpectTest):
 
     def test_no_target(self):
         """Test that we print "no target" when launched without a target."""
-        self.launch(timeout=self.TIMEOUT)
+        self.launch()
         self.resize()
 
         self.expect("set set show-statusline true", ["no target"])
@@ -115,13 +124,58 @@ class TestStatusline(PExpectTest):
     @skipIfEditlineSupportMissing
     def test_resize(self):
         """Test that move the cursor when resizing."""
-        self.launch(timeout=self.TIMEOUT)
+        self.launch()
         self.resize()
         self.expect("set set show-statusline true", ["no target"])
         self.resize(20, 60)
         # Check for the escape code to resize the scroll window.
         self.child.expect(re.escape("\x1b[1;19r"))
         self.child.expect("(lldb)")
+
+    @skipIfEditlineSupportMissing
+    def test_resize_recomputes_without_clearing(self):
+        """Resizing should recompute the statusline in place, not clear the
+        entire screen. Clearing the screen (ESC[2J) was the old workaround for
+        the statusline wrapping/duplicating on resize; it also wiped the visible
+        scrollback on every resize."""
+        self.launch()
+        self.resize()
+        self.expect("set set show-statusline true", ["no target"])
+
+        # Capture the output emitted during the resize.
+        tee = CaptureTee()
+        self.child.logfile_read = tee
+        self.resize(20, 60)
+        # Wait for the resize redraw to finish before inspecting the capture.
+        self.child.expect(re.escape("\x1b[1;19r"))
+        self.child.expect("(lldb)")
+        self.child.logfile_read = None
+
+        # The resize recomputes in place; it must not clear the whole screen.
+        self.assertNotIn(b"\x1b[2J", tee.data)
+
+    @skipIfEditlineSupportMissing
+    def test_resize_height_shrink_makes_room(self):
+        """On a height shrink the terminal can leave the prompt on the row the
+        statusline is about to occupy. The resize scrolls the content up by the
+        lost rows (a newline per row, then a cursor-up) to lift the prompt
+        clear, the same way enabling the statusline makes room for it."""
+        self.launch()
+        # Stay above the 10-row minimum terminal height on both sides.
+        self.resize(20, 60)
+        self.expect("set set show-statusline true", ["no target"])
+
+        tee = CaptureTee()
+        self.child.logfile_read = tee
+        # Shrink the height by one row.
+        self.resize(19, 60)
+        # Wait for the resize redraw (new scroll region) to finish.
+        self.child.expect(re.escape("\x1b[1;18r"))
+        self.child.expect("(lldb)")
+        self.child.logfile_read = None
+
+        # Room is made by scrolling up: a newline followed by a cursor-up.
+        self.assertIn(b"\n\x1b[1A", tee.data)
 
     @skipUnlessPlatform(["linux"])
     def test_target_symbols_add(self):
@@ -136,7 +190,7 @@ class TestStatusline(PExpectTest):
         stripped_exe = self.getBuildArtifact("stripped.out")
         shutil.copy2(symfile, stripped_exe)
         subprocess.check_call(["strip", "--strip-debug", stripped_exe])
-        self.launch(timeout=self.TIMEOUT)
+        self.launch()
 
         self.expect(
             "target create {}".format(stripped_exe),
@@ -165,7 +219,7 @@ class TestStatusline(PExpectTest):
     @skipIfRemote
     @skipIfWindows
     @skipIfDarwin
-    @skipIfLinux # https://github.com/llvm/llvm-project/issues/154763
+    @skipIfLinux  # https://github.com/llvm/llvm-project/issues/154763
     @add_test_categories(["lldb-server"])
     def test_modulelist_deadlock(self):
         """Regression test for a deadlock that occurs when the status line is enabled before connecting
@@ -235,7 +289,7 @@ class TestStatusline(PExpectTest):
         _wait_for_server_ready_in_log(server_log_file, server_ready_message)
 
         # Launch LLDB client and connect to lldb-server with statusline enabled
-        self.launch(timeout=self.TIMEOUT)
+        self.launch()
         self.resize()
         self.expect("settings set show-statusline true", ["no target"])
         self.expect(

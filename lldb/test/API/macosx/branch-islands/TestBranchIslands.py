@@ -13,6 +13,7 @@ class TestBranchIslandStepping(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessAppleSilicon
+    @skipIfRemote
     def test_step_in_branch_island(self):
         """Make sure we can step in across a branch island"""
         self.build()

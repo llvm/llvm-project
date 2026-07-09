@@ -42,6 +42,11 @@ public:
 
   void ContinueAsyncException(ExceptionResult result);
 
+  /// Release a HandleLoadDllEvent / HandleUnloadDllEvent that is parked on
+  /// m_dll_event_pred. The delegate's Resume() path calls this to let the
+  /// debug loop issue ContinueDebugEvent. Mirrors ContinueAsyncException.
+  void ContinueAsyncDllEvent();
+
 private:
   void FreeProcessHandles();
   void DebugLoop();
@@ -76,6 +81,10 @@ private:
   // and the debug loop can be continued.
   Predicate<ExceptionResult> m_exception_pred;
 
+  // Predicate gated by HandleLoadDllEvent / HandleUnloadDllEvent when the
+  // delegate asks them to park.
+  Predicate<bool> m_dll_event_pred;
+
   // An event which gets signalled by the debugger thread when it exits the
   // debugger loop and is detached from the inferior.
   HANDLE m_debugging_ended_event = nullptr;
@@ -97,5 +106,5 @@ private:
   DebuggerThreadAttachRoutine(lldb::pid_t pid,
                               const ProcessAttachInfo &launch_info);
 };
-}
+} // namespace lldb_private
 #endif

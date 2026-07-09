@@ -7,6 +7,7 @@ Implementation Status
    aio
    arpa/inet
    assert
+   byteswap
    complex
    cpio
    ctype
@@ -19,23 +20,31 @@ Implementation Status
    float
    glob
    inttypes
+   libgen
    locale
    math/index.rst
    net/if
    netinet/in
+   netinet/tcp
+   nl_types
    poll
+   pwd
+   sched
    search
    setjmp
    signal
+   spawn
    stdbit
    stdfix
    stdio
    stdlib
    string
    strings
+   sys/ipc
    sys/mman
    sys/resource
    sys/select
+   sys/sem
    sys/socket
    sys/stat
    sys/statvfs

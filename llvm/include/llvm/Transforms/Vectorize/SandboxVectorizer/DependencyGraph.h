@@ -90,6 +90,49 @@ public:
   bool operator!=(const PredIterator &Other) const { return !(*this == Other); }
 };
 
+/// Iterate over both def-use and mem dependencies.
+class SuccIterator {
+  User::user_iterator UserIt;
+  User::user_iterator UserItE;
+  DenseSet<MemDGNode *>::iterator MemIt;
+  DGNode *N = nullptr;
+  DependencyGraph *DAG = nullptr;
+
+  SuccIterator(const Value::user_iterator &UserIt,
+               const Value::user_iterator &UserItE,
+               const DenseSet<MemDGNode *>::iterator &MemIt, DGNode *N,
+               DependencyGraph &DAG)
+      : UserIt(UserIt), UserItE(UserItE), MemIt(MemIt), N(N), DAG(&DAG) {}
+  SuccIterator(const User::user_iterator &UserIt,
+               const User::user_iterator &UserItE, DGNode *N,
+               DependencyGraph &DAG)
+      : UserIt(UserIt), UserItE(UserItE), N(N), DAG(&DAG) {}
+  friend class DGNode;    // For constructor
+  friend class MemDGNode; // For constructor
+
+  /// Skip iterators that don't point to instructions or are outside \p DAG,
+  /// starting from \p OpIt and ending before \p OpItE.
+  LLVM_ABI static User::user_iterator
+  skipOutOfScope(User::user_iterator UserIt, User::user_iterator UserItE,
+                 const DependencyGraph &DAG);
+
+public:
+  using difference_type = std::ptrdiff_t;
+  using value_type = DGNode *;
+  using pointer = value_type *;
+  using reference = value_type &;
+  using iterator_category = std::input_iterator_tag;
+  LLVM_ABI value_type operator*();
+  LLVM_ABI SuccIterator &operator++();
+  SuccIterator operator++(int) {
+    auto Copy = *this;
+    ++(*this);
+    return Copy;
+  }
+  LLVM_ABI bool operator==(const SuccIterator &Other) const;
+  bool operator!=(const SuccIterator &Other) const { return !(*this == Other); }
+};
+
 /// A DependencyGraph Node that points to an Instruction and contains memory
 /// dependency edges.
 class LLVM_ABI DGNode {
@@ -101,6 +144,7 @@ protected:
   /// The number of unscheduled successors. Optional represents whether the
   /// value is meaningless, e.g., after a node gets scheduled.
   std::optional<unsigned> UnscheduledSuccs = 0;
+  std::optional<unsigned> UnscheduledPreds = 0;
   /// This is true if this node has been scheduled.
   bool Scheduled = false;
   /// The scheduler bundle that this node belongs to.
@@ -125,9 +169,16 @@ public:
     assert((bool)UnscheduledSuccs && "Invalid UnscheduledSuccs!");
     return *UnscheduledSuccs;
   }
+  /// \Returns the number of unscheduled predecessors.
+  unsigned getNumUnscheduledPreds() const {
+    assert((bool)UnscheduledPreds && "Invalid UnscheduledPreds!");
+    return *UnscheduledPreds;
+  }
 #ifndef NDEBUG
   /// \returns true unscheduled successors contains valid data (for testing).
   bool validUnscheduledSuccs() const { return (bool)UnscheduledSuccs; }
+  /// \returns true unscheduled predecessors contains valid data (for testing).
+  bool validUnscheduledPreds() const { return (bool)UnscheduledPreds; }
 #endif
   // TODO: Make this private?
   void decrUnscheduledSuccs() {
@@ -135,18 +186,28 @@ public:
     --*UnscheduledSuccs;
   }
   void incrUnscheduledSuccs() { ++*UnscheduledSuccs; }
+  void decrUnscheduledPreds() {
+    assert(*UnscheduledPreds > 0 && "Counting error!");
+    --*UnscheduledPreds;
+  }
+  void incrUnscheduledPreds() { ++*UnscheduledPreds; }
+
   void resetScheduleState() {
     UnscheduledSuccs = 0;
+    UnscheduledPreds = 0;
     Scheduled = false;
   }
-  /// \Returns true if all dependent successors have been scheduled.
-  bool ready() const { return UnscheduledSuccs == 0; }
+  /// \Returns true if all dependent successors (or predecessors during top-down
+  /// scheduling) have been scheduled.
+  bool readyBottomUp() const { return UnscheduledSuccs == 0; }
+  bool readyTopDown() const { return UnscheduledPreds == 0; }
   /// \Returns true if this node has been scheduled.
   bool scheduled() const { return Scheduled; }
   void setScheduled() {
     Scheduled = true;
     // UnscheduledSuccs is meaningless from this point on, so prohibit its use.
     UnscheduledSuccs = std::nullopt;
+    UnscheduledPreds = std::nullopt;
   }
   /// \Returns the scheduling bundle that this node belongs to, or nullptr.
   SchedBundle *getSchedBundle() const { return SB; }
@@ -173,6 +234,29 @@ public:
   /// example it's both a use-def predecessor and a mem dep predecessor.
   iterator_range<iterator> preds(DependencyGraph &DAG) const {
     return make_range(preds_begin(DAG), preds_end(DAG));
+  }
+
+  using succ_iterator = SuccIterator;
+  virtual succ_iterator succs_begin(DependencyGraph &DAG) {
+    return SuccIterator(
+        SuccIterator::skipOutOfScope(I->user_begin(), I->user_end(), DAG),
+        I->user_end(), this, DAG);
+  }
+  virtual succ_iterator succs_end(DependencyGraph &DAG) {
+    return SuccIterator(I->user_end(), I->user_end(), this, DAG);
+  }
+  succ_iterator succs_begin(DependencyGraph &DAG) const {
+    return const_cast<DGNode *>(this)->succs_begin(DAG);
+  }
+  succ_iterator succs_end(DependencyGraph &DAG) const {
+    return const_cast<DGNode *>(this)->succs_end(DAG);
+  }
+  /// \Returns a range of DAG successor nodes. If this is a MemDGNode then
+  /// this will also include the memory dependency successors.
+  /// Please note that this can include the same node more than once, if for
+  /// example it's both a use-def predecessor and a mem dep successor.
+  iterator_range<succ_iterator> succs(DependencyGraph &DAG) const {
+    return make_range(succs_begin(DAG), succs_end(DAG));
   }
 
   static bool isStackSaveOrRestoreIntrinsic(Instruction *I) {
@@ -238,6 +322,7 @@ class MemDGNode final : public DGNode {
   /// Memory successors.
   DenseSet<MemDGNode *> MemSuccs;
   friend class PredIterator; // For MemPreds.
+  friend class SuccIterator; // For MemSuccs.
   /// Creates both edges: this<->N.
   void setNextNode(MemDGNode *N) {
     assert(N != this && "About to point to self!");
@@ -277,6 +362,16 @@ public:
   iterator preds_end(DependencyGraph &DAG) override {
     return PredIterator(I->op_end(), I->op_end(), MemPreds.end(), this, DAG);
   }
+  succ_iterator succs_begin(DependencyGraph &DAG) override {
+    auto UserEndIt = I->user_end();
+    return SuccIterator(
+        SuccIterator::skipOutOfScope(I->user_begin(), UserEndIt, DAG),
+        UserEndIt, MemSuccs.begin(), this, DAG);
+  }
+  succ_iterator succs_end(DependencyGraph &DAG) override {
+    return SuccIterator(I->user_end(), I->user_end(), MemSuccs.end(), this,
+                        DAG);
+  }
   /// \Returns the previous Mem DGNode in instruction order.
   MemDGNode *getPrevNode() const { return PrevMemN; }
   /// \Returns the next Mem DGNode in instruction order.
@@ -290,8 +385,10 @@ public:
     assert(PredN != this && "Trying to add a dependency to self!");
     PredN->MemSuccs.insert(this);
     if (!Scheduled) {
-      if (!PredN->Scheduled)
+      if (!PredN->Scheduled) {
         PredN->incrUnscheduledSuccs();
+        incrUnscheduledPreds();
+      }
     }
   }
   /// Removes the memory dependency PredN->this. This also updates the
@@ -300,8 +397,10 @@ public:
     MemPreds.erase(PredN);
     PredN->MemSuccs.erase(this);
     if (!Scheduled) {
-      if (!PredN->Scheduled)
+      if (!PredN->Scheduled) {
         PredN->decrUnscheduledSuccs();
+        decrUnscheduledPreds();
+      }
     }
   }
   /// \Returns true if there is a memory dependency N->this.

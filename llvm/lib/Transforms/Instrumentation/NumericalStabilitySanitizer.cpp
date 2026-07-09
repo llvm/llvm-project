@@ -1580,7 +1580,7 @@ Value *NumericalStabilitySanitizer::maybeHandleKnownCallBase(
   // Check that the widened intrinsic is valid.
   SmallVector<Type *, 4> OverloadTys;
   [[maybe_unused]] bool IsValid =
-      Intrinsic::getIntrinsicSignature(WidenedId, WidenedFnTy, OverloadTys);
+      Intrinsic::isSignatureValid(WidenedId, WidenedFnTy, OverloadTys);
   assert(IsValid && "invalid widened intrinsic");
   // For known intrinsic functions, we create a second call to the same
   // intrinsic with a different type.
@@ -1897,8 +1897,9 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
         break;
       }
 
-      if (auto *VectorTy = dyn_cast<VectorType>(C->getType()))
-        BitcastTy = VectorType::get(BitcastTy, VectorTy->getElementCount());
+      if (BitcastTy)
+        if (auto *VectorTy = dyn_cast<VectorType>(C->getType()))
+          BitcastTy = VectorType::get(BitcastTy, VectorTy->getElementCount());
     }
     if (BitcastTy) {
       const MemoryExtents Extents = getMemoryExtentsOrDie(BitcastTy);
@@ -2088,7 +2089,7 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
   //
   //    For example, in the following example, the instrumentation in
   //    `instrumented_1` rejects the shadow return value from `instrumented_3`
-  //    because is is not tagged as expected (`&instrumented_3` instead of
+  //    because it is not tagged as expected (`&instrumented_3` instead of
   //    `non_instrumented_2`):
   //
   //        instrumented_1()

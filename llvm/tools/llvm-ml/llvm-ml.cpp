@@ -285,6 +285,13 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     SafeSEH = false;
   }
 
+  bool UnwindV3 = InputArgs.hasArg(OPT_unwindv3);
+  if (UnwindV3 && !TheTriple.isArch64Bit()) {
+    WithColor::warning()
+        << "/unwindv3 applies only to 64-bit X86 platforms; ignoring\n";
+    UnwindV3 = false;
+  }
+
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferPtr =
       MemoryBuffer::getFileOrSTDIN(InputFilename);
   if (std::error_code EC = BufferPtr.getError()) {
@@ -334,7 +341,7 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
-  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  MCContext Ctx(TheTriple, *MAI, *MRI, *STI, &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(TheTarget->createMCObjectFileInfo(
       Ctx, /*PIC=*/false, /*LargeCodeModel=*/true));
   Ctx.setObjectFileInfo(MOFI.get());
@@ -429,6 +436,9 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     Str->emitSymbolAttribute(Feat00Sym, MCSA_Global);
     Str->emitAssignment(Feat00Sym, MCConstantExpr::create(Feat00Flags, Ctx));
   }
+
+  if (UnwindV3)
+    Str->setDefaultWinCFIUnwindVersion(3);
 
   int Res = 1;
   if (InputArgs.hasArg(OPT_as_lex)) {

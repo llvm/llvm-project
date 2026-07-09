@@ -14,7 +14,7 @@
 namespace llvm {
 
 class SPIRVLegalizeImplicitBinding
-    : public PassInfoMixin<SPIRVLegalizeImplicitBinding> {
+    : public OptionalPassInfoMixin<SPIRVLegalizeImplicitBinding> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

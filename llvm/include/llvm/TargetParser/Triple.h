@@ -159,6 +159,8 @@ public:
     AArch64SubArch_arm64ec,
     AArch64SubArch_lfi,
 
+    X86_64SubArch_lfi,
+
     KalimbaSubArch_v3,
     KalimbaSubArch_v4,
     KalimbaSubArch_v5,
@@ -260,7 +262,8 @@ public:
     ChipStar,
     Firmware,
     QURT,
-    LastOSType = QURT
+    H2,
+    LastOSType = H2
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -386,21 +389,10 @@ public:
   LLVM_ABI Triple(ArchType A, SubArchType SA, VendorType V, OSType OS,
                   EnvironmentType E, ObjectFormatType OF);
 
-  bool operator==(const Triple &Other) const {
-    return Arch == Other.Arch && SubArch == Other.SubArch &&
-           Vendor == Other.Vendor && OS == Other.OS &&
-           Environment == Other.Environment &&
-           ObjectFormat == Other.ObjectFormat;
-  }
-
+  LLVM_ABI bool operator==(const Triple &Other) const;
   bool operator!=(const Triple &Other) const { return !(*this == Other); }
 
-  bool operator<(const Triple &Other) const {
-    return std::tie(Arch, SubArch, Vendor, OS, Environment, ObjectFormat,
-                    Data) < std::tie(Other.Arch, Other.SubArch, Other.Vendor,
-                                     Other.OS, Other.Environment,
-                                     Other.ObjectFormat, Other.Data);
-  }
+  LLVM_ABI bool operator<(const Triple &Other) const;
 
   /// @}
   /// @name Normalization
@@ -697,6 +689,12 @@ public:
   /// Tests whether the OS is Windows.
   bool isOSWindows() const { return getOS() == Triple::Win32; }
 
+  /// Tests whether the OS is Windows or UEFI. These targets generally share
+  /// Windows low-level platform ABI conventions, but this does not imply
+  /// support for a hosted Windows environment or its runtime libraries. Use
+  /// object format or environment predicates when those properties matter.
+  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
+
   /// Checks if the environment is MSVC.
   bool isKnownWindowsMSVCEnvironment() const {
     return isOSWindows() && getEnvironment() == Triple::MSVC;
@@ -773,6 +771,9 @@ public:
 
   /// Tests whether the OS is QURT.
   bool isOSQurt() const { return getOS() == Triple::QURT; }
+
+  /// Tests whether the OS is H2.
+  bool isOSH2() const { return getOS() == Triple::H2; }
 
   /// Tests whether the OS uses the ELF binary format.
   bool isOSBinFormatELF() const { return getObjectFormat() == Triple::ELF; }
@@ -917,8 +918,10 @@ public:
 
   /// Tests whether the target is LFI.
   bool isLFI() const {
-    return getArch() == Triple::aarch64 &&
-           getSubArch() == Triple::AArch64SubArch_lfi;
+    return (getArch() == Triple::aarch64 &&
+            getSubArch() == Triple::AArch64SubArch_lfi) ||
+           (getArch() == Triple::x86_64 &&
+            getSubArch() == Triple::X86_64SubArch_lfi);
   }
 
   /// Tests whether the target supports the EHABI exception
@@ -1195,7 +1198,7 @@ public:
   }
 
   /// Returns the default wchar_t size (in bytes) for this target triple.
-  unsigned getDefaultWCharSize() const;
+  LLVM_ABI unsigned getDefaultWCharSize() const;
 
   /// Tests if the environment supports dllimport/export annotations.
   bool hasDLLImportExport() const { return isOSWindows() || isPS(); }
@@ -1283,7 +1286,7 @@ public:
   LLVM_ABI bool isCompatibleWith(const Triple &Other) const;
 
   /// Test whether the target triple is for a GPU.
-  bool isGPU() const { return isSPIRV() || isNVPTX() || isAMDGPU(); }
+  bool isGPU() const { return isSPIROrSPIRV() || isNVPTX() || isAMDGPU(); }
 
   /// Merge target triples.
   LLVM_ABI std::string merge(const Triple &Other) const;

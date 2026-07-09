@@ -51,8 +51,7 @@ define i32 @chained_smax(i32 %x, ptr %src) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[BROADCAST_SPLAT]], <4 x i32> zeroinitializer)
 ; CHECK-NEXT:    br i1 true, label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [3 x i32], ptr [[SRC]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
@@ -508,8 +507,8 @@ define i32 @smax_reduction_multiple_incoming(ptr %src, i32 %n, i1 %cond) {
 ; CHECK:       [[LOOP_HEADER_PREHEADER]]:
 ; CHECK-NEXT:    [[IV_PH:%.*]] = phi i32 [ 10, %[[ELSE]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[MAX_PH:%.*]] = phi i32 [ 5, %[[ELSE]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[IV_PH]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[N]], [[IV_PH]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:

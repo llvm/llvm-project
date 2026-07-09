@@ -19,6 +19,8 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <variant>
 
 namespace mlir {
@@ -105,7 +107,10 @@ private:
   lower::pft::Evaluation &eval;
   bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
+  bool forceHeapAllocationForPrivateDynamicArrays = false;
   llvm::SmallPtrSet<const semantics::Symbol *, 16> mightHaveReadHostSym;
+  llvm::SmallPtrSet<const semantics::Symbol *, 4>
+      symbolsCoveredByReductionElements;
   lower::SymMap &symTable;
   bool isTargetPrivatization;
   OMPConstructSymbolVisitor visitor;
@@ -126,6 +131,7 @@ private:
       const omp::ObjectList &objects,
       llvm::SetVector<const semantics::Symbol *> &symbolSet);
   void collectSymbolsForPrivatization();
+  bool isCoveredByReductionElement(const semantics::Symbol *sym) const;
   void insertBarrier(mlir::omp::PrivateClauseOps *clauseOps);
   void collectDefaultSymbols();
   void collectImplicitSymbols();
@@ -154,13 +160,17 @@ public:
                        lower::pft::Evaluation &eval,
                        bool shouldCollectPreDeterminedSymbols,
                        bool useDelayedPrivatization, lower::SymMap &symTable,
-                       bool isTargetPrivatization = false);
+                       bool isTargetPrivatization = false,
+                       llvm::ArrayRef<const semantics::Symbol *>
+                           symbolsCoveredByReductionElements = {});
 
   DataSharingProcessor(lower::AbstractConverter &converter,
                        semantics::SemanticsContext &semaCtx,
                        lower::pft::Evaluation &eval,
                        bool useDelayedPrivatization, lower::SymMap &symTable,
-                       bool isTargetPrivatization = false);
+                       bool isTargetPrivatization = false,
+                       llvm::ArrayRef<const semantics::Symbol *>
+                           symbolsCoveredByReductionElements = {});
 
   // Privatisation is split into two steps.
   // Step1 performs cloning of all privatisation clauses and copying for
@@ -178,6 +188,10 @@ public:
   void processStep2(mlir::Operation *op, bool isLoop);
 
   void pushLoopIV(mlir::Value iv) { loopIVs.push_back(iv); }
+
+  void setForceHeapAllocationForPrivateDynamicArrays(bool value = true) {
+    forceHeapAllocationForPrivateDynamicArrays = value;
+  }
 
   const llvm::SetVector<const semantics::Symbol *> &
   getAllSymbolsToPrivatize() const {

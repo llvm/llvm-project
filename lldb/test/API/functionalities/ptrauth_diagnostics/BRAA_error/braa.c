@@ -3,9 +3,7 @@ void foo() {}
 int main() {
   //% self.filecheck("c", "braa.c")
   // CHECK: stop reason = EXC_BAD_ACCESS
-  //
-  // TODO: We need call site info support for indirect calls to make this work.
-  // CHECK-NOT: pointer authentication failure
+  // CHECK-NEXT: pointer authentication failure
   asm volatile (
       "mov x9, #0xbad \n"
       "braa %[target], x9 \n"
@@ -19,6 +17,7 @@ int main() {
 
 // Expected codegen and exception message without ptrauth diagnostics:
 // * thread #1, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x2000000100007f9c)
+// Note: Possible pointer authentication failure detected.
 //     frame #0: 0x0000000100007f9c braa`foo
 // braa`foo:
 //     0x100007f9c <+0>: ret

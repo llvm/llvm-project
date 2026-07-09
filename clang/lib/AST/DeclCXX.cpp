@@ -109,9 +109,10 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false),
-      IsAnyDestructorNoReturn(false), IsHLSLIntangible(false), IsPFPType(false),
-      IsLambda(false), IsParsingBaseSpecifiers(false),
-      ComputedVisibleConversions(false), HasODRHash(false), Definition(D) {}
+      IsAnyDestructorNoReturn(false), IsHLSLIntangible(false),
+      IsHLSLBuiltinRecord(false), IsPFPType(false), IsLambda(false),
+      IsParsingBaseSpecifiers(false), ComputedVisibleConversions(false),
+      HasODRHash(false), Definition(D) {}
 
 CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getBasesSlowCase() const {
   return Bases.get(Definition->getASTContext().getExternalSource());
@@ -990,8 +991,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       //   T is a class type [...] with [...] no unnamed bit-fields of non-zero
       //   length
       if (data().Empty && !Field->isZeroLengthBitField() &&
-          Context.getLangOpts().getClangABICompat() >
-              LangOptions::ClangABI::Ver6)
+          !Context.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver6))
         data().Empty = false;
       return;
     }
@@ -2083,34 +2083,30 @@ CXXRecordDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK) {
 }
 
 const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
-  auto GetDefinitionOrSelf =
-      [](const CXXRecordDecl *D) -> const CXXRecordDecl * {
-    if (auto *Def = D->getDefinition())
-      return Def;
-    return D;
-  };
-
   // If it's a class template specialization, find the template or partial
   // specialization from which it was instantiated.
   if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(this)) {
     auto From = TD->getInstantiatedFrom();
     if (auto *CTD = dyn_cast_if_present<ClassTemplateDecl *>(From)) {
-      while (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate()) {
-        if (NewCTD->isMemberSpecialization())
+      while (!CTD->isMemberSpecialization()) {
+        ClassTemplateDecl *D = CTD->getInstantiatedFromMemberTemplate();
+        if (!D)
           break;
-        CTD = NewCTD;
+        CTD = D;
       }
-      return GetDefinitionOrSelf(CTD->getTemplatedDecl());
+      return CTD->getTemplatedDecl();
     }
     if (auto *CTPSD =
             dyn_cast_if_present<ClassTemplatePartialSpecializationDecl *>(
                 From)) {
-      while (auto *NewCTPSD = CTPSD->getInstantiatedFromMember()) {
-        if (NewCTPSD->isMemberSpecialization())
+      while (!CTPSD->isMemberSpecialization()) {
+        ClassTemplatePartialSpecializationDecl *D =
+            CTPSD->getInstantiatedFromMember();
+        if (!D)
           break;
-        CTPSD = NewCTPSD;
+        CTPSD = D;
       }
-      return GetDefinitionOrSelf(CTPSD);
+      return CTPSD;
     }
   }
 
@@ -2119,7 +2115,7 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
       const CXXRecordDecl *RD = this;
       while (auto *NewRD = RD->getInstantiatedFromMemberClass())
         RD = NewRD;
-      return GetDefinitionOrSelf(RD);
+      return RD;
     }
   }
 
@@ -2354,7 +2350,7 @@ bool CXXRecordDecl::isEffectivelyFinal() const {
 
 void CXXDeductionGuideDecl::anchor() {}
 
-bool ExplicitSpecifier::isEquivalent(const ExplicitSpecifier Other) const {
+bool ExplicitSpecifier::isEquivalent(ExplicitSpecifier Other) const {
   if ((getKind() != Other.getKind() ||
        getKind() == ExplicitSpecKind::Unresolved)) {
     if (getKind() == ExplicitSpecKind::Unresolved &&
@@ -2369,7 +2365,7 @@ bool ExplicitSpecifier::isEquivalent(const ExplicitSpecifier Other) const {
   return true;
 }
 
-ExplicitSpecifier ExplicitSpecifier::getFromDecl(FunctionDecl *Function) {
+ExplicitSpecifier ExplicitSpecifier::getFromDecl(const FunctionDecl *Function) {
   switch (Function->getDeclKind()) {
   case Decl::Kind::CXXConstructor:
     return cast<CXXConstructorDecl>(Function)->getExplicitSpecifier();
@@ -2629,7 +2625,7 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
     if (!PrimaryTemplate)
       return true;
 
-    // A template instance is is only a usual deallocation function if it has a
+    // A template instance is only a usual deallocation function if it has a
     // type-identity parameter, the type-identity parameter is a dependent type
     // (i.e. the type-identity parameter is of type std::type_identity<U> where
     // U shall be a dependent type), and the type-identity parameter is the only
@@ -2649,7 +2645,7 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
   //   A template instance is never a usual deallocation function,
   //   regardless of its signature.
   // Post-P2719 adoption:
-  //   A template instance is is only a usual deallocation function if it has a
+  //   A template instance is only a usual deallocation function if it has a
   //   type-identity parameter
   if (getPrimaryTemplate())
     return false;
@@ -3135,6 +3131,16 @@ bool CXXConstructorDecl::isSpecializationCopyingObject() const {
   // Is it the same as our class type?
   CanQualType ClassTy = Context.getCanonicalTagType(getParent());
   return ParamType == ClassTy;
+}
+
+ArrayRef<CXXDefaultArgExpr *>
+CXXConstructorDecl::getCtorClosureDefaultArgs() const {
+  return getASTContext().getCtorClosureDefaultArgs(getCanonicalDecl());
+}
+
+void CXXConstructorDecl::setCtorClosureDefaultArgs(
+    ArrayRef<CXXDefaultArgExpr *> Args) {
+  getASTContext().setCtorClosureDefaultArgs(getCanonicalDecl(), Args);
 }
 
 void CXXDestructorDecl::anchor() {}

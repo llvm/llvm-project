@@ -45,15 +45,15 @@ end subroutine
 !CHECK-PARSE-NEXT: | | | | | | | | | Scalar -> Expr = '10_4'
 !CHECK-PARSE-NEXT: | | | | | | | | | | LiteralConstant -> IntLiteralConstant = '10'
 !CHECK-PARSE-NEXT: | | | | | | | Block
-!CHECK-PARSE-NEXT: | | | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'a(int(b,kind=8),2_8)=a(int(c,kind=8),1_8)'
-!CHECK-PARSE-NEXT: | | | | | | | | | Variable = 'a(int(b,kind=8),2_8)'
+!CHECK-PARSE-NEXT: | | | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'a(__builtin_int(b,kind=8),2_8)=a(__builtin_int(c,kind=8),1_8)'
+!CHECK-PARSE-NEXT: | | | | | | | | | Variable = 'a(__builtin_int(b,kind=8),2_8)'
 !CHECK-PARSE-NEXT: | | | | | | | | | | Designator -> DataRef -> ArrayElement
 !CHECK-PARSE-NEXT: | | | | | | | | | | | DataRef -> Name = 'a'
 !CHECK-PARSE-NEXT: | | | | | | | | | | | SectionSubscript -> Integer -> Expr = 'b'
 !CHECK-PARSE-NEXT: | | | | | | | | | | | | Designator -> DataRef -> Name = 'b'
 !CHECK-PARSE-NEXT: | | | | | | | | | | | SectionSubscript -> Integer -> Expr = '2_4'
 !CHECK-PARSE-NEXT: | | | | | | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
-!CHECK-PARSE-NEXT: | | | | | | | | | Expr = 'a(int(c,kind=8),1_8)'
+!CHECK-PARSE-NEXT: | | | | | | | | | Expr = 'a(__builtin_int(c,kind=8),1_8)'
 !CHECK-PARSE-NEXT: | | | | | | | | | | Designator -> DataRef -> ArrayElement
 !CHECK-PARSE-NEXT: | | | | | | | | | | | DataRef -> Name = 'a'
 !CHECK-PARSE-NEXT: | | | | | | | | | | | SectionSubscript -> Integer -> Expr = 'c'
@@ -71,7 +71,7 @@ end subroutine
 !CHECK-UNPARSE-NEXT: !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO  COLLAPSE(2_4) PRIVATE(b)
 !CHECK-UNPARSE-NEXT:  DO b=1_4,10_4
 !CHECK-UNPARSE-NEXT:   DO c=1_4,10_4
-!CHECK-UNPARSE-NEXT:     a(int(b,kind=8),2_8)=a(int(c,kind=8),1_8)
+!CHECK-UNPARSE-NEXT:     a(__builtin_int(b,kind=8),2_8)=a(__builtin_int(c,kind=8),1_8)
 !CHECK-UNPARSE-NEXT:   END DO
 !CHECK-UNPARSE-NEXT:  END DO
 !CHECK-UNPARSE-NEXT: END SUBROUTINE

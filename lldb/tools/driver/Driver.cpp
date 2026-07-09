@@ -34,7 +34,10 @@
 #include "llvm/Support/raw_ostream.h"
 
 #ifdef _WIN32
-#include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
+#include "lldb/Host/Config.h"
+#if LLDB_ENABLE_PYTHON
+#include "lldb/Host/ScriptInterpreterRuntimeLoader.h"
+#endif
 #endif
 
 #include <algorithm>
@@ -43,6 +46,9 @@
 #include <clocale>
 #include <csignal>
 #include <future>
+#ifndef _WIN32
+#include <pthread.h>
+#endif
 #include <string>
 #include <thread>
 #include <utility>
@@ -642,20 +648,22 @@ void Driver::UpdateWindowSize() {
   struct winsize window_size;
   if ((isatty(STDIN_FILENO) != 0) &&
       ::ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size) == 0) {
-    if (window_size.ws_col > 0)
-      m_debugger.SetTerminalWidth(window_size.ws_col);
+    if (window_size.ws_col > 0) {
+      // Set both dimensions together to avoid recomputing from a stale value.
 #ifndef _WIN32
-    if (window_size.ws_row > 0)
-      m_debugger.SetTerminalHeight(window_size.ws_row);
+      m_debugger.SetTerminalDimensions(window_size.ws_col, window_size.ws_row);
+#else
+      m_debugger.SetTerminalDimensions(window_size.ws_col,
+                                       m_debugger.GetTerminalHeight());
 #endif
+    }
   }
 }
 
-void sigint_handler(int signo) {
 #ifdef _WIN32
+void sigint_handler(int signo) {
   // Restore handler as it is not persistent on Windows.
   signal(SIGINT, sigint_handler);
-#endif
 
   static std::atomic_flag g_interrupt_sent = ATOMIC_FLAG_INIT;
   if (g_driver != nullptr) {
@@ -668,6 +676,7 @@ void sigint_handler(int signo) {
 
   _exit(signo);
 }
+#endif
 
 static void printHelp(LLDBOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " [options]";
@@ -732,13 +741,6 @@ int main(int argc, char const *argv[]) {
                         "~/Library/Logs/DiagnosticReports/.\n");
 #endif
 
-#ifdef _WIN32
-  auto python_path_or_err = SetupPythonRuntimeLibrary();
-  if (!python_path_or_err)
-    llvm::WithColor::error()
-        << llvm::toString(python_path_or_err.takeError()) << '\n';
-#endif
-
   // Parse arguments.
   LLDBOptTable T;
   unsigned MissingArgIndex;
@@ -771,6 +773,21 @@ int main(int argc, char const *argv[]) {
     return 1;
   }
 
+#if defined(_WIN32) && LLDB_ENABLE_PYTHON
+  // liblldb.dll has direct imports from python3xx.dll (the script interpreter
+  // plugin is statically linked into liblldb), so the loader needs to find
+  // python3xx.dll before lldb.exe's delay-load thunk for liblldb fires on the
+  // first SB call below. The runtime loader is statically linked into lldb.exe
+  // via lldbHost (it has no LLDB_API export), so this call does not itself
+  // trigger the liblldb.dll load.
+  llvm::Expected<lldb_private::ScriptInterpreterRuntimeLoader &> python_loader =
+      lldb_private::ScriptInterpreterRuntimeLoader::Get(eScriptLanguagePython);
+  if (!python_loader)
+    WithColor::warning() << llvm::toString(python_loader.takeError()) << '\n';
+  else if (llvm::Error err = python_loader->Load())
+    WithColor::warning() << llvm::toString(std::move(err)) << '\n';
+#endif
+
   SBError error = SBDebugger::InitializeWithErrorHandling();
   if (error.Fail()) {
     WithColor::error() << "initialization failed: " << error.GetCString()
@@ -781,14 +798,63 @@ int main(int argc, char const *argv[]) {
   // Setup LLDB signal handlers once the debugger has been initialized.
   SBDebugger::PrintDiagnosticsOnError();
 
-  //  FIXME: Migrate the SIGINT handler to be handled by the signal loop below.
+#ifdef _WIN32
   signal(SIGINT, sigint_handler);
-#if !defined(_WIN32)
+#else
   signal(SIGPIPE, SIG_IGN);
+
+  // Capture the main thread's id so the signal thread can target it.
+  pthread_t main_thread = pthread_self();
+
+  // Set when the signal thread sends itself a SIGINT to wake the main thread.
+  // The next callback invocation observes this flag and skips the work. A
+  // plain bool is sufficient because the callback only ever runs on the
+  // signal thread; it lives outside the lambda because MainLoopPosix copies
+  // the callback on every dispatch, which would discard in-lambda state.
+  bool skip_next_sigint = false;
 
   // Handle signals in a MainLoop running on a separate thread.
   MainLoop signal_loop;
   Status signal_status;
+
+  auto sigint_handler = signal_loop.RegisterSignal(
+      SIGINT,
+      [&, main_thread](MainLoopBase &) {
+        // Skip the self-sent wakeup SIGINT queued at the end of the previous
+        // invocation.
+        if (std::exchange(skip_next_sigint, false))
+          return;
+
+        // Temporarily restore the default disposition so that a second SIGINT
+        // delivered while DispatchInputInterrupt is running hard-terminates
+        // the process. This preserves the "double Ctrl-C to force exit"
+        // escape hatch users rely on when the debugger is unresponsive.
+        struct sigaction old_action;
+        struct sigaction new_action = {};
+        new_action.sa_handler = SIG_DFL;
+        sigemptyset(&new_action.sa_mask);
+
+        int ret = sigaction(SIGINT, &new_action, &old_action);
+        UNUSED_IF_ASSERT_DISABLED(ret);
+        assert(ret == 0 && "sigaction failed");
+
+        if (g_driver)
+          g_driver->GetDebugger().DispatchInputInterrupt();
+
+        ret = sigaction(SIGINT, &old_action, nullptr);
+        UNUSED_IF_ASSERT_DISABLED(ret);
+        assert(ret == 0 && "sigaction failed");
+
+        // Wake the main thread so any blocking syscall (e.g. the Python REPL
+        // waiting on input or sleeping) returns with EINTR. This lets Python
+        // observe the pending interrupt queued by DispatchInputInterrupt and
+        // raise KeyboardInterrupt. Flag the resulting callback invocation so
+        // it's skipped rather than re-running DispatchInputInterrupt.
+        skip_next_sigint = true;
+        pthread_kill(main_thread, SIGINT);
+      },
+      signal_status);
+  assert(sigint_handler && signal_status.Success());
 
   auto sigwinch_handler = signal_loop.RegisterSignal(
       SIGWINCH,

@@ -113,6 +113,7 @@ namespace {
 
 /// Types of dependence test routines.
 enum class DependenceTestType {
+  Default, ///< All tests except BanerjeeMIV
   All,
   StrongSIV,
   WeakCrossingSIV,
@@ -126,13 +127,16 @@ enum class DependenceTestType {
 } // anonymous namespace
 
 static cl::opt<DependenceTestType> EnableDependenceTest(
-    "da-enable-dependence-test", cl::init(DependenceTestType::All),
+    "da-enable-dependence-test", cl::init(DependenceTestType::Default),
     cl::ReallyHidden,
     cl::desc("Run only specified dependence test routine and disable others. "
              "The purpose is mainly to exclude the influence of other "
              "dependence test routines in regression tests. If set to All, all "
              "dependence test routines are enabled."),
-    cl::values(clEnumValN(DependenceTestType::All, "all",
+    cl::values(clEnumValN(DependenceTestType::Default, "default",
+                          "Enable all dependence test routines except "
+                          "Banerjee MIV (default)."),
+               clEnumValN(DependenceTestType::All, "all",
                           "Enable all dependence test routines."),
                clEnumValN(DependenceTestType::StrongSIV, "strong-siv",
                           "Enable only Strong SIV test."),
@@ -896,6 +900,11 @@ static const SCEV *minusSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
 static bool isDependenceTestEnabled(DependenceTestType Test) {
   if (EnableDependenceTest == DependenceTestType::All)
     return true;
+  // The Banerjee test is disabled by default because of correctness issues,
+  // but can be enabled with -da-enable-dependence-test=banerjee-miv or
+  // -da-enable-dependence-test=all.
+  if (EnableDependenceTest == DependenceTestType::Default)
+    return Test != DependenceTestType::BanerjeeMIV;
   return EnableDependenceTest == Test;
 }
 
@@ -1181,13 +1190,19 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
 //
 // We don't use OverflowSafeSignedAPInt here because it's known that this
 // algorithm doesn't overflow.
-static bool findGCD(unsigned Bits, const APInt &AM, const APInt &BM,
-                    const APInt &Delta, APInt &G, APInt &X, APInt &Y) {
+static std::optional<bool> findGCD(unsigned Bits, const APInt &AM,
+                                   const APInt &BM, const APInt &Delta,
+                                   APInt &G, APInt &X, APInt &Y) {
   LLVM_DEBUG(dbgs() << "\t    AM = " << AM << "\n");
   LLVM_DEBUG(dbgs() << "\t    BM = " << BM << "\n");
   LLVM_DEBUG(dbgs() << "\t    Delta = " << Delta << "\n");
   APInt A0(Bits, 1, true), A1(Bits, 0, true);
   APInt B0(Bits, 0, true), B1(Bits, 1, true);
+
+  // APInt::abs will overflow. In that case, bail out early.
+  if (AM.isMinSignedValue() || BM.isMinSignedValue())
+    return std::nullopt;
+
   APInt G0 = AM.abs();
   APInt G1 = BM.abs();
   APInt Q = G0; // these need to be initialized
@@ -1559,7 +1574,12 @@ bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
   APInt BM = ConstDstCoeff->getAPInt();
   APInt CM = ConstDelta->getAPInt();
   unsigned Bits = AM.getBitWidth();
-  if (findGCD(Bits, AM, BM, CM, G, X, Y)) {
+  std::optional<bool> GCDRes = findGCD(Bits, AM, BM, CM, G, X, Y);
+
+  // GCD calculation failed so we cannot proceed with this test.
+  if (!GCDRes)
+    return false;
+  if (*GCDRes) {
     // gcd doesn't divide Delta, no dependence
     return true;
   }
@@ -1579,12 +1599,14 @@ bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
 
   APInt TU(APInt::getSignedMaxValue(Bits));
   APInt TL(APInt::getSignedMinValue(Bits));
-  APInt TC = CM.sdiv(G);
-  APInt TX = X * TC;
-  APInt TY = Y * TC;
-  LLVM_DEBUG(dbgs() << "\t    TC = " << TC << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TX = " << TX << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TY = " << TY << "\n");
+  OverflowSafeSignedAPInt TC = CM.sdiv(G);
+  OverflowSafeSignedAPInt TX = OverflowSafeSignedAPInt(X) * TC;
+  OverflowSafeSignedAPInt TY = OverflowSafeSignedAPInt(Y) * TC;
+  if (!TC || !TX || !TY)
+    return false;
+  LLVM_DEBUG(dbgs() << "\t    TC = " << *TC << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TX = " << *TX << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TY = " << *TY << "\n");
 
   APInt TB = BM.sdiv(G);
   APInt TA = AM.sdiv(G);
@@ -1761,20 +1783,15 @@ static std::optional<APInt> getConstantCoefficient(const SCEV *Expr) {
   return std::nullopt;
 }
 
-bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
-                                               const Loop *CurLoop,
-                                               const SCEV *&CurLoopCoeff,
-                                               APInt &RunningGCD) const {
-  // If RunningGCD is already 1, exit early.
-  // TODO: It might be better to continue the recursion to find CurLoopCoeff.
-  if (RunningGCD == 1)
-    return true;
-
+const SCEV *DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
+                                                      const Loop *CurLoop,
+                                                      const SCEV *&CurLoopCoeff,
+                                                      APInt &RunningGCD) const {
   const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Expr);
   if (!AddRec) {
     assert(isLoopInvariant(Expr, CurLoop) &&
            "Expected loop invariant expression");
-    return true;
+    return Expr;
   }
 
   assert(AddRec->isAffine() && "Unexpected Expr");
@@ -1788,7 +1805,7 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
     // If the coefficient is the product of a constant and other stuff, we can
     // use the constant in the GCD computation.
     if (!ConstCoeff)
-      return false;
+      return nullptr;
 
     // TODO: What happens if ConstCoeff is the "most negative" signed number
     // (e.g. -128 for 8 bit wide APInt)?
@@ -1796,26 +1813,6 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
   }
 
   return accumulateCoefficientsGCD(Start, CurLoop, CurLoopCoeff, RunningGCD);
-}
-
-/// Compute \p RunningGCD and return the start value of the innermost
-/// \p SCEVAddRecExpr. In order to calculate the return value we do not
-/// return immediately if it is proved that \p RunningGCD = 1.
-static const SCEV *analyzeCoefficientsForGCD(const SCEV *Coefficients,
-                                             APInt &RunningGCD,
-                                             ScalarEvolution *SE) {
-  while (const SCEVAddRecExpr *AddRec =
-             dyn_cast<SCEVAddRecExpr>(Coefficients)) {
-    const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
-    // If the coefficient is the product of a constant and other stuff,
-    // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstantCoefficient(Coeff);
-    if (!ConstCoeff)
-      return nullptr;
-    RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
-    Coefficients = AddRec->getStart();
-  }
-  return Coefficients;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1845,11 +1842,13 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   unsigned BitWidth = SE->getTypeSizeInBits(Src->getType());
   APInt RunningGCD = APInt::getZero(BitWidth);
 
-  // Examine Src and dst coefficients.
-  const SCEV *SrcConst = analyzeCoefficientsForGCD(Src, RunningGCD, SE);
+  const SCEV *Dummy = nullptr;
+  const SCEV *SrcConst =
+      accumulateCoefficientsGCD(Src, nullptr, Dummy, RunningGCD);
   if (!SrcConst)
     return false;
-  const SCEV *DstConst = analyzeCoefficientsForGCD(Dst, RunningGCD, SE);
+  const SCEV *DstConst =
+      accumulateCoefficientsGCD(Dst, nullptr, Dummy, RunningGCD);
   if (!DstConst)
     return false;
 

@@ -1,6 +1,4 @@
 .. title:: clang-tidy - performance-faster-string-find
-.. meta::
-   :http-equiv=refresh: 5;URL=prefer-single-char-overloads.html
 
 performance-faster-string-find
 ==============================

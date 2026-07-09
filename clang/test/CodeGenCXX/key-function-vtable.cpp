@@ -43,9 +43,9 @@ inline void X1::f() { }
 
 void use_X1() { X1 x1; }
 
-// CHECK-DAG: @_ZTV2X1 = linkonce_odr unnamed_addr constant
-// CHECK-DAG: @_ZTV5testa ={{.*}} unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null
-// CHECK-DAG: @_ZTV5testc = linkonce_odr unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null
-// CHECK-DAG: @_ZTV5testb = linkonce_odr unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null
-// CHECK-DAG: @_ZTV5teste = linkonce_odr unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null
-// CHECK-DAG: @_ZTVN12_GLOBAL__N_15testgE = internal unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null
+// CHECK-DAG: @_ZTV2X1 = linkonce_odr constant
+// CHECK-DAG: @_ZTV5testa ={{.*}}constant { [3 x ptr] } { [3 x ptr] [ptr null
+// CHECK-DAG: @_ZTV5testc = linkonce_odr constant { [3 x ptr] } { [3 x ptr] [ptr null
+// CHECK-DAG: @_ZTV5testb = linkonce_odr constant { [3 x ptr] } { [3 x ptr] [ptr null
+// CHECK-DAG: @_ZTV5teste = linkonce_odr constant { [3 x ptr] } { [3 x ptr] [ptr null
+// CHECK-DAG: @_ZTVN12_GLOBAL__N_15testgE = internal constant { [3 x ptr] } { [3 x ptr] [ptr null

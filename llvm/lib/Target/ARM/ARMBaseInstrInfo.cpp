@@ -605,7 +605,7 @@ template <> bool IsCPSRDead<MachineInstr>(const MachineInstr *MI) {
 unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
-  const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
+  const MCAsmInfo &MAI = MF->getTarget().getMCAsmInfo();
 
   const MCInstrDesc &MCID = MI.getDesc();
 
@@ -637,7 +637,7 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case ARM::INLINEASM:
   case ARM::INLINEASM_BR: {
     // If this machine instr is an inline asm, measure it.
-    unsigned Size = getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
+    unsigned Size = getInlineAsmLength(MI.getOperand(0).getSymbolName(), MAI);
     if (!MF->getInfo<ARMFunctionInfo>()->isThumbFunction())
       Size = alignTo(Size, 4);
     return Size;
@@ -4825,7 +4825,7 @@ bool
 ARMBaseInstrInfo::isFpMLxInstruction(unsigned Opcode, unsigned &MulOpc,
                                      unsigned &AddSubOpc,
                                      bool &NegAcc, bool &HasLane) const {
-  DenseMap<unsigned, unsigned>::const_iterator I = MLxEntryMap.find(Opcode);
+  auto I = MLxEntryMap.find(Opcode);
   if (I == MLxEntryMap.end())
     return false;
 
@@ -5694,6 +5694,15 @@ static bool isLRAvailable(const TargetRegisterInfo &TRI,
   return !Live;
 }
 
+/// Return true if \p MI is a call instruction that the outliner can rewrite as
+/// a tail call.
+static bool CanTransformInstrIntoTailCall(const MachineInstr &MI) {
+  auto Opcode = MI.getOpcode();
+  return (Opcode == ARM::BL || Opcode == ARM::BLX || Opcode == ARM::BLX_noip ||
+          Opcode == ARM::tBL || Opcode == ARM::tBLXi || Opcode == ARM::tBLXr ||
+          Opcode == ARM::tBLXr_noip);
+}
+
 std::optional<std::unique_ptr<outliner::OutlinedFunction>>
 ARMBaseInstrInfo::getOutliningCandidateInfo(
     const MachineModuleInfo &MMI,
@@ -5788,8 +5797,6 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
   // At this point, we have only "safe" candidates to outline. Figure out
   // frame + call instruction information.
 
-  unsigned LastInstrOpcode = RepeatedSequenceLocs[0].back().getOpcode();
-
   // Helper lambda which sets call information for every candidate.
   auto SetCandidateCallInfo =
       [&RepeatedSequenceLocs](unsigned CallID, unsigned NumBytesForCall) {
@@ -5825,11 +5832,7 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
     FrameID = MachineOutlinerTailCall;
     NumBytesToCreateFrame = Costs.FrameTailCall;
     SetCandidateCallInfo(MachineOutlinerTailCall, Costs.CallTailCall);
-  } else if (LastInstrOpcode == ARM::BL || LastInstrOpcode == ARM::BLX ||
-             LastInstrOpcode == ARM::BLX_noip || LastInstrOpcode == ARM::tBL ||
-             LastInstrOpcode == ARM::tBLXr ||
-             LastInstrOpcode == ARM::tBLXr_noip ||
-             LastInstrOpcode == ARM::tBLXi) {
+  } else if (CanTransformInstrIntoTailCall(RepeatedSequenceLocs[0].back())) {
     FrameID = MachineOutlinerThunk;
     NumBytesToCreateFrame = Costs.FrameThunk;
     SetCandidateCallInfo(MachineOutlinerThunk, Costs.CallThunk);
@@ -6169,9 +6172,7 @@ ARMBaseInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
     // as a tail-call. Explicitly list the call instructions we know about so
     // we don't get unexpected results with call pseudo-instructions.
     auto UnknownCallOutlineType = outliner::InstrType::Illegal;
-    if (Opc == ARM::BL || Opc == ARM::tBL || Opc == ARM::BLX ||
-        Opc == ARM::BLX_noip || Opc == ARM::tBLXr || Opc == ARM::tBLXr_noip ||
-        Opc == ARM::tBLXi)
+    if (CanTransformInstrIntoTailCall(MI))
       UnknownCallOutlineType = outliner::InstrType::LegalTerminator;
 
     if (!Callee)

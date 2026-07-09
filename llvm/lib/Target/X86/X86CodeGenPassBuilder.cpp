@@ -12,10 +12,10 @@
 
 #include "X86.h"
 #include "X86AsmPrinter.h"
-#include "X86ISelDAGToDAG.h"
 #include "X86TargetMachine.h"
 
 #include "llvm/CodeGen/AtomicExpand.h"
+#include "llvm/CodeGen/BreakFalseDeps.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
@@ -46,6 +46,7 @@ public:
   void addIRPasses(PassManagerWrapper &PMW) const;
   void addPreISel(PassManagerWrapper &PMW) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
+  void addPreLegalizeMachineIR(PassManagerWrapper &PMW) const;
   void addILPOpts(PassManagerWrapper &PMW) const;
   void addPreRegBankSelect(PassManagerWrapper &PMW) const;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) const;
@@ -115,6 +116,11 @@ Error X86CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
   addMachineFunctionPass(X86GlobalBaseRegPass(), PMW);
   addMachineFunctionPass(X86ArgumentStackSlotPass(), PMW);
   return Error::success();
+}
+
+void X86CodeGenPassBuilder::addPreLegalizeMachineIR(
+    PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(X86PreLegalizerCombinerPass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {
@@ -196,7 +202,7 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
 
 void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   const Triple &TT = TM.getTargetTriple();
-  const MCAsmInfo *MAI = TM.getMCAsmInfo();
+  const MCAsmInfo &MAI = TM.getMCAsmInfo();
 
   // The X86 Speculative Execution Pass must run after all control
   // flow graph modifying passes. As a result it was listed to run right before
@@ -223,7 +229,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   // instructions.
   if (!TT.isOSDarwin() &&
       (!TT.isOSWindows() ||
-       MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI)) {
+       MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI)) {
     // TODO(boomanaiden154): Add CFInstrInserterPass here when it has been
     // ported.
   }

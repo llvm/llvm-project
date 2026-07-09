@@ -15,17 +15,19 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::readability {
 
 const unsigned DefaultMinimumVariableNameLength = 3;
+const unsigned DefaultMinimumBindingNameLength = 2;
 const unsigned DefaultMinimumLoopCounterNameLength = 2;
 const unsigned DefaultMinimumExceptionNameLength = 2;
 const unsigned DefaultMinimumParameterNameLength = 3;
-const char DefaultIgnoredLoopCounterNames[] = "^[ijk_]$";
 const char DefaultIgnoredVariableNames[] = "";
+const char DefaultIgnoredBindingNames[] = "^[_]$";
+const char DefaultIgnoredLoopCounterNames[] = "^[ijk_]$";
 const char DefaultIgnoredExceptionVariableNames[] = "^[e]$";
 const char DefaultIgnoredParameterNames[] = "^[n]$";
 const unsigned DefaultLineCountThreshold = 0;
 
 const char ErrorMessage[] =
-    "%select{variable|exception variable|loop variable|"
+    "%select{variable|binding variable|exception variable|loop variable|"
     "parameter}0 name %1 is too short, expected at least %2 characters";
 
 IdentifierLengthCheck::IdentifierLengthCheck(StringRef Name,
@@ -33,6 +35,8 @@ IdentifierLengthCheck::IdentifierLengthCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       MinimumVariableNameLength(Options.get("MinimumVariableNameLength",
                                             DefaultMinimumVariableNameLength)),
+      MinimumBindingNameLength(Options.get("MinimumBindingNameLength",
+                                           DefaultMinimumBindingNameLength)),
       MinimumLoopCounterNameLength(Options.get(
           "MinimumLoopCounterNameLength", DefaultMinimumLoopCounterNameLength)),
       MinimumExceptionNameLength(Options.get(
@@ -42,6 +46,9 @@ IdentifierLengthCheck::IdentifierLengthCheck(StringRef Name,
       IgnoredVariableNamesInput(
           Options.get("IgnoredVariableNames", DefaultIgnoredVariableNames)),
       IgnoredVariableNames(IgnoredVariableNamesInput),
+      IgnoredBindingNamesInput(
+          Options.get("IgnoredBindingNames", DefaultIgnoredBindingNames)),
+      IgnoredBindingNames(IgnoredBindingNamesInput),
       IgnoredLoopCounterNamesInput(Options.get("IgnoredLoopCounterNames",
                                                DefaultIgnoredLoopCounterNames)),
       IgnoredLoopCounterNames(IgnoredLoopCounterNamesInput),
@@ -57,12 +64,14 @@ IdentifierLengthCheck::IdentifierLengthCheck(StringRef Name,
 
 void IdentifierLengthCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "MinimumVariableNameLength", MinimumVariableNameLength);
+  Options.store(Opts, "MinimumBindingNameLength", MinimumBindingNameLength);
   Options.store(Opts, "MinimumLoopCounterNameLength",
                 MinimumLoopCounterNameLength);
   Options.store(Opts, "MinimumExceptionNameLength", MinimumExceptionNameLength);
   Options.store(Opts, "MinimumParameterNameLength", MinimumParameterNameLength);
-  Options.store(Opts, "IgnoredLoopCounterNames", IgnoredLoopCounterNamesInput);
   Options.store(Opts, "IgnoredVariableNames", IgnoredVariableNamesInput);
+  Options.store(Opts, "IgnoredBindingNames", IgnoredBindingNamesInput);
+  Options.store(Opts, "IgnoredLoopCounterNames", IgnoredLoopCounterNamesInput);
   Options.store(Opts, "IgnoredExceptionVariableNames",
                 IgnoredExceptionVariableNamesInput);
   Options.store(Opts, "IgnoredParameterNames", IgnoredParameterNamesInput);
@@ -82,6 +91,9 @@ void IdentifierLengthCheck::registerMatchers(MatchFinder *Finder) {
   if (MinimumParameterNameLength > 1)
     Finder->addMatcher(parmVarDecl().bind("paramVar"), this);
 
+  if (MinimumBindingNameLength > 1)
+    Finder->addMatcher(bindingDecl().bind("bindingVar"), this);
+
   if (MinimumVariableNameLength > 1)
     Finder->addMatcher(
         varDecl(unless(anyOf(hasParent(declStmt(hasParent(forStmt()))),
@@ -90,7 +102,7 @@ void IdentifierLengthCheck::registerMatchers(MatchFinder *Finder) {
         this);
 }
 
-static std::optional<unsigned> countLinesToLastUse(const VarDecl *Var,
+static std::optional<unsigned> countLinesToLastUse(const ValueDecl *Var,
                                                    const SourceManager *SrcMgr,
                                                    ASTContext *Ctx) {
   const auto *ParentScope = llvm::dyn_cast<FunctionDecl>(Var->getDeclContext());
@@ -113,7 +125,7 @@ static std::optional<unsigned> countLinesToLastUse(const VarDecl *Var,
   return LastUseLine - DeclLine + 1;
 }
 
-static bool isShortLived(const VarDecl *Var, const SourceManager *SrcMgr,
+static bool isShortLived(const ValueDecl *Var, const SourceManager *SrcMgr,
                          ASTContext *Ctx, unsigned LineCountThreshold) {
   if (LineCountThreshold == 0)
     return false;
@@ -126,79 +138,53 @@ static bool isShortLived(const VarDecl *Var, const SourceManager *SrcMgr,
 }
 
 void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *StandaloneVar = Result.Nodes.getNodeAs<VarDecl>("standaloneVar");
-  if (StandaloneVar) {
-    if (!StandaloneVar->getIdentifier())
+  auto WarnIfTooShort = [&](const ValueDecl *Var, unsigned MinNameLength,
+                            const llvm::Regex &IgnoredNames, unsigned VarKind) {
+    if (!Var->getIdentifier())
       return;
 
-    const StringRef VarName = StandaloneVar->getName();
-
-    if (VarName.size() >= MinimumVariableNameLength ||
-        IgnoredVariableNames.match(VarName))
+    const StringRef VarName = Var->getName();
+    if (VarName.size() >= MinNameLength || IgnoredNames.match(VarName))
       return;
 
-    if (isShortLived(StandaloneVar, Result.SourceManager, Result.Context,
+    if (isShortLived(Var, Result.SourceManager, Result.Context,
                      LineCountThreshold))
       return;
 
-    diag(StandaloneVar->getLocation(), ErrorMessage)
-        << 0 << StandaloneVar << MinimumVariableNameLength;
+    diag(Var->getLocation(), ErrorMessage) << VarKind << Var << MinNameLength;
+  };
+
+  if (const auto *StandaloneVar =
+          Result.Nodes.getNodeAs<ValueDecl>("standaloneVar")) {
+    WarnIfTooShort(StandaloneVar, MinimumVariableNameLength,
+                   IgnoredVariableNames, 0);
+    return;
   }
 
-  auto *ExceptionVarName = Result.Nodes.getNodeAs<VarDecl>("exceptionVar");
-  if (ExceptionVarName) {
-    if (!ExceptionVarName->getIdentifier())
-      return;
-
-    const StringRef VarName = ExceptionVarName->getName();
-    if (VarName.size() >= MinimumExceptionNameLength ||
-        IgnoredExceptionVariableNames.match(VarName))
-      return;
-
-    if (isShortLived(ExceptionVarName, Result.SourceManager, Result.Context,
-                     LineCountThreshold))
-      return;
-
-    diag(ExceptionVarName->getLocation(), ErrorMessage)
-        << 1 << ExceptionVarName << MinimumExceptionNameLength;
+  if (const auto *BindingVar =
+          Result.Nodes.getNodeAs<ValueDecl>("bindingVar")) {
+    WarnIfTooShort(BindingVar, MinimumBindingNameLength, IgnoredBindingNames,
+                   1);
+    return;
   }
 
-  const auto *LoopVar = Result.Nodes.getNodeAs<VarDecl>("loopVar");
-  if (LoopVar) {
-    if (!LoopVar->getIdentifier())
-      return;
-
-    const StringRef VarName = LoopVar->getName();
-
-    if (VarName.size() >= MinimumLoopCounterNameLength ||
-        IgnoredLoopCounterNames.match(VarName))
-      return;
-
-    if (isShortLived(LoopVar, Result.SourceManager, Result.Context,
-                     LineCountThreshold))
-      return;
-
-    diag(LoopVar->getLocation(), ErrorMessage)
-        << 2 << LoopVar << MinimumLoopCounterNameLength;
+  if (const auto *ExceptionVar =
+          Result.Nodes.getNodeAs<ValueDecl>("exceptionVar")) {
+    WarnIfTooShort(ExceptionVar, MinimumExceptionNameLength,
+                   IgnoredExceptionVariableNames, 2);
+    return;
   }
 
-  const auto *ParamVar = Result.Nodes.getNodeAs<VarDecl>("paramVar");
-  if (ParamVar) {
-    if (!ParamVar->getIdentifier())
-      return;
+  if (const auto *LoopVar = Result.Nodes.getNodeAs<ValueDecl>("loopVar")) {
+    WarnIfTooShort(LoopVar, MinimumLoopCounterNameLength,
+                   IgnoredLoopCounterNames, 3);
+    return;
+  }
 
-    const StringRef VarName = ParamVar->getName();
-
-    if (VarName.size() >= MinimumParameterNameLength ||
-        IgnoredParameterNames.match(VarName))
-      return;
-
-    if (isShortLived(ParamVar, Result.SourceManager, Result.Context,
-                     LineCountThreshold))
-      return;
-
-    diag(ParamVar->getLocation(), ErrorMessage)
-        << 3 << ParamVar << MinimumParameterNameLength;
+  if (const auto *ParamVar = Result.Nodes.getNodeAs<ValueDecl>("paramVar")) {
+    WarnIfTooShort(ParamVar, MinimumParameterNameLength, IgnoredParameterNames,
+                   4);
+    return;
   }
 }
 

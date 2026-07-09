@@ -434,7 +434,7 @@ void ProfileGeneratorBase::updateFunctionSamples() {
 }
 
 void ProfileGeneratorBase::collectProfiledFunctions() {
-  std::unordered_set<const BinaryFunction *> ProfiledFunctions;
+  SmallPtrSet<const BinaryFunction *, 0> ProfiledFunctions;
   if (collectFunctionsFromRawProfile(ProfiledFunctions))
     Binary->setProfiledFunctions(ProfiledFunctions);
   else if (collectFunctionsFromLLVMProfile(ProfiledFunctions))
@@ -444,7 +444,7 @@ void ProfileGeneratorBase::collectProfiledFunctions() {
 }
 
 bool ProfileGeneratorBase::collectFunctionsFromRawProfile(
-    std::unordered_set<const BinaryFunction *> &ProfiledFunctions) {
+    SmallPtrSetImpl<const BinaryFunction *> &ProfiledFunctions) {
   if (!SampleCounters)
     return false;
   // Go through all the stacks, ranges and branches in sample counters, use
@@ -477,7 +477,7 @@ bool ProfileGeneratorBase::collectFunctionsFromRawProfile(
 }
 
 bool ProfileGenerator::collectFunctionsFromLLVMProfile(
-    std::unordered_set<const BinaryFunction *> &ProfiledFunctions) {
+    SmallPtrSetImpl<const BinaryFunction *> &ProfiledFunctions) {
   for (const auto &FS : ProfileMap) {
     if (auto *Func = Binary->getBinaryFunction(FS.second.getFunction()))
       ProfiledFunctions.insert(Func);
@@ -486,7 +486,7 @@ bool ProfileGenerator::collectFunctionsFromLLVMProfile(
 }
 
 bool CSProfileGenerator::collectFunctionsFromLLVMProfile(
-    std::unordered_set<const BinaryFunction *> &ProfiledFunctions) {
+    SmallPtrSetImpl<const BinaryFunction *> &ProfiledFunctions) {
   for (auto *Node : ContextTracker) {
     if (!Node->getFuncName().empty())
       if (auto *Func = Binary->getBinaryFunction(Node->getFuncName()))
@@ -1296,8 +1296,7 @@ void CSProfileGenerator::populateBodySamplesWithProbes(
   // Extract the top frame probes by looking up each address among the range in
   // the Address2ProbeMap
   extractProbesFromRange(RangeCounter, ProbeCounter);
-  std::unordered_map<MCDecodedPseudoProbeInlineTree *,
-                     std::unordered_set<FunctionSamples *>>
+  DenseMap<MCDecodedPseudoProbeInlineTree *, SmallPtrSet<FunctionSamples *, 0>>
       FrameSamples;
   for (const auto &PI : ProbeCounter) {
     const MCDecodedPseudoProbe *Probe = PI.first;

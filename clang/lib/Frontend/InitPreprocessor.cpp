@@ -545,6 +545,9 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
       case 300:
         Builder.defineMacro("__OPENCL_C_VERSION__", "300");
         break;
+      case 310:
+        Builder.defineMacro("__OPENCL_C_VERSION__", "310");
+        break;
       default:
         llvm_unreachable("Unsupported OpenCL version");
       }
@@ -554,6 +557,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("CL_VERSION_1_2", "120");
     Builder.defineMacro("CL_VERSION_2_0", "200");
     Builder.defineMacro("CL_VERSION_3_0", "300");
+    Builder.defineMacro("CL_VERSION_3_1", "310");
 
     if (TI.isLittleEndian())
       Builder.defineMacro("__ENDIAN_LITTLE__");
@@ -600,6 +604,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     }
     if (LangOpts.CUDAIsDevice) {
       Builder.defineMacro("__HIP_DEVICE_COMPILE__");
+      if (TI.getTriple().getEnvironment() == llvm::Triple::LLVM)
+        Builder.defineMacro("__HIP_LLVM__");
       if (!TI.hasHIPImageSupport()) {
         Builder.defineMacro("__HIP_NO_IMAGE_SUPPORT__", "1");
         // Deprecated.
@@ -621,7 +627,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
 /// Initialize the predefined C++ language feature test macros defined in
 /// ISO/IEC JTC1/SC22/WG21 (C++) SD-6: "SG10 Feature Test Recommendations".
 static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
-                                                 MacroBuilder &Builder) {
+                                                 MacroBuilder &Builder,
+                                                 const TargetInfo &TI) {
   // C++98 features.
   if (LangOpts.RTTI)
     Builder.defineMacro("__cpp_rtti", "199711L");
@@ -714,7 +721,12 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_consteval", "202211L");
     Builder.defineMacro("__cpp_constexpr_dynamic_alloc", "201907L");
     Builder.defineMacro("__cpp_constinit", "201907L");
-    Builder.defineMacro("__cpp_impl_coroutine", "201902L");
+
+    // Support for coroutines on 32-bit x86 Microsoft platforms is
+    // incomplete, do not advertise it.
+    if (!(TI.getCXXABI().isMicrosoft() && TI.getTriple().isX86_32()))
+      Builder.defineMacro("__cpp_impl_coroutine", "201902L");
+
     Builder.defineMacro("__cpp_designated_initializers", "201707L");
     Builder.defineMacro("__cpp_impl_three_way_comparison", "201907L");
     // Intentionally to set __cpp_modules to 1.
@@ -737,7 +749,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   // we also define their feature test macros.
   if (LangOpts.CPlusPlus11)
     Builder.defineMacro("__cpp_static_call_operator", "202207L");
-  Builder.defineMacro("__cpp_named_character_escapes", "202207L");
+  Builder.defineMacro("__cpp_named_character_escapes", "202606L");
   Builder.defineMacro("__cpp_placeholder_variables", "202306L");
 
   // C++26 features supported in earlier language modes.
@@ -980,7 +992,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
                       Twine(TI.useSignedCharForObjCBool() ? "0" : "1"));
 
   if (LangOpts.CPlusPlus)
-    InitializeCPlusPlusFeatureTestMacros(LangOpts, Builder);
+    InitializeCPlusPlusFeatureTestMacros(LangOpts, Builder, TI);
 
   // darwin_constant_cfstrings controls this. This is also dependent
   // on other things like the runtime I believe.  This is set even for C code.
@@ -1027,10 +1039,16 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     }
   }
 
-  // Macros to help identify the narrow and wide character sets
-  // FIXME: clang currently ignores -fexec-charset=. If this changes,
-  // then this may need to be updated.
-  Builder.defineMacro("__clang_literal_encoding__", "\"UTF-8\"");
+  // Macros to help identify the narrow and wide character sets. This is set
+  // to fexec-charset. If fexec-charset is not specified, the default is the
+  // system charset.
+  Builder.defineMacro("__clang_literal_encoding__",
+                      Twine("\"" +
+                            (LangOpts.LiteralEncoding.empty()
+                                 ? TI.getDefaultOrdinaryLiteralEncoding()
+                                 : LangOpts.LiteralEncoding) +
+                            "\""));
+
   if (TI.getTypeWidth(TI.getWCharType()) >= 32) {
     // FIXME: 32-bit wchar_t signals UTF-32. This may change
     // if -fwide-exec-charset= is ever supported.

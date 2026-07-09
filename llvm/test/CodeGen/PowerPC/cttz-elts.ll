@@ -11,20 +11,16 @@ define i32 @v4i1(<4 x i1> %x) {
 ; CHECK-NEXT:    vsraw 2, 2, 4
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-NEXT:    xxswapd 35, 0
-; CHECK-NEXT:    xxland 0, 34, 35
-; CHECK-NEXT:    xxsldwi 1, 0, 0, 1
-; CHECK-NEXT:    xxswapd 2, 0
-; CHECK-NEXT:    xxsldwi 3, 0, 0, 3
-; CHECK-NEXT:    mffprwz 3, 1
-; CHECK-NEXT:    mffprwz 4, 2
+; CHECK-NEXT:    xxland 34, 34, 35
+; CHECK-NEXT:    xxmrghw 0, 34, 34
+; CHECK-NEXT:    xxmrghw 35, 0, 34
+; CHECK-NEXT:    vmaxuw 2, 2, 3
+; CHECK-NEXT:    xxsldwi 0, 34, 34, 1
+; CHECK-NEXT:    xxswapd 1, 34
+; CHECK-NEXT:    mffprwz 3, 0
+; CHECK-NEXT:    mffprwz 4, 1
 ; CHECK-NEXT:    cmplw 4, 3
 ; CHECK-NEXT:    iselgt 3, 4, 3
-; CHECK-NEXT:    mffprwz 4, 0
-; CHECK-NEXT:    cmplw 3, 4
-; CHECK-NEXT:    iselgt 3, 3, 4
-; CHECK-NEXT:    mffprwz 4, 3
-; CHECK-NEXT:    cmplw 3, 4
-; CHECK-NEXT:    iselgt 3, 3, 4
 ; CHECK-NEXT:    subfic 3, 3, 4
 ; CHECK-NEXT:    blr
   %y = call i32 @llvm.experimental.cttz.elts(<4 x i1> %x, i1 false)
@@ -40,20 +36,16 @@ define i32 @v4i32(<4 x i32> %x) {
 ; CHECK-NEXT:    vcmpgtuw 2, 2, 4
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-NEXT:    xxswapd 35, 0
-; CHECK-NEXT:    xxland 0, 34, 35
-; CHECK-NEXT:    xxsldwi 1, 0, 0, 1
-; CHECK-NEXT:    xxswapd 2, 0
-; CHECK-NEXT:    xxsldwi 3, 0, 0, 3
-; CHECK-NEXT:    mffprwz 3, 1
-; CHECK-NEXT:    mffprwz 4, 2
+; CHECK-NEXT:    xxland 34, 34, 35
+; CHECK-NEXT:    xxmrghw 0, 34, 34
+; CHECK-NEXT:    xxmrghw 35, 0, 34
+; CHECK-NEXT:    vmaxuw 2, 2, 3
+; CHECK-NEXT:    xxsldwi 0, 34, 34, 1
+; CHECK-NEXT:    xxswapd 1, 34
+; CHECK-NEXT:    mffprwz 3, 0
+; CHECK-NEXT:    mffprwz 4, 1
 ; CHECK-NEXT:    cmplw 4, 3
 ; CHECK-NEXT:    iselgt 3, 4, 3
-; CHECK-NEXT:    mffprwz 4, 0
-; CHECK-NEXT:    cmplw 3, 4
-; CHECK-NEXT:    iselgt 3, 3, 4
-; CHECK-NEXT:    mffprwz 4, 3
-; CHECK-NEXT:    cmplw 3, 4
-; CHECK-NEXT:    iselgt 3, 3, 4
 ; CHECK-NEXT:    subfic 3, 3, 4
 ; CHECK-NEXT:    blr
   %y = call i32 @llvm.experimental.cttz.elts(<4 x i32> %x, i1 false)
@@ -70,20 +62,16 @@ define i32 @v4i1_zero_is_poison(<4 x i1> %x) {
 ; CHECK-NEXT:    vsraw 2, 2, 4
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-NEXT:    xxswapd 35, 0
-; CHECK-NEXT:    xxland 0, 34, 35
-; CHECK-NEXT:    xxsldwi 1, 0, 0, 1
-; CHECK-NEXT:    xxswapd 2, 0
-; CHECK-NEXT:    xxsldwi 3, 0, 0, 3
-; CHECK-NEXT:    mffprwz 3, 1
-; CHECK-NEXT:    mffprwz 4, 2
+; CHECK-NEXT:    xxland 34, 34, 35
+; CHECK-NEXT:    xxmrghw 0, 34, 34
+; CHECK-NEXT:    xxmrghw 35, 0, 34
+; CHECK-NEXT:    vmaxuw 2, 2, 3
+; CHECK-NEXT:    xxsldwi 0, 34, 34, 1
+; CHECK-NEXT:    xxswapd 1, 34
+; CHECK-NEXT:    mffprwz 3, 0
+; CHECK-NEXT:    mffprwz 4, 1
 ; CHECK-NEXT:    cmplw 4, 3
 ; CHECK-NEXT:    iselgt 3, 4, 3
-; CHECK-NEXT:    mffprwz 4, 0
-; CHECK-NEXT:    cmplw 3, 4
-; CHECK-NEXT:    iselgt 3, 3, 4
-; CHECK-NEXT:    mffprwz 4, 3
-; CHECK-NEXT:    cmplw 3, 4
-; CHECK-NEXT:    iselgt 3, 3, 4
 ; CHECK-NEXT:    subfic 3, 3, 4
 ; CHECK-NEXT:    blr
   %y = call i32 @llvm.experimental.cttz.elts(<4 x i1> %x, i1 true)
@@ -99,20 +87,16 @@ define i32 @v4i32_zero_is_poison(<4 x i32> %x) {
 ; CHECK-NEXT:    vcmpgtuw 2, 2, 4
 ; CHECK-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-NEXT:    xxswapd 35, 0
-; CHECK-NEXT:    xxland 0, 34, 35
-; CHECK-NEXT:    xxsldwi 1, 0, 0, 1
-; CHECK-NEXT:    xxswapd 2, 0
-; CHECK-NEXT:    xxsldwi 3, 0, 0, 3
-; CHECK-NEXT:    mffprwz 3, 1
-; CHECK-NEXT:    mffprwz 4, 2
+; CHECK-NEXT:    xxland 34, 34, 35
+; CHECK-NEXT:    xxmrghw 0, 34, 34
+; CHECK-NEXT:    xxmrghw 35, 0, 34
+; CHECK-NEXT:    vmaxuw 2, 2, 3
+; CHECK-NEXT:    xxsldwi 0, 34, 34, 1
+; CHECK-NEXT:    xxswapd 1, 34
+; CHECK-NEXT:    mffprwz 3, 0
+; CHECK-NEXT:    mffprwz 4, 1
 ; CHECK-NEXT:    cmplw 4, 3
 ; CHECK-NEXT:    iselgt 3, 4, 3
-; CHECK-NEXT:    mffprwz 4, 0
-; CHECK-NEXT:    cmplw 3, 4
-; CHECK-NEXT:    iselgt 3, 3, 4
-; CHECK-NEXT:    mffprwz 4, 3
-; CHECK-NEXT:    cmplw 3, 4
-; CHECK-NEXT:    iselgt 3, 3, 4
 ; CHECK-NEXT:    subfic 3, 3, 4
 ; CHECK-NEXT:    blr
   %y = call i32 @llvm.experimental.cttz.elts(<4 x i32> %x, i1 true)

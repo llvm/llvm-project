@@ -48,6 +48,14 @@ namespace llvm {
   LLVM_ABI bool PointerMayBeCaptured(const Value *V, bool ReturnCaptures,
                                      unsigned MaxUsesToExplore = 0);
 
+  /// Result of a PointerMayBeCaptured query, which includes the captured
+  /// components for both the case where return is considered a capture, and
+  /// where it isn't.
+  struct CaptureResult {
+    CaptureComponents WithoutRet;
+    CaptureComponents WithRet;
+  };
+
   /// Return which components of the pointer may be captured. Only consider
   /// components that are part of \p Mask. Once \p StopFn on the accumulated
   /// components returns true, the traversal is aborted early. By default, this
@@ -55,8 +63,8 @@ namespace llvm {
   /// This function only considers captures of the passed value via its def-use
   /// chain, without considering captures of values it may be based on, or
   /// implicit captures such as for external globals.
-  LLVM_ABI CaptureComponents PointerMayBeCaptured(
-      const Value *V, bool ReturnCaptures, CaptureComponents Mask,
+  LLVM_ABI CaptureResult PointerMayBeCaptured(
+      const Value *V, CaptureComponents Mask,
       function_ref<bool(CaptureComponents)> StopFn = capturesAnything,
       unsigned MaxUsesToExplore = 0);
 
@@ -106,10 +114,9 @@ namespace llvm {
   // not in a cycle.
   //
   // Only consider components that are part of \p Mask.
-  LLVM_ABI std::pair<Instruction *, CaptureComponents>
-  FindEarliestCapture(const Value *V, Function &F, bool ReturnCaptures,
-                      const DominatorTree &DT, CaptureComponents Mask,
-                      unsigned MaxUsesToExplore = 0);
+  LLVM_ABI std::pair<Instruction *, CaptureResult>
+  FindEarliestCapture(const Value *V, Function &F, const DominatorTree &DT,
+                      CaptureComponents Mask, unsigned MaxUsesToExplore = 0);
 
   /// Capture information for a specific Use.
   struct UseCaptureInfo {

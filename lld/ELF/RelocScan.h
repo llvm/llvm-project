@@ -113,8 +113,8 @@ public:
       // PIC when the relocation uses the full address (not just low page bits).
       if (ieExpr == R_GOT && ctx.arg.isPic &&
           !ctx.target->usesOnlyLowPageBits(type))
-        sec->getPartition(ctx).relaDyn->addRelativeReloc(
-            ctx.target->relativeRel, *sec, offset, sym, addend, type, ieExpr);
+        ctx.in.relaDyn->addRelativeReloc(ctx.target->relativeRel, *sec, offset,
+                                         sym, addend, type, ieExpr);
       else
         sec->addReloc({ieExpr, type, offset, addend, &sym});
     }
@@ -191,23 +191,11 @@ void RelocScan::scan(typename Relocs<RelTy>::const_iterator &it, RelType type,
   RelExpr expr =
       ctx.target->getRelExpr(type, sym, sec->content().data() + offset);
 
-  // Ignore R_*_NONE and other marker relocations.
-  if (expr == R_NONE)
-    return;
-
   // Error if the target symbol is undefined. Symbol index 0 may be used by
   // marker relocations, e.g. R_*_NONE and R_ARM_V4BX. Don't error on them.
   if (sym.isUndefined() && symIdx != 0 &&
       maybeReportUndefined(cast<Undefined>(sym), offset))
     return;
-
-  // Ensure GOT or GOTPLT is created for relocations that reference their base
-  // addresses without directly creating entries.
-  if (oneof<R_GOTPLTREL, R_GOTPLT, R_TLSGD_GOTPLT>(expr)) {
-    ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
-  } else if (oneof<R_GOTONLY_PC, R_GOTREL, RE_PPC32_PLTREL>(expr)) {
-    ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
-  }
 
   process(expr, type, offset, sym, addend);
 }

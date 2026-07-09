@@ -106,15 +106,14 @@ bool GenericToNVVM::runOnModule(Module &M) {
   // original global variables in GVMap with a use of the corresponding copies
   // in GVMap.  The copies need to be bitcast to the original global variable
   // types, as we cannot use cvta in global variable initializers.
-  for (GVMapTy::iterator I = GVMap.begin(), E = GVMap.end(); I != E;) {
-    GlobalVariable *GV = I->first;
-    GlobalVariable *NewGV = I->second;
-
-    // Remove GV from the map so that it can be RAUWed.  Note that
-    // DenseMap::erase() won't invalidate any iterators but this one.
-    auto Next = std::next(I);
-    GVMap.erase(I);
-    I = Next;
+  // Snapshot the map first: replaceAllUsesWith() and eraseFromParent() below
+  // fire ValueMap callbacks that mutate GVMap, so we must not hold an iterator
+  // into GVMap across them.
+  SmallVector<std::pair<GlobalVariable *, GlobalVariable *>, 0> GVs(
+      GVMap.begin(), GVMap.end());
+  for (auto [GV, NewGV] : GVs) {
+    // Remove GV from the map so that it can be RAUWed.
+    GVMap.erase(GV);
 
     Constant *BitCastNewGV = ConstantExpr::getPointerCast(NewGV, GV->getType());
     // At this point, the remaining uses of GV should be found only in global

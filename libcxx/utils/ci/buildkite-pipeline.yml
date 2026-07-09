@@ -153,8 +153,8 @@ steps:
 
 - group: ':android: Android'
   steps:
-  - label: Android 5.0, x86 NDK
-    command: libcxx/utils/ci/run-buildbot android-ndk-21-def-x86
+  - label: Android 6.0, x86 NDK
+    command: libcxx/utils/ci/run-buildbot android-ndk-23-def-x86
     env:
       CC: /opt/android/clang/clang-current/bin/clang
       CXX: /opt/android/clang/clang-current/bin/clang++

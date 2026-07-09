@@ -35,7 +35,7 @@ Error Decompressor::consumeCompressedHeader(bool Is64Bit, bool IsLittleEndian) {
   if (SectionData.size() < HdrSize)
     return createError("corrupted compressed section header");
 
-  DataExtractor Extractor(SectionData, IsLittleEndian, 0);
+  DataExtractor Extractor(SectionData, IsLittleEndian);
   uint64_t Offset = 0;
   auto ChType = Extractor.getUnsigned(&Offset, Is64Bit ? sizeof(Elf64_Word)
                                                        : sizeof(Elf32_Word));

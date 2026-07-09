@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// LLDB Python header must be included first
 #include "lldb-python.h"
 
 #include "Interfaces/ScriptInterpreterPythonInterfaces.h"
@@ -300,8 +299,13 @@ void ScriptInterpreterPython::Initialize() {
   setenv("PYTHONMALLOC", "malloc", /*overwrite=*/true);
 #endif
 
+  // When the plugin is a separate shared library, the SWIG wrapper lives in
+  // the plugin library, so the path helper that redirects lookups back to
+  // liblldb is unnecessary.
+#if !LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS
   HostInfo::SetSharedLibraryDirectoryHelper(
       ScriptInterpreterPython::SharedLibraryDirectoryHelper);
+#endif
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), GetPluginDescriptionStatic(),
       lldb::eScriptLanguagePython, ScriptInterpreterPythonImpl::CreateInstance,
@@ -422,6 +426,14 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
   run_string.Printf("run_one_line (%s, 'import lldb.embedded_interpreter; from "
                     "lldb.embedded_interpreter import run_python_interpreter; "
                     "from lldb.embedded_interpreter import run_one_line')",
+                    m_dictionary_name.c_str());
+  RunSimpleString(run_string.GetData());
+  run_string.Clear();
+
+  // Configure pydoc (built-in module) to use the "plain" pager. The default one
+  // doesn't play nice with the statusline.
+  run_string.Printf("run_one_line (%s, 'import pydoc; pydoc.pager = "
+                    "pydoc.plainpager')",
                     m_dictionary_name.c_str());
   RunSimpleString(run_string.GetData());
   run_string.Clear();
@@ -1525,6 +1537,11 @@ ScriptInterpreterPythonImpl::CreateScriptedStopHookInterface() {
   return std::make_shared<ScriptedStopHookPythonInterface>(*this);
 }
 
+ScriptedHookInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedHookInterface() {
+  return std::make_shared<ScriptedHookPythonInterface>(*this);
+}
+
 ScriptedBreakpointInterfaceSP
 ScriptInterpreterPythonImpl::CreateScriptedBreakpointInterface() {
   return std::make_shared<ScriptedBreakpointPythonInterface>(*this);
@@ -2326,17 +2343,16 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
       // Not a filename, probably a package of some sort, let it go through.
       possible_package = true;
     } else if (is_directory(st) || is_regular_file(st)) {
-      if (module_file.GetDirectory().IsEmpty()) {
+      if (module_file.GetDirectory().empty()) {
         error = Status::FromErrorStringWithFormatv(
             "invalid directory name '{0}'", pathname);
         return false;
       }
-      if (llvm::Error e =
-              ExtendSysPath(module_file.GetDirectory().GetCString())) {
+      if (llvm::Error e = ExtendSysPath(module_file.GetDirectory().str())) {
         error = Status::FromError(std::move(e));
         return false;
       }
-      module_name = module_file.GetFilename().GetCString();
+      module_name = module_file.GetFilename().str();
     } else {
       error = Status::FromErrorString(
           "no known way to import this module specification");

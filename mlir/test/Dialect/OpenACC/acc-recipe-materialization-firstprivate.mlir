@@ -9,6 +9,10 @@ acc.firstprivate.recipe @firstprivatization_memref_i32 : memref<i32> init {
   %0 = memref.load %arg0[] : memref<i32>
   memref.store %0, %arg1[] : memref<i32>
   acc.terminator
+} destroy {
+^bb0(%arg0: memref<i32>, %arg1: memref<i32>):
+  memref.dealloc %arg1 : memref<i32>  
+  acc.terminator
 }
 acc.private.recipe @privatization_memref_i32 : memref<i32> init {
 ^bb0(%arg0: memref<i32>):
@@ -27,6 +31,7 @@ acc.private.recipe @privatization_memref_i32 : memref<i32> init {
 // CHECK: %[[ALLOCALOAD:.*]] = memref.load %[[ALLOCA]][] : memref<i32>
 // CHECK: %[[ADDI:.*]] = arith.addi %[[ALLOCALOAD]], %c1{{.*}} : i32
 // CHECK: memref.store %[[ADDI]], %[[ALLOCA]][] : memref<i32>
+// CHECK: memref.dealloc %[[ALLOCA]] : memref<i32>
 
 func.func @firstpriv() {
   %c1336 = arith.constant 1336 : i32

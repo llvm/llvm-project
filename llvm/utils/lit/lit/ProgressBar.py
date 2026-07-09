@@ -147,19 +147,19 @@ class _PosixTerminalController(TerminalController):
         # Colors
         set_fg = self._tigetstr("setf")
         if set_fg:
-            for i, color in zip(range(len(self._COLORS)), self._COLORS):
+            for i, color in enumerate(self._COLORS):
                 setattr(self, color, self._tparm(set_fg, i))
         set_fg_ansi = self._tigetstr("setaf")
         if set_fg_ansi:
-            for i, color in zip(range(len(self._ANSICOLORS)), self._ANSICOLORS):
+            for i, color in enumerate(self._ANSICOLORS):
                 setattr(self, color, self._tparm(set_fg_ansi, i))
         set_bg = self._tigetstr("setb")
         if set_bg:
-            for i, color in zip(range(len(self._COLORS)), self._COLORS):
+            for i, color in enumerate(self._COLORS):
                 setattr(self, "BG_" + color, self._tparm(set_bg, i))
         set_bg_ansi = self._tigetstr("setab")
         if set_bg_ansi:
-            for i, color in zip(range(len(self._ANSICOLORS)), self._ANSICOLORS):
+            for i, color in enumerate(self._ANSICOLORS):
                 setattr(self, "BG_" + color, self._tparm(set_bg_ansi, i))
 
     def _tparm(self, arg, index):

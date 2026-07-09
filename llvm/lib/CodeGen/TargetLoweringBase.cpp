@@ -586,8 +586,16 @@ RTLIB::Libcall RTLIB::getSINCOS(EVT RetVT) {
     switch (RetVT.getSimpleVT().SimpleTy) {
     case MVT::v4f32:
       return RTLIB::SINCOS_V4F32;
+    case MVT::v8f32:
+      return RTLIB::SINCOS_V8F32;
+    case MVT::v16f32:
+      return RTLIB::SINCOS_V16F32;
     case MVT::v2f64:
       return RTLIB::SINCOS_V2F64;
+    case MVT::v4f64:
+      return RTLIB::SINCOS_V4F64;
+    case MVT::v8f64:
+      return RTLIB::SINCOS_V8F64;
     case MVT::nxv4f32:
       return RTLIB::SINCOS_NXV4F32;
     case MVT::nxv2f64:
@@ -1120,6 +1128,7 @@ void TargetLoweringBase::initActions() {
     // Most backends expect to see the node which just returns the value loaded.
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, VT, Expand);
 
+    // clang-format off
     // These operations default to expand.
     setOperationAction({ISD::FGETSIGN,       ISD::CONCAT_VECTORS,
                         ISD::FMINNUM,        ISD::FMAXNUM,
@@ -1149,8 +1158,11 @@ void TargetLoweringBase::initActions() {
                         ISD::FASIN,          ISD::FATAN,
                         ISD::FCOSH,          ISD::FSINH,
                         ISD::FTANH,          ISD::FATAN2,
-                        ISD::FMULADD,        ISD::CONVERT_FROM_ARBITRARY_FP},
+                        ISD::FMULADD,        ISD::CONVERT_FROM_ARBITRARY_FP,
+                        ISD::CONVERT_TO_ARBITRARY_FP,
+                        ISD::PSEUDO_FMIN,    ISD::PSEUDO_FMAX},
                        VT, Expand);
+    // clang-format on
 
     // Overflow operations default to expand
     setOperationAction({ISD::SADDO, ISD::SSUBO, ISD::UADDO, ISD::USUBO,
@@ -1180,14 +1192,20 @@ void TargetLoweringBase::initActions() {
     // Carry-less multiply
     setOperationAction({ISD::CLMUL, ISD::CLMULR, ISD::CLMULH}, VT, Expand);
 
+    // Bit extract/deposit (compress/expand)
+    setOperationAction({ISD::PEXT, ISD::PDEP}, VT, Expand);
+
     // Saturated trunc
     setOperationAction(ISD::TRUNCATE_SSAT_S, VT, Expand);
     setOperationAction(ISD::TRUNCATE_SSAT_U, VT, Expand);
     setOperationAction(ISD::TRUNCATE_USAT_U, VT, Expand);
 
     // These default to Expand so they will be expanded to CTLZ/CTTZ by default.
-    setOperationAction({ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
+    setOperationAction({ISD::CTLZ_ZERO_POISON, ISD::CTTZ_ZERO_POISON}, VT,
                        Expand);
+
+    // This defaults to Expand so it will be expanded to ABS by default.
+    setOperationAction(ISD::ABS_MIN_POISON, VT, Expand);
     setOperationAction(ISD::CTLS, VT, Expand);
 
     setOperationAction({ISD::BITREVERSE, ISD::PARITY}, VT, Expand);
@@ -1210,6 +1228,8 @@ void TargetLoweringBase::initActions() {
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
     setOperationAction(ISD::STRICT_##DAGN, VT, Expand);
 #include "llvm/IR/ConstrainedOps.def"
+    setOperationAction(ISD::STRICT_PSEUDO_FMIN, VT, Expand);
+    setOperationAction(ISD::STRICT_PSEUDO_FMAX, VT, Expand);
 
     // For most targets @llvm.get.dynamic.area.offset just returns 0.
     setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, VT, Expand);
@@ -2774,7 +2794,7 @@ void TargetLoweringBase::finalizeLowering(MachineFunction &MF) const {
 
 MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(
     const LoadInst &LI, const DataLayout &DL, AssumptionCache *AC,
-    const TargetLibraryInfo *LibInfo) const {
+    const TargetLibraryInfo *LibInfo, CodeGenOptLevel OptLevel) const {
   MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad;
   if (LI.isVolatile())
     Flags |= MachineMemOperand::MOVolatile;
@@ -2785,10 +2805,15 @@ MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(
   if (LI.hasMetadata(LLVMContext::MD_invariant_load))
     Flags |= MachineMemOperand::MOInvariant;
 
-  if (isDereferenceableAndAlignedPointer(LI.getPointerOperand(), LI.getType(),
-                                         LI.getAlign(), DL, &LI, AC,
-                                         /*DT=*/nullptr, LibInfo))
+  // Dereferenceability analysis is expensive, skip at O0.
+  if (OptLevel != CodeGenOptLevel::None &&
+      isDereferenceableAndAlignedPointer(
+          LI.getPointerOperand(), LI.getType(), LI.getAlign(),
+          SimplifyQuery(DL, LibInfo, /*DT=*/nullptr, AC, &LI))) {
     Flags |= MachineMemOperand::MODereferenceable;
+  } else if (LI.hasMetadata(LLVMContext::MD_dereferenceable)) {
+    Flags |= MachineMemOperand::MODereferenceable;
+  }
 
   Flags |= getTargetMMOFlags(LI);
   return Flags;

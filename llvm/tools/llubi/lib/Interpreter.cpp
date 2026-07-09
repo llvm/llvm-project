@@ -14,51 +14,100 @@
 #include "ExecutorBase.h"
 #include "Library.h"
 #include "Value.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/TargetParser/Triple.h"
+
+#include <cassert>
+#include <cstring>
+#include <limits>
 
 namespace llvm::ubi {
 
 using namespace PatternMatch;
 
-static AnyValue addNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
-                          bool HasNUW) {
-  APInt Res = LHS + RHS;
-  if (HasNUW && Res.ult(RHS))
-    return AnyValue::poison();
-  if (HasNSW && LHS.isNonNegative() == RHS.isNonNegative() &&
-      LHS.isNonNegative() != Res.isNonNegative())
-    return AnyValue::poison();
-  return Res;
-}
+/// Visit the scalar values recursively. The callback function may modify the
+/// value in-place.
+static void forEachScalarValue(AnyValue &V,
+                               function_ref<void(AnyValue &)> Visit) {
+  if (V.isNone())
+    return;
 
-static AnyValue subNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
-                          bool HasNUW) {
-  APInt Res = LHS - RHS;
-  if (HasNUW && Res.ugt(LHS))
-    return AnyValue::poison();
-  if (HasNSW && LHS.isNonNegative() != RHS.isNonNegative() &&
-      LHS.isNonNegative() != Res.isNonNegative())
-    return AnyValue::poison();
-  return Res;
-}
-
-static AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
-                          bool HasNUW) {
-  bool Overflow = false;
-  APInt Res = LHS.smul_ov(RHS, Overflow);
-  if (HasNSW && Overflow)
-    return AnyValue::poison();
-  if (HasNUW) {
-    (void)LHS.umul_ov(RHS, Overflow);
-    if (Overflow)
-      return AnyValue::poison();
+  if (V.isAggregate()) {
+    for (auto &SubValue : V.asAggregate())
+      forEachScalarValue(SubValue, Visit);
+    return;
   }
-  return Res;
+
+  Visit(V);
+}
+
+static void applyRangeAttr(AnyValue &V, const ConstantRange &CR) {
+  forEachScalarValue(V, [&](AnyValue &Scalar) {
+    if (Scalar.isInteger() && !CR.contains(Scalar.asInteger()))
+      Scalar = AnyValue::poison();
+  });
+}
+
+static void applyNoFPClassAttr(AnyValue &V, FPClassTest NoFPClass) {
+  forEachScalarValue(V, [NoFPClass](AnyValue &Scalar) {
+    if (Scalar.isFloat() && (Scalar.asFloat().classify() & NoFPClass))
+      Scalar = AnyValue::poison();
+  });
+}
+
+static void applyNonNullAttr(AnyValue &V, unsigned AS, const DataLayout &DL) {
+  if (V.isPointer() && V.asPointer().isNullPtr(AS, DL))
+    V = AnyValue::poison();
+}
+
+static void applyAlignAttr(AnyValue &V, Align Alignment) {
+  forEachScalarValue(V, [Alignment](AnyValue &Scalar) {
+    if (Scalar.isPointer() &&
+        Scalar.asPointer().address().countr_zero() < Log2(Alignment))
+      Scalar = AnyValue::poison();
+  });
+}
+
+static bool violatesNoUndefAttr(AnyValue &V) {
+  bool ContainsPoison = false;
+  forEachScalarValue(
+      V, [&](AnyValue &Scalar) { ContainsPoison |= Scalar.isPoison(); });
+  return ContainsPoison;
+}
+
+/// Assumes V is either a poison or a pointer.
+static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
+                                             bool OrNull, unsigned AS,
+                                             Context &Ctx) {
+  if (V.isPoison())
+    return true;
+
+  auto &Ptr = V.asPointer();
+  if (Ptr.isNullPtr(AS, Ctx.getDataLayout())) {
+    if (OrNull)
+      return false;
+    return true;
+  }
+
+  auto *MO = Ctx.checkProvenance(Ptr, [&](const Provenance &) {
+    // TODO: check read_provenance
+    // TODO: check nofree for attributes/metadata.
+    return true;
+  });
+  if (!MO)
+    return true;
+
+  const APInt &PtrAddr = Ptr.address();
+  return Bytes > MO->getSize() || PtrAddr.ult(MO->getAddress()) ||
+         PtrAddr.ugt(MO->getAddress() + MO->getSize() - Bytes);
 }
 
 /// Instruction executor using the visitor pattern.
@@ -69,18 +118,214 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   const DataLayout &DL;
   std::list<Frame> CallStack;
   AnyValue None;
+  std::list<AnyValue> UnsupportedConstantValues;
   Library Lib;
 
   const AnyValue &getValue(Value *V) {
-    if (auto *C = dyn_cast<Constant>(V))
-      return Ctx.getConstantValue(C);
+    if (auto *C = dyn_cast<Constant>(V)) {
+      if (const AnyValue *Val = Ctx.getConstantValue(C))
+        return *Val;
+      reportError() << "Unsupported constant: " << *C << ".";
+      UnsupportedConstantValues.push_back(
+          AnyValue::getPoisonValue(Ctx, C->getType()));
+      return UnsupportedConstantValues.back();
+    }
+    if (isa<MetadataAsValue>(V))
+      return None;
     return CurrentFrame->ValueMap.at(V);
   }
 
   void setResult(Instruction &I, AnyValue V) {
     if (!hasProgramExited() && !Handler.onInstructionExecuted(I, V))
       setFailed();
-    CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
+    if (hasProgramExited())
+      return;
+    assert(V.isCompatibleWith(I.getType()) && "Unexpected value storage kind.");
+    if (!V.isNone())
+      CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
+  }
+
+  APFloat handleDenormal(APFloat Val, DenormalMode::DenormalModeKind Mode,
+                         bool IsInput) {
+    if (!Val.isDenormal())
+      return Val;
+    if (IsInput) {
+      // Non-deterministically choose between flushing or preserving the
+      // denormal value.
+      if (Ctx.getRandomBool())
+        return Val;
+    }
+    if (Mode == DenormalMode::PositiveZero)
+      return APFloat::getZero(Val.getSemantics(), false);
+    if (Mode == DenormalMode::PreserveSign)
+      return APFloat::getZero(Val.getSemantics(), Val.isNegative());
+    // Default case for IEEE, Dynamic, and Invalid
+    // Currently we treat Dynamic the same as IEEE, since we don't support
+    // changing the mode at this point.
+    return Val;
+  }
+
+  AnyValue handleFMFFlags(AnyValue Val, FastMathFlags FMF, bool IsInput) {
+    if (Val.isPoison())
+      return AnyValue::poison();
+
+    if (Val.isAggregate()) {
+      std::vector<AnyValue> ResVec;
+      ResVec.reserve(Val.asAggregate().size());
+      for (const auto &A : Val.asAggregate())
+        ResVec.push_back(handleFMFFlags(A, FMF, IsInput));
+      return AnyValue(ResVec);
+    }
+
+    const APFloat &APVal = Val.asFloat();
+    if (FMF.noNaNs() && APVal.isNaN())
+      return AnyValue::poison();
+    if (FMF.noInfs() && APVal.isInfinity())
+      return AnyValue::poison();
+    if (IsInput && FMF.noSignedZeros() && APVal.isZero())
+      return AnyValue(APFloat::getZero(
+          APVal.getSemantics(), APVal.isNegative() ^ Ctx.getRandomBool()));
+    return Val;
+  }
+
+  void addNaNCandidate(SmallVectorImpl<APFloat> &Candidates,
+                       APFloat Candidate) {
+    if (any_of(Candidates, [&](const APFloat &Existing) {
+          return Existing.bitwiseIsEqual(Candidate);
+        }))
+      return;
+    Candidates.push_back(std::move(Candidate));
+  }
+
+  APFloat pickNaNCandidate(ArrayRef<APFloat> Candidates) {
+    assert(!Candidates.empty() && "Need at least one NaN candidate.");
+    return Candidates[Ctx.getRandomUInt64() % Candidates.size()];
+  }
+
+  APInt getRandomNaNPayload(const fltSemantics &Sem) {
+    const unsigned NumBits = Sem.precision - 1;
+    SmallVector<APInt::WordType, 2> RandomWords;
+    const unsigned NumWords = APInt::getNumWords(NumBits);
+    RandomWords.reserve(NumWords);
+    for (unsigned I = 0; I != NumWords; ++I)
+      RandomWords.push_back(Ctx.getRandomUInt64());
+    return APInt(NumBits, RandomWords);
+  }
+
+  bool isPreferredNaN(const APFloat &Val) {
+    assert(Val.isNaN() && "Expected NaN.");
+    const APFloat Preferred =
+        APFloat::getQNaN(Val.getSemantics(), Val.isNegative());
+    return Val.bitwiseIsEqual(Preferred);
+  }
+
+  bool wasmMayProduceExtraNaNPayload(ArrayRef<const APFloat *> Inputs) {
+    for (const APFloat *Input : Inputs) {
+      if (!Input->isNaN())
+        continue;
+      if (Input->isSignaling() || !isPreferredNaN(*Input))
+        return true;
+    }
+    return false;
+  }
+
+  APFloat propagateInputNaN(const APFloat &InputNaN, const fltSemantics &DstSem,
+                            bool QuietingMode, bool FlipSign) {
+    APFloat Res = InputNaN;
+    bool LosesInfo;
+    Res.convert(DstSem, APFloat::rmNearestTiesToEven, &LosesInfo);
+    if (FlipSign)
+      Res.changeSign();
+    if (QuietingMode && Res.isSignaling())
+      Res = Res.makeQuiet();
+    return Res;
+  }
+
+  APFloat maybeQuietSNaN(APFloat Val) const {
+    if (Val.isSignaling() && Ctx.getRandomBool())
+      return Val.makeQuiet();
+    return Val;
+  }
+
+  APFloat maxnumWithSNaNQuieting(const APFloat &LHS, const APFloat &RHS) {
+    return maxnum(maybeQuietSNaN(LHS), maybeQuietSNaN(RHS));
+  }
+
+  APFloat minnumWithSNaNQuieting(const APFloat &LHS, const APFloat &RHS) {
+    return minnum(maybeQuietSNaN(LHS), maybeQuietSNaN(RHS));
+  }
+
+  void addPropagatedNaNCandidates(SmallVectorImpl<APFloat> &Candidates,
+                                  ArrayRef<const APFloat *> Inputs,
+                                  const fltSemantics &DstSem, bool QuietingMode,
+                                  bool SignChoice) {
+    for (const APFloat *Input : Inputs) {
+      if (!Input->isNaN())
+        continue;
+      addNaNCandidate(Candidates, propagateInputNaN(*Input, DstSem,
+                                                    QuietingMode, SignChoice));
+    }
+  }
+
+  void addTargetSpecificNaNCandidates(SmallVectorImpl<APFloat> &Candidates,
+                                      const APFloat &Result,
+                                      ArrayRef<const APFloat *> Inputs,
+                                      bool SignChoice) {
+    const Triple &TT = Ctx.getTargetTriple();
+    if (TT.isWasm()) {
+      if (!wasmMayProduceExtraNaNPayload(Inputs))
+        return;
+      APInt Payload = getRandomNaNPayload(Result.getSemantics());
+      addNaNCandidate(Candidates, APFloat::getQNaN(Result.getSemantics(),
+                                                   SignChoice, &Payload));
+      return;
+    }
+
+    if (TT.isSPARC32() || TT.isSPARC64()) {
+      APInt Payload = APInt::getAllOnes(Result.getSemantics().precision - 1);
+      addNaNCandidate(Candidates, APFloat::getQNaN(Result.getSemantics(),
+                                                   SignChoice, &Payload));
+    }
+  }
+
+  APFloat applyNaNPropagation(const APFloat &Result,
+                              ArrayRef<const APFloat *> Inputs) {
+    if (!Result.isNaN())
+      return Result;
+
+    const NaNPropagationBehavior Choice =
+        Ctx.getEffectiveNaNPropagationBehavior();
+    const bool SignChoice = Ctx.getRandomBool();
+    const fltSemantics &ResultSem = Result.getSemantics();
+    auto PreferredNaN = [&]() {
+      return APFloat::getQNaN(ResultSem, SignChoice);
+    };
+
+    SmallVector<APFloat, 4> Candidates;
+    switch (Choice) {
+    case NaNPropagationBehavior::PreferredNaN:
+      return PreferredNaN();
+    case NaNPropagationBehavior::QuietingNaN:
+      addPropagatedNaNCandidates(Candidates, Inputs, ResultSem,
+                                 /*QuietingMode=*/true, SignChoice);
+      return Candidates.empty() ? PreferredNaN() : pickNaNCandidate(Candidates);
+    case NaNPropagationBehavior::UnchangedNaN:
+      addPropagatedNaNCandidates(Candidates, Inputs, ResultSem,
+                                 /*QuietingMode=*/false, SignChoice);
+      return Candidates.empty() ? PreferredNaN() : pickNaNCandidate(Candidates);
+    case NaNPropagationBehavior::TargetSpecificNaN:
+      addTargetSpecificNaNCandidates(Candidates, Result, Inputs, SignChoice);
+      return Candidates.empty() ? PreferredNaN() : pickNaNCandidate(Candidates);
+    case NaNPropagationBehavior::NonDeterministic:
+      addNaNCandidate(Candidates, PreferredNaN());
+      addPropagatedNaNCandidates(Candidates, Inputs, ResultSem,
+                                 /*QuietingMode=*/true, SignChoice);
+      addPropagatedNaNCandidates(Candidates, Inputs, ResultSem,
+                                 /*QuietingMode=*/false, SignChoice);
+      addTargetSpecificNaNCandidates(Candidates, Result, Inputs, SignChoice);
+      return pickNaNCandidate(Candidates);
+    }
+    llvm_unreachable("Unhandled NaN propagation behavior.");
   }
 
   AnyValue computeUnOp(Type *Ty, const AnyValue &Operand,
@@ -110,15 +355,44 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     });
   }
 
+  void visitBitwiseFPUnOp(Instruction &I,
+                          function_ref<APFloat(const APFloat &)> ScalarFn) {
+    setResult(I, visitBitwiseFPUnOpWithResult(
+                     I.getType(), cast<FPMathOperator>(I).getFastMathFlags(),
+                     getValue(I.getOperand(0)), ScalarFn));
+  }
+
   AnyValue
-  visitIntUnOpWithResult(Instruction &I,
+  visitIntUnOpWithResult(Type *RetTy, const AnyValue &Operand,
                          function_ref<AnyValue(const APInt &)> ScalarFn) {
-    return computeUnOp(I.getType(), getValue(I.getOperand(0)),
-                       [&](const AnyValue &Operand) -> AnyValue {
-                         if (Operand.isPoison())
+    return computeUnOp(RetTy, Operand,
+                       [&](const AnyValue &OperandInner) -> AnyValue {
+                         if (OperandInner.isPoison())
                            return AnyValue::poison();
-                         return ScalarFn(Operand.asInteger());
+                         return ScalarFn(OperandInner.asInteger());
                        });
+  }
+
+  AnyValue visitBitwiseFPUnOpWithResult(
+      Type *RetTy, const FastMathFlags &FMF, const AnyValue &Operand,
+      function_ref<APFloat(const APFloat &)> ScalarFn) {
+    return computeUnOp(
+        RetTy, Operand, [&](const AnyValue &OperandInner) -> AnyValue {
+          if (OperandInner.isPoison())
+            return AnyValue::poison();
+
+          // We don't flush denormals here since bitwise floating-point
+          // operations only manipulate on certain bits of the operand.
+
+          AnyValue ValidatedOperand =
+              handleFMFFlags(OperandInner, FMF, /*IsInput=*/true);
+          if (ValidatedOperand.isPoison())
+            return ValidatedOperand;
+
+          APFloat Result = ScalarFn(ValidatedOperand.asFloat());
+
+          return handleFMFFlags(Result, FMF, /*IsInput=*/false);
+        });
   }
 
   AnyValue computeBinOp(
@@ -153,29 +427,36 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     });
   }
 
-  AnyValue visitIntBinOpWithResult(
+  void visitFPBinOp(
       Instruction &I,
+      function_ref<APFloat(const APFloat &, const APFloat &)> ScalarFn) {
+    setResult(I, visitFPBinOpWithResult(
+                     I.getType(), cast<FPMathOperator>(I).getFastMathFlags(),
+                     getValue(I.getOperand(0)), getValue(I.getOperand(1)),
+                     ScalarFn));
+  }
+
+  AnyValue visitIntBinOpWithResult(
+      Type *RetTy, const AnyValue &LHS, const AnyValue &RHS,
       function_ref<AnyValue(const APInt &, const APInt &)> ScalarFn) {
     return computeBinOp(
-        I.getType(), getValue(I.getOperand(0)), getValue(I.getOperand(1)),
-        [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-          if (LHS.isPoison() || RHS.isPoison())
+        RetTy, LHS, RHS,
+        [&](const AnyValue &LHSInner, const AnyValue &RHSInner) -> AnyValue {
+          if (LHSInner.isPoison() || RHSInner.isPoison())
             return AnyValue::poison();
-          return ScalarFn(LHS.asInteger(), RHS.asInteger());
+          return ScalarFn(LHSInner.asInteger(), RHSInner.asInteger());
         });
   }
 
   AnyValue visitOverflowIntBinOpWithResult(
-      CallBase &CB,
+      Type *RetTy, const AnyValue &LHS, const AnyValue &RHS,
       function_ref<std::pair<APInt, bool>(const APInt &, const APInt &)>
           ScalarFn) {
-    const AnyValue &LHS = getValue(CB.getOperand(0));
-    const AnyValue &RHS = getValue(CB.getOperand(1));
     if (!LHS.isAggregate()) {
       if (LHS.isPoison() || RHS.isPoison())
-        return std::vector{AnyValue::poison(), AnyValue::poison()};
+        return std::vector<AnyValue>{AnyValue::poison(), AnyValue::poison()};
       auto [Res, Overflow] = ScalarFn(LHS.asInteger(), RHS.asInteger());
-      return std::vector{AnyValue(Res), AnyValue::boolean(Overflow)};
+      return std::vector<AnyValue>{AnyValue(Res), AnyValue::boolean(Overflow)};
     }
 
     auto &LHSVec = LHS.asAggregate();
@@ -195,8 +476,55 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       ResVec.push_back(AnyValue(Res));
       OverflowVec.push_back(AnyValue::boolean(Overflow));
     }
-    return std::vector{AnyValue(std::move(ResVec)),
-                       AnyValue(std::move(OverflowVec))};
+    return std::vector<AnyValue>{AnyValue(std::move(ResVec)),
+                                 AnyValue(std::move(OverflowVec))};
+  }
+
+  AnyValue visitFPBinOpWithResult(
+      Type *RetTy, const FastMathFlags &FMF, const AnyValue &LHS,
+      const AnyValue &RHS,
+      function_ref<APFloat(const APFloat &, const APFloat &)> ScalarFn) {
+    DenormalMode DenormMode = getCurrentDenormalMode(RetTy);
+
+    if (!Ctx.isDefaultFPEnv())
+      reportImmediateUB() << "Non-constrained floating-point operation assumes "
+                             "default floating-point environment";
+
+    return computeBinOp(
+        RetTy, LHS, RHS,
+        [&](const AnyValue &LHSInner, const AnyValue &RHSInner) -> AnyValue {
+          if (LHSInner.isPoison() || RHSInner.isPoison())
+            return AnyValue::poison();
+
+          AnyValue ValidatedLHS =
+              handleFMFFlags(LHSInner, FMF, /*IsInput=*/true);
+          AnyValue ValidatedRHS =
+              handleFMFFlags(RHSInner, FMF, /*IsInput=*/true);
+          if (ValidatedLHS.isPoison())
+            return ValidatedLHS;
+          if (ValidatedRHS.isPoison())
+            return ValidatedRHS;
+
+          // Flush input denormals
+          APFloat FLHS = handleDenormal(ValidatedLHS.asFloat(),
+                                        DenormMode.Input, /*IsInput=*/true);
+          APFloat FRHS = handleDenormal(ValidatedRHS.asFloat(),
+                                        DenormMode.Input, /*IsInput=*/true);
+
+          APFloat RawResult = ScalarFn(FLHS, FRHS);
+
+          // Flush output denormals and handle fast-math flags.
+          AnyValue FResult = handleFMFFlags(
+              handleDenormal(RawResult, DenormMode.Output, /*IsInput=*/false),
+              FMF,
+              /*IsInput=*/false);
+
+          if (FResult.isPoison())
+            return FResult;
+
+          APFloat Result = FResult.asFloat();
+          return applyNaNPropagation(Result, {&FLHS, &FRHS});
+        });
   }
 
   AnyValue
@@ -243,17 +571,73 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   AnyValue visitIntTriOpWithResult(
-      Instruction &I,
+      Type *RetTy, const AnyValue &Op1, const AnyValue &Op2,
+      const AnyValue &Op3,
       function_ref<AnyValue(const APInt &, const APInt &, const APInt &)>
           ScalarFn) {
     return computeTriOp(
-        I.getType(), getValue(I.getOperand(0)), getValue(I.getOperand(1)),
-        getValue(I.getOperand(2)),
-        [&](const AnyValue &Op1, const AnyValue &Op2,
-            const AnyValue &Op3) -> AnyValue {
-          if (Op1.isPoison() || Op2.isPoison() || Op3.isPoison())
+        RetTy, Op1, Op2, Op3,
+        [&](const AnyValue &Op1Inner, const AnyValue &Op2Inner,
+            const AnyValue &Op3Inner) -> AnyValue {
+          if (Op1Inner.isPoison() || Op2Inner.isPoison() || Op3Inner.isPoison())
             return AnyValue::poison();
-          return ScalarFn(Op1.asInteger(), Op2.asInteger(), Op3.asInteger());
+          return ScalarFn(Op1Inner.asInteger(), Op2Inner.asInteger(),
+                          Op3Inner.asInteger());
+        });
+  }
+
+  AnyValue visitFPTriOpWithResult(
+      Type *RetTy, const FastMathFlags &FMF, const AnyValue &Op1,
+      const AnyValue &Op2, const AnyValue &Op3,
+      function_ref<APFloat(const APFloat &, const APFloat &, const APFloat &)>
+          ScalarFn) {
+    DenormalMode DenormMode = getCurrentDenormalMode(RetTy);
+
+    if (!Ctx.isDefaultFPEnv())
+      reportImmediateUB() << "Non-constrained floating-point operation assumes "
+                             "default floating-point environment";
+
+    return computeTriOp(
+        RetTy, Op1, Op2, Op3,
+        [&](const AnyValue &Op1Inner, const AnyValue &Op2Inner,
+            const AnyValue &Op3Inner) -> AnyValue {
+          if (Op1Inner.isPoison() || Op2Inner.isPoison() || Op3Inner.isPoison())
+            return AnyValue::poison();
+
+          AnyValue ValidatedOp1 =
+              handleFMFFlags(Op1Inner, FMF, /*IsInput=*/true);
+          AnyValue ValidatedOp2 =
+              handleFMFFlags(Op2Inner, FMF, /*IsInput=*/true);
+          AnyValue ValidatedOp3 =
+              handleFMFFlags(Op3Inner, FMF, /*IsInput=*/true);
+          if (ValidatedOp1.isPoison())
+            return ValidatedOp1;
+          if (ValidatedOp2.isPoison())
+            return ValidatedOp2;
+          if (ValidatedOp3.isPoison())
+            return ValidatedOp3;
+
+          // Flush input denormals
+          APFloat FOp1 = handleDenormal(ValidatedOp1.asFloat(),
+                                        DenormMode.Input, /*IsInput=*/true);
+          APFloat FOp2 = handleDenormal(ValidatedOp2.asFloat(),
+                                        DenormMode.Input, /*IsInput=*/true);
+          APFloat FOp3 = handleDenormal(ValidatedOp3.asFloat(),
+                                        DenormMode.Input, /*IsInput=*/true);
+
+          APFloat RawResult = ScalarFn(FOp1, FOp2, FOp3);
+
+          // Flush output denormals and handle fast-math flags.
+          AnyValue FResult = handleFMFFlags(
+              handleDenormal(RawResult, DenormMode.Output, /*IsInput=*/false),
+              FMF,
+              /*IsInput=*/false);
+
+          if (FResult.isPoison())
+            return FResult;
+
+          APFloat Result = FResult.asFloat();
+          return applyNaNPropagation(Result, {&FOp1, &FOp2, &FOp3});
         });
   }
 
@@ -272,9 +656,17 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     SmallVector<std::pair<PHINode *, AnyValue>> IncomingValues;
     PHINode *PHI = nullptr;
     while ((PHI = dyn_cast<PHINode>(CurrentFrame->PC))) {
-      Value *Incoming = PHI->getIncomingValueForBlock(From);
-      // TODO: handle fast-math flags.
-      IncomingValues.emplace_back(PHI, getValue(Incoming));
+      AnyValue IncomingVal = getValue(PHI->getIncomingValueForBlock(From));
+
+      // Fast-math flags validation
+      if (isa<FPMathOperator>(PHI)) {
+        FastMathFlags FMF = PHI->getFastMathFlags();
+        if (FMF.any())
+          IncomingVal =
+              handleFMFFlags(std::move(IncomingVal), FMF, /*IsInput=*/true);
+      }
+
+      IncomingValues.emplace_back(PHI, IncomingVal);
       ++CurrentFrame->PC;
     }
     for (auto &[K, V] : IncomingValues)
@@ -289,94 +681,231 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return false;
   }
 
-  AnyValue computePtrAdd(const Pointer &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset) {
-    if (Offset.isZero())
-      return Ptr;
-    APInt IndexBits = Ptr.address().trunc(Offset.getBitWidth());
-    auto NewIndex = addNoWrap(IndexBits, Offset, /*HasNSW=*/false,
-                              Flags.hasNoUnsignedWrap());
-    if (NewIndex.isPoison())
-      return AnyValue::poison();
-    if (Flags.hasNoUnsignedSignedWrap()) {
-      // The successive addition of the current address, truncated to the
-      // pointer index type and interpreted as an unsigned number, and each
-      // offset, interpreted as a signed number, does not wrap the pointer index
-      // type.
-      if (Offset.isNonNegative() ? NewIndex.asInteger().ult(IndexBits)
-                                 : NewIndex.asInteger().ugt(IndexBits))
-        return AnyValue::poison();
-    }
-    APInt NewAddr = Ptr.address();
-    NewAddr.insertBits(NewIndex.asInteger(), 0);
-
-    auto *MO = Ptr.getMemoryObject();
-    if (Flags.isInBounds() && (!MO || !MO->inBounds(NewAddr)))
-      return AnyValue::poison();
-
-    if (!AccumulatedOffset.isPoison()) {
-      AccumulatedOffset =
-          addNoWrap(AccumulatedOffset.asInteger(), Offset,
-                    Flags.hasNoUnsignedSignedWrap(), Flags.hasNoUnsignedWrap());
-      if (AccumulatedOffset.isPoison())
-        return AnyValue::poison();
-    }
-
-    // Should not expose provenance here even if the new address doesn't point
-    // to the original object.
-    return Ptr.getWithNewAddr(NewAddr);
-  }
-
-  AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset) {
-    if (Ptr.isPoison())
-      return AnyValue::poison();
-    return computePtrAdd(Ptr.asPointer(), Offset, Flags, AccumulatedOffset);
-  }
-
-  AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
-                               const APInt &Scale, GEPNoWrapFlags Flags,
-                               AnyValue &AccumulatedOffset) {
-    if (Ptr.isPoison() || Index.isPoison())
-      return AnyValue::poison();
-    assert(Ptr.isPointer() && Index.isInteger() && "Unexpected type.");
-    if (Scale.isOne())
-      return computePtrAdd(Ptr, Index.asInteger(), Flags, AccumulatedOffset);
-    auto ScaledOffset =
-        mulNoWrap(Index.asInteger(), Scale, Flags.hasNoUnsignedSignedWrap(),
-                  Flags.hasNoUnsignedWrap());
-    if (ScaledOffset.isPoison())
-      return AnyValue::poison();
-    return computePtrAdd(Ptr, ScaledOffset.asInteger(), Flags,
-                         AccumulatedOffset);
-  }
-
-  AnyValue canonicalizeIndex(const AnyValue &Idx, unsigned IndexBitWidth,
-                             GEPNoWrapFlags Flags) {
-    if (Idx.isPoison())
-      return AnyValue::poison();
-    auto &IdxInt = Idx.asInteger();
-    if (IdxInt.getBitWidth() == IndexBitWidth)
-      return Idx;
-    if (IdxInt.getBitWidth() > IndexBitWidth) {
-      if (Flags.hasNoUnsignedSignedWrap() &&
-          !IdxInt.isSignedIntN(IndexBitWidth))
-        return AnyValue::poison();
-
-      if (Flags.hasNoUnsignedWrap() && !IdxInt.isIntN(IndexBitWidth))
-        return AnyValue::poison();
-
-      return IdxInt.trunc(IndexBitWidth);
-    }
-    return IdxInt.sext(IndexBitWidth);
+  DenormalMode getCurrentDenormalMode(Type *Ty) {
+    return CurrentFrame->Func.getDenormalMode(
+        Ty->getScalarType()->getFltSemantics());
   }
 
   // Helper function to convert BooleanKind to bool. Report an immediate UB if
   // a poison is found.
   bool getBooleanNonPoison(BooleanKind Boolean) {
     if (Boolean == BooleanKind::Poison)
-      reportImmediateUB("Unexpected poison boolean value");
+      reportImmediateUB() << "Unexpected poison boolean value";
     return Boolean == BooleanKind::True;
+  }
+
+  APInt getIntNonPoison(const AnyValue &V) {
+    if (V.isPoison()) {
+      reportImmediateUB() << "Unexpected poison integer value.";
+      return APInt::getZero(64);
+    }
+    return V.asInteger();
+  }
+
+  AnyValue callMemTransferIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args,
+                                    Intrinsic::ID IID) {
+    const AnyValue &Dest = Args[0];
+    const AnyValue &Src = Args[1];
+    const AnyValue &Length = Args[2];
+    // TODO: Handle isvolatile argument.
+    if (Length.isPoison()) {
+      reportImmediateUB() << "Memory transfer intrinsic with poison length.";
+      return AnyValue();
+    }
+
+    const APInt &LengthInt = Args[2].asInteger();
+    if (LengthInt.getActiveBits() > 64) {
+      reportImmediateUB()
+          << "Memory transfer intrinsic length overflows uint64_t.";
+      return AnyValue();
+    }
+
+    const uint64_t Len = LengthInt.getZExtValue();
+    if (Len == 0)
+      return AnyValue();
+
+    if (Dest.isPoison()) {
+      reportImmediateUB()
+          << "Memory transfer intrinsic with poison destination pointer.";
+      return AnyValue();
+    }
+
+    if (Src.isPoison()) {
+      reportImmediateUB()
+          << "Memory transfer intrinsic with poison source pointer.";
+      return AnyValue();
+    }
+
+    const Pointer &DstPtr = Dest.asPointer();
+    const Pointer &SrcPtr = Src.asPointer();
+
+    Align DstAlign = CB.getParamAlign(0).valueOrOne();
+    Align SrcAlign = CB.getParamAlign(1).valueOrOne();
+
+    auto [SrcMO, SrcOffset] =
+        verifyMemAccess(SrcPtr, Len, SrcAlign, /*IsStore=*/false);
+    if (!SrcMO)
+      return AnyValue();
+
+    auto [DstMO, DstOffset] =
+        verifyMemAccess(DstPtr, Len, DstAlign, /*IsStore=*/true);
+    if (!DstMO)
+      return AnyValue();
+
+    if (IID == Intrinsic::memcpy || IID == Intrinsic::memcpy_inline) {
+      if (SrcMO == DstMO && SrcOffset != DstOffset) {
+        const uint64_t SrcEnd = SrcOffset + Len;
+        const uint64_t DstEnd = DstOffset + Len;
+        if (SrcOffset < DstEnd && DstOffset < SrcEnd) {
+          reportImmediateUB()
+              << "memcpy with overlapping source and destination.";
+          return AnyValue();
+        }
+      }
+    }
+
+    MutableArrayRef<Byte> DstBytes = DstMO->getBytes().slice(DstOffset, Len);
+    ArrayRef<Byte> SrcBytes = SrcMO->getBytes().slice(SrcOffset, Len);
+    std::memmove(DstBytes.data(), SrcBytes.data(), Len * sizeof(Byte));
+    return AnyValue();
+  }
+
+  AnyValue callMemSetIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args) {
+    const AnyValue &Dest = Args[0];
+    const AnyValue &Val = Args[1];
+    const AnyValue &Length = Args[2];
+
+    if (Length.isPoison()) {
+      reportImmediateUB() << "memset called with poison length.";
+      return AnyValue();
+    }
+
+    const APInt &LengthInt = Length.asInteger();
+    if (LengthInt.getActiveBits() > 64) {
+      reportImmediateUB() << "memset called with length overflows uint64_t.";
+      return AnyValue();
+    }
+
+    const uint64_t Len = LengthInt.getZExtValue();
+    if (Len == 0)
+      return AnyValue();
+
+    if (Dest.isPoison()) {
+      reportImmediateUB() << "memset called with poison destination pointer.";
+      return AnyValue();
+    }
+
+    const Pointer &DstPtr = Dest.asPointer();
+
+    Align DstAlign = CB.getParamAlign(0).valueOrOne();
+    auto [DstMO, DstOffset] =
+        verifyMemAccess(DstPtr, Len, DstAlign, /*IsStore=*/true);
+    if (!DstMO)
+      return AnyValue();
+
+    Byte FillByte = Val.isPoison()
+                        ? Byte::poison()
+                        : Byte::concrete(Val.asInteger().getZExtValue());
+    fill(DstMO->getBytes().slice(DstOffset, Len), FillByte);
+    return AnyValue();
+  }
+
+  static BooleanKind getMaskLane(const AnyValue &Mask, size_t I) {
+    return Mask.asAggregate()[I].asBoolean();
+  }
+
+  AnyValue callExperimentalVectorHistogramIntrinsic(CallBase &CB,
+                                                    ArrayRef<AnyValue> Args,
+                                                    Intrinsic::ID IID) {
+    struct LaneUpdate {
+      MemoryObject *MO;
+      uint64_t Offset;
+      uint64_t Count;
+      AnyValue Old;
+      AnyValue New;
+    };
+
+    const auto &Ptrs = Args[0].asAggregate();
+    const AnyValue &Update = Args[1];
+    const AnyValue &Mask = Args[2];
+    Type *ElemTy = CB.getArgOperand(1)->getType();
+    const uint64_t AccessSize = Ctx.getEffectiveTypeStoreSize(ElemTy);
+
+    SmallVector<LaneUpdate, 8> Lanes;
+    Lanes.reserve(Ptrs.size());
+    for (size_t I = 0, E = Ptrs.size(); I != E; ++I) {
+      switch (getMaskLane(Mask, I)) {
+      case BooleanKind::False:
+        continue;
+      case BooleanKind::Poison:
+        reportImmediateUB()
+            << "Poison mask lane in experimental vector histogram intrinsic.";
+        return AnyValue();
+      case BooleanKind::True:
+        break;
+      }
+
+      if (Ptrs[I].isPoison()) {
+        reportImmediateUB() << "Poison pointer lane in experimental vector "
+                               "histogram intrinsic.";
+        return AnyValue();
+      }
+
+      auto [MO, Offset] =
+          verifyMemAccess(Ptrs[I].asPointer(), AccessSize, Align(1),
+                          /*IsStore=*/true);
+      if (!MO)
+        return AnyValue();
+
+      Lanes.push_back({MO, Offset, 0, AnyValue(), AnyValue()});
+    }
+
+    for (LaneUpdate &Lane : Lanes) {
+      Lane.Count = count_if(Lanes, [&](const LaneUpdate &Other) {
+        return Other.MO == Lane.MO && Other.Offset == Lane.Offset;
+      });
+      Lane.Old = Ctx.load(*Lane.MO, Lane.Offset, ElemTy);
+    }
+
+    for (LaneUpdate &Lane : Lanes) {
+      const AnyValue &Old = Lane.Old;
+      AnyValue &New = Lane.New;
+
+      if (Old.isPoison() || Update.isPoison()) {
+        New = AnyValue::poison();
+      } else {
+        const APInt &OldInt = Old.asInteger();
+        const APInt &UpdateInt = Update.asInteger();
+
+        switch (IID) {
+        case Intrinsic::experimental_vector_histogram_add:
+          New = OldInt + UpdateInt * APInt(UpdateInt.getBitWidth(), Lane.Count,
+                                           /*isSigned=*/false,
+                                           /*implicitTrunc=*/true);
+          break;
+        case Intrinsic::experimental_vector_histogram_uadd_sat: {
+          APInt Acc = OldInt;
+          for (uint64_t I = 0; I != Lane.Count; ++I)
+            Acc = Acc.uadd_sat(UpdateInt);
+          New = Acc;
+          break;
+        }
+        case Intrinsic::experimental_vector_histogram_umax:
+          New = APIntOps::umax(OldInt, UpdateInt);
+          break;
+        case Intrinsic::experimental_vector_histogram_umin:
+          New = APIntOps::umin(OldInt, UpdateInt);
+          break;
+        default:
+          llvm_unreachable("Unexpected histogram intrinsic ID");
+        }
+      }
+    }
+
+    for (const LaneUpdate &Lane : Lanes)
+      Ctx.store(*Lane.MO, Lane.Offset, Lane.New, ElemTy);
+
+    return AnyValue();
   }
 
 public:
@@ -391,6 +920,8 @@ public:
   void visitReturnInst(ReturnInst &RI) {
     if (auto *RV = RI.getReturnValue())
       CurrentFrame->RetVal = getValue(RV);
+    else
+      CurrentFrame->RetVal = AnyValue();
     CurrentFrame->State = FrameState::Exit;
     if (!Handler.onInstructionExecuted(RI, None))
       setFailed();
@@ -407,7 +938,7 @@ public:
       jumpTo(BI, BI.getSuccessor(1));
       return;
     case BooleanKind::Poison:
-      reportImmediateUB("Branch on poison condition.");
+      reportImmediateUB() << "Branch on poison condition.";
       return;
     }
   }
@@ -415,7 +946,7 @@ public:
   void visitSwitchInst(SwitchInst &SI) {
     auto &Cond = getValue(SI.getCondition());
     if (Cond.isPoison()) {
-      reportImmediateUB("Switch on poison condition.");
+      reportImmediateUB() << "Switch on poison condition.";
       return;
     }
     for (auto &Case : SI.cases()) {
@@ -428,7 +959,7 @@ public:
   }
 
   void visitUnreachableInst(UnreachableInst &) {
-    reportImmediateUB("Unreachable code.");
+    reportImmediateUB() << "Unreachable code.";
   }
 
   void visitCallBrInst(CallBrInst &CI) {
@@ -444,7 +975,7 @@ public:
   void visitIndirectBrInst(IndirectBrInst &IBI) {
     auto &Target = getValue(IBI.getAddress());
     if (Target.isPoison()) {
-      reportImmediateUB("Indirect branch on poison.");
+      reportImmediateUB() << "Indirect branch on poison.";
       return;
     }
     if (BasicBlock *DestBB = Ctx.getTargetBlock(Target.asPointer())) {
@@ -452,21 +983,31 @@ public:
                  [DestBB](BasicBlock *Succ) { return Succ == DestBB; }))
         jumpTo(IBI, DestBB);
       else
-        reportImmediateUB("Indirect branch on unlisted target BB.");
+        reportImmediateUB() << "Indirect branch on unlisted target BB.";
 
       return;
     }
-    reportImmediateUB("Indirect branch on invalid target BB.");
+    reportImmediateUB() << "Indirect branch on invalid target BB.";
   }
 
   void returnFromCallee() {
-    // TODO: handle retval attributes (Attributes from known callee should be
-    // applied if available).
-    // TODO: handle metadata
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
     CurrentFrame->CalleeArgs.clear();
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
+    if (Type *RetTy = CB.getType(); !RetTy->isVoidTy()) {
+      // Handle attributes on the return value (Attributes from resolved callee
+      // should be applied if available).
+      AttributeSet AttrsAtCallSite = CB.getRetAttributes();
+      AttributeSet AttrsAtCallee =
+          CurrentFrame->ResolvedCallee->getAttributes().getRetAttrs();
+      handleAttributes(RetTy, RetVal, AttrsAtCallSite, AttrsAtCallee);
+      handleMetadata(RetTy, RetVal, CB);
+    }
     setResult(CB, std::move(RetVal));
+
+    for (auto &ByValArg : CurrentFrame->CalleeByValArgs)
+      Ctx.free(*ByValArg);
+    CurrentFrame->CalleeByValArgs.clear();
 
     if (auto *II = dyn_cast<InvokeInst>(&CB))
       jumpTo(*II, II->getNormalDest());
@@ -477,31 +1018,103 @@ public:
   AnyValue callIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args) {
     Intrinsic::ID IID = CB.getIntrinsicID();
     Type *RetTy = CB.getType();
+    const FastMathFlags FMF = CB.getFastMathFlagsOrNone();
 
     switch (IID) {
     case Intrinsic::assume:
       switch (Args[0].asBoolean()) {
       case BooleanKind::True:
+        for (unsigned Idx = 0; Idx < CB.getNumOperandBundles(); Idx++) {
+          OperandBundleUse OBU = CB.getOperandBundleAt(Idx);
+          auto GetBundleArg = [&](uint32_t Offset) -> Value * {
+            return OBU.Inputs[Offset];
+          };
+          if (OBU.Inputs.empty())
+            continue;
+          Value *WasOnVal = GetBundleArg(0);
+          // Bail out on unrecognized operand bundles.
+          if (!WasOnVal->getType()->isPointerTy())
+            continue;
+          unsigned AS = WasOnVal->getType()->getPointerAddressSpace();
+          const AnyValue &WasOn = getValue(WasOnVal);
+          if (WasOn.isPoison()) {
+            reportImmediateUB() << "Assume on poison pointer.";
+            break;
+          }
+          const Pointer &WasOnPtr = WasOn.asPointer();
+          Attribute::AttrKind Kind =
+              Attribute::getAttrKindFromName(OBU.getTagName());
+          switch (Kind) {
+          case Attribute::Alignment: {
+            // Alignment assumptions should have 2 or 3 arguments.
+            APInt Alignment = getIntNonPoison(getValue(GetBundleArg(1)));
+            APInt CheckedAddr = WasOnPtr.address();
+            if (OBU.Inputs.size() == 3) {
+              APInt Offset = getIntNonPoison(getValue(GetBundleArg(2)));
+              CheckedAddr -= Offset.sextOrTrunc(CheckedAddr.getBitWidth());
+            }
+            if (!Alignment.isPowerOf2()) {
+              if (!CheckedAddr.isZero())
+                reportImmediateUB() << "Assume on pointer " << WasOn
+                                    << " with a nonzero adjusted address and a "
+                                       "non-power-of-two alignment "
+                                    << Alignment << '.';
+              break;
+            }
+            if (CheckedAddr.countr_zero() < Alignment.logBase2())
+              reportImmediateUB()
+                  << "The pointer " << WasOn << " violates align(" << Alignment
+                  << ") assumption.";
+            break;
+          }
+          case Attribute::NonNull:
+            if (WasOnPtr.isNullPtr(AS, DL))
+              reportImmediateUB()
+                  << "The pointer " << WasOn << " violates nonnull assumption.";
+            break;
+          case Attribute::Dereferenceable:
+          case Attribute::DereferenceableOrNull: {
+            APInt DereferenceableBytes =
+                getIntNonPoison(getValue(GetBundleArg(1)));
+            // Only n > 0 implies that the pointer is dereferenceable.
+            if (DereferenceableBytes.isZero())
+              break;
+            if (violatesDereferenceableBytesAttr(
+                    WasOn, DereferenceableBytes.getLimitedValue(),
+                    Kind == Attribute::DereferenceableOrNull, AS, Ctx))
+              reportImmediateUB() << "The pointer " << WasOn << " violates "
+                                  << (Kind == Attribute::DereferenceableOrNull
+                                          ? "dereferenceable_or_null("
+                                          : "dereferenceable(")
+                                  << DereferenceableBytes << ") assumption.";
+            break;
+          }
+          default:
+            // TODO: handle other operand bundles like separate_storage.
+            break;
+          }
+        }
         break;
       case BooleanKind::False:
       case BooleanKind::Poison:
-        reportImmediateUB("Assume on false or poison condition.");
+        reportImmediateUB() << "Assume on false or poison condition.";
         break;
       }
-      // TODO: handle llvm.assume with operand bundles
       return AnyValue();
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end: {
       auto Ptr = Args[0];
       if (Ptr.isPoison())
         return AnyValue();
-      auto *MO = Ptr.asPointer().getMemoryObject();
+      auto *MO = Ctx.checkProvenance(Ptr.asPointer(),
+                                     [](const Provenance &) { return true; });
       assert(MO && "Memory object accessed by lifetime intrinsic should be "
                    "always valid.");
       if (IID == Intrinsic::lifetime_start) {
         MO->setState(MemoryObjectState::Alive);
         fill(MO->getBytes(), Byte::undef());
       } else {
+        fill(MO->getBytes(), Byte::poison());
         MO->setState(MemoryObjectState::Dead);
       }
       return AnyValue();
@@ -521,33 +1134,38 @@ public:
     }
     case Intrinsic::abs: {
       const bool IsIntMinPoison = getBooleanNonPoison(Args[1].asBoolean());
-      return visitIntUnOpWithResult(CB, [&](const APInt &Operand) -> AnyValue {
-        if (IsIntMinPoison && Operand.isMinSignedValue())
-          return AnyValue::poison();
-        return Operand.abs();
-      });
+      return visitIntUnOpWithResult(
+          RetTy, Args[0], [&](const APInt &Operand) -> AnyValue {
+            if (IsIntMinPoison && Operand.isMinSignedValue())
+              return AnyValue::poison();
+            return Operand.abs();
+          });
     }
     case Intrinsic::smax: {
       return visitIntBinOpWithResult(
-          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [](const APInt &LHS, const APInt &RHS) -> AnyValue {
             return APIntOps::smax(LHS, RHS);
           });
     }
     case Intrinsic::smin: {
       return visitIntBinOpWithResult(
-          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [](const APInt &LHS, const APInt &RHS) -> AnyValue {
             return APIntOps::smin(LHS, RHS);
           });
     }
     case Intrinsic::umax: {
       return visitIntBinOpWithResult(
-          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [](const APInt &LHS, const APInt &RHS) -> AnyValue {
             return APIntOps::umax(LHS, RHS);
           });
     }
     case Intrinsic::umin: {
       return visitIntBinOpWithResult(
-          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [](const APInt &LHS, const APInt &RHS) -> AnyValue {
             return APIntOps::umin(LHS, RHS);
           });
     }
@@ -555,7 +1173,8 @@ public:
     case Intrinsic::ucmp: {
       const unsigned BitWidth = RetTy->getScalarSizeInBits();
       return visitIntBinOpWithResult(
-          CB, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
             if (LHS == RHS)
               return APInt::getZero(BitWidth);
             if (IID == Intrinsic::scmp)
@@ -566,35 +1185,38 @@ public:
           });
     }
     case Intrinsic::bitreverse: {
-      return visitIntUnOpWithResult(CB, [](const APInt &Operand) -> AnyValue {
-        return Operand.reverseBits();
-      });
+      return visitIntUnOpWithResult(RetTy, Args[0],
+                                    [](const APInt &Operand) -> AnyValue {
+                                      return Operand.reverseBits();
+                                    });
     }
     case Intrinsic::bswap: {
-      return visitIntUnOpWithResult(CB, [](const APInt &Operand) -> AnyValue {
-        return Operand.byteSwap();
-      });
+      return visitIntUnOpWithResult(
+          RetTy, Args[0],
+          [](const APInt &Operand) -> AnyValue { return Operand.byteSwap(); });
     }
     case Intrinsic::ctpop: {
-      return visitIntUnOpWithResult(CB, [](const APInt &Operand) -> AnyValue {
-        return APInt(Operand.getBitWidth(), Operand.popcount());
-      });
+      return visitIntUnOpWithResult(
+          RetTy, Args[0], [](const APInt &Operand) -> AnyValue {
+            return APInt(Operand.getBitWidth(), Operand.popcount());
+          });
     }
     case Intrinsic::ctlz:
     case Intrinsic::cttz: {
       const bool IsZeroPoison = getBooleanNonPoison(Args[1].asBoolean());
-      return visitIntUnOpWithResult(CB, [&](const APInt &Operand) -> AnyValue {
-        if (IsZeroPoison && Operand.isZero())
-          return AnyValue::poison();
-        if (IID == Intrinsic::ctlz)
-          return APInt(Operand.getBitWidth(), Operand.countl_zero());
-        return APInt(Operand.getBitWidth(), Operand.countr_zero());
-      });
+      return visitIntUnOpWithResult(
+          RetTy, Args[0], [&](const APInt &Operand) -> AnyValue {
+            if (IsZeroPoison && Operand.isZero())
+              return AnyValue::poison();
+            if (IID == Intrinsic::ctlz)
+              return APInt(Operand.getBitWidth(), Operand.countl_zero());
+            return APInt(Operand.getBitWidth(), Operand.countr_zero());
+          });
     }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {
       return visitIntTriOpWithResult(
-          CB,
+          RetTy, Args[0], Args[1], Args[2],
           [IID](const APInt &Op1, const APInt &Op2,
                 const APInt &Op3) -> AnyValue {
             const unsigned BitWidth = Op1.getBitWidth();
@@ -611,7 +1233,8 @@ public:
     }
     case Intrinsic::clmul: {
       return visitIntBinOpWithResult(
-          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [](const APInt &LHS, const APInt &RHS) -> AnyValue {
             return APIntOps::clmul(LHS, RHS);
           });
     }
@@ -622,7 +1245,7 @@ public:
     case Intrinsic::smul_with_overflow:
     case Intrinsic::umul_with_overflow: {
       return visitOverflowIntBinOpWithResult(
-          CB,
+          RetTy, Args[0], Args[1],
           [IID](const APInt &LHS, const APInt &RHS) -> std::pair<APInt, bool> {
             APInt Res;
             bool Overflow = false;
@@ -658,7 +1281,8 @@ public:
     case Intrinsic::sshl_sat:
     case Intrinsic::ushl_sat: {
       return visitIntBinOpWithResult(
-          CB, [IID](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [IID](const APInt &LHS, const APInt &RHS) -> AnyValue {
             switch (IID) {
             case Intrinsic::sadd_sat:
               return LHS.sadd_sat(RHS);
@@ -683,6 +1307,575 @@ public:
             }
           });
     }
+    case Intrinsic::vector_reduce_add:
+    case Intrinsic::vector_reduce_mul:
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_or:
+    case Intrinsic::vector_reduce_xor:
+    case Intrinsic::vector_reduce_smax:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_umax:
+    case Intrinsic::vector_reduce_umin: {
+      std::optional<APInt> Res;
+      for (const auto &V : Args[0].asAggregate()) {
+        if (V.isPoison()) {
+          Res.reset();
+          break;
+        }
+        const auto &IntV = V.asInteger();
+        if (!Res) {
+          Res = IntV;
+          continue;
+        }
+        switch (IID) {
+        case Intrinsic::vector_reduce_add:
+          *Res += IntV;
+          break;
+        case Intrinsic::vector_reduce_mul:
+          *Res *= IntV;
+          break;
+        case Intrinsic::vector_reduce_and:
+          *Res &= IntV;
+          break;
+        case Intrinsic::vector_reduce_or:
+          *Res |= IntV;
+          break;
+        case Intrinsic::vector_reduce_xor:
+          *Res ^= IntV;
+          break;
+        case Intrinsic::vector_reduce_smax:
+          *Res = APIntOps::smax(*Res, IntV);
+          break;
+        case Intrinsic::vector_reduce_smin:
+          *Res = APIntOps::smin(*Res, IntV);
+          break;
+        case Intrinsic::vector_reduce_umax:
+          *Res = APIntOps::umax(*Res, IntV);
+          break;
+        case Intrinsic::vector_reduce_umin:
+          *Res = APIntOps::umin(*Res, IntV);
+          break;
+        default:
+          llvm_unreachable("Unexpected intrinsic ID");
+        }
+      }
+      return Res ? *Res : AnyValue::poison();
+    }
+    case Intrinsic::vector_insert: {
+      assert(!Args[2].isPoison() &&
+             "Verifier should reject poison vector_insert immarg.");
+      const auto &Vec = Args[0].asAggregate();
+      const auto &SubVec = Args[1].asAggregate();
+      const auto &Idx = Args[2].asInteger();
+      auto EC =
+          cast<VectorType>(CB.getArgOperand(1)->getType())->getElementCount();
+      const uint64_t RawOffset = Idx.getZExtValue();
+      const uint32_t MinSize = EC.getKnownMinValue();
+      assert(RawOffset % MinSize == 0 &&
+             "Verifier should reject misaligned vector_insert index.");
+      const uint64_t Chunk = RawOffset / MinSize;
+      const uint64_t EVL = Ctx.getEVL(EC);
+      if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
+        return AnyValue::getPoisonValue(Ctx, RetTy);
+      const uint64_t Offset = Chunk * EVL;
+      if (Offset > Vec.size() || SubVec.size() > Vec.size() - Offset)
+        return AnyValue::getPoisonValue(Ctx, RetTy);
+      std::vector<AnyValue> Res;
+      Res.reserve(Vec.size());
+      for (size_t I = 0; I != Vec.size(); ++I) {
+        if (I >= Offset && I < Offset + SubVec.size())
+          Res.push_back(SubVec[I - Offset]);
+        else
+          Res.push_back(Vec[I]);
+      }
+      return std::move(Res);
+    }
+    case Intrinsic::vector_extract: {
+      assert(!Args[1].isPoison() &&
+             "Verifier should reject poison vector_extract immarg.");
+      const auto &Vec = Args[0].asAggregate();
+      const auto &Idx = Args[1].asInteger();
+      auto EC = cast<VectorType>(RetTy)->getElementCount();
+      const uint64_t RawOffset = Idx.getZExtValue();
+      const uint32_t MinSize = EC.getKnownMinValue();
+      assert(RawOffset % MinSize == 0 &&
+             "Verifier should reject misaligned vector_extract index.");
+      const uint64_t Chunk = RawOffset / MinSize;
+      const uint64_t EVL = Ctx.getEVL(EC);
+      if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
+        return AnyValue::getPoisonValue(Ctx, RetTy);
+      const uint64_t Offset = Chunk * EVL;
+      if (Offset > Vec.size() || EVL > Vec.size() - Offset)
+        return AnyValue::getPoisonValue(Ctx, RetTy);
+      return std::vector<AnyValue>(Vec.begin() + Offset,
+                                   Vec.begin() + Offset + EVL);
+    }
+    case Intrinsic::vector_reverse: {
+      auto Vec = Args[0].asAggregate();
+      std::reverse(Vec.begin(), Vec.end());
+      return std::move(Vec);
+    }
+    case Intrinsic::vector_deinterleave2:
+    case Intrinsic::vector_deinterleave3:
+    case Intrinsic::vector_deinterleave4:
+    case Intrinsic::vector_deinterleave5:
+    case Intrinsic::vector_deinterleave6:
+    case Intrinsic::vector_deinterleave7:
+    case Intrinsic::vector_deinterleave8: {
+      const unsigned Factor = getDeinterleaveIntrinsicFactor(IID);
+      if (Factor == 0)
+        llvm_unreachable("Unexpected intrinsic ID");
+      const auto &Vec = Args[0].asAggregate();
+      std::vector<std::vector<AnyValue>> Res(Factor);
+      for (auto &SubVec : Res)
+        SubVec.reserve(Vec.size() / Factor);
+      for (size_t I = 0, E = Vec.size(); I != E; ++I)
+        Res[I % Factor].push_back(Vec[I]);
+
+      std::vector<AnyValue> AggRes;
+      AggRes.reserve(Factor);
+      for (auto &SubVec : Res)
+        AggRes.emplace_back(std::move(SubVec));
+      return AnyValue(std::move(AggRes));
+    }
+    case Intrinsic::vector_interleave2:
+    case Intrinsic::vector_interleave3:
+    case Intrinsic::vector_interleave4:
+    case Intrinsic::vector_interleave5:
+    case Intrinsic::vector_interleave6:
+    case Intrinsic::vector_interleave7:
+    case Intrinsic::vector_interleave8: {
+      const unsigned Factor = getInterleaveIntrinsicFactor(IID);
+      if (Factor == 0)
+        llvm_unreachable("Unexpected intrinsic ID");
+      const auto &Vec = Args[0].asAggregate();
+      std::vector<AnyValue> Res;
+      Res.reserve(Vec.size() * Factor);
+      for (size_t I = 0, E = Vec.size(); I != E; ++I) {
+        for (unsigned J = 0; J != Factor; ++J)
+          Res.push_back(Args[J].asAggregate()[I]);
+      }
+      return std::move(Res);
+    }
+    case Intrinsic::vector_splice_left: {
+      if (Args[2].isPoison())
+        return AnyValue::getPoisonValue(Ctx, RetTy);
+      const auto &LHS = Args[0].asAggregate();
+      const auto &RHS = Args[1].asAggregate();
+      const auto &Off = Args[2].asInteger();
+      const size_t Len = LHS.size();
+      if (Off.ugt(Len))
+        return AnyValue::getPoisonValue(Ctx, RetTy);
+      uint64_t Offset = Off.getZExtValue();
+      std::vector<AnyValue> Res;
+      Res.reserve(Len);
+      for (size_t I = 0; I != Len; ++I) {
+        size_t Pos = I + Offset;
+        Res.push_back(Pos < Len ? LHS[Pos] : RHS[Pos - Len]);
+      }
+      return std::move(Res);
+    }
+    case Intrinsic::vector_splice_right: {
+      if (Args[2].isPoison())
+        return AnyValue::getPoisonValue(Ctx, RetTy);
+      const auto &LHS = Args[0].asAggregate();
+      const auto &RHS = Args[1].asAggregate();
+      const auto &Off = Args[2].asInteger();
+      const size_t Len = LHS.size();
+      if (Off.ugt(Len))
+        return AnyValue::getPoisonValue(Ctx, RetTy);
+      uint64_t Offset = Len - Off.getZExtValue();
+      std::vector<AnyValue> Res;
+      Res.reserve(Len);
+      for (size_t I = 0; I != Len; ++I) {
+        size_t Pos = I + Offset;
+        Res.push_back(Pos < Len ? LHS[Pos] : RHS[Pos - Len]);
+      }
+      return std::move(Res);
+    }
+    case Intrinsic::stepvector: {
+      std::vector<AnyValue> Res;
+      const uint32_t Len =
+          Ctx.getEVL(cast<VectorType>(RetTy)->getElementCount());
+      const unsigned BitWidth = RetTy->getScalarSizeInBits();
+      Res.reserve(Len);
+      for (uint64_t I = 0; I != Len; ++I) {
+        Res.push_back(
+            APInt(BitWidth, I, /*IsSigned=*/false, /*ImplicitTrunc=*/true));
+      }
+      return std::move(Res);
+    }
+    case Intrinsic::vector_reduce_fadd:
+    case Intrinsic::vector_reduce_fmul:
+    case Intrinsic::vector_reduce_fmaximum:
+    case Intrinsic::vector_reduce_fminimum: {
+      const auto DenormMode = getCurrentDenormalMode(RetTy);
+      const bool HasStart = IID == Intrinsic::vector_reduce_fadd ||
+                            IID == Intrinsic::vector_reduce_fmul;
+      const AnyValue &Vector = HasStart ? Args[1] : Args[0];
+      std::optional<APFloat> Res;
+      if (HasStart) {
+        if (Args[0].isPoison())
+          return AnyValue::poison();
+        const AnyValue ValidatedStart =
+            handleFMFFlags(Args[0], FMF, /*IsInput=*/true);
+        if (ValidatedStart.isPoison())
+          return AnyValue::poison();
+        Res = handleDenormal(ValidatedStart.asFloat(), DenormMode.Input,
+                             /*IsInput=*/true);
+      }
+      for (const auto &V : Vector.asAggregate()) {
+        if (V.isPoison())
+          return AnyValue::poison();
+        const AnyValue ValidatedOp = handleFMFFlags(V, FMF, /*IsInput=*/true);
+        if (ValidatedOp.isPoison())
+          return AnyValue::poison();
+        APFloat Op = handleDenormal(ValidatedOp.asFloat(), DenormMode.Input,
+                                    /*IsInput=*/true);
+        if (!Res) {
+          Res = std::move(Op);
+          continue;
+        }
+        switch (IID) {
+        case Intrinsic::vector_reduce_fadd:
+          *Res = *Res + Op;
+          break;
+        case Intrinsic::vector_reduce_fmul:
+          *Res = *Res * Op;
+          break;
+        case Intrinsic::vector_reduce_fmaximum:
+          *Res = maximum(*Res, Op);
+          break;
+        case Intrinsic::vector_reduce_fminimum:
+          *Res = minimum(*Res, Op);
+          break;
+        default:
+          llvm_unreachable("Unexpected intrinsic ID");
+        }
+      }
+      assert(Res.has_value());
+      const AnyValue ValidatedRes =
+          handleFMFFlags(*Res, FMF, /*IsInput=*/false);
+      if (ValidatedRes.isPoison())
+        return AnyValue::poison();
+      const APFloat FRes =
+          handleDenormal(ValidatedRes.asFloat(), DenormMode.Output,
+                         /*IsInput=*/false);
+      SmallVector<const APFloat *, 8> InputVec;
+      InputVec.reserve(Vector.asAggregate().size());
+      transform(
+          Vector.asAggregate(), std::back_inserter(InputVec),
+          [](const AnyValue &V) -> const APFloat * { return &V.asFloat(); });
+      return applyNaNPropagation(FRes, InputVec);
+    }
+    case Intrinsic::vector_reduce_fmax:
+    case Intrinsic::vector_reduce_fmin: {
+      const auto DenormMode = getCurrentDenormalMode(RetTy);
+      const auto &Vector = Args[0].asAggregate();
+      SmallVector<APFloat, 8> InputFloats;
+      SmallVector<const APFloat *, 8> InputVec;
+      InputFloats.reserve(Vector.size());
+      InputVec.reserve(Vector.size());
+      for (const auto &V : Vector) {
+        if (V.isPoison())
+          return AnyValue::poison();
+        const AnyValue ValidatedOp = handleFMFFlags(V, FMF, /*IsInput=*/true);
+        if (ValidatedOp.isPoison())
+          return AnyValue::poison();
+        InputFloats.push_back(handleDenormal(ValidatedOp.asFloat(),
+                                             DenormMode.Input,
+                                             /*IsInput=*/true));
+        InputVec.push_back(&InputFloats.back());
+      }
+      assert(!InputVec.empty());
+      SmallVector<APFloat, 8> Worklist(InputFloats);
+      const bool HasSNaN =
+          any_of(InputVec, [](const APFloat *V) { return V->isSignaling(); });
+      while (Worklist.size() > 1) {
+        size_t LHSIdx = 0;
+        size_t RHSIdx = 1;
+        if (HasSNaN) {
+          LHSIdx = Ctx.getRandomUInt64() % Worklist.size();
+          RHSIdx = Ctx.getRandomUInt64() % (Worklist.size() - 1);
+          if (RHSIdx >= LHSIdx)
+            ++RHSIdx;
+        }
+
+        APFloat Res =
+            IID == Intrinsic::vector_reduce_fmax
+                ? maxnumWithSNaNQuieting(Worklist[LHSIdx], Worklist[RHSIdx])
+                : minnumWithSNaNQuieting(Worklist[LHSIdx], Worklist[RHSIdx]);
+        if (LHSIdx < RHSIdx)
+          std::swap(LHSIdx, RHSIdx);
+        Worklist.erase(Worklist.begin() + LHSIdx);
+        Worklist.erase(Worklist.begin() + RHSIdx);
+        Worklist.push_back(std::move(Res));
+      }
+
+      AnyValue ValidatedRes =
+          handleFMFFlags(Worklist.front(), FMF, /*IsInput=*/false);
+      if (ValidatedRes.isPoison())
+        return AnyValue::poison();
+      APFloat FRes = handleDenormal(ValidatedRes.asFloat(), DenormMode.Output,
+                                    /*IsInput=*/false);
+
+      return applyNaNPropagation(FRes, InputVec);
+    }
+    case Intrinsic::fabs: {
+      return visitBitwiseFPUnOpWithResult(
+          RetTy, FMF, Args[0],
+          [](const APFloat &Operand) -> APFloat { return abs(Operand); });
+    }
+    case Intrinsic::fma: {
+      return visitFPTriOpWithResult(
+          RetTy, FMF, Args[0], Args[1], Args[2],
+          [](const APFloat &Op1, const APFloat &Op2,
+             const APFloat &Op3) -> APFloat {
+            auto Res = Op1;
+            Res.fusedMultiplyAdd(Op2, Op3, RoundingMode::NearestTiesToEven);
+            return Res;
+          });
+    }
+    case Intrinsic::fmuladd: {
+      return visitFPTriOpWithResult(
+          RetTy, FMF, Args[0], Args[1], Args[2],
+          [&](const APFloat &Op1, const APFloat &Op2,
+              const APFloat &Op3) -> APFloat {
+            if (Ctx.fuseMultiplyAdd()) {
+              auto Res = Op1;
+              Res.fusedMultiplyAdd(Op2, Op3, RoundingMode::NearestTiesToEven);
+              return Res;
+            }
+            return Op1 * Op2 + Op3;
+          });
+    }
+    case Intrinsic::is_fpclass: {
+      const FPClassTest Mask =
+          static_cast<FPClassTest>(Args[1].asInteger().getZExtValue());
+      return computeUnOp(RetTy, Args[0], [&](const AnyValue &Op) -> AnyValue {
+        if (Op.isPoison())
+          return AnyValue::poison();
+        return AnyValue::boolean(
+            static_cast<bool>(Op.asFloat().classify() & Mask));
+      });
+    }
+    case Intrinsic::copysign: {
+      return computeBinOp(
+          RetTy, Args[0], Args[1],
+          [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+            if (LHS.isPoison() || RHS.isPoison())
+              return AnyValue::poison();
+            const AnyValue ValidatedLHS =
+                handleFMFFlags(LHS, FMF, /*IsInput=*/true);
+            const AnyValue ValidatedRHS =
+                handleFMFFlags(RHS, FMF, /*IsInput=*/true);
+            if (ValidatedLHS.isPoison() || ValidatedRHS.isPoison())
+              return AnyValue::poison();
+
+            return handleFMFFlags(APFloat::copySign(ValidatedLHS.asFloat(),
+                                                    ValidatedRHS.asFloat()),
+                                  FMF, /*IsInput=*/false);
+          });
+    }
+    case Intrinsic::maxnum:
+    case Intrinsic::minnum:
+    case Intrinsic::maximum:
+    case Intrinsic::minimum:
+    case Intrinsic::maximumnum:
+    case Intrinsic::minimumnum: {
+      return visitFPBinOpWithResult(
+          RetTy, FMF, Args[0], Args[1],
+          [&](const APFloat &LHS, const APFloat &RHS) -> APFloat {
+            switch (IID) {
+            case Intrinsic::maximum:
+              return maximum(LHS, RHS);
+            case Intrinsic::minimum:
+              return minimum(LHS, RHS);
+            case Intrinsic::maximumnum:
+              return maximumnum(LHS, RHS);
+            case Intrinsic::minimumnum:
+              return minimumnum(LHS, RHS);
+            case Intrinsic::maxnum:
+              return maxnumWithSNaNQuieting(LHS, RHS);
+            case Intrinsic::minnum:
+              return minnumWithSNaNQuieting(LHS, RHS);
+            default:
+              llvm_unreachable("Unexpected intrinsic ID");
+            }
+          });
+    }
+    case Intrinsic::fptosi_sat:
+    case Intrinsic::fptoui_sat: {
+      const auto BitWidth = RetTy->getScalarSizeInBits();
+      return computeUnOp(RetTy, Args[0], [&](const AnyValue &Op) -> AnyValue {
+        if (Op.isPoison())
+          return AnyValue::poison();
+        const APFloat &Operand = Op.asFloat();
+        APSInt V(BitWidth, IID == Intrinsic::fptoui_sat);
+        [[maybe_unused]] bool IsExact;
+        Operand.convertToInteger(V, APFloat::rmTowardZero, &IsExact);
+        return V;
+      });
+    }
+    case Intrinsic::memcpy:
+    case Intrinsic::memcpy_inline:
+    case Intrinsic::memmove:
+      return callMemTransferIntrinsic(CB, Args, IID);
+    case Intrinsic::memset:
+    case Intrinsic::memset_inline:
+      return callMemSetIntrinsic(CB, Args);
+    case Intrinsic::experimental_noalias_scope_decl:
+      // FIXME: Not implemented yet. Currently it acts as a noop.
+      return AnyValue();
+    case Intrinsic::experimental_cttz_elts: {
+      auto *IsZeroPoisonC = cast<ConstantInt>(CB.getArgOperand(1));
+      const bool IsZeroPoison = IsZeroPoisonC->isOne();
+
+      const auto &Vec = Args[0].asAggregate();
+      const unsigned RetBW = RetTy->getIntegerBitWidth();
+
+      if (!isUIntN(RetBW, Vec.size()))
+        return AnyValue::poison();
+
+      uint64_t Count = 0;
+      for (const AnyValue &V : Vec) {
+        if (V.isPoison())
+          return AnyValue::poison();
+        if (!V.asInteger().isZero())
+          break;
+        ++Count;
+      }
+
+      if (Count == Vec.size() && IsZeroPoison)
+        return AnyValue::poison();
+      return APInt(RetBW, Count);
+    }
+    case Intrinsic::experimental_get_vector_length: {
+      auto *VFC = cast<ConstantInt>(CB.getArgOperand(1));
+      auto *ScalableC = cast<ConstantInt>(CB.getArgOperand(2));
+
+      if (Args[0].isPoison())
+        return AnyValue::poison();
+
+      const APInt &Cnt = Args[0].asInteger();
+      const uint64_t VF = VFC->getZExtValue();
+      const bool Scalable = ScalableC->isOne();
+
+      const uint64_t MaxLanes = Ctx.getEVL(ElementCount::get(VF, Scalable));
+
+      uint64_t Res = 0;
+      if (!Cnt.isZero()) {
+        if (Cnt.getActiveBits() <= 64 && Cnt.getZExtValue() <= MaxLanes) {
+          Res = Cnt.getZExtValue();
+        } else {
+          APInt Max(Cnt.getBitWidth(), MaxLanes);
+          APInt NumIters =
+              APIntOps::RoundingUDiv(Cnt, Max, APInt::Rounding::UP);
+          uint64_t Lower =
+              APIntOps::RoundingUDiv(Cnt, NumIters, APInt::Rounding::UP)
+                  .getZExtValue();
+          uint64_t Range = MaxLanes - Lower + 1;
+          Res = Lower + Ctx.getRandomUInt64() % Range;
+        }
+      }
+
+      if (isIntN(32, Res))
+        return APInt(32, Res);
+      return AnyValue::poison();
+    }
+
+    case Intrinsic::experimental_vector_extract_last_active: {
+      const auto &Data = Args[0].asAggregate();
+      const AnyValue &Mask = Args[1];
+
+      for (size_t I = Data.size(); I != 0; --I) {
+        switch (getMaskLane(Mask, I - 1)) {
+        case BooleanKind::True:
+          return Data[I - 1];
+        case BooleanKind::False:
+          break;
+        case BooleanKind::Poison:
+          return AnyValue::poison();
+        }
+      }
+
+      return Args[2];
+    }
+
+    case Intrinsic::experimental_vector_compress: {
+      const auto &Val = Args[0].asAggregate();
+      const AnyValue &Mask = Args[1];
+      const auto &Passthru = Args[2].asAggregate();
+
+      std::vector<AnyValue> Res;
+      Res.reserve(Val.size());
+
+      for (size_t I = 0, E = Val.size(); I != E; ++I) {
+        switch (getMaskLane(Mask, I)) {
+        case BooleanKind::True:
+          Res.push_back(Val[I]);
+          break;
+        case BooleanKind::False:
+          break;
+        case BooleanKind::Poison:
+          return AnyValue::getPoisonValue(Ctx, RetTy);
+        }
+      }
+
+      for (size_t I = Res.size(), E = Val.size(); I != E; ++I)
+        Res.push_back(Passthru[I]);
+      return std::move(Res);
+    }
+
+    case Intrinsic::experimental_vector_match: {
+      const auto &Search = Args[0].asAggregate();
+      const auto &Needles = Args[1].asAggregate();
+      const auto &Mask = Args[2].asAggregate();
+
+      std::vector<AnyValue> Res;
+      Res.reserve(Search.size());
+
+      for (size_t I = 0, E = Search.size(); I != E; ++I) {
+        switch (Mask[I].asBoolean()) {
+        case BooleanKind::False:
+          Res.push_back(AnyValue::boolean(false));
+          continue;
+        case BooleanKind::Poison:
+          Res.push_back(AnyValue::poison());
+          continue;
+        case BooleanKind::True:
+          break;
+        }
+
+        if (Search[I].isPoison()) {
+          Res.push_back(AnyValue::poison());
+          continue;
+        }
+
+        bool Found = false;
+        bool SawPoison = false;
+        for (const AnyValue &Needle : Needles) {
+          if (Needle.isPoison()) {
+            SawPoison = true;
+            break;
+          }
+          if (Search[I].asInteger() == Needle.asInteger())
+            Found = true;
+        }
+
+        if (SawPoison)
+          Res.push_back(AnyValue::poison());
+        else
+          Res.push_back(AnyValue::boolean(Found));
+      }
+
+      return std::move(Res);
+    }
+    case Intrinsic::experimental_vector_histogram_add:
+    case Intrinsic::experimental_vector_histogram_uadd_sat:
+    case Intrinsic::experimental_vector_histogram_umax:
+    case Intrinsic::experimental_vector_histogram_umin:
+      return callExperimentalVectorHistogramIntrinsic(CB, Args, IID);
     default:
       Handler.onUnrecognizedInstruction(CB);
       setFailed();
@@ -713,11 +1906,135 @@ public:
     return AnyValue();
   }
 
+  /// Handle both poison-generating and UB-implying attributes for parameters
+  /// and return values.
+  void handleAttributes(Type *Ty, AnyValue &V, AttributeSet AttrsAtCallSite,
+                        AttributeSet AttrsAtCallee) {
+    if (Ty->isIntOrIntVectorTy()) {
+      if (auto CRAttr = AttrsAtCallSite.getAttribute(Attribute::Range);
+          CRAttr.isValid())
+        applyRangeAttr(V, CRAttr.getRange());
+      if (auto CRAttr = AttrsAtCallee.getAttribute(Attribute::Range);
+          CRAttr.isValid())
+        applyRangeAttr(V, CRAttr.getRange());
+    }
+    if (AttributeFuncs::isNoFPClassCompatibleType(Ty)) {
+      if (auto CRAttr = AttrsAtCallSite.getAttribute(Attribute::NoFPClass);
+          CRAttr.isValid())
+        applyNoFPClassAttr(V, CRAttr.getNoFPClass());
+      if (auto CRAttr = AttrsAtCallee.getAttribute(Attribute::NoFPClass);
+          CRAttr.isValid())
+        applyNoFPClassAttr(V, CRAttr.getNoFPClass());
+    }
+    if (Ty->isPointerTy()) {
+      if (AttrsAtCallSite.hasAttribute(Attribute::NonNull) ||
+          AttrsAtCallee.hasAttribute(Attribute::NonNull))
+        applyNonNullAttr(V, Ty->getPointerAddressSpace(), DL);
+    }
+    if (Ty->isPtrOrPtrVectorTy()) {
+      if (MaybeAlign Align = AttrsAtCallSite.getAlignment())
+        applyAlignAttr(V, *Align);
+      if (MaybeAlign Align = AttrsAtCallee.getAlignment())
+        applyAlignAttr(V, *Align);
+    }
+    if ((AttrsAtCallSite.hasAttribute(Attribute::NoUndef) ||
+         AttrsAtCallee.hasAttribute(Attribute::NoUndef)) &&
+        violatesNoUndefAttr(V)) {
+      reportImmediateUB() << "The value " << V
+                          << " violates noundef attribute.";
+      return;
+    }
+    if (Ty->isPointerTy()) {
+      unsigned AS = Ty->getPointerAddressSpace();
+      if (uint64_t DereferenceableBytes =
+              std::max(AttrsAtCallSite.getDereferenceableBytes(),
+                       AttrsAtCallee.getDereferenceableBytes())) {
+        if (violatesDereferenceableBytesAttr(V, DereferenceableBytes,
+                                             /*OrNull=*/false, AS, Ctx))
+          reportImmediateUB()
+              << "The value " << V << " violates dereferenceable("
+              << DereferenceableBytes << ") attribute.";
+      } else if (uint64_t DereferenceableOrNullBytes =
+                     std::max(AttrsAtCallSite.getDereferenceableOrNullBytes(),
+                              AttrsAtCallee.getDereferenceableOrNullBytes())) {
+        if (violatesDereferenceableBytesAttr(V, DereferenceableOrNullBytes,
+                                             /*OrNull=*/true, AS, Ctx))
+          reportImmediateUB() << "The value " << V
+                              << " violates "
+                                 "dereferenceable_or_null("
+                              << DereferenceableOrNullBytes << ") attribute.";
+      }
+    }
+  }
+
+  /// Handle both poison-generating and UB-implying metadata on instructions.
+  void handleMetadata(Type *Ty, AnyValue &V, Instruction &I) {
+    auto ExtractFirstIntOperand = [](const MDNode *Node) {
+      return mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
+    };
+
+    if (Ty->isIntOrIntVectorTy()) {
+      if (MDNode *Ranges = I.getMetadata(LLVMContext::MD_range)) {
+        SmallVector<ConstantRange> RangeList;
+        for (uint32_t I = 0; I < Ranges->getNumOperands(); I += 2) {
+          RangeList.emplace_back(
+              mdconst::extract<ConstantInt>(Ranges->getOperand(I))->getValue(),
+              mdconst::extract<ConstantInt>(Ranges->getOperand(I + 1))
+                  ->getValue());
+        }
+        forEachScalarValue(V, [&](AnyValue &Scalar) {
+          if (!Scalar.isInteger())
+            return;
+          for (auto &CR : RangeList)
+            if (CR.contains(Scalar.asInteger()))
+              return;
+          Scalar = AnyValue::poison();
+        });
+      }
+    }
+    if (AttributeFuncs::isNoFPClassCompatibleType(Ty)) {
+      if (const MDNode *NoFPClass = I.getMetadata(LLVMContext::MD_nofpclass)) {
+        applyNoFPClassAttr(
+            V, static_cast<FPClassTest>(ExtractFirstIntOperand(NoFPClass)));
+      }
+    }
+    if (Ty->isPointerTy()) {
+      if (I.hasMetadata(LLVMContext::MD_nonnull))
+        applyNonNullAttr(V, Ty->getPointerAddressSpace(), DL);
+      // Unlike align attributes, !align is only defined for pointer types.
+      if (const MDNode *Alignment = I.getMetadata(LLVMContext::MD_align))
+        applyAlignAttr(V, Align(ExtractFirstIntOperand(Alignment)));
+    }
+    if (I.hasMetadata(LLVMContext::MD_noundef) && violatesNoUndefAttr(V)) {
+      reportImmediateUB() << "The value " << V
+                          << " violates !noundef metadata.";
+      return;
+    }
+    if (Ty->isPointerTy()) {
+      unsigned AS = Ty->getPointerAddressSpace();
+      if (const MDNode *DereferenceableBytes =
+              I.getMetadata(LLVMContext::MD_dereferenceable)) {
+        uint64_t Bytes = ExtractFirstIntOperand(DereferenceableBytes);
+        if (violatesDereferenceableBytesAttr(V, Bytes,
+                                             /*OrNull=*/false, AS, Ctx))
+          reportImmediateUB()
+              << "The value " << V << " violates !dereferenceable !{i64 "
+              << Bytes << "} metadata.";
+      } else if (const MDNode *DereferenceableOrNullBytes =
+                     I.getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
+        uint64_t Bytes = ExtractFirstIntOperand(DereferenceableOrNullBytes);
+        if (violatesDereferenceableBytesAttr(V, Bytes,
+                                             /*OrNull=*/true, AS, Ctx))
+          reportImmediateUB()
+              << "The value " << V << " violates !dereferenceable_or_null!{i64 "
+              << Bytes << "} metadata.";
+      }
+    }
+  }
+
   void enterCall(CallBase &CB) {
     Function *Callee = CB.getCalledFunction();
-    // TODO: handle parameter attributes (Attributes from known callee should be
-    // applied if available).
-    // TODO: handle byval/initializes
+    // TODO: handle initializes
     auto &CalleeArgs = CurrentFrame->CalleeArgs;
     assert(CalleeArgs.empty() &&
            "Forgot to call returnFromCallee before entering a new call.");
@@ -740,17 +2057,20 @@ public:
 
       auto &CalleeVal = getValue(CalledOperand);
       if (CalleeVal.isPoison()) {
-        reportImmediateUB("Indirect call through poison function pointer.");
+        reportImmediateUB() << "Indirect call through poison function pointer.";
         return;
       }
       Callee = Ctx.getTargetFunction(CalleeVal.asPointer());
       if (!Callee) {
-        reportImmediateUB("Indirect call through invalid function pointer.");
+        reportImmediateUB()
+            << "Indirect call through invalid function pointer.";
         return;
       }
       if (Callee->getFunctionType() != CB.getFunctionType()) {
-        reportImmediateUB("Indirect call through a function pointer with "
-                          "mismatched signature.");
+        reportImmediateUB() << "Indirect call through a function pointer with "
+                               "mismatched signature. Expected: "
+                            << *CB.getFunctionType()
+                            << ", Actual: " << *Callee->getFunctionType();
         return;
       }
     }
@@ -759,6 +2079,70 @@ public:
     assert(
         Callee->getFunctionType() == CB.getFunctionType() &&
         "Expected the callee function type to match the call site signature.");
+
+    // Handle parameter attributes (Attributes from resolved callee should be
+    // applied if available).
+    for (auto [I, Arg] : enumerate(CB.args())) {
+      Type *ArgTy = Arg->getType();
+      AnyValue &ArgVal = CalleeArgs[I];
+
+      // CallBase::paramHasAttr also checks parameter attributes at known
+      // callee. We do it explicitly to avoid duplication.
+      AttributeSet AttrsAtCallSite = CB.getParamAttributes(I);
+      AttributeSet AttrsAtCallee = Callee->getAttributes().getParamAttrs(I);
+
+      if (ArgTy->isPointerTy()) {
+        auto *ByValTy = AttrsAtCallSite.getByValType();
+        auto *ByValTyFromCallee = AttrsAtCallee.getByValType();
+        if (ByValTy != ByValTyFromCallee) {
+          reportImmediateUB()
+              << "Mismatched byval attribute between callee and callsite.";
+          return;
+        }
+        if (ByValTy) {
+          if (ArgVal.isPoison()) {
+            reportImmediateUB() << "Invalid poison byval pointer argument.";
+            return;
+          }
+
+          uint64_t Size = Ctx.getEffectiveTypeAllocSize(ByValTy);
+          MaybeAlign AllocAlign = AttrsAtCallSite.getAlignment();
+          // Ignore the alignment at the callsite when it is set on the callee.
+          if (MaybeAlign CalleeAlign = AttrsAtCallee.getAlignment())
+            AllocAlign = CalleeAlign;
+          if (!AllocAlign.has_value()) {
+            // If the alignment is not specified, we use the default ABI
+            // alignment. This is the default behavior of
+            // TargetLoweringBase::getByValTypeAlignment.
+            AllocAlign = DL.getABITypeAlign(ByValTy);
+          }
+          assert(I < Callee->arg_size() &&
+                 "Byval pointers cannot be passed via variadic arguments.");
+          auto Obj = Ctx.allocate(
+              Size, AllocAlign->value(), Callee->getArg(I)->getName(),
+              ArgTy->getPointerAddressSpace(), MemInitKind::Uninitialized,
+              MemAllocKind::Stack);
+          if (!Obj) {
+            reportError()
+                << "Insufficient stack space for byval pointer argument.";
+            return;
+          }
+          if (auto [MO, Offset] = verifyMemAccess(
+                  ArgVal.asPointer(), Size,
+                  std::max(AllocAlign.value(),
+                           AttrsAtCallSite.getAlignment().valueOrOne()),
+                  /*IsStore=*/false);
+              MO)
+            copy(MO->getBytes().slice(Offset, Size), Obj->getBytes().begin());
+          else
+            return;
+          CurrentFrame->CalleeByValArgs.push_back(Obj);
+          ArgVal = Ctx.deriveFromMemoryObject(std::move(Obj));
+        }
+      }
+      handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);
+    }
+
     CurrentFrame->ResolvedCallee = Callee;
     if (Callee->isIntrinsic()) {
       CurrentFrame->CalleeRetVal = callIntrinsic(CB, CalleeArgs);
@@ -771,7 +2155,7 @@ public:
     } else {
       uint32_t MaxStackDepth = Ctx.getMaxStackDepth();
       if (MaxStackDepth && CallStack.size() >= MaxStackDepth) {
-        reportError("Maximum stack depth exceeded.");
+        reportError() << "Maximum stack depth exceeded.";
         return;
       }
       assert(!Callee->empty() && "Expected a defined function.");
@@ -813,23 +2197,23 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       // Priority: Immediate UB > poison > normal value
       if (RHS.isPoison()) {
-        reportImmediateUB("Division by zero (refine RHS to 0).");
+        reportImmediateUB() << "Division by zero (refine RHS to 0).";
         return AnyValue::poison();
       }
       const APInt &RHSVal = RHS.asInteger();
       if (RHSVal.isZero()) {
-        reportImmediateUB("Division by zero.");
+        reportImmediateUB() << "Division by zero.";
         return AnyValue::poison();
       }
       if (LHS.isPoison()) {
         if (RHSVal.isAllOnes())
-          reportImmediateUB(
-              "Signed division overflow (refine LHS to INT_MIN).");
+          reportImmediateUB()
+              << "Signed division overflow (refine LHS to INT_MIN).";
         return AnyValue::poison();
       }
       const APInt &LHSVal = LHS.asInteger();
       if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
-        reportImmediateUB("Signed division overflow.");
+        reportImmediateUB() << "Signed division overflow.";
         return AnyValue::poison();
       }
 
@@ -849,23 +2233,24 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       // Priority: Immediate UB > poison > normal value
       if (RHS.isPoison()) {
-        reportImmediateUB("Division by zero (refine RHS to 0).");
+        reportImmediateUB() << "Division by zero (refine RHS to 0).";
         return AnyValue::poison();
       }
       const APInt &RHSVal = RHS.asInteger();
       if (RHSVal.isZero()) {
-        reportImmediateUB("Division by zero.");
+        reportImmediateUB() << "Division by zero.";
         return AnyValue::poison();
       }
       if (LHS.isPoison()) {
         if (RHSVal.isAllOnes())
-          reportImmediateUB(
-              "Signed division overflow (refine LHS to INT_MIN).");
+          reportImmediateUB()
+              << "Signed division overflow (refine LHS to INT_MIN).";
         return AnyValue::poison();
       }
       const APInt &LHSVal = LHS.asInteger();
       if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
-        reportImmediateUB("Signed division overflow.");
+        reportImmediateUB() << "Signed division overflow. LHS: " << LHSVal
+                            << ", RHS: " << RHSVal;
         return AnyValue::poison();
       }
 
@@ -877,12 +2262,12 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       // Priority: Immediate UB > poison > normal value
       if (RHS.isPoison()) {
-        reportImmediateUB("Division by zero (refine RHS to 0).");
+        reportImmediateUB() << "Division by zero (refine RHS to 0).";
         return AnyValue::poison();
       }
       const APInt &RHSVal = RHS.asInteger();
       if (RHSVal.isZero()) {
-        reportImmediateUB("Division by zero.");
+        reportImmediateUB() << "Division by zero.";
         return AnyValue::poison();
       }
       if (LHS.isPoison())
@@ -905,12 +2290,12 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       // Priority: Immediate UB > poison > normal value
       if (RHS.isPoison()) {
-        reportImmediateUB("Division by zero (refine RHS to 0).");
+        reportImmediateUB() << "Division by zero (refine RHS to 0).";
         return AnyValue::poison();
       }
       const APInt &RHSVal = RHS.asInteger();
       if (RHSVal.isZero()) {
-        reportImmediateUB("Division by zero.");
+        reportImmediateUB() << "Division by zero.";
         return AnyValue::poison();
       }
       if (LHS.isPoison())
@@ -918,6 +2303,51 @@ public:
       const APInt &LHSVal = LHS.asInteger();
       return LHSVal.urem(RHSVal);
     });
+  }
+
+  void visitFAdd(BinaryOperator &I) {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
+      APFloat Res = LHS;
+      Res.add(RHS, APFloat::rmNearestTiesToEven);
+      return Res;
+    });
+  }
+
+  void visitFSub(BinaryOperator &I) {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
+      APFloat Res = LHS;
+      Res.subtract(RHS, APFloat::rmNearestTiesToEven);
+      return Res;
+    });
+  }
+
+  void visitFMul(BinaryOperator &I) {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
+      APFloat Res = LHS;
+      Res.multiply(RHS, APFloat::rmNearestTiesToEven);
+      return Res;
+    });
+  }
+
+  void visitFDiv(BinaryOperator &I) {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
+      APFloat Res = LHS;
+      Res.divide(RHS, APFloat::rmNearestTiesToEven);
+      return Res;
+    });
+  }
+
+  void visitFRem(BinaryOperator &I) {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
+      APFloat Res = LHS;
+      Res.mod(RHS);
+      return Res;
+    });
+  }
+
+  void visitFNeg(UnaryOperator &I) {
+    visitBitwiseFPUnOp(
+        I, [](const APFloat &Operand) -> APFloat { return -Operand; });
   }
 
   void visitTruncInst(TruncInst &Trunc) {
@@ -944,6 +2374,104 @@ public:
     visitIntUnOp(SExt, [&](const APInt &Operand) -> AnyValue {
       uint32_t DestBW = SExt.getDestTy()->getScalarSizeInBits();
       return Operand.sext(DestBW);
+    });
+  }
+
+  void visitFPExtInst(FPExtInst &FPExt) { visitFPConvInst(FPExt); }
+
+  void visitFPTruncInst(FPTruncInst &FPTrunc) { visitFPConvInst(FPTrunc); }
+
+  void visitFPConvInst(Instruction &I) {
+    if (!Ctx.isDefaultFPEnv())
+      reportImmediateUB() << "Non-constrained floating-point operation assumes "
+                             "default floating-point environment";
+
+    const fltSemantics &DstSem =
+        I.getType()->getScalarType()->getFltSemantics();
+
+    visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
+      if (Operand.isPoison())
+        return AnyValue::poison();
+
+      FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
+      DenormalMode DenormMode =
+          getCurrentDenormalMode(I.getOperand(0)->getType());
+
+      auto ValidatedOperand = handleFMFFlags(Operand, FMF, /*IsInput=*/true);
+      if (ValidatedOperand.isPoison())
+        return ValidatedOperand;
+
+      APFloat FOperand = handleDenormal(ValidatedOperand.asFloat(),
+                                        DenormMode.Input, /*IsInput=*/true);
+      APFloat SourceNaN = FOperand;
+
+      bool LosesInfo;
+      FOperand.convert(DstSem, Ctx.getCurrentRoundingMode(), &LosesInfo);
+
+      if (auto ValidateRes = handleFMFFlags(FOperand, FMF, /*IsInput=*/false);
+          ValidateRes.isPoison())
+        return ValidateRes;
+
+      FOperand = handleDenormal(std::move(FOperand), DenormMode.Output, true);
+
+      return AnyValue(applyNaNPropagation(FOperand, {&SourceNaN}));
+    });
+  }
+
+  void visitFPToSIInst(FPToSIInst &FPToSI) {
+    visitFPToIntInst(FPToSI, /*IsUnsigned=*/false);
+  }
+
+  void visitFPToUIInst(FPToUIInst &FPToUI) {
+    visitFPToIntInst(FPToUI, /*IsUnsigned=*/true);
+  }
+
+  void visitFPToIntInst(Instruction &I, bool IsUnsigned) {
+    // Note: We DO NOT use CurrentRoundingMode here.
+    // Language specs require truncation towards zero for FP-to-Int conversions.
+    visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
+      if (Operand.isPoison())
+        return AnyValue::poison();
+
+      APSInt Res(I.getType()->getScalarSizeInBits(), /*isUnsigned=*/IsUnsigned);
+      bool IsExact;
+      APFloat::opStatus Status = Operand.asFloat().convertToInteger(
+          Res, APFloat::rmTowardZero, &IsExact);
+
+      if (Status == APFloat::opInvalidOp)
+        return AnyValue::poison();
+
+      return AnyValue(Res);
+    });
+  }
+
+  void visitSIToFPInst(SIToFPInst &SIToFP) {
+    visitIntToFPInst(SIToFP, /*IsSigned=*/true);
+  }
+
+  void visitUIToFPInst(UIToFPInst &UIToFP) {
+    visitIntToFPInst(UIToFP, /*IsSigned=*/false);
+  }
+
+  void visitIntToFPInst(Instruction &I, bool IsSigned) {
+    const fltSemantics &DstSem =
+        I.getType()->getScalarType()->getFltSemantics();
+
+    visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
+      if (Operand.isPoison())
+        return AnyValue::poison();
+
+      APInt IOperand = Operand.asInteger();
+
+      if (isa<UIToFPInst>(I) && I.hasNonNeg() && IOperand.isNegative())
+        return AnyValue::poison();
+
+      APFloat Res(DstSem);
+
+      Res.convertFromAPInt(Operand.asInteger(), /*IsSigned=*/IsSigned,
+                           Ctx.getCurrentRoundingMode());
+
+      return AnyValue(Res);
     });
   }
 
@@ -981,9 +2509,9 @@ public:
 
   void visitLShr(BinaryOperator &I) {
     visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
-      if (RHS.uge(cast<PossiblyExactOperator>(I).isExact()
-                      ? LHS.countr_zero() + 1
-                      : LHS.getBitWidth()))
+      if (RHS.uge(LHS.getBitWidth()) ||
+          (cast<PossiblyExactOperator>(I).isExact() &&
+           RHS.ugt(LHS.countr_zero())))
         return AnyValue::poison();
       return LHS.lshr(RHS);
     });
@@ -991,9 +2519,9 @@ public:
 
   void visitAShr(BinaryOperator &I) {
     visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
-      if (RHS.uge(cast<PossiblyExactOperator>(I).isExact()
-                      ? LHS.countr_zero() + 1
-                      : LHS.getBitWidth()))
+      if (RHS.uge(LHS.getBitWidth()) ||
+          (cast<PossiblyExactOperator>(I).isExact() &&
+           RHS.ugt(LHS.countr_zero())))
         return AnyValue::poison();
       return LHS.ashr(RHS);
     });
@@ -1003,9 +2531,10 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
-      // TODO: handle pointer comparison.
-      const APInt &LHSVal = LHS.asInteger();
-      const APInt &RHSVal = RHS.asInteger();
+      const APInt &LHSVal =
+          LHS.isPointer() ? LHS.asPointer().address() : LHS.asInteger();
+      const APInt &RHSVal =
+          RHS.isPointer() ? RHS.asPointer().address() : RHS.asInteger();
       if (I.hasSameSign() && LHSVal.isNonNegative() != RHSVal.isNonNegative())
         return AnyValue::poison();
       return AnyValue::boolean(
@@ -1013,41 +2542,75 @@ public:
     });
   }
 
+  void visitFCmpInst(FCmpInst &I) {
+    DenormalMode DenormMode =
+        getCurrentDenormalMode(I.getOperand(0)->getType());
+    FastMathFlags FMF = I.getFastMathFlags();
+
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      if (LHS.isPoison() || RHS.isPoison())
+        return AnyValue::poison();
+
+      if (auto ValidateRes = handleFMFFlags(LHS, FMF, /*IsInput=*/true);
+          ValidateRes.isPoison())
+        return ValidateRes;
+      if (auto ValidateRes = handleFMFFlags(RHS, FMF, /*IsInput=*/true);
+          ValidateRes.isPoison())
+        return ValidateRes;
+
+      APFloat FLHS =
+          handleDenormal(LHS.asFloat(), DenormMode.Input, /*IsInput=*/true);
+      APFloat FRHS =
+          handleDenormal(RHS.asFloat(), DenormMode.Input, /*IsInput=*/true);
+
+      return AnyValue::boolean(FCmpInst::compare(FLHS, FRHS, I.getPredicate()));
+    });
+  }
+
   void visitSelect(SelectInst &SI) {
-    // TODO: handle fast-math flags.
+    AnyValue Res;
+
     if (SI.getCondition()->getType()->isIntegerTy(1)) {
       switch (getValue(SI.getCondition()).asBoolean()) {
       case BooleanKind::True:
-        setResult(SI, getValue(SI.getTrueValue()));
-        return;
+        Res = getValue(SI.getTrueValue());
+        break;
       case BooleanKind::False:
-        setResult(SI, getValue(SI.getFalseValue()));
-        return;
+        Res = getValue(SI.getFalseValue());
+        break;
       case BooleanKind::Poison:
-        setResult(SI, AnyValue::getPoisonValue(Ctx, SI.getType()));
-        return;
+        Res = AnyValue::getPoisonValue(Ctx, SI.getType());
+        break;
       }
+    } else {
+      auto &Cond = getValue(SI.getCondition()).asAggregate();
+      auto &TV = getValue(SI.getTrueValue()).asAggregate();
+      auto &FV = getValue(SI.getFalseValue()).asAggregate();
+      std::vector<AnyValue> ResVec;
+      size_t Len = Cond.size();
+      ResVec.reserve(Len);
+      for (uint32_t I = 0; I != Len; ++I) {
+        switch (Cond[I].asBoolean()) {
+        case BooleanKind::True:
+          ResVec.push_back(TV[I]);
+          break;
+        case BooleanKind::False:
+          ResVec.push_back(FV[I]);
+          break;
+        case BooleanKind::Poison:
+          ResVec.push_back(AnyValue::poison());
+          break;
+        }
+      }
+      Res = AnyValue(std::move(ResVec));
     }
 
-    auto &Cond = getValue(SI.getCondition()).asAggregate();
-    auto &TV = getValue(SI.getTrueValue()).asAggregate();
-    auto &FV = getValue(SI.getFalseValue()).asAggregate();
-    std::vector<AnyValue> Res;
-    size_t Len = Cond.size();
-    Res.reserve(Len);
-    for (uint32_t I = 0; I != Len; ++I) {
-      switch (Cond[I].asBoolean()) {
-      case BooleanKind::True:
-        Res.push_back(TV[I]);
-        break;
-      case BooleanKind::False:
-        Res.push_back(FV[I]);
-        break;
-      case BooleanKind::Poison:
-        Res.push_back(AnyValue::poison());
-        break;
-      }
+    // Handle fast-math flags
+    if (auto *FPMO = dyn_cast<FPMathOperator>(&SI)) {
+      if (FastMathFlags FMF = FPMO->getFastMathFlags(); FMF.any())
+        Res = handleFMFFlags(std::move(Res), FMF, /*IsInput=*/true);
     }
+
     setResult(SI, std::move(Res));
   }
 
@@ -1056,20 +2619,22 @@ public:
     if (AI.isArrayAllocation()) {
       auto &Size = getValue(AI.getArraySize());
       if (Size.isPoison()) {
-        reportImmediateUB("Alloca with poison array size.");
+        reportImmediateUB() << "Alloca with poison array size.";
         return;
       }
       if (Size.asInteger().getActiveBits() > 64) {
-        reportImmediateUB(
-            "Alloca with large array size that overflows uint64_t.");
+        reportImmediateUB()
+            << "Alloca with large array size that overflows uint64_t. Size: "
+            << Size.asInteger();
         return;
       }
       bool Overflowed = false;
       AllocSize = SaturatingMultiply(AllocSize, Size.asInteger().getZExtValue(),
                                      &Overflowed);
       if (Overflowed) {
-        reportImmediateUB(
-            "Alloca with allocation size that overflows uint64_t.");
+        reportImmediateUB()
+            << "Alloca with allocation size that overflows uint64_t. Size: "
+            << Size.asInteger();
         return;
       }
     }
@@ -1083,7 +2648,7 @@ public:
                                             : MemInitKind::Uninitialized,
                             MemAllocKind::Stack);
     if (!Obj) {
-      reportError("Insufficient stack space.");
+      reportError() << "Insufficient stack space.";
       return;
     }
     CurrentFrame->Allocas.push_back(Obj);
@@ -1091,94 +2656,47 @@ public:
   }
 
   void visitGetElementPtrInst(GetElementPtrInst &GEP) {
-    uint32_t IndexBitWidth =
-        DL.getIndexSizeInBits(GEP.getType()->getPointerAddressSpace());
-    GEPNoWrapFlags Flags = GEP.getNoWrapFlags();
-    AnyValue Res = getValue(GEP.getPointerOperand());
-    AnyValue AccumulatedOffset = APInt(IndexBitWidth, 0);
-    if (Res.isAggregate())
-      AccumulatedOffset =
-          AnyValue::getVectorSplat(AccumulatedOffset, Res.asAggregate().size());
-    auto ApplyScaledOffset = [&](const AnyValue &Index, const APInt &Scale) {
-      if (Index.isAggregate() && !Res.isAggregate()) {
-        Res = AnyValue::getVectorSplat(Res, Index.asAggregate().size());
-        AccumulatedOffset = AnyValue::getVectorSplat(
-            AccumulatedOffset, Index.asAggregate().size());
-      }
-      if (Index.isAggregate() && Res.isAggregate()) {
-        for (auto &&[ResElem, IndexElem, OffsetElem] :
-             zip(Res.asAggregate(), Index.asAggregate(),
-                 AccumulatedOffset.asAggregate()))
-          ResElem = computeScaledPtrAdd(
-              ResElem, canonicalizeIndex(IndexElem, IndexBitWidth, Flags),
-              Scale, Flags, OffsetElem);
-      } else {
-        AnyValue CanonicalIndex =
-            canonicalizeIndex(Index, IndexBitWidth, Flags);
-        if (Res.isAggregate()) {
-          for (auto &&[ResElem, OffsetElem] :
-               zip(Res.asAggregate(), AccumulatedOffset.asAggregate()))
-            ResElem = computeScaledPtrAdd(ResElem, CanonicalIndex, Scale, Flags,
-                                          OffsetElem);
-        } else {
-          Res = computeScaledPtrAdd(Res, CanonicalIndex, Scale, Flags,
-                                    AccumulatedOffset);
-        }
-      }
-    };
+    setResult(GEP, Ctx.computeGEP(cast<GEPOperator>(GEP),
+                                  [this](Value *V) -> const AnyValue & {
+                                    return getValue(V);
+                                  }));
+  }
 
-    for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
-         GTI != GTE; ++GTI) {
-      Value *V = GTI.getOperand();
-
-      // Fast path for zero offsets.
-      if (auto *CI = dyn_cast<ConstantInt>(V)) {
-        if (CI->isZero())
-          continue;
-      }
-      if (isa<ConstantAggregateZero>(V))
-        continue;
-
-      // Handle a struct index, which adds its field offset to the pointer.
-      if (StructType *STy = GTI.getStructTypeOrNull()) {
-        unsigned ElementIdx = cast<ConstantInt>(V)->getZExtValue();
-        const StructLayout *SL = DL.getStructLayout(STy);
-        // Element offset is in bytes.
-        ApplyScaledOffset(
-            APInt(IndexBitWidth, SL->getElementOffset(ElementIdx)),
-            APInt(IndexBitWidth, 1));
-        continue;
-      }
-
-      // Truncate if type size exceeds index space.
-      // TODO: Should be documented in LangRef: GEPs with nowrap flags should
-      // return poison when the type size exceeds index space.
-      TypeSize Offset = GTI.getSequentialElementStride(DL);
-      APInt Scale(IndexBitWidth, Ctx.getEffectiveTypeSize(Offset),
-                  /*isSigned=*/false, /*implicitTrunc=*/true);
-      if (!Scale.isZero())
-        ApplyScaledOffset(getValue(V), Scale);
-    }
-
-    setResult(GEP, std::move(Res));
+  void visitPtrToInt(PtrToIntInst &I) {
+    return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
+      if (V.isPoison())
+        return AnyValue::poison();
+      Ctx.exposeProvenance(V.asPointer().provenance());
+      return V.asPointer().address();
+    });
   }
 
   void visitIntToPtr(IntToPtrInst &I) {
     return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
       if (V.isPoison())
         return AnyValue::poison();
-      // TODO: expose provenance
+      auto Prov = Ctx.getWildcardProvenance();
       // TODO: check metadata
-      return Pointer(V.asInteger().zextOrTrunc(
-          DL.getPointerSizeInBits(I.getType()->getPointerAddressSpace())));
+      return Pointer(std::move(Prov),
+                     V.asInteger().zextOrTrunc(DL.getPointerSizeInBits(
+                         I.getType()->getPointerAddressSpace())));
+    });
+  }
+
+  void visitPtrToAddr(PtrToAddrInst &I) {
+    unsigned BitWidth = I.getType()->getScalarSizeInBits();
+    return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
+      if (V.isPoison())
+        return AnyValue::poison();
+      return V.asPointer().address().trunc(BitWidth);
     });
   }
 
   void visitLoadInst(LoadInst &LI) {
-    auto RetVal =
-        load(getValue(LI.getPointerOperand()), LI.getAlign(), LI.getType());
+    auto RetVal = load(getValue(LI.getPointerOperand()), LI.getAlign(),
+                       LI.getType(), LI.hasMetadata(LLVMContext::MD_noundef));
     // TODO: track volatile loads
-    // TODO: handle metadata
+    handleMetadata(LI.getType(), RetVal, LI);
     setResult(LI, std::move(RetVal));
   }
 
@@ -1301,13 +2819,14 @@ public:
         assert(Top.State == FrameState::Running &&
                "Expected to be in running state.");
         if (MaxSteps != 0 && Steps >= MaxSteps) {
-          reportError("Exceeded maximum number of execution steps.");
+          reportError() << "Exceeded maximum number of execution steps.";
           break;
         }
         ++Steps;
 
         Instruction &I = *Top.PC;
         visit(&I);
+        Ctx.resetNoncacheableConstantBuffer();
         if (hasProgramExited())
           break;
 

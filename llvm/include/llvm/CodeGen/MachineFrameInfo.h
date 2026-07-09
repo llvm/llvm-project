@@ -833,7 +833,9 @@ public:
 
   /// Create a new statically sized stack object that represents a spill slot,
   /// returning a nonnegative identifier to represent it.
-  LLVM_ABI int CreateSpillStackObject(uint64_t Size, Align Alignment);
+  LLVM_ABI int
+  CreateSpillStackObject(uint64_t Size, Align Alignment,
+                         TargetStackID::Value StackID = TargetStackID::Default);
 
   /// Remove or mark dead a statically sized stack object.
   void RemoveStackObject(int ObjectIdx) {

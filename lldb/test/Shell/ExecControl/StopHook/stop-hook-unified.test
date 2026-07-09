@@ -1,0 +1,48 @@
+# Test that stop-hooks added via "target hook add -S" work the same as
+# "target stop-hook add".
+#
+# RUN: %clang_host %p/Inputs/stop-hook.c -g -o %t
+# RUN: %lldb -b -s %p/Inputs/stop-hook-unified-1.lldbinit -s %s -f %t \
+# RUN:      | FileCheck %s
+# UNSUPPORTED: system-windows
+
+break set -f stop-hook.c -p "// Set breakpoint here to test target stop-hook"
+break set -f stop-hook.c -p "// Another breakpoint which is outside of the stop-hook range"
+target hook list
+
+# CHECK: Hook: 1
+# CHECK-NEXT:  State: enabled
+# CHECK-NEXT:  Triggers: stop
+# CHECK-NEXT:  Commands:
+# CHECK-NEXT:    expr ptr
+# CHECK-NEXT:  Specifier:
+# CHECK-NEXT:    Function: b.
+
+run
+# Stopping inside of the stop hook range
+# CHECK: (lldb) run
+# CHECK-NEXT: (void *) ${{.*}} = 0x
+
+thread step-over
+# Stepping inside of the stop hook range
+# CHECK: (lldb) thread step-over
+# CHECK-NEXT: (void *) ${{.*}} = 0x
+# CHECK: ->{{.*}} // We should stop here after stepping.
+
+process continue
+# Stopping outside of the stop hook range
+# CHECK: (lldb) process continue
+# CHECK-NOT: (void *)
+# CHECK: ->{{.*}} // Another breakpoint which is outside of the stop-hook range.
+
+thread step-over
+# Stepping inside of the stop hook range
+# CHECK: (lldb) thread step-over
+# CHECK-NOT: (void *)
+
+settings set auto-confirm true
+target hook delete
+
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: No hooks.

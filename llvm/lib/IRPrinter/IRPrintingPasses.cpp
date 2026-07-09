@@ -32,10 +32,6 @@ PrintModulePass::PrintModulePass(raw_ostream &OS, const std::string &Banner,
       EmitSummaryIndex(EmitSummaryIndex) {}
 
 PreservedAnalyses PrintModulePass::run(Module &M, ModuleAnalysisManager &AM) {
-  // Remove intrinsic declarations when printing in the new format.
-  // TODO: consider removing this now that debug intrinsics are gone.
-  M.removeDebugIntrinsicDeclarations();
-
   if (llvm::isFunctionInPrintList("*")) {
     if (!Banner.empty())
       OS << Banner << "\n";

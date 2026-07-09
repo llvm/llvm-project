@@ -592,8 +592,7 @@ loop:
   %cmp = icmp slt i32 %next_i, 16
   br i1 %cmp, label %loop, label %exit
 exit:
-  %mask = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %acc_next = tail call <vscale x 8 x i16> @llvm.aarch64.sve.add.nxv8i16(<vscale x 8 x i1> %mask, <vscale x 8 x i16> %acc_next_lo, <vscale x 8 x i16> %acc_next_hi)
+  %acc_next = tail call <vscale x 8 x i16> @llvm.aarch64.sve.add.nxv8i16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> %acc_next_lo, <vscale x 8 x i16> %acc_next_hi)
   %reduce = tail call i16 @llvm.vector.reduce.add.nxv8i16(<vscale x 8 x i16> %acc_next)
   ret i16 %reduce
 }

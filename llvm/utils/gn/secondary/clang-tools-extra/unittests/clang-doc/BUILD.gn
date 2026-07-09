@@ -42,6 +42,7 @@ unittest("ClangDocTests") {
     "HTMLGeneratorTest.cpp",
     "JSONGeneratorTest.cpp",
     "MDGeneratorTest.cpp",
+    "MarkdownParserTest.cpp",
     "MergeTest.cpp",
     "SerializeTest.cpp",
     "YAMLGeneratorTest.cpp",

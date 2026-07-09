@@ -947,8 +947,7 @@ static Value *foldIsPowerOf2OrZero(ICmpInst *Cmp0, ICmpInst *Cmp1, bool IsAnd,
                                    InstCombinerImpl &IC) {
   CmpPredicate Pred0, Pred1;
   Value *X;
-  if (!match(Cmp0, m_ICmp(Pred0, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
-                          m_SpecificInt(1))) ||
+  if (!match(Cmp0, m_ICmp(Pred0, m_Ctpop(m_Value(X)), m_SpecificInt(1))) ||
       !match(Cmp1, m_ICmp(Pred1, m_Specific(X), m_ZeroInt())))
     return nullptr;
 
@@ -985,8 +984,7 @@ static Value *foldIsPowerOf2(ICmpInst *Cmp0, ICmpInst *Cmp1, bool JoinedByAnd,
   Value *X;
   if (JoinedByAnd &&
       match(Cmp0, m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(X), m_ZeroInt())) &&
-      match(Cmp1, m_SpecificICmp(ICmpInst::ICMP_ULT,
-                                 m_Intrinsic<Intrinsic::ctpop>(m_Specific(X)),
+      match(Cmp1, m_SpecificICmp(ICmpInst::ICMP_ULT, m_Ctpop(m_Specific(X)),
                                  m_SpecificInt(2)))) {
     auto *CtPop = cast<Instruction>(Cmp1->getOperand(0));
     // Drop range attributes and re-infer them in the next iteration.
@@ -997,8 +995,7 @@ static Value *foldIsPowerOf2(ICmpInst *Cmp0, ICmpInst *Cmp1, bool JoinedByAnd,
   // (X == 0) || (ctpop(X) u> 1) --> ctpop(X) != 1
   if (!JoinedByAnd &&
       match(Cmp0, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(X), m_ZeroInt())) &&
-      match(Cmp1, m_SpecificICmp(ICmpInst::ICMP_UGT,
-                                 m_Intrinsic<Intrinsic::ctpop>(m_Specific(X)),
+      match(Cmp1, m_SpecificICmp(ICmpInst::ICMP_UGT, m_Ctpop(m_Specific(X)),
                                  m_SpecificInt(1)))) {
     auto *CtPop = cast<Instruction>(Cmp1->getOperand(0));
     // Drop range attributes and re-infer them in the next iteration.
@@ -1475,11 +1472,8 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
                         FMFSource::intersect(LHS, RHS));
   }
 
-  // This transform is not valid for a logical select.
-  if (!IsLogicalSelect &&
-      ((PredL == FCmpInst::FCMP_ORD && PredR == FCmpInst::FCMP_ORD && IsAnd) ||
-       (PredL == FCmpInst::FCMP_UNO && PredR == FCmpInst::FCMP_UNO &&
-        !IsAnd))) {
+  if ((PredL == FCmpInst::FCMP_ORD && PredR == FCmpInst::FCMP_ORD && IsAnd) ||
+      (PredL == FCmpInst::FCMP_UNO && PredR == FCmpInst::FCMP_UNO && !IsAnd)) {
     if (LHS0->getType() != RHS0->getType())
       return nullptr;
 
@@ -1489,8 +1483,14 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       // Ignore the constants because they are obviously not NANs:
       // (fcmp ord x, 0.0) & (fcmp ord y, 0.0)  -> (fcmp ord x, y)
       // (fcmp uno x, 0.0) | (fcmp uno y, 0.0)  -> (fcmp uno x, y)
-      return Builder.CreateFCmpFMF(PredL, LHS0, RHS0,
-                                   FMFSource::intersect(LHS, RHS));
+      Value *Y = RHS0;
+      FastMathFlags FMF = LHS->getFastMathFlags() & RHS->getFastMathFlags();
+      if (IsLogicalSelect) {
+        Y = Builder.CreateFreeze(Y, Y->getName() + ".fr");
+        FMF.setNoNaNs(false);
+        FMF.setNoInfs(false);
+      }
+      return Builder.CreateFCmpFMF(PredL, LHS0, Y, FMF);
     }
   }
 
@@ -1637,7 +1637,7 @@ Instruction *InstCombinerImpl::foldLogicOfIsFPClass(BinaryOperator &BO,
       return replaceInstUsesWith(BO, II);
     }
 
-    CallInst *NewClass =
+    Value *NewClass =
         Builder.CreateIntrinsic(Intrinsic::is_fpclass, {ClassVal0->getType()},
                                 {ClassVal0, Builder.getInt32(NewClassMask)});
     return replaceInstUsesWith(BO, NewClass);
@@ -2757,7 +2757,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
                         ? Builder.CreateNot(C)
                         : getFreelyInverted(C, C->hasOneUse(), &Builder);
       if (NotC != nullptr)
-        return BinaryOperator::CreateAnd(Op1, Builder.CreateNot(C));
+        return BinaryOperator::CreateAnd(Op1, NotC);
     }
 
     // (A | B) & (~A ^ B) -> A & B
@@ -3157,7 +3157,7 @@ static Value *matchOrConcat(Instruction &Or, InstCombiner::BuilderTy &Builder) {
     Value *NewLower = Builder.CreateZExt(Lo, Ty);
     Value *NewUpper = Builder.CreateZExt(Hi, Ty);
     NewUpper = Builder.CreateShl(NewUpper, HalfWidth);
-    Value *BinOp = Builder.CreateOr(NewLower, NewUpper);
+    Value *BinOp = Builder.CreateDisjointOr(NewLower, NewUpper);
     return Builder.CreateIntrinsic(id, Ty, BinOp);
   };
 
@@ -3903,6 +3903,11 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
     if (!ICmpDecompose.has_value())
       return std::nullopt;
 
+    // decomposeBitTest may provide a scalar bit test for a vector select.
+    // Ensure the types match.
+    if (ICmpDecompose->X->getType() != V->getType())
+      return std::nullopt;
+
     assert(ICmpInst::isEquality(ICmpDecompose->Pred) &&
            ICmpDecompose->C.isZero());
 
@@ -3912,8 +3917,7 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
     if (!EqZero->isZero() || NeZero->isZero())
       return std::nullopt;
 
-    if (!ICmpDecompose->Mask.isPowerOf2() || ICmpDecompose->Mask.isZero() ||
-        NeZero->getBitWidth() != ICmpDecompose->Mask.getBitWidth())
+    if (!ICmpDecompose->Mask.isPowerOf2() || ICmpDecompose->Mask.isZero())
       return std::nullopt;
 
     if (!NeZero->urem(ICmpDecompose->Mask).isZero())
@@ -3967,16 +3971,16 @@ Value *InstCombinerImpl::reassociateDisjointOr(Value *LHS, Value *RHS) {
   Value *X, *Y;
   if (match(RHS, m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))))) {
     if (Value *Res = foldDisjointOr(LHS, X))
-      return Builder.CreateOr(Res, Y, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, Y);
     if (Value *Res = foldDisjointOr(LHS, Y))
-      return Builder.CreateOr(Res, X, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, X);
   }
 
   if (match(LHS, m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))))) {
     if (Value *Res = foldDisjointOr(X, RHS))
-      return Builder.CreateOr(Res, Y, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, Y);
     if (Value *Res = foldDisjointOr(Y, RHS))
-      return Builder.CreateOr(Res, X, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, X);
   }
 
   return nullptr;
@@ -4441,8 +4445,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       match(Op0, m_Or(m_Value(A), m_ConstantInt(CI)))) {
     bool IsDisjointOuter = cast<PossiblyDisjointInst>(I).isDisjoint();
     bool IsDisjointInner = cast<PossiblyDisjointInst>(Op0)->isDisjoint();
-    Value *Inner = Builder.CreateOr(A, Op1);
-    cast<PossiblyDisjointInst>(Inner)->setIsDisjoint(IsDisjointOuter);
+    Value *Inner = Builder.CreateOr(A, Op1, "", /*IsDisjoint=*/IsDisjointOuter);
     Inner->takeName(Op0);
     return IsDisjointOuter && IsDisjointInner
                ? BinaryOperator::CreateDisjointOr(Inner, CI)
@@ -4669,6 +4672,23 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   if (Value *Res = FoldOrOfSelectSmaxToAbs(I, Builder))
     return replaceInstUsesWith(I, Res);
+
+  // signum: or (ashr X, BW-1), zext (icmp ne|sgt X, 0) --> scmp(X, 0)
+  // The ashr already supplies -1 for negative X, so any predicate that
+  // produces 1 for positive X and 0 for X == 0 yields the same result here.
+  {
+    Value *X;
+    CmpPredicate SignPred;
+    unsigned BitWidth = Ty->getScalarSizeInBits();
+    if (match(&I,
+              m_c_Or(m_AShr(m_Value(X), m_SpecificIntAllowPoison(BitWidth - 1)),
+                     m_ZExt(m_ICmp(SignPred, m_Deferred(X), m_ZeroInt())))) &&
+        (SignPred == ICmpInst::ICMP_NE || SignPred == ICmpInst::ICMP_SGT) &&
+        (Op0->hasOneUse() || Op1->hasOneUse()))
+      return replaceInstUsesWith(
+          I, Builder.CreateIntrinsic(Ty, Intrinsic::scmp,
+                                     {X, Constant::getNullValue(Ty)}));
+  }
 
   return nullptr;
 }

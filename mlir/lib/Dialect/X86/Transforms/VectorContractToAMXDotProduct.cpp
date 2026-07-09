@@ -27,6 +27,25 @@ using namespace mlir::x86;
 
 namespace {
 
+// Recursively follows single-use values through scf.yield operations
+// and returns the first non-yield user result in the contraction chain.
+static Value contractionUsersAfterYield(Value v) {
+  if (v.getNumUses() != 1)
+    return nullptr;
+
+  OpOperand &use = *v.use_begin();
+  Operation *user = use.getOwner();
+
+  if (!isa<scf::YieldOp>(user))
+    return v;
+
+  auto yield = cast<scf::YieldOp>(user);
+  Operation *parent = yield->getParentOp();
+  unsigned idx = use.getOperandNumber();
+
+  return contractionUsersAfterYield(parent->getResult(idx));
+}
+
 // Function to collapse the last two dimension (vnni and k) to help the
 // amx.tile_load to correctly load the packed element type.
 static Value collapseInnerDims(OpBuilder &builder, mlir::Location loc,
@@ -49,6 +68,20 @@ static Value collapseInnerDims(OpBuilder &builder, mlir::Location loc,
   return memref::CollapseShapeOp::create(builder, loc, input, reassociation);
 }
 
+// Check if a vector.contract operand has a memref read source.
+static bool isReadSrcMemref(Value operand) {
+  Operation *defOp = operand.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  Value srcBuff;
+  llvm::TypeSwitch<Operation *>(operand.getDefiningOp())
+      .Case<TransferReadOp, LoadOp>(
+          [&](auto readOp) { srcBuff = readOp.getOperand(0); });
+
+  return srcBuff && isa<MemRefType>(srcBuff.getType());
+}
+
 // Get the MemRef source and offset index for the operands of
 // vector.contract.
 static FailureOr<std::pair<Value, SmallVector<Value>>>
@@ -67,7 +100,7 @@ getSrcIndxValue(OpBuilder &rewriter, Location loc, Value operand,
         srcBuff = readOp.getOperand(0);
       });
 
-  if (!srcBuff)
+  if (!srcBuff || !isa<MemRefType>(srcBuff.getType()))
     return failure();
 
   if (isNotAcc)
@@ -86,6 +119,20 @@ getSrcIndxValue(OpBuilder &rewriter, Location loc, Value operand,
   }
 
   return std::make_pair(srcBuff, indices);
+}
+
+// Function to validate the loop step value.
+static LogicalResult validateLoopStep(OpBuilder &rewriter, Value step,
+                                      int64_t value) {
+
+  auto cst = step.getDefiningOp<arith::ConstantIndexOp>();
+  if (!cst)
+    return failure();
+
+  if (cst.value() != value && cst.value() != 1)
+    return failure();
+
+  return success();
 }
 
 // Function to validate the vector.contract operation.
@@ -117,6 +164,9 @@ static LogicalResult validateContractOps(OpBuilder &rewriter,
     if (buffRhs != srcBuffRhs)
       return failure();
   }
+
+  if (!contractionUsersAfterYield(contractOp.getResult()))
+    return failure();
 
   VectorType accTy = dyn_cast<VectorType>(contractOp.getAccType());
   if (!accTy)
@@ -214,9 +264,8 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
 
   Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
   Value c16 = arith::ConstantIndexOp::create(rewriter, loc, 16);
-
-  auto subview = matB.getDefiningOp<mlir::memref::SubViewOp>();
-  SmallVector<Value> subviewOffset(subview.getOffsets().size(), c0);
+  SmallVector<Value> subviewOffset(
+      llvm::cast<MemRefType>(matB.getType()).getRank(), c0);
 
   Value cStep = arith::ConstantIndexOp::create(rewriter, loc, offset);
   Value cBound = arith::ConstantIndexOp::create(rewriter, loc, (16 * offset));
@@ -228,17 +277,37 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
       [&](OpBuilder &nestedBuilder, Location loc, Value iv,
           ValueRange iterArgs) {
         subviewOffset[subviewOffset.size() - 2] = iv;
-        auto vec1 = vector::LoadOp::create(
-            rewriter, loc, VectorType::get((16 * offset), ipType), matB,
-            ValueRange(subviewOffset));
+
+        // Retrieve two rows of vector (32) for int8 and f8 type. For bf16,
+        // retrieve one row of vector (32).
+        auto vectorType = VectorType::get({2, (16 * (offset / 2))}, ipType);
+        if (ipType.isBF16())
+          vectorType = VectorType::get((16 * offset), ipType);
+
+        int64_t srcRank = (dyn_cast<ShapedType>(matB.getType())).getRank();
+        Value padding = ub::PoisonOp::create(rewriter, loc, ipType);
+        auto map = AffineMap::getMinorIdentityMap(srcRank, vectorType.getRank(),
+                                                  rewriter.getContext());
+        SmallVector<bool> inBounds(vectorType.getRank(), true);
+        Value vec1 = vector::TransferReadOp::create(
+            rewriter, loc, vectorType, matB, ValueRange(subviewOffset), padding,
+            map, inBounds);
+
+        if (!ipType.isBF16())
+          vec1 = vector::ShapeCastOp::create(
+              rewriter, loc, VectorType::get((16 * offset), ipType), vec1);
 
         // Increment the iv by 1 or 2 based on the type to load the next 32/64
         // elements
         Value incIV = arith::AddIOp::create(rewriter, loc, offsetIndx, iv);
         subviewOffset[subviewOffset.size() - 2] = incIV;
-        auto vec2 = vector::LoadOp::create(
-            rewriter, loc, VectorType::get((16 * offset), ipType), matB,
-            ValueRange(subviewOffset));
+
+        Value vec2 = vector::TransferReadOp::create(
+            rewriter, loc, vectorType, matB, ValueRange(subviewOffset), padding,
+            map, inBounds);
+        if (!ipType.isBF16())
+          vec2 = vector::ShapeCastOp::create(
+              rewriter, loc, VectorType::get((16 * offset), ipType), vec2);
 
         vector::ShuffleOp shuffle1;
         vector::ShuffleOp shuffle2;
@@ -260,7 +329,8 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
                                 23, 55, 28, 60, 29, 61, 30, 62, 31, 63});
         }
 
-        if (ipType.isSignlessInteger(8)) {
+        if (ipType.isSignlessInteger(8) || ipType.isF8E5M2() ||
+            ipType.isF8E4M3FN()) {
 
           shuffle1 = vector::ShuffleOp::create(
               rewriter, loc, VectorType::get({(16 * offset)}, ipType), vec1,
@@ -394,7 +464,7 @@ createTiledDp(OpBuilder &rewriter, Location loc,
     auto accTileType = amx::TileType::get({16, 16}, opType);
 
     Value dp;
-    if (ipType.isBF16())
+    if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN())
       dp = amx::TileMulFOp::create(rewriter, loc, accTileType, tilesLhs,
                                    tilesRhs, accIterArgs[i]);
 
@@ -468,6 +538,10 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
   Value c1 = arith::ConstantIndexOp::create(rewriter, loc, 1);
   Value c2 = arith::ConstantIndexOp::create(rewriter, loc, 2);
 
+  int64_t offset = 16 * blockingFactor;
+  if (auto cst = step.getDefiningOp<arith::ConstantIndexOp>())
+    offset = cst.value();
+
   auto newLoop = scf::ForOp::create(
       rewriter, loc, lowerBound, upperBound, step, loopItrArgs,
       [&](OpBuilder &rewriterNewInnerLoop, Location locNewInnerLoop,
@@ -485,7 +559,6 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
 
         Value indxToStoreInBuffer = c0;
         Value indxToLoadFromBuffer = c0;
-
         if (!isVnni) {
           if (outerLoop) {
             if (innerLoopIndex.value() == 0) {
@@ -509,7 +582,7 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
 
             } else {
               Value nLoadIndx = arith::ConstantIndexOp::create(
-                  rewriter, locNewInnerLoop, (16 * blockingFactor));
+                  rewriter, locNewInnerLoop, offset);
               ivNewInnerLoop = arith::AddIOp::create(rewriter, locNewInnerLoop,
                                                      nLoadIndx, ivNewInnerLoop);
               indxToStoreInBuffer = getIndxToLoadStoreFromPckBuffer(
@@ -525,7 +598,7 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
           } else {
             if (pack) {
               Value nLoadIndx = arith::ConstantIndexOp::create(
-                  rewriter, locNewInnerLoop, (16 * blockingFactor));
+                  rewriter, locNewInnerLoop, offset);
               ivNewInnerLoop = arith::AddIOp::create(rewriter, locNewInnerLoop,
                                                      nLoadIndx, ivNewInnerLoop);
               Value quotient_K = arith::DivUIOp::create(
@@ -541,27 +614,47 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
             }
           }
         }
-
         IRMapping rhsMapping;
-        if (outerLoop)
-          rhsMapping.map(
-              vectorOpRhs->getOperand(
-                  getIndexPosition(contractOp.getRhs(), outerLoop) + 1),
-              ivOuterLoop);
 
-        rhsMapping.map(
-            vectorOpRhs->getOperand(
-                getIndexPosition(contractOp.getRhs(), innerLoop) + 1),
-            ivNewInnerLoop);
-        auto rhsClone = rewriterNewInnerLoop.clone(*vectorOpRhs, rhsMapping);
+        Value matB;
+        Operation *rhsOp = vectorOpRhs;
 
-        Value matB = rhsClone->getResult(0);
+        // Clone for the subview type operations
+        if (rhsOp->getNumOperands() > 0) {
+
+          if (outerLoop) {
+            int64_t outerPos = getIndexPosition(contractOp.getRhs(), outerLoop);
+
+            if (outerPos >= 0) {
+              unsigned operandIdx = static_cast<unsigned>(outerPos + 1);
+
+              if (operandIdx < rhsOp->getNumOperands())
+                rhsMapping.map(rhsOp->getOperand(operandIdx), ivOuterLoop);
+            }
+          }
+
+          int64_t innerPos = getIndexPosition(contractOp.getRhs(), innerLoop);
+
+          if (innerPos >= 0) {
+            unsigned operandIdx = static_cast<unsigned>(innerPos + 1);
+
+            if (operandIdx < rhsOp->getNumOperands())
+              rhsMapping.map(rhsOp->getOperand(operandIdx), ivNewInnerLoop);
+          }
+
+          auto rhsClone = rewriterNewInnerLoop.clone(*rhsOp, rhsMapping);
+          matB = rhsClone->getResult(0);
+
+        } else {
+          // The mat B is of kind 'memref.get_global @__constant'
+          matB = rhsOp->getResult(0);
+        }
 
         if (!isVnni) {
           if (outerLoop) {
             if (!pack) {
               Value nLoadIndx = arith::ConstantIndexOp::create(
-                  rewriter, locNewInnerLoop, (16 * blockingFactor));
+                  rewriter, locNewInnerLoop, offset);
               matB = Value();
               indxToLoadFromBuffer = c0;
               indxToLoadFromBuffer = getIndxToLoadStoreFromPckBuffer(
@@ -572,7 +665,7 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
           } else {
             if (!pack) {
               Value nLoadIndx = arith::ConstantIndexOp::create(
-                  rewriter, locNewInnerLoop, (16 * blockingFactor));
+                  rewriter, locNewInnerLoop, offset);
               matB = Value();
               Value quotient_K = arith::DivUIOp::create(
                   rewriter, loc, ivNewInnerLoop, nLoadIndx);
@@ -581,7 +674,6 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
             }
           }
         }
-
         // compute tiled dot-product
         SmallVector<Value> accumulators = createTiledDp(
             rewriter, locNewInnerLoop, ops, lhsClone->getResult(0), matB,
@@ -678,15 +770,24 @@ struct VectorContractToAMXDotProduct
 
     VectorType lhsTy = contractOp.getLhsType();
     if (!lhsTy.getElementType().isBF16() &&
-        !lhsTy.getElementType().isSignlessInteger(8))
+        !lhsTy.getElementType().isSignlessInteger(8) &&
+        !lhsTy.getElementType().isF8E4M3FN() &&
+        !lhsTy.getElementType().isF8E5M2())
       return rewriter.notifyMatchFailure(
-          contractOp, "Only BF16/Int8 lowering is supported.");
+          contractOp, "Only BF16/Int8/F8 lowering is supported.");
+
+    if (lhsTy.getElementType() != contractOp.getRhsType().getElementType())
+      return rewriter.notifyMatchFailure(
+          contractOp, "Contraction should have same lhs and rhs type.");
 
     VectorType accTy = dyn_cast<VectorType>(contractOp.getAccType());
     if (!accTy)
       return rewriter.notifyMatchFailure(contractOp, "Wrong accmulator type.");
 
-    if ((lhsTy.getElementType().isBF16() && !accTy.getElementType().isF32()) ||
+    if (((lhsTy.getElementType().isBF16() ||
+          lhsTy.getElementType().isF8E4M3FN() ||
+          lhsTy.getElementType().isF8E5M2()) &&
+         !accTy.getElementType().isF32()) ||
         (lhsTy.getElementType().isSignlessInteger(8) &&
          !accTy.getElementType().isSignlessInteger(32)))
       return rewriter.notifyMatchFailure(contractOp,
@@ -713,6 +814,12 @@ struct VectorContractToAMXDotProduct
       opType = rewriter.getIntegerType(32);
     }
 
+    if (lhsTy.getElementType().isF8E4M3FN())
+      ipType = rewriter.getF8E4M3FNType();
+
+    if (lhsTy.getElementType().isF8E5M2())
+      ipType = rewriter.getF8E5M2Type();
+
     if (accReadOp->getBlock() == contractOp->getBlock() &&
         resultWriteOp->getBlock() != contractOp->getBlock())
       return rewriter.notifyMatchFailure(
@@ -723,6 +830,11 @@ struct VectorContractToAMXDotProduct
       return rewriter.notifyMatchFailure(
           contractOp, "The accumulator read is in different block.");
 
+    if (!(isReadSrcMemref(contractOp.getLhs()) &&
+          isReadSrcMemref(contractOp.getRhs())))
+      return rewriter.notifyMatchFailure(
+          contractOp, "The LHS or RHS src is not a MemRef type.");
+
     unsigned int dimValue = blockingFactor;
     if (!isVnni)
       dimValue = 16 * blockingFactor;
@@ -731,6 +843,10 @@ struct VectorContractToAMXDotProduct
     // within the same block.
     if (accReadOp->getBlock() == contractOp->getBlock() &&
         resultWriteOp->getBlock() == contractOp->getBlock()) {
+
+      if (!isReadSrcMemref(contractOp.getAcc()))
+        return rewriter.notifyMatchFailure(contractOp,
+                                           "The ACC src is not a MemRef type.");
 
       bool collapse = false;
       if (isVnni)
@@ -743,7 +859,7 @@ struct VectorContractToAMXDotProduct
         return rewriter.notifyMatchFailure(
             contractOp, "The contract operation doesn't satisfy the operands "
                         "dimensions. M, N, and vnni dims are 16, 16, and 2/4. "
-                        "The rest dims should be 1.");
+                        "The rest dims should be 1. Op should have one user.");
 
       Location loc = contractOp.getLoc();
 
@@ -751,14 +867,14 @@ struct VectorContractToAMXDotProduct
                                         contractOp.getLhs(), collapse);
       if (failed(srcIndxLhs))
         return rewriter.notifyMatchFailure(contractOp,
-                                           "The LHS src is not a MemRef type.");
+                                           "Failed to get the LHS src.");
       auto [srcBuffLhs, indicesLhs] = *srcIndxLhs;
 
       auto srcIndxRhs = getSrcIndxValue(rewriter, contractOp.getLoc(),
                                         contractOp.getRhs(), collapse);
       if (failed(srcIndxRhs))
         return rewriter.notifyMatchFailure(contractOp,
-                                           "The RHS src is not a MemRef type.");
+                                           "Failed to get the RHS src.");
       auto rhsSrc = *srcIndxRhs;
       auto srcBuffRhs = rhsSrc.first;
       auto indicesRhs = rhsSrc.second;
@@ -767,8 +883,10 @@ struct VectorContractToAMXDotProduct
                                         contractOp.getAcc(), false);
       if (failed(srcIndxAcc))
         return rewriter.notifyMatchFailure(contractOp,
-                                           "The ACC src is not a MemRef type.");
+                                           "Failed to get the ACC src.");
       auto [srcBuffAcc, indicesAcc] = *srcIndxAcc;
+
+      Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
 
       // amx.tile_loads
       auto tileType = amx::TileType::get({16, (16 * blockingFactor)}, ipType);
@@ -797,7 +915,6 @@ struct VectorContractToAMXDotProduct
         auto packedBuffer = memref::AllocaOp::create(rewriter, loc, bufferType);
 
         // create a loop that does online packing.
-        Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
         Value step =
             arith::ConstantIndexOp::create(rewriter, loc, blockingFactor);
         Value uBound = arith::ConstantIndexOp::create(rewriter, loc,
@@ -815,6 +932,7 @@ struct VectorContractToAMXDotProduct
                   arith::AddIOp::create(rewriter, loc, nextLoadIndx, iv);
 
               indicesRhs[indicesRhs.size() - 2] = iv;
+              indicesRhs[indicesRhs.size() - 1] = c0;
               ValueRange range1(indicesRhs);
               auto vec1 = vector::LoadOp::create(
                   rewriter, loc,
@@ -860,7 +978,7 @@ struct VectorContractToAMXDotProduct
                                       14, 30, 46, 62, 15, 31, 47, 63});
               }
 
-              auto rem = arith::RemUIOp::create(
+              auto rem = arith::DivUIOp::create(
                   rewriter, loc, rewriter.getIndexType(), iv, step);
 
               vector::StoreOp::create(rewriter, loc, shuffle1, packedBuffer,
@@ -884,7 +1002,7 @@ struct VectorContractToAMXDotProduct
 
       // Tiled dot-product.
       Value dp;
-      if (ipType.isBF16())
+      if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN())
         dp = amx::TileMulFOp::create(rewriter, loc, tileTypeAcc, loadLhs,
                                      loadRhs, loadAcc);
 
@@ -892,9 +1010,29 @@ struct VectorContractToAMXDotProduct
         dp = amx::TileMulIOp::create(rewriter, loc, tileTypeAcc, loadLhs,
                                      loadRhs, loadAcc);
 
-      amx::TileStoreOp::create(rewriter, loc, srcBuffAcc, indicesAcc, dp);
+      auto bufferType = MemRefType::get({16, 16}, opType);
+      auto resultBuffer = memref::AllocaOp::create(rewriter, loc, bufferType);
 
-      rewriter.eraseOp(resultWriteOp);
+      amx::TileStoreOp::create(rewriter, loc, resultBuffer, ValueRange{c0, c0},
+                               dp);
+
+      auto vectorType = mlir::VectorType::get({16, 16}, opType);
+      int64_t srcRank =
+          (dyn_cast<ShapedType>(resultBuffer.getType())).getRank();
+      Value padding = ub::PoisonOp::create(rewriter, loc, opType);
+      auto map = AffineMap::getMinorIdentityMap(srcRank, vectorType.getRank(),
+                                                rewriter.getContext());
+      SmallVector<bool> inBounds(vectorType.getRank(), true);
+
+      Value vecRow = vector::TransferReadOp::create(
+          rewriter, loc, vectorType, resultBuffer, ValueRange{c0, c0}, padding,
+          map, inBounds);
+
+      Value resultOp = contractionUsersAfterYield(contractOp.getResult());
+      if (auto vecType = llvm::dyn_cast<VectorType>(resultOp.getType()))
+        vecRow = vector::ShapeCastOp::create(rewriter, loc, vecType, vecRow);
+
+      rewriter.replaceAllUsesWith(resultOp, vecRow);
       return success();
     }
 
@@ -928,14 +1066,14 @@ struct VectorContractToAMXDotProduct
                                       contractOp.getLhs(), false);
     if (failed(srcIndxLhs))
       return rewriter.notifyMatchFailure(contractOp,
-                                         "The LHS src is not a MemRef type.");
+                                         "Failed to get the LHS src.");
     auto [srcBuffLhs, indicesLhs] = *srcIndxLhs;
 
     auto srcIndxRhs = getSrcIndxValue(rewriter, contractOp.getLoc(),
                                       contractOp.getRhs(), false);
     if (failed(srcIndxRhs))
       return rewriter.notifyMatchFailure(contractOp,
-                                         "The RHS src is not a MemRef type.");
+                                         "Failed to get the RHS src.");
     auto [srcBuffRhs, indicesRhs] = *srcIndxRhs;
     Operation *vectorOpLhs;
     llvm::TypeSwitch<Operation *>(contractOp.getLhs().getDefiningOp())
@@ -949,6 +1087,10 @@ struct VectorContractToAMXDotProduct
           vectorOpRhs = readOp.getBase().getDefiningOp();
         });
 
+    if (!vectorOpLhs || !vectorOpRhs)
+      return rewriter.notifyMatchFailure(
+          contractOp, "Failed to find LHS or RHS read source operation");
+
     // Retrive all the contaction operation within the loop.
     SmallVector<vector::ContractionOp> ops;
     for (mlir::Operation &op : loopLists[0].getBody()->getOperations()) {
@@ -960,9 +1102,10 @@ struct VectorContractToAMXDotProduct
 
         if (failed(validate))
           return rewriter.notifyMatchFailure(
-              contractOp, "The associated contract operations doesn't satisfy "
-                          "the re-write conditions either the dimensions are "
-                          "wrong or MemRef source are different.");
+              contractOp,
+              "The associated contract operations doesn't satisfy "
+              "the re-write conditions either the dimensions are "
+              "wrong or MemRef source are different or many users.");
 
         ops.push_back(contract);
       }
@@ -990,6 +1133,21 @@ struct VectorContractToAMXDotProduct
     if (loopLists.size() == 2) {
       outerLoop = loopLists[1];
       innerLoop = loopLists[0];
+
+      LogicalResult validateOuterLoopStep =
+          validateLoopStep(rewriter, outerLoop.getStep(), 1);
+      if (failed(validateOuterLoopStep))
+        return rewriter.notifyMatchFailure(contractOp, "Invalid loop step.");
+
+      int64_t stepValue = 16;
+      if (!isVnni)
+        stepValue = stepValue * blockingFactor;
+      LogicalResult validateInnerLoopStep =
+          validateLoopStep(rewriter, innerLoop.getStep(), stepValue);
+      if (failed(validateInnerLoopStep))
+        return rewriter.notifyMatchFailure(
+            contractOp, "Invalid loop step. The step should be 32 for BF16 and "
+                        "64 for Int8/F8.");
 
       SmallVector<Value> loopItrArgs = createTileZeros(
           rewriter, outerLoop.getLoc(), opType, outerLoop, ops.size());
@@ -1053,15 +1211,29 @@ struct VectorContractToAMXDotProduct
         rhsMapping.map(
             vectorOpRhs->getOperand(
                 getIndexPosition(contractOp.getRhs(), outerLoop) + 1),
-            c0);
+            outerLoop.getLowerBound());
         rhsMapping.map(
             vectorOpRhs->getOperand(
                 getIndexPosition(contractOp.getRhs(), innerLoop) + 1),
-            c0);
+            innerLoop.getLowerBound());
         auto rhsClone = rewriter.clone(*vectorOpRhs, rhsMapping);
 
+        Value quotient_batch = arith::DivUIOp::create(
+            rewriter, outerLoop.getLoc(), outerLoop.getLowerBound(),
+            outerLoop.getStep());
+        Value quotient_k = arith::DivUIOp::create(rewriter, outerLoop.getLoc(),
+                                                  innerLoop.getLowerBound(),
+                                                  innerLoop.getStep());
+
+        Value quotient_add = arith::AddIOp::create(rewriter, outerLoop.getLoc(),
+                                                   quotient_batch, quotient_k);
+        Value c2 =
+            arith::ConstantIndexOp::create(rewriter, outerLoop.getLoc(), 2);
+        Value rem = arith::RemUIOp::create(rewriter, outerLoop.getLoc(),
+                                           quotient_add, c2);
+
         performShuffle(rewriter, outerLoop.getLoc(), rhsClone->getResult(0),
-                       ipType, blockingFactor, packedBuffer, c0);
+                       ipType, blockingFactor, packedBuffer, rem);
 
         // First Set of Loops
         auto newLoopNonSpill = scf::ForOp::create(
@@ -1120,13 +1292,24 @@ struct VectorContractToAMXDotProduct
 
     // Case 2b: Reduction loop depth is 1.
     if (loopLists.size() == 1) {
+
       innerLoop = loopLists[0];
+      int64_t stepValue = 16;
+      if (!isVnni)
+        stepValue = stepValue * blockingFactor;
+
+      LogicalResult validateInnerLoopStep =
+          validateLoopStep(rewriter, innerLoop.getStep(), stepValue);
+      if (failed(validateInnerLoopStep))
+        return rewriter.notifyMatchFailure(
+            contractOp,
+            "Invalid loop step. The step should be 32 for BF16 and "
+            "64 for Int8/F8 or 1 if it is rduction loop other than K.");
 
       SmallVector<Value> loopItrArgs = createTileZeros(
           rewriter, innerLoop.getLoc(), opType, innerLoop, ops.size());
 
       if (isVnni) {
-
         newLoop = createLoops(
             rewriter, innerLoop.getLoc(), innerLoop.getLowerBound(),
             innerLoop.getUpperBound(), innerLoop.getStep(), loopItrArgs, ipType,
@@ -1135,6 +1318,7 @@ struct VectorContractToAMXDotProduct
             nullptr, false, false);
 
       } else {
+
         bool isInnerLoopUBLarger = false;
         bool isInnerLoopUBHasOddQuot = false;
 
@@ -1152,11 +1336,16 @@ struct VectorContractToAMXDotProduct
             (((ubVal / (16 * blockingFactor)) % 2) == 1) && isInnerLoopUBLarger;
 
         rewriter.setInsertionPoint(innerLoop);
+
         auto c0 =
             arith::ConstantIndexOp::create(rewriter, innerLoop.getLoc(), 0);
-        auto spillLoopBound = arith::ConstantIndexOp::create(
-            rewriter, innerLoop.getLoc(), 16 * blockingFactor);
+        int64_t offset = 16 * blockingFactor;
+        if (auto cst =
+                innerLoop.getStep().getDefiningOp<arith::ConstantIndexOp>())
+          offset = cst.value();
 
+        auto spillLoopBound = arith::ConstantIndexOp::create(
+            rewriter, innerLoop.getLoc(), offset);
         Value spillInnerLoop =
             arith::SubIOp::create(rewriter, innerLoop.getLoc(),
                                   innerLoop.getUpperBound(), spillLoopBound);
@@ -1171,11 +1360,19 @@ struct VectorContractToAMXDotProduct
         rhsMapping.map(
             vectorOpRhs->getOperand(
                 getIndexPosition(contractOp.getRhs(), innerLoop) + 1),
-            c0);
+            innerLoop.getLowerBound());
         auto rhsClone = rewriter.clone(*vectorOpRhs, rhsMapping);
 
+        Value quotient_k = arith::DivUIOp::create(rewriter, innerLoop.getLoc(),
+                                                  innerLoop.getLowerBound(),
+                                                  innerLoop.getStep());
+        Value c2 =
+            arith::ConstantIndexOp::create(rewriter, innerLoop.getLoc(), 2);
+        Value rem = arith::RemUIOp::create(rewriter, innerLoop.getLoc(),
+                                           quotient_k, c2);
+
         performShuffle(rewriter, innerLoop.getLoc(), rhsClone->getResult(0),
-                       ipType, blockingFactor, packedBuffer, c0);
+                       ipType, blockingFactor, packedBuffer, rem);
 
         auto newLoopNonSpill = createLoops(
             rewriter, innerLoop.getLoc(), innerLoop.getLowerBound(),
@@ -1200,194 +1397,144 @@ struct VectorContractToAMXDotProduct
 
     // Copy the amx tile accumulation results to a MemRef buffer, add the
     // initial accumulation value, and store back to the C-Matrix
+    Location loc = outerLoop.getLoc();
+    Value srcBuffAcc;
+    SmallVector<Value> indicesAcc;
 
-    if (!isVnni) {
-      Location loc = outerLoop.getLoc();
-      Operation *accReadOp =
-          traceToVectorReadLikeParentOperation(contractOp.getAcc());
+    llvm::TypeSwitch<Operation *>(accReadOp).Case<TransferReadOp, LoadOp>(
+        [&](auto readOp) {
+          srcBuffAcc = readOp.getOperand(0);
 
-      Value srcBuffAcc;
-      SmallVector<Value> indicesAcc;
+          auto indices = readOp.getIndices();
+          indicesAcc.reserve(indices.size());
 
-      llvm::TypeSwitch<Operation *>(accReadOp).Case<TransferReadOp, LoadOp>(
-          [&](auto readOp) {
-            srcBuffAcc = readOp.getOperand(0);
+          llvm::transform(indices, std::back_inserter(indicesAcc),
+                          [&](OpFoldResult ofr) {
+                            return mlir::getValueOrCreateConstantIndexOp(
+                                rewriter, loc, ofr);
+                          });
+        });
 
-            auto indices = readOp.getIndices();
-            indicesAcc.reserve(indices.size());
+    auto outputShapes =
+        mlir::cast<mlir::MemRefType>(srcBuffAcc.getType()).getShape();
+    unsigned int M = outputShapes[outputShapes.size() - 2];
+    unsigned int N = outputShapes[outputShapes.size() - 1];
 
-            llvm::transform(indices, std::back_inserter(indicesAcc),
-                            [&](OpFoldResult ofr) {
-                              return mlir::getValueOrCreateConstantIndexOp(
-                                  rewriter, loc, ofr);
-                            });
-          });
+    SmallVector<Value> dps = newLoop.getResults();
+    auto bufferType = MemRefType::get({M, N}, opType);
+    auto resultBuffer = memref::AllocaOp::create(rewriter, loc, bufferType);
 
-      auto outputShapes =
-          mlir::cast<mlir::MemRefType>(srcBuffAcc.getType()).getShape();
-      unsigned int M = outputShapes[outputShapes.size() - 2];
-      unsigned int N = outputShapes[outputShapes.size() - 1];
-
-      SmallVector<Value> dps = newLoop.getResults();
-      auto bufferType = MemRefType::get({M, N}, opType);
-      auto resultBuffer = memref::AllocaOp::create(rewriter, loc, bufferType);
-
-      // Store the amx tiled-dot product output into an MxN memref.
-      for (unsigned int i = 0, k = 0; i < M; i = i + 16) {
-        for (unsigned int j = 0; j < N; j = j + 16) {
-          Value indexOp_i = arith::ConstantIndexOp::create(rewriter, loc, i);
-          Value indexOp_j = arith::ConstantIndexOp::create(rewriter, loc, j);
-          amx::TileStoreOp::create(rewriter, loc, resultBuffer,
-                                   ValueRange{indexOp_i, indexOp_j}, dps[k]);
-          k++;
-        }
+    // Store the amx tiled-dot product output into an MxN memref.
+    for (unsigned int i = 0, k = 0; i < M; i = i + 16) {
+      for (unsigned int j = 0; j < N; j = j + 16) {
+        Value indexOp_i = arith::ConstantIndexOp::create(rewriter, loc, i);
+        Value indexOp_j = arith::ConstantIndexOp::create(rewriter, loc, j);
+        amx::TileStoreOp::create(rewriter, loc, resultBuffer,
+                                 ValueRange{indexOp_i, indexOp_j}, dps[k]);
+        k++;
       }
-      auto c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
-      auto c16 = arith::ConstantIndexOp::create(rewriter, loc, 16);
-      auto one = arith::ConstantIndexOp::create(rewriter, loc, 1);
-      auto mBound = arith::ConstantIndexOp::create(rewriter, loc, N);
+    }
+    auto c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    auto c16 = arith::ConstantIndexOp::create(rewriter, loc, 16);
+    auto one = arith::ConstantIndexOp::create(rewriter, loc, 1);
+    auto nBound = arith::ConstantIndexOp::create(rewriter, loc, N);
 
-      // Create a loop that iterates over the MxN memerf, retrives two rows +
-      // shuffle them, add up the C element values and stores them back.
-      scf::ForOp::create(
-          rewriter, loc, c0, mBound, one, ValueRange{},
-          [&](OpBuilder &nestedBuilder, Location loc, Value iv,
-              ValueRange iterArgs) {
-            auto row = vector::LoadOp::create(rewriter, loc,
-                                              VectorType::get(16, opType),
-                                              resultBuffer, ValueRange{iv, c0});
+    // Create a loop that iterates over the MxN memerf, retrives two rows +
+    // shuffle them, add up the C element values and stores them to temp buffer.
+    scf::ForOp::create(
+        rewriter, loc, c0, nBound, one, ValueRange{},
+        [&](OpBuilder &nestedBuilder, Location loc, Value iv,
+            ValueRange iterArgs) {
+          auto row =
+              vector::LoadOp::create(rewriter, loc, VectorType::get(16, opType),
+                                     resultBuffer, ValueRange{iv, c0});
 
-            auto row2 = vector::LoadOp::create(
-                rewriter, loc, VectorType::get(16, opType), resultBuffer,
-                ValueRange{iv, c16});
+          auto row2 =
+              vector::LoadOp::create(rewriter, loc, VectorType::get(16, opType),
+                                     resultBuffer, ValueRange{iv, c16});
 
-            auto shuffle1 = vector::ShuffleOp::create(
+          Value shuffle1 = row;
+          Value shuffle2 = row2;
+
+          if (!isVnni) {
+            shuffle1 = vector::ShuffleOp::create(
                 rewriter, loc, VectorType::get(16, opType), row, row2,
                 ArrayRef<int64_t>{0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20,
                                   21, 22, 23});
 
-            auto shuffle2 = vector::ShuffleOp::create(
+            shuffle2 = vector::ShuffleOp::create(
                 rewriter, loc, VectorType::get(16, opType), row, row2,
                 ArrayRef<int64_t>{8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15,
                                   28, 29, 30, 31});
+          }
+          indicesAcc[indicesAcc.size() - 2] = iv;
+          indicesAcc[indicesAcc.size() - 1] = c0;
 
-            indicesAcc[indicesAcc.size() - 2] = iv;
-            indicesAcc[indicesAcc.size() - 1] = c0;
+          Value valueCRow1 =
+              vector::LoadOp::create(rewriter, loc, VectorType::get(16, opType),
+                                     srcBuffAcc, indicesAcc);
+          indicesAcc[indicesAcc.size() - 1] = c16;
 
-            Value valueCRow1 = vector::LoadOp::create(
-                rewriter, loc, VectorType::get(16, opType), srcBuffAcc,
-                indicesAcc);
-            indicesAcc[indicesAcc.size() - 1] = c16;
+          Value valueCRow2 =
+              vector::LoadOp::create(rewriter, loc, VectorType::get(16, opType),
+                                     srcBuffAcc, indicesAcc);
 
-            Value valueCRow2 = vector::LoadOp::create(
-                rewriter, loc, VectorType::get(16, opType), srcBuffAcc,
-                indicesAcc);
+          Value addOp;
+          Value addOp2;
 
-            Value addOp;
-            Value addOp2;
+          if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN()) {
+            addOp = arith::AddFOp::create(rewriter, loc, shuffle1, valueCRow1);
 
-            if (ipType.isBF16()) {
-              addOp =
-                  arith::AddFOp::create(rewriter, loc, shuffle1, valueCRow1);
+            addOp2 = arith::AddFOp::create(rewriter, loc, shuffle2, valueCRow2);
+          }
 
-              addOp2 =
-                  arith::AddFOp::create(rewriter, loc, shuffle2, valueCRow2);
-            }
+          if (ipType.isSignlessInteger(8)) {
+            addOp = arith::AddIOp::create(rewriter, loc, shuffle1, valueCRow1);
 
-            if (ipType.isSignlessInteger(8)) {
-              addOp =
-                  arith::AddIOp::create(rewriter, loc, shuffle1, valueCRow1);
+            addOp2 = arith::AddIOp::create(rewriter, loc, shuffle2, valueCRow2);
+          }
 
-              addOp2 =
-                  arith::AddIOp::create(rewriter, loc, shuffle2, valueCRow2);
-            }
-            indicesAcc[indicesAcc.size() - 1] = c0;
-            vector::StoreOp::create(rewriter, loc, addOp, srcBuffAcc,
-                                    indicesAcc);
-            indicesAcc[indicesAcc.size() - 1] = c16;
-            vector::StoreOp::create(rewriter, loc, addOp2, srcBuffAcc,
-                                    indicesAcc);
+          vector::StoreOp::create(rewriter, loc, addOp, resultBuffer,
+                                  ValueRange{iv, c0});
+          vector::StoreOp::create(rewriter, loc, addOp2, resultBuffer,
+                                  ValueRange{iv, c16});
 
-            scf::YieldOp::create(nestedBuilder, loc);
-          });
+          scf::YieldOp::create(nestedBuilder, loc);
+        });
+
+    SmallVector<Value> writeResults;
+    for (unsigned int i = 0; i < M; i = i + 16) {
+      for (unsigned int j = 0; j < N; j = j + 16) {
+        Value indexOp_i = arith::ConstantIndexOp::create(rewriter, loc, i);
+        Value indexOp_j = arith::ConstantIndexOp::create(rewriter, loc, j);
+
+        auto vectorType = mlir::VectorType::get({16, 16}, opType);
+
+        int64_t srcRank =
+            (dyn_cast<ShapedType>(resultBuffer.getType())).getRank();
+        Value padding = ub::PoisonOp::create(rewriter, loc, opType);
+        auto map = AffineMap::getMinorIdentityMap(srcRank, vectorType.getRank(),
+                                                  rewriter.getContext());
+        SmallVector<bool> inBounds(vectorType.getRank(), true);
+
+        auto vec1 = vector::TransferReadOp::create(
+            rewriter, loc, vectorType, resultBuffer,
+            ValueRange{indexOp_i, indexOp_j}, padding, map, inBounds);
+        writeResults.push_back(vec1);
+      }
     }
 
-    auto bufferType = MemRefType::get({16, 16}, opType);
-    auto resultBuffer =
-        memref::AllocaOp::create(rewriter, outerLoop.getLoc(), bufferType);
-    SmallVector<Value> dps = newLoop.getResults();
-
+    // Replace use of vector.contract with dot-products.
     for (size_t i = 0; i < ops.size(); i++) {
       vector::ContractionOp contOp = ops[i];
-      Operation *resultWriteOp =
-          traceToVectorWriteLikeUserOperation(contOp.getResult());
-      if (isVnni) {
-        rewriter.setInsertionPoint(resultWriteOp);
+      Value vecRow = writeResults[i];
 
-        Value indexOp_0 =
-            arith::ConstantIndexOp::create(rewriter, outerLoop.getLoc(), 0);
+      Value resultWriteOp = contractionUsersAfterYield(contOp.getResult());
+      if (auto vecType = llvm::dyn_cast<VectorType>(resultWriteOp.getType()))
+        vecRow = mlir::vector::ShapeCastOp::create(rewriter, loc, vecType,
+                                                   writeResults[i]);
 
-        amx::TileStoreOp::create(rewriter, outerLoop.getLoc(), resultBuffer,
-                                 ValueRange{indexOp_0, indexOp_0}, dps[i]);
-
-        auto c0 =
-            arith::ConstantIndexOp::create(rewriter, outerLoop.getLoc(), 0);
-        auto one =
-            arith::ConstantIndexOp::create(rewriter, outerLoop.getLoc(), 1);
-        auto mBound =
-            arith::ConstantIndexOp::create(rewriter, outerLoop.getLoc(), 16);
-
-        scf::ForOp::create(
-            rewriter, outerLoop.getLoc(), c0, mBound, one, ValueRange{},
-            [&](OpBuilder &builder, Location loc, Value iv,
-                ValueRange iterArgs) {
-              auto resultAcc = vector::LoadOp::create(
-                  rewriter, loc, VectorType::get(16, opType), resultBuffer,
-                  ValueRange{iv, c0});
-
-              Operation *accReadOp =
-                  traceToVectorReadLikeParentOperation(ops[i].getAcc());
-
-              Value srcBuffAcc;
-              SmallVector<Value> indicesAcc;
-
-              llvm::TypeSwitch<Operation *>(accReadOp)
-                  .Case<TransferReadOp, LoadOp>([&](auto readOp) {
-                    srcBuffAcc = readOp.getOperand(0);
-
-                    auto indices = readOp.getIndices();
-                    indicesAcc.reserve(indices.size());
-
-                    llvm::transform(
-                        indices, std::back_inserter(indicesAcc),
-                        [&](OpFoldResult ofr) {
-                          return mlir::getValueOrCreateConstantIndexOp(
-                              rewriter, loc, ofr);
-                        });
-                  });
-
-              Value sum =
-                  arith::AddIOp::create(builder, loc, iv, indicesAcc[0]);
-              indicesAcc[indicesAcc.size() - 2] = sum;
-
-              auto acc = vector::LoadOp::create(rewriter, loc,
-                                                VectorType::get(16, opType),
-                                                srcBuffAcc, indicesAcc);
-              Value addition;
-              if (ipType.isBF16())
-                addition = arith::AddFOp::create(rewriter, loc, resultAcc, acc);
-
-              if (ipType.isSignlessInteger(8))
-                addition = arith::AddIOp::create(rewriter, loc, resultAcc, acc);
-
-              vector::StoreOp::create(builder, loc, addition, srcBuffAcc,
-                                      indicesAcc);
-
-              scf::YieldOp::create(builder, outerLoop.getLoc());
-            });
-      }
-
-      rewriter.eraseOp(resultWriteOp);
+      rewriter.replaceAllUsesWith(resultWriteOp, vecRow);
     }
 
     return success();
