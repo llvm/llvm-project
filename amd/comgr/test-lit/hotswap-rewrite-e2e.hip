@@ -4,16 +4,12 @@
 // COM: compile -> hotswap-rewrite -> verify chain using the in-tree
 // COM: clang + llvm-readelf + llvm-objdump substitutions.
 // COM:
-// COM: Patches in amd/comgr/src/comgr-hotswap-b0a0.cpp are weak stubs
-// COM: returning 0 until the concrete patch .cpp files land, so the
-// COM: dispatcher currently emits an output that is bytewise-identical
-// COM: to the input. Even with no patches applied we can assert that
-// COM: (1) the rewrite returns SUCCESS, (2) the output is a valid
-// COM: gfx1250 ELF that preserves the ISA identification, and (3) .text
-// COM: is still present and disassemblable as AMDGPU code. The
-// COM: per-patch PRs will layer in their own `llvm-objdump | FileCheck`
-// COM: stanzas on top of this harness to assert their specific opcode
-// COM: changes / trampolines.
+// COM: This kernel intentionally does not contain instructions matched by
+// COM: the current hotswap patch set. The test is still useful as a real
+// COM: code-object smoke test: it asserts that (1) rewrite returns SUCCESS,
+// COM: (2) the output remains a valid gfx1250 ELF with preserved ISA
+// COM: identification, and (3) .text is still present and disassemblable.
+// COM: Patch-specific LIT tests cover opcode changes and trampolines.
 
 // COM: Compile a tiny kernel targeting gfx1250 to a raw code object.
 // RUN: %clang --offload-arch=gfx1250 --offload-device-only \
@@ -25,7 +21,7 @@
 // RUN: %llvm-readelf -h %t.input.elf | %FileCheck --check-prefix=INPUT-FLAGS %s
 // INPUT-FLAGS: Flags:{{.*}}gfx1250
 // RUN: %llvm-readelf --notes %t.input.elf | %FileCheck --check-prefix=INPUT-META %s
-// INPUT-META: amdhsa.target: amdgcn-amd-amdhsa-{{.*}}gfx1250
+// INPUT-META: amdhsa.target: amdgcn-amd-amdhsa{{--|-unknown-}}gfx1250
 
 // COM: Run hotswap-rewrite; save the output so we can inspect it.
 // RUN: hotswap-rewrite %t.input.elf \
@@ -34,14 +30,13 @@
 // RUN:   | %FileCheck --check-prefix=STATUS %s
 // STATUS: RESULT: SUCCESS
 
-// COM: Output ELF is valid and still identifies as gfx1250 (patches are
-// COM: weak stubs, so the identity should be preserved untouched; future
-// COM: patch PRs that intentionally change the target ISA note will
-// COM: update this stanza).
+// COM: Output ELF is valid and still identifies as gfx1250; this smoke
+// COM: kernel has no patch-triggering instructions, so the rewrite should
+// COM: preserve the target identification.
 // RUN: %llvm-readelf -h %t.output.elf | %FileCheck --check-prefix=OUTPUT-FLAGS %s
 // OUTPUT-FLAGS: Flags:{{.*}}gfx1250
 // RUN: %llvm-readelf --notes %t.output.elf | %FileCheck --check-prefix=OUTPUT-META %s
-// OUTPUT-META: amdhsa.target: amdgcn-amd-amdhsa-{{.*}}gfx1250
+// OUTPUT-META: amdhsa.target: amdgcn-amd-amdhsa{{--|-unknown-}}gfx1250
 
 // COM: .text section is still present and marked executable.
 // RUN: %llvm-readelf --section-headers %t.output.elf \

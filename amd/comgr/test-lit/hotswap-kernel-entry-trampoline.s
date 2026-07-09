@@ -27,6 +27,15 @@
 // RUN: %llvm-objdump -s -j .rodata %t.out.elf | %FileCheck --check-prefix=RODATA %s
 // RUN: %llvm-readelf --notes %t.out.elf | %FileCheck --check-prefix=METADATA %s
 
+// COM: Entry trampolines are independent of the B0-to-A0 patch policy, so an
+// COM: explicit B0->A0 rewrite should still redirect the descriptor to a stub.
+// RUN: hotswap-rewrite %t.elf \
+// RUN:   amdgcn-amd-amdhsa--gfx1250:gfx1250-b0-specific+ \
+// RUN:   amdgcn-amd-amdhsa--gfx1250:gfx1250-b0-specific- \
+// RUN:   --entry-trampolines --output %t.b0a0.elf \
+// RUN:   | %FileCheck --check-prefix=API %s
+// RUN: %llvm-objdump -d %t.b0a0.elf | %FileCheck --check-prefix=DISASM %s
+
 // DISASM-LABEL: <entry_tramp_kernel>:
 // DISASM: s_endpgm
 // DISASM-LABEL: <hipblaslt_entry_kernel>:

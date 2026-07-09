@@ -35,6 +35,47 @@
 // API2: RESULT: SUCCESS
 // RUN: cmp %t.out.elf %t.out2.elf
 
+// COM: One-sided stepping annotations must also be honored. An explicit A0
+// COM: source with a generic target is not B0->A0, and a generic source with
+// COM: an explicit B0 target is not B0->A0 either.
+// RUN: hotswap-rewrite %t.elf \
+// RUN:   amdgcn-amd-amdhsa--gfx1250:gfx1250-b0-specific- \
+// RUN:   amdgcn-amd-amdhsa--gfx1250 \
+// RUN:   --output %t.a0generic.elf \
+// RUN:   | %FileCheck --check-prefix=A0GENERIC-API %s
+// A0GENERIC-API: RESULT: SUCCESS
+// RUN: %llvm-objdump -d %t.a0generic.elf | %FileCheck --check-prefix=NO-PATCH %s
+
+// RUN: hotswap-rewrite %t.elf \
+// RUN:   amdgcn-amd-amdhsa--gfx1250 \
+// RUN:   amdgcn-amd-amdhsa--gfx1250:gfx1250-b0-specific+ \
+// RUN:   --output %t.genericb0.elf \
+// RUN:   | %FileCheck --check-prefix=GENERICB0-API %s
+// GENERICB0-API: RESULT: SUCCESS
+// RUN: %llvm-objdump -d %t.genericb0.elf | %FileCheck --check-prefix=NO-PATCH %s
+
+// NO-PATCH: s_barrier_signal_isfirst -1
+// NO-PATCH-NEXT: s_barrier_wait 0xffff
+// NO-PATCH-NEXT: s_barrier_signal_isfirst -3
+// NO-PATCH-NEXT: s_barrier_wait 0xfffd
+// NO-PATCH-NEXT: s_endpgm
+
+// COM: With explicit B0->B0 stepping, entry trampolines must not accidentally
+// COM: enable B0-to-A0 instruction patches. The isfirst opcodes remain, while
+// COM: the kernel descriptor is still redirected through an appended entry stub.
+// RUN: hotswap-rewrite %t.elf \
+// RUN:   amdgcn-amd-amdhsa--gfx1250:gfx1250-b0-specific+ \
+// RUN:   amdgcn-amd-amdhsa--gfx1250:gfx1250-b0-specific+ \
+// RUN:   --entry-trampolines --output %t.b0b0.elf \
+// RUN:   | %FileCheck --check-prefix=B0B0-API %s
+// B0B0-API: RESULT: SUCCESS
+// RUN: %llvm-objdump -d %t.b0b0.elf | %FileCheck --check-prefix=B0B0 %s
+// B0B0: s_barrier_signal_isfirst -1
+// B0B0-NEXT: s_barrier_wait 0xffff
+// B0B0-NEXT: s_barrier_signal_isfirst -3
+// B0B0-NEXT: s_barrier_wait 0xfffd
+// B0B0: global_wb
+
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1250"
 .text
 .globl test_barrier_isfirst
