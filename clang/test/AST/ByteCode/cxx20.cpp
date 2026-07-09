@@ -1099,8 +1099,7 @@ namespace Virtual {
   static_assert(d.b == 'B');
   static_assert(d.c == 'C');
   // During the construction of C, the dynamic type of B's A is B.
-  static_assert(d.ba == 'B'); // expected-error {{failed}} \
-                              // expected-note {{expression evaluates to}}
+  static_assert(d.ba == 'B');
   static_assert(d.d == 'D');
   static_assert(d.f() == 'D');
   constexpr const A &a = (B&)d;

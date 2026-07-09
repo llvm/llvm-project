@@ -1235,12 +1235,50 @@ struct NonNarrowingCastsOptimization : public OpRewritePattern<tosa::CastOp> {
   }
 };
 
+struct CancellingBlockScaledCastsOptimization
+    : public OpRewritePattern<tosa::CastOp> {
+  using OpRewritePattern<tosa::CastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::CastOp castOp,
+                                PatternRewriter &rewriter) const override {
+    const Value outerInput = castOp.getInput();
+    auto innerCastOp = outerInput.getDefiningOp<tosa::CastOp>();
+    if (!innerCastOp)
+      return rewriter.notifyMatchFailure(castOp,
+                                         "input must be a cast operation");
+
+    const Value innerInput = innerCastOp.getInput();
+    const auto innerInputTy = llvm::cast<ShapedType>(innerInput.getType());
+    const auto innerOutputTy = llvm::cast<ShapedType>(innerCastOp.getType());
+    const auto outerOutputTy = llvm::cast<ShapedType>(castOp.getType());
+
+    if (!llvm::isa<tosa::BlockScaledType>(innerInputTy.getElementType()))
+      return rewriter.notifyMatchFailure(
+          castOp, "inner cast input must have block scaled element type");
+
+    if (innerInputTy != outerOutputTy)
+      return rewriter.notifyMatchFailure(
+          castOp, "inner input type must match outer output type");
+
+    const Type innerOutputElemType = innerOutputTy.getElementType();
+    const bool isLosslessCast = isa<Float32Type>(innerOutputElemType);
+    if (!isLosslessCast)
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid cancelling casts that should be lossy");
+
+    rewriter.replaceOp(castOp, innerInput);
+
+    return success();
+  }
+};
+
 void CastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<NonNarrowingCastsOptimization>(context);
+  results.add<NonNarrowingCastsOptimization,
+              CancellingBlockScaledCastsOptimization>(context);
 }
 
-struct CancellingBlockScaledCastsOptimization
+struct CancellingCastToFromBlockScaledOptimization
     : public OpRewritePattern<tosa::CastToBlockScaledOp> {
   using OpRewritePattern<tosa::CastToBlockScaledOp>::OpRewritePattern;
 
@@ -1286,7 +1324,7 @@ struct CancellingBlockScaledCastsOptimization
 
 void CastToBlockScaledOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<CancellingBlockScaledCastsOptimization>(context);
+  results.add<CancellingCastToFromBlockScaledOptimization>(context);
 }
 
 struct RowGatherToGather : public OpRewritePattern<tosa::RowGatherOp> {

@@ -4252,9 +4252,9 @@ define amdgpu_kernel void @s_fneg_select_infloop_regression_f64(double %arg, i1 
 ; SI-NEXT:    s_and_b64 s[6:7], s[4:5], exec
 ; SI-NEXT:    v_cndmask_b32_e64 v0, -v1, v0, s[4:5]
 ; SI-NEXT:    s_cselect_b32 s0, 0, s0
-; SI-NEXT:    v_mov_b32_e32 v2, s2
 ; SI-NEXT:    v_cndmask_b32_e64 v1, v0, 0, s[4:5]
 ; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    v_mov_b32_e32 v2, s2
 ; SI-NEXT:    v_mov_b32_e32 v3, s3
 ; SI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; SI-NEXT:    s_endpgm
@@ -4272,9 +4272,9 @@ define amdgpu_kernel void @s_fneg_select_infloop_regression_f64(double %arg, i1 
 ; VI-NEXT:    s_and_b64 s[6:7], s[4:5], exec
 ; VI-NEXT:    v_cndmask_b32_e64 v0, -v1, v0, s[4:5]
 ; VI-NEXT:    s_cselect_b32 s0, 0, s0
-; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    v_cndmask_b32_e64 v1, v0, 0, s[4:5]
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm

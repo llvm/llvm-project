@@ -315,7 +315,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_FRAME_INDEX: {
     int FrameIdx = MI.getOperand(1).getIndex();
-    TL.computeKnownBitsForFrameIndex(FrameIdx, Known, MF);
+    TL.computeKnownBitsForStackObjectPointer(
+        Known, MF, MF.getFrameInfo().getObjectAlign(FrameIdx));
     break;
   }
   case TargetOpcode::G_SUB: {

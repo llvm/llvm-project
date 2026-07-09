@@ -604,6 +604,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
                            .try_emplace(CachedHashStringRef(signature), this)
                            .second;
       if (keepGroup) {
+        keptGroups.push_back(i);
         if (!ctx.arg.resolveGroups)
           sections[i] = createInputSection(
               i, sec, check(obj.getSectionName(sec, shstrtab)));
@@ -769,6 +770,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
   StringRef shstrtab = CHECK2(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
   SmallVector<ArrayRef<Elf_Word>, 0> selectedGroups;
+  ArrayRef<uint32_t> keptGroups = this->keptGroups;
+  size_t keptIdx = 0;
   AArch64BuildAttrSubsections aarch64BAsubSections;
   bool hasAArch64BuildAttributes = false;
   for (size_t i = 0; i != size; ++i) {
@@ -826,14 +829,13 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     case SHT_GROUP: {
       if (!ctx.arg.relocatable)
         sections[i] = &InputSection::discarded;
-      StringRef signature =
-          cantFail(this->getELFSyms<ELFT>()[sec.sh_info].getName(stringTable));
-      ArrayRef<Elf_Word> entries =
-          cantFail(obj.template getSectionContentsAsArray<Elf_Word>(sec));
-      if ((entries[0] & GRP_COMDAT) == 0 || ignoreComdats ||
-          ctx.symtab->comdatGroups.find(CachedHashStringRef(signature))
-                  ->second == this)
-        selectedGroups.push_back(entries);
+      // Use the verdict parse() recorded for this group instead of repeating
+      // the signature hashing and comdatGroups lookup.
+      while (keptIdx != keptGroups.size() && keptGroups[keptIdx] < i)
+        ++keptIdx;
+      if (keptIdx != keptGroups.size() && keptGroups[keptIdx] == i)
+        selectedGroups.push_back(
+            cantFail(obj.template getSectionContentsAsArray<Elf_Word>(sec)));
       break;
     }
     case SHT_SYMTAB_SHNDX:
@@ -1744,7 +1746,7 @@ static uint16_t getBitcodeMachineKind(Ctx &ctx, StringRef path,
   case Triple::aarch64:
   case Triple::aarch64_be:
     return EM_AARCH64;
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::r600:
     return EM_AMDGPU;
   case Triple::arm:
