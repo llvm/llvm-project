@@ -14952,7 +14952,6 @@ static void collectLoopStmts(Stmt *AStmt, MutableArrayRef<Stmt *> LoopStmts) {
          "Expecting a loop statement for each affected loop");
 }
 
-
 /// Build and return a DeclRefExpr for the floor induction variable using the
 /// SemaRef and the provided parameters.
 static Expr *makeFloorIVRef(Sema &SemaRef, ArrayRef<VarDecl *> FloorIndVars,
