@@ -5,15 +5,18 @@ define void @zero_two_disjoint_fields(ptr %p, i64 %n) {
 ; CHECK-LABEL: define void @zero_two_disjoint_fields(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[N]], 2
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP]], i8 0, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr nuw i8, ptr [[P]], i64 868
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP1]], i8 0, i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[FIELD_A:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds nuw float, ptr [[FIELD_A]], i64 [[IV]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[FIELD_B:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 868
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds nuw float, ptr [[FIELD_B]], i64 [[IV]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ne i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -43,13 +46,14 @@ define void @zero_two_unknown_pointers(ptr %a, ptr %b, i64 %n) {
 ; CHECK-LABEL: define void @zero_two_unknown_pointers(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[N]], 2
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A]], i8 0, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[B]], i8 0, i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[IV]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ne i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -77,13 +81,14 @@ define void @diff_size(ptr %a, ptr %b, i64 %n) {
 ; CHECK-LABEL: define void @diff_size(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[N]], 2
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A]], i8 0, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[B]], i8 0, i64 [[N]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    store i32 0, ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[IV]]
-; CHECK-NEXT:    store i8 0, ptr [[GEP_B]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ne i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -179,15 +184,16 @@ define void @zero_three_unknown_pointers(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-LABEL: define void @zero_three_unknown_pointers(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[N]], 2
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A]], i8 0, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[B]], i8 0, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[C]], i8 0, i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[IV]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[GEP_C:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[IV]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_C]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ne i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -217,15 +223,19 @@ define void @zero_three_negstride(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-LABEL: define void @zero_three_negstride(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[N]], 2
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP]], i8 0, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP1]], i8 0, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[C]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP2]], i8 0, i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[N]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    store i32 0, ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
-; CHECK-NEXT:    store i32 0, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[GEP_C:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV]]
-; CHECK-NEXT:    store i32 0, ptr [[GEP_C]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ne i64 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -255,17 +265,20 @@ define void @zero_three_partial_overlap(ptr %a, i64 %n) {
 ; CHECK-LABEL: define void @zero_three_partial_overlap(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[N]], 2
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A]], i8 0, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[A]], i64 2
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP]], i8 0, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr nuw i8, ptr [[A]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP1]], i8 0, i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    store i32 0, ptr [[GEP_0]], align 4
 ; CHECK-NEXT:    [[A_2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 2
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds nuw i32, ptr [[A_2]], i64 [[IV]]
-; CHECK-NEXT:    store i32 0, ptr [[GEP_2]], align 4
 ; CHECK-NEXT:    [[A_4:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
 ; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds nuw i32, ptr [[A_4]], i64 [[IV]]
-; CHECK-NEXT:    store i32 0, ptr [[GEP_4]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ne i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]

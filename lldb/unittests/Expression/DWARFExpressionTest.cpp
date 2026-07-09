@@ -574,10 +574,43 @@ DWARF:
   EXPECT_THAT_ERROR(
       t.Eval({DW_OP_const1s, 'X', DW_OP_convert, 0x1d}).takeError(),
       llvm::Failed());
+
+  // A non-zero DIE offset with no DWARF unit.
+  EXPECT_THAT_ERROR(
+      Evaluate({DW_OP_const1s, 'X', DW_OP_convert, 0x01}, nullptr, nullptr)
+          .takeError(),
+      llvm::FailedWithMessage(
+          "DW_OP_convert with a DIE offset requires a DWARF unit"));
+
+  // DW_OP_convert with an empty stack.
+  EXPECT_THAT_ERROR(
+      Evaluate({DW_OP_convert, 0x00}, nullptr, nullptr).takeError(),
+      llvm::FailedWithMessage("DW_OP_convert needs at least 1 stack entries "
+                              "(stack has 0 entries)"));
 }
 
 TEST(DWARFExpression, DW_OP_stack_value) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_stack_value}), llvm::Failed());
+}
+
+TEST(DWARFExpression, IsImplicit) {
+  auto is_implicit = [](llvm::ArrayRef<uint8_t> expr) {
+    DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
+                            /*addr_size=*/4);
+    return DWARFExpression(extractor).IsImplicit(/*dwarf_cu=*/nullptr);
+  };
+
+  // Implicit and composite locations have no writable storage.
+  EXPECT_TRUE(is_implicit({DW_OP_lit1, DW_OP_stack_value}));
+  EXPECT_TRUE(is_implicit({DW_OP_implicit_value, 0x01, 0x11}));
+  EXPECT_TRUE(is_implicit({DW_OP_reg0, DW_OP_piece, 0x02}));
+  EXPECT_TRUE(is_implicit({DW_OP_reg0, DW_OP_bit_piece, 0x04, 0x00}));
+
+  // Memory and register locations are writable.
+  EXPECT_FALSE(is_implicit({DW_OP_addr, 0x10, 0x20, 0x30, 0x40}));
+  EXPECT_FALSE(is_implicit({DW_OP_reg0}));
+  EXPECT_FALSE(is_implicit({DW_OP_breg0, 0x00}));
+  EXPECT_FALSE(is_implicit({DW_OP_fbreg, 0x00}));
 }
 
 // This test shows that the dwarf version is used by the expression evaluation.

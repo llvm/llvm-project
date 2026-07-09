@@ -399,6 +399,17 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
     killAndFlowOrigin(*UO, *SubExpr);
     return;
   }
+  case UO_Plus: {
+    // Unary plus on a pointer is the identity (`+p == p`), so the prvalue
+    // result carries the operand's loans. Flow the operand's rvalue origins
+    // (peeling storage only when the operand is itself a glvalue).
+    if (!UO->getType()->isPointerType())
+      return;
+    const Expr *SubExpr = UO->getSubExpr();
+    flow(getOriginsList(*UO),
+         getRValueOrigins(SubExpr, getOriginsList(*SubExpr)), /*Kill=*/true);
+    return;
+  }
   case UO_PreInc:
   case UO_PostInc:
   case UO_PreDec:
@@ -626,7 +637,7 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     }
   }
 
-  ArrayRef Args = {OCE->getArgs(), OCE->getNumArgs()};
+  ArrayRef<const Expr *> Args(OCE->getArgs(), OCE->getNumArgs());
   // For `static operator()`, the first argument is the object argument,
   // remove it from the argument list to avoid off-by-one errors.
   if (OCE->getOperator() == OO_Call && OCE->getDirectCallee()->isStatic())

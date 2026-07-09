@@ -540,13 +540,15 @@ void ProcessDebugger::OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) {
   // Do nothing by default
 }
 
-void ProcessDebugger::OnLoadDll(const ModuleSpec &module_spec,
-                                lldb::addr_t module_addr) {
-  // Do nothing by default
+DllEventAction ProcessDebugger::OnLoadDll(const ModuleSpec &module_spec,
+                                          lldb::addr_t module_addr,
+                                          lldb::tid_t thread_id) {
+  return DllEventAction::ContinueDebugLoop;
 }
 
-void ProcessDebugger::OnUnloadDll(lldb::addr_t module_addr) {
-  // Do nothing by default
+DllEventAction ProcessDebugger::OnUnloadDll(lldb::addr_t module_addr,
+                                            lldb::tid_t thread_id) {
+  return DllEventAction::ContinueDebugLoop;
 }
 
 void ProcessDebugger::OnDebugString(lldb::addr_t debug_string_addr,
