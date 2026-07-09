@@ -3,7 +3,7 @@
 ; RUN: llc < %s -O0 -fast-isel-abort=2 -mtriple=armv7-linux-gnueabi -relocation-model=pic | FileCheck %s
 
 ; Weak dso_local hidden functions must be overridable at link time
-; (a strong definition in another object should override the weak one).
+; (a non-weak definition in another object should override the weak one).
 ; Instead of using GOT indirection, we use a PC-relative constant pool
 ; entry with a .reloc directive to force the assembler to emit a proper
 ; relocation (R_ARM_REL32), preventing eager resolution when the symbol

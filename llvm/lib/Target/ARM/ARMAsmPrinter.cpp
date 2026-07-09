@@ -1020,7 +1020,8 @@ void ARMAsmPrinter::emitMachineConstantPoolValue(
     // For weak symbols in ELF PIC mode, the assembler would eagerly resolve a
     // PC-relative expression like sym-(LPC+8) when the symbol and reference are
     // in the same section, preventing the linker from overriding a weak
-    // definition with a strong one. Use a .reloc directive to force a proper
+    // definition with a non-weak definition from another section. Use a
+    // .reloc directive rather than a fixup to force the generation of a
     // relocation (R_ARM_REL32) so the linker can perform the override.
     if (GV->isWeakForLinker() && TM.getTargetTriple().isOSBinFormatELF() &&
         TM.isPositionIndependent() && ACPV->getPCAdjustment() != 0) {
