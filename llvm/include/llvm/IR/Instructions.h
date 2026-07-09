@@ -188,7 +188,7 @@ struct LoadStoreInstProperties {
 
 /// An instruction for reading from memory. This uses the SubclassData field in
 /// Value to store whether or not the load is volatile.
-class  LoadInst : public UnaryInstruction {
+class LoadInst : public UnaryInstruction {
   using VolatileField = BoolBitfieldElementT<0>;
   using AlignmentField = AlignmentBitfieldElementT<VolatileField::NextBit>;
   using OrderingField = AtomicOrderingBitfieldElementT<AlignmentField::NextBit>;
