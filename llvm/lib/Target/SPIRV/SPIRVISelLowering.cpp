@@ -36,6 +36,7 @@ SPIRVTargetLowering::SPIRVTargetLowering(const TargetMachine &TM,
   setMaxAtomicSizeInBitsSupported(64);
   setMinCmpXchgSizeInBits(8);
 
+  // So that the expansion in ExpandIrInsts does not run.
   for (MVT VT : {MVT::f16, MVT::f32, MVT::f64})
     setOperationAction(ISD::FFREXP, VT, Legal);
 }
