@@ -1073,7 +1073,7 @@ class BinOpSameOpcodeHelper {
   /// left hand side (0).
   static std::pair<Constant *, unsigned>
   isBinOpWithConstant(const Instruction *I) {
-    unsigned Opcode = I->getOpcode();
+    [[maybe_unused]] unsigned Opcode = I->getOpcode();
     assert(binary_search(SupportedOp, Opcode) && "Unsupported opcode.");
     (void)SupportedOp;
     auto *BinOp = cast<BinaryOperator>(I);
