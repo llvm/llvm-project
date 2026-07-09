@@ -77,13 +77,16 @@ void test_block_captures_self_after_init() {
   });
 }
 
-// This type of code is currently not handled by zero / pattern initialization.
-// The test will break when that is fixed.
+// Bypassed variables are initialized at the goto source (before the branch).
 // UNINIT-LABEL:  test_goto_unreachable_value(
 // ZERO-LABEL:    test_goto_unreachable_value(
-// ZERO-NOT: store {{.*}}%oops
+// ZERO: %oops = alloca i32, align 4
+// ZERO: store i32 0, ptr %oops, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO: br label %jump
 // PATTERN-LABEL: test_goto_unreachable_value(
-// PATTERN-NOT: store {{.*}}%oops
+// PATTERN: %oops = alloca i32, align 4
+// PATTERN: store i32 -1431655766, ptr %oops, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN: br label %jump
 void test_goto_unreachable_value() {
   goto jump;
   int oops;
@@ -91,21 +94,14 @@ void test_goto_unreachable_value() {
   used(oops);
 }
 
-// This type of code is currently not handled by zero / pattern initialization.
-// The test will break when that is fixed.
+// Bypassed variables are initialized at the jump target.
 // UNINIT-LABEL:  test_goto(
 // ZERO-LABEL:    test_goto(
-// ZERO: if.then:
-// ZERO: br label %jump
+// ZERO: %oops = alloca i32, align 4
 // ZERO: store i32 0, ptr %oops, align 4, !annotation [[AUTO_INIT:!.+]]
-// ZERO: br label %jump
-// ZERO: jump:
 // PATTERN-LABEL: test_goto(
-// PATTERN: if.then:
-// PATTERN: br label %jump
+// PATTERN: %oops = alloca i32, align 4
 // PATTERN: store i32 -1431655766, ptr %oops, align 4, !annotation [[AUTO_INIT:!.+]]
-// PATTERN: br label %jump
-// PATTERN: jump:
 void test_goto(int i) {
   if (i)
     goto jump;
@@ -114,19 +110,14 @@ void test_goto(int i) {
   used(oops);
 }
 
-// This type of code is currently not handled by zero / pattern initialization.
-// The test will break when that is fixed.
+// Bypassed variables are initialized at the case target.
 // UNINIT-LABEL:  test_switch(
 // ZERO-LABEL:    test_switch(
-// ZERO:      sw.bb:
-// ZERO-NEXT: store i32 0, ptr %oops, align 4, !annotation [[AUTO_INIT:!.+]]
-// ZERO:      sw.bb1:
-// ZERO-NEXT: call void @{{.*}}used
+// ZERO: %oops = alloca i32, align 4
+// ZERO: store i32 0, ptr %oops, align 4, !annotation [[AUTO_INIT:!.+]]
 // PATTERN-LABEL: test_switch(
-// PATTERN:      sw.bb:
-// PATTERN-NEXT: store i32 -1431655766, ptr %oops, align 4, !annotation [[AUTO_INIT:!.+]]
-// PATTERN:      sw.bb1:
-// PATTERN-NEXT: call void @{{.*}}used
+// PATTERN: %oops = alloca i32, align 4
+// PATTERN: store i32 -1431655766, ptr %oops, align 4, !annotation [[AUTO_INIT:!.+]]
 void test_switch(int i) {
   switch (i) {
   case 0:
@@ -316,6 +307,405 @@ void test_huge_small_init() {
 void test_huge_larger_init() {
   char big[65536] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
   used(big);
+}
+
+// UNINIT-LABEL:  test_goto_multiple_bypassed(
+// ZERO-LABEL:    test_goto_multiple_bypassed(
+// ZERO: %a = alloca i32, align 4
+// ZERO: %b = alloca i32, align 4
+// ZERO-DAG: store i32 0, ptr %a, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO-DAG: store i32 0, ptr %b, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-LABEL: test_goto_multiple_bypassed(
+// PATTERN: %a = alloca i32, align 4
+// PATTERN: %b = alloca i32, align 4
+// PATTERN-DAG: store i32 -1431655766, ptr %a, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-DAG: store i32 -1431655766, ptr %b, align 4, !annotation [[AUTO_INIT:!.+]]
+void test_goto_multiple_bypassed() {
+  goto jump;
+  int a;
+  int b;
+ jump:
+  used(a);
+  used(b);
+}
+
+// UNINIT-LABEL:  test_goto_bypassed_uninitialized_attr(
+// ZERO-LABEL:    test_goto_bypassed_uninitialized_attr(
+// ZERO-NOT: store {{.*}}%skip_me
+// ZERO: call void @{{.*}}used
+// PATTERN-LABEL: test_goto_bypassed_uninitialized_attr(
+// PATTERN-NOT: store {{.*}}%skip_me
+// PATTERN: call void @{{.*}}used
+void test_goto_bypassed_uninitialized_attr() {
+  goto jump;
+  [[clang::uninitialized]] int skip_me;
+ jump:
+  used(skip_me);
+}
+
+// UNINIT-LABEL:  test_switch_between_cases(
+// ZERO-LABEL:    test_switch_between_cases(
+// ZERO: %x = alloca i32, align 4
+// ZERO: store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-LABEL: test_switch_between_cases(
+// PATTERN: %x = alloca i32, align 4
+// PATTERN: store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+void test_switch_between_cases(int c) {
+  switch (c) {
+  case 0:
+    int x;
+    x = 42;
+    used(x);
+    break;
+  case 1:
+    used(x);
+    break;
+  }
+}
+
+// UNINIT-LABEL:  test_switch_precase(
+// ZERO-LABEL:    test_switch_precase(
+// ZERO: %x = alloca i32, align 4
+// ZERO: store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-LABEL: test_switch_precase(
+// PATTERN: %x = alloca i32, align 4
+// PATTERN: store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+void test_switch_precase(int c) {
+  switch (c) {
+    int x;
+  case 0:
+    x = 1;
+    used(x);
+    break;
+  }
+}
+
+// UNINIT-LABEL:  test_computed_goto(
+// ZERO-LABEL:    test_computed_goto(
+// ZERO: %y = alloca i32, align 4
+// ZERO: store i32 0, ptr %y, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-LABEL: test_computed_goto(
+// PATTERN: %y = alloca i32, align 4
+// PATTERN: store i32 -1431655766, ptr %y, align 4, !annotation [[AUTO_INIT:!.+]]
+void test_computed_goto(int x) {
+  void *targets[] = {&&label1, &&label2};
+  goto *targets[x];
+  int y;
+label1:
+  used(y);
+  return;
+label2:
+  return;
+}
+
+// UNINIT-LABEL:  test_loop_bypass(
+// ZERO-LABEL:    test_loop_bypass(
+// ZERO: %x = alloca i32, align 4
+// ZERO: while.body:
+// ZERO: store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO: br label %X
+// PATTERN-LABEL: test_loop_bypass(
+// PATTERN: %x = alloca i32, align 4
+// PATTERN: while.body:
+// PATTERN: store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN: br label %X
+void test_loop_bypass() {
+  while (true) {
+    goto X;
+    int x;
+    X:
+    used(x);
+    if (x) break;
+  }
+}
+
+// UNINIT-LABEL:  test_complex_multi_goto(
+// ZERO-LABEL:    test_complex_multi_goto(
+// ZERO:      Z:
+// ZERO-NEXT: store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO-NEXT: br label %Y
+// ZERO:      X:
+// ZERO-NEXT: store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO-NEXT: br label %Y
+// ZERO:      sw.bb:
+// ZERO-NOT:  store {{.*}}%x
+// ZERO:      br label %X
+// ZERO:      sw.bb1:
+// ZERO-NOT:  store {{.*}}%x
+// ZERO:      br label %Z
+// ZERO:      sw.epilog:
+// ZERO-NOT:  store {{.*}}%x
+// ZERO:      br label %Y
+// PATTERN-LABEL: test_complex_multi_goto(
+// PATTERN:      Z:
+// PATTERN-NEXT: store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-NEXT: br label %Y
+// PATTERN:      X:
+// PATTERN-NEXT: store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-NEXT: br label %Y
+// PATTERN:      sw.bb:
+// PATTERN-NOT:  store {{.*}}%x
+// PATTERN:      br label %X
+// PATTERN:      sw.bb1:
+// PATTERN-NOT:  store {{.*}}%x
+// PATTERN:      br label %Z
+// PATTERN:      sw.epilog:
+// PATTERN-NOT:  store {{.*}}%x
+// PATTERN:      br label %Y
+void test_complex_multi_goto(int g(int*)) {
+  while (true) {
+    Z:
+    goto Y;
+    X:
+    goto Y;
+    int x;
+    Y:
+    switch (g(&x)) {
+    case 0:
+      goto X;
+    case 1:
+      goto Z;
+    }
+    goto Y;
+  }
+}
+
+// UNINIT-LABEL:  test_no_reinit_in_scope(
+// ZERO-LABEL:    test_no_reinit_in_scope(
+// ZERO:      while.body:
+// ZERO-NEXT: store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO-NEXT: br label %Y
+// ZERO:      if.end:
+// ZERO-NOT:  store {{.*}}%x
+// ZERO:      br label %Y
+// PATTERN-LABEL: test_no_reinit_in_scope(
+// PATTERN:      while.body:
+// PATTERN-NEXT: store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-NEXT: br label %Y
+// PATTERN:      if.end:
+// PATTERN-NOT:  store {{.*}}%x
+// PATTERN:      br label %Y
+void test_no_reinit_in_scope(int g(int*)) {
+  while (true) {
+    goto Y;
+    int x;
+    Y:
+    if (g(&x))
+      break;
+    goto Y;
+  }
+}
+
+// Backward goto: x is already in scope, no bypass init should occur at the
+// goto.
+// UNINIT-LABEL:  test_backward_goto_no_init(
+// ZERO-LABEL:    test_backward_goto_no_init(
+// ZERO:      store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO:      L:
+// ZERO-NOT:  store {{.*}}%x
+// ZERO:      if.then:
+// ZERO-NOT:  store {{.*}}%x
+// ZERO:      br label %L
+// PATTERN-LABEL: test_backward_goto_no_init(
+// PATTERN:      store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN:      L:
+// PATTERN-NOT:  store {{.*}}%x
+// PATTERN:      if.then:
+// PATTERN-NOT:  store {{.*}}%x
+// PATTERN:      br label %L
+void test_backward_goto_no_init() {
+  int x;
+ L:
+  used(x);
+  if (x)
+    goto L;
+}
+
+// Switch with default case bypassing a variable declared in case 0.
+// UNINIT-LABEL:  test_switch_default_bypass(
+// ZERO-LABEL:    test_switch_default_bypass(
+// ZERO:      sw.default:
+// ZERO-NEXT: store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-LABEL: test_switch_default_bypass(
+// PATTERN:      sw.default:
+// PATTERN-NEXT: store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+void test_switch_default_bypass(int c) {
+  switch (c) {
+  case 0:
+    int x;
+    x = 10;
+    used(x);
+    break;
+  default:
+    used(x);
+    break;
+  }
+}
+
+// Multipe variables bypassed by the same goto so both must be initialized.
+// UNINIT-LABEL:  test_goto_multiple_vars(
+// ZERO-LABEL:    test_goto_multiple_vars(
+// ZERO: %a = alloca i32, align 4
+// ZERO: %b = alloca i32, align 4
+// ZERO: store i32 0, ptr %a, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO: store i32 0, ptr %b, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO: br label %jump
+// PATTERN-LABEL: test_goto_multiple_vars(
+// PATTERN: %a = alloca i32, align 4
+// PATTERN: %b = alloca i32, align 4
+// PATTERN: store i32 -1431655766, ptr %a, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN: store i32 -1431655766, ptr %b, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN: br label %jump
+void test_goto_multiple_vars() {
+  goto jump;
+  int a;
+  int b;
+ jump:
+  used(a);
+  used(b);
+}
+
+// UNINIT-LABEL:  test_backward_goto_bypass(
+// ZERO-LABEL:    test_backward_goto_bypass(
+// ZERO:      jump:
+// ZERO:      call void @{{.*}}used
+// ZERO:      call void @{{.*}}used
+// ZERO-DAG:  store i32 0, ptr %b, align 4
+// ZERO-DAG:  store i32 0, ptr %a, align 4
+// ZERO:      br label %jump
+// PATTERN-LABEL: test_backward_goto_bypass(
+// PATTERN:      jump:
+// PATTERN:      call void @{{.*}}used
+// PATTERN:      call void @{{.*}}used
+// PATTERN-DAG:  store i32 -1431655766, ptr %b
+// PATTERN-DAG:  store i32 -1431655766, ptr %a
+// PATTERN:      br label %jump
+void test_backward_goto_bypass() {
+  {
+    int a;
+    int b;
+jump:
+    used(a);
+    used(b);
+  }
+  goto jump;
+}
+
+// C++ [basic.stc.auto]: scope re-entry restarts the lifetime, so the init is
+// emitted at the goto source and reruns each iteration (store in BEGIN, not
+// entry). Contrast the C version, which inits once in entry and returns 10.
+// UNINIT-LABEL:  test_backward_goto_around_decl(
+// ZERO-LABEL:    test_backward_goto_around_decl(
+// ZERO:      entry:
+// ZERO-NOT:  !annotation
+// ZERO:      BEGIN:
+// ZERO:      store ptr null, ptr %p, align 8, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-LABEL: test_backward_goto_around_decl(
+// PATTERN:      entry:
+// PATTERN-NOT:  !annotation
+// PATTERN:      BEGIN:
+// PATTERN:      store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %p, align 8, !annotation [[AUTO_INIT:!.+]]
+int test_backward_goto_around_decl(int b) {
+BEGIN:;
+  goto CONT;
+  int *p;
+CONT:
+  if (b)
+    *p = 10;
+  p = &b;
+  if (!b) {
+    b = 1;
+    goto BEGIN;
+  }
+  return b;
+}
+
+// Nested loops: goto source is in the inner body, so reinit lands there
+// (while.body3), every inner iteration.
+// UNINIT-LABEL:  nested_loops(
+// ZERO-LABEL:    nested_loops(
+// ZERO:      entry:
+// ZERO-NOT:  store {{.*}}%x{{.*}}!annotation
+// ZERO:      while.body3:
+// ZERO:      store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-LABEL: nested_loops(
+// PATTERN:      entry:
+// PATTERN-NOT:  store {{.*}}%x{{.*}}!annotation
+// PATTERN:      while.body3:
+// PATTERN:      store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+void nested_loops(int n) {
+  while (n) {
+    while (n) {
+      goto X;
+      int x;
+    X:
+      used(x);
+      n--;
+    }
+  }
+}
+
+// Nested loops + switch: in C++ the reinit is emitted at each case target, so
+// it runs on every case entry (one store per case).
+// UNINIT-LABEL:  nested_loops_switch(
+// ZERO-LABEL:    nested_loops_switch(
+// ZERO:      while.body3:
+// ZERO:      switch i32
+// ZERO-DAG:  store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO-DAG:  store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT]]
+// PATTERN-LABEL: nested_loops_switch(
+// PATTERN:      while.body3:
+// PATTERN:      switch i32
+// PATTERN-DAG:  store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-DAG:  store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT]]
+void nested_loops_switch(int n, int c) {
+  while (n) {
+    while (n) {
+      switch (c) {
+        int x;
+      case 0:
+        x = 1;
+        used(x);
+        break;
+      default:
+        used(x);
+        break;
+      }
+      n--;
+    }
+  }
+}
+
+// Computed goto with multiple scopes: jump sources are unknown, so all bypassed
+// variables fall back to a single function-scope init in entry. Even though a
+// regular switch is also present, its case targets must NOT reinitialize -- that
+// could clobber a variable still live across the computed jump. One init in
+// entry, none after the indirectbr.
+// UNINIT-LABEL:  test_computed_goto_multi_scope(
+// ZERO-LABEL:    test_computed_goto_multi_scope(
+// ZERO:      entry:
+// ZERO:      store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO:      indirectbr
+// ZERO-NOT:  store i32 0, ptr %x, align 4, !annotation
+// PATTERN-LABEL: test_computed_goto_multi_scope(
+// PATTERN:      entry:
+// PATTERN:      store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN:      indirectbr
+// PATTERN-NOT:  store i32 -1431655766, ptr %x, align 4, !annotation
+void test_computed_goto_multi_scope(int n, int c) {
+  void *targets[] = {&&L1, &&L2};
+  goto *targets[n];
+  int x;
+  switch (c) {
+  case 0:
+  L1:
+    used(x);
+    break;
+  default:
+  L2:
+    used(x);
+    break;
+  }
 }
 
 } // extern "C"
