@@ -534,6 +534,8 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
     return "eabi";
   case EABIHF:
     return "eabihf";
+  case X32:
+    return "x32";
   case GNU:
     return "gnu";
   case GNUT64:
@@ -991,6 +993,7 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
   return StringSwitch<Triple::EnvironmentType>(EnvironmentName)
       .StartsWith("eabihf", Triple::EABIHF)
       .StartsWith("eabi", Triple::EABI)
+      .StartsWith("x32", Triple::X32)
       .StartsWith("gnuabin32", Triple::GNUABIN32)
       .StartsWith("gnuabi64", Triple::GNUABI64)
       .StartsWith("gnueabihft64", Triple::GNUEABIHFT64)
