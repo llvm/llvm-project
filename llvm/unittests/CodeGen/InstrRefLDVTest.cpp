@@ -227,7 +227,7 @@ public:
   void initValueArray(FuncValueTable &Nums, unsigned Blks, unsigned Locs) {
     for (unsigned int I = 0; I < Blks; ++I)
       for (unsigned int J = 0; J < Locs; ++J)
-        Nums[I][J] = ValueIDNum();
+        Nums[I][J] = ValueIDNum::EmptyValue;
   }
 
   void setupSingleBlock() {
@@ -843,7 +843,7 @@ TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
     EXPECT_EQ(DefNum, SpillValue);
   }
 
-  // Stack slot for $rax should be a different value, today it's an empty value.
+  // Stack slot for $rax should be a different value, today it's EmptyValue.
   ValueIDNum SpillValue = MTracker->readMLoc(Spill64Loc);
   EXPECT_EQ(SpillValue, DefAtSpill64);
 
@@ -1178,7 +1178,7 @@ TEST_F(InstrRefLDVTest, MLocDiamondSpills) {
   EXPECT_EQ(MInLocs[3][HAXStackLoc.asU64()], HAXPHI);
   EXPECT_EQ(MInLocs[3][RAXStackLoc.asU64()], RAXPHI);
   // AH should be left untouched,
-  EXPECT_EQ(MInLocs[3][AHStackLoc.asU64()], ValueIDNum());
+  EXPECT_EQ(MInLocs[3][AHStackLoc.asU64()], ValueIDNum::EmptyValue);
 }
 
 TEST_F(InstrRefLDVTest, MLocSimpleLoop) {

@@ -96,6 +96,12 @@ public:
     return Plugin::success();
   }
 
+  Error appendMemoryPrefetch(const void *Ptr, size_t Size) {
+    std::lock_guard<std::mutex> Lock(Mtx);
+    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryPrefetch, CmdList, Ptr, Size);
+    return Plugin::success();
+  }
+
   Error appendLaunchKernel(ze_kernel_handle_t Kernel,
                            const ze_group_count_t *pLaunchFuncArgs,
                            ze_event_handle_t SignalEvent = nullptr,

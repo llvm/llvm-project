@@ -1324,7 +1324,7 @@ void ASTStmtWriter::VisitVAArgExpr(VAArgExpr *E) {
   Record.AddTypeSourceInfo(E->getWrittenTypeInfo());
   Record.AddSourceLocation(E->getBuiltinLoc());
   Record.AddSourceLocation(E->getRParenLoc());
-  Record.push_back(E->isMicrosoftABI());
+  Record.push_back(E->getVarargABI());
   Code = serialization::EXPR_VA_ARG;
 }
 

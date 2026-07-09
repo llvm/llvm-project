@@ -18,6 +18,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
 
+static llvm::StringSet<> nameObj;
+
 namespace llvm {
 
 /// Default traits class for extracting a graph from an analysis pass.
@@ -89,7 +91,6 @@ static inline void shortenFileName(std::string &FN, unsigned char len = 250) {
     FN.resize(len);
   auto strLen = FN.length();
   while (strLen > 0) {
-    static llvm::StringSet<> nameObj;
     if (nameObj.insert(FN).second)
       break;
     FN.resize(--len);

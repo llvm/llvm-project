@@ -566,24 +566,12 @@ entry:
 }
 
 define void @addsub0f(ptr noalias %dst, ptr noalias %src) {
-;
 ; CHECK-LABEL: define void @addsub0f(
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[SUB:%.*]] = fadd fast float [[TMP0]], -1.000000e+00
-; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 1
-; CHECK-NEXT:    store float [[SUB]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[INCDEC_PTR]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 2
-; CHECK-NEXT:    store float [[TMP1]], ptr [[INCDEC_PTR1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <2 x float> [[TMP2]], <float -2.000000e+00, float -3.000000e+00>
-; CHECK-NEXT:    [[TMP4:%.*]] = fsub fast <2 x float> [[TMP2]], <float -2.000000e+00, float -3.000000e+00>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP4]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[INCDEC_PTR3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz arcp contract afn <4 x float> [[TMP0]], <float -1.000000e+00, float -0.000000e+00, float -2.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -608,24 +596,12 @@ entry:
 }
 
 define void @addsub1f(ptr noalias %dst, ptr noalias %src) {
-;
 ; CHECK-LABEL: define void @addsub1f(
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 2
-; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast <2 x float> [[TMP0]], splat (float -1.000000e+00)
-; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast <2 x float> [[TMP0]], splat (float -1.000000e+00)
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 3
-; CHECK-NEXT:    store float [[TMP4]], ptr [[INCDEC_PTR3]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[SUB8:%.*]] = fsub fast float [[TMP5]], -3.000000e+00
-; CHECK-NEXT:    store float [[SUB8]], ptr [[INCDEC_PTR6]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz arcp contract afn <4 x float> [[TMP0]], <float 1.000000e+00, float -1.000000e+00, float 0.000000e+00, float -3.000000e+00>
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

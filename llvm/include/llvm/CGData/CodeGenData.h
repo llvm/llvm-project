@@ -119,10 +119,11 @@ class CodeGenData {
   /// Or, it can be mutated with -fcodegen-data-thinlto-two-rounds.
   bool EmitCGData;
 
-  /// There is a singleton instance which is thread-safe. Unlike profile data
+  /// This is a singleton instance which is thread-safe. Unlike profile data
   /// which is largely function-based, codegen data describes the whole module.
   /// Therefore, this can be initialized once, and can be used across modules
   /// instead of constructing the same one for each codegen backend.
+  static std::unique_ptr<CodeGenData> Instance;
   static std::once_flag OnceFlag;
 
   CodeGenData() = default;

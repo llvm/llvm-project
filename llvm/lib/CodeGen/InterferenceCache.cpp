@@ -27,7 +27,7 @@ using namespace llvm;
 #define DEBUG_TYPE "regalloc"
 
 // Static member used for null interference cursors.
-constexpr InterferenceCache::BlockInterference
+const InterferenceCache::BlockInterference
     InterferenceCache::Cursor::NoInterference;
 
 // Initializes PhysRegEntries (instead of a SmallVector, PhysRegEntries is a

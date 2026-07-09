@@ -1153,14 +1153,14 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
 }
 
 void VPlanTransforms::optimizeInductionLiveOutUsers(
-    VPlan &Plan, PredicatedScalarEvolution &PSE, bool FoldTail) {
+    VPlan &Plan, PredicatedScalarEvolution &PSE) {
   // Compute end values for all inductions.
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto *VectorPH = cast<VPBasicBlock>(VectorRegion->getSinglePredecessor());
   VPBuilder VectorPHBuilder(VectorPH, VectorPH->begin());
   DenseMap<VPValue *, VPValue *> EndValues;
   VPValue *ResumeTC =
-      FoldTail ? Plan.getTripCount() : &Plan.getVectorTripCount();
+      Plan.hasTailFolded() ? Plan.getTripCount() : &Plan.getVectorTripCount();
   for (auto &Phi : VectorRegion->getEntryBasicBlock()->phis()) {
     auto *WideIV = dyn_cast<VPWidenInductionRecipe>(&Phi);
     if (!WideIV)
