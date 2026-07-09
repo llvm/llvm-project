@@ -721,11 +721,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          {MVT::v4i16, MVT::v2i32}, Legal);
       setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG, {MVT::v4i16, MVT::v2i32},
                          Custom);
-      // LegalizeVectorOps uses result VT, LegalizeDAG uses ExtVT.
-      setOperationAction(ISD::SIGN_EXTEND_INREG,
-                         {MVT::v2i16, MVT::v4i8, MVT::v2i32, MVT::v4i16},
-                         Legal);
     }
+    // LegalizeVectorOps uses result VT, LegalizeDAG uses ExtVT.
+    setOperationAction(
+        ISD::SIGN_EXTEND_INREG,
+        {MVT::v2i8, MVT::v4i8, MVT::v2i16, MVT::v4i16, MVT::v2i32}, Legal);
   }
 
   if (Subtarget.hasStdExtZfbfmin()) {
@@ -17771,6 +17771,36 @@ static SDValue combineNarrowableShiftedLoad(SDNode *N, SelectionDAG &DAG) {
                      DAG.getShiftAmountConstant(ShiftAmt, VT, DL));
 }
 
+static SDValue combinePZExt(SDNode *N, SelectionDAG &DAG,
+                            const RISCVSubtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  if (!VT.isSimple())
+    return SDValue();
+
+  MVT SimpleVT = VT.getSimpleVT();
+  if (!Subtarget.isPExtPackedType(SimpleVT))
+    return SDValue();
+
+  APInt SplatVal;
+  if (!ISD::isConstantSplatVector(N->getOperand(1).getNode(), SplatVal))
+    return SDValue();
+
+  MVT EltVT = SimpleVT.getVectorElementType();
+  bool IsByteToHalf = EltVT == MVT::i16 && SplatVal == 0xff;
+  bool IsHalfToWord = EltVT == MVT::i32 && SplatVal == 0xffff;
+  if (!IsByteToHalf && !IsHalfToWord)
+    return SDValue();
+
+  MVT PPairVT = MVT::getVectorVT(
+      MVT::getIntegerVT(SimpleVT.getScalarSizeInBits() / 2),
+      SimpleVT.getVectorNumElements() * 2);
+  SDLoc DL(N);
+  SDValue Src = DAG.getBitcast(PPairVT, N->getOperand(0));
+  SDValue Res = DAG.getNode(RISCVISD::PPAIRE, DL, PPairVT, Src,
+                            DAG.getConstant(0, DL, PPairVT));
+  return DAG.getBitcast(SimpleVT, Res);
+}
+
 // Combines two comparison operation and logic operation to one selection
 // operation(min, max) and logic operation. Returns new constructed Node if
 // conditions for optimization are satisfied.
@@ -17779,6 +17809,8 @@ static SDValue performANDCombine(SDNode *N,
                                  const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
   SDValue N0 = N->getOperand(0);
+  if (SDValue V = combinePZExt(N, DAG, Subtarget))
+    return V;
 
   // Pre-promote (i32 (and (srl X, Y), 1)) on RV64 with Zbs without zero
   // extending X. This is safe since we only need the LSB after the shift and
