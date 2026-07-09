@@ -1733,16 +1733,12 @@ DEF_TRAVERSE_DECL(FriendDecl, {
 })
 
 DEF_TRAVERSE_DECL(FriendTemplateDecl, {
-  TemplateName Template = D->getFriendTemplateName();
-  if (Template.isNull()) {
-    if (D->getFriendType())
-      TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
-    else
-      TRY_TO(TraverseDecl(D->getFriendDecl()));
-  } else {
-    TRY_TO(TraverseTemplateName(Template));
-  }
-  for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists()) {
+  if (D->getFriendType())
+    TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
+  else
+    TRY_TO(TraverseDecl(D->getFriendDecl()));
+  for (unsigned I = 0, E = D->getNumTemplateParameters(); I < E; ++I) {
+    TemplateParameterList *TPL = D->getTemplateParameterList(I);
     for (TemplateParameterList::iterator ITPL = TPL->begin(), ETPL = TPL->end();
          ITPL != ETPL; ++ITPL) {
       TRY_TO(TraverseDecl(*ITPL));
@@ -2006,6 +2002,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
       case TSK_ExplicitInstantiationDeclaration:
       case TSK_ExplicitInstantiationDefinition:
       case TSK_ExplicitSpecialization:
+      case TSK_FriendDeclaration:
         break;
       }
     }
@@ -2026,6 +2023,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
         TRY_TO(TraverseDecl(RD));
         break;
 
+      case TSK_FriendDeclaration:
       case TSK_ExplicitInstantiationDeclaration:
       case TSK_ExplicitInstantiationDefinition:
       case TSK_ExplicitSpecialization:
@@ -2060,6 +2058,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
         TRY_TO(TraverseDecl(RD));
         break;
 
+      case TSK_FriendDeclaration:
       case TSK_ExplicitSpecialization:
         break;
       }
@@ -2226,8 +2225,9 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
        handles traversal of template args and qualifier.                       \
        For explicit specializations ("template<> set<int> {...};"),            \
        we traverse template args here since there is no EID. */                \
-    if (D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {    \
-      const auto *ArgsWritten = D->getTemplateArgsAsWritten();                 \
+    if (const auto *Info = D->getExplicitSpecializationInfo()) {               \
+      const auto *ArgsWritten = Info->TemplateArgsAsWritten;                   \
+      TRY_TO(TraverseTemplateParameterListHelper(Info->TemplateParams));       \
       TRY_TO(TraverseTemplateArgumentLocsHelper(                               \
           ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));      \
     } else if (!getDerived().shouldVisitTemplateInstantiations()) {            \

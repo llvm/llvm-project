@@ -1163,9 +1163,8 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
   for (CXXRecordDecl::friend_iterator I = RD->friend_begin(),
                                       E = RD->friend_end();
        I != E && Complete; ++I) {
-    FriendDecl *Friend = *I;
     // Check if friend classes and methods are complete.
-    if (TypeSourceInfo *TSI = Friend->getFriendType()) {
+    if (TypeSourceInfo *TSI = (*I)->getFriendType()) {
       // Friend classes are available as the TypeSourceInfo of the FriendDecl.
       if (CXXRecordDecl *FriendD = TSI->getType()->getAsCXXRecordDecl())
         Complete = MethodsAndNestedClassesComplete(FriendD, MNCComplete);
@@ -1174,7 +1173,7 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
     } else {
       // Friend functions are available through the NamedDecl of FriendDecl.
       if (const FunctionDecl *FD =
-              dyn_cast<FunctionDecl>(Friend->getFriendDecl()))
+          dyn_cast<FunctionDecl>((*I)->getFriendDecl()))
         Complete = FD->isDefined();
       else
         // This is a template friend, give up.

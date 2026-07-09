@@ -13938,10 +13938,13 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
       }
 
       if (!Invalid && OldDecl && !OldDecl->isInvalidDecl()) {
-        if (TemplateParameterListsAreEqual(TemplateParams,
-                                           OldDecl->getTemplateParameters(),
-                                           /*Complain=*/true,
-                                           TPL_TemplateMatch))
+        // It's ok that we don't pass the declarations corresponding to the
+        // template parameter lists here, because type alias templates cannot be
+        // declared out-of-line.
+        if (TemplateParameterListsAreEqual(
+                /*NewInstFrom=*/nullptr, TemplateParams,
+                /*OldInstFrom=*/nullptr, OldDecl->getTemplateParameters(),
+                /*Complain=*/true, TPL_TemplateMatch))
           OldTemplateParams =
               OldDecl->getMostRecentDecl()->getTemplateParameters();
         else
@@ -18083,31 +18086,6 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
   return Decl;
 }
 
-bool Sema::CheckDependentFriend(SourceLocation Loc, NestedNameSpecifier NNS,
-                                TemplateParameterList *FPL) {
-  if (!NNS.isDependent() || !FPL || FPL->size() == 0)
-    return false;
-
-  assert(NNS.getKind() == NestedNameSpecifier::Kind::Type &&
-         "dependent nested-name-specifier must be a type");
-  QualType T(NNS.getCanonical().getAsType(), 0);
-
-  if (const auto *PIT = dyn_cast<PackIndexingType>(T))
-    T = PIT->getPattern();
-
-  if (const auto *TST = dyn_cast<TemplateSpecializationType>(T)) {
-    if (isa_and_nonnull<ClassTemplateDecl>(
-            TST->getTemplateName().getAsTemplateDecl()))
-      return false;
-  }
-
-  if (isa<InjectedClassNameType>(T))
-    return false;
-
-  Diag(Loc, diag::err_dependent_friend_not_member);
-  return true;
-}
-
 DeclResult Sema::ActOnTemplatedFriendTag(
     Scope *S, SourceLocation FriendLoc, unsigned TagSpec, SourceLocation TagLoc,
     CXXScopeSpec &SS, IdentifierInfo *Name, SourceLocation NameLoc,
@@ -18123,17 +18101,16 @@ DeclResult Sema::ActOnTemplatedFriendTag(
               TagLoc, NameLoc, SS, nullptr, TempParamLists, /*friend*/ true,
               IsMemberSpecialization, Invalid)) {
     if (TemplateParams->size() > 0) {
+      // This is a declaration of a class template.
       if (Invalid)
         return true;
 
-      if (SS.isEmpty() || !SS.getScopeRep().isDependent()) {
-        DeclResult Result = CheckClassTemplate(
-            S, TagSpec, TagUseKind::Friend, TagLoc, SS, Name, NameLoc, Attr,
-            TemplateParams, AS_public, /*ModulePrivateLoc=*/SourceLocation(),
-            FriendLoc, TempParamLists.size() - 1, TempParamLists.data(),
-            IsMemberSpecialization);
-        return Result.get();
-      }
+      return CheckClassTemplate(S, TagSpec, TagUseKind::Friend, TagLoc, SS,
+                                Name, NameLoc, Attr, TemplateParams, AS_public,
+                                /*ModulePrivateLoc=*/SourceLocation(),
+                                FriendLoc, TempParamLists.size() - 1,
+                                TempParamLists.data(), IsMemberSpecialization)
+          .get();
     } else {
       // The "template<>" header is extraneous.
       Diag(TemplateParams->getTemplateLoc(), diag::err_template_tag_noparams)
@@ -18178,8 +18155,9 @@ DeclResult Sema::ActOnTemplatedFriendTag(
     if (T.isNull())
       return true;
 
-    FriendDecl *Friend = FriendDecl::Create(Context, CurContext, NameLoc, TSI,
-                                            FriendLoc, EllipsisLoc);
+    FriendDecl *Friend =
+        FriendDecl::Create(Context, CurContext, NameLoc, TSI, FriendLoc,
+                           EllipsisLoc, TempParamLists);
     Friend->setAccess(AS_public);
     CurContext->addDecl(Friend);
     return Friend;
@@ -18205,35 +18183,25 @@ DeclResult Sema::ActOnTemplatedFriendTag(
     }
   }
 
-  NestedNameSpecifier NNS = SS.getScopeRep();
-  if (EllipsisLoc.isInvalid() &&
-      CheckDependentFriend(TagLoc, NNS, TempParamLists.front()))
-    return true;
-
+  // Handle the case of a templated-scope friend class.  e.g.
+  //   template <class T> class A<T>::B;
+  // FIXME: we don't support these right now.
+  Diag(NameLoc, diag::warn_template_qualified_friend_unsupported)
+    << SS.getScopeRep() << SS.getRange() << cast<CXXRecordDecl>(CurContext);
   ElaboratedTypeKeyword ETK = TypeWithKeyword::getKeywordForTagTypeKind(Kind);
-  QualType T = Context.getDependentNameType(ETK, NNS, Name);
+  QualType T = Context.getDependentNameType(ETK, SS.getScopeRep(), Name);
   TypeSourceInfo *TSI = Context.CreateTypeSourceInfo(T);
-
   DependentNameTypeLoc TL = TSI->getTypeLoc().castAs<DependentNameTypeLoc>();
   TL.setElaboratedKeywordLoc(TagLoc);
   TL.setQualifierLoc(SS.getWithLocInContext(Context));
   TL.setNameLoc(NameLoc);
 
-  FriendDecl *Friend;
-  if (TempParamLists.empty())
-    Friend = FriendDecl::Create(Context, CurContext, NameLoc, TSI, FriendLoc,
-                                EllipsisLoc);
-  else {
-    if (CheckTemplateDeclScope(S, TempParamLists.back()))
-      return true;
-
-    Friend = FriendTemplateDecl::Create(Context, CurContext, NameLoc, TSI,
-                                        FriendLoc, TempParamLists, EllipsisLoc);
-  }
-
+  FriendDecl *Friend =
+      FriendDecl::Create(Context, CurContext, NameLoc, TSI, FriendLoc,
+                         EllipsisLoc, TempParamLists);
   Friend->setAccess(AS_public);
+  Friend->setUnsupportedFriend(true);
   CurContext->addDecl(Friend);
-
   return Friend;
 }
 
@@ -18334,14 +18302,11 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
   // friend a member of an arbitrary specialization of your template).
 
   Decl *D;
-  if (!TempParams.empty()) {
-    if (CheckTemplateDeclScope(S, TempParams.back()))
-      return nullptr;
-
+  if (!TempParams.empty())
     // TODO: Support variadic friend template decls?
-    D = FriendTemplateDecl::Create(Context, CurContext, Loc, TSI, FriendLoc,
-                                   TempParams, EllipsisLoc);
-  } else
+    D = FriendTemplateDecl::Create(Context, CurContext, Loc, TempParams, TSI,
+                                   FriendLoc);
+  else
     D = FriendDecl::Create(Context, CurContext, TSI->getTypeLoc().getBeginLoc(),
                            TSI, FriendLoc, EllipsisLoc);
 
@@ -18418,7 +18383,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
                                Kind == NestedNameSpecifier::Kind::Namespace;
     if (IsNamespaceOrGlobal) {
       Diag(SS.getRange().getBegin(), diag::err_qualified_friend_def)
-          << SS.getScopeRep();
+          << SS.getScopeRep() << FixItHint::CreateRemoval(SS.getRange());
       SS.clear();
     }
   }
@@ -18539,11 +18504,6 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     assert(isa<CXXRecordDecl>(DC) && "friend declaration not in class?");
   }
 
-  if (TemplateParams.size() && SS.isValid() &&
-      CheckDependentFriend(NameInfo.getLoc(), SS.getScopeRep(),
-                           TemplateParams.front()))
-    return nullptr;
-
   if (!DC->isRecord()) {
     int DiagArg = -1;
     switch (D.getName().getKind()) {
@@ -18612,79 +18572,81 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
       PushOnScopeChains(ND, EnclosingScope, /*AddToContext=*/ false);
   }
 
-  warnOnReservedIdentifier(ND);
+  FriendDecl *FrD = FriendDecl::Create(Context, CurContext,
+                                       D.getIdentifierLoc(), ND,
+                                       DS.getFriendSpecLoc());
+  FrD->setAccess(AS_public);
+  CurContext->addDecl(FrD);
 
-  if (ND->isInvalidDecl())
-    return ND;
+  if (ND->isInvalidDecl()) {
+    FrD->setInvalidDecl();
+  } else {
+    if (DC->isRecord()) CheckFriendAccess(ND);
 
-  if (DC->isRecord())
-    CheckFriendAccess(ND);
+    FunctionDecl *FD;
+    if (FunctionTemplateDecl *FTD = dyn_cast<FunctionTemplateDecl>(ND))
+      FD = FTD->getTemplatedDecl();
+    else
+      FD = cast<FunctionDecl>(ND);
 
-  FunctionDecl *FD;
-  if (FunctionTemplateDecl *FTD = dyn_cast<FunctionTemplateDecl>(ND))
-    FD = FTD->getTemplatedDecl();
-  else
-    FD = cast<FunctionDecl>(ND);
+    // C++ [class.friend]p6:
+    //   A function may be defined in a friend declaration of a class if and
+    //   only if the class is a non-local class, and the function name is
+    //   unqualified.
+    if (D.isFunctionDefinition()) {
+      // Qualified friend function definition.
+      if (SS.isNotEmpty()) {
+        // FIXME: We should only do this if the scope specifier names the
+        // innermost enclosing namespace; otherwise the fixit changes the
+        // meaning of the code.
+        SemaDiagnosticBuilder DB =
+            Diag(SS.getRange().getBegin(), diag::err_qualified_friend_def);
 
-  // C++ [class.friend]p6:
-  //   A function may be defined in a friend declaration of a class if and
-  //   only if the class is a non-local class, and the function name is
-  //   unqualified.
-  if (D.isFunctionDefinition()) {
-    // Qualified friend function definition.
-    if (SS.isNotEmpty()) {
-      SemaDiagnosticBuilder DB =
-          Diag(SS.getRange().getBegin(), diag::err_qualified_friend_def);
+        DB << SS.getScopeRep();
+        if (DC->isFileContext())
+          DB << FixItHint::CreateRemoval(SS.getRange());
 
-      DB << SS.getScopeRep();
+        // Friend function defined in a local class.
+      } else if (FunctionContainingLocalClass) {
+        Diag(NameInfo.getBeginLoc(), diag::err_friend_def_in_local_class);
 
-      // Friend function defined in a local class.
-    } else if (FunctionContainingLocalClass) {
-      Diag(NameInfo.getBeginLoc(), diag::err_friend_def_in_local_class);
+        // Per [basic.pre]p4, a template-id is not a name. Therefore, if we have
+        // a template-id, the function name is not unqualified because these is
+        // no name. While the wording requires some reading in-between the
+        // lines, GCC, MSVC, and EDG all consider a friend function
+        // specialization definitions to be de facto explicit specialization
+        // and diagnose them as such.
+      } else if (isTemplateId) {
+        Diag(NameInfo.getBeginLoc(), diag::err_friend_specialization_def);
+      }
+    }
 
-      // Per [basic.pre]p4, a template-id is not a name. Therefore, if we have
-      // a template-id, the function name is not unqualified because these is
-      // no name. While the wording requires some reading in-between the
-      // lines, GCC, MSVC, and EDG all consider a friend function
-      // specialization definitions to be de facto explicit specialization
-      // and diagnose them as such.
-    } else if (isTemplateId) {
-      Diag(NameInfo.getBeginLoc(), diag::err_friend_specialization_def);
+    // C++11 [dcl.fct.default]p4: If a friend declaration specifies a
+    // default argument expression, that declaration shall be a definition
+    // and shall be the only declaration of the function or function
+    // template in the translation unit.
+    if (functionDeclHasDefaultArgument(FD)) {
+      // We can't look at FD->getPreviousDecl() because it may not have been set
+      // if we're in a dependent context. If the function is known to be a
+      // redeclaration, we will have narrowed Previous down to the right decl.
+      if (D.isRedeclaration()) {
+        Diag(FD->getLocation(), diag::err_friend_decl_with_def_arg_redeclared);
+        Diag(Previous.getRepresentativeDecl()->getLocation(),
+             diag::note_previous_declaration);
+      } else if (!D.isFunctionDefinition())
+        Diag(FD->getLocation(), diag::err_friend_decl_with_def_arg_must_be_def);
+    }
+
+    // Mark templated-scope function declarations as unsupported.
+    if (!FD->getTemplateParameterLists().empty() && SS.isValid()) {
+      Diag(FD->getLocation(), diag::warn_template_qualified_friend_unsupported)
+        << SS.getScopeRep() << SS.getRange()
+        << cast<CXXRecordDecl>(CurContext);
+      FrD->setUnsupportedFriend(true);
     }
   }
 
-  // C++11 [dcl.fct.default]p4: If a friend declaration specifies a
-  // default argument expression, that declaration shall be a definition
-  // and shall be the only declaration of the function or function
-  // template in the translation unit.
-  if (functionDeclHasDefaultArgument(FD)) {
-    // We can't look at FD->getPreviousDecl() because it may not have been set
-    // if we're in a dependent context. If the function is known to be a
-    // redeclaration, we will have narrowed Previous down to the right decl.
-    if (D.isRedeclaration()) {
-      Diag(FD->getLocation(), diag::err_friend_decl_with_def_arg_redeclared);
-      Diag(Previous.getRepresentativeDecl()->getLocation(),
-           diag::note_previous_declaration);
-    } else if (!D.isFunctionDefinition())
-      Diag(FD->getLocation(), diag::err_friend_decl_with_def_arg_must_be_def);
-  }
-
-  ArrayRef<TemplateParameterList *> TPL = FD->getTemplateParameterLists();
-  FriendDecl *Friend;
-  if (TPL.size() > 0 && SS.isValid()) {
-    if (CheckTemplateDeclScope(S, TPL.back()))
-      return nullptr;
-
-    Friend =
-        FriendTemplateDecl::Create(Context, CurContext, D.getIdentifierLoc(),
-                                   ND, DS.getFriendSpecLoc(), TPL);
-  } else {
-    Friend = FriendDecl::Create(Context, CurContext, D.getIdentifierLoc(), ND,
-                                DS.getFriendSpecLoc());
-  }
-
-  Friend->setAccess(AS_public);
-  CurContext->addDecl(Friend);
+  warnOnReservedIdentifier(ND);
 
   return ND;
 }
