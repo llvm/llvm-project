@@ -1763,6 +1763,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               // May need relegalization for the scalars.
               return std::pair(0, EltTy);
             })
+        .customIf([=](const LegalityQuery &Query) {
+          if (Op != G_STORE)
+            return false;
+
+          LLT Ty = Query.Types[0];
+          LLT PtrTy = Query.Types[1];
+          unsigned AS = PtrTy.getAddressSpace();
+
+          return AS == 1 && Ty.isVector() && !isPowerOf2_32(Ty.getSizeInBits());
+        })
         .minScalar(0, S32)
         .narrowScalarIf(isTruncStoreToSizePowerOf2(0),
                         getScalarTypeFromMemDesc(0))
@@ -3543,6 +3553,77 @@ bool AMDGPULegalizerInfo::legalizeStore(LegalizerHelper &Helper,
     Observer.changingInstr(MI);
     castBufferRsrcArgToV4I32(MI, B, 0);
     Observer.changedInstr(MI);
+    return true;
+  }
+
+  if (DataTy.isFixedVector()) {
+    uint64_t TySize = DataTy.getSizeInBits();
+    uint64_t EltSize = DataTy.getElementType().getSizeInBits();
+
+    SmallVector<LLT, 10> SplitSizes;
+
+    uint64_t Mask = (1ull << 10), Cur = TySize;
+    while (Cur > 0) {
+      if (Cur >= Mask) {
+        Cur -= Mask;
+        uint64_t NumElts = Mask / EltSize;
+        SplitSizes.push_back(NumElts == 1
+                                 ? LLT::scalar(EltSize)
+                                 : LLT::fixed_vector(Mask / EltSize, EltSize));
+      }
+      Mask >>= 1;
+    }
+
+    assert(Cur == 0 && "Cur should be zero!");
+
+    if (SplitSizes.size() == 1)
+      return false;
+
+    MachineMemOperand &MMO = **MI.memoperands_begin();
+
+    Register PtrReg = MI.getOperand(1).getReg();
+    uint64_t Offset = 0;
+
+    auto SplitUnmerge = B.buildUnmerge(DataTy.getElementType(), DataReg);
+
+    for (unsigned int I = 0; I < SplitSizes.size(); ++I) {
+      uint64_t NumElts = SplitSizes[I].getSizeInBits() / EltSize;
+
+      SmallVector<Register, 128> Elts;
+      for (uint64_t Idx = 0; Idx < NumElts; ++Idx) {
+        Elts.push_back(SplitUnmerge.getReg(Offset + Idx));
+      }
+
+      Register SplitReg;
+      if (NumElts == 1) {
+        SplitReg =
+            B.buildExtractVectorElementConstant(SplitSizes[I], DataReg, Offset)
+                .getReg(0);
+      } else {
+        Register SplitRegVec =
+            B.buildBuildVector(SplitSizes[I], Elts).getReg(0);
+        LLT SplitScalarSize = LLT::scalar(SplitSizes[I].getSizeInBits());
+        SplitReg = B.buildBitcast(SplitScalarSize, SplitRegVec).getReg(0);
+      }
+
+      MachineMemOperand *SplitMMO = B.getMF().getMachineMemOperand(
+          &MMO, Offset, SplitSizes[I].getSizeInBytes());
+      if (I > 0) {
+        LLT LastSplitScalarSize =
+            LLT::scalar(SplitSizes[I - 1].getSizeInBits());
+        PtrReg =
+            B.buildPtrAdd(MRI.getType(PtrReg), PtrReg,
+                          B.buildConstant(LastSplitScalarSize,
+                                          SplitSizes[I - 1].getSizeInBytes())
+                              .getReg(0))
+                .getReg(0);
+      }
+      B.buildStore(SplitReg, PtrReg, *SplitMMO);
+
+      Offset += NumElts;
+    }
+
+    MI.eraseFromParent();
     return true;
   }
   return false;
