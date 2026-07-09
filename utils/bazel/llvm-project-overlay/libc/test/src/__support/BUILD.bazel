@@ -155,6 +155,6 @@ libc_test(
         "//libc:__support_cpp_string_view",
         "//libc:__support_printf_core_printf_converter",
         "//libc:__support_printf_core_printf_core_structs",
-        "//libc:printf_writer",
+        "//libc:__support_printf_core_printf_writer",
     ],
 )
