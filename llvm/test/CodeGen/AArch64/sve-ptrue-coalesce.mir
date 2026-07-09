@@ -505,3 +505,41 @@ body:             |
     RET_ReallyLR
 
 ...
+---
+name:            keep_ptrue_when_constrain_regclass_fails
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_p8to15 }
+  - { id: 1, class: ppr_3b }
+  - { id: 2, class: zpr }
+  - { id: 3, class: zpr }
+  - { id: 4, class: ppr }
+  - { id: 5, class: ppr }
+  - { id: 6, class: ppr }
+liveins:
+  - { reg: '$z0', virtual-reg: '%2' }
+  - { reg: '$z1', virtual-reg: '%3' }
+body:             |
+  bb.0:
+    liveins: $z0, $z1
+
+    ; CHECK-LABEL: name: keep_ptrue_when_constrain_regclass_fails
+    ; CHECK: liveins: $z0, $z1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:zpr = COPY $z0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:zpr = COPY $z1
+    ; CHECK-NEXT: [[PTRUE_B:%[0-9]+]]:ppr_p8to15 = PTRUE_B 31, implicit $vg
+    ; CHECK-NEXT: [[BRKN_PPzP:%[0-9]+]]:ppr = BRKN_PPzP [[PTRUE_B]], [[PTRUE_B]], [[PTRUE_B]]
+    ; CHECK-NEXT: [[PTRUE_H:%[0-9]+]]:ppr_3b = PTRUE_H 31, implicit $vg
+    ; CHECK-NEXT: [[CMPEQ_PPzZZ_H:%[0-9]+]]:ppr = CMPEQ_PPzZZ_H [[PTRUE_H]], [[COPY]], [[COPY1]], implicit-def dead $nzcv
+    ; CHECK-NEXT: RET_ReallyLR
+    %2:zpr = COPY $z0
+    %3:zpr = COPY $z1
+    %0:ppr_p8to15 = PTRUE_B 31, implicit $vg
+    %6:ppr = BRKN_PPzP %0, %0, %0
+    %1:ppr_3b = PTRUE_H 31, implicit $vg
+    %4:ppr = CMPEQ_PPzZZ_H %1, %2, %3, implicit-def dead $nzcv
+    RET_ReallyLR
+
+...

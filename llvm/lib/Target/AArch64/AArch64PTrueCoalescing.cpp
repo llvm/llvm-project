@@ -81,9 +81,10 @@ private:
     Register Pred = MI.getOperand(0).getReg();
     unsigned SmallestUsedElementSize = getSmallestElementSizeInUse(Pred);
     unsigned ElementSize = TII->getElementSizeForOpcode(MI.getOpcode());
+    assert(ElementSize != AArch64::ElementSizeNone &&
+           "PTRUE missing element size!");
 
-    if (ElementSize == AArch64::ElementSizeNone ||
-        SmallestUsedElementSize == AArch64::ElementSizeNone)
+    if (SmallestUsedElementSize == AArch64::ElementSizeNone)
       return std::nullopt;
 
     return PredicateInfo{&MI, ElementSize, SmallestUsedElementSize};
@@ -135,9 +136,7 @@ AArch64PTrueCoalescingImpl::getSmallestElementSizeInUse(Register Reg) const {
   unsigned SmallestElementSize = AArch64::ElementSizeNone;
 
   for (MachineOperand &UseMO : MRI->use_nodbg_operands(Reg)) {
-    if (UseMO.getSubReg())
-      return AArch64::ElementSizeNone;
-
+    assert(UseMO.getSubReg() == 0 && "Unexpected SubReg!");
     MachineInstr *UseMI = UseMO.getParent();
 
     unsigned ElementSize = TII->getElementSizeForOpcode(UseMI->getOpcode());
@@ -263,8 +262,8 @@ AArch64PTrueCoalescingPass::run(MachineFunction &MF,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserveSet<CFGAnalyses>();
   return PA;
 }
