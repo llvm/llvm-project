@@ -244,17 +244,15 @@ template <typename FatArchTy> struct FatArchTraits {
 
 template <> struct FatArchTraits<MachO::fat_arch> {
   static const uint64_t OffsetLimit = UINT32_MAX;
-  static const std::string StructName;
+  static constexpr char StructName[] = "fat_arch";
   static const uint8_t BitCount = 32;
 };
-const std::string FatArchTraits<MachO::fat_arch>::StructName = "fat_arch";
 
 template <> struct FatArchTraits<MachO::fat_arch_64> {
   static const uint64_t OffsetLimit = UINT64_MAX;
-  static const std::string StructName;
+  static constexpr char StructName[] = "fat_arch_64";
   static const uint8_t BitCount = 64;
 };
-const std::string FatArchTraits<MachO::fat_arch_64>::StructName = "fat_arch_64";
 
 template <typename FatArchTy>
 static Expected<SmallVector<FatArchTy, 2>>

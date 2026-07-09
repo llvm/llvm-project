@@ -65,10 +65,10 @@ public:
   constexpr Align &operator=(const Align &Other) = default;
   constexpr Align &operator=(Align &&Other) = default;
 
-  explicit Align(uint64_t Value) {
+  explicit constexpr Align(uint64_t Value) {
     assert(Value > 0 && "Value must not be 0");
     assert(llvm::isPowerOf2_64(Value) && "Alignment is not a power of 2");
-    ShiftValue = Log2_64(Value);
+    ShiftValue = 63 - llvm::countl_zero_constexpr(Value);
     assert(ShiftValue < 64 && "Broken invariant");
   }
 
