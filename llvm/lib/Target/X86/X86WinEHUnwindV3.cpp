@@ -58,8 +58,9 @@ static constexpr unsigned EpilogDistanceThreshold = 32767;
 /// ApproxBytesPerInstr each and alignment padding is added.
 static cl::opt<unsigned> ApproxBytesPerInstr(
     "x86-wineh-unwindv3-instr-avg-size", cl::Hidden,
-    cl::desc("Average size of an instruction. This value is used in determining "
-             "split points for chained unwinder info"),
+    cl::desc(
+        "Average size of an instruction. This value is used in determining "
+        "split points for chained unwinder info"),
     cl::init(7));
 
 /// After reporting a recoverable error for `MF`, erase all SEH pseudo-
@@ -201,8 +202,8 @@ FuncletInfo X86WinEHUnwindV3::analyzeFunclet(MachineFunction &MF,
         InEpilog = true;
         CurrentEpilogOpCount = 0;
         LLVM_DEBUG(dbgs() << "  epilog " << Info.Epilogs.size()
-                          << " begins at approx byte position "
-                          << ApproxBytePos << "\n");
+                          << " begins at approx byte position " << ApproxBytePos
+                          << "\n");
         Info.Epilogs.push_back({&MI, ApproxBytePos});
         break;
       case X86::SEH_EndEpilogue:
