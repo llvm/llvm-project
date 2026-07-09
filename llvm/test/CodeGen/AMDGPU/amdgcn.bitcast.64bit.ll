@@ -18120,15 +18120,12 @@ define inreg <8 x i8> @bitcast_v4bf16_to_v8i8_scalar(<4 x bfloat> inreg %a, i32 
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v6, v8, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v8, 16, v4
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v9.l, v0.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v9.h, v2.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v10.l, v8.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v9, v0.l, v2.l
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v9
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v10.h, v6.l
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v10, v8.l, v6.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b64 v[3:4], 24, v[9:10]
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v7, 24, v10
