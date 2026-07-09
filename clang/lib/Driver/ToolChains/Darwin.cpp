@@ -1223,6 +1223,10 @@ void Darwin::ensureTargetInitialized() const {
   setTarget(Platform, Environment, OsVer.getMajor(),
             OsVer.getMinor().value_or(0), OsVer.getSubminor().value_or(0),
             VersionTuple());
+  // The version above is a guess from the triple alone; AddDeploymentTarget()
+  // may later derive a different deployment target from flags, environment
+  // variables, or the SDK, and overwrite this initialization.
+  TargetInitializedLazily = true;
 }
 
 AppleMachO::~AppleMachO() {}
