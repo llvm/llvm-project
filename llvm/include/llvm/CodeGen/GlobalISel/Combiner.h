@@ -30,7 +30,7 @@ class MachineIRBuilder;
 /// one of these each time they enter a new function.
 ///
 /// TODO: Is it worth making this module-wide?
-class Combiner : public GIMatchTableExecutor {
+class LLVM_ABI Combiner : public GIMatchTableExecutor {
 private:
   using WorkListTy = GISelWorkList<512>;
 

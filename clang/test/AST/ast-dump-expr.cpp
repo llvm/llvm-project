@@ -216,7 +216,7 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
   // the construct above.
   a.~decltype(a)();
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:18> 'void'
-  // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:5> '<bound member function type>' .~S 0x{{[^ ]*}}
+  // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:16> '<bound member function type>' .~S 0x{{[^ ]*}}
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S'
 
   p->::S::~S();

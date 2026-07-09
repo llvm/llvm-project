@@ -60,8 +60,6 @@ LLVM_ABI CodeGenFileType getFileType();
 
 LLVM_ABI FramePointerKind getFramePointerUsage();
 
-LLVM_ABI bool getEnableNoSignedZerosFPMath();
-
 LLVM_ABI bool getEnableNoTrappingFPMath();
 
 LLVM_ABI DenormalMode::DenormalModeKind getDenormalFPMath();
@@ -217,6 +215,13 @@ LLVM_ABI bool getDefaultValueTrackingVariableLocations(const llvm::Triple &T);
 /// Creates a TargetMachine instance with the options defined on the command
 /// line. This can be used for tools that do not need further customization of
 /// the TargetOptions.
+LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
+    const Triple &TargetTriple,
+    CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
+
+// TODO: Remove after llvm 23 branches
+LLVM_DEPRECATED("Use the Triple overload instead",
+                "createTargetMachineForTriple")
 LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
     StringRef TargetTriple,
     CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);

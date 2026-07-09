@@ -156,6 +156,8 @@ public:
 class AllocationAnalysis
     : public mlir::dataflow::DenseForwardDataFlowAnalysis<LatticePoint> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(AllocationAnalysis)
+
   using DenseForwardDataFlowAnalysis::DenseForwardDataFlowAnalysis;
 
   mlir::LogicalResult visitOperation(mlir::Operation *op,
@@ -535,8 +537,7 @@ StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
       candidateOps.insert({allocmem, insertionPoint});
   }
 
-  LLVM_DEBUG(for (auto [allocMemOp, _]
-                  : candidateOps) {
+  LLVM_DEBUG(for (auto [allocMemOp, _] : candidateOps) {
     llvm::dbgs() << "StackArrays: Found candidate op: " << *allocMemOp << '\n';
   });
   return mlir::success();
@@ -803,17 +804,11 @@ AllocMemConversion::insertAlloca(fir::AllocMemOp &oldAlloc,
 static void
 visitFreeMemOp(fir::AllocMemOp oldAlloc,
                const std::function<void(mlir::Operation *)> &callBack) {
-  for (mlir::Operation *user : oldAlloc->getUsers()) {
-    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
-      for (mlir::Operation *user : declareOp->getUsers()) {
-        if (mlir::isa<fir::FreeMemOp>(user))
-          callBack(user);
-      }
-    }
-
-    if (mlir::isa<fir::FreeMemOp>(user))
-      callBack(user);
-  }
+  mlir::Operation *parent = oldAlloc->getParentOp();
+  parent->walk([&](fir::FreeMemOp freeOp) {
+    if (lookThroughDeclaresAndConverts(freeOp->getOperand(0)) == oldAlloc)
+      callBack(freeOp);
+  });
 }
 
 void AllocMemConversion::insertStackSaveRestore(

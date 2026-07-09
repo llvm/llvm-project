@@ -196,7 +196,7 @@ static T &getAccelTable(std::unique_ptr<T> &Cache, const DWARFObject &Obj,
   if (Cache)
     return *Cache;
   DWARFDataExtractor AccelSection(Obj, Section, IsLittleEndian, 0);
-  DataExtractor StrData(StringSection, IsLittleEndian, 0);
+  DataExtractor StrData(StringSection, IsLittleEndian);
   Cache = std::make_unique<T>(AccelSection, StrData);
   if (Error E = Cache->extract())
     llvm::consumeError(std::move(E));
@@ -320,7 +320,7 @@ public:
     if (AbbrevDWO)
       return AbbrevDWO.get();
     const DWARFObject &DObj = D.getDWARFObj();
-    DataExtractor abbrData(DObj.getAbbrevDWOSection(), D.isLittleEndian(), 0);
+    DataExtractor abbrData(DObj.getAbbrevDWOSection(), D.isLittleEndian());
     AbbrevDWO = std::make_unique<DWARFDebugAbbrev>(abbrData);
     return AbbrevDWO.get();
   }
@@ -329,8 +329,7 @@ public:
     if (CUIndex)
       return *CUIndex;
 
-    DataExtractor Data(D.getDWARFObj().getCUIndexSection(),
-                       D.isLittleEndian(), 0);
+    DataExtractor Data(D.getDWARFObj().getCUIndexSection(), D.isLittleEndian());
     CUIndex = std::make_unique<DWARFUnitIndex>(DW_SECT_INFO);
     if (CUIndex->parse(Data))
       fixupIndex(D, *CUIndex);
@@ -340,8 +339,7 @@ public:
     if (TUIndex)
       return *TUIndex;
 
-    DataExtractor Data(D.getDWARFObj().getTUIndexSection(),
-                       D.isLittleEndian(), 0);
+    DataExtractor Data(D.getDWARFObj().getTUIndexSection(), D.isLittleEndian());
     TUIndex = std::make_unique<DWARFUnitIndex>(DW_SECT_EXT_TYPES);
     bool isParseSuccessful = TUIndex->parse(Data);
     // If we are parsing TU-index and for .debug_types section we don't need
@@ -355,7 +353,8 @@ public:
     if (GdbIndex)
       return *GdbIndex;
 
-    DataExtractor Data(D.getDWARFObj().getGdbIndexSection(), true /*LE*/, 0);
+    DataExtractor Data(D.getDWARFObj().getGdbIndexSection(),
+                       /*IsLittleEndian=*/true);
     GdbIndex = std::make_unique<DWARFGdbIndex>();
     GdbIndex->parse(Data);
     return *GdbIndex;
@@ -365,8 +364,7 @@ public:
     if (Abbrev)
       return Abbrev.get();
 
-    DataExtractor Data(D.getDWARFObj().getAbbrevSection(),
-                       D.isLittleEndian(), 0);
+    DataExtractor Data(D.getDWARFObj().getAbbrevSection(), D.isLittleEndian());
     Abbrev = std::make_unique<DWARFDebugAbbrev>(Data);
     return Abbrev.get();
   }
@@ -834,7 +832,7 @@ static void dumpStringOffsetsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
                                      bool LittleEndian) {
   auto Contributions = collectContributionData(Units);
   DWARFDataExtractor StrOffsetExt(Obj, StringOffsetsSection, LittleEndian, 0);
-  DataExtractor StrData(StringSection, LittleEndian, 0);
+  DataExtractor StrData(StringSection, LittleEndian);
   uint64_t SectionSize = StringOffsetsSection.Data.size();
   uint64_t Offset = 0;
   for (auto &Contribution : Contributions) {
@@ -1176,7 +1174,7 @@ void DWARFContext::dump(
   };
 
   auto DumpStrSection = [&](StringRef Section) {
-    DataExtractor StrData(Section, isLittleEndian(), 0);
+    DataExtractor StrData(Section, isLittleEndian());
     uint64_t Offset = 0;
     uint64_t StrOffset = 0;
     while (StrData.isValidOffset(Offset)) {

@@ -6,7 +6,7 @@ define i32 @atomic_load_global_align1(ptr addrspace(1) %ptr) {
   ret i32 %val
 }
 
-; FIXME: 2nd error not emitted in next function
+; CHECK: error: unsupported atomic store: instruction alignment 1 is smaller than the required 4-byte alignment for this atomic operation
 define void @atomic_store_global_align1(ptr addrspace(1) %ptr, i32 %val) {
   store atomic i32 %val, ptr addrspace(1) %ptr monotonic, align 1
   ret void

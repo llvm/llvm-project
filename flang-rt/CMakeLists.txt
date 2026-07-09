@@ -69,6 +69,7 @@ include(GetToolchainDirs)
 include(FlangCommon)
 include(HandleCompilerRT)
 include(ExtendPath)
+include(FlangRTIntrospection)
 
 
 ############################
@@ -112,10 +113,17 @@ else ()
   option(FLANG_RT_ENABLE_SHARED "Build Flang-RT as a shared library." OFF)
 endif ()
 
+# Enable building Fortran modules if Fortran is enabled
+option(FLANG_RT_FORTRAN_MODULES "Build Flang-RT modules" "${RUNTIMES_FORTRAN_MODULES}")
+if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED AND NOT FLANG_RT_FORTRAN_MODULES)
+  message(WARNING "LLVM_ENABLE_RUNTIMES=flang-rt, but not building anything")
+endif ()
 
 # TODO: Support tests for the GPU target.
 set(FLANG_RT_INCLUDE_TESTS_default ${LLVM_INCLUDE_TESTS})
 if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
+  set(FLANG_RT_INCLUDE_TESTS_default OFF)
+elseif (NOT FLANG_RT_FORTRAN_MODULES)
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
 elseif (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
@@ -151,6 +159,18 @@ if (FLANG_RT_INCLUDE_CUF)
   find_package(CUDAToolkit REQUIRED)
 endif()
 
+# A recently added check in clang emits warnings for feclearexcept and fesetround:
+#   'fesetround' used without enabling floating-point exception behavior; use
+#         'pragma STDC FENV_ACCESS ON' or compile with
+#         '-ffp-exception-behavior=maytrap' [-Werror,-Wfenv-access]
+# This breaks the CI build (because of -Werror).
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  check_cxx_compiler_flag("-Werror -Wno-fenv-access" CXX_SUPPORTS_NO_FENV_ACCESS_FLAG)
+  if (CXX_SUPPORTS_NO_FENV_ACCESS_FLAG)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-fenv-access")
+  endif()
+endif()  # Clang
+
 
 ########################
 # System Introspection #
@@ -169,6 +189,10 @@ check_cxx_source_compiles(
   "
   HAVE_DECL_STRERROR_S)
 
+# Look for support of REAL(16), if not already defined via command
+# line via -DFORTRAN_SUPPORTS_REAL16=YES/NO
+check_fortran_quadmath_support()
+
 # Search for clang_rt.builtins library. Need in addition to msvcrt.
 if (WIN32)
   find_compiler_rt_library(builtins FLANG_RT_BUILTINS_LIBRARY)
@@ -180,6 +204,9 @@ if (UNIX AND CMAKE_SYSTEM_NAME MATCHES "AIX")
   add_compile_definitions(_XOPEN_SOURCE=700)
   add_compile_definitions(_LARGE_FILE_API)
 endif ()
+
+# Indicates REAL(16) support via an external library (e.g. libquadmath).
+add_compile_definitions(FLANG_RT_SUPPORTS_REAL16=$<BOOL:${FORTRAN_SUPPORTS_REAL16}>)
 
 # Check whether the compiler can undefine a macro using the "-Wp,-U" flag.
 # Aternatively, we could use

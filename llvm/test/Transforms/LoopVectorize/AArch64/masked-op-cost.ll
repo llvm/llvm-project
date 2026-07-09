@@ -46,7 +46,7 @@ for.inc:
 
 
 ; CHECK-COST: Checking a loop in 'scalable'
-; CHECK-COST: Found an estimated cost of 1 for VF vscale x 4 For instruction:   store i32 2, ptr %arrayidx1, align 4
+; CHECK-COST: Cost of 1 for VF vscale x 4: WIDEN store vp<{{.+}}>, ir<2>, ir<{{.+}}>
 
 define void @scalable(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) #0 {
 ; CHECK-LABEL: @scalable(

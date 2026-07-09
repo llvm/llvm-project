@@ -4,14 +4,10 @@
 define i64 @align_deref_align(i1 %c, ptr %p) {
 ; CHECK-LABEL: define i64 @align_deref_align(
 ; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 8), "align"(ptr [[P]], i64 8) ]
-; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[EXIT:.*]]
-; CHECK:       [[IF]]:
 ; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[V]], %[[IF]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C]], i64 [[V]], i64 0
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -52,17 +48,12 @@ exit:
 define i64 @assume_deref_align2(i1 %c1, i32 %x, ptr %p) {
 ; CHECK-LABEL: define i64 @assume_deref_align2(
 ; CHECK-SAME: i1 [[C1:%.*]], i32 [[X:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 8), "align"(ptr [[P]], i64 8) ]
-; CHECK-NEXT:    br i1 [[C1]], label %[[IF1:.*]], label %[[EXIT:.*]]
-; CHECK:       [[IF1]]:
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[X]], 10
-; CHECK-NEXT:    br i1 [[C2]], label %[[IF2:.*]], label %[[EXIT]]
-; CHECK:       [[IF2]]:
 ; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[V]], %[[IF2]] ], [ 1, %[[IF1]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C2]], i64 [[V]], i64 1
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1]], i64 [[SPEC_SELECT]], i64 0
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -135,6 +126,54 @@ exit:
   %res = phi i64 [ %v, %if ], [ 0, %entry ]
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %p, i64 8), "align"(ptr %p, i64 8) ]
   ret i64 %res
+}
+
+define i8 @align_deref_size_1(i1 %c, ptr %p) {
+; CHECK-LABEL: define i8 @align_deref_size_1(
+; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 1) ]
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C]], i8 [[V]], i8 0
+; CHECK-NEXT:    ret i8 [[SPEC_SELECT]]
+;
+entry:
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %p, i64 1) ]
+  br i1 %c, label %if, label %exit
+
+if:
+  %v = load i8, ptr %p
+  br label %exit
+
+exit:
+  %res = phi i8 [ %v, %if ], [ 0, %entry ]
+  ret i8 %res
+}
+
+define i8 @align_deref_size_unknown(i1 %c, ptr %p, i64 %size) {
+; CHECK-LABEL: define i8 @align_deref_size_unknown(
+; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]], i64 [[SIZE:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 [[SIZE]]) ]
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[EXIT:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = phi i8 [ [[V]], %[[IF]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    ret i8 [[SPEC_SELECT]]
+;
+entry:
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %p, i64 %size) ]
+  br i1 %c, label %if, label %exit
+
+if:
+  %v = load i8, ptr %p
+  br label %exit
+
+exit:
+  %res = phi i8 [ %v, %if ], [ 0, %entry ]
+  ret i8 %res
 }
 
 define i64 @deref_no_hoist(i1 %c, ptr align 8 dereferenceable(8) %p1) {

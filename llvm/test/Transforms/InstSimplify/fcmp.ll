@@ -23,7 +23,7 @@ define i1 @pr130408(x86_fp80 %x) {
 ; CHECK-NEXT:    [[MASKED:%.*]] = and i80 [[BITS]], -604444463063240877801473
 ; CHECK-NEXT:    [[OR:%.*]] = or i80 [[MASKED]], 302194561415509874573312
 ; CHECK-NEXT:    [[FP:%.*]] = bitcast i80 [[OR]] to x86_fp80
-; CHECK-NEXT:    [[RES:%.*]] = fcmp uno x86_fp80 [[FP]], 0xK00000000000000000000
+; CHECK-NEXT:    [[RES:%.*]] = fcmp uno x86_fp80 [[FP]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %bits = bitcast x86_fp80 %x to i80

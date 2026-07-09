@@ -17,7 +17,6 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Pass/Pass.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Debug.h"
 
@@ -142,8 +141,20 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
       mlir::LLVM::DIExpressionAttr::get(context, ops);
   ops.clear();
 
-  mlir::LLVM::DITypeAttr elemTy =
-      convertType(seqTy.getEleTy(), fileAttr, scope, declOp);
+  // For a descriptor-based array of characters with non-constant (assumed or
+  // deferred) length, the length of each element is stored in the descriptor.
+  // We generate a string length expression that reads it from there. The data
+  // location of the elements is provided by the enclosing array so we do not
+  // generate a string location expression for the element type itself.
+  mlir::LLVM::DITypeAttr elemTy;
+  if (auto charTy =
+          mlir::dyn_cast_if_present<fir::CharacterType>(seqTy.getEleTy());
+      charTy && !charTy.hasConstantLen())
+    elemTy = convertCharacterType(charTy, fileAttr, scope, declOp,
+                                  /*hasDescriptor=*/true,
+                                  /*genStringLocation=*/false);
+  else
+    elemTy = convertType(seqTy.getEleTy(), fileAttr, scope, declOp);
 
   // Assumed-rank arrays
   if (seqTy.hasUnknownShape()) {
@@ -187,7 +198,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
         /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
         mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0,
         dataLocation, rank, /*allocated=*/nullptr,
-        /*associated=*/nullptr, elements);
+        /*associated=*/nullptr, /*identifier=*/nullptr,
+        /*discriminator=*/nullptr, elements);
   }
 
   addOp(llvm::dwarf::DW_OP_push_object_address, {});
@@ -264,7 +276,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
       context, llvm::dwarf::DW_TAG_array_type, /*name=*/nullptr,
       /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
       mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0,
-      dataLocation, /*rank=*/nullptr, allocated, associated, elements);
+      dataLocation, /*rank=*/nullptr, allocated, associated,
+      /*identifier=*/nullptr, /*discriminator=*/nullptr, elements);
 }
 
 std::pair<std::uint64_t, unsigned short>
@@ -398,7 +411,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
       mlir::StringAttr::get(context, ""), fileAttr, /*line=*/0, scope,
       /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0,
       /*alignInBits=*/0, /*dataLocation=*/nullptr, /*rank=*/nullptr,
-      /*allocated=*/nullptr, /*associated=*/nullptr, elements);
+      /*allocated=*/nullptr, /*associated=*/nullptr, /*identifier=*/nullptr,
+      /*discriminator=*/nullptr, elements);
   DerivedTypeCache::ActiveLevels nestedRecursions =
       derivedTypeCache.startTranslating(Ty, placeHolder);
 
@@ -438,7 +452,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
           convertType(seqTy.getEleTy(), fileAttr, scope, declOp),
           mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0,
           /*dataLocation=*/nullptr, /*rank=*/nullptr,
-          /*allocated=*/nullptr, /*associated=*/nullptr, arrayElements);
+          /*allocated=*/nullptr, /*associated=*/nullptr,
+          /*identifier=*/nullptr, /*discriminator=*/nullptr, arrayElements);
     } else
       elemTy = convertType(fieldTy, fileAttr, scope, /*declOp=*/nullptr);
     offset = llvm::alignTo(offset, byteAlign);
@@ -459,7 +474,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
       mlir::StringAttr::get(context, sourceName.name), fileAttr, line, scope,
       /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
       /*alignInBits=*/0, /*dataLocation=*/nullptr, /*rank=*/nullptr,
-      /*allocated=*/nullptr, /*associated=*/nullptr, elements);
+      /*allocated=*/nullptr, /*associated=*/nullptr, /*identifier=*/nullptr,
+      /*discriminator=*/nullptr, elements);
 
   derivedTypeCache.finalize(Ty, finalAttr, std::move(nestedRecursions));
 
@@ -503,7 +519,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertTupleType(
       mlir::StringAttr::get(context, ""), fileAttr, /*line=*/0, scope,
       /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
       /*alignInBits=*/0, /*dataLocation=*/nullptr, /*rank=*/nullptr,
-      /*allocated=*/nullptr, /*associated=*/nullptr, elements);
+      /*allocated=*/nullptr, /*associated=*/nullptr, /*identifier=*/nullptr,
+      /*discriminator=*/nullptr, elements);
   derivedTypeCache.finalize(Ty, typeAttr, std::move(nestedRecursions));
   return typeAttr;
 }
@@ -565,7 +582,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
       /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
       mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0,
       /*dataLocation=*/nullptr, /*rank=*/nullptr, /*allocated=*/nullptr,
-      /*associated=*/nullptr, elements);
+      /*associated=*/nullptr, /*identifier=*/nullptr,
+      /*discriminator=*/nullptr, elements);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertVectorType(
@@ -598,13 +616,14 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertVectorType(
       /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
       mlir::LLVM::DIFlags::Vector, sizeInBits, /*alignInBits=*/0,
       /*dataLocation=*/nullptr, /*rank=*/nullptr, /*allocated=*/nullptr,
-      /*associated=*/nullptr, elements);
+      /*associated=*/nullptr, /*identifier=*/nullptr,
+      /*discriminator=*/nullptr, elements);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     fir::CharacterType charTy, mlir::LLVM::DIFileAttr fileAttr,
     mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp,
-    bool hasDescriptor) {
+    bool hasDescriptor, bool genStringLocation) {
   mlir::MLIRContext *context = module.getContext();
 
   // DWARF 5 says the following about the character encoding in 5.1.1.2.
@@ -630,9 +649,14 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     lenExpr = mlir::LLVM::DIExpressionAttr::get(context, ops);
     ops.clear();
 
-    addOp(llvm::dwarf::DW_OP_push_object_address, {});
-    addOp(llvm::dwarf::DW_OP_deref, {});
-    locExpr = mlir::LLVM::DIExpressionAttr::get(context, ops);
+    // When the character is an element of a descriptor-based array, the data
+    // location is provided by the enclosing array type and a string location
+    // expression must not be generated for the element itself.
+    if (genStringLocation) {
+      addOp(llvm::dwarf::DW_OP_push_object_address, {});
+      addOp(llvm::dwarf::DW_OP_deref, {});
+      locExpr = mlir::LLVM::DIExpressionAttr::get(context, ops);
+    }
   } else if (charTy.hasConstantLen()) {
     sizeInBits =
         charTy.getLen() * kindMapping.getCharacterBitsize(charTy.getFKind());

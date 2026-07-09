@@ -554,7 +554,26 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
       // replacement vreg uses.
       LiveInterval &NewLI = LIS.createAndComputeVirtRegInterval(NewVReg);
       VRM.grow();
+
+      // A spill slot can be stored to multiple times, so the replacement
+      // vreg may have multiple disconnected live range components. Split
+      // them into separate vregs to maintain the single-component invariant.
+      SmallVector<LiveInterval *, 4> SplitLIs;
+      LIS.splitSeparateComponents(NewLI, SplitLIs);
+
+      LLVM_DEBUG({
+        if (!SplitLIs.empty()) {
+          dbgs() << "Split unspilled interval into " << (SplitLIs.size() + 1)
+                 << " components\n";
+        }
+      });
+
       LRM.assign(NewLI, PhysReg);
+      for (LiveInterval *SplitLI : SplitLIs) {
+        VRM.grow();
+        LRM.assign(*SplitLI, PhysReg);
+      }
+
       MFI.RemoveStackObject(Slot);
       break;
     }

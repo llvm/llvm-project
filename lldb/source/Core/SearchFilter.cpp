@@ -74,15 +74,13 @@ SearchFilter::SearchFilter(const TargetSP &target_sp, unsigned char filterType)
 
 SearchFilter::~SearchFilter() = default;
 
-SearchFilterSP SearchFilter::CreateFromStructuredData(
-    const lldb::TargetSP& target_sp,
-    const StructuredData::Dictionary &filter_dict,
-    Status &error) {
-  SearchFilterSP result_sp;
+std::unique_ptr<SearchFilter> SearchFilter::CreateFromStructuredData(
+    const lldb::TargetSP &target_sp,
+    const StructuredData::Dictionary &filter_dict, Status &error) {
   if (!filter_dict.IsValid()) {
     error = Status::FromErrorString(
         "Can't deserialize from an invalid data object.");
-    return result_sp;
+    return nullptr;
   }
 
   llvm::StringRef subclass_name;
@@ -91,14 +89,14 @@ SearchFilterSP SearchFilter::CreateFromStructuredData(
       GetSerializationSubclassKey(), subclass_name);
   if (!success) {
     error = Status::FromErrorString("Filter data missing subclass key");
-    return result_sp;
+    return nullptr;
   }
 
   FilterTy filter_type = NameToFilterTy(subclass_name);
   if (filter_type == UnknownFilter) {
     error = Status::FromErrorStringWithFormatv("Unknown filter type: {0}.",
                                                subclass_name);
-    return result_sp;
+    return nullptr;
   }
 
   StructuredData::Dictionary *subclass_options = nullptr;
@@ -107,26 +105,22 @@ SearchFilterSP SearchFilter::CreateFromStructuredData(
   if (!success || !subclass_options || !subclass_options->IsValid()) {
     error =
         Status::FromErrorString("Filter data missing subclass options key.");
-    return result_sp;
+    return nullptr;
   }
 
   switch (filter_type) {
   case Unconstrained:
-    result_sp = SearchFilterForUnconstrainedSearches::CreateFromStructuredData(
+    return SearchFilterForUnconstrainedSearches::CreateFromStructuredData(
         target_sp, *subclass_options, error);
-    break;
   case ByModule:
-    result_sp = SearchFilterByModule::CreateFromStructuredData(
+    return SearchFilterByModule::CreateFromStructuredData(
         target_sp, *subclass_options, error);
-    break;
   case ByModules:
-    result_sp = SearchFilterByModuleList::CreateFromStructuredData(
+    return SearchFilterByModuleList::CreateFromStructuredData(
         target_sp, *subclass_options, error);
-    break;
   case ByModulesAndCU:
-    result_sp = SearchFilterByModuleListAndCU::CreateFromStructuredData(
+    return SearchFilterByModuleListAndCU::CreateFromStructuredData(
         target_sp, *subclass_options, error);
-    break;
   case Exception:
     error =
         Status::FromErrorString("Can't serialize exception breakpoints yet.");
@@ -135,7 +129,7 @@ SearchFilterSP SearchFilter::CreateFromStructuredData(
     llvm_unreachable("Should never get an uresolvable filter type.");
   }
 
-  return result_sp;
+  return nullptr;
 }
 
 bool SearchFilter::ModulePasses(const FileSpec &spec) { return true; }
@@ -165,10 +159,11 @@ void SearchFilter::GetDescription(Stream *s) {}
 
 void SearchFilter::Dump(Stream *s) const {}
 
-lldb::SearchFilterSP SearchFilter::CreateCopy(lldb::TargetSP& target_sp) {
-  SearchFilterSP ret_sp = DoCreateCopy();
-  ret_sp->SetTarget(target_sp);
-  return ret_sp;
+std::unique_ptr<SearchFilter>
+SearchFilter::CreateCopy(lldb::TargetSP &target_sp) {
+  std::unique_ptr<SearchFilter> ret = DoCreateCopy();
+  ret->SetTarget(target_sp);
+  return ret;
 }
 
 // Helper functions for serialization.
@@ -358,12 +353,12 @@ Searcher::CallbackReturn SearchFilter::DoFunctionIteration(
 //  SearchFilterForUnconstrainedSearches:
 //  Selects a shared library matching a given file spec, consulting the targets
 //  "black list".
-SearchFilterSP SearchFilterForUnconstrainedSearches::CreateFromStructuredData(
-    const lldb::TargetSP& target_sp,
-    const StructuredData::Dictionary &data_dict,
-    Status &error) {
+std::unique_ptr<SearchFilter>
+SearchFilterForUnconstrainedSearches::CreateFromStructuredData(
+    const lldb::TargetSP &target_sp,
+    const StructuredData::Dictionary &data_dict, Status &error) {
   // No options for an unconstrained search.
-  return std::make_shared<SearchFilterForUnconstrainedSearches>(target_sp);
+  return std::make_unique<SearchFilterForUnconstrainedSearches>(target_sp);
 }
 
 StructuredData::ObjectSP
@@ -387,8 +382,9 @@ bool SearchFilterForUnconstrainedSearches::ModulePasses(
   return true;
 }
 
-SearchFilterSP SearchFilterForUnconstrainedSearches::DoCreateCopy() {
-  return std::make_shared<SearchFilterForUnconstrainedSearches>(*this);
+std::unique_ptr<SearchFilter>
+SearchFilterForUnconstrainedSearches::DoCreateCopy() {
+  return std::make_unique<SearchFilterForUnconstrainedSearches>(*this);
 }
 
 //  SearchFilterByModule:
@@ -440,7 +436,7 @@ void SearchFilterByModule::Search(Searcher &searcher) {
 
 void SearchFilterByModule::GetDescription(Stream *s) {
   s->PutCString(", module = ");
-  s->PutCString(m_module_spec.GetFilename().AsCString("<Unknown>"));
+  s->PutCString(m_module_spec.GetFilename().nonEmptyOr("<Unknown>"));
 }
 
 uint32_t SearchFilterByModule::GetFilterRequiredItems() {
@@ -449,14 +445,13 @@ uint32_t SearchFilterByModule::GetFilterRequiredItems() {
 
 void SearchFilterByModule::Dump(Stream *s) const {}
 
-SearchFilterSP SearchFilterByModule::DoCreateCopy() {
-  return std::make_shared<SearchFilterByModule>(*this);
+std::unique_ptr<SearchFilter> SearchFilterByModule::DoCreateCopy() {
+  return std::make_unique<SearchFilterByModule>(*this);
 }
 
-SearchFilterSP SearchFilterByModule::CreateFromStructuredData(
-    const lldb::TargetSP& target_sp,
-    const StructuredData::Dictionary &data_dict,
-    Status &error) {
+std::unique_ptr<SearchFilter> SearchFilterByModule::CreateFromStructuredData(
+    const lldb::TargetSP &target_sp,
+    const StructuredData::Dictionary &data_dict, Status &error) {
   StructuredData::Array *modules_array;
   bool success = data_dict.GetValueForKeyAsArray(GetKey(OptionNames::ModList),
                                                  modules_array);
@@ -482,7 +477,7 @@ SearchFilterSP SearchFilterByModule::CreateFromStructuredData(
   }
   FileSpec module_spec(*maybe_module);
 
-  return std::make_shared<SearchFilterByModule>(target_sp, module_spec);
+  return std::make_unique<SearchFilterByModule>(target_sp, module_spec);
 }
 
 StructuredData::ObjectSP SearchFilterByModule::SerializeToStructuredData() {
@@ -562,7 +557,7 @@ void SearchFilterByModuleList::GetDescription(Stream *s) {
   if (num_modules == 1) {
     s->Printf(", module = ");
     s->PutCString(
-        m_module_spec_list.GetFileSpecAtIndex(0).GetFilename().AsCString(
+        m_module_spec_list.GetFileSpecAtIndex(0).GetFilename().nonEmptyOr(
             "<Unknown>"));
     return;
   }
@@ -570,7 +565,7 @@ void SearchFilterByModuleList::GetDescription(Stream *s) {
   s->Printf(", modules(%" PRIu64 ") = ", (uint64_t)num_modules);
   for (size_t i = 0; i < num_modules; i++) {
     s->PutCString(
-        m_module_spec_list.GetFileSpecAtIndex(i).GetFilename().AsCString(
+        m_module_spec_list.GetFileSpecAtIndex(i).GetFilename().nonEmptyOr(
             "<Unknown>"));
     if (i != num_modules - 1)
       s->PutCString(", ");
@@ -583,20 +578,20 @@ uint32_t SearchFilterByModuleList::GetFilterRequiredItems() {
 
 void SearchFilterByModuleList::Dump(Stream *s) const {}
 
-lldb::SearchFilterSP SearchFilterByModuleList::DoCreateCopy() {
-  return std::make_shared<SearchFilterByModuleList>(*this);
+std::unique_ptr<SearchFilter> SearchFilterByModuleList::DoCreateCopy() {
+  return std::make_unique<SearchFilterByModuleList>(*this);
 }
 
-SearchFilterSP SearchFilterByModuleList::CreateFromStructuredData(
-    const lldb::TargetSP& target_sp,
-    const StructuredData::Dictionary &data_dict,
-    Status &error) {
+std::unique_ptr<SearchFilter>
+SearchFilterByModuleList::CreateFromStructuredData(
+    const lldb::TargetSP &target_sp,
+    const StructuredData::Dictionary &data_dict, Status &error) {
   StructuredData::Array *modules_array;
   bool success = data_dict.GetValueForKeyAsArray(GetKey(OptionNames::ModList),
                                                  modules_array);
 
   if (!success)
-    return std::make_shared<SearchFilterByModuleList>(target_sp,
+    return std::make_unique<SearchFilterByModuleList>(target_sp,
                                                       FileSpecList{});
   FileSpecList modules;
   size_t num_modules = modules_array->GetSize();
@@ -610,7 +605,7 @@ SearchFilterSP SearchFilterByModuleList::CreateFromStructuredData(
     }
     modules.EmplaceBack(*maybe_module);
   }
-  return std::make_shared<SearchFilterByModuleList>(target_sp, modules);
+  return std::make_unique<SearchFilterByModuleList>(target_sp, modules);
 }
 
 void SearchFilterByModuleList::SerializeUnwrapped(
@@ -637,12 +632,11 @@ SearchFilterByModuleListAndCU::SearchFilterByModuleListAndCU(
 
 SearchFilterByModuleListAndCU::~SearchFilterByModuleListAndCU() = default;
 
-lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
-    const lldb::TargetSP& target_sp,
-    const StructuredData::Dictionary &data_dict,
-    Status &error) {
+std::unique_ptr<SearchFilter>
+SearchFilterByModuleListAndCU::CreateFromStructuredData(
+    const lldb::TargetSP &target_sp,
+    const StructuredData::Dictionary &data_dict, Status &error) {
   StructuredData::Array *modules_array = nullptr;
-  SearchFilterSP result_sp;
   bool success = data_dict.GetValueForKeyAsArray(GetKey(OptionNames::ModList),
                                                  modules_array);
   FileSpecList modules;
@@ -654,7 +648,7 @@ lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
       if (!maybe_module) {
         error = Status::FromErrorStringWithFormat(
             "SFBM::CFSD: filter module item %zu not a string.", i);
-        return result_sp;
+        return nullptr;
       }
       modules.EmplaceBack(*maybe_module);
     }
@@ -666,7 +660,7 @@ lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
   if (!success) {
     error =
         Status::FromErrorString("SFBM::CFSD: Could not find the CU list key.");
-    return result_sp;
+    return nullptr;
   }
 
   size_t num_cus = cus_array->GetSize();
@@ -682,8 +676,8 @@ lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
     cus.EmplaceBack(*maybe_cu);
   }
 
-  return std::make_shared<SearchFilterByModuleListAndCU>(
-      target_sp, modules, cus);
+  return std::make_unique<SearchFilterByModuleListAndCU>(target_sp, modules,
+                                                         cus);
 }
 
 StructuredData::ObjectSP
@@ -783,13 +777,13 @@ void SearchFilterByModuleListAndCU::GetDescription(Stream *s) {
   if (num_modules == 1) {
     s->Printf(", module = ");
     s->PutCString(
-        m_module_spec_list.GetFileSpecAtIndex(0).GetFilename().AsCString(
+        m_module_spec_list.GetFileSpecAtIndex(0).GetFilename().nonEmptyOr(
             "<Unknown>"));
   } else if (num_modules > 0) {
     s->Printf(", modules(%" PRIu64 ") = ", static_cast<uint64_t>(num_modules));
     for (size_t i = 0; i < num_modules; i++) {
       s->PutCString(
-          m_module_spec_list.GetFileSpecAtIndex(i).GetFilename().AsCString(
+          m_module_spec_list.GetFileSpecAtIndex(i).GetFilename().nonEmptyOr(
               "<Unknown>"));
       if (i != num_modules - 1)
         s->PutCString(", ");
@@ -803,6 +797,6 @@ uint32_t SearchFilterByModuleListAndCU::GetFilterRequiredItems() {
 
 void SearchFilterByModuleListAndCU::Dump(Stream *s) const {}
 
-SearchFilterSP SearchFilterByModuleListAndCU::DoCreateCopy() {
-  return std::make_shared<SearchFilterByModuleListAndCU>(*this);
+std::unique_ptr<SearchFilter> SearchFilterByModuleListAndCU::DoCreateCopy() {
+  return std::make_unique<SearchFilterByModuleListAndCU>(*this);
 }

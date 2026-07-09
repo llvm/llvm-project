@@ -1,0 +1,12 @@
+{
+  "configuration": {
+    "runtime_prefix": "__c3_",
+    "function_regex": "baz"
+  },
+  "instruction_post": {
+    "load": {
+      "enabled": true,
+      "id": true
+    }
+  }
+}

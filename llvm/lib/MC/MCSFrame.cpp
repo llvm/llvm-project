@@ -123,7 +123,7 @@ struct SFrameFDE {
     MCContext &C = S.getContext();
 
     // sfde_func_start_address
-    const MCExpr *V = C.getAsmInfo()->getExprForFDESymbol(
+    const MCExpr *V = C.getAsmInfo().getExprForFDESymbol(
         &(*DFrame.Begin), C.getObjectFileInfo()->getFDEEncoding(), S);
     S.emitValue(V, sizeof(int32_t));
 
@@ -223,9 +223,9 @@ class SFrameEmitterImpl {
   // Returns true if the CFI escape sequence is safe for sframes.
   bool isCFIEscapeSafe(SFrameFDE &FDE, const SFrameFRE &FRE,
                        const MCCFIInstruction &CFI) {
-    const MCAsmInfo *AI = Streamer.getContext().getAsmInfo();
-    DWARFDataExtractorSimple data(CFI.getValues(), AI->isLittleEndian(),
-                                  AI->getCodePointerSize());
+    const MCAsmInfo &AI = Streamer.getContext().getAsmInfo();
+    DWARFDataExtractorSimple data(CFI.getValues(), AI.isLittleEndian(),
+                                  AI.getCodePointerSize());
 
     // Normally, both alignment factors are extracted from the enclosing Dwarf
     // FDE or CIE. We don't have one here. Alignments are used for scaling
@@ -491,7 +491,7 @@ public:
     SFrameFRE BaseFRE(LastLabel);
     if (!DF.IsSimple) {
       for (const auto &CFI :
-           Streamer.getContext().getAsmInfo()->getInitialFrameState())
+           Streamer.getContext().getAsmInfo().getInitialFrameState())
         if (!handleCFI(FDE, BaseFRE, CFI))
           Valid = false;
     }
@@ -646,7 +646,7 @@ void MCSFrameEmitter::encodeFuncOffset(MCContext &C, uint64_t Offset,
   FDEInfo<endianness::native> I;
   I.Info = FDEData.back();
   FREType T = I.getFREType();
-  llvm::endianness E = C.getAsmInfo()->isLittleEndian()
+  llvm::endianness E = C.getAsmInfo().isLittleEndian()
                            ? llvm::endianness::little
                            : llvm::endianness::big;
   // sfre_start_address

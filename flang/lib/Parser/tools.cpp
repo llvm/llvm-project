@@ -131,6 +131,11 @@ const Name &GetFirstName(const EntityDecl &x) {
   return std::get<ObjectName>(x.t);
 }
 
+const Name &GetFirstName(const AccObject &x) {
+  return common::visit(
+      [](const auto &y) -> const Name & { return GetFirstName(y); }, x.u);
+}
+
 const CoindexedNamedObject *GetCoindexedNamedObject(const DataRef &base) {
   return common::visit(
       common::visitors{
@@ -235,7 +240,7 @@ std::optional<Label> GetFinalLabel(const OpenMPConstruct &x) {
           }
         } else if constexpr ( //
             std::is_same_v<TypeS, OpenMPLoopConstruct> ||
-            std::is_same_v<TypeS, OpenMPSectionConstruct> ||
+            std::is_same_v<TypeS, OmpSectionDirective> ||
             std::is_base_of_v<OmpBlockConstruct, TypeS>) {
           return GetFinalLabel(std::get<Block>(s.t));
         } else {

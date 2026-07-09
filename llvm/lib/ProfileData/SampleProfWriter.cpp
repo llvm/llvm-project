@@ -46,6 +46,10 @@ static cl::opt<bool> ExtBinaryWriteVTableTypeProf(
     "extbinary-write-vtable-type-prof", cl::init(false), cl::Hidden,
     cl::desc("Write vtable type profile in ext-binary sample profile writer"));
 
+static cl::opt<uint64_t> RequestedVersion(
+    "sample-profile-format-version", cl::init(DefaultVersion), cl::Hidden,
+    cl::desc("Format version to write for extensible binary profiles"));
+
 namespace llvm {
 namespace support {
 namespace endian {
@@ -58,8 +62,7 @@ struct SeekableWriter {
   SeekableWriter(raw_pwrite_stream &OS, endianness Endian)
       : OS(OS), Endian(Endian) {}
 
-  template <typename ValueType>
-  void pwrite(ValueType Val, size_t Offset) {
+  template <typename ValueType> void pwrite(ValueType Val, size_t Offset) {
     std::string StringBuf;
     raw_string_ostream SStream(StringBuf);
     Writer(SStream, Endian).write(Val);
@@ -757,7 +760,7 @@ SampleProfileWriterBinary::writeMagicIdent(SampleProfileFormat Format) {
   auto &OS = *OutputStream;
   // Write file magic identifier.
   encodeULEB128(SPMagic(Format), OS);
-  encodeULEB128(SPVersion(), OS);
+  encodeULEB128(FormatVersion, OS);
   return sampleprof_error::success;
 }
 
@@ -982,6 +985,12 @@ SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
     return EC;
 
   Writer->Format = Format;
+  if (Format != SPF_Ext_Binary)
+    Writer->setFormatVersion(DefaultVersion);
+  else if (formatVersionIsSupported(RequestedVersion))
+    Writer->setFormatVersion(RequestedVersion);
+  else
+    return sampleprof_error::unsupported_version;
   return std::move(Writer);
 }
 

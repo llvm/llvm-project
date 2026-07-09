@@ -256,6 +256,15 @@ struct AddUIExtendedOpLowering
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+struct SubUIExtendedOpLowering
+    : public ConvertOpToLLVMPattern<arith::SubUIExtendedOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::SubUIExtendedOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 template <typename ArithMulOp, bool IsSigned>
 struct MulIExtendedOpLowering : public ConvertOpToLLVMPattern<ArithMulOp> {
   using ConvertOpToLLVMPattern<ArithMulOp>::ConvertOpToLLVMPattern;
@@ -475,6 +484,45 @@ LogicalResult AddUIExtendedOpLowering::matchAndRewrite(
   }
 
   if (!isa<VectorType>(sumResultType))
+    return rewriter.notifyMatchFailure(loc, "expected vector result types");
+
+  return rewriter.notifyMatchFailure(loc,
+                                     "ND vector types are not supported yet");
+}
+
+//===----------------------------------------------------------------------===//
+// SubUIExtendedOpLowering
+//===----------------------------------------------------------------------===//
+
+LogicalResult SubUIExtendedOpLowering::matchAndRewrite(
+    arith::SubUIExtendedOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Type operandType = adaptor.getLhs().getType();
+  Type diffResultType = op.getDiff().getType();
+  Type borrowResultType = op.getBorrow().getType();
+
+  if (!LLVM::isCompatibleType(operandType))
+    return failure();
+
+  MLIRContext *ctx = rewriter.getContext();
+  Location loc = op.getLoc();
+
+  // Handle the scalar and 1D vector cases.
+  if (!isa<LLVM::LLVMArrayType>(operandType)) {
+    Type newBorrowType = typeConverter->convertType(borrowResultType);
+    Type structType =
+        LLVM::LLVMStructType::getLiteral(ctx, {diffResultType, newBorrowType});
+    Value subOverflow = LLVM::USubWithOverflowOp::create(
+        rewriter, loc, structType, adaptor.getLhs(), adaptor.getRhs());
+    Value diffExtracted =
+        LLVM::ExtractValueOp::create(rewriter, loc, subOverflow, 0);
+    Value borrowExtracted =
+        LLVM::ExtractValueOp::create(rewriter, loc, subOverflow, 1);
+    rewriter.replaceOp(op, {diffExtracted, borrowExtracted});
+    return success();
+  }
+
+  if (!isa<VectorType>(diffResultType))
     return rewriter.notifyMatchFailure(loc, "expected vector result types");
 
   return rewriter.notifyMatchFailure(loc,
@@ -728,6 +776,7 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     AddIOpLowering,
     AndIOpLowering,
     AddUIExtendedOpLowering,
+    SubUIExtendedOpLowering,
     BitcastOpLowering,
     ConstantOpLowering,
     CmpFOpLowering,

@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_FORMATVARIADICDETAILS_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
@@ -22,134 +23,58 @@ class Error;
 
 namespace support {
 namespace detail {
-class LLVM_ABI format_adapter {
-  virtual void anchor();
 
-protected:
-  virtual ~format_adapter() = default;
+using FormatFunctorRef = function_ref<void(llvm::raw_ostream &, StringRef)>;
 
-public:
-  virtual void format(raw_ostream &S, StringRef Options) = 0;
-};
-
-template <typename T> class provider_format_adapter : public format_adapter {
-  T Item;
-
-public:
-  explicit provider_format_adapter(T &&Item) : Item(std::forward<T>(Item)) {}
-
-  void format(llvm::raw_ostream &S, StringRef Options) override {
-    format_provider<std::decay_t<T>>::format(Item, S, Options);
-  }
-};
-
-template <typename T>
-class stream_operator_format_adapter : public format_adapter {
-  T Item;
-
-public:
-  explicit stream_operator_format_adapter(T &&Item)
-      : Item(std::forward<T>(Item)) {}
-
-  void format(llvm::raw_ostream &S, StringRef) override { S << Item; }
-};
-
-template <typename T> class missing_format_adapter;
-
-// Test if format_provider<T> is defined on T and contains a member function
-// with the signature:
-//   static void format(const T&, raw_stream &, StringRef);
-//
-template <class T> class has_FormatProvider {
-public:
-  using Decayed = std::decay_t<T>;
-  using Signature_format = void (*)(const Decayed &, llvm::raw_ostream &,
-                                    StringRef);
-
-  template <typename U> using check = SameType<Signature_format, &U::format>;
-
-  static constexpr bool value =
-      llvm::is_detected<check, llvm::format_provider<Decayed>>::value;
-};
-
-// Test if raw_ostream& << T -> raw_ostream& is findable via ADL.
-template <class T> class has_StreamOperator {
-public:
-  using ConstRefT = const std::decay_t<T> &;
-
-  template <typename U>
-  static auto test(int)
-      -> std::is_same<decltype(std::declval<llvm::raw_ostream &>()
-                               << std::declval<U>()),
-                      llvm::raw_ostream &>;
-
-  template <typename U> static auto test(...) -> std::false_type;
-
-  static constexpr bool value = decltype(test<ConstRefT>(0))::value;
-};
-
-// Simple template that decides whether a type T should use the member-function
-// based format() invocation.
-template <typename T>
-struct uses_format_member
-    : public std::is_base_of<format_adapter, std::remove_reference_t<T>> {};
-
-// Simple template that decides whether a type T should use the format_provider
-// based format() invocation.  The member function takes priority, so this test
-// will only be true if there is not ALSO a format member.
-template <typename T>
-struct uses_format_provider
-    : public std::bool_constant<!uses_format_member<T>::value &&
-                                has_FormatProvider<T>::value> {};
-
-// Simple template that decides whether a type T should use the operator<<
-// based format() invocation.  This takes last priority.
-template <typename T>
-struct uses_stream_operator
-    : public std::bool_constant<!uses_format_member<T>::value &&
-                                !uses_format_provider<T>::value &&
-                                has_StreamOperator<T>::value> {};
-
-// Simple template that decides whether a type T has neither a member-function
-// nor format_provider based implementation that it can use.  Mostly used so
-// that the compiler spits out a nice diagnostic when a type with no format
-// implementation can be located.
-template <typename T>
-struct uses_missing_provider
-    : public std::bool_constant<!uses_format_member<T>::value &&
-                                !uses_format_provider<T>::value &&
-                                !uses_stream_operator<T>::value> {};
-
-template <typename T>
-std::enable_if_t<uses_format_member<T>::value, T>
-build_format_adapter(T &&Item) {
-  return std::forward<T>(Item);
-}
-
-template <typename T>
-std::enable_if_t<uses_format_provider<T>::value, provider_format_adapter<T>>
-build_format_adapter(T &&Item) {
-  return provider_format_adapter<T>(std::forward<T>(Item));
-}
-
-template <typename T>
-std::enable_if_t<uses_stream_operator<T>::value,
-                 stream_operator_format_adapter<T>>
-build_format_adapter(T &&Item) {
-  // If the caller passed an Error by value, then stream_operator_format_adapter
-  // would be responsible for consuming it.
-  // Make the caller opt into this by calling fmt_consume().
+template <typename T> class FormatFunctor {
+  // If the caller passed an Error by value, then we would be responsible for
+  // consuming it. Make the caller opt into this by calling fmt_consume().
   static_assert(
       !std::is_same_v<llvm::Error, std::remove_cv_t<T>>,
       "llvm::Error-by-value must be wrapped in fmt_consume() for formatv");
-  return stream_operator_format_adapter<T>(std::forward<T>(Item));
-}
 
-template <typename T>
-std::enable_if_t<uses_missing_provider<T>::value, missing_format_adapter<T>>
-build_format_adapter(T &&) {
-  return missing_format_adapter<T>();
-}
+  T Item;
+
+  using DecayedT = std::decay_t<T>;
+  using Signature_format = void (*)(const DecayedT &, llvm::raw_ostream &,
+                                    StringRef);
+
+  template <typename U>
+  using MemberFormatCheck = decltype(std::declval<U>().format(
+      std::declval<llvm::raw_ostream &>(), std::declval<llvm::StringRef>()));
+  template <typename U>
+  using StaticFormatCheck = SameType<Signature_format, &U::format>;
+  template <typename U>
+  using StreamCheck = std::is_same<decltype(std::declval<llvm::raw_ostream &>()
+                                            << std::declval<U>()),
+                                   llvm::raw_ostream &>;
+
+public:
+  static constexpr bool HasMemberProvider =
+      llvm::is_detected<MemberFormatCheck, DecayedT>::value;
+  static constexpr bool HasFormatProvider =
+      llvm::is_detected<StaticFormatCheck,
+                        llvm::format_provider<DecayedT>>::value;
+  static constexpr bool HasStreamProvider =
+      llvm::is_detected<StreamCheck, DecayedT>::value;
+
+  static_assert(HasMemberProvider || HasFormatProvider || HasStreamProvider,
+                "type has no format provider");
+
+  explicit FormatFunctor(T &&Item) : Item(std::forward<T>(Item)) {}
+
+  void operator()(llvm::raw_ostream &S, StringRef Options) {
+    if constexpr (HasMemberProvider)
+      Item.format(S, Options);
+    else if constexpr (HasFormatProvider)
+      format_provider<DecayedT>::format(Item, S, Options);
+    else if constexpr (HasStreamProvider)
+      S << Item;
+  }
+};
+
+template <typename T> FormatFunctor(T &&) -> FormatFunctor<T>;
+
 } // namespace detail
 } // namespace support
 } // namespace llvm

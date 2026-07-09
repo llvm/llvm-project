@@ -315,7 +315,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_FRAME_INDEX: {
     int FrameIdx = MI.getOperand(1).getIndex();
-    TL.computeKnownBitsForFrameIndex(FrameIdx, Known, MF);
+    TL.computeKnownBitsForStackObjectPointer(
+        Known, MF, MF.getFrameInfo().getObjectAlign(FrameIdx));
     break;
   }
   case TargetOpcode::G_SUB: {
@@ -439,6 +440,30 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     Known = KnownBits::sdiv(Known, Known2,
                             MI.getFlag(MachineInstr::MIFlag::IsExact));
+    break;
+  }
+  case TargetOpcode::G_UREM: {
+    KnownBits LHSKnown(Known.getBitWidth());
+    KnownBits RHSKnown(Known.getBitWidth());
+
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), LHSKnown, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
+                         Depth + 1);
+
+    Known = KnownBits::urem(LHSKnown, RHSKnown);
+    break;
+  }
+  case TargetOpcode::G_SREM: {
+    KnownBits LHSKnown(Known.getBitWidth());
+    KnownBits RHSKnown(Known.getBitWidth());
+
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), LHSKnown, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
+                         Depth + 1);
+
+    Known = KnownBits::srem(LHSKnown, RHSKnown);
     break;
   }
   case TargetOpcode::G_SELECT: {
@@ -582,6 +607,23 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
 
     Known.Zero = Known.Zero.rotr(Amt);
     Known.One = Known.One.rotr(Amt);
+    break;
+  }
+  case TargetOpcode::G_FSHL:
+  case TargetOpcode::G_FSHR: {
+    MachineInstr *AmtOpMI = MRI.getVRegDef(MI.getOperand(3).getReg());
+    auto MaybeAmtOp = isConstantOrConstantSplatVector(*AmtOpMI, MRI);
+    if (!MaybeAmtOp)
+      break;
+
+    const APInt Amt = *MaybeAmtOp;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = Opcode == TargetOpcode::G_FSHL
+                ? KnownBits::fshl(Known, Known2, Amt)
+                : KnownBits::fshr(Known, Known2, Amt);
     break;
   }
   case TargetOpcode::G_INTTOPTR:
@@ -764,7 +806,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_CTTZ:
-  case TargetOpcode::G_CTTZ_ZERO_UNDEF: {
+  case TargetOpcode::G_CTTZ_ZERO_POISON: {
     KnownBits SrcOpKnown;
     computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
                          Depth + 1);
@@ -775,7 +817,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_CTLZ:
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF: {
+  case TargetOpcode::G_CTLZ_ZERO_POISON: {
     KnownBits SrcOpKnown;
     computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
                          Depth + 1);
@@ -827,6 +869,37 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
           APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
 
     computeKnownBitsImpl(InVec, Known, DemandedSrcElts, Depth + 1);
+    break;
+  }
+  case TargetOpcode::G_INSERT_VECTOR_ELT: {
+    GInsertVectorElement &Insert = cast<GInsertVectorElement>(MI);
+    Register InVec = Insert.getVectorReg();
+    Register InVal = Insert.getElementReg();
+    Register EltNo = Insert.getIndexReg();
+    LLT VecVT = MRI.getType(InVec);
+
+    if (VecVT.isScalableVector())
+      break;
+
+    auto ConstEltNo = getIConstantVRegVal(EltNo, MRI);
+    unsigned NumElts = VecVT.getNumElements();
+
+    bool DemandedVal = true;
+    APInt DemandedVecElts = DemandedElts;
+    if (ConstEltNo && ConstEltNo->ult(NumElts)) {
+      unsigned EltIdx = ConstEltNo->getZExtValue();
+      DemandedVal = !!DemandedElts[EltIdx];
+      DemandedVecElts.clearBit(EltIdx);
+    }
+    Known.setAllConflict();
+    if (DemandedVal) {
+      computeKnownBitsImpl(InVal, Known2, APInt(1, 1), Depth + 1);
+      Known = Known.intersectWith(Known2.zextOrTrunc(BitWidth));
+    }
+    if (!!DemandedVecElts) {
+      computeKnownBitsImpl(InVec, Known2, DemandedVecElts, Depth + 1);
+      Known = Known.intersectWith(Known2);
+    }
     break;
   }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
@@ -2180,6 +2253,14 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
         return Tmp - MaxShAmt;
     }
     break;
+  }
+  case TargetOpcode::G_SREM: {
+    // The sign bit is the LHS's sign bit, except when the result of the
+    // remainder is zero. The magnitude of the result should be less than or
+    // equal to the magnitude of the LHS. Therefore, the result should have
+    // at least as many sign bits as the left hand side.
+    Register Src = MI.getOperand(1).getReg();
+    return computeNumSignBits(Src, DemandedElts, Depth + 1);
   }
   case TargetOpcode::G_TRUNC: {
     Register Src = MI.getOperand(1).getReg();

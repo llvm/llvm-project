@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -ffreestanding -std=c23 %s -emit-llvm -o - | FileCheck %s
 // RUN: %if clang-target-64-bits %{ %clang_cc1 -ffreestanding -std=c23 %s -emit-llvm -o - | FileCheck %s --check-prefix=INT128 %}
-// RUN: %clang_cc1 -ffreestanding -std=c23 -isystem %S/Inputs -DTEST_LIB_SPELLINGS %s -emit-llvm -o - | FileCheck %s --check-prefix=LIB
+// RUN: %clang_cc1 -std=c23 -isystem %S/Inputs -DTEST_LIB_SPELLINGS %s -emit-llvm -o - | FileCheck %s --check-prefix=LIB
 
 // CHECK-LABEL: test_leading_zeros
 // CHECK: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
@@ -394,6 +394,45 @@ void test_int128_floor_ceil(unsigned __int128 u128) {
 }
 #endif
 
+// CHECK-LABEL: test_ulong
+// CHECK: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: xor {{i32|i64}} %{{.*}}, -1
+// CHECK: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: xor {{i32|i64}} %{{.*}}, -1
+// CHECK: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: xor {{i32|i64}} %{{.*}}, -1
+// CHECK: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: xor {{i32|i64}} %{{.*}}, -1
+// CHECK: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: call {{i32|i64}} @llvm.ctpop.{{i32|i64}}({{i32|i64}} %{{.*}})
+// CHECK: call {{i32|i64}} @llvm.ctpop.{{i32|i64}}({{i32|i64}} %{{.*}})
+// CHECK: call {{i32|i64}} @llvm.ctpop.{{i32|i64}}({{i32|i64}} %{{.*}})
+// CHECK: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// CHECK: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 true)
+// CHECK: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+void test_ulong(unsigned long ul) {
+  volatile unsigned r;
+  volatile unsigned long rl;
+  volatile _Bool rb;
+  r  = __builtin_stdc_leading_zeros(ul);
+  r  = __builtin_stdc_leading_ones(ul);
+  r  = __builtin_stdc_trailing_zeros(ul);
+  r  = __builtin_stdc_trailing_ones(ul);
+  r  = __builtin_stdc_first_leading_zero(ul);
+  r  = __builtin_stdc_first_leading_one(ul);
+  r  = __builtin_stdc_first_trailing_zero(ul);
+  r  = __builtin_stdc_first_trailing_one(ul);
+  r  = __builtin_stdc_count_zeros(ul);
+  r  = __builtin_stdc_count_ones(ul);
+  rb = __builtin_stdc_has_single_bit(ul);
+  r  = __builtin_stdc_bit_width(ul);
+  rl = __builtin_stdc_bit_floor(ul);
+  rl = __builtin_stdc_bit_ceil(ul);
+}
+
 #ifdef TEST_LIB_SPELLINGS
 #include <stdbit.h>
 
@@ -482,5 +521,254 @@ void test_lib_bit_floor(unsigned ui) {
 // LIB: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
 void test_lib_bit_ceil(unsigned ui) {
   volatile unsigned r = stdc_bit_ceil(ui);
+}
+
+// LIB-LABEL: test_lib_typed_leading_zeros
+// LIB: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// LIB: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// LIB: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
+// LIB: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+void test_lib_typed_leading_zeros(unsigned char uc, unsigned short us,
+                                  unsigned int ui, unsigned long long ull) {
+  volatile unsigned r;
+  r = stdc_leading_zeros_uc(uc);
+  r = stdc_leading_zeros_us(us);
+  r = stdc_leading_zeros_ui(ui);
+  r = stdc_leading_zeros_ull(ull);
+}
+
+// LIB-LABEL: test_lib_typed_leading_ones
+// LIB: xor i8 %{{.*}}, -1
+// LIB: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// LIB: xor i16 %{{.*}}, -1
+// LIB: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// LIB: xor i32 %{{.*}}, -1
+// LIB: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
+// LIB: xor i64 %{{.*}}, -1
+// LIB: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+void test_lib_typed_leading_ones(unsigned char uc, unsigned short us,
+                                 unsigned int ui, unsigned long long ull) {
+  volatile unsigned r;
+  r = stdc_leading_ones_uc(uc);
+  r = stdc_leading_ones_us(us);
+  r = stdc_leading_ones_ui(ui);
+  r = stdc_leading_ones_ull(ull);
+}
+
+// LIB-LABEL: test_lib_typed_trailing_zeros
+// LIB: call i8 @llvm.cttz.i8(i8 %{{.*}}, i1 false)
+// LIB: call i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
+// LIB: call i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
+// LIB: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+void test_lib_typed_trailing_zeros(unsigned char uc, unsigned short us,
+                                   unsigned int ui, unsigned long long ull) {
+  volatile unsigned r;
+  r = stdc_trailing_zeros_uc(uc);
+  r = stdc_trailing_zeros_us(us);
+  r = stdc_trailing_zeros_ui(ui);
+  r = stdc_trailing_zeros_ull(ull);
+}
+
+// LIB-LABEL: test_lib_typed_trailing_ones
+// LIB: xor i8 %{{.*}}, -1
+// LIB: call i8 @llvm.cttz.i8(i8 %{{.*}}, i1 false)
+// LIB: xor i16 %{{.*}}, -1
+// LIB: call i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
+// LIB: xor i32 %{{.*}}, -1
+// LIB: call i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
+// LIB: xor i64 %{{.*}}, -1
+// LIB: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+void test_lib_typed_trailing_ones(unsigned char uc, unsigned short us,
+                                  unsigned int ui, unsigned long long ull) {
+  volatile unsigned r;
+  r = stdc_trailing_ones_uc(uc);
+  r = stdc_trailing_ones_us(us);
+  r = stdc_trailing_ones_ui(ui);
+  r = stdc_trailing_ones_ull(ull);
+}
+
+// LIB-LABEL: test_lib_typed_first_leading_zero
+// LIB: xor i8 %{{.*}}, -1
+// LIB: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// LIB: xor i16 %{{.*}}, -1
+// LIB: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// LIB: xor i32 %{{.*}}, -1
+// LIB: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
+// LIB: xor i64 %{{.*}}, -1
+// LIB: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+void test_lib_typed_first_leading_zero(unsigned char uc, unsigned short us,
+                                       unsigned int ui, unsigned long long ull) {
+  volatile unsigned r;
+  r = stdc_first_leading_zero_uc(uc);
+  r = stdc_first_leading_zero_us(us);
+  r = stdc_first_leading_zero_ui(ui);
+  r = stdc_first_leading_zero_ull(ull);
+}
+
+// LIB-LABEL: test_lib_typed_first_leading_one
+// LIB: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// LIB: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// LIB: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
+// LIB: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+void test_lib_typed_first_leading_one(unsigned char uc, unsigned short us,
+                                      unsigned int ui, unsigned long long ull) {
+  volatile unsigned r;
+  r = stdc_first_leading_one_uc(uc);
+  r = stdc_first_leading_one_us(us);
+  r = stdc_first_leading_one_ui(ui);
+  r = stdc_first_leading_one_ull(ull);
+}
+
+// LIB-LABEL: test_lib_typed_first_trailing_zero
+// LIB: xor i8 %{{.*}}, -1
+// LIB: call i8 @llvm.cttz.i8(i8 %{{.*}}, i1 false)
+// LIB: xor i16 %{{.*}}, -1
+// LIB: call i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
+// LIB: xor i32 %{{.*}}, -1
+// LIB: call i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
+// LIB: xor i64 %{{.*}}, -1
+// LIB: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+void test_lib_typed_first_trailing_zero(unsigned char uc, unsigned short us,
+                                        unsigned int ui, unsigned long long ull) {
+  volatile unsigned r;
+  r = stdc_first_trailing_zero_uc(uc);
+  r = stdc_first_trailing_zero_us(us);
+  r = stdc_first_trailing_zero_ui(ui);
+  r = stdc_first_trailing_zero_ull(ull);
+}
+
+// LIB-LABEL: test_lib_typed_first_trailing_one
+// LIB: call i8 @llvm.cttz.i8(i8 %{{.*}}, i1 false)
+// LIB: call i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
+// LIB: call i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
+// LIB: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+void test_lib_typed_first_trailing_one(unsigned char uc, unsigned short us,
+                                       unsigned int ui, unsigned long long ull) {
+  volatile unsigned r;
+  r = stdc_first_trailing_one_uc(uc);
+  r = stdc_first_trailing_one_us(us);
+  r = stdc_first_trailing_one_ui(ui);
+  r = stdc_first_trailing_one_ull(ull);
+}
+
+// LIB-LABEL: test_lib_typed_count_zeros
+// LIB: call i8 @llvm.ctpop.i8(i8 %{{.*}})
+// LIB: call i16 @llvm.ctpop.i16(i16 %{{.*}})
+// LIB: call i32 @llvm.ctpop.i32(i32 %{{.*}})
+// LIB: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+void test_lib_typed_count_zeros(unsigned char uc, unsigned short us,
+                                unsigned int ui, unsigned long long ull) {
+  volatile unsigned r;
+  r = stdc_count_zeros_uc(uc);
+  r = stdc_count_zeros_us(us);
+  r = stdc_count_zeros_ui(ui);
+  r = stdc_count_zeros_ull(ull);
+}
+
+// LIB-LABEL: test_lib_typed_count_ones
+// LIB: call i8 @llvm.ctpop.i8(i8 %{{.*}})
+// LIB: call i16 @llvm.ctpop.i16(i16 %{{.*}})
+// LIB: call i32 @llvm.ctpop.i32(i32 %{{.*}})
+// LIB: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+void test_lib_typed_count_ones(unsigned char uc, unsigned short us,
+                               unsigned int ui, unsigned long long ull) {
+  volatile unsigned r;
+  r = stdc_count_ones_uc(uc);
+  r = stdc_count_ones_us(us);
+  r = stdc_count_ones_ui(ui);
+  r = stdc_count_ones_ull(ull);
+}
+
+// LIB-LABEL: test_lib_typed_has_single_bit
+// LIB: call i8 @llvm.ctpop.i8(i8 %{{.*}})
+// LIB: call i16 @llvm.ctpop.i16(i16 %{{.*}})
+// LIB: call i32 @llvm.ctpop.i32(i32 %{{.*}})
+// LIB: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+void test_lib_typed_has_single_bit(unsigned char uc, unsigned short us,
+                                   unsigned int ui, unsigned long long ull) {
+  volatile _Bool r;
+  r = stdc_has_single_bit_uc(uc);
+  r = stdc_has_single_bit_us(us);
+  r = stdc_has_single_bit_ui(ui);
+  r = stdc_has_single_bit_ull(ull);
+}
+
+// LIB-LABEL: test_lib_typed_bit_width
+// LIB: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// LIB: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// LIB: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
+// LIB: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+void test_lib_typed_bit_width(unsigned char uc, unsigned short us,
+                              unsigned int ui, unsigned long long ull) {
+  volatile unsigned r;
+  r = stdc_bit_width_uc(uc);
+  r = stdc_bit_width_us(us);
+  r = stdc_bit_width_ui(ui);
+  r = stdc_bit_width_ull(ull);
+}
+
+// LIB-LABEL: test_lib_typed_bit_floor
+// LIB: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 true)
+// LIB: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 true)
+// LIB: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 true)
+// LIB: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 true)
+void test_lib_typed_bit_floor(unsigned char uc, unsigned short us,
+                              unsigned int ui, unsigned long long ull) {
+  volatile unsigned char rc = stdc_bit_floor_uc(uc);
+  volatile unsigned short rs = stdc_bit_floor_us(us);
+  volatile unsigned int ri = stdc_bit_floor_ui(ui);
+  volatile unsigned long long rll = stdc_bit_floor_ull(ull);
+}
+
+// LIB-LABEL: test_lib_typed_bit_ceil
+// LIB: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// LIB: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// LIB: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
+// LIB: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+void test_lib_typed_bit_ceil(unsigned char uc, unsigned short us,
+                             unsigned int ui, unsigned long long ull) {
+  volatile unsigned char rc = stdc_bit_ceil_uc(uc);
+  volatile unsigned short rs = stdc_bit_ceil_us(us);
+  volatile unsigned int ri = stdc_bit_ceil_ui(ui);
+  volatile unsigned long long rll = stdc_bit_ceil_ull(ull);
+}
+
+// LIB-LABEL: test_lib_typed_ul
+// LIB: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: xor {{i32|i64}} %{{.*}}, -1
+// LIB: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: xor {{i32|i64}} %{{.*}}, -1
+// LIB: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: xor {{i32|i64}} %{{.*}}, -1
+// LIB: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: xor {{i32|i64}} %{{.*}}, -1
+// LIB: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: call {{i32|i64}} @llvm.cttz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: call {{i32|i64}} @llvm.ctpop.{{i32|i64}}({{i32|i64}} %{{.*}})
+// LIB: call {{i32|i64}} @llvm.ctpop.{{i32|i64}}({{i32|i64}} %{{.*}})
+// LIB: call {{i32|i64}} @llvm.ctpop.{{i32|i64}}({{i32|i64}} %{{.*}})
+// LIB: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+// LIB: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 true)
+// LIB: call {{i32|i64}} @llvm.ctlz.{{i32|i64}}({{i32|i64}} %{{.*}}, i1 false)
+void test_lib_typed_ul(unsigned long ul) {
+  volatile unsigned r;
+  volatile unsigned long rl;
+  volatile _Bool rb;
+  r  = stdc_leading_zeros_ul(ul);
+  r  = stdc_leading_ones_ul(ul);
+  r  = stdc_trailing_zeros_ul(ul);
+  r  = stdc_trailing_ones_ul(ul);
+  r  = stdc_first_leading_zero_ul(ul);
+  r  = stdc_first_leading_one_ul(ul);
+  r  = stdc_first_trailing_zero_ul(ul);
+  r  = stdc_first_trailing_one_ul(ul);
+  r  = stdc_count_zeros_ul(ul);
+  r  = stdc_count_ones_ul(ul);
+  rb = stdc_has_single_bit_ul(ul);
+  r  = stdc_bit_width_ul(ul);
+  rl = stdc_bit_floor_ul(ul);
+  rl = stdc_bit_ceil_ul(ul);
 }
 #endif

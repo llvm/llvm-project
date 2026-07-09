@@ -82,6 +82,10 @@ class CIR_UIntOfWidths<list<int> widths>
     : CIR_ConfinedType<CIR_AnyUIntType, [CIR_IntOfWidthsPred<widths>],
         "unsigned integer type of widths " # !interleave(widths, "/")>;
 
+def CIR_UIntMultipleOf16
+    : CIR_ConfinedType<CIR_AnyUIntType, [CPred<"$_self.getWidth() % 16 == 0">],
+        "unsigned integer type with a width that is a multiple of 16 bits">;
+
 class CIR_UInt<int width>
     : CIR_ConfinedType<CIR_AnyUIntType, [CIR_HasWidthPred<width>],
         width # "-bit unsigned integer">,
@@ -341,13 +345,6 @@ def CIR_AnyFloatOrVecOfFloatType
         "floating point or vector of floating point type"> {
     let cppFunctionName = "isFPOrVectorOfFPType";
 }
-
-// Types valid for arithmetic ops (add/sub/mul/div/rem):
-// scalar or vector of integer or floating-point. 
-def CIR_AnyArithType
-    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyFloatType,
-                 CIR_VectorOfIntType, CIR_VectorOfFloatType],
-                "integer, floating-point, or vector of integer/float">;
 
 // Types valid for bitwise ops (and/or/xor):
 // integer, boolean, or vector of integer (no floating-point).

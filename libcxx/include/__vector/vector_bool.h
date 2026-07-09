@@ -45,6 +45,7 @@
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/exception_guard.h>
+#include <__utility/exchange.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
@@ -740,13 +741,10 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocat
 #else
     _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
 #endif
-    : __begin_(__v.__begin_),
-      __size_(__v.__size_),
-      __cap_(__v.__cap_),
+    : __begin_(std::__exchange(__v.__begin_, nullptr)),
+      __size_(std::__exchange(__v.__size_, 0)),
+      __cap_(std::__exchange(__v.__cap_, 0)),
       __alloc_(std::move(__v.__alloc_)) {
-  __v.__begin_ = nullptr;
-  __v.__size_  = 0;
-  __v.__cap_   = 0;
 }
 
 template <class _Allocator>
@@ -754,11 +752,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<bool, _Allocator>::vector(vector&& __v, const __type_identity_t<allocator_type>& __a)
     : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(__a) {
   if (__a == allocator_type(__v.__alloc_)) {
-    this->__begin_ = __v.__begin_;
-    this->__size_  = __v.__size_;
-    this->__cap_   = __v.__cap_;
-    __v.__begin_   = nullptr;
-    __v.__cap_ = __v.__size_ = 0;
+    __begin_ = std::__exchange(__v.__begin_, nullptr);
+    __size_  = std::__exchange(__v.__size_, 0);
+    __cap_   = std::__exchange(__v.__cap_, 0);
   } else if (__v.size() > 0) {
     __vallocate(__v.size());
     __size_ = __v.__size_;
@@ -787,11 +783,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::__move_assign(vecto
     _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value) {
   __vdeallocate();
   __move_assign_alloc(__c);
-  this->__begin_ = __c.__begin_;
-  this->__size_  = __c.__size_;
-  this->__cap_   = __c.__cap_;
-  __c.__begin_   = nullptr;
-  __c.__cap_ = __c.__size_ = 0;
+  __begin_ = std::__exchange(__c.__begin_, nullptr);
+  __size_  = std::__exchange(__c.__size_, 0);
+  __cap_   = std::__exchange(__c.__cap_, 0);
 }
 
 template <class _Allocator>

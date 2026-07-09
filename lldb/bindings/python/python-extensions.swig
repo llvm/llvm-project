@@ -282,6 +282,60 @@ def command(command_name=None, doc=None):
 
     return callable
 
+
+def _add_formatter(cmd: str, type_name: str, options: dict):
+    import shlex
+
+    type_name = shlex.quote(type_name)
+
+    # Convert `option=True` to "--option", all others to "--option value".
+    flag_list = []
+    for key, value in options.items():
+        flag = key.replace("_", "-")
+        if value is True:
+            flag_list.append(f"--{flag}")
+        else:
+            flag_list.extend((f"--{flag}", value))
+
+    def decorator(obj):
+        qualified = f"{obj.__module__}.{obj.__qualname__}"
+        if isinstance(obj, type):
+            flag_list.extend(("--python-class", qualified))
+        elif callable(obj):
+            flag_list.extend(("--python-function", qualified))
+
+        result = SBCommandReturnObject()
+        flags = " ".join(flag_list)
+        interp = debugger.GetCommandInterpreter()
+        interp.HandleCommand(f"{cmd} {flags} {type_name}", result)
+        if not result.Succeeded():
+            raise RuntimeError(result.GetError())
+        return obj
+
+    return decorator
+
+
+def summary(type_name, **kwargs):
+    """A decorator that registers a function as an LLDB type summary provider.
+
+    @lldb.summary("MyType")
+    def MyTypeSummary(valobj, _):
+        return "summary string"
+    """
+    return _add_formatter("type summary add", type_name, kwargs)
+
+
+def synthetic(type_name, **kwargs):
+    """A decorator that registers a class as an LLDB synthetic child provider.
+
+    @lldb.synthetic("MyType")
+    class MyTypeSynthetic:
+        def __init__(self, valobj, _):
+            ...
+    """
+    return _add_formatter("type synthetic add", type_name, kwargs)
+
+
 class declaration(object):
     '''A class that represents a source declaration location with file, line and column.'''
     def __init__(self, file, line, col):

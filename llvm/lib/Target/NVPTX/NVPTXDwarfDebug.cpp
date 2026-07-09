@@ -279,3 +279,18 @@ void NVPTXDwarfDebug::addTargetVariableAttributes(
   CU.addUInt(Die, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
              TargetAddrSpace.value_or(DefaultAddrSpace));
 }
+
+void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
+                                                 DwarfCompileUnit &NewCU) {
+  uint16_t Dialect = DIUnit.getSourceLanguage().getDialect();
+  // A zero dialect means "no dialect specified"; nothing to emit. This field
+  // should have already been range-checked by the assembly parser, IR verifier,
+  // and bitcode reader.
+  assert(Dialect <= dwarf::DW_LLVM_LANG_DIALECT_max &&
+         "Invalid or unsupported NVPTX language dialect.");
+  if (Dialect == 0)
+    return;
+
+  NewCU.addUInt(NewCU.getUnitDie(), dwarf::DW_AT_LLVM_language_dialect,
+                dwarf::DW_FORM_data1, Dialect);
+}

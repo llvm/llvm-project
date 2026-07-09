@@ -670,11 +670,11 @@ define <8 x i32> @widen_ctlz_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32>
 }
 
 ;
-; CTLZ_ZERO_UNDEF
+; CTLZ_ZERO_POISON
 ;
 
-define <4 x i32> @widen_ctlz_undef_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
-; SSE42-LABEL: widen_ctlz_undef_v2i32_v4i32:
+define <4 x i32> @widen_ctlz_poison_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
+; SSE42-LABEL: widen_ctlz_poison_v2i32_v4i32:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movq {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; SSE42-NEXT:    movdqa %xmm3, %xmm6
@@ -723,7 +723,7 @@ define <4 x i32> @widen_ctlz_undef_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 ; SSE42-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm5[0]
 ; SSE42-NEXT:    retq
 ;
-; AVX2-LABEL: widen_ctlz_undef_v2i32_v4i32:
+; AVX2-LABEL: widen_ctlz_poison_v2i32_v4i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX2-NEXT:    vpshufb %xmm0, %xmm2, %xmm3
@@ -765,7 +765,7 @@ define <4 x i32> @widen_ctlz_undef_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: widen_ctlz_undef_v2i32_v4i32:
+; AVX512-LABEL: widen_ctlz_poison_v2i32_v4i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512-NEXT:    vplzcntd %xmm0, %xmm0
@@ -776,8 +776,8 @@ define <4 x i32> @widen_ctlz_undef_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
   ret <4 x i32> %res
 }
 
-define <8 x i32> @widen_ctlz_undef_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
-; SSE42-LABEL: widen_ctlz_undef_v4i32_v8i32:
+define <8 x i32> @widen_ctlz_poison_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
+; SSE42-LABEL: widen_ctlz_poison_v4i32_v8i32:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movq {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; SSE42-NEXT:    movdqa %xmm3, %xmm6
@@ -825,7 +825,7 @@ define <8 x i32> @widen_ctlz_undef_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE42-NEXT:    paddd %xmm6, %xmm1
 ; SSE42-NEXT:    retq
 ;
-; AVX2-LABEL: widen_ctlz_undef_v4i32_v8i32:
+; AVX2-LABEL: widen_ctlz_poison_v4i32_v8i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
@@ -851,7 +851,7 @@ define <8 x i32> @widen_ctlz_undef_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: widen_ctlz_undef_v4i32_v8i32:
+; AVX512-LABEL: widen_ctlz_poison_v4i32_v8i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
@@ -863,8 +863,8 @@ define <8 x i32> @widen_ctlz_undef_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
   ret <8 x i32> %res
 }
 
-define <8 x i32> @widen_ctlz_undef_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32> %a2, <2 x i32> %a3) {
-; SSE42-LABEL: widen_ctlz_undef_v2i32_v8i32:
+define <8 x i32> @widen_ctlz_poison_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32> %a2, <2 x i32> %a3) {
+; SSE42-LABEL: widen_ctlz_poison_v2i32_v8i32:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movq {{.*#+}} xmm5 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; SSE42-NEXT:    movdqa %xmm5, %xmm8
@@ -956,7 +956,7 @@ define <8 x i32> @widen_ctlz_undef_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 
 ; SSE42-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE42-NEXT:    retq
 ;
-; AVX2-LABEL: widen_ctlz_undef_v2i32_v8i32:
+; AVX2-LABEL: widen_ctlz_poison_v2i32_v8i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
@@ -1003,7 +1003,7 @@ define <8 x i32> @widen_ctlz_undef_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: widen_ctlz_undef_v2i32_v8i32:
+; AVX512-LABEL: widen_ctlz_poison_v2i32_v8i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
@@ -1353,11 +1353,11 @@ define <8 x i32> @widen_cttz_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32>
 }
 
 ;
-; CTTZ_ZERO_UNDEF
+; CTTZ_ZERO_POISON
 ;
 
-define <4 x i32> @widen_cttz_undef_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
-; SSE42-LABEL: widen_cttz_undef_v2i32_v4i32:
+define <4 x i32> @widen_cttz_poison_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
+; SSE42-LABEL: widen_cttz_poison_v2i32_v4i32:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE42-NEXT:    movdqa %xmm0, %xmm3
@@ -1392,7 +1392,7 @@ define <4 x i32> @widen_cttz_undef_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 ; SSE42-NEXT:    packuswb %xmm1, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX2-LABEL: widen_cttz_undef_v2i32_v4i32:
+; AVX2-LABEL: widen_cttz_poison_v2i32_v4i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpaddd %xmm2, %xmm0, %xmm3
@@ -1421,7 +1421,7 @@ define <4 x i32> @widen_cttz_undef_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 ; AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512VL-LABEL: widen_cttz_undef_v2i32_v4i32:
+; AVX512VL-LABEL: widen_cttz_poison_v2i32_v4i32:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX512VL-NEXT:    vpaddd %xmm2, %xmm0, %xmm3
@@ -1434,7 +1434,7 @@ define <4 x i32> @widen_cttz_undef_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 ; AVX512VL-NEXT:    vpsubd %xmm0, %xmm3, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
-; AVX512VPOPCNT-LABEL: widen_cttz_undef_v2i32_v4i32:
+; AVX512VPOPCNT-LABEL: widen_cttz_poison_v2i32_v4i32:
 ; AVX512VPOPCNT:       # %bb.0:
 ; AVX512VPOPCNT-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX512VPOPCNT-NEXT:    vpaddd %xmm2, %xmm0, %xmm3
@@ -1450,8 +1450,8 @@ define <4 x i32> @widen_cttz_undef_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
   ret <4 x i32> %res
 }
 
-define <8 x i32> @widen_cttz_undef_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
-; SSE42-LABEL: widen_cttz_undef_v4i32_v8i32:
+define <8 x i32> @widen_cttz_poison_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
+; SSE42-LABEL: widen_cttz_poison_v4i32_v8i32:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSE42-NEXT:    movdqa %xmm0, %xmm2
@@ -1491,7 +1491,7 @@ define <8 x i32> @widen_cttz_undef_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE42-NEXT:    packuswb %xmm2, %xmm1
 ; SSE42-NEXT:    retq
 ;
-; AVX2-LABEL: widen_cttz_undef_v4i32_v8i32:
+; AVX2-LABEL: widen_cttz_poison_v4i32_v8i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
@@ -1515,7 +1515,7 @@ define <8 x i32> @widen_cttz_undef_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; AVX2-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512VL-LABEL: widen_cttz_undef_v4i32_v8i32:
+; AVX512VL-LABEL: widen_cttz_poison_v4i32_v8i32:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
@@ -1527,7 +1527,7 @@ define <8 x i32> @widen_cttz_undef_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; AVX512VL-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
-; AVX512VPOPCNT-LABEL: widen_cttz_undef_v4i32_v8i32:
+; AVX512VPOPCNT-LABEL: widen_cttz_poison_v4i32_v8i32:
 ; AVX512VPOPCNT:       # %bb.0:
 ; AVX512VPOPCNT-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512VPOPCNT-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
@@ -1542,8 +1542,8 @@ define <8 x i32> @widen_cttz_undef_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
   ret <8 x i32> %res
 }
 
-define <8 x i32> @widen_cttz_undef_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32> %a2, <2 x i32> %a3) {
-; SSE42-LABEL: widen_cttz_undef_v2i32_v8i32:
+define <8 x i32> @widen_cttz_poison_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32> %a2, <2 x i32> %a3) {
+; SSE42-LABEL: widen_cttz_poison_v2i32_v8i32:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pcmpeqd %xmm6, %xmm6
 ; SSE42-NEXT:    movdqa %xmm0, %xmm4
@@ -1607,7 +1607,7 @@ define <8 x i32> @widen_cttz_undef_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 
 ; SSE42-NEXT:    packuswb %xmm2, %xmm1
 ; SSE42-NEXT:    retq
 ;
-; AVX2-LABEL: widen_cttz_undef_v2i32_v8i32:
+; AVX2-LABEL: widen_cttz_poison_v2i32_v8i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
@@ -1641,7 +1641,7 @@ define <8 x i32> @widen_cttz_undef_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 
 ; AVX2-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512VL-LABEL: widen_cttz_undef_v2i32_v8i32:
+; AVX512VL-LABEL: widen_cttz_poison_v2i32_v8i32:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
 ; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
@@ -1658,7 +1658,7 @@ define <8 x i32> @widen_cttz_undef_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2 
 ; AVX512VL-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
-; AVX512VPOPCNT-LABEL: widen_cttz_undef_v2i32_v8i32:
+; AVX512VPOPCNT-LABEL: widen_cttz_poison_v2i32_v8i32:
 ; AVX512VPOPCNT:       # %bb.0:
 ; AVX512VPOPCNT-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
 ; AVX512VPOPCNT-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0

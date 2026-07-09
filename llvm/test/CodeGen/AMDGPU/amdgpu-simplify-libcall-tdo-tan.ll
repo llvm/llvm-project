@@ -24,7 +24,7 @@ entry:
 define half @test_tdo_scalar_f16_tan() {
 ; CHECK-LABEL: define half @test_tdo_scalar_f16_tan() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret half 0xH0000
+; CHECK-NEXT:    ret half 0.000000e+00
 ;
 entry:
   %c = call half @_Z3tanDh(half 0.000000e+00)

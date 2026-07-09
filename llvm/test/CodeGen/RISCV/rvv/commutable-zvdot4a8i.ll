@@ -4,22 +4,22 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+zve64x,+experimental-zvdot4a8i \
 ; RUN:   -verify-machineinstrs | FileCheck %s
 
-; vdota4.vv - commutable
-define <vscale x 2 x i32> @commutable_vdota4_vv(<vscale x 2 x i32> %0, <vscale x 2 x i32> %1, iXLen %2) nounwind {
-; CHECK-LABEL: commutable_vdota4_vv:
+; vdot4a.vv - commutable
+define <vscale x 2 x i32> @commutable_vdot4a_vv(<vscale x 2 x i32> %0, <vscale x 2 x i32> %1, iXLen %2) nounwind {
+; CHECK-LABEL: commutable_vdot4a_vv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vdota4.vv v8, v8, v9
+; CHECK-NEXT:    vdot4a.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 2 x i32> @llvm.riscv.vdota4.nxv2i32.nxv2i32(
+  %a = call <vscale x 2 x i32> @llvm.riscv.vdot4a.nxv2i32.nxv2i32(
     <vscale x 2 x i32> poison,
     <vscale x 2 x i32> %0,
     <vscale x 2 x i32> %1,
     iXLen %2, iXLen 1)
-  %b = call <vscale x 2 x i32> @llvm.riscv.vdota4.nxv2i32.nxv2i32(
+  %b = call <vscale x 2 x i32> @llvm.riscv.vdot4a.nxv2i32.nxv2i32(
     <vscale x 2 x i32> poison,
     <vscale x 2 x i32> %1,
     <vscale x 2 x i32> %0,
@@ -28,21 +28,21 @@ entry:
   ret <vscale x 2 x i32> %ret
 }
 
-define <vscale x 2 x i32> @commutable_vdota4_vv_masked(<vscale x 2 x i32> %0, <vscale x 2 x i32> %1, <vscale x 2 x i1> %mask, iXLen %2) {
-; CHECK-LABEL: commutable_vdota4_vv_masked:
+define <vscale x 2 x i32> @commutable_vdot4a_vv_masked(<vscale x 2 x i32> %0, <vscale x 2 x i32> %1, <vscale x 2 x i1> %mask, iXLen %2) {
+; CHECK-LABEL: commutable_vdot4a_vv_masked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vdota4.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vdot4a.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i32> @llvm.riscv.vdota4.mask.nxv2i32.nxv2i32(
+  %a = call <vscale x 2 x i32> @llvm.riscv.vdot4a.mask.nxv2i32.nxv2i32(
     <vscale x 2 x i32> poison,
     <vscale x 2 x i32> %0,
     <vscale x 2 x i32> %1,
     <vscale x 2 x i1> %mask,
     iXLen %2, iXLen 1)
-  %b = call <vscale x 2 x i32> @llvm.riscv.vdota4.mask.nxv2i32.nxv2i32(
+  %b = call <vscale x 2 x i32> @llvm.riscv.vdot4a.mask.nxv2i32.nxv2i32(
     <vscale x 2 x i32> poison,
     <vscale x 2 x i32> %1,
     <vscale x 2 x i32> %0,
@@ -52,22 +52,22 @@ define <vscale x 2 x i32> @commutable_vdota4_vv_masked(<vscale x 2 x i32> %0, <v
   ret <vscale x 2 x i32> %ret
 }
 
-; vdota4u.vv - commutable
-define <vscale x 2 x i32> @commutable_vdota4u_vv(<vscale x 2 x i32> %0, <vscale x 2 x i32> %1, iXLen %2) nounwind {
-; CHECK-LABEL: commutable_vdota4u_vv:
+; vdot4au.vv - commutable
+define <vscale x 2 x i32> @commutable_vdot4au_vv(<vscale x 2 x i32> %0, <vscale x 2 x i32> %1, iXLen %2) nounwind {
+; CHECK-LABEL: commutable_vdot4au_vv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vdota4u.vv v8, v8, v9
+; CHECK-NEXT:    vdot4au.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 2 x i32> @llvm.riscv.vdota4u.nxv2i32.nxv2i32(
+  %a = call <vscale x 2 x i32> @llvm.riscv.vdot4au.nxv2i32.nxv2i32(
     <vscale x 2 x i32> poison,
     <vscale x 2 x i32> %0,
     <vscale x 2 x i32> %1,
     iXLen %2, iXLen 1)
-  %b = call <vscale x 2 x i32> @llvm.riscv.vdota4u.nxv2i32.nxv2i32(
+  %b = call <vscale x 2 x i32> @llvm.riscv.vdot4au.nxv2i32.nxv2i32(
     <vscale x 2 x i32> poison,
     <vscale x 2 x i32> %1,
     <vscale x 2 x i32> %0,
@@ -76,21 +76,21 @@ entry:
   ret <vscale x 2 x i32> %ret
 }
 
-define <vscale x 2 x i32> @commutable_vdota4u_vv_masked(<vscale x 2 x i32> %0, <vscale x 2 x i32> %1, <vscale x 2 x i1> %mask, iXLen %2) {
-; CHECK-LABEL: commutable_vdota4u_vv_masked:
+define <vscale x 2 x i32> @commutable_vdot4au_vv_masked(<vscale x 2 x i32> %0, <vscale x 2 x i32> %1, <vscale x 2 x i1> %mask, iXLen %2) {
+; CHECK-LABEL: commutable_vdot4au_vv_masked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vdota4u.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vdot4au.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i32> @llvm.riscv.vdota4u.mask.nxv2i32.nxv2i32(
+  %a = call <vscale x 2 x i32> @llvm.riscv.vdot4au.mask.nxv2i32.nxv2i32(
     <vscale x 2 x i32> poison,
     <vscale x 2 x i32> %0,
     <vscale x 2 x i32> %1,
     <vscale x 2 x i1> %mask,
     iXLen %2, iXLen 1)
-  %b = call <vscale x 2 x i32> @llvm.riscv.vdota4u.mask.nxv2i32.nxv2i32(
+  %b = call <vscale x 2 x i32> @llvm.riscv.vdot4au.mask.nxv2i32.nxv2i32(
     <vscale x 2 x i32> poison,
     <vscale x 2 x i32> %1,
     <vscale x 2 x i32> %0,
@@ -100,23 +100,23 @@ define <vscale x 2 x i32> @commutable_vdota4u_vv_masked(<vscale x 2 x i32> %0, <
   ret <vscale x 2 x i32> %ret
 }
 
-; vdota4su.vv - NOT commutable (signed x unsigned, operand order matters)
-define <vscale x 2 x i32> @commutable_vdota4su_vv(<vscale x 2 x i32> %0, <vscale x 2 x i32> %1, iXLen %2) nounwind {
-; CHECK-LABEL: commutable_vdota4su_vv:
+; vdot4asu.vv - NOT commutable (signed x unsigned, operand order matters)
+define <vscale x 2 x i32> @commutable_vdot4asu_vv(<vscale x 2 x i32> %0, <vscale x 2 x i32> %1, iXLen %2) nounwind {
+; CHECK-LABEL: commutable_vdot4asu_vv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vdota4su.vv v10, v8, v9
-; CHECK-NEXT:    vdota4su.vv v8, v9, v8
+; CHECK-NEXT:    vdot4asu.vv v10, v8, v9
+; CHECK-NEXT:    vdot4asu.vv v8, v9, v8
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 2 x i32> @llvm.riscv.vdota4su.nxv2i32.nxv2i32(
+  %a = call <vscale x 2 x i32> @llvm.riscv.vdot4asu.nxv2i32.nxv2i32(
     <vscale x 2 x i32> poison,
     <vscale x 2 x i32> %0,
     <vscale x 2 x i32> %1,
     iXLen %2, iXLen 1)
-  %b = call <vscale x 2 x i32> @llvm.riscv.vdota4su.nxv2i32.nxv2i32(
+  %b = call <vscale x 2 x i32> @llvm.riscv.vdot4asu.nxv2i32.nxv2i32(
     <vscale x 2 x i32> poison,
     <vscale x 2 x i32> %1,
     <vscale x 2 x i32> %0,

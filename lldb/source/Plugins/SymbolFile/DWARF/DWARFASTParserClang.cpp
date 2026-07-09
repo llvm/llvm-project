@@ -2478,30 +2478,34 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(
                                decl_line, decl_column, call_file, call_line,
                                call_column, &frame_base)) {
     Mangled func_name;
-    if (mangled)
+    if (mangled && name &&
+        Mangled::GetManglingScheme(mangled) == Mangled::eManglingSchemeNone) {
+      // The linkage name is present but is not actually a mangled name (e.g.
+      // wasi-libc renames `main` to its `__main_argc_argv` argv-passing
+      // wrapper). Display the source name (DW_AT_name) and keep the linkage
+      // name as the symbol so lookups by either name still resolve.
+      func_name.SetDemangledName(ConstString(name));
+      func_name.SetMangledName(ConstString(mangled));
+    } else if (mangled) {
       func_name.SetValue(ConstString(mangled));
-    else if ((die.GetParent().Tag() == DW_TAG_compile_unit ||
-              die.GetParent().Tag() == DW_TAG_partial_unit) &&
-             Language::LanguageIsCPlusPlus(
-                 SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
-             !Language::LanguageIsObjC(
-                 SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
-             name && strcmp(name, "main") != 0) {
+    } else if ((die.GetParent().Tag() == DW_TAG_compile_unit ||
+                die.GetParent().Tag() == DW_TAG_partial_unit) &&
+               Language::LanguageIsCPlusPlus(
+                   SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
+               !Language::LanguageIsObjC(
+                   SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
+               name && strcmp(name, "main") != 0) {
       // If the mangled name is not present in the DWARF, generate the
       // demangled name using the decl context. We skip if the function is
       // "main" as its name is never mangled.
       func_name.SetDemangledName(ConstructDemangledNameFromDWARF(die));
       // Ensure symbol is preserved (as the mangled name).
       func_name.SetMangledName(ConstString(name));
-    } else
+    } else {
       func_name.SetValue(ConstString(name));
+    }
 
     FunctionSP func_sp;
-    std::unique_ptr<Declaration> decl_up;
-    if (decl_file || decl_line || decl_column)
-      decl_up = std::make_unique<Declaration>(
-          die.GetCU()->GetFile(decl_file.value_or(0)), decl_line.value_or(0),
-          decl_column.value_or(0));
 
     SymbolFileDWARF *dwarf = die.GetDWARF();
     // Supply the type _only_ if it has already been parsed

@@ -19,6 +19,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
@@ -36,6 +37,19 @@ char ObjCLanguageRuntime::ID = 0;
 // Destructor
 ObjCLanguageRuntime::~ObjCLanguageRuntime() = default;
 
+bool ObjCLanguageRuntime::IsSupportedForArchitecture(const ArchSpec &arch) {
+  // These are the only object file formats clang can emit Objective-C
+  // metadata for; it aborts on any other.
+  switch (arch.GetTriple().getObjectFormat()) {
+  case llvm::Triple::MachO:
+  case llvm::Triple::ELF:
+  case llvm::Triple::COFF:
+    return true;
+  default:
+    return false;
+  }
+}
+
 ObjCLanguageRuntime::ObjCLanguageRuntime(Process *process)
     : LanguageRuntime(process), m_impl_cache(), m_impl_str_cache(),
       m_has_new_literals_and_indexing(eLazyBoolCalculate),
@@ -52,13 +66,7 @@ bool ObjCLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
 bool ObjCLanguageRuntime::AddClass(ObjCISA isa,
                                    const ClassDescriptorSP &descriptor_sp,
                                    const char *class_name) {
-  if (isa != 0) {
-    m_isa_to_descriptor[isa] = descriptor_sp;
-    // class_name is assumed to be valid
-    m_hash_to_isa_map.insert(std::make_pair(llvm::djbHash(class_name), isa));
-    return true;
-  }
-  return false;
+  return AddClass(isa, descriptor_sp, llvm::djbHash(class_name));
 }
 
 void ObjCLanguageRuntime::AddToMethodCache(lldb::addr_t class_addr,
@@ -182,36 +190,34 @@ ObjCLanguageRuntime::GetISA(ConstString name) {
 
 ObjCLanguageRuntime::ISAToDescriptorIterator
 ObjCLanguageRuntime::GetDescriptorIterator(ConstString name) {
-  ISAToDescriptorIterator end = m_isa_to_descriptor.end();
+  if (!name)
+    return m_isa_to_descriptor.end();
 
-  if (name) {
-    UpdateISAToDescriptorMap();
-    if (m_hash_to_isa_map.empty()) {
-      // No name hashes were provided, we need to just linearly power through
-      // the names and find a match
-      for (ISAToDescriptorIterator pos = m_isa_to_descriptor.begin();
-           pos != end; ++pos) {
-        if (pos->second->GetClassName() == name)
-          return pos;
-      }
-    } else {
-      // Name hashes were provided, so use them to efficiently lookup name to
-      // isa/descriptor
-      const uint32_t name_hash = llvm::djbHash(name.GetStringRef());
-      std::pair<HashToISAIterator, HashToISAIterator> range =
-          m_hash_to_isa_map.equal_range(name_hash);
-      for (HashToISAIterator range_pos = range.first; range_pos != range.second;
-           ++range_pos) {
-        ISAToDescriptorIterator pos =
-            m_isa_to_descriptor.find(range_pos->second);
-        if (pos != m_isa_to_descriptor.end()) {
-          if (pos->second->GetClassName() == name)
-            return pos;
-        }
-      }
-    }
+  UpdateISAToDescriptorMap();
+
+  if (m_hash_to_isa_map.empty()) {
+    // No name hashes were provided, we need to just linearly power through
+    // the names and find a match
+    for (auto it = m_isa_to_descriptor.begin(), end = m_isa_to_descriptor.end();
+         it != end; ++it)
+      if (it->second->GetClassName() == name)
+        return it;
+    return m_isa_to_descriptor.end();
   }
-  return end;
+
+  // Name hashes were provided, so use them to efficiently lookup name to
+  // isa/descriptor
+  const uint32_t name_hash = llvm::djbHash(name.GetStringRef());
+  auto matches_it = m_hash_to_isa_map.find(name_hash);
+  if (matches_it == m_hash_to_isa_map.end())
+    return m_isa_to_descriptor.end();
+
+  for (auto isa : matches_it->second)
+    if (auto pos = m_isa_to_descriptor.find(isa);
+        pos != m_isa_to_descriptor.end() && pos->second->GetClassName() == name)
+      return pos;
+
+  return m_isa_to_descriptor.end();
 }
 
 std::pair<ObjCLanguageRuntime::ISAToDescriptorIterator,

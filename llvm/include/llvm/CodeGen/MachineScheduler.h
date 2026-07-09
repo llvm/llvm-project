@@ -1440,29 +1440,18 @@ ScheduleDAGMILive *createSchedLive(MachineSchedContext *C) {
   // data and pass it to later mutations. Have a single mutation that gathers
   // the interesting nodes in one pass.
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
-
-  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
-  // Add MacroFusion mutation if fusions are not empty.
-  const auto &MacroFusions = STI.getMacroFusions();
-  if (!MacroFusions.empty())
-    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
   return DAG;
 }
 
 /// Create a generic scheduler with no vreg liveness or DAG mutation passes.
 template <typename Strategy = PostGenericScheduler>
 ScheduleDAGMI *createSchedPostRA(MachineSchedContext *C) {
-  ScheduleDAGMI *DAG = new ScheduleDAGMI(C, std::make_unique<Strategy>(C),
-                                         /*RemoveKillFlags=*/true);
-  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
-  // Add MacroFusion mutation if fusions are not empty.
-  const auto &MacroFusions = STI.getMacroFusions();
-  if (!MacroFusions.empty())
-    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
-  return DAG;
+  return new ScheduleDAGMI(C, std::make_unique<Strategy>(C),
+                           /*RemoveKillFlags=*/true);
 }
 
-class MachineSchedulerPass : public PassInfoMixin<MachineSchedulerPass> {
+class MachineSchedulerPass
+    : public OptionalPassInfoMixin<MachineSchedulerPass> {
   // FIXME: Remove this member once RegisterClassInfo is queryable as an
   // analysis.
   std::unique_ptr<impl_detail::MachineSchedulerImpl> Impl;
@@ -1477,7 +1466,7 @@ public:
 };
 
 class PostMachineSchedulerPass
-    : public PassInfoMixin<PostMachineSchedulerPass> {
+    : public OptionalPassInfoMixin<PostMachineSchedulerPass> {
   // FIXME: Remove this member once RegisterClassInfo is queryable as an
   // analysis.
   std::unique_ptr<impl_detail::PostMachineSchedulerImpl> Impl;

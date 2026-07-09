@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class FrameBlocksTestCase(TestBase):
     @skipIfWindows
     def test_block_equality(self):

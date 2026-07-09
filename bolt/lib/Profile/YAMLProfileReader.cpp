@@ -448,7 +448,8 @@ size_t YAMLProfileReader::matchWithExactName() {
     // the profile.
     Function.setExecutionCount(BinaryFunction::COUNT_NO_PROFILE);
 
-    if (profileMatches(YamlBF, Function)) {
+    // Match with stale profile when stale matching is enabled.
+    if (profileMatches(YamlBF, Function) || opts::InferStaleProfile) {
       matchProfileToFunction(YamlBF, Function);
       ++MatchedWithExactName;
     }
@@ -589,6 +590,17 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
   }
 
   return MatchedWithCallGraph;
+}
+
+size_t YAMLProfileReader::matchUnusedWithExactName() {
+  size_t Matched = 0;
+  for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs)) {
+    if (YamlBF.Used || !BF || ProfiledFunctions.count(BF))
+      continue;
+    matchProfileToFunction(YamlBF, *BF);
+    ++Matched;
+  }
+  return Matched;
 }
 
 size_t YAMLProfileReader::InlineTreeNodeMapTy::matchInlineTrees(
@@ -837,11 +849,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   const size_t MatchedWithNameSimilarity = matchWithNameSimilarity(BC);
   [[maybe_unused]] const size_t MatchedWithPseudoProbes =
       matchWithPseudoProbes(BC);
-
-  for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs))
-    if (!YamlBF.Used && BF && !ProfiledFunctions.count(BF))
-      matchProfileToFunction(YamlBF, *BF);
-
+  const size_t MatchedUnused = matchUnusedWithExactName();
 
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
     if (!YamlBF.Used && opts::Verbosity >= 1)
@@ -859,6 +867,8 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
            << " functions with call graph\n";
     outs() << "BOLT-INFO: matched " << MatchedWithNameSimilarity
            << " functions with similar names\n";
+    outs() << "BOLT-INFO: matched " << MatchedUnused
+           << " functions with identical names (stale profile)\n";
   }
 
   // Set for parseFunctionProfile().

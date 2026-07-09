@@ -81,6 +81,7 @@ if(STUBS_LIBRARY)
 else()
   # Get C++ files
   set(LIBOMP_CXXFILES
+    kmp_adt.cpp
     kmp_alloc.cpp
     kmp_atomic.cpp
     kmp_csupport.cpp
@@ -189,6 +190,9 @@ else()
   # libomp must be a C++ library such that it can link libLLVMSupport
   set(LIBOMP_LINKER_LANGUAGE CXX)
 endif()
+
+openmp_register_meta_dep(omp)
+
 if(LIBOMP_USE_HWLOC)
   # Since we are using an OBJECT library, the PRIVATE and INTERFACE options are split
   # (instead of using PUBLIC): obj.omp for compiling itself, omp for propagating
@@ -409,20 +413,23 @@ set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS omp)
 # We want to install libomp in ${DESTDIR}/${CMAKE_INSTALL_FULL_LIBDIR}
 # We want to install headers in ${DESTDIR}/${CMAKE_INSTALL_FULL_INCLUDEDIR}
 if(WIN32)
-  install(TARGETS omp ${export_to_llvmexports} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
-  install(TARGETS ${LIBOMP_IMP_LIB_TARGET} ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+  # Do not install arm64ec openmp library if building for arm64x; we need to only install the arm64x one.
+  if(NOT LIBOMP_ENABLE_ARM64X OR LIBOMP_ARCH STREQUAL "aarch64")
+    install(TARGETS omp ${export_to_llvmexports} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT openmp)
+  endif()
+  install(TARGETS ${LIBOMP_IMP_LIB_TARGET} ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}" COMPONENT openmp)
   # Create aliases (regular copies) of the library for backwards compatibility
   set(LIBOMP_ALIASES "libiomp5md")
   foreach(alias IN LISTS LIBOMP_ALIASES)
     install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E copy \"${LIBOMP_LIB_FILE}\"
-      \"${alias}${LIBOMP_LIBRARY_SUFFIX}\" WORKING_DIRECTORY \"${CMAKE_INSTALL_FULL_BINDIR}\")")
+      \"${alias}${LIBOMP_LIBRARY_SUFFIX}\" WORKING_DIRECTORY \"${CMAKE_INSTALL_FULL_BINDIR}\")" COMPONENT openmp)
     extend_path(outdir "${CMAKE_INSTALL_PREFIX}" "${OPENMP_INSTALL_LIBDIR}")
     install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E copy \"${LIBOMP_IMP_LIB_FILE}\"
-      \"${alias}${CMAKE_STATIC_LIBRARY_SUFFIX}\" WORKING_DIRECTORY \"${outdir}\")")
+      \"${alias}${CMAKE_STATIC_LIBRARY_SUFFIX}\" WORKING_DIRECTORY \"${outdir}\")" COMPONENT openmp)
   endforeach()
 else()
 
-  install(TARGETS omp ${export_to_llvmexports} ${LIBOMP_INSTALL_KIND} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+  install(TARGETS omp ${export_to_llvmexports} ${LIBOMP_INSTALL_KIND} DESTINATION "${OPENMP_INSTALL_LIBDIR}" COMPONENT openmp)
 
   if(LIBOMP_INSTALL_ALIASES)
     # Create aliases (symlinks) of the library for backwards compatibility
@@ -437,12 +444,12 @@ else()
     foreach(alias IN LISTS LIBOMP_ALIASES)
       install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_NAME}${LIBRARY_SUFFIX}\"
         \"${alias}${LIBRARY_SUFFIX}\" WORKING_DIRECTORY
-        \"\$ENV{DESTDIR}${outdir}\")")
+        \"\$ENV{DESTDIR}${outdir}\")" COMPONENT openmp)
     endforeach()
     if(LIBOMP_ENABLE_SHARED AND NOT AIX)
       install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_FILE}\"
         \"${VERSIONED_LIBGOMP_NAME}\" WORKING_DIRECTORY
-        \"\$ENV{DESTDIR}${outdir}\")")
+        \"\$ENV{DESTDIR}${outdir}\")" COMPONENT openmp)
     endif()
   endif()
 endif()
@@ -451,10 +458,11 @@ install(
   ${LIBOMP_HEADERS_INTDIR}/omp.h
   ${LIBOMP_HEADERS_INTDIR}/ompx.h
   DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH}
+  COMPONENT openmp
 )
 if(LIBOMP_OMPT_SUPPORT)
-  install(FILES ${LIBOMP_HEADERS_INTDIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
+  install(FILES ${LIBOMP_HEADERS_INTDIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} COMPONENT openmp)
   # install under legacy name ompt.h
-  install(FILES ${LIBOMP_HEADERS_INTDIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h)
+  install(FILES ${LIBOMP_HEADERS_INTDIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h COMPONENT openmp)
   set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
 endif()

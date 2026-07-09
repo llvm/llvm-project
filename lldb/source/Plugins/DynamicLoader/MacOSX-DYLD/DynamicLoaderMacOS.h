@@ -77,7 +77,9 @@ protected:
 
   void ClearDYLDHandoverBreakpoint();
 
-  void AddBinaries(const std::vector<lldb::addr_t> &load_addresses);
+  void
+  AddBinaries(const std::vector<lldb::addr_t> &load_addresses,
+              lldb_private::StructuredData::ObjectSP expedited_binary_infos);
 
   void DoClear() override;
 

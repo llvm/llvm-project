@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -40,13 +41,17 @@ void NVGPUDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/NVGPU/IR/NVGPUOps.cpp.inc"
       >();
+  declarePromisedInterfaces<memref::IndexedAccessOpInterface, LdMatrixOp>();
+  declarePromisedInterfaces<memref::IndexedMemCopyOpInterface,
+                            DeviceAsyncCopyOp>();
 }
 
 bool NVGPUDialect::isSharedMemoryAddressSpace(Attribute memorySpace) {
   if (!memorySpace)
     return false;
   if (auto intAttr = llvm::dyn_cast<IntegerAttr>(memorySpace))
-    return intAttr.getInt() == NVGPUDialect::kSharedMemoryAddressSpace;
+    return intAttr.getValue().getZExtValue() ==
+           NVGPUDialect::kSharedMemoryAddressSpace;
   if (auto gpuAttr = llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
     return gpuAttr.getValue() == gpu::AddressSpace::Workgroup;
   return false;
@@ -680,12 +685,17 @@ LogicalResult WarpgroupMmaInitAccumulatorOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult RcpOp::verify() {
-  RcpRoundingModeAttr rounding = getRoundingAttr();
   bool ftz = getFtz();
+  bool approx = getApprox();
+  mlir::NVVM::FPRoundingModeAttr rnd = getRoundingAttr();
   // Currently, only `rcp_approx` and `ftz` is supported.
-  if (rounding.getValue() != RcpRoundingMode::APPROX || !ftz) {
-    return emitOpError() << "has a limitation. " << rounding
-                         << " or non-ftz is not supported yet.";
+  if (!approx || !ftz) {
+    return emitOpError()
+           << "has a limitation. non-approx or non-ftz is not supported yet.";
+  }
+  if (rnd.getValue() != mlir::NVVM::FPRoundingMode::NONE) {
+    return emitOpError() << "has a limitation. " << rnd
+                         << " is not supported yet.";
   }
   return success();
 }

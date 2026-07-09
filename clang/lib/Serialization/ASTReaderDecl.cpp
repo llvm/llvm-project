@@ -405,6 +405,7 @@ public:
   void VisitFriendDecl(FriendDecl *D);
   void VisitFriendTemplateDecl(FriendTemplateDecl *D);
   void VisitStaticAssertDecl(StaticAssertDecl *D);
+  void VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D);
   void VisitBlockDecl(BlockDecl *BD);
   void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
   void VisitCapturedDecl(CapturedDecl *CD);
@@ -995,8 +996,6 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
       if (InsertPos)
         CommonPtr->Specializations.InsertNode(FTInfo, InsertPos);
       else {
-        assert(Reader.getContext().getLangOpts().Modules &&
-               "already deserialized this template specialization");
         Existing = ExistingInfo->getFunction();
       }
     }
@@ -2335,6 +2334,14 @@ void ASTDeclReader::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
         InheritedConstructor(Shadow, Ctor);
   }
 
+  if (unsigned NumArgs = Record.readUInt32()) {
+    CXXDefaultArgExpr **Args =
+        new (Reader.getContext()) CXXDefaultArgExpr *[NumArgs];
+    for (unsigned I = 0; I != NumArgs; I++)
+      Args[I] = cast_or_null<CXXDefaultArgExpr>(Record.readStmt());
+    D->setCtorClosureDefaultArgs(ArrayRef(Args, NumArgs));
+  }
+
   VisitCXXMethodDecl(D);
 }
 
@@ -2783,6 +2790,32 @@ void ASTDeclReader::VisitStaticAssertDecl(StaticAssertDecl *D) {
   D->AssertExprAndFailed.setInt(Record.readInt());
   D->Message = cast_or_null<StringLiteral>(Record.readExpr());
   D->RParenLoc = readSourceLocation();
+}
+
+void ASTDeclReader::VisitExplicitInstantiationDecl(
+    ExplicitInstantiationDecl *D) {
+  // Note: trailing flags were already read by ReadDeclRecord and passed to
+  // CreateDeserialized, so TypeAndFlags.getInt() is already set.
+  VisitDecl(D);
+  auto *Spec = readDeclAs<NamedDecl>();
+  D->SpecAndTSK.setPointer(Spec);
+  D->ExternLoc = readSourceLocation();
+  D->NameLoc = readSourceLocation();
+  TypeSourceInfo *TSI = readTypeSourceInfo();
+  unsigned TSK = Record.readInt();
+  D->SpecAndTSK.setInt(TSK);
+  D->TypeAndFlags.setPointer(TSI); // preserves trailing flags in int bits
+  // Read trailing objects.
+  if (D->hasTrailingQualifier())
+    *D->getTrailingObjects<NestedNameSpecifierLoc>() =
+        Record.readNestedNameSpecifierLoc();
+  if (D->hasTrailingArgsAsWritten())
+    *D->getTrailingObjects<const ASTTemplateArgumentListInfo *>() =
+        Record.readASTTemplateArgumentListInfo();
+
+  // Rebuild the ASTContext map from specialization to EID.
+  if (Spec)
+    Reader.getContext().addExplicitInstantiationDecl(Spec, D);
 }
 
 void ASTDeclReader::VisitEmptyDecl(EmptyDecl *D) {
@@ -3382,10 +3415,20 @@ ASTDeclReader::FindExistingResult::~FindExistingResult() {
 }
 
 /// Find the declaration that should be merged into, given the declaration found
-/// by name lookup. If we're merging an anonymous declaration within a typedef,
-/// we need a matching typedef, and we merge with the type inside it.
+/// by name lookup. If we're not merging with a UsingShadowDecl but Found is a
+/// UsingShadowDecl, we need to skip the UsingShadowDecl. If we're merging an
+/// anonymous declaration within a typedef, we need a matching typedef, and we
+/// merge with the type inside it.
 static NamedDecl *getDeclForMerging(NamedDecl *Found,
-                                    bool IsTypedefNameForLinkage) {
+                                    bool IsTypedefNameForLinkage,
+                                    bool FilteringUsingShadowDecl) {
+  // If the taregt declaration we want is not a UsingShadowDecl, we don't need
+  // to return the UsingShadowDecl at all.
+  if (auto *USD = dyn_cast<UsingShadowDecl>(Found);
+      USD && FilteringUsingShadowDecl)
+    return getDeclForMerging(USD->getTargetDecl(), IsTypedefNameForLinkage,
+                             FilteringUsingShadowDecl);
+
   if (!IsTypedefNameForLinkage)
     return Found;
 
@@ -3546,7 +3589,9 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
     for (IdentifierResolver::iterator I = IdResolver.begin(Name),
                                    IEnd = IdResolver.end();
          I != IEnd; ++I) {
-      if (NamedDecl *Existing = getDeclForMerging(*I, TypedefNameForLinkage))
+      if (NamedDecl *Existing =
+              getDeclForMerging(*I, TypedefNameForLinkage,
+                                /*FilteringUsingShadowDecl=*/false))
         if (C.isSameEntity(Existing, D))
           return FindExistingResult(Reader, D, Existing, AnonymousDeclNumber,
                                     TypedefNameForLinkage);
@@ -3554,10 +3599,12 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
   } else if (DeclContext *MergeDC = getPrimaryContextForMerging(Reader, DC)) {
     DeclContext::lookup_result R = MergeDC->noload_lookup(Name);
     for (DeclContext::lookup_iterator I = R.begin(), E = R.end(); I != E; ++I) {
-      if (NamedDecl *Existing = getDeclForMerging(*I, TypedefNameForLinkage))
-        if (C.isSameEntity(Existing, D))
+      if (NamedDecl *Existing = getDeclForMerging(*I, TypedefNameForLinkage,
+                                                  !isa<UsingShadowDecl>(D)))
+        if (C.isSameEntity(Existing, D)) {
           return FindExistingResult(Reader, D, Existing, AnonymousDeclNumber,
                                     TypedefNameForLinkage);
+        }
     }
   } else {
     // Not in a mergeable context.
@@ -3620,11 +3667,12 @@ void mergeInheritableAttributes(ASTReader &Reader, Decl *D, Decl *Previous) {
     D->addAttr(NewAttr);
   }
 
-  const auto *AA = Previous->getAttr<AvailabilityAttr>();
-  if (AA && !D->hasAttr<AvailabilityAttr>()) {
-    NewAttr = AA->clone(Context);
-    NewAttr->setInherited(true);
-    D->addAttr(NewAttr);
+  if (!D->hasAttr<AvailabilityAttr>()) {
+    for (const auto *AA : Previous->specific_attrs<AvailabilityAttr>()) {
+      NewAttr = AA->clone(Context);
+      NewAttr->setInherited(true);
+      D->addAttr(NewAttr);
+    }
   }
 }
 } // namespace
@@ -4106,6 +4154,10 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     break;
   case DECL_STATIC_ASSERT:
     D = StaticAssertDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_EXPLICIT_INSTANTIATION:
+    D = ExplicitInstantiationDecl::CreateDeserialized(Context, ID,
+                                                      Record.readInt());
     break;
   case DECL_OBJC_METHOD:
     D = ObjCMethodDecl::CreateDeserialized(Context, ID);

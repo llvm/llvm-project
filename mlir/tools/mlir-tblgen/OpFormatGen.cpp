@@ -1329,7 +1329,9 @@ if (!attr && {2}) {{
              "Properties.";
   return ::mlir::failure();
 }
-if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
+if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, [&]() {{
+      return emitError() << "for `{1}`: ";
+    })))
   return ::mlir::failure();
 )decl";
 

@@ -17,6 +17,7 @@ add_public_tablegen_target(LanaiCommonTableGen)
 
 add_llvm_target(LanaiCodeGen
   LanaiAsmPrinter.cpp
+  LanaiCodeGenPassBuilder.cpp
   LanaiDelaySlotFiller.cpp
   LanaiFrameLowering.cpp
   LanaiInstrInfo.cpp
@@ -37,10 +38,13 @@ add_llvm_target(LanaiCodeGen
   CodeGen
   CodeGenTypes
   Core
+  IRPrinter
   LanaiAsmParser
   LanaiDesc
   LanaiInfo
   MC
+  ObjCARC
+  Scalar
   SelectionDAG
   Support
   Target

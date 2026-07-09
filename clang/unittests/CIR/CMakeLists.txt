@@ -4,6 +4,7 @@ include_directories(SYSTEM ${MLIR_INCLUDE_DIR})
 include_directories(${MLIR_TABLEGEN_OUTPUT_DIR})
 
 add_distinct_clang_unittest(CIRUnitTests
+  ControlFlowTest.cpp
   PointerLikeTest.cpp
   RecordTypeMetadataTest.cpp
   UnionTypeSizeTest.cpp
@@ -15,4 +16,5 @@ add_distinct_clang_unittest(CIRUnitTests
   CIROpenACCSupport
   MLIRIR
   MLIROpenACCDialect
+  MLIRParser
   )

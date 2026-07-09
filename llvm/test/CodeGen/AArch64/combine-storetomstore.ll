@@ -347,7 +347,7 @@ define void @test_masked_store_success_v16i16(<16 x i16> %x, ptr %ptr, <16 x i1>
 define void @test_masked_store_success_v16i32(<16 x i32> %x, ptr %ptr, <16 x i1> %mask) {
 ; SVE-LABEL: test_masked_store_success_v16i32:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ext v5.16b, v4.16b, v4.16b, #8
+; SVE-NEXT:    mov d5, v4.d[1]
 ; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; SVE-NEXT:    zip2 v6.8b, v4.8b, v0.8b
 ; SVE-NEXT:    mov x8, #4 // =0x4
@@ -751,7 +751,7 @@ define void @test_masked_store_success_invert_mask_v8i32(<8 x i32> %x, ptr %ptr,
 define void @test_masked_store_success_invert_mask_v16i32(<16 x i32> %x, ptr %ptr, <16 x i1> %mask) {
 ; SVE-LABEL: test_masked_store_success_invert_mask_v16i32:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ext v5.16b, v4.16b, v4.16b, #8
+; SVE-NEXT:    mov d5, v4.d[1]
 ; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; SVE-NEXT:    zip2 v6.8b, v4.8b, v0.8b
 ; SVE-NEXT:    mov x8, #4 // =0x4

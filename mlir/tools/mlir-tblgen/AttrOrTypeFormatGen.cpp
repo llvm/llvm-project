@@ -897,29 +897,31 @@ void DefFormat::genCommaSeparatedPrinter(
   }
 
   // The first printed element does not need to emit a comma.
-  os << "{\n";
-  os.indent() << "bool _firstPrinted = true;\n";
-  for (FormatElement *arg : args) {
-    ParameterElement *param = getEncapsulatedParameterElement(arg);
-    if (param->isOptional()) {
-      param->genPrintGuard(ctx, os << "if (") << ") {\n";
-      os.indent();
+  if (!args.empty()) {
+    os << "{\n";
+    os.indent() << "bool _firstPrinted = true;\n";
+    for (FormatElement *arg : args) {
+      ParameterElement *param = getEncapsulatedParameterElement(arg);
+      if (param->isOptional()) {
+        param->genPrintGuard(ctx, os << "if (") << ") {\n";
+        os.indent();
+      }
+      os << tgfmt("if (!_firstPrinted) $_printer << \", \";\n", &ctx);
+      os << "_firstPrinted = false;\n";
+      extra(arg);
+      shouldEmitSpace = false;
+      lastWasPunctuation = true;
+      if (auto *realParam = dyn_cast<ParameterElement>(arg))
+        genVariablePrinter(realParam, ctx, os);
+      else if (auto *custom = dyn_cast<CustomDirective>(arg))
+        genCustomPrinter(custom, ctx, os);
+      if (extraPost)
+        extraPost(arg);
+      if (param->isOptional())
+        os.unindent() << "}\n";
     }
-    os << tgfmt("if (!_firstPrinted) $_printer << \", \";\n", &ctx);
-    os << "_firstPrinted = false;\n";
-    extra(arg);
-    shouldEmitSpace = false;
-    lastWasPunctuation = true;
-    if (auto *realParam = dyn_cast<ParameterElement>(arg))
-      genVariablePrinter(realParam, ctx, os);
-    else if (auto *custom = dyn_cast<CustomDirective>(arg))
-      genCustomPrinter(custom, ctx, os);
-    if (extraPost)
-      extraPost(arg);
-    if (param->isOptional())
-      os.unindent() << "}\n";
+    os.unindent() << "}\n";
   }
-  os.unindent() << "}\n";
 }
 
 void DefFormat::genParamsPrinter(ParamsDirective *el, FmtContext &ctx,

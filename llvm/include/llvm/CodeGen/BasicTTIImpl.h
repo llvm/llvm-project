@@ -68,7 +68,7 @@ class ScalarEvolution;
 class SCEV;
 class TargetMachine;
 
-extern cl::opt<unsigned> PartialUnrollingThreshold;
+extern LLVM_ABI cl::opt<unsigned> PartialUnrollingThreshold;
 
 /// Base class which can be used to help build a TTI implementation.
 ///
@@ -397,10 +397,23 @@ public:
                            const Function *Callee) const override {
     const TargetMachine &TM = getTLI()->getTargetMachine();
 
-    const FeatureBitset &CallerBits =
-        TM.getSubtargetImpl(*Caller)->getFeatureBits();
-    const FeatureBitset &CalleeBits =
-        TM.getSubtargetImpl(*Callee)->getFeatureBits();
+    const TargetSubtargetInfo *CallerSTI = TM.getSubtargetImpl(*Caller);
+    const TargetSubtargetInfo *CalleeSTI = TM.getSubtargetImpl(*Callee);
+    FeatureBitset InlineIgnoreFeatures = CallerSTI->getInlineIgnoreFeatures();
+    FeatureBitset InlineInverseFeatures = CallerSTI->getInlineInverseFeatures();
+    FeatureBitset InlineMustMatchFeatures =
+        CallerSTI->getInlineMustMatchFeatures();
+
+    FeatureBitset CallerBits =
+        (CallerSTI->getFeatureBits() ^ InlineInverseFeatures) &
+        ~InlineIgnoreFeatures;
+    FeatureBitset CalleeBits =
+        (CalleeSTI->getFeatureBits() ^ InlineInverseFeatures) &
+        ~InlineIgnoreFeatures;
+
+    if ((CallerBits & InlineMustMatchFeatures) !=
+        (CalleeBits & InlineMustMatchFeatures))
+      return false;
 
     // Inline a callee if its target-features are a subset of the callers
     // target-features.
@@ -931,10 +944,6 @@ public:
     return Cost;
   }
 
-  bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const override {
-    return false;
-  }
-
   bool
   isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                      unsigned ScalarOpdIdx) const override {
@@ -1047,7 +1056,10 @@ public:
     }
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override { return 1; }
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override {
+    return 1;
+  }
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -1558,6 +1570,10 @@ public:
     if (getTLI()->getValueType(DL, Src,  true) == MVT::Other)
       return 4;
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
+
+    // FIXME: Arbitrary cost
+    if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
+      return 4;
 
     // Assuming that all loads of legal types cost 1.
     InstructionCost Cost = LT.first;
@@ -2200,46 +2216,42 @@ public:
       // The possible expansions are...
       //
       // loop_dependence_war_mask:
-      //   diff = (ptrB - ptrA) / eltSize
+      //   diff = (addrB - addrA) / eltSize
       //   cmp = icmp sle diff, 0
       //   upper_bound = select cmp, -1, diff
       //   mask = get_active_lane_mask 0, upper_bound
       //
       // loop_dependence_raw_mask:
-      //   diff = (abs(ptrB - ptrA)) / eltSize
+      //   diff = (abs(addrB - addrA)) / eltSize
       //   cmp = icmp eq diff, 0
       //   upper_bound = select cmp, -1, diff
       //   mask = get_active_lane_mask 0, upper_bound
       //
-      auto *PtrTy = cast<PointerType>(ICA.getArgTypes()[0]);
-      Type *IntPtrTy = IntegerType::getIntNTy(
-          RetTy->getContext(), thisT()->getDataLayout().getPointerSizeInBits(
-                                   PtrTy->getAddressSpace()));
+      Type *AddrTy = ICA.getArgTypes()[0];
       bool IsReadAfterWrite = IID == Intrinsic::loop_dependence_raw_mask;
 
       InstructionCost Cost =
-          thisT()->getArithmeticInstrCost(Instruction::Sub, IntPtrTy, CostKind);
+          thisT()->getArithmeticInstrCost(Instruction::Sub, AddrTy, CostKind);
       if (IsReadAfterWrite) {
-        IntrinsicCostAttributes AbsAttrs(Intrinsic::abs, IntPtrTy, {IntPtrTy},
-                                         {});
+        IntrinsicCostAttributes AbsAttrs(Intrinsic::abs, AddrTy, {AddrTy}, {});
         Cost += thisT()->getIntrinsicInstrCost(AbsAttrs, CostKind);
       }
 
       TTI::OperandValueInfo EltSizeOpInfo =
           TTI::getOperandInfo(ICA.getArgs()[2]);
-      Cost += thisT()->getArithmeticInstrCost(Instruction::SDiv, IntPtrTy,
+      Cost += thisT()->getArithmeticInstrCost(Instruction::SDiv, AddrTy,
                                               CostKind, {}, EltSizeOpInfo);
 
       Type *CondTy = IntegerType::getInt1Ty(RetTy->getContext());
       CmpInst::Predicate Pred =
           IsReadAfterWrite ? CmpInst::ICMP_EQ : CmpInst::ICMP_SLE;
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, CondTy,
-                                          IntPtrTy, Pred, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, IntPtrTy,
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, CondTy, AddrTy,
+                                          Pred, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, AddrTy,
                                           CondTy, Pred, CostKind);
 
       IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
-                                    {IntPtrTy, IntPtrTy}, FMF);
+                                    {AddrTy, AddrTy}, FMF);
       Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
       return Cost;
     }
@@ -3094,18 +3106,33 @@ public:
     case Intrinsic::clmul: {
       // This cost model should match the expansion in
       // TargetLowering::expandCLMUL.
-      InstructionCost PerBitCostMul =
-          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
-          thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind) +
+      unsigned BW = RetTy->getScalarSizeInBits();
+      InstructionCost AndCost =
+          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind);
+      InstructionCost OrCost =
+          thisT()->getArithmeticInstrCost(Instruction::Or, RetTy, CostKind);
+      InstructionCost XorCost =
           thisT()->getArithmeticInstrCost(Instruction::Xor, RetTy, CostKind);
+      InstructionCost MulCost =
+          thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind);
+
+      // When the multiplication with holes approach is used, that emits 16
+      // MULs, 8 + 4 ANDs, 12 XORs and 3 ORs.
+      if (BW >= 32 && BW <= 64 &&
+          TLI->isOperationLegalOrCustom(ISD::MUL,
+                                        TLI->getValueType(DL, RetTy))) {
+        return 16 * MulCost + 12 * AndCost + 12 * XorCost + 3 * OrCost;
+      }
+
+      InstructionCost PerBitCostMul = AndCost + MulCost + XorCost;
       InstructionCost PerBitCostBittest =
-          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
+          AndCost +
           thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, RetTy,
                                       ICmpInst::BAD_ICMP_PREDICATE, CostKind) +
           thisT()->getCmpSelInstrCost(Instruction::ICmp, RetTy, RetTy,
                                       ICmpInst::ICMP_NE, CostKind);
       InstructionCost PerBitCost = std::min(PerBitCostMul, PerBitCostBittest);
-      return RetTy->getScalarSizeInBits() * PerBitCost;
+      return BW * PerBitCost;
     }
     default:
       break;
@@ -3547,7 +3574,7 @@ class BasicTTIImpl : public BasicTTIImplBase<BasicTTIImpl> {
   const TargetLoweringBase *getTLI() const { return TLI; }
 
 public:
-  explicit BasicTTIImpl(const TargetMachine *TM, const Function &F);
+  LLVM_ABI explicit BasicTTIImpl(const TargetMachine *TM, const Function &F);
 };
 
 } // end namespace llvm
