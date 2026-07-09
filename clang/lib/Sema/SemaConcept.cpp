@@ -200,10 +200,15 @@ static bool DiagRecursiveConstraintEval(
 // Figure out the to-translation-unit depth for this function declaration for
 // the purpose of seeing if they differ by constraints. This isn't the same as
 // getTemplateDepth, because it includes already instantiated parents.
-static unsigned CalculateTemplateDepthForConstraints(Sema &S,
-                                                     const NamedDecl *ND) {
-  // FIXME: This is a very expensive way to calculate this.
-  MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(ND);
+static unsigned
+CalculateTemplateDepthForConstraints(Sema &S, const NamedDecl *ND,
+                                     bool SkipForSpecialization = false) {
+  MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
+      ND, ND->getLexicalDeclContext(), /*Final=*/false,
+      /*Innermost=*/std::nullopt,
+      /*RelativeToPrimary=*/true,
+      /*Pattern=*/nullptr,
+      /*ForConstraintInstantiation=*/true, SkipForSpecialization);
   return MLTAL.getNumLevels();
 }
 
@@ -1330,8 +1335,10 @@ bool Sema::CheckConstraintSatisfaction(
   return false;
 }
 
-static ExprResult SubstituteConceptsInConstraintExpression(
-    Sema &S, const ConceptSpecializationExpr *CSE, UnsignedOrNone SubstIndex) {
+static ExprResult
+SubstituteConceptsInConstraintExpression(Sema &S, const NamedDecl *D,
+                                         const ConceptSpecializationExpr *CSE,
+                                         UnsignedOrNone SubstIndex) {
   Sema::SFINAETrap Trap(S);
   // [C++2c] [temp.constr.normal]
   // Otherwise, to form CE, any non-dependent concept template argument Ai
@@ -1339,8 +1346,7 @@ static ExprResult SubstituteConceptsInConstraintExpression(
   // If any such substitution results in an invalid concept-id,
   // the program is ill-formed; no diagnostic is required.
 
-  Expr *ConstraintExpr =
-      CSE->getNamedConcept()->getCanonicalDecl()->getConstraintExpr();
+  ConceptDecl *Concept = CSE->getNamedConcept()->getCanonicalDecl();
   Sema::ArgPackSubstIndexRAII _(S, SubstIndex);
 
   const ASTTemplateArgumentListInfo *ArgsAsWritten =
@@ -1350,17 +1356,23 @@ static ExprResult SubstituteConceptsInConstraintExpression(
             return !ArgLoc.getArgument().isDependent() &&
                    ArgLoc.getArgument().isConceptOrConceptTemplateParameter();
           })) {
-    return ConstraintExpr;
+    return Concept->getConstraintExpr();
   }
 
-  return S.SubstConceptTemplateArguments(
-      CSE, ConstraintExpr,
-      S.getTemplateInstantiationArgs(CSE->getSpecializationDecl()));
+  MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
+      Concept, Concept->getLexicalDeclContext(),
+      /*Final=*/false, CSE->getTemplateArguments(),
+      /*RelativeToPrimary=*/true,
+      /*Pattern=*/nullptr,
+      /*ForConstraintInstantiation=*/true);
+  return S.SubstConceptTemplateArguments(CSE, Concept->getConstraintExpr(),
+                                         MLTAL);
 }
 
-bool Sema::SetupConstraintScope(FunctionDecl *FD,
-                                const MultiLevelTemplateArgumentList &MLTAL,
-                                LocalInstantiationScope &Scope) {
+bool Sema::SetupConstraintScope(
+    FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+    const MultiLevelTemplateArgumentList &MLTAL,
+    LocalInstantiationScope &Scope) {
   assert(!isLambdaCallOperator(FD) &&
          "Use LambdaScopeForCallOperatorInstantiationRAII to handle lambda "
          "instantiations");
@@ -1369,7 +1381,8 @@ bool Sema::SetupConstraintScope(FunctionDecl *FD,
     InstantiatingTemplate Inst(
         *this, FD->getPointOfInstantiation(),
         Sema::InstantiatingTemplate::ConstraintsCheck{}, PrimaryTemplate,
-        FD->getTemplateSpecializationArgs()->asArray(), SourceRange());
+        TemplateArgs ? *TemplateArgs : ArrayRef<TemplateArgument>{},
+        SourceRange());
     if (Inst.isInvalid())
       return true;
 
@@ -1405,10 +1418,11 @@ bool Sema::SetupConstraintScope(FunctionDecl *FD,
             ? FD->getInstantiatedFromMemberFunction()
             : FD->getInstantiatedFromDecl();
 
-    InstantiatingTemplate Inst(*this, FD->getPointOfInstantiation(),
-                               Sema::InstantiatingTemplate::ConstraintsCheck{},
-                               InstantiatedFrom, ArrayRef<TemplateArgument>(),
-                               SourceRange());
+    InstantiatingTemplate Inst(
+        *this, FD->getPointOfInstantiation(),
+        Sema::InstantiatingTemplate::ConstraintsCheck{}, InstantiatedFrom,
+        TemplateArgs ? *TemplateArgs : ArrayRef<TemplateArgument>{},
+        SourceRange());
     if (Inst.isInvalid())
       return true;
 
@@ -1425,12 +1439,23 @@ bool Sema::SetupConstraintScope(FunctionDecl *FD,
 // constraint-instantiation and checking.
 std::optional<MultiLevelTemplateArgumentList>
 Sema::SetupConstraintCheckingTemplateArgumentsAndScope(
-    FunctionDecl *FD, LocalInstantiationScope &Scope) {
-  MultiLevelTemplateArgumentList MLTAL = getTemplateInstantiationArgs(FD);
+    FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+    LocalInstantiationScope &Scope) {
+  MultiLevelTemplateArgumentList MLTAL;
+
+  // Collect the list of template arguments relative to the 'primary' template.
+  // We need the entire list, since the constraint is completely uninstantiated
+  // at this point.
+  MLTAL =
+      getTemplateInstantiationArgs(FD, FD->getLexicalDeclContext(),
+                                   /*Final=*/false, /*Innermost=*/std::nullopt,
+                                   /*RelativeToPrimary=*/true,
+                                   /*Pattern=*/nullptr,
+                                   /*ForConstraintInstantiation=*/true);
   // Lambdas are handled by LambdaScopeForCallOperatorInstantiationRAII.
   if (isLambdaCallOperator(FD))
     return MLTAL;
-  if (SetupConstraintScope(FD, MLTAL, Scope))
+  if (SetupConstraintScope(FD, TemplateArgs, MLTAL, Scope))
     return std::nullopt;
 
   return MLTAL;
@@ -1477,7 +1502,7 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
   LocalInstantiationScope Scope(*this, !ForOverloadResolution);
   std::optional<MultiLevelTemplateArgumentList> MLTAL =
       SetupConstraintCheckingTemplateArgumentsAndScope(
-          const_cast<FunctionDecl *>(FD), Scope);
+          const_cast<FunctionDecl *>(FD), {}, Scope);
 
   if (!MLTAL)
     return true;
@@ -1500,10 +1525,15 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
       Satisfaction);
 }
 
-static const Expr *
-SubstituteConstraintExpressionWithoutSatisfaction(Sema &S, const Decl *ND,
-                                                  const Expr *ConstrExpr) {
-  MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(ND);
+static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
+    Sema &S, const Sema::TemplateCompareNewDeclInfo &DeclInfo,
+    const Expr *ConstrExpr) {
+  MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
+      DeclInfo.getDecl(), DeclInfo.getDeclContext(), /*Final=*/false,
+      /*Innermost=*/std::nullopt,
+      /*RelativeToPrimary=*/true,
+      /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true,
+      /*SkipForSpecialization*/ false);
 
   if (MLTAL.getNumSubstitutedLevels() == 0)
     return ConstrExpr;
@@ -1513,7 +1543,8 @@ SubstituteConstraintExpressionWithoutSatisfaction(Sema &S, const Decl *ND,
   // this may happen while we're comparing two templates' constraint
   // equivalence.
   std::optional<LocalInstantiationScope> ScopeForParameters;
-  if (ND->isFunctionOrFunctionTemplate()) {
+  if (const NamedDecl *ND = DeclInfo.getDecl();
+      ND && ND->isFunctionOrFunctionTemplate()) {
     ScopeForParameters.emplace(S, /*CombineWithOuterScope=*/true);
     const FunctionDecl *FD = ND->getAsFunction();
     if (FunctionTemplateDecl *Template = FD->getDescribedFunctionTemplate();
@@ -1557,9 +1588,13 @@ SubstituteConstraintExpressionWithoutSatisfaction(Sema &S, const Decl *ND,
   // possible that e.g. constraints involving C<Class<T>> and C<Class> are
   // perceived identical.
   std::optional<Sema::ContextRAII> ContextScope;
-  const DeclContext *DC = ND->getFriendObjectKind()
-                              ? ND->getLexicalDeclContext()
-                              : ND->getDeclContext();
+  const DeclContext *DC = [&] {
+    if (!DeclInfo.getDecl())
+      return DeclInfo.getDeclContext();
+    return DeclInfo.getDecl()->getFriendObjectKind()
+               ? DeclInfo.getLexicalDeclContext()
+               : DeclInfo.getDeclContext();
+  }();
   if (auto *RD = dyn_cast<CXXRecordDecl>(DC)) {
     ThisScope.emplace(S, const_cast<CXXRecordDecl *>(RD), Qualifiers());
     ContextScope.emplace(S, const_cast<DeclContext *>(cast<DeclContext>(RD)),
@@ -1575,14 +1610,15 @@ SubstituteConstraintExpressionWithoutSatisfaction(Sema &S, const Decl *ND,
   return SubstConstr.get();
 }
 
-bool Sema::AreConstraintExpressionsEqual(const Decl *Old, const Expr *OldConstr,
-                                         const Decl *New,
+bool Sema::AreConstraintExpressionsEqual(const NamedDecl *Old,
+                                         const Expr *OldConstr,
+                                         const TemplateCompareNewDeclInfo &New,
                                          const Expr *NewConstr) {
   if (OldConstr == NewConstr)
     return true;
   // C++ [temp.constr.decl]p4
-  if (Old != New &&
-      Old->getLexicalDeclContext() != New->getLexicalDeclContext()) {
+  if (Old && !New.isInvalid() && !New.ContainsDecl(Old) &&
+      Old->getLexicalDeclContext() != New.getLexicalDeclContext()) {
     Sema::SFINAETrap _(*this);
     if (const Expr *SubstConstr =
             SubstituteConstraintExpressionWithoutSatisfaction(*this, Old,
@@ -1604,15 +1640,19 @@ bool Sema::AreConstraintExpressionsEqual(const Decl *Old, const Expr *OldConstr,
   return ID1 == ID2;
 }
 
-bool Sema::FriendConstraintsDependOnEnclosingTemplate(
-    const FunctionTemplateDecl *FTD) {
-  assert(FTD->getFriendObjectKind() && "Must be a friend!");
+bool Sema::FriendConstraintsDependOnEnclosingTemplate(const FunctionDecl *FD) {
+  assert(FD->getFriendObjectKind() && "Must be a friend!");
+
+  // The logic for non-templates is handled in ASTContext::isSameEntity, so we
+  // don't have to bother checking 'DependsOnEnclosingTemplate' for a
+  // non-function-template.
+  assert(FD->getDescribedFunctionTemplate() &&
+         "Non-function templates don't need to be checked");
 
   SmallVector<AssociatedConstraint, 3> ACs;
-  FTD->getAssociatedConstraints(ACs);
+  FD->getDescribedFunctionTemplate()->getAssociatedConstraints(ACs);
 
-  const FunctionDecl *FD = FTD->getTemplatedDecl();
-  unsigned OldTemplateDepth = FTD->getTemplateDepth();
+  unsigned OldTemplateDepth = CalculateTemplateDepthForConstraints(*this, FD);
   for (const AssociatedConstraint &AC : ACs)
     if (ConstraintExpressionDependsOnEnclosingTemplate(FD, OldTemplateDepth,
                                                        AC.ConstraintExpr))
@@ -1648,9 +1688,9 @@ bool Sema::EnsureTemplateArgumentListConstraints(
   return false;
 }
 
-bool Sema::CheckFunctionTemplateConstraints(
-    SourceLocation PointOfInstantiation, FunctionTemplateDecl *Template,
-    ArrayRef<TemplateArgument> TemplateArgs,
+static bool CheckFunctionConstraintsWithoutInstantiation(
+    Sema &SemaRef, SourceLocation PointOfInstantiation,
+    FunctionTemplateDecl *Template, ArrayRef<TemplateArgument> TemplateArgs,
     ConstraintSatisfaction &Satisfaction) {
   SmallVector<AssociatedConstraint, 3> TemplateAC;
   Template->getAssociatedConstraints(TemplateAC);
@@ -1659,22 +1699,47 @@ bool Sema::CheckFunctionTemplateConstraints(
     return false;
   }
 
-  LocalInstantiationScope Scope(*this);
+  LocalInstantiationScope Scope(SemaRef);
 
-  MultiLevelTemplateArgumentList MLTAL =
-      getTemplateInstantiationArgs(Template, TemplateArgs);
+  FunctionDecl *FD = Template->getTemplatedDecl();
+  // Collect the list of template arguments relative to the 'primary'
+  // template. We need the entire list, since the constraint is completely
+  // uninstantiated at this point.
 
-  Sema::ContextRAII SavedContext(*this, Template->getTemplatedDecl());
-  return CheckConstraintSatisfaction(Template, TemplateAC, MLTAL,
-                                     PointOfInstantiation, Satisfaction);
+  MultiLevelTemplateArgumentList MLTAL;
+  {
+    // getTemplateInstantiationArgs uses this instantiation context to find out
+    // template arguments for uninstantiated functions.
+    // We don't want this RAII object to persist, because there would be
+    // otherwise duplicate diagnostic notes.
+    Sema::InstantiatingTemplate Inst(
+        SemaRef, PointOfInstantiation,
+        Sema::InstantiatingTemplate::ConstraintsCheck{}, Template, TemplateArgs,
+        PointOfInstantiation);
+    if (Inst.isInvalid())
+      return true;
+    MLTAL = SemaRef.getTemplateInstantiationArgs(
+        /*D=*/FD, FD,
+        /*Final=*/false, /*Innermost=*/{}, /*RelativeToPrimary=*/true,
+        /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true);
+  }
+
+  Sema::ContextRAII SavedContext(SemaRef, FD);
+  return SemaRef.CheckConstraintSatisfaction(
+      Template, TemplateAC, MLTAL, PointOfInstantiation, Satisfaction);
 }
 
-bool Sema::CheckFunctionSpecializationConstraints(
+bool Sema::CheckFunctionTemplateConstraints(
     SourceLocation PointOfInstantiation, FunctionDecl *Decl,
+    ArrayRef<TemplateArgument> TemplateArgs,
     ConstraintSatisfaction &Satisfaction) {
   // In most cases we're not going to have constraints, so check for that first.
   FunctionTemplateDecl *Template = Decl->getPrimaryTemplate();
-  assert(Template && "Function is not a specialization");
+
+  if (!Template)
+    return ::CheckFunctionConstraintsWithoutInstantiation(
+        *this, PointOfInstantiation, Decl->getDescribedFunctionTemplate(),
+        TemplateArgs, Satisfaction);
 
   // Note - code synthesis context for the constraints check is created
   // inside CheckConstraintsSatisfaction.
@@ -1691,7 +1756,8 @@ bool Sema::CheckFunctionSpecializationConstraints(
   LocalInstantiationScope Scope(*this);
 
   std::optional<MultiLevelTemplateArgumentList> MLTAL =
-      SetupConstraintCheckingTemplateArgumentsAndScope(Decl, Scope);
+      SetupConstraintCheckingTemplateArgumentsAndScope(Decl, TemplateArgs,
+                                                       Scope);
 
   if (!MLTAL)
     return true;
@@ -2275,8 +2341,12 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
       InnerArgs = std::move(CTAI.SugaredConverted);
     }
 
-    MultiLevelTemplateArgumentList MLTAL =
-        SemaRef.getTemplateInstantiationArgs(Concept, InnerArgs);
+    MultiLevelTemplateArgumentList MLTAL = SemaRef.getTemplateInstantiationArgs(
+        Concept, Concept->getLexicalDeclContext(),
+        /*Final=*/true, InnerArgs,
+        /*RelativeToPrimary=*/true,
+        /*Pattern=*/nullptr,
+        /*ForConstraintInstantiation=*/true);
 
     return SubstituteParameterMappings(SemaRef, &MLTAL,
                                        CSE->getTemplateArgsAsWritten(),
@@ -2357,7 +2427,7 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
     // [...]
     NormalizedConstraint *SubNF;
     if (ExprResult Res =
-            SubstituteConceptsInConstraintExpression(S, CSE, SubstIndex);
+            SubstituteConceptsInConstraintExpression(S, D, CSE, SubstIndex);
         Res.isUsable())
       // Use canonical declarations to merge ConceptDecls across different
       // modules.
@@ -2507,8 +2577,8 @@ bool Sema::IsAtLeastAsConstrained(const NamedDecl *D1,
     return false;
   }
 
-  unsigned Depth1 = CalculateTemplateDepthForConstraints(*this, D1);
-  unsigned Depth2 = CalculateTemplateDepthForConstraints(*this, D2);
+  unsigned Depth1 = CalculateTemplateDepthForConstraints(*this, D1, true);
+  unsigned Depth2 = CalculateTemplateDepthForConstraints(*this, D2, true);
 
   for (size_t I = 0; I != AC1.size() && I != AC2.size(); ++I) {
     if (Depth2 > Depth1) {
