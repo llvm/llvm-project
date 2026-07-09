@@ -49,6 +49,7 @@ gentbl_cc_library(
     tbl_outs = dict([out for c in [
         "AST",
         "Analysis",
+        "CAS",
         "Comment",
         "Common",
         "CrossTU",
@@ -705,6 +706,7 @@ cc_library(
         "include/clang/Basic/BuiltinTemplates.inc",
         "include/clang/Basic/DiagnosticASTKinds.inc",
         "include/clang/Basic/DiagnosticAnalysisKinds.inc",
+        "include/clang/Basic/DiagnosticCASKinds.inc",
         "include/clang/Basic/DiagnosticCommentKinds.inc",
         "include/clang/Basic/DiagnosticCommonKinds.inc",
         "include/clang/Basic/DiagnosticCrossTUKinds.inc",
@@ -802,6 +804,22 @@ cc_library(
         ":support",
         "//llvm:Support",
         "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "cas",
+    srcs = glob([
+        "lib/CAS/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/clang/CAS/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":basic",
+        ":config",
+        "//llvm:Support",
     ],
 )
 
@@ -1016,6 +1034,8 @@ cc_library(
     hdrs = glob([
         "include/clang/Index/*.h",
         "include/clang-c/*.h",
+        "include/indexstore/*.h",
+        "lib/Index/*.h",
     ]),
     includes = ["include"],
     deps = [
@@ -1028,7 +1048,23 @@ cc_library(
         ":sema",
         ":serialization",
         ":unified_symbol_resolution",
+        "//llvm:BitstreamReader",
+        "//llvm:BitstreamWriter",
         "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "index_headers",
+    hdrs = glob([
+        "include/clang/Index/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":basic",
+        ":lex",
         "//llvm:Support",
     ],
 )
@@ -1324,6 +1360,7 @@ cc_library(
         ":ast",
         ":ast_matchers",
         ":basic",
+        ":cas",
         ":dependency_scanning",
         ":driver",
         ":format",
@@ -1377,7 +1414,35 @@ cc_library(
         ":rewrite",
         ":tooling",
         ":tooling_core",
+        ":tooling_syntax",
         ":unified_symbol_resolution",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "tooling_refactor",
+    srcs = glob([
+        "lib/Tooling/Refactor/*.cpp",
+        "lib/Tooling/Refactor/*.h",
+    ]),
+    hdrs = glob(["include/clang/Tooling/Refactor/*.h"]),
+    textual_hdrs = glob(["include/clang/Tooling/Refactor/*.def"]),
+    deps = [
+        ":ast",
+        ":ast_matchers",
+        ":basic",
+        ":edit",
+        ":frontend",
+        ":index",
+        ":lex",
+        ":rewrite",
+        ":sema",
+        ":tooling_core",
+        ":tooling_refactoring",
+        ":tooling_syntax",
+        ":unified_symbol_resolution",
+        "//llvm:FrontendOpenMP",
         "//llvm:Support",
     ],
 )
@@ -1420,7 +1485,9 @@ cc_library(
     ]),
     hdrs = glob(["include/clang/DependencyScanning/**/*.h"]),
     deps = [
+        ":apinotes",
         ":basic",
+        ":cas",
         ":frontend",
         ":lex",
         ":serialization",
@@ -1835,9 +1902,11 @@ cc_library(
         ":apinotes",
         ":ast",
         ":basic",
+        ":cas",
         ":config",
         ":driver_options_inc_gen",
         ":edit",
+        ":index_headers",
         ":lex",
         ":options",
         ":parse",
@@ -1853,10 +1922,12 @@ cc_library(
         "//llvm:FrontendDebug",
         "//llvm:Linker",
         "//llvm:MC",
+        "//llvm:MCCAS",
         "//llvm:Option",
         "//llvm:Plugins",
         "//llvm:ProfileData",
         "//llvm:Remarks",
+        "//llvm:RemoteCachingService",
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
@@ -1945,6 +2016,7 @@ cc_library(
         "include",
         "lib/CodeGen",
     ],
+    textual_hdrs = glob(["lib/CodeGen/*.def"]),
     deps = [
         ":analysis",
         ":ast",
@@ -1955,6 +2027,7 @@ cc_library(
         ":basic_riscv_andes_vector_builtin_cg_gen",
         ":basic_riscv_sifive_vector_builtin_cg_gen",
         ":basic_riscv_vector_builtin_cg_gen",
+        ":cas",
         ":driver",
         ":frontend",
         ":lex",
@@ -2080,6 +2153,36 @@ cc_library(
 )
 
 cc_library(
+    name = "index_data_store",
+    srcs = glob(["lib/IndexDataStore/*.cpp"]),
+    hdrs = glob(["include/clang/Index/IndexDataStore.h"]),
+    deps = [
+        ":basic",
+        ":directory_watcher",
+        ":index",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "index_store",
+    srcs = ["tools/IndexStore/IndexStore.cpp"],
+    hdrs = glob(["include/indexstore/*.h"]),
+    includes = ["include"],
+    linkopts = select({
+        "@platforms//os:macos": ["-Wl,-framework,CoreServices"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":basic",
+        ":directory_watcher",
+        ":index",
+        ":index_data_store",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "install_api",
     srcs = glob([
         "lib/InstallAPI/*.cpp",
@@ -2151,6 +2254,7 @@ cc_library(
         ":extract_api",
         ":frontend",
         ":frontend_rewrite",
+        ":index_headers",
         ":options",
         ":scalable_static_analysis_core",
         ":scalable_static_analysis_frontend",
@@ -2172,8 +2276,10 @@ cc_library(
     deps = [
         ":ast",
         ":basic",
+        ":cas",
         ":codegen",
         ":config",
+        ":dependency_scanning",
         ":driver",
         ":extract_api",
         ":frontend",
@@ -2184,10 +2290,13 @@ cc_library(
         ":sema",
         ":serialization",
         ":tooling",
+        ":tooling_refactor",
         ":unified_symbol_resolution",
         "//llvm:BitstreamReader",
         "//llvm:FrontendOpenMP",
+        "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
@@ -2207,8 +2316,10 @@ cc_plugin_library(
     deps = [
         ":ast",
         ":basic",
+        ":cas",
         ":codegen",
         ":config",
+        ":dependency_scanning",
         ":driver",
         ":extract_api",
         ":frontend",
@@ -2219,10 +2330,13 @@ cc_plugin_library(
         ":sema",
         ":serialization",
         ":tooling",
+        ":tooling_refactor",
         ":unified_symbol_resolution",
         "//llvm:BitstreamReader",
         "//llvm:FrontendOpenMP",
+        "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
@@ -2248,6 +2362,8 @@ cc_binary(
     srcs = [
         "tools/c-index-test/c-index-test.c",
         "tools/c-index-test/core_main.cpp",
+        "tools/c-index-test/JSONAggregation.cpp",
+        "tools/c-index-test/JSONAggregation.h",
     ],
     copts = [
         "-Wno-uninitialized",
@@ -2258,9 +2374,11 @@ cc_binary(
         ":basic",
         ":codegen",
         ":config",
+        ":directory_watcher",
         ":driver",
         ":frontend",
         ":index",
+        ":index_store",
         ":lex",
         ":libclang",
         ":serialization",
@@ -2321,7 +2439,10 @@ cc_binary(
 
 cc_library(
     name = "clang-driver",
-    srcs = glob(["tools/driver/*.cpp"]),
+    srcs = glob([
+        "tools/driver/*.cpp",
+        "tools/driver/*.h",
+    ]),
     copts = [
         # Disable stack frame size checks in the driver because
         # clang::ensureStackAddressSpace allocates a large array on the stack.
@@ -2331,8 +2452,10 @@ cc_library(
         ":analysis",
         ":ast",
         ":basic",
+        ":cas",
         ":codegen",
         ":config",
+        ":dependency_scanning",
         ":driver",
         ":frontend",
         ":frontend_rewrite",
@@ -2343,6 +2466,7 @@ cc_library(
         ":sema",
         ":serialization",
         ":static_analyzer_frontend",
+        ":tooling",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:BitReader",
@@ -2353,6 +2477,7 @@ cc_library(
         "//llvm:MC",
         "//llvm:MCParser",
         "//llvm:Option",
+        "//llvm:RemoteCachingService",
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
@@ -2622,6 +2747,7 @@ cc_library(
     srcs = glob(["tools/clang-scan-deps/*.cpp"]),
     deps = [
         ":ScanDepsTableGen",
+        ":cas",
         ":dependency_scanning",
         ":driver",
         ":frontend",

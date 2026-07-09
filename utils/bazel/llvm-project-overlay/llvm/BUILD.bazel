@@ -359,6 +359,9 @@ cc_library(
         "lib/Support/*.h",
         "lib/Support/*.inc",
         "lib/Support/LSP/*.cpp",
+        "lib/CAS/*.cpp",
+        "lib/CAS/*.h",
+        "lib/CASUtil/*.cpp",
         # To avoid a dependency cycle.
         "include/llvm/Option/*.h",
     ]) + select({
@@ -386,6 +389,10 @@ cc_library(
     hdrs = glob([
         "include/llvm/Support/**/*.h",
         "include/llvm/ADT/*.h",
+        "include/llvm/CAS/**/*.h",
+        "include/llvm-c/CAS/*.h",
+        "include/llvm/CASUtil/*.h",
+        "include/llvm/CASObjectFormats/*.h",
     ]) + [
         "include/llvm-c/Core.h",
         "include/llvm-c/DataTypes.h",
@@ -398,11 +405,12 @@ cc_library(
         "include/llvm-c/Types.h",
         "include/llvm-c/Visibility.h",
         "include/llvm-c/blake3.h",
+        "include/llvm/BinaryFormat/Magic.h",
         "include/llvm/ExecutionEngine/JITSymbol.h",
         "include/llvm/Support/Extension.def",
         "include/llvm/Support/VCSRevision.h",
     ],
-    copts = llvm_copts,
+    copts = llvm_copts + ["-DLLVM_ENABLE_ONDISK_CAS=1"],
     defines = select({
         "@platforms//cpu:aarch64": [
         ],
@@ -462,6 +470,7 @@ cc_library(
     }),
     textual_hdrs = glob([
         "include/llvm/Support/*.def",
+        "lib/CAS/*.def",
     ]),
     deps = [
         ":config",
@@ -1127,7 +1136,10 @@ cc_library(
             "lib/Remarks/*.cpp",
             "lib/Remarks/*.h",
         ],
-        exclude = ["lib/Remarks/RemarkLinker.cpp"],
+        exclude = [
+            "lib/Remarks/RemarkLinker.cpp",
+            "lib/Remarks/ExtraOptRemarks.cpp",
+        ],
     ),
     hdrs = glob(
         [
@@ -1137,7 +1149,9 @@ cc_library(
     ) + [
         "include/llvm-c/Remarks.h",
     ],
+    textual_hdrs = glob(["include/llvm/Remarks/*.def"]),
     copts = llvm_copts,
+    features = ["-parse_headers"],
     deps = [
         ":BitstreamReader",
         ":BitstreamWriter",
@@ -1433,7 +1447,9 @@ cc_library(
     name = "Analysis",
     srcs = glob(
         ["lib/Analysis/*.cpp"],
-    ),
+    ) + [
+        "lib/Remarks/ExtraOptRemarks.cpp",
+    ],
     hdrs = glob(
         [
             "include/llvm/Analysis/*.h",
@@ -1452,6 +1468,7 @@ cc_library(
         ":MC",
         ":Object",
         ":ProfileData",
+        ":Remarks",
         ":Support",
         ":TargetParser",
         ":config",
@@ -1835,9 +1852,11 @@ cc_library(
         ":AggressiveInstCombine",
         ":Analysis",
         ":BinaryFormat",
+        ":BitWriter",
         ":Core",
         ":InstCombine",
         ":ProfileData",
+        ":Remarks",
         ":Support",
         ":Target",
         ":TransformUtils",
@@ -2290,6 +2309,24 @@ cc_library(
 )
 
 cc_library(
+    name = "MCCAS",
+    srcs = glob(["lib/MCCAS/*.cpp"]),
+    hdrs = glob(["include/llvm/MCCAS/*.h"]),
+    copts = llvm_copts,
+    features = ["-parse_headers"],
+    textual_hdrs = glob(["include/llvm/MCCAS/*.def"]),
+    deps = [
+        ":BinaryFormat",
+        ":DebugInfoCodeView",
+        ":DebugInfoDWARF",
+        ":MC",
+        ":Support",
+        ":TargetParser",
+        ":config",
+    ],
+)
+
+cc_library(
     name = "CodeGen",
     srcs = glob(
         [
@@ -2329,6 +2366,7 @@ cc_library(
         ":IRPrinter",
         ":Instrumentation",
         ":MC",
+        ":MCCAS",
         ":MCParser",
         ":ObjCARC",
         ":Object",
@@ -4208,6 +4246,20 @@ cc_library(
 )
 
 cc_library(
+    name = "RemoteCachingService",
+    srcs = [
+        "lib/RemoteCachingService/NullService/NullService.cpp",
+        "lib/RemoteCachingService/RemoteCachingService.cpp",
+    ],
+    hdrs = glob(["include/llvm/RemoteCachingService/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":Support",
+        ":config",
+    ],
+)
+
+cc_library(
     name = "LTO",
     srcs = glob([
         "lib/LTO/*.cpp",
@@ -4238,6 +4290,7 @@ cc_library(
         ":Passes",
         ":Plugins",
         ":Remarks",
+        ":RemoteCachingService",
         ":Scalar",
         ":Support",
         ":Target",
@@ -4901,6 +4954,7 @@ cc_binary(
         ":IRPrinter",
         ":IRReader",
         ":MC",
+        ":MCCAS",
         ":Passes",
         ":Plugins",
         ":Remarks",
@@ -5685,6 +5739,7 @@ cc_binary(
         ":AllTargetsDisassemblers",
         ":DWARFCFIChecker",
         ":MC",
+        ":MCCAS",
         ":MCDisassembler",
         ":MCParser",
         ":Object",
