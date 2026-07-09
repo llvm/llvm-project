@@ -4672,7 +4672,8 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
            ElTy->isPtrOrPtrVectorTy()) &&
               !isa<ScalableVectorType>(ElTy),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-              " operand must have integer type, floating point type, pointer type, or fixed "
+              " operand must have integer type, floating point type, pointer "
+              "type, or fixed "
               "vector of integer type, floating point type, or pointer type!",
           &RMWI, ElTy);
   } else if (AtomicRMWInst::isFPOperation(Op)) {

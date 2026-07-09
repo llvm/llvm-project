@@ -9227,7 +9227,8 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
       return error(
           ValLoc,
           "atomicrmw " + AtomicRMWInst::getOperationName(Operation) +
-              " operand must be an integer type, floating point type, pointer type, or fixed "
+              " operand must be an integer type, floating point type, pointer "
+              "type, or fixed "
               "vector of integer type, floating point type, or pointer type");
     }
   } else if (IsFP) {
