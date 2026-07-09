@@ -4735,6 +4735,30 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
   }
 }
 
+bool SIInstrInfo::isInlineConstant(const MachineInstr &MI, unsigned OpIdx,
+                                   int64_t ImmVal) const {
+  if (OpIdx >= MI.getDesc().NumOperands)
+    return false;
+
+  if (isCopyInstr(MI)) {
+    unsigned Size = getOpSize(MI, OpIdx);
+    assert(Size == 8 || Size == 4);
+
+    uint8_t OpType = (Size == 8) ? AMDGPU::OPERAND_REG_IMM_INT64
+                                 : AMDGPU::OPERAND_REG_IMM_INT32;
+    return isInlineConstant(ImmVal, OpType);
+  }
+
+  if (!isInlineConstant(ImmVal, MI.getDesc().operands()[OpIdx].OperandType))
+    return false;
+
+  if (ST.hasNoF16PseudoScalarTransInlineConstants() &&
+      isF16PseudoScalarTrans(MI.getOpcode()))
+    return false;
+
+  return true;
+}
+
 static bool compareMachineOp(const MachineOperand &Op0,
                              const MachineOperand &Op1) {
   if (Op0.getType() != Op1.getType())
@@ -5494,6 +5518,21 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (isVOP3(MI) && UsesLiteral && !ST.hasVOP3Literal()) {
       ErrInfo = "VOP3 instruction uses literal";
       return false;
+    }
+  }
+
+  if (ST.hasNoF16PseudoScalarTransInlineConstants() &&
+      isF16PseudoScalarTrans(Opcode)) {
+    for (int OpIdx : {Src0Idx, Src1Idx, Src2Idx}) {
+      if (OpIdx == -1)
+        continue;
+      const MachineOperand &MO = MI.getOperand(OpIdx);
+      if (MO.isImm() &&
+          isInlineConstant(MO.getImm(), Desc.operands()[OpIdx].OperandType)) {
+        ErrInfo =
+            "F16 pseudo scalar transcendental instruction uses inline constant";
+        return false;
+      }
     }
   }
 

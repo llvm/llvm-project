@@ -1323,21 +1323,7 @@ public:
   }
 
   bool isInlineConstant(const MachineInstr &MI, unsigned OpIdx,
-                        int64_t ImmVal) const {
-    if (OpIdx >= MI.getDesc().NumOperands)
-      return false;
-
-    if (isCopyInstr(MI)) {
-      unsigned Size = getOpSize(MI, OpIdx);
-      assert(Size == 8 || Size == 4);
-
-      uint8_t OpType = (Size == 8) ?
-        AMDGPU::OPERAND_REG_IMM_INT64 : AMDGPU::OPERAND_REG_IMM_INT32;
-      return isInlineConstant(ImmVal, OpType);
-    }
-
-    return isInlineConstant(ImmVal, MI.getDesc().operands()[OpIdx].OperandType);
-  }
+                        int64_t ImmVal) const;
 
   bool isInlineConstant(const MachineInstr &MI, unsigned OpIdx,
                         const MachineOperand &MO) const {

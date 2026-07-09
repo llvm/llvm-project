@@ -1,0 +1,26 @@
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass machineverifier -filetype=null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx942 -run-pass machineverifier -filetype=null %s
+
+# CHECK: *** Bad machine code: F16 pseudo scalar transcendental instruction uses inline constant ***
+# CHECK: %0:sgpr_32 = V_S_EXP_F16_e64 0, -1, 0, 0, implicit $mode, implicit $exec
+# CHECK: *** Bad machine code: F16 pseudo scalar transcendental instruction uses inline constant ***
+# CHECK: %1:sgpr_32 = V_S_LOG_F16_e64 0, 0, 0, 0, implicit $mode, implicit $exec
+# CHECK: *** Bad machine code: F16 pseudo scalar transcendental instruction uses inline constant ***
+# CHECK: %2:sgpr_32 = V_S_RCP_F16_e64 0, 1, 0, 0, implicit $mode, implicit $exec
+# CHECK: *** Bad machine code: F16 pseudo scalar transcendental instruction uses inline constant ***
+# CHECK: %3:sgpr_32 = V_S_RSQ_F16_e64 0, -16, 0, 0, implicit $mode, implicit $exec
+# CHECK: *** Bad machine code: F16 pseudo scalar transcendental instruction uses inline constant ***
+# CHECK: %4:sgpr_32 = V_S_SQRT_F16_e64 0, 64, 0, 0, implicit $mode, implicit $exec
+---
+name:            f16_pseudo_scalar_trans_inline_imm
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:sgpr_32 = V_S_EXP_F16_e64 0, -1, 0, 0, implicit $mode, implicit $exec
+    %1:sgpr_32 = V_S_LOG_F16_e64 0, 0, 0, 0, implicit $mode, implicit $exec
+    %2:sgpr_32 = V_S_RCP_F16_e64 0, 1, 0, 0, implicit $mode, implicit $exec
+    %3:sgpr_32 = V_S_RSQ_F16_e64 0, -16, 0, 0, implicit $mode, implicit $exec
+    %4:sgpr_32 = V_S_SQRT_F16_e64 0, 64, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+
+...
