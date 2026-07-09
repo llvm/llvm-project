@@ -21,6 +21,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(CodeGenTests
   AllocationOrderTest.cpp
+  DAGCombinerTest.cpp
   AMDGPUMetadataTest.cpp
   AsmPrinterDwarfTest.cpp
   CCStateTest.cpp

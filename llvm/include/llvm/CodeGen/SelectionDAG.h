@@ -2845,6 +2845,15 @@ template <> struct GraphTraits<SelectionDAG*> : public GraphTraits<SDNode*> {
   }
 };
 
+/// Walk the use chain of \p Op upward to determine which bits of Op's result
+/// are demanded by downstream users.  Returns an all-ones mask when the
+/// demand cannot be determined conservatively.
+///
+/// This is used by visitSRL in DAGCombiner to pass a tighter outer demand to
+/// SimplifyDemandedBits, enabling elimination of zero-extension masks inserted
+/// by type legalization that only clear bits which no downstream user reads.
+LLVM_ABI APInt computeDemandedBitsFromUses(SDValue Op);
+
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_SELECTIONDAG_H

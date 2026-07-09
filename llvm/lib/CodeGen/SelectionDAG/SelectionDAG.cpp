@@ -15286,3 +15286,110 @@ void llvm::checkForCycles(const llvm::SDNode *N,
 void llvm::checkForCycles(const llvm::SelectionDAG *DAG, bool force) {
   checkForCycles(DAG->getRoot().getNode(), DAG, force);
 }
+
+// Recursive worker for computeDemandedBitsFromUses.  \p Cache memoizes the
+// per-node result so reconvergent DAGs (where one node feeds several users
+// that later merge again, e.g. the parity XOR/SRL chain) are not re-walked
+// exponentially.  Caching by node is sound because a node's use-demand depends
+// only on its user subtree, not on the path taken to reach it.  A result
+// computed after hitting the depth cutoff may be conservatively wide; that is
+// still safe (an over-approximation) if such an entry is later reused.
+static APInt computeDemandedBitsFromUsesImpl(SDValue Op, unsigned Depth,
+                                             DenseMap<SDValue, APInt> &Cache) {
+  unsigned BitWidth = Op.getScalarValueSizeInBits();
+  APInt AllOnes = APInt::getAllOnes(BitWidth);
+
+  if (Depth > 6)
+    return AllOnes;
+
+  auto It = Cache.find(Op);
+  if (It != Cache.end())
+    return It->second;
+
+  APInt Demanded = APInt::getZero(BitWidth);
+
+  for (SDNode *User : Op->users()) {
+    // Only handle same-width integer users of result 0.
+    if (!User->getValueType(0).isInteger() ||
+        User->getValueType(0).getScalarSizeInBits() != BitWidth) {
+      Cache[Op] = AllOnes;
+      return AllOnes;
+    }
+
+    // Recursively find which bits of User's result are demanded.
+    APInt UserDemand =
+        computeDemandedBitsFromUsesImpl(SDValue(User, 0), Depth + 1, Cache);
+
+    // Translate UserDemand through User's operation to find which bits of Op
+    // this use demands.  Narrowing is only valid when Op is genuinely an
+    // operand of User (a use via a different result of a multi-result node
+    // must not borrow that result's demand), so each case is guarded on Op's
+    // operand position.  Anything not modeled falls through to all-ones.
+    bool OpIsLHS = User->getOperand(0) == Op;
+    bool OpIsRHS = User->getNumOperands() > 1 && User->getOperand(1) == Op;
+
+    APInt Contrib = AllOnes;
+    switch (User->getOpcode()) {
+    case ISD::XOR:
+    case ISD::OR:
+      // Bitwise and position-independent: demand passes straight through.
+      if (OpIsLHS || OpIsRHS)
+        Contrib = UserDemand;
+      break;
+    case ISD::AND:
+      // and(Op, const): only the mask bits of Op are read.
+      if (OpIsLHS)
+        if (auto *C = dyn_cast<ConstantSDNode>(User->getOperand(1)))
+          Contrib = UserDemand & C->getAPIntValue();
+      break;
+    case ISD::SRL:
+      // srl(Op, C): result bit j is Op bit j+C, so back-propagate by <<C.
+      // Op as the shift amount, a variable shift, or a shift >= BitWidth
+      // (poison/zero result) all leave Contrib at all-ones.
+      if (OpIsLHS)
+        if (auto *C = dyn_cast<ConstantSDNode>(User->getOperand(1)))
+          if (C->getAPIntValue().ult(BitWidth))
+            Contrib = UserDemand.shl(C->getZExtValue());
+      break;
+    case ISD::SHL:
+      // shl(Op, C): back-propagate by >>C.
+      if (OpIsLHS)
+        if (auto *C = dyn_cast<ConstantSDNode>(User->getOperand(1)))
+          if (C->getAPIntValue().ult(BitWidth))
+            Contrib = UserDemand.lshr(C->getZExtValue());
+      break;
+    default:
+      break;
+    }
+
+    Demanded |= Contrib;
+    if (Demanded.isAllOnes()) {
+      Cache[Op] = AllOnes;
+      return AllOnes;
+    }
+  }
+
+  // Demanded == 0 means we accumulated no narrowing evidence: either Op has no
+  // users in this fragment, or every use chain reached the analysis boundary
+  // without an anchoring consumer.  On a live SRL the result is used somewhere
+  // we could not model, so treat "no evidence" conservatively as all-ones
+  // rather than "no bits needed" (which SimplifyDemandedBits would take as a
+  // license to drop the value).  A nonzero subset is real, anchored demand and
+  // is returned as-is.
+  APInt Result = Demanded.getBoolValue() ? Demanded : AllOnes;
+  Cache[Op] = Result;
+  return Result;
+}
+
+APInt llvm::computeDemandedBitsFromUses(SDValue Op) {
+  // WARNING: the returned mask reflects Op's users at the moment of the call.
+  // A caller that feeds this to SimplifyDemandedBits is asserting that Op is
+  // used *only* through these bits.  SimplifyDemandedBits may rewrite Op's
+  // operands so that the undemanded bits of Op become garbage; that is a
+  // miscompile if a later combine introduces a new user of Op reading bits
+  // outside this mask.  Only use it where the SRL result is not subsequently
+  // re-widened (visitSRL processes to fixpoint and re-derives demand on each
+  // visit, so a stale narrowing is re-validated before it can be exploited).
+  DenseMap<SDValue, APInt> Cache;
+  return computeDemandedBitsFromUsesImpl(Op, /*Depth=*/0, Cache);
+}
