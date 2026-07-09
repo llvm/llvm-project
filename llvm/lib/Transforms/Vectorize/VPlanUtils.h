@@ -55,14 +55,14 @@ bool isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE, const Loop *L);
 /// same value for all lanes or only has its first lane used.
 bool isSingleScalar(const VPValue *VPV);
 
-/// Return true if \p V is a header mask in \p Plan.
-bool isHeaderMask(const VPValue *V, const VPlan &Plan);
-
 /// Checks if \p V is uniform across all VF lanes and UF parts. It is considered
 /// as such if it is either loop invariant (defined outside the vector region)
 /// or its operands are known to be uniform across all VFs and UFs (e.g.
 /// VPDerivedIV or the canonical IV).
 bool isUniformAcrossVFsAndUFs(const VPValue *V);
+
+/// Return true if \p V is elementwise, i.e. none of the lanes are permuted.
+bool isElementwise(const VPValue *V);
 
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
@@ -158,14 +158,6 @@ bool isUsedByLoadStoreAddress(const VPValue *V);
 /// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
 /// inserted for predicated reductions or tail folding.
 VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
-
-/// Collect the header mask with the pattern:
-/// (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
-/// Note: If alias masking is enabled this will find:
-/// (AND, HeaderMask, AliasMask)
-/// TODO: Introduce explicit recipe for header-mask instead of searching
-/// the header-mask pattern manually.
-VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
 
 /// Finds the incoming alias-mask within the vector preheader.
 VPValue *findIncomingAliasMask(const VPlan &Plan);
