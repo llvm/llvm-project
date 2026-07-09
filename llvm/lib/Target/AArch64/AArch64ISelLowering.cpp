@@ -9716,6 +9716,20 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
     CCInfo.AllocateStack(32, Align(16));
 
   unsigned NumArgs = Outs.size();
+
+  // IsVarArg is only set on an ARM64EC_Thunk_X64 for exit thunks, so if set
+  // we know we have a vararg exit thunk where x4 and x5 must be consumed in
+  // this lowering (copying the data to the stack).
+  bool IsArm64ECVarArgExitThunk = CalleeCC == CallingConv::ARM64EC_Thunk_X64 &&
+                                  IsVarArg &&
+                                  !(CLI.CB && CLI.CB->isMustTailCall());
+  if (IsArm64ECVarArgExitThunk) {
+    if (NumArgs < 2)
+      report_fatal_error("variadic arm64ec_thunk_x64 call is missing the "
+                         "x4/x5 (pointer/length) arguments");
+    NumArgs -= 2;
+  }
+
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT ArgVT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
@@ -10305,6 +10319,50 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     });
   }
 
+  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  // If we have a variadic Arm64EC exit thunk, we must lower the x4/x5
+  // parameters (address and length of additional arguments) into an outgoing
+  // stack area.
+  bool IsArm64ECVarArgExitThunk = CallConv == CallingConv::ARM64EC_Thunk_X64 &&
+                                  IsVarArg &&
+                                  !(CLI.CB && CLI.CB->isMustTailCall());
+  if (IsArm64ECVarArgExitThunk) {
+    // Materialize an aligned outgoing stack area now
+    // so the args described by x4 (pointer) and x5 (length) can be copied
+    // into a real x64-style stack layout.
+    if (Outs.size() < 2)
+      report_fatal_error("variadic arm64ec_thunk_x64 call is missing the "
+                         "x4/x5 (pointer/length) arguments");
+    if (IsTailCall)
+      report_fatal_error("tail calls are not supported for variadic "
+                         "arm64ec_thunk_x64 calls");
+
+    SDValue ThunkVarArgSrc = OutVals[Outs.size() - 2];
+    SDValue ThunkVarArgSize =
+        DAG.getZExtOrTrunc(OutVals[Outs.size() - 1], DL, PtrVT);
+    SDValue RoundedThunkVarArgSize = DAG.getNode(
+        ISD::ADD, DL, PtrVT, ThunkVarArgSize, DAG.getConstant(15, DL, PtrVT));
+    RoundedThunkVarArgSize =
+        DAG.getNode(ISD::AND, DL, PtrVT, RoundedThunkVarArgSize,
+                    DAG.getSignedConstant(-16, DL, PtrVT));
+    SDValue ThunkVarArgDst = DAG.getNode(
+        ISD::DYNAMIC_STACKALLOC, DL, DAG.getVTList(PtrVT, MVT::Other),
+        {Chain, RoundedThunkVarArgSize, DAG.getConstant(0, DL, PtrVT)});
+    Chain = ThunkVarArgDst.getValue(1);
+    MFI.CreateVariableSizedObject(Align(16), nullptr);
+
+    // The x64 shadow store for the final thunk call is allocated by the normal
+    // CALLSEQ_START below. Copy the variadic stack arguments before that call
+    // sequence starts so lowering the memcpy libcall cannot create nested
+    // ADJCALLSTACKDOWN/ADJCALLSTACKUP pairs.
+    Chain = DAG.getMemcpy(
+        Chain, DL, ThunkVarArgDst, ThunkVarArgSrc, ThunkVarArgSize, Align(16),
+        Align(1), /*isVol=*/false, /*AlwaysInline=*/false,
+        /*CI=*/nullptr, std::nullopt, MachinePointerInfo::getUnknownStack(MF),
+        MachinePointerInfo());
+  }
+
   // Adjust the stack pointer for the new arguments... and mark ZA uses.
   // These operations are automatically eliminated by the prolog/epilog pass
   assert((!IsSibCall || !ZAMarkerNode) && "ZA markers require CALLSEQ_START");
@@ -10327,7 +10385,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
   SmallSet<unsigned, 8> RegsUsed;
   SmallVector<SDValue, 8> MemOpChains;
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   if (IsVarArg && CLI.CB && CLI.CB->isMustTailCall()) {
     const auto &Forwards = FuncInfo->getForwardedMustTailRegParms();
@@ -10339,7 +10396,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Walk the register/memloc assignments, inserting copies/loads.
   unsigned ExtraArgLocs = 0;
-  for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
+  unsigned NumThunkVarArgOperands = IsArm64ECVarArgExitThunk ? 2 : 0;
+  for (unsigned i = 0, e = Outs.size() - NumThunkVarArgOperands; i != e; ++i) {
     CCValAssign &VA = ArgLocs[i - ExtraArgLocs];
     SDValue Arg = OutVals[i];
     ISD::ArgFlagsTy Flags = Outs[i].Flags;
@@ -10561,7 +10619,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   if (IsVarArg && Subtarget->isWindowsArm64EC() &&
-      !(CLI.CB && CLI.CB->isMustTailCall())) {
+      !(CLI.CB && CLI.CB->isMustTailCall()) && !IsArm64ECVarArgExitThunk) {
     SDValue ParamPtr = StackPtr;
     if (IsTailCall) {
       // Create a dummy object at the top of the stack that can be used to get
