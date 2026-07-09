@@ -44,6 +44,16 @@ if(LLDB_TEST_SWIFT)
     --inferior-env "LD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}/${CMAKE_SYSTEM_PROCESSOR}\\\""
     --inferior-env "SIMCTL_CHILD_DYLD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}/macosx\\\"")
 endif()
+
+# On Windows, where there is no rpath, the test inferiors need the Swift
+# runtime DLLs (swiftCore, Foundation, FoundationEssentials, ...) on PATH
+# at launch.
+set(LLDB_TEST_INFERIOR_RUNTIME_BIN
+  ""
+  CACHE STRING "Directory containing the target platform's runtime DLLs. \
+Used on Windows to populate the test inferior's PATH so dynamically-loaded \
+Swift runtime DLLs resolve."
+)
 # END - Swift Mods
 
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script

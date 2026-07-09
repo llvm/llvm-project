@@ -51,6 +51,10 @@ ifeq "$(findstring -target,$(SWIFTFLAGS))" ""
   SWIFTFLAGS += $(TARGET_SWIFTFLAGS)
 endif
 
+ifeq "$(OS)" "Windows_NT"
+  SWIFTFLAGS += -resource-dir "$(SWIFTSDKROOT)/usr/lib/swift"
+endif
+
 SWIFT_ENABLE_EXPLICIT_MODULES ?= YES
 ifneq "$(SWIFT_ENABLE_EXPLICIT_MODULES)" "NO"
 SWIFTFLAGS += -explicit-module-build
