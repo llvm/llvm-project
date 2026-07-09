@@ -126,7 +126,7 @@ template <size_t N> struct symbol;
 } // namespace type
 
 template <size_t N, size_t... Is>
-constexpr std::array<const char *, N> static getSymbolArray(
+[[maybe_unused]] constexpr std::array<const char *, N> static getSymbolArray(
     std::index_sequence<Is...>) {
   return {{dlwrap::type::symbol<Is>::call()...}};
 }
