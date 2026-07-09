@@ -222,4 +222,3 @@ entry:
   store i64 %and4, ptr null, align 8
   ret void
 }
-
