@@ -404,10 +404,16 @@ bool DiagnosticsEngine::setSeverityForGroup(diag::Flavor Flavor,
                                             SourceLocation Loc) {
   // Get the diagnostics in this group.
   SmallVector<diag::kind, 256> GroupDiags;
-  if (Diags->getDiagnosticsInGroup(Flavor, Group, GroupDiags))
-    return true;
+  if (Diags->getDiagnosticsInGroup(Flavor, Group, GroupDiags)) {
+    // Not a known static group or an already-registered plugin group. A plugin
+    // group name is created on demand so a -W flag can precede the plugin that
+    // owns it; anything else is a genuinely unknown option.
+    if (!Diags->ensureDynamicPluginGroup(Group))
+      return true;
+    Diags->getDiagnosticsInGroup(Flavor, Group, GroupDiags);
+  }
 
-  Diags->setGroupSeverity(Group, Map);
+  Diags->setGroupSeverity(Group, Map, Flavor, /*CommandLine=*/Loc.isInvalid());
 
   // Set the mapping.
   for (diag::kind Diag : GroupDiags)

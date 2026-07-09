@@ -292,6 +292,13 @@ features cannot lower the translation-unit ABI level;
   `-pedantic` or when that group is enabled explicitly, matching how the `_BitInt`
   type itself is already handled.
 
+- Plugin diagnostics can now be placed in a warning group. `getCustomDiagID`
+  accepts a group name, so a plugin's diagnostics can be controlled with `-W`
+  and `-R` flags like built-in ones: by convention a plugin uses
+  `<plugin>-plugin`, silenced with `-Wno-<plugin>-plugin` (or the `-Wno-plugin`
+  umbrella over every loaded plugin), promoted with `-Werror=<plugin>-plugin`,
+  and remarks controlled with `-R<plugin>-plugin`. Errors keep their severity.
+  See [ClangPlugins](ClangPlugins.rst).
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
