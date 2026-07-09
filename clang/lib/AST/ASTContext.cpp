@@ -7961,6 +7961,12 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
     return NAX->getNamespace()->Equals(NAY->getNamespace());
   }
 
+  if (const auto *UX = dyn_cast<UsingEnumDecl>(X)) {
+    const auto *UY = cast<UsingEnumDecl>(Y);
+    return isSameQualifier(UX->getQualifier(), UY->getQualifier()) &&
+           declaresSameEntity(UX->getEnumDecl(), UY->getEnumDecl());
+  }
+
   return false;
 }
 

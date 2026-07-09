@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -triple x86_64 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s
+// RUN: %clang_cc1 -triple x86_64 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20,cxx14_20,cxx20_23 %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -triple x86_64 -std=c++20 -fsyntax-only -verify=expected,cxx20,cxx14_20,cxx20_23 %s
+// RUN: %clang_cc1 -triple x86_64 -std=c++20 -fsyntax-only -verify=expected,cxx20,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -triple x86_64 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s
+// RUN: %clang_cc1 -triple x86_64 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
 auto f(); // expected-note {{previous}}
 int f(); // expected-error {{differ only in their return type}}
@@ -800,3 +800,21 @@ namespace TemplateRedecl1 {
   template auto f<int>();
   template void g<int>();
 } // namespace TemplateRedecl1
+
+namespace TemplateRedecl2 {
+  struct A {
+    template <class> auto f() const;
+  };
+  template <class T> void g() { (void)+A().f<T>(); };
+  template <class> auto A::f() const { return 0; }
+  template auto A::f<int>() const;
+  template void g<int>();
+} // namespace TemplateRedecl2
+
+namespace TemplateRedecl3 {
+  template <class> auto f() __attribute__((cdecl));
+  template <class T> void g() { (void)+f<T>(); };
+  template <class> auto f() { return 0; }
+  template auto f<int>();
+  template void g<int>();
+} // namespace TemplateRedecl3

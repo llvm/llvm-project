@@ -34,76 +34,104 @@ class PreservedAnalyses;
 // Implementation details of the pass manager interfaces.
 namespace detail {
 
-/// Template for the abstract base class used to dispatch
-/// polymorphically over pass objects.
+/// Template for the abstract base class used to dispatch over pass objects.
+/// This doesn't use virtual functions to avoid vtables, which cost a fair
+/// amount of storage that needs to be relocated in PIC builds and add an extra
+/// indirection on dispatch.
 template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
-struct PassConcept {
+class PassConcept {
+private:
+  using DestructorTy = void (*)(PassConcept &);
+  using RunTy = PreservedAnalyses (*)(PassConcept &, IRUnitT &,
+                                      AnalysisManagerT &, ExtraArgTs...);
+  using PrintPipelineTy =
+      void (*)(PassConcept &, raw_ostream &,
+               function_ref<StringRef(StringRef)> MapClassName2PassName);
+
+  StringRef Name;
+  bool IsRequired;
+
+  DestructorTy Destructor;
+  RunTy Run;
+  PrintPipelineTy PrintPipeline;
+
+protected:
+  PassConcept(StringRef Name, bool IsRequired, DestructorTy Destructor,
+              RunTy Run, PrintPipelineTy PrintPipeline)
+      : Name(Name), IsRequired(IsRequired), Destructor(Destructor), Run(Run),
+        PrintPipeline(PrintPipeline) {}
+
+public:
   // Boiler plate necessary for the container of derived classes.
-  virtual ~PassConcept() = default;
+  ~PassConcept() { Destructor(*this); }
 
-  /// The polymorphic API which runs the pass over a given IR entity.
-  ///
-  /// Note that actual pass object can omit the analysis manager argument if
-  /// desired. Also that the analysis manager may be null if there is no
-  /// analysis manager in the pass pipeline.
-  virtual PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM,
-                                ExtraArgTs... ExtraArgs) = 0;
+  // Passes are immovable.
+  PassConcept(const PassConcept &) = delete;
+  PassConcept &operator=(const PassConcept &) = delete;
 
-  virtual void
-  printPipeline(raw_ostream &OS,
-                function_ref<StringRef(StringRef)> MapClassName2PassName) = 0;
-  /// Polymorphic method to access the name of a pass.
-  virtual StringRef name() const = 0;
+  /// Run the pass.
+  PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM,
+                        ExtraArgTs... ExtraArgs) {
+    return Run(*this, IR, AM, std::forward<ExtraArgTs>(ExtraArgs)...);
+  }
 
-  /// Polymorphic method to let a pass optionally exempted from skipping by
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    PrintPipeline(*this, OS, MapClassName2PassName);
+  }
+
+  /// Get name of a pass.
+  StringRef name() const { return Name; }
+
+  /// Indicate whether a pass can optionally be exempted from skipping by
   /// PassInstrumentation.
   /// To opt-in, pass should implement `static bool isRequired()`, or inherit
   /// from `RequiredPassInfoMixin` or `OptionalPassInfoMixin`.
   /// It's no-op to have `isRequired` always return false since that is the
   /// default.
-  virtual bool isRequired() const = 0;
+  bool isRequired() const { return IsRequired; }
 };
 
-/// A template wrapper used to implement the polymorphic API.
+/// A template wrapper used to implement PassConcept.
 ///
 /// Can be instantiated for any object which provides a \c run method accepting
-/// an \c IRUnitT& and an \c AnalysisManager<IRUnit>&. It requires the pass to
-/// be a copyable object.
+/// an \c IRUnitT& and an \c AnalysisManager<IRUnit>&.
 template <typename IRUnitT, typename PassT, typename AnalysisManagerT,
           typename... ExtraArgTs>
-struct PassModel : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
-  explicit PassModel(PassT Pass) : Pass(std::move(Pass)) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  PassModel(const PassModel &Arg) : Pass(Arg.Pass) {}
-  PassModel(PassModel &&Arg) : Pass(std::move(Arg.Pass)) {}
+class PassModel final
+    : public PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
+private:
+  using PassConceptT = PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...>;
 
-  friend void swap(PassModel &LHS, PassModel &RHS) {
-    using std::swap;
-    swap(LHS.Pass, RHS.Pass);
+  /// Storage for PassT. We don't use a PassT here, because the destructor of
+  /// PassModel will not be called -- the PassT instance has to be destructed
+  /// in destructorImpl.
+  alignas(PassT) char PassBytes[sizeof(PassT)];
+
+  static PassT &getPass(PassConceptT &Self) {
+    return *reinterpret_cast<PassT *>(static_cast<PassModel &>(Self).PassBytes);
   }
 
-  PassModel &operator=(PassModel RHS) {
-    swap(*this, RHS);
-    return *this;
+  static void destructorImpl(PassConceptT &Self) { getPass(Self).~PassT(); }
+
+  static PreservedAnalyses runImpl(PassConceptT &Self, IRUnitT &IR,
+                                   AnalysisManagerT &AM,
+                                   ExtraArgTs... ExtraArgs) {
+    return getPass(Self).run(IR, AM, ExtraArgs...);
   }
 
-  PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM,
-                        ExtraArgTs... ExtraArgs) override {
-    return Pass.run(IR, AM, ExtraArgs...);
+  static void
+  printPipelineImpl(PassConceptT &Self, raw_ostream &OS,
+                    function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    getPass(Self).printPipeline(OS, MapClassName2PassName);
   }
 
-  void printPipeline(
-      raw_ostream &OS,
-      function_ref<StringRef(StringRef)> MapClassName2PassName) override {
-    Pass.printPipeline(OS, MapClassName2PassName);
+public:
+  explicit PassModel(PassT Pass)
+      : PassConceptT(PassT::name(), PassT::isRequired(), destructorImpl,
+                     runImpl, printPipelineImpl) {
+    new (PassBytes) PassT(std::move(Pass));
   }
-
-  StringRef name() const override { return PassT::name(); }
-
-  bool isRequired() const override { return PassT::isRequired(); }
-
-  PassT Pass;
 };
 
 /// Abstract concept of an analysis result.
