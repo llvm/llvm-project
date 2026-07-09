@@ -73,8 +73,20 @@ LIBC_INLINE double hypot_denorm(double a, double b) {
   double upper = r_h.hi + (r_lo + ERR);
   double lower = r_h.hi + (r_lo - ERR);
 
-  if (LIBC_LIKELY(upper == lower))
+  if (LIBC_LIKELY(upper == lower)) {
+#ifdef LIBC_MATH_HAS_NO_EXCEPT
     return (upper - correction) * SCALE_BACK;
+#else
+    // Check to raise underflow correctly.
+    DoubleDouble r = fputil::exact_add(r_h.hi, r_lo);
+    r.hi -= correction;
+    // Raise underflow if needed:
+    if ((r.hi < 1.0 && r.lo != 0.0) || (r.hi == 1.0 && r.lo < 0.0))
+      fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+
+    return r.hi * SCALE_BACK;
+#endif // LIBC_MATH_HAS_NO_EXCEPT
+  }
 
   return fputil::hypot(a * SCALE_BACK, b * SCALE_BACK);
 }
@@ -133,12 +145,20 @@ LIBC_INLINE double hypot(double x, double y) {
         return x;
       return y;
     }
+
+    // Check the exponent gap here so that all the follow up pre-scaling and
+    // overflow check won't generate spurious underflow exceptions.
+    if (LIBC_UNLIKELY(a_e - b_e >= (54U << (32 - 11)))) {
+      double x_abs = FPBits(x_u & FPBits::EXP_SIG_MASK).get_val();
+      double y_abs = FPBits(y_u & FPBits::EXP_SIG_MASK).get_val();
+      return x_abs + y_abs;
+    }
     //  Any scaling factor < 2^(-1024/2) = 2^-512 would work.
     scale = 0x1.0p-600;
     scale_back = 0x1.0p600;
     a *= scale;
     b *= scale;
-    // Check for overflow to raise them correctly.
+    // Check for overflow to raise the exception correctly.
 #if !defined(LIBC_MATH_HAS_NO_EXCEPT)
     // No overflow when calculating a^2 + b^2.
     double asq = a * a;
@@ -155,8 +175,8 @@ LIBC_INLINE double hypot(double x, double y) {
     if (sumsq >= 0x1.0p848)
       return sumsq * scale_back;
 #endif // !LIBC_MATH_HAS_NO_EXCEPT
-  } else if (LIBC_UNLIKELY(b_e <= ((FPBits::EXP_BIAS - 500) << (32 - 11)))) {
-    // The smaller magnitude is below 2^-500 (or 0), need to scale up to prevent
+  } else if (LIBC_UNLIKELY(b_e <= ((FPBits::EXP_BIAS - 400) << (32 - 11)))) {
+    // The smaller magnitude is below 2^-400 (or 0), need to scale up to prevent
     // underflow when squaring.
     if (LIBC_UNLIKELY(a_e < (1U << (32 - 11)))) {
       // Larger input is denormal, extra care is needed to perform the Ziv's
