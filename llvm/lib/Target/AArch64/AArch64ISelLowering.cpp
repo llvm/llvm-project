@@ -5194,6 +5194,7 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   SDValue SrcVal = Op.getOperand(0);
   EVT SrcVT = SrcVal.getValueType();
   EVT DstVT = Op.getValueType();
+  EVT DstElementVT = DstVT.getVectorElementType();
   EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
 
   uint64_t SrcElementWidth = SrcVT.getScalarSizeInBits();
@@ -5220,7 +5221,7 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   };
 
   // Returns true if the operation is best expanded.
-  auto Expand = [&DstVT, &SatWidth, &CanHandleNatively](EVT SrcVT) -> bool {
+  auto Expand = [&SatWidth, &CanHandleNatively](EVT SrcVT) -> bool {
     return !CanHandleNatively(SrcVT) &&
            (SrcVT.getScalarSizeInBits() < SatWidth ||
             // NEON has no vector MIN/MAX for i64, so it's simpler to scalarize
@@ -5231,17 +5232,18 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   // Try to promote the operation to a wider type if SrcVT < DstVT,
   // or if type is bf16 or if the target has no +fullfp16.
   EVT PromVT = SrcVT;
-  switch (SrcVT.getVectorElementType().getSimpleVT().SimpleTy) {
+  switch (SrcElementVT.getSimpleVT().SimpleTy) {
   case MVT::f16:
   case MVT::bf16:
-    if (DstVT.getScalarSizeInBits() == 32 || !Subtarget->hasFullFP16()) {
+    if (DstElementVT == MVT::i32 || SrcElementVT == MVT::bf16 ||
+        !Subtarget->hasFullFP16()) {
       PromVT = MVT::getVectorVT(MVT::f32, SrcVT.getVectorElementCount());
       break;
     }
     [[fallthrough]];
   case MVT::f32:
     // Promote to f64
-    if (DstVT.getScalarSizeInBits() == 64) {
+    if (DstElementVT == MVT::i64) {
       PromVT = MVT::getVectorVT(MVT::f64, SrcVT.getVectorElementCount());
       break;
     }
@@ -5273,8 +5275,7 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   if (CanHandleNatively(SrcVT))
     return DAG.getNode(Opc, DL, DstVT, SrcVal,
                        DAG.getValueType(DstVT.getScalarType()));
-
-  if (Expand(SrcVT))
+  else if (Expand(SrcVT))
     return SDValue();
 
   assert((SrcElementWidth > DstElementWidth) ||
