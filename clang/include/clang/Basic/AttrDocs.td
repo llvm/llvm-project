@@ -4703,9 +4703,11 @@ def LifetimeCaptureByDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "lifetime_capture_by, lifetime_capture_by_this, lifetime_capture_by_global, lifetime_capture_by_unknown";
   let Content = [{
-Similar to `lifetimebound`_, the ``lifetime_capture_by(X)`` attribute on a
-function parameter or implicit object parameter indicates that the capturing
-entity ``X`` may refer to the object referred by that parameter.
+Similar to `lifetimebound`_, the ``lifetime_capture_by`` attribute family on a
+function parameter or implicit object parameter indicates that a capturing
+entity may refer to the object referred to by that parameter. The capturing
+entity can be named in ``lifetime_capture_by(X)`` or selected by one of the
+standalone special forms listed below.
 
 Below is a list of types of the parameters and what they're considered to refer to:
 
@@ -4737,7 +4739,7 @@ temporary object.
     addToSet(local, s); // Ok.
   }
 
-The capturing entity ``X`` can be one of the following:
+The capturing entity can be one of the following:
 
 - Another (named) function parameter.
 
@@ -4783,7 +4785,7 @@ function by writing the attribute after the function type:
     }
   };
 
-The attribute supports specifying more than one capturing entities:
+The parameter-list form supports specifying more than one capturing entity:
 
 .. code-block:: c++
 
@@ -4793,6 +4795,13 @@ The attribute supports specifying more than one capturing entities:
     s1.insert(a);
     s2.insert(a);
   }
+
+Distinct ``lifetime_capture_by`` forms can also be combined on the same
+declaration, but each form can appear at most once. For example,
+``[[clang::lifetime_capture_by(s), clang::lifetime_capture_by_this]]`` is
+allowed, but two ``[[clang::lifetime_capture_by(...)]]`` attributes or two
+``[[clang::lifetime_capture_by_this]]`` attributes on the same declaration are
+rejected.
 
 Limitation: The capturing entity ``X`` is not used by the analysis and is
 used for documentation purposes only. This is because the analysis is

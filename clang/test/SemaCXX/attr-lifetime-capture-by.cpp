@@ -52,3 +52,33 @@ struct T {
   void explicit_this1(this T& self, const int &x [[clang::lifetime_capture_by(self)]]);
   void explicit_this2(this T& self, const int &x [[clang::lifetime_capture_by(this)]]); // expected-warning {{'lifetime_capture_by(this)' is deprecated; use 'lifetime_capture_by_this' instead}} expected-error {{argument references unavailable implicit 'this'}}
 };
+
+void duplicate_parameter_list(
+    const int &x [[clang::lifetime_capture_by(s),
+                  clang::lifetime_capture_by(t)]], // expected-error {{multiple 'lifetime_capture_by' attributes specified}}
+    S &s, S &t);
+
+void duplicate_global(
+    const int &x [[clang::lifetime_capture_by_global,
+                  clang::lifetime_capture_by_global]]); // expected-error {{multiple 'lifetime_capture_by_global' attributes specified}}
+
+void duplicate_unknown(
+    const int &x [[clang::lifetime_capture_by_unknown,
+                  clang::lifetime_capture_by_unknown]]); // expected-error {{multiple 'lifetime_capture_by_unknown' attributes specified}}
+
+struct U {
+  void duplicate_this(
+      const int &x [[clang::lifetime_capture_by_this,
+                    clang::lifetime_capture_by_this]]); // expected-error {{multiple 'lifetime_capture_by_this' attributes specified}}
+
+  void different_spellings(
+      const int &x [[clang::lifetime_capture_by(s),
+                    clang::lifetime_capture_by_this,
+                    clang::lifetime_capture_by_global,
+                    clang::lifetime_capture_by_unknown]],
+      S &s);
+
+  void deprecated_this_spelling_is_distinct(
+      const int &x [[clang::lifetime_capture_by(this), // expected-warning {{'lifetime_capture_by(this)' is deprecated; use 'lifetime_capture_by_this' instead}}
+                    clang::lifetime_capture_by_this]]);
+};

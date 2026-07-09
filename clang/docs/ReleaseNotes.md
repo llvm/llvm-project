@@ -558,8 +558,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   `lifetime_capture_by_unknown`. These replace passing `this`, `global`, and
   `unknown` as arguments to `lifetime_capture_by`; that argument form is now
   deprecated because those names can conflict with user-defined parameters.
-  They will be removed in the next release. Multiple `lifetime_capture_by`
-  attributes may also be written on the same declaration.
+  They will be removed in the next release. Distinct `lifetime_capture_by`
+  spellings may also be combined on the same declaration, but each spelling may
+  appear at most once.
 
 - The `const` and `pure` attributes only apply to functions; they are now
   diagnosed and ignored when applied to anything else.

@@ -3568,6 +3568,8 @@ def err_capture_by_attribute_argument_unknown : Error<
 def err_capture_by_references_itself : Error<"'lifetime_capture_by' argument references itself">;
 def err_capture_by_param_uses_reserved_name : Error<
   "parameter cannot be named '%0' while using 'lifetime_capture_by(%0)'">;
+def err_capture_by_attribute_multiple : Error<
+  "multiple '%0' attributes specified">;
 def warn_deprecated_capture_by_special_entity : Warning<
   "'lifetime_capture_by(%0)' is deprecated; use '%1' instead">,
   InGroup<DeprecatedAttributes>;
