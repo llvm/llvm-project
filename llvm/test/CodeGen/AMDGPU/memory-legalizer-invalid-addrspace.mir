@@ -2,7 +2,7 @@
 
 ---
 
-# GCN: error: <unknown>:0:0: in function invalid_load void (): Unsupported atomic address space
+# GCN: error: <unknown>:0:0: in function invalid_load void (): unsupported atomic address space
 
 name:            invalid_load
 body:             |
@@ -20,7 +20,7 @@ body:             |
 ...
 ---
 
-# GCN: error: <unknown>:0:0: in function invalid_store void (): Unsupported atomic address space
+# GCN: error: <unknown>:0:0: in function invalid_store void (): unsupported atomic address space
 
 name:            invalid_store
 body:             |
@@ -36,7 +36,7 @@ body:             |
 ...
 ---
 
-# GCN: error: <unknown>:0:0: in function invalid_cmpxchg void (): Unsupported atomic address space
+# GCN: error: <unknown>:0:0: in function invalid_cmpxchg void (): unsupported atomic address space
 
 name:            invalid_cmpxchg
 body:             |
@@ -53,7 +53,7 @@ body:             |
 ...
 ---
 
-# GCN: error: <unknown>:0:0: in function invalid_rmw void (): Unsupported atomic address space
+# GCN: error: <unknown>:0:0: in function invalid_rmw void (): unsupported atomic address space
 
 name:            invalid_rmw
 body:             |
