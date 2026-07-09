@@ -2000,8 +2000,14 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
     SPIRV::StorageClass::StorageClass SC) {
   if (BaseType->isFunctionTy() &&
       !cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget())
-           .canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers))
-    BaseType = Type::getInt8Ty(MIRBuilder.getContext());
+           .canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
+    const Function &F = MIRBuilder.getMF().getFunction();
+    F.getContext().diagnose(
+        DiagnosticInfoUnsupported(F,
+                                  "Function used as a data pointer requires "
+                                  "SPV_INTEL_function_pointers extension",
+                                  DebugLoc(), DS_Error));
+  }
   // TODO: Need to check if EmitIr should always be true.
   SPIRVTypeInst SpirvBaseType = getOrCreateSPIRVType(
       BaseType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite,
@@ -2030,7 +2036,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
   assert(!storageClassRequiresExplictLayout(SC));
   SPIRVTypeInst R = getOrCreateSPIRVPointerType(LLVMType, MIRBuilder, SC);
   assert(
-      (getPointeeType(R) == BaseType || LLVMType->isFunctionTy()) &&
+      getPointeeType(R) == BaseType &&
       "The base type was not correctly laid out for the given storage class.");
   return R;
 }

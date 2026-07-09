@@ -1,25 +1,19 @@
-; A function used as a data pointer (load/store through @fn) must produce
-; OpTypePointer with an i8 pointee when SPV_INTEL_function_pointers is absent,
-; or a proper OpTypePointer/CodeSectionINTEL to the function type when present.
+; A function used as a data pointer (load/store through @fn) requires
+; SPV_INTEL_function_pointers, since it needs OpTypePointer with an
+; OpTypeFunction pointee.
 
-; Without the extension: pointer pointee must be i8, never OpTypeFunction.
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: llc -verify-machineinstrs -O2 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; RUN: %if spirv-tools %{ llc -O2 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; Without the extension: using a function as a data pointer is an error.
+; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; RUN: not llc -O2 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
 ; With the extension: pointer-to-function types and FunctionPointerINTEL constants are emitted.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s --check-prefix=CHECK-EXT
 ; RUN: llc -verify-machineinstrs -O2 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s --check-prefix=CHECK-EXT
 
-; CHECK-DAG: %[[#I8:]] = OpTypeInt 8 0
-; CHECK-DAG: %[[#]] = OpTypePointer CrossWorkgroup %[[#I8]]
-; CHECK-DAG: %[[#FUNCTY:]] = OpTypeFunction
-; CHECK-NOT: OpTypePointer {{[A-Za-z]+}} %[[#FUNCTY]]{{$}}
+; CHECK-ERROR: error:{{.*}}Function used as a data pointer requires SPV_INTEL_function_pointers extension
 
 ; CHECK-EXT-DAG: OpCapability FunctionPointersINTEL
 ; CHECK-EXT-DAG: OpExtension "SPV_INTEL_function_pointers"
-; CHECK-EXT-DAG: %[[#I8:]] = OpTypeInt 8 0
 ; CHECK-EXT-DAG: %[[#FUNCTY:]] = OpTypeFunction
 ; CHECK-EXT-DAG: %[[#PTR_CW:]] = OpTypePointer CrossWorkgroup %[[#FUNCTY]]
 ; CHECK-EXT-DAG: %[[#PTR_CS:]] = OpTypePointer CodeSectionINTEL %[[#FUNCTY]]
