@@ -71,9 +71,9 @@ program test_dataclause_dedup
   do i = 1, 10
   end do
 
-  ! Regression coverage for non-bare designators: the dedup machinery only
-  ! examines simple-Name DataRefs, so distinct array elements and array
-  ! sections must pass through untouched, with no warning and no erasure.
+  ! Regression coverage for non-bare designators: distinct array elements and
+  ! sections must pass through untouched, while exact duplicates are diagnosed
+  ! precisely rather than by the base array symbol.
   block
     integer :: arr(10)
     integer, target :: t1, t2
@@ -94,15 +94,39 @@ program test_dataclause_dedup
     do i = 1, 10
     end do
 
-    ! Same array element listed twice -- not deduped, since GetDesignatorName-
-    ! IfDataRef returns null for ArrayElement and CheckMultipleAppearances
-    ! is never invoked. Compiles without diagnostics.
+    ! Different array elements in different data-sharing clauses -- not
+    ! duplicates.
+    !$acc parallel loop private(arr(1)) firstprivate(arr(2))
+    do i = 1, 10
+    end do
+
+    ! Different array sections in different data-sharing clauses -- not
+    ! duplicates.
+    !$acc parallel loop private(arr(1:5)) firstprivate(arr(6:10))
+    do i = 1, 10
+    end do
+
+    ! Same array element listed twice in the same data-sharing clause.
+    !WARNING: 'arr(1)' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored [-Wopenacc-usage]
     !$acc parallel loop private(arr(1), arr(1))
     do i = 1, 10
     end do
 
-    ! Same array section listed twice -- same reasoning, no diagnostic.
+    ! Same array element listed in conflicting data-sharing clauses.
+    !ERROR: 'arr(1)' appears in more than one data-sharing clause on the same OpenACC directive
+    !$acc parallel loop private(arr(1)) firstprivate(arr(1))
+    do i = 1, 10
+    end do
+
+    ! Same array section listed twice in the same data-sharing clause.
+    !WARNING: 'arr(1:5)' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored [-Wopenacc-usage]
     !$acc parallel loop private(arr(1:5), arr(1:5))
+    do i = 1, 10
+    end do
+
+    ! Same array section listed in conflicting data-sharing clauses.
+    !ERROR: 'arr(1:5)' appears in more than one data-sharing clause on the same OpenACC directive
+    !$acc parallel loop private(arr(1:5)) firstprivate(arr(1:5))
     do i = 1, 10
     end do
 
@@ -112,8 +136,7 @@ program test_dataclause_dedup
     end do
 
     ! Mixing a bare-name designator and an array-element designator on the
-    ! same symbol must not trigger dedup -- the array element doesn't go
-    ! through the duplicate check at all.
+    ! same symbol is not an exact duplicate.
     !$acc parallel loop private(arr, arr(1))
     do i = 1, 10
     end do

@@ -1,8 +1,8 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenacc -fno-openacc-default-none-scalars-strict
 
-! Derived-type component references in OpenACC clauses are accepted for now, but
-! the current DSA handling is deliberately imprecise:
-! - duplicate and conflicting component references are not diagnosed;
+! Derived-type component references in OpenACC clauses are accepted. Exact
+! duplicate and conflicting component references in data-sharing clauses are
+! diagnosed, but broader containment is deliberately limited for now:
 ! - component clauses do not satisfy DEFAULT(NONE) for the base object;
 ! - whole-object/component conflicts are not diagnosed.
 
@@ -67,6 +67,7 @@ subroutine test_same_object_same_dsa_components()
   use component_ref_types, only: point_t
   type(point_t) :: p
   integer :: i
+  !WARNING: 'p%x' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored [-Wopenacc-usage]
   !$acc parallel loop private(p%x, p%y, p%x)
   do i = 1, 10
     p%x = real(i)
@@ -79,6 +80,7 @@ subroutine test_same_object_incompatible_same_component()
   use component_ref_types, only: point_t
   type(point_t) :: p
   integer :: i
+  !ERROR: 'p%x' appears in more than one data-sharing clause on the same OpenACC directive
   !$acc parallel loop private(p%x) firstprivate(p%x)
   do i = 1, 10
     p%x = real(i)

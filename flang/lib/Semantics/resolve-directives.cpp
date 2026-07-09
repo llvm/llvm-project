@@ -32,6 +32,9 @@
 #include "llvm/Support/Debug.h"
 #include <list>
 #include <map>
+#include <optional>
+#include <string>
+#include <utility>
 
 namespace Fortran::semantics {
 
@@ -141,13 +144,38 @@ protected:
   Symbol &MakeAssocSymbol(const SourceName &name, const Symbol &prev) {
     return MakeAssocSymbol(name, prev, currScope());
   }
-  void AddDataSharingAttributeObject(SymbolRef object) {
-    dataSharingAttributeObjects_.insert(object);
+  struct DataSharingAttributeObjectKey {
+    SymbolRef symbol;
+    std::optional<std::string> designator;
+    bool operator<(const DataSharingAttributeObjectKey &that) const {
+      SymbolAddressCompare compare;
+      if (compare(symbol, that.symbol)) {
+        return true;
+      }
+      if (compare(that.symbol, symbol)) {
+        return false;
+      }
+      return designator < that.designator;
+    }
+  };
+  void AddDataSharingAttributeObject(
+      SymbolRef object, std::optional<std::string> designator = std::nullopt) {
+    dataSharingAttributeObjects_.try_emplace(
+        DataSharingAttributeObjectKey{object, std::move(designator)});
+  }
+  void AddDataSharingAttributeObject(SymbolRef object, Symbol::Flag flag,
+      std::optional<std::string> designator = std::nullopt) {
+    dataSharingAttributeObjects_.try_emplace(
+        DataSharingAttributeObjectKey{object, std::move(designator)}, flag);
   }
   void ClearDataSharingAttributeObjects() {
     dataSharingAttributeObjects_.clear();
   }
-  bool HasDataSharingAttributeObject(const Symbol &);
+  std::optional<Symbol::Flag> FindDataSharingAttributeObject(
+      const Symbol &, const std::optional<std::string> &designator);
+  bool HasDataSharingAttributeObject(
+      const Symbol &,
+      const std::optional<std::string> &designator = std::nullopt);
 
   /// Extract the iv and bounds of a DO loop:
   /// 1. The loop index/induction variable
@@ -174,7 +202,8 @@ protected:
   Symbol *DeclareAccessEntity(const parser::Name &, Symbol::Flag, Scope &);
   Symbol *DeclareAccessEntity(Symbol &, Symbol::Flag, Scope &);
 
-  UnorderedSymbolSet dataSharingAttributeObjects_; // on one directive
+  std::map<DataSharingAttributeObjectKey, std::optional<Symbol::Flag>>
+      dataSharingAttributeObjects_; // on one directive
   SemanticsContext &context_;
   std::vector<DirContext> dirContext_; // used as a stack
 };
@@ -387,7 +416,8 @@ private:
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
   void CheckMultipleAppearances(const parser::Name &, const Symbol &,
       Symbol::Flag, const parser::AccObject *occurrence = nullptr,
-      bool warnSameKindDuplicate = true);
+      bool warnSameKindDuplicate = true,
+      std::optional<std::string> designator = std::nullopt);
   void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
   void AllowOnlyVariable(const parser::AccObject &object);
@@ -1076,10 +1106,21 @@ void ResolveOmpParts(
 }
 
 template <typename T>
+std::optional<Symbol::Flag>
+DirectiveAttributeVisitor<T>::FindDataSharingAttributeObject(
+    const Symbol &object, const std::optional<std::string> &designator) {
+  auto it{dataSharingAttributeObjects_.find({object, designator})};
+  if (it != dataSharingAttributeObjects_.end()) {
+    return it->second;
+  }
+  return std::nullopt;
+}
+
+template <typename T>
 bool DirectiveAttributeVisitor<T>::HasDataSharingAttributeObject(
-    const Symbol &object) {
-  auto it{dataSharingAttributeObjects_.find(object)};
-  return it != dataSharingAttributeObjects_.end();
+    const Symbol &object, const std::optional<std::string> &designator) {
+  return dataSharingAttributeObjects_.find({object, designator}) !=
+      dataSharingAttributeObjects_.end();
 }
 
 template <typename T>
@@ -1960,9 +2001,11 @@ void AccAttributeVisitor::ResolveAccObject(
   common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
-            const bool preciseDesignator{
+            const bool isBareName{
                 parser::GetDesignatorNameIfDataRef(designator) != nullptr};
-            if (!preciseDesignator) {
+            std::optional<std::string> designatorKey;
+            if (!isBareName) {
+              designatorKey = designator.source.ToString();
               // Subscripted designator: evaluate subscripts and detect
               // the substring case that is disallowed in OpenACC clauses.
               if (AnalyzeExpr(context_, designator)) {
@@ -1974,9 +2017,17 @@ void AccAttributeVisitor::ResolveAccObject(
                 }
               }
             }
+            const bool isDataSharing{dataSharingAttributeFlags.test(accFlag)};
             if (ContainsStructureComponent(designator)) {
               // Do not register the base object for a component reference until
               // OpenACC DSA tracking can distinguish subcomponents.
+              if (isDataSharing) {
+                const parser::Name &baseName{parser::GetFirstName(designator)};
+                if (baseName.symbol) {
+                  CheckMultipleAppearances(baseName, *baseName.symbol, accFlag,
+                      &accObject, true, designatorKey);
+                }
+              }
               return;
             }
             // GetFirstName extracts the base symbol from both bare data
@@ -1984,15 +2035,13 @@ void AccAttributeVisitor::ResolveAccObject(
             // that DEFAULT(NONE) checking does not spuriously flag variables
             // that are explicitly listed in a data clause as array sections.
             // TODO: Multiple array sections of the same array with different
-            // data sharing attributes is not currently supported.
-            // TODO: Subcomponent designators should also be tracked precisely.
+            // data mapping attributes is not currently supported.
             const parser::Name &baseName{parser::GetFirstName(designator)};
             if (auto *symbol{ResolveAcc(baseName, accFlag, currScope())}) {
               AddToContextObjectWithDSA(*symbol, accFlag);
-              if (preciseDesignator &&
-                  dataSharingAttributeFlags.test(accFlag)) {
-                CheckMultipleAppearances(
-                    baseName, *symbol, accFlag, &accObject, preciseDesignator);
+              if (isDataSharing) {
+                CheckMultipleAppearances(baseName, *symbol, accFlag, &accObject,
+                    true, designatorKey);
               }
             }
           },
@@ -2050,9 +2099,10 @@ Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
 
 void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
     const Symbol &symbol, Symbol::Flag accFlag,
-    const parser::AccObject *occurrence, bool warnSameKindDuplicate) {
+    const parser::AccObject *occurrence, bool warnSameKindDuplicate,
+    std::optional<std::string> designator) {
   const auto *target{&symbol};
-  if (HasDataSharingAttributeObject(*target)) {
+  if (auto firstFlag{FindDataSharingAttributeObject(*target, designator)}) {
     // A same-kind duplicate (e.g. private(x, x) or private(x) private(x))
     // is benign: warn and tag this AccObject occurrence so rewrite-parse-tree
     // can drop it from the clause list. Cross-kind duplicates (e.g.
@@ -2061,23 +2111,22 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
     // Reduction is excluded from the benign case: two reduction clauses
     // with the same Symbol::Flag may still differ in operator, which is a
     // real conflict that dedup would silently hide.
-    auto firstFlag{GetContext().FindSymbolWithDSA(*target)};
-    if (warnSameKindDuplicate && occurrence && firstFlag &&
-        *firstFlag == accFlag && accFlag != Symbol::Flag::AccReduction) {
+    const std::string objectName{designator.value_or(name.ToString())};
+    if (warnSameKindDuplicate && occurrence && *firstFlag == accFlag &&
+        accFlag != Symbol::Flag::AccReduction) {
       context_.Warn(common::UsageWarning::OpenAccUsage, name.source,
           "'%s' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored"_warn_en_US,
-          name.ToString());
+          objectName);
       context_.MarkAccObjectDuplicate(occurrence);
-    } else if (firstFlag && *firstFlag == accFlag &&
-        accFlag != Symbol::Flag::AccReduction) {
+    } else if (*firstFlag == accFlag && accFlag != Symbol::Flag::AccReduction) {
       return;
     } else {
       context_.Say(name.source,
           "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_err_en_US,
-          name.ToString());
+          objectName);
     }
   } else {
-    AddDataSharingAttributeObject(*target);
+    AddDataSharingAttributeObject(*target, accFlag, std::move(designator));
   }
 }
 
