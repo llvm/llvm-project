@@ -523,10 +523,6 @@ module attributes {omp.is_target_device = true} {
   }
 
   func.func private @foo() -> () attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>}
-  fir.global internal @global_scalar constant : i32 {
-    %0 = arith.constant 10 : i32
-    fir.has_value %0 : i32
-  }
   omp.private {type = firstprivate} @privatizer : i32 copy {
   ^bb0(%arg0: !fir.ref<i32>, %arg1: !fir.ref<i32>):
     %0 = fir.load %arg0 : !fir.ref<i32>
@@ -544,4 +540,21 @@ module attributes {omp.is_target_device = true} {
     %1 = arith.addi %arg0, %arg1 : i32
     omp.yield (%1 : i32)
   }
+
+  // CHECK: fir.global internal @global_scalar constant : i32
+  fir.global @global_scalar constant : i32
+
+  // CHECK: fir.global @declare_target_enter_any {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false>} : i32
+  // CHECK: fir.global @declare_target_enter_host {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (enter), automap = false>} : i32
+  // CHECK: fir.global @declare_target_enter_nohost {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter), automap = false>} : i32
+  fir.global @declare_target_enter_any {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false>} : i32
+  fir.global @declare_target_enter_host {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (enter), automap = false>} : i32
+  fir.global @declare_target_enter_nohost {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter), automap = false>} : i32
+
+  // CHECK: fir.global @declare_target_link_any {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link), automap = false>} : i32
+  // CHECK: fir.global @declare_target_link_host {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (link), automap = false>} : i32
+  // CHECK: fir.global @declare_target_link_nohost {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (link), automap = false>} : i32
+  fir.global @declare_target_link_any {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link), automap = false>} : i32
+  fir.global @declare_target_link_host {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (link), automap = false>} : i32
+  fir.global @declare_target_link_nohost {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (link), automap = false>} : i32
 }
