@@ -196,6 +196,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::FP_TO_FP16:
     Res = PromoteIntRes_FP_TO_FP16_BF16(N);
     break;
+  case ISD::CONVERT_TO_ARBITRARY_FP:
+    Res = PromoteIntRes_CONVERT_TO_ARBITRARY_FP(N);
+    break;
   case ISD::STRICT_FP_TO_BF16:
   case ISD::STRICT_FP_TO_FP16:
     Res = PromoteIntRes_STRICT_FP_TO_FP16_BF16(N);
@@ -368,6 +371,14 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::CLMULH:
   case ISD::CLMULR:
     Res = PromoteIntRes_CLMUL(N);
+    break;
+
+  case ISD::PEXT:
+    Res = PromoteIntRes_PEXT(N);
+    break;
+
+  case ISD::PDEP:
+    Res = PromoteIntRes_PDEP(N);
     break;
 
   case ISD::IS_FPCLASS:
@@ -953,6 +964,16 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_FP16_BF16(SDNode *N) {
   SDLoc dl(N);
 
   return DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
+}
+
+// TODO: CONVERT_TO_ARBITRARY_FP also needs an ExpandIntegerResult handler for
+// wider arbitrary FP formats whose integer result requires expansion.
+SDValue DAGTypeLegalizer::PromoteIntRes_CONVERT_TO_ARBITRARY_FP(SDNode *N) {
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  SDLoc dl(N);
+
+  return DAG.getNode(ISD::CONVERT_TO_ARBITRARY_FP, dl, NVT, N->getOperand(0),
+                     N->getOperand(1), N->getOperand(2), N->getOperand(3));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_STRICT_FP_TO_FP16_BF16(SDNode *N) {
@@ -1761,6 +1782,34 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CLMUL(SDNode *N) {
   unsigned ShAmt = Opcode == ISD::CLMULH ? OldBits : OldBits - 1;
   return DAG.getNode(ISD::SRL, DL, VT, Clmul,
                      DAG.getShiftAmountConstant(ShAmt, VT, DL));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_PEXT(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  if (!TLI.isOperationLegalOrCustomOrPromote(ISD::PEXT, VT)) {
+    if (SDValue Res = TLI.expandPEXT(N, DAG))
+      return DAG.getNode(ISD::ANY_EXTEND, DL, VT, Res);
+  }
+  // Only the mask operand needs zero-extension because the implicit AND from
+  // masking clears the corresponding bits in X anyway.
+  SDValue X = GetPromotedInteger(N->getOperand(0));
+  SDValue Y = ZExtPromotedInteger(N->getOperand(1));
+  return DAG.getNode(ISD::PEXT, DL, VT, X, Y);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_PDEP(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  if (!TLI.isOperationLegalOrCustomOrPromote(ISD::PDEP, VT)) {
+    if (SDValue Res = TLI.expandPDEP(N, DAG))
+      return DAG.getNode(ISD::ANY_EXTEND, DL, VT, Res);
+  }
+  // Neither operand needs zero-extension because the upper operand bits could
+  // only result in depositing result bits that will be discarded.
+  SDValue X = GetPromotedInteger(N->getOperand(0));
+  SDValue Y = GetPromotedInteger(N->getOperand(1));
+  return DAG.getNode(ISD::PDEP, DL, VT, X, Y);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_TRUNCATE(SDNode *N) {
@@ -2821,10 +2870,22 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ExpOp(SDNode *N) {
   // we rewrite to a libcall here directly, letting makeLibCall handle promotion
   // if the target accepts it according to shouldSignExtendTypeInLibCall.
 
-  // The exponent should fit in a sizeof(int) type for the libcall to be valid.
-  assert(DAG.getLibInfo().getIntSize() ==
-             N->getOperand(1 + OpOffset).getValueType().getSizeInBits() &&
-         "POWI exponent should match with sizeof(int) when doing the libcall.");
+  // A wider-than-int exponent can't be passed in an int (there's no wider
+  // libcall), so bail like the soften/expand paths. A narrower one is
+  // sign-extended to int by the makeLibCall below.
+  if (N->getOperand(1 + OpOffset).getScalarValueSizeInBits() >
+      DAG.getLibInfo().getIntSize()) {
+    const Function &Fn = DAG.getMachineFunction().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoLegalizationFailure(
+        Twine(IsPowI ? "powi" : "ldexp") +
+            " exponent does not match sizeof(int)",
+        Fn, N->getDebugLoc()));
+    if (IsStrict)
+      ReplaceValueWith(SDValue(N, 1), Chain);
+    ReplaceValueWith(SDValue(N, 0), DAG.getPOISON(N->getValueType(0)));
+    return SDValue();
+  }
+
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setIsSigned(true);
   SDValue Ops[2] = {N->getOperand(0 + OpOffset), N->getOperand(1 + OpOffset)};
@@ -3310,6 +3371,14 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::CLMULR:
   case ISD::CLMULH:
     ExpandIntRes_CLMUL(N, Lo, Hi);
+    break;
+
+  case ISD::PEXT:
+    ExpandIntRes_PEXT(N, Lo, Hi);
+    break;
+
+  case ISD::PDEP:
+    ExpandIntRes_PDEP(N, Lo, Hi);
     break;
 
   case ISD::VSCALE:
@@ -5619,6 +5688,16 @@ void DAGTypeLegalizer::ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDValue HiLoCross2 = DAG.getNode(ISD::CLMUL, DL, HalfVT, LH, RL);
   SDValue HiLoCross = DAG.getNode(ISD::XOR, DL, HalfVT, HiLoCross1, HiLoCross2);
   Hi = DAG.getNode(ISD::XOR, DL, HalfVT, LoH, HiLoCross);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_PEXT(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Res = TLI.expandPEXT(N, DAG);
+  SplitInteger(Res, Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_PDEP(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Res = TLI.expandPDEP(N, DAG);
+  SplitInteger(Res, Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_VSCALE(SDNode *N, SDValue &Lo,

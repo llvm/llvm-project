@@ -649,3 +649,14 @@ trap:
 }
 
 declare void @use(i1)
+
+define i1 @gep_nuw_negative_offset_unsigned(ptr %p) {
+; CHECK-LABEL: @gep_nuw_negative_offset_unsigned(
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 -100
+; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr [[P2]], [[P]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %p2 = getelementptr nuw i8, ptr %p, i64 -100
+  %c = icmp ult ptr %p2, %p
+  ret i1 %c
+}

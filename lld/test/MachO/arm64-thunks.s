@@ -27,7 +27,6 @@
 
 # OBJC: Sections:
 # OBJC: __text
-# OBJC-NEXT: __lcxx_override
 # OBJC-NEXT: __stubs
 # OBJC-NEXT: __stub_helper
 # OBJC-NEXT: __objc_stubs
@@ -64,7 +63,6 @@
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _e.thunk.1
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _f.thunk.1
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _fold_func_low_addr.thunk.0
-# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _z
 
 
 # CHECK: Disassembly of section __TEXT,__text:
@@ -228,10 +226,6 @@
 # CHECK: [[#%x, FOLD_LOW_THUNK_0]] <_fold_func_low_addr.thunk.0>:
 # CHECK:  adrp x16, 0x[[#%x, FOLD_LOW_PAGE]]000
 # CHECK:  add  x16, x16, #[[#%d, FOLD_LOW_OFFSET]]
-
-# CHECK: Disassembly of section __TEXT,__lcxx_override:
-# CHECK: <_z>:
-# CHECK:  bl 0x[[#%x, A_THUNK_0]] <_a.thunk.0>
 
 # CHECK: Disassembly of section __TEXT,__stubs:
 
@@ -423,15 +417,3 @@ _fold_func_high_addr:
   # dramatic memory usage and a huge linker map file
   .space 0x4000000, 'A'
   .byte 0
-
-
-.section __TEXT,__lcxx_override,regular,pure_instructions
-
-.globl _z
-.no_dead_strip _z
-.p2align 2
-_z:
-  bl _a
-  ## Ensure calling into stubs works
-  bl _extern_sym
-  ret

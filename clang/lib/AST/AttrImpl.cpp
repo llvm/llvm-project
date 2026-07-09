@@ -376,4 +376,90 @@ bool areAlignedAttrsEqual(const AlignedAttr &A1, const AlignedAttr &A2,
 }
 } // namespace
 
+namespace {
+// Machinery to unique attributes based on the arguments.
+// The construction mirrors the equivalent testing code above.
+// The content of the arguments are added to the FoldingSetNodeID instance,
+// which allows the AttributedTypes to unique the attributes based on
+// the value of the arguments.
+
+#define USE_DEFAULT_PROFILE                                                    \
+  (std::is_same_v<T, StringRef> || std::is_same_v<T, VersionTuple> ||          \
+   std::is_same_v<T, IdentifierInfo *> ||                                      \
+   std::is_same_v<T, const IdentifierInfo *> || std::is_enum_v<T> ||           \
+   std::is_integral_v<T>)
+
+template <class T>
+typename std::enable_if_t<!USE_DEFAULT_PROFILE>
+profileAttrArg(llvm::FoldingSetNodeID &, const ASTContext &, T) {
+  llvm_unreachable("profile not implemented for this type");
+}
+
+template <class T>
+typename std::enable_if_t<USE_DEFAULT_PROFILE>
+profileAttrArg(llvm::FoldingSetNodeID &ID, const ASTContext &, T V) {
+  if constexpr (std::is_same_v<T, StringRef>)
+    ID.AddString(V);
+  else if constexpr (std::is_same_v<T, VersionTuple>) {
+    ID.AddInteger(V.getMajor());
+    ID.AddInteger(V.getMinor().value_or(0));
+    ID.AddInteger(V.getSubminor().value_or(0));
+    ID.AddInteger(V.getBuild().value_or(0));
+  } else if constexpr (std::is_same_v<T, IdentifierInfo *> ||
+                       std::is_same_v<T, const IdentifierInfo *>)
+    ID.AddPointer(V);
+  else
+    ID.AddInteger(static_cast<long long>(V));
+}
+
+template <>
+inline void profileAttrArg<ParamIdx>(llvm::FoldingSetNodeID &ID,
+                                     const ASTContext &, ParamIdx P) {
+  ID.AddBoolean(P.isValid());
+  if (P.isValid())
+    ID.AddInteger(P.getASTIndex());
+}
+
+template <class T>
+inline void profileAttrArg(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                           T *Begin, T *End) {
+  ID.AddInteger(End - Begin);
+  for (; Begin != End; ++Begin)
+    profileAttrArg(ID, Ctx, *Begin);
+}
+
+template <>
+inline void profileAttrArg<Attr *>(llvm::FoldingSetNodeID &ID,
+                                   const ASTContext &Ctx, Attr *A) {
+  if (!A) {
+    ID.AddPointer(nullptr);
+    return;
+  }
+  ID.AddInteger(A->getKind());
+  A->Profile(ID, Ctx);
+}
+
+template <>
+inline void profileAttrArg<Expr *>(llvm::FoldingSetNodeID &ID,
+                                   const ASTContext &Ctx, Expr *E) {
+  E->Profile(ID, Ctx, /*Canonical=*/true);
+}
+
+template <>
+inline void profileAttrArg<QualType>(llvm::FoldingSetNodeID &ID,
+                                     const ASTContext &, QualType T) {
+  ID.AddPointer(T.getCanonicalType().getAsOpaquePtr());
+}
+
+void profileAlignedAttr(const AlignedAttr &A, llvm::FoldingSetNodeID &ID,
+                        const ASTContext &Ctx) {
+  ID.AddInteger(A.getSpellingListIndex());
+  ID.AddBoolean(A.isAlignmentExpr());
+  if (A.isAlignmentExpr())
+    profileAttrArg(ID, Ctx, A.getAlignmentExpr());
+  else
+    profileAttrArg(ID, Ctx, A.getAlignmentType()->getType());
+}
+} // namespace
+
 #include "clang/AST/AttrImpl.inc"

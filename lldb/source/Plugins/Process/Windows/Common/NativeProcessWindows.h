@@ -9,6 +9,7 @@
 #ifndef liblldb_NativeProcessWindows_h_
 #define liblldb_NativeProcessWindows_h_
 
+#include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/lldb-forward.h"
 
@@ -21,6 +22,7 @@ class HostProcess;
 class NativeProcessWindows;
 class NativeThreadWindows;
 class NativeDebugDelegate;
+class PseudoConsole;
 
 using NativeDebugDelegateSP = std::shared_ptr<NativeDebugDelegate>;
 
@@ -46,6 +48,8 @@ public:
       return Extension::libraries;
     }
   };
+
+  ~NativeProcessWindows() override;
 
   Status Resume(const ResumeActionList &resume_actions) override;
 
@@ -103,6 +107,24 @@ public:
 
   bool HasPendingLibraryEvents() override;
 
+  void SetClientSupportsLibrariesRead(bool v) {
+    m_client_supports_libraries_read = v;
+  }
+
+  /// Forwards to NativeProcessProtocol's bookkeeping.
+  void SetEnabledExtensions(Extension flags) override {
+    NativeProcessProtocol::SetEnabledExtensions(flags);
+    SetClientSupportsLibrariesRead(
+        bool(flags & (Extension::libraries | Extension::libraries_svr4)));
+  }
+
+  /// Forward bytes from the gdb-remote `I` packet into the inferior's
+  /// ConPTY-backed stdin via `m_stdio_communication.Write` →
+  /// `ConnectionConPTY::Write` → `WriteFile` on the parent-side STDIN
+  /// HANDLE. Returns the number of bytes written (0 if the PTY is
+  /// disconnected or write fails).
+  size_t WriteStdin(const void *buf, size_t len, Status &error) override;
+
   // ProcessDebugger Overrides
   void OnExitProcess(uint32_t exit_code) override;
   void OnDebuggerConnected(lldb::addr_t image_base) override;
@@ -110,9 +132,13 @@ public:
                                    const ExceptionRecord &record) override;
   void OnCreateThread(const HostThread &thread) override;
   void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) override;
-  void OnLoadDll(const ModuleSpec &module_spec,
-                 lldb::addr_t module_addr) override;
-  void OnUnloadDll(lldb::addr_t module_addr) override;
+  DllEventAction OnLoadDll(const ModuleSpec &module_spec,
+                           lldb::addr_t module_addr,
+                           lldb::tid_t thread_id) override;
+  DllEventAction OnUnloadDll(lldb::addr_t module_addr,
+                             lldb::tid_t thread_id) override;
+  void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                     uint16_t length_lower_word) override;
 
 protected:
   NativeThreadWindows *GetThreadByID(lldb::tid_t thread_id);
@@ -150,11 +176,33 @@ private:
 
   /// Set whenever an OS DLL load/unload event has been seen since the last stop
   /// reply.
-  bool m_pending_library_events = true;
+  bool m_pending_library_events = false;
 
   /// Whether we've seen the loader breakpoint that fires once per process at
   /// launch / attach.
   bool m_initial_stop_seen = false;
+
+  /// Set when Halt() / Interrupt() schedules a DebugBreakProcess injection.
+  bool m_pending_halt = false;
+
+  bool m_client_supports_libraries_read = false;
+
+  /// PseudoConsole for the lldb-server stdio-forwarding path.
+  std::shared_ptr<PseudoConsole> m_pty;
+
+  /// Wraps a ConnectionConPTY around the PTY's parent-side STDOUT HANDLE.
+  ThreadedCommunication m_stdio_communication;
+
+  /// Bridge between m_stdio_communication's read thread and
+  /// NativeDelegate::NewProcessOutput.
+  static void STDIOReadThreadBytesReceived(void *baton, const void *src,
+                                           size_t src_len);
+
+  /// Wire up m_stdio_communication on m_pty's STDOUT HANDLE.
+  void StartStdioForwarding();
+
+  /// Tear down the read thread and disconnect m_stdio_communication.
+  void StopStdioForwarding();
 };
 
 //------------------------------------------------------------------
@@ -185,13 +233,15 @@ public:
     m_process.OnExitThread(thread_id, exit_code);
   }
 
-  void OnLoadDll(const lldb_private::ModuleSpec &module_spec,
-                 lldb::addr_t module_addr) override {
-    m_process.OnLoadDll(module_spec, module_addr);
+  DllEventAction OnLoadDll(const lldb_private::ModuleSpec &module_spec,
+                           lldb::addr_t module_addr,
+                           lldb::tid_t thread_id) override {
+    return m_process.OnLoadDll(module_spec, module_addr, thread_id);
   }
 
-  void OnUnloadDll(lldb::addr_t module_addr) override {
-    m_process.OnUnloadDll(module_addr);
+  DllEventAction OnUnloadDll(lldb::addr_t module_addr,
+                             lldb::tid_t thread_id) override {
+    return m_process.OnUnloadDll(module_addr, thread_id);
   }
 
   void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,

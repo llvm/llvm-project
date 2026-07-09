@@ -109,6 +109,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86WinEHUnwindV2LegacyPass(PR);
   initializeX86PreLegalizerCombinerLegacyPass(PR);
   initializeX86PostLegalizerCombinerLegacyPass(PR);
+  initializeX86WinEHUnwindV3Pass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -290,10 +291,6 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
 
   auto &I = SubtargetMap[Key];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
     I = std::make_unique<X86Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this,
         MaybeAlign(F.getParent()->getOverrideStackAlignment()),
@@ -634,8 +631,10 @@ void X86PassConfig::addPreEmitPass2() {
 
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.
-  if (TT.isOSWindows() && TT.isX86_64())
+  if (TT.isOSWindows() && TT.isX86_64()) {
     addPass(createX86WinEHUnwindV2LegacyPass());
+    addPass(createX86WinEHUnwindV3Pass());
+  }
 }
 
 bool X86PassConfig::addPostFastRegAllocRewrite() {

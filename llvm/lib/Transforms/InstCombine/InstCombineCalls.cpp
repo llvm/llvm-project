@@ -15,6 +15,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -31,6 +32,7 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -304,9 +306,9 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
   }
 
   // If we can unconditionally load from this address, replace with a
-  // load/select idiom. TODO: use DT for context sensitive query
+  // load/select idiom.
   if (isDereferenceablePointer(LoadPtr, II.getType(),
-                               II.getDataLayout(), &II, &AC)) {
+                               SQ.getWithInstruction(&II))) {
     LoadInst *LI = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                              "unmaskedload");
     LI->copyMetadata(II);
@@ -505,21 +507,20 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
 
   // If ctlz/cttz is only used as a shift amount, set is_zero_poison to true.
   if (II.hasOneUse() && match(Op1, m_Zero()) &&
-      match(II.user_back(), m_Shift(m_Value(), m_Specific(&II)))) {
-    II.dropUBImplyingAttrsAndMetadata();
-    return IC.replaceOperand(II, 1, IC.Builder.getTrue());
-  }
+      match(II.user_back(), m_Shift(m_Value(), m_Specific(&II))))
+    return CallInst::Create(II.getCalledFunction(),
+                            {Op0, IC.Builder.getTrue()});
 
   Constant *C;
 
   if (IsTZ) {
     // cttz(-x) -> cttz(x)
     if (match(Op0, m_Neg(m_Value(X))))
-      return IC.replaceOperand(II, 0, X);
+      return CallInst::Create(II.getCalledFunction(), {X, Op1});
 
     // cttz(-x & x) -> cttz(x)
     if (match(Op0, m_c_And(m_Neg(m_Value(X)), m_Deferred(X))))
-      return IC.replaceOperand(II, 0, X);
+      return CallInst::Create(II.getCalledFunction(), {X, Op1});
 
     // cttz(sext(x)) -> cttz(zext(x))
     if (match(Op0, m_OneUse(m_SExt(m_Value(X))))) {
@@ -543,10 +544,10 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     Value *Y;
     SelectPatternFlavor SPF = matchSelectPattern(Op0, X, Y).Flavor;
     if (SPF == SPF_ABS || SPF == SPF_NABS)
-      return IC.replaceOperand(II, 0, X);
+      return CallInst::Create(II.getCalledFunction(), {X, Op1});
 
     if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))))
-      return IC.replaceOperand(II, 0, X);
+      return CallInst::Create(II.getCalledFunction(), {X, Op1});
 
     // cttz(shl(%const, %val), 1) --> add(cttz(%const, 1), %val)
     if (match(Op0, m_Shl(m_ImmConstant(C), m_Value(X))) &&
@@ -636,7 +637,8 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
   if (!Known.One.isZero() ||
       isKnownNonZero(Op0, IC.getSimplifyQuery().getWithInstruction(&II))) {
     if (!match(II.getArgOperand(1), m_One()))
-      return IC.replaceOperand(II, 1, IC.Builder.getTrue());
+      return CallInst::Create(II.getCalledFunction(),
+                              {Op0, IC.Builder.getTrue()});
   }
 
   // Add range attribute since known bits can't completely reflect what we know.
@@ -663,13 +665,13 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   // ctpop(bitreverse(x)) -> ctpop(x)
   // ctpop(bswap(x)) -> ctpop(x)
   if (match(Op0, m_BitReverse(m_Value(X))) || match(Op0, m_BSwap(m_Value(X))))
-    return IC.replaceOperand(II, 0, X);
+    return CallInst::Create(II.getCalledFunction(), X);
 
   // ctpop(rot(x)) -> ctpop(x)
   if ((match(Op0, m_FShl(m_Value(X), m_Value(Y), m_Value())) ||
        match(Op0, m_FShr(m_Value(X), m_Value(Y), m_Value()))) &&
       X == Y)
-    return IC.replaceOperand(II, 0, X);
+    return CallInst::Create(II.getCalledFunction(), X);
 
   // ctpop(x | -x) -> bitwidth - cttz(x, false)
   if (Op0->hasOneUse() &&
@@ -921,6 +923,15 @@ static CallInst *canonicalizeConstantArg0ToArg1(CallInst &Call) {
   if (isa<Constant>(Arg0) && !isa<Constant>(Arg1)) {
     Call.setArgOperand(0, Arg1);
     Call.setArgOperand(1, Arg0);
+    AttributeList CallAttr = Call.getAttributes();
+    AttributeSet LHSAttr = CallAttr.getParamAttrs(0);
+    AttributeSet RHSAttr = CallAttr.getParamAttrs(1);
+    LLVMContext &Ctx = Call.getContext();
+    Call.setAttributes(CallAttr
+                           .setAttributesAtIndex(
+                               Ctx, AttributeList::FirstArgIndex + 0, RHSAttr)
+                           .setAttributesAtIndex(
+                               Ctx, AttributeList::FirstArgIndex + 1, LHSAttr));
     return &Call;
   }
   return nullptr;
@@ -1061,18 +1072,17 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
       II.getFunction()->getAttributes().hasFnAttr(Attribute::StrictFP);
 
   Value *FNegSrc;
-  if (match(Src0, m_FNeg(m_Value(FNegSrc)))) {
-    // is.fpclass (fneg x), mask -> is.fpclass x, (fneg mask)
-
-    II.setArgOperand(1, ConstantInt::get(Src1->getType(), fneg(Mask)));
-    return replaceOperand(II, 0, FNegSrc);
-  }
+  // is.fpclass (fneg x), mask -> is.fpclass x, (fneg mask)
+  if (match(Src0, m_FNeg(m_Value(FNegSrc))))
+    return CallInst::Create(
+        II.getCalledFunction(),
+        {FNegSrc, ConstantInt::get(Src1->getType(), fneg(Mask))});
 
   Value *FAbsSrc;
-  if (match(Src0, m_FAbs(m_Value(FAbsSrc)))) {
-    II.setArgOperand(1, ConstantInt::get(Src1->getType(), inverse_fabs(Mask)));
-    return replaceOperand(II, 0, FAbsSrc);
-  }
+  if (match(Src0, m_FAbs(m_Value(FAbsSrc))))
+    return CallInst::Create(
+        II.getCalledFunction(),
+        {FAbsSrc, ConstantInt::get(Src1->getType(), inverse_fabs(Mask))});
 
   if ((OrderedMask == fcInf || OrderedInvertedMask == fcInf) &&
       (IsOrdered || IsUnordered) && !IsStrict) {
@@ -1599,7 +1609,7 @@ Value *InstCombinerImpl::foldReversedIntrinsicOperands(IntrinsicInst *II) {
 
   // intrinsic (reverse X), (reverse Y), ... --> reverse (intrinsic X, Y, ...)
   Instruction *FPI = isa<FPMathOperator>(II) ? II : nullptr;
-  Instruction *NewIntrinsic = Builder.CreateIntrinsic(
+  Value *NewIntrinsic = Builder.CreateIntrinsic(
       II->getType(), II->getIntrinsicID(), NewArgs, FPI);
   return Builder.CreateVectorReverse(NewIntrinsic);
 }
@@ -2023,6 +2033,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (auto Pair = matchSymmetricPair(II->getOperand(0), II->getOperand(1))) {
       replaceOperand(*II, 0, Pair->first);
       replaceOperand(*II, 1, Pair->second);
+      II->dropPoisonGeneratingAnnotations();
+      II->dropUBImplyingAttrsAndMetadata();
       return II;
     }
 
@@ -2057,13 +2069,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // abs(-x) -> abs(x)
     Value *X;
-    if (match(IIOperand, m_Neg(m_Value(X)))) {
-      if (cast<Instruction>(IIOperand)->hasNoSignedWrap() || IntMinIsPoison)
-        replaceOperand(*II, 1, Builder.getTrue());
-      return replaceOperand(*II, 0, X);
-    }
+    if (match(IIOperand, m_Neg(m_Value(X))))
+      return CallInst::Create(
+          II->getCalledFunction(),
+          {X,
+           Builder.getInt1(IntMinIsPoison ||
+                           cast<Instruction>(IIOperand)->hasNoSignedWrap())});
+
     if (match(IIOperand, m_c_Select(m_Neg(m_Value(X)), m_Deferred(X))))
-      return replaceOperand(*II, 0, X);
+      return CallInst::Create(II->getCalledFunction(),
+                              {X, II->getArgOperand(1)});
 
     Value *Y;
     // abs(a * abs(b)) -> abs(a * b)
@@ -2073,7 +2088,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       bool NSW =
           cast<Instruction>(IIOperand)->hasNoSignedWrap() && IntMinIsPoison;
       auto *XY = NSW ? Builder.CreateNSWMul(X, Y) : Builder.CreateMul(X, Y);
-      return replaceOperand(*II, 0, XY);
+      return CallInst::Create(II->getCalledFunction(),
+                              {XY, II->getArgOperand(1)});
     }
 
     if (std::optional<bool> Known =
@@ -2493,7 +2509,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (auto *SkippedBarrier = simplifyInvariantGroupIntrinsic(*II, *this))
       return replaceInstUsesWith(*II, SkippedBarrier);
     break;
-  case Intrinsic::powi:
+  case Intrinsic::powi: {
     if (ConstantInt *Power = dyn_cast<ConstantInt>(II->getArgOperand(1))) {
       // 0 and 1 are handled in instsimplify
       // powi(x, -1) -> 1/x
@@ -2515,10 +2531,23 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             match(II->getArgOperand(0), m_FAbs(m_Value(X))) ||
             match(II->getArgOperand(0),
                   m_Intrinsic<Intrinsic::copysign>(m_Value(X), m_Value())))
-          return replaceOperand(*II, 0, X);
+          return CallInst::Create(II->getCalledFunction(), {X, Power});
+      }
+    }
+    if (ConstantFP *Base = dyn_cast<ConstantFP>(II->getArgOperand(0))) {
+      Value *Exp = II->getArgOperand(1);
+      Type *Ty = Base->getType();
+      // powi(2.0, p) -> ldexp(1.0, p)
+      if (II->hasApproxFunc() && Base->isExactlyValue(2.0)) {
+        ConstantFP *One = ConstantFP::get(Ty, 1.0);
+        if (auto *VTy = dyn_cast<VectorType>(Ty))
+          Exp = Builder.CreateVectorSplat(VTy->getElementCount(), Exp);
+        Value *Ldexp = Builder.CreateLdexp(One, Exp, II);
+        return replaceInstUsesWith(*II, Ldexp);
       }
     }
     break;
+  }
 
   case Intrinsic::cttz:
   case Intrinsic::ctlz:
@@ -2545,7 +2574,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (!ModuloC)
         return nullptr;
       if (ModuloC != ShAmtC)
-        return replaceOperand(*II, 2, ModuloC);
+        return CallInst::Create(II->getCalledFunction(), {Op0, Op1, ModuloC});
 
       assert(match(ConstantFoldCompareInstOperands(ICmpInst::ICMP_UGT, WidthC,
                                                    ShAmtC, DL),
@@ -2643,6 +2672,40 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     KnownBits Op2Known(BitWidth);
     if (SimplifyDemandedBits(II, 2, Op2Demanded, Op2Known))
       return &CI;
+    break;
+  }
+  case Intrinsic::pdep: {
+    const APInt *MaskC;
+    if (match(II->getArgOperand(1), m_APInt(MaskC))) {
+      unsigned MaskIdx, MaskLen;
+      if (MaskC->isShiftedMask(MaskIdx, MaskLen)) {
+        // any single contiguous sequence of 1s anywhere in the mask simply
+        // describes a subset of the input bits shifted to the appropriate
+        // position.  Replace with the straight forward IR.
+        Value *Input = II->getArgOperand(0);
+        Value *ShiftAmt = ConstantInt::get(II->getType(), MaskIdx);
+        Value *Shifted = Builder.CreateShl(Input, ShiftAmt);
+        Value *Masked = Builder.CreateAnd(Shifted, II->getArgOperand(1));
+        return replaceInstUsesWith(*II, Masked);
+      }
+    }
+    break;
+  }
+  case Intrinsic::pext: {
+    const APInt *MaskC;
+    if (match(II->getArgOperand(1), m_APInt(MaskC))) {
+      unsigned MaskIdx, MaskLen;
+      if (MaskC->isShiftedMask(MaskIdx, MaskLen)) {
+        // any single contiguous sequence of 1s anywhere in the mask simply
+        // describes a subset of the input bits shifted to the appropriate
+        // position.  Replace with the straight forward IR.
+        Value *Input = II->getArgOperand(0);
+        Value *Masked = Builder.CreateAnd(Input, II->getArgOperand(1));
+        Value *ShiftAmt = ConstantInt::get(II->getType(), MaskIdx);
+        Value *Shifted = Builder.CreateLShr(Masked, ShiftAmt);
+        return replaceInstUsesWith(*II, Shifted);
+      }
+    }
     break;
   }
   case Intrinsic::ptrmask: {
@@ -3021,8 +3084,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (ElementCount::isKnownGT(NegatedCount, RetCount)) {
       SmallVector<Value *, 5> NewArgs(II->args());
       NewArgs[NegatedOpArg] = OpNotNeg;
-      Instruction *NewMul =
-          Builder.CreateIntrinsic(II->getType(), IID, NewArgs, II);
+      Value *NewMul = Builder.CreateIntrinsic(II->getType(), IID, NewArgs, II);
       return replaceInstUsesWith(*II, Builder.CreateFNegFMF(NewMul, II));
     }
     break;
@@ -3043,19 +3105,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Src1 = II->getArgOperand(1);
     Value *Src2 = II->getArgOperand(2);
     Value *X, *Y;
-    if (match(Src0, m_FNeg(m_Value(X))) && match(Src1, m_FNeg(m_Value(Y)))) {
-      replaceOperand(*II, 0, X);
-      replaceOperand(*II, 1, Y);
-      return II;
-    }
+    if (match(Src0, m_FNeg(m_Value(X))) && match(Src1, m_FNeg(m_Value(Y))))
+      return replaceInstUsesWith(
+          *II, Builder.CreateIntrinsic(IID, II->getType(), {X, Y, Src2}, II));
 
     // fma fabs(x), fabs(x), z -> fma x, x, z
-    if (match(Src0, m_FAbs(m_Value(X))) &&
-        match(Src1, m_FAbs(m_Specific(X)))) {
-      replaceOperand(*II, 0, X);
-      replaceOperand(*II, 1, X);
-      return II;
-    }
+    if (match(Src0, m_FAbs(m_Value(X))) && match(Src1, m_FAbs(m_Specific(X))))
+      return replaceInstUsesWith(
+          *II, Builder.CreateIntrinsic(IID, II->getType(), {X, X, Src2}, II));
 
     // Try to simplify the underlying FMul. We can only apply simplifications
     // that do not require rounding.
@@ -3109,14 +3166,28 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(Mag, m_APFloat(MagC)) && MagC->isNegative()) {
       APFloat PosMagC = *MagC;
       PosMagC.clearSign();
-      return replaceOperand(*II, 0, ConstantFP::get(Mag->getType(), PosMagC));
+      return replaceInstUsesWith(
+          *II, Builder.CreateCopySign(ConstantFP::get(Mag->getType(), PosMagC),
+                                      Sign, II));
     }
 
     // Peek through changes of magnitude's sign-bit. This call rewrites those:
     // copysign (fabs X), Sign --> copysign X, Sign
     // copysign (fneg X), Sign --> copysign X, Sign
     if (match(Mag, m_FAbs(m_Value(X))) || match(Mag, m_FNeg(m_Value(X))))
-      return replaceOperand(*II, 0, X);
+      return replaceInstUsesWith(*II, Builder.CreateCopySign(X, Sign, II));
+
+    // copysign(floor(fabs(X)), X) --> copysign(trunc(X), X)
+    // copysign ignores the sign bit of its magnitude argument (implicit fabs),
+    // so replacing floor(fabs(X)) with trunc(X) is correct for all inputs
+    // including NaN without requiring nnan. The m_FAbs match also ensures
+    // the floor argument is non-negative, so floor == trunc.
+    Value *FAbsArg;
+    if (match(Mag, m_Intrinsic<Intrinsic::floor>(m_FAbs(m_Value(FAbsArg)))) &&
+        FAbsArg == Sign) {
+      Value *Trunc = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, Sign, II);
+      return replaceInstUsesWith(*II, Builder.CreateCopySign(Trunc, Sign, II));
+    }
 
     Type *SignEltTy = Sign->getType()->getScalarType();
 
@@ -3160,10 +3231,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
       // fabs (select Cond, -FVal, FVal) --> fabs FVal
       if (match(TVal, m_FNeg(m_Specific(FVal))))
-        return replaceOperand(*II, 0, FVal);
+        return replaceInstUsesWith(*II, Builder.CreateFAbs(FVal, II));
       // fabs (select Cond, TVal, -TVal) --> fabs TVal
       if (match(FVal, m_FNeg(m_Specific(TVal))))
-        return replaceOperand(*II, 0, TVal);
+        return replaceInstUsesWith(*II, Builder.CreateFAbs(TVal, II));
     }
 
     Value *Magnitude, *Sign;
@@ -3202,7 +3273,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // f(fabs(x)) --> f(x)
       // f(copysign(x, y)) --> f(x)
       // for f in {cos, cosh}
-      return replaceOperand(*II, 0, X);
+      return replaceInstUsesWith(*II, Builder.CreateUnaryIntrinsic(IID, X, II));
     }
     break;
   }
@@ -3267,9 +3338,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
            signBitMustBeTheSame(Exp, InnerExp, SQ.getWithInstruction(II)))) {
         Value *NewExp =
             Builder.CreateBinaryIntrinsic(Intrinsic::sadd_sat, InnerExp, Exp);
-        II->setArgOperand(1, NewExp);
-        II->setFastMathFlags(InnerFlags); // Or the inner flags.
-        return replaceOperand(*II, 0, InnerSrc);
+        return replaceInstUsesWith(
+            *II, Builder.CreateLdexp(InnerSrc, NewExp, FMF | InnerFlags));
       }
     }
 
@@ -3629,6 +3699,166 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return nullptr;
     break;
   case Intrinsic::assume: {
+    for (auto [Idx, OBU] : llvm::enumerate(II->operand_bundles())) {
+      auto RemoveBundle = [&, Idx = Idx]() -> Instruction * {
+        if (II->getNumOperandBundles() == 1)
+          return eraseInstFromFunction(*II);
+        return CallBase::removeOperandBundleAt(II, Idx);
+      };
+
+      switch (getBundleAttrFromOBU(OBU)) {
+      case BundleAttr::None:
+        llvm_unreachable("Unexpected Attribute");
+      case BundleAttr::Align: {
+        // Try to remove redundant alignment assumptions.
+        auto [Ptr, _, OffsetPtr, Alignment, Offset] = getAssumeAlignInfo(OBU);
+
+        if (!Alignment)
+          break;
+
+        // Remove align 1 and non-power-of-two bundles; they don't add any
+        // useful information.
+        if (*Alignment == 1 || !isPowerOf2_64(*Alignment))
+          return RemoveBundle();
+
+        if (auto *GEP = dyn_cast<GEPOperator>(Ptr);
+            GEP &&
+            GEP->getMaxPreservedAlignment(getDataLayout()) >= *Alignment) {
+          Builder.CreateAlignmentAssumption(
+              getDataLayout(), GEP->getPointerOperand(), *Alignment,
+              OffsetPtr ? const_cast<Value *>(OffsetPtr->get()) : nullptr);
+          return RemoveBundle();
+        }
+
+        if (!Offset)
+          break;
+
+        Value *BasePtr;
+        const APInt *PtrOffset;
+        if (match(Ptr.get(), m_PtrAdd(m_Value(BasePtr), m_APInt(PtrOffset)))) {
+          auto PtrOffsetVal =
+              PtrOffset->sextOrTrunc(DL.getIndexTypeSizeInBits(Ptr->getType()))
+                  .trySExtValue();
+          if (!PtrOffsetVal)
+            break;
+          Builder.CreateAlignmentAssumption(
+              DL, BasePtr, *Alignment,
+              Builder.getInt64(*Offset - *PtrOffsetVal));
+          return RemoveBundle();
+        }
+
+        // Don't try to remove align assumptions for pointers derived from
+        // arguments. We might lose information if the function gets inline and
+        // the align argument attribute disappears.
+        Value *UO = getUnderlyingObject(Ptr);
+        if (!UO || isa<Argument>(UO))
+          break;
+
+        // Compute known bits for the pointer and drop the assume if the
+        // known alignment isn't increased by it.
+        auto AlignMask = (*Alignment - 1);
+        if (KnownBits KB = computeKnownBits(Ptr, II);
+            (KB.Zero & AlignMask) == (~*Offset & AlignMask) &&
+            (KB.One & AlignMask) == (*Offset & AlignMask))
+          return RemoveBundle();
+        break;
+      }
+
+      case BundleAttr::Dereferenceable: {
+        auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
+
+        if (!Count)
+          break;
+
+        if (*Count == 0 ||
+            isDereferenceablePointer(Ptr, APInt(64, *Count),
+                                     getSimplifyQuery().getWithInstruction(II)))
+          return RemoveBundle();
+
+        break;
+      }
+
+      case BundleAttr::Ignore:
+        return RemoveBundle();
+
+      case BundleAttr::NonNull: {
+        auto [Ptr] = llvm::getAssumeNonNullInfo(OBU);
+
+        // Drop assume if we can prove nonnull without it
+        if (isKnownNonZero(Ptr, getSimplifyQuery().getWithInstruction(II)))
+          return RemoveBundle();
+
+        // Fold the assume into metadata if it's valid at the load
+        if (auto *LI = dyn_cast<LoadInst>(Ptr);
+            LI &&
+            isValidAssumeForContext(II, LI, &DT, /*AllowEphemerals=*/true)) {
+          MDNode *MD = MDNode::get(II->getContext(), {});
+          LI->setMetadata(LLVMContext::MD_nonnull, MD);
+          LI->setMetadata(LLVMContext::MD_noundef, MD);
+          return RemoveBundle();
+        }
+
+        if (auto *GEP = dyn_cast<GEPOperator>(Ptr);
+            GEP && GEP->isInBounds() &&
+            !NullPointerIsDefined(II->getFunction(),
+                                  Ptr->getType()->getPointerAddressSpace())) {
+          Builder.CreateNonnullAssumption(GEP->stripInBoundsOffsets());
+          return RemoveBundle();
+        }
+
+        // TODO: apply nonnull return attributes to calls and invokes
+        break;
+      }
+
+      case BundleAttr::NoUndef: {
+        auto [Val] = getAssumeNoUndefInfo(OBU);
+
+        if (isGuaranteedNotToBeUndefOrPoison(Val, &AC, II, &DT))
+          return RemoveBundle();
+
+        if (auto *LI = dyn_cast<LoadInst>(Val);
+            LI &&
+            isValidAssumeForContext(II, LI, &DT, /*AllowEphemerals=*/true)) {
+          LI->setMetadata(LLVMContext::MD_noundef,
+                          MDNode::get(II->getContext(), {}));
+          return RemoveBundle();
+        }
+
+      } break;
+
+      case BundleAttr::SeparateStorage: {
+        auto [Ptr1, Ptr2] = getAssumeSeparateStorageInfo(OBU);
+        // Separate storage assumptions apply to the underlying allocations, not
+        // any particular pointer within them. When evaluating the hints for AA
+        // purposes we getUnderlyingObject them; by precomputing the answers
+        // here we can avoid having to do so repeatedly there.
+        auto MaybeSimplifyHint = [&](const Use &U) {
+          Value *Hint = U.get();
+          // Not having a limit is safe because InstCombine removes unreachable
+          // code.
+          Value *UnderlyingObject = getUnderlyingObject(Hint, /*MaxLookup*/ 0);
+          if (Hint != UnderlyingObject)
+            replaceUse(const_cast<Use &>(U), UnderlyingObject);
+        };
+        MaybeSimplifyHint(Ptr1);
+        MaybeSimplifyHint(Ptr2);
+      } break;
+
+      // TODO: Drop these assumes when they are redundant
+      case BundleAttr::DereferenceableOrNull:
+        break;
+
+      // This cannot be simplified
+      case BundleAttr::Cold:
+        break;
+      }
+    }
+
+    // If the assume has operand bundles, the folds below will never work, so
+    // don't bother trying.
+    if (II->hasOperandBundles())
+      break;
+
     Value *IIOperand = II->getArgOperand(0);
 
     // Canonicalize assume(a && b) -> assume(a); assume(b);
@@ -3647,78 +3877,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return eraseInstFromFunction(*II);
     }
 
-    for (unsigned Idx = 0; Idx < II->getNumOperandBundles(); Idx++) {
-      OperandBundleUse OBU = II->getOperandBundleAt(Idx);
-
-      // Separate storage assumptions apply to the underlying allocations, not
-      // any particular pointer within them. When evaluating the hints for AA
-      // purposes we getUnderlyingObject them; by precomputing the answers here
-      // we can avoid having to do so repeatedly there.
-      if (OBU.getTagName() == "separate_storage") {
-        assert(OBU.Inputs.size() == 2);
-        auto MaybeSimplifyHint = [&](const Use &U) {
-          Value *Hint = U.get();
-          // Not having a limit is safe because InstCombine removes unreachable
-          // code.
-          Value *UnderlyingObject = getUnderlyingObject(Hint, /*MaxLookup*/ 0);
-          if (Hint != UnderlyingObject)
-            replaceUse(const_cast<Use &>(U), UnderlyingObject);
-        };
-        MaybeSimplifyHint(OBU.Inputs[0]);
-        MaybeSimplifyHint(OBU.Inputs[1]);
-      }
-
-      // Try to remove redundant alignment assumptions.
-      if (OBU.getTagName() == "align" && OBU.Inputs.size() == 2) {
-        RetainedKnowledge RK = getKnowledgeFromOperandInAssume(
-            *cast<AssumeInst>(II), II->arg_size() + Idx);
-        if (!RK || RK.AttrKind != Attribute::Alignment ||
-            !isPowerOf2_64(RK.ArgValue) || !isa<ConstantInt>(RK.IRArgValue))
-          continue;
-
-        // Remove align 1 bundles; they don't add any useful information.
-        if (RK.ArgValue == 1)
-          return CallBase::removeOperandBundleAt(II, Idx);
-
-        // Don't try to remove align assumptions for pointers derived from
-        // arguments. We might lose information if the function gets inline and
-        // the align argument attribute disappears.
-        Value *UO = getUnderlyingObject(RK.WasOn);
-        if (!UO || isa<Argument>(UO))
-          continue;
-
-        // Compute known bits for the pointer and drop the assume if the
-        // known alignment isn't increased by it.
-        if ((1ULL << computeKnownBits(RK.WasOn, II).countMinTrailingZeros()) <
-            RK.ArgValue)
-          continue;
-        return CallBase::removeOperandBundleAt(II, Idx);
-      }
-
-      if (OBU.getTagName() == "nonnull" && OBU.Inputs.size() == 1) {
-        RetainedKnowledge RK = getKnowledgeFromOperandInAssume(
-            *cast<AssumeInst>(II), II->arg_size() + Idx);
-        if (!RK || RK.AttrKind != Attribute::NonNull)
-          continue;
-
-        // Drop assume if we can prove nonnull without it
-        if (isKnownNonZero(RK.WasOn, getSimplifyQuery().getWithInstruction(II)))
-          return CallBase::removeOperandBundleAt(II, Idx);
-
-        // Fold the assume into metadata if it's valid at the load
-        if (auto *LI = dyn_cast<LoadInst>(RK.WasOn);
-            LI &&
-            isValidAssumeForContext(II, LI, &DT, /*AllowEphemerals=*/true)) {
-          MDNode *MD = MDNode::get(II->getContext(), {});
-          LI->setMetadata(LLVMContext::MD_nonnull, MD);
-          LI->setMetadata(LLVMContext::MD_noundef, MD);
-          return CallBase::removeOperandBundleAt(II, Idx);
-        }
-
-        // TODO: apply nonnull return attributes to calls and invokes
-      }
-    }
-
     // Convert nonnull assume like:
     // %A = icmp ne i32* %PTR, null
     // call void @llvm.assume(i1 %A)
@@ -3732,78 +3890,30 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
 
     // Convert alignment assume like:
-    // %B = ptrtoint i32* %A to i64
+    // %B = ptrtoint ptr %A to i64
     // %C = and i64 %B, Constant
     // %D = icmp eq i64 %C, 0
     // call void @llvm.assume(i1 %D)
     // into
-    // call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64  Constant + 1)]
+    // call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64  Constant + 1)]
     uint64_t AlignMask = 1;
     if ((match(IIOperand, m_Not(m_Trunc(m_Value(A)))) ||
          match(IIOperand,
                m_SpecificICmp(ICmpInst::ICMP_EQ,
                               m_And(m_Value(A), m_ConstantInt(AlignMask)),
                               m_Zero())))) {
-      if (isPowerOf2_64(AlignMask + 1)) {
-        uint64_t Offset = 0;
-        match(A, m_Add(m_Value(A), m_ConstantInt(Offset)));
-        if (match(A, m_PtrToIntOrAddr(m_Value(A)))) {
-          /// Note: this doesn't preserve the offset information but merges
-          /// offset and alignment.
-          /// TODO: we can generate a GEP instead of merging the alignment with
-          /// the offset.
-          Builder.CreateAlignmentAssumption(getDataLayout(), A,
-                                            MinAlign(Offset, AlignMask + 1));
-          return eraseInstFromFunction(*II);
-        }
+      if (isPowerOf2_64(AlignMask + 1) &&
+          match(A, m_PtrToIntOrAddr(m_Value(A)))) {
+        Builder.CreateAlignmentAssumption(getDataLayout(), A, AlignMask + 1);
+        return eraseInstFromFunction(*II);
       }
     }
 
-    /// Canonicalize Knowledge in operand bundles.
-    if (EnableKnowledgeRetention && II->hasOperandBundles()) {
-      for (unsigned Idx = 0; Idx < II->getNumOperandBundles(); Idx++) {
-        auto &BOI = II->bundle_op_info_begin()[Idx];
-        RetainedKnowledge RK =
-          llvm::getKnowledgeFromBundle(cast<AssumeInst>(*II), BOI);
-        if (BOI.End - BOI.Begin > 2)
-          continue; // Prevent reducing knowledge in an align with offset since
-                    // extracting a RetainedKnowledge from them looses offset
-                    // information
-        RetainedKnowledge CanonRK =
-          llvm::simplifyRetainedKnowledge(cast<AssumeInst>(II), RK,
-                                          &getAssumptionCache(),
-                                          &getDominatorTree());
-        if (CanonRK == RK)
-          continue;
-        if (!CanonRK) {
-          if (BOI.End - BOI.Begin > 0) {
-            Worklist.pushValue(II->op_begin()[BOI.Begin]);
-            Value::dropDroppableUse(II->op_begin()[BOI.Begin]);
-          }
-          continue;
-        }
-        assert(RK.AttrKind == CanonRK.AttrKind);
-        if (BOI.End - BOI.Begin > 0)
-          II->op_begin()[BOI.Begin].set(CanonRK.WasOn);
-        if (BOI.End - BOI.Begin > 1)
-          II->op_begin()[BOI.Begin + 1].set(ConstantInt::get(
-              Type::getInt64Ty(II->getContext()), CanonRK.ArgValue));
-        if (RK.WasOn)
-          Worklist.pushValue(RK.WasOn);
-        return II;
-      }
-    }
-
-    // If there is a dominating assume with the same condition as this one,
-    // then this one is redundant, and should be removed.
-    KnownBits Known(1);
-    computeKnownBits(IIOperand, Known, II);
-    if (Known.isAllOnes() && isAssumeWithEmptyBundle(cast<AssumeInst>(*II)))
-      return eraseInstFromFunction(*II);
-
-    // assume(false) is unreachable.
-    if (match(IIOperand, m_CombineOr(m_Zero(), m_Undef()))) {
-      CreateNonTerminatorUnreachable(II);
+    // Remove assumes on true/false
+    if (auto *CI = dyn_cast<ConstantInt>(IIOperand);
+        CI || isa<UndefValue, PoisonValue>(IIOperand)) {
+      if (!CI || CI->isZero())
+        CreateNonTerminatorUnreachable(II);
       return eraseInstFromFunction(*II);
     }
 
@@ -4244,17 +4354,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return I;
     break;
   case Intrinsic::frexp: {
-    Value *X;
-    // The first result is idempotent with the added complication of the struct
-    // return, and the second result is zero because the value is already
-    // normalized.
-    if (match(II->getArgOperand(0), m_ExtractValue<0>(m_Value(X)))) {
-      if (match(X, m_Intrinsic<Intrinsic::frexp>(m_Value()))) {
-        X = Builder.CreateInsertValue(
-            X, Constant::getNullValue(II->getType()->getStructElementType(1)),
-            1);
-        return replaceInstUsesWith(*II, X);
-      }
+    // frexp(frexp(x).fract) -> { frexp(x).fract, 0 }: the fraction operand is
+    // already normalized, so the first result is idempotent and the second is
+    // zero.
+    if (match(II->getArgOperand(0),
+              m_ExtractValue<0>(m_Intrinsic<Intrinsic::frexp>(m_Value())))) {
+      Value *Res = Builder.CreateInsertValue(PoisonValue::get(II->getType()),
+                                             II->getArgOperand(0), 0);
+      Res = Builder.CreateInsertValue(
+          Res, Constant::getNullValue(II->getType()->getStructElementType(1)),
+          1);
+      return replaceInstUsesWith(*II, Res);
     }
     break;
   }
@@ -4380,40 +4490,119 @@ Instruction *InstCombinerImpl::visitCallBrInst(CallBrInst &CBI) {
   return visitCallBase(CBI);
 }
 
+// A simple parser for format string specifiers for the purposes of the
+// modular-format attribute. In the case of malformed format strings this might
+// under or over report the specifiers present, but such cases are undefined
+// behavior.
+static Bitset<256> parseFormatStringSpecifiers(StringRef FormatStr) {
+  Bitset<256> Specifiers;
+  for (size_t I = 0; I < FormatStr.size(); ++I) {
+    if (FormatStr[I] != '%')
+      continue;
+
+    // Check for escaped '%'.
+    if (I + 1 < FormatStr.size() && FormatStr[I + 1] == '%') {
+      ++I; // Skip the second '%'.
+      continue;
+    }
+
+    // Scan past allowed prefix characters.
+    size_t J =
+        FormatStr.find_first_not_of("0123456789-+ #0$.*'hlLjztqwvI", I + 1);
+    if (J == StringRef::npos)
+      break;
+
+    Specifiers.set(static_cast<unsigned char>(FormatStr[J]));
+    I = J; // Resume search from after the specifier.
+  }
+  return Specifiers;
+}
+
+static bool isAspectNeeded(StringRef Aspect, CallInst *CI,
+                           std::optional<unsigned> FirstArgIdx,
+                           const std::optional<Bitset<256>> &Specifiers) {
+  if (Aspect == "float") {
+    if (Specifiers) {
+      static constexpr Bitset<256> FloatSpecifiers{'f', 'F', 'e', 'E',
+                                                   'g', 'G', 'a', 'A'};
+      return (*Specifiers & FloatSpecifiers).any();
+    }
+    // Fallback to type-based check for dynamic format string.
+    if (!FirstArgIdx)
+      return true;
+    return llvm::any_of(
+        llvm::make_range(std::next(CI->arg_begin(), *FirstArgIdx),
+                         CI->arg_end()),
+        [](Value *V) { return V->getType()->isFloatingPointTy(); });
+  }
+  if (Aspect == "fixed") {
+    if (Specifiers) {
+      static constexpr Bitset<256> FixedSpecifiers{'r', 'R', 'k', 'K'};
+      return (*Specifiers & FixedSpecifiers).any();
+    }
+    // Fallback for fixed-point: assume needed if format is dynamic.
+    return true;
+  }
+  // Unknown aspects are always considered to be needed.
+  return true;
+}
+
+static void referenceAspect(StringRef Aspect, StringRef ImplName, Module *M,
+                            IRBuilderBase &B) {
+  SmallString<20> Name = ImplName;
+  Name += '_';
+  Name += Aspect;
+  LLVMContext &Ctx = M->getContext();
+  Function *RelocNoneFn =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::reloc_none);
+  B.CreateCall(RelocNoneFn,
+               {MetadataAsValue::get(Ctx, MDString::get(Ctx, Name))});
+}
+
 static Value *optimizeModularFormat(CallInst *CI, IRBuilderBase &B) {
   if (!CI->hasFnAttr("modular-format"))
     return nullptr;
 
   SmallVector<StringRef> Args(
       llvm::split(CI->getFnAttr("modular-format").getValueAsString(), ','));
-  // TODO: Make use of the first two arguments
-  unsigned FirstArgIdx;
-  [[maybe_unused]] bool Error;
-  Error = Args[2].getAsInteger(10, FirstArgIdx);
-  assert(!Error && "invalid first arg index");
-  if (FirstArgIdx == 0)
+  if (Args.size() < 5)
     return nullptr;
-  --FirstArgIdx;
+
+  StringRef FormatIdxStr = Args[1];
+  StringRef FirstArgIdxStr = Args[2];
   StringRef FnName = Args[3];
   StringRef ImplName = Args[4];
   ArrayRef<StringRef> AllAspects = ArrayRef<StringRef>(Args).drop_front(5);
 
+  unsigned FormatIdx;
+  std::optional<unsigned> FirstArgIdx;
+  [[maybe_unused]] bool Error;
+  Error = FormatIdxStr.getAsInteger(10, FormatIdx);
+  assert(!Error && "invalid format arg index");
+  --FormatIdx; // 1-based to 0-based
+
+  FirstArgIdx.emplace();
+  Error = FirstArgIdxStr.getAsInteger(10, *FirstArgIdx);
+  assert(!Error && "invalid first arg index");
+  if (*FirstArgIdx > 0)
+    --*FirstArgIdx; // 1-based to 0-based
+  else
+    FirstArgIdx.reset();
+
   if (AllAspects.empty())
     return nullptr;
 
+  Value *FormatVal = CI->getArgOperand(FormatIdx);
+  StringRef FormatStr;
+
+  std::optional<Bitset<256>> Specifiers;
+  if (getConstantStringInfo(FormatVal, FormatStr))
+    Specifiers = parseFormatStringSpecifiers(FormatStr);
+
   SmallVector<StringRef> NeededAspects;
-  for (StringRef Aspect : AllAspects) {
-    if (Aspect == "float") {
-      if (llvm::any_of(
-              llvm::make_range(std::next(CI->arg_begin(), FirstArgIdx),
-                               CI->arg_end()),
-              [](Value *V) { return V->getType()->isFloatingPointTy(); }))
-        NeededAspects.push_back("float");
-    } else {
-      // Unknown aspects are always considered to be needed.
+  for (StringRef Aspect : AllAspects)
+    if (isAspectNeeded(Aspect, CI, FirstArgIdx, Specifiers))
       NeededAspects.push_back(Aspect);
-    }
-  }
 
   if (NeededAspects.size() == AllAspects.size())
     return nullptr;
@@ -4429,19 +4618,9 @@ static Value *optimizeModularFormat(CallInst *CI, IRBuilderBase &B) {
   New->removeFnAttr("modular-format");
   B.Insert(New);
 
-  const auto ReferenceAspect = [&](StringRef Aspect) {
-    SmallString<20> Name = ImplName;
-    Name += '_';
-    Name += Aspect;
-    Function *RelocNoneFn =
-        Intrinsic::getOrInsertDeclaration(M, Intrinsic::reloc_none);
-    B.CreateCall(RelocNoneFn,
-                 {MetadataAsValue::get(Ctx, MDString::get(Ctx, Name))});
-  };
-
   llvm::sort(NeededAspects);
   for (StringRef Request : NeededAspects)
-    ReferenceAspect(Request);
+    referenceAspect(Request, ImplName, M, B);
 
   return New;
 }

@@ -107,7 +107,8 @@ LANGSTANDARD(c2y, "c2y",
              LineComment | C99 | C11 | C17 | C23 | C2y | Digraphs | HexFloat, 202400)
 LANGSTANDARD(gnu2y, "gnu2y",
              C, "Working Draft for ISO C2y with GNU extensions",
-             LineComment | C99 | C11 | C17 | C23 | C2y | Digraphs | GNUMode | HexFloat, 202400)
+             LineComment | C99 | C11 | C17 | C23 | C2y | Digraphs | GNUMode
+                 | HexFloat, 202400)
 // TODO: Add the iso9899:202y alias once ISO publishes the standard.
 
 // C++ modes
@@ -191,6 +192,19 @@ LANGSTANDARD(gnucxx26, "gnu++2c",
              CPlusPlus20 | CPlusPlus23 | CPlusPlus26 | Digraphs | HexFloat | GNUMode, 202400)
 LANGSTANDARD_ALIAS(gnucxx26, "gnu++26")
 
+// FIXME: Use correct version code for C++29 once published.
+// TODO: Add LANGSTANDARD_ALIAS() for "c++29" once C++29 is ratified.
+LANGSTANDARD(cxx29, "c++2d",
+             CXX, "Working draft for C++2d",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             CPlusPlus20 | CPlusPlus23 | CPlusPlus26 | CPlusPlus29 | Digraphs | HexFloat, 202700)
+
+// TODO: Add LANGSTANDARD_ALIAS() for "gnu++29" once C++29 is ratified.
+LANGSTANDARD(gnucxx29, "gnu++2d",
+             CXX, "Working draft for C++2d with GNU extensions",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             CPlusPlus20 | CPlusPlus23 | CPlusPlus26 | CPlusPlus29 | Digraphs | HexFloat | GNUMode, 202700)
+
 // OpenCL
 LANGSTANDARD(opencl10, "cl1.0",
              OpenCL, "OpenCL 1.0",
@@ -209,6 +223,9 @@ LANGSTANDARD(opencl20, "cl2.0",
 LANGSTANDARD(opencl30, "cl3.0",
              OpenCL, "OpenCL 3.0",
              LineComment | C99 | Digraphs | HexFloat | OpenCL, std::nullopt)
+LANGSTANDARD(opencl31, "cl3.1",
+             OpenCL, "OpenCL 3.1",
+             LineComment | C99 | Digraphs | HexFloat | OpenCL, std::nullopt)
 
 LANGSTANDARD(openclcpp10, "clc++1.0",
              OpenCL, "C++ for OpenCL 1.0",
@@ -226,6 +243,7 @@ LANGSTANDARD_ALIAS_DEPR(opencl11, "CL1.1")
 LANGSTANDARD_ALIAS_DEPR(opencl12, "CL1.2")
 LANGSTANDARD_ALIAS_DEPR(opencl20, "CL2.0")
 LANGSTANDARD_ALIAS_DEPR(opencl30, "CL3.0")
+LANGSTANDARD_ALIAS_DEPR(opencl31, "CL3.1")
 LANGSTANDARD_ALIAS_DEPR(openclcpp10, "CLC++")
 LANGSTANDARD_ALIAS_DEPR(openclcpp10, "CLC++1.0")
 LANGSTANDARD_ALIAS_DEPR(openclcpp2021, "CLC++2021")

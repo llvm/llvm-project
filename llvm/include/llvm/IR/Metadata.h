@@ -867,13 +867,7 @@ struct AAMDNodes {
 };
 
 // Specialize DenseMapInfo for AAMDNodes.
-template<>
-struct DenseMapInfo<AAMDNodes> {
-  static inline AAMDNodes getEmptyKey() {
-    return AAMDNodes(DenseMapInfo<MDNode *>::getEmptyKey(), nullptr, nullptr,
-                     nullptr, nullptr);
-  }
-
+template <> struct DenseMapInfo<AAMDNodes> {
   static unsigned getHashValue(const AAMDNodes &Val) {
     return DenseMapInfo<MDNode *>::getHashValue(Val.TBAA) ^
            DenseMapInfo<MDNode *>::getHashValue(Val.TBAAStruct) ^
@@ -1260,13 +1254,6 @@ public:
 
   bool isReplaceable() const { return isTemporary() || isAlwaysReplaceable(); }
   bool isAlwaysReplaceable() const { return getMetadataID() == DIAssignIDKind; }
-
-  /// Check if this is a valid generalized type metadata node.
-  bool hasGeneralizedMDString() {
-    if (getNumOperands() < 2 || !isa<MDString>(getOperand(1)))
-      return false;
-    return cast<MDString>(getOperand(1))->getString().ends_with(".generalized");
-  }
 
   unsigned getNumTemporaryUses() const {
     assert(isTemporary() && "Only for temporaries");

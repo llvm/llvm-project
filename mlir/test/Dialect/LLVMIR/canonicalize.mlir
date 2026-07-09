@@ -185,6 +185,30 @@ llvm.func @fold_extract_sparse() -> f32 {
 
 // -----
 
+// CHECK-LABEL: no_fold_extract_splat_rank_mismatch
+llvm.func @no_fold_extract_splat_rank_mismatch() -> vector<2xi32> {
+  %0 = llvm.mlir.constant(dense<12> : vector<2xi32>) : vector<2xi32>
+  %1 = llvm.mlir.constant(dense<23> : vector<4x2xi32>) : !llvm.array<4 x vector<2xi32>>
+  // CHECK: extractvalue
+  %2 = llvm.extractvalue %1[0] : !llvm.array<4 x vector<2xi32>>
+  %3 = llvm.shl %0, %2 : vector<2xi32>
+  llvm.return %3 : vector<2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: no_fold_extract_sparse_rank_mismatch
+llvm.func @no_fold_extract_sparse_rank_mismatch() -> vector<2xi32> {
+  %0 = llvm.mlir.constant(dense<12> : vector<2xi32>) : vector<2xi32>
+  %1 = llvm.mlir.constant(sparse<[[0, 0]], [23]> : vector<4x2xi32>) : !llvm.array<4 x vector<2xi32>>
+  // CHECK: extractvalue
+  %2 = llvm.extractvalue %1[0] : !llvm.array<4 x vector<2xi32>>
+  %3 = llvm.shl %0, %2 : vector<2xi32>
+  llvm.return %3 : vector<2xi32>
+}
+
+// -----
+
 // CHECK-LABEL: fold_zero
 llvm.func @fold_zero() -> i32 {
   // CHECK-NOT: insertvalue

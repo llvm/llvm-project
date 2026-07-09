@@ -124,8 +124,12 @@ UnsignedOrNone Program::getOrCreateGlobal(const ValueDecl *VD,
   return std::nullopt;
 }
 
-unsigned Program::getOrCreateDummy(const DeclTy &D, bool IsConstexprUnknown) {
+unsigned Program::getOrCreateDummy(DeclTy D, bool IsConstexprUnknown) {
   assert(D);
+
+  if (const auto *VD = dyn_cast_if_present<VarDecl>(dyn_cast<const Decl *>(D)))
+    D = VD->getFirstDecl();
+
   // Dedup blocks since they are immutable and pointers cannot be compared.
   if (auto It = DummyVariables.find(D.getOpaqueValue());
       It != DummyVariables.end())
@@ -251,6 +255,12 @@ UnsignedOrNone Program::createGlobal(const DeclTy &D, QualType Ty,
                                      bool IsStatic, bool IsExtern, bool IsWeak,
                                      bool IsConstexprUnknown,
                                      const Expr *Init) {
+  // Since this global variable is constexpr-unknown and a reference, register
+  // the pointee type instead. When referencing the variable, the pointer will
+  // then be of the pointee type instead of just PT_Ptr.
+  if (Ty->isReferenceType() && IsConstexprUnknown)
+    Ty = Ty->getPointeeType();
+
   // Create a descriptor for the global.
   Descriptor *Desc;
   const bool IsConst = Ty.isConstQualified();

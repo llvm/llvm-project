@@ -16,7 +16,6 @@
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/tools.h"
-#include "flang/Semantics/attr.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
@@ -1195,16 +1194,70 @@ static void CheckIoImpliedDoIndex(
   }
 }
 
+// F2023 12.6.3p7: The do-variable of an io-implied-do that is in another
+// io-implied-do shall not appear as, nor be associated with, the do-variable
+// of the containing io-implied-do.
+void DoForallChecker::CheckActiveIoImpliedDoVar(const parser::Name &name) {
+  if (!name.symbol) {
+    return;
+  }
+  const Symbol &resolved{ResolveAssociations(*name.symbol)};
+  const EquivalenceSet *equivSet{FindEquivalenceSet(resolved)};
+  for (const Symbol *active : activeIoImpliedDoVars_) {
+    const Symbol &activeResolved{ResolveAssociations(*active)};
+    bool associated{&resolved == &activeResolved};
+    if (!associated && equivSet) {
+      for (const EquivalenceObject &obj : *equivSet) {
+        if (obj.symbol == activeResolved) {
+          associated = true;
+          break;
+        }
+      }
+    }
+    if (associated) {
+      if (name.symbol == active) {
+        context_.Warn(common::UsageWarning::IoImpliedDoIndexConflict,
+            name.source,
+            "I/O implied DO index '%s' appears in an enclosing I/O implied DO loop and should not have the same name"_warn_en_US,
+            name.source);
+      } else {
+        context_.Warn(common::UsageWarning::IoImpliedDoIndexConflict,
+            name.source,
+            "I/O implied DO index '%s' should not be associated with do-variable '%s' of an enclosing I/O implied DO loop"_warn_en_US,
+            name.source, active->name());
+      }
+      break;
+    }
+  }
+  activeIoImpliedDoVars_.insert(name.symbol);
+}
+
+void DoForallChecker::Enter(const parser::OutputImpliedDo &outputImpliedDo) {
+  CheckActiveIoImpliedDoVar(parser::UnwrapRef<parser::Name>(
+      std::get<parser::IoImpliedDoControl>(outputImpliedDo.t).Name()));
+}
+
+void DoForallChecker::Enter(const parser::InputImpliedDo &inputImpliedDo) {
+  CheckActiveIoImpliedDoVar(parser::UnwrapRef<parser::Name>(
+      std::get<parser::IoImpliedDoControl>(inputImpliedDo.t).Name()));
+}
+
 void DoForallChecker::Leave(const parser::OutputImpliedDo &outputImpliedDo) {
-  CheckIoImpliedDoIndex(context_,
-      parser::UnwrapRef<parser::Name>(
-          std::get<parser::IoImpliedDoControl>(outputImpliedDo.t).Name()));
+  const auto &name{parser::UnwrapRef<parser::Name>(
+      std::get<parser::IoImpliedDoControl>(outputImpliedDo.t).Name())};
+  CheckIoImpliedDoIndex(context_, name);
+  if (name.symbol) {
+    activeIoImpliedDoVars_.erase(name.symbol);
+  }
 }
 
 void DoForallChecker::Leave(const parser::InputImpliedDo &inputImpliedDo) {
-  CheckIoImpliedDoIndex(context_,
-      parser::UnwrapRef<parser::Name>(
-          std::get<parser::IoImpliedDoControl>(inputImpliedDo.t).Name()));
+  const auto &name{parser::UnwrapRef<parser::Name>(
+      std::get<parser::IoImpliedDoControl>(inputImpliedDo.t).Name())};
+  CheckIoImpliedDoIndex(context_, name);
+  if (name.symbol) {
+    activeIoImpliedDoVars_.erase(name.symbol);
+  }
 }
 
 void DoForallChecker::Leave(const parser::StatVariable &statVariable) {

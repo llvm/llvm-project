@@ -494,7 +494,8 @@ int RegAllocFastImpl::getStackSpaceFor(Register VirtReg) {
   if (Alignment > CurrentAlign && !TRI->canRealignStack(MF))
     Alignment = CurrentAlign;
 
-  int FrameIdx = MFI->CreateSpillStackObject(Size, Alignment);
+  int FrameIdx =
+      MFI->CreateSpillStackObject(Size, Alignment, TRI->getSpillStackID(RC));
 
   // Assign the slot.
   StackSlotForVirtReg[VirtReg] = FrameIdx;

@@ -431,9 +431,6 @@ template <>
 struct DenseMapInfo<AA::ValueAndContext>
     : public DenseMapInfo<AA::ValueAndContext::Base> {
   using Base = DenseMapInfo<AA::ValueAndContext::Base>;
-  static inline AA::ValueAndContext getEmptyKey() {
-    return Base::getEmptyKey();
-  }
   static unsigned getHashValue(const AA::ValueAndContext &VAC) {
     return Base::getHashValue(VAC);
   }
@@ -447,9 +444,6 @@ struct DenseMapInfo<AA::ValueAndContext>
 template <>
 struct DenseMapInfo<AA::ValueScope> : public DenseMapInfo<unsigned char> {
   using Base = DenseMapInfo<unsigned char>;
-  static inline AA::ValueScope getEmptyKey() {
-    return AA::ValueScope(Base::getEmptyKey());
-  }
   static unsigned getHashValue(const AA::ValueScope &S) {
     return Base::getHashValue(S);
   }
@@ -462,10 +456,6 @@ struct DenseMapInfo<AA::ValueScope> : public DenseMapInfo<unsigned char> {
 template <>
 struct DenseMapInfo<const AA::InstExclusionSetTy *>
     : public DenseMapInfo<void *> {
-  using super = DenseMapInfo<void *>;
-  static inline const AA::InstExclusionSetTy *getEmptyKey() {
-    return static_cast<const AA::InstExclusionSetTy *>(super::getEmptyKey());
-  }
   static unsigned getHashValue(const AA::InstExclusionSetTy *BES) {
     unsigned H = 0;
     if (BES)
@@ -477,8 +467,6 @@ struct DenseMapInfo<const AA::InstExclusionSetTy *>
                       const AA::InstExclusionSetTy *RHS) {
     if (LHS == RHS)
       return true;
-    if (LHS == getEmptyKey() || RHS == getEmptyKey())
-      return false;
     auto SizeLHS = LHS ? LHS->size() : 0;
     auto SizeRHS = RHS ? RHS->size() : 0;
     if (SizeLHS != SizeRHS)
@@ -942,12 +930,6 @@ struct IRPosition {
   /// Check if the position has any call base context.
   bool hasCallBaseContext() const { return CBContext != nullptr; }
 
-  /// Special DenseMap key values.
-  ///
-  ///{
-  LLVM_ABI static const IRPosition EmptyKey;
-  ///}
-
   /// Conversion into a void * to allow reuse of pointer hashing.
   operator void *() const { return Enc.getOpaqueValue(); }
 
@@ -1082,7 +1064,6 @@ private:
 
 /// Helper that allows IRPosition as a key in a DenseMap.
 template <> struct DenseMapInfo<IRPosition> {
-  static inline IRPosition getEmptyKey() { return IRPosition::EmptyKey; }
   static unsigned getHashValue(const IRPosition &IRP) {
     return (DenseMapInfo<void *>::getHashValue(IRP) << 4) ^
            (DenseMapInfo<Value *>::getHashValue(IRP.getCallBaseContext()));

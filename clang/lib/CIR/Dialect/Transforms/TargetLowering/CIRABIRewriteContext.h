@@ -11,10 +11,9 @@
 // rewrites a cir.func signature, the function body, and call sites to match
 // the ABI-lowered shape.
 //
-// This file currently handles Direct (pass-through and coerce-in-registers),
-// Extend, and Ignore.  The remaining ArgKind handlers (Indirect, Expand)
-// are added by subsequent PRs in the calling-convention-lowering split
-// series.
+// This file handles Direct (pass-through and coerce-in-registers), Extend,
+// Ignore, Indirect (sret return, byval and byref arguments), and Expand
+// (struct flattening into scalar fields).
 //
 //===----------------------------------------------------------------------===//
 

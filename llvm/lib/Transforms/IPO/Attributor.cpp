@@ -1332,8 +1332,6 @@ ChangeStatus Attributor::manifestAttrs(const IRPosition &IRP,
   return updateAttrMap<Attribute>(IRP, Attrs, AddAttrCB);
 }
 
-const IRPosition IRPosition::EmptyKey(DenseMapInfo<void *>::getEmptyKey());
-
 SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   IRPositions.emplace_back(IRP);
 

@@ -364,10 +364,6 @@ protected:
 static_assert(
     sizeof(lldb_private::Symbol) == 80,
     "Symbol is a high volume data type, size must be increased with care");
-#elif __SIZEOF_POINTER__ == 4 && !defined(_WIN32)
-static_assert(
-    sizeof(lldb_private::Symbol) == 52,
-    "Symbol is a high volume data type, size must be increased with care");
 #endif
 
 namespace llvm {

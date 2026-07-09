@@ -1036,10 +1036,6 @@ private:
 };
 
 template <> struct DenseMapInfo<MachineOperand> {
-  static MachineOperand getEmptyKey() {
-    return MachineOperand(static_cast<MachineOperand::MachineOperandType>(
-        MachineOperand::MO_Empty));
-  }
   static unsigned getHashValue(const MachineOperand &MO) {
     return hash_value(MO);
   }

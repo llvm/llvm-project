@@ -708,7 +708,7 @@ public:
   static void setUseExtended(bool Enable) { ExtendedLLT = Enable; }
 
 private:
-  static bool ExtendedLLT;
+  LLVM_ABI static bool ExtendedLLT;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const LLT &Ty) {
@@ -717,11 +717,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const LLT &Ty) {
 }
 
 template <> struct DenseMapInfo<LLT> {
-  static inline LLT getEmptyKey() {
-    LLT Invalid;
-    Invalid.Info = LLT::Kind::POINTER;
-    return Invalid;
-  }
   static inline unsigned getHashValue(const LLT &Ty) {
     uint64_t Val = Ty.getUniqueRAWLLTData();
     return DenseMapInfo<uint64_t>::getHashValue(Val);

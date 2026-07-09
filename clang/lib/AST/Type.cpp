@@ -2102,6 +2102,10 @@ public:
   Type *VisitPackExpansionType(const PackExpansionType *T) {
     return Visit(T->getPattern());
   }
+
+  Type *VisitAtomicType(const AtomicType *T) {
+    return Visit(T->getValueType());
+  }
 };
 
 } // namespace
@@ -2786,6 +2790,10 @@ QualType Type::getRVVEltType(const ASTContext &Ctx) const {
 }
 
 bool QualType::isPODType(const ASTContext &Context) const {
+  if (Context.getLangOpts().HLSL &&
+      getTypePtr()->isHLSLStandardLayoutRecordOrArrayOf())
+    return true;
+
   // C++11 has a more relaxed definition of POD.
   if (Context.getLangOpts().CPlusPlus11)
     return isCXX11PODType(Context);
@@ -5338,6 +5346,16 @@ NullabilityKindOrNone AttributedType::stripOuterNullability(QualType &T) {
   return std::nullopt;
 }
 
+void AttributedType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                             Kind attrKind, QualType modified,
+                             QualType equivalent, const Attr *attr) {
+  ID.AddInteger(attrKind);
+  ID.AddPointer(modified.getAsOpaquePtr());
+  ID.AddPointer(equivalent.getAsOpaquePtr());
+  if (attr)
+    attr->Profile(ID, Ctx);
+}
+
 bool Type::isSignableIntegerType(const ASTContext &Ctx) const {
   if (!isIntegralType(Ctx) || isEnumeralType())
     return false;
@@ -5527,6 +5545,16 @@ bool Type::isHLSLIntangibleType() const {
          "all HLSL structs and classes should be CXXRecordDecl");
   assert(RD->isCompleteDefinition() && "expecting complete type");
   return RD->isHLSLIntangible();
+}
+
+bool Type::isHLSLStandardLayoutRecordOrArrayOf() const {
+  const Type *BaseTy = getBaseElementTypeUnsafe();
+  if (const auto *RD =
+          dyn_cast_or_null<CXXRecordDecl>(BaseTy->getAsRecordDecl())) {
+    if (!RD->isHLSLBuiltinRecord() && RD->isStandardLayout())
+      return true;
+  }
+  return false;
 }
 
 QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {

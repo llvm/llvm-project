@@ -447,7 +447,8 @@ public:
 
   /// Add attributes to the attribute set. Returns a new set because attribute
   /// sets are immutable.
-  AttributeSet addAttributes(LLVMContext &C, const AttrBuilder &B) const;
+  LLVM_ABI AttributeSet addAttributes(LLVMContext &C,
+                                      const AttrBuilder &B) const;
 
   /// Remove the specified attribute from this set. Returns a new set because
   /// attribute sets are immutable.
@@ -526,15 +527,8 @@ public:
 /// \class
 /// Provide DenseMapInfo for AttributeSet.
 template <> struct DenseMapInfo<AttributeSet, void> {
-  static AttributeSet getEmptyKey() {
-    auto Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
-    return AttributeSet(reinterpret_cast<AttributeSetNode *>(Val));
-  }
-
   static unsigned getHashValue(AttributeSet AS) {
-    return (unsigned((uintptr_t)AS.SetNode) >> 4) ^
-           (unsigned((uintptr_t)AS.SetNode) >> 9);
+    return DenseMapInfo<const void *>::getHashValue(AS.SetNode);
   }
 
   static bool isEqual(AttributeSet LHS, AttributeSet RHS) { return LHS == RHS; }
@@ -585,9 +579,6 @@ private:
 
   static AttributeList getImpl(LLVMContext &C, ArrayRef<AttributeSet> AttrSets);
 
-  AttributeList setAttributesAtIndex(LLVMContext &C, unsigned Index,
-                                     AttributeSet Attrs) const;
-
 public:
   AttributeList() = default;
 
@@ -609,6 +600,11 @@ public:
                                     AttributeSet Attrs);
   LLVM_ABI static AttributeList get(LLVMContext &C, unsigned Index,
                                     const AttrBuilder &B);
+
+  /// Set the attribute set at the given index.
+  /// Returns a new list because attribute lists are immutable.
+  [[nodiscard]] LLVM_ABI AttributeList setAttributesAtIndex(
+      LLVMContext &C, unsigned Index, AttributeSet Attrs) const;
 
   // TODO: remove non-AtIndex versions of these methods.
   /// Add an attribute to the attribute set at the given index.
@@ -1095,15 +1091,8 @@ public:
 /// \class
 /// Provide DenseMapInfo for AttributeList.
 template <> struct DenseMapInfo<AttributeList, void> {
-  static AttributeList getEmptyKey() {
-    auto Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
-    return AttributeList(reinterpret_cast<AttributeListImpl *>(Val));
-  }
-
   static unsigned getHashValue(AttributeList AS) {
-    return (unsigned((uintptr_t)AS.pImpl) >> 4) ^
-           (unsigned((uintptr_t)AS.pImpl) >> 9);
+    return DenseMapInfo<const void *>::getHashValue(AS.pImpl);
   }
 
   static bool isEqual(AttributeList LHS, AttributeList RHS) {

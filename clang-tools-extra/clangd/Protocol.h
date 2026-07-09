@@ -2108,11 +2108,6 @@ namespace llvm {
 
 template <> struct DenseMapInfo<clang::clangd::Range> {
   using Range = clang::clangd::Range;
-  static inline Range getEmptyKey() {
-    static clang::clangd::Position Tomb{-1, -1};
-    static Range R{Tomb, Tomb};
-    return R;
-  }
   static unsigned getHashValue(const Range &Val) {
     return llvm::hash_combine(Val.start.line, Val.start.character, Val.end.line,
                               Val.end.character);

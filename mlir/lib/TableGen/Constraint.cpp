@@ -125,24 +125,13 @@ AppliedConstraint::AppliedConstraint(Constraint &&constraint,
     : constraint(constraint), self(std::string(self)),
       entities(std::move(entities)) {}
 
-Constraint DenseMapInfo<Constraint>::getEmptyKey() {
-  return Constraint(RecordDenseMapInfo::getEmptyKey(),
-                    Constraint::CK_Uncategorized);
-}
-
 unsigned DenseMapInfo<Constraint>::getHashValue(Constraint constraint) {
-  if (constraint == getEmptyKey())
-    return RecordDenseMapInfo::getHashValue(RecordDenseMapInfo::getEmptyKey());
   return llvm::hash_combine(constraint.getPredicate(), constraint.getSummary());
 }
 
 bool DenseMapInfo<Constraint>::isEqual(Constraint lhs, Constraint rhs) {
   if (lhs == rhs)
     return true;
-  if (lhs == getEmptyKey())
-    return false;
-  if (rhs == getEmptyKey())
-    return false;
   return lhs.getPredicate() == rhs.getPredicate() &&
          lhs.getSummary() == rhs.getSummary();
 }

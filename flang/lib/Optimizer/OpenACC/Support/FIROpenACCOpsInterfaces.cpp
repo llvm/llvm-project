@@ -18,7 +18,6 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SmallSet.h"
 
 namespace fir::acc {
@@ -39,7 +38,7 @@ AccFortranObjectViewModel<mlir::acc::ReductionInitOp>::getViewSource(
   detail::verifyFortranObjectViewResult(op, resultView);
   auto iface = mlir::cast<mlir::RegionBranchOpInterface>(op);
   llvm::SmallVector<mlir::Value, 1> resultValues;
-  iface.getPredecessorValues(mlir::RegionSuccessor::parent(), /*index=*/0,
+  iface.getPredecessorValues(mlir::RegionSuccessor(op), /*index=*/0,
                              resultValues);
   assert(!resultValues.empty() &&
          "acc.reduction_init's result must have at least one possible value");

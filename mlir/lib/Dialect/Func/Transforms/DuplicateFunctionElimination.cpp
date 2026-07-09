@@ -53,9 +53,6 @@ struct DuplicateFuncOpEquivalenceInfo
   static bool isEqual(func::FuncOp lhs, func::FuncOp rhs) {
     if (lhs == rhs)
       return true;
-    if (lhs == getEmptyKey() || rhs == getEmptyKey())
-      return false;
-
     if (lhs.isDeclaration() || rhs.isDeclaration())
       return false;
 
