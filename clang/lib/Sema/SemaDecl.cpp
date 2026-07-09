@@ -11052,8 +11052,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       for (const ParmVarDecl *PVD : NewFD->parameters()) {
         QualType ParamTy = PVD->getType().getNonReferenceType();
         QualType EltTy = Context.getBaseElementType(ParamTy);
-        // `isCompleteType` forces completion of the element type so the
-        // resource parameter check is valid.
+        // `isCompleteType` forces completion of the element type without
+        // reporting an error (diagnosed elsewhere) so the resource parameter
+        // check is valid.
         if (!EltTy->isDependentType() &&
             isCompleteType(PVD->getLocation(), EltTy) &&
             ParamTy->isHLSLIntangibleType()) {
