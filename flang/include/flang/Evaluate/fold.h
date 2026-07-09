@@ -17,7 +17,6 @@
 #include "expression.h"
 #include "tools.h"
 #include "type.h"
-#include <variant>
 
 namespace Fortran::evaluate::characteristics {
 class TypeAndShape;

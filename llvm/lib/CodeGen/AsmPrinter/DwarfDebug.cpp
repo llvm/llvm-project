@@ -585,7 +585,7 @@ struct FwdRegParamInfo {
 };
 
 /// Register worklist for finding call site values.
-using FwdRegWorklist = MapVector<uint64_t, SmallVector<FwdRegParamInfo, 2>>;
+using FwdRegWorklist = MapVector<Register, SmallVector<FwdRegParamInfo, 2>>;
 /// Container for the set of register units known to be clobbered on the path
 /// to a call site.
 using ClobberedRegUnitSet = SmallSet<MCRegUnit, 16>;
@@ -3278,7 +3278,8 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
         if (TypeBitSize > GenericBitSize && IsByteSized && IsOutOfRange) {
           DwarfExpr.addImplicitValue(
               APInt(static_cast<unsigned>(TypeBitSize),
-                    static_cast<uint64_t>(Entry.getInt()), IsSigned),
+                    static_cast<uint64_t>(Entry.getInt()), IsSigned,
+                    /*implicitTrunc=*/true),
               AP);
           return true;
         }

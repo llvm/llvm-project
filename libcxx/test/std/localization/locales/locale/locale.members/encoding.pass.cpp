@@ -12,6 +12,7 @@
 // REQUIRES: locale.en_US.UTF-8
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: availability-te-environment-missing
+// UNSUPPORTED: LLVM-LIBC-FIXME
 
 // class locale
 

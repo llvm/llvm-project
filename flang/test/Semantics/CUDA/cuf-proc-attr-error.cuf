@@ -1,5 +1,5 @@
 ! RUN: %python %S/../test_errors.py %s %flang_fc1
-! Test conflicting CUDA subprogram attributes
+! Test empty or invalid CUDA subprogram attributes
 module m1
  contains
   !ERROR: expected DEVICE, GLOBAL, GRID_GLOBAL, or HOST attribute

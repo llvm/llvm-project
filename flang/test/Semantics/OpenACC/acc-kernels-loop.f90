@@ -249,7 +249,7 @@ program openacc_kernels_loop_validity
   end do
 
   !$acc kernels loop default(none)
-  !ERROR: The DEFAULT(NONE) clause requires that 'n' must be listed in a data-mapping clause
+  !WARNING: OpenACC DEFAULT(NONE) ignored for scalar 'n' (-fno-openacc-default-none-scalars-strict) [-Wopenacc-default-none-scalars-strict]
   do i = 1, N
     !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-mapping clause
     a(i) = 3.14d0

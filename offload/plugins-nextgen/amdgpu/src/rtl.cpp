@@ -4031,7 +4031,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     return new AMDGPUGlobalHandlerTy();
   }
 
-  Triple::ArchType getTripleArch() const override { return Triple::amdgcn; }
+  Triple::ArchType getTripleArch() const override { return Triple::amdgpu; }
 
   const char *getName() const override { return GETNAME(TARGET_NAME); }
 
@@ -4468,6 +4468,10 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
 void AMDGPUQueueTy::callbackError(hsa_status_t Status, hsa_queue_t *Source,
                                   void *Data) {
   auto &AMDGPUDevice = *reinterpret_cast<AMDGPUDeviceTy *>(Data);
+
+  // Drain any pending RPC work the device pushed before its queue died.
+  if (RPCServerTy *RPCServer = AMDGPUDevice.getRPCServer())
+    RPCServer->flushDevice(AMDGPUDevice);
 
   if (Status == HSA_STATUS_ERROR_EXCEPTION) {
     auto KernelTraceInfoRecord =

@@ -940,27 +940,56 @@ entry:
 }
 
 define i32 @test_phi_select_index_non_local(ptr %A, i32 %N, i32 %i)  {
-; CHECK-LABEL: @test_phi_select_index_non_local(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I:%.*]], [[N:%.*]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[IF_END:%.*]]
-; CHECK:       land.lhs.true:
-; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I]], 1
-; CHECK-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[ADD]] to i64
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i32 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP3]], i32 [[ADD]], i32 [[I]]
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
-; CHECK-NEXT:    [[I_ADDR_0:%.*]] = phi i32 [ [[I]], [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[LAND_LHS_TRUE]] ]
-; CHECK-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[I_ADDR_0]] to i64
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM5]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX6]], align 4
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; MDEP-LABEL: @test_phi_select_index_non_local(
+; MDEP-NEXT:  entry:
+; MDEP-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I:%.*]], [[N:%.*]]
+; MDEP-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[ENTRY_IF_END_CRIT_EDGE:%.*]]
+; MDEP:       entry.if.end_crit_edge:
+; MDEP-NEXT:    [[IDXPROM5_PHI_TRANS_INSERT:%.*]] = sext i32 [[I]] to i64
+; MDEP-NEXT:    [[ARRAYIDX6_PHI_TRANS_INSERT:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM5_PHI_TRANS_INSERT]]
+; MDEP-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[ARRAYIDX6_PHI_TRANS_INSERT]], align 4
+; MDEP-NEXT:    br label [[IF_END:%.*]]
+; MDEP:       land.lhs.true:
+; MDEP-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
+; MDEP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM]]
+; MDEP-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; MDEP-NEXT:    [[ADD:%.*]] = add nsw i32 [[I]], 1
+; MDEP-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[ADD]] to i64
+; MDEP-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM1]]
+; MDEP-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; MDEP-NEXT:    [[CMP3:%.*]] = icmp slt i32 [[TMP0]], [[TMP1]]
+; MDEP-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP3]], i32 [[ADD]], i32 [[I]]
+; MDEP-NEXT:    [[TMP2:%.*]] = select i1 [[CMP3]], i32 [[TMP1]], i32 [[TMP0]]
+; MDEP-NEXT:    [[DOTPRE1:%.*]] = sext i32 [[SPEC_SELECT]] to i64
+; MDEP-NEXT:    br label [[IF_END]]
+; MDEP:       if.end:
+; MDEP-NEXT:    [[IDXPROM5_PRE_PHI:%.*]] = phi i64 [ [[IDXPROM5_PHI_TRANS_INSERT]], [[ENTRY_IF_END_CRIT_EDGE]] ], [ [[DOTPRE1]], [[LAND_LHS_TRUE]] ]
+; MDEP-NEXT:    [[TMP3:%.*]] = phi i32 [ [[DOTPRE]], [[ENTRY_IF_END_CRIT_EDGE]] ], [ [[TMP2]], [[LAND_LHS_TRUE]] ]
+; MDEP-NEXT:    [[I_ADDR_0:%.*]] = phi i32 [ [[I]], [[ENTRY_IF_END_CRIT_EDGE]] ], [ [[SPEC_SELECT]], [[LAND_LHS_TRUE]] ]
+; MDEP-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM5_PRE_PHI]]
+; MDEP-NEXT:    ret i32 [[TMP3]]
+;
+; MSSA-LABEL: @test_phi_select_index_non_local(
+; MSSA-NEXT:  entry:
+; MSSA-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I:%.*]], [[N:%.*]]
+; MSSA-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[IF_END:%.*]]
+; MSSA:       land.lhs.true:
+; MSSA-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
+; MSSA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM]]
+; MSSA-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; MSSA-NEXT:    [[ADD:%.*]] = add nsw i32 [[I]], 1
+; MSSA-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[ADD]] to i64
+; MSSA-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM1]]
+; MSSA-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; MSSA-NEXT:    [[CMP3:%.*]] = icmp slt i32 [[TMP0]], [[TMP1]]
+; MSSA-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP3]], i32 [[ADD]], i32 [[I]]
+; MSSA-NEXT:    br label [[IF_END]]
+; MSSA:       if.end:
+; MSSA-NEXT:    [[I_ADDR_0:%.*]] = phi i32 [ [[I]], [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[LAND_LHS_TRUE]] ]
+; MSSA-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[I_ADDR_0]] to i64
+; MSSA-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM5]]
+; MSSA-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX6]], align 4
+; MSSA-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
   %cmp = icmp slt i32 %i, %N
@@ -987,7 +1016,88 @@ if.end:
 }
 
 define i32 @test_phi_select_index_loop(ptr %A, i32 %N)  {
-; CHECK-LABEL: @test_phi_select_index_loop(
+; MDEP-LABEL: @test_phi_select_index_loop(
+; MDEP-NEXT:  entry:
+; MDEP-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N:%.*]], 1
+; MDEP-NEXT:    br i1 [[CMP]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; MDEP:       for.body.preheader:
+; MDEP-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[A:%.*]], align 4
+; MDEP-NEXT:    br label [[FOR_BODY:%.*]]
+; MDEP:       for.body:
+; MDEP-NEXT:    [[TMP0:%.*]] = phi i32 [ [[TMP2:%.*]], [[FOR_BODY]] ], [ [[DOTPRE]], [[FOR_BODY_PREHEADER]] ]
+; MDEP-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[FOR_BODY]] ], [ 1, [[FOR_BODY_PREHEADER]] ]
+; MDEP-NEXT:    [[RES:%.*]] = phi i32 [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; MDEP-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IDX]] to i64
+; MDEP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM]]
+; MDEP-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; MDEP-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[RES]] to i64
+; MDEP-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM1]]
+; MDEP-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP1]], [[TMP0]]
+; MDEP-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP1]], i32 [[IDX]], i32 [[RES]]
+; MDEP-NEXT:    [[IDX_NEXT]] = add nsw i32 [[IDX]], 1
+; MDEP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[IDX_NEXT]], [[N]]
+; MDEP-NEXT:    [[TMP2]] = select i1 [[CMP1]], i32 [[TMP1]], i32 [[TMP0]]
+; MDEP-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+; MDEP:       for.cond.cleanup.loopexit:
+; MDEP-NEXT:    br label [[FOR_COND_CLEANUP]]
+; MDEP:       for.cond.cleanup:
+; MDEP-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; MDEP-NEXT:    ret i32 [[RES_0_LCSSA]]
+;
+; MSSA-LABEL: @test_phi_select_index_loop(
+; MSSA-NEXT:  entry:
+; MSSA-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N:%.*]], 1
+; MSSA-NEXT:    br i1 [[CMP]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; MSSA:       for.body.preheader:
+; MSSA-NEXT:    br label [[FOR_BODY:%.*]]
+; MSSA:       for.body:
+; MSSA-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[FOR_BODY]] ], [ 1, [[FOR_BODY_PREHEADER]] ]
+; MSSA-NEXT:    [[RES:%.*]] = phi i32 [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; MSSA-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IDX]] to i64
+; MSSA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM]]
+; MSSA-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; MSSA-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[RES]] to i64
+; MSSA-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM1]]
+; MSSA-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
+; MSSA-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP0]], [[TMP1]]
+; MSSA-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP1]], i32 [[IDX]], i32 [[RES]]
+; MSSA-NEXT:    [[IDX_NEXT]] = add nsw i32 [[IDX]], 1
+; MSSA-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[IDX_NEXT]], [[N]]
+; MSSA-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+; MSSA:       for.cond.cleanup.loopexit:
+; MSSA-NEXT:    br label [[FOR_COND_CLEANUP]]
+; MSSA:       for.cond.cleanup:
+; MSSA-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; MSSA-NEXT:    ret i32 [[RES_0_LCSSA]]
+;
+entry:
+  %cmp = icmp sgt i32 %N, 1
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.body:
+  %idx = phi i32 [ 1, %entry ], [ %idx.next, %for.body ]
+  %res = phi i32 [ 0, %entry ], [ %spec.select, %for.body ]
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  %idxprom1 = sext i32 %res to i64
+  %arrayidx1 = getelementptr inbounds i32, ptr %A, i64 %idxprom1
+  %1 = load i32, ptr %arrayidx1, align 4
+  %cmp1 = icmp slt i32 %0, %1
+  %spec.select = select i1 %cmp1, i32 %idx, i32 %res
+  %idx.next = add nsw i32 %idx, 1
+  %exitcond.not = icmp eq i32 %idx.next, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+
+  for.cond.cleanup:
+  %res.0.lcssa = phi i32 [ 0, %entry ], [ %spec.select, %for.body ]
+  ret i32 %res.0.lcssa
+}
+
+; Negative test: a store that may clobber the loaded location sits between the
+; two loads, so the load through the select index must NOT be eliminated.
+define i32 @test_phi_select_index_loop_clobber(ptr %A, i32 %N)  {
+; CHECK-LABEL: @test_phi_select_index_loop_clobber(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N:%.*]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -999,6 +1109,7 @@ define i32 @test_phi_select_index_loop(ptr %A, i32 %N)  {
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IDX]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 7, ptr [[A]], align 4
 ; CHECK-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[RES]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
@@ -1023,6 +1134,7 @@ for.body:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom
   %0 = load i32, ptr %arrayidx, align 4
+  store i32 7, ptr %A, align 4
   %idxprom1 = sext i32 %res to i64
   %arrayidx1 = getelementptr inbounds i32, ptr %A, i64 %idxprom1
   %1 = load i32, ptr %arrayidx1, align 4
@@ -1035,4 +1147,76 @@ for.body:
   for.cond.cleanup:
   %res.0.lcssa = phi i32 [ 0, %entry ], [ %spec.select, %for.body ]
   ret i32 %res.0.lcssa
+}
+
+; The indvars-canonicalized form of a min-index loop: the induction variable is
+; an i64 `%iv`, `arr[i]` is addressed directly with `%iv`, while the select's
+; true value is `trunc nuw nsw %iv` and the running index is zero-extended back
+; for `arr[minloc]`.  The load through the select index should still be
+; eliminated: translating the true side yields `zext nneg (trunc nuw %iv)` which
+; folds back to `%iv`, matching the existing `arr[i]` address.
+define i32 @test_phi_select_index_loop_trunc(ptr %arr, i64 %n) {
+; MDEP-LABEL: @test_phi_select_index_loop_trunc(
+; MDEP-NEXT:  entry:
+; MDEP-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[ARR:%.*]], align 4
+; MDEP-NEXT:    br label [[FOR_BODY:%.*]]
+; MDEP:       for.body:
+; MDEP-NEXT:    [[TMP0:%.*]] = phi i32 [ [[DOTPRE]], [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[FOR_BODY]] ]
+; MDEP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; MDEP-NEXT:    [[MINLOC:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SEL:%.*]], [[FOR_BODY]] ]
+; MDEP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], i64 [[IV]]
+; MDEP-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; MDEP-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[MINLOC]] to i64
+; MDEP-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], i64 [[IDXPROM]]
+; MDEP-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], [[TMP0]]
+; MDEP-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i64 [[IV]] to i32
+; MDEP-NEXT:    [[SEL]] = select i1 [[CMP]], i32 [[TMP2]], i32 [[MINLOC]]
+; MDEP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; MDEP-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; MDEP-NEXT:    [[TMP3]] = select i1 [[CMP]], i32 [[TMP1]], i32 [[TMP0]]
+; MDEP-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; MDEP:       exit:
+; MDEP-NEXT:    ret i32 [[SEL]]
+;
+; MSSA-LABEL: @test_phi_select_index_loop_trunc(
+; MSSA-NEXT:  entry:
+; MSSA-NEXT:    br label [[FOR_BODY:%.*]]
+; MSSA:       for.body:
+; MSSA-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; MSSA-NEXT:    [[MINLOC:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SEL:%.*]], [[FOR_BODY]] ]
+; MSSA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR:%.*]], i64 [[IV]]
+; MSSA-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; MSSA-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[MINLOC]] to i64
+; MSSA-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], i64 [[IDXPROM]]
+; MSSA-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; MSSA-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], [[TMP1]]
+; MSSA-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i64 [[IV]] to i32
+; MSSA-NEXT:    [[SEL]] = select i1 [[CMP]], i32 [[TMP2]], i32 [[MINLOC]]
+; MSSA-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; MSSA-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; MSSA-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; MSSA:       exit:
+; MSSA-NEXT:    ret i32 [[SEL]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %minloc = phi i32 [ 0, %entry ], [ %sel, %for.body ]
+  %arrayidx = getelementptr inbounds [4 x i8], ptr %arr, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %idxprom = zext nneg i32 %minloc to i64
+  %arrayidx2 = getelementptr inbounds [4 x i8], ptr %arr, i64 %idxprom
+  %1 = load i32, ptr %arrayidx2, align 4
+  %cmp = icmp slt i32 %0, %1
+  %2 = trunc nuw nsw i64 %iv to i32
+  %sel = select i1 %cmp, i32 %2, i32 %minloc
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %for.body
+
+exit:
+  %r = phi i32 [ %sel, %for.body ]
+  ret i32 %r
 }
