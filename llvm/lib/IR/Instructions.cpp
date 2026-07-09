@@ -1363,28 +1363,23 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Align Align, InsertPosition InsertBef)
     : LoadInst(Ty, Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
-               SyncScope::System, /*IsElementwise=*/false, InsertBef) {}
+               SyncScope::System, InsertBef) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name,
                    const LoadStoreInstProperties &Props,
                    InsertPosition InsertBef)
     : LoadInst(Ty, Ptr, Name, Props.IsVolatile, Props.Alignment, Props.Ordering,
-               Props.SSID, /*IsElementwise=*/false, InsertBef) {}
+               Props.SSID, InsertBef) {
+  setElementwise(Props.IsElementwise);
+}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Align Align, AtomicOrdering Order, SyncScope::ID SSID,
                    InsertPosition InsertBef)
-    : LoadInst(Ty, Ptr, Name, isVolatile, Align, Order, SSID,
-               /*IsElementwise=*/false, InsertBef) {}
-
-LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
-                   Align Align, AtomicOrdering Order, SyncScope::ID SSID,
-                   bool IsElementwise, InsertPosition InsertBef)
     : UnaryInstruction(Ty, Load, Ptr, InsertBef) {
   setVolatile(isVolatile);
   setAlignment(Align);
   setAtomic(Order, SSID);
-  setElementwise(IsElementwise);
   AssertOK();
   setName(Name);
 }
@@ -4460,9 +4455,7 @@ AllocaInst *AllocaInst::cloneImpl() const {
 }
 
 LoadInst *LoadInst::cloneImpl() const {
-  return new LoadInst(getType(), getOperand(0), Twine(), isVolatile(),
-                      getAlign(), getOrdering(), getSyncScopeID(),
-                      isElementwise(),
+  return new LoadInst(getType(), getOperand(0), Twine(), getProperties(),
                       /*InsertBefore=*/nullptr);
 }
 

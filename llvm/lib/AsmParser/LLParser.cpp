@@ -9020,8 +9020,9 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
     return error(ExplicitTypeLoc, "loading unsized types is not allowed");
   if (!Alignment)
     Alignment = M->getDataLayout().getABITypeAlign(Ty);
-  Inst = new LoadInst(Ty, Val, "", isVolatile, *Alignment, Ordering, SSID,
-                      IsElementwise,
+  Inst = new LoadInst(Ty, Val, "",
+                      LoadStoreInstProperties{isVolatile, *Alignment, Ordering,
+                                              SSID, IsElementwise},
                       /*InsertBefore=*/nullptr);
   return AteExtraComma ? InstExtraComma : InstNormal;
 }

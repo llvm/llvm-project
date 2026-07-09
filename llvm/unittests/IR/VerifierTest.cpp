@@ -521,7 +521,6 @@ TEST(VerifierTest, AtomicRMWIntVector) {
   new AtomicRMWInst(AtomicRMWInst::Add, Ptr, CV, Align(8),
                     AtomicOrdering::SequentiallyConsistent, SyncScope::System,
                     /*Elementwise=*/false, Entry);
-
   ReturnInst::Create(C, Entry);
 
   std::string Error;
@@ -530,6 +529,7 @@ TEST(VerifierTest, AtomicRMWIntVector) {
   EXPECT_TRUE(
       StringRef(Error).starts_with("atomicrmw add operand must have integer or "
                                    "fixed vector of integer type!"))
+      << Error;
 }
 
 TEST(VerifierTest, ElementwiseLoadNonAtomic) {
@@ -543,9 +543,12 @@ TEST(VerifierTest, ElementwiseLoadNonAtomic) {
   Type *I32Ty = Type::getInt32Ty(C);
   Type *VecTy = FixedVectorType::get(I32Ty, 4);
 
-  new LoadInst(VecTy, Ptr, "", /*isVolatile=*/false, Align(4),
-               AtomicOrdering::NotAtomic, SyncScope::System,
-               /*IsElementwise=*/true, Entry);
+  new LoadInst(VecTy, Ptr, "",
+               LoadStoreInstProperties{/*IsVolatile=*/false, Align(4),
+                                       AtomicOrdering::NotAtomic,
+                                       SyncScope::System,
+                                       /*IsElementwise=*/true},
+               Entry);
   ReturnInst::Create(C, Entry);
 
   std::string Error;
@@ -566,9 +569,12 @@ TEST(VerifierTest, ElementwiseLoadScalar) {
 
   Type *I32Ty = Type::getInt32Ty(C);
 
-  new LoadInst(I32Ty, Ptr, "", /*isVolatile=*/false, Align(4),
-               AtomicOrdering::Monotonic, SyncScope::System,
-               /*IsElementwise=*/true, Entry);
+  new LoadInst(I32Ty, Ptr, "",
+               LoadStoreInstProperties{/*IsVolatile=*/false, Align(4),
+                                       AtomicOrdering::Monotonic,
+                                       SyncScope::System,
+                                       /*IsElementwise=*/true},
+               Entry);
   ReturnInst::Create(C, Entry);
 
   std::string Error;
@@ -590,9 +596,12 @@ TEST(VerifierTest, ElementwiseLoadOddSizedVector) {
   Type *I32Ty = Type::getInt32Ty(C);
   Type *VecTy = FixedVectorType::get(I32Ty, 5);
 
-  new LoadInst(VecTy, Ptr, "", /*isVolatile=*/false, Align(4),
-               AtomicOrdering::Monotonic, SyncScope::System,
-               /*IsElementwise=*/true, Entry);
+  new LoadInst(VecTy, Ptr, "",
+               LoadStoreInstProperties{/*IsVolatile=*/false, Align(4),
+                                       AtomicOrdering::Monotonic,
+                                       SyncScope::System,
+                                       /*IsElementwise=*/true},
+               Entry);
   ReturnInst::Create(C, Entry);
 
   std::string Error;
