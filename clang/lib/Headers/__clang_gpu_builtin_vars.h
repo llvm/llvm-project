@@ -6,6 +6,8 @@
 //
 //===-----------------------------------------------------------------------===
 
+#include <stddef.h>
+
 #ifndef __CLANG_GPU_BUILTIN_VARS_H__
 #define __CLANG_GPU_BUILTIN_VARS_H__
 
@@ -19,6 +21,22 @@ static inline __attribute__((device)) const struct {
     return __gpu_num_lanes();
   }
 } warpSize{};
+
+extern "C" {
+
+typedef struct dim3 {
+  dim3() {}
+  dim3(unsigned x) : x(x) {}
+  unsigned x = 0, y = 0, z = 0;
+} dim3;
+
+// TODO: For some reason the CUDA device compilation requires this declaration
+// to be present on the device while it is only used on the host.
+unsigned __llvmPushCallConfiguration(dim3 gridDim, dim3 blockDim,
+                                     size_t sharedMem = 0, void *stream = 0);
+unsigned __llvmLaunchKernel(const void *func, dim3 gridDim, dim3 blockDim,
+                            void **args, size_t sharedMem = 0, void *stream = 0);
+}
 
 // Make sure nobody can create instances of the coordinate types, take their
 // address, copy, or assign them.

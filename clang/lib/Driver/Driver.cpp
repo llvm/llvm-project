@@ -5032,7 +5032,7 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
         getFinalPhase(Args) == phases::Preprocess))
     return HostAction;
 
-  bool UseLLVMOffload = Args.hasArg(
+  bool UsesLLVMOffloading = Args.hasArg(
       options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
 
   ActionList OffloadActions;
@@ -5042,6 +5042,8 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
       Action::OFK_OpenMP, Action::OFK_Cuda, Action::OFK_HIP, Action::OFK_SYCL};
 
   for (Action::OffloadKind Kind : OffloadKinds) {
+    llvm::errs() << "Offload Kind: " << Action::GetOffloadKindName(Kind) \
+                 << '\n';
     SmallVector<const ToolChain *, 2> ToolChains;
     ActionList DeviceActions;
 
@@ -5058,15 +5060,9 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
                  << ", Input Arg: " << InputArg->getAsString(Args) << '\n';
 
     // Allow the toolchain to be active for unsupported file types if we are "offload-cross-compiling" via llvm-offload.
-    if (!UseLLVMOffload && ((Kind == Action::OFK_Cuda && !types::isCuda(InputType)) ||
+    if (!UsesLLVMOffloading && ((Kind == Action::OFK_Cuda && !types::isCuda(InputType)) ||
         (Kind == Action::OFK_HIP && !types::isHIP(InputType))))
       continue;
-    // FIX: this effectively disables OpenMP offloading for now
-    if (UseLLVMOffload &&
-        (!types::isCuda(InputType) && !types::isHIP(InputType))) {
-      llvm::errs() << "Not making toolchain\n";
-      continue;
-    }
 
     // Get the product of all bound architectures and toolchains.
     SmallVector<std::pair<const ToolChain *, BoundArch>> TCAndArchs;
@@ -5188,7 +5184,7 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
     return HostAction;
 
   OffloadAction::DeviceDependences DDep;
-  if (C.isOffloadingHostKind(Action::OFK_Cuda) &&
+  if (!UsesLLVMOffloading && C.isOffloadingHostKind(Action::OFK_Cuda) &&
       !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false)) {
     // If we are not in RDC-mode we just emit the final CUDA fatbinary for
     // each translation unit without requiring any linking.
@@ -5196,7 +5192,7 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
         C.MakeAction<LinkJobAction>(OffloadActions, types::TY_CUDA_FATBIN);
     DDep.add(*FatbinAction, *C.getSingleOffloadToolChain<Action::OFK_Cuda>(),
              /*BA=*/{}, Action::OFK_Cuda);
-  } else if (HIPNoRDC && offloadDeviceOnly()) {
+  } else if (!UsesLLVMOffloading && HIPNoRDC && offloadDeviceOnly()) {
     // If we are in device-only non-RDC-mode we just emit the final HIP
     // fatbinary for each translation unit, linking each input individually.
     Action *FatbinAction =
@@ -5204,7 +5200,7 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
     DDep.add(*FatbinAction,
              *C.getOffloadToolChains<Action::OFK_HIP>().first->second,
              /*BA=*/{}, Action::OFK_HIP);
-  } else if (HIPNoRDC) {
+  } else if (!UsesLLVMOffloading && HIPNoRDC) {
     // Host + device assembly: defer to clang-offload-bundler (see
     // BuildActions).
     if (HIPAsmBundleDeviceOut &&

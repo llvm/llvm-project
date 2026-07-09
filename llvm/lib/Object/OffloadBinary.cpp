@@ -404,6 +404,8 @@ OffloadKind object::getOffloadKind(StringRef Name) {
 
 StringRef object::getOffloadKindName(OffloadKind Kind) {
   switch (Kind) {
+  case OFK_LLVM:
+    return "llvm";
   case OFK_OpenMP:
     return "openmp";
   case OFK_Cuda:
