@@ -3809,8 +3809,7 @@ DecompositionDecl::OriginalVarResult DecompositionDecl::getOriginalVar() const {
   Result.DiagKind = OriginalVarResult::Temporary;
   if (const auto *Call = dyn_cast<CallExpr>(Stripped)) {
     Result.DiagKind = getDiagKindFromCall(Call);
-  } else if (isa<InitListExpr>(Stripped) ||
-             isa<CXXStdInitializerListExpr>(Stripped)) {
+  } else if (isa<InitListExpr, CXXStdInitializerListExpr>(Stripped)) {
     Result.DiagKind = OriginalVarResult::InitListExpr;
   } else if (const auto *FCE = dyn_cast<CXXFunctionalCastExpr>(Stripped)) {
     const Expr *SubExpr = FCE->getSubExpr()->IgnoreParenImpCasts();
@@ -3825,12 +3824,11 @@ DecompositionDecl::OriginalVarResult DecompositionDecl::getOriginalVar() const {
           Result.DiagKind = getDiagKindFromCall(ArgCall);
       }
     }
-  } else if (isa<MaterializeTemporaryExpr>(Init) ||
-             isa<CXXBindTemporaryExpr>(Init))
+  } else if (isa<MaterializeTemporaryExpr, CXXBindTemporaryExpr>(Stripped)) {
     Result.DiagKind = OriginalVarResult::Temporary;
-  else
+  } else if (Stripped->isXValue()) {
     Result.DiagKind = OriginalVarResult::MoveExpr;
-
+  }
   return Result;
 }
 
