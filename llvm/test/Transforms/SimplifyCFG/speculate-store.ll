@@ -488,12 +488,9 @@ define void @ifconvertstore_with_op(ptr %A, i32 %B, i32 %C) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[C:%.*]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[RET_END:%.*]]
-; CHECK:       if.then:
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], 4
-; CHECK-NEXT:    store i32 [[OR]], ptr [[A]], align 4
-; CHECK-NEXT:    br label [[RET_END]]
-; CHECK:       ret.end:
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[OR]], i32 [[B]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -515,12 +512,9 @@ define void @ifconvertstore_with_op_swapped(ptr %A, i32 %B, i32 %C) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[C:%.*]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label [[RET_END:%.*]], label [[IF_THEN:%.*]]
-; CHECK:       if.then:
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], 4
-; CHECK-NEXT:    store i32 [[OR]], ptr [[A]], align 4
-; CHECK-NEXT:    br label [[RET_END]]
-; CHECK:       ret.end:
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[OR]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -569,13 +563,10 @@ define i32 @ifconvertstore_with_op_and_phi(ptr %A, i32 %B, i32 %C) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[C:%.*]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[RET_END:%.*]]
-; CHECK:       if.then:
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], 4
-; CHECK-NEXT:    store i32 [[OR]], ptr [[A]], align 4
-; CHECK-NEXT:    br label [[RET_END]]
-; CHECK:       ret.end:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[OR]], [[IF_THEN]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[OR]], i32 [[B]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[A]], align 4
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i32 [[OR]], i32 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
