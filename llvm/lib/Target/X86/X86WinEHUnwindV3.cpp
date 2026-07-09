@@ -60,7 +60,7 @@ static cl::opt<unsigned> ApproxBytesPerInstr(
     "x86-wineh-unwindv3-instr-avg-size", cl::Hidden,
     cl::desc("Average size of an instruction. This value is used in determining "
              "split points for chained unwinder info"),
-    cl::init(6));
+    cl::init(7));
 
 /// After reporting a recoverable error for `MF`, erase all SEH pseudo-
 /// instructions and clear the WinCFI flag so the AsmPrinter doesn't try to
