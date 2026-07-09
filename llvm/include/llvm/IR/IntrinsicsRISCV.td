@@ -2068,6 +2068,40 @@ class RVPBinaryIntrinsic
   def int_riscv_pssa : RVPBinaryIntrinsic;
   def int_riscv_paas : RVPBinaryIntrinsic;
   def int_riscv_pasa : RVPBinaryIntrinsic;
+
+  // Packed Reduction Sum.
+  class RVPReductionIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [llvm_anyvector_ty, LLVMMatchType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_predsum  : RVPReductionIntrinsic;
+  def int_riscv_predsumu : RVPReductionIntrinsic;
+
+  // Packed Merge
+  class RVPTernaryIntrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>,
+                             LLVMMatchType<0>],
+                            [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmerge : RVPTernaryIntrinsic;
+
+  // Packed Absolute Difference Sum.
+  def int_riscv_pabdsumu
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [llvm_anyvector_ty, LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pabdsumau
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_anyvector_ty,
+                               LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+
+  // Packed Saturating Absolute Value
+  class RVPUnaryIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_psabs : RVPUnaryIntrinsic;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//

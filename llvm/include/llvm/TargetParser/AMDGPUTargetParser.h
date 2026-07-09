@@ -39,7 +39,7 @@ enum GPUKind : uint32_t {
 #include "AMDGPUTargetParser.def"
 
   GK_AMDGCN_GENERIC_FIRST = GK_GFX9_GENERIC,
-  GK_AMDGCN_GENERIC_LAST = GK_GFX12_5_GENERIC,
+  GK_AMDGCN_GENERIC_LAST = GK_GFX13_GENERIC,
 };
 
 /// Instruction set architecture version.

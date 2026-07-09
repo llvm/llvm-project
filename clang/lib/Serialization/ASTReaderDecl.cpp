@@ -905,9 +905,10 @@ void ASTDeclReader::VisitDeclaratorDecl(DeclaratorDecl *DD) {
   if (Record.readInt()) { // hasExtInfo
     auto *Info = new (Reader.getContext()) DeclaratorDecl::ExtInfo();
     Record.readQualifierInfo(*Info);
-    Info->TrailingRequiresClause = AssociatedConstraint(
-        Record.readExpr(),
-        UnsignedOrNone::fromInternalRepresentation(Record.readUInt32()));
+    Expr *ConstraintExpr = Record.readExpr();
+    UnsignedOrNone ArgPackSubstIndex = Record.readUnsignedOrNone();
+    Info->TrailingRequiresClause =
+        AssociatedConstraint(ConstraintExpr, ArgPackSubstIndex);
     DD->DeclInfo = Info;
   }
   QualType TSIType = Record.readType();
@@ -949,6 +950,9 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     SmallVector<TemplateArgument, 8> TemplArgs;
     Record.readTemplateArgumentList(TemplArgs, /*Canonicalize*/ true);
 
+    const TemplateParameterList *TemplateParams =
+        Record.readBool() ? Record.readTemplateParameterList() : nullptr;
+
     // Template args as written.
     TemplateArgumentListInfo TemplArgsWritten;
     bool HasTemplateArgumentsAsWritten = Record.readBool();
@@ -973,7 +977,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
 
     FunctionTemplateSpecializationInfo *FTInfo =
         FunctionTemplateSpecializationInfo::Create(
-            C, FD, Template, TSK, TemplArgList,
+            C, FD, Template, TSK, TemplArgList, TemplateParams,
             HasTemplateArgumentsAsWritten ? &TemplArgsWritten : nullptr, POI,
             MSInfo);
     FD->TemplateOrSpecialization = FTInfo;
@@ -1008,6 +1012,9 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     while (NumCandidates--)
       Candidates.addDecl(readDeclAs<NamedDecl>());
 
+    const TemplateParameterList *TemplateParams =
+        Record.readBool() ? Record.readTemplateParameterList() : nullptr;
+
     // Templates args.
     TemplateArgumentListInfo TemplArgsWritten;
     bool HasTemplateArgumentsAsWritten = Record.readBool();
@@ -1015,7 +1022,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
       Record.readTemplateArgumentListInfo(TemplArgsWritten);
 
     FD->setDependentTemplateSpecialization(
-        Reader.getContext(), Candidates,
+        Reader.getContext(), Candidates, TemplateParams,
         HasTemplateArgumentsAsWritten ? &TemplArgsWritten : nullptr);
     // These are not merged; we don't need to merge redeclarations of dependent
     // template friends.
@@ -2334,6 +2341,14 @@ void ASTDeclReader::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
         InheritedConstructor(Shadow, Ctor);
   }
 
+  if (unsigned NumArgs = Record.readUInt32()) {
+    CXXDefaultArgExpr **Args =
+        new (Reader.getContext()) CXXDefaultArgExpr *[NumArgs];
+    for (unsigned I = 0; I != NumArgs; I++)
+      Args[I] = cast_or_null<CXXDefaultArgExpr>(Record.readStmt());
+    D->setCtorClosureDefaultArgs(ArrayRef(Args, NumArgs));
+  }
+
   VisitCXXMethodDecl(D);
 }
 
@@ -2548,6 +2563,20 @@ RedeclarableResult ASTDeclReader::VisitClassTemplateSpecializationDeclImpl(
   D->SpecializationKind = (TemplateSpecializationKind)Record.readInt();
   D->StrictPackMatch = Record.readBool();
 
+  // extern/template keyword locations for explicit instantiations
+  if (auto K = D->SpecializationKind;
+      K == TSK_ExplicitInstantiationDeclaration ||
+      K == TSK_ExplicitInstantiationDefinition) {
+    SourceLocation ExternKeywordLoc = readSourceLocation();
+    SourceLocation TemplateKeywordLoc = readSourceLocation();
+    D->setExplicitInstantiationInfo(ExternKeywordLoc, TemplateKeywordLoc,
+                                    Record.readASTTemplateArgumentListInfo());
+  } else if (K == TSK_ExplicitSpecialization) {
+    auto *TemplateParams = Record.readTemplateParameterList();
+    D->setExplicitSpecializationInfo(TemplateParams,
+                                     Record.readASTTemplateArgumentListInfo());
+  }
+
   bool writtenAsCanonicalDecl = Record.readInt();
   if (writtenAsCanonicalDecl) {
     auto *CanonPattern = readDeclAs<ClassTemplateDecl>();
@@ -2578,27 +2607,11 @@ RedeclarableResult ASTDeclReader::VisitClassTemplateSpecializationDeclImpl(
     }
   }
 
-  // extern/template keyword locations for explicit instantiations
-  if (Record.readBool()) {
-    auto *ExplicitInfo = new (C) ExplicitInstantiationInfo;
-    ExplicitInfo->ExternKeywordLoc = readSourceLocation();
-    ExplicitInfo->TemplateKeywordLoc = readSourceLocation();
-    D->ExplicitInfo = ExplicitInfo;
-  }
-
-  if (Record.readBool())
-    D->setTemplateArgsAsWritten(Record.readASTTemplateArgumentListInfo());
-
   return Redecl;
 }
 
 void ASTDeclReader::VisitClassTemplatePartialSpecializationDecl(
-                                    ClassTemplatePartialSpecializationDecl *D) {
-  // We need to read the template params first because redeclarable is going to
-  // need them for profiling
-  TemplateParameterList *Params = Record.readTemplateParameterList();
-  D->TemplateParams = Params;
-
+    ClassTemplatePartialSpecializationDecl *D) {
   RedeclarableResult Redecl = VisitClassTemplateSpecializationDeclImpl(D);
 
   // These are read/set from/to the first declaration.
@@ -2644,23 +2657,26 @@ RedeclarableResult ASTDeclReader::VisitVarTemplateSpecializationDeclImpl(
     }
   }
 
-  // extern/template keyword locations for explicit instantiations
-  if (Record.readBool()) {
-    auto *ExplicitInfo = new (C) ExplicitInstantiationInfo;
-    ExplicitInfo->ExternKeywordLoc = readSourceLocation();
-    ExplicitInfo->TemplateKeywordLoc = readSourceLocation();
-    D->ExplicitInfo = ExplicitInfo;
-  }
-
-  if (Record.readBool())
-    D->setTemplateArgsAsWritten(Record.readASTTemplateArgumentListInfo());
-
   SmallVector<TemplateArgument, 8> TemplArgs;
   Record.readTemplateArgumentList(TemplArgs, /*Canonicalize*/ true);
   D->TemplateArgs = TemplateArgumentList::CreateCopy(C, TemplArgs);
   D->PointOfInstantiation = readSourceLocation();
   D->SpecializationKind = (TemplateSpecializationKind)Record.readInt();
   D->IsCompleteDefinition = Record.readInt();
+
+  // extern/template keyword locations for explicit instantiations
+  if (auto K = D->SpecializationKind;
+      K == TSK_ExplicitInstantiationDeclaration ||
+      K == TSK_ExplicitInstantiationDefinition) {
+    SourceLocation ExternKeywordLoc = readSourceLocation();
+    SourceLocation TemplateKeywordLoc = readSourceLocation();
+    D->setExplicitInstantiationInfo(ExternKeywordLoc, TemplateKeywordLoc,
+                                    Record.readASTTemplateArgumentListInfo());
+  } else if (K == TSK_ExplicitSpecialization) {
+    auto *TemplateParams = Record.readTemplateParameterList();
+    D->setExplicitSpecializationInfo(TemplateParams,
+                                     Record.readASTTemplateArgumentListInfo());
+  }
 
   RedeclarableResult Redecl = VisitVarDeclImpl(D);
 
@@ -2692,9 +2708,6 @@ RedeclarableResult ASTDeclReader::VisitVarTemplateSpecializationDeclImpl(
 ///        using Template(Partial)SpecializationDecl as input type.
 void ASTDeclReader::VisitVarTemplatePartialSpecializationDecl(
     VarTemplatePartialSpecializationDecl *D) {
-  TemplateParameterList *Params = Record.readTemplateParameterList();
-  D->TemplateParams = Params;
-
   RedeclarableResult Redecl = VisitVarTemplateSpecializationDeclImpl(D);
 
   // These are read/set from/to the first declaration.
@@ -3407,10 +3420,20 @@ ASTDeclReader::FindExistingResult::~FindExistingResult() {
 }
 
 /// Find the declaration that should be merged into, given the declaration found
-/// by name lookup. If we're merging an anonymous declaration within a typedef,
-/// we need a matching typedef, and we merge with the type inside it.
+/// by name lookup. If we're not merging with a UsingShadowDecl but Found is a
+/// UsingShadowDecl, we need to skip the UsingShadowDecl. If we're merging an
+/// anonymous declaration within a typedef, we need a matching typedef, and we
+/// merge with the type inside it.
 static NamedDecl *getDeclForMerging(NamedDecl *Found,
-                                    bool IsTypedefNameForLinkage) {
+                                    bool IsTypedefNameForLinkage,
+                                    bool FilteringUsingShadowDecl) {
+  // If the taregt declaration we want is not a UsingShadowDecl, we don't need
+  // to return the UsingShadowDecl at all.
+  if (auto *USD = dyn_cast<UsingShadowDecl>(Found);
+      USD && FilteringUsingShadowDecl)
+    return getDeclForMerging(USD->getTargetDecl(), IsTypedefNameForLinkage,
+                             FilteringUsingShadowDecl);
+
   if (!IsTypedefNameForLinkage)
     return Found;
 
@@ -3571,7 +3594,9 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
     for (IdentifierResolver::iterator I = IdResolver.begin(Name),
                                    IEnd = IdResolver.end();
          I != IEnd; ++I) {
-      if (NamedDecl *Existing = getDeclForMerging(*I, TypedefNameForLinkage))
+      if (NamedDecl *Existing =
+              getDeclForMerging(*I, TypedefNameForLinkage,
+                                /*FilteringUsingShadowDecl=*/false))
         if (C.isSameEntity(Existing, D))
           return FindExistingResult(Reader, D, Existing, AnonymousDeclNumber,
                                     TypedefNameForLinkage);
@@ -3579,10 +3604,12 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
   } else if (DeclContext *MergeDC = getPrimaryContextForMerging(Reader, DC)) {
     DeclContext::lookup_result R = MergeDC->noload_lookup(Name);
     for (DeclContext::lookup_iterator I = R.begin(), E = R.end(); I != E; ++I) {
-      if (NamedDecl *Existing = getDeclForMerging(*I, TypedefNameForLinkage))
-        if (C.isSameEntity(Existing, D))
+      if (NamedDecl *Existing = getDeclForMerging(*I, TypedefNameForLinkage,
+                                                  !isa<UsingShadowDecl>(D)))
+        if (C.isSameEntity(Existing, D)) {
           return FindExistingResult(Reader, D, Existing, AnonymousDeclNumber,
                                     TypedefNameForLinkage);
+        }
     }
   } else {
     // Not in a mergeable context.

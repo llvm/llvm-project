@@ -35,12 +35,12 @@ which includes :ref:`C <c>`, :ref:`Objective-C <objc>`, :ref:`C++ <cxx>`, and
 language-specific information, please see the corresponding language
 specific section:
 
--  :ref:`C Language <c>`: K&R C, ANSI C89, ISO C90, C94 (C89+AMD1), C99 (+TC1,
+-  :ref:`C Language <c>`: K&R C, ANSI C89, ISO C90, C95 (C90+AMD1), C99 (+TC1,
    TC2, TC3), C11, C17, C23, and C2y.
 -  :ref:`Objective-C Language <objc>`: ObjC 1, ObjC 2, ObjC 2.1, plus
    variants depending on base language.
 -  :ref:`C++ Language <cxx>`: C++98, C++03, C++11, C++14, C++17, C++20, C++23,
-   and C++26.
+   C++26, and C++29.
 -  :ref:`Objective C++ Language <objcxx>`
 -  :ref:`OpenCL Kernel Language <opencl>`: OpenCL C 1.0, 1.1, 1.2, 2.0, 3.0,
    and C++ for OpenCL 1.0 and 2021.
@@ -4032,7 +4032,7 @@ Differences between various standard modes
 ------------------------------------------
 
 clang supports the ``-std`` option, which changes what language mode clang uses.
-The supported modes for C are c89, gnu89, c94, c99, gnu99, c11, gnu11, c17,
+The supported modes for C are c89, gnu89, iso9899:199409 (for C95), c99, gnu99, c11, gnu11, c17,
 gnu17, c23, gnu23, c2y, gnu2y, and various aliases for those modes. If no ``-std``
 option is specified, clang defaults to gnu17 mode. Many C99 and C11 features
 are supported in earlier modes as a conforming extension, with a warning. Use
@@ -5188,7 +5188,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /showIncludes:user      Like /showIncludes but omit system headers
       /showIncludes           Print info about included files to stderr
       /source-charset:<value> Set source encoding, supports only UTF-8
-      /std:<value>            Set language version (c++14,c++17,c++20,c++23preview,c++latest,c11,c17)
+      /std:<value>            Set language version (c++14,c++17,c++20,c++23preview,c++26preview,c++latest,c11,c17)
       /TC                     Treat all source files as C
       /Tc <file>              Treat <file> as C source file
       /TP                     Treat all source files as C++

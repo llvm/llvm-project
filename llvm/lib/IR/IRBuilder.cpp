@@ -906,8 +906,7 @@ CallInst *IRBuilderBase::CreateGCGetPointerBase(Value *DerivedPtr,
                                                 const Twine &Name) {
   Type *PtrTy = DerivedPtr->getType();
   return CreateIntrinsicWithoutFolding(
-      Intrinsic::experimental_gc_get_pointer_base, {PtrTy, PtrTy}, {DerivedPtr},
-      {}, Name);
+      Intrinsic::experimental_gc_get_pointer_base, PtrTy, DerivedPtr, {}, Name);
 }
 
 CallInst *IRBuilderBase::CreateGCGetPointerOffset(Value *DerivedPtr,

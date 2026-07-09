@@ -219,7 +219,7 @@ void X86MCAsmInfoGNUCOFF::anchor() { }
 X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple,
                                          const MCTargetOptions &Options)
     : MCAsmInfoGNUCOFF(Options) {
-  assert((Triple.isOSWindows() || Triple.isUEFI()) &&
+  assert(Triple.isOSWindowsOrUEFI() &&
          "Windows and UEFI are the only supported COFF targets");
   if (Triple.isX86_64()) {
     InternalSymbolPrefix = ".L";
