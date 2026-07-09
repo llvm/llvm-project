@@ -35,6 +35,9 @@ SPIRVTargetLowering::SPIRVTargetLowering(const TargetMachine &TM,
   // consider 128-bit OpTypeInt as valid either.
   setMaxAtomicSizeInBitsSupported(64);
   setMinCmpXchgSizeInBits(8);
+
+  for (MVT VT : {MVT::f16, MVT::f32, MVT::f64})
+    setOperationAction(ISD::FFREXP, VT, Legal);
 }
 
 // Returns true of the types logically match, as defined in
