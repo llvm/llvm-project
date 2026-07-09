@@ -128,6 +128,8 @@ void LifetimeModeling::printState(raw_ostream &Out, ProgramStateRef State,
   }
 }
 
+// FIXME: Eventually move the debug checker to its own source file once
+// it has more functionality.
 namespace {
 class DebugLifetimeModeling : public Checker<eval::Call> {
 public:
@@ -148,7 +150,7 @@ public:
 
 bool DebugLifetimeModeling::evalCall(const CallEvent &Call,
                                      CheckerContext &C) const {
-  if (!llvm::isa_and_nonnull<CallExpr>(Call.getOriginExpr()))
+  if (isa_and_nonnull<CallExpr>(Call.getOriginExpr()))
     return false;
 
   const FnCheck *Handler = Callbacks.lookup(Call);
