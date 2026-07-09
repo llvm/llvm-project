@@ -147,6 +147,20 @@ public:
       return Context.BoolTy;
     return Context.getIntTypeForBitwidth(Value.getBitWidth(), Value.isSigned());
   }
+  QualType VisitConcreteFloat(nonloc::ConcreteFloat CF) {
+    const llvm::fltSemantics &Sem = CF.getValue()->getSemantics();
+    if (&Sem == &llvm::APFloat::IEEEsingle())
+      return Context.FloatTy;
+    if (&Sem == &llvm::APFloat::IEEEdouble())
+      return Context.DoubleTy;
+    if (&Sem == &llvm::APFloat::x87DoubleExtended())
+      return Context.LongDoubleTy;
+    if (&Sem == &llvm::APFloat::IEEEhalf())
+      return Context.Float16Ty;
+    if (&Sem == &llvm::APFloat::IEEEquad())
+      return Context.Float128Ty;
+    return QualType{};
+  }
   QualType VisitLocAsInteger(nonloc::LocAsInteger LI) {
     QualType NestedType = Visit(LI.getLoc());
     if (NestedType.isNull())
@@ -243,7 +257,8 @@ nonloc::PointerToMember::iterator nonloc::PointerToMember::end() const {
 //===----------------------------------------------------------------------===//
 
 bool SVal::isConstant() const {
-  return getAs<nonloc::ConcreteInt>() || getAs<loc::ConcreteInt>();
+  return getAs<nonloc::ConcreteInt>() || getAs<loc::ConcreteInt>() ||
+         getAs<nonloc::ConcreteFloat>();
 }
 
 bool SVal::isConstant(int I) const {
@@ -255,6 +270,8 @@ bool SVal::isConstant(int I) const {
 }
 
 bool SVal::isZeroConstant() const {
+  if (std::optional<nonloc::ConcreteFloat> FV = getAs<nonloc::ConcreteFloat>())
+    return FV->getValue()->isZero();
   return isConstant(0);
 }
 
@@ -312,6 +329,26 @@ void SVal::dumpToStream(raw_ostream &os) const {
 
 void NonLoc::dumpToStream(raw_ostream &os) const {
   switch (getKind()) {
+  case nonloc::ConcreteFloatKind: {
+    const llvm::APFloat &Value = *castAs<nonloc::ConcreteFloat>().getValue();
+    llvm::SmallString<16> Str;
+    Value.toString(Str);
+    os << Str << ' ';
+    const auto &Sem = Value.getSemantics();
+    if (&Sem == &llvm::APFloat::IEEEhalf())
+      os << "IEEEhalf";
+    else if (&Sem == &llvm::APFloat::IEEEsingle())
+      os << "IEEEsingle";
+    else if (&Sem == &llvm::APFloat::IEEEdouble())
+      os << "IEEEdouble";
+    else if (&Sem == &llvm::APFloat::IEEEquad())
+      os << "IEEEquad";
+    else if (&Sem == &llvm::APFloat::x87DoubleExtended())
+      os << "x87DoubleExtended";
+    else
+      os << "unknown";
+    break;
+  }
   case nonloc::ConcreteIntKind: {
     APSIntPtr Value = castAs<nonloc::ConcreteInt>().getValue();
     os << Value << ' ' << (Value->isSigned() ? 'S' : 'U')

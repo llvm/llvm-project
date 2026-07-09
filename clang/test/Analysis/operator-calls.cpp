@@ -69,15 +69,17 @@ namespace RValues {
     }
   };
 
+  float getUnknownFloat();
+
   SmallOpaque getSmallOpaque() {
     SmallOpaque obj;
-    obj.x = 1.0;
+    obj.x = getUnknownFloat();
     return obj;
   }
 
   LargeOpaque getLargeOpaque() {
     LargeOpaque obj = LargeOpaque();
-    obj.x[0] = 1.0;
+    obj.x[0] = getUnknownFloat();
     return obj;
   }
 

@@ -375,6 +375,9 @@ std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
   case Stmt::IntegerLiteralClass:
     return makeIntVal(cast<IntegerLiteral>(E));
 
+  case Stmt::FloatingLiteralClass:
+    return makeFloatVal(cast<FloatingLiteral>(E));
+
   case Stmt::ObjCBoolLiteralExprClass:
     return makeBoolVal(cast<ObjCBoolLiteralExpr>(E));
 
@@ -861,6 +864,38 @@ public:
   }
   SVal VisitCompoundVal(nonloc::CompoundVal V) {
     // Compound to whatever.
+    return UnknownVal();
+  }
+  SVal VisitConcreteFloat(nonloc::ConcreteFloat V) {
+    // Float to float.
+    if (CastTy->isRealFloatingType()) {
+      const llvm::fltSemantics &TargetSem =
+          VB.getContext().getFloatTypeSemantics(CastTy);
+      llvm::APFloat Value = *V.getValue();
+      bool LosesInfo = false;
+      Value.convert(TargetSem, llvm::APFloat::rmNearestTiesToEven, &LosesInfo);
+      if (!LosesInfo)
+        return VB.makeFloatVal(Value);
+      return UnknownVal();
+    }
+
+    // Float to integer.
+    if (CastTy->isIntegralOrEnumerationType()) {
+      APSIntType ResultType = VB.getBasicValueFactory().getAPSIntType(CastTy);
+      llvm::APSInt Result = ResultType.getValue(0);
+      llvm::APFloat Value = *V.getValue();
+      bool IsExact;
+      llvm::APFloat::opStatus Status =
+          Value.convertToInteger(Result, llvm::APFloat::rmTowardZero, &IsExact);
+      if (Status == llvm::APFloat::opOK || Status == llvm::APFloat::opInexact)
+        return VB.makeIntVal(Result);
+      return UnknownVal();
+    }
+
+    // Float to bool.
+    if (CastTy->isBooleanType())
+      return VB.makeTruthVal(!V.getValue()->isZero(), CastTy);
+
     return UnknownVal();
   }
   SVal VisitConcreteInt(nonloc::ConcreteInt V) {
