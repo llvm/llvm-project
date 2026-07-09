@@ -261,14 +261,14 @@ public:
       _LIBCPP_DIAGNOSE_WARNING(__mode& ios_base::noreplace,
                                "fstream::open() with noreplace is not supported on AIX; open() will return failure")
 #    endif
-      ;
+          ;
 #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
   basic_filebuf* open(const wchar_t* __s, ios_base::openmode __mode)
 #      if defined(_AIX)
       _LIBCPP_DIAGNOSE_WARNING(__mode& ios_base::noreplace,
                                "fstream::open() with noreplace is not supported on AIX; open() will return failure")
 #      endif
-      ;
+          ;
 #    endif
   _LIBCPP_HIDE_FROM_ABI basic_filebuf* open(const string& __s, ios_base::openmode __mode);
 
@@ -1225,14 +1225,14 @@ public:
       _LIBCPP_DIAGNOSE_WARNING(__mode& ios_base::noreplace,
                                "fstream::open() with noreplace is not supported on AIX; open() will return failure")
 #    endif
-      ;
+          ;
 #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
   void open(const wchar_t* __s, ios_base::openmode __mode = ios_base::in)
 #      if defined(_AIX)
       _LIBCPP_DIAGNOSE_WARNING(__mode& ios_base::noreplace,
                                "fstream::open() with noreplace is not supported on AIX; open() will return failure")
 #      endif
-      ;
+          ;
 #    endif
   void open(const string& __s, ios_base::openmode __mode = ios_base::in);
 #    if _LIBCPP_STD_VER >= 17
@@ -1393,14 +1393,14 @@ public:
       _LIBCPP_DIAGNOSE_WARNING(__mode& ios_base::noreplace,
                                "fstream::open() with noreplace is not supported on AIX; open() will return failure")
 #    endif
-      ;
+          ;
 #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
   void open(const wchar_t* __s, ios_base::openmode __mode = ios_base::out)
 #      if defined(_AIX)
       _LIBCPP_DIAGNOSE_WARNING(__mode& ios_base::noreplace,
                                "fstream::open() with noreplace is not supported on AIX; open() will return failure")
 #      endif
-      ;
+          ;
 #    endif
   void open(const string& __s, ios_base::openmode __mode = ios_base::out);
 
@@ -1567,14 +1567,14 @@ public:
       _LIBCPP_DIAGNOSE_WARNING(__mode& ios_base::noreplace,
                                "fstream::open() with noreplace is not supported on AIX; open() will return failure")
 #    endif
-      ;
+          ;
 #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
   void open(const wchar_t* __s, ios_base::openmode __mode = ios_base::in | ios_base::out)
 #      if defined(_AIX)
       _LIBCPP_DIAGNOSE_WARNING(__mode& ios_base::noreplace,
                                "fstream::open() with noreplace is not supported on AIX; open() will return failure")
 #      endif
-      ;
+          ;
 #    endif
   _LIBCPP_HIDE_FROM_ABI void open(const string& __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
 
