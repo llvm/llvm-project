@@ -13514,12 +13514,16 @@ def err_sycl_special_type_num_init_method : Error<
   "method defined">;
 def err_sycl_device_invalid_target : Error<
   "%0 is not a supported SYCL device target">;
-def warn_sycl_kernel_has_ptr_param : Warning<
-  "pointers parameters in SYCL kernels must point to device-accessible memory, "
+def warn_sycl_kernel_param_has_ptr: Warning<
+  "pointer parameters in SYCL kernels must point to device-accessible memory, "
   "i.e. the USM">,
   InGroup<NonPortableSYCL>, DefaultIgnore;
 def err_sycl_kernel_param_has_vbase : Error<
   "%0 inherits virtual base classes and cannot be used as a SYCL kernel parameter">;
+def err_sycl_kernel_param_has_fam : Error<
+  "%0 contains a flexible array member and cannot be used as a SYCL kernel parameter">;
+def err_sycl_kernel_param_has_vmt : Error<
+  "%0 is a variably modified type and cannot be used as a SYCL kernel parameter">;
 
 // SYCL external attribute diagnostics
 def err_sycl_external_invalid_linkage : Error<
