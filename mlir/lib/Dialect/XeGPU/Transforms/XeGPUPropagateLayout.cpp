@@ -30,6 +30,7 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -38,6 +39,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
+#include <limits>
 
 namespace mlir {
 namespace xegpu {
@@ -58,6 +60,14 @@ namespace {
 // LayoutInfo
 //===----------------------------------------------------------------------===//
 
+/// Program-order index of the op currently being visited by the backward
+/// analysis. `visitOperation` sets this before dispatching, and the
+/// single-argument LayoutInfo constructor stamps it onto every demand pushed to
+/// an operand, so the ~30 `operand->meet(LayoutInfo(...))` call sites need no
+/// change. A larger index means farther from the producer; the sentinel max
+/// marks demands with no associated op (e.g. exit state).
+static int64_t currentProgramOrder = std::numeric_limits<int64_t>::max();
+
 /// Helper class for tracking the analysis state of an mlir value. For layout
 /// propagation, the analysis state is simply the distribution layout of
 /// each value. The distribution layout information is encapsulated using
@@ -75,20 +85,34 @@ namespace {
 ///  assigned with the same layout.
 ///  3) The meet operator works as follows:
 ///     - If only one side is assigned, return that side.
-///     - If both sides are assigned, prefer the side carrying a slice layout.
-///       If both (or neither) are slice layouts, prefer the lhs (current
-///       state) so an already assigned unique layout is not changed.
+///     - If both sides are assigned, prefer the layout demanded by the user
+///       that is nearer to the producer in program order (smaller
+///       `programOrder`); on a tie keep lhs.
+///
+/// The `programOrder` field records the program-order index of the consumer op
+/// that demanded the layout (see `currentProgramOrder`). During this backward
+/// analysis a value can be demanded by several users; keeping the nearest one
+/// tends to preserve a consumer's layout as far up the def chain as possible,
+/// minimizing layout conversions. This is a hint, not an optimum.
+/// `programOrder` is never propagated up the chain - each visited op stamps its
+/// own index - so it is deliberately excluded from `operator==`.
 
 struct LayoutInfo {
 private:
   xegpu::DistributeLayoutAttr storage = nullptr;
+  // Program-order index of the consumer op that demanded this layout. Smaller
+  // means nearer to the producer. Unassigned/unknown demands sort last.
+  int64_t programOrder = std::numeric_limits<int64_t>::max();
 
 public:
   LayoutInfo() = default;
-  LayoutInfo(const xegpu::DistributeLayoutAttr &layout) : storage(layout) {}
+  LayoutInfo(const xegpu::DistributeLayoutAttr &layout);
+  LayoutInfo(const xegpu::DistributeLayoutAttr &layout, int64_t programOrder)
+      : storage(layout), programOrder(programOrder) {}
 
   // Two lattice values are equal if they are both unassigned, or both assigned
-  // with the same layout.
+  // with the same layout. `programOrder` is intentionally excluded: it is not
+  // propagated, so a pure order refinement must not be reported as a change.
   bool operator==(const LayoutInfo &other) const {
     if (isAssigned() != other.isAssigned())
       return false;
@@ -104,8 +128,6 @@ public:
   void print(raw_ostream &os) const;
 
   bool isAssigned() const { return storage != nullptr; }
-
-  LayoutInfo transpose(ArrayRef<int64_t> permutation) const;
 
   SmallVector<int> getLaneLayout() const;
 
@@ -135,6 +157,11 @@ public:
   void set(const xegpu::DistributeLayoutAttr &layout) { storage = layout; }
 };
 
+// Stamp every demand pushed by the current op with that op's program-order
+// index so `meet` can prefer the nearest consumer.
+LayoutInfo::LayoutInfo(const xegpu::DistributeLayoutAttr &layout)
+    : storage(layout), programOrder(currentProgramOrder) {}
+
 void LayoutInfo::print(raw_ostream &os) const {
   if (isAssigned()) {
     os << storage;
@@ -148,7 +175,10 @@ LayoutInfo LayoutInfo::meet(const LayoutInfo &lhs, const LayoutInfo &rhs) {
     return rhs;
   if (!rhs.isAssigned())
     return lhs;
-  if (!lhs.isSliceLayout() && rhs.isSliceLayout())
+  // Prefer the demand from the user nearer to the producer in program order.
+  // Distinct users always have distinct indices, so this decides every
+  // real conflict; on a tie (same op, or both unknown) keep lhs.
+  if (rhs.programOrder < lhs.programOrder)
     return rhs;
   return lhs;
 }
@@ -185,6 +215,15 @@ public:
 private:
   xegpu::LayoutKind layoutKind;
   unsigned indexBitWidth;
+
+  // Program-order index of every op, built lazily on first use via a pre-order
+  // walk of the top-level module/function (matching printed-IR order). Used to
+  // tell which consumer of a value is nearer to its producer.
+  DenseMap<Operation *, int64_t> programOrder;
+  // Returns the program-order index of `op`, populating `programOrder` from
+  // `op`'s top-level ancestor on first call.
+  int64_t getProgramOrder(Operation *op);
+
   void visitDpasOp(xegpu::DpasOp dpas, ArrayRef<LayoutInfoLattice *> operands,
                    ArrayRef<const LayoutInfoLattice *> results);
 
@@ -300,9 +339,29 @@ public:
 };
 } // namespace
 
+int64_t LayoutInfoPropagation::getProgramOrder(Operation *op) {
+  auto it = programOrder.find(op);
+  if (it != programOrder.end())
+    return it->second;
+  // First time we see this op's tree: number every op under its top-level
+  // ancestor in pre-order (i.e. printed-IR order). Nested ops (e.g. inside an
+  // scf.for body) get an index between their parent and the parent's next
+  // sibling, so a use inside a loop is "nearer" than a use after it.
+  Operation *root = op;
+  while (root->getParentOp())
+    root = root->getParentOp();
+  int64_t counter = 0;
+  root->walk<WalkOrder::PreOrder>(
+      [&](Operation *o) { programOrder[o] = counter++; });
+  return programOrder.lookup(op);
+}
+
 LogicalResult LayoutInfoPropagation::visitOperation(
     Operation *op, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
+  // Stamp demands pushed by this op with its program-order index so `meet` can
+  // prefer the nearest consumer.
+  currentProgramOrder = getProgramOrder(op);
   TypeSwitch<Operation *>(op)
       .Case(
           [&](xegpu::DpasOp dpasOp) { visitDpasOp(dpasOp, operands, results); })
