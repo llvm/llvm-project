@@ -1111,13 +1111,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerFullLinkTimeOptimizationLastEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
-        // The regular (non-LTO) and ThinLTO function simplification pipelines
-        // run early-cse with MemorySSA near the start of the function pass
-        // sequence, but the full-LTO postlink pipeline does not. Without it a
-        // redundant load/store round-trip can survive to codegen (the later
-        // GVN/DSE do not catch this pattern), which costs extra hazard s_nop
-        // padding in some kernels. Run it here, at the end of the full-LTO
-        // middle-end, before codegen.
+        // Clean up redundant memory round-trips that the full-LTO pipeline,
+        // unlike the non-LTO/ThinLTO ones, otherwise leaves for codegen.
         if (Level != OptimizationLevel::O0)
           PM.addPass(createModuleToFunctionPassAdaptor(
               EarlyCSEPass(/*UseMemorySSA=*/true)));
