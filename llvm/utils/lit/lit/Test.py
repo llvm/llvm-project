@@ -446,7 +446,8 @@ class Test:
         getUsedFeatures() -> list of strings
 
         Returns a list of all features appearing in XFAIL, UNSUPPORTED and
-        REQUIRES annotations for this test.
+        REQUIRES annotations, as well as in any 'RUN(<expr>):' command gate,
+        for this test.
         """
         import lit.TestRunner
 
@@ -454,9 +455,16 @@ class Test:
             self.getSourcePath(), require_script=False
         )
         feature_keywords = ("UNSUPPORTED:", "REQUIRES:", "XFAIL:")
-        boolean_expressions = itertools.chain.from_iterable(
-            parsed[k] or [] for k in feature_keywords
+        boolean_expressions = list(
+            itertools.chain.from_iterable(parsed[k] or [] for k in feature_keywords)
         )
+        # Command gates are boolean expressions too.
+        boolean_expressions += [
+            directive.gate
+            for directive in (parsed["RUN:"] or [])
+            if isinstance(directive, lit.TestRunner.CommandDirective)
+            and directive.gate is not None
+        ]
         tokens = itertools.chain.from_iterable(
             BooleanExpression.tokenize(expr)
             for expr in boolean_expressions

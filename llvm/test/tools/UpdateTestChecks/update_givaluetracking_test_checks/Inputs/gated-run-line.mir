@@ -1,0 +1,9 @@
+# RUN(some-feature): llc -mtriple aarch64 -passes="print<gisel-value-tracking>" %s -filetype=null 2>&1 | FileCheck %s --check-prefix=GATED
+
+---
+name:            Cst
+body:             |
+  bb.1:
+    %0:_(s8) = G_CONSTANT i8 1
+    %1:_(s8) = COPY %0
+...

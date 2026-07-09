@@ -1,0 +1,5 @@
+# When every run line is gated out by an unavailable feature there is nothing
+# to execute, so the test is reported UNSUPPORTED (like a test with no run
+# line).
+#
+# RUN(absent): echo NOPE

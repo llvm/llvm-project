@@ -564,7 +564,13 @@ def invoke_tool(exe, cmd_args, ir, preprocess_cmd=None, verbose=False):
 
 
 ##### LLVM IR parser
-RUN_LINE_RE = re.compile(r"^\s*(?://|[;#])\s*RUN:\s*(.*)$")
+# A RUN line, which may carry a per-command feature gate written as
+# 'RUN(<expr>):' (see lit's TestRunner).  The gate is delimited but *not*
+# captured, so group(1) stays the command for every caller; the gate is simply
+# stripped so a gated line runs like an ordinary RUN line.  The inner '.*?' is
+# non-greedy so the gate ends at the first '):', while still allowing the
+# expression to contain its own (nested) parentheses, e.g. 'RUN((a || b)):'.
+RUN_LINE_RE = re.compile(r"^\s*(?://|[;#])\s*RUN(?:\(.*?\))?:\s*(.*)$")
 CHECK_PREFIX_RE = re.compile(r"--?check-prefix(?:es)?[= ](\S+)")
 PREFIX_RE = re.compile("^[a-zA-Z0-9_-]+$")
 CHECK_RE = re.compile(

@@ -1,0 +1,5 @@
+# A feature gate is only supported on COMMAND directives such as RUN:.  Using
+# it on any other keyword is a parse error.
+#
+# RUN: echo hi
+# REQUIRES(present): true

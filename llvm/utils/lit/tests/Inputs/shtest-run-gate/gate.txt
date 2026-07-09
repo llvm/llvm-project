@@ -1,0 +1,16 @@
+# An ungated run line always runs.  A gated run line runs only when its lit
+# boolean expression is satisfied by the available features; here 'present' is
+# available and 'absent' is not.  Every SKIP_* line must be gated out.
+#
+# RUN: echo RUNS_PLAIN
+# RUN(present): echo RUNS_PRESENT
+# RUN(present || absent): echo RUNS_OR
+# RUN(!absent): echo RUNS_NOTABSENT
+# RUN((present || absent) && !absent): echo RUNS_GROUPED
+# RUN(present): echo RUNS_CONT_A \
+# RUN:   && echo RUNS_CONT_B
+# RUN(absent): echo SKIP_CONT_A \
+# RUN:   && echo SKIP_CONT_B
+# RUN(absent): echo SKIP_ABSENT
+# RUN(present && absent): echo SKIP_AND
+# RUN(!present): echo SKIP_NOTPRESENT

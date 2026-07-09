@@ -925,19 +925,53 @@ def executeScript(
         return (e.out, e.err, e.exitCode, e.msg, None)
 
 
+def _buildKeywordPattern(keyword):
+    """
+    Build the byte regex fragment matching a single keyword.
+
+    A ':'-terminated keyword may carry an optional gate, 'KEYWORD(<expr>):'
+    (see CommandDirective.gate), which _splitKeywordGate() separates back out.
+    The inner '.*?' is non-greedy so the gate ends at the first '):', while
+    backtracking against the trailing ':' still lets <expr> contain its own
+    (possibly nested) parentheses, e.g. 'RUN((a || b) && c):'.
+    """
+    kb = keyword.encode("utf-8")
+    if kb.endswith(b":"):
+        return re.escape(kb[:-1]) + rb"(?:\(.*?\))?" + re.escape(b":")
+    return re.escape(kb)
+
+
+# Matches a canonical ':'-keyword carrying a feature gate, e.g. 'RUN(expr):'.
+# Group 1 is the keyword base ('RUN'), group 2 is the gate expression ('expr').
+_keyword_gate_re = re.compile(r"([^(]+)\((.*)\):")
+
+
+def _splitKeywordGate(keyword):
+    """
+    Split a matched keyword into (canonical_keyword, gate).
+
+    'RUN(expr):' -> ('RUN:', 'expr'); 'RUN:' -> ('RUN:', None).
+    """
+    match = _keyword_gate_re.fullmatch(keyword)
+    if match:
+        return match.group(1) + ":", match.group(2).strip()
+    return keyword, None
+
+
 def parseIntegratedTestScriptCommands(source_path, keywords):
     """
     parseIntegratedTestScriptCommands(source_path) -> commands
 
     Parse the commands in an integrated test script file into a list of
-    (line_number, command_type, line).
+    (line_number, command_type, gate, line).  'gate' is the command's gate
+    expression (see CommandDirective.gate), or None.
     """
 
     # We use `bytes` for scanning input files to avoid requiring them to always
     # have valid codings.
 
     keywords_re = re.compile(
-        b"(%s)(.*)\n" % (b"|".join(re.escape(k.encode("utf-8")) for k in keywords),)
+        b"(%s)(.*)\n" % (b"|".join(_buildKeywordPattern(k) for k in keywords),)
     )
 
     f = open(source_path, "rb")
@@ -966,9 +1000,11 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
             # characters from being converted to Unix \n newlines, so manually
             # strip those from the yielded lines.
             keyword, ln = match.groups()
+            command_type, gate = _splitKeywordGate(keyword.decode("utf-8"))
             yield (
                 line_number,
-                keyword.decode("utf-8"),
+                command_type,
+                gate,
                 ln.decode("utf-8").rstrip("\r"),
             )
     finally:
@@ -1152,11 +1188,23 @@ class CommandDirective(ExpandableScriptDirective):
 
     command: The content accumulated so far from the directive and its
         continuation lines.
+    gate: A feature gate written 'RUN(<expr>): ...', or None for an
+        unconditional command.  <expr> is an ordinary lit boolean expression
+        (same grammar and BooleanExpression machinery as
+        REQUIRES/UNSUPPORTED/XFAIL); the command is kept only when <expr> is
+        satisfied by the available features (see parseIntegratedTestScript).
     """
 
-    def __init__(self, start_line_number, end_line_number, keyword, line):
+    def __init__(self, start_line_number, end_line_number, keyword, line, gate):
         super().__init__(start_line_number, end_line_number, keyword)
         self.command = line.rstrip()
+        if gate is not None:
+            if not gate:
+                raise ValueError(f"'{keyword[:-1]}(...)' gate is empty")
+            # Evaluating against no features raises ValueError if <expr> is
+            # malformed; that syntax check is all we want here.
+            BooleanExpression.evaluate(gate, [])
+        self.gate = gate
 
     def add_continuation(self, line_number, keyword, line):
         if keyword != self.keyword or not self.needs_continuation():
@@ -1525,8 +1573,8 @@ class IntegratedTestKeywordParser:
         self.parser = parser
 
         if kind == ParserKind.COMMAND:
-            self.parser = lambda line_number, line, output: self._handleCommand(
-                line_number, line, output, self.keyword
+            self.parser = lambda line_number, line, output, gate: self._handleCommand(
+                line_number, line, output, self.keyword, gate
             )
         elif kind == ParserKind.LIST:
             self.parser = self._handleList
@@ -1553,10 +1601,13 @@ class IntegratedTestKeywordParser:
         else:
             raise ValueError("Unknown kind '%s'" % kind)
 
-    def parseLine(self, line_number, line):
+    def parseLine(self, line_number, line, gate):
         try:
             self.parsed_lines += [(line_number, line)]
-            self.value = self.parser(line_number, line, self.value)
+            if self.kind == ParserKind.COMMAND:
+                self.value = self.parser(line_number, line, self.value, gate)
+            else:
+                self.value = self.parser(line_number, line, self.value)
         except ValueError as e:
             raise ValueError(
                 str(e)
@@ -1584,18 +1635,19 @@ class IntegratedTestKeywordParser:
         return re.sub(r"%\(line *([\+-]) *(\d+)\)", replace_line_number, line)
 
     @classmethod
-    def _handleCommand(cls, line_number, line, output, keyword):
+    def _handleCommand(cls, line_number, line, output, keyword, gate):
         """A helper for parsing COMMAND type keywords"""
         # Substitute line number expressions.
         line = cls._substituteLineNumbers(line_number, line)
 
         # Collapse lines with trailing '\\', or add line with line number to
-        # start a new pipeline.
+        # start a new pipeline.  Only a new pipeline carries a gate; a
+        # continuation inherits it.
         if not output or not output[-1].add_continuation(line_number, keyword, line):
             if output is None:
                 output = []
             line = buildPdbgCommand(f"{keyword} at line {line_number}", line)
-            output.append(CommandDirective(line_number, line_number, keyword, line))
+            output.append(CommandDirective(line_number, line_number, keyword, line, gate))
         return output
 
     @staticmethod
@@ -1700,11 +1752,17 @@ def _parseKeywords(sourcepath, additional_parsers=[], require_script=True):
         keyword_parsers[parser.keyword] = parser
 
     # Collect the test lines from the script.
-    for line_number, command_type, ln in parseIntegratedTestScriptCommands(
+    for line_number, command_type, gate, ln in parseIntegratedTestScriptCommands(
         sourcepath, keyword_parsers.keys()
     ):
         parser = keyword_parsers[command_type]
-        parser.parseLine(line_number, ln)
+        if gate is not None and parser.kind != ParserKind.COMMAND:
+            raise ValueError(
+                "Feature gate '%s(%s):' is not supported; a '(<feature>)' gate "
+                "may only be used on COMMAND directives such as 'RUN:' "
+                "(test line %d)" % (command_type[:-1], gate, line_number)
+            )
+        parser.parseLine(line_number, ln, gate)
         if command_type == "END." and parser.getValue() is True:
             break
 
@@ -1802,6 +1860,28 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
             Test.UNSUPPORTED,
             "Test does not require any of the features "
             "specified in limit_to_features: %s" % msg,
+        )
+
+    # Drop gated commands whose expression is not satisfied by the available
+    # features; unconditional commands are kept as-is.
+    features = test.config.available_features
+    script = [
+        directive
+        for directive in script
+        if not isinstance(directive, CommandDirective)
+        or directive.gate is None
+        or BooleanExpression.evaluate(directive.gate, features)
+    ]
+
+    # If every 'RUN:' line was gated out, treat it like a missing script and
+    # mark the test unsupported -- but only when the test is expected to supply
+    # the script (require_script), not for a caller-provided preamble.
+    if require_script and not any(
+        isinstance(directive, CommandDirective) for directive in script
+    ):
+        return lit.Test.Result(
+            Test.UNSUPPORTED,
+            "Test has no 'RUN:' lines enabled for the available features",
         )
 
     return script

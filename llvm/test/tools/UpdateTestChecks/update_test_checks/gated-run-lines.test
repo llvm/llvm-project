@@ -1,0 +1,9 @@
+## Feature-gated run lines in update_test_checks.py.
+
+## Recognition: the gate is stripped and the command is run like an ordinary
+## run line, so its FileCheck prefix gets generated checks.  That any are
+## produced shows the gate was stripped (otherwise opt would have rejected it).
+# RUN: cp -f %S/Inputs/gated-run-line.ll %t.ll && %update_test_checks %t.ll
+# RUN: FileCheck --input-file=%t.ll %s --check-prefix=RECOGNIZE
+# RECOGNIZE: GATED-LABEL:
+

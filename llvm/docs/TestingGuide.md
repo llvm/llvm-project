@@ -667,6 +667,38 @@ Use, `XFAIL: *` if the test is expected to fail everywhere. Similarly, use
 ; XFAIL: target=powerpc{{.*}}, system-darwin
 ```
 
+### Gating individual RUN lines on a feature
+
+`REQUIRES`, `UNSUPPORTED` and `XFAIL` gate the *whole* test. To gate a
+single `RUN` line instead, write the `RUN` keyword immediately followed
+by a boolean expression in parentheses, `RUN(<expr>):`. The line is only
+added to the test script when `<expr>` is satisfied; otherwise it is
+silently skipped while the other `RUN` lines run as usual.
+
+`<expr>` is an ordinary lit boolean expression, parsed and evaluated by
+the same machinery as `REQUIRES`/`UNSUPPORTED`/`XFAIL` and against the
+same `config.available_features` set. It may therefore use feature
+names, the boolean operators `&&`, `||` and `!`, grouping parentheses,
+and `{{ }}` regular expressions (for example `RUN(linux && !asan):` or
+`RUN(target={{.*}}-windows{{.*}}):`). A malformed expression is a test
+error, exactly as it is for those keywords. Unlike them, `RUN(<expr>):`
+takes a single expression rather than a comma-separated list, and the
+gate is only supported on `RUN` lines (more precisely, on `COMMAND`
+directives); using it on any other keyword is an error.
+
+``` llvm
+; Always run this line.
+; RUN: <tool> < %s | FileCheck %s
+; Additionally run this line only when the tool under test understands
+; the 'lit-feature-A' feature and is not an asserts build.
+; RUN(lit-feature-A && !asserts): <tool> < %s  | FileCheck %s --check-prefix=FEATURE-A
+```
+
+A line continuation (trailing `\`) inherits the gate of the `RUN` line
+it continues. If *every* `RUN` line in a test is gated out, the test has
+nothing to execute and is reported as `UNSUPPORTED`, just like a test
+with no `RUN` line.
+
 ### Tips for writing constraints
 
 **`REQUIRES` and `UNSUPPORTED`**

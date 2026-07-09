@@ -1,0 +1,4 @@
+# A run-line gate must be a syntactically valid lit boolean expression;
+# a malformed one is a parse error (the same check REQUIRES/UNSUPPORTED use).
+#
+# RUN(present &&): echo NOPE

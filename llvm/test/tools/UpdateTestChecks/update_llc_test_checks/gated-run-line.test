@@ -1,0 +1,11 @@
+# REQUIRES: x86-registered-target
+## A feature-gated run line is treated like an ordinary run line: the gate is
+## stripped and the command is run, so its FileCheck prefix gets checks.
+
+# RUN: cp -f %S/Inputs/gated-run-line.ll %t.ll && %update_llc_test_checks %t.ll
+# RUN: FileCheck --input-file=%t.ll %s --check-prefix=OUTPUT
+
+## Both the plain and the gated run lines produced checks; the gate was stripped
+## from the gated command (otherwise llc would have rejected it).
+# OUTPUT-DAG: PLAIN-LABEL:
+# OUTPUT-DAG: GATED-LABEL:

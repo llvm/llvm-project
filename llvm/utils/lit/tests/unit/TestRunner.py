@@ -134,6 +134,35 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
         self.assertEqual(value[0].command.strip(), "%dbg(MY_RUN: at line 4)  baz")
         self.assertEqual(value[1].command.strip(), "%dbg(MY_RUN: at line 12)  foo  bar")
 
+    def test_command_gate_split(self):
+        # A COMMAND-style keyword may carry a 'KEYWORD(<expr>):' gate; the
+        # canonical keyword and the boolean expression are separated by
+        # _splitKeywordGate.  Surrounding whitespace in the gate is stripped,
+        # and the expression may contain operators and (nested) parentheses.
+        split = lit.TestRunner._splitKeywordGate
+        self.assertEqual(split("RUN:"), ("RUN:", None))
+        self.assertEqual(split("RUN(lit-feature-A):"), ("RUN:", "lit-feature-A"))
+        self.assertEqual(split("RUN( foo ):"), ("RUN:", "foo"))
+        self.assertEqual(split("RUN(a && !b):"), ("RUN:", "a && !b"))
+        self.assertEqual(split("RUN((a || b) && c):"), ("RUN:", "(a || b) && c"))
+        # A keyword with no gate is returned unchanged (gate is None).
+        self.assertEqual(split("XFAIL:"), ("XFAIL:", None))
+
+    def test_command_gate_validation(self):
+        # A gated CommandDirective records the boolean expression it is gated
+        # on; any expression accepted by REQUIRES/UNSUPPORTED/XFAIL is valid.
+        for good in ("feat", "a && b", "!x", "(a || b) && !c", "he{{l+}}o"):
+            directive = lit.TestRunner.CommandDirective(1, 1, "RUN:", "echo hi", good)
+            self.assertEqual(directive.gate, good)
+        # An ungated command has gate None.
+        directive = lit.TestRunner.CommandDirective(1, 1, "RUN:", "echo hi", None)
+        self.assertIsNone(directive.gate)
+        # A malformed expression (or an empty gate) is rejected, using the same
+        # BooleanExpression syntax check as the BOOLEAN_EXPR keywords.
+        for bad in ("a &&", "&& b", "(a", ""):
+            with self.assertRaises(ValueError):
+                lit.TestRunner.CommandDirective(1, 1, "RUN:", "echo hi", bad)
+
     def test_boolean(self):
         parsers = self.make_parsers()
         self.parse_test(parsers)

@@ -1,0 +1,8 @@
+## Feature-gated run lines in update_cc_test_checks.py.
+
+## Recognition: the gate is stripped and the command is run like an ordinary
+## run line, so its FileCheck prefix gets generated checks.
+# RUN: cp -f %S/Inputs/gated-run-line.c %t.c && %update_cc_test_checks --version 4 %t.c
+# RUN: FileCheck --input-file=%t.c %s --check-prefix=RECOGNIZE
+# RECOGNIZE: GATED-LABEL:
+
