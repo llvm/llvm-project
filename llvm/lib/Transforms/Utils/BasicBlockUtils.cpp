@@ -774,7 +774,8 @@ BasicBlock *llvm::SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ,
   CallBr->setSuccessor(SuccIdx, CallBrTarget);
 
   if (DTU) {
-    DTU->applyUpdates({{DominatorTree::Insert, CallBrBlock, CallBrTarget}});
+    if (!ReusesCallBrTarget)
+      DTU->applyUpdates({{DominatorTree::Insert, CallBrBlock, CallBrTarget}});
     if (DTU->getDomTree().dominates(CallBrBlock, Succ)) {
       if (!is_contained(successors(CallBrBlock), Succ))
         DTU->applyUpdates({{DominatorTree::Delete, CallBrBlock, Succ}});

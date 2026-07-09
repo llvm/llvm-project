@@ -194,7 +194,7 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
         BasicBlock *Succ = CallBr->getSuccessor(J);
         if (L->contains(Succ))
           continue;
-        bool UpdatedLI = false;
+        bool UpdatedLI;
         auto It = CallBrTargets.find(Succ);
         BasicBlock *ExistingTarget =
             (It != CallBrTargets.end()) ? It->second : nullptr;
