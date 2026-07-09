@@ -155,7 +155,7 @@ static cl::opt<unsigned>
                          cl::desc("livedebugvalues-stack-ws-limit"),
                          cl::init(250));
 
-DbgOpID DbgOpID::UndefID = DbgOpID(0xffffffff);
+constexpr DbgOpID DbgOpID::UndefID = DbgOpID(0xffffffff);
 
 /// Tracker for converting machine value locations and variable values into
 /// variable locations (the output of LiveDebugValues), recorded as DBG_VALUEs
@@ -487,7 +487,7 @@ public:
     for (auto Location : MTracker->locations()) {
       LocIdx Idx = Location.Idx;
       ValueIDNum &VNum = MLocs[Idx.asU64()];
-      if (VNum == ValueIDNum::EmptyValue)
+      if (VNum == ValueIDNum())
         continue;
       VarLocs.push_back(VNum);
 
@@ -832,7 +832,7 @@ public:
     if (ActiveMLocIt == ActiveMLocs.end())
       return;
 
-    VarLocs[MLoc.asU64()] = ValueIDNum::EmptyValue;
+    VarLocs[MLoc.asU64()] = ValueIDNum();
 
     // Examine the remaining variable locations: if we can find the same value
     // again, we can recover the location.
@@ -957,7 +957,7 @@ public:
     // XXX XXX XXX "pretend to be old LDV" means dropping all tracking data
     // about the old location.
     if (EmulateOldLDV)
-      VarLocs[Src.asU64()] = ValueIDNum::EmptyValue;
+      VarLocs[Src.asU64()] = ValueIDNum();
   }
 
   MachineInstrBuilder emitMOLoc(const MachineOperand &MO,
@@ -981,8 +981,6 @@ public:
 //===----------------------------------------------------------------------===//
 //            Implementation
 //===----------------------------------------------------------------------===//
-
-ValueIDNum ValueIDNum::EmptyValue = {UINT_MAX, UINT_MAX, UINT_MAX};
 
 #ifndef NDEBUG
 void ResolvedDbgOp::dump(const MLocTracker *MTrack) const {
@@ -1032,8 +1030,8 @@ void DbgValue::dump(const MLocTracker *MTrack,
 MLocTracker::MLocTracker(MachineFunction &MF, const TargetInstrInfo &TII,
                          const TargetRegisterInfo &TRI,
                          const TargetLowering &TLI)
-    : MF(MF), TII(TII), TRI(TRI), TLI(TLI),
-      LocIdxToIDNum(ValueIDNum::EmptyValue), LocIdxToLocID(0) {
+    : MF(MF), TII(TII), TRI(TRI), TLI(TLI), LocIdxToIDNum(ValueIDNum()),
+      LocIdxToLocID(0) {
   NumRegs = TRI.getNumRegs();
   reset();
   LocIDToLocIdx.resize(NumRegs, LocIdx::MakeIllegalLoc());
@@ -3784,7 +3782,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
     // If there is no resolved value for this live-in then it is not directly
     // reachable from the entry block -- model it as a PHI on entry to this
     // block, which means we leave the ValueIDNum unchanged.
-    if (ResolvedValue != ValueIDNum::EmptyValue)
+    if (ResolvedValue != ValueIDNum())
       Num = ResolvedValue;
   }
   // Later, we'll be looking up ranges of instruction numbers.

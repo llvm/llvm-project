@@ -12949,6 +12949,13 @@ static SDValue lowerShuffleAsZeroOrAnyExtend(
                                            InputV, Mask, Subtarget, DAG);
   };
 
+  // Match against a foldable v4i32 VZEXT_MOVL zero-extending instruction.
+  // TODO: Add v8i16 (with FP16) support when we have test coverage.
+  if (VT == MVT::v4i32 &&
+      (V1.getOpcode() == ISD::SCALAR_TO_VECTOR || isa<MemSDNode>(V1)) &&
+      Mask[0] == 0 && (NumElements - 1) == (int)Zeroable.countLeadingOnes())
+    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, V1);
+
   // The widest scale possible for extending is to a 64-bit integer.
   assert(Bits % 64 == 0 &&
          "The number of bits in a vector must be divisible by 64 on x86!");
@@ -44366,6 +44373,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     break;
   }
   case X86ISD::PSADBW: {
+    APInt LHSUndef, LHSZero;
+    APInt RHSUndef, RHSZero;
     SDValue LHS = Op.getOperand(0);
     SDValue RHS = Op.getOperand(1);
     assert(VT.getScalarType() == MVT::i64 &&
@@ -44373,10 +44382,16 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
            LHS.getValueType().getScalarType() == MVT::i8 &&
            "Unexpected PSADBW types");
 
+    APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumElts * 8);
+    if (SimplifyDemandedVectorElts(LHS, DemandedSrcElts, LHSUndef, LHSZero, TLO,
+                                   Depth + 1))
+      return true;
+    if (SimplifyDemandedVectorElts(RHS, DemandedSrcElts, RHSUndef, RHSZero, TLO,
+                                   Depth + 1))
+      return true;
+
     // Aggressively peek through ops to get at the demanded elts.
     if (!DemandedElts.isAllOnes()) {
-      unsigned NumSrcElts = LHS.getValueType().getVectorNumElements();
-      APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
       SDValue NewLHS = SimplifyMultipleUseDemandedVectorElts(
           LHS, DemandedSrcElts, TLO.DAG, Depth + 1);
       SDValue NewRHS = SimplifyMultipleUseDemandedVectorElts(

@@ -34,7 +34,7 @@ using namespace llvm;
 #define DEBUG_TYPE "regalloc"
 
 // Reserve an address that indicates a value that is known to be "undef".
-static VNInfo UndefVNI(0xbad, SlotIndex());
+static constexpr VNInfo UndefVNI(0xbad, SlotIndex());
 
 void LiveRangeCalc::resetLiveOutMap() {
   unsigned NumBlocks = MF->getNumBlockIDs();
@@ -250,7 +250,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
        auto EP = LR.extendInBlock(Undefs, Start, End);
        VNInfo *VNI = EP.first;
        FoundUndef |= EP.second;
-       setLiveOutValue(Pred, EP.second ? &UndefVNI : VNI);
+       setLiveOutValue(Pred, EP.second ? const_cast<VNInfo *>(&UndefVNI) : VNI);
        if (VNI) {
          if (TheVNI && TheVNI != VNI)
            UniqueVNI = false;

@@ -72,8 +72,6 @@ public:
     CurIndex += SourceToDest.size();
   }
 
-  static const TypeIndex Untranslated;
-
   // Local hashing entry points
   Error mergeTypesAndIds(MergingTypeTableBuilder &DestIds,
                          MergingTypeTableBuilder &DestTypes,
@@ -152,7 +150,8 @@ private:
     // successfully. If it refers to a type later in the stream or a record we
     // had to defer, defer it until later pass.
     unsigned MapPos = slotForIndex(Idx);
-    if (LLVM_UNLIKELY(MapPos >= Map.size() || Map[MapPos] == Untranslated))
+    if (LLVM_UNLIKELY(MapPos >= Map.size() ||
+                      Map[MapPos] == TypeIndex(SimpleTypeKind::NotTranslated)))
       return false;
 
     Idx = Map[MapPos];
@@ -202,8 +201,6 @@ private:
 
 } // end anonymous namespace
 
-const TypeIndex TypeStreamMerger::Untranslated(SimpleTypeKind::NotTranslated);
-
 void TypeStreamMerger::addMapping(TypeIndex Idx) {
   if (!IsSecondPass) {
     assert(IndexMap.size() == slotForIndex(CurIndex) &&
@@ -234,7 +231,7 @@ bool TypeStreamMerger::remapIndexFallback(TypeIndex &Idx,
 
   // This type index is invalid. Remap this to "not translated by cvpack",
   // and return failure.
-  Idx = Untranslated;
+  Idx = TypeIndex(SimpleTypeKind::NotTranslated);
   return false;
 }
 
@@ -353,7 +350,7 @@ Error TypeStreamMerger::remapType(const CVType &Type) {
   if (!R)
     return R.takeError();
 
-  TypeIndex DestIdx = Untranslated;
+  TypeIndex DestIdx = TypeIndex(SimpleTypeKind::NotTranslated);
   if (*R) {
     auto DoSerialize =
         [this, Type](MutableArrayRef<uint8_t> Storage) -> ArrayRef<uint8_t> {
