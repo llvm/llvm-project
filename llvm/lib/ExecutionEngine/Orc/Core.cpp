@@ -2778,6 +2778,15 @@ void ExecutionSession::OL_completeLookupFlags(
 void ExecutionSession::OL_destroyMaterializationResponsibility(
     MaterializationResponsibility &MR) {
 
+  // Destroying an MR with symbols still pending only trips the assert below,
+  // which is compiled out in release builds. There the outstanding queries are
+  // stranded: their callbacks never run and the state they reference can be
+  // freed at session teardown. Fail those symbols here so the queries reach a
+  // terminal state, mirroring MaterializationTask::~MaterializationTask.
+  // OL_notifyFailed is a no-op on an empty set.
+  if (!MR.SymbolFlags.empty())
+    OL_notifyFailed(MR);
+
   assert(MR.SymbolFlags.empty() &&
          "All symbols should have been explicitly materialized or failed");
   MR.JD.unlinkMaterializationResponsibility(MR);

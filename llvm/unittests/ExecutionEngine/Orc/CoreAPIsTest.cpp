@@ -958,6 +958,52 @@ TEST_F(CoreAPIsStandardTest, FailMaterializerWithUnqueriedSymbols) {
       << "Expected lookup for Bar to fail.";
 }
 
+TEST_F(CoreAPIsStandardTest, DropMaterializationResponsibilityFailsQuery) {
+  // Dropping an MR that still owns pending symbols must fail the outstanding
+  // query, not strand it (the empty-symbols invariant is otherwise only checked
+  // by a debug-mode assert). Dropped via unique_ptr reset; no exceptions.
+
+  bool OnCompletionRun = false;
+  bool LookupFailed = false;
+
+  auto OnCompletion = [&](Expected<SymbolMap> Result) {
+    OnCompletionRun = true;
+    if (Result) {
+      ADD_FAILURE() << "Lookup unexpectedly succeeded";
+    } else {
+      LookupFailed = true;
+      consumeError(Result.takeError());
+    }
+  };
+
+  std::unique_ptr<MaterializationResponsibility> FooMR;
+
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Foo, FooSym.getFlags()}}),
+      [&](std::unique_ptr<MaterializationResponsibility> R) {
+        FooMR = std::move(R);
+      })));
+
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Foo), SymbolState::Ready, OnCompletion,
+            NoDependenciesToRegister);
+
+  EXPECT_FALSE(OnCompletionRun) << "Query should still be outstanding";
+
+  // Drop the MR with symbols still pending; this must fail the query.
+  FooMR.reset();
+
+  EXPECT_TRUE(OnCompletionRun)
+      << "Dropping an MR with outstanding symbols must fail the query, not "
+         "strand it";
+  EXPECT_TRUE(LookupFailed) << "Query completion must carry a failure error";
+
+  // The symbol is now in the error state, so a later lookup also fails.
+  EXPECT_THAT_EXPECTED(
+      ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Foo})),
+      Failed());
+}
+
 TEST_F(CoreAPIsStandardTest, DropMaterializerWhenEmpty) {
   bool DestructorRun = false;
 
