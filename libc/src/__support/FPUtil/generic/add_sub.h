@@ -125,7 +125,6 @@ add_or_sub(InType x, InType y) {
         // rounding.
         volatile InType tmp = y;
 #endif // LIBC_USE_CONSTEXPR
-
         if constexpr (IsSub)
           tmp = -tmp;
         return cast<OutType>(tmp);

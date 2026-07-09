@@ -35,8 +35,7 @@ struct Float128 {
 
   // Floating point type and integer type
   template <typename T>
-  LIBC_INLINE constexpr explicit Float128(T value)
-      : bits(static_cast<UInt128>(0U)) {
+  LIBC_INLINE constexpr explicit Float128(T value) : bits(0U) {
     if constexpr (cpp::is_floating_point_v<T>) {
       bits = fputil::cast<Float128>(value).bits;
     } else if constexpr (cpp::is_integral_v<T>) {
@@ -71,7 +70,7 @@ struct Float128 {
     FPBits<Float128> x_bits(*this);
     int x_bits_exp =
         x_bits.get_explicit_exponent() - FPBits<Float128>::FRACTION_LEN;
-    // sign * mantissa * 2(exp-bias)
+    // sign * 2^(exp-bias) * mantissa
     DyadicFloat<FPBits<Float128>::STORAGE_LEN> xd(
         x_bits.sign(), x_bits_exp, x_bits.get_explicit_mantissa());
     return static_cast<T>(xd.as_mantissa_type());
@@ -100,6 +99,26 @@ struct Float128 {
     return fputil::generic::div<Float128>(*this, other);
   }
 
+  LIBC_INLINE constexpr Float128 &operator*=(const Float128 &other) {
+    *this = *this * other;
+    return *this;
+  }
+
+  LIBC_INLINE constexpr Float128 &operator+=(const Float128 &other) {
+    *this = *this + other;
+    return *this;
+  }
+
+  LIBC_INLINE constexpr Float128 &operator-=(const Float128 &other) {
+    *this = *this - other;
+    return *this;
+  }
+
+  LIBC_INLINE constexpr Float128 &operator/=(const Float128 &other) {
+    *this = *this / other;
+    return *this;
+  }
+
   LIBC_INLINE constexpr bool operator==(const Float128 &other) const {
     return fputil::equals(*this, other);
   }
@@ -122,23 +141,6 @@ struct Float128 {
 
   LIBC_INLINE constexpr bool operator>=(const Float128 &other) const {
     return fputil::greater_than_or_equals(*this, other);
-  }
-
-  LIBC_INLINE constexpr Float128 &operator*=(const Float128 &other) {
-    *this = *this * other;
-    return *this;
-  }
-  LIBC_INLINE constexpr Float128 &operator+=(const Float128 &other) {
-    *this = *this + other;
-    return *this;
-  }
-  LIBC_INLINE constexpr Float128 &operator-=(const Float128 &other) {
-    *this = *this - other;
-    return *this;
-  }
-  LIBC_INLINE constexpr Float128 &operator/=(const Float128 &other) {
-    *this = *this / other;
-    return *this;
   }
 };
 
