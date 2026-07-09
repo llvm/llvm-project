@@ -3128,6 +3128,8 @@ public:
     case ISD::FSUB:
     case ISD::FDIV:
     case ISD::FREM:
+    case ISD::PSEUDO_FMIN:
+    case ISD::PSEUDO_FMAX:
       return true;
     default:
       return false;

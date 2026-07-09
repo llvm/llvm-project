@@ -99,8 +99,9 @@ public:
   LTOKind getDefaultLTOMode() const override { return LTOK_Full; }
 
   /// We need to adjust the LTO mode based on user arguments.
-  LTOKind getLTOMode(const llvm::opt::ArgList &Args,
-                     Action::OffloadKind Kind = Action::OFK_None) const override;
+  LTOKind
+  getLTOMode(const llvm::opt::ArgList &Args,
+             Action::OffloadKind Kind = Action::OFK_None) const override;
 
   const ToolChain &HostTC;
   ParsedTargetIDType

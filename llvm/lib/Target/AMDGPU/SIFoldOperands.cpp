@@ -1375,7 +1375,6 @@ void SIFoldOperandsImpl::foldOperand(
       if (MovOp == AMDGPU::V_MOV_B16_t16_e64) {
         const auto &SrcOp = UseMI->getOperand(UseOpIdx);
         MachineOperand NewSrcOp(SrcOp);
-        MachineFunction *MF = UseMI->getMF();
         UseMI->removeOperand(1);
         UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // src0_modifiers
         UseMI->addOperand(NewSrcOp);                          // src0
@@ -1832,7 +1831,6 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
   if (CopiesToReplace.empty() && FoldList.empty())
     return Changed;
 
-  MachineFunction *MF = MI.getMF();
   // Make sure we add EXEC uses to any new v_mov instructions created.
   for (MachineInstr *Copy : CopiesToReplace)
     Copy->addImplicitDefUseOperands(*MF);
