@@ -1127,10 +1127,7 @@ define i1 @gep_gep_multiple_ult_nuw_multi_use(ptr %base, i64 %idx1, i64 %idx2, i
 
 define i1 @gep_const_same_block(ptr align 16 %foo) {
 ; CHECK-LABEL: @gep_const_same_block(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO]], i64 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %gep1 = getelementptr i8, ptr %foo, i64 4
   %gep2 = getelementptr i8, ptr %foo, i64 8
@@ -1140,10 +1137,7 @@ define i1 @gep_const_same_block(ptr align 16 %foo) {
 
 define i1 @gep_const_same_negative_block(ptr align 16 %foo) {
 ; CHECK-LABEL: @gep_const_same_negative_block(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 -12
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO]], i64 -8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %gep1 = getelementptr i8, ptr %foo, i64 -12
   %gep2 = getelementptr i8, ptr %foo, i64 -8
@@ -1179,10 +1173,7 @@ define i1 @gep_const_different_block_2(ptr align 16 %foo) {
 
 define i1 @gep_const_edge_case_1(ptr align 16 %foo) {
 ; CHECK-LABEL: @gep_const_edge_case_1(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 14
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO]], i64 15
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %gep1 = getelementptr i8, ptr %foo, i64 14
   %gep2 = getelementptr i8, ptr %foo, i64 15
@@ -1205,10 +1196,7 @@ define i1 @gep_const_edge_case_2(ptr align 16 %foo) {
 
 define i1 @gep_const_edge_case_3(ptr align 16 %foo) {
 ; CHECK-LABEL: @gep_const_edge_case_3(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 16
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO]], i64 17
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %gep1 = getelementptr i8, ptr %foo, i64 16
   %gep2 = getelementptr i8, ptr %foo, i64 17
@@ -1233,8 +1221,7 @@ define i1 @gep_variable_offsets(ptr align 16 %foo, i64 %i, i64 %j) {
 @g16 = global [4 x i32] zeroinitializer, align 16
 define i1 @gep_global_offsets() {
 ; CHECK-LABEL: @gep_global_offsets(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr getelementptr (i8, ptr @g16, i64 20), getelementptr inbounds nuw (i8, ptr @g16, i64 16)
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp ule ptr getelementptr (i8, ptr @g16, i64 20), getelementptr inbounds nuw (i8, ptr @g16, i64 16)
   ret i1 %cmp
