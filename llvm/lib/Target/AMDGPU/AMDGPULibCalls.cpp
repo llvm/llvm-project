@@ -901,73 +901,73 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   // OpenCL powr(x<0, y) = NaN, but the folds below would turn it into a
   // finite number. Skip them unless NaNs are ignored or the base is known
   // non-negative.
-  if ((CF || CINT) && !FPOp->hasNoNaNs() &&
-      (FInfo.getId() == AMDGPULibFunc::EI_POWR ||
-       FInfo.getId() == AMDGPULibFunc::EI_POWR_FAST) &&
+  bool IsPowr = FInfo.getId() == AMDGPULibFunc::EI_POWR ||
+                FInfo.getId() == AMDGPULibFunc::EI_POWR_FAST;
+  bool SkipConstantFolds =
+      (CF || CINT) && IsPowr && !FPOp->hasNoNaNs() &&
       !cannotBeOrderedLessThanZero(
-          opr0, SQ.getWithInstruction(cast<Instruction>(FPOp))))
-    return false;
+          opr0, SQ.getWithInstruction(cast<Instruction>(FPOp)));
 
-  if ((CF && CF->isZero()) || (CINT && ci_opr1 == 0)) {
-    //  pow/powr/pown(x, 0) == 1
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1\n");
-    Constant *cnval = ConstantFP::get(eltType, 1.0);
-    if (getVecSize(FInfo) > 1) {
-      cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
+  if (!SkipConstantFolds) {
+    if ((CF && CF->isZero()) || (CINT && ci_opr1 == 0)) {
+      //  pow/powr/pown(x, 0) == 1
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1\n");
+      Constant *cnval = ConstantFP::get(eltType, 1.0);
+      if (getVecSize(FInfo) > 1) {
+        cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
+      }
+      replaceCall(FPOp, cnval);
+      return true;
     }
-    replaceCall(FPOp, cnval);
-    return true;
-  }
-  if ((CF && CF->isOne()) || (CINT && ci_opr1 == 1)) {
-    // pow/powr/pown(x, 1.0) = x
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << "\n");
-    replaceCall(FPOp, opr0);
-    return true;
-  }
-  if ((CF && CF->isExactlyValue(2.0)) || (CINT && ci_opr1 == 2)) {
-    // pow/powr/pown(x, 2.0) = x*x
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << " * "
-                      << *opr0 << "\n");
-    Value *nval = B.CreateFMul(opr0, opr0, "__pow2");
-    replaceCall(FPOp, nval);
-    return true;
-  }
-  if ((CF && CF->isMinusOne()) || (CINT && ci_opr1 == -1)) {
-    // pow/powr/pown(x, -1.0) = 1.0/x
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1 / " << *opr0 << "\n");
-    Constant *cnval = ConstantFP::get(eltType, 1.0);
-    if (getVecSize(FInfo) > 1) {
-      cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
+    if ((CF && CF->isOne()) || (CINT && ci_opr1 == 1)) {
+      // pow/powr/pown(x, 1.0) = x
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << "\n");
+      replaceCall(FPOp, opr0);
+      return true;
     }
-    Value *nval = B.CreateFDiv(cnval, opr0, "__powrecip");
-    replaceCall(FPOp, nval);
-    return true;
-  }
+    if ((CF && CF->isExactlyValue(2.0)) || (CINT && ci_opr1 == 2)) {
+      // pow/powr/pown(x, 2.0) = x*x
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << " * "
+                        << *opr0 << "\n");
+      Value *nval = B.CreateFMul(opr0, opr0, "__pow2");
+      replaceCall(FPOp, nval);
+      return true;
+    }
+    if ((CF && CF->isMinusOne()) || (CINT && ci_opr1 == -1)) {
+      // pow/powr/pown(x, -1.0) = 1.0/x
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1 / " << *opr0 << "\n");
+      Constant *cnval = ConstantFP::get(eltType, 1.0);
+      if (getVecSize(FInfo) > 1) {
+        cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
+      }
+      Value *nval = B.CreateFDiv(cnval, opr0, "__powrecip");
+      replaceCall(FPOp, nval);
+      return true;
+    }
 
-  if (CF && (CF->isExactlyValue(0.5) || CF->isExactlyValue(-0.5))) {
-    // pow[r](x, [-]0.5) = sqrt(x) / rsqrt(x)
-    //
-    // sqrt/rsqrt and pow disagree on two negative inputs:
-    //   pow(-Inf, 0.5) == +Inf  but  sqrt(-Inf) == NaN   (ninf case)
-    //   pow(-0.0, 0.5) == +0.0  but  sqrt(-0.0) == -0.0  (nsz case)
-    // powr requires x >= 0 by the OpenCL spec, so -Inf is undefined behaviour
-    // and the ninf check can be skipped for powr/powr_fast. -0.0 is a valid
-    // input for powr since -0.0 >= 0 by IEEE comparison, so nsz is still
-    // required for all variants.
-    bool IsPowr = FInfo.getId() == AMDGPULibFunc::EI_POWR ||
-                  FInfo.getId() == AMDGPULibFunc::EI_POWR_FAST;
-    if (FPOp->hasNoSignedZeros() && (IsPowr || FPOp->hasNoInfs())) {
-      bool issqrt = CF->isExactlyValue(0.5);
-      if (FunctionCallee FPExpr =
-              getFunction(M, AMDGPULibFunc(issqrt ? AMDGPULibFunc::EI_SQRT
-                                                  : AMDGPULibFunc::EI_RSQRT,
-                                           FInfo))) {
-        LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << FInfo.getName()
-                          << '(' << *opr0 << ")\n");
-        Value *nval = CreateCallEx(B, FPExpr, opr0,
-                                   issqrt ? "__pow2sqrt" : "__pow2rsqrt");
-        replaceCall(FPOp, nval);
-        return true;
+    if (CF && (CF->isExactlyValue(0.5) || CF->isExactlyValue(-0.5))) {
+      // pow[r](x, [-]0.5) = sqrt(x) / rsqrt(x)
+      //
+      // sqrt/rsqrt and pow disagree on two negative inputs:
+      //   pow(-Inf, 0.5) == +Inf  but  sqrt(-Inf) == NaN   (ninf case)
+      //   pow(-0.0, 0.5) == +0.0  but  sqrt(-0.0) == -0.0  (nsz case)
+      // powr requires x >= 0 by the OpenCL spec, so -Inf is undefined behaviour
+      // and the ninf check can be skipped for powr/powr_fast. -0.0 is a valid
+      // input for powr since -0.0 >= 0 by IEEE comparison, so nsz is still
+      // required for all variants.
+      if (FPOp->hasNoSignedZeros() && (IsPowr || FPOp->hasNoInfs())) {
+        bool issqrt = CF->isExactlyValue(0.5);
+        if (FunctionCallee FPExpr =
+                getFunction(M, AMDGPULibFunc(issqrt ? AMDGPULibFunc::EI_SQRT
+                                                    : AMDGPULibFunc::EI_RSQRT,
+                                             FInfo))) {
+          LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << FInfo.getName()
+                            << '(' << *opr0 << ")\n");
+          Value *nval = CreateCallEx(B, FPExpr, opr0,
+                                     issqrt ? "__pow2sqrt" : "__pow2rsqrt");
+          replaceCall(FPOp, nval);
+          return true;
+        }
       }
     }
   }
