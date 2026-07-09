@@ -30,7 +30,6 @@ int main(int argc, char *argv[]) {
   dlinfo(handle, RTLD_DI_LINKMAP, &map);
   if (map) {
     printf("DSO link_map name: %s\n", map->l_name);
-
         readable = true;
       }
       close(pipefd[0]);
@@ -47,6 +46,5 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 #else // BUILD_SO
-
 void fn() { printf("DSO function called successfully\n"); }
 #endif
