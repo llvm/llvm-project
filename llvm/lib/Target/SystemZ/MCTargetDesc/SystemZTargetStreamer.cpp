@@ -237,9 +237,9 @@ void SystemZzOSStreamer::emitPPA1(PPA1Info &Info) {
     OutStreamer.AddComment(
         Twine("  Bit 4-31: Offset ").concat(utostr(FPRSaveAreaOffset)));
     OutStreamer.emitInt32(FPRSaveAreaOffset |
-                         (Info.FrameReg << 28)); // Offset to FPR save area
-                                                 // with register to add
-                                                 // value to (alloca reg).
+                          (Info.FrameReg << 28)); // Offset to FPR save area
+                                                  // with register to add
+                                                  // value to (alloca reg).
   }
 
   // Emit saved VR mask to VR save area.

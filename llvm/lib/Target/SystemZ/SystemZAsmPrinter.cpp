@@ -1612,10 +1612,9 @@ void SystemZAsmPrinter::calculatePPA1() {
 
     GCCEH = MF->getContext().getOrCreateSymbol(Twine("GCC_except_table") +
                                                Twine(MF->getFunctionNumber()));
-    PersonalityADADisp =
-        ADATable.insert(PersonalityRoutine, SystemZII::MO_ADA_INDIRECT_FUNC_DESC);
-    GCCEHADADisp =
-        ADATable.insert(GCCEH, SystemZII::MO_ADA_DATA_SYMBOL_ADDR);
+    PersonalityADADisp = ADATable.insert(PersonalityRoutine,
+                                         SystemZII::MO_ADA_INDIRECT_FUNC_DESC);
+    GCCEHADADisp = ADATable.insert(GCCEH, SystemZII::MO_ADA_DATA_SYMBOL_ADDR);
   }
 
   // Get the name of the function, with suffix _.

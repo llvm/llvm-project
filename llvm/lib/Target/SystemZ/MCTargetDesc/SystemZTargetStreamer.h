@@ -88,7 +88,7 @@ public:
     int64_t OffsetFPR = 0;
     int64_t OffsetVR = 0;
     uint64_t CallFrameSize = 0;
-    uint64_t PersonalityADADisp = 0; // ADA displacement for personality routine.
+    uint64_t PersonalityADADisp = 0; // ADA displacement for personality func.
     uint64_t GCCEHADADisp = 0;       // ADA displacement for GCCEH symbol.
     unsigned SizeOfFnParams = 0;
     uint32_t FrameAndFPROffset;
