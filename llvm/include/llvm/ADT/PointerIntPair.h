@@ -34,8 +34,7 @@ template <typename Ptr> struct PunnedPointer {
   static_assert(std::is_trivially_copy_constructible<Ptr>::value, "");
   static_assert(std::is_trivially_move_constructible<Ptr>::value, "");
 
-  explicit constexpr PunnedPointer() : Data{} {}
-  explicit PunnedPointer(intptr_t i) { *this = i; }
+  explicit constexpr PunnedPointer(intptr_t i = 0) { *this = i; }
 
   constexpr intptr_t asInt() const {
     intptr_t R = 0;
@@ -45,7 +44,7 @@ template <typename Ptr> struct PunnedPointer {
 
   constexpr operator intptr_t() const { return asInt(); }
 
-  PunnedPointer &operator=(intptr_t V) {
+  constexpr PunnedPointer &operator=(intptr_t V) {
     std::memcpy(Data, &V, sizeof(Data));
     return *this;
   }
