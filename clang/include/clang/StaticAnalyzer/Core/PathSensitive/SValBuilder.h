@@ -110,6 +110,11 @@ public:
   /// that value is returned. Otherwise, returns NULL.
   virtual const llvm::APSInt *getKnownValue(ProgramStateRef state, SVal val) = 0;
 
+  /// If the SVal represents a concrete floating-point value, returns a pointer
+  /// to that value. Otherwise, returns NULL.
+  virtual const llvm::APFloat *getKnownFloatValue(ProgramStateRef state,
+                                                  SVal val) = 0;
+
   /// Tries to get the minimal possible (integer) value of a given SVal. This
   /// always returns the value of a ConcreteInt, but may return NULL if the
   /// value is symbolic and the constraint manager cannot provide a useful
@@ -273,6 +278,14 @@ public:
     return nonloc::ConcreteInt(
         BasicVals.getValue(integer->getValue(),
                      integer->getType()->isUnsignedIntegerOrEnumerationType()));
+  }
+
+  nonloc::ConcreteFloat makeFloatVal(const FloatingLiteral *F) {
+    return nonloc::ConcreteFloat(BasicVals.getFloatValue(F->getValue()));
+  }
+
+  nonloc::ConcreteFloat makeFloatVal(const llvm::APFloat &F) {
+    return nonloc::ConcreteFloat(BasicVals.getFloatValue(F));
   }
 
   nonloc::ConcreteInt makeBoolVal(const ObjCBoolLiteralExpr *boolean) {

@@ -81,6 +81,9 @@ public:
   /// (integer) value, that value is returned. Otherwise, returns NULL.
   const llvm::APSInt *getKnownValue(ProgramStateRef state, SVal V) override;
 
+  const llvm::APFloat *getKnownFloatValue(ProgramStateRef state,
+                                          SVal V) override;
+
   /// Evaluates a given SVal by recursively evaluating and simplifying the
   /// children SVals, then returns its minimal possible (integer) value. If the
   /// constraint manager cannot provide a meaningful answer, this returns NULL.
@@ -1221,6 +1224,13 @@ const llvm::APSInt *SimpleSValBuilder::getConcreteValue(SVal V) {
 const llvm::APSInt *SimpleSValBuilder::getKnownValue(ProgramStateRef state,
                                                      SVal V) {
   return getConstValue(state, simplifySVal(state, V));
+}
+
+const llvm::APFloat *
+SimpleSValBuilder::getKnownFloatValue(ProgramStateRef state, SVal V) {
+  if (auto X = V.getAs<nonloc::ConcreteFloat>())
+    return X->getValue().get();
+  return nullptr;
 }
 
 const llvm::APSInt *SimpleSValBuilder::getMinValue(ProgramStateRef state,
