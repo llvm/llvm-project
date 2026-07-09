@@ -419,6 +419,7 @@ def calculate_arch_features(arch_string):
 llvm_config.feature_config(
     [
         ("--assertion-mode", {"ON": "asserts"}),
+        ("--build-mode", {"[Dd][Ee][Bb][Uu][Gg]": "debug"}),
         ("--cxxflags", {r"-D_GLIBCXX_DEBUG\b": "libstdcxx-safe-mode"}),
         ("--targets-built", calculate_arch_features),
     ]

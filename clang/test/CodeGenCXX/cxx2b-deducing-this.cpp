@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -std=c++2b %s -emit-llvm -triple x86_64-linux -o - | FileCheck %s
 
+// debug increases stack usage to the point of overflow.
+// UNSUPPORTED: debug
+
 struct TrivialStruct {
     void explicit_object_function(this TrivialStruct) {}
 };
