@@ -53,6 +53,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         PartialEntityAccessModel<fir::CoordinateOp>>(*ctx);
     fir::DeclareOp::attachInterface<PartialEntityAccessModel<fir::DeclareOp>>(
         *ctx);
+    fir::DeclareOp::attachInterface<
+        OutlineIdentityOperandDeclareModel<fir::DeclareOp>>(*ctx);
 
     fir::AddrOfOp::attachInterface<AddressOfGlobalModel>(*ctx);
     fir::GlobalOp::attachInterface<GlobalVariableModel>(*ctx);
@@ -94,6 +96,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
             PartialEntityAccessModel<hlfir::DesignateOp>>(*ctx);
         hlfir::DeclareOp::attachInterface<
             PartialEntityAccessModel<hlfir::DeclareOp>>(*ctx);
+        hlfir::DeclareOp::attachInterface<
+            OutlineIdentityOperandDeclareModel<hlfir::DeclareOp>>(*ctx);
       });
 
   // Register CUF operation interfaces

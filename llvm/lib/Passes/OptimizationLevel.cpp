@@ -10,7 +10,7 @@
 
 using namespace llvm;
 
-constexpr OptimizationLevel OptimizationLevel::O0 = {0};
-constexpr OptimizationLevel OptimizationLevel::O1 = {1};
-constexpr OptimizationLevel OptimizationLevel::O2 = {2};
-constexpr OptimizationLevel OptimizationLevel::O3 = {3};
+const OptimizationLevel OptimizationLevel::O0 = {0};
+const OptimizationLevel OptimizationLevel::O1 = {1};
+const OptimizationLevel OptimizationLevel::O2 = {2};
+const OptimizationLevel OptimizationLevel::O3 = {3};

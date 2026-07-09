@@ -554,6 +554,15 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - The `modular_format` attribute now supports the `fixed` aspect for C
   ISO 18037 fixed-point `printf` specifiers.
 
+- The `lifetime_capture_by` attribute now accepts three new spelling forms:
+  `lifetime_capture_by_this`, `lifetime_capture_by_global`, and
+  `lifetime_capture_by_unknown`. These replace passing `this`, `global`, and
+  `unknown` as arguments to `lifetime_capture_by`; that argument form is now
+  deprecated because those names can conflict with user-defined parameters.
+  They will be removed in the next release. Distinct `lifetime_capture_by`
+  spellings may also be combined on the same declaration, but each spelling may
+  appear at most once.
+
 - The `const` and `pure` attributes only apply to functions; they are now
   diagnosed and ignored when applied to anything else.
 
@@ -790,6 +799,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
 - Fixed assertion failures involving code completion with delayed default arguments and exception specifications. (#GH200879)
 - Fixed a regression where calling a function that takes a class-type parameter by value inside `decltype` of a concept could be incorrectly rejected when used as a non-type template argument. (#GH175831)
+- Clang no longer crashes if `__attribute__((cleanup))` is applied to an invalid declaration. Furthermore, in declarations that
+  contain multiple `cleanup` attributes, Clang now only uses the last one, matching GCC's behaviour (previously, Clang
+  would only use the first one). A new warning that diagnoses such declarations has been added to `-Wignored-attributes`.
+  (#GH191829)
 - Fixed a crash in the constant evaluator when an ill-formed array new-expression whose bound could not be determined (e.g. `new int[]()`) was used in a constant expression. (#GH200139)
 - Clang now defines the GCC-compatible predefined macros `__WCHAR_MIN__`, `__WINT_MIN__`, and `__SIG_ATOMIC_MIN__`. (#GH199678)
 
@@ -933,6 +946,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   immediate-escalated callable. (#GH192846)
 - Fixed a crash when passing one sized implicitly casted vector to a `abs` function. (#GH204777)
 - Fixed a crash when diagnosing an invalid out-of-line definition of a member class template. (#GH201490)
+- Fixed a crash in the parser when a missing semicolon after a tag definition is followed by a template-id not preceded by `::`. (#GH207992)
 
 ### OpenACC Specific Changes
 
