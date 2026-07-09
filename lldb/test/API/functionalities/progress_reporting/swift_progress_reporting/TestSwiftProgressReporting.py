@@ -42,7 +42,6 @@ class TestSwiftProgressReporting(TestBase):
             "Setting up Swift reflection",
             "Importing dependencies for main.swift",
             "Importing dependencies for main.swift: Foundation",
-            "Importing Swift standard library",
             "Loading reflection metadata",
         ]
 

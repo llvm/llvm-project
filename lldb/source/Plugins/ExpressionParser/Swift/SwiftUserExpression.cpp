@@ -366,7 +366,7 @@ static llvm::Error AddVariableInfo(
     target_type = variable_sp->GetType()->GetForwardCompilerType();
   else {
     CompilerType var_type = SwiftExpressionParser::ResolveVariable(
-        variable_sp, stack_frame_sp, runtime, use_dynamic, bind_generic_types);
+        variable_sp, *stack_frame_sp, runtime, use_dynamic, bind_generic_types);
 
     // IsMeaninglessWithoutDynamicResolution basically only checks if
     // it is an unspecialized generic type.

@@ -667,11 +667,11 @@ lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::Update() {
   if (m_unsafe_ptr->Update() == ChildCacheState::eRefetch)
     return ChildCacheState::eRefetch;
 
-  const uint32_t num_children = CalculateNumChildrenIgnoringErrors();
   m_children = ::ExtractChildrenFromSwiftPointerValueObject(valobj_sp,
                                                           *m_unsafe_ptr.get());
-  return m_children.size() == num_children ? ChildCacheState::eReuse
-                                           : ChildCacheState::eRefetch;
+  // The children are freshly-rebuilt memory snapshots, so the caller must drop
+  // any cached wrapper children rather than reuse stale ones from a prior stop.
+  return ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::

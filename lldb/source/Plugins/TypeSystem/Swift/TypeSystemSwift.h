@@ -96,9 +96,34 @@ private:
 ///
 /// Memory management:
 ///
-/// A per-module TypeSystemSwiftTypeRef owns a lazily initialized SwiftASTContext.
-/// A SwiftASTContextForExpressions owns a  TypeSystemSwiftTypeRef.
+/// A per-module TypeSystemSwiftTypeRef owns a lazily initialized
+/// SwiftASTContext. A SwiftASTContextForExpressions owns a
+/// TypeSystemSwiftTypeRef.
 ///
+/// \endverbatim
+///
+/// Static vs. runtime types:
+///
+/// Static Swift types generally don't know their own size or memory
+/// layout, because the layout can depend on runtime information
+/// (e.g., resilient library types, generics, ...)  Similar to the
+/// Objective-C runtime, SwiftLanguageRuntime can return the *runtime
+/// type* of a static type.  Because runtime types are bound to a
+/// process, they can use the SwiftLanguageRuntime to answer size and
+/// layout queries. Runtime types are created in a target's scratch
+/// typesystem, never in a per-module typesystem.
+///
+/// \verbatim
+///   static type            (per-module TypeSystemSwiftTypeRef)
+///     - mangled name
+///     - no size or layout information
+///                  │
+///                  │   SwiftLanguageRuntime::GetRuntimeType()
+///                  │
+///                  ↓
+///   runtime type           (scratch TypeSystemSwiftTypeRefForExpressions)
+///     - bound to a process / runtime
+///     - answers size and layout queries via process' SwiftLanguageRuntime
 /// \endverbatim
 class TypeSystemSwift : public TypeSystem {
   /// LLVM RTTI support.

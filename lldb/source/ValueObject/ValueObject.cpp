@@ -279,8 +279,8 @@ CompilerType ValueObject::GetCompilerType() {
 
   if (auto *runtime =
           process_sp->GetLanguageRuntime(GetObjectRuntimeLanguage())) {
-    if (std::optional<CompilerType> complete_type =
-            runtime->GetRuntimeType(compiler_type)) {
+    if (std::optional<CompilerType> complete_type = runtime->GetRuntimeType(
+            compiler_type, GetUpdatePoint().GetExecutionContextRef())) {
       m_override_type = *complete_type;
       if (m_override_type.IsValid())
         return m_override_type;

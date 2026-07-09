@@ -11,7 +11,7 @@
 // -----------------------------------------------------------------------------
 func main() {
   var foo: String????? = "foo"
-  print(foo) //% lldbutil.check_variable(self, self.frame().FindVariable("foo"), use_dynamic=False,use_synthetic=True,summary='"foo"')
+  print(foo) //% lldbutil.check_variable(self, self.frame().FindVariable("foo"), use_dynamic=True,use_synthetic=True,summary='"foo"')
 }
 
 main()

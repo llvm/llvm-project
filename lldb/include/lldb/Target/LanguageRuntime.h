@@ -17,6 +17,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Symbol/DeclVendor.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Runtime.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -206,7 +207,8 @@ public:
   /// from the user interface.
   virtual bool IsAllowedRuntimeValue(ConstString name) { return false; }
 
-  virtual std::optional<CompilerType> GetRuntimeType(CompilerType base_type) {
+  virtual std::optional<CompilerType>
+  GetRuntimeType(CompilerType base_type, ExecutionContextRef exe_ctx) {
     return std::nullopt;
   }
 

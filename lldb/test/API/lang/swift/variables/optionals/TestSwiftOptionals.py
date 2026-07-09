@@ -66,39 +66,39 @@ class TestSwiftOptionalType(TestBase):
         lldbutil.check_variable(
             self,
             optS_Some,
-            use_dynamic=False,
+            use_dynamic=True,
             num_children=2)
         uoptS_Some = self.frame().FindVariable("uoptS_Some")
         lldbutil.check_variable(
             self,
             uoptS_Some,
-            use_dynamic=False,
+            use_dynamic=True,
             num_children=2)
 
         optString_None = self.frame().FindVariable("optString_None")
         lldbutil.check_variable(
             self,
             optString_None,
-            use_dynamic=False,
+            use_dynamic=True,
             num_children=0)
         uoptString_None = self.frame().FindVariable("uoptString_None")
         lldbutil.check_variable(
             self,
             uoptString_None,
-            use_dynamic=False,
+            use_dynamic=True,
             num_children=0)
 
         optString_Some = self.frame().FindVariable("optString_Some")
         lldbutil.check_variable(
             self,
             optString_Some,
-            use_dynamic=False,
+            use_dynamic=True,
             num_children=0)
         uoptString_Some = self.frame().FindVariable("uoptString_Some")
         lldbutil.check_variable(
             self,
             uoptString_Some,
-            use_dynamic=False,
+            use_dynamic=True,
             num_children=0)
         uoptString_Some.GetChildAtIndex(99)
 
@@ -106,7 +106,7 @@ class TestSwiftOptionalType(TestBase):
         lldbutil.check_variable(
             self,
             optTrue,
-            use_dynamic=False,
+            use_dynamic=True,
             num_children=0,
             summary='true')
 
@@ -114,7 +114,7 @@ class TestSwiftOptionalType(TestBase):
         lldbutil.check_variable(
             self,
             optFalse,
-            use_dynamic=False,
+            use_dynamic=True,
             num_children=0,
             summary='false')
 
@@ -122,7 +122,7 @@ class TestSwiftOptionalType(TestBase):
         lldbutil.check_variable(
             self,
             optNil,
-            use_dynamic=False,
+            use_dynamic=True,
             num_children=0,
             summary='nil')
 

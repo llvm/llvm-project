@@ -96,7 +96,13 @@ SwiftArrayNativeBufferHandler::SwiftArrayNativeBufferHandler(
   if (opt_size)
     m_element_size = *opt_size;
   auto opt_stride = elem_type.GetByteStride(process_sp.get());
+  // The Objective-C bridged array path (_ContiguousArrayStorage) uses a Clang
+  // 'id' element type, whose type system does not implement GetByteStride.
+  assert((opt_stride ||
+          !elem_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>()) &&
+         "Swift Array element type has no stride");
   m_element_stride = opt_stride.value_or(m_element_size);
+  assert(m_element_stride > 0 && "Swift array element stride must be positive");
   size_t ptr_size = process_sp->GetAddressByteSize();
   Status error;
   lldb::addr_t next_read = native_ptr;
@@ -465,6 +471,8 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &static_valobj) {
     if (!nonsynth_sp)
       return nullptr;
     ValueObjectSP storage_sp(nonsynth_sp->GetChildMemberWithName(g__storage));
+    if (!storage_sp)
+      return nullptr;
 
     lldb::addr_t storage_location =
         storage_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);

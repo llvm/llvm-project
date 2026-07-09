@@ -49,7 +49,3 @@ class TestSwiftDedupMacros(TestBase):
 #       CHECK: SwiftASTContextForExpressions{{.*}}-DSPACE
 #       CHECK-NOT: {{ SPACE}}
 #       CHECK: SwiftASTContextForExpressions{{.*}}-UNDEBUG
-#       CHECK: SwiftASTContext(module: "Dylib{{.*}}-DDEBUG=1
-#       CHECK: SwiftASTContext(module: "Dylib{{.*}}-DSPACE
-#       CHECK-NOT: {{ SPACE}}
-#       CHECK: SwiftASTContext(module: "Dylib{{.*}}-UNDEBUG

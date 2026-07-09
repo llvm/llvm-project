@@ -493,19 +493,30 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
 
   m_ptr_size = m_process->GetAddressByteSize();
 
-  auto count_sp = m_storage->GetChildAtNamePath({g__count, g__value});
+  // Embedded Swift can resolve the static, but not the dynamic value.
+  ValueObject *storage_for_children = m_storage;
+  if (m_is_embedded_swift) {
+    lldb::ValueObjectSP static_storage = m_storage->GetStaticValue();
+    if (!static_storage)
+      return;
+    storage_for_children = static_storage.get();
+  }
+  auto count_sp =
+      storage_for_children->GetChildAtNamePath({g__count, g__value});
   if (!count_sp)
     return;
   m_count = count_sp->GetValueAsUnsigned(0);
 
-  auto scale_sp = m_storage->GetChildAtNamePath({g__scale, g__value});
+  auto scale_sp =
+      storage_for_children->GetChildAtNamePath({g__scale, g__value});
   if (!scale_sp)
     return;
   auto scale = scale_sp->GetValueAsUnsigned(0);
   m_scale = scale;
 
   auto keys_ivar = value_type ? g__rawKeys : g__rawElements;
-  auto keys_sp = m_storage->GetChildAtNamePath({keys_ivar, g__rawValue});
+  auto keys_sp =
+      storage_for_children->GetChildAtNamePath({keys_ivar, g__rawValue});
   if (!keys_sp)
     return;
   m_keys_ptr = keys_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
@@ -513,7 +524,8 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
   lldb::addr_t last_field_ptr = keys_sp->GetAddressOf().address;
 
   if (value_type) {
-    auto values_sp = m_storage->GetChildAtNamePath({g__rawValues, g__rawValue});
+    auto values_sp =
+        storage_for_children->GetChildAtNamePath({g__rawValues, g__rawValue});
     if (!values_sp)
       return;
     m_values_ptr = values_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);

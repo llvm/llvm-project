@@ -90,10 +90,10 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
         lldbutil.check_variable(self, b, False, value="123456")
 
         nonPayload1 = frame.FindVariable("nonPayload1")
-        lldbutil.check_variable(self, nonPayload1, False, value="one")
+        lldbutil.check_variable(self, nonPayload1, True, value="one")
 
         nonPayload2 = frame.FindVariable("nonPayload2")
-        lldbutil.check_variable(self, nonPayload2, False, value="two")
+        lldbutil.check_variable(self, nonPayload2, True, value="two")
 
         singlePayload = frame.FindVariable("singlePayload")
         payload = singlePayload.GetChildMemberWithName("payload")
@@ -103,7 +103,7 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
         lldbutil.check_variable(self, b, False, value="123456")
 
         emptySinglePayload = frame.FindVariable("emptySinglePayload")
-        lldbutil.check_variable(self, emptySinglePayload, False, value="nonPayloadTwo")
+        lldbutil.check_variable(self, emptySinglePayload, True, value="nonPayloadTwo")
 
         smallMultipayloadEnum1 = frame.FindVariable("smallMultipayloadEnum1")
         one = smallMultipayloadEnum1.GetChildMemberWithName("one")

@@ -18,6 +18,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectRegister.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
+#include "lldb/lldb-enumerations.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include <memory>
@@ -52,6 +53,14 @@ static llvm::Expected<lldb::TypeSystemSP> GetTypeSystemFromCU(StackFrame &ctx) {
                                     ctx.GetFunctionName());
 
   lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+  // BEGIN SWIFT
+  if (language == lldb::eLanguageTypeSwift) {
+    lldb::TargetSP target_sp = ctx.CalculateTarget();
+    if (!target_sp)
+      return llvm::createStringError("no target in this context");
+    return target_sp->GetScratchTypeSystemForLanguage(language);
+  }
+  // END SWIFT
   symbol_context = ctx.GetSymbolContext(lldb::eSymbolContextModule);
   return symbol_context.module_sp->GetTypeSystemForLanguage(language);
 }
