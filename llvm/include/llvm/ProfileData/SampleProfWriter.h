@@ -132,6 +132,13 @@ public:
   virtual void setPartialProfile() {}
   virtual void setUseCtxSplitLayout() {}
 
+  void setFormatVersion(uint64_t V) {
+    assert(sampleprof::formatVersionIsSupported(V) &&
+           "Unsupported format version");
+    FormatVersion = V;
+  }
+  uint64_t getFormatVersion() const { return FormatVersion; }
+
 protected:
   SampleProfileWriter(std::unique_ptr<raw_ostream> &OS)
       : OutputStream(std::move(OS)) {}
@@ -162,6 +169,9 @@ protected:
 
   /// Profile format.
   SampleProfileFormat Format = SPF_None;
+
+  /// Format version to write.
+  uint64_t FormatVersion = sampleprof::DefaultVersion;
 };
 
 /// Sample-based profile writer (text format).
