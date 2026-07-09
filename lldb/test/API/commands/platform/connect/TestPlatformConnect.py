@@ -4,7 +4,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-@expectedFailureWindows  # process modules not loaded
 @skipIfWasm  # no remote platform to connect to
 class TestPlatformProcessConnect(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
@@ -13,6 +12,7 @@ class TestPlatformProcessConnect(TestBase):
     @skipIfRemote
     @expectedFailureAll(hostoslist=["windows"], triple=".*-android")
     @skipIfDarwin  # lldb-server not found correctly
+    @expectedFailureWindows  # process modules not loaded
     # lldb-server platform times out waiting for the gdbserver port number to be
     # written to the pipe, yet it seems the gdbserver already has written it.
     @expectedFailureAll(
@@ -43,6 +43,7 @@ class TestPlatformProcessConnect(TestBase):
     @skipIfRemote
     @expectedFailureAll(hostoslist=["windows"], triple=".*-android")
     @skipIfDarwin  # lldb-server not found correctly
+    @expectedFailureWindows  # process modules not loaded
     # lldb-server platform times out waiting for the gdbserver port number to be
     # written to the pipe, yet it seems the gdbserver already has written it.
     @expectedFailureAll(
