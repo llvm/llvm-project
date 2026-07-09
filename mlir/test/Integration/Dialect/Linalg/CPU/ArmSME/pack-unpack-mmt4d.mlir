@@ -28,7 +28,7 @@
 ///
 /// NOTES ON IMPLEMENTATION
 /// 1. The MMT4D example uses _scalable_ tile sizes for data tiling.
-///   * The matrix-multiplication dimension that's scalable: N.
+///   * The matrix-multiplication dimensions that are scalable: M and N.
 ///
 /// 2. The lowering of linalg.mmt4d leverages scalable vectorisation.
 ///   * The matrix-multiplication dimension that's scalable: M, N (to match data
