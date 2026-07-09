@@ -687,7 +687,8 @@ public:
     if (Number >= BBMap.size()) {
       unsigned Max =
           GraphTraits<decltype(BB->getParent())>::getMaxNumber(BB->getParent());
-      BBMap.resize(Number >= Max ? Number + 1 : Max);
+      assert(Number < Max);
+      BBMap.resize(Max);
     }
     BBMap[Number] = L;
   }
