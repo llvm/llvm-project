@@ -320,15 +320,20 @@ selected:        false
 tracksRegLiveness: true
 body:             |
   bb.0:
-    %idx:_(s64) = G_CONSTANT i64 0
-    %elt:_(s32) = G_CONSTANT i32 42
-    %addr:gpr64 = IMPLICIT_DEF
     ; Regression test for CombinerHelper::matchCombineInsertVecElts.
     ; The base vector of G_INSERT_VECTOR_ELT is defined by INLINEASM. The combiner
     ; must stop at INLINEASM and not assume that operand 0 is a register.
     ; CHECK-LABEL: name: test_inlineasm_base
-    ; CHECK: INLINEASM
-    ; CHECK: G_INSERT_VECTOR_ELT
+    ; CHECK: %idx:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %elt:_(s32) = G_CONSTANT i32 42
+    ; CHECK-NEXT: %addr:gpr64 = IMPLICIT_DEF
+    ; CHECK-NEXT: INLINEASM &"ldr $0, [$1]", sideeffect attdialect, regdef:FPR128, def %base(<4 x s32>), reguse:GPR64, %addr
+    ; CHECK-NEXT: %v:_(<4 x s32>) = G_INSERT_VECTOR_ELT %base, %elt(s32), %idx(s64)
+    ; CHECK-NEXT: $q0 = COPY %v(<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %idx:_(s64) = G_CONSTANT i64 0
+    %elt:_(s32) = G_CONSTANT i32 42
+    %addr:gpr64 = IMPLICIT_DEF
     INLINEASM &"ldr $0, [$1]", sideeffect attdialect, regdef:FPR128, def %base:fpr128(<4 x s32>), reguse:GPR64, %addr:gpr64
     %v:_(<4 x s32>) = G_INSERT_VECTOR_ELT %base:fpr128(<4 x s32>), %elt:_(s32), %idx:_(s64)
     $q0 = COPY %v(<4 x s32>)
