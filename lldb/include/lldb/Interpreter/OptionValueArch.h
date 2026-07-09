@@ -12,6 +12,7 @@
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/CompletionRequest.h"
+#include <mutex>
 
 namespace lldb_private {
 
@@ -45,6 +46,7 @@ public:
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
   void Clear() override {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     m_current_value = m_default_value;
     m_value_was_set = false;
   }

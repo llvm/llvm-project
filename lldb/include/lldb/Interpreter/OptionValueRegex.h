@@ -37,6 +37,7 @@ public:
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
   void Clear() override {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     m_regex = RegularExpression(m_default_regex_str);
     m_value_was_set = false;
   }

@@ -372,6 +372,8 @@ protected:
                                 // set from the command line or as a setting,
                                 // versus if we just have the default value that
                                 // was already populated in the option value.
+  mutable std::recursive_mutex m_mutex;
+
 private:
   std::optional<ArchSpec> GetArchSpecValue() const;
   bool SetArchSpecValue(ArchSpec arch_spec);
@@ -412,8 +414,6 @@ private:
   bool SetFormatEntityValue(const FormatEntity::Entry &entry);
 
   const RegularExpression *GetRegexValue() const;
-
-  mutable std::mutex m_mutex;
 };
 
 } // namespace lldb_private

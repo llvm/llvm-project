@@ -41,6 +41,7 @@ public:
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
   void Clear() override {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     m_values.clear();
     m_value_was_set = false;
   }

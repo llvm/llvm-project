@@ -36,6 +36,7 @@ public:
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
   void Clear() override {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     m_file_spec.Clear();
     m_line_number = LLDB_INVALID_LINE_NUMBER;
     m_column_number = LLDB_INVALID_COLUMN_NUMBER;
