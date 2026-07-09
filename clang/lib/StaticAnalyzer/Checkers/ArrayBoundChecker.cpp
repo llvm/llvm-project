@@ -118,30 +118,12 @@ public:
   void recordMayUnderflow() { MayUnderflow = true; }
   void recordMayOverflowExtent(NonLoc Extent) { MayOverflowExtent = Extent; }
 
-  bool mayUnderflow() { return MayUnderflow; }
+  bool mayUnderflow() const { return MayUnderflow; }
 
   bool mayBeInvalid() const { return MayUnderflow || MayOverflowExtent; }
 
   std::string getMessage(PathSensitiveBugReport &BR, StringRef RegName,
                          SizeUnit SU) const;
-
-private:
-  /// Return true if information about the value of \p SV can put constraints
-  /// on some symbol which is interesting within the bug report \p BR
-  /// In particular, this returns true when \p SV is interesting within \p BR;
-  /// but it also returns true if \p SV is an expression that contains integer
-  /// constants and a single symbolic operand which is interesting (in \p BR).
-  /// We need to use this instead of plain `BR.isInteresting()` because if we
-  /// are analyzing code like
-  ///   int array[10];
-  ///   int f(int arg) {
-  ///     return array[arg] && array[arg + 10];
-  ///   }
-  /// then the byte offsets are `arg * 4` and `(arg + 10) * 4`, which are not
-  /// sub-expressions of each other (but `getSimplifiedOffsets` is smart enough
-  /// to detect this out of bounds access).
-  static bool providesInformationAboutInteresting(SVal SV,
-                                                  PathSensitiveBugReport &BR);
 };
 
 struct Messages {
@@ -209,6 +191,39 @@ public:
 };
 
 } // anonymous namespace
+
+/// Return true if information about the value of \p SV can put constraints
+/// on some symbol which is interesting within the bug report \p BR
+/// In particular, this returns true when \p SV is interesting within \p BR;
+/// but it also returns true if \p SV is an expression that contains integer
+/// constants and a single symbolic operand which is interesting (in \p BR).
+/// We need to use this instead of plain `BR.isInteresting()` because if we
+/// are analyzing code like
+///   int array[10];
+///   int f(int arg) {
+///     return array[arg] && array[arg + 10];
+///   }
+/// then the byte offsets are `arg * 4` and `(arg + 10) * 4`, which are not
+/// sub-expressions of each other (but `getSimplifiedOffsets` is smart enough
+/// to detect this out of bounds access).
+static bool providesInformationAboutInteresting(SVal SV,
+                                                PathSensitiveBugReport &BR) {
+  SymbolRef Sym = SV.getAsSymbol();
+  if (!Sym)
+    return false;
+  for (SymbolRef PartSym : Sym->symbols()) {
+    // The interestingess mark may appear on any layer as we're stripping off
+    // the SymIntExpr, UnarySymExpr etc. layers...
+    if (BR.isInteresting(PartSym))
+      return true;
+    // ...but if both sides of the expression are symbolic, then there is no
+    // practical algorithm to produce separate constraints for the two
+    // operands (from the single combined result).
+    if (isa<SymSymExpr>(PartSym))
+      return false;
+  }
+  return false;
+}
 
 /// For a given Location that can be represented as a symbolic expression
 /// Arr[Idx] (or perhaps Arr[Idx1][Idx2] etc.), return the parent memory block
@@ -557,25 +572,6 @@ std::string CheckResult::getMessage(PathSensitiveBugReport &BR,
     Out << SU.asExtentDesc(/*ForceBytes=*/!UseIndex) << ' ' << RegName;
   }
   return std::string(Out.str());
-}
-
-bool CheckResult::providesInformationAboutInteresting(
-    SVal SV, PathSensitiveBugReport &BR) {
-  SymbolRef Sym = SV.getAsSymbol();
-  if (!Sym)
-    return false;
-  for (SymbolRef PartSym : Sym->symbols()) {
-    // The interestingess mark may appear on any layer as we're stripping off
-    // the SymIntExpr, UnarySymExpr etc. layers...
-    if (BR.isInteresting(PartSym))
-      return true;
-    // ...but if both sides of the expression are symbolic, then there is no
-    // practical algorithm to produce separate constraints for the two
-    // operands (from the single combined result).
-    if (isa<SymSymExpr>(PartSym))
-      return false;
-  }
-  return false;
 }
 
 void ArrayBoundChecker::handleAccessExpr(const Expr *E,
