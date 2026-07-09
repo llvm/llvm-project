@@ -989,7 +989,14 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
     LevelInfo level;
     bool pastDo = false;
     for (lower::pft::Evaluation &e : doEval->getNestedEvaluations()) {
-      if (e.getIf<parser::NonLabelDoStmt>() || e.getIf<parser::EndDoStmt>())
+      // A labeled DO loop (e.g. "DO 10 ... 10 END DO") leaves a ContinueStmt
+      // for its terminating labeled statement in addition to the EndDoStmt.
+      // Such a CONTINUE is a no-op and must not be treated as intervening
+      // code: doing so would spuriously emit guarded "after" code (and
+      // arithmetic on the loop bounds), which is invalid when the bounds are
+      // host-evaluated under omp.target.
+      if (e.getIf<parser::NonLabelDoStmt>() || e.getIf<parser::EndDoStmt>() ||
+          e.getIf<parser::ContinueStmt>())
         continue;
       // Semantics guarantees the only DoConstruct here is the next associated
       // loop (non-associated DO loops are rejected as intervening code).
