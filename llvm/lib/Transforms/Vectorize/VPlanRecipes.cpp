@@ -2447,33 +2447,6 @@ Intrinsic::ID VPHistogramRecipe::getHistogramIntrinsicID() const {
   llvm_unreachable("Unknown HistogramUpdateKind");
 }
 
-std::optional<VPHistogramRecipe::HistogramUpdateKind>
-VPHistogramRecipe::getUpdateKindForInstruction(Instruction *I) {
-  if (auto *BO = dyn_cast<BinaryOperator>(I)) {
-    switch (BO->getOpcode()) {
-    case Instruction::Add:
-      return HistogramUpdateKind::Add;
-    case Instruction::Sub:
-      return HistogramUpdateKind::Sub;
-    default:
-      return std::nullopt;
-    }
-  }
-  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::uadd_sat:
-      return HistogramUpdateKind::UAddSat;
-    case Intrinsic::umax:
-      return HistogramUpdateKind::UMax;
-    case Intrinsic::umin:
-      return HistogramUpdateKind::UMin;
-    default:
-      return std::nullopt;
-    }
-  }
-  return std::nullopt;
-}
-
 InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   // FIXME: Take the gather and scatter into account as well. For now we're
