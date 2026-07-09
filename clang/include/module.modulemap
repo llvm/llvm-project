@@ -147,12 +147,12 @@ module Clang_Options { requires cplusplus umbrella "clang/Options" module * { ex
 module Clang_Parse { requires cplusplus umbrella "clang/Parse" module * { export * } }
 module Clang_Rewrite { requires cplusplus umbrella "clang/Rewrite/Core" module * { export * } }
 module Clang_RewriteFrontend { requires cplusplus umbrella "clang/Rewrite/Frontend" module * { export * } }
-module Clang_ScalableStaticAnalysisFramework {
+module Clang_ScalableStaticAnalysis {
   requires cplusplus
-  umbrella "clang/ScalableStaticAnalysisFramework"
+  umbrella "clang/ScalableStaticAnalysis"
 
-  textual header "clang/ScalableStaticAnalysisFramework/BuiltinAnchorSources.def"
-  textual header "clang/ScalableStaticAnalysisFramework/Core/Model/PrivateFieldNames.def"
+  textual header "clang/ScalableStaticAnalysis/BuiltinAnchorSources.def"
+  textual header "clang/ScalableStaticAnalysis/Core/Model/PrivateFieldNames.def"
 
   module * { export * }
 }

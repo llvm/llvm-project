@@ -284,42 +284,36 @@ public:
     }
   }
 
-  // Rewrite all uses of the original variable, in the basic blocks whose names
-  // start with `prefix`, with the linear variable in-place.
+  // Rewrite all uses of the original variable, in the basic blocks in the
+  // [startBB, endBB] interval, with the linear variable in-place.
   void rewriteInPlace(llvm::IRBuilderBase &builder, llvm::BasicBlock *startBB,
-                      llvm::BasicBlock *endBB, llvm::StringRef prefix,
-                      size_t varIndex) {
+                      llvm::BasicBlock *endBB, size_t varIndex) {
     llvm::SmallVector<llvm::BasicBlock *, 32> worklist;
-    llvm::SmallPtrSet<llvm::BasicBlock *, 32> visited;
-    llvm::SmallPtrSet<llvm::BasicBlock *, 32> matchingBBs;
+    llvm::SmallPtrSet<llvm::BasicBlock *, 32> collectedBBs;
 
     assert(startBB && endBB && "Invalid startBB/endBB");
 
-    // Traverse basic blocks from startBB to endBB and save those
-    // whose names start with the specified prefix.
+    // Collect basic blocks from startBB to endBB.
     worklist.push_back(startBB);
-    visited.insert(startBB);
+    collectedBBs.insert(startBB);
 
     while (!worklist.empty()) {
       llvm::BasicBlock *bb = worklist.pop_back_val();
-
-      if (bb->hasName() && bb->getName().starts_with(prefix))
-        matchingBBs.insert(bb);
 
       if (bb == endBB)
         continue;
 
       for (llvm::BasicBlock *succ : llvm::successors(bb)) {
-        if (visited.insert(succ).second)
+        if (collectedBBs.insert(succ).second)
           worklist.push_back(succ);
       }
     }
 
-    // Rewrite all uses in the matching BBs.
+    // Rewrite all uses in the collected BBs.
     llvm::SmallVector<llvm::User *> users(linearOrigVal[varIndex]->users());
     for (auto *user : users) {
       if (auto *userInst = dyn_cast<llvm::Instruction>(user)) {
-        if (matchingBBs.contains(userInst->getParent()))
+        if (collectedBBs.contains(userInst->getParent()))
           user->replaceUsesOfWith(linearOrigVal[varIndex],
                                   linearLoopBodyTemps[varIndex]);
       }
@@ -358,7 +352,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("allocate");
   };
   auto checkBare = [&todo](auto op, LogicalResult &result) {
-    if (op.getBare())
+    if (op.getKernelType() == omp::TargetExecMode::bare)
       result = todo("ompx_bare");
   };
   auto checkDepend = [&todo](auto op, LogicalResult &result) {
@@ -1751,6 +1745,25 @@ findAssociatedValue(Value privateVar, llvm::IRBuilderBase &builder,
   return moduleTranslation.lookupValue(privateVar);
 }
 
+// Privatizer region arguments may be by-value even when the available LLVM
+// value is storage for that value, e.g. lowered Fortran boxchar descriptors in
+// task context structs. Materialize the value expected by the region argument
+// while preserving the existing pointer mapping for pointer arguments.
+static llvm::Value *
+materializeRegionArgValue(llvm::IRBuilderBase &builder,
+                          LLVM::ModuleTranslation &moduleTranslation,
+                          BlockArgument regionArg, llvm::Value *value) {
+  if (!regionArg)
+    return value;
+
+  llvm::Type *regionArgType =
+      moduleTranslation.convertType(regionArg.getType());
+  if (regionArgType->isPointerTy() || !value->getType()->isPointerTy())
+    return value;
+
+  return builder.CreateLoad(regionArgType, value);
+}
+
 /// Initialize a single (first)private variable. You probably want to use
 /// allocateAndInitPrivateVars instead of this.
 /// This returns the private variable which has been initialized. This
@@ -1942,10 +1955,15 @@ static LogicalResult copyFirstPrivateVars(
     // copyRegion implements `lhs = rhs`
     Region &copyRegion = decl.getCopyRegion();
 
-    moduleTranslation.mapValue(decl.getCopyMoldArg(), moldVar);
+    llvm::Value *copyMoldVar = materializeRegionArgValue(
+        builder, moduleTranslation, decl.getCopyMoldArg(), moldVar);
+    llvm::Value *copyPrivateVar = materializeRegionArgValue(
+        builder, moduleTranslation, decl.getCopyPrivateArg(), llvmVar);
+
+    moduleTranslation.mapValue(decl.getCopyMoldArg(), copyMoldVar);
 
     // map copyRegion lhs arg
-    moduleTranslation.mapValue(decl.getCopyPrivateArg(), llvmVar);
+    moduleTranslation.mapValue(decl.getCopyPrivateArg(), copyPrivateVar);
 
     // in-place convert copy region
     if (failed(inlineConvertOmpRegions(copyRegion, "omp.private.copy", builder,
@@ -3136,14 +3154,15 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     // initialized character box is yielded by value. Here we need to store the
     // yielded value into the private allocation, and load the private
     // allocation to match the type expected by region block arguments.
+    [[maybe_unused]] llvm::Value *llvmPrivateVar = llvmPrivateVarAlloc;
     if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
         !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
       builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
       // Load it so we have the value pointed to by the GEP
-      llvmPrivateVarAlloc = builder.CreateLoad(privateVarOrErr.get()->getType(),
-                                               llvmPrivateVarAlloc);
+      llvmPrivateVar = builder.CreateLoad(privateVarOrErr.get()->getType(),
+                                          llvmPrivateVarAlloc);
     }
-    assert(llvmPrivateVarAlloc->getType() ==
+    assert(llvmPrivateVar->getType() ==
            moduleTranslation.convertType(blockArg.getType()));
 
     // Mapping blockArg -> llvmPrivateVarAlloc is done inside the body callback
@@ -3609,14 +3628,15 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
     llvm::IRBuilderBase::InsertPointGuard guard(builder);
     builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
 
+    [[maybe_unused]] llvm::Value *llvmPrivateVar = llvmPrivateVarAlloc;
     if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
         !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
       builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
       // Load it so we have the value pointed to by the GEP
-      llvmPrivateVarAlloc = builder.CreateLoad(privateVarOrErr.get()->getType(),
-                                               llvmPrivateVarAlloc);
+      llvmPrivateVar = builder.CreateLoad(privateVarOrErr.get()->getType(),
+                                          llvmPrivateVarAlloc);
     }
-    assert(llvmPrivateVarAlloc->getType() ==
+    assert(llvmPrivateVar->getType() ==
            moduleTranslation.convertType(blockArg.getType()));
   }
 
@@ -3890,9 +3910,11 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
       assert(llvmPrivateVarAlloc &&
              "reads from mold so shouldn't have been skipped");
 
-      llvm::Expected<llvm::Value *> privateVarOrErr =
-          initPrivateVar(builder, moduleTranslation, privDecl, mold, blockArg,
-                         llvmPrivateVarAlloc, builder.GetInsertBlock());
+      llvm::Value *moldArg = materializeRegionArgValue(
+          builder, moduleTranslation, privDecl.getInitMoldArg(), mold);
+      llvm::Expected<llvm::Value *> privateVarOrErr = initPrivateVar(
+          builder, moduleTranslation, privDecl, moldArg, blockArg,
+          llvmPrivateVarAlloc, builder.GetInsertBlock());
       if (!privateVarOrErr)
         return privateVarOrErr.takeError();
 
@@ -3903,14 +3925,15 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
       // initialized character box is yielded by value. Here we need to store
       // the yielded value into the private allocation, and load the private
       // allocation to match the type expected by region block arguments.
+      [[maybe_unused]] llvm::Value *llvmPrivateVar = llvmPrivateVarAlloc;
       if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
           !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
         builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
         // Load it so we have the value pointed to by the GEP
-        llvmPrivateVarAlloc = builder.CreateLoad(
-            privateVarOrErr.get()->getType(), llvmPrivateVarAlloc);
+        llvmPrivateVar = builder.CreateLoad(privateVarOrErr.get()->getType(),
+                                            llvmPrivateVarAlloc);
       }
-      assert(llvmPrivateVarAlloc->getType() ==
+      assert(llvmPrivateVar->getType() ==
              moduleTranslation.convertType(blockArg.getType()));
 
       // Mapping blockArg -> llvmPrivateVarAlloc is done inside the body
@@ -4469,7 +4492,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
   }
 
-  llvm::BasicBlock *sourceBlock = builder.GetInsertBlock();
   llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
       wsloopOp.getRegion(), "omp.wsloop.region", builder, moduleTranslation);
 
@@ -4498,17 +4520,20 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   // Check if we can generate no-loop kernel
   bool noLoopMode = false;
   omp::TargetOp targetOp = wsloopOp->getParentOfType<mlir::omp::TargetOp>();
-  if (targetOp) {
-    Operation *targetCapturedOp = targetOp.getInnermostCapturedOmpOp();
+  if (targetOp &&
+      targetOp.getKernelType() == omp::TargetExecMode::spmd_no_loop) {
+    Operation *targetCapturedOp =
+        cast<omp::ComposableOpInterface>(*targetOp).findCapturedOp();
     // We need this check because, without it, noLoopMode would be set to true
     // for every omp.wsloop nested inside a no-loop SPMD target region, even if
     // that loop is not the top-level SPMD one.
-    if (loopOp == targetCapturedOp) {
-      if (targetOp.getKernelExecFlags(targetCapturedOp) ==
-          omp::TargetExecMode::no_loop)
-        noLoopMode = true;
-    }
+    if (loopOp == targetCapturedOp)
+      noLoopMode = true;
   }
+
+  for (size_t index = 0; index < wsloopOp.getLinearVars().size(); index++)
+    linearClauseProcessor.rewriteInPlace(builder, loopInfo->getBody(),
+                                         loopInfo->getLatch(), index);
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
       ompBuilder->applyWorkshareLoop(
@@ -4531,10 +4556,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                                                 loopInfo->getLastIter());
     if (failed(handleError(afterBarrierIP, *loopOp)))
       return failure();
-    for (size_t index = 0; index < wsloopOp.getLinearVars().size(); index++)
-      linearClauseProcessor.rewriteInPlace(
-          builder, sourceBlock->getSingleSuccessor(), *regionBlock,
-          "omp.loop_nest.region", index);
 
     builder.restoreIP(oldIP);
   }
@@ -4920,6 +4941,10 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   }
   builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
 
+  for (size_t index = 0; index < simdOp.getLinearVars().size(); index++)
+    linearClauseProcessor.rewriteInPlace(builder, loopInfo->getBody(),
+                                         loopInfo->getLatch(), index);
+
   ompBuilder->applySimd(loopInfo, alignedVars,
                         simdOp.getIfExpr()
                             ? moduleTranslation.lookupValue(simdOp.getIfExpr())
@@ -4927,29 +4952,6 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                         order, simdlen, safelen);
 
   linearClauseProcessor.emitStoresForLinearVar(builder);
-
-  // Check if this SIMD loop contains ordered regions
-  bool hasOrderedRegions = false;
-  simdOp.getRegion().walk([&](omp::OrderedRegionOp orderedOp) {
-    hasOrderedRegions = true;
-    return WalkResult::interrupt();
-  });
-
-  for (size_t index = 0; index < simdOp.getLinearVars().size(); index++) {
-    llvm::BasicBlock *startBB = sourceBlock->getSingleSuccessor();
-    llvm::BasicBlock *endBB = *regionBlock;
-    linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
-                                         "omp.loop_nest.region", index);
-
-    if (hasOrderedRegions) {
-      // Also rewrite uses in ordered regions so they read the current value
-      linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
-                                           "omp.ordered.region", index);
-      // Also rewrite uses in finalize blocks (code after ordered regions)
-      linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
-                                           "omp_region.finalize", index);
-    }
-  }
 
   // We now need to reduce the per-simd-lane reduction variable into the
   // original variable. This works a bit differently to other reductions (e.g.
@@ -7782,19 +7784,25 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Lowers the FlagsAttr which is applied to the module on the device
-/// pass when offloading, this attribute contains OpenMP RTL globals that can
-/// be passed as flags to the frontend, otherwise they are set to default
+/// Lowers the FlagsAttr which is applied to the module when offloading. This
+/// attribute contains OpenMP RTL globals that can be passed as flags to the
+/// frontend, otherwise they are set to default
 static LogicalResult
 convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
                  LLVM::ModuleTranslation &moduleTranslation) {
-  if (!cast<mlir::ModuleOp>(op))
-    return failure();
+  auto offloadMod = dyn_cast<omp::OffloadModuleInterface>(op);
+  if (!offloadMod)
+    return op->emitOpError() << "omp flags attached to non offload module op";
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
-  ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
-                              attribute.getOpenmpDeviceVersion());
+  if (offloadMod.getIsTargetDevice())
+    ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
+                                attribute.getOpenmpDeviceVersion());
+
+  // The flags below are only intended to be emitted for GPU offload targets.
+  if (!offloadMod.getIsGPU())
+    return success();
 
   if (attribute.getNoGpuLib())
     return success();
@@ -8301,7 +8309,8 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
   }
 
   // Update kernel bounds structure for the `OpenMPIRBuilder` to use.
-  omp::TargetExecMode execMode = targetOp.getKernelExecFlags(capturedOp);
+  // Use the kernel_type attribute set by the frontend instead of analyzing IR.
+  omp::TargetExecMode execMode = targetOp.getKernelType();
   switch (execMode) {
   case omp::TargetExecMode::bare:
     attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_BARE;
@@ -8312,7 +8321,7 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
   case omp::TargetExecMode::spmd:
     attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_SPMD;
     break;
-  case omp::TargetExecMode::no_loop:
+  case omp::TargetExecMode::spmd_no_loop:
     attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
     break;
   }
@@ -8368,9 +8377,7 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
   if (numThreads)
     attrs.MaxThreads = moduleTranslation.lookupValue(numThreads);
 
-  bool hostEvalTripCount;
-  targetOp.getKernelExecFlags(capturedOp, &hostEvalTripCount);
-  if (hostEvalTripCount) {
+  if (targetOp.hasHostEvalTripCount()) {
     llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
     attrs.LoopTripCount = nullptr;
 
@@ -8677,7 +8684,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::TargetKernelRuntimeAttrs runtimeAttrs;
   llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs defaultAttrs;
-  Operation *targetCapturedOp = targetOp.getInnermostCapturedOmpOp();
+  Operation *targetCapturedOp =
+      cast<omp::ComposableOpInterface>(*targetOp).findCapturedOp();
   initTargetDefaultAttrs(targetOp, targetCapturedOp, defaultAttrs,
                          isTargetDevice, isGPU);
 
@@ -8812,6 +8820,21 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
         // a deleted block.
         ompBuilder->Builder.ClearInsertionPoint();
         ompBuilder->Builder.SetCurrentDebugLocation(llvm::DebugLoc());
+      } else if (llvm::Function *llvmFunc =
+                     moduleTranslation.lookupFunction(funcOp.getName())) {
+        // Device-side declare target functions are externally visible by
+        // default so they can be referenced from other device translation
+        // units. That also prevents the offload LTO from internalizing and
+        // deleting them when they end up unused in the final device image.
+        // Such dead functions can still reference internal LDS and trigger
+        // spurious "local memory global used by non-kernel function" backend
+        // warnings. Marking them hidden keeps the symbol usable within the
+        // device image's linkage unit while letting LTO drop it when nothing
+        // references it; symbols that must stay reachable (e.g. via an offload
+        // entry that takes their address) are kept alive by that reference.
+        if (!llvmFunc->isDeclaration() && llvmFunc->hasExternalLinkage() &&
+            llvmFunc->getVisibility() == llvm::GlobalValue::DefaultVisibility)
+          llvmFunc->setVisibility(llvm::GlobalValue::HiddenVisibility);
       }
     }
     return success();
@@ -8820,14 +8843,16 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
   if (LLVM::GlobalOp gOp = dyn_cast<LLVM::GlobalOp>(op)) {
     llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
     if (auto *gVal = llvmModule->getNamedValue(gOp.getSymName())) {
+      auto *gVar = cast<llvm::GlobalVariable>(gVal);
       llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
       bool isDeclaration = gOp.isDeclaration();
       bool isExternallyVisible =
           gOp.getVisibility() != mlir::SymbolTable::Visibility::Private;
       auto loc = op->getLoc()->findInstanceOf<FileLineColLoc>();
       llvm::StringRef mangledName = gOp.getSymName();
-      auto captureClause =
-          convertToCaptureClauseKind(attribute.getCaptureClause().getValue());
+      mlir::omp::DeclareTargetCaptureClause captureClause =
+          attribute.getCaptureClause().getValue();
+      auto captureClauseKind = convertToCaptureClauseKind(captureClause);
       auto deviceClause =
           convertToDeviceClauseKind(attribute.getDeviceType().getValue());
       // unused for MLIR at the moment, required in Clang for book
@@ -8854,31 +8879,64 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
                                                      lineNo);
       };
 
-      llvm::vfs::FileSystem &vfs = moduleTranslation.getFileSystem();
+      bool requiresUSM = ompBuilder->Config.hasRequiresUnifiedSharedMemory();
+      bool isToOrEnter =
+          captureClause == omp::DeclareTargetCaptureClause::to ||
+          captureClause == omp::DeclareTargetCaptureClause::enter;
+      bool isHostOnly = attribute.getDeviceType().getValue() ==
+                        omp::DeclareTargetDeviceType::host;
 
+      // A to/enter declare-target variable needs a device-resident,
+      // name-resolvable copy and a host offloading entry. A local-linkage
+      // global provides neither, so we promote it to external.
+      if (isToOrEnter && !isHostOnly && !requiresUSM &&
+          gVar->hasLocalLinkage()) {
+        gVar->setLinkage(llvm::GlobalValue::ExternalLinkage);
+        isExternallyVisible = true;
+
+        // Clear the stale dso_local flag so it is referenced like a
+        // module-scope declare target global.
+        if (ompBuilder->Config.isTargetDevice())
+          gVar->setDSOLocal(false);
+      }
+
+      llvm::vfs::FileSystem &vfs = moduleTranslation.getFileSystem();
       ompBuilder->registerTargetGlobalVariable(
-          captureClause, deviceClause, isDeclaration, isExternallyVisible,
+          captureClauseKind, deviceClause, isDeclaration, isExternallyVisible,
           ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, vfs),
           mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
           /*GlobalInitializer*/ nullptr, /*VariableLinkage*/ nullptr,
           gVal->getType(), gVal);
 
-      bool requiresUSM = ompBuilder->Config.hasRequiresUnifiedSharedMemory();
       if (ompBuilder->Config.isTargetDevice() &&
-          (attribute.getCaptureClause().getValue() ==
-               mlir::omp::DeclareTargetCaptureClause::link ||
+          (captureClause == omp::DeclareTargetCaptureClause::link ||
            requiresUSM)) {
         llvm::Type *ptrTy = gVal->getType();
         // For USM the global type becomes a pointer handle, as opposed to the
         // globals original type.
         if (requiresUSM)
           ptrTy = llvm::PointerType::get(llvmModule->getContext(), 0);
-        ompBuilder->getAddrOfDeclareTargetVar(
-            captureClause, deviceClause, isDeclaration, isExternallyVisible,
+        bool addrGlobalCreated = ompBuilder->getAddrOfDeclareTargetVar(
+            captureClauseKind, deviceClause, isDeclaration, isExternallyVisible,
             ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, vfs),
             mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
             ptrTy, /*GlobalInitializer*/ nullptr,
             /*VariableLinkage*/ nullptr);
+
+        // For indirectly-accessed global pointers, we rely on "internal"
+        // linkage to optimize out the unneeded full-variable storage later,
+        // since we can't prevent the LLVM dialect from generating globals
+        // without also breaking target lowering.
+        if (addrGlobalCreated)
+          gVar->setLinkage(llvm::GlobalValue::InternalLinkage);
+      }
+
+      // Mark 'device_type(host) enter(...)' variables as external in the device
+      // since they're not supposed to have their own copy. This will cause
+      // linker errors if accesses are attempted from the target device.
+      if (ompBuilder->Config.isTargetDevice() && isHostOnly && isToOrEnter) {
+        gVar->setLinkage(llvm::GlobalValue::ExternalLinkage);
+        gVar->setInitializer(nullptr);
       }
     }
   }

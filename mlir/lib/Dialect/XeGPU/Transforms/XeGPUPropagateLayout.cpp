@@ -17,7 +17,7 @@
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -452,7 +452,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
     ArrayRef<const LayoutInfoLattice *> results) {
 
   LayoutInfo prefetchLayout;
-  const uArch *uArch = getUArch(getChipStr(prefetch).value_or(""));
+  const auto *uArch = xegpu::uArch::getUArch(getChipStr(prefetch).value_or(""));
   if (!uArch)
     return;
   xegpu::DistributeLayoutAttr anchorLayout = prefetch.getLayoutAttr();
@@ -518,7 +518,8 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   VectorType sourceTy = reduction.getSourceVectorType();
   SmallVector<int64_t> reductionDims(reduction.getReductionDims());
 
-  const uArch *uArch = getUArch(xegpu::getChipStr(reduction).value_or(""));
+  const auto *uArch =
+      xegpu::uArch::getUArch(xegpu::getChipStr(reduction).value_or(""));
   if (!uArch)
     return;
 
@@ -556,7 +557,8 @@ void LayoutInfoPropagation::visitVectorReductionOp(
     ArrayRef<const LayoutInfoLattice *> results) {
 
   VectorType sourceTy = reduction.getSourceVectorType();
-  const uArch *uArch = getUArch(xegpu::getChipStr(reduction).value_or(""));
+  const auto *uArch =
+      xegpu::uArch::getUArch(xegpu::getChipStr(reduction).value_or(""));
   if (!uArch)
     return;
 
@@ -631,7 +633,7 @@ void LayoutInfoPropagation::visitDpasOp(
   LayoutInfo dpasBLayout;
   LayoutInfo dpasCDLayout;
 
-  const uArch *uArch = getUArch(getChipStr(dpas).value_or(""));
+  const auto *uArch = xegpu::uArch::getUArch(getChipStr(dpas).value_or(""));
   if (!uArch)
     return;
   VectorType aTy = dpas.getLhsType();
@@ -725,7 +727,7 @@ void LayoutInfoPropagation::visitDpasMxOp(
   xegpu::DistributeLayoutAttr anchorLayoutB = dpasMx.getLayoutBAttr();
   xegpu::DistributeLayoutAttr anchorLayoutCD = dpasMx.getLayoutCdAttr();
 
-  const uArch *uArch = getUArch(getChipStr(dpasMx).value_or(""));
+  const auto *uArch = xegpu::uArch::getUArch(getChipStr(dpasMx).value_or(""));
   if (!uArch)
     return;
 
@@ -866,7 +868,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
     xegpu::StoreNdOp store, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
   LayoutInfo storeLayout;
-  const uArch *uArch = getUArch(getChipStr(store).value_or(""));
+  const auto *uArch = xegpu::uArch::getUArch(getChipStr(store).value_or(""));
   if (!uArch)
     return;
   xegpu::DistributeLayoutAttr anchorLayout = store.getLayoutAttr();
@@ -921,7 +923,7 @@ void LayoutInfoPropagation::visitLoadNdOp(
     ArrayRef<const LayoutInfoLattice *> results) {
   LayoutInfo loadLayout;
 
-  const uArch *uArch = getUArch(getChipStr(load).value_or(""));
+  const auto *uArch = xegpu::uArch::getUArch(getChipStr(load).value_or(""));
   if (!uArch)
     return;
   LayoutInfo valueLayout = results[0]->getValue();
@@ -1061,7 +1063,8 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
 
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
-  const uArch *uArch = getUArch(xegpu::getChipStr(bitcast).value_or(""));
+  const auto *uArch =
+      xegpu::uArch::getUArch(xegpu::getChipStr(bitcast).value_or(""));
   if (!uArch)
     return;
   auto requiredResLayoutAttr = setupBitCastResultLayout(
@@ -1095,7 +1098,8 @@ void LayoutInfoPropagation::visitVectorInterleaveOp(
 
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
-  const uArch *uArch = getUArch(xegpu::getChipStr(interleave).value_or(""));
+  const auto *uArch =
+      xegpu::uArch::getUArch(xegpu::getChipStr(interleave).value_or(""));
   if (!uArch)
     return;
 
@@ -1150,8 +1154,8 @@ void LayoutInfoPropagation::visitInsertStridedSliceOp(
 
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
-  const uArch *uArch =
-      getUArch(xegpu::getChipStr(insertStridedSlice).value_or(""));
+  const auto *uArch = xegpu::uArch::getUArch(
+      xegpu::getChipStr(insertStridedSlice).value_or(""));
   if (!uArch)
     return;
 
@@ -1174,7 +1178,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     ArrayRef<const LayoutInfoLattice *> results) {
   xegpu::DistributeLayoutAttr requiredAnchorLayoutAttr;
   xegpu::DistributeLayoutAttr anchorLayoutAttr = load.getLayoutAttr();
-  const uArch *uArch = getUArch(getChipStr(load).value_or(""));
+  const auto *uArch = xegpu::uArch::getUArch(getChipStr(load).value_or(""));
   if (!uArch)
     return;
   VectorType resVecTy = load.getValueType();
@@ -1191,7 +1195,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     if (layoutKind == xegpu::LayoutKind::InstData &&
         !consumerLayoutAttr.getEffectiveLaneLayoutAsInt().empty()) {
       const auto uArchInstruction =
-          dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
+          dyn_cast<xegpu::uArch::LoadGatherInstruction>(
               uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
       if (!uArchInstruction)
         return;
@@ -1238,7 +1242,8 @@ void LayoutInfoPropagation::visitStoreScatterOp(
 
   xegpu::DistributeLayoutAttr requiredAnchorLayoutAttr;
   xegpu::DistributeLayoutAttr anchorLayoutAttr = storeScatter.getLayoutAttr();
-  const uArch *uArch = getUArch(getChipStr(storeScatter).value_or(""));
+  const auto *uArch =
+      xegpu::uArch::getUArch(getChipStr(storeScatter).value_or(""));
   if (!uArch)
     return;
   VectorType srcVecTy = storeScatter.getValueType();
@@ -1248,9 +1253,8 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     requiredAnchorLayoutAttr = anchorLayoutAttr;
     if (layoutKind == xegpu::LayoutKind::InstData) {
       const auto uArchInstruction =
-          dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
-              uArch->getInstruction(
-                  xegpu::uArch::InstructionKind::StoreScatter));
+          dyn_cast<xegpu::uArch::StoreScatterInstruction>(uArch->getInstruction(
+              xegpu::uArch::InstructionKind::StoreScatter));
       if (!uArchInstruction)
         return;
       auto completed = xegpu::completeScatterStoreLaneLayoutFromInstData(
@@ -1269,8 +1273,19 @@ void LayoutInfoPropagation::visitStoreScatterOp(
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
       return;
     }
+    auto numSgOrErr = getNumSg(storeScatter, uArch->getSubgroupSize());
+    if (layoutKind == xegpu::LayoutKind::Subgroup && failed(numSgOrErr)) {
+      storeScatter.emitWarning(
+          "Unable to determine the number of subgroups for the operation.");
+      return;
+    }
     requiredAnchorLayoutAttr = xegpu::setupStoreScatterAnchorLayout(
-        layoutKind, srcVecTy, chunkSize, uArch);
+        layoutKind, srcVecTy, chunkSize, numSgOrErr.value_or(0), uArch);
+    if (!requiredAnchorLayoutAttr) {
+      storeScatter.emitWarning(
+          "Failed to determine required layout for store scatter.");
+      return;
+    }
     storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 
@@ -1308,7 +1323,8 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
   if (!hasParamsOfLayoutKind(anchorLayout)) {
     VectorType resVecTy =
         llvm::cast<VectorType>(loadMatrixOp.getRes().getType());
-    const uArch *uArch = getUArch(getChipStr(loadMatrixOp).value_or(""));
+    const auto *uArch =
+        xegpu::uArch::getUArch(getChipStr(loadMatrixOp).value_or(""));
     if (!uArch)
       return;
     int chunkSize =
@@ -1326,16 +1342,16 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
   xegpu::DistributeLayoutAttr anchorLayoutAttr = storeMatrix.getLayoutAttr();
   LayoutInfo layout;
   VectorType srcVecTy = llvm::cast<VectorType>(storeMatrix.getData().getType());
-  const uArch *uArch = getUArch(getChipStr(storeMatrix).value_or(""));
+  const auto *uArch =
+      xegpu::uArch::getUArch(getChipStr(storeMatrix).value_or(""));
   if (!uArch)
     return;
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
     requiredAnchorLayoutAttr = anchorLayoutAttr;
     if (layoutKind == xegpu::LayoutKind::InstData) {
       const auto uArchInstruction =
-          dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
-              uArch->getInstruction(
-                  xegpu::uArch::InstructionKind::StoreScatter));
+          dyn_cast<xegpu::uArch::StoreScatterInstruction>(uArch->getInstruction(
+              xegpu::uArch::InstructionKind::StoreScatter));
       if (!uArchInstruction)
         return;
       auto completed = xegpu::completeScatterStoreLaneLayoutFromInstData(
@@ -1352,8 +1368,19 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
   } else {
     int chunkSize =
         1; // placeHolder for future use when StoreMatrix supports coalescing
+    auto numSgOrErr = getNumSg(storeMatrix, uArch->getSubgroupSize());
+    if (layoutKind == xegpu::LayoutKind::Subgroup && failed(numSgOrErr)) {
+      storeMatrix.emitWarning(
+          "Unable to determine the number of subgroups for the operation.");
+      return;
+    }
     requiredAnchorLayoutAttr = xegpu::setupStoreMatrixAnchorLayout(
-        layoutKind, srcVecTy, chunkSize, uArch);
+        layoutKind, srcVecTy, chunkSize, numSgOrErr.value_or(0), uArch);
+    if (!requiredAnchorLayoutAttr) {
+      storeMatrix.emitWarning(
+          "Failed to determine required layout for store matrix.");
+      return;
+    }
     storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
   }
   layout = LayoutInfo(requiredAnchorLayoutAttr);

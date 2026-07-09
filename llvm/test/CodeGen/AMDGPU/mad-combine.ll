@@ -1073,14 +1073,20 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_0_f32(ptr addrspace(1)
 ; SI-STD-NEXT:    v_mul_f32_e32 v4, v6, v1
 ; SI-STD-NEXT:    v_fma_f32 v4, v2, v3, v4
 ; SI-STD-NEXT:    v_sub_f32_e32 v4, v4, v5
-; SI-STD-NEXT:    s_cbranch_execz .LBB12_3
-; SI-STD-NEXT:    s_branch .LBB12_4
+; SI-STD-NEXT:    s_mov_b64 s[2:3], 0
+; SI-STD-NEXT:    s_branch .LBB12_3
 ; SI-STD-NEXT:  .LBB12_2:
+; SI-STD-NEXT:    s_mov_b64 s[2:3], -1
 ; SI-STD-NEXT:    ; implicit-def: $vgpr4
-; SI-STD-NEXT:  .LBB12_3: ; %aggressive
+; SI-STD-NEXT:  .LBB12_3: ; %Flow
+; SI-STD-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; SI-STD-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-STD-NEXT:    s_cmp_lg_u32 s2, 1
+; SI-STD-NEXT:    s_cbranch_scc1 .LBB12_5
+; SI-STD-NEXT:  ; %bb.4: ; %aggressive
 ; SI-STD-NEXT:    v_mad_f32 v4, v6, v1, -v5
 ; SI-STD-NEXT:    v_mac_f32_e32 v4, v2, v3
-; SI-STD-NEXT:  .LBB12_4: ; %exit
+; SI-STD-NEXT:  .LBB12_5: ; %exit
 ; SI-STD-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-STD-NEXT:    s_mov_b32 s2, 0
 ; SI-STD-NEXT:    v_mov_b32_e32 v1, 0
@@ -1115,14 +1121,20 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_0_f32(ptr addrspace(1)
 ; SI-DENORM-FASTFMAF-NEXT:    v_mul_f32_e32 v4, v6, v1
 ; SI-DENORM-FASTFMAF-NEXT:    v_fma_f32 v4, v2, v3, v4
 ; SI-DENORM-FASTFMAF-NEXT:    v_sub_f32_e32 v4, v4, v5
-; SI-DENORM-FASTFMAF-NEXT:    s_cbranch_execz .LBB12_3
-; SI-DENORM-FASTFMAF-NEXT:    s_branch .LBB12_4
+; SI-DENORM-FASTFMAF-NEXT:    s_mov_b64 s[2:3], 0
+; SI-DENORM-FASTFMAF-NEXT:    s_branch .LBB12_3
 ; SI-DENORM-FASTFMAF-NEXT:  .LBB12_2:
+; SI-DENORM-FASTFMAF-NEXT:    s_mov_b64 s[2:3], -1
 ; SI-DENORM-FASTFMAF-NEXT:    ; implicit-def: $vgpr4
-; SI-DENORM-FASTFMAF-NEXT:  .LBB12_3: ; %aggressive
+; SI-DENORM-FASTFMAF-NEXT:  .LBB12_3: ; %Flow
+; SI-DENORM-FASTFMAF-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; SI-DENORM-FASTFMAF-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-DENORM-FASTFMAF-NEXT:    s_cmp_lg_u32 s2, 1
+; SI-DENORM-FASTFMAF-NEXT:    s_cbranch_scc1 .LBB12_5
+; SI-DENORM-FASTFMAF-NEXT:  ; %bb.4: ; %aggressive
 ; SI-DENORM-FASTFMAF-NEXT:    v_fma_f32 v1, v6, v1, -v5
 ; SI-DENORM-FASTFMAF-NEXT:    v_fma_f32 v4, v2, v3, v1
-; SI-DENORM-FASTFMAF-NEXT:  .LBB12_4: ; %exit
+; SI-DENORM-FASTFMAF-NEXT:  .LBB12_5: ; %exit
 ; SI-DENORM-FASTFMAF-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-DENORM-FASTFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-FASTFMAF-NEXT:    v_mov_b32_e32 v1, 0
@@ -1157,13 +1169,19 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_0_f32(ptr addrspace(1)
 ; SI-DENORM-SLOWFMAF-NEXT:    s_cbranch_vccnz .LBB12_2
 ; SI-DENORM-SLOWFMAF-NEXT:  ; %bb.1: ; %normal
 ; SI-DENORM-SLOWFMAF-NEXT:    v_sub_f32_e32 v3, v1, v2
-; SI-DENORM-SLOWFMAF-NEXT:    s_cbranch_execz .LBB12_3
-; SI-DENORM-SLOWFMAF-NEXT:    s_branch .LBB12_4
+; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b64 s[2:3], 0
+; SI-DENORM-SLOWFMAF-NEXT:    s_branch .LBB12_3
 ; SI-DENORM-SLOWFMAF-NEXT:  .LBB12_2:
+; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b64 s[2:3], -1
 ; SI-DENORM-SLOWFMAF-NEXT:    ; implicit-def: $vgpr3
-; SI-DENORM-SLOWFMAF-NEXT:  .LBB12_3: ; %aggressive
+; SI-DENORM-SLOWFMAF-NEXT:  .LBB12_3: ; %Flow
+; SI-DENORM-SLOWFMAF-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; SI-DENORM-SLOWFMAF-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-DENORM-SLOWFMAF-NEXT:    s_cmp_lg_u32 s2, 1
+; SI-DENORM-SLOWFMAF-NEXT:    s_cbranch_scc1 .LBB12_5
+; SI-DENORM-SLOWFMAF-NEXT:  ; %bb.4: ; %aggressive
 ; SI-DENORM-SLOWFMAF-NEXT:    v_sub_f32_e32 v3, v1, v2
-; SI-DENORM-SLOWFMAF-NEXT:  .LBB12_4: ; %exit
+; SI-DENORM-SLOWFMAF-NEXT:  .LBB12_5: ; %exit
 ; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-SLOWFMAF-NEXT:    v_mov_b32_e32 v1, 0
@@ -1283,14 +1301,20 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_2_f32(ptr addrspace(1)
 ; SI-STD-NEXT:    v_mul_f32_e32 v4, v6, v1
 ; SI-STD-NEXT:    v_mac_f32_e32 v4, v2, v3
 ; SI-STD-NEXT:    v_sub_f32_e32 v4, v4, v5
-; SI-STD-NEXT:    s_cbranch_execz .LBB14_3
-; SI-STD-NEXT:    s_branch .LBB14_4
+; SI-STD-NEXT:    s_mov_b64 s[2:3], 0
+; SI-STD-NEXT:    s_branch .LBB14_3
 ; SI-STD-NEXT:  .LBB14_2:
+; SI-STD-NEXT:    s_mov_b64 s[2:3], -1
 ; SI-STD-NEXT:    ; implicit-def: $vgpr4
-; SI-STD-NEXT:  .LBB14_3: ; %aggressive
+; SI-STD-NEXT:  .LBB14_3: ; %Flow
+; SI-STD-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; SI-STD-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-STD-NEXT:    s_cmp_lg_u32 s2, 1
+; SI-STD-NEXT:    s_cbranch_scc1 .LBB14_5
+; SI-STD-NEXT:  ; %bb.4: ; %aggressive
 ; SI-STD-NEXT:    v_mad_f32 v4, v6, v1, -v5
 ; SI-STD-NEXT:    v_mac_f32_e32 v4, v2, v3
-; SI-STD-NEXT:  .LBB14_4: ; %exit
+; SI-STD-NEXT:  .LBB14_5: ; %exit
 ; SI-STD-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-STD-NEXT:    s_mov_b32 s2, 0
 ; SI-STD-NEXT:    v_mov_b32_e32 v1, 0
@@ -1325,14 +1349,20 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_2_f32(ptr addrspace(1)
 ; SI-DENORM-FASTFMAF-NEXT:    v_mul_f32_e32 v4, v6, v1
 ; SI-DENORM-FASTFMAF-NEXT:    v_fma_f32 v4, v2, v3, v4
 ; SI-DENORM-FASTFMAF-NEXT:    v_sub_f32_e32 v4, v4, v5
-; SI-DENORM-FASTFMAF-NEXT:    s_cbranch_execz .LBB14_3
-; SI-DENORM-FASTFMAF-NEXT:    s_branch .LBB14_4
+; SI-DENORM-FASTFMAF-NEXT:    s_mov_b64 s[2:3], 0
+; SI-DENORM-FASTFMAF-NEXT:    s_branch .LBB14_3
 ; SI-DENORM-FASTFMAF-NEXT:  .LBB14_2:
+; SI-DENORM-FASTFMAF-NEXT:    s_mov_b64 s[2:3], -1
 ; SI-DENORM-FASTFMAF-NEXT:    ; implicit-def: $vgpr4
-; SI-DENORM-FASTFMAF-NEXT:  .LBB14_3: ; %aggressive
+; SI-DENORM-FASTFMAF-NEXT:  .LBB14_3: ; %Flow
+; SI-DENORM-FASTFMAF-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; SI-DENORM-FASTFMAF-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-DENORM-FASTFMAF-NEXT:    s_cmp_lg_u32 s2, 1
+; SI-DENORM-FASTFMAF-NEXT:    s_cbranch_scc1 .LBB14_5
+; SI-DENORM-FASTFMAF-NEXT:  ; %bb.4: ; %aggressive
 ; SI-DENORM-FASTFMAF-NEXT:    v_fma_f32 v1, v6, v1, -v5
 ; SI-DENORM-FASTFMAF-NEXT:    v_fma_f32 v4, v2, v3, v1
-; SI-DENORM-FASTFMAF-NEXT:  .LBB14_4: ; %exit
+; SI-DENORM-FASTFMAF-NEXT:  .LBB14_5: ; %exit
 ; SI-DENORM-FASTFMAF-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-DENORM-FASTFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-FASTFMAF-NEXT:    v_mov_b32_e32 v1, 0
@@ -1368,13 +1398,19 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_2_f32(ptr addrspace(1)
 ; SI-DENORM-SLOWFMAF-NEXT:    s_cbranch_vccnz .LBB14_2
 ; SI-DENORM-SLOWFMAF-NEXT:  ; %bb.1: ; %normal
 ; SI-DENORM-SLOWFMAF-NEXT:    v_sub_f32_e32 v3, v1, v2
-; SI-DENORM-SLOWFMAF-NEXT:    s_cbranch_execz .LBB14_3
-; SI-DENORM-SLOWFMAF-NEXT:    s_branch .LBB14_4
+; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b64 s[2:3], 0
+; SI-DENORM-SLOWFMAF-NEXT:    s_branch .LBB14_3
 ; SI-DENORM-SLOWFMAF-NEXT:  .LBB14_2:
+; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b64 s[2:3], -1
 ; SI-DENORM-SLOWFMAF-NEXT:    ; implicit-def: $vgpr3
-; SI-DENORM-SLOWFMAF-NEXT:  .LBB14_3: ; %aggressive
+; SI-DENORM-SLOWFMAF-NEXT:  .LBB14_3: ; %Flow
+; SI-DENORM-SLOWFMAF-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; SI-DENORM-SLOWFMAF-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-DENORM-SLOWFMAF-NEXT:    s_cmp_lg_u32 s2, 1
+; SI-DENORM-SLOWFMAF-NEXT:    s_cbranch_scc1 .LBB14_5
+; SI-DENORM-SLOWFMAF-NEXT:  ; %bb.4: ; %aggressive
 ; SI-DENORM-SLOWFMAF-NEXT:    v_sub_f32_e32 v3, v1, v2
-; SI-DENORM-SLOWFMAF-NEXT:  .LBB14_4: ; %exit
+; SI-DENORM-SLOWFMAF-NEXT:  .LBB14_5: ; %exit
 ; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-SLOWFMAF-NEXT:    v_mov_b32_e32 v1, 0
@@ -1445,14 +1481,20 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_3_f32(ptr addrspace(1)
 ; SI-STD-NEXT:    v_mul_f32_e32 v5, v6, v1
 ; SI-STD-NEXT:    v_mac_f32_e32 v5, v3, v4
 ; SI-STD-NEXT:    v_sub_f32_e32 v5, v2, v5
-; SI-STD-NEXT:    s_cbranch_execz .LBB15_3
-; SI-STD-NEXT:    s_branch .LBB15_4
+; SI-STD-NEXT:    s_mov_b64 s[2:3], 0
+; SI-STD-NEXT:    s_branch .LBB15_3
 ; SI-STD-NEXT:  .LBB15_2:
+; SI-STD-NEXT:    s_mov_b64 s[2:3], -1
 ; SI-STD-NEXT:    ; implicit-def: $vgpr5
-; SI-STD-NEXT:  .LBB15_3: ; %aggressive
+; SI-STD-NEXT:  .LBB15_3: ; %Flow
+; SI-STD-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; SI-STD-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-STD-NEXT:    s_cmp_lg_u32 s2, 1
+; SI-STD-NEXT:    s_cbranch_scc1 .LBB15_5
+; SI-STD-NEXT:  ; %bb.4: ; %aggressive
 ; SI-STD-NEXT:    v_mad_f32 v1, -v6, v1, v2
 ; SI-STD-NEXT:    v_mad_f32 v5, -v3, v4, v1
-; SI-STD-NEXT:  .LBB15_4: ; %exit
+; SI-STD-NEXT:  .LBB15_5: ; %exit
 ; SI-STD-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-STD-NEXT:    s_mov_b32 s2, 0
 ; SI-STD-NEXT:    v_mov_b32_e32 v1, 0
@@ -1487,14 +1529,20 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_3_f32(ptr addrspace(1)
 ; SI-DENORM-FASTFMAF-NEXT:    v_mul_f32_e32 v5, v6, v1
 ; SI-DENORM-FASTFMAF-NEXT:    v_fma_f32 v5, v3, v4, v5
 ; SI-DENORM-FASTFMAF-NEXT:    v_sub_f32_e32 v5, v2, v5
-; SI-DENORM-FASTFMAF-NEXT:    s_cbranch_execz .LBB15_3
-; SI-DENORM-FASTFMAF-NEXT:    s_branch .LBB15_4
+; SI-DENORM-FASTFMAF-NEXT:    s_mov_b64 s[2:3], 0
+; SI-DENORM-FASTFMAF-NEXT:    s_branch .LBB15_3
 ; SI-DENORM-FASTFMAF-NEXT:  .LBB15_2:
+; SI-DENORM-FASTFMAF-NEXT:    s_mov_b64 s[2:3], -1
 ; SI-DENORM-FASTFMAF-NEXT:    ; implicit-def: $vgpr5
-; SI-DENORM-FASTFMAF-NEXT:  .LBB15_3: ; %aggressive
+; SI-DENORM-FASTFMAF-NEXT:  .LBB15_3: ; %Flow
+; SI-DENORM-FASTFMAF-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; SI-DENORM-FASTFMAF-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-DENORM-FASTFMAF-NEXT:    s_cmp_lg_u32 s2, 1
+; SI-DENORM-FASTFMAF-NEXT:    s_cbranch_scc1 .LBB15_5
+; SI-DENORM-FASTFMAF-NEXT:  ; %bb.4: ; %aggressive
 ; SI-DENORM-FASTFMAF-NEXT:    v_fma_f32 v1, -v6, v1, v2
 ; SI-DENORM-FASTFMAF-NEXT:    v_fma_f32 v5, -v3, v4, v1
-; SI-DENORM-FASTFMAF-NEXT:  .LBB15_4: ; %exit
+; SI-DENORM-FASTFMAF-NEXT:  .LBB15_5: ; %exit
 ; SI-DENORM-FASTFMAF-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-DENORM-FASTFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-FASTFMAF-NEXT:    v_mov_b32_e32 v1, 0
@@ -1530,13 +1578,19 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_3_f32(ptr addrspace(1)
 ; SI-DENORM-SLOWFMAF-NEXT:    s_cbranch_vccnz .LBB15_2
 ; SI-DENORM-SLOWFMAF-NEXT:  ; %bb.1: ; %normal
 ; SI-DENORM-SLOWFMAF-NEXT:    v_sub_f32_e32 v3, v2, v1
-; SI-DENORM-SLOWFMAF-NEXT:    s_cbranch_execz .LBB15_3
-; SI-DENORM-SLOWFMAF-NEXT:    s_branch .LBB15_4
+; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b64 s[2:3], 0
+; SI-DENORM-SLOWFMAF-NEXT:    s_branch .LBB15_3
 ; SI-DENORM-SLOWFMAF-NEXT:  .LBB15_2:
+; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b64 s[2:3], -1
 ; SI-DENORM-SLOWFMAF-NEXT:    ; implicit-def: $vgpr3
-; SI-DENORM-SLOWFMAF-NEXT:  .LBB15_3: ; %aggressive
+; SI-DENORM-SLOWFMAF-NEXT:  .LBB15_3: ; %Flow
+; SI-DENORM-SLOWFMAF-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; SI-DENORM-SLOWFMAF-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-DENORM-SLOWFMAF-NEXT:    s_cmp_lg_u32 s2, 1
+; SI-DENORM-SLOWFMAF-NEXT:    s_cbranch_scc1 .LBB15_5
+; SI-DENORM-SLOWFMAF-NEXT:  ; %bb.4: ; %aggressive
 ; SI-DENORM-SLOWFMAF-NEXT:    v_sub_f32_e32 v3, v2, v1
-; SI-DENORM-SLOWFMAF-NEXT:  .LBB15_4: ; %exit
+; SI-DENORM-SLOWFMAF-NEXT:  .LBB15_5: ; %exit
 ; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-SLOWFMAF-NEXT:    v_mov_b32_e32 v1, 0

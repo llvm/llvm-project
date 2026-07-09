@@ -5720,6 +5720,8 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   RegisterPredefDecl(Context.VaListTagDecl, PREDEF_DECL_VA_LIST_TAG);
   RegisterPredefDecl(Context.BuiltinMSVaListDecl,
                      PREDEF_DECL_BUILTIN_MS_VA_LIST_ID);
+  RegisterPredefDecl(Context.BuiltinZOSVaListDecl,
+                     PREDEF_DECL_BUILTIN_ZOS_VA_LIST_ID);
   RegisterPredefDecl(Context.MSGuidTagDecl,
                      PREDEF_DECL_BUILTIN_MS_GUID_ID);
   RegisterPredefDecl(Context.MSTypeInfoTagDecl,
@@ -8588,6 +8590,9 @@ void OMPClauseWriter::VisitOMPAllocateClause(OMPAllocateClause *C) {
 
 void OMPClauseWriter::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
   Record.push_back(C->varlist_size());
+  Record.writeEnum(C->getModifier());
+  Record.AddSourceLocation(C->getModifierLoc());
+  Record.AddStmt(C->getModifierExpr());
   VisitOMPClauseWithPreInit(C);
   Record.AddSourceLocation(C->getLParenLoc());
   for (auto *VE : C->varlist())

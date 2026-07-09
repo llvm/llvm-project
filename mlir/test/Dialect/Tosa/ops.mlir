@@ -1180,6 +1180,32 @@ func.func @test_cast3(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3x!quant.unifo
 }
 
 // -----
+// CHECK-LABEL: test_cast_to_block_scaled
+func.func @test_cast_to_block_scaled(%arg0: tensor<4x32xf32>, %arg1: tensor<4x32xbf16>, %arg2: tensor<4x32xf8E4M3FN>) -> (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>) {
+  %0 = tosa.cast %arg0 : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  %1 = tosa.cast %arg1 : (tensor<4x32xbf16>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
+  %2 = tosa.cast %arg2 : (tensor<4x32xf8E4M3FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+  return %0, %1, %2 : tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+}
+
+// -----
+// CHECK-LABEL: test_cast_from_block_scaled
+func.func @test_cast_from_block_scaled(%arg0: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>, %arg1: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>, %arg2: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>) -> (tensor<4x32xf32>, tensor<4x32xbf16>, tensor<4x32xf8E5M2>) {
+  %0 = tosa.cast %arg0 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>) -> tensor<4x32xf32>
+  %1 = tosa.cast %arg1 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>) -> tensor<4x32xbf16>
+  %2 = tosa.cast %arg2 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>) -> tensor<4x32xf8E5M2>
+  return %0, %1, %2 : tensor<4x32xf32>, tensor<4x32xbf16>, tensor<4x32xf8E5M2>
+}
+
+// -----
+// CHECK-LABEL: test_cast_block_scaled_dynamic
+func.func @test_cast_block_scaled_dynamic(%arg0: tensor<?x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>, %arg1: tensor<4x?x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>) -> (tensor<?x32xf32>, tensor<4x?xf32>) {
+  %0 = tosa.cast %arg0 : (tensor<?x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>) -> tensor<?x32xf32>
+  %1 = tosa.cast %arg1 : (tensor<4x?x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>) -> tensor<4x?xf32>
+  return %0, %1 : tensor<?x32xf32>, tensor<4x?xf32>
+}
+
+// -----
 // CHECK-LABEL: rescale
 func.func @test_rescale(%arg0: tensor<13x21x3x!quant.uniform<u8:f32, 0.015655439347028732:127>>) -> tensor<13x21x3x!quant.uniform<i8:f32, 0.015655439347028732:-1>> {
    %multiplier = "tosa.const"() {values = dense<1073741824> : tensor<1xi32> } : () -> tensor<1xi32>
@@ -1911,4 +1937,76 @@ func.func @test_assert_equal_shape() {
   %1 = tosa.const_shape {values = dense<[5, 2]> : tensor<2xindex>} : () -> !tosa.shape<2>
   tosa.assert_equal_shape %0, %1 {allow_broadcast = true} : (!tosa.shape<2>, !tosa.shape<2>) -> ()
   return
+}
+
+// -----
+
+// CHECK-LABEL: test_block_scaled_const
+func.func @test_block_scaled_const() -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>> {
+  %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {1.0, 1.0}>> : [[0.0 : f8E4M3FN, 1.0 : f8E4M3FN, 0.001953125 : f8E4M3FN, 0.0078125 : f8E4M3FN, 
+                                                                                                                          2.0 : f8E4M3FN, 2.25 : f8E4M3FN, 2.5 : f8E4M3FN, 2.75 : f8E4M3FN, 
+                                                                                                                          15.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN,
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN,  
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN], 
+                                                                                                                         [0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN]]>}> : () -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  return %0 : tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_block_scaled_const_splat
+func.func @test_block_scaled_const_splat() -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN, {1.0, 1.0}>> : 0.0 : f4E2M1FN>}> : () -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %0 : tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_block_scaled_const_splat_mxint8
+func.func @test_block_scaled_const_splat_mxint8() -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>> {
+  %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8, {1.0, 1.0}>> : 0 : i8>}> : () -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+  return %0 : tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+}
+
+// -----
+
+// CHECK-LABEL: test_block_scaled_const_scale_values
+func.func @test_block_scaled_const_scale_values() -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>> {
+  %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {1.0, 2.0}>> : 0.0 : f8E4M3FN>}> : () -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  return %0 : tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_block_scaled_const_scale_values_explicit_type
+func.func @test_block_scaled_const_scale_values_explicit_type() -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>> {
+  %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {1.0 : f8E8M0FNU, 2.0 : f8E8M0FNU}>> : 0.0 : f8E4M3FN>}> : () -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  return %0 : tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_block_scaled_const_scale_values_wide_inner_dim
+func.func @test_block_scaled_const_scale_values_wide_inner_dim() -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>> {
+  %0 = "tosa.const"() <{values = dense<tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {1.0, 2.0, 4.0, 8.0}>> : 0.0 : f8E4M3FN>}> : () -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  return %0 : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_block_scaled_const_cast_scale_values_no_propagate
+func.func @test_block_scaled_const_cast_scale_values_no_propagate() -> tensor<2x32xf32> {
+  %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {2.0, 4.0}>> : 0.0 : f8E4M3FN>}> : () -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  %1 = tosa.cast %0 : (tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<2x32xf32>
+  return %1 : tensor<2x32xf32>
 }

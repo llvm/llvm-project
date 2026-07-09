@@ -20,7 +20,8 @@ namespace llvm {
 
 class MachineFunction;
 class RegScavenger;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class Triple;
 
 class AArch64RegisterInfo final : public AArch64GenRegisterInfo {

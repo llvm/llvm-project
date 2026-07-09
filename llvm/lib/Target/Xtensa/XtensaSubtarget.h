@@ -85,6 +85,7 @@ public:
   bool hasMiscSR() const { return HasMiscSR; }
   bool hasExtendedL32R() const { return HasExtendedL32R; }
   bool hasDataCache() const { return HasDataCache; }
+  bool hasDebug() const { return HasDebug; }
   bool hasHighPriInterrupts() const { return HasHighPriInterrupts; }
   bool hasHighPriInterruptsLevel3() const { return HasHighPriInterruptsLevel3; }
   bool hasHighPriInterruptsLevel4() const { return HasHighPriInterruptsLevel4; }

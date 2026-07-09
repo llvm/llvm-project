@@ -35,6 +35,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -94,6 +95,8 @@ LLVMInitializeAMDGPUAsmPrinter() {
                                      llvm::createR600AsmPrinterPass);
   TargetRegistry::RegisterAsmPrinter(getTheGCNTarget(),
                                      createAMDGPUAsmPrinterPass);
+  TargetRegistry::RegisterAsmPrinter(getTheGCNLegacyTarget(),
+                                     createAMDGPUAsmPrinterPass);
 }
 
 namespace {
@@ -116,6 +119,13 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
     : AsmPrinter(TM, std::move(Streamer)) {
   assert(OutStreamer && "AsmPrinter constructed without streamer");
+  GetResourceUsage = [this](MachineFunction &MF)
+      -> const AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo * {
+    if (auto *ResourceUsageW =
+            getAnalysisIfAvailable<AMDGPUResourceUsageAnalysisWrapperPass>())
+      return &ResourceUsageW->getResourceInfo();
+    return nullptr;
+  };
 }
 
 StringRef AMDGPUAsmPrinter::getPassName() const {
@@ -144,19 +154,19 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
   if (getTargetStreamer() && !getTargetStreamer()->getTargetID())
     initializeTargetID(M);
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA &&
-      TM.getTargetTriple().getOS() != Triple::AMDPAL)
+  const Triple &TT = M.getTargetTriple();
+  if (TT.getOS() != Triple::AMDHSA && TT.getOS() != Triple::AMDPAL)
     return;
 
   getTargetStreamer()->EmitDirectiveAMDGCNTarget();
 
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TT.getOS() == Triple::AMDHSA) {
     getTargetStreamer()->EmitDirectiveAMDHSACodeObjectVersion(
         CodeObjectVersion);
     HSAMetadataStream->begin(M, *getTargetStreamer()->getTargetID());
   }
 
-  if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
+  if (TT.getOS() == Triple::AMDPAL)
     getTargetStreamer()->getPALMetadata()->readFromIR(M);
 }
 
@@ -165,12 +175,13 @@ void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (!IsTargetStreamerInitialized)
     initTargetStreamer(M);
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
+  const Triple &TT = M.getTargetTriple();
+  if (TT.getOS() != Triple::AMDHSA)
     getTargetStreamer()->EmitISAVersion();
 
   // Emit HSA Metadata (NT_AMD_AMDGPU_HSA_METADATA).
   // Emit HSA Metadata (NT_AMD_HSA_METADATA).
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TT.getOS() == Triple::AMDHSA) {
     HSAMetadataStream->end();
     bool Success = HSAMetadataStream->emitTo(*getTargetStreamer());
     (void)Success;
@@ -399,9 +410,10 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 bool AMDGPUAsmPrinter::doInitialization(Module &M) {
+  const llvm::Triple &TT = M.getTargetTriple();
   CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(M);
 
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TT.getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
     case AMDGPU::AMDHSA_COV4:
       HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV4>();
@@ -542,8 +554,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
         RI.getSymbol(FnSym->getName(), RIK::RIK_NumAGPR, OutContext);
     uint64_t NumVgpr, NumAgpr;
 
-    MachineModuleInfo &MMI =
-        getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+    MachineModuleInfo &MMI = *GetMMI();
     MachineFunction *MF = MMI.getMachineFunction(F);
     if (MF && NumVgprSymbol->isVariable() && NumAgprSymbol->isVariable() &&
         TryGetMCExprValue(NumVgprSymbol->getVariableValue(), NumVgpr) &&
@@ -713,14 +724,15 @@ void AMDGPUAsmPrinter::emitAMDGPUInfo(Module &M) {
 }
 
 bool AMDGPUAsmPrinter::doFinalization(Module &M) {
+  const Triple &TT = M.getTargetTriple();
+
   // Pad with s_code_end to help tools and guard against instruction prefetch
   // causing stale data in caches. Arguably this should be done by the linker,
   // which is why this isn't done for Mesa.
   // Don't do it if there is no code.
   const MCSubtargetInfo &STI = *getGlobalSTI();
   if ((AMDGPU::isGFX10Plus(STI) || AMDGPU::isGFX90A(STI)) &&
-      (STI.getTargetTriple().getOS() == Triple::AMDHSA ||
-       STI.getTargetTriple().getOS() == Triple::AMDPAL)) {
+      (TT.getOS() == Triple::AMDHSA || TT.getOS() == Triple::AMDPAL)) {
     MCSection *TextSect = getObjFileLowering().getTextSection();
     if (TextSect->hasInstructions()) {
       OutStreamer->switchSection(TextSect);
@@ -890,8 +902,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (!IsTargetStreamerInitialized)
     initTargetStreamer(*MF.getFunction().getParent());
 
-  ResourceUsage =
-      &getAnalysis<AMDGPUResourceUsageAnalysisWrapperPass>().getResourceInfo();
+  ResourceUsage = GetResourceUsage(MF);
   CurrentProgramInfo.reset(MF);
 
   const AMDGPUMachineFunctionInfo *MFI =
@@ -1271,7 +1282,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
 
   ProgInfo.AccumOffset = computeAccumOffset(ProgInfo.NumArchVGPR, Ctx);
-  ProgInfo.TgSplit = STM.isTgSplitEnabled();
+  ProgInfo.TgSplit =
+      STM.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(MF.getFunction());
   ProgInfo.NumSGPR = GetSymRefExpr(RIK::RIK_NumSGPR);
   ProgInfo.ScratchSize = GetSymRefExpr(RIK::RIK_PrivateSegSize);
   ProgInfo.VCCUsed = GetSymRefExpr(RIK::RIK_UsesVCC);
@@ -2003,6 +2015,41 @@ void AMDGPUAsmPrinter::emitResourceUsageRemarks(
   if (isModuleEntryFunction)
     EmitResourceUsageRemark("BytesLDS", "LDS Size [bytes/block]",
                             CurrentProgramInfo.LDSSize);
+}
+
+PreservedAnalyses AMDGPUAsmPrinterBeginPass::run(Module &M,
+                                                 ModuleAnalysisManager &MAM) {
+
+  AMDGPUAsmPrinter &AsmPrinter = static_cast<AMDGPUAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+AMDGPUAsmPrinterPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  AMDGPUAsmPrinter &AsmPrinter = static_cast<AMDGPUAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.GetResourceUsage = [&MFAM](MachineFunction &MF)
+      -> const AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo * {
+    return &MFAM.getResult<AMDGPUResourceUsageAnalysis>(MF);
+  };
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses AMDGPUAsmPrinterEndPass::run(Module &M,
+                                               ModuleAnalysisManager &MAM) {
+  AMDGPUAsmPrinter &AsmPrinter = static_cast<AMDGPUAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }
 
 char AMDGPUAsmPrinter::ID = 0;

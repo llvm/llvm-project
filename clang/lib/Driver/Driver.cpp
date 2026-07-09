@@ -70,9 +70,9 @@
 #include "clang/Driver/Types.h"
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
-#include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
+#include "clang/ScalableStaticAnalysis/Core/Serialization/SerializationFormatRegistry.h"
+#include "clang/ScalableStaticAnalysis/Core/TUSummary/ExtractorRegistry.h"
+#include "clang/ScalableStaticAnalysis/SSAFForceLinker.h" // IWYU pragma: keep
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -616,10 +616,9 @@ static void setZosTargetVersion(const Driver &D, llvm::Triple &Target,
 ///
 /// This routine provides the logic to compute a target triple from various
 /// args passed to the driver and the default triple string.
-static llvm::Triple computeTargetTriple(const Driver &D,
-                                        StringRef TargetTriple,
+static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
                                         const ArgList &Args,
-                                        StringRef DarwinArchName = "") {
+                                        StringRef ArchName = "") {
   // FIXME: Already done in Compilation *Driver::BuildCompilation
   if (const Arg *A = Args.getLastArg(options::OPT_target))
     TargetTriple = A->getValue();
@@ -635,9 +634,8 @@ static llvm::Triple computeTargetTriple(const Driver &D,
   // Handle Apple-specific options available here.
   if (Target.isOSBinFormatMachO()) {
     // If an explicit Darwin arch name is given, that trumps all.
-    if (!DarwinArchName.empty()) {
-      tools::darwin::setTripleTypeForMachOArchName(Target, DarwinArchName,
-                                                   Args);
+    if (!ArchName.empty()) {
+      tools::darwin::setTripleTypeForMachOArchName(Target, ArchName, Args);
       return llvm::Triple(Target.normalize());
     }
 
@@ -646,6 +644,9 @@ static llvm::Triple computeTargetTriple(const Driver &D,
       StringRef ArchName = A->getValue();
       tools::darwin::setTripleTypeForMachOArchName(Target, ArchName, Args);
     }
+  } else if (!ArchName.empty()) {
+    Target.setArchName(ArchName);
+    return Target;
   }
 
   // Handle pseudo-target flags '-mlittle-endian'/'-EL' and
@@ -674,11 +675,14 @@ static llvm::Triple computeTargetTriple(const Driver &D,
       StringRef ObjectMode = *ObjectModeValue;
       llvm::Triple::ArchType AT = llvm::Triple::UnknownArch;
 
+      // Silently accept '32_64' and 'any'
+      const bool OtherAllowedMode =
+          ObjectMode == "32_64" || ObjectMode == "any";
       if (ObjectMode == "64") {
         AT = Target.get64BitArchVariant().getArch();
       } else if (ObjectMode == "32") {
         AT = Target.get32BitArchVariant().getArch();
-      } else {
+      } else if (!OtherAllowedMode) {
         D.Diag(diag::err_drv_invalid_object_mode) << ObjectMode;
       }
 
@@ -938,10 +942,8 @@ static TripleSet inferOffloadToolchains(Compilation &C,
   for (llvm::StringRef Arch : Archs) {
     OffloadArch ID = StringToOffloadArch(Arch);
     if (ID == OffloadArch::Unknown)
-      ID = StringToOffloadArch(getProcessorFromTargetID(
-          llvm::Triple(llvm::Triple::amdgcn, llvm::Triple::NoSubArch,
-                       llvm::Triple::AMD, llvm::Triple::AMDHSA),
-          Arch));
+      ID = StringToOffloadArch(
+          getProcessorFromTargetID(llvm::Triple("amdgcn-amd-amdhsa"), Arch));
 
     if (Kind == Action::OFK_HIP && !IsAMDOffloadArch(ID)) {
       C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
@@ -987,8 +989,7 @@ static TripleSet inferOffloadToolchains(Compilation &C,
 
   // Infer the default target triple if no specific architectures are given.
   if (Archs.empty() && Kind == Action::OFK_HIP)
-    Triples.insert(llvm::Triple(llvm::Triple::amdgcn, llvm::Triple::NoSubArch,
-                                llvm::Triple::AMD, llvm::Triple::AMDHSA));
+    Triples.insert(llvm::Triple("amdgcn-amd-amdhsa"));
   else if (Archs.empty() && Kind == Action::OFK_Cuda) {
     llvm::Triple::ArchType Arch =
         C.getDefaultToolChain().getTriple().isArch64Bit()
@@ -1668,7 +1669,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       (Std->containsValue("c++20") || Std->containsValue("c++2a") ||
        Std->containsValue("c++23") || Std->containsValue("c++2b") ||
        Std->containsValue("c++26") || Std->containsValue("c++2c") ||
-       Std->containsValue("c++latest"));
+       Std->containsValue("c++2d") || Std->containsValue("c++latest"));
 
   // Process -fmodule-header{=} flags.
   if (Arg *A = Args.getLastArg(options::OPT_fmodule_header_EQ,
@@ -3134,6 +3135,8 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
       Diag(clang::diag::warn_drv_unused_x) << LastXArg->getValue();
   }
 
+  bool IsSYCL = Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false);
+
   for (Arg *A : Args) {
     if (A->getOption().getKind() == Option::InputClass) {
       const char *Value = A->getValue();
@@ -3151,6 +3154,8 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
             Ty = types::TY_Fortran;
           } else if (IsDXCMode()) {
             Ty = types::TY_HLSL;
+          } else if (IsSYCL) {
+            Ty = types::TY_CXX;
           } else {
             // If running with -E, treat as a C input (this changes the
             // builtin macros, for example). This may be overridden by -ObjC
@@ -4800,9 +4805,11 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     if (TC.requiresObjcopy(Args)) {
       Action *LastAction = Actions.back();
       // llvm-objcopy expects an unvalidated DXIL container (TY_OBJECT).
-      if (LastAction->getType() == types::TY_Object)
+      if (LastAction->getType() == types::TY_Object) {
+        ActionList ObjcopyActions({LastAction});
         Actions.push_back(
-            C.MakeAction<ObjcopyJobAction>(LastAction, types::TY_Object));
+            C.MakeAction<ObjcopyJobAction>(ObjcopyActions, types::TY_Object));
+      }
     }
 
     // Call validator when -Vd not in Args.
@@ -5394,6 +5401,17 @@ Action *Driver::ConstructPhaseAction(
     return C.MakeAction<BackendJobAction>(Input, types::TY_PP_Asm);
   }
   case phases::Assemble:
+    // When -marm64x is used, construct jobs for the EC and native targets and
+    // merge them into an archive with llvm-objcopy.
+    const llvm::Triple Target(llvm::Triple::normalize(TargetTriple));
+    if (Target.isOSWindows() && Args.hasArg(options::OPT_marm64x)) {
+      Action *Act =
+          C.MakeAction<AssembleJobAction>(std::move(Input), types::TY_Object);
+      ActionList Inputs;
+      Inputs.push_back(C.MakeAction<BindArchAction>(Act, BoundArch("aarch64")));
+      Inputs.push_back(C.MakeAction<BindArchAction>(Act, BoundArch("arm64ec")));
+      return C.MakeAction<ObjcopyJobAction>(Inputs, types::TY_Object);
+    }
     return C.MakeAction<AssembleJobAction>(std::move(Input), types::TY_Object);
   }
 
@@ -5488,7 +5506,8 @@ void Driver::BuildJobs(Compilation &C) const {
     BuildJobsForAction(C, A, &C.getDefaultToolChain(),
                        /*BA=*/{},
                        /*AtTopLevel*/ true,
-                       /*MultipleArchs*/ ArchNames.size() > 1,
+                       /*MultipleArchs*/ ArchNames.size() > 1 ||
+                           C.getArgs().hasArgNoClaim(options::OPT_marm64x),
                        /*LinkingOutput*/ LinkingOutput, CachedResults,
                        /*TargetDeviceOffloadKind*/ Action::OFK_None);
   }
@@ -7231,7 +7250,7 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       case llvm::Triple::csky:
         TC = std::make_unique<toolchains::CSKYToolChain>(*this, Target, Args);
         break;
-      case llvm::Triple::amdgcn:
+      case llvm::Triple::amdgpu:
       case llvm::Triple::r600:
         TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args);
         break;

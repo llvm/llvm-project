@@ -130,9 +130,9 @@ GenericKernelTy::getKernelLaunchEnvironment(
   if (!NeedsReductionBuffer && !KernelArgs.DynCGroupMem)
     return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
 
-  auto AllocOrErr = GenericDevice.dataAlloc(sizeof(KernelLaunchEnvironmentTy),
-                                            /*HostPtr=*/nullptr,
-                                            TargetAllocTy::TARGET_ALLOC_DEVICE);
+  auto AllocOrErr = GenericDevice.dataAlloc(
+      sizeof(KernelLaunchEnvironmentTy),
+      /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE, /*Alignment=*/0);
   if (!AllocOrErr)
     return AllocOrErr.takeError();
 
@@ -153,7 +153,8 @@ GenericKernelTy::getKernelLaunchEnvironment(
     // Use number of teams many buffer elements.
     auto AllocOrErr = GenericDevice.dataAlloc(
         uint64_t(RedCfg.ReductionDataSize) * NumBlocks0,
-        /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
+        /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE,
+        /*Alignment=*/0);
     if (!AllocOrErr)
       return AllocOrErr.takeError();
     LocalKLE.ReductionBuffer = *AllocOrErr;
@@ -231,7 +232,8 @@ GenericKernelTy::prepareBlockMemory(GenericDeviceTy &GenericDevice,
       // Get global memory as fallback.
       auto AllocOrErr = GenericDevice.dataAlloc(
           NumBlocks * DynBlockMemSize,
-          /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
+          /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE,
+          /*Alignment=*/0);
       if (!AllocOrErr)
         return AllocOrErr.takeError();
       DynFallbackPtr = *AllocOrErr;
@@ -297,13 +299,13 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
   KernelLaunchParamsTy LaunchParams;
 
-  // Kernel languages (.IsCUDA) don't use indirection, whereas dispatching with
-  // an array of kernel argument pointers (.IsPtrArgs) uses KernelArgs.ArgPtrs
-  // and KernelArgs.ArgSizes directly.
+  // Kernel languages do not use the OpenMP indirection and argument parsing.
   if (KernelArgs.Flags.IsCUDA) {
     LaunchParams =
         *reinterpret_cast<KernelLaunchParamsTy *>(KernelArgs.ArgPtrs);
-  } else if (!KernelArgs.Flags.IsPtrArgs) {
+  } else if (KernelArgs.Flags.IsPtrArgs) {
+    LaunchParams = KernelLaunchParamsTy{KernelArgs.NumArgs, KernelArgs.ArgPtrs};
+  } else {
     LaunchParams =
         prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs,
                     Args, Ptrs, *KernelLaunchEnvOrErr, KernelArgs.Version);
@@ -377,7 +379,7 @@ GenericKernelTy::prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   for (uint32_t I = 0; I < NumArgs; ++I)
     Ptrs[I] = &Args[I];
 
-  return KernelLaunchParamsTy{sizeof(void *) * NumArgs, &Args[0], &Ptrs[0]};
+  return KernelLaunchParamsTy{NumArgs, &Ptrs[0]};
 }
 
 uint32_t
@@ -693,6 +695,9 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     return ImageOrErr.takeError();
   DeviceImageTy *Image = *ImageOrErr;
 
+  if (identify_magic(InputTgtImage) == file_magic::bitcode)
+    Image->setIRImage(MemoryBuffer::getMemBufferCopy(InputTgtImage));
+
   // Add the image to list.
   LoadedImages.push_back(Image);
 
@@ -990,9 +995,11 @@ Error GenericDeviceTy::getDeviceMemorySize(uint64_t &DSize) {
 }
 
 Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
-                                            TargetAllocTy Kind) {
+                                            TargetAllocTy Kind,
+                                            size_t Alignment) {
   void *Alloc = nullptr;
 
+  // TODO Check alignment.
   if (RecordReplay && RecordReplay->isRecordingOrReplaying())
     return RecordReplay->allocate(Size);
 
@@ -1000,7 +1007,7 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
   case TARGET_ALLOC_DEFAULT:
   case TARGET_ALLOC_DEVICE:
     if (MemoryManager) {
-      auto AllocOrErr = MemoryManager->allocate(Size, HostPtr);
+      auto AllocOrErr = MemoryManager->allocate(Size, HostPtr, Alignment);
       if (!AllocOrErr)
         return AllocOrErr.takeError();
       Alloc = *AllocOrErr;
@@ -1012,7 +1019,7 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
     [[fallthrough]];
   case TARGET_ALLOC_HOST:
   case TARGET_ALLOC_SHARED: {
-    auto AllocOrErr = allocate(Size, HostPtr, Kind);
+    auto AllocOrErr = allocate(Size, HostPtr, Kind, Alignment);
     if (!AllocOrErr)
       return AllocOrErr.takeError();
     Alloc = *AllocOrErr;
@@ -1147,6 +1154,15 @@ Error GenericDeviceTy::dataFill(void *TgtPtr, const void *PatternPtr,
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
   auto Err =
       dataFillImpl(TgtPtr, PatternPtr, PatternSize, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Error GenericDeviceTy::dataPrefetch(size_t Count, const void **Mems,
+                                    const size_t *Sizes, bool ToHost,
+                                    __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+  auto Err = dataPrefetchImpl(Count, Mems, Sizes, ToHost, AsyncInfoWrapper);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }
@@ -1549,8 +1565,8 @@ int32_t GenericPluginTy::load_binary(int32_t DeviceId,
 
 void *GenericPluginTy::data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
                                   int32_t Kind) {
-  auto AllocOrErr =
-      getDevice(DeviceId).dataAlloc(Size, HostPtr, (TargetAllocTy)Kind);
+  auto AllocOrErr = getDevice(DeviceId).dataAlloc(
+      Size, HostPtr, (TargetAllocTy)Kind, /*Alignment=*/0);
   if (!AllocOrErr) {
     auto Err = AllocOrErr.takeError();
     REPORT() << "Failure to allocate device memory: "

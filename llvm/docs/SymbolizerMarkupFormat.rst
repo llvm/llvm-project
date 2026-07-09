@@ -2,9 +2,6 @@
 Symbolizer Markup Format
 ==========================
 
-.. contents::
-   :local:
-
 Overview
 ========
 

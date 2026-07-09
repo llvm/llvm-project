@@ -1020,7 +1020,7 @@ public:
 
     FileSpec src_fs(src);
     FileSystem::Instance().Resolve(src_fs);
-    FileSpec dst_fs(dst ? dst : src_fs.GetFilename().GetCString());
+    FileSpec dst_fs(dst ? dst : src_fs.GetFilename());
 
     PlatformSP platform_sp(
         GetDebugger().GetPlatformList().GetSelectedPlatform());

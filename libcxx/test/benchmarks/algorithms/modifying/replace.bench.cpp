@@ -22,10 +22,7 @@
 int main(int argc, char** argv) {
   auto std_replace    = [](auto first, auto last, auto old, auto new_) { return std::replace(first, last, old, new_); };
   auto std_replace_if = [](auto first, auto last, auto old, auto new_) {
-    auto pred = [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == old;
-    };
+    auto pred = [&](auto element) { return element == old; };
     return std::replace_if(first, last, pred, new_);
   };
 

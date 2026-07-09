@@ -498,6 +498,7 @@ mlir_c_api_cc_library(
         "lib/CAPI/IR/BuiltinTypes.cpp",
         "lib/CAPI/IR/Diagnostics.cpp",
         "lib/CAPI/IR/DialectHandle.cpp",
+        "lib/CAPI/IR/Dominance.cpp",
         "lib/CAPI/IR/ExtensibleDialect.cpp",
         "lib/CAPI/IR/IR.cpp",
         "lib/CAPI/IR/IntegerSet.cpp",
@@ -512,6 +513,7 @@ mlir_c_api_cc_library(
         "include/mlir-c/Diagnostics.h",
         "include/mlir-c/Dialect/Func.h",
         "include/mlir-c/Dialect/IRDL.h",
+        "include/mlir-c/Dominance.h",
         "include/mlir-c/ExecutionEngine.h",
         "include/mlir-c/ExtensibleDialect.h",
         "include/mlir-c/IR.h",
@@ -524,7 +526,9 @@ mlir_c_api_cc_library(
         "include/mlir/CAPI/AffineExpr.h",
         "include/mlir/CAPI/AffineMap.h",
         "include/mlir/CAPI/Diagnostics.h",
+        "include/mlir/CAPI/Dominance.h",
         "include/mlir/CAPI/IR.h",
+        "include/mlir/CAPI/IRMapping.h",
         "include/mlir/CAPI/IntegerSet.h",
         "include/mlir/CAPI/Interfaces.h",
         "include/mlir/CAPI/Pass.h",
@@ -2137,6 +2141,7 @@ cc_library(
         ":IR",
         ":Pass",
         ":TransformUtils",
+        ":Transforms",
         ":VectorDialect",
     ],
 )
@@ -2361,6 +2366,7 @@ cc_library(
         ":MemRefDialect",
         ":Pass",
         ":TransformUtils",
+        ":Transforms",
         ":VectorDialect",
         "//llvm:Support",
     ],
@@ -4422,6 +4428,7 @@ cc_library(
         ":OpenACCToSCF",
         ":OpenMPToLLVM",
         ":PDLToPDLInterp",
+        ":RaiseWasmToMLIR",
         ":ReconcileUnrealizedCasts",
         ":SCFToControlFlow",
         ":SCFToEmitC",
@@ -5563,7 +5570,6 @@ cc_library(
         ":LLVMDialect",
         ":LLVMIRTransformsLegalizeForExport",
         ":LLVMPassIncGen",
-        ":NVVMDialect",
         ":Pass",
         ":TransformUtils",
         ":ViewLikeInterface",
@@ -5849,8 +5855,7 @@ cc_library(
         "//llvm:Target",
     ] + if_cuda_available([
         ":NVVMToLLVMIRTranslation",
-        "//llvm:NVPTXCodeGen",
-    ]),
+    ] + (["//llvm:NVPTXCodeGen"] if "NVPTX" in llvm_targets else [])),
 )
 
 cc_library(
@@ -6405,6 +6410,7 @@ cc_library(
         ":GPUDialect",
         ":IR",
         ":InferIntRangeInterface",
+        ":InliningUtils",
         ":LLVMDialect",
         ":NVVMOpsIncGen",
         ":NVVMRequiresSMTraitsIncGen",
@@ -6415,6 +6421,37 @@ cc_library(
         "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "NVVMPassIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = {
+        "include/mlir/Dialect/NVVM/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=NVVM",
+        ],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/NVVM/Transforms/Passes.td",
+    deps = [
+        ":PassBaseTdFiles",
+    ],
+)
+
+cc_library(
+    name = "NVVMTransforms",
+    srcs = glob(["lib/Dialect/NVVM/Transforms/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/NVVM/Transforms/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":LLVMDialect",
+        ":NVVMDialect",
+        ":NVVMPassIncGen",
+        ":Pass",
+        ":TransformUtils",
     ],
 )
 
@@ -8678,6 +8715,7 @@ cc_library(
         ":MathTransforms",
         ":Pass",
         ":TransformUtils",
+        ":Transforms",
         ":VectorDialect",
     ],
 )
@@ -8797,6 +8835,7 @@ cc_library(
         ":NVVMDialect",
         ":Pass",
         ":TransformUtils",
+        ":Transforms",
         ":VectorDialect",
         ":VectorUtils",
         "//llvm:Support",
@@ -9571,9 +9610,11 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
-        ":AllToLLVMIRTranslations",
+        ":BuiltinToLLVMIRTranslation",
         ":IR",
         ":LLVMDialect",
+        ":LLVMToLLVMIRTranslation",
+        ":OpenMPToLLVMIRTranslation",
         ":Support",
         ":ToLLVMIRTranslation",
         "//llvm:AllTargetsAsmParsers",
@@ -9795,6 +9836,7 @@ cc_library(
         ":MathTransforms",
         ":MemRefTransforms",
         ":NVGPUTransforms",
+        ":NVVMTransforms",
         ":OpenACCTransforms",
         ":OpenMPTransforms",
         ":QuantTransforms",
@@ -10622,6 +10664,19 @@ cc_library(
 )
 
 cc_library(
+    name = "OpenACCAnalysisHeaders",
+    hdrs = glob(["include/mlir/Dialect/OpenACC/Analysis/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":GPUDialect",
+        ":IR",
+        ":OpenACCDialect",
+        ":Pass",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "OpenACCUtils",
     srcs = glob(
         ["lib/Dialect/OpenACC/Utils/*.cpp"],
@@ -10635,6 +10690,9 @@ cc_library(
         ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
+        ":LLVMDialect",
+        ":MemRefDialect",
+        ":OpenACCAnalysisHeaders",
         ":OpenACCDialect",
         ":OpenACCOpsIncGen",
         ":OpenACCPassIncGen",
@@ -11732,6 +11790,7 @@ cc_library(
         ":Support",
         ":TilingInterfaceIncGen",
         ":ViewLikeInterface",
+        "//llvm:Support",
     ],
 )
 
@@ -11898,6 +11957,32 @@ cc_library(
     deps = [
         ":IR",
         ":MaskingOpInterfaceIncGen",
+    ],
+)
+
+cc_library(
+    name = "RaiseWasmToMLIR",
+    srcs = glob([
+        "lib/Conversion/RaiseWasm/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/RaiseWasm/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ControlFlowDialect",
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":IR",
+        ":MathDialect",
+        ":MemRefDialect",
+        ":Pass",
+        ":TransformUtils",
+        ":Transforms",
+        ":VectorDialect",
+        ":WasmSSADialect",
+        "//llvm:Support",
     ],
 )
 
@@ -13303,6 +13388,7 @@ cc_library(
         ":MathPassIncGen",
         ":Pass",
         ":SCFDialect",
+        ":TensorDialect",
         ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",
@@ -13330,6 +13416,7 @@ cc_library(
         ":MathDialect",
         ":Pass",
         ":TransformUtils",
+        ":Transforms",
         ":VectorDialect",
         "//llvm:Support",
     ],
@@ -13542,14 +13629,12 @@ cc_library(
         ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":FuncDialect",
-        ":GPUDialect",
         ":IR",
         ":InferTypeOpInterface",
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":MemRefPassIncGen",
         ":MemRefUtils",
-        ":NVGPUDialect",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
         ":SCFDialect",

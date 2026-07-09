@@ -26,7 +26,7 @@ func.func @_QQmain() {
   %7:2 = hlfir.declare %6 {uniq_name = "_QFEdst_record"} : (!fir.ref<!record_t>) -> (!fir.ref<!record_t>, !fir.ref<!record_t>)
   %16 = omp.map.info var_ptr(%7#1 : !fir.ref<!record_t>, !record_t) map_clauses(implicit, tofrom) capture(ByRef) -> !fir.ref<!record_t> {name = "dst_record"}
   %17 = omp.map.info var_ptr(%7#1 : !fir.ref<!record_t>, !record_t) map_clauses(implicit, tofrom) capture(ByRef) mapper(@record_mapper) -> !fir.ref<!record_t> {name = "dst_record_with_mapper"}
-  omp.target map_entries(%16 -> %arg0, %17 -> %arg1 : !fir.ref<!record_t>, !fir.ref<!record_t>) {
+  omp.target kernel_type(generic) map_entries(%16 -> %arg0, %17 -> %arg1 : !fir.ref<!record_t>, !fir.ref<!record_t>) {
     %20:2 = hlfir.declare %arg0 {uniq_name = "_QFEdst_record"} : (!fir.ref<!record_t>) -> (!fir.ref<!record_t>, !fir.ref<!record_t>)
     %21:2 = hlfir.declare %arg1 {uniq_name = "_QFEdst_record"} : (!fir.ref<!record_t>) -> (!fir.ref<!record_t>, !fir.ref<!record_t>)
 
@@ -86,7 +86,7 @@ func.func @_QQmain() {
 // CHECK-SAME: members(%{{.*}}, %{{.*}} : [1], [1, 0] : {{.*}}) -> {{.*}}> {name =
 // CHECK-SAME: "dst_record_with_mapper"}
 
-// CHECK: omp.target map_entries(
+// CHECK: omp.target kernel_type(generic) map_entries(
 // CHECK-SAME: %[[RECORD_MAP]] -> %{{[^[:space:]]+}},
 // CHECK-SAME: %[[FIELD_MAP]] -> %{{[^[:space:]]+}},
 // CHECK-SAME: %[[FIELD_BASE_ADDR_MAP]] -> %{{[^[:space:]]+}}
