@@ -8,8 +8,12 @@ if (ORC_RT_LLVM_TOOLS_AVAILABLE)
     ${CMAKE_CURRENT_SOURCE_DIR}/regression/lit.cfg.py
   )
 
+  # Build the regression test-support tools.
+  add_subdirectory(tools)
+
   list(APPEND ORC_RT_TEST_DEPS
     orc-executor
+    orc-rt-smoke-check
   )
 
   add_custom_target(orc-rt-test-depends DEPENDS ${ORC_RT_TEST_DEPS})
