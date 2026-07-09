@@ -997,9 +997,6 @@ public:
         std::vector<CallsiteInfo>(), std::vector<AllocInfo>());
   }
 
-  /// A dummy node to reference external functions that aren't in the index
-  LLVM_ABI static FunctionSummary ExternalNode;
-
 private:
   /// Number of instructions (ignoring debug instructions, e.g.) computed
   /// during the initial compile step when the summary index is first built.
@@ -2130,9 +2127,7 @@ template <> struct GraphTraits<ValueInfo> {
 
   static ChildIteratorType child_begin(NodeRef N) {
     if (!N.getSummaryList().size()) // handle external function
-      return ChildIteratorType(
-          FunctionSummary::ExternalNode.CallGraphEdgeList.begin(),
-          &valueInfoFromEdge);
+      return ChildIteratorType(ChildEdgeIteratorType(), &valueInfoFromEdge);
     FunctionSummary *F =
         cast<FunctionSummary>(N.getSummaryList().front()->getBaseObject());
     return ChildIteratorType(F->CallGraphEdgeList.begin(), &valueInfoFromEdge);
@@ -2140,9 +2135,7 @@ template <> struct GraphTraits<ValueInfo> {
 
   static ChildIteratorType child_end(NodeRef N) {
     if (!N.getSummaryList().size()) // handle external function
-      return ChildIteratorType(
-          FunctionSummary::ExternalNode.CallGraphEdgeList.end(),
-          &valueInfoFromEdge);
+      return ChildIteratorType(ChildEdgeIteratorType(), &valueInfoFromEdge);
     FunctionSummary *F =
         cast<FunctionSummary>(N.getSummaryList().front()->getBaseObject());
     return ChildIteratorType(F->CallGraphEdgeList.end(), &valueInfoFromEdge);
@@ -2150,7 +2143,7 @@ template <> struct GraphTraits<ValueInfo> {
 
   static ChildEdgeIteratorType child_edge_begin(NodeRef N) {
     if (!N.getSummaryList().size()) // handle external function
-      return FunctionSummary::ExternalNode.CallGraphEdgeList.begin();
+      return ChildEdgeIteratorType();
 
     FunctionSummary *F =
         cast<FunctionSummary>(N.getSummaryList().front()->getBaseObject());
@@ -2159,7 +2152,7 @@ template <> struct GraphTraits<ValueInfo> {
 
   static ChildEdgeIteratorType child_edge_end(NodeRef N) {
     if (!N.getSummaryList().size()) // handle external function
-      return FunctionSummary::ExternalNode.CallGraphEdgeList.end();
+      return ChildEdgeIteratorType();
 
     FunctionSummary *F =
         cast<FunctionSummary>(N.getSummaryList().front()->getBaseObject());
