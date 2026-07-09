@@ -32112,9 +32112,13 @@ Instruction *AArch64TargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 Instruction *AArch64TargetLowering::emitTrailingFence(
     IRBuilderBase &Builder, Instruction *Inst, AtomicOrdering Ord) const {
   if (auto *LI = dyn_cast<LoadInst>(Inst);
-      LI && Ord == AtomicOrdering::SequentiallyConsistent &&
-      isOpSuitableForRCPC3(LI))
-    return nullptr;
+      LI && Ord == AtomicOrdering::SequentiallyConsistent) {
+    if (isOpSuitableForRCPC3(LI))
+      return nullptr;
+
+    if (isOpSuitableForLDPSTP(LI))
+      return Builder.CreateFence(AtomicOrdering::Acquire);
+  }
 
   return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);
 }
