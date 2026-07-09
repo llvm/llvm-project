@@ -62,6 +62,7 @@ FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
 FunctionPass *createSIFormMemoryClausesLegacyPass();
+FunctionPass *createSIPostRA16BitMovFoldingPass();
 
 FunctionPass *createSIPostRABundlerPass();
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
@@ -269,6 +270,9 @@ extern char &AMDGPUPreloadKernArgPrologLegacyID;
 void initializeAMDGPUPreloadKernelArgumentsLegacyPass(PassRegistry &);
 extern char &AMDGPUPreloadKernelArgumentsLegacyID;
 
+void initializeSIPostRA16BitMovFoldingLegacyPass(PassRegistry &);
+extern char &SIPostRA16BitMovFoldingLegacyID;
+
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
@@ -474,6 +478,13 @@ public:
 
 class AMDGPUSetWavePriorityPass
     : public OptionalPassInfoMixin<AMDGPUSetWavePriorityPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class SIPostRA16BitMovFoldingPass
+    : public OptionalPassInfoMixin<SIPostRA16BitMovFoldingPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

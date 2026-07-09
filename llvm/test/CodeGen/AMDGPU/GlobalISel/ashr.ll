@@ -2055,18 +2055,22 @@ define <4 x i2> @v_ashr_v4i2(<4 x i2> %value, <4 x i2> %amount) {
 ; GFX11-TRUE16-LABEL: v_ashr_v4i2:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 2
-; GFX11-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 2
-; GFX11-TRUE16-NEXT:    v_bfe_i32 v2, v2, 0, 2
-; GFX11-TRUE16-NEXT:    v_and_b16 v4.l, v4.l, 3
-; GFX11-TRUE16-NEXT:    v_and_b16 v0.h, v5.l, 3
-; GFX11-TRUE16-NEXT:    v_and_b16 v1.h, v6.l, 3
-; GFX11-TRUE16-NEXT:    v_and_b16 v2.h, v7.l, 3
-; GFX11-TRUE16-NEXT:    v_bfe_i32 v3, v3, 0, 2
-; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, v4.l, v0.l
-; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v1.l, v0.h, v1.l
-; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v2.l, v1.h, v2.l
-; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v3.l, v2.h, v3.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v1, v2.l, v3.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v2.h, v5.l, 3
+; GFX11-TRUE16-NEXT:    v_and_b16 v2.l, v4.l, 3
+; GFX11-TRUE16-NEXT:    v_pk_lshlrev_b16 v0, 14, v0 op_sel_hi:[0,1]
+; GFX11-TRUE16-NEXT:    v_and_b16 v4.h, v7.l, 3
+; GFX11-TRUE16-NEXT:    v_pk_lshlrev_b16 v1, 14, v1 op_sel_hi:[0,1]
+; GFX11-TRUE16-NEXT:    v_and_b16 v4.l, v6.l, 3
+; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v0, 14, v0 op_sel_hi:[0,1]
+; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v3, 14, v1 op_sel_hi:[0,1]
+; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v1, v2, v0
+; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v3, v4, v3
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v1.h
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v3.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v3.h
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_ashr_v4i2:
