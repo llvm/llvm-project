@@ -168,6 +168,11 @@ static cl::opt<bool> ForceMemsetPatternIntrinsic(
     cl::desc("Use memset.pattern intrinsic whenever possible"), cl::init(false),
     cl::Hidden);
 
+static cl::opt<bool> ForceCRCClmul(
+    "loop-idiom-force-crc-clmul",
+    cl::desc("Use the clmul-based CRC loop optimization whenever possible"),
+    cl::init(false), cl::Hidden);
+
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 } // namespace llvm
@@ -1575,12 +1580,18 @@ bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
 }
 
 bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
+  if (ForceCRCClmul)
+    return optimizeCRCLoopUsingClmul(Info) ||
+           (!ApplyCodeSizeHeuristics && optimizeCRCLoopUsingTableLookup(Info));
+
   // FIXME: Once intrinsic cost modeling is more reliable for clmul, that should
   // be used to determine which optimization to use. Until then, only apply the
   // clmul optimization when optimizing for size, since a lookup table is not
-  // viable in that case.
-  return ApplyCodeSizeHeuristics ? optimizeCRCLoopUsingClmul(Info)
-                                 : optimizeCRCLoopUsingTableLookup(Info);
+  // viable in that case. On some platforms, TC=8 for clmul seems to be slower
+  // than even the unoptimized loop, so bail on that case as well.
+  return ApplyCodeSizeHeuristics
+             ? Info.TripCount > 8 && optimizeCRCLoopUsingClmul(Info)
+             : optimizeCRCLoopUsingTableLookup(Info);
 }
 
 // The algorithm used in this optimization is a Polynomial (GF(2)) Barrett
@@ -1601,10 +1612,10 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   auto *ClmulTy = IntegerType::get(Ctx, ClmulBW);
 
   // This optimization should only be applied if clmul for the required width is
-  // a fast operation on the target, and only for significant trip counts.
+  // a fast operation on the target.
   // TODO: If clmul exists on the target but not for the required width, it
-  // might be possible to split into multiple iterations of this.
-  if (TC <= 8 || !TTI->haveFastClmul(ClmulTy))
+  // might be possible to split into multiple iterations of this reduction.
+  if (!TTI->haveFastClmul(ClmulTy))
     return false;
 
   // First, generate the constants required for GF(2) Barrett reduction.
