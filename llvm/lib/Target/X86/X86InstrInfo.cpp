@@ -6821,11 +6821,25 @@ static bool hasPartialRegUpdate(unsigned Opcode, const X86Subtarget &Subtarget,
   case X86::LZCNT32rr:
   case X86::LZCNT64rm:
   case X86::LZCNT64rr:
+    return Subtarget.hasLZCNTFalseDeps();
   case X86::TZCNT32rm:
   case X86::TZCNT32rr:
   case X86::TZCNT64rm:
   case X86::TZCNT64rr:
-    return Subtarget.hasLZCNTFalseDeps();
+    return Subtarget.hasTZCNTFalseDeps();
+  case X86::BLSR32rr:
+  case X86::BLSR32rm:
+  case X86::BLSR64rr:
+  case X86::BLSR64rm:
+  case X86::BLSI32rr:
+  case X86::BLSI32rm:
+  case X86::BLSI64rr:
+  case X86::BLSI64rm:
+  case X86::BLSMSK32rr:
+  case X86::BLSMSK32rm:
+  case X86::BLSMSK64rr:
+  case X86::BLSMSK64rm:
+    return Subtarget.hasBLSFalseDeps() && !ForLoadFold; // Preserve load folding
   }
 
   return false;

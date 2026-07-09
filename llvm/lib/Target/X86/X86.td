@@ -593,9 +593,19 @@ def TuningPOPCNTFalseDeps : SubtargetFeature<"false-deps-popcnt",
                                      "POPCNT has a false dependency on dest register",
                                      [], InlineIgnore>;
 
-def TuningLZCNTFalseDeps : SubtargetFeature<"false-deps-lzcnt-tzcnt",
+def TuningLZCNTFalseDeps : SubtargetFeature<"false-deps-lzcnt",
                                      "HasLZCNTFalseDeps", "true",
-                                     "LZCNT/TZCNT have a false dependency on dest register",
+                                     "LZCNT has a false dependency on dest register",
+                                     [], InlineIgnore>;
+
+def TuningTZCNTFalseDeps : SubtargetFeature<"false-deps-tzcnt",
+                                     "HasTZCNTFalseDeps", "true",
+                                     "TZCNT has a false dependency on dest register",
+                                     [], InlineIgnore>;
+
+def TuningBLSFalseDeps : SubtargetFeature<"false-deps-bls",
+                                     "HasBLSFalseDeps", "true",
+                                     "BLSR/BLSI/BLSMSK have a false dependency on dest register",
                                      [], InlineIgnore>;
 
 def TuningMULCFalseDeps : SubtargetFeature<"false-deps-mulc",
@@ -980,6 +990,7 @@ def ProcessorFeatures {
     TuningFastVariablePerLaneShuffle,
     TuningPOPCNTFalseDeps,
     TuningLZCNTFalseDeps,
+    TuningTZCNTFalseDeps,
     TuningInsertVZEROUPPER,
     TuningAllowLight256Bit
   ];
@@ -1064,6 +1075,7 @@ def ProcessorFeatures {
                                       TuningFastVariablePerLaneShuffle,
                                       TuningPOPCNTFalseDeps,
                                       TuningLZCNTFalseDeps,
+                                      TuningTZCNTFalseDeps,
                                       TuningInsertVZEROUPPER,
                                       TuningAllowLight256Bit,
                                       TuningNoDomainDelayMov,
@@ -1733,7 +1745,10 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN4Features =
     !listconcat(ZN3Features, ZN4AdditionalFeatures);
 
-  list<SubtargetFeature> ZN5AdditionalTuning = [TuningSlowIndirectCall];
+  list<SubtargetFeature> ZN5AdditionalTuning = [TuningSlowIndirectCall,
+                                                TuningTZCNTFalseDeps,
+                                                TuningBLSFalseDeps
+                                                ];
   list<SubtargetFeature> ZN5Tuning =
     !listconcat(ZN4Tuning, ZN5AdditionalTuning);
   list<SubtargetFeature> ZN5AdditionalFeatures = [FeatureMOVDIRI,
@@ -1748,6 +1763,8 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN6RemoveTuning = [TuningSlowIndirectCall,
                                             TuningCOMPRESSFalseDeps,
                                             TuningEXPANDFalseDeps,
+                                            TuningTZCNTFalseDeps,
+                                            TuningBLSFalseDeps
                                             ];
   list<SubtargetFeature> ZN6Tuning =
     !listremove(ZN5Tuning, ZN6RemoveTuning);
