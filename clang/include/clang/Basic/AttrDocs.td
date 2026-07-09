@@ -7648,7 +7648,7 @@ already being compiled with GNU inline semantics as the implied default. It is
 unspecified which macro is defined in a C++ compilation.
 
 GNU inline semantics are the default behavior with ``-std=gnu89``,
-``-std=c89``, ``-std=c94``, or ``-fgnu89-inline``.
+``-std=c89``, ``-fgnu89-inline``, or ``-std=iso9899:199409``.
   }];
 }
 
@@ -9795,9 +9795,10 @@ Heap Allocation Elision more aggressively.
 When a coroutine function returns such a type, a direct call expression therein
 that returns a prvalue of a type attributed ``[[clang::coro_await_elidable]]``
 is said to be under a safe elide context if one of the following is true:
+
 - it is the immediate right-hand side operand to a co_await expression.
 - it is an argument to a ``[[clang::coro_await_elidable_argument]]`` parameter
-or parameter pack of another direct call expression under a safe elide context.
+  or parameter pack of another direct call expression under a safe elide context.
 
 Do note that the safe elide context applies only to the call expression itself,
 and the context does not transitively include any of its subexpressions unless

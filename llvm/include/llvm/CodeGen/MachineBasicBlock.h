@@ -47,7 +47,8 @@ class StringRef;
 class raw_ostream;
 class LiveIntervals;
 class LiveVariables;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 // This structure uniquely identifies a basic block section.
@@ -78,7 +79,7 @@ struct MBBSectionID {
 
 private:
   // This is only used to construct the special cold and exception sections.
-  MBBSectionID(SectionType T) : Type(T), Number(0) {}
+  constexpr MBBSectionID(SectionType T) : Type(T), Number(0) {}
 };
 
 template <> struct DenseMapInfo<MBBSectionID> {

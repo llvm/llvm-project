@@ -257,15 +257,15 @@ define <8 x i16> @test_illegal(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: test_illegal:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
-; CHECK-NEXT:    vorr d21, d16, d16
-; CHECK-NEXT:    vmov.u16 r0, d16[0]
 ; CHECK-NEXT:    vorr d22, d16, d16
+; CHECK-NEXT:    vmov.u16 r0, d16[0]
+; CHECK-NEXT:    vorr d23, d16, d16
 ; CHECK-NEXT:    vmov.u16 r2, d17[3]
 ; CHECK-NEXT:    vmov.u16 r3, d17[1]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
 ; CHECK-NEXT:    vmov.u16 r1, d19[1]
-; CHECK-NEXT:    vuzp.16 d21, d22
-; CHECK-NEXT:    vuzp.16 d21, d18
+; CHECK-NEXT:    vuzp.16 d22, d23
+; CHECK-NEXT:    vuzp.16 d22, d18
 ; CHECK-NEXT:    vext.16 d16, d16, d18, #3
 ; CHECK-NEXT:    vmov.16 d20[0], r0
 ; CHECK-NEXT:    vmov.16 d20[1], r2

@@ -461,20 +461,32 @@ xegpu::inferBroadcastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   SmallVector<int64_t> bcastDims;
   size_t dimDiff = resShape.size() - srcShape.size();
   auto bcastSourceLayout = resLayout;
+
+  // Right-aligned source in result, look for stretched unit dims.
   for (size_t i = dimDiff; i < resShape.size(); i++) {
     if ((srcShape[i - dimDiff] == 1) && (resShape[i] != 1))
       bcastDims.push_back(i);
   }
 
-  // the sg_layout and lane_layout for unit dimensions are preserved so it can
-  // be propagate to producer op so potentially used by the multi-reduction op.
+  // Case UnitDimStretch (e.g., 1x4 -> 4x4): the source layout data field must
+  // be 1.
   if (!bcastDims.empty())
     bcastSourceLayout = bcastSourceLayout.setUnitDimData(bcastDims);
 
-  if (dimDiff > 0) {
+  // Case RankDiff:
+  if (dimDiff) {
     SmallVector<int64_t> sliceDims;
-    for (size_t i = 0; i < dimDiff; i++)
-      sliceDims.push_back(i);
+    bool isOuterDimDiffUnitDims = llvm::all_of(
+        resShape.take_front(dimDiff), [&](int64_t dim) { return dim == 1; });
+    if (dimDiff && bcastDims.size() == dimDiff && isOuterDimDiffUnitDims) {
+      // Case RankDiffInnerDims (e.g., 1x4 -> 1x16x4):
+      //  slice the expanded inner dims
+      sliceDims.assign(bcastDims.begin(), bcastDims.end());
+    } else {
+      // Case RankDiffOuterDims (e.g., 1x4 -> 1x1x4):
+      //  slice the outer dims
+      llvm::append_range(sliceDims, llvm::seq<int64_t>(0, dimDiff));
+    }
     bcastSourceLayout = xegpu::SliceAttr::get(
         resLayout.getContext(), bcastSourceLayout,
         DenseI64ArrayAttr::get(resLayout.getContext(), sliceDims));
@@ -1710,13 +1722,11 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
   const int subgroupSize = uArch->getSubgroupSize();
   ArrayRef<int64_t> resShape = resVecTy.getShape();
   auto context = resVecTy.getContext();
-  auto elemBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
 
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
-          uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-  int maxChunkSize = std::min(
-      uArchInstruction->getMaxLaneLoadSize(elemBitWidth), contigChunkSize);
+  const auto *uArchInstruction = dyn_cast<xegpu::uArch::LoadGatherInstruction>(
+      uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
+  int maxChunkSize =
+      std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
 
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
                                       maxChunkSize, resShape, subgroupSize);
@@ -1733,13 +1743,11 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
   const int subgroupSize = uArch->getSubgroupSize();
   ArrayRef<int64_t> resShape = resVecTy.getShape();
   auto context = resVecTy.getContext();
-  auto elemBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
 
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
-          uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-  int maxChunkSize = std::min(
-      uArchInstruction->getMaxLaneLoadSize(elemBitWidth), contigChunkSize);
+  const auto *uArchInstruction = dyn_cast<xegpu::uArch::LoadGatherInstruction>(
+      uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
+  int maxChunkSize =
+      std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
                                       maxChunkSize, resShape, subgroupSize);
 }
@@ -1786,13 +1794,12 @@ xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
   const int subgroupSize = uArch->getSubgroupSize();
   ArrayRef<int64_t> srcShape = srcVecTy.getShape();
   auto context = srcVecTy.getContext();
-  auto elemBitWidth = srcVecTy.getElementType().getIntOrFloatBitWidth();
 
   const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
+      dyn_cast<xegpu::uArch::StoreScatterInstruction>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
-  int maxChunkSize = std::min(
-      uArchInstruction->getMaxLaneStoreSize(elemBitWidth), contigChunkSize);
+  int maxChunkSize =
+      std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
   return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
                                        srcShape, subgroupSize);
 }
@@ -1806,13 +1813,12 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
   const int subgroupSize = uArch->getSubgroupSize();
   ArrayRef<int64_t> srcShape = srcVecTy.getShape();
   auto context = srcVecTy.getContext();
-  auto elemBitWidth = srcVecTy.getElementType().getIntOrFloatBitWidth();
 
   const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
+      dyn_cast<xegpu::uArch::StoreScatterInstruction>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
-  int maxChunkSize = std::min(
-      uArchInstruction->getMaxLaneStoreSize(elemBitWidth), contigChunkSize);
+  int maxChunkSize =
+      std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
 
   return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
                                        srcShape, subgroupSize);
@@ -1831,13 +1837,13 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
 ///   - Otherwise a standard scatter-style factorization is computed via
 ///     `computeScatterIOLaneLayoutAndData`, bounded by `maxChunkSize` — the
 ///     per-lane load width reported by the uArch's LoadGather instruction
-///     (`getMaxLaneLoadSize`).
+///     (`getMaxLaneAccessSizeBytes`).
 ///
 std::optional<xegpu::DistributeLayoutAttr>
 xegpu::completeScatterLoadLaneLayoutFromInstData(
     xegpu::DistributeLayoutAttr specifiedLayout,
     xegpu::DistributeLayoutAttr consumerLayout, Type elemTy,
-    const xegpu::uArch::LoadGatherInstructionInterface *uArchInstruction,
+    const xegpu::uArch::LoadGatherInstruction *uArchInstruction,
     const int subgroupSize) {
   if (!specifiedLayout)
     return specifiedLayout;
@@ -1851,8 +1857,7 @@ xegpu::completeScatterLoadLaneLayoutFromInstData(
 
   // Reuse the load-side setup with inst_data as the destination shape.
   auto *context = specifiedLayout.getContext();
-  auto elemBitWidth = elemTy.getIntOrFloatBitWidth();
-  int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
+  int maxChunkSize = uArchInstruction->getMaxLaneAccessSizeBytes();
   if (consumerLayout) {
     auto consumerLaneLayout = consumerLayout.getEffectiveLaneLayoutAsInt();
     auto consumerLaneData = consumerLayout.getEffectiveLaneDataAsInt();
@@ -1876,7 +1881,7 @@ xegpu::completeScatterLoadLaneLayoutFromInstData(
 std::optional<xegpu::DistributeLayoutAttr>
 xegpu::completeScatterStoreLaneLayoutFromInstData(
     xegpu::DistributeLayoutAttr specifiedLayout, Type elemTy,
-    const xegpu::uArch::StoreScatterInstructionInterface *uArchInstruction,
+    const xegpu::uArch::StoreScatterInstruction *uArchInstruction,
     const int subgroupSize) {
   if (!specifiedLayout)
     return specifiedLayout;
@@ -1890,8 +1895,7 @@ xegpu::completeScatterStoreLaneLayoutFromInstData(
 
   // Reuse the store-side setup with inst_data as the source shape.
   auto *context = specifiedLayout.getContext();
-  auto elemBitWidth = elemTy.getIntOrFloatBitWidth();
-  int maxChunkSize = uArchInstruction->getMaxLaneStoreSize(elemBitWidth);
+  int maxChunkSize = uArchInstruction->getMaxLaneAccessSizeBytes();
   auto [defLaneLayout, defLaneData] = computeScatterIOLaneLayoutAndData(
       specifiedInstData, subgroupSize, maxChunkSize);
   if (!isValidLaneLayout(specifiedInstData, defLaneLayout, defLaneData))
@@ -1999,31 +2003,40 @@ xegpu::completeDpasLaneLayoutFromInstData(xegpu::DistributeLayoutAttr aLayout,
   if (!uArchInstruction)
     return std::nullopt;
   auto subgroupSize = uArch->getSubgroupSize();
-
-  auto [laneLayoutA, laneDataA] = compute2DBlockIOLaneLayoutAndData(
-      aTy.getShape(), subgroupSize,
-      aTy.getElementType().getIntOrFloatBitWidth(),
-      uArchInstruction->getPackedFormatBitSizeA());
-  auto [laneLayoutB, laneDataB] = compute2DBlockIOLaneLayoutAndData(
-      bTy.getShape(), subgroupSize,
-      bTy.getElementType().getIntOrFloatBitWidth(),
-      uArchInstruction->getPackedFormatBitSizeB(), /*vnni=*/true);
-  auto [laneLayoutCD, laneDataCD] = compute2DBlockIOLaneLayoutAndData(
-      cdTy.getShape(), subgroupSize,
-      cdTy.getElementType().getIntOrFloatBitWidth(),
-      cdTy.getElementType().getIntOrFloatBitWidth());
+  llvm::SmallVector<int64_t> laneLayoutA, laneDataA, laneLayoutB, laneDataB,
+      laneLayoutCD, laneDataCD;
   SmallVector<int64_t> instDataA = aLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> instDataB = bLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> instDataCD = cdLayout.getEffectiveInstDataAsInt();
+
+  if (isa<xegpu::uArch::Xe2, xegpu::uArch::Xe3>(uArch)) {
+    std::tie(laneLayoutA, laneDataA) = compute2DBlockIOLaneLayoutAndData(
+        aTy.getShape(), subgroupSize,
+        aTy.getElementType().getIntOrFloatBitWidth(),
+        uArchInstruction->getPackedFormatBitSizeA());
+    std::tie(laneLayoutB, laneDataB) = compute2DBlockIOLaneLayoutAndData(
+        bTy.getShape(), subgroupSize,
+        bTy.getElementType().getIntOrFloatBitWidth(),
+        uArchInstruction->getPackedFormatBitSizeB(), /*vnni=*/true);
+    std::tie(laneLayoutCD, laneDataCD) = compute2DBlockIOLaneLayoutAndData(
+        cdTy.getShape(), subgroupSize,
+        cdTy.getElementType().getIntOrFloatBitWidth(),
+        cdTy.getElementType().getIntOrFloatBitWidth());
+  } else {
+    assert(false && "Unsupported uArch for DPAS lane layout completion");
+  }
+
   if (!isValidLaneLayout(instDataA, laneLayoutA, laneDataA) ||
       !isValidLaneLayout(instDataB, laneLayoutB, laneDataB) ||
       !isValidLaneLayout(instDataCD, laneLayoutCD, laneDataCD))
     return std::nullopt;
   return std::make_tuple(
-      buildInstDataLayoutWithLane(context, instDataA, laneLayoutA, laneDataA),
-      buildInstDataLayoutWithLane(context, instDataB, laneLayoutB, laneDataB),
-      buildInstDataLayoutWithLane(context, instDataCD, laneLayoutCD,
-                                  laneDataCD));
+      buildInstDataLayoutWithLane(context, instDataA, laneLayoutA, laneDataA,
+                                  aLayout.getOrder()),
+      buildInstDataLayoutWithLane(context, instDataB, laneLayoutB, laneDataB,
+                                  bLayout.getOrder()),
+      buildInstDataLayoutWithLane(context, instDataCD, laneLayoutCD, laneDataCD,
+                                  cdLayout.getOrder()));
 }
 
 /// Like completeDpasLaneLayoutFromInstData, but for dpas_mx: also re-derives

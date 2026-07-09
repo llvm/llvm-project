@@ -74,7 +74,7 @@ public:
     ppc64,       // PPC64: powerpc64, ppu
     ppc64le,     // PPC64LE: powerpc64le
     r600,        // R600: AMD GPUs HD2XXX - HD6XXX
-    amdgcn,      // AMDGCN: AMD GCN GPUs
+    amdgpu,      // AMDGPU: AMD GCN+ GPUs
     riscv32,     // RISC-V (32-bit, little endian): riscv32
     riscv64,     // RISC-V (64-bit, little endian): riscv64
     riscv32be,   // RISC-V (32-bit, big endian): riscv32be
@@ -159,6 +159,8 @@ public:
     AArch64SubArch_arm64ec,
     AArch64SubArch_lfi,
 
+    X86_64SubArch_lfi,
+
     KalimbaSubArch_v3,
     KalimbaSubArch_v4,
     KalimbaSubArch_v5,
@@ -188,6 +190,90 @@ public:
     DXILSubArch_v1_8,
     DXILSubArch_v1_9,
     LatestDXILSubArch = DXILSubArch_v1_9,
+
+    // AMDGPU sub-arch
+    AMDGPUSubArch6,
+    AMDGPUSubArch600,
+    AMDGPUSubArch601,
+    AMDGPUSubArch602,
+
+    AMDGPUSubArch7,
+    AMDGPUSubArch700,
+    AMDGPUSubArch701,
+    AMDGPUSubArch702,
+    AMDGPUSubArch703,
+    AMDGPUSubArch704,
+    AMDGPUSubArch705,
+
+    AMDGPUSubArch8,
+    AMDGPUSubArch801,
+    AMDGPUSubArch802,
+    AMDGPUSubArch803,
+    AMDGPUSubArch805,
+
+    // 810 is its own major arch.
+    AMDGPUSubArch810,
+
+    AMDGPUSubArch9,
+    AMDGPUSubArch900,
+    AMDGPUSubArch902,
+    AMDGPUSubArch904,
+    AMDGPUSubArch906,
+    AMDGPUSubArch909,
+    AMDGPUSubArch90C,
+
+    // 908 and 90a are not covered by a generic target, and are their own major
+    // subarches.
+    AMDGPUSubArch908,
+    AMDGPUSubArch90A,
+
+    AMDGPUSubArch9_4,
+    AMDGPUSubArch942,
+    AMDGPUSubArch950,
+
+    AMDGPUSubArch10_1,
+    AMDGPUSubArch1010,
+    AMDGPUSubArch1011,
+    AMDGPUSubArch1012,
+    AMDGPUSubArch1013,
+
+    AMDGPUSubArch10_3,
+    AMDGPUSubArch1030,
+    AMDGPUSubArch1031,
+    AMDGPUSubArch1032,
+    AMDGPUSubArch1033,
+    AMDGPUSubArch1034,
+    AMDGPUSubArch1035,
+    AMDGPUSubArch1036,
+
+    AMDGPUSubArch11,
+    AMDGPUSubArch1100,
+    AMDGPUSubArch1101,
+    AMDGPUSubArch1102,
+    AMDGPUSubArch1103,
+    AMDGPUSubArch1150,
+    AMDGPUSubArch1151,
+    AMDGPUSubArch1152,
+    AMDGPUSubArch1153,
+    AMDGPUSubArch1154,
+
+    AMDGPUSubArch11_7,
+    AMDGPUSubArch1170,
+    AMDGPUSubArch1171,
+    AMDGPUSubArch1172,
+
+    AMDGPUSubArch12,
+    AMDGPUSubArch1200,
+    AMDGPUSubArch1201,
+
+    AMDGPUSubArch12_5,
+    AMDGPUSubArch1250,
+    AMDGPUSubArch1251,
+
+    AMDGPUSubArch13,
+    AMDGPUSubArch1310,
+    FirstAMDGPUSubArch = AMDGPUSubArch6,
+    LastAMDGPUSubArch = AMDGPUSubArch1310
   };
   enum VendorType {
     UnknownVendor,
@@ -387,21 +473,10 @@ public:
   LLVM_ABI Triple(ArchType A, SubArchType SA, VendorType V, OSType OS,
                   EnvironmentType E, ObjectFormatType OF);
 
-  bool operator==(const Triple &Other) const {
-    return Arch == Other.Arch && SubArch == Other.SubArch &&
-           Vendor == Other.Vendor && OS == Other.OS &&
-           Environment == Other.Environment &&
-           ObjectFormat == Other.ObjectFormat;
-  }
-
+  LLVM_ABI bool operator==(const Triple &Other) const;
   bool operator!=(const Triple &Other) const { return !(*this == Other); }
 
-  bool operator<(const Triple &Other) const {
-    return std::tie(Arch, SubArch, Vendor, OS, Environment, ObjectFormat,
-                    Data) < std::tie(Other.Arch, Other.SubArch, Other.Vendor,
-                                     Other.OS, Other.Environment,
-                                     Other.ObjectFormat, Other.Data);
-  }
+  LLVM_ABI bool operator<(const Triple &Other) const;
 
   /// @}
   /// @name Normalization
@@ -698,6 +773,12 @@ public:
   /// Tests whether the OS is Windows.
   bool isOSWindows() const { return getOS() == Triple::Win32; }
 
+  /// Tests whether the OS is Windows or UEFI. These targets generally share
+  /// Windows low-level platform ABI conventions, but this does not imply
+  /// support for a hosted Windows environment or its runtime libraries. Use
+  /// object format or environment predicates when those properties matter.
+  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
+
   /// Checks if the environment is MSVC.
   bool isKnownWindowsMSVCEnvironment() const {
     return isOSWindows() && getEnvironment() == Triple::MSVC;
@@ -905,9 +986,9 @@ public:
   }
 
   /// Tests whether the target is AMDGCN
-  bool isAMDGCN() const { return getArch() == Triple::amdgcn; }
+  bool isAMDGCN() const { return getArch() == Triple::amdgpu; }
 
-  bool isAMDGPU() const { return getArch() == Triple::r600 || isAMDGCN(); }
+  bool isAMDGPU() const { return isAMDGCN() || getArch() == Triple::r600; }
 
   /// Tests whether the target is Thumb (little and big endian).
   bool isThumb() const {
@@ -921,8 +1002,10 @@ public:
 
   /// Tests whether the target is LFI.
   bool isLFI() const {
-    return getArch() == Triple::aarch64 &&
-           getSubArch() == Triple::AArch64SubArch_lfi;
+    return (getArch() == Triple::aarch64 &&
+            getSubArch() == Triple::AArch64SubArch_lfi) ||
+           (getArch() == Triple::x86_64 &&
+            getSubArch() == Triple::X86_64SubArch_lfi);
   }
 
   /// Tests whether the target supports the EHABI exception
@@ -1339,6 +1422,11 @@ public:
   /// Parse anything recognized as an architecture for the first field of the
   /// triple.
   LLVM_ABI static ArchType parseArch(StringRef Str);
+
+  /// Parse the subarchitecture encoded in the first (architecture) field of the
+  /// triple (e.g. "amdgpu9.00" -> AMDGPUSubArch900). Returns NoSubArch if the
+  /// string does not encode a recognized subarchitecture.
+  LLVM_ABI static SubArchType parseSubArch(StringRef Str);
 
   /// @}
 

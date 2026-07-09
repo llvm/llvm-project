@@ -43,9 +43,10 @@ enum class MemoryObjectState {
   //   -> Dead (after the end of lifetime of an alloca)
   //   -> Freed (after free is called on a heap object)
   Alive,
-  // This memory object is out of lifetime. It is OK to perform
-  // operations that do not access its content, e.g., getelementptr.
-  // Otherwise, an immediate UB occurs.
+  // This memory object is out of lifetime. Its contents are poison. Loads and
+  // memory transfers from it are allowed and propagate poison, stores to it
+  // cause immediate UB, and non-accessing operations such as getelementptr are
+  // allowed.
   // Valid transition:
   //   -> Alive (after the start of lifetime of an alloca)
   Dead,
@@ -201,6 +202,17 @@ public:
 using ConstBytesView = BytesView<ArrayRef<Byte>>;
 using MutableBytesView = BytesView<MutableArrayRef<Byte>>;
 
+class MaterializedConstant : public AnyValue {
+  bool Cacheable;
+
+public:
+  MaterializedConstant(std::nullopt_t) : Cacheable(false) {}
+  MaterializedConstant(AnyValue V, bool Cacheable)
+      : AnyValue(std::move(V)), Cacheable(Cacheable) {}
+
+  bool isCacheable() const { return Cacheable; }
+};
+
 /// The global context for the interpreter.
 /// It tracks global state such as heap memory objects and floating point
 /// environment.
@@ -290,7 +302,11 @@ class Context {
 
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
-  std::map<Constant *, AnyValue> ConstCache;
+  std::map<Constant *, MaterializedConstant> ConstCache;
+  // Temporary buffer for non-cacheable constants (e.g.,
+  // undef/ptrtoint/inttoptr).
+  SpecificBumpPtrAllocator<MaterializedConstant> NoncacheableConstBuffer;
+  size_t NoncacheableConstCount = 0;
   DenseMap<Function *, Pointer> FuncAddrMap;
   DenseMap<BasicBlock *, Pointer> BlockAddrMap;
   DenseMap<uint64_t, std::pair<Function *, IntrusiveRefCntPtr<MemoryObject>>>
@@ -298,8 +314,8 @@ class Context {
   DenseMap<uint64_t, std::pair<BasicBlock *, IntrusiveRefCntPtr<MemoryObject>>>
       ValidBlockTargets;
   DenseMap<GlobalVariable *, Pointer> GlobalAddrMap;
-  std::optional<AnyValue> getConstantValueImpl(Constant *C);
-  std::optional<AnyValue> evaluateConstantExpression(ConstantExpr *CE);
+  MaterializedConstant getConstantValueImpl(Constant *C);
+  MaterializedConstant evaluateConstantExpression(ConstantExpr *CE);
 
   // Floating-point environment
   RoundingMode CurrentRoundingMode = RoundingMode::NearestTiesToEven;
@@ -361,7 +377,12 @@ public:
   uint64_t getEffectiveTypeAllocSize(Type *Ty);
   uint64_t getEffectiveTypeStoreSize(Type *Ty);
 
-  const AnyValue *getConstantValue(Constant *C);
+  /// Returns a pointer to an evaluated constant \p C. If it cannot be
+  /// evaluated, returns nullptr. Note that it returns a pointer to a temporary
+  /// buffer when \p C is not context-free. The caller is responsible for
+  /// calling resetNoncacheableConstantBuffer after all references are dropped.
+  const MaterializedConstant *getConstantValue(Constant *C);
+  void resetNoncacheableConstantBuffer();
   IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind,
