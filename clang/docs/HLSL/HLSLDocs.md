@@ -1,5 +1,4 @@
-```{title} Clang HLSL Documentation
-```
+# Clang HLSL Documentation
 
 ```{toctree}
 :maxdepth: 1
