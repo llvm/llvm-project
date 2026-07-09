@@ -983,12 +983,8 @@ InstructionCost GCNTTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
     TTI::OperandValueInfo Op2Info, const Instruction *I) const {
-  // FIXME: Commit 0967957d7a94 changed the base implementation to return a
-  // cost that scales with vector width for non-throughput cost kinds. This
-  // causes SimplifyCFG's speculativelyExecuteBB (which uses TCK_SizeAndLatency)
-  // to stop folding branches to selects. We want the fold for AMDGPU, and
-  // reverting to the pre-0967957d7a94 behavior seems appropriate since
-  // SimplifyCFG lacks the context for a thorough profitability analysis.
+  // For size and latency cost kinds, return a low cost independent of vector
+  // width to enable SimplifyCFG's speculativelyExecuteBB optimization.
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
 
