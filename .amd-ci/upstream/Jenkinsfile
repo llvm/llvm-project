@@ -105,18 +105,19 @@ if (
 }
 
 Boolean disableStaging = false, disableRelease = true
-Boolean timerTrigger = currentBuild.getBuildCauses('hudson.triggers.TimerTrigger$TimerTriggerCause')
+// Timer (cron) trigger removed (see the note above the properties block), so a
+// timer-triggered run is no longer possible and the former '!timerTrigger'
+// guard has been dropped from this condition.
 if (
     ((disableStaging &&
       actualTarget == stagingBranch) ||
      (disableRelease &&
       targetIsRelBranch)) &&
-        !currentBuild.getBuildCauses(manualCause) &&
-        !timerTrigger
+        !currentBuild.getBuildCauses(manualCause)
 ) {
     String cause = currentBuild.getBuildCauses().shortDescription // groovylint-disable-line UnnecessaryGetter
     echo 'Pipeline for base ' + actualTarget + ' not built for cause ' + cause
-    echo 'Pipeline only runs if manually or timer triggered.'
+    echo 'Pipeline only runs if manually triggered.'
     currentBuild.result = notBuiltResultStr
     return this
 }
@@ -129,8 +130,7 @@ Boolean runDownstream = (
 
 String space = ' ', andChain = '&&', underScore = '_', slash = '/', dash = '-'
 String gitCommitEnv = 'GIT_COMMIT', bashCmd = 'bash'
-String skipStr = 'Skipping build.', contStr = 'Continuing build.'
-String contTimerReason = 'Timer trigger.' + space + contStr
+String skipStr = 'Skipping build.'
 
 List propsList = []
 if (isPrBranch) { // Sic; don't want postsub on upstream-main to go through this block.
@@ -146,11 +146,13 @@ if (isPrBranch) { // Sic; don't want postsub on upstream-main to go through this
         )
     )
 }
-if (postsub) {
-    propsList.add(
-        pipelineTriggers([cron('TZ=Asia/Kolkata\nH 0 * * *')])
-    )
-}
+// Timer (cron) trigger disabled: this job now runs on push/merge events only.
+// Previously postsub added a daily cron ('TZ=Asia/Kolkata\nH 0 * * *') which
+// caused a second daily run alongside the push-to-upstream-main build (the
+// upstream-main branch already receives a daily merge from the llvm_sync job).
+//
+// Restore the timerTrigger detection, the '!timerTrigger' guard,
+//  and the merge-status override that were removed alongside this block.
 
 // ===========================================================================
 // Parallel SPEC Build CI parameters
@@ -603,13 +605,9 @@ try {
                     }
                     if (mstat && mstat != 'None') {
                         echo('Merge status is ' + mstat)
-                        if (timerTrigger) {
-                            echo(contTimerReason)
-                        } else {
-                            echo(skipStr)
-                            isSkippableMerge = true
-                            return // From stage
-                        }
+                        echo(skipStr)
+                        isSkippableMerge = true
+                        return // From stage
                     }
                 }
             }
