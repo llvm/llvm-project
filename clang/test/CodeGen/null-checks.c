@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -fms-kernel -O2 -triple x86_64-pc-windows-msvc %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -O2 -triple x86_64-pc-windows-msvc %s -emit-llvm -o - | FileCheck %s --check-prefix=NOCHECK
 // RUN: %clang_cc1 -fms-kernel -O2 -triple x86_64-pc-windows-msvc -fdelete-null-pointer-checks %s -emit-llvm -o - | FileCheck %s --check-prefix=NOCHECK
+// RUN: %clang_cc1 -O2 -triple x86_64-pc-windows-msvc -fdelete-null-pointer-checks -fms-kernel %s -emit-llvm -o - | FileCheck %s --check-prefix=NOCHECK
 
 // CHECK-LABEL: i32 @process
 // CHECK-NEXT:  entry:
