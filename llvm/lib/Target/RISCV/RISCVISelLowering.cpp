@@ -11856,7 +11856,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_pasub:
   case Intrinsic::riscv_pasubu:
   case Intrinsic::riscv_pabd:
-  case Intrinsic::riscv_pabdu: {
+  case Intrinsic::riscv_pabdu:
+  case Intrinsic::riscv_psabs: {
     unsigned Opc;
     switch (IntNo) {
     case Intrinsic::riscv_paadd:
@@ -11877,7 +11878,13 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     case Intrinsic::riscv_pabdu:
       Opc = ISD::ABDU;
       break;
+    case Intrinsic::riscv_psabs:
+      Opc = RISCVISD::PSABS;
+      break;
     }
+
+    if (IntNo == Intrinsic::riscv_psabs)
+      return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1));
 
     return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
@@ -15882,7 +15889,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_pssa:
     case Intrinsic::riscv_paas:
     case Intrinsic::riscv_pasa:
-    case Intrinsic::riscv_pmerge: {
+    case Intrinsic::riscv_pmerge:
+    case Intrinsic::riscv_psabs: {
       EVT VT = N->getValueType(0);
       if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
         return;
@@ -15906,6 +15914,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         break;
       case Intrinsic::riscv_pabdu:
         Opc = ISD::ABDU;
+        break;
+      case Intrinsic::riscv_psabs:
+        Opc = RISCVISD::PSABS;
         break;
       default:
         // pas/psa/psas/pssa/paas/pasa and pmerge: re-emit at the widened type
@@ -19902,14 +19913,14 @@ static SDValue performReverseEVLCombine(SDNode *N,
   SmallVector<SDValue> Worklist = {Op};
   while (!Worklist.empty()) {
     SDValue X = Worklist.pop_back_val();
+    if (DAG.isSplatValue(X))
+      continue;
     if (!X.hasOneUser())
       return SDValue();
     if (auto *VPL = dyn_cast<VPLoadSDNode>(X)) {
       if (VPLoad && VPLoad != VPL)
         return SDValue();
       VPLoad = VPL;
-    } else if (DAG.isSplatValue(X)) {
-      continue;
     } else if (DAG.getTargetLoweringInfo().isBinOp(X.getOpcode()) &&
                X->getNumValues() == 1) {
       append_range(Worklist, X->op_values());
