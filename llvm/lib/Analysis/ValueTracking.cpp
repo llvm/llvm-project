@@ -308,6 +308,7 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
 
 static bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
                            const SimplifyQuery &Q, unsigned Depth);
+static const Value *getOperandWithSameZeroTest(const Value *V);
 
 bool llvm::isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
                               unsigned Depth) {
@@ -3605,13 +3606,13 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     }
 
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      if (const Value *Op = getOperandWithSameZeroTest(II))
+        return isKnownNonZero(Op, DemandedElts, Q, Depth);
+
       switch (II->getIntrinsicID()) {
       case Intrinsic::sshl_sat:
       case Intrinsic::ushl_sat:
       case Intrinsic::abs:
-      case Intrinsic::bitreverse:
-      case Intrinsic::bswap:
-      case Intrinsic::ctpop:
         return isKnownNonZero(II->getArgOperand(0), DemandedElts, Q, Depth);
         // NB: We don't do usub_sat here as in any case we can prove its
         // non-zero, we will fold it to `sub nuw` in InstCombine.
@@ -10744,23 +10745,101 @@ void llvm::findValuesAffectedByCondition(
   }
 }
 
-const Value *llvm::stripNullTest(const Value *V) {
-  // (X >> C) or/add (X & mask(C) != 0)
-  if (const auto *BO = dyn_cast<BinaryOperator>(V)) {
-    if (BO->getOpcode() == Instruction::Add ||
-        BO->getOpcode() == Instruction::Or) {
-      const Value *X;
-      const APInt *C1, *C2;
-      if (match(BO, m_c_BinOp(m_LShr(m_Value(X), m_APInt(C1)),
-                              m_ZExt(m_SpecificICmp(
-                                  ICmpInst::ICMP_NE,
-                                  m_And(m_Deferred(X), m_LowBitMask(C2)),
-                                  m_Zero())))) &&
-          C2->popcount() == C1->getZExtValue())
-        return X;
-    }
+static const Value *getOperandWithSameZeroTest(const Value *V) {
+  const auto *II = dyn_cast<IntrinsicInst>(V);
+  if (!II)
+    return nullptr;
+
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::bitreverse:
+  case Intrinsic::bswap:
+  case Intrinsic::ctpop:
+    // Return only operands with the same per-lane zero-test as the original
+    // value:
+    //
+    //   (Op X) == 0  iff  X == 0
+    //
+    // This is intentionally stronger than preserving aggregate non-zeroness.
+    // For example, a lane-reordering intrinsic may preserve whether an entire
+    // vector is non-zero, but it would not preserve the per-lane result of
+    // `icmp eq/ne V, zeroinitializer`. Keep this list limited to operations
+    // that preserve the zero-test independently in every scalar lane.
+    return II->getArgOperand(0);
+  default:
+    return nullptr;
   }
+}
+
+static const Value *stripExistingNullTestPattern(const Value *V) {
+  // This preserves the historical stripNullTest fold:
+  //
+  //   (X >> C) or/add zext((X & lowmask(C)) != 0)
+  //
+  // The expression is zero exactly when X is zero: the shift covers the high
+  // bits and the low-mask test covers the bits shifted out. Keep this as a
+  // separate helper so the zero-test-root logic below can use it as another
+  // source of root equivalence without mixing it into the OR algebra.
+  const auto *BO = dyn_cast<BinaryOperator>(V);
+  if (!BO || (BO->getOpcode() != Instruction::Add &&
+              BO->getOpcode() != Instruction::Or))
+    return nullptr;
+
+  const Value *X;
+  const APInt *C1, *C2;
+  if (match(BO, m_c_BinOp(m_LShr(m_Value(X), m_APInt(C1)),
+                          m_ZExt(m_SpecificICmp(
+                              ICmpInst::ICMP_NE,
+                              m_And(m_Deferred(X), m_LowBitMask(C2)),
+                              m_Zero())))) &&
+      C2->popcount() == C1->getZExtValue())
+    return X;
+
   return nullptr;
+}
+
+static const Value *getZeroTestRoot(const Value *V, unsigned Depth = 0) {
+  if (Depth >= MaxAnalysisRecursionDepth)
+    return V;
+
+  // First peel operations whose result has the exact same zero-test as one
+  // operand. This step does not inspect how the value is used; it only records
+  // a local equivalence for `V == 0`.
+  if (const Value *X = getOperandWithSameZeroTest(V))
+    return getZeroTestRoot(X, Depth + 1);
+
+  // Then preserve existing stripNullTest knowledge as another zero-test root.
+  // Recurse so a future root can still be stripped through a chain of such
+  // expressions without duplicating the caller-side logic.
+  if (const Value *X = stripExistingNullTestPattern(V))
+    return getZeroTestRoot(X, Depth + 1);
+
+  const auto *BO = dyn_cast<BinaryOperator>(V);
+  if (!BO || BO->getOpcode() != Instruction::Or)
+    return V;
+
+  const Value *LHS = getZeroTestRoot(BO->getOperand(0), Depth + 1);
+  const Value *RHS = getZeroTestRoot(BO->getOperand(1), Depth + 1);
+
+  // The only expression-level algebra modeled here is bitwise OR:
+  //
+  //   Z(A | B) = Z(A) && Z(B), where Z(V) is `V == 0`.
+  //
+  // If both operands reduce to the same root X, the conjunction is idempotent:
+  //
+  //   Z(A | B) = Z(X) && Z(X) = Z(X)
+  //
+  // If the roots differ, this helper deliberately gives up. That keeps this a
+  // small canonicalization for common zero-test roots, not a general boolean
+  // expression solver.
+  if (LHS == RHS)
+    return LHS;
+
+  return V;
+}
+
+const Value *llvm::stripNullTest(const Value *V) {
+  const Value *Root = getZeroTestRoot(V);
+  return Root != V ? Root : nullptr;
 }
 
 Value *llvm::stripNullTest(Value *V) {
