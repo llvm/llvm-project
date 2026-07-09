@@ -400,6 +400,50 @@ exit:                                              ; preds = %outer.loop
   ret i8 %crc.outer
 }
 
+define i16 @crc16.be.tc8.misalign(i8 %msg, i16 %checksum) {
+; CHECK-LABEL: define i16 @crc16.be.tc8.misalign(
+; CHECK-SAME: i8 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CRC2:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC2]], 8
+; CHECK-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
+; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i64
+; CHECK-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.8, i64 [[INDEXER_EXT]]
+; CHECK-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
+; CHECK-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
+; CHECK-NEXT:    [[CRC_NEXT3]] = xor i16 [[CRC_BE_SHIFT]], [[TBL_LD]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 0
+; CHECK-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT3]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i8 [ %msg, %entry ], [ %data.next, %loop ]
+  %crc.trunc = trunc i16 %crc to i8
+  %xor.data.crc = xor i8 %data, %crc.trunc
+  %data.next = shl i8 %data, 1
+  %check.sb = icmp sge i8 %xor.data.crc, 0
+  %crc.shl = shl i16 %crc, 1
+  %xor = xor i16 %crc.shl, 4129
+  %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
 define i16 @crc16.be.tc16(i16 %msg, i16 %checksum) {
 ; CHECK-LABEL: define i16 @crc16.be.tc16(
 ; CHECK-SAME: i16 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) {
@@ -415,7 +459,7 @@ define i16 @crc16.be.tc16(i16 %msg, i16 %checksum) {
 ; CHECK-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC_DATA_INDEXER]], 8
 ; CHECK-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
 ; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i64
-; CHECK-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.8, i64 [[INDEXER_EXT]]
+; CHECK-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.9, i64 [[INDEXER_EXT]]
 ; CHECK-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
 ; CHECK-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
 ; CHECK-NEXT:    [[CRC_NEXT3]] = xor i16 [[CRC_BE_SHIFT]], [[TBL_LD]]
@@ -441,50 +485,6 @@ loop:                                              ; preds = %loop, %entry
   %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %crc.xor
   %iv.next = add nuw nsw i8 %iv, 1
   %exit.cond = icmp samesign ult i8 %iv, 15
-  br i1 %exit.cond, label %loop, label %exit
-
-exit:                                              ; preds = %loop
-  ret i16 %crc.next
-}
-
-define i16 @crc16.be.tc8.misalign(i8 %msg, i16 %checksum) {
-; CHECK-LABEL: define i16 @crc16.be.tc8.misalign(
-; CHECK-SAME: i8 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CRC3:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT3:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CRC2:%.*]] = lshr i16 [[CRC3]], 8
-; CHECK-NEXT:    [[CRC_INDEXER_CAST:%.*]] = trunc i16 [[CRC2]] to i8
-; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[CRC_INDEXER_CAST]] to i64
-; CHECK-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.9, i64 [[INDEXER_EXT]]
-; CHECK-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
-; CHECK-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC3]], 8
-; CHECK-NEXT:    [[CRC_NEXT3]] = xor i16 [[CRC_BE_SHIFT]], [[TBL_LD]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 0
-; CHECK-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT3]], %[[LOOP]] ]
-; CHECK-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
-;
-entry:
-  br label %loop
-
-loop:                                              ; preds = %loop, %entry
-  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
-  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
-  %data = phi i8 [ %msg, %entry ], [ %data.next, %loop ]
-  %crc.trunc = trunc i16 %crc to i8
-  %xor.data.crc = xor i8 %data, %crc.trunc
-  %data.next = shl i8 %data, 1
-  %check.sb = icmp sge i8 %xor.data.crc, 0
-  %crc.shl = shl i16 %crc, 1
-  %xor = xor i16 %crc.shl, 4129
-  %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %xor
-  %iv.next = add nuw nsw i8 %iv, 1
-  %exit.cond = icmp samesign ult i8 %iv, 7
   br i1 %exit.cond, label %loop, label %exit
 
 exit:                                              ; preds = %loop
