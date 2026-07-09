@@ -7,6 +7,7 @@ define void @tail_call() {
   ; DARWIN-LABEL: name: tail_call
   ; DARWIN: bb.1 (%ir-block.0):
   ; DARWIN-NEXT:   TCRETURNdi @simple_fn, 0, csr_darwin_aarch64_aapcs, implicit $sp
+  ;
   ; WINDOWS-LABEL: name: tail_call
   ; WINDOWS: bb.1 (%ir-block.0):
   ; WINDOWS-NEXT:   TCRETURNdi @simple_fn, 0, csr_aarch64_aapcs, implicit $sp
@@ -23,6 +24,7 @@ define void @indirect_tail_call(ptr %func) {
   ; DARWIN-NEXT: {{  $}}
   ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:tcgpr64(p0) = COPY $x0
   ; DARWIN-NEXT:   TCRETURNri [[COPY]](p0), 0, csr_darwin_aarch64_aapcs, implicit $sp
+  ;
   ; WINDOWS-LABEL: name: indirect_tail_call
   ; WINDOWS: bb.1 (%ir-block.0):
   ; WINDOWS-NEXT:   liveins: $x0
@@ -39,15 +41,16 @@ define void @test_outgoing_args(i32 %a) {
   ; DARWIN: bb.1 (%ir-block.0):
   ; DARWIN-NEXT:   liveins: $w0
   ; DARWIN-NEXT: {{  $}}
-  ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; DARWIN-NEXT:   $w0 = COPY [[COPY]](s32)
+  ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; DARWIN-NEXT:   $w0 = COPY [[COPY]](i32)
   ; DARWIN-NEXT:   TCRETURNdi @outgoing_args_fn, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit $w0
+  ;
   ; WINDOWS-LABEL: name: test_outgoing_args
   ; WINDOWS: bb.1 (%ir-block.0):
   ; WINDOWS-NEXT:   liveins: $w0
   ; WINDOWS-NEXT: {{  $}}
-  ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; WINDOWS-NEXT:   $w0 = COPY [[COPY]](s32)
+  ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; WINDOWS-NEXT:   $w0 = COPY [[COPY]](i32)
   ; WINDOWS-NEXT:   TCRETURNdi @outgoing_args_fn, 0, csr_aarch64_aapcs, implicit $sp, implicit $w0
   tail call void @outgoing_args_fn(i32 %a)
   ret void
@@ -62,33 +65,50 @@ define void @test_outgoing_stack_args([8 x <2 x double>], <4 x half> %arg) {
   ; DARWIN: bb.1 (%ir-block.1):
   ; DARWIN-NEXT:   liveins: $q0, $q1, $q2, $q3, $q4, $q5, $q6, $q7
   ; DARWIN-NEXT: {{  $}}
-  ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-  ; DARWIN-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
-  ; DARWIN-NEXT:   [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
-  ; DARWIN-NEXT:   [[COPY4:%[0-9]+]]:_(<2 x s64>) = COPY $q4
-  ; DARWIN-NEXT:   [[COPY5:%[0-9]+]]:_(<2 x s64>) = COPY $q5
-  ; DARWIN-NEXT:   [[COPY6:%[0-9]+]]:_(<2 x s64>) = COPY $q6
-  ; DARWIN-NEXT:   [[COPY7:%[0-9]+]]:_(<2 x s64>) = COPY $q7
+  ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+  ; DARWIN-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY]](<2 x i64>)
+  ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
+  ; DARWIN-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY1]](<2 x i64>)
+  ; DARWIN-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x i64>) = COPY $q2
+  ; DARWIN-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY2]](<2 x i64>)
+  ; DARWIN-NEXT:   [[COPY3:%[0-9]+]]:_(<2 x i64>) = COPY $q3
+  ; DARWIN-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY3]](<2 x i64>)
+  ; DARWIN-NEXT:   [[COPY4:%[0-9]+]]:_(<2 x i64>) = COPY $q4
+  ; DARWIN-NEXT:   [[BITCAST4:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY4]](<2 x i64>)
+  ; DARWIN-NEXT:   [[COPY5:%[0-9]+]]:_(<2 x i64>) = COPY $q5
+  ; DARWIN-NEXT:   [[BITCAST5:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY5]](<2 x i64>)
+  ; DARWIN-NEXT:   [[COPY6:%[0-9]+]]:_(<2 x i64>) = COPY $q6
+  ; DARWIN-NEXT:   [[BITCAST6:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY6]](<2 x i64>)
+  ; DARWIN-NEXT:   [[COPY7:%[0-9]+]]:_(<2 x i64>) = COPY $q7
+  ; DARWIN-NEXT:   [[BITCAST7:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY7]](<2 x i64>)
   ; DARWIN-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; DARWIN-NEXT:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (<4 x s16>) from %fixed-stack.0, align 16)
-  ; DARWIN-NEXT:   $d0 = COPY [[LOAD]](<4 x s16>)
+  ; DARWIN-NEXT:   [[LOAD:%[0-9]+]]:_(<4 x f16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (<4 x f16>) from %fixed-stack.0, align 16)
+  ; DARWIN-NEXT:   $d0 = COPY [[LOAD]](<4 x f16>)
   ; DARWIN-NEXT:   TCRETURNdi @outgoing_stack_args_fn, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit $d0
+  ;
   ; WINDOWS-LABEL: name: test_outgoing_stack_args
   ; WINDOWS: bb.1 (%ir-block.1):
   ; WINDOWS-NEXT:   liveins: $q0, $q1, $q2, $q3, $q4, $q5, $q6, $q7
   ; WINDOWS-NEXT: {{  $}}
-  ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; WINDOWS-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-  ; WINDOWS-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
-  ; WINDOWS-NEXT:   [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
-  ; WINDOWS-NEXT:   [[COPY4:%[0-9]+]]:_(<2 x s64>) = COPY $q4
-  ; WINDOWS-NEXT:   [[COPY5:%[0-9]+]]:_(<2 x s64>) = COPY $q5
-  ; WINDOWS-NEXT:   [[COPY6:%[0-9]+]]:_(<2 x s64>) = COPY $q6
-  ; WINDOWS-NEXT:   [[COPY7:%[0-9]+]]:_(<2 x s64>) = COPY $q7
+  ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+  ; WINDOWS-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY]](<2 x i64>)
+  ; WINDOWS-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
+  ; WINDOWS-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY1]](<2 x i64>)
+  ; WINDOWS-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x i64>) = COPY $q2
+  ; WINDOWS-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY2]](<2 x i64>)
+  ; WINDOWS-NEXT:   [[COPY3:%[0-9]+]]:_(<2 x i64>) = COPY $q3
+  ; WINDOWS-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY3]](<2 x i64>)
+  ; WINDOWS-NEXT:   [[COPY4:%[0-9]+]]:_(<2 x i64>) = COPY $q4
+  ; WINDOWS-NEXT:   [[BITCAST4:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY4]](<2 x i64>)
+  ; WINDOWS-NEXT:   [[COPY5:%[0-9]+]]:_(<2 x i64>) = COPY $q5
+  ; WINDOWS-NEXT:   [[BITCAST5:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY5]](<2 x i64>)
+  ; WINDOWS-NEXT:   [[COPY6:%[0-9]+]]:_(<2 x i64>) = COPY $q6
+  ; WINDOWS-NEXT:   [[BITCAST6:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY6]](<2 x i64>)
+  ; WINDOWS-NEXT:   [[COPY7:%[0-9]+]]:_(<2 x i64>) = COPY $q7
+  ; WINDOWS-NEXT:   [[BITCAST7:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY7]](<2 x i64>)
   ; WINDOWS-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; WINDOWS-NEXT:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (<4 x s16>) from %fixed-stack.0, align 16)
-  ; WINDOWS-NEXT:   $d0 = COPY [[LOAD]](<4 x s16>)
+  ; WINDOWS-NEXT:   [[LOAD:%[0-9]+]]:_(<4 x f16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (<4 x f16>) from %fixed-stack.0, align 16)
+  ; WINDOWS-NEXT:   $d0 = COPY [[LOAD]](<4 x f16>)
   ; WINDOWS-NEXT:   TCRETURNdi @outgoing_stack_args_fn, 0, csr_aarch64_aapcs, implicit $sp, implicit $d0
   tail call void @outgoing_stack_args_fn(<4 x half> %arg)
   ret void
@@ -100,55 +120,56 @@ declare i32 @too_big_stack(i64 %x0, i64 %x1, i64 %x2, i64 %x3, i64 %x4, i64 %x5,
 define i32 @test_too_big_stack() {
   ; DARWIN-LABEL: name: test_too_big_stack
   ; DARWIN: bb.1.entry:
-  ; DARWIN-NEXT:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-  ; DARWIN-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 8
-  ; DARWIN-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 9
+  ; DARWIN-NEXT:   [[DEF:%[0-9]+]]:_(i64) = G_IMPLICIT_DEF
+  ; DARWIN-NEXT:   [[C:%[0-9]+]]:_(i8) = G_CONSTANT i8 8
+  ; DARWIN-NEXT:   [[C1:%[0-9]+]]:_(i16) = G_CONSTANT i16 9
   ; DARWIN-NEXT:   ADJCALLSTACKDOWN 4, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
-  ; DARWIN-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; DARWIN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-  ; DARWIN-NEXT:   G_STORE [[C]](s8), [[PTR_ADD]](p0) :: (store (s8) into stack)
-  ; DARWIN-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-  ; DARWIN-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-  ; DARWIN-NEXT:   G_STORE [[C1]](s16), [[PTR_ADD1]](p0) :: (store (s16) into stack + 2, align 1)
-  ; DARWIN-NEXT:   $x0 = COPY [[DEF]](s64)
-  ; DARWIN-NEXT:   $x1 = COPY [[DEF]](s64)
-  ; DARWIN-NEXT:   $x2 = COPY [[DEF]](s64)
-  ; DARWIN-NEXT:   $x3 = COPY [[DEF]](s64)
-  ; DARWIN-NEXT:   $x4 = COPY [[DEF]](s64)
-  ; DARWIN-NEXT:   $x5 = COPY [[DEF]](s64)
-  ; DARWIN-NEXT:   $x6 = COPY [[DEF]](s64)
-  ; DARWIN-NEXT:   $x7 = COPY [[DEF]](s64)
+  ; DARWIN-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; DARWIN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](i64)
+  ; DARWIN-NEXT:   G_STORE [[C]](i8), [[PTR_ADD]](p0) :: (store (i8) into stack)
+  ; DARWIN-NEXT:   [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 2
+  ; DARWIN-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](i64)
+  ; DARWIN-NEXT:   G_STORE [[C1]](i16), [[PTR_ADD1]](p0) :: (store (i16) into stack + 2, align 1)
+  ; DARWIN-NEXT:   $x0 = COPY [[DEF]](i64)
+  ; DARWIN-NEXT:   $x1 = COPY [[DEF]](i64)
+  ; DARWIN-NEXT:   $x2 = COPY [[DEF]](i64)
+  ; DARWIN-NEXT:   $x3 = COPY [[DEF]](i64)
+  ; DARWIN-NEXT:   $x4 = COPY [[DEF]](i64)
+  ; DARWIN-NEXT:   $x5 = COPY [[DEF]](i64)
+  ; DARWIN-NEXT:   $x6 = COPY [[DEF]](i64)
+  ; DARWIN-NEXT:   $x7 = COPY [[DEF]](i64)
   ; DARWIN-NEXT:   BL @too_big_stack, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit-def $w0
   ; DARWIN-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def $sp, implicit $sp
-  ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
-  ; DARWIN-NEXT:   $w0 = COPY [[COPY1]](s32)
+  ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w0
+  ; DARWIN-NEXT:   $w0 = COPY [[COPY1]](i32)
   ; DARWIN-NEXT:   RET_ReallyLR implicit $w0
+  ;
   ; WINDOWS-LABEL: name: test_too_big_stack
   ; WINDOWS: bb.1.entry:
-  ; WINDOWS-NEXT:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-  ; WINDOWS-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 8
-  ; WINDOWS-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 9
+  ; WINDOWS-NEXT:   [[DEF:%[0-9]+]]:_(i64) = G_IMPLICIT_DEF
+  ; WINDOWS-NEXT:   [[C:%[0-9]+]]:_(i8) = G_CONSTANT i8 8
+  ; WINDOWS-NEXT:   [[C1:%[0-9]+]]:_(i16) = G_CONSTANT i16 9
   ; WINDOWS-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
-  ; WINDOWS-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; WINDOWS-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-  ; WINDOWS-NEXT:   G_STORE [[C]](s8), [[PTR_ADD]](p0) :: (store (s8) into stack)
-  ; WINDOWS-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; WINDOWS-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-  ; WINDOWS-NEXT:   G_STORE [[C1]](s16), [[PTR_ADD1]](p0) :: (store (s16) into stack + 8, align 1)
-  ; WINDOWS-NEXT:   $x0 = COPY [[DEF]](s64)
-  ; WINDOWS-NEXT:   $x1 = COPY [[DEF]](s64)
-  ; WINDOWS-NEXT:   $x2 = COPY [[DEF]](s64)
-  ; WINDOWS-NEXT:   $x3 = COPY [[DEF]](s64)
-  ; WINDOWS-NEXT:   $x4 = COPY [[DEF]](s64)
-  ; WINDOWS-NEXT:   $x5 = COPY [[DEF]](s64)
-  ; WINDOWS-NEXT:   $x6 = COPY [[DEF]](s64)
-  ; WINDOWS-NEXT:   $x7 = COPY [[DEF]](s64)
+  ; WINDOWS-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; WINDOWS-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](i64)
+  ; WINDOWS-NEXT:   G_STORE [[C]](i8), [[PTR_ADD]](p0) :: (store (i8) into stack)
+  ; WINDOWS-NEXT:   [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+  ; WINDOWS-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](i64)
+  ; WINDOWS-NEXT:   G_STORE [[C1]](i16), [[PTR_ADD1]](p0) :: (store (i16) into stack + 8, align 1)
+  ; WINDOWS-NEXT:   $x0 = COPY [[DEF]](i64)
+  ; WINDOWS-NEXT:   $x1 = COPY [[DEF]](i64)
+  ; WINDOWS-NEXT:   $x2 = COPY [[DEF]](i64)
+  ; WINDOWS-NEXT:   $x3 = COPY [[DEF]](i64)
+  ; WINDOWS-NEXT:   $x4 = COPY [[DEF]](i64)
+  ; WINDOWS-NEXT:   $x5 = COPY [[DEF]](i64)
+  ; WINDOWS-NEXT:   $x6 = COPY [[DEF]](i64)
+  ; WINDOWS-NEXT:   $x7 = COPY [[DEF]](i64)
   ; WINDOWS-NEXT:   BL @too_big_stack, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit-def $w0
   ; WINDOWS-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-  ; WINDOWS-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
-  ; WINDOWS-NEXT:   $w0 = COPY [[COPY1]](s32)
+  ; WINDOWS-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w0
+  ; WINDOWS-NEXT:   $w0 = COPY [[COPY1]](i32)
   ; WINDOWS-NEXT:   RET_ReallyLR implicit $w0
 entry:
   %call = tail call i32 @too_big_stack(i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i8 8, i16 9)
@@ -163,6 +184,7 @@ define i32 @test_nonvoid_ret() {
   ; DARWIN-LABEL: name: test_nonvoid_ret
   ; DARWIN: bb.1 (%ir-block.0):
   ; DARWIN-NEXT:   TCRETURNdi @nonvoid_ret, 0, csr_darwin_aarch64_aapcs, implicit $sp
+  ;
   ; WINDOWS-LABEL: name: test_nonvoid_ret
   ; WINDOWS: bb.1 (%ir-block.0):
   ; WINDOWS-NEXT:   TCRETURNdi @nonvoid_ret, 0, csr_aarch64_aapcs, implicit $sp
@@ -174,21 +196,22 @@ declare void @varargs(i32, double, i64, ...)
 define void @test_varargs() {
   ; DARWIN-LABEL: name: test_varargs
   ; DARWIN: bb.1 (%ir-block.0):
-  ; DARWIN-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; DARWIN-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
-  ; DARWIN-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-  ; DARWIN-NEXT:   $w0 = COPY [[C]](s32)
-  ; DARWIN-NEXT:   $d0 = COPY [[C1]](s64)
-  ; DARWIN-NEXT:   $x1 = COPY [[C2]](s64)
+  ; DARWIN-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; DARWIN-NEXT:   [[C1:%[0-9]+]]:_(f64) = G_FCONSTANT double 1.000000e+00
+  ; DARWIN-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 12
+  ; DARWIN-NEXT:   $w0 = COPY [[C]](i32)
+  ; DARWIN-NEXT:   $d0 = COPY [[C1]](f64)
+  ; DARWIN-NEXT:   $x1 = COPY [[C2]](i64)
   ; DARWIN-NEXT:   TCRETURNdi @varargs, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit $w0, implicit $d0, implicit $x1
+  ;
   ; WINDOWS-LABEL: name: test_varargs
   ; WINDOWS: bb.1 (%ir-block.0):
-  ; WINDOWS-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; WINDOWS-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
-  ; WINDOWS-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-  ; WINDOWS-NEXT:   $w0 = COPY [[C]](s32)
-  ; WINDOWS-NEXT:   $x1 = COPY [[C1]](s64)
-  ; WINDOWS-NEXT:   $x2 = COPY [[C2]](s64)
+  ; WINDOWS-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; WINDOWS-NEXT:   [[C1:%[0-9]+]]:_(f64) = G_FCONSTANT double 1.000000e+00
+  ; WINDOWS-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 12
+  ; WINDOWS-NEXT:   $w0 = COPY [[C]](i32)
+  ; WINDOWS-NEXT:   $x1 = COPY [[C1]](f64)
+  ; WINDOWS-NEXT:   $x2 = COPY [[C2]](i64)
   ; WINDOWS-NEXT:   TCRETURNdi @varargs, 0, csr_aarch64_aapcs, implicit $sp, implicit $w0, implicit $x1, implicit $x2
   tail call void(i32, double, i64, ...) @varargs(i32 42, double 1.0, i64 12)
   ret void
@@ -201,31 +224,32 @@ define void @test_varargs_2() {
 
   ; DARWIN-LABEL: name: test_varargs_2
   ; DARWIN: bb.1 (%ir-block.0):
-  ; DARWIN-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; DARWIN-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
-  ; DARWIN-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-  ; DARWIN-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 314
+  ; DARWIN-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; DARWIN-NEXT:   [[C1:%[0-9]+]]:_(f64) = G_FCONSTANT double 1.000000e+00
+  ; DARWIN-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 12
+  ; DARWIN-NEXT:   [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 314
   ; DARWIN-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
-  ; DARWIN-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; DARWIN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s64)
-  ; DARWIN-NEXT:   G_STORE [[C3]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 1)
-  ; DARWIN-NEXT:   $w0 = COPY [[C]](s32)
-  ; DARWIN-NEXT:   $d0 = COPY [[C1]](s64)
-  ; DARWIN-NEXT:   $x1 = COPY [[C2]](s64)
+  ; DARWIN-NEXT:   [[C4:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; DARWIN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](i64)
+  ; DARWIN-NEXT:   G_STORE [[C3]](i64), [[PTR_ADD]](p0) :: (store (i64) into stack, align 1)
+  ; DARWIN-NEXT:   $w0 = COPY [[C]](i32)
+  ; DARWIN-NEXT:   $d0 = COPY [[C1]](f64)
+  ; DARWIN-NEXT:   $x1 = COPY [[C2]](i64)
   ; DARWIN-NEXT:   BL @varargs, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
   ; DARWIN-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   RET_ReallyLR
+  ;
   ; WINDOWS-LABEL: name: test_varargs_2
   ; WINDOWS: bb.1 (%ir-block.0):
-  ; WINDOWS-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; WINDOWS-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
-  ; WINDOWS-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-  ; WINDOWS-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 314
-  ; WINDOWS-NEXT:   $w0 = COPY [[C]](s32)
-  ; WINDOWS-NEXT:   $x1 = COPY [[C1]](s64)
-  ; WINDOWS-NEXT:   $x2 = COPY [[C2]](s64)
-  ; WINDOWS-NEXT:   $x3 = COPY [[C3]](s64)
+  ; WINDOWS-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; WINDOWS-NEXT:   [[C1:%[0-9]+]]:_(f64) = G_FCONSTANT double 1.000000e+00
+  ; WINDOWS-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 12
+  ; WINDOWS-NEXT:   [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 314
+  ; WINDOWS-NEXT:   $w0 = COPY [[C]](i32)
+  ; WINDOWS-NEXT:   $x1 = COPY [[C1]](f64)
+  ; WINDOWS-NEXT:   $x2 = COPY [[C2]](i64)
+  ; WINDOWS-NEXT:   $x3 = COPY [[C3]](i64)
   ; WINDOWS-NEXT:   TCRETURNdi @varargs, 0, csr_aarch64_aapcs, implicit $sp, implicit $w0, implicit $x1, implicit $x2, implicit $x3
   tail call void(i32, double, i64, ...) @varargs(i32 42, double 1.0, i64 12, i64 314)
   ret void
@@ -240,53 +264,70 @@ define void @test_varargs_3([8 x <2 x double>], <4 x half> %arg) {
   ; DARWIN: bb.1 (%ir-block.1):
   ; DARWIN-NEXT:   liveins: $q0, $q1, $q2, $q3, $q4, $q5, $q6, $q7
   ; DARWIN-NEXT: {{  $}}
-  ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-  ; DARWIN-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
-  ; DARWIN-NEXT:   [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
-  ; DARWIN-NEXT:   [[COPY4:%[0-9]+]]:_(<2 x s64>) = COPY $q4
-  ; DARWIN-NEXT:   [[COPY5:%[0-9]+]]:_(<2 x s64>) = COPY $q5
-  ; DARWIN-NEXT:   [[COPY6:%[0-9]+]]:_(<2 x s64>) = COPY $q6
-  ; DARWIN-NEXT:   [[COPY7:%[0-9]+]]:_(<2 x s64>) = COPY $q7
+  ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+  ; DARWIN-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY]](<2 x i64>)
+  ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
+  ; DARWIN-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY1]](<2 x i64>)
+  ; DARWIN-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x i64>) = COPY $q2
+  ; DARWIN-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY2]](<2 x i64>)
+  ; DARWIN-NEXT:   [[COPY3:%[0-9]+]]:_(<2 x i64>) = COPY $q3
+  ; DARWIN-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY3]](<2 x i64>)
+  ; DARWIN-NEXT:   [[COPY4:%[0-9]+]]:_(<2 x i64>) = COPY $q4
+  ; DARWIN-NEXT:   [[BITCAST4:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY4]](<2 x i64>)
+  ; DARWIN-NEXT:   [[COPY5:%[0-9]+]]:_(<2 x i64>) = COPY $q5
+  ; DARWIN-NEXT:   [[BITCAST5:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY5]](<2 x i64>)
+  ; DARWIN-NEXT:   [[COPY6:%[0-9]+]]:_(<2 x i64>) = COPY $q6
+  ; DARWIN-NEXT:   [[BITCAST6:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY6]](<2 x i64>)
+  ; DARWIN-NEXT:   [[COPY7:%[0-9]+]]:_(<2 x i64>) = COPY $q7
+  ; DARWIN-NEXT:   [[BITCAST7:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY7]](<2 x i64>)
   ; DARWIN-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; DARWIN-NEXT:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (<4 x s16>) from %fixed-stack.0, align 16)
-  ; DARWIN-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; DARWIN-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
-  ; DARWIN-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-  ; DARWIN-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 314
+  ; DARWIN-NEXT:   [[LOAD:%[0-9]+]]:_(<4 x f16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (<4 x f16>) from %fixed-stack.0, align 16)
+  ; DARWIN-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; DARWIN-NEXT:   [[C1:%[0-9]+]]:_(f64) = G_FCONSTANT double 1.000000e+00
+  ; DARWIN-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 12
+  ; DARWIN-NEXT:   [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 314
   ; DARWIN-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   [[COPY8:%[0-9]+]]:_(p0) = COPY $sp
-  ; DARWIN-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; DARWIN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY8]], [[C4]](s64)
-  ; DARWIN-NEXT:   G_STORE [[C3]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 1)
-  ; DARWIN-NEXT:   $w0 = COPY [[C]](s32)
-  ; DARWIN-NEXT:   $d0 = COPY [[C1]](s64)
-  ; DARWIN-NEXT:   $x1 = COPY [[C2]](s64)
+  ; DARWIN-NEXT:   [[C4:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; DARWIN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY8]], [[C4]](i64)
+  ; DARWIN-NEXT:   G_STORE [[C3]](i64), [[PTR_ADD]](p0) :: (store (i64) into stack, align 1)
+  ; DARWIN-NEXT:   $w0 = COPY [[C]](i32)
+  ; DARWIN-NEXT:   $d0 = COPY [[C1]](f64)
+  ; DARWIN-NEXT:   $x1 = COPY [[C2]](i64)
   ; DARWIN-NEXT:   BL @varargs, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
   ; DARWIN-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   RET_ReallyLR
+  ;
   ; WINDOWS-LABEL: name: test_varargs_3
   ; WINDOWS: bb.1 (%ir-block.1):
   ; WINDOWS-NEXT:   liveins: $q0, $q1, $q2, $q3, $q4, $q5, $q6, $q7
   ; WINDOWS-NEXT: {{  $}}
-  ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; WINDOWS-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-  ; WINDOWS-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
-  ; WINDOWS-NEXT:   [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
-  ; WINDOWS-NEXT:   [[COPY4:%[0-9]+]]:_(<2 x s64>) = COPY $q4
-  ; WINDOWS-NEXT:   [[COPY5:%[0-9]+]]:_(<2 x s64>) = COPY $q5
-  ; WINDOWS-NEXT:   [[COPY6:%[0-9]+]]:_(<2 x s64>) = COPY $q6
-  ; WINDOWS-NEXT:   [[COPY7:%[0-9]+]]:_(<2 x s64>) = COPY $q7
+  ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+  ; WINDOWS-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY]](<2 x i64>)
+  ; WINDOWS-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
+  ; WINDOWS-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY1]](<2 x i64>)
+  ; WINDOWS-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x i64>) = COPY $q2
+  ; WINDOWS-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY2]](<2 x i64>)
+  ; WINDOWS-NEXT:   [[COPY3:%[0-9]+]]:_(<2 x i64>) = COPY $q3
+  ; WINDOWS-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY3]](<2 x i64>)
+  ; WINDOWS-NEXT:   [[COPY4:%[0-9]+]]:_(<2 x i64>) = COPY $q4
+  ; WINDOWS-NEXT:   [[BITCAST4:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY4]](<2 x i64>)
+  ; WINDOWS-NEXT:   [[COPY5:%[0-9]+]]:_(<2 x i64>) = COPY $q5
+  ; WINDOWS-NEXT:   [[BITCAST5:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY5]](<2 x i64>)
+  ; WINDOWS-NEXT:   [[COPY6:%[0-9]+]]:_(<2 x i64>) = COPY $q6
+  ; WINDOWS-NEXT:   [[BITCAST6:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY6]](<2 x i64>)
+  ; WINDOWS-NEXT:   [[COPY7:%[0-9]+]]:_(<2 x i64>) = COPY $q7
+  ; WINDOWS-NEXT:   [[BITCAST7:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY7]](<2 x i64>)
   ; WINDOWS-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; WINDOWS-NEXT:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (<4 x s16>) from %fixed-stack.0, align 16)
-  ; WINDOWS-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-  ; WINDOWS-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
-  ; WINDOWS-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-  ; WINDOWS-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 314
-  ; WINDOWS-NEXT:   $w0 = COPY [[C]](s32)
-  ; WINDOWS-NEXT:   $x1 = COPY [[C1]](s64)
-  ; WINDOWS-NEXT:   $x2 = COPY [[C2]](s64)
-  ; WINDOWS-NEXT:   $x3 = COPY [[C3]](s64)
+  ; WINDOWS-NEXT:   [[LOAD:%[0-9]+]]:_(<4 x f16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (<4 x f16>) from %fixed-stack.0, align 16)
+  ; WINDOWS-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; WINDOWS-NEXT:   [[C1:%[0-9]+]]:_(f64) = G_FCONSTANT double 1.000000e+00
+  ; WINDOWS-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 12
+  ; WINDOWS-NEXT:   [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 314
+  ; WINDOWS-NEXT:   $w0 = COPY [[C]](i32)
+  ; WINDOWS-NEXT:   $x1 = COPY [[C1]](f64)
+  ; WINDOWS-NEXT:   $x2 = COPY [[C2]](i64)
+  ; WINDOWS-NEXT:   $x3 = COPY [[C3]](i64)
   ; WINDOWS-NEXT:   TCRETURNdi @varargs, 0, csr_aarch64_aapcs, implicit $sp, implicit $w0, implicit $x1, implicit $x2, implicit $x3
   tail call void(i32, double, i64, ...) @varargs(i32 42, double 1.0, i64 12, i64 314)
   ret void
@@ -302,6 +343,7 @@ define void @test_bad_call_conv() {
   ; DARWIN-NEXT:   BL @bad_call_conv_fn, csr_aarch64_noregs, implicit-def $lr, implicit $sp
   ; DARWIN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   RET_ReallyLR
+  ;
   ; WINDOWS-LABEL: name: test_bad_call_conv
   ; WINDOWS: bb.1 (%ir-block.0):
   ; WINDOWS-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
@@ -322,6 +364,7 @@ define void @test_byval(ptr byval(i8) %ptr) {
   ; DARWIN-NEXT:   BL @simple_fn, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
   ; DARWIN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   RET_ReallyLR
+  ;
   ; WINDOWS-LABEL: name: test_byval
   ; WINDOWS: bb.1 (%ir-block.0):
   ; WINDOWS-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -345,6 +388,7 @@ define void @test_inreg(ptr inreg %ptr) {
   ; DARWIN-NEXT:   BL @simple_fn, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
   ; DARWIN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   RET_ReallyLR
+  ;
   ; WINDOWS-LABEL: name: test_inreg
   ; WINDOWS: bb.1 (%ir-block.0):
   ; WINDOWS-NEXT:   liveins: $x0
@@ -363,6 +407,7 @@ define void @test_mismatched_caller() {
   ; DARWIN-LABEL: name: test_mismatched_caller
   ; DARWIN: bb.1 (%ir-block.0):
   ; DARWIN-NEXT:   TCRETURNdi @fast_fn, 0, csr_darwin_aarch64_aapcs, implicit $sp
+  ;
   ; WINDOWS-LABEL: name: test_mismatched_caller
   ; WINDOWS: bb.1 (%ir-block.0):
   ; WINDOWS-NEXT:   TCRETURNdi @fast_fn, 0, csr_aarch64_aapcs, implicit $sp
@@ -376,6 +421,7 @@ define void @test_assume() local_unnamed_addr {
   ; DARWIN-LABEL: name: test_assume
   ; DARWIN: bb.1.entry:
   ; DARWIN-NEXT:   TCRETURNdi @nonvoid_ret, 0, csr_darwin_aarch64_aapcs, implicit $sp
+  ;
   ; WINDOWS-LABEL: name: test_assume
   ; WINDOWS: bb.1.entry:
   ; WINDOWS-NEXT:   TCRETURNdi @nonvoid_ret, 0, csr_aarch64_aapcs, implicit $sp
@@ -394,6 +440,7 @@ define void @test_lifetime() local_unnamed_addr {
   ; DARWIN-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.t
   ; DARWIN-NEXT:   LIFETIME_START %stack.0.t
   ; DARWIN-NEXT:   TCRETURNdi @nonvoid_ret, 0, csr_darwin_aarch64_aapcs, implicit $sp
+  ;
   ; WINDOWS-LABEL: name: test_lifetime
   ; WINDOWS: bb.1.entry:
   ; WINDOWS-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.t
@@ -424,6 +471,7 @@ define hidden swiftcc i64 @swiftself_indirect_tail(ptr swiftself %arg) {
   ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:tcgpr64(p0) = COPY $x0
   ; DARWIN-NEXT:   $x20 = COPY [[COPY]](p0)
   ; DARWIN-NEXT:   TCRETURNri [[COPY1]](p0), 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit $x20
+  ;
   ; WINDOWS-LABEL: name: swiftself_indirect_tail
   ; WINDOWS: bb.1 (%ir-block.0):
   ; WINDOWS-NEXT:   liveins: $x20
@@ -451,6 +499,7 @@ define void @foo(ptr) {
   ; DARWIN-NEXT:   [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
   ; DARWIN-NEXT:   $x0 = COPY [[C]](p0)
   ; DARWIN-NEXT:   TCRETURNdi @must_callee, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit $x0
+  ;
   ; WINDOWS-LABEL: name: foo
   ; WINDOWS: bb.1 (%ir-block.1):
   ; WINDOWS-NEXT:   liveins: $x0
@@ -471,23 +520,24 @@ define void @test_tail_call_outgoing_v16f16(<16 x half> %arg) {
   ; DARWIN: bb.1 (%ir-block.0):
   ; DARWIN-NEXT:   liveins: $q0, $q1
   ; DARWIN-NEXT: {{  $}}
-  ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-  ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
-  ; DARWIN-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s16>) = G_CONCAT_VECTORS [[COPY]](<8 x s16>), [[COPY1]](<8 x s16>)
-  ; DARWIN-NEXT:   [[UV:%[0-9]+]]:_(<8 x s16>), [[UV1:%[0-9]+]]:_(<8 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x s16>)
-  ; DARWIN-NEXT:   $q0 = COPY [[UV]](<8 x s16>)
-  ; DARWIN-NEXT:   $q1 = COPY [[UV1]](<8 x s16>)
+  ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(<8 x f16>) = COPY $q0
+  ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:_(<8 x f16>) = COPY $q1
+  ; DARWIN-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x f16>) = G_CONCAT_VECTORS [[COPY]](<8 x f16>), [[COPY1]](<8 x f16>)
+  ; DARWIN-NEXT:   [[UV:%[0-9]+]]:_(<8 x f16>), [[UV1:%[0-9]+]]:_(<8 x f16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x f16>)
+  ; DARWIN-NEXT:   $q0 = COPY [[UV]](<8 x f16>)
+  ; DARWIN-NEXT:   $q1 = COPY [[UV1]](<8 x f16>)
   ; DARWIN-NEXT:   TCRETURNdi @outgoing_v16f16, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit $q0, implicit $q1
+  ;
   ; WINDOWS-LABEL: name: test_tail_call_outgoing_v16f16
   ; WINDOWS: bb.1 (%ir-block.0):
   ; WINDOWS-NEXT:   liveins: $q0, $q1
   ; WINDOWS-NEXT: {{  $}}
-  ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-  ; WINDOWS-NEXT:   [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
-  ; WINDOWS-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s16>) = G_CONCAT_VECTORS [[COPY]](<8 x s16>), [[COPY1]](<8 x s16>)
-  ; WINDOWS-NEXT:   [[UV:%[0-9]+]]:_(<8 x s16>), [[UV1:%[0-9]+]]:_(<8 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x s16>)
-  ; WINDOWS-NEXT:   $q0 = COPY [[UV]](<8 x s16>)
-  ; WINDOWS-NEXT:   $q1 = COPY [[UV1]](<8 x s16>)
+  ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(<8 x f16>) = COPY $q0
+  ; WINDOWS-NEXT:   [[COPY1:%[0-9]+]]:_(<8 x f16>) = COPY $q1
+  ; WINDOWS-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x f16>) = G_CONCAT_VECTORS [[COPY]](<8 x f16>), [[COPY1]](<8 x f16>)
+  ; WINDOWS-NEXT:   [[UV:%[0-9]+]]:_(<8 x f16>), [[UV1:%[0-9]+]]:_(<8 x f16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x f16>)
+  ; WINDOWS-NEXT:   $q0 = COPY [[UV]](<8 x f16>)
+  ; WINDOWS-NEXT:   $q1 = COPY [[UV1]](<8 x f16>)
   ; WINDOWS-NEXT:   TCRETURNdi @outgoing_v16f16, 0, csr_aarch64_aapcs, implicit $sp, implicit $q0, implicit $q1
   tail call void @outgoing_v16f16(<16 x half> %arg)
   ret void

@@ -464,13 +464,13 @@ define float @D139275_c4001580(float %val) {
 ; ALL-NEXT:    [[CMP1:%.*]] = fcmp ult float [[VAL]], 1.000000e+00
 ; ALL-NEXT:    br i1 [[CMP1]], label [[IF_END3:%.*]], label [[RETURN]]
 ; ALL:       if.end3:
-; ALL-NEXT:    [[CMP4:%.*]] = fcmp olt float [[VAL]], 0x3FC99999A0000000
+; ALL-NEXT:    [[CMP4:%.*]] = fcmp olt float [[VAL]], 2.000000e-01
 ; ALL-NEXT:    br i1 [[CMP4]], label [[RETURN]], label [[IF_END6:%.*]]
 ; ALL:       if.end6:
-; ALL-NEXT:    [[SUB:%.*]] = fadd float [[VAL]], 0xBFB99999A0000000
+; ALL-NEXT:    [[SUB:%.*]] = fadd float [[VAL]], -1.000000e-01
 ; ALL-NEXT:    br label [[RETURN]]
 ; ALL:       return:
-; ALL-NEXT:    [[RETVAL_0:%.*]] = phi float [ [[SUB]], [[IF_END6]] ], [ 0.000000e+00, [[ENTRY:%.*]] ], [ 0x3FB99999A0000000, [[IF_END]] ], [ 0.000000e+00, [[IF_END3]] ]
+; ALL-NEXT:    [[RETVAL_0:%.*]] = phi float [ [[SUB]], [[IF_END6]] ], [ 0.000000e+00, [[ENTRY:%.*]] ], [ 1.000000e-01, [[IF_END]] ], [ 0.000000e+00, [[IF_END3]] ]
 ; ALL-NEXT:    ret float [[RETVAL_0]]
 ;
 entry:

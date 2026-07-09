@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV: OpName %[[#FuncNameInt16:]] "spirv.llvm_bswap_i16"
 ; CHECK-SPIRV: OpName %[[#FuncNameInt32:]] "spirv.llvm_bswap_i32"

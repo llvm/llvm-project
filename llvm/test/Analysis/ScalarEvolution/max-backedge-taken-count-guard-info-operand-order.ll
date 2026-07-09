@@ -218,7 +218,7 @@ define void @const_max_btc_32_or_order_1(i64 %n) {
 ; CHECK-NEXT:    %and.pre = and i1 %pre.1, %pre.0
 ; CHECK-NEXT:    --> (%pre.1 umin %pre.0) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %ph ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: %n LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,-9223372036854775807) S: [1,-9223372036854775807) Exits: (1 + %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @const_max_btc_32_or_order_1

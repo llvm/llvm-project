@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_BASIC_SPECIFIERS_H
 #define LLVM_CLANG_BASIC_SPECIFIERS_H
 
+#include "clang/Basic/OptionalUnsigned.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -361,6 +362,8 @@ namespace clang {
     // parameters are assumed to only get null on error.
     NullableResult,
   };
+  using NullabilityKindOrNone = OptionalUnsigned<NullabilityKind>;
+
   /// Prints human-readable debug representation.
   llvm::raw_ostream &operator<<(llvm::raw_ostream&, NullabilityKind);
 

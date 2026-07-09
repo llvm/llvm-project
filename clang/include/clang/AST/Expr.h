@@ -619,6 +619,10 @@ public:
     /// Likewise, INT_MAX + 1 can be folded to INT_MIN, but has UB.
     bool HasUndefinedBehavior = false;
 
+    /// Whether any diagnostic has been emitted. This is set regardless of
+    /// whether @ref #Diag is set or not.
+    bool DiagEmitted = false;
+
     /// Diag - If this is non-null, it will be filled in with a stack of notes
     /// indicating why evaluation failed (or why it failed to produce a constant
     /// expression).
@@ -735,9 +739,8 @@ public:
   /// initializer of the given declaration. Returns true if the initializer
   /// can be folded to a constant, and produces any relevant notes. In C++11,
   /// notes will be produced if the expression is not a constant expression.
-  bool EvaluateAsInitializer(APValue &Result, const ASTContext &Ctx,
-                             const VarDecl *VD,
-                             SmallVectorImpl<PartialDiagnosticAt> &Notes,
+  bool EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
+                             EvalResult &Result,
                              bool IsConstantInitializer) const;
 
   /// EvaluateWithSubstitution - Evaluate an expression as if from the context
@@ -2465,7 +2468,7 @@ public:
         Data(reinterpret_cast<uintptr_t>(Field) | OffsetOfNode::Field) {}
 
   /// Create an offsetof node that refers to an identifier.
-  OffsetOfNode(SourceLocation DotLoc, IdentifierInfo *Name,
+  OffsetOfNode(SourceLocation DotLoc, const IdentifierInfo *Name,
                SourceLocation NameLoc)
       : Range(DotLoc.isValid() ? DotLoc : NameLoc, NameLoc),
         Data(reinterpret_cast<uintptr_t>(Name) | Identifier) {}
@@ -2492,7 +2495,7 @@ public:
 
   /// For a field or identifier offsetof node, returns the name of
   /// the field.
-  IdentifierInfo *getFieldName() const;
+  const IdentifierInfo *getFieldName() const;
 
   /// For a base class node, returns the base specifier.
   CXXBaseSpecifier *getBase() const {
@@ -3214,7 +3217,7 @@ public:
   /// a CallExpr without going through the slower virtual child_iterator
   /// interface.  This provides efficient reverse iteration of the
   /// subexpressions.  This is currently used for CFG construction.
-  ArrayRef<Stmt *> getRawSubExprs() {
+  ArrayRef<Stmt *> getRawSubExprs() const {
     return {getTrailingStmts(), PREARGS_START + getNumPreArgs() + getNumArgs()};
   }
 
@@ -4958,28 +4961,37 @@ public:
 
 /// Represents a call to the builtin function \c __builtin_va_arg.
 class VAArgExpr : public Expr {
+public:
+  enum VarArgKind { VA_Std = 0, VA_MS, VA_ZOS };
+
+private:
   Stmt *Val;
-  llvm::PointerIntPair<TypeSourceInfo *, 1, bool> TInfo;
+  llvm::PointerIntPair<TypeSourceInfo *, 2, VarArgKind> TInfo;
   SourceLocation BuiltinLoc, RParenLoc;
 public:
   VAArgExpr(SourceLocation BLoc, Expr *e, TypeSourceInfo *TInfo,
-            SourceLocation RPLoc, QualType t, bool IsMS)
+            SourceLocation RPLoc, QualType t, VarArgKind VaKind)
       : Expr(VAArgExprClass, t, VK_PRValue, OK_Ordinary), Val(e),
-        TInfo(TInfo, IsMS), BuiltinLoc(BLoc), RParenLoc(RPLoc) {
+        TInfo(TInfo, VaKind), BuiltinLoc(BLoc), RParenLoc(RPLoc) {
     setDependence(computeDependence(this));
   }
 
   /// Create an empty __builtin_va_arg expression.
   explicit VAArgExpr(EmptyShell Empty)
-      : Expr(VAArgExprClass, Empty), Val(nullptr), TInfo(nullptr, false) {}
+      : Expr(VAArgExprClass, Empty), Val(nullptr), TInfo(nullptr, VA_Std) {}
 
   const Expr *getSubExpr() const { return cast<Expr>(Val); }
   Expr *getSubExpr() { return cast<Expr>(Val); }
   void setSubExpr(Expr *E) { Val = E; }
 
+  VarArgKind getVarargABI() const { return TInfo.getInt(); }
+  void setVarargABI(VarArgKind Kind) { TInfo.setInt(Kind); }
+
   /// Returns whether this is really a Win64 ABI va_arg expression.
-  bool isMicrosoftABI() const { return TInfo.getInt(); }
-  void setIsMicrosoftABI(bool IsMS) { TInfo.setInt(IsMS); }
+  bool isMicrosoftABI() const { return TInfo.getInt() == VA_MS; }
+
+  /// Returns whether this is really a z/OS ABI va_arg expression.
+  bool isZOSABI() const { return TInfo.getInt() == VA_ZOS; }
 
   TypeSourceInfo *getWrittenTypeInfo() const { return TInfo.getPointer(); }
   void setWrittenTypeInfo(TypeSourceInfo *TI) { TInfo.setPointer(TI); }
@@ -5137,7 +5149,7 @@ class EmbedExpr final : public Expr {
 public:
   EmbedExpr(const ASTContext &Ctx, SourceLocation Loc, EmbedDataStorage *Data,
             unsigned Begin, unsigned NumOfElements);
-  explicit EmbedExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
+  explicit EmbedExpr(EmptyShell Empty) : Expr(EmbedExprClass, Empty) {}
 
   SourceLocation getLocation() const { return EmbedKeywordLoc; }
   SourceLocation getBeginLoc() const { return EmbedKeywordLoc; }
@@ -5323,11 +5335,14 @@ class InitListExpr : public Expr {
 
 public:
   InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
-               ArrayRef<Expr*> initExprs, SourceLocation rbraceloc);
+               ArrayRef<Expr *> initExprs, SourceLocation rbraceloc,
+               bool isExplicit);
 
   /// Build an empty initializer list.
   explicit InitListExpr(EmptyShell Empty)
-    : Expr(InitListExprClass, Empty), AltForm(nullptr, true) { }
+      : Expr(InitListExprClass, Empty), AltForm(nullptr, true) {
+    InitListExprBits.IsExplicit = false;
+  }
 
   unsigned getNumInits() const { return InitExprs.size(); }
 
@@ -5348,8 +5363,6 @@ public:
   Expr * const *getInits() const {
     return reinterpret_cast<Expr * const *>(InitExprs.data());
   }
-
-  ArrayRef<Expr *> inits() { return {getInits(), getNumInits()}; }
 
   ArrayRef<Expr *> inits() const { return {getInits(), getNumInits()}; }
 
@@ -5441,11 +5454,7 @@ public:
 
   // Explicit InitListExpr's originate from source code (and have valid source
   // locations). Implicit InitListExpr's are created by the semantic analyzer.
-  // FIXME: This is wrong; InitListExprs created by semantic analysis have
-  // valid source locations too!
-  bool isExplicit() const {
-    return LBraceLoc.isValid() && RBraceLoc.isValid();
-  }
+  bool isExplicit() const { return InitListExprBits.IsExplicit; }
 
   /// Is this an initializer for an array of characters, initialized by a string
   /// literal or an @encode?
@@ -6123,7 +6132,11 @@ public:
 
   Expr **getExprs() { return reinterpret_cast<Expr **>(getTrailingObjects()); }
 
-  ArrayRef<Expr *> exprs() { return {getExprs(), getNumExprs()}; }
+  Expr *const *getExprs() const {
+    return reinterpret_cast<Expr *const *>(getTrailingObjects());
+  }
+
+  ArrayRef<Expr *> exprs() const { return {getExprs(), getNumExprs()}; }
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
@@ -7546,6 +7559,22 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
   DB.AddTaggedVal(reinterpret_cast<uint64_t>(E), DiagnosticsEngine::ak_expr);
   return DB;
 }
+
+/// Walk @p E through parens, implicit casts, unary &/*, array subscripts and
+/// comma operators to find the head of a struct-field access -- typically a
+/// MemberExpr, or an LValueToRValue ImplicitCastExpr over a pointer-typed
+/// field. Returns nullptr for shapes we don't handle (multiple subscripts,
+/// non-comma binary ops, or '&fam' on an array lvalue which designates the
+/// array-as-a-whole rather than an element pointer).
+///
+/// If @p OutArrayIndex / @p OutArrayElementTy are non-null, they receive the
+/// index expression and base array type for forms like '&p->fam[idx]'.
+///
+/// Shared by CGBuiltin's __builtin_*_object_size lowering and the AST
+/// constant evaluator so they recognize the same 'counted_by' access shapes.
+const Expr *findStructFieldAccess(const Expr *E,
+                                  const Expr **OutArrayIndex = nullptr,
+                                  QualType *OutArrayElementTy = nullptr);
 
 } // end namespace clang
 

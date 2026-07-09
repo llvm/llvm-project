@@ -3,9 +3,9 @@
 
 // https://github.com/llvm/llvm-project/issues/173943
 
-constexpr void f(this auto& self) // expected-note {{candidate function}}
+constexpr void f(this auto& self)
     // expected-error@-1 {{unknown type name 'constexpr'}}
-    // expected-error@-2 {{'auto' not allowed in function prototype}}
+    // expected-warning@-2 {{'auto' parameters are a C++20 extension}}
     // expected-error@-3 {{explicit object parameters are incompatible with C++ standards before C++2b}}
     // expected-error@-4 {{expected ';' after top level declarator}}
     // expected-error@-5 {{an explicit object parameter cannot appear in a non-member function}}

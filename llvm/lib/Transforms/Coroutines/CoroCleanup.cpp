@@ -140,10 +140,12 @@ bool Lowerer::lower(Function &F) {
         break;
       case Intrinsic::coro_async_size_replace:
         auto *Target = cast<ConstantStruct>(
-            cast<GlobalVariable>(II->getArgOperand(0)->stripPointerCasts())
+            cast<GlobalVariable>(
+                II->getArgOperand(0)->stripPointerCastsAndAliases())
                 ->getInitializer());
         auto *Source = cast<ConstantStruct>(
-            cast<GlobalVariable>(II->getArgOperand(1)->stripPointerCasts())
+            cast<GlobalVariable>(
+                II->getArgOperand(1)->stripPointerCastsAndAliases())
                 ->getInitializer());
         auto *TargetSize = Target->getOperand(1);
         auto *SourceSize = Source->getOperand(1);
@@ -183,7 +185,6 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
         FnTy, GlobalValue::LinkageTypes::InternalLinkage,
         M.getDataLayout().getProgramAddressSpace(), "__NoopCoro_ResumeDestroy",
         &M);
-    NoopFn->setCallingConv(CallingConv::Fast);
     buildDebugInfoForNoopResumeDestroyFunc(NoopFn);
     auto *Entry = BasicBlock::Create(C, "entry", NoopFn);
     ReturnInst::Create(C, Entry);

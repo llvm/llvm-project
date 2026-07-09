@@ -68,26 +68,26 @@ module call_dispatch
       real :: p1_fct2
       class(p1) :: p
     end function
-    ! CHECK-LABEL: func.func @_QMcall_dispatchPp1_fct2(%{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32
+    ! CHECK-LABEL: func.func @_QMcall_dispatchPp1_fct2(%{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>> {fir.bindc_name = "p"}) -> f32
 
     function p1_fct3_arg0(this)
       real :: p1_fct2
       class(p1) :: this
     end function
-    ! CHECK-LABEL: func.func @_QMcall_dispatchPp1_fct3_arg0(%{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32
+    ! CHECK-LABEL: func.func @_QMcall_dispatchPp1_fct3_arg0(%{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>> {fir.bindc_name = "this"}) -> f32
 
     function p1_fct4_arg1(i, this)
       real :: p1_fct2
       integer :: i
       class(p1) :: this
     end function
-    ! CHECK-LABEL: func.func @_QMcall_dispatchPp1_fct4_arg1(%{{.*}}: !fir.ref<i32>, %{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32
+    ! CHECK-LABEL: func.func @_QMcall_dispatchPp1_fct4_arg1(%{{.*}}: !fir.ref<i32> {fir.bindc_name = "i"}, %{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>> {fir.bindc_name = "this"}) -> f32
 
     subroutine pass_with_class_arg(this, other)
       class(p1) :: this
       class(p1) :: other
     end subroutine
-    ! CHECK-LABEL: func.func @_QMcall_dispatchPpass_with_class_arg(%{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, %{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {
+    ! CHECK-LABEL: func.func @_QMcall_dispatchPpass_with_class_arg(%{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>> {fir.bindc_name = "this"}, %{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>  {fir.bindc_name = "other"}) {
 
     subroutine p1_proc1_nopass()
     end subroutine
@@ -96,18 +96,18 @@ module call_dispatch
     subroutine p1_proc2(p)
       class(p1) :: p
     end subroutine
-    ! CHECK-LABEL: func.func @_QMcall_dispatchPp1_proc2(%{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>)
+    ! CHECK-LABEL: func.func @_QMcall_dispatchPp1_proc2(%{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>> {fir.bindc_name = "p"})
 
     subroutine p1_proc3_arg0(this)
       class(p1) :: this
     end subroutine
-    ! CHECK-LABEL: func.func @_QMcall_dispatchPp1_proc3_arg0(%{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>)
+    ! CHECK-LABEL: func.func @_QMcall_dispatchPp1_proc3_arg0(%{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>> {fir.bindc_name = "this"})
 
     subroutine p1_proc4_arg1(i, this)
       integer, intent(in) :: i
       class(p1) :: this
     end subroutine
-    ! CHECK-LABEL: func.func @_QMcall_dispatchPp1_proc4_arg1(%{{.*}}: !fir.ref<i32>, %{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>)
+    ! CHECK-LABEL: func.func @_QMcall_dispatchPp1_proc4_arg1(%{{.*}}: !fir.ref<i32> {fir.bindc_name = "i"}, %{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>> {fir.bindc_name = "this"})
 
     subroutine tbp_nopass()
     end subroutine
@@ -116,18 +116,18 @@ module call_dispatch
     subroutine tbp_pass(t)
       class(p1) :: t
     end subroutine
-    ! CHECK-LABEL: func.func @_QMcall_dispatchPtbp_pass(%{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>)
+    ! CHECK-LABEL: func.func @_QMcall_dispatchPtbp_pass(%{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>> {fir.bindc_name = "t"})
 
     subroutine tbp_pass_arg0(this)
       class(p1) :: this
     end subroutine
-    ! CHECK-LABEL: func.func @_QMcall_dispatchPtbp_pass_arg0(%{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>)
+    ! CHECK-LABEL: func.func @_QMcall_dispatchPtbp_pass_arg0(%{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>> {fir.bindc_name = "this"})
 
     subroutine tbp_pass_arg1(i, this)
       integer, intent(in) :: i
       class(p1) :: this
     end subroutine
-    ! CHECK-LABEL: func.func @_QMcall_dispatchPtbp_pass_arg1(%{{.*}}: !fir.ref<i32>, %{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>)
+    ! CHECK-LABEL: func.func @_QMcall_dispatchPtbp_pass_arg1(%{{.*}}: !fir.ref<i32> {fir.bindc_name = "i"}, %{{.*}}: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>> {fir.bindc_name = "this"})
 
     subroutine check_dispatch(p)
       class(p1) :: p

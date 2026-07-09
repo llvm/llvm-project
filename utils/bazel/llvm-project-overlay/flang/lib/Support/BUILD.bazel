@@ -1,0 +1,52 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+# Stub VCSVersion.inc — Bazel builds do not run the LLVM cmake VCS revision
+# generator. Version.cpp includes this header unconditionally and guards the
+# repository/revision symbols with #ifdef, so an empty file is sufficient.
+write_file(
+    name = "vcs_version_inc",
+    out = "VCSVersion.inc",
+    content = [],
+)
+
+cc_library(
+    name = "FortranSupport",
+    srcs = [
+        "FPMaxminBehavior.cpp",
+        "Flags.cpp",
+        "Fortran.cpp",
+        "Fortran-features.cpp",
+        "LangOptions.cpp",
+        "OpenMP-utils.cpp",
+        "Timing.cpp",
+        "VCSVersion.inc",
+        "Version.cpp",
+        "default-kinds.cpp",
+        "idioms.cpp",
+    ],
+    # Version.cpp does `#include "VCSVersion.inc"` (quoted, no path), so the
+    # generated VCSVersion.inc must be reachable from the same directory.
+    includes = ["."],
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:ParserHeaders",
+        "//flang:SupportHeaders",
+        "//llvm:Support",
+        "//mlir:IR",
+        "//mlir:Support",
+    ],
+)

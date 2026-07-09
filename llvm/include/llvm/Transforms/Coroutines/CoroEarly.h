@@ -23,9 +23,8 @@ namespace llvm {
 
 class Module;
 
-struct CoroEarlyPass : PassInfoMixin<CoroEarlyPass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
+struct CoroEarlyPass : RequiredPassInfoMixin<CoroEarlyPass> {
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 } // end namespace llvm
 

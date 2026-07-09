@@ -31,6 +31,7 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>
 #include <__memory/is_sufficiently_aligned.h>
+#include <__type_traits/copy_cv.h>
 #include <__type_traits/has_unique_object_representation.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <cstring>
@@ -224,7 +225,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void notify_one() const noexcept { std::__atomic_notify_one(*this); }
   _LIBCPP_HIDE_FROM_ABI void notify_all() const noexcept { std::__atomic_notify_all(*this); }
 #  if _LIBCPP_STD_VER >= 26
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* address() const noexcept { return __ptr_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __copy_cv_t<_Tp, void>* address() const noexcept { return __ptr_; }
 #  endif
 
 protected:
@@ -258,6 +259,8 @@ struct atomic_ref : public __atomic_ref_base<_Tp> {
         "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
 
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp&&) = delete;
+
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept { return __base::operator=(__desired); }
@@ -277,6 +280,8 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
         std::__is_sufficiently_aligned<__base::required_alignment>(std::addressof(__obj)),
         "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
+
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp&&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
 
@@ -324,6 +329,8 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
         "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
 
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp&&) = delete;
+
   _LIBCPP_HIDE_FROM_ABI atomic_ref(const atomic_ref&) noexcept = default;
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __desired) const noexcept { return __base::operator=(__desired); }
@@ -366,6 +373,8 @@ struct atomic_ref<_Tp*> : public __atomic_ref_base<_Tp*> {
   using difference_type = ptrdiff_t;
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp*& __ptr) : __base(__ptr) {}
+
+  _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp*&&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI _Tp* operator=(_Tp* __desired) const noexcept { return __base::operator=(__desired); }
 

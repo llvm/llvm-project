@@ -126,7 +126,7 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(["amd64", "x86_64"]))
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
+    @expectedFailureWindowsAndNoLLDBServer(bugnumber="llvm.org/pr37683")
     def test_convenience_registers(self):
         """Test convenience registers."""
         self.build()
@@ -579,7 +579,7 @@ class RegisterCommandsTestCase(TestBase):
         self.expect(
             "register write blub 1",
             error=True,
-            substrs=["error: Register not found for 'blub'."],
+            substrs=["error: Register not found for 'blub'"],
         )
 
     def test_info_unknown_register(self):
@@ -589,7 +589,7 @@ class RegisterCommandsTestCase(TestBase):
         self.expect(
             "register info blub",
             error=True,
-            substrs=["error: No register found with name 'blub'."],
+            substrs=["error: No register found with name 'blub'"],
         )
 
     def test_info_many_registers(self):
@@ -702,6 +702,7 @@ class RegisterCommandsTestCase(TestBase):
             "fs_base does not equal to pthread_self() value.",
         )
 
+    @skipIfWasm  # attaching requires launching the inferior as a host process
     def test_process_must_be_stopped(self):
         """Check that all register commands error when the process is not stopped."""
         self.build()

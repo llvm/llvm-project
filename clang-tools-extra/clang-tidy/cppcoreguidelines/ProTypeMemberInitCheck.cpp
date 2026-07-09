@@ -571,9 +571,11 @@ void ProTypeMemberInitCheck::checkMissingBaseClassInitializer(
       return;
 
     for (const CXXCtorInitializer *Init : Ctor->inits())
-      if (Init->isBaseInitializer() && Init->isWritten())
-        BasesToInit.erase(
-            Init->getBaseClass()->getAsCXXRecordDecl()->getCanonicalDecl());
+      if (Init->isBaseInitializer() && Init->isWritten()) {
+        if (const CXXRecordDecl *CRD =
+                Init->getBaseClass()->getAsCXXRecordDecl())
+          BasesToInit.erase(CRD->getCanonicalDecl());
+      }
   }
 
   if (BasesToInit.empty())

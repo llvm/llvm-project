@@ -19,9 +19,9 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Hash.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/KCFIHash.h"
 
 using namespace llvm;
 

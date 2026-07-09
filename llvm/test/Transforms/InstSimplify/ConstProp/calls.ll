@@ -197,7 +197,7 @@ define float @test_intrinsic_pow_f32_overflow() nounwind uwtable ssp {
 entry:
 ; CHECK-LABEL: @test_intrinsic_pow_f32_overflow(
 ; CHECK-NOT: call
-; CHECK: ret float 0x7FF0000000000000
+; CHECK: ret float +inf
   %0 = call float @llvm.pow.f32(float 40.0, float 50.0)
   ret float %0
 }
@@ -222,19 +222,19 @@ entry:
 
 ; log(0.0) -> -inf
 ; CHECK-NOT: call
-; CHECK: store float 0xFFF0000000000000
+; CHECK: store float -inf
   %1 = call float @llvm.log.f32(float 0.0)
   store float %1, ptr %f
 
 ; log(-0.0) -> -inf
 ; CHECK-NOT: call
-; CHECK: store float 0xFFF0000000000000
+; CHECK: store float -inf
   %2 = call float @llvm.log.f32(float -0.0)
   store float %2, ptr %f
 
 ; log(-x) -> NaN
 ; CHECK-NOT: call
-; CHECK: store float 0x7FF8000000000000
+; CHECK: store float +qnan
   %3 = call float @llvm.log.f32(float -20.0)
   store float %3, ptr %f
 
@@ -245,7 +245,7 @@ entry:
   store float %4, ptr %f
 
 ; CHECK-NOT: call
-; CHECK: store <3 x float> <float 0xFFF0000000000000, float 0x7FF8000000000000, float 0.000000e+00>
+; CHECK: store <3 x float> <float -inf, float +qnan, float 0.000000e+00>
   %5 = call <3 x float> @llvm.log.v4f32(<3 x float> <float 0.0, float -6.0, float 1.0>)
   store <3 x float> %5, ptr %v
 
@@ -259,17 +259,17 @@ entry:
   %f = alloca float
 
 ; log2(0.0) -> -inf
-; CHECK: store float 0xFFF0000000000000
+; CHECK: store float -inf
   %1 = call float @llvm.log2.f32(float 0.0)
   store float %1, ptr %f
 
 ; log2(-0.0) -> -inf
-; CHECK: store float 0xFFF0000000000000
+; CHECK: store float -inf
   %2 = call float @llvm.log2.f32(float -0.0)
   store float %2, ptr %f
 
 ; log2(-x) -> NaN
-; CHECK: store float 0x7FF8000000000000
+; CHECK: store float +qnan
   %3 = call float @llvm.log2.f32(float -20.0)
   store float %3, ptr %f
 
@@ -278,7 +278,7 @@ entry:
   %4 = call float @llvm.log2.f32(float 1.0)
   store float %4, ptr %f
 
-; CHECK: store <3 x float> <float 0xFFF0000000000000, float 0x7FF8000000000000, float 0.000000e+00>
+; CHECK: store <3 x float> <float -inf, float +qnan, float 0.000000e+00>
   %5 = call <3 x float> @llvm.log2.v4f32(<3 x float> <float 0.0, float -6.0, float 1.0>)
   store <3 x float> %5, ptr %v
 
@@ -292,17 +292,17 @@ entry:
   %f = alloca float
 
 ; log10(0.0) -> -inf
-; CHECK: store float 0xFFF0000000000000
+; CHECK: store float -inf
   %1 = call float @llvm.log10.f32(float 0.0)
   store float %1, ptr %f
 
 ; log10(-0.0) -> -inf
-; CHECK: store float 0xFFF0000000000000
+; CHECK: store float -inf
   %2 = call float @llvm.log10.f32(float -0.0)
   store float %2, ptr %f
 
 ; log10(-x) -> NaN
-; CHECK: store float 0x7FF8000000000000
+; CHECK: store float +qnan
   %3 = call float @llvm.log10.f32(float -20.0)
   store float %3, ptr %f
 
@@ -311,7 +311,7 @@ entry:
   %4 = call float @llvm.log10.f32(float 1.0)
   store float %4, ptr %f
 
-; CHECK: store <3 x float> <float 0xFFF0000000000000, float 0x7FF8000000000000, float 0.000000e+00>
+; CHECK: store <3 x float> <float -inf, float +qnan, float 0.000000e+00>
   %5 = call <3 x float> @llvm.log10.v3f32(<3 x float> <float 0.0, float -6.0, float 1.0>)
   store <3 x float> %5, ptr %v
 

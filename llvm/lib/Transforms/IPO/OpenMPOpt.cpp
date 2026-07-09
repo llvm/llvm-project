@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -291,7 +292,7 @@ struct OMPInformationCache : public InformationCache {
     switch (T.getArch()) {
     case llvm::Triple::nvptx:
     case llvm::Triple::nvptx64:
-    case llvm::Triple::amdgcn:
+    case llvm::Triple::amdgpu:
       assert(OMPBuilder.Config.IsTargetDevice &&
              "OpenMP AMDGPU/NVPTX is only prepared to deal with device code.");
       OMPBuilder.Config.IsGPU = true;
@@ -1088,7 +1089,8 @@ private:
     SmallDenseMap<BasicBlock *, SmallPtrSet<Instruction *, 4>> BB2PRMap;
 
     BasicBlock *StartBB = nullptr, *EndBB = nullptr;
-    auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+    auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                         ArrayRef<BasicBlock *> DeallocBlocks) {
       BasicBlock *CGStartBB = CodeGenIP.getBlock();
       BasicBlock *CGEndBB =
           SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
@@ -1128,7 +1130,8 @@ private:
       const DebugLoc DL = ParentBB->getTerminator()->getDebugLoc();
       ParentBB->getTerminator()->eraseFromParent();
 
-      auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+      auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                           ArrayRef<BasicBlock *> DeallocBlocks) {
         BasicBlock *CGStartBB = CodeGenIP.getBlock();
         BasicBlock *CGEndBB =
             SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
@@ -1258,8 +1261,9 @@ private:
       // avoid overriding binding settings, and without explicit cancellation.
       OpenMPIRBuilder::InsertPointTy AfterIP =
           cantFail(OMPInfoCache.OMPBuilder.createParallel(
-              Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
-              OMP_PROC_BIND_default, /* IsCancellable */ false));
+              Loc, AllocaIP, /* DeallocBlocks */ {}, BodyGenCB, PrivCB, FiniCB,
+              nullptr, nullptr, OMP_PROC_BIND_default,
+              /* IsCancellable */ false));
       UncondBrInst::Create(AfterBB, AfterIP.getBlock());
 
       // Perform the actual outlining.
@@ -3458,10 +3462,13 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
            bool &) -> std::optional<Value *> { return nullptr; };
 
     Function *F = getAnchorScope();
-    for (User *U : RFI.Declaration->users())
-      if (CallBase *CB = dyn_cast<CallBase>(U)) {
-        if (CB->getFunction() != F)
-          continue;
+    const OMPInformationCache::RuntimeFunctionInfo::UseVector *Uses =
+        RFI.getUseVector(*F);
+    if (!Uses)
+      return;
+
+    for (Use *U : *Uses)
+      if (CallBase *CB = dyn_cast<CallBase>(U->getUser())) {
         MallocCalls.insert(CB);
         A.registerSimplificationCallback(IRPosition::callsite_returned(*CB),
                                          SCB);
@@ -4945,7 +4952,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       case OMPRTL___kmpc_end_master:
       case OMPRTL___kmpc_barrier:
       case OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2:
-      case OMPRTL___kmpc_nvptx_teams_reduce_nowait_v2:
+      case OMPRTL___kmpc_gpu_xteam_reduce_nowait:
       case OMPRTL___kmpc_error:
       case OMPRTL___kmpc_flush:
       case OMPRTL___kmpc_get_hardware_thread_id_in_block:
@@ -5021,6 +5028,29 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       case OMPRTL___kmpc_free_shared:
         // Return without setting a fixpoint, to be resolved in updateImpl.
         return;
+      case OMPRTL___kmpc_distribute_static_loop_4:
+      case OMPRTL___kmpc_distribute_static_loop_4u:
+      case OMPRTL___kmpc_distribute_static_loop_8:
+      case OMPRTL___kmpc_distribute_static_loop_8u:
+      case OMPRTL___kmpc_distribute_for_static_loop_4:
+      case OMPRTL___kmpc_distribute_for_static_loop_4u:
+      case OMPRTL___kmpc_distribute_for_static_loop_8:
+      case OMPRTL___kmpc_distribute_for_static_loop_8u:
+      case OMPRTL___kmpc_for_static_loop_4:
+      case OMPRTL___kmpc_for_static_loop_4u:
+      case OMPRTL___kmpc_for_static_loop_8:
+      case OMPRTL___kmpc_for_static_loop_8u:
+        // Parallel regions might be reached by these calls, as they take a
+        // callback argument potentially containing arbitrary user-provided
+        // code.
+        ReachedUnknownParallelRegions.insert(&CB);
+        // TODO: The presence of these calls on their own does not prevent a
+        // kernel from being SPMD-izable. We mark it as such because we need
+        // further changes in order to also consider the contents of the
+        // callbacks passed to them.
+        SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+        SPMDCompatibilityTracker.insert(&CB);
+        break;
       default:
         // Unknown OpenMP runtime calls cannot be executed in SPMD-mode,
         // generally. However, they do not hide parallel regions.
@@ -5559,13 +5589,22 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
 }
 
 void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
-  if (!DisableOpenMPOptDeglobalization)
-    A.getOrCreateAAFor<AAHeapToShared>(IRPosition::function(F));
-  A.getOrCreateAAFor<AAExecutionDomain>(IRPosition::function(F));
-  if (!DisableOpenMPOptDeglobalization)
-    A.getOrCreateAAFor<AAHeapToStack>(IRPosition::function(F));
+  auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
+
+  IRPosition FPos = IRPosition::function(F);
+  A.getOrCreateAAFor<AAExecutionDomain>(FPos);
   if (F.hasFnAttribute(Attribute::Convergent))
-    A.getOrCreateAAFor<AANonConvergent>(IRPosition::function(F));
+    A.getOrCreateAAFor<AANonConvergent>(FPos);
+
+  bool FunctionUsesSharedAlloc = false;
+  if (!DisableOpenMPOptDeglobalization) {
+    const OMPInformationCache::RuntimeFunctionInfo::UseVector *SharedAllocUses =
+        OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared].getUseVector(
+            const_cast<Function &>(F));
+    FunctionUsesSharedAlloc = SharedAllocUses && !SharedAllocUses->empty();
+  }
+  bool HasHeapToStackCandidate = false;
+  const TargetLibraryInfo *TLI = nullptr;
 
   for (auto &I : instructions(F)) {
     if (auto *LI = dyn_cast<LoadInst>(&I)) {
@@ -5577,6 +5616,12 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
       continue;
     }
     if (auto *CI = dyn_cast<CallBase>(&I)) {
+      if (!DisableOpenMPOptDeglobalization && !HasHeapToStackCandidate) {
+        if (!TLI)
+          TLI = A.getInfoCache().getTargetLibraryInfoForFunction(F);
+        HasHeapToStackCandidate =
+            isRemovableAlloc(CI, TLI) || getFreedOperand(CI, TLI);
+      }
       if (CI->isIndirectCall())
         A.getOrCreateAAFor<AAIndirectCallInfo>(
             IRPosition::callsite_function(*CI));
@@ -5599,6 +5644,11 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
       }
     }
   }
+
+  if (FunctionUsesSharedAlloc)
+    A.getOrCreateAAFor<AAHeapToShared>(FPos);
+  if (HasHeapToStackCandidate)
+    A.getOrCreateAAFor<AAHeapToStack>(FPos);
 }
 
 const char AAICVTracker::ID = 0;

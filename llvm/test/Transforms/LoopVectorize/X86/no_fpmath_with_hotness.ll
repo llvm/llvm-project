@@ -27,7 +27,7 @@ for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %a.08 = phi double [ %add, %for.body ], [ 0.000000e+00, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %v, i64 %indvars.iv, !dbg !9
-  %0 = load i32, ptr %arrayidx, align 4, !dbg !9, !tbaa !11
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !9
   %cmp1 = icmp eq i32 %0, 0, !dbg !15
   %cond = select i1 %cmp1, double 3.400000e+00, double 1.150000e+00, !dbg !9
   %add = fadd double %a.08, %cond, !dbg !16
@@ -57,7 +57,7 @@ for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %a.08 = phi double [ %add, %for.body ], [ 0.000000e+00, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %v, i64 %indvars.iv, !dbg !22
-  %0 = load i32, ptr %arrayidx, align 4, !dbg !22, !tbaa !11
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !22
   %cmp1 = icmp eq i32 %0, 0, !dbg !24
   %cond = select i1 %cmp1, double 3.400000e+00, double 1.150000e+00, !dbg !22
   %add = fadd double %a.08, %cond, !dbg !25
@@ -69,11 +69,9 @@ for.body:
 
 !llvm.dbg.cu = !{!28}
 !llvm.module.flags = !{!0, !1}
-!llvm.ident = !{!2}
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !{i32 1, !"PIC Level", i32 2}
-!2 = !{!"clang version 3.7.0"}
 !3 = !DILocation(line: 5, column: 20, scope: !4)
 !4 = distinct !DISubprogram(name: "cond_sum", scope: !5, file: !5, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !28, retainedNodes: !7)
 !5 = !DIFile(filename: "no_fpmath.c", directory: "")
@@ -82,10 +80,6 @@ for.body:
 !8 = !DILocation(line: 5, column: 3, scope: !4)
 !9 = !DILocation(line: 6, column: 14, scope: !4)
 !10 = !DILocation(line: 9, column: 3, scope: !4)
-!11 = !{!12, !12, i64 0}
-!12 = !{!"int", !13, i64 0}
-!13 = !{!"omnipotent char", !14, i64 0}
-!14 = !{!"Simple C/C++ TBAA"}
 !15 = !DILocation(line: 6, column: 19, scope: !4)
 !16 = !DILocation(line: 6, column: 11, scope: !4)
 !17 = distinct !{!17, !18}

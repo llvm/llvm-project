@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cinttypes>
@@ -153,7 +154,7 @@ static void printUnwindRow(const UnwindRow &Row, raw_ostream &OS,
                            DIDumpOptions DumpOpts, unsigned IndentLevel) {
   OS.indent(2 * IndentLevel);
   if (Row.hasAddress())
-    OS << format("0x%" PRIx64 ": ", Row.getAddress());
+    OS << formatv("{0:x}: ", Row.getAddress());
   OS << "CFA=";
   printUnwindLocation(Row.getCFAValue(), OS, DumpOpts);
   if (Row.getRegisterLocations().hasLocations()) {

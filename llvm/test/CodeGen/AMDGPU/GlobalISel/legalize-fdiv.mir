@@ -2734,7 +2734,7 @@ body: |
     ; SI-LABEL: name: test_fdiv_s16_constant_one_rcp
     ; SI: liveins: $vgpr0
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 1.000000e+00
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[C]](s16)
@@ -2808,7 +2808,7 @@ body: |
     ; SI-LABEL: name: test_fdiv_s16_constant_negative_one_rcp
     ; SI: liveins: $vgpr0
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xHBC00
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half -1.000000e+00
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[C]](s16)

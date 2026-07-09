@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -33,10 +34,13 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/Support/UndefPoison.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
+#include <limits>
 #include <numeric>
 #include <optional>
+#include <tuple>
 
 #define DEBUG_TYPE "globalisel-utils"
 
@@ -589,7 +593,7 @@ bool llvm::extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
     return true;
   }
 
-  LeftoverTy = LLT::scalar(LeftoverSize);
+  LeftoverTy = LLT::integer(LeftoverSize);
   // For irregular sizes, extract the individual parts.
   for (unsigned I = 0; I != NumParts; ++I) {
     Register NewReg = MRI.createGenericVirtualRegister(MainTy);
@@ -837,89 +841,6 @@ llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
   return FoldedElements;
 }
 
-bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
-                           bool SNaN) {
-  const MachineInstr *DefMI = MRI.getVRegDef(Val);
-  if (!DefMI)
-    return false;
-
-  if (DefMI->getFlag(MachineInstr::FmNoNans))
-    return true;
-
-  // If the value is a constant, we can obviously see if it is a NaN or not.
-  if (const ConstantFP *FPVal = getConstantFPVRegVal(Val, MRI)) {
-    return !FPVal->getValueAPF().isNaN() ||
-           (SNaN && !FPVal->getValueAPF().isSignaling());
-  }
-
-  if (DefMI->getOpcode() == TargetOpcode::G_BUILD_VECTOR) {
-    for (const auto &Op : DefMI->uses())
-      if (!isKnownNeverNaN(Op.getReg(), MRI, SNaN))
-        return false;
-    return true;
-  }
-
-  switch (DefMI->getOpcode()) {
-  default:
-    break;
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FSUB:
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FDIV:
-  case TargetOpcode::G_FREM:
-  case TargetOpcode::G_FSIN:
-  case TargetOpcode::G_FCOS:
-  case TargetOpcode::G_FTAN:
-  case TargetOpcode::G_FACOS:
-  case TargetOpcode::G_FASIN:
-  case TargetOpcode::G_FATAN:
-  case TargetOpcode::G_FATAN2:
-  case TargetOpcode::G_FCOSH:
-  case TargetOpcode::G_FSINH:
-  case TargetOpcode::G_FTANH:
-  case TargetOpcode::G_FMA:
-  case TargetOpcode::G_FMAD:
-    if (SNaN)
-      return true;
-
-    // TODO: Need isKnownNeverInfinity
-    return false;
-  case TargetOpcode::G_FMINNUM_IEEE:
-  case TargetOpcode::G_FMAXNUM_IEEE: {
-    if (SNaN)
-      return true;
-    // This can return a NaN if either operand is an sNaN, or if both operands
-    // are NaN.
-    return (isKnownNeverNaN(DefMI->getOperand(1).getReg(), MRI) &&
-            isKnownNeverSNaN(DefMI->getOperand(2).getReg(), MRI)) ||
-           (isKnownNeverSNaN(DefMI->getOperand(1).getReg(), MRI) &&
-            isKnownNeverNaN(DefMI->getOperand(2).getReg(), MRI));
-  }
-  case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FMAXNUM: {
-    // Only one needs to be known not-nan, since it will be returned if the
-    // other ends up being one.
-    return isKnownNeverNaN(DefMI->getOperand(1).getReg(), MRI, SNaN) ||
-           isKnownNeverNaN(DefMI->getOperand(2).getReg(), MRI, SNaN);
-  }
-  }
-
-  if (SNaN) {
-    // FP operations quiet. For now, just handle the ones inserted during
-    // legalization.
-    switch (DefMI->getOpcode()) {
-    case TargetOpcode::G_FPEXT:
-    case TargetOpcode::G_FPTRUNC:
-    case TargetOpcode::G_FCANONICALIZE:
-      return true;
-    default:
-      return false;
-    }
-  }
-
-  return false;
-}
-
 Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
                                   const MachinePointerInfo &MPO) {
   auto PSV = dyn_cast_if_present<const PseudoSourceValue *>(MPO.V);
@@ -1023,36 +944,52 @@ llvm::ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
   return std::nullopt;
 }
 
-std::optional<SmallVector<unsigned>>
-llvm::ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
-                             std::function<unsigned(APInt)> CB) {
-  LLT Ty = MRI.getType(Src);
-  SmallVector<unsigned> FoldedCTLZs;
-  auto tryFoldScalar = [&](Register R) -> std::optional<unsigned> {
-    auto MaybeCst = getIConstantVRegVal(R, MRI);
-    if (!MaybeCst)
-      return std::nullopt;
-    return CB(*MaybeCst);
+SmallVector<APInt>
+llvm::ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
+                             const MachineRegisterInfo &MRI) {
+  unsigned EltBits = DstTy.getScalarSizeInBits();
+  auto Fold = [Opcode, EltBits](const APInt &V) -> APInt {
+    switch (Opcode) {
+    case TargetOpcode::G_CTLZ:
+    case TargetOpcode::G_CTLZ_ZERO_POISON:
+      return APInt(EltBits, V.countl_zero());
+    case TargetOpcode::G_CTTZ:
+    case TargetOpcode::G_CTTZ_ZERO_POISON:
+      return APInt(EltBits, V.countr_zero());
+    case TargetOpcode::G_CTPOP:
+      return APInt(EltBits, V.popcount());
+    case TargetOpcode::G_ABS:
+      return V.abs();
+    case TargetOpcode::G_BSWAP:
+      return V.byteSwap();
+    case TargetOpcode::G_BITREVERSE:
+      return V.reverseBits();
+    }
+    llvm_unreachable("unexpected opcode in ConstantFoldUnaryIntOp");
   };
-  if (Ty.isVector()) {
-    // Try to constant fold each element.
+
+  auto tryFoldScalar = [&](Register R) -> std::optional<APInt> {
+    if (auto MaybeCst = getIConstantVRegVal(R, MRI))
+      return Fold(*MaybeCst);
+    return std::nullopt;
+  };
+  if (MRI.getType(Src).isVector()) {
     auto *BV = getOpcodeDef<GBuildVector>(Src, MRI);
     if (!BV)
-      return std::nullopt;
+      return {};
+    SmallVector<APInt> Folded;
     for (unsigned SrcIdx = 0; SrcIdx < BV->getNumSources(); ++SrcIdx) {
       if (auto MaybeFold = tryFoldScalar(BV->getSourceReg(SrcIdx))) {
-        FoldedCTLZs.emplace_back(*MaybeFold);
+        Folded.emplace_back(std::move(*MaybeFold));
         continue;
       }
-      return std::nullopt;
+      return {};
     }
-    return FoldedCTLZs;
+    return Folded;
   }
-  if (auto MaybeCst = tryFoldScalar(Src)) {
-    FoldedCTLZs.emplace_back(*MaybeCst);
-    return FoldedCTLZs;
-  }
-  return std::nullopt;
+  if (auto MaybeCst = tryFoldScalar(Src))
+    return {std::move(*MaybeCst)};
+  return {};
 }
 
 std::optional<SmallVector<APInt>>
@@ -1135,7 +1072,7 @@ llvm::ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 }
 
 bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
-                                  GISelValueTracking *VT) {
+                                  GISelValueTracking *VT, bool OrNegative) {
   std::optional<DefinitionAndSourceRegister> DefSrcReg =
       getDefSrcRegIgnoringCopies(Reg, MRI);
   if (!DefSrcReg)
@@ -1144,11 +1081,15 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
   const MachineInstr &MI = *DefSrcReg->MI;
   const LLT Ty = MRI.getType(Reg);
 
+  auto IsPow2 = [OrNegative](const APInt &V) {
+    return V.isPowerOf2() || (OrNegative && V.isNegatedPowerOf2());
+  };
+
   switch (MI.getOpcode()) {
   case TargetOpcode::G_CONSTANT: {
     unsigned BitWidth = Ty.getScalarSizeInBits();
     const ConstantInt *CI = MI.getOperand(1).getCImm();
-    return CI->getValue().zextOrTrunc(BitWidth).isPowerOf2();
+    return IsPow2(CI->getValue().zextOrTrunc(BitWidth));
   }
   case TargetOpcode::G_SHL: {
     // A left-shift of a constant one will have exactly one bit set because
@@ -1174,7 +1115,7 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     // TODO: Probably should have a recursion depth guard since you could have
     // bitcasted vector elements.
     for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
-      if (!isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT))
+      if (!isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT, OrNegative))
         return false;
 
     return true;
@@ -1185,7 +1126,7 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     const unsigned BitWidth = Ty.getScalarSizeInBits();
     for (const MachineOperand &MO : llvm::drop_begin(MI.operands())) {
       auto Const = getIConstantVRegVal(MO.getReg(), MRI);
-      if (!Const || !Const->zextOrTrunc(BitWidth).isPowerOf2())
+      if (!Const || !IsPow2(Const->zextOrTrunc(BitWidth)))
         return false;
     }
 
@@ -1349,7 +1290,7 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
   LLT TargetScalar = TargetTy.getScalarType();
   unsigned GCD = std::gcd(OrigScalar.getSizeInBits().getFixedValue(),
                           TargetScalar.getSizeInBits().getFixedValue());
-  return LLT::scalar(GCD);
+  return LLT::integer(GCD);
 }
 
 std::optional<int> llvm::getSplatIndex(MachineInstr &MI) {
@@ -1795,8 +1736,10 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FNEARBYINT:
   case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPEXTLOAD:
   case TargetOpcode::G_FPOW:
   case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_FPTRUNCSTORE:
   case TargetOpcode::G_FREM:
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FSIN:
@@ -1850,22 +1793,6 @@ static bool shiftAmountKnownInRange(Register ShiftAmount,
   }
 
   return true;
-}
-
-namespace {
-enum class UndefPoisonKind {
-  PoisonOnly = (1 << 0),
-  UndefOnly = (1 << 1),
-  UndefOrPoison = PoisonOnly | UndefOnly,
-};
-}
-
-static bool includesPoison(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::PoisonOnly)) != 0;
-}
-
-static bool includesUndef(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::UndefOnly)) != 0;
 }
 
 static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
@@ -2153,4 +2080,186 @@ llvm::GFConstant::getConstant(Register Const, const MachineRegisterInfo &MRI) {
     return std::nullopt;
 
   return GFConstant(MayBeConstant->Value, GFConstantKind::Scalar);
+}
+
+// Returns a list of types to use for memory op lowering in MemOps. A partial
+// port of findOptimalMemOpLowering in TargetLowering.
+static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
+                                          unsigned Limit, const MemOp &Op,
+                                          unsigned DstAS, unsigned SrcAS,
+                                          const AttributeList &FuncAttributes,
+                                          const TargetLowering &TLI) {
+  if (Op.isMemcpyWithFixedDstAlign() && Op.getSrcAlign() < Op.getDstAlign())
+    return false;
+
+  LLT Ty = TLI.getOptimalMemOpLLT(Op, FuncAttributes);
+
+  if (Ty == LLT()) {
+    // Use the largest scalar type whose alignment constraints are satisfied.
+    // We only need to check DstAlign here as SrcAlign is always greater or
+    // equal to DstAlign (or zero).
+    Ty = LLT::integer(64);
+    if (Op.isFixedDstAlign())
+      while (Op.getDstAlign() < Ty.getSizeInBytes() &&
+             !TLI.allowsMisalignedMemoryAccesses(Ty, DstAS, Op.getDstAlign()))
+        Ty = LLT::integer(Ty.getSizeInBytes());
+    assert(Ty.getSizeInBits() > 0 && "Could not find valid type");
+    // FIXME: check for the largest legal type we can load/store to.
+  }
+
+  unsigned NumMemOps = 0;
+  uint64_t Size = Op.size();
+  while (Size) {
+    unsigned TySize = Ty.getSizeInBytes();
+    while (TySize > Size) {
+      // For now, only use non-vector load / store's for the left-over pieces.
+      LLT NewTy = Ty;
+      // FIXME: check for mem op safety and legality of the types. Not all of
+      // SDAGisms map cleanly to GISel concepts.
+      if (NewTy.isVector())
+        NewTy =
+            NewTy.getSizeInBits() > 64 ? LLT::integer(64) : LLT::integer(32);
+      NewTy = LLT::integer(llvm::bit_floor(NewTy.getSizeInBits() - 1));
+      unsigned NewTySize = NewTy.getSizeInBytes();
+      assert(NewTySize > 0 && "Could not find appropriate type");
+
+      // If the new LLT cannot cover all of the remaining bits, then consider
+      // issuing a (or a pair of) unaligned and overlapping load / store.
+      unsigned Fast;
+      // Need to get a VT equivalent for allowMisalignedMemoryAccesses().
+      MVT VT = getMVTForLLT(Ty);
+      if (NumMemOps && Op.allowOverlap() && NewTySize < Size &&
+          TLI.allowsMisalignedMemoryAccesses(
+              VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign() : Align(1),
+              MachineMemOperand::MONone, &Fast) &&
+          Fast)
+        TySize = Size;
+      else {
+        Ty = NewTy;
+        TySize = NewTySize;
+      }
+    }
+
+    if (++NumMemOps > Limit)
+      return false;
+
+    MemOps.push_back(Ty);
+    Size -= TySize;
+  }
+
+  return true;
+}
+
+bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
+                                const MachineRegisterInfo &MRI, unsigned MaxLen,
+                                Register &Dst, Register &Src,
+                                uint64_t &KnownLen, Align &Alignment,
+                                bool &DstAlignCanChange,
+                                std::vector<LLT> &MemOps) {
+  const unsigned Opc = MI.getOpcode();
+  assert((Opc == TargetOpcode::G_MEMCPY ||
+          Opc == TargetOpcode::G_MEMCPY_INLINE ||
+          Opc == TargetOpcode::G_MEMMOVE || Opc == TargetOpcode::G_MEMSET ||
+          Opc == TargetOpcode::G_MEMSET_INLINE) &&
+         "Expected memcpy like instruction");
+
+  auto MMOIt = MI.memoperands_begin();
+  const MachineMemOperand *MemOp = *MMOIt;
+
+  Align DstAlign = MemOp->getBaseAlign();
+  Align SrcAlign;
+  Alignment = DstAlign;
+  Register Len;
+  std::tie(Dst, Src, Len) = MI.getFirst3Regs();
+
+  if (Opc != TargetOpcode::G_MEMSET && Opc != TargetOpcode::G_MEMSET_INLINE) {
+    assert(MMOIt != MI.memoperands_end() && "Expected a second MMO on MI");
+    MemOp = *(++MMOIt);
+    SrcAlign = MemOp->getBaseAlign();
+    Alignment = std::min(DstAlign, SrcAlign);
+  }
+
+  // See if this is a constant length copy.
+  auto LenVRegAndVal = getIConstantVRegValWithLookThrough(Len, MRI);
+  if (!LenVRegAndVal) {
+    // FIXME: support dynamically sized G_MEMCPY_INLINE and G_MEMSET_INLINE
+    assert(Opc != TargetOpcode::G_MEMCPY_INLINE &&
+           Opc != TargetOpcode::G_MEMSET_INLINE &&
+           "inline memcpy and memset with dynamic size are not yet supported");
+    return false;
+  }
+
+  KnownLen = LenVRegAndVal->Value.getZExtValue();
+  DstAlignCanChange = false;
+
+  if (KnownLen == 0)
+    return true;
+
+  if (Opc != TargetOpcode::G_MEMCPY_INLINE &&
+      Opc != TargetOpcode::G_MEMSET_INLINE && MaxLen && KnownLen > MaxLen)
+    return false;
+
+  bool IsVolatile = MemOp->isVolatile();
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const auto &TLI = *MF.getSubtarget().getTargetLowering();
+  // On Darwin, -Os means optimize for size without hurting performance, so
+  // only really optimize for size when -Oz (MinSize) is used.
+  bool OptSize = MF.getTarget().getTargetTriple().isOSDarwin()
+                     ? MF.getFunction().hasMinSize()
+                     : MF.getFunction().hasOptSize();
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  MachineInstr *FIDef = getOpcodeDef(TargetOpcode::G_FRAME_INDEX, Dst, MRI);
+  if (FIDef && !MFI.isFixedObjectIndex(FIDef->getOperand(1).getIndex()))
+    DstAlignCanChange = true;
+
+  const auto &DstMMO = **MI.memoperands_begin();
+  MachinePointerInfo DstPtrInfo = DstMMO.getPointerInfo();
+
+  switch (Opc) {
+  case TargetOpcode::G_MEMCPY_INLINE:
+  case TargetOpcode::G_MEMCPY: {
+    const auto &SrcMMO = **std::next(MI.memoperands_begin());
+    MachinePointerInfo SrcPtrInfo = SrcMMO.getPointerInfo();
+    uint64_t Limit = Opc == TargetOpcode::G_MEMCPY_INLINE
+                         ? std::numeric_limits<uint64_t>::max()
+                         : TLI.getMaxStoresPerMemcpy(OptSize);
+    return findGISelOptimalMemOpLowering(
+        MemOps, Limit,
+        MemOp::Copy(KnownLen, DstAlignCanChange, std::min(DstAlign, SrcAlign),
+                    SrcAlign, IsVolatile),
+        DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
+        MF.getFunction().getAttributes(), TLI);
+  }
+  case TargetOpcode::G_MEMMOVE: {
+    const auto &SrcMMO = **std::next(MI.memoperands_begin());
+    MachinePointerInfo SrcPtrInfo = SrcMMO.getPointerInfo();
+    unsigned Limit = TLI.getMaxStoresPerMemmove(OptSize);
+    // FIXME: SelectionDAG always passes false for 'AllowOverlap', apparently
+    // due to a bug in it's findOptimalMemOpLowering implementation. For now do
+    // the same thing here.
+    return findGISelOptimalMemOpLowering(
+        MemOps, Limit,
+        MemOp::Copy(KnownLen, DstAlignCanChange, std::min(DstAlign, SrcAlign),
+                    SrcAlign, /*IsVolatile=*/true),
+        DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
+        MF.getFunction().getAttributes(), TLI);
+  }
+  case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE: {
+    unsigned Limit = Opc == TargetOpcode::G_MEMSET_INLINE
+                         ? std::numeric_limits<unsigned>::max()
+                         : TLI.getMaxStoresPerMemset(OptSize);
+    auto ValVRegAndVal = getIConstantVRegValWithLookThrough(Src, MRI);
+    bool IsZeroVal = ValVRegAndVal && ValVRegAndVal->Value == 0;
+    return findGISelOptimalMemOpLowering(
+        MemOps, Limit,
+        MemOp::Set(KnownLen, DstAlignCanChange, DstAlign,
+                   /*IsZeroMemset=*/IsZeroVal,
+                   /*IsVolatile=*/IsVolatile),
+        DstPtrInfo.getAddrSpace(), ~0u, MF.getFunction().getAttributes(), TLI);
+  }
+  default:
+    llvm_unreachable("Unexpected memcpy-family opcode");
+  }
 }

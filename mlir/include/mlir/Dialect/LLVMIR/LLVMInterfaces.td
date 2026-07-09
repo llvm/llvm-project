@@ -551,6 +551,73 @@ def LLVM_LLVMAddrSpaceAttrInterface :
   ];
 }
 
+def LLVM_IntrinsicIntegerAttrInterface :
+    AttrInterface<"IntrinsicIntegerAttrInterface"> {
+  let description = [{
+    An interface for attributes that represent LLVM intrinsic integer immediate
+    arguments while using a richer dialect-specific assembly form.
+
+    The default implementation is intended for enum-style attributes whose
+    `getValue()` returns an enum with a storage type that matches the LLVM
+    immarg width. Attributes with non-enum storage or a different LLVM immarg
+    width must override `getIntegerAttr`.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the integer attribute to pass to LLVM.",
+      /*retTy=*/"::mlir::IntegerAttr",
+      /*methodName=*/"getIntegerAttr",
+      /*args=*/(ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        using EnumType = decltype($_attr.getValue());
+        using StorageType = std::underlying_type_t<EnumType>;
+        auto type = ::mlir::IntegerType::get($_attr.getContext(),
+                                             sizeof(StorageType) * 8);
+        return ::mlir::IntegerAttr::get(
+            type, static_cast<StorageType>($_attr.getValue()));
+      }]
+    >
+  ];
+}
+
+def LLVM_ModuleFlagAttrInterface :
+    AttrInterface<"ModuleFlagAttrInterface"> {
+  let description = [{
+    An interface for attributes that represent LLVM module flag metadata entries.
+
+    Implementing attributes provide the module flag merge behavior, metadata key,
+    and metadata value. This lets target dialects define richer, target-specific
+    module flag attributes while still sharing `llvm.module_flags` as the common
+    operation container. Values returned by this interface must use a shape that
+    can be exported to LLVM IR: integer attributes (exported as i32 constants),
+    string attributes, attributes implementing `IntrinsicIntegerAttrInterface`,
+    supported array values, or `ModuleFlagProfileSummaryAttr`.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the module flag merge behavior.",
+      /*retTy=*/"::mlir::LLVM::ModFlagBehavior",
+      /*methodName=*/"getModuleFlagBehavior",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the module flag metadata key.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getModuleFlagKey",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the module flag metadata value.",
+      /*retTy=*/"::mlir::Attribute",
+      /*methodName=*/"getModuleFlagValue",
+      /*args=*/(ins)
+    >
+  ];
+}
+
 def LLVM_TargetAttrInterface
   : AttrInterface<"TargetAttrInterface", [DLTIQueryInterface]> {
   let description = [{

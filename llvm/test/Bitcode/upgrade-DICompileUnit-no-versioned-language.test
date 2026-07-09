@@ -1,7 +1,17 @@
-; Test loading metadata which was not aware of versioned language names.
+; Test loading metadata which was not aware of versioned language names
+; nor of the DW_AT_LLVM_language_dialect attribute.
+;
+; The CU metadata record in this fixture predates both the
+; sourceLanguageVersion field (Record index 22) and the dialect field
+; (Record index 23). The MetadataLoader must default the dialect to 0
+; ("no dialect specified") when the record is shorter than 24 elements,
+; and the AsmWriter must omit the dialect attribute since it defaults to
+; zero (printDwarfEnum skips zero values).
 ;
 ; RUN: llvm-dis -o - %p/Inputs/compile-unit-no-versioned-language.bc \
-; RUN:     | FileCheck %s --implicit-check-not "sourceLanguageName" --implicit-check-not "sourceLanguageVersion"
+; RUN:     | FileCheck %s --implicit-check-not "sourceLanguageName" \
+; RUN:                    --implicit-check-not "sourceLanguageVersion" \
+; RUN:                    --implicit-check-not "dialect"
 
 ; Input bitcode file was compiled from following source on
 ; LLVM commit `fc22b58c25963ece6b041cadbdc931c2338955e4`:

@@ -48,7 +48,7 @@ define void @memset_x(ptr %a, i8 %value, i64 %x) nounwind !prof !0 {
 !1 = !{!"VP", i32 1, i32 100, i32 5, i32 10, i32 16, i32 13}
 ;.
 ; CHECK: attributes #[[ATTR0]] = { nounwind }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i32 10}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 1048575, i32 1}

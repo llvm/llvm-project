@@ -366,5 +366,7 @@ declare void @llvm.x86.tilestored64.internal(i16, i16, ptr, i64, x86_amx)
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !DIFile(filename: "1", directory: "1"))
 !1 = !{i32 2, !"Debug Info Version", i32 3}
-!2 = distinct !DISubprogram(unit: !0)
+!2 = distinct !DISubprogram(unit: !0, type: !5)
 !3 = !DILocation(line: 1, column: 1, scope: !2)
+!4 = !{null}
+!5 = !DISubroutineType(types: !4)

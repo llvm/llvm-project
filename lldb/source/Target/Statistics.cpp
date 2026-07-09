@@ -17,6 +17,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/StructuredData.h"
 
 using namespace lldb;
@@ -129,8 +130,9 @@ TargetStats::ToJSON(Target &target,
     for (auto module_identifier : m_module_identifiers)
       json_module_uuid_array.emplace_back(module_identifier);
 
-    target_metrics_json.try_emplace(m_expr_eval.name, m_expr_eval.ToJSON());
-    target_metrics_json.try_emplace(m_frame_var.name, m_frame_var.ToJSON());
+    target_metrics_json.try_emplace("expressionEvaluation",
+                                    m_expr_eval.ToJSON());
+    target_metrics_json.try_emplace("frameVariable", m_frame_var.ToJSON());
     if (include_modules)
       target_metrics_json.try_emplace("moduleIdentifiers",
                                       std::move(json_module_uuid_array));
@@ -507,6 +509,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       if (auto json_transcript = llvm::json::parse(buffer))
         global_stats.try_emplace("transcript",
                                  std::move(json_transcript.get()));
+      else
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Target), json_transcript.takeError(),
+                       "failed to parse transcript JSON: {0}");
     }
   }
 

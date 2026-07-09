@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -o - < %s | FileCheck %s --check-prefix=EH
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --force-dwarf-frame-section -o - < %s | FileCheck %s --check-prefix=BOTH
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --exception-model=dwarf -o - < %s | FileCheck %s --check-prefix=EH
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --force-dwarf-frame-section --exception-model=dwarf -o - < %s | FileCheck %s --check-prefix=BOTH
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 --force-dwarf-frame-section -o - < %s | FileCheck %s --check-prefix=BOTH
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 --exception-model=dwarf -o - < %s | FileCheck %s --check-prefix=EH
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 --force-dwarf-frame-section --exception-model=dwarf -o - < %s | FileCheck %s --check-prefix=BOTH
 
 ; EH: f:
 ; EH-NOT: .cfi_sections

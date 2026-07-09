@@ -596,7 +596,7 @@ public:
     assert(!dest.isPreemptible);
     if (std::optional<uint32_t> index =
             ctx.in.ppc64LongBranchTarget->addEntry(&dest, addend)) {
-      ctx.mainPart->relaDyn->addRelativeReloc(
+      ctx.in.relaDyn->addRelativeReloc(
           ctx.target->relativeRel, *ctx.in.ppc64LongBranchTarget,
           *index * UINT64_C(8), dest,
           addend + getPPC64GlobalEntryToLocalEntryOffset(ctx, dest.stOther),

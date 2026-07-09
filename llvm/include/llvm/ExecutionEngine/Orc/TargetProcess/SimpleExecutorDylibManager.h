@@ -41,6 +41,9 @@ public:
 
   Expected<tpctypes::DylibHandle> open(const std::string &Path, uint64_t Mode);
 
+  ExecutorResolver::ResolveResult resolve(ExecutorAddr Resolver,
+                                          RemoteSymbolLookupSet Lookup);
+
   Error shutdown() override;
   void addBootstrapSymbols(StringMap<ExecutorAddr> &M) override;
 

@@ -17,7 +17,8 @@
 using namespace llvm;
 
 bool llvm::canTrackArgumentsInterprocedurally(Function *F) {
-  return F->hasLocalLinkage() && !F->hasAddressTaken();
+  return F->hasExactDefinition() && F->hasLocalLinkage() &&
+         !F->hasAddressTaken();
 }
 
 bool llvm::canTrackReturnsInterprocedurally(Function *F) {

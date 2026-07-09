@@ -461,7 +461,8 @@ static void emitWorklistOverloads(raw_ostream &OS, const OverloadContext &Ctx,
                                   ArrayRef<int64_t> VectorSizes,
                                   ArrayRef<const Record *> MatrixDimensions) {
   bool InIfdef = false;
-  for (const TypeWorkItem &Item : Worklist) {
+  for (size_t I = 0, E = Worklist.size(); I != E; ++I) {
+    const TypeWorkItem &Item = Worklist[I];
     if (Item.NeedsIfdefGuard && !InIfdef) {
       OS << "#ifdef __HLSL_ENABLE_16_BIT\n";
       InIfdef = true;
@@ -487,8 +488,7 @@ static void emitWorklistOverloads(raw_ostream &OS, const OverloadContext &Ctx,
     }
 
     if (InIfdef) {
-      bool NextIsUnguarded =
-          (&Item == &Worklist.back()) || !(&Item + 1)->NeedsIfdefGuard;
+      bool NextIsUnguarded = (I + 1 == E) || !Worklist[I + 1].NeedsIfdefGuard;
       if (NextIsUnguarded) {
         OS << "#endif\n";
         InIfdef = false;

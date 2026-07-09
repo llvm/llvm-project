@@ -1184,7 +1184,7 @@ def hlfir_ApplyOp : hlfir_Op<"apply", [NoMemoryEffect, AttrSizedOperandSegments]
   ];
 }
 
-def hlfir_NullOp : hlfir_Op<"null", [NoMemoryEffect, fir_FortranVariableOpInterface]> {
+def hlfir_NullOp : hlfir_Op<"null", [Pure, fir_FortranVariableOpInterface]> {
   let summary = "create a NULL() address";
 
   let description = [{

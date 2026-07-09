@@ -230,6 +230,7 @@ MVT M68kTargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
   return MVT::getIntegerVT(DL.getPointerSizeInBits(0));
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "M68kGenCallingConv.inc"
 
 enum StructReturnType { NotStructReturn, RegStructReturn, StackStructReturn };
@@ -268,11 +269,12 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
                                          SDValue Chain, ISD::ArgFlagsTy Flags,
                                          SelectionDAG &DAG, const SDLoc &DL) {
   SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), DL, MVT::i32);
+  Align Alignment = Flags.getNonZeroByValAlign();
 
-  return DAG.getMemcpy(
-      Chain, DL, Dst, Src, SizeNode, Flags.getNonZeroByValAlign(),
-      /*isVolatile=*/false, /*AlwaysInline=*/true,
-      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
+  return DAG.getMemcpy(Chain, DL, Dst, Src, SizeNode, Alignment, Alignment,
+                       /*isVolatile=*/false, /*AlwaysInline=*/true,
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                       MachinePointerInfo());
 }
 
 /// Return true if the calling convention is one that we can guarantee TCO for.
@@ -1105,7 +1107,7 @@ M68kTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CCID,
     else if (VA.getLocInfo() == CCValAssign::ZExt)
       ValToCopy = DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), ValToCopy);
     else if (VA.getLocInfo() == CCValAssign::AExt) {
-      if (ValVT.isVector() && ValVT.getVectorElementType() == MVT::i1)
+      if (ValVT.isVectorOf(MVT::i1))
         ValToCopy = DAG.getNode(ISD::SIGN_EXTEND, DL, VA.getLocVT(), ValToCopy);
       else
         ValToCopy = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), ValToCopy);

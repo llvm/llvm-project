@@ -228,6 +228,12 @@ bool isPrivatizingConstruct(Directive D, unsigned Version) {
   return llvm::is_contained(Privatizing, D);
 }
 
+ArrayRef<StringRef> getReservedLocatorNames() {
+  // All names must be lowercase.
+  static StringRef names[]{"omp_all_memory"};
+  return names;
+}
+
 std::string prettifyFunctionName(StringRef FunctionName) {
   // Internalized functions have the right name, but simply a suffix.
   if (FunctionName.ends_with(".internalized"))

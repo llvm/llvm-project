@@ -202,9 +202,10 @@ public:
   bool hasUniqueVTablePointer(QualType RecordTy) {
     const CXXRecordDecl *RD = RecordTy->getAsCXXRecordDecl();
 
-    // Under -fapple-kext, multiple definitions of the same vtable may be
-    // emitted.
-    if (!CGM.getCodeGenOpts().AssumeUniqueVTables ||
+    // The exact dynamic_cast optimization relies on the vtable having a unique
+    // address. -fno-assume-unique-vtables disables it, and under -fapple-kext
+    // multiple definitions of the same vtable may be emitted.
+    if (CGM.getCodeGenOpts().DisableExactDynamicCast ||
         getContext().getLangOpts().AppleKext)
       return false;
 
@@ -227,7 +228,10 @@ public:
         llvm::GlobalValue::DefaultVisibility)
       return false;
 
-    return true;
+    // A vague-linkage (weak) vtable on a target whose ABI may duplicate it can
+    // be emitted with a distinct address in more than one image, so its address
+    // cannot be assumed unique.
+    return !CGM.mayVTableBeDuplicated(CGM.getVTableLinkage(RD));
   }
 
   bool shouldEmitExactDynamicCast(QualType DestRecordTy) override {
@@ -1381,12 +1385,14 @@ bool ItaniumCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
   if (!RD)
     return false;
 
-  // If C++ prohibits us from making a copy, return by address.
+  // If C++ prohibits us from making a copy, return by address using the target
+  // hook getSRetAddrSpace to decide the AS.
   if (!RD->canPassInRegisters()) {
     auto Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
-    FI.getReturnInfo() = ABIArgInfo::getIndirect(
-        Align, /*AddrSpace=*/CGM.getDataLayout().getAllocaAddrSpace(),
-        /*ByVal=*/false);
+    LangAS SRetAS = CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD);
+    unsigned AS = CGM.getContext().getTargetAddressSpace(SRetAS);
+    FI.getReturnInfo() =
+        ABIArgInfo::getIndirect(Align, /*AddrSpace=*/AS, /*ByVal=*/false);
     return true;
   }
   return false;
@@ -2097,6 +2103,12 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
   // Set the correct linkage.
   VTable->setLinkage(Linkage);
 
+  // On a target that may duplicate vtables, a weak vtable does not have a
+  // unique address, so its address is insignificant and it can be marked
+  // unnamed_addr.
+  if (CGM.mayVTableBeDuplicated(VTable->getLinkage()))
+    VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
   if (CGM.supportsCOMDAT() && VTable->isWeakForLinker())
     VTable->setComdat(CGM.getModule().getOrInsertComdat(VTable->getName()));
 
@@ -2256,7 +2268,8 @@ llvm::GlobalVariable *ItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   VTable = CGM.CreateOrReplaceCXXRuntimeVariable(
       Name, VTableType, llvm::GlobalValue::ExternalLinkage,
       getContext().toCharUnitsFromBits(PAlign).getAsAlign());
-  VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  if (!CGM.shouldEmitRTTI())
+    VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   if (CGM.getTarget().hasPS4DLLImportExport())
     setVTableSelectiveDLLImportExport(CGM, VTable, RD);

@@ -33,7 +33,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_freebsd64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-FREEBSD-X86-64 %s
 //
-// CHECK-FREEBSD-X86-64: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-FREEBSD-X86-64: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-FREEBSD-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-freebsd{{/|\\\\}}libclang_rt.profile.a"
 //
 // RUN: %clang -### %s 2>&1 \
@@ -81,7 +81,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_freebsd64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-FREEBSD-X86-64-SHARED %s
 //
-// CHECK-FREEBSD-X86-64-SHARED: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-FREEBSD-X86-64-SHARED: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-FREEBSD-X86-64-SHARED: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-freebsd{{/|\\\\}}libclang_rt.profile.a"
 //
 // RUN: %clang -### %s 2>&1 \
