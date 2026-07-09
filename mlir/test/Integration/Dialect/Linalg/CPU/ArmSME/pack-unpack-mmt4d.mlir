@@ -244,14 +244,14 @@ module @transforms attributes { transform.with_named_sequence } {
     %mmt4d_func = transform.get_parent_op %mmt4d {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
 
     // Step 1: Tile
-    // Tile parallel dims (note, the M, N dim is scalable!)
+    // Tile parallel dims (note, the M, N dims are scalable!)
     %tiled_mmt4d_parallel, %_:4 = transform.structured.tile_using_for %mmt4d tile_sizes [1, 1, 0, [8], [8], 0]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
     // Tile reduction dims
     %tiled_mmt4d, %loop_k = transform.structured.tile_using_for %tiled_mmt4d_parallel tile_sizes [0, 0, 1, 0, 0, 0]
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
 
-    // Step 2: Vectorize linalg.mmt4d (note, the M, N dim is scalable!)
+    // Step 2: Vectorize linalg.mmt4d (note, the M, N dims are scalable!)
     transform.structured.vectorize %tiled_mmt4d vector_sizes  [1, 1, 1, [8], [8], 1] {create_named_contraction}
       : !transform.any_op
 
