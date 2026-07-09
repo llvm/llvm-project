@@ -29,10 +29,10 @@ define void @sgt_loopguard(ptr noalias nocapture readonly %a, ptr noalias nocapt
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[N]])
 ; COMMON-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[C]], i32 [[INDEX]]
 ; COMMON-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i32 [[INDEX]]
 ; COMMON-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[A]], i32 [[INDEX]]
-; COMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[N]])
 ; COMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[NEXT_GEP2]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; COMMON-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[NEXT_GEP1]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; COMMON-NEXT:    [[TMP0:%.*]] = add <16 x i8> [[WIDE_MASKED_LOAD3]], [[WIDE_MASKED_LOAD]]
@@ -94,10 +94,10 @@ define void @sgt_no_loopguard(ptr noalias nocapture readonly %a, ptr noalias noc
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[TMP1]])
 ; COMMON-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[C]], i32 [[INDEX]]
 ; COMMON-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i32 [[INDEX]]
 ; COMMON-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[A]], i32 [[INDEX]]
-; COMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[TMP1]])
 ; COMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[NEXT_GEP2]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; COMMON-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[NEXT_GEP1]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; COMMON-NEXT:    [[TMP2:%.*]] = add <16 x i8> [[WIDE_MASKED_LOAD3]], [[WIDE_MASKED_LOAD]]
@@ -157,10 +157,10 @@ define void @sgt_extra_use_cmp(ptr noalias nocapture readonly %a, ptr noalias no
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; COMMON-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[TMP2]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 [[TMP1]])
 ; COMMON-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[C]], i32 [[INDEX]]
 ; COMMON-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i32 [[INDEX]]
 ; COMMON-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[A]], i32 [[INDEX]]
-; COMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 [[TMP1]])
 ; COMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr align 1 [[NEXT_GEP2]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i8> poison)
 ; COMMON-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr align 1 [[NEXT_GEP1]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i8> poison)
 ; COMMON-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[WIDE_MASKED_LOAD3]], [[WIDE_MASKED_LOAD]]
@@ -219,10 +219,10 @@ define void @sgt_const_tripcount(ptr noalias nocapture readonly %a, ptr noalias 
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 2049)
 ; COMMON-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[C]], i32 [[INDEX]]
 ; COMMON-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i32 [[INDEX]]
 ; COMMON-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[A]], i32 [[INDEX]]
-; COMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 2049)
 ; COMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[NEXT_GEP2]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; COMMON-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[NEXT_GEP1]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; COMMON-NEXT:    [[TMP0:%.*]] = add <16 x i8> [[WIDE_MASKED_LOAD3]], [[WIDE_MASKED_LOAD]]
@@ -335,10 +335,10 @@ define void @sgt_step_minus_two(ptr noalias nocapture readonly %a, ptr noalias n
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[TMP1]])
 ; COMMON-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[C]], i32 [[INDEX]]
 ; COMMON-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i32 [[INDEX]]
 ; COMMON-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[A]], i32 [[INDEX]]
-; COMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[TMP1]])
 ; COMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[NEXT_GEP2]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; COMMON-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[NEXT_GEP1]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; COMMON-NEXT:    [[TMP2:%.*]] = add <16 x i8> [[WIDE_MASKED_LOAD3]], [[WIDE_MASKED_LOAD]]
@@ -456,10 +456,10 @@ define void @icmp_eq(ptr noalias nocapture readonly %A, ptr noalias nocapture re
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[N]])
 ; COMMON-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[C]], i32 [[INDEX]]
 ; COMMON-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i32 [[INDEX]]
 ; COMMON-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[A]], i32 [[INDEX]]
-; COMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[N]])
 ; COMMON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[NEXT_GEP2]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; COMMON-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[NEXT_GEP1]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; COMMON-NEXT:    [[TMP0:%.*]] = add <16 x i8> [[WIDE_MASKED_LOAD3]], [[WIDE_MASKED_LOAD]]
@@ -564,8 +564,8 @@ define void @sgt_for_loop(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-PREFER-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-PREFER:       [[VECTOR_BODY]]:
 ; CHECK-PREFER-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-PREFER-NEXT:    [[TMP0:%.*]] = sub i32 [[N]], [[INDEX]]
 ; CHECK-PREFER-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[N]])
+; CHECK-PREFER-NEXT:    [[TMP0:%.*]] = sub i32 [[N]], [[INDEX]]
 ; CHECK-PREFER-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP0]]
 ; CHECK-PREFER-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 -15
 ; CHECK-PREFER-NEXT:    [[REVERSE:%.*]] = shufflevector <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i1> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
@@ -697,8 +697,8 @@ define void @sgt_for_loop_i64(ptr noalias nocapture readonly %a, ptr noalias noc
 ; CHECK-PREFER-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-PREFER:       [[VECTOR_BODY]]:
 ; CHECK-PREFER-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-PREFER-NEXT:    [[TMP0:%.*]] = sub i64 [[CONV16]], [[INDEX]]
 ; CHECK-PREFER-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 [[INDEX]], i64 [[CONV16]])
+; CHECK-PREFER-NEXT:    [[TMP0:%.*]] = sub i64 [[CONV16]], [[INDEX]]
 ; CHECK-PREFER-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-PREFER-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP1]]
 ; CHECK-PREFER-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP2]], i32 -15
@@ -870,8 +870,8 @@ define void @sgt_nested_loop(ptr noalias nocapture readonly %a, ptr noalias noca
 ; CHECK-PREFER-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-PREFER:       [[VECTOR_BODY]]:
 ; CHECK-PREFER-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-PREFER-NEXT:    [[TMP0:%.*]] = sub i32 [[ADD]], [[INDEX]]
 ; CHECK-PREFER-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[ADD]])
+; CHECK-PREFER-NEXT:    [[TMP0:%.*]] = sub i32 [[ADD]], [[INDEX]]
 ; CHECK-PREFER-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP0]]
 ; CHECK-PREFER-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 -15
 ; CHECK-PREFER-NEXT:    [[REVERSE:%.*]] = shufflevector <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i1> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
