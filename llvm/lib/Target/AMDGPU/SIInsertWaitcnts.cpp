@@ -3635,10 +3635,8 @@ bool SIInsertWaitcnts::run() {
     //   V_NOP
     MachineBasicBlock::iterator I = EntryBB.begin();
     BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::GLOBAL_WB))
-        .addImm(AMDGPU::CPol::SCOPE_CU)
-        .addReg(AMDGPU::EXEC, RegState::Implicit);
-    BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::V_NOP_e32))
-        .addReg(AMDGPU::EXEC, RegState::Implicit);
+        .addImm(AMDGPU::CPol::SCOPE_CU);
+    BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::V_NOP_e32));
     Modified = true;
   }
 
