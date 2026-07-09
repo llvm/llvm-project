@@ -11498,6 +11498,8 @@ bool ScalarEvolution::isKnownViaInduction(CmpPredicate Pred, SCEVUse LHS,
 /// LHS into its operands:
 ///
 ///   max(X0, ..., Xn) Pred RHS  if  Xi Pred RHS for all i.
+///
+///   min(X0, ..., Xn) Pred RHS  if  Xi Pred RHS for some i.
 static bool isKnownViaMinMaxDecomposition(ScalarEvolution &SE,
                                           CmpPredicate Pred, const SCEV *LHS,
                                           const SCEV *RHS) {
@@ -11515,6 +11517,15 @@ static bool isKnownViaMinMaxDecomposition(ScalarEvolution &SE,
 
   if (isa<SCEVSMaxExpr, SCEVUMaxExpr>(LHS))
     if (all_of(cast<SCEVMinMaxExpr>(LHS)->operands(), [&](const SCEV *Op) {
+          return SE.isKnownPredicate(Pred, Op, RHS);
+        }))
+      return true;
+
+  // Dual "any_of" case (see above); only sound when the min signedness matches
+  // the predicate.
+  bool IsSigned = ICmpInst::isSigned(Pred);
+  if (IsSigned ? isa<SCEVSMinExpr>(LHS) : isa<SCEVUMinExpr>(LHS))
+    if (any_of(cast<SCEVMinMaxExpr>(LHS)->operands(), [&](const SCEV *Op) {
           return SE.isKnownPredicate(Pred, Op, RHS);
         }))
       return true;
@@ -13048,29 +13059,6 @@ static bool IsKnownPredicateViaMinOrMax(ScalarEvolution &SE, CmpPredicate Pred,
         IsMinMaxConsistingOf<SCEVUMinExpr>(LHS, RHS) ||
         // A <= max(A, ...)
         IsMinMaxConsistingOf<SCEVUMaxExpr>(RHS, LHS);
-
-  case ICmpInst::ICMP_UGT:
-    std::swap(LHS, RHS);
-    [[fallthrough]];
-  case ICmpInst::ICMP_ULT:
-    // umin(Ops) u<= each Op, so proving Op u< RHS for any Op proves
-    // umin(Ops) u< RHS.
-    //
-    // Use computeConstantDifference instead of the more powerful
-    // isKnownPredicate to keep this check cheap: isKnownPredicateViaMinOrMax
-    // is called from isKnownViaNonRecursiveReasoning, so recursing into
-    // the full predicate prover would be expensive.
-    if (const auto *Min = dyn_cast<SCEVUMinExpr>(LHS)) {
-      for (SCEVUse Op : Min->operands()) {
-        std::optional<APInt> Diff = SE.computeConstantDifference(RHS, Op);
-        // When Op and RHS share a common base differing by a
-        // constant offset D (RHS - Op = D), Op u< RHS holds iff D != 0 and
-        // RHS >= D (unsigned), i.e. the subtraction doesn't underflow.
-        if (Diff && !Diff->isZero() && SE.getUnsignedRangeMin(RHS).uge(*Diff))
-          return true;
-      }
-    }
-    return false;
   }
 
   llvm_unreachable("covered switch fell through?!");
