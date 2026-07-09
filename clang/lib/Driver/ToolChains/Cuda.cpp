@@ -418,9 +418,9 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   const auto &TC =
       static_cast<const toolchains::NVPTXToolChain &>(getToolChain());
 
-  bool UseLLVMOffload = Args.hasFlag(options::OPT_foffload_via_llvm,
-                                     options::OPT_fno_offload_via_llvm, false);
-  assert((UseLLVMOffload || TC.getTriple().isNVPTX()) && "Wrong platform");
+  bool UsesLLVMOffloading = Args.hasFlag(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
+  assert((UsesLLVMOffloading || TC.getTriple().isNVPTX()) && "Wrong platform");
 
   BoundArch GPUArch;
   // If this is a CUDA action we need to extract the device architecture
@@ -443,7 +443,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
          "Device action expected to have an architecture.");
 
   // Check that our installation's ptxas supports gpu_arch.
-  if (!UseLLVMOffload && !Args.hasArg(options::OPT_no_cuda_version_check)) {
+  if (!UsesLLVMOffloading && !Args.hasArg(options::OPT_no_cuda_version_check)) {
     TC.CudaInstallation.CheckCudaVersionSupportsArch(GPUArch.Arch);
   }
 
@@ -516,7 +516,8 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                /*Default=*/true);
   else if (JA.isOffloading(Action::OFK_Cuda))
     // In CUDA we generate relocatable code by default.
-    Relocatable = Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+    Relocatable = UsesLLVMOffloading ||
+                  Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
                                /*Default=*/false);
   else
     // Otherwise, we are compiling directly and should create linkable output.
@@ -565,9 +566,9 @@ void NVPTX::FatBinary::ConstructJob(Compilation &C, const JobAction &JA,
                                     const char *LinkingOutput) const {
   const auto &TC =
       static_cast<const toolchains::CudaToolChain &>(getToolChain());
-  bool UseLLVMOffload = Args.hasFlag(options::OPT_foffload_via_llvm,
-                                     options::OPT_fno_offload_via_llvm, false);
-  assert((UseLLVMOffload || TC.getTriple().isNVPTX()) && "Wrong platform");
+  bool UsesLLVMOffloading = Args.hasFlag(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
+  assert((UsesLLVMOffloading || TC.getTriple().isNVPTX()) && "Wrong platform");
 
   ArgStringList CmdArgs;
   if (TC.CudaInstallation.version() <= CudaVersion::CUDA_100)
@@ -615,9 +616,9 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       static_cast<const toolchains::NVPTXToolChain &>(getToolChain());
   ArgStringList CmdArgs;
 
-  bool UseLLVMOffload = Args.hasFlag(options::OPT_foffload_via_llvm,
-                                     options::OPT_fno_offload_via_llvm, false);
-  assert((UseLLVMOffload || TC.getTriple().isNVPTX()) && "Wrong platform");
+  bool UsesLLVMOffloading = Args.hasFlag(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
+  assert((UsesLLVMOffloading || TC.getTriple().isNVPTX()) && "Wrong platform");
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {

@@ -5060,8 +5060,8 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
                  << ", Input Arg: " << InputArg->getAsString(Args) << '\n';
 
     // Allow the toolchain to be active for unsupported file types if we are "offload-cross-compiling" via llvm-offload.
-    if (!UsesLLVMOffloading && ((Kind == Action::OFK_Cuda && !types::isCuda(InputType)) ||
-        (Kind == Action::OFK_HIP && !types::isHIP(InputType))))
+    if ((Kind == Action::OFK_Cuda && !types::isCuda(InputType)) ||
+        (Kind == Action::OFK_HIP && !types::isHIP(InputType)))
       continue;
 
     // Get the product of all bound architectures and toolchains.
@@ -5154,9 +5154,12 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
       OffloadAction::DeviceDependences DDep;
       DDep.add(*A, *TCAndArch->first, TCAndArch->second, Kind);
 
-      // Compiling CUDA in non-RDC mode uses the PTX output if available.
+      // The legacy CUDA fatbinary path can include PTX alongside the cubin.
+      // The LLVM offload wrapper path feeds these images through a device
+      // linker first, and clang-nvlink-wrapper does not accept PTX as input.
       for (Action *Input : A->getInputs())
-        if (Kind == Action::OFK_Cuda && A->getType() == types::TY_Object &&
+        if (!UsesLLVMOffloading && Kind == Action::OFK_Cuda &&
+            A->getType() == types::TY_Object &&
             !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
                           false))
           DDep.add(*Input, *TCAndArch->first, TCAndArch->second, Kind);

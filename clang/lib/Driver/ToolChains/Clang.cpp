@@ -987,14 +987,13 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-include");
     CmdArgs.push_back("__clang_openmp_device_functions.h");
   }
+  bool isCudaInput = llvm::any_of(
+      Inputs, [](const InputInfo &I) { return types::isCuda(I.getType()); });
   if (UsesLLVMOffloading && JA.isOffloading(Action::OFK_Cuda) &&
       Args.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
                    true) &&
       !Args.hasArg(options::OPT_nohipwrapperinc) &&
-      !Args.hasArg(options::OPT_nobuiltininc) &&
-      llvm::any_of(Inputs, [](const InputInfo &I) {
-        return types::isCuda(I.getType());
-      })) {
+      !Args.hasArg(options::OPT_nobuiltininc) && isCudaInput) {
     CmdArgs.append({"-include", "__clang_gpu_device_functions.h"});
 
     SmallString<128> OffloadCudaInclude(D.Dir);
