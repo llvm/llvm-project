@@ -2400,6 +2400,9 @@ private:
   bool isKnownPredicateViaSplitting(CmpPredicate Pred, SCEVUse LHS,
                                     SCEVUse RHS);
 
+  bool isKnownPredicateImpl(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS,
+                            unsigned Depth);
+
   /// Try to match the Expr as "(L + R)<Flags>".
   bool splitBinaryAdd(SCEVUse Expr, SCEVUse &L, SCEVUse &R,
                       SCEV::NoWrapFlags &Flags);
