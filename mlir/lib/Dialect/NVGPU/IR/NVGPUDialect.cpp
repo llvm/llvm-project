@@ -704,34 +704,19 @@ LogicalResult RcpOp::verify() {
 // NVGPU_TruncfOp
 //===----------------------------------------------------------------------===//
 
-static bool isShapedContainerType(Type t) {
-  return llvm::isa<VectorType, RankedTensorType, UnrankedTensorType>(t);
-}
-
 static LogicalResult verifyConversionShapes(Operation *op, Type inType,
                                             Type outType) {
-  if (llvm::isa<UnrankedTensorType>(inType) ||
-      llvm::isa<UnrankedTensorType>(outType))
-    return op->emitOpError("unranked tensor types are not supported, got ")
-           << inType << " and " << outType;
-  bool srcIsShaped = isShapedContainerType(inType);
-  bool dstIsShaped = isShapedContainerType(outType);
-  if (srcIsShaped != dstIsShaped)
+  bool srcIsVector = llvm::isa<VectorType>(inType);
+  bool dstIsVector = llvm::isa<VectorType>(outType);
+  if (srcIsVector != dstIsVector)
     return op->emitOpError("input and output must both be scalars or both be "
-                           "vectors/tensors, got ")
+                           "vectors, got ")
            << inType << " and " << outType;
-  if (srcIsShaped) {
-    auto srcShaped = llvm::cast<ShapedType>(inType);
-    auto dstShaped = llvm::cast<ShapedType>(outType);
-    if (srcShaped.getRank() == 0 || dstShaped.getRank() == 0)
-      return op->emitOpError("rank-0 shaped types are not supported, use "
-                             "scalar type instead");
-    if (srcShaped.getShape() != dstShaped.getShape())
+  if (srcIsVector) {
+    auto srcVector = llvm::cast<VectorType>(inType);
+    auto dstVector = llvm::cast<VectorType>(outType);
+    if (srcVector.getShape() != dstVector.getShape())
       return op->emitOpError("input and output shapes must match, got ")
-             << inType << " and " << outType;
-    if (llvm::isa<VectorType>(inType) != llvm::isa<VectorType>(outType))
-      return op->emitOpError("input and output must be the same container "
-                             "type (both vector or both tensor), got ")
              << inType << " and " << outType;
   }
   return success();

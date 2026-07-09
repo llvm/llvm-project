@@ -99,31 +99,15 @@ func.func @fptrunc_shape_mismatch(%in : vector<16xf32>) {
 // -----
 
 func.func @fptrunc_scalar_vector_mismatch(%in : f32) {
-  // expected-error @+1 {{'nvgpu.truncf' op input and output must both be scalars or both be vectors/tensors}}
+  // expected-error @+1 {{'nvgpu.truncf' op input and output must both be scalars or both be vectors}}
   %out = nvgpu.truncf %in : f32 to vector<1xf16>
   return
 }
 
 // -----
 
-func.func @fptrunc_rank0_tensor(%in : tensor<f32>) {
-  // expected-error @+1 {{'nvgpu.truncf' op rank-0 shaped types are not supported, use scalar type instead}}
-  %out = nvgpu.truncf %in : tensor<f32> to tensor<f16>
-  return
-}
-
-// -----
-
-func.func @fptrunc_container_mismatch(%in : vector<4xf32>) {
-  // expected-error @+1 {{'nvgpu.truncf' op input and output must be the same container type (both vector or both tensor)}}
-  %out = nvgpu.truncf %in : vector<4xf32> to tensor<4xf16>
-  return
-}
-
-// -----
-
-func.func @fptrunc_unranked_tensor(%in : tensor<*xf32>) {
-  // expected-error @+1 {{'nvgpu.truncf' op unranked tensor types are not supported}}
-  %out = nvgpu.truncf %in : tensor<*xf32> to tensor<*xf16>
+func.func @fptrunc_rank0_vector(%in : vector<f32>) {
+  // expected-error @+1 {{'nvgpu.truncf' op operand #0 must be floating-point or vector of floating-point values, but got 'vector<f32>'}}
+  %out = nvgpu.truncf %in : vector<f32> to vector<f16>
   return
 }

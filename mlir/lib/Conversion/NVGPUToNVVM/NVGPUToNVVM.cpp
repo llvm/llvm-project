@@ -2263,9 +2263,6 @@ struct NVGPUTruncfOpLowering : public ConvertOpToLLVMPattern<nvgpu::TruncfOp> {
   LogicalResult
   matchAndRewrite(nvgpu::TruncfOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (isa<RankedTensorType>(op.getIn().getType()))
-      return rewriter.notifyMatchFailure(
-          op, "tensor inputs not handled; type converter should lower first");
     return lowerTruncf(op, adaptor, rewriter, getTypeConverter());
   }
 };
@@ -2276,9 +2273,6 @@ struct NVGPUExtfOpLowering : public ConvertOpToLLVMPattern<nvgpu::ExtfOp> {
   LogicalResult
   matchAndRewrite(nvgpu::ExtfOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (isa<RankedTensorType>(op.getIn().getType()))
-      return rewriter.notifyMatchFailure(
-          op, "tensor inputs not handled; type converter should lower first");
     return lowerExtf(op, adaptor, rewriter, getTypeConverter());
   }
 };
@@ -2306,9 +2300,6 @@ struct NVGPUFPCanonicalizePattern : public OpRewritePattern<CvtOp> {
                                 PatternRewriter &rewriter) const override {
     Type inType = op.getIn().getType();
     Type outType = op.getOut().getType();
-
-    if (isa<RankedTensorType>(inType))
-      return failure();
 
     Type srcElemTy = getElementTypeOrSelf(inType);
     Type dstElemTy = getElementTypeOrSelf(outType);

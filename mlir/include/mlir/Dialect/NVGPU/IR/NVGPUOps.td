@@ -703,7 +703,7 @@ def NVGPU_TruncfOp : NVGPU_Op<"truncf", [Pure]> {
     %r = nvgpu.truncf %in : vector<2x4xf16> to vector<2x4xf8E5M2>
     ```
   }];
-  let arguments = (ins FloatLike:$in,
+  let arguments = (ins AnyTypeOf<[AnyFloat, VectorOfNonZeroRankOf<[AnyFloat]>]>:$in,
                        DefaultValuedAttr<FPRoundingModeAttr, "NVVM::FPRoundingMode::RN">:$rnd,
                        DefaultValuedAttr<ConfinedAttr<SaturationModeAttr, 
                          [EnumAttrIsOneOf<SaturationModeAttr, 
@@ -712,7 +712,7 @@ def NVGPU_TruncfOp : NVGPU_Op<"truncf", [Pure]> {
                        DefaultValuedAttr<BoolAttr, "false">:$relu,
                        Optional<I32>:$random_bits
                        );
-  let results = (outs FloatLike:$out);
+  let results = (outs AnyTypeOf<[AnyFloat, VectorOfNonZeroRankOf<[AnyFloat]>]>:$out);
   let assemblyFormat = "$in (`,` $random_bits^)? attr-dict `:` type($in) `to` type($out)";
   let hasVerifier = 1;
 }
@@ -738,10 +738,10 @@ def NVGPU_ExtfOp : NVGPU_Op<"extf", [Pure]> {
     %r = nvgpu.extf %in : f8E4M3FN to f32
     ```
   }];
-  let arguments = (ins FloatLike:$in,
+  let arguments = (ins AnyTypeOf<[AnyFloat, VectorOfNonZeroRankOf<[AnyFloat]>]>:$in,
                        DefaultValuedAttr<FPRoundingModeAttr, "NVVM::FPRoundingMode::RN">:$rnd,
                        DefaultValuedAttr<BoolAttr, "false">:$relu);
-  let results = (outs FloatLike:$out);
+  let results = (outs AnyTypeOf<[AnyFloat, VectorOfNonZeroRankOf<[AnyFloat]>]>:$out);
   let assemblyFormat = "$in attr-dict `:` type($in) `to` type($out)";
   let hasVerifier = 1;
 }

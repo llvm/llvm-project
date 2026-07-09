@@ -52,31 +52,15 @@ func.func @fpext_shape_mismatch(%in : vector<16xf8E5M2>) {
 // -----
 
 func.func @fpext_scalar_vector_mismatch(%in : f8E4M3FN) {
-  // expected-error @+1 {{'nvgpu.extf' op input and output must both be scalars or both be vectors/tensors}}
+  // expected-error @+1 {{'nvgpu.extf' op input and output must both be scalars or both be vectors}}
   %out = nvgpu.extf %in : f8E4M3FN to vector<1xf16>
   return
 }
 
 // -----
 
-func.func @fpext_rank0_tensor(%in : tensor<f8E4M3FN>) {
-  // expected-error @+1 {{'nvgpu.extf' op rank-0 shaped types are not supported, use scalar type instead}}
-  %out = nvgpu.extf %in : tensor<f8E4M3FN> to tensor<f16>
-  return
-}
-
-// -----
-
-func.func @fpext_container_mismatch(%in : vector<4xf8E4M3FN>) {
-  // expected-error @+1 {{'nvgpu.extf' op input and output must be the same container type (both vector or both tensor)}}
-  %out = nvgpu.extf %in : vector<4xf8E4M3FN> to tensor<4xf16>
-  return
-}
-
-// -----
-
-func.func @fpext_unranked_tensor(%in : tensor<*xf8E4M3FN>) {
-  // expected-error @+1 {{'nvgpu.extf' op unranked tensor types are not supported}}
-  %out = nvgpu.extf %in : tensor<*xf8E4M3FN> to tensor<*xf16>
+func.func @fpext_rank0_vector(%in : vector<f8E4M3FN>) {
+  // expected-error @+1 {{'nvgpu.extf' op operand #0 must be floating-point or vector of floating-point values, but got 'vector<f8E4M3FN>'}}
+  %out = nvgpu.extf %in : vector<f8E4M3FN> to vector<f16>
   return
 }
