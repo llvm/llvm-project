@@ -1116,7 +1116,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         if (Level != OptimizationLevel::O0) {
           PM.addPass(createModuleToFunctionPassAdaptor(
               EarlyCSEPass(/*UseMemorySSA=*/true)));
-          }
+        }
 
         // When we are using -fgpu-rdc, we can only run accelerator code
         // selection after linking to prevent, otherwise we end up removing
