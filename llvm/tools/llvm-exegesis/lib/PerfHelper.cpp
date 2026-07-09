@@ -74,6 +74,19 @@ PerfEvent::PerfEvent(StringRef PfmEventString)
     FullQualifiedEventString = PfmEventString;
 }
 
+RawPerfEvent::RawPerfEvent(int EventSelect, int UMask) {
+#ifdef HAVE_LIBPFM
+  EventString = ("raw:" + Twine(EventSelect) + ":" + Twine(UMask)).str();
+  FullQualifiedEventString = EventString;
+  Attr = new perf_event_attr();
+  Attr->size = sizeof(*Attr);
+  Attr->type = PERF_TYPE_RAW;
+  Attr->config = (UMask << 8) | EventSelect;
+  Attr->exclude_kernel = 1;
+  Attr->exclude_hv = 1;
+#endif
+}
+
 void PerfEvent::initRealEvent(StringRef PfmEventString) {
 #ifdef HAVE_LIBPFM
   char *Fstr = nullptr;
