@@ -1929,9 +1929,9 @@ define zeroext i16 @clpeak_umad_pat_i16(i16 zeroext %x, i16 zeroext %y) {
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.h, v0.l, v1.l, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-SDAG-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: clpeak_umad_pat_i16:
@@ -1959,7 +1959,8 @@ define zeroext i16 @clpeak_umad_pat_i16(i16 zeroext %x, i16 zeroext %y) {
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v0.h
-; GFX11-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: clpeak_umad_pat_i16:
@@ -1990,9 +1991,9 @@ define zeroext i16 @clpeak_umad_pat_i16(i16 zeroext %x, i16 zeroext %y) {
 ; GFX1200-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.h, v0.l, v1.l, v0.l
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
-; GFX1200-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1200-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
-; GFX1200-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX1200-SDAG-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX1200-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-SDAG-FAKE16-LABEL: clpeak_umad_pat_i16:
@@ -2028,7 +2029,8 @@ define zeroext i16 @clpeak_umad_pat_i16(i16 zeroext %x, i16 zeroext %y) {
 ; GFX1200-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
 ; GFX1200-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v0.h
-; GFX1200-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX1200-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1200-GISEL-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX1200-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-GISEL-FAKE16-LABEL: clpeak_umad_pat_i16:
@@ -2091,9 +2093,9 @@ define zeroext i16 @clpeak_umad_pat_i16(i16 zeroext %x, i16 zeroext %y) {
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.h, v0.l, v1.l, v0.l
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
-; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
-; GFX1250-SDAG-REAL16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-REAL16-LABEL: clpeak_umad_pat_i16:
@@ -2110,7 +2112,8 @@ define zeroext i16 @clpeak_umad_pat_i16(i16 zeroext %x, i16 zeroext %y) {
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-REAL16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
 ; GFX1250-GISEL-REAL16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v0.h
-; GFX1250-GISEL-REAL16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-REAL16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX1250-GISEL-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX1250-GISEL-LABEL: clpeak_umad_pat_i16:
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
@@ -10496,9 +10499,9 @@ define zeroext i16 @clpeak_umad_pat_i16_x2(i16 zeroext %x, i16 zeroext %y) {
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.h, v0.l, v0.h, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-SDAG-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: clpeak_umad_pat_i16_x2:
@@ -10542,7 +10545,8 @@ define zeroext i16 @clpeak_umad_pat_i16_x2(i16 zeroext %x, i16 zeroext %y) {
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v0.h
-; GFX11-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: clpeak_umad_pat_i16_x2:
@@ -10589,9 +10593,9 @@ define zeroext i16 @clpeak_umad_pat_i16_x2(i16 zeroext %x, i16 zeroext %y) {
 ; GFX1200-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.h, v0.l, v0.h, v0.l
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
-; GFX1200-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1200-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
-; GFX1200-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX1200-SDAG-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX1200-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-SDAG-FAKE16-LABEL: clpeak_umad_pat_i16_x2:
@@ -10643,7 +10647,8 @@ define zeroext i16 @clpeak_umad_pat_i16_x2(i16 zeroext %x, i16 zeroext %y) {
 ; GFX1200-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
 ; GFX1200-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v0.h
-; GFX1200-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX1200-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1200-GISEL-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX1200-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-GISEL-FAKE16-LABEL: clpeak_umad_pat_i16_x2:
@@ -10738,9 +10743,9 @@ define zeroext i16 @clpeak_umad_pat_i16_x2(i16 zeroext %x, i16 zeroext %y) {
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.h, v0.l, v0.h, v0.l
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
-; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
-; GFX1250-SDAG-REAL16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-REAL16-LABEL: clpeak_umad_pat_i16_x2:
@@ -10767,7 +10772,8 @@ define zeroext i16 @clpeak_umad_pat_i16_x2(i16 zeroext %x, i16 zeroext %y) {
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-REAL16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
 ; GFX1250-GISEL-REAL16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v0.h
-; GFX1250-GISEL-REAL16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-REAL16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX1250-GISEL-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX1250-GISEL-LABEL: clpeak_umad_pat_i16_x2:
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
@@ -12531,11 +12537,9 @@ define i64 @mul_u24_known_24bit_add64(i16 %x.s, i16 %y.s, i64 %z) {
 ; GFX11-SDAG-TRUE16-LABEL: mul_u24_known_24bit_add64:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v4.h, 0
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v1.l
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v4.h
+; GFX11-SDAG-TRUE16-NEXT:    v_cvt_u32_u16_e32 v4, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    v_cvt_u32_u16_e32 v5, v1.l
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u64_u32 v[0:1], null, v4, v5, v[2:3]
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -12568,12 +12572,10 @@ define i64 @mul_u24_known_24bit_add64(i16 %x.s, i16 %y.s, i64 %z) {
 ; GFX1200-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v4.h, 0
-; GFX1200-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX1200-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
-; GFX1200-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1200-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v4.h
-; GFX1200-SDAG-TRUE16-NEXT:    v_mad_co_u64_u32 v[0:1], null, v4, v0, v[2:3]
+; GFX1200-SDAG-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
+; GFX1200-SDAG-TRUE16-NEXT:    v_cvt_u32_u16_e32 v1, v1.l
+; GFX1200-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1200-SDAG-TRUE16-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, v1, v[2:3]
 ; GFX1200-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-SDAG-FAKE16-LABEL: mul_u24_known_24bit_add64:
@@ -12633,12 +12635,10 @@ define i64 @mul_u24_known_24bit_add64(i16 %x.s, i16 %y.s, i64 %z) {
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
 ; GFX1250-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-REAL16-NEXT:    v_mov_b16_e32 v4.h, 0
-; GFX1250-SDAG-REAL16-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX1250-SDAG-REAL16-NEXT:    v_mov_b16_e32 v0.l, v1.l
-; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-SDAG-REAL16-NEXT:    v_mov_b16_e32 v0.h, v4.h
-; GFX1250-SDAG-REAL16-NEXT:    v_mad_co_u64_u32 v[0:1], null, v4, v0, v[2:3]
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_u32_u16_e32 v1, v1.l
+; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SDAG-REAL16-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, v1, v[2:3]
 ; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-REAL16-LABEL: mul_u24_known_24bit_add64:

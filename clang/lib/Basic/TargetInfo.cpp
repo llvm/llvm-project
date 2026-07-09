@@ -632,6 +632,10 @@ TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
   return CCK_Default;
 }
 
+VTableUniquenessKind TargetInfo::getVTableUniqueness() const {
+  return VTableUniquenessKind::AlwaysUnique;
+}
+
 bool TargetInfo::callGlobalDeleteInDeletingDtor(
     const LangOptions &LangOpts) const {
   if (getCXXABI() == TargetCXXABI::Microsoft &&

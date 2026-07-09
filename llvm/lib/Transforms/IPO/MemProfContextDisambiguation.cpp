@@ -2296,7 +2296,7 @@ uint64_t IndexCallsiteContextGraph::getLastStackId(IndexCall &Call) {
   return Index.getStackIdAtIndex(CallsiteContext.back());
 }
 
-static const std::string MemProfCloneSuffix = ".memprof.";
+static const char MemProfCloneSuffix[] = ".memprof.";
 
 static std::string getMemProfFuncName(Twine Base, unsigned CloneNo) {
   // We use CloneNo == 0 to refer to the original version, which doesn't get

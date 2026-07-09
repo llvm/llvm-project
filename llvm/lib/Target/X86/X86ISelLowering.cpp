@@ -1899,6 +1899,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FMA, VT, Legal);
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
       setOperationAction(ISD::FCANONICALIZE, VT, Expand);
+      setOperationAction(ISD::FLDEXP, VT, Custom);
     }
     setOperationAction(ISD::LRINT, MVT::v16f32,
                        Subtarget.hasDQI() ? Legal : Custom);
@@ -2196,6 +2197,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FNEG, MVT::v32f16, Custom);
     setOperationAction(ISD::FABS, MVT::v32f16, Custom);
     setOperationAction(ISD::FCOPYSIGN, MVT::v32f16, Custom);
+    setOperationAction(ISD::FLDEXP, MVT::v32f16, Custom);
 
     if (Subtarget.hasGFNI()) {
       setOperationAction(ISD::CTLZ, MVT::v64i8, Custom);
@@ -2221,8 +2223,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // narrower widths.
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX512()) {
     for (MVT VT : {MVT::f16, MVT::f32, MVT::f64, MVT::v8f16, MVT::v4f32,
-                   MVT::v2f64, MVT::v16f16, MVT::v8f32, MVT::v4f64, MVT::v32f16,
-                   MVT::v16f32, MVT::v8f64})
+                   MVT::v2f64, MVT::v16f16, MVT::v8f32, MVT::v4f64})
       setOperationAction(ISD::FLDEXP, VT, Custom);
 
     // These operations are handled on non-VLX by artificially widening in
@@ -12947,6 +12948,13 @@ static SDValue lowerShuffleAsZeroOrAnyExtend(
     return lowerShuffleAsSpecificExtension(DL, VT, Scale, Offset, ExtOpc,
                                            InputV, Mask, Subtarget, DAG);
   };
+
+  // Match against a foldable v4i32 VZEXT_MOVL zero-extending instruction.
+  // TODO: Add v8i16 (with FP16) support when we have test coverage.
+  if (VT == MVT::v4i32 &&
+      (V1.getOpcode() == ISD::SCALAR_TO_VECTOR || isa<MemSDNode>(V1)) &&
+      Mask[0] == 0 && (NumElements - 1) == (int)Zeroable.countLeadingOnes())
+    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, V1);
 
   // The widest scale possible for extending is to a 64-bit integer.
   assert(Bits % 64 == 0 &&
@@ -44365,6 +44373,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     break;
   }
   case X86ISD::PSADBW: {
+    APInt LHSUndef, LHSZero;
+    APInt RHSUndef, RHSZero;
     SDValue LHS = Op.getOperand(0);
     SDValue RHS = Op.getOperand(1);
     assert(VT.getScalarType() == MVT::i64 &&
@@ -44372,10 +44382,16 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
            LHS.getValueType().getScalarType() == MVT::i8 &&
            "Unexpected PSADBW types");
 
+    APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumElts * 8);
+    if (SimplifyDemandedVectorElts(LHS, DemandedSrcElts, LHSUndef, LHSZero, TLO,
+                                   Depth + 1))
+      return true;
+    if (SimplifyDemandedVectorElts(RHS, DemandedSrcElts, RHSUndef, RHSZero, TLO,
+                                   Depth + 1))
+      return true;
+
     // Aggressively peek through ops to get at the demanded elts.
     if (!DemandedElts.isAllOnes()) {
-      unsigned NumSrcElts = LHS.getValueType().getVectorNumElements();
-      APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
       SDValue NewLHS = SimplifyMultipleUseDemandedVectorElts(
           LHS, DemandedSrcElts, TLO.DAG, Depth + 1);
       SDValue NewRHS = SimplifyMultipleUseDemandedVectorElts(
@@ -47829,6 +47845,11 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
     if (Rdx.getValueType() == MVT::v8i16) {
       Rdx = DAG.getNode(X86ISD::PACKUS, DL, MVT::v16i8, Rdx,
                         DAG.getUNDEF(MVT::v8i16));
+    } else if (NumElts == 4) {
+      // v4i16 fits into the bottom v8i8 64-bits and is cheaper to truncate.
+      Rdx = DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i16, Rdx);
+      Rdx = DAG.getBitcast(MVT::v8i8, Rdx);
+      Rdx = WidenToV16I8(Rdx);
     } else {
       EVT ByteVT = VecVT.changeVectorElementType(*DAG.getContext(), MVT::i8);
       Rdx = DAG.getNode(ISD::TRUNCATE, DL, ByteVT, Rdx);
