@@ -2168,6 +2168,15 @@ void Clang::AddSystemZTargetArgs(const ArgList &Args,
     CmdArgs.push_back("-mfloat-abi");
     CmdArgs.push_back("soft");
   }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mzos_ppa1_name,
+                               options::OPT_mno_zos_ppa1_name)) {
+    if(!Triple.isOSzOS())
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << Triple.str();
+    else
+      CmdArgs.push_back(A->getValue());
+  }
 }
 
 void Clang::AddX86TargetArgs(const ArgList &Args,

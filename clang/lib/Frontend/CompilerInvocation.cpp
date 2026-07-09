@@ -1766,11 +1766,6 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   if (Opts.XCOFFReadOnlyPointers)
     GenerateArg(Consumer, OPT_mxcoff_roptr);
 
-  if (Opts.getZOSPPA1Name() == CodeGenOptions::ZOSPPA1NameKind::Emit)
-    GenerateArg(Consumer, OPT_mzos_ppa1_name);
-  else if (Opts.getZOSPPA1Name() == CodeGenOptions::ZOSPPA1NameKind::NoEmit)
-    GenerateArg(Consumer, OPT_mno_zos_ppa1_name);
-
   if (!Opts.OptRecordPasses.empty())
     GenerateArg(Consumer, OPT_opt_record_passes, Opts.OptRecordPasses);
 
@@ -2198,15 +2193,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         << A->getSpelling() << T.str();
   }
 
-  if (T.isOSzOS()) {
-    if (const Arg *A =
-            Args.getLastArg(OPT_mzos_ppa1_name, OPT_mno_zos_ppa1_name)) {
-      if (A->getOption().matches(OPT_mzos_ppa1_name))
-        Opts.setZOSPPA1Name(CodeGenOptions::ZOSPPA1NameKind::Emit);
-      else
-        Opts.setZOSPPA1Name(CodeGenOptions::ZOSPPA1NameKind::NoEmit);
-    }
-  }
+  if (!T.isOSzOS() && Args.hasArg(OPT_mzos_ppa1_name, OPT_mno_zos_ppa1_name))
+    Opts.ZOSPPA1Name = true;
 
   bool NeedLocTracking = false;
 
