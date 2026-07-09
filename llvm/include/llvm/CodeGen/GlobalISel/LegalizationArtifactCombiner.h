@@ -293,7 +293,7 @@ public:
         return false;
 
       // G_TRUNC/G_MERGE_VALUES operate on the raw bit pattern - if the merge
-      // feeds us float sources, reinterpret them to integer of the same size
+      // feeds us float sources, reinterpret them as integers of the same size
       // so we never emit a G_TRUNC or G_MERGE_VALUES with a floating-point
       // source operand.
       const LLT WorkTy =

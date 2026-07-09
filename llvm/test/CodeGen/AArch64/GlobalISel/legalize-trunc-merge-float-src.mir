@@ -7,7 +7,7 @@
 # source is reinterpreted to an integer of the same size via G_BITCAST first.
 
 ---
-# DstSize < MergeSrcSize - trunc folds trought the merge to the first source.
+# DstSize < MergeSrcSize - trunc folds through the merge to the first source.
 name:           trunc_merge_float_src_smaller
 legalized:      true
 body:            |
