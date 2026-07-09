@@ -4,6 +4,7 @@
 ! RUN: mkdir -p %t/self
 ! RUN: bbc -module %t/self -implicit-use-module implicit_mod %t/implicit_mod.f90 -o /dev/null
 ! RUN: bbc -module %t %t/implicit_mod.f90 -o /dev/null
+! RUN: not bbc -emit-hlfir -I %t -implicit-use-module implicit_mod %t/use_in_module.f90 -o - 2>&1 | FileCheck %s --check-prefix=MODULE-SCOPE
 ! RUN: bbc -emit-hlfir -fopenacc -I %t -implicit-use-module implicit_mod %t/use_implicit.f90 -o - | FileCheck %s
 
 !--- implicit_mod.f90
@@ -26,6 +27,14 @@ subroutine use_implicit
   x = module_value + common_value
   !$acc end data
 end subroutine
+
+!--- use_in_module.f90
+module use_in_module
+  implicit none
+  integer :: x = module_value
+end module
+
+! MODULE-SCOPE: No explicit type declared for 'module_value'
 
 ! CHECK-LABEL: func.func @_QPuse_implicit()
 ! CHECK-DAG: fir.address_of(@_QMimplicit_modEmodule_value) : !fir.ref<i32>

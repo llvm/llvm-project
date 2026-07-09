@@ -3920,6 +3920,9 @@ void ModuleVisitor::AddUseForCommonBlocks() {
 }
 
 void ModuleVisitor::AddImplicitUseModules() {
+  if (InModuleFile() || currScope().kind() != Scope::Kind::Subprogram) {
+    return;
+  }
   for (const std::string &module : context().implicitUseModules()) {
     if (module.empty()) {
       continue;
