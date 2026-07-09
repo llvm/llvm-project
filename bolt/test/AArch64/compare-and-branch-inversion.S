@@ -7,6 +7,7 @@
 
 # RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t
 # RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: llvm-strip --strip-unneeded %t
 # RUN: llvm-bolt -v=1 %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp --compact-code-model \
 # RUN:   | FileCheck %s --check-prefix=BOLT-INFO
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s

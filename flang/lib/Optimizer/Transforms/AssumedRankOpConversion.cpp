@@ -6,14 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Lower/BuiltinModules.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Support.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Support/TypeCode.h"
-#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/support.h"
 #include "flang/Support/Fortran.h"
@@ -78,7 +76,6 @@ public:
     // get modified.
     if (fir::isBoxAddress(rebox.getBox().getType()))
       TODO(loc, "fir.rebox_assumed_rank codegen with fir.ref<fir.box<>> input");
-    mlir::Value tempDesc = builder.createTemporary(loc, newMaxRankBoxType);
     mlir::Value newDtype;
     mlir::Type newEleType = newBoxType.unwrapInnerType();
     auto oldBoxType = mlir::cast<fir::BaseBoxType>(
@@ -99,12 +96,38 @@ public:
         static_cast<int>(getLowerBoundModifier(rebox.getLbsModifier()));
     mlir::Value lowerBoundModifier = builder.createIntegerConstant(
         loc, builder.getIntegerType(32), lbsModifierCode);
-    fir::runtime::genCopyAndUpdateDescriptor(builder, loc, tempDesc,
-                                             rebox.getBox(), newDtype,
-                                             newAttribute, lowerBoundModifier);
 
-    mlir::Value descValue = fir::LoadOp::create(builder, loc, tempDesc);
-    mlir::Value castDesc = builder.createConvert(loc, newBoxType, descValue);
+    auto emitCopyAndConvert = [&]() -> mlir::Value {
+      mlir::Value tempDesc = builder.createTemporary(loc, newMaxRankBoxType);
+      fir::runtime::genCopyAndUpdateDescriptor(
+          builder, loc, tempDesc, rebox.getBox(), newDtype, newAttribute,
+          lowerBoundModifier);
+      mlir::Value descValue = fir::LoadOp::create(builder, loc, tempDesc);
+      return builder.createConvert(loc, newBoxType, descValue);
+    };
+
+    mlir::Value castDesc;
+    if (rebox.getOptional()) {
+      // If the input may be an absent OPTIONAL dummy, guard the runtime
+      // call with a presence check and return a fir.absent box otherwise.
+      mlir::Value isPresent = fir::IsPresentOp::create(
+          builder, loc, builder.getI1Type(), rebox.getBox());
+      castDesc =
+          builder
+              .genIfOp(loc, {newBoxType}, isPresent,
+                       /*withElseRegion=*/true)
+              .genThen([&] {
+                fir::ResultOp::create(builder, loc, emitCopyAndConvert());
+              })
+              .genElse([&]() {
+                mlir::Value absent =
+                    fir::AbsentOp::create(builder, loc, newBoxType);
+                fir::ResultOp::create(builder, loc, absent);
+              })
+              .getResults()[0];
+    } else {
+      castDesc = emitCopyAndConvert();
+    }
     rewriter.replaceOp(rebox, castDesc);
     return mlir::success();
   }

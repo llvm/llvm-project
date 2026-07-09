@@ -24,7 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
-#include "llvm/Debuginfod/HTTPClient.h"
+#include "llvm/HTTP/HTTPClient.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ProfileData/InstrProfReader.h"
@@ -690,7 +690,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "debug-file-directory",
       cl::desc("Directories to search for object files by build ID"));
   cl::opt<bool> Debuginfod(
-      "debuginfod", cl::ZeroOrMore,
+      "debuginfod",
       cl::desc("Use debuginfod to look up object files from profile"),
       cl::init(canUseDebuginfod()));
 
@@ -766,7 +766,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
 
   cl::opt<cl::boolOrDefault> UseColor(
       "use-color", cl::desc("Emit colored output (default=autodetect)"),
-      cl::init(cl::BOU_UNSET));
+      cl::init(cl::boolOrDefault::BOU_UNSET));
 
   cl::list<std::string> DemanglerOpts(
       "Xdemangler", cl::desc("<demangler-path>|<demangler-option>"));
@@ -814,6 +814,29 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
     ViewOpts.Debug = DebugDump;
+
+    // Initialize `Format` and `Colors` before any call to `error()` or
+    // `warning()`, which use `ViewOpts.colored_ostream()` and would read
+    // uninitialized `Colors`.
+    ViewOpts.Format = Format;
+    switch (ViewOpts.Format) {
+    case CoverageViewOptions::OutputFormat::Text:
+      ViewOpts.Colors = UseColor == cl::boolOrDefault::BOU_UNSET
+                            ? sys::Process::StandardOutHasColors()
+                            : UseColor == cl::boolOrDefault::BOU_TRUE;
+      break;
+    case CoverageViewOptions::OutputFormat::HTML:
+      if (UseColor == cl::boolOrDefault::BOU_FALSE)
+        errs() << "Color output cannot be disabled when generating html.\n";
+      ViewOpts.Colors = true;
+      break;
+    case CoverageViewOptions::OutputFormat::Lcov:
+      if (UseColor == cl::boolOrDefault::BOU_TRUE)
+        errs() << "Color output cannot be enabled when generating lcov.\n";
+      ViewOpts.Colors = false;
+      break;
+    }
+
     if (Debuginfod) {
       HTTPClient::initialize();
       BIDFetcher = std::make_unique<DebuginfodFetcher>(DebugFileDirectory);
@@ -844,25 +867,6 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       for (StringRef OF : ObjectFilenames)
         outs() << OF << '\n';
       ::exit(0);
-    }
-
-    ViewOpts.Format = Format;
-    switch (ViewOpts.Format) {
-    case CoverageViewOptions::OutputFormat::Text:
-      ViewOpts.Colors = UseColor == cl::BOU_UNSET
-                            ? sys::Process::StandardOutHasColors()
-                            : UseColor == cl::BOU_TRUE;
-      break;
-    case CoverageViewOptions::OutputFormat::HTML:
-      if (UseColor == cl::BOU_FALSE)
-        errs() << "Color output cannot be disabled when generating html.\n";
-      ViewOpts.Colors = true;
-      break;
-    case CoverageViewOptions::OutputFormat::Lcov:
-      if (UseColor == cl::BOU_TRUE)
-        errs() << "Color output cannot be enabled when generating lcov.\n";
-      ViewOpts.Colors = false;
-      break;
     }
 
     if (!PathRemaps.empty()) {
@@ -1024,6 +1028,11 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
       cl::desc("Show the MCDC Coverage for each applicable boolean expression"),
       cl::cat(ViewCategory));
 
+  cl::opt<bool> ShowMCDCNonExecutedVectors(
+      "show-mcdc-non-executed-vectors", cl::Optional,
+      cl::desc("Show MC/DC test vectors that were not executed"),
+      cl::cat(ViewCategory));
+
   cl::opt<bool> ShowBestLineRegionsCounts(
       "show-line-counts-or-regions", cl::Optional,
       cl::desc("Show the execution counts for each line, or the execution "
@@ -1130,6 +1139,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   ViewOpts.ShowBranchCounts =
       ShowBranches == CoverageViewOptions::BranchOutputType::Count;
   ViewOpts.ShowMCDC = ShowMCDC;
+  ViewOpts.ShowMCDCNonExecutedVectors = ShowMCDCNonExecutedVectors;
   ViewOpts.ShowBranchPercents =
       ShowBranches == CoverageViewOptions::BranchOutputType::Percent;
   ViewOpts.ShowFunctionInstantiations = ShowInstantiations;
@@ -1321,6 +1331,12 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
                                     cl::desc("Unify function instantiations"),
                                     cl::init(true), cl::cat(ExportCategory));
 
+  cl::opt<bool> ShowMCDCNonExecutedVectors(
+      "show-mcdc-non-executed-vectors", cl::Optional,
+      cl::desc("Include MC/DC test vectors that were not executed in the "
+               "export"),
+      cl::cat(ExportCategory));
+
   auto Err = commandLineParser(argc, argv);
   if (Err)
     return Err;
@@ -1329,6 +1345,7 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
   ViewOpts.SkipFunctions = SkipFunctions;
   ViewOpts.SkipBranches = SkipBranches;
   ViewOpts.UnifyFunctionInstantiations = UnifyInstantiations;
+  ViewOpts.ShowMCDCNonExecutedVectors = ShowMCDCNonExecutedVectors;
 
   if (ViewOpts.Format != CoverageViewOptions::OutputFormat::Text &&
       ViewOpts.Format != CoverageViewOptions::OutputFormat::Lcov) {

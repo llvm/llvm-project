@@ -431,7 +431,7 @@ static __isl_give isl_aff *lower_bound(__isl_keep isl_constraint *c,
 	aff = isl_constraint_get_bound(c, isl_dim_set, pos);
 	aff = isl_aff_ceil(aff);
 
-	if (isl_ast_build_has_stride(build, pos)) {
+	if (isl_ast_build_has_stride(build)) {
 		isl_aff *offset;
 		isl_val *stride;
 
@@ -613,7 +613,7 @@ static __isl_give isl_pw_aff_list *lower_bounds(
 		list = isl_pw_aff_list_add(list, isl_pw_aff_from_aff(aff));
 	}
 
-	if (isl_ast_build_has_stride(build, pos))
+	if (isl_ast_build_has_stride(build))
 		list = remove_redundant_lower_bounds(list, build);
 
 	return list;
@@ -725,7 +725,7 @@ static __isl_give isl_set *add_implied_guards(__isl_take isl_set *guard,
 	isl_set *dom, *set;
 
 	depth = isl_ast_build_get_depth(build);
-	has_stride = isl_ast_build_has_stride(build, depth);
+	has_stride = isl_ast_build_has_stride(build);
 	if (depth < 0 || has_stride < 0)
 		return isl_set_free(guard);
 	if (!has_stride && !degenerate)
@@ -1049,7 +1049,7 @@ static __isl_give isl_ast_expr *for_inc(__isl_keep isl_ast_build *build)
 		return NULL;
 	ctx = isl_ast_build_get_ctx(build);
 
-	if (!isl_ast_build_has_stride(build, depth))
+	if (!isl_ast_build_has_stride(build))
 		return isl_ast_expr_alloc_int_si(ctx, 1);
 
 	v = isl_ast_build_get_stride(build, depth);
@@ -1690,7 +1690,7 @@ static __isl_give isl_ast_graft *create_node(__isl_take isl_union_map *executed,
 	if (depth < 0)
 		build = isl_ast_build_free(build);
 	data.depth = depth;
-	if (!isl_ast_build_has_stride(build, data.depth))
+	if (!isl_ast_build_has_stride(build))
 		return create_node_scaled(executed, bounds, domain, build);
 
 	offset = isl_ast_build_get_offset(build, data.depth);
@@ -2934,6 +2934,239 @@ static int compute_separate_domain(struct isl_codegen_domains *domains,
 	return 0;
 }
 
+/* Internal data structure for split_off_fixed_non_strided.
+ *
+ * "build" is a (possibly modified) copy of the build.
+ * "core" is part of the domain that is not split off.
+ * "fixed" collects basic sets that have a fixed value at the current depth
+ *         and that may be split off.
+ * "split" collects basic sets that are split off.
+ * "stride" describes stride constraints satisfied by "core"
+ *          (along with additional constraints on the outer dimensions).
+ */
+struct isl_split_fixed_data {
+	isl_ast_build *build;
+	isl_set *core;
+	isl_set *fixed;
+	isl_set *split;
+	isl_set *stride;
+};
+
+/* Initialize "split" for a domain with the given space.
+ */
+static void isl_split_fixed_init(struct isl_split_fixed_data *split,
+	__isl_keep isl_ast_build *build, __isl_take isl_space *space)
+{
+	split->build = isl_ast_build_copy(build);
+	split->core = isl_set_empty(space);
+	split->fixed = isl_set_copy(split->core);
+	split->split = isl_set_copy(split->core);
+	split->stride = NULL;
+}
+
+/* Free all memory allocated for "split".
+ */
+static void isl_split_fixed_free(struct isl_split_fixed_data *split)
+{
+	split->build = isl_ast_build_free(split->build);
+	split->core = isl_set_free(split->core);
+	split->fixed = isl_set_free(split->fixed);
+	split->split = isl_set_free(split->split);
+	split->stride = isl_set_free(split->stride);
+}
+
+/* Add "bset" to either split->core or split->fixed depending
+ * on whether it has an obviously fixed value at the current depth.
+ *
+ * Only accept values that are directly defined by an equality constraint.
+ * Note that isl_map_plain_is_single_valued also considers cases
+ * of an equality constraint involving an integer division defined
+ * in terms of the current dimension.
+ * To prevent such cases from triggering, those integer divisions
+ * are first eliminated.
+ */
+static isl_stat split_fixed(__isl_take isl_basic_set *bset, void *user)
+{
+	struct isl_split_fixed_data *split = user;
+	isl_set *set;
+	isl_map *map;
+	isl_bool sv;
+
+	set = isl_set_from_basic_set(bset);
+	map = isl_ast_build_map_to_iterator(split->build, isl_set_copy(set));
+	map = isl_map_remove_divs_involving_dims(map, isl_dim_out, 0, 1);
+	sv = isl_map_plain_is_single_valued(map);
+	isl_map_free(map);
+
+	if (sv < 0)
+		isl_set_free(set);
+	else if (sv)
+		split->fixed = isl_set_union(split->fixed, set);
+	else
+		split->core = isl_set_union(split->core, set);
+
+	return isl_stat_non_error_bool(sv);
+}
+
+/* Add "bset" to either split->core or split->split depending
+ * on whether it satisfies the stride constraints.
+ */
+static isl_stat split_not_strided(__isl_take isl_basic_set *bset, void *user)
+{
+	struct isl_split_fixed_data *split = user;
+	isl_set *set;
+	isl_bool match;
+
+	set = isl_set_from_basic_set(bset);
+	match = isl_set_is_subset(set, split->stride);
+
+	if (match < 0)
+		isl_set_free(set);
+	else if (match)
+		split->core = isl_set_union(split->core, set);
+	else
+		split->split = isl_set_union(split->split, set);
+
+	return isl_stat_non_error_bool(match);
+}
+
+/* Is part of "domain" strided while the remainder has a fixed value
+ * for the current dimension?
+ *
+ * First, split off the basic sets of "domain" that have a fixed value, and
+ * check if the remainder satisfies some stride constraints.
+ *
+ * If so, see if any of the basic sets with a fixed value also
+ * satisfy these stride constraints.  If so, add them to the core
+ * strided domain.
+ * Also include the shared constraints on the outer dimensions
+ * to these constraints so that a basic set with a fixed value
+ * that happens to be equal to one of the possible values in the strided domain,
+ * but does not otherwise fit in the strided domain, is not added
+ * to this domain.
+ *
+ * The remaining basic sets are collected in split->split.
+ * If there are any left, then return isl_bool_true.
+ */
+static isl_bool isl_split_fixed_need_split(struct isl_split_fixed_data *split,
+	__isl_keep isl_set *domain)
+{
+	isl_size n1, n2, n3;
+	isl_bool has_stride;
+	isl_basic_set *outer;
+	isl_map *map;
+
+	if (isl_set_foreach_basic_set(domain, &split_fixed, split) < 0)
+		return isl_bool_error;
+
+	n1 = isl_set_n_basic_set(split->fixed);
+	n2 = isl_set_n_basic_set(split->core);
+	if (n1 < 0 || n2 < 0)
+		return isl_bool_error;
+	if (n1 == 0 || n2 == 0)
+		return isl_bool_false;
+
+	split->build = isl_ast_build_detect_strides(split->build,
+						isl_set_copy(split->core));
+	has_stride = isl_ast_build_has_stride(split->build);
+	if (has_stride < 0)
+		return isl_bool_error;
+	if (!has_stride)
+		return isl_bool_false;
+
+	split->stride = isl_ast_build_get_stride_constraint(split->build);
+	map = isl_ast_build_map_to_iterator(split->build,
+						isl_set_copy(split->core));
+	outer = isl_set_plain_unshifted_simple_hull(isl_map_domain(map));
+	split->stride =
+		isl_set_intersect(split->stride, isl_set_from_basic_set(outer));
+
+	if (isl_set_foreach_basic_set(split->fixed,
+					&split_not_strided, split) < 0)
+		return isl_bool_error;
+
+	n3 = isl_set_n_basic_set(split->split);
+	if (n3 < 0)
+		return isl_bool_error;
+	return isl_bool_ok(n3 > 0);
+}
+
+/* If part of "domain" is strided and the remainder has
+ * a fixed value for the current dimension, then subtract
+ * the second part from the first.
+ *
+ * There need to be at least two basic sets for one to be strided and
+ * one to have a fixed value.
+ * Furthermore, some local variables need to be involved
+ * for some basic sets to be strided.
+ *
+ * If this is the case, initialize the isl_split_fixed_data data structure,
+ * check whether a split is needed, and, if so, perform the split.
+ */
+static __isl_give isl_set *split_off_fixed_non_strided(
+	__isl_keep isl_ast_build *build, __isl_take isl_set *domain)
+{
+	isl_bool locals, need;
+	isl_size n;
+	struct isl_split_fixed_data split;
+
+	n = isl_set_n_basic_set(domain);
+	if (n < 0)
+		return isl_set_free(domain);
+	if (n <= 1)
+		return domain;
+	locals = isl_set_involves_locals(domain);
+	if (locals < 0)
+		return isl_set_free(domain);
+	if (!locals)
+		return domain;
+
+	isl_split_fixed_init(&split, build, isl_set_get_space(domain));
+
+	need = isl_split_fixed_need_split(&split, domain);
+
+	if (need < 0) {
+		domain = isl_set_free(domain);
+	} else if (need) {
+		isl_set_free(domain);
+		domain = isl_set_copy(split.core);
+		domain = isl_set_subtract(domain, isl_set_copy(split.split));
+		domain = isl_set_union(domain, isl_set_copy(split.split));
+	}
+
+	isl_split_fixed_free(&split);
+	return domain;
+}
+
+/* Eliminate dimensions inner to the current dimension as well as
+ * existentially quantified variables and local variables
+ * that depend on the current dimension.
+ * The result then consists only of constraints that are independent
+ * of the current dimension and upper and lower bounds on the current
+ * dimension.
+ * Do this as a preparation for splitting up the domain into disjoint
+ * basic sets.
+ *
+ * If some parts of the domain satisfy some stride constraints,
+ * while the other parts have a fixed value for the current dimension,
+ * then first subtract this second part from the first.
+ * This is especially useful when the second part overlaps with
+ * the start or the end of the strided domain.
+ * In such cases it is usually better to generate code for this fixed value
+ * separately.  Explicitly subtracting it here avoids situations
+ * where the first part is subtracted from the second, leading to
+ * more complicated code inside the (larger) strided domain.
+ */
+static __isl_give isl_set *compute_domains_eliminate(
+	__isl_keep isl_ast_build *build, __isl_take isl_set *domain)
+{
+	domain = isl_ast_build_eliminate_inner(build, domain);
+	domain = split_off_fixed_non_strided(build, domain);
+	domain = isl_ast_build_eliminate_divs(build, domain);
+
+	return domain;
+}
+
 /* Split up the domain at the current depth into disjoint
  * basic sets for which code should be generated separately
  * for the given separation class domain.
@@ -2995,7 +3228,7 @@ static isl_stat compute_partial_domains(struct isl_codegen_domains *domains,
 	domain = isl_set_intersect(domain,
 				isl_set_copy(domains->schedule_domain));
 
-	domain = isl_ast_build_eliminate(domains->build, domain);
+	domain = compute_domains_eliminate(domains->build, domain);
 	domain = isl_set_intersect(domain, isl_set_copy(class_domain));
 
 	domain = isl_set_coalesce_preserve(domain);
@@ -3363,7 +3596,7 @@ static __isl_give isl_ast_graft_list *generate_shifted_component_tree_base(
 		return generate_shifted_component_tree_unroll(executed, domain,
 								build);
 
-	domain = isl_ast_build_eliminate(build, domain);
+	domain = compute_domains_eliminate(build, domain);
 	domain = isl_set_coalesce_preserve(domain);
 
 	outer_disjunction = has_pure_outer_disjunction(domain, build);

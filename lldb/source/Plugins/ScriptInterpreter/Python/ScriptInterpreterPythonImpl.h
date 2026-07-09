@@ -9,10 +9,6 @@
 #ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
 #define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
 #include "lldb-python.h"
 
 #include "PythonDataObjects.h"
@@ -94,6 +90,8 @@ public:
 
   lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() override;
 
+  lldb::ScriptedHookInterfaceSP CreateScriptedHookInterface() override;
+
   lldb::ScriptedBreakpointInterfaceSP
   CreateScriptedBreakpointInterface() override;
 
@@ -103,9 +101,6 @@ public:
 
   lldb::ScriptedFrameProviderInterfaceSP
   CreateScriptedFrameProviderInterface() override;
-
-  lldb::ScriptedSymbolLocatorInterfaceSP
-  CreateScriptedSymbolLocatorInterface() override;
 
   lldb::ScriptedThreadPlanInterfaceSP
   CreateScriptedThreadPlanInterface() override;
@@ -501,5 +496,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
 #endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H

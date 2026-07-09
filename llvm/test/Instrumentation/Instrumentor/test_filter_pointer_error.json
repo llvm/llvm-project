@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "runtime_prefix": "__test_filter_pointer_error",
+    "runtime_prefix.description": "The runtime API prefix."
+  },
+  "instruction_post": {
+    "load": {
+      "enabled": true,
+      "filter": "pointer!=foo",
+      "pointer": true
+    }
+  }
+}

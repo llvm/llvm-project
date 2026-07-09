@@ -14,6 +14,8 @@
 // Test none target with amdhsa triple, which implies >= gfx700
 // RUN: %clang_cc1 -x cl -cl-std=CL3.0 %s -verify -triple amdgcn-unknown-amdhsa -Wpedantic-core-features -DTEST_CORE_FEATURES -DFLAT_SUPPORT
 
+// RUN: %clang_cc1 -x cl -cl-std=CL3.0 %s -verify -triple amdgcn-unknown-amdhsa-llvm -Wpedantic-core-features -DTEST_CORE_FEATURES -DFLAT_SUPPORT -DLLVM_ENV_EXTENSIONS
+
 // Extensions in all versions
 #ifndef cl_clang_storage_class_specifiers
 #error "Missing cl_clang_storage_class_specifiers define"
@@ -29,6 +31,11 @@
 #error "Missing __cl_clang_variadic_functions define"
 #endif
 #pragma OPENCL EXTENSION __cl_clang_variadic_functions : enable
+
+#ifndef __cl_clang_function_scope_local_variables
+#error "Missing __cl_clang_function_scope_local_variables define"
+#endif
+#pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
 
 #ifndef __cl_clang_non_portable_kernel_param_types
 #error "Missing __cl_clang_non_portable_kernel_param_types define"
@@ -212,5 +219,17 @@
     #ifdef __opencl_c_pipes
       #error "Incorrect __opencl_c_pipes define"
     #endif
+  #endif
+#endif
+
+#ifdef LLVM_ENV_EXTENSIONS
+  // Features available with llvm env
+  #ifndef cl_khr_subgroup_extended_types
+    #error "missing cl_khr_subgroup_extended_types define"
+  #endif
+#else
+  // Features not available with unknown environment.
+  #ifdef cl_khr_subgroup_extended_types
+    #error "incorrect cl_khr_subgroup_extended_types define"
   #endif
 #endif

@@ -54,13 +54,13 @@ void TesttheTest() {
 
 // X64: define dso_local void @"??3@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
 // X64: define dso_local void @"??_V@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
-// X64: define dso_local dllexport void @"??1DrawingBuffer@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %this)
+// X64: define dso_local dllexport void @"??1DrawingBuffer@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %this)
 
 // X64: define weak dso_local noundef ptr @"??_EDrawingBuffer@@UEAAPEAXI@Z"
-// X64: call void @"??1DrawingBuffer@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %arraydestroy.element)
+// X64: call void @"??1DrawingBuffer@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %arraydestroy.element)
 // X64: call void @"??_V?$RefCounted@UDrawingBuffer@@@@SAXPEAX@Z"(ptr noundef %2)
 // X64: call void @"??_V@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %{{.*}})
-// X64: call void @"??1DrawingBuffer@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %this1)
+// X64: call void @"??1DrawingBuffer@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %this1)
 // X64: call void @"??3@YAXPEAX_K@Z"(ptr noundef %this1, i64 noundef {{.*}})
 
 
@@ -68,7 +68,7 @@ void TesttheTest() {
 // X86: define dso_local void @"??_V@YAXPAXI@Z"(ptr noundef %0, i32 noundef %1)
 
 // X86: define weak dso_local x86_thiscallcc noundef ptr @"??_EDrawingBuffer@@UAEPAXI@Z"
-// X86: call x86_thiscallcc void @"??1DrawingBuffer@@UAE@XZ"(ptr noundef nonnull align 4 dereferenceable(4) %arraydestroy.element)
+// X86: call x86_thiscallcc void @"??1DrawingBuffer@@UAE@XZ"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %arraydestroy.element)
 // X86: call void @"??_V?$RefCounted@UDrawingBuffer@@@@SAXPAX@Z"(ptr noundef %2)
 // X86: call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef {{.*}})
 // X86  call x86_thiscallcc void @"??1DrawingBuffer@@UAE@XZ"(ptr noundef nonnull align 4 dereferenceable(4) %this1)

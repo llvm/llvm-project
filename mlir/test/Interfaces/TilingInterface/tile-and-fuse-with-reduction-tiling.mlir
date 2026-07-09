@@ -59,3 +59,43 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:   %[[REDUCE:.+]] = linalg.reduce
 //  CHECK-SAME:       ins(%[[FORALL]] :
 //       CHECK:   return %[[REDUCE]]
+
+// -----
+
+// Check that linalg.index is correctly offset after partial reduction tiling.
+
+module {
+  func.func @partial_reduction_with_linalg_index(
+      %arg0 : tensor<8x128xf32>) -> tensor<8xi32> {
+    %c0_i32 = arith.constant 0 : i32
+    %empty = tensor.empty() : tensor<8xi32>
+    %fill = linalg.fill ins(%c0_i32 : i32) outs(%empty : tensor<8xi32>) -> tensor<8xi32>
+    %generic = linalg.generic {
+        indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                         affine_map<(d0, d1) -> (d0)>],
+        iterator_types = ["parallel", "reduction"]}
+        ins(%arg0 : tensor<8x128xf32>) outs(%fill : tensor<8xi32>) {
+      ^bb0(%b0 : f32, %b1 : i32):
+        %idx = linalg.index 1 : index
+        %idx_i32 = arith.index_cast %idx : index to i32
+        %0 = arith.addi %idx_i32, %b1 : i32
+        linalg.yield %0 : i32
+    } -> tensor<8xi32>
+    return %generic : tensor<8xi32>
+  }
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %loop = transform.test.tile_and_fuse_outer_parallel_partial_reduction
+      %generic tile_sizes = [32]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+// CHECK-LABEL: func @partial_reduction_with_linalg_index(
+//       CHECK:   scf.forall (%[[IV0:[a-zA-Z0-9]+]]) =
+//       CHECK:     %[[GENERIC:.+]] = linalg.generic
+//       CHECK:       %[[LOCAL_IDX:.+]] = linalg.index 1 : index
+//       CHECK:       affine.apply affine_map<(d0)[s0] -> (d0 + s0)>(%[[IV0]])[%[[LOCAL_IDX]]]

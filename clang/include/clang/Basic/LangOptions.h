@@ -113,6 +113,25 @@ public:
     SOB_Trapping
   };
 
+  // Used by __attribute__((overflow_behavior())) to describe overflow behavior
+  // on a per-type basis.
+  enum OverflowBehaviorKind {
+    // Default C standard behavior (type dependent).
+    OB_Unset,
+
+    // __attribute__((overflow_behavior("wrap")))
+    OB_Wrap,
+
+    // __attribute__((overflow_behavior("trap")))
+    OB_Trap,
+
+    // Signed types defined as wrapping via -fwrapv can still be instrumented
+    // by sanitizers (PR82432). This field is needed to disambiguate canonical
+    // wrapping type behaviors from -fwrapv behaviors.
+    // -fwrapv
+    OB_SignedAndDefined
+  };
+
   // FIXME: Unify with TUKind.
   enum CompilingModuleKind {
     /// Not compiling a module interface at all.
@@ -158,6 +177,7 @@ public:
     MSVC2017 = 1910,
     MSVC2017_5 = 1912,
     MSVC2017_7 = 1914,
+    MSVC2017_8 = 1915,
     MSVC2019 = 1920,
     MSVC2019_5 = 1925,
     MSVC2019_8 = 1928,
@@ -492,6 +512,11 @@ public:
   CoreFoundationABI CFRuntime = CoreFoundationABI::Unspecified;
 
   std::string ObjCConstantStringClass;
+  std::string ObjCConstantArrayClass;
+  std::string ObjCConstantDictionaryClass;
+  std::string ObjCConstantIntegerNumberClass;
+  std::string ObjCConstantFloatNumberClass;
+  std::string ObjCConstantDoubleNumberClass;
 
   /// The name of the handler function to be called when -ftrapv is
   /// specified.
@@ -523,6 +548,9 @@ public:
 
   /// A prefix map for __FILE__, __BASE_FILE__ and __builtin_FILE().
   std::map<std::string, std::string, std::greater<std::string>> MacroPrefixMap;
+
+  /// Macro name to use in lifetimebound fix-it suggestions.
+  std::string LifetimeSafetyLifetimeBoundMacro;
 
   /// Triples of the OpenMP targets that the host code codegen should
   /// take into account in order to generate accurate offloading descriptors.
@@ -593,6 +621,9 @@ public:
   /// The allocation token mode.
   std::optional<llvm::AllocTokenMode> AllocTokenMode;
 
+  /// Name of the literal encoding to convert the internal encoding to.
+  std::string LiteralEncoding;
+
   LangOptions();
 
   /// Set language defaults for the given input language and
@@ -641,6 +672,10 @@ public:
   bool isSubscriptPointerArithmetic() const {
     return ObjCRuntime.isSubscriptPointerArithmetic() &&
            !ObjCSubscriptingLegacyRuntime;
+  }
+
+  bool isCompatibleWith(ClangABI Version) const {
+    return getClangABICompat() <= Version;
   }
 
   bool isCompatibleWithMSVC() const { return MSCompatibilityVersion > 0; }
@@ -954,6 +989,10 @@ public:
 ///
 /// The is implemented as a value of the new FPOptions plus a mask showing which
 /// fields are actually set in it.
+///
+/// NOTE: This type is serialized into the AST format (e.g. for defaulted
+/// functions). When adding a new field here or in FPOptions, ensure that the
+/// AST VERSION_MAJOR is bumped if it changes the layout or size.
 class FPOptionsOverride {
   FPOptions Options = FPOptions::getFromOpaqueInt(0);
   FPOptions::storage_type OverrideMask = 0;

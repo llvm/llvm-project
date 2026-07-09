@@ -74,9 +74,9 @@ define i32 @ray_sphere(ptr nocapture noundef readonly %sph, ptr nocapture nounde
 ; SSE2-NEXT:    [[TMP32:%.*]] = shufflevector <2 x double> [[TMP31]], <2 x double> poison, <2 x i32> zeroinitializer
 ; SSE2-NEXT:    [[TMP33:%.*]] = fdiv <2 x double> [[TMP30]], [[TMP32]]
 ; SSE2-NEXT:    [[TMP34:%.*]] = extractelement <2 x double> [[TMP33]], i32 1
-; SSE2-NEXT:    [[CMP93:%.*]] = fcmp olt double [[TMP34]], 0x3EB0C6F7A0B5ED8D
+; SSE2-NEXT:    [[CMP93:%.*]] = fcmp olt double [[TMP34]], f0x3EB0C6F7A0B5ED8D
 ; SSE2-NEXT:    [[TMP35:%.*]] = extractelement <2 x double> [[TMP33]], i32 0
-; SSE2-NEXT:    [[CMP94:%.*]] = fcmp olt double [[TMP35]], 0x3EB0C6F7A0B5ED8D
+; SSE2-NEXT:    [[CMP94:%.*]] = fcmp olt double [[TMP35]], f0x3EB0C6F7A0B5ED8D
 ; SSE2-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP93]], i1 [[CMP94]], i1 false
 ; SSE2-NEXT:    br i1 [[OR_COND]], label [[CLEANUP]], label [[LOR_LHS_FALSE:%.*]]
 ; SSE2:       lor.lhs.false:
@@ -154,9 +154,9 @@ define i32 @ray_sphere(ptr nocapture noundef readonly %sph, ptr nocapture nounde
 ; AVX-NEXT:    [[TMP29:%.*]] = shufflevector <2 x double> [[TMP28]], <2 x double> poison, <2 x i32> zeroinitializer
 ; AVX-NEXT:    [[TMP30:%.*]] = fdiv <2 x double> [[TMP27]], [[TMP29]]
 ; AVX-NEXT:    [[TMP31:%.*]] = extractelement <2 x double> [[TMP30]], i32 1
-; AVX-NEXT:    [[CMP93:%.*]] = fcmp olt double [[TMP31]], 0x3EB0C6F7A0B5ED8D
+; AVX-NEXT:    [[CMP93:%.*]] = fcmp olt double [[TMP31]], f0x3EB0C6F7A0B5ED8D
 ; AVX-NEXT:    [[TMP32:%.*]] = extractelement <2 x double> [[TMP30]], i32 0
-; AVX-NEXT:    [[CMP94:%.*]] = fcmp olt double [[TMP32]], 0x3EB0C6F7A0B5ED8D
+; AVX-NEXT:    [[CMP94:%.*]] = fcmp olt double [[TMP32]], f0x3EB0C6F7A0B5ED8D
 ; AVX-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP93]], i1 [[CMP94]], i1 false
 ; AVX-NEXT:    br i1 [[OR_COND]], label [[CLEANUP]], label [[LOR_LHS_FALSE:%.*]]
 ; AVX:       lor.lhs.false:
@@ -234,9 +234,9 @@ define i32 @ray_sphere(ptr nocapture noundef readonly %sph, ptr nocapture nounde
 ; AVX2-NEXT:    [[TMP29:%.*]] = shufflevector <2 x double> [[TMP28]], <2 x double> poison, <2 x i32> zeroinitializer
 ; AVX2-NEXT:    [[TMP30:%.*]] = fdiv <2 x double> [[TMP27]], [[TMP29]]
 ; AVX2-NEXT:    [[TMP31:%.*]] = extractelement <2 x double> [[TMP30]], i32 1
-; AVX2-NEXT:    [[CMP93:%.*]] = fcmp olt double [[TMP31]], 0x3EB0C6F7A0B5ED8D
+; AVX2-NEXT:    [[CMP93:%.*]] = fcmp olt double [[TMP31]], f0x3EB0C6F7A0B5ED8D
 ; AVX2-NEXT:    [[TMP32:%.*]] = extractelement <2 x double> [[TMP30]], i32 0
-; AVX2-NEXT:    [[CMP94:%.*]] = fcmp olt double [[TMP32]], 0x3EB0C6F7A0B5ED8D
+; AVX2-NEXT:    [[CMP94:%.*]] = fcmp olt double [[TMP32]], f0x3EB0C6F7A0B5ED8D
 ; AVX2-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP93]], i1 [[CMP94]], i1 false
 ; AVX2-NEXT:    br i1 [[OR_COND]], label [[CLEANUP]], label [[LOR_LHS_FALSE:%.*]]
 ; AVX2:       lor.lhs.false:

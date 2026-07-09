@@ -101,12 +101,13 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
   // If the node is only used by a CopyToReg and the dest reg is a vreg, use
   // the CopyToReg'd destination register instead of creating a new vreg.
   bool MatchReg = true;
-  const TargetRegisterClass *UseRC = nullptr;
+
   MVT VT = Op.getSimpleValueType();
 
-  // Stick to the preferred register classes for legal types.
-  if (TLI->isTypeLegal(VT))
-    UseRC = TLI->getRegClassFor(VT, Op->isDivergent());
+  // FIXME: The Untyped check is a workaround for SystemZ i128 inline assembly
+  // using i128, when it should probably be using v2i64.
+  const TargetRegisterClass *UseRC =
+      VT == MVT::Untyped ? nullptr : TLI->getRegClassFor(VT, Op->isDivergent());
 
   for (SDNode *User : Op->users()) {
     bool Match = true;
@@ -150,7 +151,7 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
   }
 
   const TargetRegisterClass *SrcRC = nullptr, *DstRC = nullptr;
-  SrcRC = TRI->getMinimalPhysRegClass(SrcReg, VT);
+  SrcRC = TRI->getMinimalPhysRegClass(SrcReg);
 
   // Figure out the register class to create for the destreg.
   if (VRBase) {
@@ -705,12 +706,10 @@ void InstrEmitter::EmitRegSequence(SDNode *Node, VRBaseMapType &VRBaseMap,
 
 /// EmitDbgValue - Generate machine instruction for a dbg_value node.
 ///
-MachineInstr *
-InstrEmitter::EmitDbgValue(SDDbgValue *SD,
-                           VRBaseMapType &VRBaseMap) {
-  DebugLoc DL = SD->getDebugLoc();
+MachineInstr *InstrEmitter::EmitDbgValue(SDDbgValue *SD,
+                                         VRBaseMapType &VRBaseMap) {
   assert(cast<DILocalVariable>(SD->getVariable())
-             ->isValidLocationForIntrinsic(DL) &&
+             ->isValidLocationForIntrinsic(SD->getDebugLoc()) &&
          "Expected inlined-at fields to agree");
 
   SD->setIsEmitted();

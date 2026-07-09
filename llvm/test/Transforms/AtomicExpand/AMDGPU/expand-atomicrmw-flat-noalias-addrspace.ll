@@ -4,7 +4,6 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -passes='require<libcall-lowering-info>,atomic-expand' %s | FileCheck -check-prefixes=ALL,GFX908 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes='require<libcall-lowering-info>,atomic-expand' %s | FileCheck -check-prefixes=ALL,GFX90A %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes='require<libcall-lowering-info>,atomic-expand' %s | FileCheck -check-prefixes=ALL,GFX942 %s
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes='require<libcall-lowering-info>,atomic-expand' %s | FileCheck -check-prefixes=ALL,GFX942 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -passes='require<libcall-lowering-info>,atomic-expand' %s | FileCheck -check-prefixes=ALL,GFX12 %s
 
 ; --------------------------------------------------------------------

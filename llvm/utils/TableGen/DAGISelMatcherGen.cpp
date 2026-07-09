@@ -93,7 +93,7 @@ class MatcherGen {
   SmallVector<std::pair<const Record *, unsigned>, 2> PhysRegInputs;
 
   /// This is the top level of the generated matcher, the result.
-  MatcherList TheMatcher;
+  MatcherList TheMatcherList;
 
   /// As we emit matcher nodes, this points to the latest check which should
   /// have future checks inserted after it.
@@ -105,7 +105,7 @@ public:
   bool EmitMatcherCode(unsigned Variant);
   void EmitResultCode();
 
-  MatcherList GetMatcher() { return std::move(TheMatcher); }
+  MatcherList GetMatcherList() { return std::move(TheMatcherList); }
 
 private:
   void AddMatcher(Matcher *NewNode);
@@ -146,7 +146,7 @@ private:
 
 MatcherGen::MatcherGen(const PatternToMatch &pattern,
                        const CodeGenDAGPatterns &cgp)
-    : Pattern(pattern), CGP(cgp), InsertPt(TheMatcher.before_begin()) {
+    : Pattern(pattern), CGP(cgp), InsertPt(TheMatcherList.before_begin()) {
   // We need to produce the matcher tree for the patterns source pattern.  To
   // do this we need to match the structure as well as the types.  To do the
   // type matching, we want to figure out the fewest number of type checks we
@@ -184,7 +184,7 @@ void MatcherGen::InferPossibleTypes() {
 
 /// AddMatcher - Add a matcher node to the current graph we're building.
 void MatcherGen::AddMatcher(Matcher *NewNode) {
-  InsertPt = TheMatcher.insert_after(InsertPt, NewNode);
+  InsertPt = TheMatcherList.insert_after(InsertPt, NewNode);
 }
 
 //===----------------------------------------------------------------------===//
@@ -671,6 +671,10 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
           new EmitRegisterMatcher(Reg, N.getType(0), NextRecordedOperandNo));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
+    } else if (Def->isSubClassOf("RegisterByHwMode")) {
+      PrintFatalError(Def->getLoc() /* TODO: N.getLoc() */,
+                      "RegisterByHwMode in SelectionDAG patterns "
+                      "not yet supported!");
     }
 
     if (Def->getName() == "zero_reg") {
@@ -1051,12 +1055,11 @@ void MatcherGen::EmitResultCode() {
   AddMatcher(new CompleteMatchMatcher(Results, Pattern));
 }
 
-/// ConvertPatternToMatcher - Create the matcher for the specified pattern with
-/// the specified variant.  If the variant number is invalid, this returns an
-/// empty MatcherList.
-MatcherList llvm::ConvertPatternToMatcher(const PatternToMatch &Pattern,
-                                          unsigned Variant,
-                                          const CodeGenDAGPatterns &CGP) {
+/// Create the matcher for the specified pattern with the specified variant.
+/// If the variant number is invalid, this returns an empty MatcherList.
+MatcherList llvm::ConvertPatternToMatcherList(const PatternToMatch &Pattern,
+                                              unsigned Variant,
+                                              const CodeGenDAGPatterns &CGP) {
   MatcherGen Gen(Pattern, CGP);
 
   // Generate the code for the matcher.
@@ -1072,5 +1075,5 @@ MatcherList llvm::ConvertPatternToMatcher(const PatternToMatch &Pattern,
   Gen.EmitResultCode();
 
   // Unconditional match.
-  return Gen.GetMatcher();
+  return Gen.GetMatcherList();
 }

@@ -27,9 +27,9 @@ body:             |
     ; CHECK-CSSC-NEXT: [[CTZWr:%[0-9]+]]:gpr32 = CTZWr [[COPY]]
     ; CHECK-CSSC-NEXT: $w0 = COPY [[CTZWr]]
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $w0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = G_CTTZ %0(s32)
-    $w0 = COPY %1(s32)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = G_CTTZ %0(i32)
+    $w0 = COPY %1(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -58,9 +58,9 @@ body:             |
     ; CHECK-CSSC-NEXT: [[CTZXr:%[0-9]+]]:gpr64 = CTZXr [[COPY]]
     ; CHECK-CSSC-NEXT: $x0 = COPY [[CTZXr]]
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $x0
-    %0:gpr(s64) = COPY $x0
-    %1:gpr(s64) = G_CTTZ %0(s64)
-    $x0 = COPY %1(s64)
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = G_CTTZ %0(i64)
+    $x0 = COPY %1(i64)
     RET_ReallyLR implicit $x0
 
 ...

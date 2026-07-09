@@ -51,6 +51,18 @@ def gi_vop3pmodsdot :
     GIComplexOperandMatcher<s32, "selectVOP3PModsDOT">,
     GIComplexPatternEquiv<VOP3PModsDOT>;
 
+def gi_vop3pnomodsdot :
+    GIComplexOperandMatcher<s32, "selectVOP3PNoModsDOT">,
+    GIComplexPatternEquiv<VOP3PNoModsDOT>;
+
+def gi_vop3pmodsf32 :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsF32">,
+    GIComplexPatternEquiv<VOP3PModsF32>;
+
+def gi_vop3pnomodsf32 :
+    GIComplexOperandMatcher<s32, "selectVOP3PNoModsF32">,
+    GIComplexPatternEquiv<VOP3PNoModsF32>;
+
 def gi_wmmaopselvop3pmods :
     GIComplexOperandMatcher<s32, "selectWMMAOpSelVOP3PMods">,
     GIComplexPatternEquiv<WMMAOpSelVOP3PMods>;
@@ -259,6 +271,15 @@ def : GINodeEquiv<G_AMDGPU_CVT_PK_I16_I32, AMDGPUpk_i16_i32_impl>;
 def : GINodeEquiv<G_AMDGPU_SMED3, AMDGPUsmed3>;
 def : GINodeEquiv<G_AMDGPU_UMED3, AMDGPUumed3>;
 def : GINodeEquiv<G_AMDGPU_FMED3, AMDGPUfmed3_impl>;
+def : GINodeEquiv<G_AMDGPU_SMAX3, AMDGPUsmax3>;
+def : GINodeEquiv<G_AMDGPU_UMAX3, AMDGPUumax3>;
+def : GINodeEquiv<G_AMDGPU_FMAX3, AMDGPUfmax3>;
+def : GINodeEquiv<G_AMDGPU_SMIN3, AMDGPUsmin3>;
+def : GINodeEquiv<G_AMDGPU_UMIN3, AMDGPUumin3>;
+def : GINodeEquiv<G_AMDGPU_FMIN3, AMDGPUfmin3>;
+def : GINodeEquiv<G_AMDGPU_FMAXIMUM3, AMDGPUfmaximum3>;
+def : GINodeEquiv<G_AMDGPU_FMINIMUM3, AMDGPUfminimum3>;
+
 def : GINodeEquiv<G_AMDGPU_CLAMP, AMDGPUclamp>;
 
 def : GINodeEquiv<G_AMDGPU_ATOMIC_CMPXCHG, AMDGPUatomic_cmp_swap>;
@@ -441,8 +462,8 @@ def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastFPImm32">,
 def gi_bitcast_fpimm_to_i64 : GICustomOperandRenderer<"renderBitcastFPImm64">,
   GISDNodeXFormEquiv<bitcast_fpimm_to_i64>;
 
-def gi_IMMPopCount : GICustomOperandRenderer<"renderPopcntImm">,
-  GISDNodeXFormEquiv<IMMPopCount>;
+def gi_IMMCountTrailingOnes : GICustomOperandRenderer<"renderCountTrailingOnesImm">,
+  GISDNodeXFormEquiv<IMMCountTrailingOnes>;
 
 def gi_extract_cpol : GICustomOperandRenderer<"renderExtractCPol">,
   GISDNodeXFormEquiv<extract_cpol>;

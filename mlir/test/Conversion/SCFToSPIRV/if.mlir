@@ -167,4 +167,26 @@ func.func @unsupported_yield_type(%arg0 : memref<8xi32>, %arg1 : memref<8xi32>, 
   return
 }
 
+// CHECK-LABEL: @selection_flatten
+func.func @selection_flatten(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer>>, %arg3 : i1) {
+  %value = arith.constant 0.0 : f32
+  %i = arith.constant 0 : index
+  // CHECK: spirv.mlir.selection control(Flatten) {
+  scf.if %arg3 {
+    memref.store %value, %arg2[%i] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
+  } {spirv.selection_control = #spirv.selection_control<Flatten>}
+  return
+}
+
+// CHECK-LABEL: @selection_dont_flatten
+func.func @selection_dont_flatten(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer>>, %arg3 : i1) {
+  %value = arith.constant 0.0 : f32
+  %i = arith.constant 0 : index
+  // CHECK: spirv.mlir.selection control(DontFlatten) {
+  scf.if %arg3 {
+    memref.store %value, %arg2[%i] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
+  } {spirv.selection_control = #spirv.selection_control<DontFlatten>}
+  return
+}
+
 } // end module

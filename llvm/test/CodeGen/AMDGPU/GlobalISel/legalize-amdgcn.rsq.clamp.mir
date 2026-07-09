@@ -24,9 +24,9 @@ body: |
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[INT:%[0-9]+]]:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), [[COPY]](s32)
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x47EFFFFFE0000000
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x7F7FFFFF
     ; VI-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMINNUM_IEEE [[INT]], [[C]]
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC7EFFFFFE0000000
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float f0xFF7FFFFF
     ; VI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[C1]]
     ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
     %0:_(s32) = COPY $vgpr0
@@ -56,9 +56,9 @@ body: |
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[INT:%[0-9]+]]:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), [[COPY]](s32)
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x47EFFFFFE0000000
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x7F7FFFFF
     ; VI-NEXT: [[FMINNUM:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMINNUM [[INT]], [[C]]
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC7EFFFFFE0000000
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float f0xFF7FFFFF
     ; VI-NEXT: [[FMAXNUM:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMAXNUM [[FMINNUM]], [[C1]]
     ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM]](s32)
     %0:_(s32) = COPY $vgpr0

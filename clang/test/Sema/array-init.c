@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=gnu99 -fsyntax-only -pedantic -verify=expected,pedantic %s
 // RUN: %clang_cc1 -std=gnu99 -fsyntax-only -Wgnu -Wc11-extensions -verify %s
+// RUN: %clang_cc1 -std=gnu99 -fsyntax-only -pedantic -verify=expected,pedantic %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=gnu99 -fsyntax-only -Wgnu -Wc11-extensions -verify %s -fexperimental-new-constant-interpreter
 // REQUIRES: LP64
 
 extern int foof(void) = 1; // expected-error{{illegal initializer (only variables can be initialized)}}

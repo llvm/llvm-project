@@ -32,6 +32,7 @@
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Repeated.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
@@ -103,9 +104,12 @@ FailureOr<Value> tensor::getOrCreateDestination(OpBuilder &b, Location loc,
       mixedSizes.push_back(b.getIndexAttr(sz));
   }
 
-  // Create empty tensor.
-  Value emptyTensor =
-      tensor::EmptyOp::create(b, loc, mixedSizes, tensorType.getElementType());
+  // Create empty tensor with the same encoding as the result type.
+  Attribute encoding;
+  if (auto rankedTensorType = dyn_cast<RankedTensorType>(tensorType))
+    encoding = rankedTensorType.getEncoding();
+  Value emptyTensor = tensor::EmptyOp::create(
+      b, loc, mixedSizes, tensorType.getElementType(), encoding);
   return emptyTensor;
 }
 
@@ -920,7 +924,7 @@ void DimOp::inferResultRangesFromOptional(ArrayRef<IntegerValueRange> argRanges,
 
 OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
   // All forms of folding require a known index.
-  auto index = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getIndex());
+  std::optional<int64_t> index = getConstantIndex();
   if (!index)
     return {};
 
@@ -931,14 +935,14 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
 
   // Out of bound indices produce undefined behavior but are still valid IR.
   // Don't choke on them.
-  int64_t indexVal = index.getInt();
+  int64_t indexVal = index.value();
   if (indexVal < 0 || indexVal >= tensorType.getRank())
     return {};
 
   // Fold if the shape extent along the given index is known.
-  if (!tensorType.isDynamicDim(index.getInt())) {
+  if (!tensorType.isDynamicDim(indexVal)) {
     Builder builder(getContext());
-    return builder.getIndexAttr(tensorType.getShape()[index.getInt()]);
+    return builder.getIndexAttr(tensorType.getShape()[indexVal]);
   }
 
   Operation *definingOp = getSource().getDefiningOp();
@@ -949,11 +953,11 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
         llvm::cast<RankedTensorType>(fromElements.getResult().getType());
     // The case where the type encodes the size of the dimension is handled
     // above.
-    assert(ShapedType::isDynamic(resultType.getShape()[index.getInt()]));
+    assert(ShapedType::isDynamic(resultType.getShape()[indexVal]));
 
     // Find the operand of the fromElements that corresponds to this index.
     auto dynExtents = fromElements.getDynamicExtents().begin();
-    for (auto dim : resultType.getShape().take_front(index.getInt()))
+    for (auto dim : resultType.getShape().take_front(indexVal))
       if (ShapedType::isDynamic(dim))
         dynExtents++;
 
@@ -961,14 +965,12 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
   }
 
   // The size at the given index is now known to be a dynamic size.
-  unsigned unsignedIndex = index.getValue().getZExtValue();
-
   if (auto sliceOp = dyn_cast_or_null<tensor::ExtractSliceOp>(definingOp)) {
     // Fold only for non-rank reduced ops. For the rank-reduced version, rely on
     // `resolve-shaped-type-result-dims` pass.
     if (sliceOp.getType().getRank() == sliceOp.getSourceType().getRank() &&
-        sliceOp.isDynamicSize(unsignedIndex)) {
-      return {sliceOp.getDynamicSize(unsignedIndex)};
+        sliceOp.isDynamicSize(indexVal)) {
+      return {sliceOp.getDynamicSize(indexVal)};
     }
   }
 
@@ -1205,9 +1207,7 @@ struct FoldEmptyTensorWithCastOp : public OpRewritePattern<CastOp> {
     newMixedSizes.reserve(currMixedSizes.size());
     assert(resultShape.size() == currMixedSizes.size() &&
            "mismatch in result shape and sizes of empty op");
-    for (auto it : llvm::zip(resultShape, currMixedSizes)) {
-      int64_t newDim = std::get<0>(it);
-      OpFoldResult currDim = std::get<1>(it);
+    for (auto [newDim, currDim] : llvm::zip(resultShape, currMixedSizes)) {
       // Case 1: The empty tensor dim is static. Check that the tensor cast
       // result dim matches.
       if (auto attr = llvm::dyn_cast_if_present<Attribute>(currDim)) {
@@ -1236,9 +1236,9 @@ struct FoldEmptyTensorWithCastOp : public OpRewritePattern<CastOp> {
       newMixedSizes.push_back(currDim);
     }
 
-    // TODO: Do not drop tensor encoding.
     rewriter.replaceOpWithNewOp<EmptyOp>(castOp, newMixedSizes,
-                                         resultType.getElementType());
+                                         resultType.getElementType(),
+                                         resultType.getEncoding());
     return success();
   }
 };
@@ -1456,6 +1456,13 @@ void FromElementsOp::build(OpBuilder &builder, OperationState &result,
 }
 
 OpFoldResult FromElementsOp::fold(FoldAdaptor adaptor) {
+  // DenseElementsAttr::get requires StringAttr for element types that are not
+  // integer, index, float, or complex (e.g. vector types), but folded constants
+  // won't be StringAttr instances. Only fold for element types directly
+  // supported by DenseElementsAttr.
+  Type eltType = getType().getElementType();
+  if (!eltType.isIntOrIndexOrFloat() && !isa<ComplexType>(eltType))
+    return {};
   if (!llvm::is_contained(adaptor.getElements(), nullptr))
     return DenseElementsAttr::get(getType(), adaptor.getElements());
   return {};
@@ -2078,6 +2085,19 @@ LogicalResult ExpandShapeOp::verify() {
            << " dynamic dims while output_shape has " << getOutputShape().size()
            << " values";
 
+  // Verify that the number of dynamic dims in output_shape matches the number
+  // of dynamic dims in the result type.
+  if (failed(verifyDynamicDimensionCount(getOperation(), resultType,
+                                         getOutputShape())))
+    return failure();
+
+  // Verify if provided output shapes are in agreement with output type.
+  DenseI64ArrayAttr staticOutputShapes = getStaticOutputShapeAttr();
+  ArrayRef<int64_t> resShape = getResult().getType().getShape();
+  for (auto [pos, shape] : llvm::enumerate(resShape))
+    if (ShapedType::isStatic(shape) && shape != staticOutputShapes[pos])
+      return emitOpError("invalid output shape provided at pos ") << pos;
+
   return verifyTensorReshapeOp(*this, resultType, srcType);
 }
 
@@ -2105,6 +2125,10 @@ struct FoldReshapeWithConstant : OpRewritePattern<TensorReshapeOp> {
     if (!matchPattern(reshapeOp.getSrc(), m_Constant(&attr)))
       return failure();
     if (!attr || !attr.isSplat())
+      return failure();
+    // DenseElementsAttr requires a static shape; skip folding for dynamic
+    // result types.
+    if (!reshapeOp.getResultType().hasStaticShape())
       return failure();
     DenseElementsAttr newAttr = DenseElementsAttr::getFromRawBuffer(
         reshapeOp.getResultType(), attr.getRawData());
@@ -2676,29 +2700,14 @@ public:
       counts.push_back(count);
     }
 
-    // New attribute constructed by the sliced values.
-    DenseElementsAttr newAttr;
-
-    if (auto elems = llvm::dyn_cast<DenseIntElementsAttr>(attr)) {
-      SmallVector<APInt> outValues;
-      outValues.reserve(sourceType.getNumElements());
-      sliceElements<DenseElementsAttr::IntElementIterator, APInt>(
-          elems.begin(), counts, offsets, sizes, strides, &outValues);
-      newAttr = DenseElementsAttr::get(resultType, outValues);
-    } else if (auto elems = llvm::dyn_cast<DenseFPElementsAttr>(attr)) {
-      SmallVector<APFloat> outValues;
-      outValues.reserve(sourceType.getNumElements());
-      sliceElements<DenseElementsAttr::FloatElementIterator, APFloat>(
-          elems.begin(), counts, offsets, sizes, strides, &outValues);
-      newAttr = DenseElementsAttr::get(resultType, outValues);
-    }
-
-    if (newAttr) {
-      rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, resultType, newAttr);
-      return success();
-    }
-
-    return failure();
+    // Slice the elements and construct a new attribute.
+    SmallVector<Attribute> outValues;
+    outValues.reserve(resultType.getNumElements());
+    sliceElements(attr.value_begin<Attribute>(), counts, offsets, sizes,
+                  strides, &outValues);
+    auto newAttr = DenseElementsAttr::get(resultType, outValues);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, resultType, newAttr);
+    return success();
   }
 
 private:
@@ -3372,7 +3381,7 @@ void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
   // Add a region and a block to yield the pad value.
   Region *region = result.regions[0].get();
   int sourceRank = llvm::cast<RankedTensorType>(source.getType()).getRank();
-  SmallVector<Type> blockArgTypes(sourceRank, b.getIndexType());
+  Repeated<Type> blockArgTypes(sourceRank, b.getIndexType());
   SmallVector<Location> blockArgLocs(sourceRank, result.location);
 
   // `builder.createBlock` changes the insertion point within the block. Create

@@ -47,6 +47,7 @@
 #include "UseRangesCheck.h"
 #include "UseScopedLockCheck.h"
 #include "UseStartsEndsWithCheck.h"
+#include "UseStdBitCheck.h"
 #include "UseStdFormatCheck.h"
 #include "UseStdNumbersCheck.h"
 #include "UseStdPrintCheck.h"
@@ -96,6 +97,7 @@ public:
         "modernize-use-scoped-lock");
     CheckFactories.registerCheck<UseStartsEndsWithCheck>(
         "modernize-use-starts-ends-with");
+    CheckFactories.registerCheck<UseStdBitCheck>("modernize-use-std-bit");
     CheckFactories.registerCheck<UseStdFormatCheck>("modernize-use-std-format");
     CheckFactories.registerCheck<UseStdNumbersCheck>(
         "modernize-use-std-numbers");

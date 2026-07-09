@@ -22,7 +22,7 @@ static bool consumeNegativeIndicator(StringRef &GlobList) {
 // Extracts the first glob from the comma-separated list of globs,
 // removes it and the trailing comma from the GlobList and
 // returns the extracted glob.
-static llvm::StringRef extractNextGlob(StringRef &GlobList) {
+static StringRef extractNextGlob(StringRef &GlobList) {
   const StringRef UntrimmedGlob =
       GlobList.substr(0, GlobList.find_first_of(",\n"));
   const StringRef Glob = UntrimmedGlob.trim();
@@ -31,7 +31,7 @@ static llvm::StringRef extractNextGlob(StringRef &GlobList) {
 }
 
 static llvm::Regex createRegexFromGlob(StringRef &Glob) {
-  llvm::SmallString<128> RegexText("^");
+  SmallString<128> RegexText("^");
   const StringRef MetaChars("()^$|*+?.[]\\{}");
   for (const char C : Glob) {
     if (C == '*')

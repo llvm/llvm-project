@@ -17,6 +17,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
+#include <cinttypes>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -185,7 +186,7 @@ void ValueObjectPrinter::SetupMostSpecializedValue() {
 const char *ValueObjectPrinter::GetRootNameForDisplay() {
   const char *root_valobj_name =
       m_options.m_root_valobj_name.empty()
-          ? GetMostSpecializedValue().GetName().AsCString()
+          ? GetMostSpecializedValue().GetName().AsCString(nullptr)
           : m_options.m_root_valobj_name.c_str();
   return root_valobj_name ? root_valobj_name : "";
 }
@@ -451,7 +452,7 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
       }
 
       error_printed = true;
-      m_stream->Printf(" <%s>\n", m_error.c_str());
+      m_stream->Printf(" <%s>", m_error.c_str());
     } else {
       // Make sure we have a value and make sure the summary didn't specify
       // that the value should not be printed - and do not print the value if
@@ -470,6 +471,9 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
         if (m_options.m_hide_pointer_value &&
             IsPointerValue(valobj.GetCompilerType())) {
         } else {
+          if (auto stripped = valobj.GetStrippedPointerValue(
+                  valobj.GetPointerValue().address))
+            m_stream->Printf(" (actual=0x%" PRIx64 ")", *stripped);
           if (ShouldShowName())
             m_stream->PutChar(' ');
           m_stream->PutCString(m_value);
@@ -792,8 +796,8 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
           m_stream->PutCString(", ");
         did_print_children = true;
         if (!hide_names) {
-          const char *name = child_sp.get()->GetName().AsCString();
-          if (name && *name) {
+          llvm::StringRef name = child_sp.get()->GetName().GetStringRef();
+          if (!name.empty()) {
             m_stream->PutCString(name);
             m_stream->PutCString(" = ");
           }

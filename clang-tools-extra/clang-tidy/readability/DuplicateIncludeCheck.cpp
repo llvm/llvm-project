@@ -117,8 +117,9 @@ void DuplicateIncludeCallbacks::InclusionDirective(
         advanceBeyondCurrentLine(SM, FilenameRange.getEnd(), 1);
     Check.diag(HashLoc, "duplicate include")
         << FixItHint::CreateRemoval(SourceRange{Start, End});
-  } else
+  } else {
     Files.back().push_back(FileName);
+  }
 }
 
 void DuplicateIncludeCallbacks::MacroDefined(const Token &MacroNameTok,

@@ -12,8 +12,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-MakeUniqueCheck::MakeUniqueCheck(StringRef Name,
-                                 clang::tidy::ClangTidyContext *Context)
+MakeUniqueCheck::MakeUniqueCheck(StringRef Name, ClangTidyContext *Context)
     : MakeSmartPtrCheck(Name, Context, "std::make_unique"),
       RequireCPlusPlus14(Options.get("MakeSmartPtrFunction", "").empty()) {}
 

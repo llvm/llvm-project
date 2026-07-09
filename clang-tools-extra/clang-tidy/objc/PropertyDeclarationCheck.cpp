@@ -40,7 +40,7 @@ static FixItHint generateFixItHint(const ObjCPropertyDecl *Decl,
   size_t Index = 0;
   if (Style == CategoryProperty) {
     const size_t UnderScorePos = Name.find_first_of('_');
-    if (UnderScorePos != llvm::StringRef::npos) {
+    if (UnderScorePos != StringRef::npos) {
       Index = UnderScorePos + 1;
       NewName.replace(0, Index - 1, Name.substr(0, Index - 1).lower());
     }
@@ -50,7 +50,7 @@ static FixItHint generateFixItHint(const ObjCPropertyDecl *Decl,
     if (NewName != Name) {
       return FixItHint::CreateReplacement(
           CharSourceRange::getTokenRange(SourceRange(Decl->getLocation())),
-          llvm::StringRef(NewName));
+          StringRef(NewName));
     }
   }
   return {};
@@ -78,19 +78,19 @@ static std::string validPropertyNameRegex(bool UsedInMatcher) {
   return StartMatcher + "([a-z]|[A-Z][A-Z0-9])[a-z0-9A-Z]*$";
 }
 
-static bool hasCategoryPropertyPrefix(llvm::StringRef PropertyName) {
+static bool hasCategoryPropertyPrefix(StringRef PropertyName) {
   auto RegexExp =
       llvm::Regex("^[a-zA-Z][a-zA-Z0-9]*_[a-zA-Z0-9][a-zA-Z0-9_]+$");
   return RegexExp.match(PropertyName);
 }
 
-static bool prefixedPropertyNameValid(llvm::StringRef PropertyName) {
+static bool prefixedPropertyNameValid(StringRef PropertyName) {
   const size_t Start = PropertyName.find_first_of('_');
-  assert(Start != llvm::StringRef::npos && Start + 1 < PropertyName.size());
+  assert(Start != StringRef::npos && Start + 1 < PropertyName.size());
   auto Prefix = PropertyName.substr(0, Start);
   if (Prefix.lower() != Prefix)
     return false;
-  auto RegexExp = llvm::Regex(llvm::StringRef(validPropertyNameRegex(false)));
+  auto RegexExp = llvm::Regex(StringRef(validPropertyNameRegex(false)));
   return RegexExp.match(PropertyName.substr(Start + 1));
 }
 
@@ -108,7 +108,7 @@ void PropertyDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<ObjCPropertyDecl>("property");
   assert(!MatchedDecl->getName().empty());
   auto *DeclContext = MatchedDecl->getDeclContext();
-  auto *CategoryDecl = llvm::dyn_cast<ObjCCategoryDecl>(DeclContext);
+  auto *CategoryDecl = dyn_cast<ObjCCategoryDecl>(DeclContext);
 
   if (CategoryDecl != nullptr &&
       hasCategoryPropertyPrefix(MatchedDecl->getName())) {

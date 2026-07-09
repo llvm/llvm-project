@@ -245,6 +245,10 @@ public:
   /// The set of GNU address of label extension "&&label".
   llvm::SmallVector<AddrLabelExpr *, 4> AddrLabels;
 
+  /// An unresolved identifier lookup expression for an implicit call
+  /// to a SYCL kernel launch function in a dependent context.
+  Expr *SYCLKernelLaunchIdExpr = nullptr;
+
 public:
   /// Represents a simple identification of a weak object.
   ///
@@ -324,14 +328,6 @@ public:
     // instantiated.
     class DenseMapInfo {
     public:
-      static inline WeakObjectProfileTy getEmptyKey() {
-        return WeakObjectProfileTy();
-      }
-
-      static inline WeakObjectProfileTy getTombstoneKey() {
-        return WeakObjectProfileTy::getSentinel();
-      }
-
       static unsigned getHashValue(const WeakObjectProfileTy &Val) {
         using Pair = std::pair<BaseInfoTy, const NamedDecl *>;
 

@@ -55,3 +55,13 @@ bool HostThread::HasThread() const {
     return false;
   return m_native_thread->GetSystemHandle() != LLDB_INVALID_HOST_THREAD;
 }
+
+unsigned llvm::DenseMapInfo<HostThread>::getHashValue(const HostThread &val) {
+  return DenseMapInfo<thread_t>::getHashValue(
+      val.GetNativeThread().GetSystemHandle());
+}
+
+bool llvm::DenseMapInfo<HostThread>::isEqual(const HostThread &lhs,
+                                             const HostThread &rhs) {
+  return lhs.EqualsThread(rhs);
+}

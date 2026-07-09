@@ -29,7 +29,7 @@ set(LIBCXXABI_USE_LLVM_UNWINDER OFF CACHE BOOL "")
 
 # Test configuration.
 set(LIBCXX_TEST_CONFIG "amdgpu-libc++-shared.cfg.in" CACHE STRING "")
-set(LIBCXX_TEST_PARAMS "optimization=none;long_tests=False;executor=amdhsa-loader" CACHE STRING "")
+set(LIBCXX_TEST_PARAMS "optimization=none;long_tests=False;executor=llvm-gpu-loader" CACHE STRING "")
 
 # Necessary compile flags for AMDGPU.
 set(LIBCXX_ADDITIONAL_COMPILE_FLAGS

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // This test breaks when enabling LSV.
-// UNSUPPORTED: clang-modules-build
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 // UNSUPPORTED: c++03, c++11, c++14
 

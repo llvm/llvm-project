@@ -12,11 +12,9 @@ define void @copy_bitcast_fusion(ptr noalias %foo, ptr noalias %bar) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = select i1 false, i64 1, i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 true, i64 1, i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[FOO]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr [[FOO]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[FOO]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[TMP5]], i32 1

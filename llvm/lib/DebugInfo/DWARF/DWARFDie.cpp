@@ -46,7 +46,7 @@ static void dumpApplePropertyAttribute(raw_ostream &OS, uint64_t Val) {
     if (!PropName.empty())
       OS << PropName;
     else
-      OS << format("DW_APPLE_PROPERTY_0x%" PRIx64, Bit);
+      OS << formatv("DW_APPLE_PROPERTY_{0:x}", Bit);
     if (!(Val ^= Bit))
       break;
     OS << ", ";
@@ -96,8 +96,7 @@ static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
          "bad FORM for location expression");
   DWARFContext &Ctx = U->getContext();
   ArrayRef<uint8_t> Expr = *FormValue.getAsBlock();
-  DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
-                     Ctx.isLittleEndian(), 0);
+  DataExtractor Data(Expr, Ctx.isLittleEndian());
   DWARFExpression DE(Data, U->getAddressByteSize(), U->getFormParams().Format);
   printDwarfExpression(&DE, OS, DumpOpts, U);
 }
@@ -246,7 +245,8 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   // having both the raw value and the pretty-printed value is
   // interesting. These attributes are handled below.
   if (Attr == DW_AT_specification || Attr == DW_AT_abstract_origin ||
-      Attr == DW_AT_call_origin || Attr == DW_AT_import) {
+      Attr == DW_AT_call_origin || Attr == DW_AT_import ||
+      Attr == DW_AT_LLVM_virtual_call_origin) {
     if (const char *Name =
             Die.getAttributeValueAsReferencedDie(FormValue).getName(
                 DINameKind::LinkageName))
@@ -481,13 +481,25 @@ bool DWARFDie::addressRangeContainsAddress(const uint64_t Address) const {
   return false;
 }
 
+// FIXME: should we return a structure akin to DISourceLanguageName here
+// encapsulates an unversioned (dwarf::SourceLanguage) and versioned
+// (dwarf::SourceLanguageName) language, and put the burden on the
+// user to determine which to use?
 std::optional<uint64_t> DWARFDie::getLanguage() const {
-  if (isValid()) {
-    if (std::optional<DWARFFormValue> LV =
-            U->getUnitDIE().find(dwarf::DW_AT_language))
-      return LV->getAsUnsignedConstant();
-  }
-  return std::nullopt;
+  if (!isValid())
+    return std::nullopt;
+
+  DWARFDie Unit = U->getUnitDIE();
+
+  if (std::optional<DWARFFormValue> LV = Unit.find(dwarf::DW_AT_language))
+    return LV->getAsUnsignedConstant();
+
+  uint16_t Name =
+      dwarf::toUnsigned(Unit.find(dwarf::DW_AT_language_name), /*Default=*/0);
+  uint32_t Version = dwarf::toUnsigned(Unit.find(dwarf::DW_AT_language_version),
+                                       /*Default=*/0);
+
+  return llvm::dwarf::toDW_LANG(static_cast<SourceLanguageName>(Name), Version);
 }
 
 Expected<DWARFLocationExpressionsVector>
@@ -677,7 +689,7 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
     uint32_t abbrCode = debug_info_data.getULEB128(&offset);
     if (DumpOpts.ShowAddresses)
       WithColor(OS, HighlightColor::Address).get()
-          << format("\n0x%8.8" PRIx64 ": ", Offset);
+          << formatv("\n{0:x8}: ", Offset);
 
     if (abbrCode) {
       auto AbbrevDecl = getAbbreviationDeclarationPtr();
@@ -685,11 +697,11 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
         WithColor(OS, HighlightColor::Tag).get().indent(Indent)
             << formatv("{0}", getTag());
         if (DumpOpts.Verbose) {
-          OS << format(" [%u] %c", abbrCode,
-                       AbbrevDecl->hasChildren() ? '*' : ' ');
+          OS << formatv(" [{0}] {1}", abbrCode,
+                        AbbrevDecl->hasChildren() ? '*' : ' ');
           if (std::optional<uint32_t> ParentIdx = Die->getParentIdx())
-            OS << format(" (0x%8.8" PRIx64 ")",
-                         U->getDIEAtIndex(*ParentIdx).getOffset());
+            OS << formatv(" ({0:x8})",
+                          U->getDIEAtIndex(*ParentIdx).getOffset());
         }
         OS << '\n';
 

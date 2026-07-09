@@ -13,15 +13,15 @@ define void @selects_with_diff_cond_lanes(ptr %ptr, i1 %cond0, i1 %cond1, <2 x i
 ; CHECK-NEXT:    [[LD1:%.*]] = load <2 x i8>, ptr [[PTR1]], align 2
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[COND0]], <2 x i8> [[LD0]], <2 x i8> [[LD0]]
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND1]], <2 x i8> [[LD1]], <2 x i8> [[LD1]]
-; CHECK-NEXT:    [[VPACK:%.*]] = extractelement <2 x i8> [[SEL0]], i32 0
-; CHECK-NEXT:    [[VPACK1:%.*]] = insertelement <4 x i8> poison, i8 [[VPACK]], i32 0
-; CHECK-NEXT:    [[VPACK2:%.*]] = extractelement <2 x i8> [[SEL0]], i32 1
-; CHECK-NEXT:    [[VPACK3:%.*]] = insertelement <4 x i8> [[VPACK1]], i8 [[VPACK2]], i32 1
-; CHECK-NEXT:    [[VPACK4:%.*]] = extractelement <2 x i8> [[SEL1]], i32 0
-; CHECK-NEXT:    [[VPACK5:%.*]] = insertelement <4 x i8> [[VPACK3]], i8 [[VPACK4]], i32 2
-; CHECK-NEXT:    [[VPACK6:%.*]] = extractelement <2 x i8> [[SEL1]], i32 1
-; CHECK-NEXT:    [[VPACK7:%.*]] = insertelement <4 x i8> [[VPACK5]], i8 [[VPACK6]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[VPACK7]], ptr [[PTR0]], align 2
+; CHECK-NEXT:    [[VPACK:%.*]] = extractelement <2 x i8> [[SEL0]], i32 0, !sandboxvec [[META0:![0-9]+]]
+; CHECK-NEXT:    [[VPACK1:%.*]] = insertelement <4 x i8> poison, i8 [[VPACK]], i32 0, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[VPACK2:%.*]] = extractelement <2 x i8> [[SEL0]], i32 1, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[VPACK3:%.*]] = insertelement <4 x i8> [[VPACK1]], i8 [[VPACK2]], i32 1, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[VPACK4:%.*]] = extractelement <2 x i8> [[SEL1]], i32 0, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[VPACK5:%.*]] = insertelement <4 x i8> [[VPACK3]], i8 [[VPACK4]], i32 2, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[VPACK6:%.*]] = extractelement <2 x i8> [[SEL1]], i32 1, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[VPACK7:%.*]] = insertelement <4 x i8> [[VPACK5]], i8 [[VPACK6]], i32 3, !sandboxvec [[META0]]
+; CHECK-NEXT:    store <4 x i8> [[VPACK7]], ptr [[PTR0]], align 2, !sandboxvec [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr <2 x i8>, ptr %ptr, i32 0
@@ -45,15 +45,15 @@ define void @selects_with_common_condition_but_diff_lanes(ptr %ptr, i1 %cond, <2
 ; CHECK-NEXT:    [[LD1:%.*]] = load <2 x i8>, ptr [[PTR1]], align 2
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[COND]], <2 x i8> [[LD0]], <2 x i8> [[LD0]]
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], <2 x i8> [[LD1]], <2 x i8> [[LD1]]
-; CHECK-NEXT:    [[VPACK:%.*]] = extractelement <2 x i8> [[SEL0]], i32 0
-; CHECK-NEXT:    [[VPACK1:%.*]] = insertelement <4 x i8> poison, i8 [[VPACK]], i32 0
-; CHECK-NEXT:    [[VPACK2:%.*]] = extractelement <2 x i8> [[SEL0]], i32 1
-; CHECK-NEXT:    [[VPACK3:%.*]] = insertelement <4 x i8> [[VPACK1]], i8 [[VPACK2]], i32 1
-; CHECK-NEXT:    [[VPACK4:%.*]] = extractelement <2 x i8> [[SEL1]], i32 0
-; CHECK-NEXT:    [[VPACK5:%.*]] = insertelement <4 x i8> [[VPACK3]], i8 [[VPACK4]], i32 2
-; CHECK-NEXT:    [[VPACK6:%.*]] = extractelement <2 x i8> [[SEL1]], i32 1
-; CHECK-NEXT:    [[VPACK7:%.*]] = insertelement <4 x i8> [[VPACK5]], i8 [[VPACK6]], i32 3
-; CHECK-NEXT:    store <4 x i8> [[VPACK7]], ptr [[PTR0]], align 2
+; CHECK-NEXT:    [[VPACK:%.*]] = extractelement <2 x i8> [[SEL0]], i32 0, !sandboxvec [[META1:![0-9]+]]
+; CHECK-NEXT:    [[VPACK1:%.*]] = insertelement <4 x i8> poison, i8 [[VPACK]], i32 0, !sandboxvec [[META1]]
+; CHECK-NEXT:    [[VPACK2:%.*]] = extractelement <2 x i8> [[SEL0]], i32 1, !sandboxvec [[META1]]
+; CHECK-NEXT:    [[VPACK3:%.*]] = insertelement <4 x i8> [[VPACK1]], i8 [[VPACK2]], i32 1, !sandboxvec [[META1]]
+; CHECK-NEXT:    [[VPACK4:%.*]] = extractelement <2 x i8> [[SEL1]], i32 0, !sandboxvec [[META1]]
+; CHECK-NEXT:    [[VPACK5:%.*]] = insertelement <4 x i8> [[VPACK3]], i8 [[VPACK4]], i32 2, !sandboxvec [[META1]]
+; CHECK-NEXT:    [[VPACK6:%.*]] = extractelement <2 x i8> [[SEL1]], i32 1, !sandboxvec [[META1]]
+; CHECK-NEXT:    [[VPACK7:%.*]] = insertelement <4 x i8> [[VPACK5]], i8 [[VPACK6]], i32 3, !sandboxvec [[META1]]
+; CHECK-NEXT:    store <4 x i8> [[VPACK7]], ptr [[PTR0]], align 2, !sandboxvec [[META1]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr <2 x i8>, ptr %ptr, i32 0
@@ -72,17 +72,17 @@ define void @selects_same_cond_lanes(ptr %ptr, <2 x i1> %cond0, <2 x i1> %cond1,
 ; CHECK-LABEL: define void @selects_same_cond_lanes(
 ; CHECK-SAME: ptr [[PTR:%.*]], <2 x i1> [[COND0:%.*]], <2 x i1> [[COND1:%.*]], <2 x i8> [[OP0:%.*]], <2 x i8> [[OP1:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr <2 x i8>, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[VPACK:%.*]] = extractelement <2 x i1> [[COND0]], i32 0
-; CHECK-NEXT:    [[VPACK1:%.*]] = insertelement <4 x i1> poison, i1 [[VPACK]], i32 0
-; CHECK-NEXT:    [[VPACK2:%.*]] = extractelement <2 x i1> [[COND0]], i32 1
-; CHECK-NEXT:    [[VPACK3:%.*]] = insertelement <4 x i1> [[VPACK1]], i1 [[VPACK2]], i32 1
-; CHECK-NEXT:    [[VPACK4:%.*]] = extractelement <2 x i1> [[COND1]], i32 0
-; CHECK-NEXT:    [[VPACK5:%.*]] = insertelement <4 x i1> [[VPACK3]], i1 [[VPACK4]], i32 2
-; CHECK-NEXT:    [[VPACK6:%.*]] = extractelement <2 x i1> [[COND1]], i32 1
-; CHECK-NEXT:    [[VPACK7:%.*]] = insertelement <4 x i1> [[VPACK5]], i1 [[VPACK6]], i32 3
-; CHECK-NEXT:    [[VECL:%.*]] = load <4 x i8>, ptr [[PTR0]], align 2
-; CHECK-NEXT:    [[VEC:%.*]] = select <4 x i1> [[VPACK7]], <4 x i8> [[VECL]], <4 x i8> [[VECL]]
-; CHECK-NEXT:    store <4 x i8> [[VEC]], ptr [[PTR0]], align 2
+; CHECK-NEXT:    [[VPACK:%.*]] = extractelement <2 x i1> [[COND0]], i32 0, !sandboxvec [[META2:![0-9]+]]
+; CHECK-NEXT:    [[VPACK1:%.*]] = insertelement <4 x i1> poison, i1 [[VPACK]], i32 0, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[VPACK2:%.*]] = extractelement <2 x i1> [[COND0]], i32 1, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[VPACK3:%.*]] = insertelement <4 x i1> [[VPACK1]], i1 [[VPACK2]], i32 1, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[VPACK4:%.*]] = extractelement <2 x i1> [[COND1]], i32 0, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[VPACK5:%.*]] = insertelement <4 x i1> [[VPACK3]], i1 [[VPACK4]], i32 2, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[VPACK6:%.*]] = extractelement <2 x i1> [[COND1]], i32 1, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[VPACK7:%.*]] = insertelement <4 x i1> [[VPACK5]], i1 [[VPACK6]], i32 3, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[VECL:%.*]] = load <4 x i8>, ptr [[PTR0]], align 2, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[VEC:%.*]] = select <4 x i1> [[VPACK7]], <4 x i8> [[VECL]], <4 x i8> [[VECL]], !sandboxvec [[META2]]
+; CHECK-NEXT:    store <4 x i8> [[VEC]], ptr [[PTR0]], align 2, !sandboxvec [[META2]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr <2 x i8>, ptr %ptr, i32 0
@@ -95,3 +95,8 @@ define void @selects_same_cond_lanes(ptr %ptr, <2 x i1> %cond0, <2 x i1> %cond1,
   store <2 x i8> %sel1, ptr %ptr1
   ret void
 }
+;.
+; CHECK: [[META0]] = distinct !{!"sandboxregion"}
+; CHECK: [[META1]] = distinct !{!"sandboxregion"}
+; CHECK: [[META2]] = distinct !{!"sandboxregion"}
+;.

@@ -1,0 +1,5 @@
+# NOTE: This file contains an intentional tab character that triggers a YAML
+# parse failure. Do not replace tabs with spaces.
+version: 0
+	redirecting-with: fallthrough
+roots: []

@@ -52,3 +52,13 @@ func.func @test3(%a: f32) -> f32 {
 // CHECK-LABEL: test3
 //       CHECK:   Pattern mul(*, add(*, m_Op("test.name"))) matched
 //       CHECK:   Pattern m_Attr("fastmath") matched and bound value to: fast
+
+func.func @test4(%a: f32) -> f32 {
+  %0 = ub.poison : f32
+  %1 = arith.constant 1.0 : f32
+  %2 = arith.addf %a, %1 : f32
+  return %2 : f32
+}
+
+// CHECK-LABEL: test4
+//       CHECK:   Pattern m_Poison() matched 1 times

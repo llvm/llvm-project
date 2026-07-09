@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestDAP_setExceptionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_functionality(self):

@@ -44,8 +44,13 @@ void GpuModuleToBinaryPass::runOnOperation() {
           .Cases({"binary", "bin"}, CompilationTarget::Binary)
           .Cases({"fatbinary", "fatbin"}, CompilationTarget::Fatbin)
           .Default(std::nullopt);
-  if (!targetFormat)
-    getOperation()->emitError() << "Invalid format specified.";
+  if (!targetFormat) {
+    getOperation()->emitError()
+        << "Invalid format specified: '" << compilationTarget
+        << "' (expected one of: offloading, llvm, assembly, isa, binary, bin, "
+           "fatbinary, fatbin)";
+    return signalPassFailure();
+  }
 
   // Lazy symbol table builder callback.
   std::optional<SymbolTable> parentTable;

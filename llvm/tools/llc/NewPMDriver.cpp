@@ -128,14 +128,6 @@ int llvm::compileModuleWithNewPM(
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
-  PassBuilder PB(Target.get(), PipelineTuningOptions(), std::nullopt, &PIC);
-  PB.registerModuleAnalyses(MAM);
-  PB.registerCGSCCAnalyses(CGAM);
-  PB.registerFunctionAnalyses(FAM);
-  PB.registerLoopAnalyses(LAM);
-  PB.registerMachineFunctionAnalyses(MFAM);
-  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
-  SI.registerCallbacks(PIC, &MAM);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
 
@@ -146,9 +138,17 @@ int llvm::compileModuleWithNewPM(
         Target->Options.FloatABIType, Target->Options.EABIVersion,
         Options.MCOptions.ABIName, Target->Options.VecLib);
   });
-  MAM.registerPass([&] { return LibcallLoweringModuleAnalysis(); });
 
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
+
+  PassBuilder PB(Target.get(), PipelineTuningOptions(), std::nullopt, &PIC);
+  PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerMachineFunctionAnalyses(MFAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
+  SI.registerCallbacks(PIC, &MAM);
 
   ModulePassManager MPM;
   FunctionPassManager FPM;
@@ -174,7 +174,8 @@ int llvm::compileModuleWithNewPM(
 
   } else {
     ExitOnErr(Target->buildCodeGenPipeline(
-        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
+        MPM, MAM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt,
+        MMI.getContext(), &PIC));
   }
 
   // If user only wants to print the pipeline, print it before parsing the MIR.
@@ -185,7 +186,8 @@ int llvm::compileModuleWithNewPM(
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
     });
-    outs() << PipelineStr << '\n';
+    printFormattedPipelinePasses(outs(), PipelineStr, *PrintPipelinePasses);
+    outs() << '\n';
     return 0;
   }
 

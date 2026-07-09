@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11 -check-suffixes=,CXX11 %s misc-static-assert %t
+// RUN: %check_clang_tidy -std=c++11,c++14 -check-suffixes=,CXX11 %s misc-static-assert %t
 // RUN: %check_clang_tidy -std=c++17-or-later -check-suffixes=,CXX17 %s misc-static-assert %t
 
 void abort() {}

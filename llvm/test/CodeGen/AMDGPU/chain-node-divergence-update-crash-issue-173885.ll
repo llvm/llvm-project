@@ -27,6 +27,6 @@ entry:
   store i64 0, ptr addrspace(5) %load, align 8
   %gep = getelementptr i8, ptr addrspace(5) %load, i32 8
   store i64 0, ptr addrspace(5) %gep, align 8
-  call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) null, ptr addrspace(5) align 8 %load, i64 16, i1 false)
+  call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) zeroinitializer, ptr addrspace(5) align 8 %load, i64 16, i1 false)
   ret void
 }

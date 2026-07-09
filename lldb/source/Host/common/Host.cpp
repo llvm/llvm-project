@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // C includes
+#include <cctype>
 #include <cerrno>
 #include <climits>
 #include <cstdlib>
@@ -49,6 +50,7 @@
 #include "lldb/Host/ProcessLauncher.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -56,9 +58,11 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-forward.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Program.h"
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/ConnectionGenericFileWindows.h"
@@ -389,39 +393,43 @@ MonitorShellCommand(std::shared_ptr<ShellInfo> shell_info, lldb::pid_t pid,
 Status Host::RunShellCommand(llvm::StringRef command,
                              const FileSpec &working_dir, int *status_ptr,
                              int *signo_ptr, std::string *command_output_ptr,
+                             std::string *separated_error_output,
                              const Timeout<std::micro> &timeout,
-                             bool run_in_shell, bool hide_stderr) {
+                             bool run_in_shell) {
   return RunShellCommand(llvm::StringRef(), Args(command), working_dir,
-                         status_ptr, signo_ptr, command_output_ptr, timeout,
-                         run_in_shell, hide_stderr);
+                         status_ptr, signo_ptr, command_output_ptr,
+                         separated_error_output, timeout, run_in_shell);
 }
 
 Status Host::RunShellCommand(llvm::StringRef shell_path,
                              llvm::StringRef command,
                              const FileSpec &working_dir, int *status_ptr,
                              int *signo_ptr, std::string *command_output_ptr,
+                             std::string *separated_error_output,
                              const Timeout<std::micro> &timeout,
-                             bool run_in_shell, bool hide_stderr) {
+                             bool run_in_shell) {
   return RunShellCommand(shell_path, Args(command), working_dir, status_ptr,
-                         signo_ptr, command_output_ptr, timeout, run_in_shell,
-                         hide_stderr);
+                         signo_ptr, command_output_ptr, separated_error_output,
+                         timeout, run_in_shell);
 }
 
 Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
                              int *status_ptr, int *signo_ptr,
                              std::string *command_output_ptr,
+                             std::string *separated_error_output,
                              const Timeout<std::micro> &timeout,
-                             bool run_in_shell, bool hide_stderr) {
+                             bool run_in_shell) {
   return RunShellCommand(llvm::StringRef(), args, working_dir, status_ptr,
-                         signo_ptr, command_output_ptr, timeout, run_in_shell,
-                         hide_stderr);
+                         signo_ptr, command_output_ptr, separated_error_output,
+                         timeout, run_in_shell);
 }
 
 Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
                              const FileSpec &working_dir, int *status_ptr,
                              int *signo_ptr, std::string *command_output_ptr,
+                             std::string *separated_error_output,
                              const Timeout<std::micro> &timeout,
-                             bool run_in_shell, bool hide_stderr) {
+                             bool run_in_shell) {
   Status error;
   ProcessLaunchInfo launch_info;
   launch_info.SetArchitecture(HostInfo::GetArchitecture());
@@ -448,9 +456,10 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
   if (working_dir)
     launch_info.SetWorkingDirectory(working_dir);
   llvm::SmallString<64> output_file_path;
+  llvm::SmallString<64> error_file_path;
 
   if (command_output_ptr) {
-    // Create a temporary file to get the stdout/stderr and redirect the output
+    // Create a temporary file to get the stdout and redirect the output
     // of the command into this file. We will later read this file if all goes
     // well and fill the data into "command_output_ptr"
     if (FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir()) {
@@ -463,7 +472,22 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
     }
   }
 
+  if (separated_error_output) {
+    // Create a temporary file to get the stderr and redirect the output
+    // of the command into this file. We will later read this file if all goes
+    // well and fill the data into "separated_error_output".
+    if (FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir()) {
+      tmpdir_file_spec.AppendPathComponent("lldb-shell-error.%%%%%%");
+      llvm::sys::fs::createUniqueFile(tmpdir_file_spec.GetPath(),
+                                      error_file_path);
+    } else {
+      llvm::sys::fs::createTemporaryFile("lldb-shell-error.%%%%%%", "",
+                                         error_file_path);
+    }
+  }
+
   FileSpec output_file_spec(output_file_path.str());
+  FileSpec error_file_spec(error_file_path.str());
   // Set up file descriptors.
   launch_info.AppendSuppressFileAction(STDIN_FILENO, true, false);
   if (output_file_spec)
@@ -472,10 +496,11 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
   else
     launch_info.AppendSuppressFileAction(STDOUT_FILENO, false, true);
 
-  if (output_file_spec && !hide_stderr)
-    launch_info.AppendDuplicateFileAction(STDOUT_FILENO, STDERR_FILENO);
+  if (error_file_spec)
+    launch_info.AppendOpenFileAction(STDERR_FILENO, error_file_spec, false,
+                                     true);
   else
-    launch_info.AppendSuppressFileAction(STDERR_FILENO, false, true);
+    launch_info.AppendDuplicateFileAction(STDOUT_FILENO, STDERR_FILENO);
 
   std::shared_ptr<ShellInfo> shell_info_sp(new ShellInfo());
   launch_info.SetMonitorProcessCallback(
@@ -524,10 +549,33 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
           }
         }
       }
+      if (separated_error_output) {
+        separated_error_output->clear();
+        uint64_t file_size =
+            FileSystem::Instance().GetByteSize(error_file_spec);
+        if (file_size > 0) {
+          if (file_size > separated_error_output->max_size()) {
+            error = Status::FromErrorStringWithFormat(
+                "shell command error output is too large to fit into a "
+                "std::string");
+          } else {
+            WritableDataBufferSP Buffer =
+                FileSystem::Instance().CreateWritableDataBuffer(
+                    error_file_spec);
+            if (error.Success())
+              separated_error_output->assign(
+                  reinterpret_cast<char *>(Buffer->GetBytes()),
+                  Buffer->GetByteSize());
+          }
+        }
+      }
     }
   }
 
-  llvm::sys::fs::remove(output_file_spec.GetPath());
+  if (output_file_spec)
+    llvm::sys::fs::remove(output_file_spec.GetPath());
+  if (error_file_spec)
+    llvm::sys::fs::remove(error_file_spec.GetPath());
   return error;
 }
 
@@ -568,7 +616,53 @@ llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
 }
 
 bool Host::IsInteractiveGraphicSession() { return false; }
+
+llvm::Error Host::OpenURL(llvm::StringRef url) {
+  if (url.empty())
+    return llvm::createStringError("cannot open empty URL");
+
+  LLDB_LOG(GetLog(LLDBLog::Host), "Opening URL: {0}", url);
+
+#if defined(_WIN32)
+  // TODO: open the URL with ShellExecuteW (needs a shell32 link dependency).
+  return llvm::errorCodeToError(
+      std::error_code(ENOTSUP, std::system_category()));
+#else
+  // Resolve xdg-open and run it directly (run_in_shell=false) so the URL is a
+  // literal argument the shell never parses; this keeps query-string
+  // metacharacters from being interpreted regardless of the user's shell.
+  llvm::ErrorOr<std::string> xdg_open =
+      llvm::sys::findProgramByName("xdg-open");
+  if (!xdg_open)
+    return llvm::createStringError("could not find xdg-open to open the URL");
+
+  Args args;
+  args.AppendArgument(*xdg_open);
+  args.AppendArgument(url);
+
+  int status = 0;
+  int signo = 0;
+  std::string output;
+  Status error = RunShellCommand(
+      args, /*working_dir=*/FileSpec(), &status, &signo, &output,
+      /*separated_error_output=*/nullptr, std::chrono::seconds(10),
+      /*run_in_shell=*/false);
+  if (error.Fail())
+    return error.takeError();
+  if (status != 0)
+    return llvm::createStringError(
+        llvm::formatv("xdg-open exited with status {0}", status));
+  return llvm::Error::success();
 #endif
+}
+#endif
+
+std::string Host::URLEncode(llvm::StringRef str) {
+  std::string out;
+  llvm::raw_string_ostream os(out);
+  llvm::printPercentEncoded(str, os);
+  return out;
+}
 
 std::unique_ptr<Connection> Host::CreateDefaultConnection(llvm::StringRef url) {
 #if defined(_WIN32)

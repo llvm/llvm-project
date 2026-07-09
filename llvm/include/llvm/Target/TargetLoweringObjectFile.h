@@ -108,13 +108,14 @@ public:
   /// placed in.
   virtual MCSection *getSectionForConstant(const DataLayout &DL,
                                            SectionKind Kind, const Constant *C,
-                                           Align &Alignment) const;
+                                           Align &Alignment,
+                                           const Function *F) const;
 
   /// Similar to the function above, but append \p SectionSuffix to the section
   /// name.
   virtual MCSection *getSectionForConstant(const DataLayout &DL,
                                            SectionKind Kind, const Constant *C,
-                                           Align &Alignment,
+                                           Align &Alignment, const Function *F,
                                            StringRef SectionSuffix) const;
 
   virtual MCSection *

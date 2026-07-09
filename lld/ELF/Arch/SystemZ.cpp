@@ -88,6 +88,9 @@ RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s,
   case R_390_32:
   case R_390_64:
     return R_ABS;
+  case R_390_TLS_LDO32:
+  case R_390_TLS_LDO64:
+    return R_DTPREL;
   case R_390_PC32:
   case R_390_PC64:
     return R_PC;
@@ -101,7 +104,7 @@ RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s,
 void SystemZ::writeGotHeader(uint8_t *buf) const {
   // _GLOBAL_OFFSET_TABLE_[0] holds the value of _DYNAMIC.
   // _GLOBAL_OFFSET_TABLE_[1] and [2] are reserved.
-  write64be(buf, ctx.mainPart->dynamic->getVA());
+  write64be(buf, ctx.in.dynamic->getVA());
 }
 
 void SystemZ::writeGotPlt(uint8_t *buf, const Symbol &s) const {

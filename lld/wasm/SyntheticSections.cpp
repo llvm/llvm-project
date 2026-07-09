@@ -52,6 +52,16 @@ public:
   raw_string_ostream os{body};
 };
 
+void writeGetTLSBase(const Ctx &ctx, raw_ostream &os) {
+  if (ctx.arg.libcallThreadContext) {
+    writeU8(os, WASM_OPCODE_CALL, "call");
+    writeUleb128(os, ctx.sym.getTLSBase->getFunctionIndex(), "function index");
+  } else {
+    writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
+    writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
+  }
+}
+
 } // namespace
 
 bool DylinkSection::isNeeded() const {
@@ -466,8 +476,7 @@ void GlobalSection::addInternalGOTEntry(Symbol *sym) {
 void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
   assert(!ctx.arg.extendedConst);
   bool is64 = ctx.arg.is64.value_or(false);
-  unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD
-                                 : WASM_OPCODE_I32_ADD;
+  unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD;
 
   for (const Symbol *sym : internalGotSymbols) {
     if (TLS != sym->isTLS())
@@ -475,11 +484,12 @@ void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
 
     if (auto *d = dyn_cast<DefinedData>(sym)) {
       // Get __memory_base
-      writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       if (sym->isTLS())
-        writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
-      else
+        writeGetTLSBase(ctx, os);
+      else {
+        writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
         writeUleb128(os, ctx.sym.memoryBase->getGlobalIndex(), "__memory_base");
+      }
 
       // Add the virtual address of the data symbol
       writePtrConst(os, d->getVA(), is64, "offset");
@@ -520,9 +530,9 @@ void GlobalSection::writeBody() {
       // the correct runtime value during `__wasm_apply_global_relocs`.
       if (!ctx.arg.extendedConst && ctx.isPic && !sym->isTLS())
         mutable_ = true;
-      // With multi-theadeding any TLS globals must be mutable since they get
+      // With multi-threading any TLS globals must be mutable since they get
       // set during `__wasm_apply_global_tls_relocs`
-      if (ctx.arg.sharedMemory && sym->isTLS())
+      if (ctx.arg.isMultithreaded() && sym->isTLS())
         mutable_ = true;
     }
     WasmGlobalType type{itype, mutable_};
@@ -559,10 +569,11 @@ void GlobalSection::writeBody() {
     } else {
       WasmInitExpr initExpr;
       if (auto *d = dyn_cast<DefinedData>(sym))
-        // In the sharedMemory case TLS globals are set during
-        // `__wasm_apply_global_tls_relocs`, but in the non-shared case
+        // In the multithreaded case, TLS globals are set during
+        // `__wasm_apply_global_tls_relocs`, but in the single-threaded case
         // we know the absolute value at link time.
-        initExpr = intConst(d->getVA(/*absolute=*/!ctx.arg.sharedMemory), is64);
+        initExpr =
+            intConst(d->getVA(/*absolute=*/!ctx.arg.isMultithreaded()), is64);
       else if (auto *f = dyn_cast<FunctionSymbol>(sym))
         initExpr = intConst(f->isStub ? 0 : f->getTableIndex(), is64);
       else {
@@ -646,7 +657,7 @@ void ElemSection::writeBody() {
   uint32_t tableIndex = ctx.arg.tableBase;
   for (const FunctionSymbol *sym : indirectFunctions) {
     assert(sym->getTableIndex() == tableIndex);
-    (void) tableIndex;
+    (void)tableIndex;
     writeUleb128(os, sym->getFunctionIndex(), "function index");
     ++tableIndex;
   }
@@ -663,7 +674,14 @@ void DataCountSection::writeBody() {
 }
 
 bool DataCountSection::isNeeded() const {
-  return numSegments && ctx.arg.sharedMemory;
+  // The datacount section is only required under certain circumstance.
+  // Specifically, when the module includes bulk memory instructions that deal
+  // with passive data segments. i.e. memory.init/data.drop.
+  // LLVM does not yet have relocation types for data segments so these
+  // instructions are not yet supported in input files.  However, in the case
+  // of shared memory, lld itself will generate these instructions as part of
+  // `__wasm_init_memory`. See Writer::createInitMemoryFunction.
+  return numSegments && ctx.arg.isMultithreaded();
 }
 
 void LinkingSection::writeBody() {
@@ -992,4 +1010,4 @@ void BuildIdSection::writeBuildId(llvm::ArrayRef<uint8_t> buf) {
   memcpy(hashPlaceholderPtr, buf.data(), hashSize);
 }
 
-} // namespace wasm::lld
+} // namespace lld::wasm

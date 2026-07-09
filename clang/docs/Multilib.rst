@@ -48,7 +48,8 @@ EXPERIMENTAL Multilib via configuration file
 ============================================
 
 Some Clang toolchains support loading multilib configuration from a
-``multilib.yaml`` configuration file.
+``multilib.yaml`` configuration file. This is currently supported on Linux,
+Windows, and Baremetal toolchains.
 
 A ``multilib.yaml`` configuration file specifies which multilib variants are
 available, their relative location, what compilation options were used to build

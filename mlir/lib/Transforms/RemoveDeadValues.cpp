@@ -19,12 +19,7 @@
 // (C) Removes unneccesary operands, results, region arguments, and region
 // terminator operands of region branch ops, and,
 // (D) Removes simple and region branch ops that have all non-live results and
-// don't affect memory in any way,
-//
-// iff
-//
-// the IR doesn't have any non-function symbol ops, non-call symbol user ops and
-// branch ops.
+// don't affect memory in any way.
 //
 // Here, a "simple op" refers to an op that isn't a symbol op, symbol-user op,
 // region branch op, branch op, region branch terminator op, or return-like.
@@ -63,7 +58,7 @@
 #define DEBUG_TYPE "remove-dead-values"
 
 namespace mlir {
-#define GEN_PASS_DEF_REMOVEDEADVALUES
+#define GEN_PASS_DEF_REMOVEDEADVALUESPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -142,9 +137,8 @@ static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
     if (liveness->isLive) {
       LDBG() << "Value " << value << " is live according to liveness analysis";
       return true;
-    } else {
-      LDBG() << "Value " << value << " is dead according to liveness analysis";
     }
+    LDBG() << "Value " << value << " is dead according to liveness analysis";
   }
   return false;
 }
@@ -265,7 +259,7 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 }
 
 /// Process a function-like operation `funcOp` using the liveness analysis `la`
-/// and the IR in `module`. If it is not public or external:
+/// and `symbolUserMap`. If it is not public or external:
 ///   (1) Adding its non-live arguments to a list for future removal.
 ///   (2) Marking their corresponding operands in its callers for removal.
 ///   (3) Identifying and enqueueing unnecessary terminator operands
@@ -274,7 +268,8 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 ///   (5) Collecting the uses of these return values in its callers for future
 ///       removal.
 ///   (6) Marking all its results as non-live values.
-static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
+static void processFuncOp(FunctionOpInterface funcOp,
+                          const SymbolUserMap &symbolUserMap,
                           RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet,
                           RDVFinalCleanupList &cl) {
   LDBG() << "Processing function op: "
@@ -285,7 +280,13 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
            << funcOp.getOperation()->getName();
     return;
   }
-
+  ArrayRef<Operation *> users = symbolUserMap.getUsers(funcOp);
+  if (!llvm::all_of(users, llvm::IsaPred<CallOpInterface>)) {
+    // If a non-call operation references the function (e.g. spirv.EntryPoint),
+    // we cannot safely remove arguments or return values since we don't know
+    // what the user expects. Skip this function entirely.
+    return;
+  }
   // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
   SmallVector<Value> arguments(funcOp.getArguments());
   BitVector nonLiveArgs = markLives(arguments, nonLiveSet, la);
@@ -299,10 +300,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // Do (2). (Skip creating generic operand cleanup entries for call ops.
   // Call arguments will be removed in the call-site specific segment-aware
   // cleanup, avoiding generic eraseOperands bitvector mechanics.)
-  SymbolTable::UseRange uses = *funcOp.getSymbolUses(module);
-  for (SymbolTable::SymbolUse use : uses) {
-    Operation *callOp = use.getUser();
-    assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
+  for (Operation *callOp : users) {
     // Push an empty operand cleanup entry so that call-site specific logic in
     // cleanUpDeadVals runs (it keys off CallOpInterface). The BitVector is
     // intentionally all false to avoid generic erasure.
@@ -336,8 +334,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // since it forwards only to non-live value(s) (%1#1).
   size_t numReturns = funcOp.getNumResults();
   BitVector nonLiveRets(numReturns, true);
-  for (SymbolTable::SymbolUse use : uses) {
-    Operation *callOp = use.getUser();
+  for (Operation *callOp : users) {
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
     BitVector liveCallRets = markLives(callOp->getResults(), nonLiveSet, la);
     nonLiveRets &= liveCallRets.flip();
@@ -360,8 +357,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // Do (5) and (6).
   if (numReturns == 0)
     return;
-  for (SymbolTable::SymbolUse use : uses) {
-    Operation *callOp = use.getUser();
+  for (Operation *callOp : users) {
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
     cl.results.push_back({callOp, nonLiveRets});
     collectNonLiveValues(nonLiveSet, callOp->getResults(), nonLiveRets);
@@ -614,8 +610,8 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
   // AttrSizedOperandSegments) in the next phase.
   DenseMap<Operation *, BitVector> erasedFuncArgs;
   for (auto &f : list.functions) {
-    LDBG() << "Cleaning up function: " << f.funcOp.getOperation()->getName()
-           << " (" << f.funcOp.getOperation() << ")";
+    LDBG() << "Cleaning up function: " << f.funcOp.getName() << " ("
+           << f.funcOp.getOperation() << ")";
     LDBG_OS([&](raw_ostream &os) {
       os << "  Erasing non-live arguments [";
       llvm::interleaveComma(f.nonLiveArgs.set_bits(), os);
@@ -634,6 +630,9 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
       // Record only if we actually erased something.
       if (f.nonLiveArgs.any())
         erasedFuncArgs.try_emplace(f.funcOp.getOperation(), f.nonLiveArgs);
+    } else {
+      LDBG() << "Failed to erase arguments for function: "
+             << f.funcOp.getName();
     }
     (void)f.funcOp.eraseResults(f.nonLiveRets);
   }
@@ -755,7 +754,10 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
   LDBG() << "Finished cleanup of dead values";
 }
 
-struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
+struct RemoveDeadValues
+    : public impl::RemoveDeadValuesPassBase<RemoveDeadValues> {
+  using impl::RemoveDeadValuesPassBase<
+      RemoveDeadValues>::RemoveDeadValuesPassBase;
   void runOnOperation() override;
 };
 } // namespace
@@ -763,6 +765,13 @@ struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
 void RemoveDeadValues::runOnOperation() {
   auto &la = getAnalysis<RunLivenessAnalysis>();
   Operation *module = getOperation();
+
+  // Build a symbol user map once up front so that processFuncOp can look up the
+  // callers of each function in O(1). Otherwise, each call would walk the
+  // entire module to find the callers, making the pass O(numFunctions *
+  // numOperations).
+  SymbolTableCollection symbolTableCollection;
+  SymbolUserMap symbolUserMap(symbolTableCollection, module);
 
   // Tracks values eligible for erasure - complements liveness analysis to
   // identify "droppable" values.
@@ -774,7 +783,7 @@ void RemoveDeadValues::runOnOperation() {
 
   module->walk([&](Operation *op) {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
-      processFuncOp(funcOp, module, la, deadVals, finalCleanupList);
+      processFuncOp(funcOp, symbolUserMap, la, deadVals, finalCleanupList);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
       processRegionBranchOp(regionBranchOp, la, deadVals, finalCleanupList);
     } else if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
@@ -813,8 +822,4 @@ void RemoveDeadValues::runOnOperation() {
     module->emitError("greedy pattern rewrite failed to converge");
     signalPassFailure();
   }
-}
-
-std::unique_ptr<Pass> mlir::createRemoveDeadValuesPass() {
-  return std::make_unique<RemoveDeadValues>();
 }

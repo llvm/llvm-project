@@ -219,6 +219,15 @@
 // CHECK: #map{{[0-9]*}} = affine_map<(d0) -> (d0 + d0 floordiv 4 - 4)>
 #map66 = affine_map<(d0) -> (d0 + ((d0 floordiv 4) - 4))>
 
+// CHECK: #map{{[0-9]*}} = affine_map<()[s0, s1] -> (1)>
+#map67 = affine_map<()[s0, s1] -> ((s0 + s1) floordiv (s0 + s1))>
+
+// CHECK: #map{{[0-9]*}} = affine_map<()[s0, s1] -> (2)>
+#map68 = affine_map<()[s0, s1] -> ((s0 + s1) ceildiv (s0 + s1) * 2)>
+
+// CHECK: #map{{[0-9]*}} = affine_map<()[s0, s1] -> (0)>
+#map69 = affine_map<()[s0, s1] -> ((s0 + s1) mod (s0 + s1))>
+
 // Single identity maps are removed.
 // CHECK: @f0(memref<2x4xi8, 1>)
 func.func private @f0(memref<2x4xi8, #map0, 1>)
@@ -430,3 +439,12 @@ func.func private @f56(memref<1x1xi8, #map56>)
 
 // CHECK: "f66"() {map = #map{{[0-9]*}}} : () -> ()
 "f66"() {map = #map66} : () -> ()
+
+// CHECK: "f67"() {map = #map{{[0-9]*}}} : () -> ()
+"f67"() {map = #map67} : () -> ()
+
+// CHECK: "f68"() {map = #map{{[0-9]*}}} : () -> ()
+"f68"() {map = #map68} : () -> ()
+
+// CHECK: "f69"() {map = #map{{[0-9]*}}} : () -> ()
+"f69"() {map = #map69} : () -> ()

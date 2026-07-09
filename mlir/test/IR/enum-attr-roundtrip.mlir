@@ -57,6 +57,50 @@ func.func @test_enum_prop() -> () {
   return
 }
 
+// CHECK-LABEL: @test_two_default_enum_props
+func.func @test_two_default_enum_props() -> () {
+  // Both default: both elided.
+  // CHECK: test.op_with_two_default_enum_props{{$}}
+  test.op_with_two_default_enum_props
+
+  // value1 non-default, value2 default (dog): only value1 printed.
+  // CHECK: test.op_with_two_default_enum_props second{{$}}
+  test.op_with_two_default_enum_props second
+
+  // value1 default (first), value2 non-default: only value2 printed.
+  // Key test: value1 parser must not consume "cat" (not a TestEnum keyword).
+  // CHECK: test.op_with_two_default_enum_props cat{{$}}
+  test.op_with_two_default_enum_props cat
+
+  // Both non-default.
+  // CHECK: test.op_with_two_default_enum_props second cat{{$}}
+  test.op_with_two_default_enum_props second cat
+
+  return
+}
+
+// CHECK-LABEL: @test_two_default_bit_enum_props
+func.func @test_two_default_bit_enum_props() -> () {
+  // Both default: both elided.
+  // CHECK: test.op_with_two_default_bit_enum_props{{$}}
+  test.op_with_two_default_bit_enum_props
+
+  // value1 non-default (write), value2 default (user): only value1 printed.
+  // CHECK: test.op_with_two_default_bit_enum_props write{{$}}
+  test.op_with_two_default_bit_enum_props write
+
+  // value1 default (read), value2 non-default: only value2 printed.
+  // Key test: value1 parser must not consume "group" (not a TestBitEnum keyword).
+  // CHECK: test.op_with_two_default_bit_enum_props group{{$}}
+  test.op_with_two_default_bit_enum_props group
+
+  // Both non-default.
+  // CHECK: test.op_with_two_default_bit_enum_props write group{{$}}
+  test.op_with_two_default_bit_enum_props write group
+
+  return
+}
+
 // CHECK-LABEL @test_bit_enum_prop()
 func.func @test_bit_enum_prop() -> () {
   // CHECK: test.op_with_bit_enum_prop read : ()

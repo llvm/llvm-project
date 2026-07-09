@@ -101,7 +101,7 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
 
   const char *m = inst.GetMnemonic(target);
   const char *o = inst.GetOperands(target);
-  std::string c = inst.GetComment(target);
+  std::string comment = inst.GetComment(target);
   auto d = inst.GetData(target);
 
   std::string bytes;
@@ -119,24 +119,22 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
   if (!bytes.empty()) // remove last whitespace
     bytes.pop_back();
   disassembled_inst.instructionBytes = std::move(bytes);
-
-  llvm::raw_string_ostream si(disassembled_inst.instruction);
-  si << llvm::formatv("{0,-7} {1,-25}", m, o);
+  disassembled_inst.instruction = llvm::formatv("{0,-7} {1,-25}", m, o);
 
   // Only add the symbol on the first line of the function.
   // in the comment section
   if (lldb::SBSymbol symbol = addr.GetSymbol();
       symbol.GetStartAddress() == addr) {
     const llvm::StringRef sym_display_name = symbol.GetDisplayName();
-    c.append(" ");
-    c.append(sym_display_name);
+    comment.append(" ");
+    comment.append(sym_display_name);
 
     if (resolve_symbols)
       disassembled_inst.symbol = sym_display_name;
   }
 
-  if (!c.empty()) {
-    si << " ; " << c;
+  if (!comment.empty()) {
+    disassembled_inst.instruction += " ; " + comment;
   }
 
   std::optional<protocol::Source> source = dap.ResolveSource(addr);

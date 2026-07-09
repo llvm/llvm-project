@@ -117,6 +117,13 @@ Potentially breaking changes
   first element being returned from ``find`` will be broken, and ``lower_bound`` or ``equal_range`` should be used
   instead.
 
+- The algorithms for ``std::{map,set}`` ``lower_bound`` and ``upper_bound`` operations were modified such that their
+  result changed for comparators that are not a strict weak order. Being a strict weak order was always a requirement
+  of the Standard and still is, however in this release libc++ changed the behavior of ``std::{map,set}`` for such
+  comparators. Since this may be tricky to work around in some cases, an escape hatch is provided in this release:
+  defining ``_LIBCPP_ENABLE_LEGACY_TREE_LOWER_UPPER_BOUND`` will revert to the historical implementation of
+  these operations. That escape hatch will be removed in LLVM 23.
+
 - The ABI flag ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` has been split off from
   ``_LIBCPP_ABI_NO_ITERATOR_BASES``. If you are using this flag and care about ABI stability, you should set
   ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` as well.

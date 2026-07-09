@@ -117,13 +117,11 @@ int Four_(void) __attribute__((alias("_Z6__Fourv")));
 //.
 // DEVICE: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 //.
-// HOST: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// HOST: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 51}
-// HOST: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// HOST: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 51}
+// HOST: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
 // DEVICE: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
-// DEVICE: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// DEVICE: [[META2:![0-9]+]] = !{i32 7, !"openmp", i32 51}
-// DEVICE: [[META3:![0-9]+]] = !{i32 7, !"openmp-device", i32 51}
-// DEVICE: [[META4:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// DEVICE: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 51}
+// DEVICE: [[META2:![0-9]+]] = !{i32 7, !"openmp-device", i32 51}
+// DEVICE: [[META3:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

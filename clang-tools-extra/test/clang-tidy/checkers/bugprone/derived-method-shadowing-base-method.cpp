@@ -137,3 +137,10 @@ public:
     void methodWithArg(MyInt *I);
     void methodWithArg(MyInt const* I);
 };
+
+class R: public Base
+{
+public:
+    template <typename T>
+    Base* getThis();
+};

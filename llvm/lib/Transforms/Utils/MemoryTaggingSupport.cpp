@@ -21,48 +21,31 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
+#include <utility>
 
 namespace llvm {
 namespace memtag {
-namespace {
-bool maybeReachableFromEachOther(const SmallVectorImpl<IntrinsicInst *> &Insts,
-                                 const DominatorTree *DT, const LoopInfo *LI,
-                                 size_t MaxLifetimes) {
-  // If we have too many lifetime ends, give up, as the algorithm below is N^2.
-  if (Insts.size() > MaxLifetimes)
-    return true;
-  for (size_t I = 0; I < Insts.size(); ++I) {
-    for (size_t J = 0; J < Insts.size(); ++J) {
-      if (I == J)
-        continue;
-      if (isPotentiallyReachable(Insts[I], Insts[J], nullptr, DT, LI))
-        return true;
-    }
-  }
-  return false;
-}
-} // namespace
 
-bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
+void forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
                           const LoopInfo &LI, const AllocaInfo &AInfo,
                           const SmallVectorImpl<Instruction *> &RetVec,
                           llvm::function_ref<void(Instruction *)> Callback) {
   if (AInfo.LifetimeEnd.size() == 1 && AInfo.LifetimeStart.size() == 1 &&
       PDT.dominates(AInfo.LifetimeEnd[0], AInfo.LifetimeStart[0])) {
     Callback(AInfo.LifetimeEnd[0]);
-    return true;
+    return;
   }
   SmallPtrSet<BasicBlock *, 2> EndBlocks;
   SmallVector<BasicBlock *, 2> StartBlocks;
-  for (const auto &[BB, ID] : AInfo.LastBBLifetime) {
-    if (ID == Intrinsic::lifetime_end)
+  for (const auto &[BB, BBInfo] : AInfo.BBInfos) {
+    if (BBInfo.Last == Intrinsic::lifetime_end)
       EndBlocks.insert(BB);
     else
       StartBlocks.push_back(BB);
   }
-  bool UncoveredRets = false;
 
   if (!StartBlocks.empty()) {
     for (auto *RI : RetVec) {
@@ -75,26 +58,32 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
           isPotentiallyReachableFromMany(WL, RI->getParent(), &EndBlocks, &DT,
                                          &LI)) {
         Callback(RI);
-        UncoveredRets = true;
       }
     }
   }
   for_each(AInfo.LifetimeEnd, Callback);
-  // We may have inserted untag outside of the lifetime interval.
-  // Signal the caller to remove the lifetime end call for this alloca.
-  return !UncoveredRets;
 }
 
-bool isStandardLifetime(const AllocaInfo &AInfo, const DominatorTree *DT,
-                        const LoopInfo *LI, size_t MaxLifetimes) {
-  // An alloca that has exactly one start and end in every possible execution.
-  // If it has multiple ends, they have to be unreachable from each other, so
-  // at most one of them is actually used for each execution of the function.
-  return AInfo.LifetimeStart.size() > 0 &&
-         (AInfo.LifetimeEnd.size() == 1 ||
-          (AInfo.LifetimeEnd.size() > 0 &&
-           !maybeReachableFromEachOther(AInfo.LifetimeEnd, DT, LI,
-                                        MaxLifetimes)));
+bool isSupportedLifetime(const AllocaInfo &AInfo, const DominatorTree *DT,
+                         const LoopInfo *LI) {
+  if (AInfo.LifetimeStart.empty())
+    return false;
+  SmallVector<BasicBlock *, 2> LastEndBlocks;
+  SmallPtrSet<const BasicBlock *, 2> FirstEndBlocks;
+  SmallPtrSet<BasicBlock *, 2> StartBlocks;
+  for_each(AInfo.BBInfos, [&](const auto &It) {
+    const auto &[BB, BBI] = It;
+    if (BBI.Last == Intrinsic::lifetime_end)
+      LastEndBlocks.append(succ_begin(BB), succ_end(BB));
+    else
+      StartBlocks.insert(BB);
+    if (BBI.First == Intrinsic::lifetime_end)
+      FirstEndBlocks.insert(BB);
+  });
+  if (LastEndBlocks.empty() || FirstEndBlocks.empty())
+    return true;
+  return !isManyPotentiallyReachableFromMany(LastEndBlocks, FirstEndBlocks,
+                                             &StartBlocks, DT, LI);
 }
 
 Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
@@ -157,12 +146,18 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
     if (!AI ||
         getAllocaInterestingness(*AI) != AllocaInterestingness::kInteresting)
       return;
+    auto &AInfo = Info.AllocasToInstrument[AI];
+    auto &BBInfo = AInfo.BBInfos[II->getParent()];
+
     if (II->getIntrinsicID() == Intrinsic::lifetime_start)
-      Info.AllocasToInstrument[AI].LifetimeStart.push_back(II);
-    else
-      Info.AllocasToInstrument[AI].LifetimeEnd.push_back(II);
-    Info.AllocasToInstrument[AI].LastBBLifetime[II->getParent()] =
-        II->getIntrinsicID();
+      AInfo.LifetimeStart.push_back(II);
+    else if (BBInfo.Last != Intrinsic::lifetime_end)
+      AInfo.LifetimeEnd.push_back(II);
+
+    BBInfo.Last = II->getIntrinsicID();
+    if (BBInfo.First == Intrinsic::not_intrinsic)
+      BBInfo.First = II->getIntrinsicID();
+
     return;
   }
 

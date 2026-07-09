@@ -11,7 +11,7 @@
 @v3 = addrspace(3) global i8 poison
 @unused = addrspace(3) global i16 poison
 
-; OPT{LITERAL}: @llvm.amdgcn.lds.offset.table = internal addrspace(4) constant [2 x [1 x i32]] [[1 x i32] [i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds to i32)], [1 x i32] [i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds to i32)]]
+; OPT{LITERAL}: @llvm.amdgcn.lds.offset.table = internal addrspace(4) constant [2 x [1 x ptr addrspace(3)]] [[1 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds], [1 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds]]
 
 define void @f0() {
 ; OPT-LABEL: @f0(
@@ -64,14 +64,12 @@ define void @f1() {
 define void @f2() {
 ; OPT-LABEL: @f2(
 ; OPT-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; OPT-NEXT:    [[V22:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; OPT-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[V22]], align 4
-; OPT-NEXT:    [[V23:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
+; OPT-NEXT:    [[V22:%.*]] = getelementptr inbounds [2 x [1 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; OPT-NEXT:    [[V23:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[V22]], align 4
 ; OPT-NEXT:    [[LD:%.*]] = load i64, ptr addrspace(3) [[V23]], align 8
 ; OPT-NEXT:    [[MUL:%.*]] = mul i64 [[LD]], 4
-; OPT-NEXT:    [[V2:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; OPT-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[V2]], align 4
-; OPT-NEXT:    [[V21:%.*]] = inttoptr i32 [[TMP3]] to ptr addrspace(3)
+; OPT-NEXT:    [[V2:%.*]] = getelementptr inbounds [2 x [1 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; OPT-NEXT:    [[V21:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[V2]], align 4
 ; OPT-NEXT:    store i64 [[MUL]], ptr addrspace(3) [[V21]], align 8
 ; OPT-NEXT:    ret void
 ;

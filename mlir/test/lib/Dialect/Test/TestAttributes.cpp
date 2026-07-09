@@ -277,7 +277,7 @@ struct mlir::FieldParser<test::CopyCount> {
   }
 };
 namespace test {
-llvm::hash_code hash_value(const test::CopyCount &copyCount) {
+static llvm::hash_code hash_value(const test::CopyCount &copyCount) {
   return llvm::hash_value(copyCount.value);
 }
 } // namespace test

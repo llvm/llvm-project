@@ -14,7 +14,7 @@ define void @test(i8 %0, i8 %1) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i8> [[TMP2]], <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i8> [[TMP5]], <16 x i8> [[TMP7]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 17, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <16 x i8> [[TMP8]], <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 7, i32 0, i32 9, i32 0, i32 0, i32 0, i32 0, i32 0, i32 15>
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <16 x i8> zeroinitializer, [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <16 x i8> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -210,8 +210,6 @@ void polly::recordAssumption(polly::RecordedAssumptionsTy *RecordedAssumptions,
                              polly::AssumptionKind Kind, isl::set Set,
                              DebugLoc Loc, polly::AssumptionSign Sign,
                              BasicBlock *BB, bool RTC) {
-  assert((Set.is_params() || BB) &&
-         "Assumptions without a basic block must be parameter sets");
   if (RecordedAssumptions)
     RecordedAssumptions->push_back({Kind, Sign, Set, Loc, BB, RTC});
 }
@@ -243,7 +241,7 @@ struct ScopExpander final : SCEVVisitor<ScopExpander, const SCEV *> {
 
   explicit ScopExpander(const Region &R, ScalarEvolution &SE, Function *GenFn,
                         ScalarEvolution &GenSE, const char *Name,
-                        ValueMapT *VMap, LoopToScevMapT *LoopMap,
+                        ValueMapT *VMap, polly::LoopToScevMapT *LoopMap,
                         BasicBlock *RTCBB)
       : Expander(GenSE, Name, /*PreserveLCSSA=*/false), Name(Name), R(R),
         VMap(VMap), LoopMap(LoopMap), RTCBB(RTCBB), GenSE(GenSE), GenFn(GenFn) {
@@ -272,7 +270,7 @@ private:
   const char *Name;
   const Region &R;
   ValueMapT *VMap;
-  LoopToScevMapT *LoopMap;
+  polly::LoopToScevMapT *LoopMap;
   BasicBlock *RTCBB;
   DenseMap<const SCEV *, const SCEV *> SCEVCache;
 
@@ -389,50 +387,50 @@ private:
     return GenSE.getUDivExpr(visit(E->getLHS()), RHSScev);
   }
   const SCEV *visitAddExpr(const SCEVAddExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
+    SmallVector<SCEVUse, 4> NewOps;
     for (const SCEV *Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getAddExpr(NewOps);
   }
   const SCEV *visitMulExpr(const SCEVMulExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
+    SmallVector<SCEVUse, 4> NewOps;
     for (const SCEV *Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getMulExpr(NewOps);
   }
   const SCEV *visitUMaxExpr(const SCEVUMaxExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getUMaxExpr(NewOps);
   }
   const SCEV *visitSMaxExpr(const SCEVSMaxExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getSMaxExpr(NewOps);
   }
   const SCEV *visitUMinExpr(const SCEVUMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getUMinExpr(NewOps);
   }
   const SCEV *visitSMinExpr(const SCEVSMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getSMinExpr(NewOps);
   }
   const SCEV *visitSequentialUMinExpr(const SCEVSequentialUMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getUMinExpr(NewOps, /*Sequential=*/true);
   }
   const SCEV *visitAddRecExpr(const SCEVAddRecExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
 
     const Loop *L = E->getLoop();
@@ -461,20 +459,6 @@ Value *polly::expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
   ScopExpander Expander(S.getRegion(), SE, GenFn, GenSE, Name, VMap, LoopMap,
                         RTCBB);
   return Expander.expandCodeFor(E, Ty, IP);
-}
-
-Value *polly::getConditionFromTerminator(Instruction *TI) {
-  if (BranchInst *BR = dyn_cast<BranchInst>(TI)) {
-    if (BR->isUnconditional())
-      return ConstantInt::getTrue(Type::getInt1Ty(TI->getContext()));
-
-    return BR->getCondition();
-  }
-
-  if (SwitchInst *SI = dyn_cast<SwitchInst>(TI))
-    return SI->getCondition();
-
-  return nullptr;
 }
 
 Loop *polly::getLoopSurroundingScop(Scop &S, LoopInfo &LI) {

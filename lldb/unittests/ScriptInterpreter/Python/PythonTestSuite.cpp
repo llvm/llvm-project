@@ -172,22 +172,7 @@ lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data) {
 }
 
 void *
-lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFileSpec(PyObject *data) {
-  return nullptr;
-}
-
-void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBModuleSpec(
-    PyObject *data) {
-  return nullptr;
-}
-
-void *
-lldb_private::python::LLDBSWIGPython_CastPyObjectToSBModule(PyObject *data) {
-  return nullptr;
-}
-
-void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFileSpecList(
-    PyObject *data) {
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBTarget(PyObject *data) {
   return nullptr;
 }
 

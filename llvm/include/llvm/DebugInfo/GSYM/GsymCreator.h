@@ -133,6 +133,7 @@ class OutputAggregator;
 /// entry in the Function Info Offsets Table. For details on the exact encoding
 /// of FunctionInfo objects, see "llvm/DebugInfo/GSYM/FunctionInfo.h".
 class GsymCreator {
+protected:
   // Private member variables require Mutex protections
   mutable std::mutex Mutex;
   std::vector<FunctionInfo> Funcs;
@@ -154,20 +155,20 @@ class GsymCreator {
   ///
   /// \returns The start address of the first FunctionInfo or std::nullopt if
   /// there are no function infos.
-  std::optional<uint64_t> getFirstFunctionAddress() const;
+  LLVM_ABI std::optional<uint64_t> getFirstFunctionAddress() const;
 
   /// Get the last function address.
   ///
   /// \returns The start address of the last FunctionInfo or std::nullopt if
   /// there are no function infos.
-  std::optional<uint64_t> getLastFunctionAddress() const;
+  LLVM_ABI std::optional<uint64_t> getLastFunctionAddress() const;
 
   /// Get the base address to use for this GSYM file.
   ///
   /// \returns The base address to put into the header and to use when creating
   ///          the address offset table or std::nullpt if there are no valid
   ///          function infos or if the base address wasn't specified.
-  std::optional<uint64_t> getBaseAddress() const;
+  LLVM_ABI std::optional<uint64_t> getBaseAddress() const;
 
   /// Get the size of an address offset in the address offset table.
   ///
@@ -177,7 +178,7 @@ class GsymCreator {
   /// on the current contents of the GSYM file.
   ///
   /// \returns The size in byets of the address offsets.
-  uint8_t getAddressOffsetSize() const;
+  LLVM_ABI uint8_t getAddressOffsetSize() const;
 
   /// Get the maximum address offset for the current address offset size.
   ///
@@ -187,22 +188,14 @@ class GsymCreator {
   ///
   /// \returns The maximum address offset value that will be encoded into a GSYM
   /// file.
-  uint64_t getMaxAddressOffset() const;
+  LLVM_ABI uint64_t getMaxAddressOffset() const;
 
   /// Calculate the byte size of the GSYM header and tables sizes.
-  ///
-  /// This function will calculate the exact size in bytes of the encocded GSYM
-  /// for the following items:
-  /// - The GSYM header
-  /// - The Address offset table
-  /// - The Address info offset table
-  /// - The file table
-  /// - The string table
   ///
   /// This is used to help split GSYM files into segments.
   ///
   /// \returns Size in bytes the GSYM header and tables.
-  uint64_t calculateHeaderAndTableSize() const;
+  virtual uint64_t calculateHeaderAndTableSize() const = 0;
 
   /// Copy a FunctionInfo from the \a SrcGC GSYM creator into this creator.
   ///
@@ -216,7 +209,8 @@ class GsymCreator {
   /// \returns The number of bytes it will take to encode the function info in
   /// this GsymCreator. This helps calculate the size of the current GSYM
   /// segment file.
-  uint64_t copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncInfoIdx);
+  LLVM_ABI uint64_t copyFunctionInfo(const GsymCreator &SrcGC,
+                                     size_t FuncInfoIdx);
 
   /// Copy a string from \a SrcGC into this object.
   ///
@@ -228,7 +222,7 @@ class GsymCreator {
   /// \param SrcGC The source gsym creator to copy from.
   /// \param StrOff The string table offset from \a SrcGC to copy.
   /// \returns The new string table offset of the string within this object.
-  uint32_t copyString(const GsymCreator &SrcGC, uint32_t StrOff);
+  LLVM_ABI gsym_strp_t copyString(const GsymCreator &SrcGC, gsym_strp_t StrOff);
 
   /// Copy a file from \a SrcGC into this object.
   ///
@@ -244,7 +238,7 @@ class GsymCreator {
   /// file index of zero will always return zero as the zero is a reserved file
   /// index that means no file.
   /// \returns The new file index of the file within this object.
-  uint32_t copyFile(const GsymCreator &SrcGC, uint32_t FileIdx);
+  LLVM_ABI uint32_t copyFile(const GsymCreator &SrcGC, uint32_t FileIdx);
 
   /// Inserts a FileEntry into the file table.
   ///
@@ -252,7 +246,7 @@ class GsymCreator {
   ///
   /// \param FE A file entry object that contains valid string table offsets
   /// from this object already.
-  uint32_t insertFileEntry(FileEntry FE);
+  LLVM_ABI uint32_t insertFileEntry(FileEntry FE);
 
   /// Fixup any string and file references by updating any file indexes and
   /// strings offsets in the InlineInfo parameter.
@@ -264,7 +258,7 @@ class GsymCreator {
   /// \param II The inline info that contains file indexes and string offsets
   /// that come from \a SrcGC. The entries will be updated by coping any files
   /// and strings over into this object.
-  void fixupInlineInfo(const GsymCreator &SrcGC, InlineInfo &II);
+  LLVM_ABI void fixupInlineInfo(const GsymCreator &SrcGC, InlineInfo &II);
 
   /// Save this GSYM file into segments that are roughly \a SegmentSize in size.
   ///
@@ -280,8 +274,8 @@ class GsymCreator {
   /// \param Path The path prefix to use when saving the GSYM files.
   /// \param ByteOrder The endianness to use when saving the file.
   /// \param SegmentSize The size in bytes to segment the GSYM file into.
-  llvm::Error saveSegments(StringRef Path, llvm::endianness ByteOrder,
-                           uint64_t SegmentSize) const;
+  LLVM_ABI llvm::Error saveSegments(StringRef Path, llvm::endianness ByteOrder,
+                                    uint64_t SegmentSize) const;
 
   /// Let this creator know that this is a segment of another GsymCreator.
   ///
@@ -292,8 +286,42 @@ class GsymCreator {
     IsSegment = true;
   }
 
+  /// Validate that the creator is ready for encoding.
+  ///
+  /// Checks that functions exist, the creator is finalized, the function count
+  /// fits in 32 bits, and the base address is valid.
+  ///
+  /// \param[out] BaseAddr Set to the base address on success.
+  /// \returns An error if validation fails, or Error::success().
+  LLVM_ABI llvm::Error
+  validateForEncoding(std::optional<uint64_t> &BaseAddr) const;
+
+  /// Write the address offsets table to the output stream.
+  ///
+  /// \param O The file writer to write to.
+  /// \param AddrOffSize The byte width of each address offset.
+  /// \param BaseAddr The base address to subtract from each function address.
+  LLVM_ABI void encodeAddrOffsets(FileWriter &O, uint8_t AddrOffSize,
+                                  uint64_t BaseAddr) const;
+
+  /// Write the file table to the output stream.
+  ///
+  /// \param O The file writer to write to.
+  /// \returns An error if the file table is too large, or Error::success().
+  LLVM_ABI llvm::Error encodeFileTable(FileWriter &O) const;
+
+  /// Create a new empty creator of the same version.
+  ///
+  /// Used by createSegment() to create segment creators of the correct
+  /// version type.
+  virtual std::unique_ptr<GsymCreator> createNew(bool Quiet) const = 0;
+
 public:
   LLVM_ABI GsymCreator(bool Quiet = false);
+  virtual ~GsymCreator() = default;
+
+  /// Get the size in bytes needed for encoding string offsets.
+  virtual uint8_t getStringOffsetSize() const = 0;
 
   /// Save a GSYM file to a stand alone file.
   ///
@@ -317,7 +345,7 @@ public:
   ///
   /// \param O The stream to save the binary data to
   /// \returns An error object that indicates success or failure of the save.
-  LLVM_ABI llvm::Error encode(FileWriter &O) const;
+  virtual llvm::Error encode(FileWriter &O) const = 0;
 
   /// Insert a string into the GSYM string table.
   ///
@@ -329,7 +357,7 @@ public:
   ///             the string is owned by another object that will stay around
   ///             long enough for the GsymCreator to save the GSYM file.
   /// \returns The unique 32 bit offset into the string table.
-  LLVM_ABI uint32_t insertString(StringRef S, bool Copy = true);
+  LLVM_ABI gsym_strp_t insertString(StringRef S, bool Copy = true);
 
   /// Retrieve a string from the GSYM string table given its offset.
   ///
@@ -339,7 +367,7 @@ public:
   /// \param Offset The offset of the string to retrieve, previously returned by
   /// insertString.
   /// \returns The string at the given offset in the string table.
-  LLVM_ABI StringRef getString(uint32_t Offset);
+  LLVM_ABI StringRef getString(gsym_strp_t Offset);
 
   /// Insert a file into this GSYM creator.
   ///

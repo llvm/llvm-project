@@ -83,12 +83,14 @@ program main
     logical(kind=8) x
   end type
   type, bind(c) :: t13
-    !ERROR: Each component of an interoperable derived type must have an interoperable type
-    real(kind=2) x
+    real(kind=2) x ! ok, interoperable with C _Float16
   end type
   type, bind(c) :: t14
+    complex(kind=2) x ! ok, interoperable with C _Float16 _Complex
+  end type
+  type, bind(c) :: t13b
     !ERROR: Each component of an interoperable derived type must have an interoperable type
-    complex(kind=2) x
+    complex(kind=3) x ! bfloat16 is not interoperable
   end type
   type, bind(c) :: t15
     !ERROR: An array component of an interoperable type must have at least one element

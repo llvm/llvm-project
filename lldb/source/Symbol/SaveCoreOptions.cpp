@@ -21,7 +21,7 @@ Status SaveCoreOptions::SetPluginName(const char *name) {
     return error;
   }
 
-  std::vector<llvm::StringRef> plugin_names =
+  llvm::SmallVector<llvm::StringRef> plugin_names =
       PluginManager::GetSaveCorePluginNames();
   if (!llvm::is_contained(plugin_names, name)) {
     StreamString stream;

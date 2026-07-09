@@ -6,11 +6,11 @@ target triple = "thumbv7-apple-ios3.0.0"
 ;CHECK:foo_F32
 ;CHECK: <4 x float>
 ;CHECK:ret
-define float @foo_F32(ptr nocapture %A, i32 %n) nounwind uwtable readonly ssp {
+define float @foo_F32(ptr nocapture %A, i32 %n) readonly {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
-.lr.ph:                                           ; preds = %0, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %0 ]
   %prod.01 = phi float [ %4, %.lr.ph ], [ 0.000000e+00, %0 ]
   %2 = getelementptr inbounds float, ptr %A, i64 %indvars.iv
@@ -21,7 +21,7 @@ define float @foo_F32(ptr nocapture %A, i32 %n) nounwind uwtable readonly ssp {
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   %prod.0.lcssa = phi float [ 0.000000e+00, %0 ], [ %4, %.lr.ph ]
   ret float %prod.0.lcssa
 }
@@ -29,11 +29,11 @@ define float @foo_F32(ptr nocapture %A, i32 %n) nounwind uwtable readonly ssp {
 ;CHECK:foo_I8
 ;CHECK: xor <16 x i8>
 ;CHECK:ret
-define signext i8 @foo_I8(ptr nocapture %A, i32 %n) nounwind uwtable readonly ssp {
+define i8 @foo_I8(ptr nocapture %A, i32 %n) readonly {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
-.lr.ph:                                           ; preds = %0, %.lr.ph
+.lr.ph:
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %0 ]
   %red.01 = phi i8 [ %4, %.lr.ph ], [ 0, %0 ]
   %2 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv
@@ -44,7 +44,7 @@ define signext i8 @foo_I8(ptr nocapture %A, i32 %n) nounwind uwtable readonly ss
   %exitcond = icmp eq i32 %lftr.wideiv, %n
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   %red.0.lcssa = phi i8 [ 0, %0 ], [ %4, %.lr.ph ]
   ret i8 %red.0.lcssa
 }

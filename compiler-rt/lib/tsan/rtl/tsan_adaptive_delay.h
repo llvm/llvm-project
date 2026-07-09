@@ -82,8 +82,6 @@ struct AdaptiveDelay {
   static void BeforeChildThreadRunsImpl();
 
   static bool is_adaptive_delay_enabled;
-
-  friend struct AdaptiveDelayImpl;
 };
 
 // The runtime defines cur_thread() to retrieve TLS thread state, and it

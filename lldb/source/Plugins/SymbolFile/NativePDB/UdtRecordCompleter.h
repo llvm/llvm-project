@@ -124,7 +124,6 @@ private:
       llvm::codeview::TypeIndex ti, llvm::codeview::MemberAccess access,
       std::optional<uint64_t> vtable_idx = std::optional<uint64_t>());
   void AddMethod(llvm::StringRef name, llvm::codeview::TypeIndex type_idx,
-                 llvm::codeview::MemberAccess access,
                  llvm::codeview::MethodOptions options,
                  llvm::codeview::MemberAttributes attrs);
   void FinishRecord();

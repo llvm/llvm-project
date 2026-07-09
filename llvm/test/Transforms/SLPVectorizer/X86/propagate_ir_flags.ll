@@ -330,7 +330,7 @@ define void @only_arcp(ptr %x) {
 define void @addsub_all_nsw(ptr %x) {
 ; CHECK-LABEL: @addsub_all_nsw(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP2]], <i32 1, i32 -1, i32 1, i32 -1>
+; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <4 x i32> [[TMP2]], <i32 -1, i32 1, i32 -1, i32 1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -359,7 +359,7 @@ define void @addsub_all_nsw(ptr %x) {
 define void @addsub_some_nsw(ptr %x) {
 ; CHECK-LABEL: @addsub_some_nsw(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP2]], <i32 1, i32 -1, i32 1, i32 -1>
+; CHECK-NEXT:    [[TMP5:%.*]] = sub <4 x i32> [[TMP2]], <i32 -1, i32 1, i32 -1, i32 1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -388,7 +388,7 @@ define void @addsub_some_nsw(ptr %x) {
 define void @addsub_no_nsw(ptr %x) {
 ; CHECK-LABEL: @addsub_no_nsw(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP2]], <i32 1, i32 -1, i32 1, i32 -1>
+; CHECK-NEXT:    [[TMP5:%.*]] = sub <4 x i32> [[TMP2]], <i32 -1, i32 1, i32 -1, i32 1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;

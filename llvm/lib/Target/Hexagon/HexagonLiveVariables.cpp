@@ -373,9 +373,6 @@ bool HexagonLiveVariablesImpl::runOnMachineFunction(
     MachinePostDominatorTree &MPDT) {
   LLVM_DEBUG(dbgs() << "\nHexagon Live Variables";);
   Fn.RenumberBlocks();
-  // Update the block numbers in the dominator tree since we preserve it.
-  MDT.updateBlockNumbers();
-  MPDT.updateBlockNumbers();
 
   MF = &Fn;
   MRI = &Fn.getRegInfo();

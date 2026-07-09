@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=mipsisa32r6-linux-gnu -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=mipsisa32r6-linux-gnu --start-before=mips-set-machine-register-flags -verify-machineinstrs %s -o - | FileCheck %s
 
 name:	f
 alignment:       4
@@ -6,13 +6,24 @@ tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $d12_64, $d14_64
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
 
-    renamable $d0_64 = CMP_LT_D renamable $d14_64, renamable $d12_64
+    %1:fgr64cc = CMP_LT_D renamable $d14_64, renamable $d12_64
     ; CHECK: cmp.lt.d
-    $v1 = MFC1_D64 $d0_64
+    %2:gpr32 = MFC1_D64 $d12_64
     ; CHECK: mfc1
-    renamable $v0 = COPY renamable $d0_64
+    %3:gpr32 = COPY renamable %1:fgr64cc
     ; CHECK: mfc1
-    renamable $v0 = SUBu killed renamable $v1, killed renamable $v0
+    %4:gpr32 = SUBu %3:gpr32, %2:gpr32
+    BEQ %3:gpr32, $zero, %bb.2, implicit-def dead $at
+
+  bb.1:
+    $v0 = ADDiu %4:gpr32, 1
+    RetRA implicit $v0
+
+  bb.2:
+    %5:gpr32 = COPY renamable %1:fgr64cc
+    ; CHECK: mfc1
+    $v0 = ADDiu %5:gpr32, 2
     RetRA implicit $v0
 ...

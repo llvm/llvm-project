@@ -17,18 +17,18 @@ define <8 x i32> @fixed_bitselect_v8i32(ptr %pre_cond_ptr, ptr %left_ptr, ptr %r
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ldp q5, q4, [x1]
 ; CHECK-NEXT:    ldp q6, q7, [x2]
-; CHECK-NEXT:    mov z2.d, z0.d
-; CHECK-NEXT:    mov z3.d, z1.d
+; CHECK-NEXT:    movprfx z2, z1
+; CHECK-NEXT:    subr z2.s, z2.s, #0 // =0x0
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    subr z3.s, z3.s, #0 // =0x0
 ; CHECK-NEXT:    sub z1.s, z1.s, #1 // =0x1
 ; CHECK-NEXT:    sub z0.s, z0.s, #1 // =0x1
-; CHECK-NEXT:    subr z2.s, z2.s, #0 // =0x0
-; CHECK-NEXT:    subr z3.s, z3.s, #0 // =0x0
-; CHECK-NEXT:    and z2.d, z2.d, z4.d
-; CHECK-NEXT:    and z3.d, z3.d, z5.d
+; CHECK-NEXT:    and z3.d, z3.d, z4.d
+; CHECK-NEXT:    and z2.d, z2.d, z5.d
 ; CHECK-NEXT:    and z4.d, z0.d, z7.d
 ; CHECK-NEXT:    and z0.d, z1.d, z6.d
-; CHECK-NEXT:    orr z1.d, z4.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z3.d
+; CHECK-NEXT:    orr z0.d, z0.d, z2.d
+; CHECK-NEXT:    orr z1.d, z4.d, z3.d
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fixed_bitselect_v8i32:

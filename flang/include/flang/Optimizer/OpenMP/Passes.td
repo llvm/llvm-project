@@ -35,12 +35,6 @@ def MapsForPrivatizedSymbolsPass
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
-def MarkDeclareTargetPass
-    : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
-  let summary = "Marks all functions called by an OpenMP declare target function as declare target";
-  let dependentDialects = ["mlir::omp::OpenMPDialect"];
-}
-
 def DeleteUnreachableTargetsPass
     : Pass<"omp-delete-unreachable-targets", "mlir::ModuleOp"> {
   let summary = "Deletes OpenMP target operations in unreachable code";

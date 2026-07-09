@@ -687,6 +687,12 @@ void DAGTypeLegalizer::ReplaceValueWith(SDValue From, SDValue To) {
           auto OldValId = getTableId(OldVal);
           auto NewValId = getTableId(NewVal);
           DAG.ReplaceAllUsesOfValueWith(OldVal, NewVal);
+          // Re-remap ids after RAUW, since the call above may have caused
+          // nodes to be deleted (via CSE), triggering NoteDeletion callbacks
+          // that added new entries to ReplacedValues. Without re-remapping,
+          // we could create a cycle like A -> B -> A.
+          RemapId(OldValId);
+          RemapId(NewValId);
           if (OldValId != NewValId)
             ReplacedValues[OldValId] = NewValId;
         }

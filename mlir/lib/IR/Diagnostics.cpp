@@ -600,9 +600,17 @@ struct ExpectedDiag {
   /// Emit an error at the location referenced by this diagnostic.
   LogicalResult emitError(raw_ostream &os, llvm::SourceMgr &mgr,
                           const Twine &msg) {
-    SMRange range(fileLoc, SMLoc::getFromPointer(fileLoc.getPointer() +
-                                                 substring.size()));
-    mgr.PrintMessage(os, fileLoc, llvm::SourceMgr::DK_Error, msg, range);
+    // fileLoc may be invalid when the expected diagnostic used an unknown
+    // location specifier (e.g. `// expected-error @unknown {{...}}`). In that
+    // case, skip the source range to avoid a null-pointer dereference and an
+    // assertion in SMRange that both endpoints must have the same validity.
+    if (fileLoc.isValid()) {
+      SMRange range(fileLoc, SMLoc::getFromPointer(fileLoc.getPointer() +
+                                                   substring.size()));
+      mgr.PrintMessage(os, fileLoc, llvm::SourceMgr::DK_Error, msg, range);
+    } else {
+      mgr.PrintMessage(os, fileLoc, llvm::SourceMgr::DK_Error, msg);
+    }
     return failure();
   }
 

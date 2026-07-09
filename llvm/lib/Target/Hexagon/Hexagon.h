@@ -41,7 +41,9 @@ void initializeHexagonEarlyIfConversionPass(PassRegistry &);
 void initializeHexagonExpandCondsetsPass(PassRegistry &);
 void initializeHexagonGenMemAbsolutePass(PassRegistry &);
 void initializeHexagonGenMuxPass(PassRegistry &);
+void initializeHexagonGlobalSchedulerPass(PassRegistry &);
 void initializeHexagonHardwareLoopsPass(PassRegistry &);
+void initializeHexagonHVXSaveRemarkPass(PassRegistry &);
 void initializeHexagonLiveVariablesPass(PassRegistry &);
 void initializeHexagonLoopIdiomRecognizeLegacyPassPass(PassRegistry &);
 void initializeHexagonLoopAlignPass(PassRegistry &);
@@ -68,8 +70,9 @@ void initializeHexagonOptimizeSZextendsPass(PassRegistry &);
 void initializeHexagonPeepholePass(PassRegistry &);
 void initializeHexagonSplitConst32AndConst64Pass(PassRegistry &);
 void initializeHexagonVectorPrintPass(PassRegistry &);
-
 void initializeHexagonQFPOptimizerPass(PassRegistry &);
+void initializeHexagonPostRAHandleQFPPass(PassRegistry &);
+void initializeHexagonXQFloatGeneratorPass(PassRegistry &);
 
 Pass *createHexagonLoopIdiomPass();
 Pass *createHexagonVectorLoopCarriedReuseLegacyPass();
@@ -94,7 +97,9 @@ FunctionPass *createHexagonGenInsert();
 FunctionPass *createHexagonGenMemAbsolute();
 FunctionPass *createHexagonGenMux();
 FunctionPass *createHexagonGenPredicate();
+FunctionPass *createHexagonGlobalScheduler();
 FunctionPass *createHexagonHardwareLoops();
+FunctionPass *createHexagonHVXSaveRemark();
 FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
                                    CodeGenOptLevel OptLevel);
 FunctionPass *createHexagonLoopAlign();
@@ -117,6 +122,8 @@ FunctionPass *createHexagonVectorPrint();
 FunctionPass *createHexagonVExtract();
 FunctionPass *createHexagonExpandCondsets();
 FunctionPass *createHexagonQFPOptimizer();
+FunctionPass *createHexagonPostRAHandleQFP();
+FunctionPass *createHexagonXQFloatGenerator();
 
 } // end namespace llvm;
 

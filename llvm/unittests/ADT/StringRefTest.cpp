@@ -1093,7 +1093,7 @@ TEST(StringRefTest, Take) {
 }
 
 TEST(StringRefTest, FindIf) {
-  StringRef Punct("Test.String");
+  StringRef Punct("This.Is.Test.String");
   StringRef NoPunct("ABCDEFG");
   StringRef Empty;
 
@@ -1106,6 +1106,16 @@ TEST(StringRefTest, FindIf) {
   EXPECT_EQ(4U, Punct.find_if_not(IsAlpha));
   EXPECT_EQ(StringRef::npos, NoPunct.find_if_not(IsAlpha));
   EXPECT_EQ(StringRef::npos, Empty.find_if_not(IsAlpha));
+
+  EXPECT_EQ(12U, Punct.rfind_if(IsPunct));
+  EXPECT_EQ(7U, Punct.rfind_if(IsPunct, /*End=*/12));
+  EXPECT_EQ(StringRef::npos, Punct.rfind_if(IsPunct, /*End=*/4));
+  EXPECT_EQ(StringRef::npos, Punct.rfind_if(IsPunct, /*End=*/0));
+
+  EXPECT_EQ(12U, Punct.rfind_if_not(IsAlpha));
+  EXPECT_EQ(7U, Punct.rfind_if_not(IsAlpha, /*End=*/12));
+  EXPECT_EQ(StringRef::npos, Punct.rfind_if_not(IsAlpha, /*End=*/4));
+  EXPECT_EQ(StringRef::npos, Punct.rfind_if_not(IsAlpha, /*End=*/0));
 }
 
 TEST(StringRefTest, TakeWhileUntil) {
@@ -1196,6 +1206,13 @@ TEST(StringRefTest, LFCRLineEnding) {
   EXPECT_EQ(StringRef("\n\r"), Cases[0].detectEOL());
   EXPECT_EQ(StringRef("\n\r"), Cases[1].detectEOL());
   EXPECT_EQ(StringRef("\n\r"), Cases[2].detectEOL());
+}
+
+TEST(StringRefTest, NonEmptyOr) {
+  constexpr StringLiteral empty("");
+  constexpr StringLiteral populated("yay!");
+  EXPECT_EQ(populated, empty.nonEmptyOr("yay!"));
+  EXPECT_EQ(populated, populated.nonEmptyOr("boo!"));
 }
 
 static_assert(std::is_trivially_copyable_v<StringRef>, "trivially copyable");

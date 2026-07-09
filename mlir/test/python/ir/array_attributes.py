@@ -621,6 +621,22 @@ def testGetDenseResourceElementsAttr():
     print("EXIT FUNCTION")
 
 
+# CHECK-LABEL: TEST: testGetDenseResourceElementsAttrScalar
+@run
+def testGetDenseResourceElementsAttrScalar():
+    with Context(), Location.unknown():
+        element_type = IntegerType.get_signless(64)
+        tensor_type = RankedTensorType.get((), element_type)
+        resource = DenseResourceElementsAttr.get_from_buffer(
+            memoryview(np.array(42, dtype=np.int64)), "scalar", tensor_type
+        )
+        module = Module.create()
+        module.operation.attributes["test.resource"] = resource
+        # CHECK: test.resource = dense_resource<scalar> : tensor<i64>
+        # CHECK: scalar: "0x080000002A00000000000000"
+        print(module)
+
+
 # CHECK-LABEL: TEST: testDanglingResource
 print("TEST: testDanglingResource")
 # see https://github.com/llvm/llvm-project/pull/149414, https://github.com/llvm/llvm-project/pull/150137, https://github.com/llvm/llvm-project/pull/150561

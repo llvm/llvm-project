@@ -65,7 +65,7 @@ void ComparePointerToMemberVirtualFunctionCheck::check(
     return;
   }
   // compare with variable which type is pointer to member function.
-  llvm::SmallVector<SourceLocation, 12U> SameSignatureVirtualMethods{};
+  SmallVector<SourceLocation, 12U> SameSignatureVirtualMethods{};
   const auto *MPT = cast<MemberPointerType>(DRE->getType().getCanonicalType());
   const CXXRecordDecl *RD = MPT->getMostRecentCXXRecordDecl();
   if (RD == nullptr)

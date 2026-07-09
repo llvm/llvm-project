@@ -390,8 +390,9 @@ public:
     MainFileBuf = Invalid ? StringRef{} : Buf;
 
     TypeHintPolicy.SuppressScope = true; // keep type names short
-    TypeHintPolicy.AnonymousTagLocations =
-        false; // do not print lambda locations
+    TypeHintPolicy.AnonymousTagNameStyle = llvm::to_underlying(
+        PrintingPolicy::AnonymousTagMode::Plain); // do not print lambda
+                                                  // location
 
     // Not setting PrintCanonicalTypes for "auto" allows
     // SuppressDefaultTemplateArgs (set by default) to have an effect.
@@ -491,7 +492,8 @@ public:
     // either.
     if (const CXXMethodDecl *Method =
             dyn_cast_or_null<CXXMethodDecl>(Callee.Decl))
-      if (IsFunctor || Method->hasCXXExplicitFunctionObjectParameter())
+      if (IsFunctor || (!E->isTypeDependent() &&
+                        Method->hasCXXExplicitFunctionObjectParameter()))
         Args = Args.drop_front(1);
     processCall(Callee, E->getRParenLoc(), Args);
     return true;

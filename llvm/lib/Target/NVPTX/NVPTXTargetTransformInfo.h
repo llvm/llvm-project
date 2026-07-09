@@ -57,7 +57,8 @@ public:
   bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const override {
     return AS != AddressSpace::ADDRESS_SPACE_SHARED &&
-           AS != AddressSpace::ADDRESS_SPACE_LOCAL && AS != ADDRESS_SPACE_PARAM;
+           AS != AddressSpace::ADDRESS_SPACE_LOCAL &&
+           AS != AddressSpace::ADDRESS_SPACE_ENTRY_PARAM;
   }
 
   std::optional<Instruction *>
@@ -183,6 +184,20 @@ public:
     }
   }
 
+  APInt getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
+                                         unsigned DstAS) const override {
+    if (SrcAS != llvm::ADDRESS_SPACE_GENERIC)
+      return BaseT::getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
+    if (DstAS != llvm::ADDRESS_SPACE_GLOBAL &&
+        DstAS != llvm::ADDRESS_SPACE_SHARED)
+      return BaseT::getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
+
+    // Address change within 4K size does not change the original address space
+    // and is safe to perform address cast form SrcAS to DstAS.
+    APInt PtrMask(DL.getPointerSizeInBits(llvm::ADDRESS_SPACE_GENERIC), 0xfff);
+    return PtrMask;
+  }
+
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const override;
 
@@ -207,7 +222,16 @@ public:
     return false;
   }
 
-  InstructionUniformity getInstructionUniformity(const Value *V) const override;
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
+
+  ValueUniformity getValueUniformity(const Value *V) const override;
 };
 
 } // end namespace llvm

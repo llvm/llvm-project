@@ -380,7 +380,7 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   Conf.DefaultTriple = Triple.getTriple();
 
   Conf.OptPipeline = Args.getLastArgValue(OPT_lto_newpm_passes, "");
-  Conf.PassPlugins = PassPlugins;
+  Conf.PassPluginFilenames = PassPlugins;
   Conf.DebugPassManager = Args.hasArg(OPT_lto_debug_pass_manager);
 
   Conf.DiagHandler = diagnosticHandler;

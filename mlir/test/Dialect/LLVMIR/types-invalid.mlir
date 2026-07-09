@@ -14,6 +14,13 @@ func.func @function_returning_function() {
 
 // -----
 
+func.func @function_taking_opaque_struct() {
+  // expected-error @+1 {{invalid function argument type}}
+  "some.op"() : () -> !llvm.func<void(struct<"foo", opaque>)>
+}
+
+// -----
+
 func.func @function_taking_function() {
   // expected-error @+1 {{invalid function argument type}}
   "some.op"() : () -> !llvm.func<void (func<void ()>)>
@@ -96,6 +103,13 @@ func.func @unexpected_type() {
 
 // -----
 
+func.func @invalid_di_derived_type_extra_data() {
+  // expected-error @+1 {{extraData must be a DINodeAttr or an IntegerAttr}}
+  "some.op"() {attr = #llvm.di_derived_type<tag = DW_TAG_member, sizeInBits = 64, extraData = "not debug info">} : () -> ()
+}
+
+// -----
+
 func.func @explicitly_opaque_struct() {
   "some.op"() : () -> !llvm.struct<"a", opaque>
   // expected-error @+1 {{identified type already used with a different body}}
@@ -139,4 +153,20 @@ func.func private @target_ext_no_name() {
   // expected-error@below {{expected string}}
   // expected-error@below {{failed to parse LLVMTargetExtType parameter 'extTypeName' which is to be a `::llvm::StringRef`}}
   "some.op"() : () -> !llvm.target<i32, 42>
+}
+
+// -----
+
+func.func @byte_invalid_bitwidth() {
+    // expected-error@below {{bitwidth must be less than 8388608, but got 8388608}}
+    %0 = "some.op"() : () -> !llvm.byte<8388608>
+    llvm.return
+}
+
+// -----
+
+llvm.func @byte_zero_bitwidth() {
+    // expected-error@below {{bitwidth must be greater than 0}}
+    %0 = "some.op"() : () -> !llvm.byte<0>
+    llvm.return
 }

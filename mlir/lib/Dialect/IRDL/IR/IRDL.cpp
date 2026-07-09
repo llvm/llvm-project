@@ -116,14 +116,14 @@ LogicalResult OperationOp::verify() {
 
 LogicalResult TypeOp::verify() {
   auto symName = getSymName();
-  if (symName.front() == '!')
+  if (!symName.empty() && symName.front() == '!')
     symName = symName.substr(1);
   return isValidName(symName, getOperation(), "type");
 }
 
 LogicalResult AttributeOp::verify() {
   auto symName = getSymName();
-  if (symName.front() == '#')
+  if (!symName.empty() && symName.front() == '#')
     symName = symName.substr(1);
   return isValidName(symName, getOperation(), "attribute");
 }

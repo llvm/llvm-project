@@ -71,7 +71,7 @@ entry:
 ; GCN-DAG: s_mov_b32 s[[SL:[0-9]+]], 0x40003c00
 ; GCN:     v_lshrrev_b64 v[{{[0-9:]+}}], v{{[0-9]+}}, s[[[SL]]:[[SH]]]
 
-; OPT: %0 = extractelement <4 x half> <half 0xH3C00, half 0xH4000, half 0xH4200, half 0xH4400>, i32 %sel2
+; OPT: %0 = extractelement <4 x half> <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 4.000000e+00>, i32 %sel2
 ; OPT: store half %0, ptr addrspace(1) %out, align 2
 
 define amdgpu_kernel void @half4_alloca_store4(ptr addrspace(1) %out, ptr addrspace(3) %dummy_lds) {
@@ -97,7 +97,7 @@ entry:
 ; GCN:     s_mov_b64 s[{{[0-9:]+}}], 0xffff
 
 ; OPT: %alloca = freeze <4 x half> poison
-; OPT: %0 = insertelement <4 x half> %alloca, half 0xH3C00, i32 %sel2
+; OPT: %0 = insertelement <4 x half> %alloca, half 1.000000e+00, i32 %sel2
 ; OPT: store <4 x half> %0, ptr addrspace(1) %out, align 2
 
 define amdgpu_kernel void @half4_alloca_load4(ptr addrspace(1) %out, ptr addrspace(3) %dummy_lds) {

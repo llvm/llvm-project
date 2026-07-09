@@ -7,12 +7,12 @@
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return11u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> zeroinitializer
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 0
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return11(int4x4 A) {
     return A._11;
@@ -21,12 +21,12 @@ int Return11(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return12u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> <i32 1>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 4
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return12(int4x4 A) {
     return A._12;
@@ -35,12 +35,12 @@ int Return12(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return13u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> <i32 2>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 8
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return13(int4x4 A) {
     return A._13;
@@ -49,12 +49,12 @@ int Return13(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return14u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> <i32 3>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 12
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return14(int4x4 A) {
     return A._14;
@@ -63,12 +63,12 @@ int Return14(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return21u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> <i32 4>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 1
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return21(int4x4 A) {
     return A._21;
@@ -77,12 +77,12 @@ int Return21(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return22u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> <i32 5>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 5
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return22(int4x4 A) {
     return A._22;
@@ -91,12 +91,12 @@ int Return22(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return23u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> <i32 6>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 9
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return23(int4x4 A) {
     return A._23;
@@ -105,12 +105,12 @@ int Return23(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return24u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> <i32 7>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 13
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return24(int4x4 A) {
     return A._24;
@@ -119,12 +119,12 @@ int Return24(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return31u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> <i32 8>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 2
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return31(int4x4 A) {
     return A._31;
@@ -133,12 +133,12 @@ int Return31(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return32u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> <i32 9>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 6
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return32(int4x4 A) {
     return A._32;
@@ -147,12 +147,12 @@ int Return32(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return33u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> <i32 10>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 10
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return33(int4x4 A) {
     return A._33;
@@ -161,12 +161,12 @@ int Return33(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return34u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> <i32 11>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 14
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return34(int4x4 A) {
     return A._34;
@@ -175,12 +175,12 @@ int Return34(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return41u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> <i32 12>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 3
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return41(int4x4 A) {
     return A._41;
@@ -189,12 +189,12 @@ int Return41(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return42u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> <i32 13>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 7
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return42(int4x4 A) {
     return A._42;
@@ -203,12 +203,12 @@ int Return42(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return43u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> <i32 14>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 11
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return43(int4x4 A) {
     return A._43;
@@ -217,12 +217,12 @@ int Return43(int4x4 A) {
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return44u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <1 x i32> <i32 15>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    ret i32 [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 15
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return44(int4x4 A) {
     return A._44;

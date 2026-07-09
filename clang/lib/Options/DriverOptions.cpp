@@ -46,6 +46,6 @@ public:
 } // anonymous namespace
 
 const llvm::opt::OptTable &clang::getDriverOptTable() {
-  static DriverOptTable Table;
+  static const DriverOptTable Table;
   return Table;
 }

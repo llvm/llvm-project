@@ -73,8 +73,7 @@ public:
                  const std::string &FS, const SPIRVTargetMachine &TM);
   SPIRVSubtarget &initSubtargetDependencies(StringRef CPU, StringRef FS);
 
-  void initAvailableExtensions(
-      const std::set<SPIRV::Extension::Extension> &AllowedExtIds);
+  void initAvailableExtensions(const ExtensionSet &AllowedExtIds);
   void resolveEnvFromModule(const Module &M);
 
   // Parses features string setting specified subtarget options.
@@ -145,9 +144,8 @@ public:
 
   // Adds known SPIR-V extensions to the global list of allowed extensions that
   // SPIRVSubtarget module owns as
-  // cl::opt<std::set<SPIRV::Extension::Extension>, ...> global variable.
-  static void
-  addExtensionsToClOpt(const std::set<SPIRV::Extension::Extension> &AllowList);
+  // cl::opt<ExtensionSet, ...> global variable.
+  static void addExtensionsToClOpt(const ExtensionSet &AllowList);
 };
 } // namespace llvm
 

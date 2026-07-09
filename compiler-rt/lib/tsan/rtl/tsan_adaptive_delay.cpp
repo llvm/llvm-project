@@ -260,11 +260,7 @@ struct AdaptiveDelayImpl {
   DelaySpec atomic_delay_;
   DelaySpec sync_delay_;
 
-  void Init() {
-    InitTls();
-
-    AdaptiveDelay::is_adaptive_delay_enabled = flags()->enable_adaptive_delay;
-  }
+  void Init() { InitTls(); }
 
   void InitTls() {
     TLS()->bucket_start_ns_ = NanoTime();
@@ -414,7 +410,13 @@ AdaptiveDelayImpl& GetImpl() {
 
 bool AdaptiveDelay::is_adaptive_delay_enabled;
 
-void AdaptiveDelay::InitImpl() { GetImpl().Init(); }
+void AdaptiveDelay::InitImpl() {
+  AdaptiveDelay::is_adaptive_delay_enabled = flags()->enable_adaptive_delay;
+  if (!AdaptiveDelay::is_adaptive_delay_enabled)
+    return;
+
+  GetImpl().Init();
+}
 
 void AdaptiveDelay::SyncOpImpl() { GetImpl().SyncOp(); }
 void AdaptiveDelay::AtomicOpFenceImpl(int mo) { GetImpl().AtomicOpFence(mo); }

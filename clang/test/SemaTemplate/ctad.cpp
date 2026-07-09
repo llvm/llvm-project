@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++17 -verify=expected,cxx17 %s
+// RUN: %clang_cc1 -std=c++17 -verify=expected,cxx17 %s -Wno-c++20-extensions
 // RUN: %clang_cc1 -std=c++20 -verify=expected,cxx20 %s
 
 namespace pr41427 {
@@ -116,3 +116,44 @@ template <class T, class> struct S {
 S<int, int>::I i; // expected-error{{no viable constructor or deduction guide for deduction of template arguments of 'S<int, int>::I'}} \
                   // expected-note{{while building implicit deduction guide first needed here}}
 }
+
+namespace GH167513 {
+  template <class T, T> struct A {
+    A(T) {}
+  };
+  template <class T> using AA = A<T, T{}>;
+  AA b{0};
+} // namespace GH167513
+
+#if __cplusplus >= 202002L
+namespace GH200418 {
+  template <template <class> class... Ts> struct S {
+    template <Ts... Vs> using X = decltype((Vs , ...));
+  };
+
+  template <class> struct A {
+    constexpr A(int) {}
+  };
+  A(int) -> A<int>;
+
+  using T = A<int>;
+  using T = S<A>::X<0>;
+} // namespace GH200418
+#endif
+
+namespace GH203261 {
+  template <class> struct A {}; // expected-note {{template is declared here}}
+  template <template <class> class TT> struct S {
+    A(int) -> TT<int>;
+    // expected-error@-1 {{deduction guide must be declared in the same scope as template 'GH203261::A'}}
+    // expected-error@-2 {{deduced type 'TT<int>' of deduction guide is not written as a specialization of template 'A'}}
+  };
+} // namespace GH203261
+
+namespace TemplateTemplateParm1 {
+  template <template <class> class TT> struct S {
+    template <class> struct A {};
+    A(int) -> TT<int>;
+    // expected-error@-1 {{deduced type 'TT<int>' of deduction guide is not written as a specialization of template 'A'}}
+  };
+} // namespace TemplateTemplateParm1

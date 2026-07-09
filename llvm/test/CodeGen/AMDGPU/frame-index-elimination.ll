@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-promote-alloca < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,MUBUF %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-MUBUF,MUBUF %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca,+enable-flat-scratch < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,MUBUF %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-MUBUF,MUBUF %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=+enable-flat-scratch < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck --check-prefixes=GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck --check-prefixes=GFX11-FAKE16 %s
 
@@ -373,13 +373,13 @@ entry:
   br label %.shuffle.then.i.i.i.i
 
 .shuffle.then.i.i.i.i:                            ; preds = %.shuffle.then.i.i.i.i, %entry
-  store i64 0, ptr addrspace(5) null, align 4
+  store i64 0, ptr addrspace(5) zeroinitializer, align 4
   %icmp = icmp ugt i64 %p2i, 1
   br i1 %icmp, label %.shuffle.then.i.i.i.i, label %vector.body.i.i.i.i
 
 vector.body.i.i.i.i:                              ; preds = %.shuffle.then.i.i.i.i
   %wide.load9.i.i.i.i = load <2 x i32>, ptr addrspace(5) %.omp.reduction.element.i.i.i.i, align 4
-  store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) null, align 4
+  store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) zeroinitializer, align 4
   ret void
 }
 
@@ -393,14 +393,14 @@ entry:
   br label %.shuffle.then.i.i.i.i
 
 .shuffle.then.i.i.i.i:                            ; preds = %.shuffle.then.i.i.i.i, %entry
-  store i64 0, ptr addrspace(5) null, align 4
+  store i64 0, ptr addrspace(5) zeroinitializer, align 4
   %or = and i32 %p2i, -512
   %icmp = icmp ugt i32 %or, 9999999
   br i1 %icmp, label %.shuffle.then.i.i.i.i, label %vector.body.i.i.i.i
 
 vector.body.i.i.i.i:                              ; preds = %.shuffle.then.i.i.i.i
   %wide.load9.i.i.i.i = load <2 x i32>, ptr addrspace(5) %.omp.reduction.element.i.i.i.i, align 4
-  store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) null, align 4
+  store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) zeroinitializer, align 4
   ret void
 }
 
@@ -414,14 +414,14 @@ entry:
   br label %.shuffle.then.i.i.i.i
 
 .shuffle.then.i.i.i.i:                            ; preds = %.shuffle.then.i.i.i.i, %entry
-  store i64 0, ptr addrspace(5) null, align 4
+  store i64 0, ptr addrspace(5) zeroinitializer, align 4
   %or = or i32 %p2i, 12345
   %icmp = icmp ugt i32 %or, 9999999
   br i1 %icmp, label %.shuffle.then.i.i.i.i, label %vector.body.i.i.i.i
 
 vector.body.i.i.i.i:                              ; preds = %.shuffle.then.i.i.i.i
   %wide.load9.i.i.i.i = load <2 x i32>, ptr addrspace(5) %.omp.reduction.element.i.i.i.i, align 4
-  store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) null, align 4
+  store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) zeroinitializer, align 4
   ret void
 }
 

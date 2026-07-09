@@ -19,15 +19,15 @@ namespace Test {
   D d;
 }
 
-// CHECK: call void @_ZN4Test2V2C2Ev(ptr noundef nonnull align 8 dereferenceable(20) %2, ptr addrspace(1) noundef getelementptr inbounds (ptr addrspace(1), ptr addrspace(1) @_ZTTN4Test1DE, i64 11))
-// CHECK: call void @_ZN4Test2C1C2Ev(ptr noundef nonnull align 8 dereferenceable(12) %this1, ptr addrspace(1) noundef getelementptr inbounds (ptr addrspace(1), ptr addrspace(1) @_ZTTN4Test1DE, i64 1))
-// CHECK: call void @_ZN4Test2C2C2Ev(ptr noundef nonnull align 8 dereferenceable(12) %3, ptr addrspace(1) noundef getelementptr inbounds (ptr addrspace(1), ptr addrspace(1) @_ZTTN4Test1DE, i64 3))
+// CHECK: call void @_ZN4Test2V2C2Ev(ptr noundef nonnull align 8 dereferenceable(20) %2, ptr addrspace(1) noundef getelementptr inbounds nuw (i8, ptr addrspace(1) @_ZTTN4Test1DE, i64 88))
+// CHECK: call void @_ZN4Test2C1C2Ev(ptr noundef nonnull align 8 dereferenceable(12) %this1, ptr addrspace(1) noundef getelementptr inbounds nuw (i8, ptr addrspace(1) @_ZTTN4Test1DE, i64 8))
+// CHECK: call void @_ZN4Test2C2C2Ev(ptr noundef nonnull align 8 dereferenceable(12) %3, ptr addrspace(1) noundef getelementptr inbounds nuw (i8, ptr addrspace(1) @_ZTTN4Test1DE, i64 24))
 // CHECK: define linkonce_odr void @_ZN4Test2V2C2Ev(ptr noundef nonnull align 8 dereferenceable(20) %this, ptr addrspace(1) noundef %vtt)
 // CHECK: define linkonce_odr void @_ZN4Test2C1C2Ev(ptr noundef nonnull align 8 dereferenceable(12) %this, ptr addrspace(1) noundef %vtt)
 // CHECK: define linkonce_odr void @_ZN4Test2C2C2Ev(ptr noundef nonnull align 8 dereferenceable(12) %this, ptr addrspace(1) noundef %vtt)
-// WITH-NONZERO-DEFAULT-AS: call {{.*}} void @_ZN4Test2V2C2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(20) %2, ptr addrspace(1) noundef getelementptr inbounds (ptr addrspace(1), ptr addrspace(1) @_ZTTN4Test1DE, i64 11))
-// WITH-NONZERO-DEFAULT-AS: call {{.*}} void @_ZN4Test2C1C2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(12) %this1, ptr addrspace(1) noundef getelementptr inbounds (ptr addrspace(1), ptr addrspace(1) @_ZTTN4Test1DE, i64 1))
-// WITH-NONZERO-DEFAULT-AS: call {{.*}} void @_ZN4Test2C2C2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(12) %3, ptr addrspace(1) noundef getelementptr inbounds (ptr addrspace(1), ptr addrspace(1) @_ZTTN4Test1DE, i64 3))
+// WITH-NONZERO-DEFAULT-AS: call {{.*}} void @_ZN4Test2V2C2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(20) %2, ptr addrspace(1) noundef getelementptr inbounds nuw (i8, ptr addrspace(1) @_ZTTN4Test1DE, i64 88))
+// WITH-NONZERO-DEFAULT-AS: call {{.*}} void @_ZN4Test2C1C2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(12) %this1, ptr addrspace(1) noundef getelementptr inbounds nuw (i8, ptr addrspace(1) @_ZTTN4Test1DE, i64 8))
+// WITH-NONZERO-DEFAULT-AS: call {{.*}} void @_ZN4Test2C2C2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(12) %3, ptr addrspace(1) noundef getelementptr inbounds nuw (i8, ptr addrspace(1) @_ZTTN4Test1DE, i64 24))
 // WITH-NONZERO-DEFAULT-AS: define linkonce_odr {{.*}} void @_ZN4Test2V2C2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(20) %this, ptr addrspace(1) noundef %vtt)
 // WITH-NONZERO-DEFAULT-AS: define linkonce_odr {{.*}} void @_ZN4Test2C1C2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(12) %this, ptr addrspace(1) noundef %vtt)
 // WITH-NONZERO-DEFAULT-AS: define linkonce_odr {{.*}} void @_ZN4Test2C2C2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(12) %this, ptr addrspace(1) noundef %vtt)

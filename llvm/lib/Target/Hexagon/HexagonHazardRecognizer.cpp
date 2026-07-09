@@ -38,7 +38,7 @@ void HexagonHazardRecognizer::Reset() {
 ScheduleHazardRecognizer::HazardType
 HexagonHazardRecognizer::getHazardType(SUnit *SU, int stalls) {
   MachineInstr *MI = SU->getInstr();
-  if (!MI || TII->isZeroCost(MI->getOpcode()))
+  if (!MI || TII->isZeroCost(MI->getOpcode()) || MI->isMetaInstruction())
     return NoHazard;
 
   if (!Resources->canReserveResources(*MI)) {
@@ -92,7 +92,7 @@ void HexagonHazardRecognizer::AdvanceCycle() {
 /// store doesn't have resources to fit in the packet (but the .new store may
 /// have resources). We attempt to schedule the store as soon as possible to
 /// help packetize the two instructions together.
-bool HexagonHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
+bool HexagonHazardRecognizer::ShouldPreferAnother(SUnit *SU) const {
   if (PrefVectorStoreNew != nullptr && PrefVectorStoreNew != SU)
     return true;
   if (UsesLoad && SU->isInstr() && SU->getInstr()->mayLoad())
@@ -120,7 +120,7 @@ void HexagonHazardRecognizer::EmitInstruction(SUnit *SU) {
     if (MO.isReg() && MO.isDef() && !MO.isImplicit())
       RegDefs.insert(MO.getReg());
 
-  if (TII->isZeroCost(MI->getOpcode()))
+  if (TII->isZeroCost(MI->getOpcode()) || MI->isMetaInstruction())
     return;
 
   if (!Resources->canReserveResources(*MI) || isNewStore(*MI)) {

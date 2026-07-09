@@ -7,7 +7,7 @@
 // RUN: mkdir -p %t/mytmp
 // RUN: env TMP="%t/mytmp" %clang --target=x86_64-pc-windows-msvc -nogpulib -nogpuinc \
 // RUN:   --rocm-path=%S/Inputs/rocm -nostdinc -nostdlib -c \
-// RUN:   --offload-arch=gfx1030 -emit-llvm -v %s 2>&1 | \
+// RUN:   --no-offload-new-driver --offload-arch=gfx1030 -emit-llvm -v %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK %s
 // RUN: ls %t/mytmp >%t/mytmp.txt 2>&1
 // RUN: touch %t/empty.txt

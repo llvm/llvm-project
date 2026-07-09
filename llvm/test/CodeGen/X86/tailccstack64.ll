@@ -6,12 +6,12 @@
 ; CHECK: subq  ${{24|72|80}}, %rsp
 
 ; Check that lowered arguments on the stack do not overwrite each other.
-; Add %in1 %p1 to a different temporary register (%eax).
-; CHECK: movl  [[A1:32|144]](%rsp), [[R1:%e..|%r.*d]]
-; Move param %in1 to temp register (%r10d).
+; Move %p1 to a temporary register (%eax).
+; CHECK: movl  {{%edi|%ecx}}, [[R1:%e..|%r.*d]]
+; Fold the load of %in1 into the add.
+; CHECK: addl  [[A1:32|144]](%rsp), [[R1]]
+; Move param %in2 to temp register (%r10d).
 ; CHECK: movl  [[A2:40|152]](%rsp), [[R2:%[a-z0-9]+]]
-; Add %in1 %p1 to a different temporary register (%eax).
-; CHECK: addl {{%edi|%ecx}}, [[R1]]
 ; Move param %in2 to stack.
 ; CHECK-DAG: movl  [[R2]], [[A1]](%rsp)
 ; Move result of addition to stack.

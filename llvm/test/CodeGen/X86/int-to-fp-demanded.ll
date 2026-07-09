@@ -380,3 +380,59 @@ define i32 @uitofp_multiuse_okay(i32 %i_in) nounwind {
   %r = and i32 %i, 2147483648
   ret i32 %r
 }
+
+define i16 @f16_bitcast_signbit(float %a) nounwind {
+; X86-LABEL: f16_bitcast_signbit:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fstps (%esp)
+; X86-NEXT:    calll __truncsfhf2
+; X86-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-NEXT:    andl $32768, %eax # imm = 0x8000
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    popl %ecx
+; X86-NEXT:    retl
+;
+; X64-LABEL: f16_bitcast_signbit:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    callq __truncsfhf2@PLT
+; X64-NEXT:    pextrw $0, %xmm0, %eax
+; X64-NEXT:    andl $32768, %eax # imm = 0x8000
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    popq %rcx
+; X64-NEXT:    retq
+  %bf = fptrunc float %a to half
+  %i = bitcast half %bf to i16
+  %r = and i16 %i, -32768
+  ret i16 %r
+}
+
+define i16 @bf16_bitcast_signbit(float %a) nounwind {
+; X86-LABEL: bf16_bitcast_signbit:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fstps (%esp)
+; X86-NEXT:    calll __truncsfbf2
+; X86-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-NEXT:    andl $32768, %eax # imm = 0x8000
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    popl %ecx
+; X86-NEXT:    retl
+;
+; X64-LABEL: bf16_bitcast_signbit:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    callq __truncsfbf2@PLT
+; X64-NEXT:    pextrw $0, %xmm0, %eax
+; X64-NEXT:    andl $32768, %eax # imm = 0x8000
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    popq %rcx
+; X64-NEXT:    retq
+  %bf = fptrunc float %a to bfloat
+  %i = bitcast bfloat %bf to i16
+  %r = and i16 %i, -32768
+  ret i16 %r
+}

@@ -43,7 +43,8 @@ class MachineRegisterInfo;
 class RegisterBank;
 class SIInstrInfo;
 class SIRegisterInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 
 class AMDGPUInstructionSelector final : public InstructionSelector {
 private:
@@ -52,8 +53,7 @@ private:
 
 public:
   AMDGPUInstructionSelector(const GCNSubtarget &STI,
-                            const AMDGPURegisterBankInfo &RBI,
-                            const AMDGPUTargetMachine &TM);
+                            const AMDGPURegisterBankInfo &RBI);
 
   bool select(MachineInstr &I) override;
   static const char *getName();
@@ -101,7 +101,7 @@ private:
   bool selectG_UADDO_USUBO_UADDE_USUBE(MachineInstr &I) const;
   bool selectG_AMDGPU_MAD_64_32(MachineInstr &I) const;
   bool selectG_EXTRACT(MachineInstr &I) const;
-  bool selectG_FMA_FMAD(MachineInstr &I) const;
+  bool selectS16MergeToS32(MachineInstr &MI) const;
   bool selectG_MERGE_VALUES(MachineInstr &I) const;
   bool selectG_UNMERGE_VALUES(MachineInstr &I) const;
   bool selectG_BUILD_VECTOR(MachineInstr &I) const;
@@ -145,6 +145,7 @@ private:
   bool selectG_INSERT_VECTOR_ELT(MachineInstr &I) const;
   bool selectBufferLoadLds(MachineInstr &MI) const;
   bool selectGlobalLoadLds(MachineInstr &MI) const;
+  bool selectTensorLoadStore(MachineInstr &MI, Intrinsic::ID IID) const;
   bool selectBVHIntersectRayIntrinsic(MachineInstr &I) const;
   bool selectSMFMACIntrin(MachineInstr &I) const;
   bool selectPermlaneSwapIntrin(MachineInstr &I, Intrinsic::ID IntrID) const;
@@ -155,13 +156,13 @@ private:
   bool selectNamedBarrierInst(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSBarrierSignalIsfirst(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSGetBarrierState(MachineInstr &I, Intrinsic::ID IID) const;
-  bool selectSBarrierLeave(MachineInstr &I) const;
   bool selectWaveShuffleIntrin(MachineInstr &I) const;
 
   std::pair<Register, unsigned> selectVOP3ModsImpl(Register Src,
                                                    bool IsCanonicalizing = true,
                                                    bool AllowAbs = true,
                                                    bool OpSel = false) const;
+  std::pair<Register, unsigned> selectVOP3PModsF32Impl(Register Src) const;
 
   Register copyToVGPRIfSrcFolded(Register Src, unsigned Mods,
                                  MachineOperand Root, MachineInstr *InsertPt,
@@ -199,6 +200,12 @@ private:
 
   InstructionSelector::ComplexRendererFns
   selectVOP3PModsDOT(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PNoModsDOT(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PModsF32(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PNoModsF32(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectWMMAOpSelVOP3PMods(MachineOperand &Root) const;
@@ -239,8 +246,9 @@ private:
   InstructionSelector::ComplexRendererFns
   selectSmrdSgprImm(MachineOperand &Root) const;
 
-  std::pair<Register, int> selectFlatOffsetImpl(MachineOperand &Root,
-                                                uint64_t FlatVariant) const;
+  std::pair<Register, int>
+  selectFlatOffsetImpl(MachineOperand &Root,
+                       AMDGPU::FlatAddrSpace FlatVariant) const;
 
   InstructionSelector::ComplexRendererFns
   selectFlatOffset(MachineOperand &Root) const;
@@ -399,8 +407,8 @@ private:
     renderBitcastFPImm(MIB, MI, OpIdx);
   }
 
-  void renderPopcntImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                       int OpIdx) const;
+  void renderCountTrailingOnesImm(MachineInstrBuilder &MIB,
+                                  const MachineInstr &MI, int OpIdx) const;
   void renderExtractCPol(MachineInstrBuilder &MIB, const MachineInstr &MI,
                          int OpIdx) const;
   void renderExtractSWZ(MachineInstrBuilder &MIB, const MachineInstr &MI,
@@ -456,7 +464,6 @@ private:
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
   const AMDGPURegisterBankInfo &RBI;
-  const AMDGPUTargetMachine &TM;
   const GCNSubtarget &STI;
 #define GET_GLOBALISEL_PREDICATES_DECL
 #define AMDGPUSubtarget GCNSubtarget

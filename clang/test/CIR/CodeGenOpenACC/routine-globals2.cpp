@@ -25,11 +25,11 @@ void force_emit() {
   GlobalFunc7();
 }
 
-// CHECK: cir.func{{.*}} @[[G6_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[G6_R_NAME:.*]]]>}
-// CHECK: cir.func{{.*}} @[[G7_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[G7_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @[[G6_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[G6_R_NAME:.*]]]>{{.*}}}
+// CHECK: cir.func{{.*}} @[[G7_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[G7_R_NAME:.*]]]>{{.*}}}
 
-// CHECK: cir.func{{.*}} @[[G4_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[G4_R_NAME:.*]], @[[G4_R2_NAME:.*]]]>}
-// CHECK: cir.func{{.*}} @[[G5_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[G5_R_NAME:.*]], @[[G5_R1_NAME:.*]], @[[G5_R2_NAME:.*]], @[[G5_R3_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @[[G4_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[G4_R_NAME:.*]], @[[G4_R2_NAME:.*]]]>{{.*}}}
+// CHECK: cir.func{{.*}} @[[G5_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[G5_R_NAME:.*]], @[[G5_R1_NAME:.*]], @[[G5_R2_NAME:.*]], @[[G5_R3_NAME:.*]]]>{{.*}}}
 
 // CHECK: acc.routine @[[G4_R_NAME]] func(@[[G4_NAME]]) seq
 // CHECK: acc.routine @[[G5_R_NAME]] func(@[[G5_NAME]]) seq

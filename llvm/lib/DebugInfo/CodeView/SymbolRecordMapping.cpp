@@ -258,6 +258,19 @@ Error SymbolRecordMapping::visitKnownRecord(
 }
 
 Error SymbolRecordMapping::visitKnownRecord(
+    CVSymbol &CVR, DefRangeRegisterRelIndirSym &DefRangeRegisterRelIndir) {
+
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.Register));
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.Flags));
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.BasePointerOffset));
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.OffsetInUdt));
+  error(mapLocalVariableAddrRange(IO, DefRangeRegisterRelIndir.Range));
+  error(IO.mapVectorTail(DefRangeRegisterRelIndir.Gaps, MapGap()));
+
+  return Error::success();
+}
+
+Error SymbolRecordMapping::visitKnownRecord(
     CVSymbol &CVR, DefRangeRegisterSym &DefRangeRegister) {
 
   error(IO.mapObject(DefRangeRegister.Hdr.Register));
@@ -440,6 +453,17 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
   error(IO.mapInteger(RegRel.Type));
   error(IO.mapEnum(RegRel.Register));
   error(IO.mapStringZ(RegRel.Name));
+
+  return Error::success();
+}
+
+Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
+                                            RegRelativeIndirSym &RegRelIndir) {
+  error(IO.mapInteger(RegRelIndir.Offset));
+  error(IO.mapInteger(RegRelIndir.Type));
+  error(IO.mapInteger(RegRelIndir.OffsetInUdt));
+  error(IO.mapEnum(RegRelIndir.Register));
+  error(IO.mapStringZ(RegRelIndir.Name));
 
   return Error::success();
 }

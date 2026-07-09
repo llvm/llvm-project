@@ -6,6 +6,7 @@ import lldbdap_testcase
 import re
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestDAP_module_event(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_module_event(self):

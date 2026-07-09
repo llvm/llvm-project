@@ -404,10 +404,8 @@ body:             |
     ; CHECK-LABEL: name: freeze_xor_fold_barrier
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cst:_(s64) = G_CONSTANT i64 9
-    ; CHECK-NEXT: %c:_(s64) = G_CONSTANT_FOLD_BARRIER %cst
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR %c, %c
-    ; CHECK-NEXT: $x0 = COPY [[XOR]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: $x0 = COPY [[C]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
     %cst:_(s64) = G_CONSTANT i64 9

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++14 -fexperimental-new-constant-interpreter -verify=expected,both %s
 // RUN: %clang_cc1 -std=c++23 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++14 -verify=ref,both %s
-// RUN: %clang_cc1 -std=c++23 -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++14                                         -verify=ref,both      %s
+// RUN: %clang_cc1 -std=c++23                                         -verify=ref,both      %s
 
 namespace MemberPointers {
   struct A {
@@ -302,4 +302,15 @@ namespace Equality {
 
   constexpr int (T<17>::*deepm) = (int(T<10>::*))&T<30>::m;
   static_assert(deepm == &T<50>::m, "");
+}
+
+namespace Errors {
+#if __cplusplus >= 202302L
+  constexpr bool test1() {
+    X s; // both-error {{unknown type name}}
+    s.*bar(); // both-error {{use of undeclared identifier}}
+    return true;
+  }
+  static_assert(test1(), ""); // both-error {{not an integral constant expression}}
+#endif
 }

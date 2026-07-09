@@ -35,7 +35,12 @@ LLVM_LIBC_FUNCTION(int, sprintf,
                                      cpp::numeric_limits<size_t>::max());
   printf_core::Writer writer(wb);
 
+#ifdef LIBC_COPT_PRINTF_MODULAR
+  LIBC_INLINE_ASM(".reloc ., BFD_RELOC_NONE, __printf_float");
+  auto ret_val = printf_core::printf_main_modular(&writer, format, args);
+#else
   auto ret_val = printf_core::printf_main(&writer, format, args);
+#endif
   if (!ret_val.has_value()) {
     libc_errno = printf_core::internal_error_to_errno(ret_val.error());
     return -1;

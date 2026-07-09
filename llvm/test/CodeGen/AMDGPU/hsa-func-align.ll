@@ -5,11 +5,11 @@
 ; ELF: Name: .text
 ; ELF: SHF_ALLOC (0x2)
 ; ELF: SHF_EXECINSTR (0x4)
-; ELF: AddressAlignment: 32
+; ELF: AddressAlignment: 64
 ; ELF: }
 
 ; HSA: .globl simple_align16
-; HSA: .p2align 5
+; HSA: .p2align 6
 define void @simple_align16(ptr addrspace(4) %ptr.out) align 32 {
 entry:
   %out = load ptr addrspace(1), ptr addrspace(4) %ptr.out

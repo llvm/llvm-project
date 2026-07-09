@@ -188,11 +188,6 @@ u32 getThreadID();
 constexpr uptr MaxRandomLength = 256U;
 bool getRandom(void *Buffer, uptr Length, bool Blocking = false);
 
-// Get the total number of resident pages for BaseAddress to BaseAddress + Size.
-// This function can run slowly, and is only expected to be called
-// from getStats functions where performance does not matter.
-u64 getResidentPages(uptr BaseAddress, uptr Size);
-
 // Platform memory mapping functions.
 
 #define MAP_ALLOWNOMEM (1U << 0)
@@ -253,6 +248,7 @@ enum class ReleaseToOS : u8 {
              // take.
   ForceFast, // Force release pages to the OS, but do it quickly and skip any
              // cases where a lock is held by another thread.
+  Last = ForceFast, // Must be set to the last entry in the enum.
 };
 
 constexpr unsigned char PatternFillByte = 0xAB;

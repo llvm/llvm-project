@@ -34,12 +34,12 @@ entry:
   %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([3 x i32]) %a, i64 2)
   %2 = load i32, ptr %1, align 4
 ; CHECK:	  %[[#A:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#]] %[[#ulong_2]]
-; CHECK:	  %[[#B:]] = OpLoad %[[#uint]] %[[#A]] Aligned 4
+; CHECK:	  %[[#B:]] = OpLoad %[[#uint]] %[[#A]]
 
   %3 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([5 x i32]) %tmp, i64 3)
   store i32 %2, ptr %3, align 4
 ; CHECK:	  %[[#C:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#tmp]] %[[#ulong_3]]
-; CHECK:	             OpStore %[[#C]] %[[#B]] Aligned 4
+; CHECK:	             OpStore %[[#C]] %[[#B]]
 
   ret void
 }
@@ -55,14 +55,14 @@ entry:
   %3 = load i32, ptr %2, align 4
 ; CHECK:	  %[[#A:]] = OpInBoundsAccessChain %[[#ptr_S]] %[[#]] %[[#ulong_2]]
 ; CHECK:	  %[[#B:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#A]] %[[#ulong_1]]
-; CHECK:	  %[[#C:]] = OpLoad %[[#uint]] %[[#B]] Aligned 4
+; CHECK:	  %[[#C:]] = OpLoad %[[#uint]] %[[#B]]
 
   %4 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([5 x %struct.S]) %tmp, i64 3)
   %5 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %4, i32 0)
   store i32 %3, ptr %5, align 4
 ; CHECK:	  %[[#D:]] = OpInBoundsAccessChain %[[#ptr_S]] %[[#tmp]] %[[#ulong_3]]
 ; CHECK:	  %[[#E:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#D]] %[[#uint_0]]
-; CHECK:	             OpStore %[[#E]] %[[#C]] Aligned 4
+; CHECK:	             OpStore %[[#E]] %[[#C]]
 
   ret void
 }
@@ -76,12 +76,12 @@ entry:
   %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([3 x %struct.S]) %a, i64 2, i64 1)
   %2 = load i32, ptr %1, align 4
 ; CHECK:	  %[[#A:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#]] %[[#ulong_2]] %[[#ulong_1]]
-; CHECK:	  %[[#B:]] = OpLoad %[[#uint]] %[[#A]] Aligned 4
+; CHECK:	  %[[#B:]] = OpLoad %[[#uint]] %[[#A]]
 
   %3 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([5 x %struct.S]) %tmp, i64 3, i32 0)
   store i32 %2, ptr %3, align 4
 ; CHECK:	  %[[#C:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#tmp]] %[[#ulong_3]] %[[#uint_0]]
-; CHECK:	             OpStore %[[#C]] %[[#B]] Aligned 4
+; CHECK:	             OpStore %[[#C]] %[[#B]]
 
   ret void
 }
@@ -99,7 +99,7 @@ entry:
 ; CHECK:	  %[[#A:]] = OpInBoundsAccessChain %[[#ptr_S2]] %[[#]] %[[#ulong_1]]
 ; CHECK:	  %[[#B:]] = OpInBoundsAccessChain %[[#ptr_S]] %[[#A]] %[[#ulong_1]]
 ; CHECK:	  %[[#C:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#B]] %[[#ulong_0]]
-; CHECK:	  %[[#D:]] = OpLoad %[[#uint]] %[[#C]] Aligned 4
+; CHECK:	  %[[#D:]] = OpLoad %[[#uint]] %[[#C]]
 
   %5 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([5 x %struct.S2]) %tmp, i64 3)
   %6 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S2) %5, i32 1)
@@ -108,7 +108,7 @@ entry:
 ; CHECK:	  %[[#E:]] = OpInBoundsAccessChain %[[#ptr_S2]] %[[#tmp]] %[[#ulong_3]]
 ; CHECK:	  %[[#F:]] = OpInBoundsAccessChain %[[#ptr_S]] %[[#E]] %[[#uint_1]]
 ; CHECK:	  %[[#G:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#F]] %[[#uint_0]]
-; CHECK:	             OpStore %[[#G]] %[[#D]] Aligned 4
+; CHECK:	             OpStore %[[#G]] %[[#D]]
 
   ret void
 }
@@ -122,12 +122,12 @@ entry:
   %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([3 x %struct.S2]) %a, i64 1, i64 1, i64 0)
   %2 = load i32, ptr %1, align 4
 ; CHECK:	  %[[#A:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#]] %[[#ulong_1]] %[[#ulong_1]] %[[#ulong_0]]
-; CHECK:	  %[[#B:]] = OpLoad %[[#uint]] %[[#A]] Aligned 4
+; CHECK:	  %[[#B:]] = OpLoad %[[#uint]] %[[#A]]
 
   %3 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([5 x %struct.S2]) %tmp, i64 3, i32 1, i32 0)
   store i32 %2, ptr %3, align 4
 ; CHECK:	  %[[#C:]] = OpInBoundsAccessChain %[[#ptr_uint]] %[[#tmp]] %[[#ulong_3]] %[[#uint_1]] %[[#uint_0]]
-; CHECK:	             OpStore %[[#C]] %[[#B]] Aligned 4
+; CHECK:	             OpStore %[[#C]] %[[#B]]
 
   ret void
 }

@@ -11,10 +11,6 @@
 
 #include "lldb/API/SBDefines.h"
 
-namespace lldb_private {
-class ScriptInterpreter;
-}
-
 namespace lldb {
 
 class LLDB_API SBFileSpec {
@@ -83,7 +79,6 @@ private:
   friend class SBThread;
   friend class SBTrace;
   friend class SBSaveCoreOptions;
-  friend class lldb_private::ScriptInterpreter;
 
   SBFileSpec(const lldb_private::FileSpec &fspec);
 

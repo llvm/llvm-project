@@ -1,0 +1,97 @@
+// Tests for CallGraph JSON deserialization error conditions.
+
+// RUN: not clang-ssaf-format --type=tu %S/Inputs/CallGraph/missing-pretty-name.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=PRETTY-NAME
+// PRETTY-NAME:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}missing-pretty-name.json'
+// PRETTY-NAME-NEXT: reading SummaryData entries from field 'data'
+// PRETTY-NAME-NEXT: reading SummaryData entry from index '0'
+// PRETTY-NAME-NEXT: reading EntitySummary entries from field 'summary_data'
+// PRETTY-NAME-NEXT: reading EntitySummary entry from index '0'
+// PRETTY-NAME-NEXT: reading EntitySummary from field 'entity_summary'
+// PRETTY-NAME-NEXT: failed to read PrettyName from field 'pretty_name': expected JSON string
+
+// RUN: not clang-ssaf-format --type=tu %S/Inputs/CallGraph/missing-direct-callees.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DIRECT-CALLEES
+// DIRECT-CALLEES:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}missing-direct-callees.json'
+// DIRECT-CALLEES-NEXT: reading SummaryData entries from field 'data'
+// DIRECT-CALLEES-NEXT: reading SummaryData entry from index '0'
+// DIRECT-CALLEES-NEXT: reading EntitySummary entries from field 'summary_data'
+// DIRECT-CALLEES-NEXT: reading EntitySummary entry from index '0'
+// DIRECT-CALLEES-NEXT: reading EntitySummary from field 'entity_summary'
+// DIRECT-CALLEES-NEXT: failed to read DirectCallees from field 'direct_callees': expected JSON array
+
+// RUN: not clang-ssaf-format --type=tu %S/Inputs/CallGraph/invalid-direct-callee-element.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=CALLEE-ELEMENT
+// CALLEE-ELEMENT:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}invalid-direct-callee-element.json'
+// CALLEE-ELEMENT-NEXT: reading SummaryData entries from field 'data'
+// CALLEE-ELEMENT-NEXT: reading SummaryData entry from index '0'
+// CALLEE-ELEMENT-NEXT: reading EntitySummary entries from field 'summary_data'
+// CALLEE-ELEMENT-NEXT: reading EntitySummary entry from index '0'
+// CALLEE-ELEMENT-NEXT: reading EntitySummary from field 'entity_summary'
+// CALLEE-ELEMENT-NEXT: reading DirectCallees from field 'direct_callees'
+// CALLEE-ELEMENT-NEXT: failed to read EntityId from index '0': expected JSON object
+
+// RUN: not clang-ssaf-format --type=tu %S/Inputs/CallGraph/invalid-direct-callee-id.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=CALLEE-ID
+// CALLEE-ID:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}invalid-direct-callee-id.json'
+// CALLEE-ID-NEXT: reading SummaryData entries from field 'data'
+// CALLEE-ID-NEXT: reading SummaryData entry from index '0'
+// CALLEE-ID-NEXT: reading EntitySummary entries from field 'summary_data'
+// CALLEE-ID-NEXT: reading EntitySummary entry from index '0'
+// CALLEE-ID-NEXT: reading EntitySummary from field 'entity_summary'
+// CALLEE-ID-NEXT: reading DirectCallees from field 'direct_callees'
+// CALLEE-ID-NEXT: reading EntityId from index '0'
+// CALLEE-ID-NEXT: failed to read EntityId: expected JSON object with a single '@' key mapped to a number (unsigned 64-bit integer)
+
+// RUN: not clang-ssaf-format --type=tu %S/Inputs/CallGraph/missing-virtual-callees.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=VIRTUAL-CALLEES
+// VIRTUAL-CALLEES:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}missing-virtual-callees.json'
+// VIRTUAL-CALLEES-NEXT: reading SummaryData entries from field 'data'
+// VIRTUAL-CALLEES-NEXT: reading SummaryData entry from index '0'
+// VIRTUAL-CALLEES-NEXT: reading EntitySummary entries from field 'summary_data'
+// VIRTUAL-CALLEES-NEXT: reading EntitySummary entry from index '0'
+// VIRTUAL-CALLEES-NEXT: reading EntitySummary from field 'entity_summary'
+// VIRTUAL-CALLEES-NEXT: failed to read VirtualCallees from field 'virtual_callees': expected JSON array
+
+// RUN: not clang-ssaf-format --type=tu %S/Inputs/CallGraph/missing-def.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DEF
+// DEF:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}missing-def.json'
+// DEF-NEXT: reading SummaryData entries from field 'data'
+// DEF-NEXT: reading SummaryData entry from index '0'
+// DEF-NEXT: reading EntitySummary entries from field 'summary_data'
+// DEF-NEXT: reading EntitySummary entry from index '0'
+// DEF-NEXT: reading EntitySummary from field 'entity_summary'
+// DEF-NEXT: failed to read SourceLocation from field 'def': expected JSON object
+
+// RUN: not clang-ssaf-format --type=tu %S/Inputs/CallGraph/missing-def-file.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DEF-FILE
+// DEF-FILE:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}missing-def-file.json'
+// DEF-FILE-NEXT: reading SummaryData entries from field 'data'
+// DEF-FILE-NEXT: reading SummaryData entry from index '0'
+// DEF-FILE-NEXT: reading EntitySummary entries from field 'summary_data'
+// DEF-FILE-NEXT: reading EntitySummary entry from index '0'
+// DEF-FILE-NEXT: reading EntitySummary from field 'entity_summary'
+// DEF-FILE-NEXT: reading SourceLocation from field 'def'
+// DEF-FILE-NEXT: failed to read File from field 'file': expected JSON string
+
+// RUN: not clang-ssaf-format --type=tu %S/Inputs/CallGraph/missing-def-line.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DEF-LINE
+// DEF-LINE:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}missing-def-line.json'
+// DEF-LINE-NEXT: reading SummaryData entries from field 'data'
+// DEF-LINE-NEXT: reading SummaryData entry from index '0'
+// DEF-LINE-NEXT: reading EntitySummary entries from field 'summary_data'
+// DEF-LINE-NEXT: reading EntitySummary entry from index '0'
+// DEF-LINE-NEXT: reading EntitySummary from field 'entity_summary'
+// DEF-LINE-NEXT: reading SourceLocation from field 'def'
+// DEF-LINE-NEXT: failed to read Line from field 'line': expected JSON number
+
+// RUN: not clang-ssaf-format --type=tu %S/Inputs/CallGraph/missing-def-col.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DEF-COL
+// DEF-COL:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}missing-def-col.json'
+// DEF-COL-NEXT: reading SummaryData entries from field 'data'
+// DEF-COL-NEXT: reading SummaryData entry from index '0'
+// DEF-COL-NEXT: reading EntitySummary entries from field 'summary_data'
+// DEF-COL-NEXT: reading EntitySummary entry from index '0'
+// DEF-COL-NEXT: reading EntitySummary from field 'entity_summary'
+// DEF-COL-NEXT: reading SourceLocation from field 'def'
+// DEF-COL-NEXT: failed to read Column from field 'col': expected JSON number

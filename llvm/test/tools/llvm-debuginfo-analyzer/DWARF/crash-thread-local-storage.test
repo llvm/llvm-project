@@ -41,7 +41,7 @@
 ; CHECK:                    {Entry} const_u 0, gnu_push_tls_address
 ; CHECK:      2         {Variable} extern 'NGlobal' -> 'int'
 ; CHECK:                  {Location}
-; CHECK:                    {Entry} addrx 0
+; CHECK:                    {Entry} addrx 1
 ; CHECK:      3         {Function} extern not_inlined 'test' -> 'void'
 ; CHECK:      4           {Variable} 'TLocal' -> 'int'
 ; CHECK:                    {Location}

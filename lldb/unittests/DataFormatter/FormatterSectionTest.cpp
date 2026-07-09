@@ -131,8 +131,9 @@ Sections:
   ASSERT_TRUE(rect_summary_sp != nullptr);
 
   std::string dest;
-  ValueObjectSP valobj = ValueObjectConstResult::CreateValueObjectFromBool(
-      m_target_sp, false, "mock");
+  Scalar val;
+  ValueObjectSP valobj = ValueObjectConstResult::CreateValueObjectFromScalar(
+      ExecutionContext(m_target_sp.get(), false), val, CompilerType(), "mock");
   ASSERT_TRUE(
       point_summary_sp->FormatObject(valobj.get(), dest, TypeSummaryOptions()));
   ASSERT_EQ(dest, "AAAAA");

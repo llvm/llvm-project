@@ -9,10 +9,6 @@
 #ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDFRAMEPYTHONINTERFACE_H
 #define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDFRAMEPYTHONINTERFACE_H
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
 #include "ScriptedPythonInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
 #include <optional>
@@ -55,11 +51,13 @@ public:
 
   lldb::ValueObjectListSP GetVariables() override;
 
+  std::optional<lldb::ValueType>
+  GetValueTypeForVariable(lldb::ValueObjectSP value) override;
+
   lldb::ValueObjectSP
   GetValueObjectForVariableExpression(llvm::StringRef expr, uint32_t options,
                                       Status &status) override;
 };
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
 #endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDFRAMEPYTHONINTERFACE_H

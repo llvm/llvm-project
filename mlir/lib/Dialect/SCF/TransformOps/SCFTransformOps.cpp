@@ -451,6 +451,52 @@ transform::LoopCoalesceOp::applyToOne(transform::TransformRewriter &rewriter,
 }
 
 //===----------------------------------------------------------------------===//
+// LoopCoalesceNestedOp
+//===----------------------------------------------------------------------===//
+DiagnosedSilenceableFailure transform::LoopCoalesceNestedOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *op,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  auto forOp = dyn_cast<scf::ForOp>(op);
+  if (!forOp) {
+    return emitSilenceableError() << "expected scf.for operation";
+  }
+
+  // Collect nested loops (including imperfectly nested ones)
+  SmallVector<scf::ForOp> nestedLoops;
+  scf::ForOp currentLoop = forOp;
+
+  while (currentLoop) {
+    nestedLoops.push_back(currentLoop);
+    Block &body = currentLoop.getRegion().front();
+
+    // Look for the next nested loop
+    scf::ForOp nextLoop = nullptr;
+    for (Operation &bodyOp : body) {
+      if (auto innerFor = dyn_cast<scf::ForOp>(&bodyOp)) {
+        nextLoop = innerFor;
+        break;
+      }
+    }
+
+    currentLoop = nextLoop;
+  }
+
+  // Need at least 2 loops to coalesce
+  if (nestedLoops.size() < 2) {
+    return emitSilenceableError() << "need at least 2 nested loops to coalesce";
+  }
+
+  // Call coalesceLoops directly
+  if (failed(coalesceLoops(rewriter, nestedLoops))) {
+    return emitSilenceableError() << "failed to coalesce nested loops";
+  }
+
+  results.push_back(nestedLoops.front());
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // TakeAssumedBranchOp
 //===----------------------------------------------------------------------===//
 /// Replaces the given op with the contents of the given single-block region,

@@ -89,6 +89,8 @@ def Tosa_ConcatShapeOp : Tosa_ShapeOp<"concat_shape", [Pure]> {
   let results = (outs Tosa_Shape:$output);
 
   let hasVerifier = 1;
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -344,6 +346,8 @@ def Tosa_SliceShapeOp : Tosa_ShapeOp<"slice_shape", [Pure]> {
   let results = (outs Tosa_Shape:$output);
 
   let hasVerifier = 1;
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -169,6 +169,7 @@ class PPC64 final : public TargetInfo {
 public:
   PPC64(Ctx &);
   uint32_t calcEFlags() const override;
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -969,6 +970,12 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   }
 }
 
+void PPC64::initTargetSpecificSections() {
+  ctx.in.ppc64LongBranchTarget =
+      std::make_unique<PPC64LongBranchTargetSection>(ctx);
+  ctx.inputSections.push_back(ctx.in.ppc64LongBranchTarget.get());
+}
+
 // Only needed to support relocations used by relocateNonAlloc and relocateEh.
 RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
                           const uint8_t *loc) const {
@@ -1189,8 +1196,10 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_PPC64_TOC16_LO:
       // Record the TOC entry (.toc + addend) as not relaxable.
       if (sym.isSection() && isa<Defined>(sym) &&
-          cast<Defined>(sym).section->name == ".toc")
+          cast<Defined>(sym).section->name == ".toc") {
+        std::lock_guard<std::mutex> lock(ctx.relocMutex);
         ctx.ppc64noTocRelax.insert({&sym, addend});
+      }
       expr = R_GOTREL;
       break;
     case R_PPC64_TOC16_HA:

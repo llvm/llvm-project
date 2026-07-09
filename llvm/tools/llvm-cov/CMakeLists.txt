@@ -22,4 +22,4 @@ add_llvm_tool(llvm-cov
   TestingSupport.cpp
   )
 
-target_link_libraries(llvm-cov PRIVATE LLVMDebuginfod)
+target_link_libraries(llvm-cov PRIVATE LLVMHTTP LLVMDebuginfod)

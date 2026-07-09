@@ -15,7 +15,7 @@ module attributes {omp.is_target_device = false} {
     %map1 = omp.map.info var_ptr(%3 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
     %map2 = omp.map.info var_ptr(%5 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
     %map3 = omp.map.info var_ptr(%7 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-    omp.target map_entries(%map1 -> %arg0, %map2 -> %arg1, %map3 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%map1 -> %arg0, %map2 -> %arg1, %map3 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       %8 = llvm.load %arg0 : !llvm.ptr -> i32
       %9 = llvm.load %arg1 : !llvm.ptr -> i32
       %10 = llvm.add %8, %9  : i32
@@ -26,7 +26,7 @@ module attributes {omp.is_target_device = false} {
   }
 
   llvm.func @omp_target_no_map() {
-    omp.target {
+    omp.target kernel_type(generic) {
       omp.terminator
     }
     llvm.return
@@ -35,19 +35,19 @@ module attributes {omp.is_target_device = false} {
 
 // CHECK: define void @omp_target_region_()
 // CHECK-NOT: call i32 @__tgt_target_kernel({{.*}})
-// CHECK: call void @__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_region__l[[LINE1:.*]](ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
+// CHECK: call void @__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_region__l[[LINE1:.*]](ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, ptr null)
 // CHECK-NEXT: ret void
 
 // CHECK: define void @omp_target_no_map()
 // CHECK-NOT: call i32 @__tgt_target_kernel({{.*}})
-// CHECK: call void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_no_map_l[[LINE2:.*]]()
+// CHECK: call void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_no_map_l[[LINE2:.*]](ptr null)
 // CHECK-NEXT: ret void
 
-// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE1]](ptr %[[ADDR_A:.*]], ptr %[[ADDR_B:.*]], ptr %[[ADDR_C:.*]])
+// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE1]](ptr %[[ADDR_A:.*]], ptr %[[ADDR_B:.*]], ptr %[[ADDR_C:.*]], ptr %{{.*}})
 // CHECK: %[[VAL_A:.*]] = load i32, ptr %[[ADDR_A]], align 4
 // CHECK: %[[VAL_B:.*]] = load i32, ptr %[[ADDR_B]], align 4
 // CHECK: %[[SUM:.*]] = add i32 %[[VAL_A]], %[[VAL_B]]
 // CHECK: store i32 %[[SUM]], ptr %[[ADDR_C]], align 4
 
-// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_no_map_l[[LINE2]]()
+// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_no_map_l[[LINE2]](ptr %{{.*}})
 // CHECK: ret void

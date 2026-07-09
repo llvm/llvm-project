@@ -12,8 +12,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
 
-#include <map>
-
 namespace clang::tidy::llvm_check {
 
 namespace {

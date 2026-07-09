@@ -208,6 +208,13 @@ NestedNameSpecifierLocBuilder(const NestedNameSpecifierLocBuilder &Other)
          BufferCapacity);
 }
 
+NestedNameSpecifierLocBuilder::NestedNameSpecifierLocBuilder(
+    NestedNameSpecifierLocBuilder &&Other)
+    : Representation(std::move(Other.Representation)),
+      Buffer(std::exchange(Other.Buffer, nullptr)),
+      BufferSize(std::exchange(Other.BufferSize, 0)),
+      BufferCapacity(std::exchange(Other.BufferCapacity, 0)) {}
+
 NestedNameSpecifierLocBuilder &
 NestedNameSpecifierLocBuilder::
 operator=(const NestedNameSpecifierLocBuilder &Other) {
@@ -244,6 +251,21 @@ operator=(const NestedNameSpecifierLocBuilder &Other) {
   BufferSize = 0;
   Append(Other.Buffer, Other.Buffer + Other.BufferSize, Buffer, BufferSize,
          BufferCapacity);
+  return *this;
+}
+
+NestedNameSpecifierLocBuilder &NestedNameSpecifierLocBuilder::operator=(
+    NestedNameSpecifierLocBuilder &&Other) {
+  Representation = std::move(Other.Representation);
+
+  // Free our storage, if we have any.
+  if (BufferCapacity) {
+    free(Buffer);
+  }
+  Buffer = std::exchange(Other.Buffer, nullptr);
+  BufferSize = std::exchange(Other.BufferSize, 0);
+  BufferCapacity = std::exchange(Other.BufferCapacity, 0);
+
   return *this;
 }
 

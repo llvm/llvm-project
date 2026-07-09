@@ -300,6 +300,42 @@ including the portion reserved for system software use.
 The '``dynamic_smem_size``' variant returns the amount of dynamic shared
 memory allocated per CTA for the kernel at launch time.
 
+'``llvm.nvvm.read.ptx.sreg.reserved_smem_offset_*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.read.ptx.sreg.reserved_smem_offset_begin()
+    declare i32 @llvm.nvvm.read.ptx.sreg.reserved_smem_offset_end()
+    declare i32 @llvm.nvvm.read.ptx.sreg.reserved_smem_offset_cap()
+    declare i32 @llvm.nvvm.read.ptx.sreg.reserved_smem_offset_0()
+    declare i32 @llvm.nvvm.read.ptx.sreg.reserved_smem_offset_1()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.read.ptx.sreg.reserved_smem_offset_*``' intrinsics provide
+access to PTX special registers that hold information about reserved shared
+memory offsets. 
+
+The '``reserved_smem_offset_begin``' intrinsic reads the start offset of
+the reserved shared memory region.
+
+The '``reserved_smem_offset_end``' intrinsic reads the end offset of the
+reserved shared memory region.
+
+The '``reserved_smem_offset_cap``' intrinsic reads the capacity limit of
+the reserved shared memory region.
+
+The '``reserved_smem_offset_0``' and '``reserved_smem_offset_1``' intrinsics
+read additional offsets in the reserved shared memory region.
+
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#special-registers-reserved-smem>`__.
+
 Barriers
 --------
 
@@ -1069,6 +1105,196 @@ Semantics:
 If the given pointer in the generic address space refers to memory which falls
 within the state space of the intrinsic (and therefore could be safely address
 space casted to this space), 1 is returned, otherwise 0 is returned.
+
+Narrow Floating-Point Conversion intrinsics
+-------------------------------------------
+
+These intrinsics perform conversions involving narrow floating-point formats.
+The following table describes the rounding modes used across these intrinsics:
+
+.. _narrow-fp-rounding-modes:
+
+.. table:: Narrow Floating-Point Conversion Rounding Modes
+   :widths: 30 60
+
+   +-----------------------+---------------------------------------------------+
+   | Rounding Mode         | Description                                       |
+   +=======================+===================================================+
+   |``rn`` (default)       | Round to nearest, with ties to even               |
+   +-----------------------+---------------------------------------------------+
+   |``rz``                 | Round towards zero                                |
+   +-----------------------+---------------------------------------------------+
+   |``rp``                 | Round towards positive infinity                   |
+   +-----------------------+---------------------------------------------------+
+   |``rs``                 | Stochastic rounding which is achieved through the |
+   |                       | use of the supplied random bits (``%rnd_bits``).  |
+   |                       | The result s rounded in the direction towards     |
+   |                       | zero or away from zero based on the carry out of  |
+   |                       | the integer addition of the of mantissa from      |
+   |                       | the input.                                        |
+   +-----------------------+---------------------------------------------------+
+
+.. _scale-factor:
+
+Some conversions involve a scale factor which is provided as a packed 16-bit 
+integer containing two scaling factors of type ``ue8m0``, one for each input.
+For down conversion, inputs are divided by ``scale_factor`` and then the 
+conversion is performed. For up-conversion, inputs are converted to destination 
+type and then multiplied by ``scale_factor``.
+
+``fp8`` Conversion Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i16 @llvm.nvvm.ff.to{.e4m3x2, .e5m2x2}.rn{.relu}(float %a, float %b)
+    declare i16 @llvm.nvvm.ff.to.ue8m0x2{.rz, .rp}{.satfinite}(float %a, float %b)
+    declare i16 @llvm.f16x2.to{.e4m3x2, .e5m2x2}.rn{.relu}(<2 x half> %a)
+    declare i16 @llvm.bf16x2.to{.e4m3x2, .e5m2x2}.rn{.relu}.satfinite(<2 x bfloat> %a)
+    declare i16 @llvm.bf16x2.to.ue8m0x2{.rz, .rp}{.satfinite}(<2 x bfloat> %a)
+    declare <2 x half> @llvm.nvvm{.e4m3x2, .e5m2x2}.to.f16x2.rn{.relu}(i16 %a)
+    declare <2 x bfloat> @llvm.nvvm{.e4m3x2, .e5m2x2}.to.bf16x2.rn{.relu}{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
+    declare <2 x bfloat> @llvm.nvvm.ue8m0x2.to.bf16x2(i16 %a)
+    declare <4 x i8> @llvm.nvvm.f32x4.to{.e4m3x4, .e5m2x4}.rs{.relu}.satfinite(<4 x f32> %a, i32 %rnd_bits)
+
+Overview:
+"""""""""
+
+These intrinsics perform conversions involving the ``e4m3`` and ``e5m2`` narrow 
+floating-point formats. In case of two inputs, the value converted from input 
+``%a`` is stored in the upper 8-bits of the result, and the value converted 
+from input ``%b`` is stored in the lower 8-bits of the result.
+
+For rounding modes, see :ref:`narrow-fp-rounding-modes`.
+
+The ``relu`` modifier clamps negative results to 0.
+
+When ``satfinite`` is specified, if the absolute value of input (ignoring sign) 
+is greater than ``MAX_NORM`` of the specified destination format, then the 
+result is sign-preserved ``MAX_NORM`` of the destination format and a positive 
+``MAX_NORM`` in ``.ue8m0x2`` for which the destination sign is not supported. 
+Also, if the input value is ``NaN``, then the result is ``NaN`` in the 
+specified destination format. The ``satfinite`` modifier is assumed to be 
+present for conversions involving ``e4m3`` and ``e5m2`` types as the 
+destination.
+
+For scale factor, see :ref:`scale-factor <scale-factor>`.
+
+For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
+
+``s2f6`` Conversion Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i16 @llvm.nvvm.ff.to.s2f6x2.rn{.relu}.satfinite.scale.n2.ue8m0(float %a, float %b, i16 %scale_factor)
+    declare i16 @llvm.nvvm.bf16x2.to.s2f6x2.rn{.relu}.satfinite.scale.n2.ue8m0(<2 x bfloat> %a, i16 %scale_factor)
+    declare <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn{.relu}{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
+
+Overview:
+"""""""""
+
+These intrinsics perform conversions involving the ``s2f6`` narrow 
+floating-point format. In case of two inputs, the value converted from input 
+``%a`` is stored in the upper 8-bits of the result, and the value converted 
+from input ``%b`` is stored in the lower 8-bits of the result.
+
+For rounding modes, see :ref:`narrow-fp-rounding-modes`.
+
+The ``relu`` modifier clamps negative results to 0.
+
+When ``satfinite`` is specified, if the absolute value of input (ignoring sign) 
+is greater than ``MAX_NORM`` of the specified destination format, then the 
+result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the 
+input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
+destination format.
+
+For scale factor, see :ref:`scale-factor <scale-factor>`.
+
+For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
+
+``fp6`` Conversion Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i16 @llvm.nvvm.ff.to{.e2m3x2, .e3m2x2}.rn{.relu}.satfinite(float %a, float %b)
+    declare i16 @llvm.nvvm.f16x2.to{.e2m3x2, .e3m2x2}.rn{.relu}.satfinite(<2 x half> %a)
+    declare i16 @llvm.nvvm.bf16x2.to{.e2m3x2, .e3m2x2}.rn{.relu}.satfinite(<2 x bfloat> %a)
+    declare <2 x half> @llvm.nvvm{.e2m3x2, .e3m2x2}.to.f16x2.rn{.relu}(i16 %a)
+    declare <2 x bfloat> @llvm.nvvm{.e2m3x2, .e3m2x2}.to.bf16x2.rn{.relu}{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
+    declare <4 x i8> @llvm.nvvm.f32x4.to{.e2m3x4, .e3m2x4}.rs{.relu}.satfinite(<4 x f32> %a, i32 %rnd_bits)
+    
+Overview:
+"""""""""
+
+These intrinsics perform conversions involving the ``e2m3`` and ``e3m2`` narrow 
+floating-point formats. In case of two inputs, the value converted from input 
+``%a`` is stored in the upper 8-bits of the result, and the value converted 
+from input ``%b`` is stored in the lower 8-bits of the result with 2 MSBs 
+padded with 0s in both cases.
+
+For rounding modes, see :ref:`narrow-fp-rounding-modes`.
+
+The ``relu`` modifier clamps negative results to 0.
+
+When ``satfinite`` is specified, if the absolute value of input (ignoring sign) 
+is greater than ``MAX_NORM`` of the specified destination format, then the 
+result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the 
+input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
+destination format.
+
+For scale factor, see :ref:`scale-factor <scale-factor>`.
+
+For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
+
+``fp4`` Conversion Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i16 @llvm.nvvm.ff.to.e2m1x2.rn{.relu}.satfinite(float %a, float %b)
+    declare i16 @llvm.nvvm.f16x2.to.e2m1x2.rn{.relu}.satfinite(<2 x half> %a)
+    declare i16 @llvm.nvvm.bf16x2.to.e2m1x2.rn{.relu}.satfinite(<2 x bfloat> %a)
+    declare <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn{.relu}(i16 %a)
+    declare <2 x bfloat> @llvm.nvvm.e2m1x2.to.bf16x2.rn{.relu}{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
+    declare i16 @llvm.nvvm.f32x4.to.e2m1x4.rs{.relu}.satfinite(<4 x f32> %a, i32 %rnd_bits)
+
+Overview:
+"""""""""
+
+These intrinsics perform conversions involving the ``e2m1`` narrow 
+floating-point format. For conversions involving ``e2m1x2``, the packed 
+``e2m1x2`` value is stored in the lower byte of the ``i16`` argument or result.
+In case of two inputs, the value converted from input 
+``%a`` is stored in the upper 4-bits of the result, and the value converted 
+from input ``%b`` is stored in the lower 4-bits of the result.
+
+For rounding modes, see :ref:`narrow-fp-rounding-modes`.
+
+The ``relu`` modifier clamps negative results to 0.
+
+When ``satfinite`` is specified, if the absolute value of input (ignoring sign) 
+is greater than ``MAX_NORM`` of the specified destination format, then the 
+result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the 
+input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
+destination format.
+
+For scale factor, see :ref:`scale-factor <scale-factor>`.
+
+For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
 
 Arithmetic Intrinsics
 ---------------------
@@ -2427,7 +2653,7 @@ Overview:
 
 The '``@llvm.nvvm.tensormap.replace.global.stride.*``' intrinsics replace the 
 ``%ord``-th element of the ``global_stride`` field of the tensor-map object 
-with ``%new_value``.
+with ``%new_value``. ``%ord`` must be in the range [0, 4].
 
 '``llvm.nvvm.tensormap.replace.element.stride``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2445,7 +2671,7 @@ Overview:
 
 The '``@llvm.nvvm.tensormap.replace.element.stride.*``' intrinsics replace the 
 ``%ord``-th element of the ``element_stride`` field of the tensor-map object 
-with ``%new_value``.
+with ``%new_value``. ``%ord`` must be in the range [0, 4].
 
 '``llvm.nvvm.tensormap.replace.global.dim``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2463,7 +2689,7 @@ Overview:
 
 The '``@llvm.nvvm.tensormap.replace.global.dim.*``' intrinsics replace the 
 ``%ord``-th element of the ``global_dim`` field of the tensor-map object 
-with ``%new_value``.
+with ``%new_value``. ``%ord`` must be in the range [0, 4].
 
 '``llvm.nvvm.tensormap.replace.box.dim``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2481,7 +2707,7 @@ Overview:
 
 The '``@llvm.nvvm.tensormap.replace.box.dim.*``' intrinsics replace the 
 ``%ord``-th element of the ``box_dim`` field of the tensor-map object with 
-``%new_value``.
+``%new_value``. ``%ord`` must be in the range [0, 4].
 
 '``llvm.nvvm.tensormap.replace.elemtype``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3605,6 +3831,103 @@ similar but the latter uses generic addressing (see `Generic Addressing
 For more information, refer `PTX ISA
 <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-bulk>`__.
 
+'``llvm.nvvm.st.async``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.st.async.i32(ptr addrspace(7) %dest_addr, i32 %value, ptr addrspace(7) %mbarrier_addr)
+  declare void @llvm.nvvm.st.async.i64(ptr addrspace(7) %dest_addr, i64 %value, ptr addrspace(7) %mbarrier_addr)
+  declare void @llvm.nvvm.st.async.i128(ptr addrspace(7) %dest_addr, i128 %value, ptr addrspace(7) %mbarrier_addr)
+  
+Overview:
+"""""""""
+
+The '``llvm.nvvm.st.async``' intrinsic initiates a weak 
+asynchronous store operation to shared memory that stores the value specified 
+by the `%value` operand to the destination address specified by the 
+`%dest_addr` operand. The `%value` operand must be an ``i32``, ``i64`` or 
+``i128``, lowering to the ``.b32``, ``.b64`` and ``.b128`` variants 
+of the ``st.async`` PTX instruction respectively.
+
+The store operation is treated as a weak memory operation. The effects of this 
+operation become visible to other threads only when synchronization is 
+established by other means.
+
+The operation is performed asynchronously and the completion is signalled using 
+the mbarrier object specified by the `%mbarrier_addr` operand. Upon completion, 
+a `complete-tx <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier-complete-tx-operation>`__ operation is performed on the mbarrier object, with the 
+`completeCount` argument equal to the amount of data stored in bytes.
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-async>`__.
+
+'``llvm.nvvm.st.async.{sys,gpu}``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+  
+  ; sys scope
+  declare void @llvm.nvvm.st.async.sys.i8(ptr addrspace(1) %dest_addr, i8 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.sys.i16(ptr addrspace(1) %dest_addr, i16 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.sys.i32(ptr addrspace(1) %dest_addr, i32 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.sys.i64(ptr addrspace(1) %dest_addr, i64 %value, i1 immarg %is_multimem)
+   
+  ; gpu scope
+  declare void @llvm.nvvm.st.async.gpu.i8(ptr addrspace(1) %dest_addr, i8 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.gpu.i16(ptr addrspace(1) %dest_addr, i16 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.gpu.i32(ptr addrspace(1) %dest_addr, i32 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.gpu.i64(ptr addrspace(1) %dest_addr, i64 %value, i1 immarg %is_multimem)
+   
+Overview:
+"""""""""
+
+The '``llvm.nvvm.st.async.sys``' and 
+'``llvm.nvvm.st.async.gpu``' intrinsics initiate an 
+asynchronous release store to global memory that stores the value specified by 
+the `%value` operand to the destination address specified by the `%dest_addr` 
+operand.
+
+The `%is_multimem` immediate argument selects the variant of the store. When it 
+is `0`, a regular ``st.async`` is emitted. When it is `1`, a
+``multimem.st.async`` is emitted and the `%dest_addr` operand must be a 
+multimem address.
+
+The store carries ``.release`` semantics — prior stores from the current thread 
+are made visible to other threads in the scope.
+
+The scope of this operation can be ``sys`` or ``gpu``.
+
+These intrinsics lower to the `.b8`, `.b16`, `.b32`, and `.b64` variants of the
+``st.async`` instruction.
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-async>`__.
+
+'``llvm.nvvm.st.async.mmio.sys``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.st.async.mmio.sys.i8(ptr addrspace(1) %dest_addr, i8 %value)
+  declare void @llvm.nvvm.st.async.mmio.sys.i16(ptr addrspace(1) %dest_addr, i16 %value)
+  declare void @llvm.nvvm.st.async.mmio.sys.i32(ptr addrspace(1) %dest_addr, i32 %value)
+  declare void @llvm.nvvm.st.async.mmio.sys.i64(ptr addrspace(1) %dest_addr, i64 %value)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.st.async.mmio.sys``' intrinsic performs an `MMIO <https://docs.nvidia.com/cuda/parallel-thread-execution/#mmio-operation>`__ 
+store to global memory with ``.release`` semantics at the ``sys`` scope.
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-async>`__.
 
 clusterlaunchcontrol Intrinsics
 -------------------------------
@@ -3722,6 +4045,42 @@ an event.
 
 For more information on the pmevent instructions, refer to the `PTX ISA
 <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent>`__.
+
+Warp-level Matrix Transpose Intrinsics
+---------------------------------------
+
+'``llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i32 @llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16(i32 %src)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16``' intrinsic
+transposes an 8x8 matrix of 16-bit elements distributed across all 32
+threads of a warp. Each thread provides a 32-bit register containing two
+packed ``.b16`` elements, and receives back two packed ``.b16`` elements
+from the transposed matrix in the same format.
+
+The mandatory ``.sync`` qualifier indicates that ``movmatrix`` causes the
+executing thread to wait until all threads in the warp execute the same
+``movmatrix`` intrinsic before resuming execution.
+
+The mandatory ``.aligned`` qualifier indicates that all threads in the warp
+must execute the same ``movmatrix`` intrinsic. In conditionally executed
+code, a ``movmatrix`` intrinsic should only be used if it is known that
+all threads in the warp evaluate the condition identically, otherwise the
+behavior is undefined.
+
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-instructions-movmatrix>`__.
+
 
 Other Intrinsics
 ----------------

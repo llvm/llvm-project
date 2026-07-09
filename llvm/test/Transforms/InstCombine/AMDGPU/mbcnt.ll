@@ -72,24 +72,306 @@ define i32 @mbcnt_lo_hi(i32 %x, i32 %y, i32 %z) {
 
 define i32 @ockl_lane_u32() {
 ; DEFAULT-LABEL: define i32 @ockl_lane_u32() {
-; DEFAULT-NEXT:    [[LO:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; DEFAULT-NEXT:    [[HI:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; DEFAULT-NEXT:    ret i32 [[HI]]
 ;
 ; WAVE32-LABEL: define i32 @ockl_lane_u32
 ; WAVE32-SAME: () #[[ATTR1]] {
-; WAVE32-NEXT:    [[LO:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; WAVE32-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
 ; WAVE32-NEXT:    ret i32 [[LO]]
 ;
 ; WAVE64-LABEL: define i32 @ockl_lane_u32
 ; WAVE64-SAME: () #[[ATTR1]] {
-; WAVE64-NEXT:    [[LO:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; WAVE64-NEXT:    [[HI:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; WAVE64-NEXT:    ret i32 [[HI]]
 ;
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
   ret i32 %hi
+}
+
+define i32 @mbcnt_lo_and63() {
+; DEFAULT-LABEL: define i32 @mbcnt_lo_and63() {
+; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; DEFAULT-NEXT:    ret i32 [[LO]]
+;
+; WAVE32-LABEL: define i32 @mbcnt_lo_and63
+; WAVE32-SAME: () #[[ATTR1]] {
+; WAVE32-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; WAVE32-NEXT:    ret i32 [[LO]]
+;
+; WAVE64-LABEL: define i32 @mbcnt_lo_and63
+; WAVE64-SAME: () #[[ATTR1]] {
+; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; WAVE64-NEXT:    ret i32 [[LO]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %and = and i32 %lo, 63
+  ret i32 %lo
+}
+
+define i32 @mbcnt_hi_and31() {
+; DEFAULT-LABEL: define i32 @mbcnt_hi_and31() {
+; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 0)
+; DEFAULT-NEXT:    ret i32 [[HI]]
+;
+; WAVE32-LABEL: define i32 @mbcnt_hi_and31
+; WAVE32-SAME: () #[[ATTR1]] {
+; WAVE32-NEXT:    ret i32 0
+;
+; WAVE64-LABEL: define i32 @mbcnt_hi_and31
+; WAVE64-SAME: () #[[ATTR1]] {
+; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 0)
+; WAVE64-NEXT:    ret i32 [[HI]]
+;
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 0)
+  %and = and i32 %hi, 31
+  ret i32 %and
+}
+
+define i32 @ockl_lane_u32_and127() {
+; DEFAULT-LABEL: define i32 @ockl_lane_u32_and127() {
+; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; DEFAULT-NEXT:    ret i32 [[HI]]
+;
+; WAVE32-LABEL: define i32 @ockl_lane_u32_and127
+; WAVE32-SAME: () #[[ATTR1]] {
+; WAVE32-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; WAVE32-NEXT:    ret i32 [[LO]]
+;
+; WAVE64-LABEL: define i32 @ockl_lane_u32_and127
+; WAVE64-SAME: () #[[ATTR1]] {
+; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; WAVE64-NEXT:    ret i32 [[HI]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %and = and i32 %hi, 127
+  ret i32 %and
+}
+
+define i32 @known_range_mbcnt_lo(i32 %unknown) {
+; DEFAULT-LABEL: define i32 @known_range_mbcnt_lo
+; DEFAULT-SAME: (i32 [[UNKNOWN:%.*]]) {
+; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 [[UNKNOWN]], i32 0)
+; DEFAULT-NEXT:    ret i32 [[LO]]
+;
+; WAVE32-LABEL: define i32 @known_range_mbcnt_lo
+; WAVE32-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE32-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 [[UNKNOWN]], i32 0)
+; WAVE32-NEXT:    ret i32 [[LO]]
+;
+; WAVE64-LABEL: define i32 @known_range_mbcnt_lo
+; WAVE64-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 [[UNKNOWN]], i32 0)
+; WAVE64-NEXT:    ret i32 [[LO]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 %unknown, i32 0)
+  %min = call i32 @llvm.umin.i32(i32 %lo, i32 32)
+  ret i32 %min
+}
+
+define i32 @mbcnt_lo_add_unknown(i32 %unknown) {
+; DEFAULT-LABEL: define i32 @mbcnt_lo_add_unknown
+; DEFAULT-SAME: (i32 [[UNKNOWN:%.*]]) {
+; DEFAULT-NEXT:    [[LO:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
+; DEFAULT-NEXT:    ret i32 [[LO]]
+;
+; WAVE32-LABEL: define i32 @mbcnt_lo_add_unknown
+; WAVE32-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE32-NEXT:    [[LO:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
+; WAVE32-NEXT:    ret i32 [[LO]]
+;
+; WAVE64-LABEL: define i32 @mbcnt_lo_add_unknown
+; WAVE64-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE64-NEXT:    [[LO:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
+; WAVE64-NEXT:    ret i32 [[LO]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 %unknown)
+  ret i32 %lo
+}
+
+define i32 @mbcnt_hi_add_unknown(i32 %unknown) {
+; DEFAULT-LABEL: define i32 @mbcnt_hi_add_unknown
+; DEFAULT-SAME: (i32 [[UNKNOWN:%.*]]) {
+; DEFAULT-NEXT:    [[HI:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[UNKNOWN]])
+; DEFAULT-NEXT:    ret i32 [[HI]]
+;
+; WAVE32-LABEL: define i32 @mbcnt_hi_add_unknown
+; WAVE32-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE32-NEXT:    ret i32 [[UNKNOWN]]
+;
+; WAVE64-LABEL: define i32 @mbcnt_hi_add_unknown
+; WAVE64-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE64-NEXT:    [[HI:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[UNKNOWN]])
+; WAVE64-NEXT:    ret i32 [[HI]]
+;
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %unknown)
+  ret i32 %hi
+}
+
+define i32 @known_range_mbcnt_hi(i32 %unknown) {
+; DEFAULT-LABEL: define i32 @known_range_mbcnt_hi
+; DEFAULT-SAME: (i32 [[UNKNOWN:%.*]]) {
+; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.hi(i32 [[UNKNOWN]], i32 0)
+; DEFAULT-NEXT:    ret i32 [[HI]]
+;
+; WAVE32-LABEL: define i32 @known_range_mbcnt_hi
+; WAVE32-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE32-NEXT:    ret i32 0
+;
+; WAVE64-LABEL: define i32 @known_range_mbcnt_hi
+; WAVE64-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.hi(i32 [[UNKNOWN]], i32 0)
+; WAVE64-NEXT:    ret i32 [[HI]]
+;
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 %unknown, i32 0)
+  %min = call i32 @llvm.umin.i32(i32 %hi, i32 32)
+  ret i32 %min
+}
+
+define i32 @known_range_mbcnt_lo_hi() {
+; DEFAULT-LABEL: define i32 @known_range_mbcnt_lo_hi() {
+; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; DEFAULT-NEXT:    ret i32 [[HI]]
+;
+; WAVE32-LABEL: define i32 @known_range_mbcnt_lo_hi
+; WAVE32-SAME: () #[[ATTR1]] {
+; WAVE32-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; WAVE32-NEXT:    ret i32 [[LO]]
+;
+; WAVE64-LABEL: define i32 @known_range_mbcnt_lo_hi
+; WAVE64-SAME: () #[[ATTR1]] {
+; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; WAVE64-NEXT:    ret i32 [[HI]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %min = call i32 @llvm.umin.i32(i32 %hi, i32 64)
+  ret i32 %min
+}
+
+define i32 @known_range_mbcnt_lo_hi_add_unknown(i32 %unknown) {
+; DEFAULT-LABEL: define i32 @known_range_mbcnt_lo_hi_add_unknown
+; DEFAULT-SAME: (i32 [[UNKNOWN:%.*]]) {
+; DEFAULT-NEXT:    [[LO:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
+; DEFAULT-NEXT:    [[HI:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; DEFAULT-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[HI]], i32 64)
+; DEFAULT-NEXT:    ret i32 [[MIN]]
+;
+; WAVE32-LABEL: define i32 @known_range_mbcnt_lo_hi_add_unknown
+; WAVE32-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE32-NEXT:    [[LO:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
+; WAVE32-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LO]], i32 64)
+; WAVE32-NEXT:    ret i32 [[MIN]]
+;
+; WAVE64-LABEL: define i32 @known_range_mbcnt_lo_hi_add_unknown
+; WAVE64-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE64-NEXT:    [[LO:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
+; WAVE64-NEXT:    [[HI:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; WAVE64-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[HI]], i32 64)
+; WAVE64-NEXT:    ret i32 [[MIN]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 %unknown)
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %min = call i32 @llvm.umin.i32(i32 %hi, i32 64)
+  ret i32 %min
+}
+
+define i32 @known_range_mbcnt_lo_hi_add_known_range_unfoldable(i32 range(i32 0, 2) %unknown) {
+; DEFAULT-LABEL: define i32 @known_range_mbcnt_lo_hi_add_known_range_unfoldable
+; DEFAULT-SAME: (i32 range(i32 0, 2) [[UNKNOWN:%.*]]) {
+; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 0, 34) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
+; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 66) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; DEFAULT-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[HI]], i32 64)
+; DEFAULT-NEXT:    ret i32 [[MIN]]
+;
+; WAVE32-LABEL: define i32 @known_range_mbcnt_lo_hi_add_known_range_unfoldable
+; WAVE32-SAME: (i32 range(i32 0, 2) [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE32-NEXT:    [[LO:%.*]] = call range(i32 0, 34) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
+; WAVE32-NEXT:    ret i32 [[LO]]
+;
+; WAVE64-LABEL: define i32 @known_range_mbcnt_lo_hi_add_known_range_unfoldable
+; WAVE64-SAME: (i32 range(i32 0, 2) [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 0, 34) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
+; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 66) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; WAVE64-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[HI]], i32 64)
+; WAVE64-NEXT:    ret i32 [[MIN]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 %unknown)
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %min = call i32 @llvm.umin.i32(i32 %hi, i32 64)
+  ret i32 %min
+}
+
+define i32 @known_range_mbcnt_lo_hi_add_known_range_foldable(i32 range(i32 0, 2) %unknown) {
+; DEFAULT-LABEL: define i32 @known_range_mbcnt_lo_hi_add_known_range_foldable
+; DEFAULT-SAME: (i32 range(i32 0, 2) [[UNKNOWN:%.*]]) {
+; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 0, 34) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
+; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 66) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; DEFAULT-NEXT:    ret i32 [[HI]]
+;
+; WAVE32-LABEL: define i32 @known_range_mbcnt_lo_hi_add_known_range_foldable
+; WAVE32-SAME: (i32 range(i32 0, 2) [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE32-NEXT:    [[LO:%.*]] = call range(i32 0, 34) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
+; WAVE32-NEXT:    ret i32 [[LO]]
+;
+; WAVE64-LABEL: define i32 @known_range_mbcnt_lo_hi_add_known_range_foldable
+; WAVE64-SAME: (i32 range(i32 0, 2) [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 0, 34) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
+; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 66) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; WAVE64-NEXT:    ret i32 [[HI]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 %unknown)
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %min = call i32 @llvm.umin.i32(i32 %hi, i32 65)
+  ret i32 %min
+}
+
+define i32 @known_range_mbcnt_lo_existing_stricter_range(i32 %unknown) {
+; DEFAULT-LABEL: define i32 @known_range_mbcnt_lo_existing_stricter_range
+; DEFAULT-SAME: (i32 [[UNKNOWN:%.*]]) {
+; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 0, 16) i32 @llvm.amdgcn.mbcnt.lo(i32 [[UNKNOWN]], i32 0)
+; DEFAULT-NEXT:    ret i32 [[LO]]
+;
+; WAVE32-LABEL: define i32 @known_range_mbcnt_lo_existing_stricter_range
+; WAVE32-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE32-NEXT:    [[LO:%.*]] = call range(i32 0, 16) i32 @llvm.amdgcn.mbcnt.lo(i32 [[UNKNOWN]], i32 0)
+; WAVE32-NEXT:    ret i32 [[LO]]
+;
+; WAVE64-LABEL: define i32 @known_range_mbcnt_lo_existing_stricter_range
+; WAVE64-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 0, 16) i32 @llvm.amdgcn.mbcnt.lo(i32 [[UNKNOWN]], i32 0)
+; WAVE64-NEXT:    ret i32 [[LO]]
+;
+  %lo = call range(i32 0, 16) i32 @llvm.amdgcn.mbcnt.lo(i32 %unknown, i32 0)
+  ret i32 %lo
+}
+
+define i32 @known_range_mbcnt_lo_refineable_range(i32 %unknown) {
+; DEFAULT-LABEL: define i32 @known_range_mbcnt_lo_refineable_range
+; DEFAULT-SAME: (i32 [[UNKNOWN:%.*]]) {
+; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 [[UNKNOWN]], i32 0)
+; DEFAULT-NEXT:    ret i32 [[LO]]
+;
+; WAVE32-LABEL: define i32 @known_range_mbcnt_lo_refineable_range
+; WAVE32-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE32-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 [[UNKNOWN]], i32 0)
+; WAVE32-NEXT:    ret i32 [[LO]]
+;
+; WAVE64-LABEL: define i32 @known_range_mbcnt_lo_refineable_range
+; WAVE64-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR1]] {
+; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 [[UNKNOWN]], i32 0)
+; WAVE64-NEXT:    ret i32 [[LO]]
+;
+  %lo = call range(i32 0, 128) i32 @llvm.amdgcn.mbcnt.lo(i32 %unknown, i32 0)
+  ret i32 %lo
 }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:

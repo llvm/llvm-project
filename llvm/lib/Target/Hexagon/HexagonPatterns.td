@@ -306,7 +306,7 @@ def anyimm3: PatLeaf<(i32 AnyImm3:$Addr)>;
 def f32ImmPred : PatLeaf<(f32 fpimm:$F)>;
 def f64ImmPred : PatLeaf<(f64 fpimm:$F)>;
 def f32zero: PatLeaf<(f32 fpimm:$F), [{
-  return N->isExactlyValue(APFloat::getZero(APFloat::IEEEsingle(), false));
+  return N->isPosZero();
 }]>;
 
 // This complex pattern is really only to detect various forms of
@@ -530,17 +530,22 @@ def: Pat<(i64 (bitconvert F64:$v)), (I64:$v)>;
 def: Pat<(f64 (bitconvert I64:$v)), (F64:$v)>;
 
 // Bit convert 32- and 64-bit types.
-// All of these are bitcastable to one another: i32, v2i16, v4i8.
+// All of these are bitcastable to one another: i32, f32, v2i16, v4i8.
 defm: NopCast_pat<i32,   v2i16, IntRegs>;
 defm: NopCast_pat<i32,    v4i8, IntRegs>;
 defm: NopCast_pat<v2i16,  v4i8, IntRegs>;
-// All of these are bitcastable to one another: i64, v2i32, v4i16, v8i8.
+defm: NopCast_pat<f32,   v2i16, IntRegs>;
+defm: NopCast_pat<f32,    v4i8, IntRegs>;
+// All of these are bitcastable to one another: i64, f64, v2i32, v4i16, v8i8.
 defm: NopCast_pat<i64,   v2i32, DoubleRegs>;
 defm: NopCast_pat<i64,   v4i16, DoubleRegs>;
 defm: NopCast_pat<i64,    v8i8, DoubleRegs>;
 defm: NopCast_pat<v2i32, v4i16, DoubleRegs>;
 defm: NopCast_pat<v2i32,  v8i8, DoubleRegs>;
 defm: NopCast_pat<v4i16,  v8i8, DoubleRegs>;
+defm: NopCast_pat<f64,   v2i32, DoubleRegs>;
+defm: NopCast_pat<f64,   v4i16, DoubleRegs>;
+defm: NopCast_pat<f64,    v8i8, DoubleRegs>;
 
 
 // --(3) Extend/truncate/saturate ----------------------------------------
@@ -1269,12 +1274,14 @@ def Divu8: SDNodeXForm<imm, [{
 def FShl32i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
   (HiReg (S2_asl_i_p (Combinew $Rs, $Rt), $S))>;
 def FShl32r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
-  (HiReg (S2_asl_r_p (Combinew $Rs, $Rt), $Ru))>;
+  (HiReg (S2_asl_r_p (Combinew $Rs, $Rt), (A2_andir $Ru, 31)))>;
 
 def FShl64i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
   (S2_lsr_i_p_or (S2_asl_i_p $Rs, $S),  $Rt, (Subi<64> $S))>;
 def FShl64r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
-  (S2_lsr_r_p_or (S2_asl_r_p $Rs, $Ru), $Rt, (A2_subri 64, $Ru))>;
+  (S2_lsl_r_p_or (S2_asl_r_p $Rs, (A2_andir $Ru, 63)),
+                  $Rt,
+                  (A2_addi (A2_andir $Ru, 63), -64))>;
 
 // Combined SDNodeXForm: (Divu8 (Subi<64> $S))
 def Divu64_8: SDNodeXForm<imm, [{
@@ -1309,12 +1316,14 @@ def: Pat<(fshl I64:$Rs, I64:$Rt, I32:$Ru),  (FShl64r $Rs, $Rt, $Ru)>;
 def FShr32i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
   (LoReg (S2_lsr_i_p (Combinew $Rs, $Rt), $S))>;
 def FShr32r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
-  (LoReg (S2_lsr_r_p (Combinew $Rs, $Rt), $Ru))>;
+  (LoReg (S2_lsr_r_p (Combinew $Rs, $Rt), (A2_andir $Ru, 31)))>;
 
 def FShr64i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
   (S2_asl_i_p_or (S2_lsr_i_p $Rt, $S),  $Rs, (Subi<64> $S))>;
 def FShr64r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
-  (S2_asl_r_p_or (S2_lsr_r_p $Rt, $Ru), $Rs, (A2_subri 64, $Ru))>;
+  (S2_lsr_r_p_or (S2_lsr_r_p $Rt, (A2_andir $Ru, 63)),
+                  $Rs,
+                  (A2_addi (A2_andir $Ru, 63), -64))>;
 
 // Special cases:
 let AddedComplexity = 100 in {
@@ -1743,9 +1752,39 @@ def n8_0ImmPred: PatLeaf<(i32 imm), [{
   return -255 <= V && V <= 0;
 }]>;
 
+def mulnsw : PatFrag<(ops node:$lhs, node:$rhs),
+                     (mul node:$lhs, node:$rhs), [{
+  return N->getFlags().hasNoSignedWrap();
+}]>;
+
 // Change the sign of the immediate for Rd=-mpyi(Rs,#u8)
 def: Pat<(mul I32:$Rs, n8_0ImmPred:$n8),
          (M2_mpysin I32:$Rs, (NegImm8 imm:$n8))>;
+
+def: Pat<(v2i32 (mulnsw (sext V2I16:$Rs), (sext V2I16:$Rt))),
+         (M2_vmpy2s_s0 V2I16:$Rs, V2I16:$Rt)>;
+
+// PatFrag matching assertsext of a v2i32 from i16, produced when a scalar
+// sext i16 is splatted into a v2i32 vector and the splat is hoisted out of
+// the loop into an earlier block, arriving as a live-in v2i32 register.
+def assertsext_v2i32_i16 : PatFrag<(ops node:$Rs),
+                                    (assertsext node:$Rs), [{
+  auto *T = cast<VTSDNode>(N->getOperand(1));
+  return N->getValueType(0) == MVT::v2i32 && T->getVT() == MVT::i16;
+}]>;
+
+// Handle sext v2i16 multiplied by a splatted scalar sext i16, where the
+// splat was hoisted and arrives as assertsext v2i32. Recover the v2i16
+// by combining the low halfwords of both elements.
+def: Pat<(v2i32 (mulnsw (sext V2I16:$Rs),
+                         (assertsext_v2i32_i16 V2I32:$Rt))),
+         (M2_vmpy2s_s0 V2I16:$Rs,
+                       (A2_combine_ll (HiReg $Rt), (LoReg $Rt)))>;
+
+def: Pat<(v2i32 (mulnsw (assertsext_v2i32_i16 V2I32:$Rs),
+                         (sext V2I16:$Rt))),
+         (M2_vmpy2s_s0 (A2_combine_ll (HiReg $Rs), (LoReg $Rs)),
+                       V2I16:$Rt)>;
 
 def: Pat<(add Sext64:$Rs, I64:$Rt),
          (A2_addsp (LoReg Sext64:$Rs), I64:$Rt)>;
@@ -3457,20 +3496,13 @@ def HexagonBARRIER: SDNode<"HexagonISD::BARRIER", SDTNone, [SDNPHasChain]>;
 def: Pat<(HexagonBARRIER), (Y2_barrier)>;
 
 def: Pat<(trap), (PS_crash)>;
-def: Pat<(debugtrap), (Y2_break)>;
+def: Pat<(debugtrap), (J2_trap0 0xDB)>;
 
 // Read cycle counter.
-def SDTInt64Leaf: SDTypeProfile<1, 0, [SDTCisVT<0, i64>]>;
-def HexagonREADCYCLE: SDNode<"HexagonISD::READCYCLE", SDTInt64Leaf,
-  [SDNPHasChain]>;
+def : Pat<(i64 (readcyclecounter)), (PS_readcr64 UPCYCLE)>;
 
-def: Pat<(HexagonREADCYCLE), (A4_tfrcpp UPCYCLE)>;
-
-// Read time counter.
-def HexagonREADTIMER: SDNode<"HexagonISD::READTIMER", SDTInt64Leaf,
-  [SDNPHasChain]>;
-
-def: Pat<(HexagonREADTIMER), (A4_tfrcpp UTIMER)>;
+// Read packet counter
+def : Pat<(i64 (readsteadycounter)), (PS_readcr64 UTIMER)>;
 
 def SDTInt32Leaf : SDTypeProfile<1, 0, [SDTCisVT<0, i32>]>;
 def HexagonTHREADPOINTER : SDNode<"HexagonISD::THREAD_POINTER", SDTPtrLeaf>;

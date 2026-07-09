@@ -341,7 +341,8 @@ _mm_rsqrt_ps(__m128 __a)
 /// \returns A 128-bit vector of [4 x float] whose lower 32 bits contain the
 ///    minimum value between both operands. The upper 96 bits are copied from
 ///    the upper 96 bits of the first source operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_min_ss(__m128 __a, __m128 __b) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_min_ss(__m128 __a,
+                                                                 __m128 __b) {
   return __builtin_ia32_minss((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -384,7 +385,8 @@ static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_min_ps(__m128 __a,
 /// \returns A 128-bit vector of [4 x float] whose lower 32 bits contain the
 ///    maximum value between both operands. The upper 96 bits are copied from
 ///    the upper 96 bits of the first source operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_max_ss(__m128 __a, __m128 __b) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_max_ss(__m128 __a,
+                                                                 __m128 __b) {
   return __builtin_ia32_maxss((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -2569,11 +2571,10 @@ _mm_avg_pu16(__m64 __a, __m64 __b) {
 /// \returns A 64-bit integer vector whose lower 16 bits contain the sums of the
 ///    sets of absolute differences between both operands. The upper bits are
 ///    cleared.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_sad_pu8(__m64 __a, __m64 __b)
-{
-  return __trunc64(__builtin_ia32_psadbw128((__v16qi)__zext128(__a),
-                                            (__v16qi)__zext128(__b)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_sad_pu8(__m64 __a, __m64 __b) {
+  return __trunc64(__builtin_ia32_psadbw128((__v16qu)__zext128(__a),
+                                            (__v16qu)__zext128(__b)));
 }
 
 #if defined(__cplusplus)

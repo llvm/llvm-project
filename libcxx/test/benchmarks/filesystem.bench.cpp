@@ -31,7 +31,9 @@ void BM_PathConstructString(benchmark::State& st, GenInputs gen) {
     benchmark::DoNotOptimize(P.native().data());
   }
 }
-BENCHMARK_CAPTURE(BM_PathConstructString, large_string, getRandomStringInputs)->Range(8, TestNumInputs);
+BENCHMARK_CAPTURE(BM_PathConstructString, large_string, getRandomStringInputs)
+    ->Name("filesystem::path::ctor(std::string const&)")
+    ->Range(8, TestNumInputs);
 
 template <class GenInputs>
 void BM_PathConstructCStr(benchmark::State& st, GenInputs gen) {
@@ -46,7 +48,9 @@ void BM_PathConstructCStr(benchmark::State& st, GenInputs gen) {
     benchmark::DoNotOptimize(P.native().data());
   }
 }
-BENCHMARK_CAPTURE(BM_PathConstructCStr, large_string, getRandomStringInputs)->Arg(TestNumInputs);
+BENCHMARK_CAPTURE(BM_PathConstructCStr, large_string, getRandomStringInputs)
+    ->Name("filesystem::path::ctor(char const*)")
+    ->Arg(TestNumInputs);
 
 template <template <class...> class ItType, class GenInputs>
 void BM_PathConstructIter(benchmark::State& st, GenInputs gen) {
@@ -66,17 +70,11 @@ void BM_PathConstructIter(benchmark::State& st, GenInputs gen) {
     benchmark::DoNotOptimize(P.native().data());
   }
 }
-template <class GenInputs>
-void BM_PathConstructInputIter(benchmark::State& st, GenInputs gen) {
-  BM_PathConstructIter<cpp17_input_iterator>(st, gen);
-}
-template <class GenInputs>
-void BM_PathConstructForwardIter(benchmark::State& st, GenInputs gen) {
-  BM_PathConstructIter<forward_iterator>(st, gen);
-}
-BENCHMARK_CAPTURE(BM_PathConstructInputIter, large_string, getRandomStringInputs)
+BENCHMARK_CAPTURE(BM_PathConstructIter<cpp17_input_iterator>, large_string, getRandomStringInputs)
+    ->Name("filesystem::path::ctor(input-iter, input-iter)")
     ->Range(8, TestNumInputs);
-BENCHMARK_CAPTURE(BM_PathConstructForwardIter, large_string, getRandomStringInputs)
+BENCHMARK_CAPTURE(BM_PathConstructIter<forward_iterator>, large_string, getRandomStringInputs)
+    ->Name("filesystem::path::ctor(forward-iter, forward-iter)")
     ->Range(8, TestNumInputs);
 
 template <class GenInputs>
@@ -95,6 +93,7 @@ void BM_PathIterateMultipleTimes(benchmark::State& st, GenInputs gen) {
   }
 }
 BENCHMARK_CAPTURE(BM_PathIterateMultipleTimes, iterate_elements, getRandomStringInputs)
+    ->Name("filesystem::path::iterator (iterate multiple times)")
     ->Range(8, TestNumInputs);
 
 template <class GenInputs>
@@ -113,7 +112,9 @@ void BM_PathIterateOnce(benchmark::State& st, GenInputs gen) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK_CAPTURE(BM_PathIterateOnce, iterate_elements, getRandomStringInputs)->Range(8, TestNumInputs);
+BENCHMARK_CAPTURE(BM_PathIterateOnce, iterate_elements, getRandomStringInputs)
+    ->Name("filesystem::path::iterator (iterate once)")
+    ->Range(8, TestNumInputs);
 
 template <class GenInputs>
 void BM_PathIterateOnceBackwards(benchmark::State& st, GenInputs gen) {
@@ -134,7 +135,9 @@ void BM_PathIterateOnceBackwards(benchmark::State& st, GenInputs gen) {
     benchmark::DoNotOptimize(*I);
   }
 }
-BENCHMARK_CAPTURE(BM_PathIterateOnceBackwards, iterate_elements, getRandomStringInputs)->Arg(TestNumInputs);
+BENCHMARK_CAPTURE(BM_PathIterateOnceBackwards, iterate_elements, getRandomStringInputs)
+    ->Name("filesystem::path::iterator (iterate once backwards)")
+    ->Arg(TestNumInputs);
 
 static fs::path getRandomPaths(int NumParts, int PathLen) {
   fs::path Result;
@@ -155,9 +158,11 @@ void BM_LexicallyNormal(benchmark::State& st, GenInput gen, size_t PathLen) {
   }
 }
 BENCHMARK_CAPTURE(BM_LexicallyNormal, small_path, getRandomPaths, /*PathLen*/ 5)
+    ->Name("filesystem::path::lexically_normal() (small path)")
     ->RangeMultiplier(2)
     ->Range(2, 256);
 BENCHMARK_CAPTURE(BM_LexicallyNormal, large_path, getRandomPaths, /*PathLen*/ 32)
+    ->Name("filesystem::path::lexically_normal() (large path)")
     ->RangeMultiplier(2)
     ->Range(2, 256);
 
@@ -172,9 +177,11 @@ void BM_LexicallyRelative(benchmark::State& st, GenInput gen, size_t PathLen) {
   }
 }
 BENCHMARK_CAPTURE(BM_LexicallyRelative, small_path, getRandomPaths, /*PathLen*/ 5)
+    ->Name("filesystem::path::lexically_relative() (small path)")
     ->RangeMultiplier(2)
     ->Range(2, 256);
 BENCHMARK_CAPTURE(BM_LexicallyRelative, large_path, getRandomPaths, /*PathLen*/ 32)
+    ->Name("filesystem::path::lexically_relative() (large path)")
     ->RangeMultiplier(2)
     ->Range(2, 256);
 

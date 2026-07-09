@@ -18,7 +18,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     llvm.store %6, %5 : i32, !llvm.ptr
     %10 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "threads"}
     %11 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "a"}
-    omp.target map_entries(%10 -> %arg0, %11 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%10 -> %arg0, %11 -> %arg1 : !llvm.ptr, !llvm.ptr) {
       %12 = llvm.mlir.constant(1 : i32) : i32
       %13 = llvm.load %arg0 : !llvm.ptr -> i32
       omp.parallel num_threads(%13 : i32) {

@@ -2,8 +2,8 @@
 // REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +altivec -target-feature +vsx \
 // RUN:   -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1  -flax-vector-conversions=none -target-feature +altivec -target-feature +vsx \
-// RUN:   -target-feature +power8-vector -triple powerpc64le-unknown-unknown \
+// RUN: %clang_cc1  -flax-vector-conversions=none \
+// RUN:   -target-feature +power8-vector -target-feature +isa-v207-instructions -triple powerpc64le-unknown-unknown \
 // RUN:   -emit-llvm %s -o - | FileCheck %s -check-prefixes=CHECK,CHECK-P8
 #include <altivec.h>
 
