@@ -24,7 +24,7 @@ typedef enum {
 typedef struct {
   const char *IsaName;
   bool SrameccSupported;
-  bool XnackSupported;
+  bool XNACKOnOffModes;
   bool NeedsCOV6;
 } isa_features_t;
 
@@ -142,7 +142,7 @@ bool getExpectedIsaName(unsigned CodeObjectVersion, const char *IsaName,
       }
     }
 
-    if (strncmp(Token, "xnack", strlen("xnack")) == 0 && Isa->XnackSupported) {
+    if (strncmp(Token, "xnack", strlen("xnack")) == 0 && Isa->XNACKOnOffModes) {
       switch (Token[strlen("xnack")]) {
       case '-':
         Xnack = off;
@@ -177,7 +177,7 @@ bool getExpectedIsaName(unsigned CodeObjectVersion, const char *IsaName,
             MAX_ISA_NAME_SIZE - strlen(ExpectedIsaName));
   }
 
-  if (Isa->XnackSupported && Xnack != any) {
+  if (Isa->XNACKOnOffModes && Xnack != any) {
     strncat(ExpectedIsaName, Xnack == on ? ":xnack+" : ":xnack-",
             MAX_ISA_NAME_SIZE - strlen(ExpectedIsaName));
   }
@@ -357,12 +357,12 @@ int main(int argc, char *argv[]) {
           testIsaName(IsaName, ":sramecc-");
         }
 
-        if (IsaFeatures[I].XnackSupported) {
+        if (IsaFeatures[I].XNACKOnOffModes) {
           testIsaName(IsaName, ":xnack+");
           testIsaName(IsaName, ":xnack-");
         }
 
-        if (IsaFeatures[I].SrameccSupported && IsaFeatures[I].XnackSupported) {
+        if (IsaFeatures[I].SrameccSupported && IsaFeatures[I].XNACKOnOffModes) {
           testIsaName(IsaName, ":sramecc+:xnack+");
           testIsaName(IsaName, ":sramecc+:xnack-");
           testIsaName(IsaName, ":sramecc-:xnack+");

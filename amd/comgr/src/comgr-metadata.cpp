@@ -275,7 +275,7 @@ struct IsaInfo {
   const char *IsaName;
   const char *Processor;
   bool SrameccSupported;
-  bool XnackSupported;
+  bool XNACKOnOffModes;
   unsigned ElfMachine;
   bool TrapHandlerEnabled;
   bool ImageSupport;
@@ -293,7 +293,7 @@ struct IsaInfo {
   unsigned AddressableNumVGPRs;
 } IsaInfos[] = {
 #define HANDLE_ISA(TARGET_TRIPLE, PROCESSOR, SRAMECC_SUPPORTED,                \
-                   XNACK_SUPPORTED, ELF_MACHINE, TRAP_HANDLER_ENABLED,         \
+                   XNACK_ON_OFF_MODES, ELF_MACHINE, TRAP_HANDLER_ENABLED,      \
                    IMAGE_SUPPORT, LDS_SIZE, LDS_BANK_COUNT, EUS_PER_CU,        \
                    MAX_WAVES_PER_CU, MAX_FLAT_WORK_GROUP_SIZE,                 \
                    SGPR_ALLOC_GRANULE, TOTAL_NUM_SGPRS, ADDRESSABLE_NUM_SGPRS, \
@@ -301,7 +301,7 @@ struct IsaInfo {
   {TARGET_TRIPLE "-" PROCESSOR,                                                \
    PROCESSOR,                                                                  \
    SRAMECC_SUPPORTED,                                                          \
-   XNACK_SUPPORTED,                                                            \
+   XNACK_ON_OFF_MODES,                                                         \
    ELF::ELF_MACHINE,                                                           \
    TRAP_HANDLER_ENABLED,                                                       \
    IMAGE_SUPPORT,                                                              \
@@ -332,7 +332,7 @@ typedef struct amdgpu_hsa_note_code_object_version_s {
 // NOLINTNEXTLINE(readability-identifier-naming)
 namespace {
 bool getMachInfo(unsigned Mach, std::string &Processor, bool &SrameccSupported,
-                 bool &XnackSupported) {
+                 bool &XNACKOnOffModes) {
   auto *IsaIterator = std::find_if(
       std::begin(IsaInfos), std::end(IsaInfos),
       [Mach](const IsaInfo &IsaInfo) { return Mach == IsaInfo.ElfMachine; });
@@ -342,7 +342,7 @@ bool getMachInfo(unsigned Mach, std::string &Processor, bool &SrameccSupported,
 
   Processor = IsaIterator->Processor;
   SrameccSupported = IsaIterator->SrameccSupported;
-  XnackSupported = IsaIterator->XnackSupported;
+  XNACKOnOffModes = IsaIterator->XNACKOnOffModes;
   return true;
 }
 
@@ -367,9 +367,9 @@ amd_comgr_status_t getElfIsaNameFromElfHeader(const ELFObjectFile<ELFT> *Obj,
   ElfIsaName += "--";
 
   std::string Processor;
-  bool SrameccSupported, XnackSupported;
+  bool SrameccSupported, XNACKOnOffModes;
   if (!getMachInfo(ElfHeader.e_flags & ELF::EF_AMDGPU_MACH, Processor,
-                   SrameccSupported, XnackSupported)) {
+                   SrameccSupported, XNACKOnOffModes)) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
   ElfIsaName += Processor;
@@ -440,7 +440,7 @@ bool isSupportedFeature(size_t IsaIndex, StringRef Feature) {
   }
 
   return (Feature.drop_back() == "xnack" &&
-          IsaInfos[IsaIndex].XnackSupported) ||
+          IsaInfos[IsaIndex].XNACKOnOffModes) ||
          (Feature.drop_back() == "sramecc" &&
           IsaInfos[IsaIndex].SrameccSupported);
 }
@@ -474,7 +474,7 @@ amd_comgr_status_t getIsaMetadata(StringRef IsaName,
   Root["Version"] = Doc.getNode("1.0.0", /*Copy=*/true);
 
   auto FeaturesNode = Doc.getMapNode();
-  if (IsaInfos[IsaIndex].XnackSupported) {
+  if (IsaInfos[IsaIndex].XNACKOnOffModes) {
     FeaturesNode["xnack"] = Doc.getNode("any", /*Copy=*/true);
   }
   if (IsaInfos[IsaIndex].SrameccSupported) {
