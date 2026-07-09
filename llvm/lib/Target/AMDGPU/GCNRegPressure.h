@@ -121,6 +121,10 @@ struct GCNRegPressure {
   }
   unsigned getSGPRTuplesWeight() const { return Value[TOTAL_KINDS + SGPR]; }
 
+  unsigned getMaxSGPR() const {
+    return std::max(getSGPRNum(), getSGPRTuplesWeight());
+  }
+
   unsigned getOccupancy(const GCNSubtarget &ST,
                         unsigned DynamicVGPRBlockSize) const {
     return std::min(ST.getOccupancyWithNumSGPRs(getSGPRNum()),

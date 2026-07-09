@@ -1,0 +1,66 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs %s -o - -run-pass=amdgpu-hot-block-remat -amdgpu-remat-aggressive | FileCheck %s
+
+# Instructions that define $scc (S_NOT_B32) are sunk to their users, and the
+# SCC-smash guard finds/creates a safe insertion point.
+# CHECK: bb.0:
+# CHECK-NOT: S_NOT_B32
+# CHECK: bb.2:
+# CHECK: S_NOT_B32 0
+# CHECK: S_NOT_B32 1
+# CHECK: S_NOT_B32 2
+# CHECK: S_NOT_B32 3
+# CHECK: S_NOT_B32 4
+# CHECK: S_NOT_B32 5
+# CHECK: S_NOT_B32 6
+# CHECK: S_NOT_B32 7
+
+--- |
+  define amdgpu_ps void @main() {
+    ret void
+  }
+...
+---
+name:            main
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    %v0:vreg_1024 = IMPLICIT_DEF
+    %v1:vreg_1024 = IMPLICIT_DEF
+    %v2:vreg_1024 = IMPLICIT_DEF
+    %v3:vreg_1024 = IMPLICIT_DEF
+
+    %t0:sgpr_32 = S_NOT_B32 0, implicit-def $scc
+    %t2:sgpr_32 = S_NOT_B32 1, implicit-def $scc
+    %t4:sgpr_32 = S_NOT_B32 2, implicit-def $scc
+    %t6:sgpr_32 = S_NOT_B32 3, implicit-def $scc
+    %t8:sgpr_32 = S_NOT_B32 4, implicit-def $scc
+    %t10:sgpr_32 = S_NOT_B32 5, implicit-def $scc
+    %t12:sgpr_32 = S_NOT_B32 6, implicit-def $scc
+    %t14:sgpr_32 = S_NOT_B32 7, implicit-def $scc
+
+    %cmp:sreg_32_xm0 = V_CMP_GT_F32_e64 0, 0, 0, %v0.sub0, 0, implicit $exec, implicit $mode
+    $exec_lo = S_MOV_B32_term %cmp:sreg_32_xm0
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+    S_BRANCH %bb.2
+
+  bb.2:
+    KILL %t0
+    KILL %t2
+    KILL %t4
+    KILL %t6
+    KILL %t8
+    KILL %t10
+    KILL %t12
+    KILL %t14
+
+    KILL %v0
+    KILL %v1
+    KILL %v2
+    KILL %v3
+    S_ENDPGM 0
+...

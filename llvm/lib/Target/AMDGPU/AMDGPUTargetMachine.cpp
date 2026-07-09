@@ -427,6 +427,13 @@ static bool isLTOPreLink(ThinOrFullLTOPhase Phase) {
 }
 } // anonymous namespace
 
+// Enable the hot block rematerialization pass.
+static cl::opt<bool> EnableHotBlockRemat(
+    "amdgpu-enable-hot-block-remat",
+    cl::desc("Enable hot block rematerialize optimization"),
+    cl::init(false),
+    cl::Hidden);
+
 static cl::opt<bool, true> EnableObjectLinking(
     "amdgpu-enable-object-linking",
     cl::desc("Enable object linking for cross-TU LDS and ABI support"),
@@ -563,7 +570,11 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
   initializeAMDGPUPreloadKernelArgumentsLegacyPass(*PR);
   initializeAMDGPUUniformIntrinsicCombineLegacyPass(*PR);
+<<<<<<< HEAD
   initializeSIPostRA16BitMovFoldingLegacyPass(*PR);
+=======
+  initializeAMDGPUHotBlockRematerializePass(*PR);
+>>>>>>> f87912c91661 (Initial pass)
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -1687,6 +1698,11 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // compilation time, so we only enable it from O2.
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
     insertPass(EndOfPreRA, &SIFormMemoryClausesID);
+
+  // Rematerialize must run before PHI elimination so it can move virtual
+  // register defs freely on SSA MachineIR.
+  if (isPassEnabled(EnableHotBlockRemat))
+    addPass(&AMDGPUHotBlockRematerializeID);
 
   TargetPassConfig::addOptimizedRegAlloc();
 }
