@@ -66,6 +66,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Debug.h"
 
 namespace mlir {
@@ -92,8 +93,9 @@ private:
   void convertHostRegion(Operation *computeOp, Region &region);
 
   template <typename OpTy>
-  void lowerIfClauseForComputeConstruct(OpTy computeConstructOp,
-                                        SmallVector<Operation *> &eraseOps);
+  void lowerIfClauseForComputeConstruct(
+      OpTy computeConstructOp, SmallVector<Operation *> &eraseOps,
+      llvm::SetVector<Operation *> &condEraseOps);
 
 public:
   void runOnOperation() override;
@@ -122,7 +124,8 @@ void ACCIfClauseLowering::convertHostRegion(Operation *computeOp,
 // constructs
 template <typename OpTy>
 void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
-    OpTy computeConstructOp, SmallVector<Operation *> &eraseOps) {
+    OpTy computeConstructOp, SmallVector<Operation *> &eraseOps,
+    llvm::SetVector<Operation *> &condEraseOps) {
   Value ifCond = computeConstructOp.getIfCond();
   if (!ifCond)
     return;
@@ -141,18 +144,33 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
   SmallVector<Operation *> privateOps;
   SmallVector<Operation *> reductionOps;
 
+  // A data entry op is "externally owned" when it is also used by a construct
+  // that encloses this one (e.g. an acc.data wrapping this compute construct
+  // that shares the same data entry op). Such ops - and their data exit ops -
+  // belong to the enclosing construct and must not be cloned or erased here.
+  auto isExternallyOwned = [&](Operation *dataOp) {
+    for (Operation *user : dataOp->getUsers())
+      for (Operation *anc = computeConstructOp->getParentOp(); anc;
+           anc = anc->getParentOp())
+        if (anc == user)
+          return true;
+    return false;
+  };
+
   // Collect data entry operations
   for (Value operand : computeConstructOp.getDataClauseOperands())
     if (Operation *defOp = operand.getDefiningOp())
       if (isa<ACC_DATA_ENTRY_OPS>(defOp))
         dataEntryOps.push_back(defOp);
 
-  // Find corresponding exit operations for each entry operation.
+  // Find corresponding exit operations for each local entry operation. Exit ops
+  // of externally owned entry ops belong to the enclosing construct.
   // Iterate backwards through entry ops since exit ops appear in reverse order.
   for (Operation *dataEntryOp : llvm::reverse(dataEntryOps))
-    for (Operation *user : dataEntryOp->getUsers())
-      if (isa<ACC_DATA_EXIT_OPS>(user))
-        dataExitOps.push_back(user);
+    if (!isExternallyOwned(dataEntryOp))
+      for (Operation *user : dataEntryOp->getUsers())
+        if (isa<ACC_DATA_EXIT_OPS>(user))
+          dataExitOps.push_back(user);
 
   // Collect firstprivate, private, and reduction operations
   auto collectOps = [&](SmallVector<Operation *> &ops, OperandRange operands) {
@@ -191,7 +209,17 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
       deviceMapping.map(op->getResult(0), clonedOp->getResult(0));
     }
   };
-  cloneAndMapOps(dataEntryOps, deviceDataOperands);
+  // Local data entry ops are cloned into the device path; externally owned ones
+  // (mapped by an enclosing construct such as acc.data) are referenced directly.
+  for (Operation *op : dataEntryOps) {
+    if (isExternallyOwned(op)) {
+      deviceDataOperands.push_back(op->getResult(0));
+      continue;
+    }
+    Operation *clonedOp = rewriter.clone(*op, deviceMapping);
+    deviceDataOperands.push_back(clonedOp->getResult(0));
+    deviceMapping.map(op->getResult(0), clonedOp->getResult(0));
+  }
   cloneAndMapOps(firstprivateOps, firstprivateOperands);
   cloneAndMapOps(privateOps, privateOperands);
   cloneAndMapOps(reductionOps, reductionOperands);
@@ -247,18 +275,23 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
   for (Operation *dataOp : dataExitOps)
     eraseOps.push_back(dataOp);
 
-  // The new host code may contain uses of the acc variables. Replace them by
-  // the host values.
-  auto replaceAndEraseOps = [&](SmallVector<Operation *> &ops) {
+  // The host (else) region may contain uses of the acc variables. Redirect
+  // only those host-side uses to the host values. Other uses (e.g. an enclosing
+  // acc.data that shares the same data entry op) must be preserved, so these ops
+  // are only erased once they have no remaining users.
+  Region &elseRegion = ifOp.getElseRegion();
+  auto replaceHostUsesAndScheduleErase = [&](SmallVector<Operation *> &ops) {
     for (Operation *op : ops) {
-      getAccVar(op).replaceAllUsesWith(getVar(op));
-      eraseOps.push_back(op);
+      getAccVar(op).replaceUsesWithIf(getVar(op), [&](OpOperand &use) {
+        return elseRegion.isAncestor(use.getOwner()->getParentRegion());
+      });
+      condEraseOps.insert(op);
     }
   };
-  replaceAndEraseOps(dataEntryOps);
-  replaceAndEraseOps(firstprivateOps);
-  replaceAndEraseOps(privateOps);
-  replaceAndEraseOps(reductionOps);
+  replaceHostUsesAndScheduleErase(dataEntryOps);
+  replaceHostUsesAndScheduleErase(firstprivateOps);
+  replaceHostUsesAndScheduleErase(privateOps);
+  replaceHostUsesAndScheduleErase(reductionOps);
 }
 
 void ACCIfClauseLowering::runOnOperation() {
@@ -266,17 +299,24 @@ void ACCIfClauseLowering::runOnOperation() {
   accSupport = &getAnalysis<OpenACCSupport>();
 
   SmallVector<Operation *> eraseOps;
+  llvm::SetVector<Operation *> condEraseOps;
   funcOp.walk([&](Operation *op) {
     if (auto parallelOp = dyn_cast<acc::ParallelOp>(op))
-      lowerIfClauseForComputeConstruct(parallelOp, eraseOps);
+      lowerIfClauseForComputeConstruct(parallelOp, eraseOps, condEraseOps);
     else if (auto kernelsOp = dyn_cast<acc::KernelsOp>(op))
-      lowerIfClauseForComputeConstruct(kernelsOp, eraseOps);
+      lowerIfClauseForComputeConstruct(kernelsOp, eraseOps, condEraseOps);
     else if (auto serialOp = dyn_cast<acc::SerialOp>(op))
-      lowerIfClauseForComputeConstruct(serialOp, eraseOps);
+      lowerIfClauseForComputeConstruct(serialOp, eraseOps, condEraseOps);
   });
 
   for (Operation *op : eraseOps)
     op->erase();
+  // Data entry/private/reduction ops may be shared with other constructs (e.g.
+  // an enclosing acc.data). Erase them only after their users are gone, in
+  // reverse insertion order so consumers are removed before producers.
+  for (Operation *op : llvm::reverse(condEraseOps))
+    if (op->use_empty())
+      op->erase();
 }
 
 } // namespace

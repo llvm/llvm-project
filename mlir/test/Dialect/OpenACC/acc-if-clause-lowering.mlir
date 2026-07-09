@@ -406,3 +406,39 @@ func.func @test_parallel_if_atomic_capture(%x: memref<i32>, %v: memref<i32>, %co
   }
   return
 }
+
+// -----
+
+// A data entry op (acc.present) shared by an enclosing acc.data and a nested
+// acc.kernels that has an if clause. Lowering the kernels' if clause must not
+// erase or rewrite the present op that acc.data still uses (otherwise acc.data
+// ends up with a non data-entry op as its data operand and fails to verify).
+// CHECK-LABEL: func.func @test_kernels_if_shared_present
+func.func @test_kernels_if_shared_present(%arg0: memref<10xi32>, %cond: i1) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  // CHECK: %[[PRESENT:.*]] = acc.present varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  %present = acc.present varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  // The enclosing acc.data must keep referencing the original present op.
+  // CHECK: acc.data dataOperands(%[[PRESENT]] : memref<10xi32>) {
+  acc.data dataOperands(%present : memref<10xi32>) {
+    // CHECK: scf.if %{{.*}} {
+    // The externally owned present op is referenced directly, not cloned/erased.
+    // CHECK-NOT: acc.present
+    // CHECK:   acc.kernels dataOperands(%[[PRESENT]] : memref<10xi32>)
+    // CHECK: } else {
+    // Host path uses the original variable, not the present result.
+    // CHECK:   memref.store %{{.*}}, %arg0[%{{.*}}] : memref<10xi32>
+    // CHECK: }
+    acc.kernels dataOperands(%present : memref<10xi32>) if(%cond) {
+      scf.for %i = %c0 to %c10 step %c1 {
+        memref.store %c0_i32, %present[%i] : memref<10xi32>
+      }
+      acc.terminator
+    }
+    acc.terminator
+  }
+  return
+}
