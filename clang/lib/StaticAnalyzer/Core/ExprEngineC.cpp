@@ -274,8 +274,12 @@ void ExprEngine::VisitCastExpr(const CastExpr *CastE, ExplodedNode *Pred,
 
       if (const MemRegion *MR = State->getSVal(Ex, SF).getAsRegion()) {
         SVal OrigV = State->getSVal(MR);
-        CastedV = svalBuilder.evalCast(svalBuilder.simplifySVal(State, OrigV),
-                                       CastE->getType(), Ex->getType());
+        // __builtin_bit_cast reinterprets raw bits. We cannot model this
+        // for floating-point values because evalCast performs a value
+        // conversion, not a bit reinterpretation.
+        if (!OrigV.getAs<nonloc::ConcreteFloat>())
+          CastedV = svalBuilder.evalCast(svalBuilder.simplifySVal(State, OrigV),
+                                         CastE->getType(), Ex->getType());
       }
       Dst.insert(Engine.makeNodeWithBinding(Node, CastE, CastedV));
     }
