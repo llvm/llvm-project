@@ -375,6 +375,9 @@ class DeviceImageTy {
   /// The managed image data.
   std::unique_ptr<MemoryBuffer> Image;
 
+  /// An optional buffer for an IR image.
+  std::unique_ptr<MemoryBuffer> DeviceIRImage;
+
   /// Reference to the device this image is loaded on.
   GenericDeviceTy &Device;
 
@@ -401,6 +404,21 @@ public:
   MemoryBufferRef getMemoryBuffer() const {
     return MemoryBufferRef(StringRef((const char *)getStart(), getSize()),
                            "Image");
+  }
+
+  /// Get a memory buffer reference to the whole IR image.
+  MemoryBufferRef getIRImageMemoryBuffer() const {
+    if (DeviceIRImage)
+      return MemoryBufferRef(*DeviceIRImage);
+
+    return MemoryBufferRef();
+  }
+
+  bool hasIRImage() const { return DeviceIRImage != nullptr; }
+
+  /// Set the IR image.
+  void setIRImage(std::unique_ptr<MemoryBuffer> ImageBuffer) {
+    DeviceIRImage = std::move(ImageBuffer);
   }
 };
 

@@ -182,9 +182,10 @@ __global__ void endpgm() {
 // CHECK-NEXT:    store i64 [[B:%.*]], ptr [[B_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[B_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.amdgcn.icmp.i64.i64(i64 [[TMP0]], i64 [[TMP1]], i32 35)
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[OUT_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    store i64 [[TMP2]], ptr [[TMP3]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[TMP0]], [[TMP1]]
+// CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i64 [[TMP3]], ptr [[TMP4]], align 8
 // CHECK-NEXT:    ret void
 //
 __global__ void test_uicmp_i64(unsigned long long *out, unsigned long long a, unsigned long long b)
