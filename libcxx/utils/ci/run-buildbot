@@ -147,23 +147,6 @@ function require-env-var() {
     fi
 }
 
-function detect-lit() {
-    if [[ -x "${BUILD_DIR}/bin/llvm-lit" ]]; then
-        LIT_RUNNER=("${BUILD_DIR}/bin/llvm-lit")
-    elif command -v llvm-lit >/dev/null 2>&1; then
-        LIT_RUNNER=("$(command -v llvm-lit)")
-    else
-        LIT_RUNNER=(python3 "${MONOREPO_ROOT}/llvm/utils/lit/lit.py")
-    fi
-}
-
-function run-smoke-test() {
-    local test_dir="${1}"
-    local filter="${2}"
-    step "Running smoke test ${filter}"
-    "${LIT_RUNNER[@]}" -j1 -sv --show-xfail --show-unsupported --filter="${filter}" "${test_dir}"
-}
-
 function ohos-lit-args() {
     local args="-j1 -sv --xunit-xml-output test-results.xml --time-tests"
     if python3 -c 'import psutil' >/dev/null 2>&1; then
@@ -902,20 +885,6 @@ ohos-aarch64-full|ohos-hdc-aarch64-full)
     generate-cmake-ohos-hdc
 
     check-runtimes
-;;
-ohos-aarch64-smoke|ohos-hdc-aarch64-smoke)
-    clean
-
-    generate-cmake-ohos-hdc
-
-    step "Building the OHOS smoke test dependencies"
-    ninja -vC "${BUILD_DIR}" cxx-test-depends cxxabi-test-depends unwind-test-depends
-
-    detect-lit
-    run-smoke-test "${BUILD_DIR}/libcxxabi/test" 'thread_local_destruction_order.pass.cpp'
-    run-smoke-test "${BUILD_DIR}/libunwind/test" 'bad_unwind_info.pass.cpp'
-    run-smoke-test "${BUILD_DIR}/libunwind/test" 'signal_unwind.pass.cpp'
-    run-smoke-test "${BUILD_DIR}/libcxx/test" 'clocale.pass.cpp'
 ;;
 #################################################################
 # Insert vendor-specific internal configurations below.
