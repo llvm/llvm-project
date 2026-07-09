@@ -14,6 +14,8 @@
 // <atomic>
 
 #include <atomic>
+#include <cassert>
+#include <chrono>
 #include <functional>
 #include <thread>
 #include <vector>
@@ -38,8 +40,10 @@ int main(int, char**) {
 
     auto notify = [&] {
       for (int i = 0; i < num_iterations; ++i) {
-        while (waiter_ready.load() < num_waiters) {
-        }
+        assert(std::__libcpp_thread_poll_with_backoff(
+                   [&]() -> bool { return waiter_ready.load() == num_waiters; },
+                   std::__libcpp_timed_backoff_policy(),
+                   std::chrono::seconds(1)) == std::__poll_with_backoff_results::__poll_success);
         waiter_ready.store(0);
         state.fetch_add(1);
         state.notify_all();
