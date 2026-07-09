@@ -4124,6 +4124,7 @@ BinaryFunction::iterator BinaryFunction::insertBasicBlocks(
 void BinaryFunction::updateBBIndices(const unsigned StartIndex) {
   for (unsigned I = StartIndex; I < BasicBlocks.size(); ++I)
     BasicBlocks[I]->Index = I;
+  ++BlockNumberEpoch;
 }
 
 void BinaryFunction::updateCFIState(BinaryBasicBlock *Start,

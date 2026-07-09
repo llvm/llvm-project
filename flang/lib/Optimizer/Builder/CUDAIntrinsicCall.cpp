@@ -640,22 +640,12 @@ static constexpr IntrinsicHandler cudaHandlers[]{
      {{}},
      /*isElemental=*/false},
 };
+static_assert(fir::isSorted(cudaHandlers) && "map must be sorted");
 
-template <std::size_t N>
-static constexpr bool isSorted(const IntrinsicHandler (&array)[N]) {
-  // Replace by std::sorted when C++20 is default (will be constexpr).
-  const IntrinsicHandler *lastSeen{nullptr};
-  bool isSorted{true};
-  for (const auto &x : array) {
-    if (lastSeen)
-      isSorted &= std::string_view{lastSeen->name} < std::string_view{x.name};
-    lastSeen = &x;
-  }
-  return isSorted;
-}
-static_assert(isSorted(cudaHandlers) && "map must be sorted");
-
-const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name) {
+const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name,
+                                                 bool isBindcCall) {
+  if (isBindcCall)
+    return nullptr;
   auto compare = [](const IntrinsicHandler &cudaHandler, llvm::StringRef name) {
     return name.compare(cudaHandler.name) > 0;
   };

@@ -1329,10 +1329,23 @@ def COS_APPROX_f32 :
   BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$src), (ins FTZFlag:$ftz),
                       "cos.approx$ftz.f32",
                       [(set f32:$dst, (UnaryOpAllowsApproxFn<fcos> f32:$src))]>;
-def TANH_APPROX_f32 :
-  BasicNVPTXInst<(outs B32:$dst), (ins B32:$src), "tanh.approx.f32",
-                 [(set f32:$dst, (UnaryOpAllowsApproxFn<ftanh> f32:$src))]>,
-                 Requires<[hasPTX<70>, hasSM<75>]>;
+
+class FTANHInst<RegTyInfo t> :
+      BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src),
+                "tanh.approx." # t.PtxType,
+                [(set t.Ty:$dst, (UnaryOpAllowsApproxFn<ftanh> t.Ty:$src))]>;
+
+def TANH_APPROX_f32 : FTANHInst<F32RT>,
+                      Requires<[hasPTX<70>, hasSM<75>]>;
+
+let Predicates = [useFP16Math, hasPTX<70>, hasSM<75>] in {
+  def TANH_APPROX_f16   : FTANHInst<F16RT>;
+  def TANH_APPROX_f16x2 : FTANHInst<F16X2RT>;
+}
+let Predicates = [hasPTX<78>, hasSM<90>] in {
+  def TANH_APPROX_bf16   : FTANHInst<BF16RT>;
+  def TANH_APPROX_bf16x2 : FTANHInst<BF16X2RT>;
+}
 
 //-----------------------------------
 // Bitwise operations

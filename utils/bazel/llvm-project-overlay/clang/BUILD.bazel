@@ -1300,9 +1300,14 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ast",
+        ":ast_matchers",
         ":basic",
+        ":dependency_scanning",
         ":frontend",
+        ":support",
         ":tooling_core",
+        "//llvm:Option",
+        "//llvm:Support",
     ],
 )
 
@@ -1328,7 +1333,6 @@ cc_library(
         ":rewrite",
         ":support",
         ":tooling_core",
-        ":tooling_headers",
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
