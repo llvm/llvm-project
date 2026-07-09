@@ -1257,7 +1257,7 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, unsigned NameID,
     return error(NameLoc,
                  "symbol with local linkage cannot have a DLL storage class");
 
-  Type *Ty;
+  Type *Ty = nullptr;
   LocTy ExplicitTypeLoc = Lex.getLoc();
   if (parseType(Ty) ||
       parseToken(lltok::comma, "expected comma after alias or ifunc's type"))
@@ -4747,7 +4747,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     bool HasInRange = false;
     APSInt InRangeStart;
     APSInt InRangeEnd;
-    Type *Ty;
+    Type *Ty = nullptr;
     Lex.Lex();
 
     if (Opc == Instruction::GetElementPtr) {
@@ -6749,7 +6749,7 @@ bool LLParser::parseMetadataAsValue(Value *&V, PerFunctionState &PFS) {
 ///  ::= i32 7
 bool LLParser::parseValueAsMetadata(Metadata *&MD, const Twine &TypeMsg,
                                     PerFunctionState *PFS) {
-  Type *Ty;
+  Type *Ty = nullptr;
   LocTy Loc;
   if (parseType(Ty, TypeMsg, Loc))
     return true;
@@ -8112,7 +8112,7 @@ bool LLParser::parseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
   // If RetType is a non-function pointer type, then this is the short syntax
   // for the call, which means that RetType is just the return type.  Infer the
   // rest of the function argument types from the arguments that are present.
-  FunctionType *Ty;
+  FunctionType *Ty = nullptr;
   if (resolveFunctionType(RetType, ArgList, Ty))
     return error(RetTypeLoc, "Invalid result type for LLVM function");
 
@@ -8426,7 +8426,7 @@ bool LLParser::parseCallBr(Instruction *&Inst, PerFunctionState &PFS) {
   // If RetType is a non-function pointer type, then this is the short syntax
   // for the call, which means that RetType is just the return type.  Infer the
   // rest of the function argument types from the arguments that are present.
-  FunctionType *Ty;
+  FunctionType *Ty = nullptr;
   if (resolveFunctionType(RetType, ArgList, Ty))
     return error(RetTypeLoc, "Invalid result type for LLVM function");
 
@@ -8818,7 +8818,7 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
   // If RetType is a non-function pointer type, then this is the short syntax
   // for the call, which means that RetType is just the return type.  Infer the
   // rest of the function argument types from the arguments that are present.
-  FunctionType *Ty;
+  FunctionType *Ty = nullptr;
   if (resolveFunctionType(RetType, ArgList, Ty))
     return error(RetTypeLoc, "Invalid result type for LLVM function");
 
@@ -8983,7 +8983,7 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
     Lex.Lex();
   }
 
-  Type *Ty;
+  Type *Ty = nullptr;
   LocTy ExplicitTypeLoc = Lex.getLoc();
   if (parseType(Ty) ||
       parseToken(lltok::comma, "expected comma after load's type") ||
