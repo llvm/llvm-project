@@ -120,9 +120,9 @@
 using namespace llvm;
 
 // This must be consistent with ShadowWidthBits.
-static const Align ShadowTLSAlignment = Align(2);
+static constexpr Align ShadowTLSAlignment = Align(2);
 
-static const Align MinOriginAlignment = Align(4);
+static constexpr Align MinOriginAlignment = Align(4);
 
 // The size of TLS variables. These constants must be kept in sync with the ones
 // in dfsan.cpp.
