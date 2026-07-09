@@ -1072,7 +1072,7 @@ class BinOpSameOpcodeHelper {
   /// the instruction is neither Sub, FSub, Shl, nor AShr, we then check the
   /// left hand side (0).
   static std::pair<Constant *, unsigned>
-  isBinOpWithConstantInt(const Instruction *I) {
+  isBinOpWithConstant(const Instruction *I) {
     unsigned Opcode = I->getOpcode();
     assert(binary_search(SupportedOp, Opcode) && "Unsupported opcode.");
     (void)SupportedOp;
@@ -1189,7 +1189,7 @@ class BinOpSameOpcodeHelper {
       if (FromOpcode == ToOpcode)
         return SmallVector<Value *>(I->operands());
       assert(binary_search(SupportedOp, ToOpcode) && "Unsupported opcode.");
-      auto [C, Pos] = isBinOpWithConstantInt(I);
+      auto [C, Pos] = isBinOpWithConstant(I);
       Type *RHSType = I->getOperand(Pos)->getType();
       Constant *RHS;
       if (auto *CFP = dyn_cast<ConstantFP>(C)) {
@@ -1324,7 +1324,7 @@ public:
              (initializeAltOp(I) && AltOp.equal(Opcode));
     }
     MaskType InterchangeableMask = OpcodeInMaskForm;
-    auto [C, Pos] = isBinOpWithConstantInt(I);
+    auto [C, Pos] = isBinOpWithConstant(I);
     if (auto *CI = dyn_cast_or_null<ConstantInt>(C)) {
       constexpr MaskType CanBeAll =
           XorBIT | OrBIT | AndBIT | SubBIT | AddBIT | MulBIT | AShrBIT | ShlBIT;
