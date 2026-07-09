@@ -25,9 +25,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
-// Reserve an address that indicates a value that is known to be "undef".
-static VNInfo UndefVNI(0xbad, SlotIndex());
-
 static void createDeadDef(SlotIndexes &Indexes, VNInfo::Allocator &Alloc,
                           LiveRange &LR, const MachineOperand &MO) {
   const MachineInstr &MI = *MO.getParent();

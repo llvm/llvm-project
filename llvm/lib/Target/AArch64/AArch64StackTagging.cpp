@@ -88,7 +88,7 @@ static cl::opt<StackTaggingRecordStackHistoryMode> ClRecordStackHistory(
                                 "storing into the stack ring buffer")),
     cl::Hidden, cl::init(none));
 
-static const Align kTagGranuleSize = Align(16);
+static constexpr Align kTagGranuleSize = Align(16);
 
 namespace {
 

@@ -921,6 +921,29 @@ public:
   }
 };
 
+/// Converts the GLSL clamp ops (FClamp, SClamp, UClamp) into a nested
+/// min/max sequence, following the op semantics `min(max(x, minVal), maxVal)`.
+template <typename SPIRVOp, typename LLVMMinOp, typename LLVMMaxOp>
+class ClampPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value max = LLVMMaxOp::create(rewriter, loc, dstType, adaptor.getX(),
+                                  adaptor.getY());
+    rewriter.template replaceOpWithNewOp<LLVMMinOp>(op, dstType, max,
+                                                    adaptor.getZ());
+    return success();
+  }
+};
+
 /// Converts `spirv.Load` and `spirv.Store` to LLVM dialect.
 template <typename SPIRVOp>
 class LoadStorePattern : public SPIRVToLLVMConversion<SPIRVOp> {
@@ -1021,6 +1044,18 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(returnValueOp, ArrayRef<Type>(),
                                                 adaptor.getOperands());
+    return success();
+  }
+};
+
+class UnreachablePattern : public SPIRVToLLVMConversion<spirv::UnreachableOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::UnreachableOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::UnreachableOp unreachableOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<LLVM::UnreachableOp>(unreachableOp);
     return success();
   }
 };
@@ -1584,6 +1619,55 @@ public:
   }
 };
 
+/// Converts `spirv.GL.FMix` to `x * (1 - a) + y * a` as specified by
+/// GL.std.450.
+class GLFMixPattern : public SPIRVToLLVMConversion<spirv::GLFMixOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::GLFMixOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::GLFMixOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value x = adaptor.getX();
+    Value y = adaptor.getY();
+    Value a = adaptor.getA();
+    Value one = createFPConstant(loc, op.getType(), dstType, rewriter, 1.0);
+    Value oneMinusA = LLVM::FSubOp::create(rewriter, loc, dstType, one, a);
+    Value lhs = LLVM::FMulOp::create(rewriter, loc, dstType, x, oneMinusA);
+    Value rhs = LLVM::FMulOp::create(rewriter, loc, dstType, y, a);
+    rewriter.replaceOpWithNewOp<LLVM::FAddOp>(op, dstType, lhs, rhs);
+    return success();
+  }
+};
+
+/// Converts `spirv.CL.mix` to `fma(a, y - x, x)`. The OpenCL spec defines
+/// mix as `x + (y - x) * a` and explicitly permits FMA contractions.
+class CLMixPattern : public SPIRVToLLVMConversion<spirv::CLMixOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::CLMixOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::CLMixOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value x = adaptor.getX();
+    Value y = adaptor.getY();
+    Value a = adaptor.getZ();
+    Value diff = LLVM::FSubOp::create(rewriter, loc, dstType, y, x);
+    rewriter.replaceOpWithNewOp<LLVM::FMAOp>(op, dstType, a, diff, x);
+    return success();
+  }
+};
+
 // Converts spirv.GL.Radians (scale = pi/180) and spirv.GL.Degrees
 // (scale = 180/pi) by multiplying the operand by a compile-time constant.
 template <typename SPIRVOp>
@@ -1946,6 +2030,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLFAbsOp, LLVM::FAbsOp>,
       DirectConversionPattern<spirv::GLFloorOp, LLVM::FFloorOp>,
       DirectConversionPattern<spirv::GLFmaOp, LLVM::FMAOp>,
+      ClampPattern<spirv::GLFClampOp, LLVM::MinNumOp, LLVM::MaxNumOp>,
+      ClampPattern<spirv::GLSClampOp, LLVM::SMinOp, LLVM::SMaxOp>,
+      ClampPattern<spirv::GLUClampOp, LLVM::UMinOp, LLVM::UMaxOp>,
       DirectConversionPattern<spirv::GLFMaxOp, LLVM::MaxNumOp>,
       DirectConversionPattern<spirv::GLFMinOp, LLVM::MinNumOp>,
       DirectConversionPattern<spirv::GLLogOp, LLVM::LogOp>,
@@ -1966,6 +2053,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLAcosOp, LLVM::ACosOp>,
       DirectConversionPattern<spirv::GLAtanOp, LLVM::ATanOp>,
       InverseSqrtPattern, SAbsPattern, TanPattern, TanhPattern, FractPattern,
+      GLFMixPattern,
 
       // OpenCL extended instruction set ops
       DirectConversionPattern<spirv::CLCeilOp, LLVM::FCeilOp>,
@@ -1998,7 +2086,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::CLSMaxOp, LLVM::SMaxOp>,
       DirectConversionPattern<spirv::CLSMinOp, LLVM::SMinOp>,
       DirectConversionPattern<spirv::CLUMaxOp, LLVM::UMaxOp>,
-      DirectConversionPattern<spirv::CLUMinOp, LLVM::UMinOp>,
+      DirectConversionPattern<spirv::CLUMinOp, LLVM::UMinOp>, CLMixPattern,
 
       // Logical ops
       DirectConversionPattern<spirv::LogicalAndOp, LLVM::AndOp>,
@@ -2024,6 +2112,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
 
       // Return ops
       ReturnPattern, ReturnValuePattern,
+
+      // Unreachable op
+      UnreachablePattern,
 
       // Barrier ops
       ControlBarrierPattern<spirv::ControlBarrierOp>,

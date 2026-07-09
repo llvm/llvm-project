@@ -491,7 +491,6 @@ void SelectionDAGISel::initializeAnalysisResults(
   AC = &FAM.getResult<AssumptionAnalysis>(Fn);
   auto *PSI = MAMP.getCachedResult<ProfileSummaryAnalysis>(*Fn.getParent());
   BlockFrequencyInfo *BFI = nullptr;
-  FAM.getResult<BlockFrequencyAnalysis>(Fn);
   if (PSI && PSI->hasProfileSummary() && RegisterPGOPasses)
     BFI = &FAM.getResult<BlockFrequencyAnalysis>(Fn);
 
