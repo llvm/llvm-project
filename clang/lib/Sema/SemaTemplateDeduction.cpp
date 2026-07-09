@@ -4846,6 +4846,37 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
         /*OriginalCallArgs=*/nullptr, /*PartialOverloading=*/false,
         /*PartialOrdering=*/true, IsAddressOfFunction);
   });
+  // Taking the address of a function template forms its function type, and
+  // substituting into that type can require instantiating a trailing return
+  // type whose expression selects a deleted function. That is a deduction
+  // failure, not a hard error:
+  //
+  // C++ [temp.deduct.funcaddr]p1:
+  //   [...] If there is a target, the function template's function type and
+  //   the target type are used as the types of P and A, and the deduction is
+  //   done as described in [temp.deduct.type].
+  //
+  // C++ [temp.deduct.general]p7:
+  //   [...] The substitution occurs in all types and expressions that are
+  //   used in the deduction substitution loci. The expressions include [...]
+  //   general expressions (i.e., non-constant expressions) inside sizeof,
+  //   decltype, and other contexts that allow non-constant expressions. [...]
+  //
+  // C++ [dcl.fct.def.delete]p2:
+  //   A construct that designates a deleted function implicitly or
+  //   explicitly, other than to declare it [...], is ill-formed.
+  //   [Note: [...] It applies even for references in expressions that are not
+  //   potentially evaluated. - end note]
+  //
+  // C++ [temp.deduct.general]p8:
+  //   If a substitution results in an invalid type or expression, type
+  //   deduction fails. [...] Invalid types and expressions can result in a
+  //   deduction failure only in the immediate context of the deduction
+  //   substitution loci. [...]
+  //
+  // This substitution is in that immediate context, so treat diagnostics
+  // recorded by the SFINAE trap as deduction failure instead of replaying
+  // them as hard errors.
   if (Trap.hasErrorOccurred()) {
     if (Specialization)
       Specialization->setInvalidDecl(true);
