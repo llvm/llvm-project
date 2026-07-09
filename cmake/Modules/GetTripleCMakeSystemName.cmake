@@ -34,9 +34,12 @@ function(get_triple_cmake_system_name triple out_var)
 
   # Check the special environment components first, since it can
   # override the usual OS mapping.
-  if("${_env}" MATCHES "^android")
-    set(${out_var} "Android" PARENT_SCOPE)
-  elseif("${_env}" MATCHES "^cygnus")
+  #
+  # FIXME: Not mapping the android environment to
+  # CMAKE_SYSTEM_NAME=Android, which would then make cmake require an
+  # NDK. Existing android cross builds seem to rely on an assumed
+  # linux host.
+  if("${_env}" MATCHES "^cygnus")
     set(${out_var} "CYGWIN" PARENT_SCOPE)
   elseif("${_os}" MATCHES "^darwin|^macos")
     set(${out_var} "Darwin" PARENT_SCOPE)
