@@ -13639,6 +13639,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
           IsSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE, RHS,
           getConstant(Limit)));
     }
+  }
 
   // On all paths just preceeding, we established the following invariant:
   //   IV can be assumed not to overflow up to and including the exiting
