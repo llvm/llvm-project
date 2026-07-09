@@ -243,7 +243,7 @@ private:
       return __ptr_;
     }
 
-    return std::bit_cast<_Iter>((std::bit_cast<std::uintptr_t>(__ptr_) >> __bits_) << __bits_) + __current_;
+    return std::bit_cast<_Iter>(std::bit_cast<std::uintptr_t>(__ptr_) - __current_) + __current_;
   }
 
   constexpr void __update(difference_type __n) {
