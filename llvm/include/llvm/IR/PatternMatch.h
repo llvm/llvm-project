@@ -824,6 +824,31 @@ inline cstfp_pred_ty<is_non_zero_not_denormal_fp> m_NonZeroNotDenormalFP() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+template <typename Pattern> struct SpecificType_match {
+  Type *RefTy;
+  Pattern P;
+
+  SpecificType_match(Type *RefTy, const Pattern &P) : RefTy(RefTy), P(P) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    return V->getType() == RefTy && P.match(V);
+  }
+};
+
+// Explicit deduction guide.
+template <typename Pattern>
+SpecificType_match(const Type *, const Pattern &)
+    -> SpecificType_match<Pattern>;
+
+/// Match a value of a specific type.
+template <typename Pattern>
+inline auto m_SpecificType(Type *RefTy, const Pattern &P) {
+  return SpecificType_match<Pattern>(RefTy, P);
+}
+inline auto m_SpecificType(Type *RefTy) {
+  return m_SpecificType(RefTy, m_Value());
+}
+
 /// Match a value, capturing it if we match.
 inline match_bind<Value> m_Value(Value *&V) { return V; }
 inline match_bind<const Value> m_Value(const Value *&V) { return V; }
