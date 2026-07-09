@@ -54,10 +54,13 @@
 // NOHOST32-DAG: #define __SIZEOF_PTRDIFF_T__ 4
 // NOHOST32-DAG: #define __SIZEOF_POINTER__ 4
 
-// Aux-target OS macros
+// Aux-target OS and arch macros
 // WIN64-DAG: #define _WIN32 1
 // WIN64-DAG: #define _WIN64 1
+// WIN64-DAG: #define _M_X64 100
+// WIN64-DAG: #define _M_AMD64 100
 // LINUX64-DAG: #define __linux__ 1
+// LINUX64-DAG: #define __x86_64__ 1
 
 // SPIRV device macros always present
 // LINUX64-DAG: #define __SPIRV__ 1
