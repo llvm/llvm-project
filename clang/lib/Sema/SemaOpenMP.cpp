@@ -16888,8 +16888,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   SmallVector<OMPLoopBasedDirective::HelperExprs, 4> LoopHelpers;
   for (const auto &Loop : SeqAnalysis.Loops)
     LoopHelpers.push_back(Loop.HelperExprs);
-  FusionStmt =
-      addLoopVarFinalization(Context, FusionStmt, LoopHelpers);
+  FusionStmt = addLoopVarFinalization(Context, FusionStmt, LoopHelpers);
   return OMPFuseDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                   NumGeneratedTopLevelLoops, AStmt, FusionStmt,
                                   buildPreInits(Context, PreInits));
