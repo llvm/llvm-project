@@ -141,7 +141,7 @@ void MCAsmInfoGOFF::printSwitchToSection(const MCSection &Section,
     printSwitchToSection(*Sec.getParent(), Subsection, T, OS);
     if (!Sec.Emitted) {
       emitCATTR(OS, Sec.getName(), Sec.EDAttributes.Rmode,
-                Sec.EDAttributes.Alignment, Sec.EDAttributes.LoadBehavior,
+                Sec.getEDAlignment(), Sec.EDAttributes.LoadBehavior,
                 GOFF::ESD_EXE_Unspecified, Sec.EDAttributes.IsReadOnly, 0,
                 Sec.EDAttributes.FillByteValue, StringRef());
       if (auto *BeginSym = static_cast<MCSymbolGOFF *>(Sec.getBeginSymbol())) {
@@ -161,7 +161,7 @@ void MCAsmInfoGOFF::printSwitchToSection(const MCSection &Section,
     printSwitchToSection(*ED->getParent(), Subsection, T, OS);
     if (!Sec.Emitted) {
       emitCATTR(OS, ED->getName(), ED->getEDAttributes().Rmode,
-                ED->EDAttributes.Alignment, ED->EDAttributes.LoadBehavior,
+                ED->getEDAlignment(), ED->EDAttributes.LoadBehavior,
                 Sec.PRAttributes.Executable, ED->EDAttributes.IsReadOnly,
                 Sec.PRAttributes.SortKey, ED->EDAttributes.FillByteValue,
                 Sec.getName());

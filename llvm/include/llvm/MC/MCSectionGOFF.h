@@ -19,8 +19,6 @@
 #include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
@@ -35,7 +33,7 @@ class LLVM_ABI MCSectionGOFF final : public MCSection {
   // The attributes of the GOFF symbols.
   union {
     GOFF::SDAttr SDAttributes;
-    mutable GOFF::EDAttr EDAttributes;
+    GOFF::EDAttr EDAttributes;
     GOFF::PRAttr PRAttributes;
   };
 
@@ -67,9 +65,7 @@ class LLVM_ABI MCSectionGOFF final : public MCSection {
                 GOFF::EDAttr EDAttributes, MCSectionGOFF *Parent)
       : MCSection(Name, K.isText(), IsVirtual, nullptr), Parent(Parent),
         EDAttributes(EDAttributes), SymbolType(GOFF::ESD_ST_ElementDefinition),
-        IsBSS(K.isBSS()), RequiresNonZeroLength(0), Emitted(0) {
-          setAlignment(Align(1 << EDAttributes.Alignment));
-        }
+        IsBSS(K.isBSS()), RequiresNonZeroLength(0), Emitted(0) {}
 
   MCSectionGOFF(StringRef Name, SectionKind K, bool IsVirtual,
                 GOFF::PRAttr PRAttributes, MCSectionGOFF *Parent)
@@ -98,14 +94,19 @@ public:
   }
   GOFF::EDAttr getEDAttributes() const {
     assert(isED() && "Not a ED section");
-    // Update alignment.
-    uint8_t Log = Log2(getAlign());
-    if (Log <= GOFF::ESD_ALIGN_4Kpage)
-      EDAttributes.Alignment = static_cast<GOFF::ESDAlignment>(Log);
-    else
-      llvm_unreachable("Unsupported alignment");
     return EDAttributes;
   }
+
+  // Returns the ESD alignment value for the ED section, computed from the
+  // MCSection alignment. Only defined for ED sections.
+  GOFF::ESDAlignment getEDAlignment() const {
+    assert(isED() && "Not a ED section");
+    uint8_t Log = Log2(getAlign());
+    if (Log > GOFF::ESD_ALIGN_4Kpage)
+      reportFatalUsageError("Unsupported alignment");
+    return static_cast<GOFF::ESDAlignment>(Log);
+  }
+
   GOFF::PRAttr getPRAttributes() const {
     assert(isPR() && "Not a PR section");
     return PRAttributes;
