@@ -37,19 +37,32 @@ using SetVectorType = SmallSetVector<MachineInstr *, 32>;
 /// Helper data structure for grouping together uses where the head of the group
 /// dominates all the other uses in the group.
 class DomGroup {
+public:
+  enum class RestorePlacement {
+    BeforeHead,
+    LoopPreheader,
+    IncomingBlockOfPhi,
+  };
+
+private:
   SmallVector<MachineInstr *> Uses;
   SmallVector<MachineBasicBlock *> UseBlocks;
   SmallDenseMap<MachineInstr *, MachineBasicBlock *> PHIInstrToRestoreBlock;
+  MachineInstr *Restore = nullptr;
   MachineBasicBlock *CommonDominator = nullptr;
   bool Deleted = false;
+  RestorePlacement WhereToRestore;
 
 public:
-  DomGroup(MachineInstr *MI, MachineBasicBlock *RestoreBlock) {
+  DomGroup(MachineInstr *MI, MachineBasicBlock *RestoreBlock,
+           RestorePlacement WhereToRestore)
+      : WhereToRestore(WhereToRestore) {
     Uses.push_back(MI);
     UseBlocks.push_back(RestoreBlock);
     if (MI->isPHI())
       PHIInstrToRestoreBlock[MI] = RestoreBlock;
   }
+  DomGroup() = default;
   MachineInstr *getHead() const { return Uses.front(); }
   bool isDeleted() const { return Deleted; }
   void merge(DomGroup &Other) {
@@ -69,8 +82,13 @@ public:
   size_t size() const { return Uses.size(); }
   void setCommonDominator(MachineBasicBlock *CD) { CommonDominator = CD; }
   MachineBasicBlock *getCommonDominator() const { return CommonDominator; }
+  void setRestore(MachineInstr *R) { Restore = R; }
+  MachineInstr *getRestore() const { return Restore; }
   bool hasCommonDominator() const { return CommonDominator != nullptr; }
   MachineBasicBlock *getRestoreBlock() const { return UseBlocks.front(); }
+  void setRestoreBlock(MachineBasicBlock *NewRestoreBlock) {
+    *UseBlocks.begin() = NewRestoreBlock;
+  }
   MachineBasicBlock *getRestoreBlockForPHI(MachineInstr *PHI) const {
     assert(PHI->isPHI() && "The instruction is not a PHI node.");
     auto It = PHIInstrToRestoreBlock.find(PHI);
@@ -78,6 +96,7 @@ public:
            "The PHI node does not exist in the map.");
     return It->second;
   }
+  RestorePlacement getWhereToRestore() const { return WhereToRestore; }
 };
 
 class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
@@ -95,20 +114,20 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   // TODO: Support spilling of a register more than once.
   DenseSet<Register> SpilledRegs;
   // We do not spill the registers that are returned by restore instructions.
-  DenseSet<Register> RestoreDstRegs;
+  DenseMap<Register, DomGroup> RestoreRegToDomGroup;
 
   unsigned MaxVGPRs = 0;
   unsigned MaxSGPRs = 0;
 
   /// Check if it is legal to spill \p CandidateReg e.g. is not a physical
   /// register.
-  bool isLegalToSpill(Register CandidateReg);
+  bool isLegalCandidate(Register CandidateReg);
 
   /// Return the registers with the longest next-use distance that we need to
   /// spill. \p CurMI is the high-register-pressure point.
   /// Returns a tuple of (Register, NextUseDistance, LaneBitmask).
   SmallVector<std::tuple<Register, int64_t, LaneBitmask>>
-  getRegistersToSpill(MachineInstr *CurMI, GCNDownwardRPTracker &RPTracker);
+  getCandidates(MachineInstr *CurMI, GCNDownwardRPTracker &RPTracker);
 
   /// Return where we have to spill \p RegToSpill. It can be one of:
   /// (i) the high register pressure point,
@@ -160,11 +179,13 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
 
   bool isSpilledReg(Register Reg) { return SpilledRegs.contains(Reg); }
 
-  bool isRestoredReg(Register Reg) { return RestoreDstRegs.contains(Reg); }
+  bool isRestoredReg(Register Reg) {
+    return RestoreRegToDomGroup.contains(Reg);
+  }
 
   void clearTables() {
     SpilledRegs.clear();
-    RestoreDstRegs.clear();
+    RestoreRegToDomGroup.clear();
   }
 
 public:
