@@ -1,10 +1,11 @@
-// RUN: %clang_msan -g %s -o %t
-// RUN: %clang_msan -g %s -DBUILD_SO -fPIC -o %t-so.so -shared -Wl,--image-base=0x4000000
+// RUN: %clang -g %s -o %t
+// RUN: %clang -g %s -DBUILD_SO -fPIC -o %t-so.so -shared -Wl,--image-base=0x4000000
 // RUN: %run %t 2>&1
 
 // REQUIRES: lld-available
 // REQUIRES: glibc
 
+// Regression test for #84482 and #21068
 // XFAIL: msan, dfsan
 
 #ifndef BUILD_SO
