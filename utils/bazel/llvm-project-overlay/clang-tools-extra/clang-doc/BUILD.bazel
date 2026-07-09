@@ -22,6 +22,16 @@ cc_library(
 )
 
 cc_library(
+    name = "markdown",
+    srcs = glob(["markdown/*.cpp"]),
+    hdrs = glob(["markdown/*.h"]),
+    includes = ["."],
+    deps = [
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "lib",
     srcs = glob(
         ["*.cpp"],

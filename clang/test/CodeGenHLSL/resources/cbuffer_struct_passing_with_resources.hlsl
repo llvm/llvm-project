@@ -135,7 +135,7 @@ void case3() {
 // CHECK-NEXT: store ptr @cbs.Buf, ptr [[TMP1_BUF_PTR]], align 4
 
 // call useMyStruct with the temporary
-// CHECK-NEXT: call void @useMyStruct(MyStruct)(ptr noundef dead_on_return [[TMP1]])
+// CHECK-NEXT: call void @useMyStruct(MyStruct)(ptr noundef align 4 dead_on_return [[TMP1]])
 
   useMyStruct(cbs); 
 
@@ -149,7 +149,7 @@ void case3() {
 // CHECK-NEXT: store float [[CBUF_LOAD_F]], ptr [[TMP2_F_PTR]], align 4
 
 // call useMyStructWithCounter with the temporary
-// CHECK-NEXT: call void @useMyStructWithCounter(MyStructWithCounter)(ptr noundef dead_on_return [[TMP2]])
+// CHECK-NEXT: call void @useMyStructWithCounter(MyStructWithCounter)(ptr noundef align 4 dead_on_return [[TMP2]])
 
   useMyStructWithCounter(cbsWithCounter);
 }
@@ -321,7 +321,7 @@ void case6() {
 // CHECK-SAME:i32 noundef 6, i32 noundef 0, i32 noundef 2, i32 noundef 1, ptr noundef @cbw.BufArray.str, i32 noundef 7)
 
 // call useWrappaStruct with the temporary
-// CHECK-NEXT: call void @useWrappaStruct(WrappaStruct)(ptr noundef dead_on_return [[TMP]])
+// CHECK-NEXT: call void @useWrappaStruct(WrappaStruct)(ptr noundef align 1 dead_on_return [[TMP]])
 
   useWrappaStruct(cbw);
 }
@@ -379,7 +379,7 @@ void case9() {
 // CHECK-NEXT: store ptr @cbw.s.0.Buf, ptr [[TMP_BUF_PTR]], align 4
 
 // call useMyStruct with the temporary
-// CHECK-NEXT: call void @useMyStruct(MyStruct)(ptr noundef dead_on_return [[TMP]])
+// CHECK-NEXT: call void @useMyStruct(MyStruct)(ptr noundef align 4 dead_on_return [[TMP]])
 
   useMyStruct(cbw.s[0]);
 }

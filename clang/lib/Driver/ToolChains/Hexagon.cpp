@@ -428,18 +428,20 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   HTC.getLibraryDir(Args, LibraryDir);
 
   if (IncStdLib && IncStartFiles) {
-    if (!IsShared) {
-      if (HTC.GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
-        SmallString<128> Crt0 = LibraryDir;
-        if (HTC.getTriple().isOSH2()) {
-          llvm::sys::path::append(Crt0, "crt0-noflash-hosted.o");
-          CmdArgs.push_back(Args.MakeArgString(Crt0));
-        } else if (HTC.getTriple().isOSUnknown()) {
-          llvm::sys::path::append(Crt0, "crt0-semihost.o");
-          CmdArgs.push_back(Args.MakeArgString(Crt0));
-        }
-        // Known OS other than H2: no semihost crt0; OS provides its own.
-      } else {
+    if (HTC.GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
+      SmallString<128> Crt0 = LibraryDir;
+      if (HTC.getTriple().isOSH2()) {
+        llvm::sys::path::append(Crt0, "crt0-noflash-hosted.o");
+        CmdArgs.push_back(Args.MakeArgString(Crt0));
+      } else if (HTC.getTriple().isOSUnknown()) {
+        llvm::sys::path::append(Crt0, "crt0-semihost.o");
+        CmdArgs.push_back(Args.MakeArgString(Crt0));
+      } else if (HTC.getTriple().isOSQurt()) {
+        // QURT provides its own crt0.
+      }
+      // Known OS other than H2/QURT: no semihost crt0; OS provides its own.
+    } else {
+      if (!IsShared) {
         if (HasStandalone) {
           SmallString<128> Crt0SA = LibraryDir;
           llvm::sys::path::append(Crt0SA, "crt0_standalone.o");
@@ -599,14 +601,29 @@ void HexagonToolChain::getLibraryDir(const ArgList &Args,
     llvm::sys::path::append(Dir, "lib");
   }
   std::string CpuVer = GetTargetCPUVersion(Args).str();
-  llvm::sys::path::append(Dir, CpuVer);
-  if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args))
-    if (*G == 0)
-      llvm::sys::path::append(Dir, "G0");
+  bool IsPicolibc = GetCStdlibType(Args) == ToolChain::CST_Picolibc;
+  bool IsG0 =
+      toolchains::HexagonToolChain::getSmallDataThreshold(Args).value_or(1) ==
+      0;
   bool IsStatic = Args.hasArg(options::OPT_static);
   bool IsShared = Args.hasArg(options::OPT_shared);
-  if (IsShared && !IsStatic)
-    llvm::sys::path::append(Dir, "pic");
+  bool IsPic = Args.hasArg(options::OPT_fpic, options::OPT_fPIC);
+  if (IsPicolibc) {
+    // Flat layout: lib/v68-G0-pic, lib/v68-G0, lib/v68
+    std::string Variant = CpuVer;
+    if (IsG0)
+      Variant += "-G0";
+    if (IsPic || IsShared)
+      Variant += "-pic";
+    llvm::sys::path::append(Dir, Variant);
+  } else {
+    // Nested layout (non-Picolibc): lib/v68/G0/pic
+    llvm::sys::path::append(Dir, CpuVer);
+    if (IsG0)
+      llvm::sys::path::append(Dir, "G0");
+    if (IsShared && !IsStatic)
+      llvm::sys::path::append(Dir, "pic");
+  }
 }
 
 void HexagonToolChain::getBaseIncludeDir(const ArgList &Args,
@@ -676,16 +693,33 @@ void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
   if (auto G = getSmallDataThreshold(Args))
     HasG0 = *G == 0;
 
+  bool IsPicolibc = GetCStdlibType(Args) == ToolChain::CST_Picolibc;
   const std::string CpuVer = GetTargetCPUVersion(Args).str();
   for (auto &Dir : RootDirs) {
     std::string LibDir = Dir + "/lib";
     std::string LibDirCpu = LibDir + '/' + CpuVer;
-    if (HasG0) {
-      if (HasPIC)
-        LibPaths.push_back(LibDirCpu + "/G0/pic");
-      LibPaths.push_back(LibDirCpu + "/G0");
+    if (IsPicolibc) {
+      // Flat layout: push only the single most-specific variant dir, then lib.
+      // Base case (no G0/pic): lib/v68, lib.
+      // -shared also implies -pic for Picolibc library search paths.
+      bool HasPICOrShared = HasPIC || Args.hasArg(options::OPT_shared);
+      if (HasG0) {
+        std::string Variant = CpuVer + "-G0";
+        if (HasPICOrShared)
+          Variant += "-pic";
+        LibPaths.push_back(LibDir + "/" + Variant);
+      } else {
+        LibPaths.push_back(LibDirCpu);
+      }
+    } else {
+      // Nested layout (non-Picolibc): lib/v68/G0/pic, lib/v68/G0
+      if (HasG0) {
+        if (HasPIC)
+          LibPaths.push_back(LibDirCpu + "/G0/pic");
+        LibPaths.push_back(LibDirCpu + "/G0");
+      }
+      LibPaths.push_back(LibDirCpu);
     }
-    LibPaths.push_back(LibDirCpu);
     LibPaths.push_back(LibDir);
   }
 }
@@ -806,23 +840,39 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                           UseInitArrayDefault))
     CC1Args.push_back("-fno-use-init-array");
 
-  static const std::pair<options::ID, const char *> FixedRegs[] = {
-      {options::OPT_ffixed_r16, "+reserved-r16"},
-      {options::OPT_ffixed_r17, "+reserved-r17"},
-      {options::OPT_ffixed_r18, "+reserved-r18"},
-      {options::OPT_ffixed_r19, "+reserved-r19"},
-      {options::OPT_ffixed_r20, "+reserved-r20"},
-      {options::OPT_ffixed_r21, "+reserved-r21"},
-      {options::OPT_ffixed_r22, "+reserved-r22"},
-      {options::OPT_ffixed_r23, "+reserved-r23"},
-      {options::OPT_ffixed_r24, "+reserved-r24"},
-      {options::OPT_ffixed_r25, "+reserved-r25"},
-      {options::OPT_ffixed_r26, "+reserved-r26"},
-      {options::OPT_ffixed_r27, "+reserved-r27"},
-      {options::OPT_ffixed_r28, "+reserved-r28"},
+  // The bool marks caller-saved (scratch) registers in the Hexagon ABI.
+  // Reserving those only behaves correctly if every other translation unit and
+  // library reserves them too, so we warn when the user does so.
+  static const std::tuple<options::ID, const char *, bool> FixedRegs[] = {
+      {options::OPT_ffixed_r6, "+reserved-r6", true},
+      {options::OPT_ffixed_r7, "+reserved-r7", true},
+      {options::OPT_ffixed_r8, "+reserved-r8", true},
+      {options::OPT_ffixed_r9, "+reserved-r9", true},
+      {options::OPT_ffixed_r10, "+reserved-r10", true},
+      {options::OPT_ffixed_r11, "+reserved-r11", true},
+      {options::OPT_ffixed_r12, "+reserved-r12", true},
+      {options::OPT_ffixed_r13, "+reserved-r13", true},
+      {options::OPT_ffixed_r14, "+reserved-r14", true},
+      {options::OPT_ffixed_r15, "+reserved-r15", true},
+      {options::OPT_ffixed_r16, "+reserved-r16", false},
+      {options::OPT_ffixed_r17, "+reserved-r17", false},
+      {options::OPT_ffixed_r18, "+reserved-r18", false},
+      {options::OPT_ffixed_r19, "+reserved-r19", false},
+      {options::OPT_ffixed_r20, "+reserved-r20", false},
+      {options::OPT_ffixed_r21, "+reserved-r21", false},
+      {options::OPT_ffixed_r22, "+reserved-r22", false},
+      {options::OPT_ffixed_r23, "+reserved-r23", false},
+      {options::OPT_ffixed_r24, "+reserved-r24", false},
+      {options::OPT_ffixed_r25, "+reserved-r25", false},
+      {options::OPT_ffixed_r26, "+reserved-r26", false},
+      {options::OPT_ffixed_r27, "+reserved-r27", false},
+      {options::OPT_ffixed_r28, "+reserved-r28", false},
   };
-  for (const auto &[Opt, Feature] : FixedRegs) {
-    if (DriverArgs.hasArg(Opt)) {
+  for (const auto &[Opt, Feature, IsCallerSaved] : FixedRegs) {
+    if (Arg *A = DriverArgs.getLastArg(Opt)) {
+      if (IsCallerSaved)
+        getDriver().Diag(diag::warn_drv_hexagon_reserved_caller_saved_reg)
+            << A->getOption().getName();
       CC1Args.push_back("-target-feature");
       CC1Args.push_back(Feature);
     }

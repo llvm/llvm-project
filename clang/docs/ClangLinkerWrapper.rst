@@ -57,7 +57,9 @@ only for the linker wrapper will be forwarded to the wrapped linker job.
     --save-temps           Save intermediate results
     --sysroot<value>       Set the system root
     --verbose              Verbose output from tools
-    --v                    Display the version number and exit
+    -v
+    --wrapper-verbose      Verbose output from the linker-wrapper
+    --version              Display the version number and exit
     --                     The separator for the wrapped linker arguments
 
 The linker wrapper will generate the appropriate runtime calls to register the
@@ -97,34 +99,41 @@ The linker wrapper performs a lot of steps internally, such as input matching,
 symbol resolution, and image registration. This makes it difficult to debug in
 some scenarios. The behavior of the linker-wrapper is controlled mostly through
 metadata, described in `clang documentation
-<https://clang.llvm.org/docs/OffloadingDesign.html>`_. Intermediate output can
-be obtained from the linker-wrapper using the ``--save-temps`` flag. These files
-can then be modified.
+<https://clang.llvm.org/docs/OffloadingDesign.html>`_.
+
+The individual tool invocations the wrapper performs can be printed with the
+``--wrapper-verbose`` flag, and the intermediate files they operate on can be
+kept with ``--save-temps``. When both are enabled the wrapper emits a
+self-contained sequence of commands that reproduce its output. The example below
+shows the sequence for a single OpenMP image.
 
 .. code-block:: sh
 
   $> clang openmp.c -fopenmp --offload-arch=gfx90a -c
-  $> clang openmp.o -fopenmp --offload-arch=gfx90a -Wl,--save-temps
-  $> ; Modify temp files.
-  $> llvm-objcopy --update-section=.llvm.offloading=out.bc openmp.o
+  $> clang openmp.o -fopenmp --offload-arch=gfx90a -Wl,--wrapper-verbose -Wl,--save-temps
 
-Doing this will allow you to override one of the input files by replacing its
-embedded offloading metadata with a user-modified version. However, this will be
-more difficult when there are multiple input files. For a very large hammer, the
-``--override-image=<kind>=<file>`` flag can be used.
+  # 1. Extract each embedded device image from the host object.
+  llvm-offload-binary openmp.o --image=kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a,file=openmp.gfx90a.o
 
-In the following example, we use the ``--save-temps`` to obtain the LLVM-IR just
-before running the backend. We then modify it to test altered behavior, and then
-compile it to a binary. This can then be passed to the linker-wrapper which will
-then ignore all embedded metadata and use the provided image as if it were the
-result of the device linking phase.
+  # 2. Link the extracted image for the device target.
+  clang --target=amdgcn-amd-amdhsa -mcpu=gfx90a openmp.gfx90a.o -o openmp.gfx90a.img <...>
 
-.. code-block:: sh
+  # 3. Bundle the linked image back into the offloading binary format.
+  llvm-offload-binary -o openmp.gfx90a.offload --image=file=openmp.gfx90a.img,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a
 
-  $> clang openmp.c -fopenmp --offload-arch=gfx90a -Wl,--save-temps
-  $> ; Modify temp files.
-  $> clang --target=amdgcn-amd-amdhsa -mcpu=gfx90a -nogpulib out.bc -o a.out
-  $> clang openmp.c -fopenmp --offload-arch=gfx90a -Wl,--override-image=openmp=a.out
+  # 4. Generate the host runtime registration code for the bundled images.
+  llvm-offload-wrapper --kind=openmp --triple=x86_64-unknown-linux-gnu -o openmp.wrapper.bc openmp.gfx90a.offload
+
+  # 5. Compile the registration code into a host object.
+  clang --target=x86_64-unknown-linux-gnu -c -fPIC -o openmp.wrapper.o openmp.wrapper.bc
+
+  # 6. Link the host objects with the registration code into the executable.
+  ld.lld openmp.host.o openmp.wrapper.o -o a.out <...>
+
+To replace the output of a single stage, edit the relevant intermediate file and
+re-run the remaining commands. To bypass the device link entirely and substitute
+a pre-built image, use the ``--override-image=<kind>=<file>`` flag.
+
 
 Example
 =======

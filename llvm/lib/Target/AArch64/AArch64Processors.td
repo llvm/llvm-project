@@ -535,7 +535,8 @@ def TuneNeoverseN2 : SubtargetFeature<"neoversen2", "ARMProcFamily", "NeoverseN2
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
                                       FeatureUseFixedOverScalableIfEqualCost,
-                                      FeaturePredictableSelectIsExpensive]>;
+                                      FeaturePredictableSelectIsExpensive,
+                                      FeatureLimited64bitVectorMulBandwidth]>;
 
 def TuneNeoverseN3 : SubtargetFeature<"neoversen3", "ARMProcFamily", "NeoverseN3",
                                       "Neoverse N3 ARM processors", [
@@ -613,7 +614,8 @@ def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "Neover
                                       FeatureEnableSelectOptimize,
                                       FeatureUseFixedOverScalableIfEqualCost,
                                       FeatureAvoidLDAPUR,
-                                      FeaturePredictableSelectIsExpensive]>;
+                                      FeaturePredictableSelectIsExpensive,
+                                      FeatureLimited64bitVectorMulBandwidth]>;
 
 def TuneSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
                                    "Qualcomm Saphira processors", [
