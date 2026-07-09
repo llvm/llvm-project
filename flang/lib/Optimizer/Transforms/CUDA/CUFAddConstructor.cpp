@@ -242,7 +242,8 @@ struct CUFAddConstructor
     if (!needAllocatorRegistration) {
       mod.walk([&](fir::GlobalOp globalOp) {
         if (globalOp.getDataAttrAttr()) {
-          if (auto baseBoxType = mlir::dyn_cast<fir::BaseBoxType>(globalOp.getType())) {
+          if (auto baseBoxType =
+                  mlir::dyn_cast<fir::BaseBoxType>(globalOp.getType())) {
             if (baseBoxType.isPointerOrAllocatable()) {
               needAllocatorRegistration = true;
               return mlir::WalkResult::interrupt();
