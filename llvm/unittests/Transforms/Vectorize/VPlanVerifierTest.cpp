@@ -330,6 +330,41 @@ TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
   delete PHINode;
 }
 
+TEST_F(VPVerifierTest, DerivedIVWithStartInLoopRegions) {
+  VPlan &Plan = getPlan();
+  auto *I32Ty = Type::getInt32Ty(C);
+  VPBasicBlock *Entry = Plan.getEntry();
+  VPBasicBlock *Latch = Plan.createVPBasicBlock("latch");
+  VPInstruction *DefI = new VPInstruction(
+      Instruction::Add, {Plan.getPoison(I32Ty), Plan.getPoison(I32Ty)},
+      VPIRFlags::getDefaultFlags(Instruction::Add));
+  Entry->appendRecipe(DefI);
+
+  auto *Start = new VPInstruction(VPInstruction::Not, Plan.getPoison(I32Ty));
+  Latch->appendRecipe(Start);
+  auto *DIV = new VPDerivedIVRecipe(InductionDescriptor::IK_IntInduction,
+                                    nullptr, Start, Plan.getPoison(I32Ty),
+                                    Plan.getPoison(I32Ty));
+  Latch->appendRecipe(DIV);
+  Latch->appendRecipe(
+      new VPInstruction(VPInstruction::BranchOnCond, Plan.getTrue()));
+
+  VPRegionBlock *LoopR = Plan.createLoopRegion(I32Ty, DebugLoc::getUnknown(),
+                                               "loop", Latch, Latch);
+  VPBlockUtils::connectBlocks(Entry, LoopR);
+  VPBlockUtils::connectBlocks(LoopR, Plan.getScalarHeader());
+
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+  EXPECT_STREQ(
+      "VPDerivedIVRecipe must have start value defined outside loop regions\n",
+      ::testing::internal::GetCapturedStderr().c_str());
+#endif
+}
+
 TEST_F(VPVerifierTest, testRUN_VPLAN_PASS) {
   VPlan &Plan = getPlan();
   VPIRValue *Zero = Plan.getConstantInt(32, 0);
