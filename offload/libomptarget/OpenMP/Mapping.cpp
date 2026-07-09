@@ -263,7 +263,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
               "exist for host address " DPxMOD " (%" PRId64 " bytes)",
               DPxPTR(HstPtrBegin), Size);
   } else if ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY &&
-              !HasCloseModifier) ||
+              (!HasCloseModifier || LR.TPR.getEntry() != nullptr)) ||
              (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
 
     // If unified shared memory is active, implicitly mapped variables that are
