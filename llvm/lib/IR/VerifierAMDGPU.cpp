@@ -139,8 +139,16 @@ void llvm::verifyAMDGPUAlloca(VerifierSupport &VS, const AllocaInst &AI) {
   if (!VS.TT.isAMDGPU())
     return;
 
-  if (AI.getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
-    VS.CheckFailed("alloca on amdgpu must be in addrspace(5)", &AI);
+  if (AI.getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS &&
+      AI.getAddressSpace() != AMDGPUAS::VGPR)
+    VS.CheckFailed("alloca on amdgpu must be in addrspace(5) or addrspace(13)",
+                   &AI);
+
+  // Only static allocas can live in VGPRs; a dynamically sized one has no
+  // register-file representation. (Other address spaces are already rejected
+  // above, so this only adds the more specific diagnostic for addrspace(13).)
+  if (!AI.isStaticAlloca() && AI.getAddressSpace() == AMDGPUAS::VGPR)
+    VS.CheckFailed("dynamic alloca on amdgpu must be in addrspace(5)", &AI);
 }
 
 bool llvm::isAMDGPUCallBrIntrinsic(Intrinsic::ID ID) {
