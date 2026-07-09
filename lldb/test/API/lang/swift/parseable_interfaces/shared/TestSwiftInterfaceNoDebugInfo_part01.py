@@ -104,6 +104,12 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
 
         # Import C for the first time and check we can evaluate expressions
         # involving types from it
+        if self.getPlatform() == "windows":
+            # main does not reference CC, so unlike the Unix DT_NEEDED behavior
+            # CC.dll is not in main's import table and is never loaded into the
+            # inferior. Load it explicitly so the expression evaluator can
+            # resolve CC's symbols (this does not compile its .swiftinterface).
+            self.runCmd('process load "%s"' % self.getBuildArtifact("CC.dll"))
         self.runCmd("expr import CC")
         lldbutil.check_expression(
             self, self.frame(), "Baz.baz()", "23", use_summary=False)
@@ -129,7 +135,6 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
     def test_swift_interface(self):
         """Test that we load and handle modules that only have textual .swiftinterface files"""
         self.build()
