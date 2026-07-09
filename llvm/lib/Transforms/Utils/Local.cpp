@@ -2964,10 +2964,6 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly)
           K->mergeDIAssignID(J);
         break;
-      case LLVMContext::MD_tbaa:
-        if (DoesKMove)
-          K->setMetadata(Kind, MDNode::getMostGenericTBAA(JMD, KMD));
-        break;
       case LLVMContext::MD_alias_scope:
         if (DoesKMove)
           K->setMetadata(Kind, MDNode::getMostGenericAliasScope(JMD, KMD));
@@ -3007,9 +3003,10 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(Kind, JMD);
         break;
-      // Keep empty cases for prof, mmra, memprof, and callsite to prevent them
-      // from being removed as unknown metadata. The actual merging is handled
-      // separately below.
+      // Keep empty cases for tbaa, prof, mmra, memprof, and callsite to prevent
+      // them from being removed as unknown metadata. The actual merging is
+      // handled separately below.
+      case LLVMContext::MD_tbaa:
       case LLVMContext::MD_prof:
       case LLVMContext::MD_mmra:
       case LLVMContext::MD_memprof:
@@ -3112,6 +3109,22 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   if (!AAOnly && (JProf || KProf)) {
     K->setMetadata(LLVMContext::MD_prof,
                    MDNode::getMergedProfMetadata(KProf, JProf, K, J));
+  }
+
+  // Merge TBAA metadata.
+  // Handle separately to support cases where only one instruction has the
+  // metadata.
+  MDNode *JTBAA = J->getMetadata(LLVMContext::MD_tbaa);
+  MDNode *KTBAA = K->getMetadata(LLVMContext::MD_tbaa);
+  if (KTBAA) {
+    if (DoesKMove)
+      K->setMetadata(LLVMContext::MD_tbaa,
+                     MDNode::getMostGenericTBAA(JTBAA, KTBAA));
+  } else if (!AAOnly && JTBAA &&
+             isa<LoadInst, StoreInst, CallInst, VAArgInst, AtomicRMWInst,
+                 AtomicCmpXchgInst>(K)) {
+    // Only J has a tag: copy it so the result is independent of CSE order.
+    K->setMetadata(LLVMContext::MD_tbaa, JTBAA);
   }
 }
 
