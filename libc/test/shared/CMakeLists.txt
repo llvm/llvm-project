@@ -852,6 +852,7 @@ add_fp_unittest(
     libc.src.__support.builtins.subdf3
     libc.src.__support.builtins.subsf3
     libc.src.__support.builtins.subtf3
+    libc.src.__support.uint128
 )
 
 add_fp_unittest(
