@@ -1042,6 +1042,32 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
                                        VIC);
     }
 
+    // Building a packed <2 x float> for a v_pk_*_f32 source is not always free:
+    // the two lanes must occupy an aligned VGPR pair, and the cost of an insert
+    // depends on where the inserted lane comes from.
+    //   - A lane fed directly by a load is free: the load result can be
+    //     allocated straight into its pair slot, with no alignment move.
+    //   - A lane manufactured from compute is taxed: it typically needs a
+    //     v_mov_b32 to align it into the pair. Charge 1 in TTI as a minimal
+    //     non-zero cost for that alignment move; a higher per-insert tax
+    //     over-penalizes SLP gather for this pattern.
+    // Taxing only the manufactured case keeps the SLP vectorizer honest about
+    // assembling pairs from non-adjacent scalars - without it SLP
+    // over-vectorizes and inflates register pressure - while leaving a genuine
+    // load-fed <2 x float> reduction free to pack.
+    //
+    // Restricted to f32: at 32-bit width the only packed VOP3P ALU ops are
+    // v_pk_{add,mul,fma}_f32 - there is no packed 32-bit integer op - so a
+    // <2 x i32> has no pair-alignment consumer and must not be taxed. Limited
+    // to gfx9 targets that expose packed FP32 (gfx90a, gfx94x, gfx950) via
+    // hasPackedFP32Ops(); gfx12+ is left unchanged pending separate evaluation.
+    if (Opcode == Instruction::InsertElement && EltSize == 32 &&
+        ST->hasPackedFP32Ops() &&
+        ST->getGeneration() == AMDGPUSubtarget::GFX9)
+      if (auto *VecTy = dyn_cast<FixedVectorType>(ValTy))
+        if (VecTy->getNumElements() == 2 && VecTy->getElementType()->isFloatTy())
+          return (Op1 && isa<LoadInst>(Op1)) ? 0 : 1;
+
     // Extracts are just reads of a subregister, so are free. Inserts are
     // considered free because we don't want to have any cost for scalarizing
     // operations, and we don't have to copy into a different register class.
@@ -1344,6 +1370,21 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
 
   unsigned ScalarSize = DL.getTypeSizeInBits(SrcTy->getElementType());
+
+  // Packed FP32 on gfx9: keep shuffle-level costing free. The insert cost above
+  // already taxes manufactured <2 x float> lanes, and an additional per-lane
+  // shuffle tax stacks on top of that and over-penalizes profitable SLP trees.
+  // The 16/8-bit branch below relies on subword packing (multiple elements per
+  // VGPR) and does not apply to FP32, so FP32 is handled separately here.
+  //
+  // f32-only and gfx9 packed-FP32 targets only, for the same reasons as in
+  // getVectorInstrCost; gfx12+ is left unchanged pending separate evaluation.
+  if (ScalarSize == 32 && SrcTy->getElementType()->isFloatTy() &&
+      ST->hasPackedFP32Ops() &&
+      ST->getGeneration() == AMDGPUSubtarget::GFX9) {
+    return 0;
+  }
+
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
       (ScalarSize == 16 || ScalarSize == 8)) {
     // Larger vector widths may require additional instructions, but are
