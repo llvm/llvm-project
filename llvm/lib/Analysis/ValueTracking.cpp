@@ -5709,6 +5709,34 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       Known.knownNot(fcNan | fcInf | fcNegative);
       break;
     }
+    case Intrinsic::convert_from_arbitrary_fp: {
+      auto *MD = cast<MetadataAsValue>(II->getArgOperand(1))->getMetadata();
+      StringRef FormatStr = cast<MDString>(MD)->getString();
+      const fltSemantics *SrcSemanticsPtr = APFloat::getArbitraryFPSemantics(FormatStr);
+      if (!SrcSemanticsPtr)
+          break;
+
+      const fltSemantics SrcSemantics = *SrcSemanticsPtr;
+      const fltSemantics DestSemantics = II->getType()->getFltSemantics();
+
+      int SrcMaxExp = APFloat::semanticsMaxExponent(SrcSemantics);
+      int DestMaxExp = APFloat::semanticsMaxExponent(DestSemantics);
+
+      if (!APFloat::semanticsHasInf(SrcSemantics) &&
+          (SrcMaxExp <= DestMaxExp))
+        Known.KnownFPClasses &= ~fcInf;
+
+      const bool SrcSupportsNaN = APFloat::semanticsHasNaN(SrcSemantics);
+      // If the source format doesn't have NaN, the output cannot be NaN
+      if (!SrcSupportsNaN)
+        Known.KnownFPClasses &= ~fcNan;
+
+      // override compile-time flag
+      if (II->hasNoNaNs())
+        Known.KnownFPClasses &= ~fcNan;
+
+      break;
+    }
     default:
       break;
     }
