@@ -2540,8 +2540,8 @@ ScalarEvolution::getStrengthenedNoWrapFlagsFromBinOp(
     unsigned BitWidth = ShiftAmt->getBitWidth();
     if (ShiftAmt->uge(BitWidth))
       return std::nullopt;
-    // NSW only transfers if the shift amount is < BitWidth - 1, otherwise the
-    // result is more poisonous.
+    // NSW only transfers if the shift amount is < BitWidth - 1, as INT_MIN * -1
+    // overflows.
     CanUseNSW = ShiftAmt->ult(BitWidth - 1);
     Opcode = Instruction::Mul;
     RHS = getConstant(APInt::getOneBitSet(BitWidth, ShiftAmt->getZExtValue()));
