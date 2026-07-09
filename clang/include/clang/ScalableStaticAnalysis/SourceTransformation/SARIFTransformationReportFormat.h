@@ -41,7 +41,7 @@ struct ReportDocument {
   std::vector<ReportResult> Results;
 };
 
-/// Writes \p Doc to \p Path as a SARIF 2.1.0 JSON document.
+/// Writes \p Doc to \p Path as a SARIF JSON document.
 llvm::Error writeSARIFTransformationReport(const ReportDocument &Doc,
                                            llvm::StringRef Path);
 
