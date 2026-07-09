@@ -681,6 +681,12 @@ private:
     return !ExternallyReferencedOffsets.empty();
   }
 
+  /// True if there are references to \p Offset inside this function from data,
+  /// e.g. from indirect goto references.
+  bool hasInternalReferenceAt(uint64_t Offset) const {
+    return ExternallyReferencedOffsets.count(Offset) != 0;
+  }
+
   /// Return an entry ID corresponding to a symbol known to belong to
   /// the function.
   ///
