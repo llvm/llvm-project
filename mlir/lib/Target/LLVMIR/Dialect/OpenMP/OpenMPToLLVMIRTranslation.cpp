@@ -10296,6 +10296,17 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
     }
     // Record the alloc pointer keyed by the MLIR variable value.
     ompIface.registerAllocatedPtr(var, allocCall);
+
+    Value baseVar = getBaseValueForTypeLookup(var);
+    if (llvm::Value *baseLlvm = moduleTranslation.lookupValue(baseVar)) {
+      llvm::Value *boundPtr = builder.CreatePointerBitCastOrAddrSpaceCast(
+          allocCall, baseLlvm->getType());
+      moduleTranslation.remapAllValuesWith(baseLlvm, boundPtr);
+    } else if (llvm::Value *varLlvm = moduleTranslation.lookupValue(var)) {
+      llvm::Value *boundPtr = builder.CreatePointerBitCastOrAddrSpaceCast(
+          allocCall, varLlvm->getType());
+      moduleTranslation.remapAllValuesWith(varLlvm, boundPtr);
+    }
   }
 
   return success();

@@ -115,3 +115,25 @@ llvm.func @test_allocate_array_global() {
   omp.allocate_free (%z : !llvm.ptr) allocator(%alloc6 : i32)
   llvm.return
 }
+
+// -----
+
+// Verifies that loads and stores after omp.allocate_dir use the OMP-allocated
+// pointer rather than the original storage.
+//
+// CHECK-LABEL: define void @test_allocate_use
+// CHECK:   %[[TID:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   %[[ALLOC:.*]] = call ptr @__kmpc_alloc(i32 %[[TID]], i64 8, ptr null)
+// CHECK:   store i32 42, ptr %[[ALLOC]]
+// CHECK:   %[[VAL:.*]] = load i32, ptr %[[ALLOC]]
+// CHECK:   %[[TID_FREE:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   call void @__kmpc_free(i32 %[[TID_FREE]], ptr %[[ALLOC]], ptr null)
+// CHECK:   ret void
+llvm.func @test_allocate_use(%arg0: !llvm.ptr) {
+  omp.allocate_dir (%arg0 : !llvm.ptr)
+  %c42 = llvm.mlir.constant(42 : i32) : i32
+  llvm.store %c42, %arg0 : i32, !llvm.ptr
+  %v = llvm.load %arg0 : !llvm.ptr -> i32
+  omp.allocate_free (%arg0 : !llvm.ptr)
+  llvm.return
+}

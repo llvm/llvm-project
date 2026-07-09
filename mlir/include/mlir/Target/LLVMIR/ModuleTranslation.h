@@ -102,6 +102,9 @@ public:
     return valueMapping.lookup(value);
   }
 
+  /// Remap old value with new value.
+  void remapAllValuesWith(llvm::Value *oldValue, llvm::Value *newValue);
+
   /// Looks up remapped a list of remapped values.
   SmallVector<llvm::Value *> lookupValues(ValueRange values);
 
