@@ -958,6 +958,64 @@ TEST_F(CoreAPIsStandardTest, FailMaterializerWithUnqueriedSymbols) {
       << "Expected lookup for Bar to fail.";
 }
 
+TEST_F(CoreAPIsStandardTest, DropMaterializationResponsibilityFailsQuery) {
+  // Destroying a MaterializationResponsibility while it still owns
+  // un-materialized / un-failed symbols must fail the outstanding query rather
+  // than stranding it. The empty-symbols invariant is only checked by a
+  // debug-mode assert in ~MaterializationResponsibility; in a release build a
+  // responsibility can be destroyed with symbols still pending -- e.g. if a
+  // client drops the MR without calling resolve/emit/failMaterialization, or a
+  // MaterializationUnit returns early. Before the fix the query was never
+  // completed and its completion state could be destroyed underneath it at
+  // teardown. This test exercises the path without exceptions: it simply drops
+  // the MR via unique_ptr reset.
+
+  bool OnCompletionRun = false;
+  bool LookupFailed = false;
+
+  auto OnCompletion = [&](Expected<SymbolMap> Result) {
+    OnCompletionRun = true;
+    // We expect failure, not a resolved SymbolMap. Consume the error here so
+    // there is no unchecked Error escaping the callback.
+    if (Result) {
+      ADD_FAILURE() << "Lookup unexpectedly succeeded";
+    } else {
+      LookupFailed = true;
+      consumeError(Result.takeError());
+    }
+  };
+
+  std::unique_ptr<MaterializationResponsibility> FooMR;
+
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Foo, FooSym.getFlags()}}),
+      [&](std::unique_ptr<MaterializationResponsibility> R) {
+        FooMR = std::move(R);
+      })));
+
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Foo), SymbolState::Ready, OnCompletion,
+            NoDependenciesToRegister);
+
+  EXPECT_FALSE(OnCompletionRun) << "Query should still be outstanding";
+
+  // Drop the MR with SymbolFlags still populated (no resolve / emit / fail).
+  // OL_destroyMaterializationResponsibility must fail the query here.
+  FooMR.reset();
+
+  EXPECT_TRUE(OnCompletionRun)
+      << "Dropping an MR with outstanding symbols must fail the query, not "
+         "strand it";
+  EXPECT_TRUE(LookupFailed) << "Query completion must carry a failure error";
+
+  // A subsequent lookup of the same symbol must also report failure (the symbol
+  // is now in the error state), mirroring
+  // MaterializationSideEffectsOnlyFailuresPersist.
+  EXPECT_THAT_EXPECTED(
+      ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Foo})),
+      Failed());
+}
+
 TEST_F(CoreAPIsStandardTest, DropMaterializerWhenEmpty) {
   bool DestructorRun = false;
 

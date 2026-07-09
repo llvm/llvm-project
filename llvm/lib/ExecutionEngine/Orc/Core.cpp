@@ -2778,6 +2778,25 @@ void ExecutionSession::OL_completeLookupFlags(
 void ExecutionSession::OL_destroyMaterializationResponsibility(
     MaterializationResponsibility &MR) {
 
+  // Clients are required to emit or explicitly fail every symbol a
+  // MaterializationResponsibility tracks before destroying it; the assert below
+  // enforces that contract in debug builds. That assert is compiled out in
+  // release builds, so a responsibility destroyed with symbols still pending --
+  // e.g. if a client drops the MR (via unique_ptr reset) or a
+  // MaterializationUnit returns early without calling
+  // resolve/emit/failMaterialization -- would silently strand the outstanding
+  // queries: their completion callbacks never run, and any state those
+  // callbacks reference can be destroyed underneath them at session teardown.
+  // As defense-in-depth, fail any still-pending symbols here so a contract
+  // violation degrades to a cleanly-failed query instead of a stranded query or
+  // use-after-free, while the debug assert is retained so the violation stays
+  // loud in debug builds. This mirrors
+  // MaterializationTask::~MaterializationTask, which fails materialization for
+  // a task that was never run. OL_notifyFailed is a no-op on an empty set, so
+  // the ordinary emit-then-destroy path is untouched.
+  if (!MR.SymbolFlags.empty())
+    OL_notifyFailed(MR);
+
   assert(MR.SymbolFlags.empty() &&
          "All symbols should have been explicitly materialized or failed");
   MR.JD.unlinkMaterializationResponsibility(MR);
