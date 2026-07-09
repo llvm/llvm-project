@@ -841,6 +841,141 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_last_vgpr(ptr addrspace(1) %
   ret void
 }
 
+; SimplifyDemandedBits must recurse into the active-value operand (operand 1)
+; of set_inactive_chain_arg. Only the low 16 bits are demanded, so the OR that
+; sets the upper 16 bits of the active value must be optimized away.
+define amdgpu_cs_chain void @set_inactive_chain_arg_active_demanded(ptr addrspace(1) %out, i32 %inactive, i32 %x) {
+; GISEL11-LABEL: set_inactive_chain_arg_active_demanded:
+; GISEL11:       ; %bb.0:
+; GISEL11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL11-NEXT:    s_or_saveexec_b32 s0, -1
+; GISEL11-NEXT:    v_mov_b32_e32 v0, v10
+; GISEL11-NEXT:    s_mov_b32 exec_lo, s0
+; GISEL11-NEXT:    v_or_b32_e32 v1, 0xffff0000, v11
+; GISEL11-NEXT:    s_or_saveexec_b32 s0, -1
+; GISEL11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GISEL11-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s0
+; GISEL11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GISEL11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GISEL11-NEXT:    s_mov_b32 exec_lo, s0
+; GISEL11-NEXT:    v_mov_b32_e32 v1, v0
+; GISEL11-NEXT:    global_store_b32 v[8:9], v1, off
+; GISEL11-NEXT:    s_endpgm
+;
+; DAGISEL11-LABEL: set_inactive_chain_arg_active_demanded:
+; DAGISEL11:       ; %bb.0:
+; DAGISEL11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; DAGISEL11-NEXT:    s_or_saveexec_b32 s0, -1
+; DAGISEL11-NEXT:    v_mov_b32_e32 v0, v10
+; DAGISEL11-NEXT:    s_mov_b32 exec_lo, s0
+; DAGISEL11-NEXT:    s_or_saveexec_b32 s0, -1
+; DAGISEL11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; DAGISEL11-NEXT:    v_cndmask_b32_e64 v0, v0, v11, s0
+; DAGISEL11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; DAGISEL11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; DAGISEL11-NEXT:    s_mov_b32 exec_lo, s0
+; DAGISEL11-NEXT:    v_mov_b32_e32 v1, v0
+; DAGISEL11-NEXT:    global_store_b32 v[8:9], v1, off
+; DAGISEL11-NEXT:    s_endpgm
+;
+; GISEL10-LABEL: set_inactive_chain_arg_active_demanded:
+; GISEL10:       ; %bb.0:
+; GISEL10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL10-NEXT:    s_or_saveexec_b32 s0, -1
+; GISEL10-NEXT:    v_mov_b32_e32 v0, v10
+; GISEL10-NEXT:    s_mov_b32 exec_lo, s0
+; GISEL10-NEXT:    v_or_b32_e32 v1, 0xffff0000, v11
+; GISEL10-NEXT:    s_or_saveexec_b32 s0, -1
+; GISEL10-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s0
+; GISEL10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GISEL10-NEXT:    s_mov_b32 exec_lo, s0
+; GISEL10-NEXT:    v_mov_b32_e32 v1, v0
+; GISEL10-NEXT:    global_store_dword v[8:9], v1, off
+; GISEL10-NEXT:    s_endpgm
+;
+; DAGISEL10-LABEL: set_inactive_chain_arg_active_demanded:
+; DAGISEL10:       ; %bb.0:
+; DAGISEL10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; DAGISEL10-NEXT:    s_or_saveexec_b32 s0, -1
+; DAGISEL10-NEXT:    v_mov_b32_e32 v0, v10
+; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s0
+; DAGISEL10-NEXT:    s_or_saveexec_b32 s0, -1
+; DAGISEL10-NEXT:    v_cndmask_b32_e64 v0, v0, v11, s0
+; DAGISEL10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s0
+; DAGISEL10-NEXT:    v_mov_b32_e32 v1, v0
+; DAGISEL10-NEXT:    global_store_dword v[8:9], v1, off
+; DAGISEL10-NEXT:    s_endpgm
+;
+; GISEL11_W64-LABEL: set_inactive_chain_arg_active_demanded:
+; GISEL11_W64:       ; %bb.0:
+; GISEL11_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL11_W64-NEXT:    s_or_saveexec_b64 s[0:1], -1
+; GISEL11_W64-NEXT:    v_mov_b32_e32 v0, v10
+; GISEL11_W64-NEXT:    s_mov_b64 exec, s[0:1]
+; GISEL11_W64-NEXT:    v_or_b32_e32 v1, 0xffff0000, v11
+; GISEL11_W64-NEXT:    s_or_saveexec_b64 s[0:1], -1
+; GISEL11_W64-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
+; GISEL11_W64-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[0:1]
+; GISEL11_W64-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GISEL11_W64-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GISEL11_W64-NEXT:    s_mov_b64 exec, s[0:1]
+; GISEL11_W64-NEXT:    v_mov_b32_e32 v1, v0
+; GISEL11_W64-NEXT:    global_store_b32 v[8:9], v1, off
+; GISEL11_W64-NEXT:    s_endpgm
+;
+; DAGISEL11_W64-LABEL: set_inactive_chain_arg_active_demanded:
+; DAGISEL11_W64:       ; %bb.0:
+; DAGISEL11_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; DAGISEL11_W64-NEXT:    s_or_saveexec_b64 s[0:1], -1
+; DAGISEL11_W64-NEXT:    v_mov_b32_e32 v0, v10
+; DAGISEL11_W64-NEXT:    s_mov_b64 exec, s[0:1]
+; DAGISEL11_W64-NEXT:    s_or_saveexec_b64 s[0:1], -1
+; DAGISEL11_W64-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; DAGISEL11_W64-NEXT:    v_cndmask_b32_e64 v0, v0, v11, s[0:1]
+; DAGISEL11_W64-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; DAGISEL11_W64-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; DAGISEL11_W64-NEXT:    s_mov_b64 exec, s[0:1]
+; DAGISEL11_W64-NEXT:    v_mov_b32_e32 v1, v0
+; DAGISEL11_W64-NEXT:    global_store_b32 v[8:9], v1, off
+; DAGISEL11_W64-NEXT:    s_endpgm
+;
+; GISEL10_W64-LABEL: set_inactive_chain_arg_active_demanded:
+; GISEL10_W64:       ; %bb.0:
+; GISEL10_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL10_W64-NEXT:    s_or_saveexec_b64 s[0:1], -1
+; GISEL10_W64-NEXT:    v_mov_b32_e32 v0, v10
+; GISEL10_W64-NEXT:    s_mov_b64 exec, s[0:1]
+; GISEL10_W64-NEXT:    v_or_b32_e32 v1, 0xffff0000, v11
+; GISEL10_W64-NEXT:    s_or_saveexec_b64 s[0:1], -1
+; GISEL10_W64-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[0:1]
+; GISEL10_W64-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GISEL10_W64-NEXT:    s_mov_b64 exec, s[0:1]
+; GISEL10_W64-NEXT:    v_mov_b32_e32 v1, v0
+; GISEL10_W64-NEXT:    global_store_dword v[8:9], v1, off
+; GISEL10_W64-NEXT:    s_endpgm
+;
+; DAGISEL10_W64-LABEL: set_inactive_chain_arg_active_demanded:
+; DAGISEL10_W64:       ; %bb.0:
+; DAGISEL10_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; DAGISEL10_W64-NEXT:    s_or_saveexec_b64 s[0:1], -1
+; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v0, v10
+; DAGISEL10_W64-NEXT:    s_mov_b64 exec, s[0:1]
+; DAGISEL10_W64-NEXT:    s_or_saveexec_b64 s[0:1], -1
+; DAGISEL10_W64-NEXT:    v_cndmask_b32_e64 v0, v0, v11, s[0:1]
+; DAGISEL10_W64-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; DAGISEL10_W64-NEXT:    s_mov_b64 exec, s[0:1]
+; DAGISEL10_W64-NEXT:    v_mov_b32_e32 v1, v0
+; DAGISEL10_W64-NEXT:    global_store_dword v[8:9], v1, off
+; DAGISEL10_W64-NEXT:    s_endpgm
+  %active = or i32 %x, -65536
+  %tmp = call i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32 %active, i32 %inactive) #0
+  %and = and i32 %tmp, 65535
+  %wwm = call i32 @llvm.amdgcn.strict.wwm.i32(i32 %and)
+  store i32 %wwm, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32, i32) #0
 declare i64 @llvm.amdgcn.set.inactive.chain.arg.i64(i64, i64) #0
 declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32 immarg, i32 immarg, i32 immarg, i1 immarg)
