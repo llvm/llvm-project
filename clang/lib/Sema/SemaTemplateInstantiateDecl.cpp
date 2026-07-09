@@ -2734,6 +2734,23 @@ static QualType adjustFunctionTypeForInstantiation(ASTContext &Context,
                                  NewFunc->getParamTypes(), NewEPI);
 }
 
+static void mergeFunctionDecl(Sema &SemaRef, FunctionDecl *NewFD, QualType NewT,
+                              FunctionDecl *OldFD) {
+  SemaRef.mergeDeclAttributes(NewFD, OldFD);
+
+  if (QualType OT = OldFD->getReturnType();
+      OT != NewT->castAs<FunctionType>()->getReturnType()) {
+    // If this function has a deduced return type and has already been
+    // defined, copy the deduced value from the old declaration.
+    if (AutoType *OldAT = OT->getContainedAutoType();
+        OldAT && OldAT->isDeduced()) {
+      QualType DT = OldAT->getDeducedType();
+      NewFD->setType(DT.isNull() ? SemaRef.SubstAutoTypeDependent(NewT)
+                                 : SemaRef.SubstAutoType(NewT, DT));
+    }
+  }
+}
+
 /// Normal class members are of more specific types and therefore
 /// don't make it here.  This function serves three purposes:
 ///   1) instantiating function templates
@@ -2872,21 +2889,8 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     Function->setRangeEnd(D->getSourceRange().getEnd());
   }
   Function->setPreviousDeclaration(PrevDecl);
-  if (PrevDecl) {
-    SemaRef.mergeDeclAttributes(Function, PrevDecl);
-
-    if (QualType OT = PrevDecl->getReturnType();
-        OT != cast<FunctionType>(T)->getReturnType()) {
-      // If this function has a deduced return type and has already been
-      // defined, copy the deduced value from the old declaration.
-      if (AutoType *OldAT = OT->getContainedAutoType();
-          OldAT && OldAT->isDeduced()) {
-        QualType DT = OldAT->getDeducedType();
-        Function->setType(DT.isNull() ? SemaRef.SubstAutoTypeDependent(T)
-                                      : SemaRef.SubstAutoType(T, DT));
-      }
-    }
-  }
+  if (PrevDecl)
+    mergeFunctionDecl(SemaRef, Function, T, PrevDecl);
 
   if (D->isInlined())
     Function->setImplicitlyInline();
@@ -3319,7 +3323,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   }
   Method->setPreviousDeclaration(PrevDecl);
   if (PrevDecl)
-    SemaRef.mergeDeclAttributes(Method, PrevDecl);
+    mergeFunctionDecl(SemaRef, Method, T, PrevDecl);
 
   if (D->isInlined())
     Method->setImplicitlyInline();
@@ -5398,12 +5402,18 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
         NumLevels);
   } else {
     FunctionDecl *OrigFD = FD;
-    if (Info)
+    if (Info) {
       FD = InstantiateFunctionDeclaration(
           cast<FunctionTemplateDecl>(Info->getTemplate()->getFirstDecl()),
           Info->TemplateArguments, CallLoc);
-    else
+      // The above should always succeed for valid code, but may fail due to
+      // error recovery. For example, if both a fatal error and an uncompilable
+      // error occur, we stop instantiating templates at all.
+      if (!FD)
+        return true;
+    } else {
       FD = FD->getFirstDecl();
+    }
     if (FD != OrigFD)
       Param =
           cast<ParmVarDecl>(FD->getParamDecl(Param->getFunctionScopeIndex()));

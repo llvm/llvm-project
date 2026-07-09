@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
@@ -27,6 +26,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "flang-cuf-function-rewrite"
@@ -45,8 +45,9 @@ using genFunctionType =
 
 class CallConversion : public OpRewritePattern<fir::CallOp> {
 public:
-  CallConversion(MLIRContext *context)
-      : OpRewritePattern<fir::CallOp>(context) {}
+  CallConversion(MLIRContext *context, bool deferAccRoutines)
+      : OpRewritePattern<fir::CallOp>(context),
+        deferAccRoutines_(deferAccRoutines) {}
 
   LogicalResult
   matchAndRewrite(fir::CallOp op,
@@ -73,6 +74,18 @@ public:
     // procedure that happens to share the name.
     if (!func.isExternal())
       return failure();
+
+    // Defer folding in the host copy of an OpenACC routine. Device
+    // specialization later clones the host body to build the device routine, so
+    // folding it to the host value now would bake that value into the device
+    // clone. A later run (after specialization) folds each copy in its own
+    // host/device context. Calls already inside a gpu.module are device copies
+    // and are always safe to fold.
+    if (deferAccRoutines_ && !op->getParentOfType<gpu::GPUModuleOp>()) {
+      if (auto enclosing = op->getParentOfType<mlir::FunctionOpInterface>())
+        if (mlir::acc::isAccRoutine(enclosing))
+          return failure();
+    }
 
     mlir::Value result = fct->second(rewriter, op);
     if (!result)
@@ -103,16 +116,20 @@ private:
   // is recovered independently of external name mangling.
   const llvm::StringMap<genFunctionType> genMappings_ = {
       {"on_device", &genOnDevice}};
+
+  bool deferAccRoutines_ = false;
 };
 
 class CUFFunctionRewrite
     : public fir::impl::CUFFunctionRewriteBase<CUFFunctionRewrite> {
 public:
+  using CUFFunctionRewriteBase::CUFFunctionRewriteBase;
+
   void runOnOperation() override {
     auto *ctx = &getContext();
     mlir::RewritePatternSet patterns(ctx);
 
-    patterns.insert<CallConversion>(patterns.getContext());
+    patterns.insert<CallConversion>(patterns.getContext(), deferAccRoutines);
 
     if (mlir::failed(
             mlir::applyPatternsGreedily(getOperation(), std::move(patterns)))) {

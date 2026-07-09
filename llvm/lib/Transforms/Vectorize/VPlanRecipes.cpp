@@ -2053,14 +2053,13 @@ void VPPhiAccessors::setIncomingValueForBlock(const VPBasicBlock *VPBB,
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPPhiAccessors::printPhiOperands(raw_ostream &O,
                                       VPSlotTracker &SlotTracker) const {
-  interleaveComma(enumerate(getAsRecipe()->operands()), O,
-                  [this, &O, &SlotTracker](auto Op) {
-                    O << "[ ";
-                    Op.value()->printAsOperand(O, SlotTracker);
-                    O << ", ";
-                    getIncomingBlock(Op.index())->printAsOperand(O);
-                    O << " ]";
-                  });
+  interleaveComma(incoming_values_and_blocks(), O, [&O, &SlotTracker](auto Op) {
+    O << "[ ";
+    std::get<0>(Op)->printAsOperand(O, SlotTracker);
+    O << ", ";
+    std::get<1>(Op)->printAsOperand(O);
+    O << " ]";
+  });
 }
 #endif
 
@@ -2339,10 +2338,7 @@ void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << "call";
   printFlags(O);
   O << getIntrinsicName() << "(";
-
-  interleaveComma(operands(), O, [&O, &SlotTracker](VPValue *Op) {
-    Op->printAsOperand(O, SlotTracker);
-  });
+  printOperands(O, SlotTracker);
   O << ")";
 }
 #endif
@@ -4010,10 +4006,9 @@ void VPReplicateRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     O << "call";
     printFlags(O);
     O << "@" << CB->getCalledFunction()->getName() << "(";
-    interleaveComma(make_range(op_begin(), op_begin() + (getNumOperands() - 1)),
-                    O, [&O, &SlotTracker](VPValue *Op) {
-                      Op->printAsOperand(O, SlotTracker);
-                    });
+    interleaveComma(drop_end(operands()), O, [&O, &SlotTracker](VPValue *Op) {
+      Op->printAsOperand(O, SlotTracker);
+    });
     O << ")";
   } else {
     O << Instruction::getOpcodeName(getUnderlyingInstr()->getOpcode());
@@ -4085,18 +4080,6 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     // TODO: Using the original IR may not be accurate.
     // Currently, ARM will use the underlying IR to calculate gather/scatter
     // instruction cost.
-    [[maybe_unused]] auto IsReverseMask = [this, R]() {
-      VPValue *Mask = getMask();
-      if (!Mask)
-        return false;
-
-      if (isa<VPWidenLoadEVLRecipe, VPWidenStoreEVLRecipe>(R))
-        return match(Mask, m_Intrinsic<Intrinsic::experimental_vp_reverse>());
-
-      return match(Mask, m_Reverse(m_VPValue()));
-    };
-    assert(!IsReverseMask() &&
-           "Inconsecutive memory access should not have reverse order");
     Type *PtrTy = getAddr()->getScalarType();
     const Value *Ptr = getAddr()->getUnderlyingValue();
 
