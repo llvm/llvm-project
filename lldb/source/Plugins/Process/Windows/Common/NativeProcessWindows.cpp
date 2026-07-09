@@ -84,6 +84,8 @@ NativeProcessWindows::NativeProcessWindows(lldb::pid_t pid, int terminal_fd,
   if (E)
     return;
 
+  m_expecting_loader_int3 = true;
+
   SetID(GetDebuggedProcessId());
 
   ProcessInstanceInfo info;
@@ -625,12 +627,15 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
     return ExceptionResult::BreakInDebugger;
   }
 
-  if (IsSystemModuleAddress(exception_addr)) {
-    LLDB_LOG(log,
-             "Ignoring loader/OS breakpoint at address {0:x} in a system "
-             "module.",
-             exception_addr);
-    return ExceptionResult::MaskException;
+  if (m_expecting_loader_int3) {
+    m_expecting_loader_int3 = false;
+    if (IsSystemModuleAddress(exception_addr)) {
+      LLDB_LOG(log,
+               "Skipping expected loader breakpoint at address {0:x} in a "
+               "system module.",
+               exception_addr);
+      return ExceptionResult::MaskException;
+    }
   }
 
   std::string desc = formatv("Exception {0:x8} encountered at address {1:x8}",

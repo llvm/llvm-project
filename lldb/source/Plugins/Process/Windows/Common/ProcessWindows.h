@@ -134,6 +134,7 @@ private:
   std::vector<lldb::break_id_t> m_watchpoint_ids;
   std::shared_ptr<PTY> m_pty;
   bool m_pending_halt = false;
+  bool m_expecting_loader_int3 = false;
 };
 } // namespace lldb_private
 

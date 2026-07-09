@@ -228,6 +228,9 @@ ProcessWindows::DoAttachToProcessWithID(lldb::pid_t pid,
   Status error = AttachProcess(pid, attach_info, delegate);
   if (error.Success())
     SetID(GetDebuggedProcessId());
+
+  m_expecting_loader_int3 = true;
+
   return error;
 }
 
@@ -719,14 +722,17 @@ ProcessWindows::OnDebugException(bool first_chance,
     const lldb::addr_t bp_addr = record.GetExceptionAddress();
     if (m_pending_halt) {
       m_pending_halt = false;
-    } else if (first_chance && m_session_data->m_initial_stop_received &&
-               !GetBreakpointSiteList().FindByAddress(bp_addr) &&
-               IsSystemModuleAddress(bp_addr)) {
-      LLDB_LOG(
-          log,
-          "Ignoring loader/OS breakpoint at address {0:x} in a system module.",
-          bp_addr);
-      return ExceptionResult::MaskException;
+    } else if (m_expecting_loader_int3 && first_chance &&
+               m_session_data->m_initial_stop_received &&
+               !GetBreakpointSiteList().FindByAddress(bp_addr)) {
+      m_expecting_loader_int3 = false;
+      if (IsSystemModuleAddress(bp_addr)) {
+        LLDB_LOG(log,
+                 "Skipping expected loader breakpoint at address {0:x} in a "
+                 "system module.",
+                 bp_addr);
+        return ExceptionResult::MaskException;
+      }
     }
 
     // Handle breakpoints at the first chance.
