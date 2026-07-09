@@ -71,7 +71,8 @@ public:
   //
   // This preserves the large-string handling of EmitStringTableDef without
   // emitting an llvm::StringTable object.
-  void EmitStringTableStorageDef(raw_ostream &OS, const Twine &Name) const;
+  LLVM_ABI void EmitStringTableStorageDef(raw_ostream &OS,
+                                          const Twine &Name) const;
 
   // Emit the string as one single string.
   LLVM_ABI void EmitString(raw_ostream &O) const;
