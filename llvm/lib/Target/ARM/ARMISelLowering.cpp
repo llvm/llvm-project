@@ -9852,13 +9852,11 @@ ARMTargetLowering::LowerAEABIUnalignedLoad(SDValue Op,
   Align Alignment = LD->getAlign();
   const DataLayout &DL = DAG.getDataLayout();
   bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
+  RTLIB::Libcall LC =
+      (MemVT == MVT::i32) ? RTLIB::AEABI_UREAD4 : RTLIB::AEABI_UREAD8;
 
   if (MF.getFunction().hasMinSize() && !AllowsUnaligned &&
-      Alignment <= llvm::Align(2)) {
-
-    RTLIB::Libcall LC =
-        (MemVT == MVT::i32) ? RTLIB::AEABI_UREAD4 : RTLIB::AEABI_UREAD8;
-
+      Alignment <= llvm::Align(2) && DAG.getLibcalls().getLibcallImpl(LC)) {
     MakeLibCallOptions Opts;
     SDLoc dl(Op);
 
@@ -9897,9 +9895,11 @@ SDValue ARMTargetLowering::LowerAEABIUnalignedStore(SDValue Op,
   Align Alignment = ST->getAlign();
   const DataLayout &DL = DAG.getDataLayout();
   bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
+  RTLIB::Libcall LC =
+      (MemVT == MVT::i32) ? RTLIB::AEABI_UWRITE4 : RTLIB::AEABI_UWRITE8;
 
   if (MF.getFunction().hasMinSize() && !AllowsUnaligned &&
-      Alignment <= llvm::Align(2)) {
+      Alignment <= llvm::Align(2) && DAG.getLibcalls().getLibcallImpl(LC)) {
 
     SDLoc dl(Op);
 
@@ -9907,9 +9907,6 @@ SDValue ARMTargetLowering::LowerAEABIUnalignedStore(SDValue Op,
     SDValue StoreVal = ST->getOperand(1);
     if (ST->isTruncatingStore())
       StoreVal = DAG.getNode(ISD::TRUNCATE, dl, MemVT, ST->getOperand(1));
-
-    RTLIB::Libcall LC =
-        (MemVT == MVT::i32) ? RTLIB::AEABI_UWRITE4 : RTLIB::AEABI_UWRITE8;
 
     MakeLibCallOptions Opts;
     auto CallResult =

@@ -1754,6 +1754,11 @@ class PatGprPairGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), (vt GPRPair:$rs2))),
           (Inst GPRPair:$rs1, GPRPair:$rs2)>;
 
+// Unary GPRPair operation, one source register pair.
+class PatGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
+    : Pat<(vt (OpNode (vt GPRPair:$rs1))),
+          (Inst GPRPair:$rs1)>;
+
 // Reduction sum. PatRedSum is the single-GPR source (predsum.bs/hs/ws), result
 // XLenVT; PatRedSumPair is the RV32 paired source (predsum.dbs/dhs), result i32.
 // Target-illegal results (i32 accumulator on RV64, i64 on RV32) don't reach
@@ -1897,6 +1902,11 @@ def SDT_RISCVPPairE_DB : SDTypeProfile<2, 4, [SDTCisVT<0, v4i8>,
                                               SDTCisSameAs<0, 4>,
                                               SDTCisSameAs<0, 5>]>;
 def riscv_ppaire_db : RVSDNode<"PPAIRE_DB", SDT_RISCVPPairE_DB>;
+
+// signed-saturating abs of each lane; an INT_MIN lane maps to INT_MAX.
+def SDT_RISCVPackedUnary : SDTypeProfile<1, 1, [SDTCisVec<0>,
+                                                SDTCisSameAs<0, 1>]>;
+def riscv_psabs : RVSDNode<"PSABS", SDT_RISCVPackedUnary>;
 
 // Add one to the immediate. Used by RISCVISD::SATI.
 def IncImm : SDNodeXForm<imm, [{
@@ -2118,6 +2128,10 @@ let Predicates = [HasStdExtP] in {
   def : PatGprGpr<smax, PMAX_H, XLenVecI16VT>;
   def : PatGprGpr<umax, PMAXU_H, XLenVecI16VT>;
 
+  // 8/16-bit saturating absolute value patterns
+  def : PatGpr<riscv_psabs, PSABS_B, XLenVecI8VT>;
+  def : PatGpr<riscv_psabs, PSABS_H, XLenVecI16VT>;
+
   // 8/16-bit vselect patterns
   def : Pat<(XLenVecI8VT (vselect (XLenVecI8VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
             (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
@@ -2234,6 +2248,11 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v4i8 (bitreverse GPR:$rs)), (BREV8 GPR:$rs)>;
   def : Pat<(v2i16 (bitreverse GPR:$rs)),
             (PPAIROE_H (REV_RV32 GPR:$rs), (REV_RV32 GPR:$rs))>;
+
+  // Element reverse (prev): reverse the byte/halfword order of the register.
+  def : Pat<(v4i8 (vector_reverse (v4i8 GPR:$rs))), (REV8_RV32 GPR:$rs)>;
+  def : Pat<(v2i16 (vector_reverse (v2i16 GPR:$rs))),
+            (PPAIROE_H GPR:$rs, GPR:$rs)>;
 
   // Load/Store patterns
   def : StPat<store, SW, GPR, v4i8>;
@@ -2443,6 +2462,10 @@ let append Predicates = [IsRV32] in {
   def : PatGprPairGprPair<umax, PMAXU_DH, v4i16>;
   def : PatGprPairGprPair<smax, PMAX_DW, v2i32>;
   def : PatGprPairGprPair<umax, PMAXU_DW, v2i32>;
+
+  // 8/16-bit saturating absolute value patterns
+  def : PatGprPair<riscv_psabs, PSABS_DB, v8i8>;
+  def : PatGprPair<riscv_psabs, PSABS_DH, v4i16>;
 
   // 16-bit bswap patterns
   def : Pat<(v4i16 (bswap GPRPair:$rs)),
@@ -2682,6 +2705,12 @@ let append Predicates = [IsRV64] in {
             (REV16_RV64 (REV_RV64 GPR:$rs))>;
   def : Pat<(v2i32 (bitreverse GPR:$rs)),
             (PPAIROE_W (REV_RV64 GPR:$rs), (REV_RV64 GPR:$rs))>;
+
+  // Element reverse (prev): reverse the byte/halfword/word order of the register.
+  def : Pat<(v8i8 (vector_reverse (v8i8 GPR:$rs))), (REV8_RV64 GPR:$rs)>;
+  def : Pat<(v4i16 (vector_reverse (v4i16 GPR:$rs))), (REV16_RV64 GPR:$rs)>;
+  def : Pat<(v2i32 (vector_reverse (v2i32 GPR:$rs))),
+            (PPAIROE_W GPR:$rs, GPR:$rs)>;
 
   // Load/Store patterns
   def : StPat<store, SD, GPR, v8i8>;

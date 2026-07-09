@@ -529,6 +529,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     DefineStd(Builder, "i386", Opts);
   }
 
+  if (getTriple().isLFI()) {
+    Builder.defineMacro("__LFI__");
+  }
+
   Builder.defineMacro("__SEG_GS");
   Builder.defineMacro("__SEG_FS");
   Builder.defineMacro("__seg_gs", "__attribute__((address_space(256)))");

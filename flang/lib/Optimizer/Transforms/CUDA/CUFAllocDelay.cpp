@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/IR/Block.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/DenseMap.h"
@@ -41,7 +41,7 @@ namespace {
 /// skipped as "uses" and collected in \p hostAssocStores so the caller can
 /// move them along with the sunk group.
 static mlir::Operation *
-findDelayTarget(hlfir::DeclareOp declareOp, mlir::Block *entryBlock,
+findDelayTarget(fir::DeclareOp declareOp, mlir::Block *entryBlock,
                 llvm::SmallVectorImpl<fir::StoreOp> &hostAssocStores) {
   mlir::Operation *earliest = nullptr;
   mlir::Region *funcRegion = entryBlock->getParent();
@@ -110,14 +110,14 @@ struct CUFAllocDelay : public fir::impl::CUFAllocDelayBase<CUFAllocDelay> {
           boxAllocOps.push_back(allocOp);
 
     for (cuf::AllocOp allocOp : boxAllocOps) {
-      // Find the hlfir.declare and fir.store that use this cuf.alloc.
+      // Find the fir.declare and fir.store that use this cuf.alloc.
       // Bail out if the alloc has any unexpected users to avoid breaking
       // dominance for patterns we don't track.
-      hlfir::DeclareOp declareOp = nullptr;
+      fir::DeclareOp declareOp = nullptr;
       fir::StoreOp storeOp = nullptr;
       bool hasUnknownUser = false;
       for (mlir::Operation *user : allocOp->getUsers()) {
-        if (auto decl = mlir::dyn_cast<hlfir::DeclareOp>(user))
+        if (auto decl = mlir::dyn_cast<fir::DeclareOp>(user))
           declareOp = decl;
         else if (auto store = mlir::dyn_cast<fir::StoreOp>(user))
           storeOp = store;
@@ -141,7 +141,7 @@ struct CUFAllocDelay : public fir::impl::CUFAllocDelayBase<CUFAllocDelay> {
       if (delayTarget == declareOp)
         continue;
 
-      // Move {cuf.alloc, fir.store, hlfir.declare} before the delay target.
+      // Move {cuf.alloc, fir.store, fir.declare} before the delay target.
       // The embox/zero_bits/shape/constants stay at their original positions
       // since they still dominate the new locations.
       allocOp->moveBefore(delayTarget);

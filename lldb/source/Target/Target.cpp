@@ -870,7 +870,7 @@ void Target::AddNameToBreakpoint(BreakpointSP &bp_sp, llvm::StringRef name,
   if (!bp_sp)
     return;
 
-  BreakpointName *bp_name = FindBreakpointName(ConstString(name), true, error);
+  BreakpointName *bp_name = FindBreakpointName(name, true, error);
   if (!bp_name)
     return;
 
@@ -883,9 +883,9 @@ void Target::AddBreakpointName(std::unique_ptr<BreakpointName> bp_name) {
       std::make_pair(bp_name->GetName(), std::move(bp_name)));
 }
 
-BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
-                                           Status &error) {
-  BreakpointID::StringIsBreakpointName(name.GetStringRef(), error);
+BreakpointName *Target::FindBreakpointName(llvm::StringRef name,
+                                           bool can_create, Status &error) {
+  BreakpointID::StringIsBreakpointName(name, error);
   if (!error.Success())
     return nullptr;
 
@@ -901,19 +901,18 @@ BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
   }
 
   return m_breakpoint_names
-      .insert(std::make_pair(
-          name, std::make_unique<BreakpointName>(name.GetStringRef().str())))
+      .insert(
+          std::make_pair(name, std::make_unique<BreakpointName>(name.str())))
       .first->second.get();
 }
 
-void Target::DeleteBreakpointName(ConstString name) {
+void Target::DeleteBreakpointName(llvm::StringRef name) {
   BreakpointNameMap::iterator iter = m_breakpoint_names.find(name);
 
   if (iter != m_breakpoint_names.end()) {
-    const char *name_cstr = name.AsCString(nullptr);
     m_breakpoint_names.erase(iter);
     for (auto bp_sp : m_breakpoint_list.Breakpoints())
-      bp_sp->RemoveName(name_cstr);
+      bp_sp->RemoveName(name);
   }
 }
 
@@ -5994,9 +5993,6 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
 std::recursive_mutex &Target::GetAPIMutex() {
   Policy policy = PolicyStack::Get().Current();
   if (policy.view == Policy::View::Private)
-    return m_private_mutex;
-
-  if (GetProcessSP() && GetProcessSP()->CurrentThreadIsPrivateStateThread())
     return m_private_mutex;
 
   return m_mutex;
