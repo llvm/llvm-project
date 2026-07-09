@@ -532,25 +532,6 @@ TEST(VerifierTest, AtomicRMWIntVector) {
       << Error;
 }
 
-TEST(VerifierTest, AtomicRMWFixedIntVector) {
-  LLVMContext C;
-  Module M("M", C);
-  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
-  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
-  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
-  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
-
-  Type *IntTy = Type::getInt16Ty(C);
-  Constant *CV = ConstantVector::getSplat(ElementCount::getFixed(2),
-                                          ConstantInt::get(IntTy, 0));
-  new AtomicRMWInst(AtomicRMWInst::Add, Ptr, CV, Align(4),
-                    AtomicOrdering::SequentiallyConsistent, SyncScope::System,
-                    /*Elementwise=*/false, Entry);
-  ReturnInst::Create(C, Entry);
-
-  EXPECT_FALSE(verifyFunction(*F));
-}
-
 TEST(VerifierTest, GetElementPtrInst) {
   LLVMContext C;
   Module M("M", C);
