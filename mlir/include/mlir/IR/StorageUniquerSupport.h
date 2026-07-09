@@ -200,8 +200,8 @@ public:
   /// overload resolution when attempting to match non-pointer arguments
   /// against an unconstrained MLIRContext * parameter.
   template <typename Arg1, typename... Args,
-            typename = std::enable_if_t<std::is_convertible<
-                llvm::remove_cvref_t<Arg1>, MLIRContext *>::value>>
+            typename = std::enable_if_t<std::is_convertible_v<
+                llvm::remove_cvref_t<Arg1>, MLIRContext *>>>
   static ConcreteT getChecked(function_ref<InFlightDiagnostic()> emitErrorFn,
                               Arg1 &&ctx, Args... args) {
     // If the construction invariants fail then we return a null attribute.
