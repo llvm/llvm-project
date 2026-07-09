@@ -167,8 +167,8 @@ int main(int, char**) {
   static_assert(test<contiguous_iterator<int*>>());
 
   // bounded overload
-  test<long*, long>();
-  static_assert(test<long*, long>());
+  test<long long*, long long>();
+  static_assert(test<long long*, long long>());
 
   return 0;
 }

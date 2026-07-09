@@ -25,13 +25,13 @@
 #include "test_iterators.h"
 #include "test_macros.h"
 
-struct Foo {
+struct alignas(4) Foo {
   int x;
   constexpr bool operator==(Foo const& other) const { return x == other.x; }
 };
 
-struct Foo2 {
-  long x;
+struct alignas(8) Foo2 {
+  int x;
   constexpr bool operator==(Foo2 const& other) const { return x == other.x; }
 };
 

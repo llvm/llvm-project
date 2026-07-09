@@ -113,8 +113,8 @@ int main(int, char**) {
   test<contiguous_iterator<int*>>();
   static_assert(test<contiguous_iterator<int*>>());
 
-  test<long*, long>();
-  static_assert(test<long*, long>());
+  test<long long*, long long>();
+  static_assert(test<long long*, long long>());
 
   return 0;
 }
