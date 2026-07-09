@@ -217,9 +217,8 @@ static MarkerStyle getMarker(const FileCheckDiag &Diag) {
   // don't have markers.  For example, a marker for the MatchNoteDiag
   // 'with "VAR" equal to "5"' would seem to indicate where "VAR" matches, but
   // we don't actually have that location.  Instead, we just place the note
-  // after the start of the associated MatchResultDiag.  This decision is
-  // overriden below for the case of MatchNoneDiag because the search range is
-  // used instead.
+  // after the start of the associated MatchResultDiag.  Search ranges are
+  // indicated separately.
   MarkerStyle Res;
   bool IsError = Diag.isError() || Diag.getMatchResultDiag().isError();
   if (Diag.getMatchRange()) {
@@ -231,7 +230,7 @@ static MarkerStyle getMarker(const FileCheckDiag &Diag) {
   Res.Color = IsError ? raw_ostream::RED : raw_ostream::GREEN;
   Res.FiltersAsError = IsError;
 
-  // Add Note.  Override the default Lead and Color for some diagnostic kinds.
+  // Add Note.  Override the default Head and Color for some diagnostic kinds.
   switch (Diag.getKind()) {
   case FileCheckDiag::MatchFoundDiag:
     switch (cast<MatchFoundDiag>(Diag).getStatus()) {
@@ -251,8 +250,6 @@ static MarkerStyle getMarker(const FileCheckDiag &Diag) {
     }
     break;
   case FileCheckDiag::MatchNoneDiag:
-    Res.Head = 'X';
-    Res.Mid = Res.Tail = '~';
     switch (cast<MatchNoneDiag>(Diag).getStatus()) {
     case MatchNoneDiag::Success:
       break;
@@ -260,7 +257,7 @@ static MarkerStyle getMarker(const FileCheckDiag &Diag) {
       Res.Note = "match failed for invalid pattern";
       break;
     case MatchNoneDiag::Expected:
-      Res.Note = "no match found";
+      Res.Note = "no match found in search range";
       break;
     }
     break;
@@ -334,8 +331,11 @@ static void DumpInputAnnotationHelp(raw_ostream &OS) {
      << "           - CHECK-DAG overlapping match (discarded, reported if "
      << "-vv)\n"
      << "  - ";
-  WithColor(OS, raw_ostream::SAVEDCOLOR, true) << "X~~";
-  OS << "    marks search range when no match is found, such as:\n"
+  WithColor(OS, raw_ostream::SAVEDCOLOR, true) << "{ }";
+  OS << "    encloses search range (exclusive bounds) when no match is found "
+     << "or\n"
+     << "           there is an error, such as:\n"
+     << "           - the errors mentioned above\n"
      << "           - CHECK-NEXT not found (error)\n"
      << "           - CHECK-NOT not found (success, reported if -vv)\n"
      << "           - CHECK-DAG not found after discarded matches (error)\n"
@@ -379,9 +379,11 @@ struct InputAnnotation {
   /// be different from the starting line of the original diagnostic if
   /// !IsFirstLine.
   unsigned InputLine;
-  /// The column range (one-origin indexing, inclusive boundaries) in which to
-  /// mark the input line.  If \c InputLastCol is \c UINT_MAX, the rest of the
-  /// input line should be marked.
+  /// The column range (inclusive boundaries) in which to mark the input line.
+  /// A value of one indicates the first column of the actual input, and a
+  /// value of zero indicates the left margin.  If \c InputLastCol is
+  /// \c UINT_MAX, the rest of the input line should be marked, and another
+  /// \c InputAnnotation will continue it on the next line.
   unsigned InputFirstCol, InputLastCol;
   /// The marker to use.
   MarkerStyle Marker;
@@ -505,7 +507,6 @@ private:
   Loc First;
   /// Location of the last marked character.
   Loc Last;
-  MarkerRange(Loc First, Loc Last) : First(First), Last(Last) {}
 
 public:
   /// Make an invalid range to be overwritten before being used.
@@ -513,14 +514,55 @@ public:
   /// \p Range specifies the \a logical input range to be depicted by annotation
   /// markers \a drawn at the resulting \c MarkerRange.
   ///
-  /// If \p Range is an empty range, then the resulting \c MarkerRange is
-  /// expanded to a single character.  This avoids a missing marker for an empty
-  /// range, but it means the markers for a single-character range are
-  /// indistinguishable from markers for an empty range.
-  MarkerRange(const SourceMgr &SM, SMRange Range) {
-    // Range has an inclusive start as MarkerRange requires.
+  /// \a how that drawing depicts that logical input range is determined by
+  /// \p ShowExclusive.  The drawing specifies either:
+  /// - The \a inclusive start and end bounds of the logical input range if
+  ///   \p !ShowExclusive.  In this case:
+  ///   - If the logical input range is empty, then the resulting \c MarkerRange
+  ///     is expanded to a single character.  This avoids a missing marker, but
+  ///     it means the markers for a single-character range are
+  ///     indistinguishable from markers for an empty range.
+  ///   - The first and last location of the \c MarkerRange are always real
+  ///     locations in the input (never, for example, column 0).
+  /// - The \a exclusive start and end bounds of the logical input range if
+  ///   \p ShowExclusive.  In this case:
+  ///   - The \c MarkerRange length is then always at least two because
+  ///     exclusive boundaries never occupy the same location.
+  ///   - If a \p Range boundary is an input line boundary, the corresponding
+  ///     \c MarkerRange column might be in the line's margin (e.g., column 0)
+  ///     to avoid placing a marker on an adjacent line.  That decision can make
+  ///     input annotations more concise (more line-liners) and easier to read.
+  ///     It also avoids non-existent adjacent lines (e.g., line 0) that are not
+  ///     depicted in the input dump.
+  MarkerRange(const SourceMgr &SM, SMRange Range, bool ShowExclusive = false) {
+    // Given an SMRange representing the range of text "range of text", the
+    // following example compares how it and the resulting MarkerRange encode
+    // the same start (s) and end (e) bounds:
+    //
+    //     ....range of text....
+    //         s            e    SMRange
+    //         s           e     MarkerRange with ShowExclusive=false
+    //        s             e    MarkerRange with ShowExclusive=true
+    if (ShowExclusive) {
+      // Range has inclusive start, but ShowExclusive requires exclusive start.
+      First = SM.getLineAndColumn(Range.Start);
+      --First.Col;
+      // Range has an exclusive end as ShowExclusive requires.  If it is at a
+      // line boundary, it is at the start of the next line, so normally move it
+      // to the end of the previous line.  For an empty range, do not do that as
+      // we do not want an end marker on the line before the start marker.
+      if (Range.Start == Range.End) {
+        Last = SM.getLineAndColumn(Range.End);
+      } else {
+        SMLoc EndLoc = SMLoc::getFromPointer(Range.End.getPointer() - 1);
+        Last = SM.getLineAndColumn(EndLoc);
+        ++Last.Col;
+      }
+      return;
+    }
+    // Range has an inclusive start as !ShowExclusive requires.
     First = SM.getLineAndColumn(Range.Start);
-    // Range has an exclusive end, but MarkerRange requires an inclusive end.
+    // Range has an exclusive end, but !ShowExclusive requires an inclusive end.
     if (Range.Start == Range.End) {
       // Convert the empty range to a one-character range.
       Last = First;
@@ -532,14 +574,133 @@ public:
       Last = SM.getLineAndColumn(EndLoc);
     }
   }
+  /// \p Loc specifies a single input character to be marked by a single
+  /// annotation marker character.
+  MarkerRange(Loc OneChar) : First(OneChar), Last(OneChar) {}
   /// Is the marker range contained on a single line?
   bool isSingleLine() const { return First.Line == Last.Line; }
   /// Get the location of the first marked character.
   Loc getFirstLoc() const { return First; }
   /// Get the location of the last marked character.
   Loc getLastLoc() const { return Last; }
-  /// Return a range marking only the first character.
-  MarkerRange truncate() const { return {First, First}; }
+};
+
+/// Emits search range annotations for each \c MatchResultDiag as it is
+/// encountered.
+///
+/// In some cases, it emits a single, one-line annotation.  Otherwise, it emits
+/// separate annotations for the start and end of the search range.  The logic
+/// for making this determination is encapsulated in static member functions.
+class SearchRangeAnnotator {
+private:
+  const SourceMgr &SM;
+  /// Where to append search range annotations.
+  std::vector<InputAnnotation> &Annotations;
+  /// A globally unique index for this annotation.
+  unsigned &LabelIndexGlobal;
+  /// The most recent \c MatchResultDiag, or \c nullptr if all search range
+  /// annotations have been added already for the most recent
+  /// \c MatchResultDiag.
+  const MatchResultDiag *MRD;
+  /// The labeler for \c MRD.  Stored by value as the original labeler might be
+  /// destroyed by the time we call \c endDiags here.
+  InputAnnotationLabeler Labeler;
+  /// Would a \c SearchRangeAnnotator make any search range annotations for
+  /// \p MRD?
+  static bool makesAnnotationsFor(const MatchResultDiag &MRD) {
+    return !MRD.getMatchRange() || MRD.isError();
+  }
+  /// Assuming \c makesAnnotationsFor(MRD), would a \c SearchRangeAnnotator make
+  /// a one-line search range annotation for \p MRD?  Either way, the search
+  /// range computed for \p MRD is stored in \p SearchRange.
+  static bool makesOneLinerFor(const SourceMgr &SM, const MatchResultDiag &MRD,
+                               MarkerRange &SearchRange) {
+    assert(makesAnnotationsFor(MRD) &&
+           "expected makesAnnotationsFor to be checked first");
+    SearchRange = {SM, MRD.getSearchRange(), /*ShowExclusive=*/true};
+    return SearchRange.isSingleLine();
+  }
+  /// Make the next annotation for the current \c MatchResultDiag.
+  void makeAnnotation(bool Start) {
+    InputAnnotation &A = Annotations.emplace_back();
+    A.LabelIndexGlobal = LabelIndexGlobal++;
+    Labeler.generateLabel(A.Label);
+    A.IsFirstLine = true;
+    A.FoundAndExpectedMatch = false;
+    MarkerRange SearchRange;
+    if (makesOneLinerFor(SM, *MRD, SearchRange)) {
+      assert(Start && "expected no search range end annotation for one-liner");
+      A.InputLine = SearchRange.getFirstLoc().Line;
+      A.InputFirstCol = SearchRange.getFirstLoc().Col;
+      A.InputLastCol = SearchRange.getLastLoc().Col;
+      MatchCustomNoteDiag NoteDiag("search range (exclusive bounds)");
+      NoteDiag.setMatchResultDiag(MRD);
+      A.Marker = getMarker(NoteDiag);
+      A.Marker.Head = '{';
+      A.Marker.Mid = ' ';
+      A.Marker.Tail = '}';
+      MRD = nullptr;
+      return;
+    }
+    // We have separate annotations for start and end.
+    MarkerRange::Loc Loc =
+        Start ? SearchRange.getFirstLoc() : SearchRange.getLastLoc();
+    A.InputLine = Loc.Line;
+    A.InputFirstCol = A.InputLastCol = Loc.Col;
+    MatchCustomNoteDiag NoteDiag(std::string("search range ") +
+                                 (Start ? "start" : "end") + " (exclusive)");
+    NoteDiag.setMatchResultDiag(MRD);
+    A.Marker = getMarker(NoteDiag);
+    A.Marker.Head = Start ? '{' : '}';
+  }
+
+public:
+  /// How many search range annotations would a \c SearchRangeAnnotator generate
+  /// for \c MRD?
+  static unsigned countAnnotationsFor(const SourceMgr &SM,
+                                      const MatchResultDiag &MRD) {
+    if (!makesAnnotationsFor(MRD))
+      return 0;
+    MarkerRange SearchRange;
+    return makesOneLinerFor(SM, MRD, SearchRange) ? 1 : 2;
+  }
+  /// Are the search range annotations generated by a \c SearchRangeAnnotator
+  /// sufficient for \p MRD?  Otherwise, \p MRD needs to be rendered as a
+  /// separate annotation.
+  static bool sufficesFor(const MatchResultDiag &MRD) {
+    return makesAnnotationsFor(MRD) && getMarker(MRD).Note.empty();
+  }
+  /// \p Annotations is where this annotator should append search range
+  /// annotations.  \p LabelIndexGlobal is the globally unique index of the next
+  /// annotation label to be generated.  This annotator will increment it when
+  /// generating a new label for a search range annotation.
+  SearchRangeAnnotator(const SourceMgr &SM,
+                       std::vector<InputAnnotation> &Annotations,
+                       unsigned &LabelIndexGlobal)
+      : SM(SM), Annotations(Annotations), LabelIndexGlobal(LabelIndexGlobal),
+        MRD(nullptr) {}
+  /// Emit any search range start annotation or one-line search range annotation
+  /// for \p MRDNew using its labeler \p LabelerNew.  This annotator will emit
+  /// any search range end annotation at the next call to \c newMatchResultDiag
+  /// or \c endDiags.
+  void newMatchResultDiag(const MatchResultDiag &MRDNew,
+                          InputAnnotationLabeler LabelerNew) {
+    if (MRD) {
+      makeAnnotation(/*Start=*/false);
+      MRD = nullptr;
+    }
+    if (makesAnnotationsFor(MRDNew)) {
+      MRD = &MRDNew;
+      Labeler = LabelerNew;
+      makeAnnotation(/*Start=*/true);
+    }
+  }
+  /// Emit any search range end annotation for the final \c MatchResultDiag
+  /// passed to \c newMatchResultDiag.
+  void endDiags() {
+    if (MRD)
+      makeAnnotation(/*Start=*/false);
+  }
 };
 } // namespace
 
@@ -560,12 +721,22 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
   // series of zero or more MatchNoteDiag's.  Each such MatchResultDiag and its
   // MatchNoteDiag series can require multiple labels.
   std::map<SMLoc, unsigned, CompareSMLoc> LabelCountPerPattern;
-  for (const FileCheckDiag &Diag : Diags)
-    ++LabelCountPerPattern[Diag.getMatchResultDiag().getCheckLoc()];
+  for (const FileCheckDiag &Diag : Diags) {
+    unsigned &C = LabelCountPerPattern[Diag.getMatchResultDiag().getCheckLoc()];
+    if (const MatchResultDiag *MRD = dyn_cast<MatchResultDiag>(&Diag)) {
+      C += SearchRangeAnnotator::countAnnotationsFor(SM, *MRD);
+      if (!SearchRangeAnnotator::sufficesFor(*MRD))
+        ++C;
+    } else {
+      ++C;
+    }
+  }
   // How many labels have we generated so far per check pattern?
   std::map<SMLoc, unsigned, CompareSMLoc> LabelIndexPerPattern;
   // How many total labels have we generated so far?
   unsigned LabelIndexGlobal = 0;
+  SearchRangeAnnotator TheSearchRangeAnnotator(SM, Annotations,
+                                               LabelIndexGlobal);
   // What's the widest label we've generated so far?
   LabelWidthGlobal = 0;
   // The labeler for the current MatchResultDiag and its MatchNoteDiag series.
@@ -578,6 +749,9 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
           LabelCountPerPattern[MRD->getCheckLoc()] > 1
               ? &LabelIndexPerPattern[MRD->getCheckLoc()]
               : nullptr);
+      TheSearchRangeAnnotator.newMatchResultDiag(*MRD, CurLabeler);
+      if (SearchRangeAnnotator::sufficesFor(*MRD))
+        continue;
     }
 
     // Build label that is unique for this input annotation before it is
@@ -596,22 +770,17 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
         A.FoundAndExpectedMatch = true;
     }
 
-    // If Diag has a match range, position the marker there.  If it is a
-    // MatchNoneDiag, position the marker at its search range.  Otherwise,
+    // If Diag has a match range, position the marker there.  Otherwise,
     // position the marker at the start of the most recent MatchResultDiag, with
     // which it is associated.
     MarkerRange InputRange;
     if (Diag.getMatchRange()) {
       InputRange = MarkerRange(SM, *Diag.getMatchRange());
-    } else if (const MatchNoneDiag *MND = dyn_cast<MatchNoneDiag>(&Diag)) {
-      InputRange = MarkerRange(SM, MND->getSearchRange());
     } else {
-      assert(isa<MatchNoteDiag>(Diag) &&
-             "expected only MatchNoteDiag to have no input range");
       const MatchResultDiag &MRD = Diag.getMatchResultDiag();
       InputRange = MRD.getMatchRange() ? MarkerRange(SM, *MRD.getMatchRange())
                                        : MarkerRange(SM, MRD.getSearchRange());
-      InputRange = InputRange.truncate();
+      InputRange = MarkerRange(InputRange.getFirstLoc());
       assert(A.Marker.Head == ' ' && "expected no marker for no match range");
     }
 
@@ -647,6 +816,7 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
       }
     }
   }
+  TheSearchRangeAnnotator.endDiags();
 }
 
 static unsigned FindInputLineInFilter(
@@ -686,7 +856,7 @@ static void DumpEllipsisOrElidedLines(raw_ostream &OS, std::string &ElidedLines,
   unsigned EllipsisLines = 3;
   if (EllipsisLines < StringRef(ElidedLines).count('\n')) {
     for (unsigned i = 0; i < EllipsisLines; ++i) {
-      WithColor(OS, raw_ostream::BLACK, /*Bold=*/true)
+      WithColor(OS, raw_ostream::BRIGHT_BLACK, /*Bold=*/true)
           << right_justify(".", LabelWidthGlobal);
       OS << '\n';
     }
@@ -810,7 +980,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
     }
 
     // Print right-aligned line number.
-    WithColor(*LineOS, raw_ostream::BLACK, /*Bold=*/true, /*BF=*/false,
+    WithColor(*LineOS, raw_ostream::BRIGHT_BLACK, /*Bold=*/true, /*BG=*/false,
               TheColorMode)
         << format_decimal(Line, LabelWidthGlobal) << ": ";
 
@@ -833,8 +1003,16 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       WithColor COS(*LineOS, raw_ostream::SAVEDCOLOR, /*Bold=*/false,
                     /*BG=*/false, TheColorMode);
       bool InMatch = false;
-      if (Req.Verbose)
-        COS.changeColor(raw_ostream::CYAN, true, true);
+      if (Req.Verbose) {
+        COS.changeColor(raw_ostream::CYAN, /*Bold=*/true, /*BG=*/true);
+      } else {
+        // Our goal is to use the output streams's default color so that input
+        // text is legibile in both light and dark themes.  SAVEDCOLOR above
+        // currently ignores the Bold=false there, so we override it with
+        // resetColor here, which ensures consistent colors with the resetColor
+        // below anyway.
+        COS.resetColor();
+      }
       for (unsigned Col = 1; InputFilePtr != InputFileEnd && !Newline; ++Col) {
         bool WasInMatch = InMatch;
         InMatch = false;
@@ -844,6 +1022,8 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
             break;
           }
         }
+        // If !Req.Verbose, FoundAndExpectedMatches is empty, so InMatch and
+        // WasInMatch remain false, so these color transitions never happen.
         if (!WasInMatch && InMatch)
           COS.resetColor();
         else if (WasInMatch && !InMatch)
@@ -864,17 +1044,20 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
            AnnotationItr->InputLine == Line) {
       WithColor COS(*LineOS, AnnotationItr->Marker.Color, /*Bold=*/true,
                     /*BG=*/false, TheColorMode);
-      // The two spaces below are where the ": " appears on input lines.
-      COS << left_justify(AnnotationItr->Label, LabelWidthGlobal) << "  ";
+      // The space below aligns with the ":" on the input line.
+      COS << left_justify(AnnotationItr->Label, LabelWidthGlobal) << " ";
       unsigned Col;
-      for (Col = 1; Col < AnnotationItr->InputFirstCol; ++Col)
+      // A search range annotation at the beginning of the line starts at column
+      // 0 because it is an exclusive boundary.
+      for (Col = 0; Col < AnnotationItr->InputFirstCol; ++Col)
         COS << ' ';
       COS << AnnotationItr->Marker.Head;
       // If InputLastCol==UINT_MAX, stop at InputLineWidth.
       for (++Col; Col < AnnotationItr->InputLastCol && Col <= InputLineWidth;
            ++Col)
         COS << AnnotationItr->Marker.Mid;
-      if (Col <= AnnotationItr->InputLastCol && Col <= InputLineWidth) {
+      if (Col <= AnnotationItr->InputLastCol &&
+          AnnotationItr->InputLastCol != UINT_MAX) {
         COS << AnnotationItr->Marker.Tail;
         ++Col;
       }
@@ -884,7 +1067,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
         // put the note right after the marker, subsequent annotations for the
         // same input line might appear to mark this note instead of the input
         // line.
-        for (; Col <= InputLineWidth; ++Col)
+        for (; Col <= InputLineWidth + 1; ++Col)
           COS << ' ';
         COS << ' ' << Note;
       }

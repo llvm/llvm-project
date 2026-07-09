@@ -414,8 +414,8 @@ define void @nested_loops_temporal_divergence_both(float %pre.cond.val, i32 %n.i
 ; GFX10-NEXT:  ; %bb.3: ; %UseInst
 ; GFX10-NEXT:    ; in Loop: Header=BB5_1 Depth=1
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s10
-; GFX10-NEXT:    v_mov_b32_e32 v9, s7
 ; GFX10-NEXT:    v_mov_b32_e32 v8, s6
+; GFX10-NEXT:    v_mov_b32_e32 v9, s7
 ; GFX10-NEXT:    v_cmp_lt_u32_e32 vcc_lo, s6, v1
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s9
 ; GFX10-NEXT:    s_add_i32 s6, s6, 1

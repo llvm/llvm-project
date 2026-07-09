@@ -154,6 +154,10 @@ Error lto::DTLTO::prepareDtltoJob(StringRef ModulePath, unsigned Task) {
   if (Error Err = checkCacheHit(J))
     return Err;
   if (!J.Cached) {
+    InputModuleIDsToSerialize.insert(J.ModuleID);
+    for (StringRef ImportPath : J.ImportsFilesList)
+      InputModuleIDsToSerialize.insert(ImportPath);
+
     TimeTraceScope JobScope("Emit individual index for DTLTO",
                             J.SummaryIndexPath);
     if (Error Err = save(SummaryIndexFiles[Task], J.SummaryIndexPath))
@@ -224,6 +228,8 @@ void lto::DTLTO::buildCommonRemoteCompilerOptions() {
 Error lto::DTLTO::prepareDtltoJobs() {
   auto &ModuleMap =
       ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
+
+  InputModuleIDsToSerialize.clear();
 
   if (ModuleMap.empty())
     return Error::success();

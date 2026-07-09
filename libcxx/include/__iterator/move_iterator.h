@@ -13,6 +13,7 @@
 #include <__compare/compare_three_way_result.h>
 #include <__compare/three_way_comparable.h>
 #include <__concepts/assignable.h>
+#include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
 #include <__concepts/derived_from.h>
 #include <__concepts/same_as.h>
@@ -27,7 +28,6 @@
 #include <__type_traits/conditional.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_assignable.h>
-#include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
@@ -122,7 +122,7 @@ public:
 
 #if _LIBCPP_STD_VER >= 20
   _LIBCPP_HIDE_FROM_ABI constexpr move_iterator()
-    requires is_constructible_v<_Iter>
+    requires default_initializable<_Iter>
       : __current_() {}
 
   template <class _Up>

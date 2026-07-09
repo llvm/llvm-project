@@ -310,6 +310,17 @@ bool SBValue::SetValueFromCString(const char *value_str, lldb::SBError &error) {
   return success;
 }
 
+bool SBValue::CanSetValue() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (!value_sp)
+    return false;
+
+  return value_sp->CanSetValue();
+}
+
 lldb::SBTypeFormat SBValue::GetTypeFormat() {
   LLDB_INSTRUMENT_VA(this);
 
