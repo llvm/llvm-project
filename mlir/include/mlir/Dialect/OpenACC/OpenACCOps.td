@@ -384,6 +384,15 @@ def DeclareActionAttr : OpenACC_Attr<"DeclareAction", "declare_action"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+// Attribute to store locations for an optional OpenACC loop directive and one
+// or more loops
+def OpenACC_LoopLocAttr : OpenACC_Attr<"LoopLoc", "loop_loc"> {
+  let summary = "Stores the OpenACC loop directive and per-loop source locations";
+  let parameters = (ins OptionalParameter<"::mlir::LocationAttr">:$directive,
+                        ArrayRefParameter<"::mlir::LocationAttr">:$loops);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 // Device type enumeration.
 def OpenACC_DeviceTypeNone      : I32EnumAttrCase<"None", 0, "none">;
 def OpenACC_DeviceTypeStar      : I32EnumAttrCase<"Star", 1, "star">;
