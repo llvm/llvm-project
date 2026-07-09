@@ -416,7 +416,7 @@ static void writeControlledNops(raw_ostream &OS, const MCAssembler &Asm,
     assert(NumBytesToEmit && "try to emit zero-sized NOP");
 
     if (!Asm.getBackend().writeNopData(OS, NumBytesToEmit, STI)) {
-      report_fatal_error("unable to write NOP sequence of the remaining " +
+      reportFatalInternalError("unable to write NOP sequence of the remaining " +
                          Twine(NumBytesToEmit) + " bytes");
       return;
     }
@@ -583,7 +583,7 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     if (!Asm.isBundlingEnabled()) {
       if (!Asm.getBackend().writeNopData(OS, FragmentSize,
                                          BF.getSubtargetInfo()))
-        report_fatal_error("unable to write nop sequence of " +
+        reportFatalInternalError("unable to write nop sequence of " +
                            Twine(FragmentSize) + " bytes");
     } else {
       writeControlledNops(OS, Asm, FragmentSize, Asm.getFragmentOffset(BF),
