@@ -23,8 +23,7 @@ llvm_config.with_environment(
 
 # Regression test-support tools live under test/tools.
 llvm_config.with_environment(
-    "PATH",
-    os.path.join(config.orc_rt_obj_root, "test", "tools"),
-    append_path=True)
+    "PATH", os.path.join(config.orc_rt_obj_root, "test", "tools"), append_path=True
+)
 
 llvm_config.use_default_substitutions()
