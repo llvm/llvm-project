@@ -2181,7 +2181,6 @@ static std::optional<Instruction *> instCombineZExtSVECmpNE(InstCombiner &IC,
       !match(II.getOperand(2), m_Zero()))
     return std::nullopt;
 
-  bool Changed = false;
   for (auto *U : II.users()) {
     if (match(U, m_ZExt(m_Specific(&II)))) {
       auto *User = cast<Instruction>(U);
@@ -2194,12 +2193,10 @@ static std::optional<Instruction *> instCombineZExtSVECmpNE(InstCombiner &IC,
           {II.getOperand(0), II.getOperand(1), ConstantInt::get(Ty, 1)});
       IC.replaceInstUsesWith(*User, UMin);
       IC.eraseInstFromFunction(*User);
-      Changed = true;
-    } else
-      continue;
+      return &II;
+    }
   }
-
-  return Changed ? std::optional<Instruction *>(&II) : std::nullopt;
+  return std::nullopt;
 }
 
 static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
