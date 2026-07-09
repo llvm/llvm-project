@@ -29,6 +29,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
+#include <llvm/CodeGen/ISDOpcodes.h>
 #include <optional>
 
 using namespace llvm;
@@ -988,8 +989,43 @@ InstructionCost GCNTTIImpl::getCmpSelInstrCost(
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
 
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                   Op1Info, Op2Info, I);
+  // Compute cost based on type legalization.
+  const TargetLoweringBase *TLI = getTLI();
+  if (TLI->getValueType(DL, ValTy, true) == MVT::Other)
+    return 1;
+
+  const int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  assert(ISD && "Invalid opcode");
+  auto getScalarCost = [TLI, ISD](std::pair<InstructionCost, MVT> ScalarLT) {
+    return TLI->isOperationExpand(ISD, ScalarLT.second) ? 1 : ScalarLT.first;
+  };
+
+  const std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
+  if (!ValTy->isVectorTy())
+    return getScalarCost(LT);
+
+  auto *ValVTy = dyn_cast_or_null<FixedVectorType>(ValTy);
+  if (!ValVTy)
+    return InstructionCost::getInvalid();
+
+  // Return legalization cost for legal vector types.
+  // TODO Handle splitting as suggested but not implemented in the base
+  // implementation?
+  if (LT.second.isVector()) {
+    const int VecISD =
+        ISD == ISD::SELECT && CondTy->isVectorTy() ? ISD::VSELECT : ISD;
+    if (!TLI->isOperationExpand(VecISD, LT.second))
+      return LT.first;
+  }
+
+  // Otherwise, assume vector needs to be scalarized.
+  InstructionCost ScalarCost =
+      getScalarCost(getTypeLegalizationCost(ValVTy->getScalarType()));
+
+  // Return scalar cost plus cost of inserting all values.
+  return getScalarizationOverhead(ValVTy, /*Insert*/ true,
+                                  /*Extract*/ false, CostKind) +
+         ValVTy->getNumElements() * ScalarCost;
 }
 
 InstructionCost
