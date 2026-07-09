@@ -112,6 +112,7 @@ void LifetimeModeling::checkDeadSymbols(SymbolReaper &SymReaper,
 
     State = State->remove<LifetimeBoundMap>(Val);
   }
+  C.addTransition(State);
 }
 
 void LifetimeModeling::printState(raw_ostream &Out, ProgramStateRef State,
