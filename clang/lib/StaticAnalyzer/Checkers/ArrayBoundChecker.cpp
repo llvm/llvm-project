@@ -94,21 +94,33 @@ public:
 };
 
 class CheckResult {
-  const NonLoc ByteOffsetVal;
-  bool AssumedNonNegative = false;
-  std::optional<NonLoc> AssumedUpperBound = std::nullopt;
+  /// Offset of the accessed location, measured from the start of the region.
+  /// As of now, the offset and the extent are always measured in bytes, but it
+  /// may be necessary to change this in the future.
+  const NonLoc Offset;
+
+  /// Updated to true when we detect that underflow is feasible.
+  bool MayUnderflow = false;
+
+  /// Updated to store the extent of the accessed buffer when we notice that
+  /// problematic overflow was feasible and therefore we either need to create
+  /// an overflow bug report, or need to note that we are assuming that there
+  /// is no overflow.  Otherwise (when overflow was infeasible or this is an
+  /// '&array[size]' expression that idiomatically creates a past-the-end
+  /// pointer) this data member is std::nullopt. In these cases we do not need
+  /// to know the extent and its value should be ignored so it is comfortable
+  /// to avoid storing it.
+  std::optional<NonLoc> MayOverflowExtent = std::nullopt;
 
 public:
-  CheckResult(NonLoc ByteOffsVal) : ByteOffsetVal(ByteOffsVal) {}
+  CheckResult(NonLoc Offs) : Offset(Offs) {}
 
-  void recordNonNegativeAssumption() { AssumedNonNegative = true; }
-  void recordUpperBoundAssumption(NonLoc UpperBoundVal) {
-    AssumedUpperBound = UpperBoundVal;
-  }
+  void recordMayUnderflow() { MayUnderflow = true; }
+  void recordMayOverflowExtent(NonLoc Extent) { MayOverflowExtent = Extent; }
 
-  bool assumedNonNegative() { return AssumedNonNegative; }
+  bool mayUnderflow() { return MayUnderflow; }
 
-  bool hasAssumption() const { return AssumedNonNegative || AssumedUpperBound; }
+  bool mayBeInvalid() const { return MayUnderflow || MayOverflowExtent; }
 
   std::string getMessage(PathSensitiveBugReport &BR, StringRef RegName,
                          SizeUnit SU) const;
@@ -501,10 +513,10 @@ static Messages getTaintMsgs(const MemSpaceRegion *Space,
 
 std::string CheckResult::getMessage(PathSensitiveBugReport &BR,
                                     StringRef RegName, SizeUnit SU) const {
-  bool ShouldReportNonNegative = AssumedNonNegative;
-  if (!providesInformationAboutInteresting(ByteOffsetVal, BR)) {
-    if (AssumedUpperBound &&
-        providesInformationAboutInteresting(*AssumedUpperBound, BR)) {
+  bool ShouldReportNonNegative = MayUnderflow;
+  if (!providesInformationAboutInteresting(Offset, BR)) {
+    if (MayOverflowExtent &&
+        providesInformationAboutInteresting(*MayOverflowExtent, BR)) {
       // Even if the byte offset isn't interesting (e.g. it's a constant value),
       // the assumption can still be interesting if it provides information
       // about an interesting symbolic upper bound.
@@ -515,8 +527,8 @@ std::string CheckResult::getMessage(PathSensitiveBugReport &BR,
     }
   }
 
-  std::optional<int64_t> OffsetN = getConcreteValue(ByteOffsetVal);
-  std::optional<int64_t> ExtentN = getConcreteValue(AssumedUpperBound);
+  std::optional<int64_t> OffsetN = getConcreteValue(Offset);
+  std::optional<int64_t> ExtentN = getConcreteValue(MayOverflowExtent);
 
   const bool UseIndex =
       !SU.isBytes() && tryDividePair(OffsetN, ExtentN, SU.asCharUnits());
@@ -528,7 +540,7 @@ std::string CheckResult::getMessage(PathSensitiveBugReport &BR,
     Out << "index ";
     if (OffsetN)
       Out << "'" << OffsetN << "' ";
-  } else if (AssumedUpperBound) {
+  } else if (MayOverflowExtent) {
     Out << "byte offset ";
     if (OffsetN)
       Out << "'" << OffsetN << "' ";
@@ -540,7 +552,7 @@ std::string CheckResult::getMessage(PathSensitiveBugReport &BR,
   if (ShouldReportNonNegative) {
     Out << " non-negative";
   }
-  if (AssumedUpperBound) {
+  if (MayOverflowExtent) {
     if (ShouldReportNonNegative)
       Out << " and";
     Out << " less than ";
@@ -648,7 +660,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
         }
         // ...but it can be valid as well, so the checker will (optimistically)
         // assume that it's valid and mention this in the note tag.
-        Res.recordNonNegativeAssumption();
+        Res.recordMayUnderflow();
       }
     }
 
@@ -667,7 +679,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
     // checker will first assume that the offset is non-negative, and then
     // (with this additional assumption) it will detect an overflow error.
     // In this situation the warning message should mention both possibilities.
-    bool AlsoMentionUnderflow = Res.assumedNonNegative();
+    bool AlsoMentionUnderflow = Res.mayUnderflow();
 
     auto [WithinUpperBound, ExceedsUpperBound] =
         compareValueToThreshold(State, ByteOffset, *KnownSize, SVB);
@@ -714,7 +726,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
       }
       // ...and it isn't tainted, so the checker will (optimistically) assume
       // that the offset is in bounds and mention this in the note tag.
-      Res.recordUpperBoundAssumption(*KnownSize);
+      Res.recordMayOverflowExtent(*KnownSize);
     }
 
     // Actually update the state. The "if" only fails in the extremely unlikely
@@ -728,7 +740,7 @@ NormalTransition:
   // Add a transition, reporting the state updates that we accumulated.
   const NoteTag *T = nullptr;
 
-  if (Res.hasAssumption()) {
+  if (Res.mayBeInvalid()) {
     std::string RN = getRegionName(Reg->getMemorySpace(C.getState()), Reg);
     SizeUnit SU = SizeUnit::forExpr(E, C);
     T = C.getNoteTag([Res, RN, SU](PathSensitiveBugReport &BR) -> std::string {
