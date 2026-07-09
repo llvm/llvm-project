@@ -311,3 +311,26 @@ body:             |
     RET_ReallyLR
 
 ...
+---
+name:            test_inlineasm_base
+alignment:       4
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %idx:_(s64) = G_CONSTANT i64 0
+    %elt:_(s32) = G_CONSTANT i32 42
+    %addr:gpr64 = IMPLICIT_DEF
+    ; Regression test for CombinerHelper::matchCombineInsertVecElts.
+    ; The base vector of G_INSERT_VECTOR_ELT is defined by INLINEASM. The combiner
+    ; must stop at INLINEASM and not assume that operand 0 is a register.
+    ; CHECK-LABEL: name: test_inlineasm_base
+    ; CHECK: INLINEASM
+    ; CHECK: G_INSERT_VECTOR_ELT
+    INLINEASM &"ldr $0, [$1]", sideeffect attdialect, regdef:FPR128, def %base:fpr128(<4 x s32>), reguse:GPR64, %addr:gpr64
+    %v:_(<4 x s32>) = G_INSERT_VECTOR_ELT %base:fpr128(<4 x s32>), %elt:_(s32), %idx:_(s64)
+    $q0 = COPY %v(<4 x s32>)
+    RET_ReallyLR implicit $q0
+...
