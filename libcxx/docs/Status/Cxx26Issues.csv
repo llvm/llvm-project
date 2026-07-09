@@ -295,7 +295,7 @@
 "`LWG4467 <https://wg21.link/LWG4467>`__","``hive::splice`` can throw ``bad_alloc``","2026-03 (Croydon)","","","`#189837 <https://github.com/llvm/llvm-project/issues/189837>`__",""
 "`LWG4468 <https://wg21.link/LWG4468>`__","§[const.wrap.class] ""``operator decltype(auto)``"" is ill-formed","2026-03 (Croydon)","|Complete|","23","`#189838 <https://github.com/llvm/llvm-project/issues/189838>`__",""
 "`LWG4469 <https://wg21.link/LWG4469>`__","Names of parameters of addressable function shall remain unspecified","2026-03 (Croydon)","","","`#189839 <https://github.com/llvm/llvm-project/issues/189839>`__",""
-"`LWG4472 <https://wg21.link/LWG4472>`__","``std::atomic_ref<const T>`` can be constructed from temporaries","2026-03 (Croydon)","","","`#189840 <https://github.com/llvm/llvm-project/issues/189840>`__",""
+"`LWG4472 <https://wg21.link/LWG4472>`__","``std::atomic_ref<const T>`` can be constructed from temporaries","2026-03 (Croydon)","|Complete|","23","`#189840 <https://github.com/llvm/llvm-project/issues/189840>`__",""
 "`LWG4474 <https://wg21.link/LWG4474>`__","""``round_to_nearest``"" rounding mode is unclear","2026-03 (Croydon)","","","`#189841 <https://github.com/llvm/llvm-project/issues/189841>`__",""
 "`LWG4476 <https://wg21.link/LWG4476>`__","``run_loop`` should not have a ``set_error`` completion","2026-03 (Croydon)","","","`#189842 <https://github.com/llvm/llvm-project/issues/189842>`__",""
 "`LWG4477 <https://wg21.link/LWG4477>`__","Placement ``operator delete`` should be constexpr","2026-03 (Croydon)","|Complete|","23","`#189843 <https://github.com/llvm/llvm-project/issues/189843>`__",""
