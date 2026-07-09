@@ -175,24 +175,26 @@ func.func private @pack_rhs(%B: tensor<16x13xf32>) ->  tensor<?x16x?x1xf32> {
 // Implements packing for the C matrix (accumulator) in matrix multiplication.
 // The inner tile size is "scalable": 8 * vscale
 //===----------------------------------------------------------------------===//
-func.func private @pack_acc(%C: tensor<7x13xf32>) -> tensor<1x?x8x?xf32> {
+func.func private @pack_acc(%C: tensor<7x13xf32>) -> tensor<?x?x?x?xf32> {
   %pad = arith.constant 0.0 : f32
 
-  // Compute the outer tile size.
+  // Compute the outer tile sizes.
+  %c7 = arith.constant 7 : index
   %c13 = arith.constant 13 : index
   %vs = vector.vscale
   %c8 = arith.constant 8 : index
   %vs_c8 = arith.muli %vs, %c8 : index
-  %outer_tile_size = arith.ceildivui %c13, %vs_c8 : index
+  %outer_tile_size_0 = arith.ceildivui %c7, %vs_c8 : index
+  %outer_tile_size_1 = arith.ceildivui %c13, %vs_c8 : index
 
-  %C_pack_empty = tensor.empty(%outer_tile_size, %vs_c8) : tensor<1x?x8x?xf32>
+  %C_pack_empty = tensor.empty(%outer_tile_size_0, %outer_tile_size_1, %vs_c8, %vs_c8) : tensor<?x?x?x?xf32>
   %C_pack = linalg.pack %C
     padding_value(%pad : f32)
     outer_dims_perm = [0, 1]
     inner_dims_pos = [0, 1]
-    inner_tiles = [8, %vs_c8] into %C_pack_empty : tensor<7x13xf32> -> tensor<1x?x8x?xf32>
+    inner_tiles = [%vs_c8, %vs_c8] into %C_pack_empty : tensor<7x13xf32> -> tensor<?x?x?x?xf32>
 
-  return %C_pack : tensor<1x?x8x?xf32>
+  return %C_pack : tensor<?x?x?x?xf32>
 }
 
 //===----------------------------------------------------------------------===//
@@ -201,7 +203,7 @@ func.func private @pack_acc(%C: tensor<7x13xf32>) -> tensor<1x?x8x?xf32> {
 // Implements unpacking for the C matrix (accumulator) in matrix
 // multiplication. The inner tile size is "scalable": 8 * vscale
 //===----------------------------------------------------------------------===//
-func.func private @unpack_acc(%C_packed: tensor<1x?x8x?xf32>) -> tensor<7x13xf32> {
+func.func private @unpack_acc(%C_packed: tensor<?x?x?x?xf32>) -> tensor<7x13xf32> {
   %vs = vector.vscale
   %c8 = arith.constant 8 : index
   %vs_c8 = arith.muli %vs, %c8 : index
@@ -210,8 +212,8 @@ func.func private @unpack_acc(%C_packed: tensor<1x?x8x?xf32>) -> tensor<7x13xf32
   %C_out_unpack = linalg.unpack %C_packed
     outer_dims_perm = [0, 1]
     inner_dims_pos = [0, 1]
-    inner_tiles = [8, %vs_c8]
-    into %C_out_empty : tensor<1x?x8x?xf32> -> tensor<7x13xf32>
+    inner_tiles = [%vs_c8, %vs_c8]
+    into %C_out_empty : tensor<?x?x?x?xf32> -> tensor<7x13xf32>
 
   return %C_out_unpack: tensor<7x13xf32>
 }
@@ -225,13 +227,13 @@ func.func private @matmul_via_mmt4d(%A: tensor<7x16xf32>, %B: tensor<16x13xf32>,
   // Pack input matrices
   %A_pack = func.call @pack_lhs(%A): (tensor<7x16xf32>) -> tensor<1x16x?x1xf32>
   %B_pack = func.call @pack_rhs(%B): (tensor<16x13xf32>) -> tensor<?x16x?x1xf32>
-  %C_pack = func.call @pack_acc(%C): (tensor<7x13xf32>) -> tensor<1x?x8x?xf32>
+  %C_pack = func.call @pack_acc(%C): (tensor<7x13xf32>) -> tensor<?x?x?x?xf32>
 
   // MMT4D
-  %mmt4d = linalg.mmt4d ins(%A_pack, %B_pack : tensor<1x16x?x1xf32>, tensor<?x16x?x1xf32>) outs(%C_pack : tensor<1x?x8x?xf32>) -> tensor<1x?x8x?xf32>
+  %mmt4d = linalg.mmt4d ins(%A_pack, %B_pack : tensor<1x16x?x1xf32>, tensor<?x16x?x1xf32>) outs(%C_pack : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
 
   // Unpack the output
-  %C_out_unpack = func.call @unpack_acc(%mmt4d) : (tensor<1x?x8x?xf32>) -> tensor<7x13xf32>
+  %C_out_unpack = func.call @unpack_acc(%mmt4d) : (tensor<?x?x?x?xf32>) -> tensor<7x13xf32>
 
   return %C_out_unpack : tensor<7x13xf32>
 }
@@ -297,8 +299,11 @@ module @transforms attributes { transform.with_named_sequence } {
        : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
     // 1.2 Tile the linalg.unpack Op so that we can decompose it into e.g. tensor.pad
-    //    and other lower-level Ops (see step 2)
-    %tiled_unpack_op_p, %loops_unpack:2 = transform.structured.tile_using_for %unpack tile_sizes [8, 1]
+    //    and other lower-level Ops (see step 2). Tile by [8*vscale, 8*vscale]
+    //    (scalable, equal to the inner tile sizes) so the tiled outer dims are
+    //    statically 1 and DecomposeOuterUnitDimsUnPackOp can fire.
+    %tiled_unpack_op_p, %loops_unpack:2 = transform.structured.tile_using_for %unpack tile_sizes [[8], [8]]
+        inner_tile_alignments = [Equal, Equal]
        : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
     // 2.1. Decompose tiled PackOp into lower-level Ops + simplify
