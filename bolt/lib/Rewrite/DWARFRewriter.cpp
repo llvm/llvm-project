@@ -591,6 +591,8 @@ static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx,
     DWARFDataExtractor DebugInfoData = CU->getDebugInfoExtractor();
     DWARFDebugInfoEntry DIEEntry;
     SmallVector<uint32_t, 8> ParentIndex;
+    // The initial entry is an artificial root. The unit's terminating null DIE
+    // only pops back to this root, so stop before reading past NextCUOffset.
     ParentIndex.push_back(UINT32_MAX);
     do {
       if (!DIEEntry.extractFast(*CU, &DIEOffset, DebugInfoData, NextCUOffset,
@@ -622,7 +624,7 @@ static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx,
       } else {
         ParentIndex.pop_back();
       }
-    } while (!ParentIndex.empty());
+    } while (DIEOffset < NextCUOffset);
   }
 
   DenseMap<DWARFUnit *, SmallVector<DWARFUnit *>> MembersByLeader;
