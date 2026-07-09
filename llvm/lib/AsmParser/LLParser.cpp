@@ -9209,21 +9209,16 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   if (Val->getType()->isScalableTy())
     return error(ValLoc, "atomicrmw operand may not be scalable");
 
-  // For elementwise ops, the value must be a fixed vector type whose element
-  // type is legal for the corresponding scalar atomicrmw operation. So assign
-  // ScalarTy the element type for elementwise ops so we can check this.
-  Type *ScalarTy = Val->getType();
+  Type *ValTy = Val->getType();
   if (IsElementwise) {
-    auto *VecTy = dyn_cast<FixedVectorType>(Val->getType());
-    if (!VecTy)
+    if (!isa<FixedVectorType>(Val->getType()))
       return error(ValLoc,
                    "atomicrmw elementwise operand must be a fixed vector type");
-    ScalarTy = VecTy->getElementType();
   }
 
   if (Operation == AtomicRMWInst::Xchg) {
-    if (!ScalarTy->isIntOrIntVectorTy() && !ScalarTy->isFPOrFPVectorTy() &&
-        !ScalarTy->isPtrOrPtrVectorTy()) {
+    if (!ValTy->isIntOrIntVectorTy() && !ValTy->isFPOrFPVectorTy() &&
+        !ValTy->isPtrOrPtrVectorTy()) {
       return error(
           ValLoc,
           "atomicrmw " + AtomicRMWInst::getOperationName(Operation) +
@@ -9232,14 +9227,14 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
               "vector of integer type, floating point type, or pointer type");
     }
   } else if (IsFP) {
-    if (!ScalarTy->isFPOrFPVectorTy()) {
+    if (!ValTy->isFPOrFPVectorTy()) {
       return error(ValLoc, "atomicrmw " +
                                AtomicRMWInst::getOperationName(Operation) +
                                " operand must be a floating point or fixed "
                                "vector of floating point type");
     }
   } else {
-    if (!ScalarTy->isIntOrIntVectorTy()) {
+    if (!ValTy->isIntOrIntVectorTy()) {
       return error(
           ValLoc,
           "atomicrmw " + AtomicRMWInst::getOperationName(Operation) +
@@ -9248,7 +9243,7 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   }
 
   unsigned Size =
-      PFS.getFunction().getDataLayout().getTypeStoreSizeInBits(Val->getType());
+      PFS.getFunction().getDataLayout().getTypeStoreSizeInBits(ValTy);
   if (Size < 8 || (Size & (Size - 1)))
     return error(ValLoc,
                  "atomicrmw operand must have a power-of-two byte size");
