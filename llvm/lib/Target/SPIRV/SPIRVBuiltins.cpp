@@ -1685,9 +1685,6 @@ static bool genWorkgroupQuery(const SPIRV::IncomingCall *Call,
                               SPIRV::BuiltIn::BuiltIn BuiltinValue,
                               uint64_t DefaultValue) {
   Register IndexRegister = Call->Arguments[0];
-  SPIRVTypeInst IndexRegisterType = GR->getSPIRVTypeForVReg(IndexRegister);
-  if (!IndexRegisterType || IndexRegisterType->getOpcode() != SPIRV::OpTypeInt)
-    report_fatal_error("Expect an integer <Dimindx> argument");
   const unsigned ResultWidth = Call->ReturnType->getOperand(1).getImm();
   const unsigned PointerSize = GR->getPointerSize();
   const SPIRVTypeInst PointerSizeType =
@@ -3488,6 +3485,77 @@ mapBuiltinToOpcode(StringRef DemangledCall,
   return std::make_tuple(-1, 0, 0);
 }
 
+/// Checks that scalar/vector numeric arguments of \p Call match the types
+/// implied by their mangling in \p DemangledCall. Pointers and opaque
+/// builtin types (images, samplers, pipes, etc.) are not validated here, as
+/// mangling does not enforce their exact spelling.
+///
+/// \returns false if a numeric argument's SPIR-V type disagrees with the
+/// type implied by the mangled name, true otherwise.
+static bool demangledArgTypesMatchIR(const SPIRV::IncomingCall *Call,
+                                     StringRef DemangledCall,
+                                     SPIRVGlobalRegistry *GR,
+                                     LLVMContext &Ctx) {
+  if (Call->isSpirvOp())
+    return true;
+
+  SmallVector<StringRef, 10> ArgTypeStrs;
+  SPIRV::parseBuiltinTypeStr(ArgTypeStrs, DemangledCall, Ctx);
+
+  for (unsigned ArgIdx = 0; ArgIdx < Call->Arguments.size(); ++ArgIdx) {
+    if (ArgIdx >= ArgTypeStrs.size())
+      continue;
+    StringRef ArgTypeStr = ArgTypeStrs[ArgIdx].trim();
+    // Opaque/builtin OpenCL and SPIR-V types (images, samplers, pipes,
+    // reserve_id, etc.) are not validated here, as mangling does not enforce
+    // their exact spelling, and some builtin type names have no TableGen
+    // record and would otherwise abort compilation when parsed.
+    if (hasBuiltinTypePrefix(ArgTypeStr))
+      continue;
+
+    Type *ExpectedType = SPIRV::parseBuiltinCallArgumentType(ArgTypeStr, Ctx);
+    if (!ExpectedType || ExpectedType->isVoidTy() ||
+        ExpectedType->isPointerTy() || ExpectedType->isTargetExtTy())
+      continue;
+
+    SPIRVTypeInst ArgType = GR->getSPIRVTypeForVReg(Call->Arguments[ArgIdx]);
+    if (!ArgType)
+      continue;
+    unsigned ArgTypeOpcode = ArgType->getOpcode();
+    if (ArgTypeOpcode != SPIRV::OpTypeInt &&
+        ArgTypeOpcode != SPIRV::OpTypeFloat &&
+        ArgTypeOpcode != SPIRV::OpTypeBool &&
+        ArgTypeOpcode != SPIRV::OpTypeVector)
+      continue;
+
+    Type *ExpectedScalarType =
+        ExpectedType->isVectorTy()
+            ? cast<VectorType>(ExpectedType)->getElementType()
+            : ExpectedType;
+    SPIRVTypeInst ArgScalarType = GR->getScalarOrVectorComponentType(ArgType);
+    if (!ArgScalarType)
+      continue;
+
+    bool ExpectedIsInt = ExpectedScalarType->isIntegerTy();
+    bool ExpectedIsFloat = ExpectedScalarType->isFloatingPointTy();
+    unsigned ArgOpcode = ArgScalarType->getOpcode();
+    bool ArgIsInt =
+        ArgOpcode == SPIRV::OpTypeInt || ArgOpcode == SPIRV::OpTypeBool;
+    bool ArgIsFloat = ArgOpcode == SPIRV::OpTypeFloat;
+
+    if ((ExpectedIsInt && !ArgIsInt) || (ExpectedIsFloat && !ArgIsFloat))
+      return false;
+
+    unsigned ExpectedElts =
+        ExpectedType->isVectorTy()
+            ? cast<VectorType>(ExpectedType)->getElementCount().getFixedValue()
+            : 1;
+    if (ExpectedElts != GR->getScalarOrVectorComponentCount(ArgType))
+      return false;
+  }
+  return true;
+}
+
 std::optional<bool> lowerBuiltin(StringRef DemangledCall,
                                  SPIRV::InstructionSet::InstructionSet Set,
                                  MachineIRBuilder &MIRBuilder,
@@ -3520,6 +3588,17 @@ std::optional<bool> lowerBuiltin(StringRef DemangledCall,
     LLVM_DEBUG(dbgs() << "Too many arguments for builtin " << DemangledCall
                       << ": expected at most " << Call->Builtin->MaxNumArgs
                       << ", got " << Args.size()
+                      << "; treating as a normal function\n");
+    return std::nullopt;
+  }
+
+  // Check that argument types match what the mangling implies. If not
+  // (e.g. broken mangling), treat the call as a regular function call
+  // rather than crashing.
+  if (!demangledArgTypesMatchIR(Call.get(), DemangledCall, GR,
+                                MIRBuilder.getContext())) {
+    LLVM_DEBUG(dbgs() << "Argument types do not match mangled types for "
+                      << "builtin " << DemangledCall
                       << "; treating as a normal function\n");
     return std::nullopt;
   }
