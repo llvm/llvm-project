@@ -317,6 +317,60 @@ entry:
   %sum = add i32 %count_x_1, %count_x_2
   ret i32 %sum
 }
+
+; A volatile grid_size load must NOT be silently replaced by a block_count
+; load: volatile loads have observable side effects.
+define i32 @num_blocks_x_volatile_grid_size() {
+; CHECK-LABEL: define i32 @num_blocks_x_volatile_grid_size() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DISPATCH:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+; CHECK-NEXT:    [[D_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[DISPATCH]], i64 12
+; CHECK-NEXT:    [[GRID_SIZE_X:%.*]] = load volatile i32, ptr addrspace(4) [[D_GEP_X]], align 4
+; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[I_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG]], i64 12
+; CHECK-NEXT:    [[WG_SIZE_X:%.*]] = load i16, ptr addrspace(4) [[I_GEP_X]], align 2, !range [[RNG1]]
+; CHECK-NEXT:    [[CONV_X:%.*]] = zext nneg i16 [[WG_SIZE_X]] to i32
+; CHECK-NEXT:    [[COUNT_X:%.*]] = udiv i32 [[GRID_SIZE_X]], [[CONV_X]]
+; CHECK-NEXT:    ret i32 [[COUNT_X]]
+;
+entry:
+  %dispatch = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+  %d_gep_x = getelementptr i8, ptr addrspace(4) %dispatch, i32 12
+  %grid_size_x = load volatile i32, ptr addrspace(4) %d_gep_x, align 4
+  %implicitarg = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %i_gep_x = getelementptr i8, ptr addrspace(4) %implicitarg, i32 12
+  %wg_size_x = load i16, ptr addrspace(4) %i_gep_x, align 2
+  %conv_x = zext i16 %wg_size_x to i32
+  %count_x = udiv i32 %grid_size_x, %conv_x
+  ret i32 %count_x
+}
+
+; An atomic grid_size load must NOT be silently replaced by a block_count
+; load: atomic loads have observable memory ordering semantics.
+define i32 @num_blocks_x_atomic_grid_size() {
+; CHECK-LABEL: define i32 @num_blocks_x_atomic_grid_size() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DISPATCH:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+; CHECK-NEXT:    [[D_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[DISPATCH]], i64 12
+; CHECK-NEXT:    [[GRID_SIZE_X:%.*]] = load atomic i32, ptr addrspace(4) [[D_GEP_X]] monotonic, align 4
+; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[I_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG]], i64 12
+; CHECK-NEXT:    [[WG_SIZE_X:%.*]] = load i16, ptr addrspace(4) [[I_GEP_X]], align 2, !range [[RNG1]]
+; CHECK-NEXT:    [[CONV_X:%.*]] = zext nneg i16 [[WG_SIZE_X]] to i32
+; CHECK-NEXT:    [[COUNT_X:%.*]] = udiv i32 [[GRID_SIZE_X]], [[CONV_X]]
+; CHECK-NEXT:    ret i32 [[COUNT_X]]
+;
+entry:
+  %dispatch = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+  %d_gep_x = getelementptr i8, ptr addrspace(4) %dispatch, i32 12
+  %grid_size_x = load atomic i32, ptr addrspace(4) %d_gep_x monotonic, align 4
+  %implicitarg = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %i_gep_x = getelementptr i8, ptr addrspace(4) %implicitarg, i32 12
+  %wg_size_x = load i16, ptr addrspace(4) %i_gep_x, align 2
+  %conv_x = zext i16 %wg_size_x to i32
+  %count_x = udiv i32 %grid_size_x, %conv_x
+  ret i32 %count_x
+}
 ;.
 ; CHECK: [[META0]] = !{}
 ; CHECK: [[RNG1]] = !{i16 1, i16 1025}

@@ -29,13 +29,13 @@ entry:
 }
 declare !type !2 i32 @_Z3fooc(i8 signext)
 
-!0 = !{i64 0, !"_ZTSFiPvcE.generalized"}
+!0 = !{!"_ZTSFiPvcE.generalized"}
 !1 = !{!2}
-!2 = !{i64 0, !"_ZTSFicE.generalized"}
-!3 = !{i64 0, !"_ZTSFivE.generalized"}
+!2 = !{!"_ZTSFicE.generalized"}
+!3 = !{!"_ZTSFivE.generalized"}
 ;.
-; CHECK: [[META0]] = !{i64 0, !"_ZTSFiPvcE.generalized"}
+; CHECK: [[META0]] = !{!"_ZTSFiPvcE.generalized"}
 ; CHECK: [[META1]] = !{[[META2:![0-9]+]]}
-; CHECK: [[META2]] = !{i64 0, !"_ZTSFicE.generalized"}
-; CHECK: [[META3]] = !{i64 0, !"_ZTSFivE.generalized"}
+; CHECK: [[META2]] = !{!"_ZTSFicE.generalized"}
+; CHECK: [[META3]] = !{!"_ZTSFivE.generalized"}
 ;.

@@ -158,6 +158,9 @@ def FeatureVBMI     : SubtargetFeature<"avx512vbmi", "HasVBMI", "true",
 def FeatureVBMI2    : SubtargetFeature<"avx512vbmi2", "HasVBMI2", "true",
                       "Enable AVX-512 further Vector Byte Manipulation Instructions",
                                       [FeatureBWI]>;
+def FeatureBMM      : SubtargetFeature<"avx512bmm", "HasBMM", "true",
+                      "Enable AVX512 Bit Matrix Multiply",
+                                      [FeatureBWI]>;
 def FeatureAVXIFMA    : SubtargetFeature<"avxifma", "HasAVXIFMA", "true",
                            "Enable AVX-IFMA",
                            [FeatureAVX2]>;
@@ -294,9 +297,6 @@ def FeatureAMXAVX512 : SubtargetFeature<"amx-avx512",
                                         "HasAMXAVX512", "true",
                                         "Support AMX-AVX512 instructions",
                                         [FeatureAMXTILE]>;
-def FeatureAMXTF32 : SubtargetFeature<"amx-tf32", "HasAMXTF32", "true",
-                                      "Support AMX-TF32 instructions",
-                                      [FeatureAMXTILE]>;
 def FeatureCMPCCXADD : SubtargetFeature<"cmpccxadd", "HasCMPCCXADD", "true",
                                         "Support CMPCCXADD instructions">;
 def FeatureRAOINT : SubtargetFeature<"raoint", "HasRAOINT", "true",
@@ -918,6 +918,7 @@ include "X86SchedLunarlakeP.td"
 include "X86SchedSapphireRapids.td"
 include "X86ScheduleC864GM4.td"
 include "X86ScheduleC864GM7.td"
+include "X86ScheduleC864GM8.td"
 
 
 //===----------------------------------------------------------------------===//
@@ -1277,8 +1278,7 @@ def ProcessorFeatures {
                                                   FeatureMOVRS,
                                                   FeatureAMXMOVRS,
                                                   FeatureAMXAVX512,
-                                                  FeatureAMXFP8,
-                                                  FeatureAMXTF32];
+                                                  FeatureAMXFP8];
   list<SubtargetFeature> DMRFeatures =
     !listconcat(GNRDFeatures, DMRAdditionalFeatures);
   list<SubtargetFeature> DMRAdditionalTuning = [TuningPreferLegacySetCC];
@@ -1737,7 +1737,8 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN6AdditionalFeatures = [FeatureFP16,
                                                   FeatureAVXVNNIINT8,
                                                   FeatureAVXNECONVERT,
-                                                  FeatureAVXIFMA
+                                                  FeatureAVXIFMA,
+                                                  FeatureBMM
                                                   ];
   list<SubtargetFeature> ZN6Features =
     !listconcat(ZN5Features, ZN6AdditionalFeatures);
@@ -1819,6 +1820,12 @@ def ProcessorFeatures {
   list<SubtargetFeature> C864GM7AdditionalTuning = [TuningBranchFusion];
   list<SubtargetFeature> C864GM7Tuning =
     !listconcat(C864GM4Tuning, C864GM7AdditionalTuning);
+
+  // C86-4G-M8
+  list<SubtargetFeature> C864GM8AdditionalFeatures = [FeatureSHSTK];
+  list<SubtargetFeature> C864GM8Features =
+    !listconcat(C864GM7Features, C864GM8AdditionalFeatures);
+  list<SubtargetFeature> C864GM8Tuning = C864GM7Tuning;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2192,6 +2199,8 @@ def : ProcModel<P, C864GM4Model, ProcessorFeatures.C864GM4Features,
 }
 def : ProcModel<"c86-4g-m7", C864GM7Model, ProcessorFeatures.C864GM7Features,
                 ProcessorFeatures.C864GM7Tuning>;
+def : ProcModel<"c86-4g-m8", C864GM8Model, ProcessorFeatures.C864GM8Features,
+                ProcessorFeatures.C864GM8Tuning>;
 
 def : Proc<"geode",           [FeatureX87, FeatureCX8, FeatureMMX, FeaturePRFCHW],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;

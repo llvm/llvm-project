@@ -7648,7 +7648,7 @@ already being compiled with GNU inline semantics as the implied default. It is
 unspecified which macro is defined in a C++ compilation.
 
 GNU inline semantics are the default behavior with ``-std=gnu89``,
-``-std=c89``, ``-std=c94``, or ``-fgnu89-inline``.
+``-std=c89``, ``-fgnu89-inline``, or ``-std=iso9899:199409``.
   }];
 }
 

@@ -252,9 +252,8 @@ body: |
     ; GFX11-TRUE16-NEXT: {{  $}}
     ; GFX11-TRUE16-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
-    ; GFX11-TRUE16-NEXT: [[V_MOV_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_MOV_B16_t16_e64 0, 0, 0, implicit $exec
-    ; GFX11-TRUE16-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY1]], %subreg.lo16, [[V_MOV_B16_t16_e64_]], %subreg.hi16
-    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[REG_SEQUENCE]]
+    ; GFX11-TRUE16-NEXT: [[V_CVT_U32_U16_t16_e64_:%[0-9]+]]:vgpr_32 = V_CVT_U32_U16_t16_e64 0, [[COPY1]], 0, implicit $exec
+    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[V_CVT_U32_U16_t16_e64_]]
     ;
     ; GFX11-FAKE16-LABEL: name: anyext_vgpr_s1_to_vgpr_s16
     ; GFX11-FAKE16: liveins: $vgpr0

@@ -113,20 +113,20 @@ define amdgpu_ps <10 x float> @image_bvh_dual_intersect_ray_ssssss(i64 inreg %no
 ; GFX12-GISEL-LABEL: image_bvh_dual_intersect_ray_ssssss:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    s_mov_b32 s16, s3
+; GFX12-GISEL-NEXT:    s_mov_b32 s17, s4
 ; GFX12-GISEL-NEXT:    s_mov_b32 s18, s5
 ; GFX12-GISEL-NEXT:    s_mov_b32 s20, s6
-; GFX12-GISEL-NEXT:    s_mov_b32 s17, s4
 ; GFX12-GISEL-NEXT:    s_mov_b32 s21, s7
 ; GFX12-GISEL-NEXT:    s_mov_b32 s22, s8
 ; GFX12-GISEL-NEXT:    s_mov_b32 s8, s9
 ; GFX12-GISEL-NEXT:    s_mov_b32 s9, s10
 ; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v14, s16 :: v_dual_mov_b32 v15, s17
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v16, s18 :: v_dual_mov_b32 v17, s20
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v10, v0 :: v_dual_mov_b32 v11, v1
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v12, v2 :: v_dual_mov_b32 v13, v3
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v14, s16 :: v_dual_mov_b32 v15, s17
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v16, s18 :: v_dual_mov_b32 v17, s20
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v18, s21 :: v_dual_mov_b32 v19, s22
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v4, s8 :: v_dual_mov_b32 v5, s9
 ; GFX12-GISEL-NEXT:    s_mov_b32 s4, s11

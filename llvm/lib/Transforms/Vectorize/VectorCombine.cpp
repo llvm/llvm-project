@@ -158,6 +158,7 @@ private:
   bool foldInterleaveIntrinsics(Instruction &I);
   bool foldDeinterleaveIntrinsics(Instruction &I);
   bool foldBitcastOfVPLoad(Instruction &I);
+  bool foldBitOrderReverseAndSwap(Instruction &I);
   bool shrinkType(Instruction &I);
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
@@ -566,6 +567,9 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
                                     {ConvertToShuffle});
     }
   }
+
+  LLVM_DEBUG(dbgs() << "Found a binop of extractions: " << I << "\n  OldCost: "
+                    << OldCost << " vs NewCost: " << NewCost << "\n");
 
   // Aggressively form a vector op if the cost is equal because the transform
   // may enable further optimization.
@@ -1513,6 +1517,9 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
       CmpInst::isFPPredicate(Pred) ? Instruction::FCmp : Instruction::ICmp;
   auto *VecTy = dyn_cast<FixedVectorType>(X->getType());
   if (!VecTy)
+    return false;
+
+  if (Index0 >= VecTy->getNumElements() || Index1 >= VecTy->getNumElements())
     return false;
 
   InstructionCost Ext0Cost =
@@ -2673,6 +2680,17 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   // original binop(s). If binops have multiple uses, they won't be eliminated.
   ReducedInstCount |= SingleSrcBinOp && LHS->hasOneUser() && RHS->hasOneUser();
 
+  // For concat shuffles of i1 vectors where both binops are one-use, the
+  // transform keeps the same instruction count but canonicalises to a single
+  // wider binop, enabling downstream folds (e.g. NOT(XOR(concat(a,b),
+  // concat(c,d))) -> XNOR(concat(a,b),concat(c,d)) on AVX-512 mask regs).
+  // Restrict to BinaryOperator (not CmpInst) since narrow comparisons may
+  // be cheaper than wide ones on some targets (e.g. AVX-512 vpcmpeq).
+  ReducedInstCount |= cast<ShuffleVectorInst>(&I)->isConcat() &&
+                      I.getType()->getScalarType()->isIntegerTy(1) &&
+                      isa<BinaryOperator>(LHS) && LHS->hasOneUser() &&
+                      RHS->hasOneUser();
+
   auto *ShuffleCmpTy =
       FixedVectorType::get(BinOpTy->getElementType(), ShuffleDstTy);
   InstructionCost NewCost = TTI.getShuffleCost(
@@ -3247,6 +3265,10 @@ bool VectorCombine::foldShufflesOfLengthChangingShuffles(Instruction &I) {
     ChainLength++;
   }
   if (ChainLength <= 1)
+    return false;
+
+  // Bail out if all leaves were poison.
+  if (!Y)
     return false;
 
   if (llvm::all_of(Mask, [&](int M) {
@@ -5973,6 +5995,61 @@ bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
   return true;
 }
 
+/// Fold the following cases into a single byte-level bit-reverse operation
+/// and accepts bswap and bitreverse intrinsics:
+///   bswap(bitreverse(x)) --> bitcast(bitreverse(bitcast(x)))
+///   bitreverse(bswap(x)) --> bitcast(bitreverse(bitcast(x)))
+bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
+  Value *X;
+  if (!match(&I, m_BitReverse(m_BSwap(m_Value(X)))) &&
+      !match(&I, m_BSwap(m_BitReverse(m_Value(X)))))
+    return false;
+
+  Type *Ty = I.getType();
+  Type *I8Ty = Builder.getInt8Ty();
+  TypeSize ElementSize = DL->getTypeStoreSize(Ty);
+  ElementCount NewVecCnt = ElementCount::get(ElementSize.getKnownMinValue(),
+                                             ElementSize.isScalable());
+  Type *NewVecTy = VectorType::get(I8Ty, NewVecCnt);
+
+  auto *II = cast<IntrinsicInst>(&I);
+  auto *InnerII = cast<IntrinsicInst>(II->getArgOperand(0));
+  // OldCost = cost of bitreverse/bswap + cost of bswap/bitreverse
+  InstructionCost OldCost = TTI.getInstructionCost(II, CostKind) +
+                            TTI.getInstructionCost(InnerII, CostKind);
+
+  // NewCost = cost of bitcast to byte vector +
+  //           cost of bitreverse/bswap on byte vector +
+  //           cost of bitcast back to original type
+  InstructionCost CastToVecCost = TTI.getCastInstrCost(
+      Instruction::BitCast, NewVecTy, Ty, TTI::CastContextHint::None, CostKind);
+  InstructionCost CastToOrigCost = TTI.getCastInstrCost(
+      Instruction::BitCast, Ty, NewVecTy, TTI::CastContextHint::None, CostKind);
+
+  IntrinsicCostAttributes ICANew(Intrinsic::bitreverse, NewVecTy, {NewVecTy});
+  InstructionCost NewIntrinsicCost =
+      TTI.getIntrinsicInstrCost(ICANew, CostKind);
+  InstructionCost NewCost = CastToVecCost + NewIntrinsicCost + CastToOrigCost;
+
+  if (!InnerII->hasOneUse())
+    NewCost += TTI.getInstructionCost(InnerII, CostKind);
+
+  LLVM_DEBUG(dbgs() << "Found bitorder reverse and swap: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+  if (!NewCost.isValid() || NewCost >= OldCost)
+    return false;
+
+  // Perform transform: bitcast(arg, <N x i8>), bitreverse, bitcast back
+  Builder.SetInsertPoint(II);
+  Value *CastToVec = Builder.CreateBitCast(X, NewVecTy);
+  Value *NewCall =
+      Builder.CreateUnaryIntrinsic(Intrinsic::bitreverse, CastToVec);
+  Value *CastToOrig = Builder.CreateBitCast(NewCall, Ty);
+  replaceValue(I, *CastToOrig);
+  return true;
+}
+
 // Attempt to shrink loads that are only used by shufflevector instructions.
 bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   auto *OldLoad = dyn_cast<LoadInst>(&I);
@@ -6266,6 +6343,10 @@ bool VectorCombine::run() {
     // If this is an early pipeline invocation of this pass, we are done.
     if (TryEarlyFoldsOnly)
       return false;
+
+    if (Opcode == Instruction::Call)
+      if (foldBitOrderReverseAndSwap(I))
+        return true;
 
     // Otherwise, try folds that improve codegen but may interfere with
     // early IR canonicalizations.

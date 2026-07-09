@@ -116,3 +116,38 @@ func.func @vector_step() -> vector<8xindex> {
   %1 = test.reflect_bounds %0 : vector<8xindex>
   func.return %1 : vector<8xindex>
 }
+
+// CHECK-LABEL: func @vector_step_i32
+// CHECK: test.reflect_bounds {smax = 7 : si32, smin = 0 : si32, umax = 7 : ui32, umin = 0 : ui32}
+func.func @vector_step_i32() -> vector<8xi32> {
+  %0 = vector.step : vector<8xi32>
+  %1 = test.reflect_bounds %0 : vector<8xi32>
+  func.return %1 : vector<8xi32>
+}
+
+// Boundary: 255 lanes do not wrap, so the upper bound is the last lane (254).
+// CHECK-LABEL: func @vector_step_i8_no_wrap_boundary
+// CHECK: test.reflect_bounds {smax = 127 : si8, smin = -128 : si8, umax = 254 : ui8, umin = 0 : ui8}
+func.func @vector_step_i8_no_wrap_boundary() -> vector<255xi8> {
+  %0 = vector.step : vector<255xi8>
+  %1 = test.reflect_bounds %0 : vector<255xi8>
+  func.return %1 : vector<255xi8>
+}
+
+// Boundary: 256 lanes exactly fill the i8 range without wrapping (last lane 255).
+// CHECK-LABEL: func @vector_step_i8_exact_fit
+// CHECK: test.reflect_bounds {smax = 127 : si8, smin = -128 : si8, umax = 255 : ui8, umin = 0 : ui8}
+func.func @vector_step_i8_exact_fit() -> vector<256xi8> {
+  %0 = vector.step : vector<256xi8>
+  %1 = test.reflect_bounds %0 : vector<256xi8>
+  func.return %1 : vector<256xi8>
+}
+
+// The sequence wraps (300 > 256), so the result spans the entire i8 range.
+// CHECK-LABEL: func @vector_step_i8_wrap
+// CHECK: test.reflect_bounds {smax = 127 : si8, smin = -128 : si8, umax = 255 : ui8, umin = 0 : ui8}
+func.func @vector_step_i8_wrap() -> vector<300xi8> {
+  %0 = vector.step : vector<300xi8>
+  %1 = test.reflect_bounds %0 : vector<300xi8>
+  func.return %1 : vector<300xi8>
+}

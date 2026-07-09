@@ -920,15 +920,6 @@ def OMP_Do : Directive<[Spelling<"do">]> {
   let category = CA_Executable;
   let languages = [L_Fortran];
 }
-def OMP_EndDo : Directive<[Spelling<"end do">]> {
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_NoWait>,
-  ];
-  let leafConstructs = OMP_Do.leafConstructs;
-  let association = OMP_Do.association;
-  let category = OMP_Do.category;
-  let languages = OMP_Do.languages;
-}
 def OMP_Error : Directive<[Spelling<"error">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_At, 51>,
@@ -1130,15 +1121,6 @@ def OMP_Scope : Directive<[Spelling<"scope">]> {
   let association = AS_Block;
   let category = CA_Executable;
 }
-def OMP_EndScope : Directive<[Spelling<"end scope">]> {
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_NoWait>,
-  ];
-  let leafConstructs = OMP_Scope.leafConstructs;
-  let association = OMP_Scope.association;
-  let category = OMP_Scope.category;
-  let languages = [L_Fortran];
-}
 def OMP_Section : Directive<[Spelling<"section">]> {
   let association = AS_Separating;
   let category = CA_Subsidiary;
@@ -1156,15 +1138,6 @@ def OMP_Sections : Directive<[Spelling<"sections">]> {
   ];
   let association = AS_Block;
   let category = CA_Executable;
-}
-def OMP_EndSections : Directive<[Spelling<"end sections">]> {
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_NoWait>,
-  ];
-  let leafConstructs = OMP_Sections.leafConstructs;
-  let association = OMP_Sections.association;
-  let category = OMP_Sections.category;
-  let languages = [L_Fortran];
 }
 def OMP_Simd : Directive<[Spelling<"simd">]> {
   let allowedClauses = [
@@ -1198,18 +1171,6 @@ def OMP_Single : Directive<[Spelling<"single">]> {
   ];
   let association = AS_Block;
   let category = CA_Executable;
-}
-def OMP_EndSingle : Directive<[Spelling<"end single">]> {
-  let allowedClauses = [
-    VersionedClause<OMPC_CopyPrivate>,
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_NoWait>,
-  ];
-  let leafConstructs = OMP_Single.leafConstructs;
-  let association = OMP_Single.association;
-  let category = OMP_Single.category;
-  let languages = [L_Fortran];
 }
 def OMP_Target : Directive<[Spelling<"target">]> {
   let allowedClauses = [
@@ -1468,31 +1429,15 @@ def OMP_Workshare : Directive<[Spelling<"workshare">]> {
   let category = CA_Executable;
   let languages = [L_Fortran];
 }
-def OMP_EndWorkshare : Directive<[Spelling<"end workshare">]> {
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_NoWait>,
-  ];
-  let leafConstructs = OMP_Workshare.leafConstructs;
-  let association = OMP_Workshare.association;
-  let category = OMP_Workshare.category;
-  let languages = [L_Fortran];
-}
 def OMP_Workdistribute : Directive<[Spelling<"workdistribute">]> {
   let association = AS_Block;
   let category = CA_Executable;
   let languages = [L_Fortran];
 }
-def OMP_EndWorkdistribute : Directive<[Spelling<"end workdistribute">]> {
-  let leafConstructs = OMP_Workdistribute.leafConstructs;
-  let association = OMP_Workdistribute.association;
-  let category = OMP_Workdistribute.category;
-  let languages = [L_Fortran];
-}
 
 //===----------------------------------------------------------------------===//
 // Definitions of OpenMP compound directives
-// Sorted alphabetically wrt directive spelling, except "end xyz" immediately
-// follows "xyz".
+// Sorted alphabetically wrt directive spelling.
 //===----------------------------------------------------------------------===//
 
 def OMP_DistributeParallelDo : Directive<[Spelling<"distribute parallel do">]> {
@@ -1665,15 +1610,6 @@ def OMP_DoSimd : Directive<[Spelling<"do simd">]> {
   ];
   let leafConstructs = [OMP_Do, OMP_Simd];
   let category = CA_Executable;
-  let languages = [L_Fortran];
-}
-def OMP_EndDoSimd : Directive<[Spelling<"end do simd">]> {
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_NoWait>,
-  ];
-  let leafConstructs = OMP_DoSimd.leafConstructs;
-  let association = OMP_DoSimd.association;
-  let category = OMP_DoSimd.category;
   let languages = [L_Fortran];
 }
 def OMP_ForSimd : Directive<[Spelling<"for simd">]> {
