@@ -3,7 +3,7 @@
 // DEFINE:    -canonicalize -test-lower-to-arm-sme -convert-vector-to-llvm="enable-arm-sve" \
 // DEFINE:    -test-lower-to-llvm
 // DEFINE: %{entry_point} = main
-// DEFINE: %{run} = %mcr_aarch64_cmd -e %{entry_point} -entry-point-result=void --march=aarch64 --mattr="+sve,+sme"\
+// DEFINE: %{run} = %mcr_aarch64_cmd -e %{entry_point} -entry-point-result=void --march=aarch64 --mattr="+sme"\
 // DEFINE:    -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib
 
 // RUN: %{compile} | %{run} | FileCheck %s
