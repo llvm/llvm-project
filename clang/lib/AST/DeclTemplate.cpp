@@ -1218,50 +1218,21 @@ void FriendTemplateDecl::anchor() {}
 
 FriendTemplateDecl *
 FriendTemplateDecl::Create(ASTContext &Context, DeclContext *DC,
-                           SourceLocation Loc, FriendUnion Friend,
-                           SourceLocation FriendLoc,
-                           ArrayRef<TemplateParameterList *> FriendTypeTPLists,
-                           SourceLocation EllipsisLoc) {
-  std::size_t Extra =
-      FriendTemplateDecl::additionalSizeToAlloc<TemplateParameterList *>(
-          FriendTypeTPLists.size());
-  auto *FTD = new (Context, DC, Extra) FriendTemplateDecl(
-      DC, Loc, Friend, FriendLoc, EllipsisLoc, FriendTypeTPLists);
-  cast<CXXRecordDecl>(DC)->pushFriendDecl(FTD);
-  return FTD;
+                           SourceLocation L,
+                           MutableArrayRef<TemplateParameterList *> Params,
+                           FriendUnion Friend, SourceLocation FLoc) {
+  TemplateParameterList **TPL = nullptr;
+  if (!Params.empty()) {
+    TPL = new (Context) TemplateParameterList *[Params.size()];
+    llvm::copy(Params, TPL);
+  }
+  return new (Context, DC)
+      FriendTemplateDecl(DC, L, TPL, Params.size(), Friend, FLoc);
 }
 
-FriendTemplateDecl *
-FriendTemplateDecl::Create(ASTContext &Context, DeclContext *DC,
-                           SourceLocation Loc, TemplateName Template,
-                           SourceLocation FriendLoc,
-                           ArrayRef<TemplateParameterList *> FriendTypeTPLists,
-                           SourceLocation EllipsisLoc) {
-  std::size_t Extra =
-      FriendTemplateDecl::additionalSizeToAlloc<TemplateParameterList *>(
-          FriendTypeTPLists.size());
-  auto *FTD = new (Context, DC, Extra)
-      FriendTemplateDecl(DC, Loc, FriendUnion(), FriendLoc, EllipsisLoc,
-                         FriendTypeTPLists, Template);
-  cast<CXXRecordDecl>(DC)->pushFriendDecl(FTD);
-  return FTD;
-}
-
-FriendTemplateDecl *
-FriendTemplateDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
-                                       unsigned NumFriendTypeTPLists) {
-  std::size_t Extra =
-      FriendTemplateDecl::additionalSizeToAlloc<TemplateParameterList *>(
-          NumFriendTypeTPLists);
-  return new (C, ID, Extra)
-      FriendTemplateDecl(EmptyShell(), NumFriendTypeTPLists);
-}
-
-SourceRange FriendTemplateDecl::getSourceRange() const {
-  SourceLocation Begin =
-      getFriendTypeTemplateParameterLists().front()->getTemplateLoc();
-  SourceLocation End = FriendDecl::getSourceRange().getEnd();
-  return SourceRange(Begin, End);
+FriendTemplateDecl *FriendTemplateDecl::CreateDeserialized(ASTContext &C,
+                                                           GlobalDeclID ID) {
+  return new (C, ID) FriendTemplateDecl(EmptyShell());
 }
 
 //===----------------------------------------------------------------------===//
