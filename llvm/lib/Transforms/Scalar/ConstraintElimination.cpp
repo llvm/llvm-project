@@ -1074,38 +1074,42 @@ void State::addInfoForInductions(BasicBlock &BB) {
   }
 
   Value *LowerBound = StartValue;
+  bool UnsignedInBounds = true, SignedInBounds = true;
   if (IncStep) {
-    // Adjust lower bound when dealing with a post-increment value.
     auto *StartC = dyn_cast<ConstantInt>(StartValue);
     if (!StartC)
       return;
-    bool Overflow = false;
-    APInt Sum = StartC->getValue().uadd_ov(*StepOffset, Overflow);
-    if (Overflow)
-      return;
+    bool UOverflow = false, SOverflow = false;
+    APInt Sum = StartC->getValue().uadd_ov(*StepOffset, UOverflow);
+    (void)StartC->getValue().sadd_ov(*StepOffset, SOverflow);
     LowerBound = ConstantInt::get(StartValue->getType(), Sum);
+    UnsignedInBounds = !UOverflow;
+    SignedInBounds = !SOverflow;
   }
 
-  // AR may wrap. Add PN >= StartValue conditional on LowerBound <= B which
+  // AR may wrap. Add PN >= StartValue conditional on LowerBound <= B, which
   // guarantees that the loop exits before wrapping in combination with the
   // restrictions on B and the step above.
-  if (!MonotonicallyIncreasingUnsigned)
+  if (!MonotonicallyIncreasingUnsigned && UnsignedInBounds)
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_UGE, PN, StartValue,
         ConditionTy(CmpInst::ICMP_ULE, LowerBound, B)));
-  // Only unsigned facts are derived for the post-increment path.
-  if (!MonotonicallyIncreasingSigned && !IncStep)
+  if (!MonotonicallyIncreasingSigned && SignedInBounds)
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_SGE, PN, StartValue,
-        ConditionTy(CmpInst::ICMP_SLE, StartValue, B)));
+        ConditionTy(CmpInst::ICMP_SLE, LowerBound, B)));
+
+  if (SignedInBounds)
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_SLT, PN, B,
+        ConditionTy(CmpInst::ICMP_SLE, LowerBound, B)));
+
+  if (!UnsignedInBounds)
+    return;
 
   WorkList.push_back(FactOrCheck::getConditionFact(
       DTN, CmpInst::ICMP_ULT, PN, B,
       ConditionTy(CmpInst::ICMP_ULE, LowerBound, B)));
-  if (!IncStep)
-    WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_SLT, PN, B,
-        ConditionTy(CmpInst::ICMP_SLE, StartValue, B)));
 
   // Try to add condition from header to the dedicated exit blocks. When exiting
   // either with EQ or NE in the header, we know that the induction value must

@@ -294,10 +294,9 @@ define i1 @postinc_negative_start_signed_body_folded(i1 %c) {
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 10
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[RES:%.*]] = icmp slt i64 [[IV]], 10
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_0:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_0]]:
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -540,10 +539,9 @@ define void @postinc_signed_facts_when_unsigned_overflows(ptr %p, i1 %c) {
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i8 [[IV_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[UB:%.*]] = icmp slt i8 [[IV]], 100
 ; CHECK-NEXT:    [[UNS:%.*]] = icmp ult i8 [[IV]], 100
 ; CHECK-NEXT:    [[Z0:%.*]] = zext i1 false to i8
-; CHECK-NEXT:    [[Z1:%.*]] = zext i1 [[UB]] to i8
+; CHECK-NEXT:    [[Z1:%.*]] = zext i1 true to i8
 ; CHECK-NEXT:    [[Z2:%.*]] = zext i1 [[UNS]] to i8
 ; CHECK-NEXT:    store i8 [[Z0]], ptr [[P]], align 1
 ; CHECK-NEXT:    store i8 [[Z1]], ptr [[P]], align 1
