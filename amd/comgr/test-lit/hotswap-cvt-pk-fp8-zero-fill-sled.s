@@ -40,7 +40,10 @@ test_cvt_pk_fp8_zero_fill_after:
 .size test_cvt_pk_fp8_zero_fill_after, .Ltest_cvt_pk_fp8_zero_fill_after_end-test_cvt_pk_fp8_zero_fill_after
 
 // DISASM-LABEL: <test_cvt_pk_fp8_zero_fill_source>:
-// DISASM-NEXT:  s_branch{{.*}}<test_cvt_pk_fp8_zero_fill_after+0x4>
+// COM: The cvt is replaced by a forward branch into the appended trampoline
+// COM: pool (a fresh vaddr above .text); the pool section is unnamed, so
+// COM: objdump prints no symbol annotation for the target.
+// DISASM-NEXT:  s_branch
 // DISASM-NEXT:  s_nop
 // DISASM-NEXT:  s_nop
 // DISASM-NEXT:  s_endpgm
@@ -50,7 +53,9 @@ test_cvt_pk_fp8_zero_fill_after:
 // DISASM-NOT:   v_lshl_or_b32
 // DISASM-LABEL: <test_cvt_pk_fp8_zero_fill_after>:
 // DISASM-NEXT:  s_endpgm
-// DISASM-NEXT:  s_mov_b32
+// COM: Trampoline body lives in the appended pool section (fresh vaddr above
+// COM: .text), so objdump emits a section header here -- DISASM, not -NEXT.
+// DISASM:       s_mov_b32
 // DISASM-NEXT:  v_mov_b32{{.*}}0x477f0000
 // DISASM-NEXT:  v_mov_b32{{.*}}0x477f0000
 // DISASM-NEXT:  v_and_b32{{.*}}0x7fffffff

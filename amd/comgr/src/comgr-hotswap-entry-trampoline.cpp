@@ -316,21 +316,20 @@ descriptorAlreadyTargetsEntryStub(const ElfView &Elf,
   std::optional<uint64_t> Entry = entryVAddr(KD);
   if (!Entry)
     return std::nullopt;
-  if (*Entry < Elf.textAddr())
-    return false;
 
   std::optional<uint64_t> TextEnd = checkedAddUint64(
       Elf.textAddr(), Elf.textSize(), "entry trampoline text end");
   if (!TextEnd)
     return std::nullopt;
 
-  const uint64_t TextOffset = *Entry - Elf.textAddr();
-  if (TextOffset > Elf.textSize() ||
-      KernelEntryStubStride > Elf.textSize() - TextOffset)
+  // Read whatever the descriptor's entry points at: the real kernel prologue in
+  // .text on a never-rewritten object, or the entry stub in the appended
+  // trampoline pool on an already-rewritten one. dataAtVAddr resolves either
+  // through the covering allocatable section.
+  const uint8_t *StubBytes = Elf.dataAtVAddr(*Entry, KernelEntryStubStride);
+  if (!StubBytes)
     return false;
-
-  ArrayRef<uint8_t> Candidate(Elf.textData() + TextOffset,
-                              KernelEntryStubStride);
+  ArrayRef<uint8_t> Candidate(StubBytes, KernelEntryStubStride);
   // Avoid feeding arbitrary kernel-entry instructions into the stub matcher.
   // The full decode below is only needed once the bytes look like a hotswap
   // entry stub.
@@ -348,7 +347,8 @@ descriptorAlreadyTargetsEntryStub(const ElfView &Elf,
   if (!Target)
     return std::nullopt;
 
-  return *Target >= Elf.textAddr() && *Target < *TextEnd && *Target < *Entry;
+  // A genuine entry stub jumps back to the original kernel body in .text.
+  return *Target >= Elf.textAddr() && *Target < *TextEnd;
 }
 
 static std::optional<uint64_t>
@@ -491,12 +491,14 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
   if (!ExistingGrowthBytes)
     return std::nullopt;
   uint64_t AppendOffset = *ExistingGrowthBytes;
-  std::optional<uint64_t> TextEndVAddr = checkedAddUint64(
-      Elf.textAddr(), Elf.textSize(), "entry trampoline text end");
-  if (!TextEndVAddr)
+  // Stubs live in the appended trampoline pool at its fresh virtual address
+  // (trampolinePoolVAddr()), no longer immediately after .text.
+  std::optional<uint64_t> PoolVAddrOr = Elf.trampolinePoolVAddr();
+  if (!PoolVAddrOr)
     return std::nullopt;
+  const uint64_t PoolVAddr = *PoolVAddrOr;
   std::optional<uint64_t> StubPoolBaseVAddr = checkedAddUint64(
-      *TextEndVAddr, AppendOffset, "entry trampoline stub-pool base");
+      PoolVAddr, AppendOffset, "entry trampoline stub-pool base");
   if (!StubPoolBaseVAddr)
     return std::nullopt;
   std::optional<uint64_t> AlignedStubPoolBaseVAddr =
@@ -504,7 +506,7 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
                      "entry trampoline aligned stub-pool base");
   if (!AlignedStubPoolBaseVAddr)
     return std::nullopt;
-  const uint64_t StubStart = *AlignedStubPoolBaseVAddr - *TextEndVAddr;
+  const uint64_t StubStart = *AlignedStubPoolBaseVAddr - PoolVAddr;
   std::vector<Trampoline> LocalGrowth;
   std::vector<KernelEntryTrampolineFixup> LocalFixups;
   if (!appendPaddingTrampoline(LocalGrowth, StubStart - AppendOffset,
@@ -514,14 +516,8 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
 
   for (const WorkItem &Item : Work) {
     const KernelDescriptorInfo &KD = Item.KD;
-    std::optional<uint64_t> StubTextEnd = checkedAddUint64(
-        Elf.textSize(), AppendOffset,
-        (Twine("entry trampoline append offset for '") + KD.KernelName + "'")
-            .str());
-    if (!StubTextEnd)
-      return std::nullopt;
     std::optional<uint64_t> StubVAddr = checkedAddUint64(
-        Elf.textAddr(), *StubTextEnd,
+        PoolVAddr, AppendOffset,
         (Twine("entry trampoline vaddr for '") + KD.KernelName + "'").str());
     if (!StubVAddr)
       return std::nullopt;
@@ -584,7 +580,7 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
 }
 
 bool rewriteKernelEntryDescriptorOffsets(
-    WritableMemoryBuffer &OutBuf, uint64_t OldTextSize, StringRef TargetCpu,
+    WritableMemoryBuffer &OutBuf, uint64_t PoolVAddr, StringRef TargetCpu,
     ArrayRef<KernelEntryTrampolineFixup> Fixups) {
   if (Fixups.empty())
     return true;
@@ -608,16 +604,8 @@ bool rewriteKernelEntryDescriptorOffsets(
       Ok = false;
       continue;
     }
-    std::optional<uint64_t> StubTextOffset = checkedAddUint64(
-        OldTextSize, Fixup.StubTextOffset,
-        (Twine("entry trampoline text offset for '") + Fixup.KernelName + "'")
-            .str());
-    if (!StubTextOffset) {
-      Ok = false;
-      continue;
-    }
     std::optional<uint64_t> StubVAddr = checkedAddUint64(
-        OutElf.textAddr(), *StubTextOffset,
+        PoolVAddr, Fixup.StubTextOffset,
         (Twine("entry trampoline vaddr for '") + Fixup.KernelName + "'").str());
     if (!StubVAddr) {
       Ok = false;

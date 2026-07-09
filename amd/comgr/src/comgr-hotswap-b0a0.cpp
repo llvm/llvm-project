@@ -404,11 +404,11 @@ SmallVector<uint8_t> encodeLongBranch(const LLVMState &LS, uint64_t FromOffset,
 [[nodiscard]] bool emitToTrampoline(PatchContext &Ctx, uint64_t InstOffset,
                                     uint32_t InstSize,
                                     ArrayRef<uint8_t> Replacement) {
-  // This trampoline lands right after .text and after every trampoline already
-  // queued -- later ones are appended behind it and cannot shift it, and
-  // fixupTrampolineBranches walks the same list in the same order -- so its
-  // final pool offset is known exactly now.
-  uint64_t PoolStart = Ctx.TextSize;
+  // This trampoline lands at the appended pool base and after every trampoline
+  // already queued -- later ones are appended behind it and cannot shift it,
+  // and fixupTrampolineBranches walks the same list in the same order -- so its
+  // final pool offset (relative to .text) is known exactly now.
+  uint64_t PoolStart = Ctx.PoolBaseOffset;
   for (const Trampoline &Prev : Ctx.OutTrampolines)
     PoolStart += Prev.Bytes.size();
 
@@ -515,9 +515,19 @@ applyGfx1250B0toA0Rules(std::vector<InternalDecodedInst> &Decoded,
   }
 
   StringMap<KernelPatchStats> KernelStats;
-  PatchContext Ctx{Config,           Decoded, Text, TextSize, LS,
-                   OutTrampolines,   Sleds,   Elf,  Liveness, KernelStats,
-                   OutScratchPatches};
+  // Pool base as a .text-relative offset for trampoline branch math. The pool
+  // is always >= textAddr(); checkedSubUint64 guards a malformed object.
+  std::optional<uint64_t> PoolVAddr = Elf.trampolinePoolVAddr();
+  if (!PoolVAddr)
+    return std::nullopt;
+  std::optional<uint64_t> PoolBaseOffset = checkedSubUint64(
+      *PoolVAddr, Elf.textAddr(), "trampoline pool base offset");
+  if (!PoolBaseOffset)
+    return std::nullopt;
+  PatchContext Ctx{Config,         Decoded,         Text,
+                   TextSize,       *PoolBaseOffset, LS,
+                   OutTrampolines, Sleds,           Elf,
+                   Liveness,       KernelStats,     OutScratchPatches};
 
   const HotswapPatchVTable &VT = getHotswapPatchVTable();
 
@@ -624,12 +634,16 @@ applyGfx1250B0toA0Rules(std::vector<InternalDecodedInst> &Decoded,
 /// trampoline could not be fixed up.
 [[nodiscard]] static bool
 fixupTrampolineBranches(std::vector<Trampoline> &Trampolines, uint8_t *Text,
-                        uint64_t TextSize, const LLVMState &LS) {
+                        uint64_t PoolBaseOffset, const LLVMState &LS) {
   // Fail-fast on the first encoding error: the position of later
   // trampolines depends on earlier ones, so a single bad branch would
   // cascade into incorrect layout. A single failure invalidates the whole
   // rewrite, so there is nothing useful to recover beyond it.
-  uint64_t TrampOffset = TextSize;
+  //
+  // Offsets are .text-relative; the pool begins at PoolBaseOffset
+  // (trampolinePoolVAddr() - textAddr()), which is far past .text, so both
+  // edges route through the s_add_pc_i64 long branch.
+  uint64_t TrampOffset = PoolBaseOffset;
   for (Trampoline &T : Trampolines) {
     uint64_t TP = TrampOffset;
     TrampOffset += T.Bytes.size();
@@ -810,8 +824,23 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
 
   std::unique_ptr<WritableMemoryBuffer> Result;
   std::vector<Trampoline> Growth = Deferred;
+  // The appended pool's fresh virtual address is the single reference point for
+  // all trampoline branch/stub targets (growWithTrampolines places it there).
+  std::optional<uint64_t> PoolVAddrOr = Elf.trampolinePoolVAddr();
+  if (!PoolVAddrOr) {
+    log() << "hotswap: error: retargetCodeObject: could not compute trampoline "
+          << "pool virtual address.\n";
+    return AMD_COMGR_STATUS_ERROR;
+  }
+  const uint64_t PoolVAddr = *PoolVAddrOr;
+  // Pool is always >= textAddr(); checkedSubUint64 guards a malformed object.
+  std::optional<uint64_t> PoolBaseOffsetOr = checkedSubUint64(
+      PoolVAddr, Elf.textAddr(), "trampoline pool base offset");
+  if (!PoolBaseOffsetOr)
+    return AMD_COMGR_STATUS_ERROR;
+  const uint64_t PoolBaseOffset = *PoolBaseOffsetOr;
   if (!Deferred.empty()) {
-    if (!fixupTrampolineBranches(Deferred, Text, Elf.textSize(), LS)) {
+    if (!fixupTrampolineBranches(Deferred, Text, PoolBaseOffset, LS)) {
       // A trampoline branch could not be encoded, so the local `Buf` copy
       // is half-redirected; shipping it would run corrupted code. Fall back
       // to the pristine input object (`ElfData`, untouched) so the loader
@@ -871,7 +900,7 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
       GrowthTotal += T.Bytes.size();
     }
     patchDebugSections(*Result, Deferred, Elf, GrowthTotal);
-    if (!rewriteKernelEntryDescriptorOffsets(*Result, Elf.textSize(), LS.Cpu,
+    if (!rewriteKernelEntryDescriptorOffsets(*Result, PoolVAddr, LS.Cpu,
                                              EntryFixups))
       return AMD_COMGR_STATUS_ERROR;
   } else {

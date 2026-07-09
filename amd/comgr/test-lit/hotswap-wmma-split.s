@@ -29,26 +29,16 @@
 
 // RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
 
-// COM: Verify .text actually grew on the wire. Disassembly above shows the
-// COM: replacement mnemonics, but a buggy rewriter could leave the .text
-// COM: section header sh_size unchanged -- the disassembler walks raw bytes
-// COM: regardless, but downstream tools that respect section headers (the
-// COM: HSA loader's relocation pass, ELF strippers, debuggers) would then
-// COM: miss the appended trampolines. Assert .text in the output is strictly
-// COM: larger than .text in the input. Field 7 of llvm-readelf -S is the
-// COM: hex Size column; the trailing space after `\.text` skips
-// COM: `.text.<funcname>` would-be matches (none exist here, but cheap
-// COM: insurance).
-// COM: Drop `exit` from the awk one-liner: with `exit`, awk closes its
-// COM: stdin before llvm-readelf finishes writing, and LIT's pipefail
-// COM: shell propagates the SIGPIPE -> the test fails non-deterministically
-// COM: in standalone runs (only passes in the bulk LIT run because
-// COM: output buffering shifts the race). The `\.text ` pattern (with
-// COM: trailing space) matches at most one section header per ELF, so
-// COM: removing `exit` does not change the captured value.
-// RUN: SIZE_IN=$(%llvm-readelf -S %t.elf | awk '/\.text /{print $7}') && \
-// RUN:   SIZE_OUT=$(%llvm-readelf -S %t.out.elf | awk '/\.text /{print $7}') && \
-// RUN:   test $((16#$SIZE_OUT)) -gt $((16#$SIZE_IN))
+// COM: Verify the trampoline pool landed on the wire. The rewriter appends the
+// COM: pool as a new section at a fresh virtual address (it no longer grows
+// COM: .text in place and shifts everything after it, which would corrupt the
+// COM: absolute/PC-relative addresses baked into a fully-linked object). So
+// COM: assert the output gained a section header relative to the input; a
+// COM: buggy rewriter that dropped the pool would leave the count unchanged.
+// COM: "Number of section headers" from llvm-readelf -h is decimal.
+// RUN: NSEC_IN=$(%llvm-readelf -h %t.elf | awk '/Number of section headers/{print $NF}') && \
+// RUN:   NSEC_OUT=$(%llvm-readelf -h %t.out.elf | awk '/Number of section headers/{print $NF}') && \
+// RUN:   test "$NSEC_OUT" -gt "$NSEC_IN"
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1250"
 

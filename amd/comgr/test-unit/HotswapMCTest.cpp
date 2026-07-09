@@ -731,12 +731,15 @@ TEST(KernelEntryTrampoline, ClampsInstPrefSizeAndAvoidsPrefetchGuard) {
   EXPECT_EQ(ExpectedGuard, 0u);
   ASSERT_FALSE(Growth.empty());
 
-  const uint64_t OldTextSize = ViewOrErr->textSize();
-  const uint64_t TextEndVAddr = ViewOrErr->textAddr() + OldTextSize;
+  // Stubs live in the appended pool at trampolinePoolVAddr(); the first stub's
+  // offset is the padding needed to reach a KernelEntryStubStride boundary from
+  // the pool base.
+  std::optional<uint64_t> PoolVAddrOr = ViewOrErr->trampolinePoolVAddr();
+  ASSERT_TRUE(PoolVAddrOr.has_value());
+  const uint64_t PoolVAddr = *PoolVAddrOr;
   const uint64_t ExpectedStubOffset =
-      ((TextEndVAddr + KernelEntryStubStride - 1) &
-       ~(KernelEntryStubStride - 1)) -
-      TextEndVAddr;
+      ((PoolVAddr + KernelEntryStubStride - 1) & ~(KernelEntryStubStride - 1)) -
+      PoolVAddr;
   EXPECT_EQ(Fixups[0].StubTextOffset, ExpectedStubOffset);
 
   uint64_t GrowthTotal = 0;
@@ -750,7 +753,7 @@ TEST(KernelEntryTrampoline, ClampsInstPrefSizeAndAvoidsPrefetchGuard) {
   ASSERT_NE(Out, nullptr);
 
   ASSERT_TRUE(
-      rewriteKernelEntryDescriptorOffsets(*Out, OldTextSize, S.Cpu, Fixups));
+      rewriteKernelEntryDescriptorOffsets(*Out, PoolVAddr, S.Cpu, Fixups));
 
   uint8_t *OutData = reinterpret_cast<uint8_t *>(Out->getBufferStart());
   llvm::Expected<ElfView> OutView =
@@ -788,8 +791,7 @@ TEST(KernelEntryTrampoline, ClampsInstPrefSizeAndAvoidsPrefetchGuard) {
   ASSERT_EQ(KDs.size(), 1u);
   std::optional<uint64_t> KdVAddr = OutView->getKernelDescriptorVAddr("kernel");
   ASSERT_TRUE(KdVAddr.has_value());
-  const uint64_t StubVAddr =
-      ViewOrErr->textAddr() + OldTextSize + Fixups[0].StubTextOffset;
+  const uint64_t StubVAddr = PoolVAddr + Fixups[0].StubTextOffset;
   EXPECT_EQ(KDs[0].EntryOffset, static_cast<int64_t>(StubVAddr - *KdVAddr));
 }
 
@@ -816,12 +818,12 @@ TEST(KernelEntryTrampoline, AlignsStubByVirtualAddress) {
   ASSERT_TRUE(Count.has_value());
   EXPECT_EQ(*Count, 1u);
   ASSERT_EQ(Fixups.size(), 1u);
-  const uint64_t StubVAddr =
-      ViewOrErr->textAddr() + ViewOrErr->textSize() + Fixups[0].StubTextOffset;
+  // The stub is aligned by its virtual address: the pool base plus the stub's
+  // offset lands on a KernelEntryStubStride boundary.
+  std::optional<uint64_t> PoolVAddrOr = ViewOrErr->trampolinePoolVAddr();
+  ASSERT_TRUE(PoolVAddrOr.has_value());
+  const uint64_t StubVAddr = *PoolVAddrOr + Fixups[0].StubTextOffset;
   EXPECT_EQ(StubVAddr % KernelEntryStubStride, 0u);
-  EXPECT_NE((ViewOrErr->textSize() + Fixups[0].StubTextOffset) %
-                KernelEntryStubStride,
-            0u);
 }
 
 TEST(KernelEntryTrampoline, AppendReturnsZeroWhenNoDescriptorsExist) {

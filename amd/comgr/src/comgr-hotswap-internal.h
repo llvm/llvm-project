@@ -84,6 +84,15 @@ inline std::optional<uint64_t> checkedAddUint64(uint64_t LHS, uint64_t RHS,
   return std::nullopt;
 }
 
+inline std::optional<uint64_t> checkedSubUint64(uint64_t LHS, uint64_t RHS,
+                                                llvm::StringRef Context) {
+  if (LHS < RHS) {
+    log() << "hotswap: error: " << Context << " underflows uint64_t.\n";
+    return std::nullopt;
+  }
+  return LHS - RHS;
+}
+
 // -- Trampoline and NOP sled --------------------------------------------------
 
 struct Trampoline {
@@ -241,6 +250,12 @@ public:
   std::optional<FunctionTextRange>
   findFunctionTextRangeAtOffset(uint64_t TextOffset) const;
 
+  /// Return a pointer to \p Len bytes at virtual address \p VAddr, resolved
+  /// through the allocatable section that contains it (any section, not just
+  /// `.text` -- e.g. the appended trampoline pool). Returns nullptr if no
+  /// section covers the range or it falls outside the buffer.
+  const uint8_t *dataAtVAddr(uint64_t VAddr, uint64_t Len) const;
+
   /// Pointer to the kernel_descriptor for \p KernelName inside the buffer,
   /// or nullptr if not found.
   uint8_t *findKernelDescriptor(llvm::StringRef KernelName);
@@ -310,13 +325,22 @@ public:
   void updateKernelDescriptor(llvm::StringRef KernelName, unsigned ExtraVgprs,
                               unsigned VgprGranuleSize);
 
-  /// Grow the ELF by inserting trampoline bytes after `.text` and adjusting
-  /// all section and program headers. Returns a null unique_ptr on failure.
+  /// Virtual address at which growWithTrampolines appends the trampoline pool:
+  /// the first page-aligned address above every existing allocatable section.
+  /// Callers that pre-compute branch/stub targets (B0-to-A0 trampolines,
+  /// kernel-entry stubs) must resolve pool positions against this value so the
+  /// baked branches land on the pool's final location. Single source of truth
+  /// shared with growWithTrampolines. std::nullopt on sh_addr+sh_size overflow.
+  std::optional<uint64_t> trampolinePoolVAddr() const;
+
+  /// Grow the ELF by appending the trampoline pool at a fresh virtual address
+  /// (trampolinePoolVAddr()) in a new PT_LOAD segment, leaving every existing
+  /// section, symbol, and segment in place. Returns a null unique_ptr on
+  /// failure.
   ///
-  /// SHF_ALLOC sections after `.text` (e.g. `.dynamic` in clang/lld-produced
-  /// HSACOs) are handled: their file offsets, virtual addresses (sh_addr,
-  /// p_vaddr, p_paddr), and segment sizes are shifted by the total
-  /// trampoline size to keep the ELF layout consistent.
+  /// Appending (rather than growing `.text` and shifting everything after it)
+  /// preserves the absolute/PC-relative addresses baked into a fully-linked
+  /// AMDGPU code object, which carries no relocations to fix up.
   std::unique_ptr<llvm::WritableMemoryBuffer>
   growWithTrampolines(llvm::ArrayRef<Trampoline> Trampolines,
                       llvm::ArrayRef<uint8_t> SNopBytes) const;
@@ -648,6 +672,11 @@ struct PatchContext {
   std::vector<InternalDecodedInst> &Decoded;
   uint8_t *Text = nullptr;
   uint64_t TextSize = 0;
+  // .text-relative offset at which the appended trampoline pool begins
+  // (trampolinePoolVAddr() - textAddr()). Trampoline branch offsets are
+  // computed against this, not TextSize, since the pool no longer sits
+  // immediately after .text.
+  uint64_t PoolBaseOffset = 0;
   const LLVMState &LS;
   std::vector<Trampoline> &OutTrampolines;
   std::vector<NopSled> &NopSleds;
@@ -784,7 +813,7 @@ std::optional<uint32_t> appendKernelEntryTrampolines(
 /// Apply descriptor rewrites recorded by appendKernelEntryTrampolines after
 /// the ELF has been grown.
 bool rewriteKernelEntryDescriptorOffsets(
-    llvm::WritableMemoryBuffer &OutBuf, uint64_t OldTextSize,
+    llvm::WritableMemoryBuffer &OutBuf, uint64_t PoolVAddr,
     llvm::StringRef TargetCpu,
     llvm::ArrayRef<KernelEntryTrampolineFixup> Fixups);
 

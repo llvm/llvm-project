@@ -35,30 +35,15 @@ using ELFFileT = ElfView::ELFFileT;
 
 static constexpr unsigned SgprEncodingGranule = 8;
 
+// Page alignment for the appended trampoline pool's virtual address and file
+// offset, so its PT_LOAD segment maps consistently.
+static constexpr uint64_t TrampolinePoolAlign = 4096;
+
 enum class MetadataSgprUpdateStatus {
   NotFound,
   Found,
   Error,
 };
-
-static std::optional<size_t>
-checkedAlignToSize(size_t Value, uint64_t Alignment, StringRef Context) {
-  if (Alignment <= 1)
-    return Value;
-  uint64_t Value64 = static_cast<uint64_t>(Value);
-  uint64_t Remainder = Value64 % Alignment;
-  if (Remainder == 0)
-    return Value;
-  std::optional<uint64_t> Aligned =
-      checkedAddUint64(Value64, Alignment - Remainder, Context);
-  if (!Aligned)
-    return std::nullopt;
-  if (*Aligned > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
-    log() << "hotswap: error: " << Context << " exceeds size_t.\n";
-    return std::nullopt;
-  }
-  return static_cast<size_t>(*Aligned);
-}
 
 static std::optional<uint64_t> checkedSectionFileOffset(const ELFT::Shdr &Sec,
                                                         uint64_t VAddr,
@@ -968,238 +953,41 @@ void ElfView::updateKernelDescriptor(StringRef KernelName, unsigned ExtraVgprs,
               &Rsrc1, sizeof(Rsrc1));
 }
 
-// -- Section/program header adjustment for trampoline growth ------------------
+// -- ElfView::dataAtVAddr -----------------------------------------------------
 
-static bool adjustSectionHeaders(uint8_t *Elf, size_t ElfSize,
-                                 uint64_t TextOffset, uint64_t TextSize,
-                                 size_t TrampTotal) {
-  if (ElfSize < sizeof(Ehdr))
-    return true;
-
-  std::optional<uint64_t> TextEnd =
-      checkedAddUint64(TextOffset, TextSize, "section header .text end");
-  if (!TextEnd)
-    return false;
-  uint64_t Shoff;
-  uint16_t Shentsize;
-  uint16_t Shnum;
-  std::memcpy(&Shoff, Elf + offsetof(Ehdr, e_shoff), sizeof(Shoff));
-  std::memcpy(&Shentsize, Elf + offsetof(Ehdr, e_shentsize), sizeof(Shentsize));
-  std::memcpy(&Shnum, Elf + offsetof(Ehdr, e_shnum), sizeof(Shnum));
-  if (Shentsize < sizeof(Shdr))
-    return true;
-
-  if (Shoff >= *TextEnd) {
-    std::optional<uint64_t> NewShoff =
-        checkedAddUint64(Shoff, TrampTotal, "section header table offset");
-    if (!NewShoff)
-      return false;
-    uint64_t NewShoffValue = *NewShoff;
-    std::memcpy(Elf + offsetof(Ehdr, e_shoff), &NewShoffValue,
-                sizeof(NewShoffValue));
-    Shoff = NewShoffValue;
+const uint8_t *ElfView::dataAtVAddr(uint64_t VAddr, uint64_t Len) const {
+  for (const ELFT::Shdr &Shdr : Sections) {
+    if (!(Shdr.sh_flags & ELF::SHF_ALLOC) || Shdr.sh_type == ELF::SHT_NOBITS)
+      continue;
+    if (VAddr < Shdr.sh_addr)
+      continue;
+    uint64_t Off = VAddr - Shdr.sh_addr;
+    if (Off > Shdr.sh_size || Len > Shdr.sh_size - Off)
+      continue;
+    if (Shdr.sh_offset > size() || Off > size() - Shdr.sh_offset ||
+        Len > size() - Shdr.sh_offset - Off)
+      continue;
+    return data() + Shdr.sh_offset + Off;
   }
-
-  for (uint16_t I = 0; I < Shnum; ++I) {
-    uint64_t ShTableDelta = static_cast<uint64_t>(I) * Shentsize;
-    std::optional<uint64_t> ShPos =
-        checkedAddUint64(Shoff, ShTableDelta, "section header entry offset");
-    if (!ShPos)
-      return false;
-    if (*ShPos > ElfSize || sizeof(Shdr) > ElfSize - *ShPos)
-      break;
-    uint8_t *Sh = Elf + *ShPos;
-    uint64_t ShOffset;
-    std::memcpy(&ShOffset, Sh + offsetof(Shdr, sh_offset), sizeof(ShOffset));
-
-    if (ShOffset == TextOffset) {
-      std::optional<uint64_t> NewTextSize =
-          checkedAddUint64(TextSize, TrampTotal, ".text section size");
-      if (!NewTextSize)
-        return false;
-      uint64_t NewTextSizeValue = *NewTextSize;
-      std::memcpy(Sh + offsetof(Shdr, sh_size), &NewTextSizeValue,
-                  sizeof(NewTextSizeValue));
-    } else if (ShOffset > TextOffset) {
-      std::optional<uint64_t> NewOffset =
-          checkedAddUint64(ShOffset, TrampTotal, "post-.text section offset");
-      if (!NewOffset)
-        return false;
-      uint64_t NewOffsetValue = *NewOffset;
-      std::memcpy(Sh + offsetof(Shdr, sh_offset), &NewOffsetValue,
-                  sizeof(NewOffsetValue));
-      uint64_t ShFlags;
-      std::memcpy(&ShFlags, Sh + offsetof(Shdr, sh_flags), sizeof(ShFlags));
-      if (ShFlags & ELF::SHF_ALLOC) {
-        uint64_t ShAddr;
-        std::memcpy(&ShAddr, Sh + offsetof(Shdr, sh_addr), sizeof(ShAddr));
-        std::optional<uint64_t> NewAddr =
-            checkedAddUint64(ShAddr, TrampTotal, "post-.text section address");
-        if (!NewAddr)
-          return false;
-        ShAddr = *NewAddr;
-        std::memcpy(Sh + offsetof(Shdr, sh_addr), &ShAddr, sizeof(ShAddr));
-      }
-    }
-  }
-  return true;
+  return nullptr;
 }
 
-static bool adjustProgramHeaders(uint8_t *Elf, size_t ElfSize,
-                                 uint64_t TextOffset, uint64_t TextSize,
-                                 size_t TrampTotal) {
-  if (ElfSize < sizeof(Ehdr))
-    return true;
+// -- ElfView::trampolinePoolVAddr ---------------------------------------------
 
-  std::optional<uint64_t> TextEnd =
-      checkedAddUint64(TextOffset, TextSize, "program header .text end");
-  if (!TextEnd)
-    return false;
-  uint64_t Phoff;
-  uint16_t Phentsize;
-  uint16_t Phnum;
-  std::memcpy(&Phoff, Elf + offsetof(Ehdr, e_phoff), sizeof(Phoff));
-  std::memcpy(&Phentsize, Elf + offsetof(Ehdr, e_phentsize), sizeof(Phentsize));
-  std::memcpy(&Phnum, Elf + offsetof(Ehdr, e_phnum), sizeof(Phnum));
-  if (Phentsize < sizeof(Phdr))
-    return true;
-
-  for (uint16_t I = 0; I < Phnum; ++I) {
-    uint64_t PhTableDelta = static_cast<uint64_t>(I) * Phentsize;
-    std::optional<uint64_t> PhPos =
-        checkedAddUint64(Phoff, PhTableDelta, "program header entry offset");
-    if (!PhPos)
-      return false;
-    if (*PhPos > ElfSize || sizeof(Phdr) > ElfSize - *PhPos)
-      break;
-    uint8_t *Ph = Elf + *PhPos;
-    uint64_t POffset;
-    uint64_t PFilesz;
-    uint64_t PMemsz;
-    std::memcpy(&POffset, Ph + offsetof(Phdr, p_offset), sizeof(POffset));
-    std::memcpy(&PFilesz, Ph + offsetof(Phdr, p_filesz), sizeof(PFilesz));
-    std::memcpy(&PMemsz, Ph + offsetof(Phdr, p_memsz), sizeof(PMemsz));
-
-    std::optional<uint64_t> PEnd =
-        checkedAddUint64(POffset, PFilesz, "program header file end");
-    if (!PEnd)
-      return false;
-    if (POffset <= TextOffset && *PEnd >= *TextEnd) {
-      std::optional<uint64_t> NewPFilesz =
-          checkedAddUint64(PFilesz, TrampTotal, "program header file size");
-      std::optional<uint64_t> NewPMemsz =
-          checkedAddUint64(PMemsz, TrampTotal, "program header memory size");
-      if (!NewPFilesz || !NewPMemsz)
-        return false;
-      PFilesz = *NewPFilesz;
-      PMemsz = *NewPMemsz;
-      std::memcpy(Ph + offsetof(Phdr, p_filesz), &PFilesz, sizeof(PFilesz));
-      std::memcpy(Ph + offsetof(Phdr, p_memsz), &PMemsz, sizeof(PMemsz));
-    } else if (POffset > TextOffset) {
-      std::optional<uint64_t> NewPOffset =
-          checkedAddUint64(POffset, TrampTotal, "post-.text program offset");
-      if (!NewPOffset)
-        return false;
-      POffset = *NewPOffset;
-      std::memcpy(Ph + offsetof(Phdr, p_offset), &POffset, sizeof(POffset));
-      uint64_t PVaddr;
-      std::memcpy(&PVaddr, Ph + offsetof(Phdr, p_vaddr), sizeof(PVaddr));
-      std::optional<uint64_t> NewPVaddr =
-          checkedAddUint64(PVaddr, TrampTotal, "post-.text program vaddr");
-      if (!NewPVaddr)
-        return false;
-      PVaddr = *NewPVaddr;
-      std::memcpy(Ph + offsetof(Phdr, p_vaddr), &PVaddr, sizeof(PVaddr));
-      uint64_t PPaddr;
-      std::memcpy(&PPaddr, Ph + offsetof(Phdr, p_paddr), sizeof(PPaddr));
-      std::optional<uint64_t> NewPPaddr =
-          checkedAddUint64(PPaddr, TrampTotal, "post-.text program paddr");
-      if (!NewPPaddr)
-        return false;
-      PPaddr = *NewPPaddr;
-      std::memcpy(Ph + offsetof(Phdr, p_paddr), &PPaddr, sizeof(PPaddr));
-    }
-  }
-  return true;
-}
-
-static bool adjustSymbolValues(uint8_t *Elf, size_t ElfSize,
-                               uint64_t TextOffset, size_t TrampTotal) {
-  if (TrampTotal == 0)
-    return true;
-
-  Expected<ELFFileT> FileOrErr =
-      ELFFileT::create(StringRef(reinterpret_cast<const char *>(Elf), ElfSize));
-  if (!FileOrErr) {
-    log() << "hotswap: error: adjustSymbolValues: failed to parse grown ELF: "
-          << toString(FileOrErr.takeError()) << "\n";
-    return false;
-  }
-  ELFFileT File = std::move(*FileOrErr);
-
-  if (File.getHeader().e_type == ELF::ET_REL)
-    return true;
-
-  Expected<ELFT::ShdrRange> SectionsOrErr = File.sections();
-  if (!SectionsOrErr) {
-    log() << "hotswap: error: adjustSymbolValues: failed to read section "
-          << "headers: " << toString(SectionsOrErr.takeError()) << "\n";
-    return false;
-  }
-  ELFT::ShdrRange Sections = *SectionsOrErr;
-
-  unsigned SectionIndex = 0;
-  for (const ELFT::Shdr &SymShdr : Sections) {
-    if (SymShdr.sh_type != ELF::SHT_SYMTAB &&
-        SymShdr.sh_type != ELF::SHT_DYNSYM) {
-      ++SectionIndex;
+std::optional<uint64_t> ElfView::trampolinePoolVAddr() const {
+  uint64_t MaxAllocEnd = 0;
+  for (const ELFT::Shdr &Shdr : Sections) {
+    if (!(Shdr.sh_flags & ELF::SHF_ALLOC))
       continue;
-    }
-
-    Expected<ELFT::SymRange> SymsOrErr = File.symbols(&SymShdr);
-    if (!SymsOrErr) {
-      log() << "hotswap: error: adjustSymbolValues: failed to read symbol "
-            << "table section " << SectionIndex << ": "
-            << toString(SymsOrErr.takeError()) << "\n";
-      ++SectionIndex;
-      continue;
-    }
-
-    for (const ELFT::Sym &Sym : *SymsOrErr) {
-      if (Sym.st_shndx == ELF::SHN_UNDEF || Sym.st_shndx >= ELF::SHN_LORESERVE)
-        continue;
-
-      Expected<const ELFT::Shdr *> DefShdrOrErr = File.getSection(Sym.st_shndx);
-      if (!DefShdrOrErr) {
-        log() << "hotswap: error: adjustSymbolValues: symbol references "
-              << "missing section " << Sym.st_shndx << ": "
-              << toString(DefShdrOrErr.takeError()) << "\n";
-        continue;
-      }
-      const ELFT::Shdr &DefShdr = **DefShdrOrErr;
-      if (!(DefShdr.sh_flags & ELF::SHF_ALLOC) ||
-          DefShdr.sh_offset <= TextOffset)
-        continue;
-
-      const uint8_t *SymBytes = reinterpret_cast<const uint8_t *>(&Sym);
-      if (SymBytes < File.base() || SymBytes + sizeof(ELFT::Sym) > File.end()) {
-        log() << "hotswap: error: adjustSymbolValues: symbol table entry is "
-              << "outside the ELF buffer.\n";
-        continue;
-      }
-
-      uint64_t SymOffset = SymBytes - File.base();
-      std::optional<uint64_t> Value =
-          checkedAddUint64(Sym.st_value, TrampTotal, "post-.text symbol value");
-      if (!Value)
-        return false;
-      uint64_t Value64 = *Value;
-      std::memcpy(Elf + SymOffset + offsetof(ELFT::Sym, st_value), &Value64,
-                  sizeof(Value64));
-    }
-    ++SectionIndex;
+    // Overflow would collapse MaxAllocEnd and overlap the pool with existing
+    // sections.
+    std::optional<uint64_t> End = checkedAddUint64(
+        Shdr.sh_addr, Shdr.sh_size, "allocatable section end for pool vaddr");
+    if (!End)
+      return std::nullopt;
+    MaxAllocEnd = std::max(MaxAllocEnd, *End);
   }
-  return true;
+  return alignTo(MaxAllocEnd, TrampolinePoolAlign);
 }
 
 // -- ElfView::growWithTrampolines ---------------------------------------------
@@ -1207,8 +995,19 @@ static bool adjustSymbolValues(uint8_t *Elf, size_t ElfSize,
 std::unique_ptr<WritableMemoryBuffer>
 ElfView::growWithTrampolines(ArrayRef<Trampoline> Trampolines,
                              ArrayRef<uint8_t> SNopBytes) const {
+  // SNopBytes is unused in the append-at-end model: nothing between .text and
+  // the following sections moves, so there is no in-image gap to pad. It is
+  // retained in the signature for callers and for a future in-place variant.
+  (void)SNopBytes;
+
   const size_t InputSize = size();
   const uint8_t *Input = data();
+
+  if (InputSize < sizeof(Ehdr)) {
+    log() << "hotswap: error: growWithTrampolines: input (" << InputSize
+          << " bytes) is smaller than an ELF64 header.\n";
+    return nullptr;
+  }
 
   size_t TrampTotal = 0;
   for (const Trampoline &T : Trampolines) {
@@ -1224,83 +1023,163 @@ ElfView::growWithTrampolines(ArrayRef<Trampoline> Trampolines,
           << "returning empty result.\n";
     return nullptr;
   }
-  if (TrampTotal > std::numeric_limits<size_t>::max() - InputSize) {
-    log() << "hotswap: error: growWithTrampolines: trampoline bytes ("
-          << TrampTotal << ") + existing ELF size (" << InputSize
-          << ") overflow size_t.\n";
-    return nullptr;
-  }
 
-  std::optional<uint64_t> TextEnd = checkedAddUint64(
-      textOffset(), textSize(), "growWithTrampolines .text end");
-  if (!TextEnd || *TextEnd > InputSize) {
-    log() << "hotswap: error: growWithTrampolines: .text range exceeds input "
-          << "ELF size.\n";
+  // Append the pool at a fresh virtual address above every existing
+  // allocatable section (trampolinePoolVAddr()). Because existing sections,
+  // symbols, and program headers keep their addresses, the baked PC-relative
+  // literals (and DWARF) that reference post-.text data stay valid. The
+  // previous scheme grew .text in place and shifted everything after it,
+  // silently corrupting those baked references (a fully-linked AMDGPU object
+  // carries no relocations) -- see
+  // ElfView.GrowWithTrampolinesKeepsIsaReferenceConsistentWithSymbol.
+  //
+  // The vaddr and file offset are page-aligned (equal modulo the alignment) so
+  // the appended PT_LOAD maps consistently.
+  std::optional<uint64_t> PoolVAddrOr = trampolinePoolVAddr();
+  if (!PoolVAddrOr) {
+    log() << "hotswap: error: growWithTrampolines: could not compute a "
+          << "trampoline pool virtual address.\n";
     return nullptr;
   }
+  const uint64_t PoolVAddr = *PoolVAddrOr;
+  const uint64_t PoolFileOff =
+      alignTo(static_cast<uint64_t>(InputSize), TrampolinePoolAlign);
 
-  // Pad TrampTotal to the maximum alignment of all post-.text sections so
-  // that shifting file offsets preserves sh_addralign invariants. The
-  // sh_addr update in adjustSectionHeaders is still gated on SHF_ALLOC.
-  uint64_t MaxPostTextAlign = 1;
-  for (const ELFT::Shdr &Shdr : Sections) {
-    if (Shdr.sh_offset <= textOffset())
-      continue;
-    if (Shdr.sh_addralign > MaxPostTextAlign)
-      MaxPostTextAlign = Shdr.sh_addralign;
-  }
-  std::optional<size_t> PaddedTrampTotalOrErr = checkedAlignToSize(
-      TrampTotal, MaxPostTextAlign, "padded trampoline byte count");
-  if (!PaddedTrampTotalOrErr)
-    return nullptr;
-  size_t PaddedTrampTotal = *PaddedTrampTotalOrErr;
-  if (PaddedTrampTotal > std::numeric_limits<size_t>::max() - InputSize) {
-    log() << "hotswap: error: growWithTrampolines: padded trampoline bytes ("
-          << PaddedTrampTotal << ") + ELF size (" << InputSize
-          << ") overflow size_t.\n";
-    return nullptr;
-  }
-  size_t PadBytes = PaddedTrampTotal - TrampTotal;
+  // Copy the program-header and section-header tables to the end of the file,
+  // each with one new entry for the pool (a PT_LOAD segment so the loader maps
+  // it, and an SHF_ALLOC|SHF_EXECINSTR section so objdump/tools and a
+  // subsequent rewrite can see it), then repoint e_phoff / e_shoff. Those
+  // tables are metadata addressed via the ELF header, so relocating them moves
+  // nothing a baked literal can reference.
+  uint64_t Phoff, Shoff;
+  uint16_t Phentsize, Phnum, Shentsize, Shnum;
+  std::memcpy(&Phoff, Input + offsetof(Ehdr, e_phoff), sizeof(Phoff));
+  std::memcpy(&Phentsize, Input + offsetof(Ehdr, e_phentsize),
+              sizeof(Phentsize));
+  std::memcpy(&Phnum, Input + offsetof(Ehdr, e_phnum), sizeof(Phnum));
+  std::memcpy(&Shoff, Input + offsetof(Ehdr, e_shoff), sizeof(Shoff));
+  std::memcpy(&Shentsize, Input + offsetof(Ehdr, e_shentsize),
+              sizeof(Shentsize));
+  std::memcpy(&Shnum, Input + offsetof(Ehdr, e_shnum), sizeof(Shnum));
 
-  const size_t NewSize = InputSize + PaddedTrampTotal;
+  const bool HasPhdrs =
+      Phnum > 0 && Phoff != 0 && Phentsize >= sizeof(Phdr) &&
+      Phoff <= InputSize &&
+      static_cast<uint64_t>(Phnum) * Phentsize <= InputSize - Phoff;
+  const bool HasShdrs =
+      Shnum > 0 && Shoff != 0 && Shentsize >= sizeof(Shdr) &&
+      Shoff <= InputSize &&
+      static_cast<uint64_t>(Shnum) * Shentsize <= InputSize - Shoff;
+
+  std::optional<uint64_t> PoolEnd =
+      checkedAddUint64(PoolFileOff, TrampTotal, "trampoline pool file end");
+  if (!PoolEnd)
+    return nullptr;
+
+  // Lay out the relocated tables after the pool: [pool][phdrs][shdrs].
+  uint64_t Cursor = *PoolEnd;
+  const uint64_t NewPhnum = HasPhdrs ? static_cast<uint64_t>(Phnum) + 1 : Phnum;
+  const uint64_t NewShnum = HasShdrs ? static_cast<uint64_t>(Shnum) + 1 : Shnum;
+  uint64_t NewPhoff = Phoff;
+  uint64_t NewShoff = Shoff;
+  if (HasPhdrs) {
+    if (static_cast<uint64_t>(Phnum) >= std::numeric_limits<uint16_t>::max()) {
+      log() << "hotswap: error: growWithTrampolines: program-header count "
+            << Phnum << " leaves no room to append a PT_LOAD.\n";
+      return nullptr;
+    }
+    NewPhoff = alignTo(Cursor, static_cast<uint64_t>(alignof(Phdr)));
+    std::optional<uint64_t> End = checkedAddUint64(
+        NewPhoff, NewPhnum * Phentsize, "relocated phdr table end");
+    if (!End)
+      return nullptr;
+    Cursor = *End;
+  }
+  if (HasShdrs) {
+    if (static_cast<uint64_t>(Shnum) >= std::numeric_limits<uint16_t>::max()) {
+      log() << "hotswap: error: growWithTrampolines: section-header count "
+            << Shnum << " leaves no room to append the pool section.\n";
+      return nullptr;
+    }
+    NewShoff = alignTo(Cursor, static_cast<uint64_t>(alignof(Shdr)));
+    std::optional<uint64_t> End = checkedAddUint64(
+        NewShoff, NewShnum * Shentsize, "relocated shdr table end");
+    if (!End)
+      return nullptr;
+    Cursor = *End;
+  }
+  if (Cursor > std::numeric_limits<size_t>::max()) {
+    log()
+        << "hotswap: error: growWithTrampolines: grown size exceeds size_t.\n";
+    return nullptr;
+  }
+  const size_t NewSize = static_cast<size_t>(Cursor);
+
+  // getNewMemBuffer zero-initializes, so the alignment gaps between regions are
+  // well-defined padding without extra memsets.
   std::unique_ptr<WritableMemoryBuffer> Buf =
-      WritableMemoryBuffer::getNewUninitMemBuffer(NewSize);
+      WritableMemoryBuffer::getNewMemBuffer(NewSize);
   if (!Buf) {
     log() << "hotswap: error: growWithTrampolines: "
-          << "WritableMemoryBuffer::getNewUninitMemBuffer(" << NewSize
+          << "WritableMemoryBuffer::getNewMemBuffer(" << NewSize
           << ") failed (out of memory).\n";
     return nullptr;
   }
 
   uint8_t *Out = reinterpret_cast<uint8_t *>(Buf->getBufferStart());
-  size_t TextEndSize = static_cast<size_t>(*TextEnd);
-  std::memcpy(Out, Input, TextEndSize);
-  size_t Pos = TextEndSize;
+  // 1. Original bytes verbatim -- nothing shifts.
+  std::memcpy(Out, Input, InputSize);
+  // 2. Trampoline pool at its fresh, page-aligned file offset / vaddr.
+  size_t Pos = static_cast<size_t>(PoolFileOff);
   for (const Trampoline &T : Trampolines) {
     std::memcpy(Out + Pos, T.Bytes.data(), T.Bytes.size());
     Pos += T.Bytes.size();
   }
-  if (PadBytes > 0 && SNopBytes.size() == MinInstSize) {
-    for (size_t I = 0; I < PadBytes; I += MinInstSize)
-      std::memcpy(Out + Pos + I, SNopBytes.data(), MinInstSize);
-    Pos += PadBytes;
-  } else if (PadBytes > 0) {
-    std::memset(Out + Pos, 0, PadBytes);
-    Pos += PadBytes;
+  // 3. Relocated program-header table + appended PT_LOAD for the pool.
+  if (HasPhdrs) {
+    std::memcpy(Out + NewPhoff, Input + Phoff,
+                static_cast<size_t>(Phnum) * Phentsize);
+    Phdr PoolPhdr{};
+    PoolPhdr.p_type = ELF::PT_LOAD;
+    PoolPhdr.p_flags = ELF::PF_R | ELF::PF_X;
+    PoolPhdr.p_offset = PoolFileOff;
+    PoolPhdr.p_vaddr = PoolVAddr;
+    PoolPhdr.p_paddr = PoolVAddr;
+    PoolPhdr.p_filesz = TrampTotal;
+    PoolPhdr.p_memsz = TrampTotal;
+    PoolPhdr.p_align = TrampolinePoolAlign;
+    std::memcpy(Out + NewPhoff + static_cast<uint64_t>(Phnum) * Phentsize,
+                &PoolPhdr, sizeof(PoolPhdr));
+    std::memcpy(Out + offsetof(Ehdr, e_phoff), &NewPhoff, sizeof(NewPhoff));
+    uint16_t NewPhnum16 = static_cast<uint16_t>(NewPhnum);
+    std::memcpy(Out + offsetof(Ehdr, e_phnum), &NewPhnum16, sizeof(NewPhnum16));
   }
-  if (TextEndSize < InputSize)
-    std::memcpy(Out + Pos, Input + TextEndSize, InputSize - TextEndSize);
+  // 4. Relocated section-header table + appended pool section. The section has
+  // an empty name (sh_name == 0): the loader ignores section headers and tools
+  // still disassemble it by flags, so no .shstrtab surgery is needed.
+  if (HasShdrs) {
+    std::memcpy(Out + NewShoff, Input + Shoff,
+                static_cast<size_t>(Shnum) * Shentsize);
+    Shdr PoolShdr{};
+    PoolShdr.sh_name = 0;
+    PoolShdr.sh_type = ELF::SHT_PROGBITS;
+    PoolShdr.sh_flags = ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;
+    PoolShdr.sh_addr = PoolVAddr;
+    PoolShdr.sh_offset = PoolFileOff;
+    PoolShdr.sh_size = TrampTotal;
+    PoolShdr.sh_addralign = TrampolinePoolAlign;
+    std::memcpy(Out + NewShoff + static_cast<uint64_t>(Shnum) * Shentsize,
+                &PoolShdr, sizeof(PoolShdr));
+    std::memcpy(Out + offsetof(Ehdr, e_shoff), &NewShoff, sizeof(NewShoff));
+    uint16_t NewShnum16 = static_cast<uint16_t>(NewShnum);
+    std::memcpy(Out + offsetof(Ehdr, e_shnum), &NewShnum16, sizeof(NewShnum16));
+  }
 
-  if (!adjustSectionHeaders(Out, NewSize, textOffset(), textSize(),
-                            PaddedTrampTotal) ||
-      !adjustProgramHeaders(Out, NewSize, textOffset(), textSize(),
-                            PaddedTrampTotal) ||
-      !adjustSymbolValues(Out, NewSize, textOffset(), PaddedTrampTotal))
-    return nullptr;
-  log() << "hotswap: growWithTrampolines: grew ELF from " << InputSize << " to "
-        << NewSize << " bytes (" << Trampolines.size() << " trampoline"
-        << (Trampolines.size() == 1 ? "" : "s") << ", " << TrampTotal
-        << " trampoline bytes + " << PadBytes << " alignment padding).\n";
+  log() << "hotswap: growWithTrampolines: appended " << Trampolines.size()
+        << (Trampolines.size() == 1 ? " trampoline (" : " trampolines (")
+        << TrampTotal << " bytes) at vaddr 0x" << utohexstr(PoolVAddr)
+        << " (file 0x" << utohexstr(PoolFileOff) << "); grew ELF from "
+        << InputSize << " to " << NewSize << " bytes.\n";
   return Buf;
 }
 

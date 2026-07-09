@@ -11,8 +11,8 @@
 // RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
 // RUN:   --dump %t.out.elf --check-idempotent 2>&1 \
 // RUN:   | %FileCheck --check-prefix=API %s
-// API: hotswap: growWithTrampolines: grew ELF
-// API-SAME: 1 trampoline
+// API: hotswap: growWithTrampolines: appended 1 trampoline
+// API-SAME: grew ELF
 // API: REWRITE: SUCCESS
 // API: IDEMPOTENT: YES
 

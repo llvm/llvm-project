@@ -37,8 +37,10 @@
 // DISASM-NOT: tensor_load_to_lds
 
 // COM: Dead-SGPR trampoline body: s_pack_hh + tensor_load + branch-back,
-// COM: appended after the original functions.
-// DISASM-NEXT: s_pack_hh_b32_b16
+// COM: appended in the trampoline pool section (a fresh vaddr above .text), so
+// COM: objdump emits a section header between .text and the pool -- use DISASM
+// COM: (not DISASM-NEXT) to cross that boundary.
+// DISASM: s_pack_hh_b32_b16
 // DISASM-NEXT: tensor_load_to_lds
 // DISASM-NEXT: s_branch
 
