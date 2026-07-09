@@ -45,6 +45,11 @@ NativeDylibManager::Create(Session &S, SimpleSymbolTable &ST,
 }
 
 void NativeDylibManager::load(OnLoadCompleteFn &&OnComplete, std::string Path) {
+  // Empty path -> global handle; no shutdown callback (RTLD_DEFAULT
+  // mustn't be dlclose'd).
+  if (Path.empty())
+    return OnComplete(hostOSGetGlobalLookupHandle());
+
   auto H = hostOSLoadLibrary(Path);
   if (!H)
     return OnComplete(H.takeError());

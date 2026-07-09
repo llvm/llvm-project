@@ -617,6 +617,10 @@ bool TargetTransformInfo::shouldBuildLookupTablesForConstant(
   return TTIImpl->shouldBuildLookupTablesForConstant(C);
 }
 
+unsigned TargetTransformInfo::getMinimumLookupTableEntryBitWidth() const {
+  return TTIImpl->getMinimumLookupTableEntryBitWidth();
+}
+
 bool TargetTransformInfo::shouldBuildRelLookupTables() const {
   return TTIImpl->shouldBuildRelLookupTables();
 }
@@ -922,8 +926,10 @@ InstructionCost TargetTransformInfo::getPartialReductionCost(
                                           BinOp, CostKind, FMF);
 }
 
-unsigned TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF) const {
-  return TTIImpl->getMaxInterleaveFactor(VF);
+unsigned
+TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF,
+                                            bool HasUnorderedReductions) const {
+  return TTIImpl->getMaxInterleaveFactor(VF, HasUnorderedReductions);
 }
 
 TargetTransformInfo::OperandValueInfo

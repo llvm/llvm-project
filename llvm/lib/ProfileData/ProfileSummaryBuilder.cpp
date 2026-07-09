@@ -81,7 +81,7 @@ const ArrayRef<uint32_t> ProfileSummaryBuilder::DefaultCutoffs =
 // thresholds when -profile-summary-cutoff-hot/cold is 0.  If the hot cutoff is
 // 0, no sample counts are treated as hot.  If the cold cutoff is 0, all sample
 // counts are treated as cold.  Assumes there is no UINT64_MAX sample counts.
-static const ProfileSummaryEntry ZeroCutoffEntry = {0, UINT64_MAX, 0};
+static constexpr ProfileSummaryEntry ZeroCutoffEntry = {0, UINT64_MAX, 0};
 
 const ProfileSummaryEntry &
 ProfileSummaryBuilder::getEntryForPercentile(const SummaryEntryVector &DS,

@@ -65,13 +65,6 @@ public:
 
   lldb::TypeCategoryImplSP GetAtIndex(uint32_t);
 
-  bool
-  AnyMatches(const FormattersMatchCandidate &candidate_type,
-             TypeCategoryImpl::FormatCategoryItems items =
-                 TypeCategoryImpl::ALL_ITEM_TYPES,
-             bool only_enabled = true, const char **matching_category = nullptr,
-             TypeCategoryImpl::FormatCategoryItems *matching_type = nullptr);
-
   uint32_t GetCount() { return m_map.size(); }
 
   template <typename ImplSP> void Get(FormattersMatchData &, ImplSP &);

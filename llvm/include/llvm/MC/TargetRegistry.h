@@ -662,7 +662,7 @@ public:
   /// For example feature string "+a,+m,c" is accepted, and results in feature
   /// list {"+a", "+m", "c"}. Later in ApplyFeatureFlag, it asserts
   /// that all features must start with '+' or '-' and assert is failed.
-  static bool isValidFeatureListFormat(StringRef FeaturesString);
+  LLVM_ABI static bool isValidFeatureListFormat(StringRef FeaturesString);
 
   /// @}
 };

@@ -13,12 +13,10 @@
 #ifndef LLVM_ANALYSIS_DOTGRAPHTRAITSPASS_H
 #define LLVM_ANALYSIS_DOTGRAPHTRAITSPASS_H
 
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
-#include <unordered_set>
-
-static std::unordered_set<std::string> nameObj;
 
 namespace llvm {
 
@@ -91,6 +89,7 @@ static inline void shortenFileName(std::string &FN, unsigned char len = 250) {
     FN.resize(len);
   auto strLen = FN.length();
   while (strLen > 0) {
+    static llvm::StringSet<> nameObj;
     if (nameObj.insert(FN).second)
       break;
     FN.resize(--len);

@@ -68,6 +68,14 @@ def simplify_uaddo : GICombineRule<
   (apply [{ applySimplifyUADDO(*${root}, MRI, B, Observer, Helper,
                                ${matchinfo}); }])>;
 
+def emit_bzero : GICombineRule<
+  (defs root:$root),
+  (match (G_MEMSET $dst_addr, $value, $size, $tailcall):$root,
+         [{ return llvm::AArch64GISelUtils::matchEmitBZero(*${root}, MRI,
+                                                           Libcalls,
+                                                           CInfo.EnableMinSize); }]),
+  (apply [{ llvm::AArch64GISelUtils::applyEmitBZero(*${root}, B); }])>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       select_zero_true,
@@ -82,13 +90,17 @@ def AArch64PreLegalizerCombiner: GICombiner<
                                       push_sub_through_sext,
                                       push_add_through_sext,
                                       push_mul_through_sext,
-                                      simplify_uaddo]> {
+                                      simplify_uaddo,
+                                      memcpy_family_combines,
+                                      emit_bzero]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
 def AArch64O0PreLegalizerCombiner: GICombiner<
   "AArch64O0PreLegalizerCombinerImpl", [optnone_combines,
-                                        combine_shuffle_vector]> {
+                                        combine_shuffle_vector,
+                                        memcpy_family_combines,
+                                        emit_bzero]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 

@@ -1918,6 +1918,23 @@ TEST(SignatureHelpTest, StalePreamble) {
   EXPECT_EQ(0, Results.activeParameter);
 }
 
+TEST(SignatureHelpTest, EOFInSkippedFunctionBody) {
+  Annotations Test(R"cpp(
+#ifdef IS_HEADER
+void frameSizeBlocksWarning() {
+  auto fn = []() {
+  };
+  fn();
+}
+#else
+#define IS_HEADER
+#include __FILE__
+#^endif
+)cpp");
+  auto Results = signatures(Test.code(), Test.point());
+  EXPECT_THAT(Results.signatures, IsEmpty());
+}
+
 class IndexRequestCollector : public SymbolIndex {
 public:
   IndexRequestCollector(std::vector<Symbol> Syms = {}) : Symbols(Syms) {}

@@ -62,7 +62,7 @@ namespace llvm {
     SlotIndex def;
 
     /// VNInfo constructor.
-    VNInfo(unsigned i, SlotIndex d) : id(i), def(d) {}
+    constexpr VNInfo(unsigned i, SlotIndex d) : id(i), def(d) {}
 
     /// VNInfo constructor, copies values from orig, except for the value number.
     VNInfo(unsigned i, const VNInfo &orig) : id(i), def(orig.def) {}
@@ -489,6 +489,13 @@ namespace llvm {
     /// appropriate.  This returns an iterator to the inserted segment (which
     /// may have grown since it was inserted).
     LLVM_ABI iterator addSegment(Segment S);
+
+    /// Merge the segment pointed to by @p I with its immediate neighbors when
+    /// they use the same value number and touch it. @p I must be a valid
+    /// iterator into this live range. Returns an iterator to the merged
+    /// segment, which may be @p I or the previous segment if @p I was merged
+    /// into it.
+    LLVM_ABI iterator mergeAdjacentSegments(iterator I);
 
     /// Attempt to extend a value defined after @p StartIdx to include @p Use.
     /// Both @p StartIdx and @p Use should be in the same basic block. In case
