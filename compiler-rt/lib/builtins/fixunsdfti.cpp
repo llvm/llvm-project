@@ -1,13 +1,16 @@
-//===-- lib/fixunsdfti.cpp - libc-backed __fixunsdfti -----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// __fixunsdfti implemented on top of LLVM-libc's shared::fixunsdfti.
-//
+///
+/// \file
+/// This file implements compiler-rt's __fixunsdfti, truncating double ->
+/// __uint128_t conversion (saturating), on top of LLVM-libc's
+/// shared::fixunsdfti.
+///
 //===----------------------------------------------------------------------===//
 
 #include "int_lib.h"
