@@ -2064,3 +2064,19 @@ auto x = quantity<reference<int>{}, int>{};
 } // namespace CannotResolve1
 
 } // namespace GH175831
+
+
+namespace GH206336 {
+class Dim;
+struct S;
+template <class T> concept foo = true;
+template <class T> concept SS = false; // expected-note {{because 'false' evaluated to false}}
+template <class X> concept _Dim = _Dim<X>; // expected-error {{a concept definition cannot refer to itself}} \
+                                           // expected-note {{declared here}}
+template <SS, _Dim Dim, foo<> E> auto bar(Dim, E) {}; // expected-note {{candidate template ignored: constraints not satisfied}} \
+                                                      // expected-note {{because 'GH206336::S' does not satisfy 'SS'}}
+
+void baz() {
+  auto qux = bar<S>(true, [] {}); // expected-error {{no matching function for call to 'bar'}}
+}
+}

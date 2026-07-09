@@ -9306,6 +9306,7 @@ bool Sema::CheckConceptUseInDefinition(NamedDecl *Concept, SourceLocation Loc) {
       CE && !CE->isInvalidDecl() && !CE->hasDefinition()) {
     Diag(Loc, diag::err_recursive_concept) << CE;
     Diag(CE->getLocation(), diag::note_declared_at);
+    CE->setInvalidDecl();
     return true;
   }
   // Concept template parameters don't have a definition and can't
