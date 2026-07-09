@@ -2,19 +2,6 @@
 //
 // Test that explicit template specialization after instantiation
 // is handled gracefully without assertion failure.
-//
-// Before the fix, this code triggered an assertion failure:
-//   Assertion failed: !D->isInvalidDecl() && "Cannot get layout of invalid decl!"
-//   Location: clang/lib/AST/RecordLayoutBuilder.cpp:3388
-//   Exit code: 134 (SIGABRT)
-//
-// After the fix:
-//   Clean error messages are reported
-//   Exit code: 1
-//
-// The fix adds error handling in getASTRecordLayout() to return a minimal
-// safe layout (1-byte size/alignment) for invalid declarations, allowing
-// error recovery to continue and report all errors.
 
 template <typename T>
 struct X {

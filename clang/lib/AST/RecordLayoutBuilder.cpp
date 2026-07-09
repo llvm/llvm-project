@@ -3410,10 +3410,6 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
     return *NewEntry;
   }
 
-  assert(D && "Cannot get layout of forward declarations!");
-  assert(!D->isInvalidDecl() && "Cannot get layout of invalid decl!");
-  assert(D->isCompleteDefinition() && "Cannot layout type before complete!");
-
   // Look up this layout, if already laid out, return what we have.
   // Note that we can't save a reference to the entry because this function
   // is recursive.
