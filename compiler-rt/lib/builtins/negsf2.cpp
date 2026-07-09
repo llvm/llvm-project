@@ -1,13 +1,14 @@
-//===-- lib/negsf2.cpp - single-precision negation --------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// __negsf2 implemented on top of LLVM-libc's shared::negsf2 instruction.
-//
+/// \file
+/// This file implements compiler-rt's __negsf2, single-precision negation,
+/// on top of LLVM-libc's shared::negsf2.
+///
 //===----------------------------------------------------------------------===//
 
 #define QUAD_PRECISION

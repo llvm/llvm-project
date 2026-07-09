@@ -1,13 +1,15 @@
-//===-- lib/addsf3.cpp - libc-backed __addsf3 -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// __addsf3 implemented on top of LLVM-libc's shared::addsf3.
-//
+///
+/// \file
+/// This file implements compiler-rt's __addsf3, single-precision addition, on
+/// top of LLVM-libc's shared::addsf3.
+///
 //===----------------------------------------------------------------------===//
 
 #define SINGLE_PRECISION

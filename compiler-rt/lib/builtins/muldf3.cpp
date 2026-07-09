@@ -1,13 +1,15 @@
-//===-- lib/muldf3.cpp - double-precision multiplication --------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// __muldf3 implemented on top of LLVM-libc's shared::muldf3 instruction.
-//
+///
+/// \file
+/// This file implements compiler-rt's __muldf3, double-precision
+/// multiplication, on top of LLVM-libc's shared::muldf3.
+///
 //===----------------------------------------------------------------------===//
 
 #define DOUBLE_PRECISION
