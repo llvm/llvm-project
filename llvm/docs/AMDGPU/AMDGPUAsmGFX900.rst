@@ -9,9 +9,6 @@
 Syntax of gfx900, gfx902, gfx909 and gfx90c Instructions
 ====================================================================================
 
-.. contents::
-  :local:
-
 Introduction
 ============
 

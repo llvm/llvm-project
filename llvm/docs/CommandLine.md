@@ -1,8 +1,6 @@
 # CommandLine 2.0 Library Manual
 
-```{contents}
-:local:
-```
+
 
 ## Introduction
 

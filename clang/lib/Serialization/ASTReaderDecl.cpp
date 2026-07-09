@@ -1094,6 +1094,9 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
       StringLiteral *DeletedMessage =
           HasMessage ? cast<StringLiteral>(Record.readExpr()) : nullptr;
 
+      FPOptionsOverride FPFeatures =
+          FPOptionsOverride::getFromOpaqueInt(Record.readInt());
+
       unsigned NumLookups = Record.readInt();
       SmallVector<DeclAccessPair, 8> Lookups;
       for (unsigned I = 0; I != NumLookups; ++I) {
@@ -1104,7 +1107,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
 
       FD->setDefaultedOrDeletedInfo(
           FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
-              Reader.getContext(), Lookups, DeletedMessage));
+              Reader.getContext(), Lookups, FPFeatures, DeletedMessage));
     }
   }
 
