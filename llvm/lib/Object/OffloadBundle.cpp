@@ -19,6 +19,7 @@
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Timer.h"
 
@@ -372,28 +373,22 @@ CompressedOffloadBundle::compress(compression::Params P,
 
   SmallVector<char, 0> FinalBuffer;
   raw_svector_ostream OS(FinalBuffer);
+  // The on-disk header is always little-endian, independent of the host.
+  support::endian::Writer Writer(OS, endianness::little);
   OS << MagicNumber;
-  OS.write(reinterpret_cast<const char *>(&Version), sizeof(Version));
-  OS.write(reinterpret_cast<const char *>(&CompressionMethod),
-           sizeof(CompressionMethod));
+  Writer.write(Version);
+  Writer.write(CompressionMethod);
 
   // Write size fields according to version.
   if (Version == 2) {
-    uint32_t TotalFileSize32 = static_cast<uint32_t>(TotalFileSize64);
-    uint32_t UncompressedSize32 = static_cast<uint32_t>(UncompressedSize64);
-    OS.write(reinterpret_cast<const char *>(&TotalFileSize32),
-             sizeof(TotalFileSize32));
-    OS.write(reinterpret_cast<const char *>(&UncompressedSize32),
-             sizeof(UncompressedSize32));
+    Writer.write(static_cast<uint32_t>(TotalFileSize64));
+    Writer.write(static_cast<uint32_t>(UncompressedSize64));
   } else { // Version 3.
-    OS.write(reinterpret_cast<const char *>(&TotalFileSize64),
-             sizeof(TotalFileSize64));
-    OS.write(reinterpret_cast<const char *>(&UncompressedSize64),
-             sizeof(UncompressedSize64));
+    Writer.write(TotalFileSize64);
+    Writer.write(UncompressedSize64);
   }
 
-  OS.write(reinterpret_cast<const char *>(&TruncatedHash),
-           sizeof(TruncatedHash));
+  Writer.write(TruncatedHash);
   OS.write(reinterpret_cast<const char *>(CompressedBuffer.data()),
            CompressedBuffer.size());
 
@@ -432,29 +427,29 @@ CompressedOffloadBundle::compress(compression::Params P,
 LLVM_PACKED_START
 union RawCompressedBundleHeader {
   struct CommonFields {
-    uint32_t Magic;
-    uint16_t Version;
-    uint16_t Method;
+    support::ulittle32_t Magic;
+    support::ulittle16_t Version;
+    support::ulittle16_t Method;
   };
 
   struct V1Header {
     CommonFields Common;
-    uint32_t UncompressedFileSize;
-    uint64_t Hash;
+    support::ulittle32_t UncompressedFileSize;
+    support::ulittle64_t Hash;
   };
 
   struct V2Header {
     CommonFields Common;
-    uint32_t FileSize;
-    uint32_t UncompressedFileSize;
-    uint64_t Hash;
+    support::ulittle32_t FileSize;
+    support::ulittle32_t UncompressedFileSize;
+    support::ulittle64_t Hash;
   };
 
   struct V3Header {
     CommonFields Common;
-    uint64_t FileSize;
-    uint64_t UncompressedFileSize;
-    uint64_t Hash;
+    support::ulittle64_t FileSize;
+    support::ulittle64_t UncompressedFileSize;
+    support::ulittle64_t Hash;
   };
 
   CommonFields Common;
@@ -518,7 +513,7 @@ CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
   case static_cast<uint16_t>(compression::Format::Zlib):
   case static_cast<uint16_t>(compression::Format::Zstd):
     Normalized.CompressionFormat =
-        static_cast<compression::Format>(Header.Common.Method);
+        static_cast<compression::Format>(Header.Common.Method.value());
     break;
   default:
     return createStringError("unknown compressing method");
