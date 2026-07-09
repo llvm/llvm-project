@@ -17,6 +17,8 @@ TextEncoding::getConverter(ConversionAction Action) const {
   switch (Action) {
   case CA_ToLiteralEncoding:
     return ToLiteralEncodingConverter.get();
+  case CA_ToSystemEncoding:
+    return ToSystemEncodingConverter.get();
   default:
     return nullptr;
   }
@@ -24,23 +26,46 @@ TextEncoding::getConverter(ConversionAction Action) const {
 
 std::error_code
 TextEncoding::setConvertersFromOptions(TextEncoding &TE,
-                                       const clang::LangOptions &Opts) {
+                                       const clang::LangOptions &Opts,
+                                       clang::TargetInfo &TInfo) {
   using namespace llvm;
 
   const char *UTF8 = "UTF-8";
   TE.LiteralEncoding =
       Opts.LiteralEncoding.empty() ? UTF8 : Opts.LiteralEncoding.c_str();
 
-  // Create converter between internal and literal encoding specified
-  // in fexec-charset option.
-  if (TE.LiteralEncoding == UTF8)
+  if (TE.LiteralEncoding != UTF8) {
+    ErrorOr<TextEncodingConverter> ErrorOrLiteralConverter =
+        llvm::TextEncodingConverter::create(UTF8, TE.LiteralEncoding);
+    if (ErrorOrLiteralConverter)
+      TE.ToLiteralEncodingConverter = std::make_unique<TextEncodingConverter>(
+          std::move(*ErrorOrLiteralConverter));
+    else
+      return ErrorOrLiteralConverter.getError();
+  }
+
+  if (TInfo.getDefaultOrdinaryLiteralEncoding() == UTF8)
     return std::error_code();
+
+  // Create converter between internal and default ordinary encoding for the
+  // target
   ErrorOr<TextEncodingConverter> ErrorOrConverter =
-      llvm::TextEncodingConverter::create(UTF8, TE.LiteralEncoding);
+      llvm::TextEncodingConverter::create(
+          UTF8, TInfo.getDefaultOrdinaryLiteralEncoding());
   if (ErrorOrConverter)
-    TE.ToLiteralEncodingConverter =
+    TE.ToSystemEncodingConverter =
         std::make_unique<TextEncodingConverter>(std::move(*ErrorOrConverter));
   else
     return ErrorOrConverter.getError();
+
+  ErrorOrConverter = llvm::TextEncodingConverter::create(
+      TInfo.getDefaultOrdinaryLiteralEncoding(), UTF8);
+
+  if (ErrorOrConverter)
+    TInfo.TargetStrConverter =
+        std::make_unique<TextEncodingConverter>(std::move(*ErrorOrConverter));
+  else
+    return ErrorOrConverter.getError();
+
   return std::error_code();
 }

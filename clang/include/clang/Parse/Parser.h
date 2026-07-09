@@ -3867,8 +3867,9 @@ private:
   /// associated with the class's definition.
   void PopParsingClass(Sema::ParsingClassState);
 
-  ExprResult ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
-                                          bool Unevaluated);
+  ExprResult
+  ParseStringLiteralExpression(bool AllowUserDefinedLiteral, bool Unevaluated,
+                               ConversionAction CA = CA_ToLiteralEncoding);
 
   /// This routine is called when the '@' is seen and consumed.
   /// Current token is an Identifier and is not a 'try'. This
@@ -5716,7 +5717,6 @@ private:
     bool Finished;
   };
   ObjCImplParsingDataRAII *CurParsedObjCImpl;
-  ConversionAction ParserConversionAction;
 
   /// StashAwayMethodOrFunctionBodyTokens -  Consume the tokens and store them
   /// for later parsing.

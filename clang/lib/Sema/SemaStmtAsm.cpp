@@ -245,6 +245,14 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
       Diag(Expr->getBeginLoc(), diag::err_asm_operand_empty_string)
           << SL->getSourceRange();
     }
+    if (Context.getTargetInfo().TargetStrConverter) {
+      SmallString<16> ConvertedAsm;
+      Context.getTargetInfo().TargetStrConverter->convert(SL->getString(),
+                                                          ConvertedAsm);
+      return StringLiteral::Create(Context, ConvertedAsm,
+                                   StringLiteralKind::Ordinary,
+                                   /*Pascal*/ false, {}, SL->getBeginLoc());
+    }
     return SL;
   }
   if (DiagnoseUnexpandedParameterPack(Expr))
