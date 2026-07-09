@@ -126,7 +126,7 @@ float16_t test_vminnmh_f16(float16_t a, float16_t b) {
 // CIR:  cir.call_llvm_intrinsic "aarch64.neon.fminnm"
 
 // LLVM-SAME: half {{.*}} [[A:%.]], half {{.*}} [[B:%.]]) {{.*}} {
-// LLVM:  [[MIN:%.*]] = call half @llvm.aarch64.neon.fminnm.f16(half %a, half %b)
+// LLVM:  [[MIN:%.*]] = call half @llvm.aarch64.neon.fminnm.f16(half [[A]], half [[B]])
 // LLVM:  ret half [[MIN]]
   return vminnmh_f16(a, b);
 }
