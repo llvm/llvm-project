@@ -1104,6 +1104,22 @@ static bool isLog2Table(Constant *Table, const APInt &Mul, const APInt &Shift,
 // %arrayidx = getelementptr inbounds i8, ptr @table, i64 %shr11
 // %0 = load i8, ptr %arrayidx, align 1
 //
+// CASE 3:
+// A variant where the most-significant set bit of the OR-cascade result is
+// isolated via subtraction before the multiply, i.e.
+// table[((v - (v >> 1)) * MulConst) >> ShiftConst], analogous to how the
+// cttz pattern isolates the least-significant set bit via `x & -x`:
+//
+// %shr = lshr i64 %v, 1
+// %or = or i64 %shr, %v
+// ... (rest of the OR-cascade, as above) ...
+// %shr11 = lshr i64 %or10, 1
+// %sub = sub i64 %or10, %shr11
+// %mul = mul i64 %sub, 571347909858961602
+// %shr12 = lshr i64 %mul, 58
+// %arrayidx = getelementptr inbounds i8, ptr @table, i64 %shr12
+// %0 = load i8, ptr %arrayidx, align 1
+//
 // All these can be lowered to @llvm.ctlz.i32/64 intrinsics and a subtract.
 //
 // This shares its initial match (load from a GEP into a constant table with
@@ -1121,6 +1137,18 @@ static bool tryToRecognizeTableBasedLog2(LoadInst *LI, Type *AccessType,
       m_LShr(m_Mul(m_Value(X), m_APInt(MulConst)), m_APInt(ShiftConst));
   if (!match(GepIdx, m_CastOrSelf(MatchInner)))
     return false;
+
+  // The multiplied value may instead be the OR-cascade result with its
+  // most-significant set bit isolated first via `v - (v >> 1)`: since every
+  // bit below the MSB of an OR-cascade result is 1, this subtraction leaves
+  // just the MSB, mirroring how tryToRecognizeTableBasedCttz() isolates the
+  // least-significant set bit via `x & -x`.
+  bool IsolatedMSB = false;
+  Value *V;
+  if (match(X, m_Sub(m_Value(V), m_LShr(m_Deferred(V), m_SpecificInt(1))))) {
+    IsolatedMSB = true;
+    X = V;
+  }
 
   unsigned InputBits = X->getType()->getScalarSizeInBits();
   if (InputBits != 16 && InputBits != 32 && InputBits != 64 && InputBits != 128)
@@ -1140,10 +1168,24 @@ static bool tryToRecognizeTableBasedLog2(LoadInst *LI, Type *AccessType,
     X = Y;
   }
 
-  if (!GEPScale.isIntN(InputBits) ||
-      !isLog2Table(GVTable->getInitializer(), *MulConst, *ShiftConst,
-                   AccessType, InputBits, GEPScale.zextOrTrunc(InputBits), DL))
+  if (!GEPScale.isIntN(InputBits))
     return false;
+
+  if (IsolatedMSB) {
+    // With the MSB isolated, the multiplicand for an input whose MSB is at bit
+    // Idx is a single set bit rather than a run of low bits, which is exactly
+    // what isCTTZTable() checks for (there is no additional masking here, so
+    // pass an all-ones mask).
+    if (!isCTTZTable(GVTable->getInitializer(), *MulConst, *ShiftConst,
+                     APInt::getAllOnes(InputBits), AccessType, InputBits,
+                     GEPScale.zextOrTrunc(InputBits), DL))
+      return false;
+  } else {
+    if (!isLog2Table(GVTable->getInitializer(), *MulConst, *ShiftConst,
+                     AccessType, InputBits, GEPScale.zextOrTrunc(InputBits),
+                     DL))
+      return false;
+  }
 
   ConstantInt *ZeroTableElem = cast<ConstantInt>(
       ConstantFoldLoadFromConst(GVTable->getInitializer(), AccessType, DL));
