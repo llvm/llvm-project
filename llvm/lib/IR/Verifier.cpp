@@ -4670,7 +4670,7 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
   if (Op == AtomicRMWInst::Xchg) {
     Check((ElTy->isIntOrIntVectorTy() || ElTy->isFPOrFPVectorTy() ||
            ElTy->isPtrOrPtrVectorTy()) &&
-              !isa<ScalableVectorType>(ElTy),
+              isa<FixedVectorType>(ElTy),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must be an integer type, a floating-point type, a "
               "pointer type, or a fixed vector of any of these types!",
