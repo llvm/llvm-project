@@ -655,16 +655,16 @@ func.func @complete_dpas_mx_inst_data(%arg0: vector<16x1024xf8E5M2>, %arg1: vect
 }
 
 // -----
-// A value with two consumers: one back-propagates a plain layout (the store_nd
-// of %trunc), the other back-propagates a slice layout (the broadcast/transpose
-// chain feeding the reduction result). `meet` must prefer the slice layout, and
-// the inst_data / lane_layout / lane_data fields must be preserved on it.
+// %trunc has two consumers: the broadcast/transpose chain (nearer in program
+// order, back-propagates a slice layout) and the store_nd of %trunc (farther,
+// back-propagates a plain layout). `meet` must keep the nearer consumer's
+// layout, preserving its inst_data / lane_layout / lane_data fields.
 gpu.module @test {
-  // CHECK-LABEL: truncf_prefers_slice
+  // CHECK-LABEL: truncf_prefers_nearer_user
   // CHECK: %[[TRUNC:.*]] = arith.truncf
   // CHECK-SAME: {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [4, 8, 4], lane_layout = [4, 1, 4], lane_data = [1, 1, 1], order = [0, 2, 1]>, dims = [0]>}
   // CHECK-SAME: : vector<32x4xbf16> to vector<32x4xf8E8M0FNU>
-  gpu.func @truncf_prefers_slice(%src: memref<32x128xbf16>, %dst_red: memref<32x128xf8E8M0FNU>,
+  gpu.func @truncf_prefers_nearer_user(%src: memref<32x128xbf16>, %dst_red: memref<32x128xf8E8M0FNU>,
       %dst_plain: memref<32x4xf8E8M0FNU>) kernel {
     %cst = arith.constant dense<0xFF80> : vector<32x4xbf16>
     %tdesc = xegpu.create_nd_tdesc %src : memref<32x128xbf16> -> !xegpu.tensor_desc<32x128xbf16>
