@@ -13,12 +13,14 @@
 # CHECK-SAME: Consider adding a symbol or FDE for this code.
 
 ## Scenario 1a: FDE-only predecessor at the section start (named after .text).
+## The tail has trailing filler nops after its ret: they are trimmed from the
+## callable Size but remain part of MaxSize slack.
 # CHECK: Binary Function ".text/{{[0-9]+}}" after disassembly
 # CHECK: Size        : 0x14
 # CHECK: MaxSize     : 0x14
 # CHECK: Binary Function "{{.*}}__BOLT_UNMARKED_TAIL{{.*}}" after disassembly
 # CHECK: Size        : 0x8
-# CHECK: MaxSize     : 0x8
+# CHECK: MaxSize     : 0x10
 
 ## Scenario 1b: FDE-only predecessor discovered from the FDE alone.
 # CHECK: Binary Function "__BOLT_FDE_FUNC{{.*}}" after disassembly
@@ -53,6 +55,8 @@
 .Ltail_after_fde:
 	nop
 	ret
+	nop
+	nop
 
 ## Scenario 1b: identical FDE-only region, not at the section start.
 .Lfde_sub2:

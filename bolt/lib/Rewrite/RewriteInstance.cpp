@@ -2093,17 +2093,11 @@ bool isAArch64TailPaddingInst(const BinaryContext &BC, const MCInst &Inst) {
 }
 
 /// True if the decoded tail looks like real callable code, not padding.
+/// Expects trailing filler to have already been trimmed, so the last
+/// instruction must be the tail's terminator.
 bool isValidAArch64UnmarkedTail(const BinaryContext &BC,
                                 ArrayRef<MCInst> Insts) {
   if (Insts.empty())
-    return false;
-
-  bool HasExecutable = false;
-  for (const MCInst &Inst : Insts) {
-    if (!isAArch64TailPaddingInst(BC, Inst))
-      HasExecutable = true;
-  }
-  if (!HasExecutable)
     return false;
 
   // Expect a callable snippet; inlined tails end with ret.
@@ -2111,7 +2105,9 @@ bool isValidAArch64UnmarkedTail(const BinaryContext &BC,
 }
 
 /// Disassemble a prefix of [TailStart, TailStart + TrailingExtent) and return
-/// its length. Any remaining bytes in the range must be zero padding.
+/// the length of the callable tail. Trailing filler instructions (nop/trap)
+/// after the terminator are trimmed and treated as slack, and any remaining
+/// bytes in the range must be zero padding.
 /// Returns 0 if the region is not valid unmarked code.
 uint64_t
 measureAArch64UnmarkedTail(BinaryContext &BC, const BinaryFunction &Pred,
@@ -2136,6 +2132,7 @@ measureAArch64UnmarkedTail(BinaryContext &BC, const BinaryFunction &Pred,
       reinterpret_cast<const uint8_t *>(Contents.data()) + SectionOffset;
 
   SmallVector<MCInst, 4> Insts;
+  SmallVector<uint64_t, 4> InstSizes;
   uint64_t CodeLen = 0;
   while (CodeLen < TrailingExtent) {
     if (hasDataMarkerAt(TailStart + CodeLen))
@@ -2151,18 +2148,34 @@ measureAArch64UnmarkedTail(BinaryContext &BC, const BinaryFunction &Pred,
         !Size)
       break;
     Insts.push_back(Inst);
+    InstSizes.push_back(Size);
     CodeLen += Size;
   }
 
-  if (!CodeLen || !isValidAArch64UnmarkedTail(BC, Insts))
+  // Ignore trailing filler (nop/trap) after the terminator. The filler is
+  // treated as slack, just like the zero padding checked below, so real
+  // binaries with post-ret padding are still recognized.
+  size_t CallableInsts = Insts.size();
+  while (CallableInsts > 0 &&
+         isAArch64TailPaddingInst(BC, Insts[CallableInsts - 1]))
+    --CallableInsts;
+
+  uint64_t TailLen = 0;
+  for (size_t I = 0; I < CallableInsts; ++I)
+    TailLen += InstSizes[I];
+
+  if (!TailLen || !isValidAArch64UnmarkedTail(
+                      BC, ArrayRef(Insts).take_front(CallableInsts)))
     return 0;
 
+  // Everything past the decoded region must be zero padding. The decoded
+  // filler in [TailLen, CodeLen) is already validated as nop/trap above.
   for (uint64_t I = CodeLen; I < TrailingExtent; ++I) {
     if (Bytes[I] != 0)
       return 0;
   }
 
-  return CodeLen;
+  return TailLen;
 }
 
 } // namespace
