@@ -409,15 +409,16 @@ public:
 
     if (printPointer(Os, ArgType) == PrintDeclKind::Pointer) {
       assert(RTC);
-      if (auto *Decl = RTC->getCanonicalDecl(CallArg->getType()))
+      if (auto *Decl = RTC->getCanonicalDecl(CallArg->getType())) {
         printQuotedQualifiedName(Os, Decl);
-      else {
+      } else {
         auto Typedef = ArgType->getAs<TypedefType>();
         assert(Typedef);
         printQuotedQualifiedName(Os, Typedef->getDecl());
       }
-    } else
+    } else {
       printType(Os, CallArg->getType());
+    }
 
     bool usesDefaultArgValue = isa<CXXDefaultArgExpr>(CallArg) && Param;
     const SourceLocation SrcLocToReport =
@@ -487,10 +488,10 @@ public:
     llvm::raw_svector_ostream ArgOs(Buf);
     Arg->printPretty(ArgOs, /*Helper=*/nullptr,
                      D->getASTContext().getPrintingPolicy());
-    auto ArgCode = ArgOs.str();
+    StringRef ArgCode = ArgOs.str();
     if (ArgCode.contains('\n'))
       return;
-    ArgCode = ArgCode.slice(0, 50);
+    ArgCode = ArgCode.take_front(50);
     if (ArgCode.size() == 50)
       Os << " '" << ArgCode << "...'";
     else
@@ -501,7 +502,7 @@ public:
   virtual PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
                                      const Type *T) const {
     T = T->getUnqualifiedDesugaredType();
-    bool IsPtr = isa<PointerType>(T) || isa<ObjCObjectPointerType>(T);
+    bool IsPtr = isa<PointerType,ObjCObjectPointerType>(T);
     Os << "raw " << (IsPtr ? "pointer" : "reference") << " to " << typeName();
     return PrintDeclKind::Pointee;
   }
@@ -545,7 +546,7 @@ public:
     return isRefOrCheckedPtrType(type);
   }
 
-  const char *typeName() const final { return "RefPtr capable type"; }
+  const char *typeName() const final { return "RefPtr-capable type"; }
 };
 
 class UncheckedCallArgsChecker final : public RawPtrRefCallArgsChecker {
@@ -574,7 +575,7 @@ public:
     return isExprToGetCheckedPtrCapableMember(E);
   }
 
-  const char *typeName() const final { return "CheckedPtr capable type"; }
+  const char *typeName() const final { return "CheckedPtr-capable type"; }
 };
 
 class UnretainedCallArgsChecker final : public RawPtrRefCallArgsChecker {
@@ -608,14 +609,14 @@ public:
 
   PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
                              const Type *T) const final {
-    if (!isa<ObjCObjectPointerType>(T) && T->getAs<TypedefType>()) {
+    if (isa<TypedefType>(T)) {
       Os << typeName() << " ";
       return PrintDeclKind::Pointer;
     }
     return RawPtrRefCallArgsChecker::printPointer(Os, T);
   }
 
-  const char *typeName() const final { return "RetainPtr capable type"; }
+  const char *typeName() const final { return "RetainPtr-capable type"; }
 };
 
 } // namespace

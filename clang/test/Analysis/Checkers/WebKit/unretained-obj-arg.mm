@@ -11,8 +11,8 @@ extern "C" NSString *LocalGlobalNSString;
 void foo() {
   consumeCFString(kCFURLTagNamesKey);
   consumeCFString(LocalGlobalCFString);
-    // expected-warning@-1{{Function argument 'LocalGlobalCFString' (to 'consumeCFString') is a RetainPtr capable type 'CFStringRef'}}
+    // expected-warning@-1{{Function argument 'LocalGlobalCFString' (to 'consumeCFString') is a RetainPtr-capable type 'CFStringRef'}}
   consumeNSString(NSApplicationDidBecomeActiveNotification);
   consumeNSString(LocalGlobalNSString);
-    // expected-warning@-1{{Function argument 'LocalGlobalNSString' (to 'consumeNSString') is a raw pointer to RetainPtr capable type 'NSString'}}
+    // expected-warning@-1{{Function argument 'LocalGlobalNSString' (to 'consumeNSString') is a raw pointer to RetainPtr-capable type 'NSString'}}
 }

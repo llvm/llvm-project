@@ -284,7 +284,7 @@ void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
   for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
     if (Redecl->getAttr<ObjCBridgeAttr>() ||
         Redecl->getAttr<ObjCBridgeMutableAttr>()) {
-      CFPointees.insert(std::make_pair(RT, TD));
+      CFPointees.insert({RT, TD});
       return;
     }
   }
@@ -305,17 +305,14 @@ const TypedefDecl *RetainTypeChecker::getCanonicalDecl(QualType QT) {
       return TD;
   }
   QT = QT.getCanonicalType();
-  auto PointeeQT = QT.getCanonicalType()->getPointeeType();
+  auto PointeeQT = QT->getPointeeType();
   auto *PointeeType = PointeeQT.getTypePtrOrNull();
   if (!PointeeType)
     return nullptr;
   auto *RD = dyn_cast<RecordType>(PointeeType);
   if (!RD)
     return nullptr;
-  auto It = CFPointees.find(RD);
-  if (It == CFPointees.end())
-    return nullptr;
-  return It->second;
+  return CFPointees.lookup(RD);
 }
 
 std::optional<bool> isUncounted(const CXXRecordDecl* Class)

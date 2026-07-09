@@ -30,7 +30,7 @@ public:
 CheckedObject* provide();
 void foo() {
   provide()->doWork();
-  // expected-warning@-1{{Function argument 'provide()' (parameter 'this' to 'CheckedObject::doWork') is a raw pointer to CheckedPtr capable type 'CheckedObject'}}
+  // expected-warning@-1{{Function argument 'provide()' (parameter 'this' to 'CheckedObject::doWork') is a raw pointer to CheckedPtr-capable type 'CheckedObject'}}
 }
 
 void doWorkWithObject(const CheckedObject&);
