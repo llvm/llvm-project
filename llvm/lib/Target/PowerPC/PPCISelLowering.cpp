@@ -8591,7 +8591,8 @@ SDValue PPCTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG,
   LowerFP_TO_INTForReuse(Op, RLI, DAG, dl);
 
   return DAG.getLoad(Op.getValueType(), dl, RLI.Chain, RLI.Ptr, RLI.MPI,
-                     RLI.Alignment, RLI.MMOFlags(), RLI.AAInfo, RLI.Ranges);
+                     RLI.Alignment, RLI.MMOFlags(),
+                     MMOMetadata(RLI.AAInfo, RLI.Ranges));
 }
 
 // We're trying to insert a regular store, S, and then a load, L. If the
@@ -8920,14 +8921,15 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
       // Drop range metadata, as this metadata becomes invalid for f64 bit
       // reinterpretation of i64 values.
       Bits = DAG.getLoad(MVT::f64, dl, RLI.Chain, RLI.Ptr, RLI.MPI,
-                         RLI.Alignment, RLI.MMOFlags(), RLI.AAInfo, nullptr);
+                         RLI.Alignment, RLI.MMOFlags(),
+                         MMOMetadata(RLI.AAInfo));
       if (RLI.ResChain)
         DAG.makeEquivalentMemoryOrdering(RLI.ResChain, Bits.getValue(1));
     } else if (Subtarget.hasLFIWAX() &&
                canReuseLoadAddress(SINT, MVT::i32, RLI, DAG, ISD::SEXTLOAD)) {
       MachineMemOperand *MMO = MF.getMachineMemOperand(
           RLI.MPI, MachineMemOperand::MOLoad, 4, RLI.Alignment,
-          MachineMemOperand::Metadata(RLI.AAInfo, RLI.Ranges));
+          MMOMetadata(RLI.AAInfo, RLI.Ranges));
       SDValue Ops[] = { RLI.Chain, RLI.Ptr };
       Bits = DAG.getMemIntrinsicNode(PPCISD::LFIWAX, dl,
                                      DAG.getVTList(MVT::f64, MVT::Other),
@@ -8938,7 +8940,7 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
                canReuseLoadAddress(SINT, MVT::i32, RLI, DAG, ISD::ZEXTLOAD)) {
       MachineMemOperand *MMO = MF.getMachineMemOperand(
           RLI.MPI, MachineMemOperand::MOLoad, 4, RLI.Alignment,
-          MachineMemOperand::Metadata(RLI.AAInfo, RLI.Ranges));
+          MMOMetadata(RLI.AAInfo, RLI.Ranges));
       SDValue Ops[] = { RLI.Chain, RLI.Ptr };
       Bits = DAG.getMemIntrinsicNode(PPCISD::LFIWZX, dl,
                                      DAG.getVTList(MVT::f64, MVT::Other),
@@ -8972,7 +8974,7 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
 
       MachineMemOperand *MMO = MF.getMachineMemOperand(
           RLI.MPI, MachineMemOperand::MOLoad, 4, RLI.Alignment,
-          MachineMemOperand::Metadata(RLI.AAInfo, RLI.Ranges));
+          MMOMetadata(RLI.AAInfo, RLI.Ranges));
       SDValue Ops[] = { RLI.Chain, RLI.Ptr };
       Bits = DAG.getMemIntrinsicNode(SINT.getOpcode() == ISD::ZERO_EXTEND ?
                                      PPCISD::LFIWZX : PPCISD::LFIWAX,
@@ -9034,7 +9036,7 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
 
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         RLI.MPI, MachineMemOperand::MOLoad, 4, RLI.Alignment,
-        MachineMemOperand::Metadata(RLI.AAInfo, RLI.Ranges));
+        MMOMetadata(RLI.AAInfo, RLI.Ranges));
     SDValue Ops[] = { RLI.Chain, RLI.Ptr };
     Ld = DAG.getMemIntrinsicNode(IsSigned ? PPCISD::LFIWAX : PPCISD::LFIWZX, dl,
                                  DAG.getVTList(MVT::f64, MVT::Other), Ops,
@@ -12076,7 +12078,7 @@ SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
 
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         RLI.MPI, MachineMemOperand::MOLoad, 4, RLI.Alignment,
-        MachineMemOperand::Metadata(RLI.AAInfo, RLI.Ranges));
+        MMOMetadata(RLI.AAInfo, RLI.Ranges));
     SDValue Ops[] = {RLI.Chain, RLI.Ptr, DAG.getValueType(Op.getValueType())};
     SDValue Bits = DAG.getMemIntrinsicNode(
         PPCISD::LD_SPLAT, dl, DAG.getVTList(MVT::v4i32, MVT::Other), Ops,
