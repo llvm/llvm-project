@@ -34,6 +34,27 @@
 using namespace clang;
 using namespace ento;
 
+/// Returns a human-readable name for the most common floating-point semantics.
+/// Anything else is reported as "unknown."
+static StringRef getFloatSemanticsName(const llvm::fltSemantics &Sem) {
+  switch (llvm::APFloat::SemanticsToEnum(Sem)) {
+  case llvm::APFloat::S_IEEEhalf:
+    return "IEEEhalf";
+  case llvm::APFloat::S_BFloat:
+    return "BFloat";
+  case llvm::APFloat::S_IEEEsingle:
+    return "IEEEsingle";
+  case llvm::APFloat::S_IEEEdouble:
+    return "IEEEdouble";
+  case llvm::APFloat::S_IEEEquad:
+    return "IEEEquad";
+  case llvm::APFloat::S_x87DoubleExtended:
+    return "x87DoubleExtended";
+  default:
+    return "unknown";
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Symbol iteration within an SVal.
 //===----------------------------------------------------------------------===//
@@ -148,18 +169,22 @@ public:
     return Context.getIntTypeForBitwidth(Value.getBitWidth(), Value.isSigned());
   }
   QualType VisitConcreteFloat(nonloc::ConcreteFloat CF) {
-    const llvm::fltSemantics &Sem = CF.getValue()->getSemantics();
-    if (&Sem == &llvm::APFloat::IEEEsingle())
-      return Context.FloatTy;
-    if (&Sem == &llvm::APFloat::IEEEdouble())
-      return Context.DoubleTy;
-    if (&Sem == &llvm::APFloat::x87DoubleExtended())
-      return Context.LongDoubleTy;
-    if (&Sem == &llvm::APFloat::IEEEhalf())
+    switch (llvm::APFloat::SemanticsToEnum(CF.getValue()->getSemantics())) {
+    case llvm::APFloat::S_IEEEhalf:
       return Context.Float16Ty;
-    if (&Sem == &llvm::APFloat::IEEEquad())
+    case llvm::APFloat::S_BFloat:
+      return Context.BFloat16Ty;
+    case llvm::APFloat::S_IEEEsingle:
+      return Context.FloatTy;
+    case llvm::APFloat::S_IEEEdouble:
+      return Context.DoubleTy;
+    case llvm::APFloat::S_IEEEquad:
       return Context.Float128Ty;
-    return QualType{};
+    case llvm::APFloat::S_x87DoubleExtended:
+      return Context.LongDoubleTy;
+    default:
+      return QualType{};
+    }
   }
   QualType VisitLocAsInteger(nonloc::LocAsInteger LI) {
     QualType NestedType = Visit(LI.getLoc());
@@ -333,20 +358,7 @@ void NonLoc::dumpToStream(raw_ostream &os) const {
     const llvm::APFloat &Value = *castAs<nonloc::ConcreteFloat>().getValue();
     llvm::SmallString<16> Str;
     Value.toString(Str);
-    os << Str << ' ';
-    const auto &Sem = Value.getSemantics();
-    if (&Sem == &llvm::APFloat::IEEEhalf())
-      os << "IEEEhalf";
-    else if (&Sem == &llvm::APFloat::IEEEsingle())
-      os << "IEEEsingle";
-    else if (&Sem == &llvm::APFloat::IEEEdouble())
-      os << "IEEEdouble";
-    else if (&Sem == &llvm::APFloat::IEEEquad())
-      os << "IEEEquad";
-    else if (&Sem == &llvm::APFloat::x87DoubleExtended())
-      os << "x87DoubleExtended";
-    else
-      os << "unknown";
+    os << Str << ' ' << getFloatSemanticsName(Value.getSemantics());
     break;
   }
   case nonloc::ConcreteIntKind: {
