@@ -4,6 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %t/a.s -o %t/a.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %t/unpaired.s -o %t/unpaired.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %t/lone-ldr.s -o %t/lone-ldr.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %t/all-or-nothing.s -o %t/all-or-nothing.o
 
 # RUN: ld.lld %t/a.o -T %t/out-of-adr-range.t -o %t/a
 # RUN: llvm-objdump --no-show-raw-insn -d %t/a | FileCheck %s
@@ -66,6 +67,21 @@
 
 # LONE-LDR:         ldr	   x0
 
+## Make sure that relaxation is not applied if not all adrp+ldr pairs for
+## a given symbol can be relaxed. This is not legal, because there may be
+## a branch between the adrp and ldr instructions. We can still perform the
+## relaxation for other symbols.
+# RUN: ld.lld %t/all-or-nothing.o -o %t/all-or-nothing
+# RUN: llvm-objdump --no-show-raw-insn -d %t/all-or-nothing | \
+# RUN:   FileCheck --check-prefix=ALL-OR-NOTHING %s
+
+# ALL-OR-NOTHING: adrp   x1
+# ALL-OR-NOTHING: ldr    x1
+# ALL-OR-NOTHING: adrp   x1
+# ALL-OR-NOTHING: ldr    x2
+# ALL-OR-NOTHING: nop
+# ALL-OR-NOTHING: adr    x1
+
 ## This linker script ensures that .rodata and .text are sufficiently (>1M)
 ## far apart so that the adrp + ldr pair cannot be relaxed to adr + nop.
 #--- out-of-adr-range.t
@@ -95,19 +111,31 @@ SECTIONS {
 .hidden x
 x:
 .word 10
+.hidden y
+y:
+.word 10
+.hidden z
+z:
+.word 10
+.hidden u
+u:
+.word 10
+.hidden v
+v:
+.word 10
 .text
 .global _start
 _start:
   adrp    x1, :got:x
   ldr     x1, [x1, #:got_lo12:x]
-  adrp    x2, :got:x+1
-  ldr     x2, [x2, #:got_lo12:x]
-  adrp    x3, :got:x
-  ldr     x3, [x3, #:got_lo12:x+8]
-  adrp    x4, :got:x
-  ldr     x5, [x4, #:got_lo12:x]
-  adrp    x6, :got:x
-  ldr     x6, [x0, #:got_lo12:x]
+  adrp    x2, :got:y+1
+  ldr     x2, [x2, #:got_lo12:y]
+  adrp    x3, :got:z
+  ldr     x3, [x3, #:got_lo12:z+8]
+  adrp    x4, :got:u
+  ldr     x5, [x4, #:got_lo12:u]
+  adrp    x6, :got:v
+  ldr     x6, [x0, #:got_lo12:v]
 
 #--- unpaired.s
 .text
@@ -130,3 +158,21 @@ x:
 .global _start
 _start:
   ldr     x0, [x0, #:got_lo12:x]
+
+#--- all-or-nothing.s
+.rodata
+.hidden x
+x:
+.word 10
+.hidden y
+y:
+.word 10
+.text
+.global _start
+_start:
+  adrp    x1, :got:x
+  ldr     x1, [x1, #:got_lo12:x]
+  adrp    x1, :got:x
+  ldr     x2, [x1, #:got_lo12:x]
+  adrp    x1, :got:y
+  ldr     x1, [x1, #:got_lo12:y]
