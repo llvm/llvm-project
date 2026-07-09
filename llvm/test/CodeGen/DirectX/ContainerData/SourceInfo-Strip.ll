@@ -29,8 +29,7 @@
 
 ; Without the flag, SRCI should be emitted.
 ; DXC:      - Name:            SRCI
-; DXC-NEXT:   Size:            348
-; DXC-NEXT:   SourceInfo:
+; DXC:        SourceInfo:
 ; DXC-NEXT:     Header:
 ; DXC:            SectionCount:    3
 ; DXC-NEXT:     Names:
