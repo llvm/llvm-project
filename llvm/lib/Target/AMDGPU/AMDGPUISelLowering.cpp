@@ -4417,7 +4417,6 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   }
 
   SDValue Lo = DAG.getNode(ISD::TRUNCATE, SL, TargetType, LHS);
-
   SDValue NewShift =
       DAG.getNode(ISD::SHL, SL, TargetType, Lo, ShiftAmt, N->getFlags());
 
