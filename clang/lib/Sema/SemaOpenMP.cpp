@@ -23350,17 +23350,28 @@ public:
         }
         return false;
       }
-
-      // Fallback: redirect to DecompositionDecl for non-struct bindings
-      // (arrays, tuples).
-      D = DD;
-      DeclarationNameInfo NameInfo(D->getDeclName(), DRE->getLocation());
-      E = DeclRefExpr::Create(SemaRef.Context, DRE->getQualifierLoc(),
-                              DRE->getTemplateKeywordLoc(), DD,
-                              /*RefersToEnclosingVariableOrCapture=*/false,
-                              NameInfo, D->getType(), DRE->getValueKind(),
-                              DRE->getFoundDecl(),
-                              /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
+      if (auto *ASE = dyn_cast_or_null<ArraySubscriptExpr>(BindingExpr)) {
+        if (const VarDecl *OrigVar =
+                getOriginalVarOrDiagnose(SemaRef, DD, DRE->getExprLoc())) {
+          // Build OrigVar[idx] analoguous to the MemberExpr rewrite, then
+          // Visit(E).
+          DeclarationNameInfo NameInfo(D->getDeclName(), DRE->getLocation());
+          E = DeclRefExpr::Create(SemaRef.Context, DRE->getQualifierLoc(),
+                                  DRE->getTemplateKeywordLoc(), DD,
+                                  /*RefersToEnclosingVariableOrCapture=*/false,
+                                  NameInfo, D->getType(), DRE->getValueKind(),
+                                  DRE->getFoundDecl(),
+                                  /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
+          return Visit(E);
+        }
+        return false;
+      }
+      // Tuple-like should already be rejected; do not map DD as a silent
+      // fallback.
+      SemaRef.Diag(DRE->getExprLoc(),
+                   diag::err_omp_unsupported_structured_binding_init)
+          << 4;
+      return false;
     }
     // Handle DecompositionDecl directly (implicit captures).
     else if (auto *DD = dyn_cast<DecompositionDecl>(D)) {
