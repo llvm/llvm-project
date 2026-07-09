@@ -15087,9 +15087,9 @@ libc_function(
         ":__support_cpp_limits",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_printf_core_vasprintf_internal",
         ":__support_printf_core_printf_core_structs",
         ":__support_printf_core_printf_error_mapper",
+        ":__support_printf_core_vasprintf_internal",
     ],
 )
 
@@ -15172,9 +15172,9 @@ libc_function(
         ":__support_cpp_limits",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_printf_core_vasprintf_internal",
         ":__support_printf_core_printf_core_structs",
         ":__support_printf_core_printf_error_mapper",
+        ":__support_printf_core_vasprintf_internal",
     ],
 )
 
