@@ -17452,6 +17452,18 @@ OMPClause *SemaOpenMP::ActOnOpenMPNumThreadsClause(
     OpenMPNumThreadsClauseModifier DimsModifier, Expr *DimsModifierExpr,
     SourceLocation DimsModifierLoc, SourceLocation StartLoc,
     SourceLocation LParenLoc, SourceLocation EndLoc) {
+  assert((PrescriptivenessModifier == (PrescriptivenessModifierLoc.isValid()
+                                           ? OMPC_NUMTHREADS_strict
+                                           : OMPC_NUMTHREADS_unknown)) &&
+         "Unexpected num_threads prescriptiveness modifier.");
+  assert(
+      (DimsModifier == (DimsModifierLoc.isValid() ? OMPC_NUMTHREADS_dims
+                                                  : OMPC_NUMTHREADS_unknown)) &&
+      "Unexpected num_threads dims modifier.");
+
+  if (VarList.empty())
+    return nullptr;
+
   SmallVector<Expr *, 3> Vars(VarList.begin(), VarList.end());
   for (Expr *&ValExpr : Vars) {
     // OpenMP [2.5, Restrictions]
@@ -17495,6 +17507,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPNumThreadsClause(
   for (Expr *&ValExpr : Vars) {
     ValExpr = SemaRef.MakeFullExpr(ValExpr).get();
     ValExpr = tryBuildCapture(SemaRef, ValExpr, Captures).get();
+  }
+  if (DimsModifierExpr) {
+    DimsModifierExpr = SemaRef.MakeFullExpr(DimsModifierExpr).get();
+    DimsModifierExpr =
+        tryBuildCapture(SemaRef, DimsModifierExpr, Captures).get();
   }
   Stmt *PreInit = buildPreInits(getASTContext(), Captures);
 

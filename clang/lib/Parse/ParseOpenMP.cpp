@@ -5381,7 +5381,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     while (true) {
       if (Tok.is(tok::identifier) && Tok.getIdentifierInfo()->isStr("dims") &&
           NextToken().is(tok::l_paren)) {
-
+        // Parse the dims modifier.
         SourceLocation TLoc = Tok.getLocation();
         ConsumeToken();
         SourceLocation RLoc;
@@ -5400,20 +5400,22 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         }
         HasModifier = true;
       } else {
+        // Parse any modifier other than dims.
         OpenMPNumThreadsClauseModifier Modifier =
             static_cast<OpenMPNumThreadsClauseModifier>(
                 getOpenMPSimpleClauseType(
                     Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok),
                     getLangOpts()));
 
-        // The dims modifier is a complex modifier. It must be parsed above.
+        // The dims modifier is a complex modifier that must be parsed above.
         if (Modifier == OMPC_NUMTHREADS_dims)
           Modifier = OMPC_NUMTHREADS_unknown;
 
         if (Modifier != OMPC_NUMTHREADS_unknown) {
+          // Only prescriptiveness modifiers should enter this part.
           if (Data.ExtraModifierArray[0] != OMPC_NUMTHREADS_unknown) {
             Diag(Tok, diag::err_omp_duplicate_modifier)
-                << getOpenMPSimpleClauseTypeName(Kind, OMPC_NUMTHREADS_strict)
+                << getOpenMPSimpleClauseTypeName(Kind, Modifier)
                 << getOpenMPClauseName(Kind);
           } else {
             Data.ExtraModifierArray[0] = Modifier;
@@ -5422,17 +5424,19 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
           ConsumeAnyToken();
           HasModifier = true;
         } else {
+          // Not a recognized modifier.
           break;
         }
       }
 
-      if (Tok.is(tok::comma)) {
+      // If a comma is present, continue parsing modifiers, and stop otherwise.
+      if (Tok.is(tok::comma))
         ConsumeToken();
-      } else {
+      else
         break;
-      }
     }
 
+    // If any modifier was parsed, the next token must be a colon.
     if (HasModifier) {
       if (Tok.is(tok::colon)) {
         ConsumeToken();
