@@ -88,7 +88,7 @@ void should_evaluate(Final &f) { typeid(func(), f); }
 // Not most derived
 void base_ref(Base &b) { typeid(b); }
 // CIR-LABEL:  cir.func {{.*}}@_Z8base_refR4Base
-// CIR    :    cir.vtable.get_vptr
+// CIR:        cir.vtable.get_vptr
 // CIR:        cir.return
 // LLVM-LABEL: define {{.*}}void @_Z8base_refR4Base
 // LLVM:       getelementptr inbounds ptr, ptr
@@ -100,7 +100,7 @@ void base_ref(Base &b) { typeid(b); }
 // Not most derived
 void base_deref(Base *b) { typeid(*b); }
 // CIR-LABEL:  cir.func {{.*}}@_Z10base_derefP4Base
-// CIR    :    cir.vtable.get_vptr
+// CIR:        cir.vtable.get_vptr
 // CIR:        cir.return
 // LLVM-LABEL: define {{.*}}void @_Z10base_derefP4Base
 // LLVM:       getelementptr inbounds ptr, ptr
@@ -112,7 +112,7 @@ void base_deref(Base *b) { typeid(*b); }
 // Not most derived
 void nonfinal_ref(NonFinal &d) { typeid(d); }
 // CIR-LABEL:  cir.func {{.*}}@_Z12nonfinal_refR8NonFinal
-// CIR    :    cir.vtable.get_vptr
+// CIR:        cir.vtable.get_vptr
 // CIR:        cir.return
 // LLVM-LABEL: define {{.*}}void @_Z12nonfinal_refR8NonFinal
 // LLVM:       getelementptr inbounds ptr, ptr
@@ -124,7 +124,7 @@ void nonfinal_ref(NonFinal &d) { typeid(d); }
 // Not most derived
 void nonfinal_deref(NonFinal *d) { typeid(*d); }
 // CIR-LABEL:  cir.func {{.*}}@_Z14nonfinal_derefP8NonFinal
-// CIR    :    cir.vtable.get_vptr
+// CIR:        cir.vtable.get_vptr
 // CIR:        cir.return
 // LLVM-LABEL: define {{.*}}void @_Z14nonfinal_derefP8NonFinal
 // LLVM:       getelementptr inbounds ptr, ptr
