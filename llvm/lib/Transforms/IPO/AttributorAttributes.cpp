@@ -3201,56 +3201,35 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     auto Remark = [&](OptimizationRemark OR) {
       switch (Info.K) {
       case UBInfo::NullPtrAccess:
-        return OR << "Memory access through a constant null pointer ("
+      case UBInfo::UndefPtrAccess: {
+        return OR << "Memory access through a pointer known to be "
                   << ore::NV("Pointer",
                              getPointerOperand(I, /*AllowVolatile*/ true))
-                  << ") is undefined behavior; replacing with 'unreachable'.";
-      case UBInfo::UndefPtrAccess:
-        return OR << "Memory access through a pointer ("
-                  << ore::NV("Pointer",
-                             getPointerOperand(I, /*AllowVolatile*/ true))
-                  << ") known to be 'undef' is undefined behavior; "
-                     "replacing with 'unreachable'.";
-      case UBInfo::UndefBranchCondition:
-        return OR << "Branch condition ("
-                  << ore::NV("Condition", cast<CondBrInst>(I)->getCondition())
-                  << ") known to be 'undef' is undefined behavior; "
-                     "replacing with 'unreachable'.";
-      case UBInfo::UndefReturnValue:
-        return OR << "Value returned ("
-                  << ore::NV("ReturnValue",
-                             cast<ReturnInst>(I)->getReturnValue())
-                  << ") from a 'noundef' position is known to be 'undef', "
-                     "which is undefined behavior; replacing with "
-                     "'unreachable'.";
-      case UBInfo::NullReturnViolatesNonNull:
-        return OR << "Value returned ("
-                  << ore::NV("ReturnValue",
-                             cast<ReturnInst>(I)->getReturnValue())
-                  << ") from a 'nonnull' position is known to be null, "
-                     "which is undefined behavior; replacing with "
-                     "'unreachable'.";
-      case UBInfo::UndefCallArgument: {
-        OR << "Argument " << ore::NV("ArgNo", *Info.ArgNo)
-           << " passed to 'noundef' parameter of ";
-        CallBase &CB = *cast<CallBase>(I);
-        if (auto *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand()))
-          OR << ore::NV("Callee", Callee);
-        else
-          OR << "the callee";
-        return OR << " is known to be 'undef', which is undefined "
-                     "behavior; replacing with 'unreachable'.";
+                  << " is undefined behavior; replacing with 'unreachable'.";
       }
+      case UBInfo::UndefBranchCondition:
+        return OR << "Branch condition known to be "
+                  << ore::NV("Condition", cast<CondBrInst>(I)->getCondition())
+                  << " is undefined behavior; replacing with 'unreachable'.";
+      case UBInfo::UndefReturnValue:
+      case UBInfo::NullReturnViolatesNonNull:
+        return OR << "Value returned known to be "
+                  << ore::NV("ReturnValue",
+                             cast<ReturnInst>(I)->getReturnValue())
+                  << " is undefined behavior; replacing with 'unreachable'.";
+      case UBInfo::UndefCallArgument:
       case UBInfo::NullArgViolatesNonNull: {
-        OR << "Argument " << ore::NV("ArgNo", *Info.ArgNo)
-           << " passed to 'nonnull' parameter of ";
+        bool IsUndef = Info.K == UBInfo::UndefCallArgument;
         CallBase &CB = *cast<CallBase>(I);
+        OR << "Argument " << ore::NV("ArgNo", *Info.ArgNo)
+           << " passed to parameter of ";
         if (auto *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand()))
           OR << ore::NV("Callee", Callee);
         else
           OR << "the callee";
-        return OR << " is known to be null, which is undefined behavior; "
-                     "replacing with 'unreachable'.";
+        return OR << " known to be "
+                  << ore::NV("Argument", IsUndef ? "undef" : "null")
+                  << " is undefined behavior; replacing with 'unreachable'.";
       }
       }
       llvm_unreachable("Unknown UBInfo::Kind");

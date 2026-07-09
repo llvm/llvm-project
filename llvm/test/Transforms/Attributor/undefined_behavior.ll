@@ -18,7 +18,7 @@ define void @load_wholly_unreachable() {
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    unreachable
 ;
-; REMARKS: remark: {{.*}}: Memory access through a constant null pointer (null) is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Memory access through a pointer known to be null is undefined behavior; replacing with 'unreachable'.
   %a = load i32, ptr null
   ret void
 }
@@ -29,7 +29,7 @@ define void @load_undef_pointer() {
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    unreachable
 ;
-; REMARKS: remark: {{.*}}: Memory access through a pointer (undef) known to be 'undef' is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Memory access through a pointer known to be undef is undefined behavior; replacing with 'unreachable'.
   %a = load i32, ptr undef
   ret void
 }
@@ -51,8 +51,8 @@ define void @loads_wholly_unreachable() {
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    unreachable
 ;
-; REMARKS: remark: {{.*}}: Memory access through a constant null pointer (null) is undefined behavior; replacing with 'unreachable'.
-; REMARKS: remark: {{.*}}: Memory access through a constant null pointer (null) is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Memory access through a pointer known to be null is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Memory access through a pointer known to be null is undefined behavior; replacing with 'unreachable'.
   %a = load i32, ptr null
   %b = load i32, ptr null
   ret void
@@ -69,7 +69,7 @@ define void @load_single_bb_unreachable(i1 %cond) {
 ; CHECK:       e:
 ; CHECK-NEXT:    ret void
 ;
-; REMARKS: remark: {{.*}}: Memory access through a constant null pointer (null) is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Memory access through a pointer known to be null is undefined behavior; replacing with 'unreachable'.
   br i1 %cond, label %t, label %e
 t:
   %b = load i32, ptr null
@@ -110,7 +110,7 @@ define void @load_null_propagated() {
 ; CGSCC-SAME: () #[[ATTR3:[0-9]+]] {
 ; CGSCC-NEXT:    ret void
 ;
-; REMARKS-TUNIT: remark: {{.*}}: Memory access through a constant null pointer (call) is undefined behavior; replacing with 'unreachable'.
+; REMARKS-TUNIT: remark: {{.*}}: Memory access through a pointer known to be call is undefined behavior; replacing with 'unreachable'.
   %ptr = call ptr @ret_null()
   %a = load i32, ptr %ptr
   ret void
@@ -124,7 +124,7 @@ define void @store_wholly_unreachable() {
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    unreachable
 ;
-; REMARKS: remark: {{.*}}: Memory access through a constant null pointer (null) is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Memory access through a pointer known to be null is undefined behavior; replacing with 'unreachable'.
   store i32 5, ptr null
   ret void
 }
@@ -150,7 +150,7 @@ define void @store_single_bb_unreachable(i1 %cond) {
 ; CHECK:       e:
 ; CHECK-NEXT:    ret void
 ;
-; REMARKS: remark: {{.*}}: Memory access through a constant null pointer (null) is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Memory access through a pointer known to be null is undefined behavior; replacing with 'unreachable'.
   br i1 %cond, label %t, label %e
 t:
   store i32 5, ptr null
@@ -191,7 +191,7 @@ define void @store_null_propagated() {
 ; CGSCC-NEXT:    [[PTR:%.*]] = call noalias align 4294967296 ptr @ret_null() #[[ATTR11:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
-; REMARKS-TUNIT: remark: {{.*}}: Memory access through a constant null pointer (call) is undefined behavior; replacing with 'unreachable'.
+; REMARKS-TUNIT: remark: {{.*}}: Memory access through a pointer known to be call is undefined behavior; replacing with 'unreachable'.
   %ptr = call ptr @ret_null()
   store i32 5, ptr %ptr
   ret void
@@ -210,7 +210,7 @@ define void @atomicrmw_wholly_unreachable() {
 ; CGSCC-SAME: () #[[ATTR6:[0-9]+]] {
 ; CGSCC-NEXT:    unreachable
 ;
-; REMARKS: remark: {{.*}}: Memory access through a constant null pointer (null) is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Memory access through a pointer known to be null is undefined behavior; replacing with 'unreachable'.
   %a = atomicrmw add ptr null, i32 1 acquire
   ret void
 }
@@ -234,7 +234,7 @@ define void @atomicrmw_single_bb_unreachable(i1 %cond) {
 ; CGSCC:       e:
 ; CGSCC-NEXT:    ret void
 ;
-; REMARKS: remark: {{.*}}: Memory access through a constant null pointer (null) is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Memory access through a pointer known to be null is undefined behavior; replacing with 'unreachable'.
   br i1 %cond, label %t, label %e
 t:
   %a = atomicrmw add ptr null, i32 1 acquire
@@ -276,7 +276,7 @@ define void @atomicrmw_null_propagated() {
 ; CGSCC-NEXT:    [[A:%.*]] = atomicrmw add ptr [[PTR]], i32 1 acquire, align 4
 ; CGSCC-NEXT:    ret void
 ;
-; REMARKS-TUNIT: remark: {{.*}}: Memory access through a constant null pointer (call) is undefined behavior; replacing with 'unreachable'.
+; REMARKS-TUNIT: remark: {{.*}}: Memory access through a pointer known to be call is undefined behavior; replacing with 'unreachable'.
   %ptr = call ptr @ret_null()
   %a = atomicrmw add ptr %ptr, i32 1 acquire
   ret void
@@ -295,7 +295,7 @@ define void @atomiccmpxchg_wholly_unreachable() {
 ; CGSCC-SAME: () #[[ATTR6]] {
 ; CGSCC-NEXT:    unreachable
 ;
-; REMARKS: remark: {{.*}}: Memory access through a constant null pointer (null) is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Memory access through a pointer known to be null is undefined behavior; replacing with 'unreachable'.
   %a = cmpxchg ptr null, i32 2, i32 3 acq_rel monotonic
   ret void
 }
@@ -319,7 +319,7 @@ define void @atomiccmpxchg_single_bb_unreachable(i1 %cond) {
 ; CGSCC:       e:
 ; CGSCC-NEXT:    ret void
 ;
-; REMARKS: remark: {{.*}}: Memory access through a constant null pointer (null) is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Memory access through a pointer known to be null is undefined behavior; replacing with 'unreachable'.
   br i1 %cond, label %t, label %e
 t:
   %a = cmpxchg ptr null, i32 2, i32 3 acq_rel monotonic
@@ -361,7 +361,7 @@ define void @atomiccmpxchg_null_propagated() {
 ; CGSCC-NEXT:    [[A:%.*]] = cmpxchg ptr [[PTR]], i32 2, i32 3 acq_rel monotonic, align 4
 ; CGSCC-NEXT:    ret void
 ;
-; REMARKS-TUNIT: remark: {{.*}}: Memory access through a constant null pointer (call) is undefined behavior; replacing with 'unreachable'.
+; REMARKS-TUNIT: remark: {{.*}}: Memory access through a pointer known to be call is undefined behavior; replacing with 'unreachable'.
   %ptr = call ptr @ret_null()
   %a = cmpxchg ptr %ptr, i32 2, i32 3 acq_rel monotonic
   ret void
@@ -390,7 +390,7 @@ define i32 @cond_br_on_undef() {
 ; CGSCC:       e:
 ; CGSCC-NEXT:    unreachable
 ;
-; REMARKS: remark: {{.*}}: Branch condition (undef) known to be 'undef' is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Branch condition known to be undef is undefined behavior; replacing with 'unreachable'.
   br i1 undef, label %t, label %e
 t:
   ret i32 1
@@ -415,7 +415,7 @@ define void @cond_br_on_undef2(i1 %cond) {
 ; CHECK:       e1:
 ; CHECK-NEXT:    ret void
 ;
-; REMARKS: remark: {{.*}}: Branch condition (undef) known to be 'undef' is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Branch condition known to be undef is undefined behavior; replacing with 'unreachable'.
   br i1 %cond, label %t1, label %e1
 t1:
   br i1 undef, label %t2, label %e2
@@ -456,7 +456,7 @@ define void @cond_br_on_undef_interproc() {
 ; CGSCC:       e:
 ; CGSCC-NEXT:    ret void
 ;
-; REMARKS-TUNIT: remark: {{.*}}: Branch condition (call) known to be 'undef' is undefined behavior; replacing with 'unreachable'.
+; REMARKS-TUNIT: remark: {{.*}}: Branch condition known to be call is undefined behavior; replacing with 'unreachable'.
   %cond = call i1 @ret_undef()
   br i1 %cond, label %t, label %e
 t:
@@ -503,7 +503,7 @@ define void @cond_br_on_undef_interproc2() {
 ; CGSCC:       e:
 ; CGSCC-NEXT:    ret void
 ;
-; REMARKS-TUNIT: remark: {{.*}}: Branch condition (call) known to be 'undef' is undefined behavior; replacing with 'unreachable'.
+; REMARKS-TUNIT: remark: {{.*}}: Branch condition known to be call is undefined behavior; replacing with 'unreachable'.
   %cond = call i1 @ret_undef2()
   br i1 %cond, label %t, label %e
 t:
@@ -533,7 +533,7 @@ define i32 @cond_br_on_undef3() {
 ; CGSCC:       e:
 ; CGSCC-NEXT:    unreachable
 ;
-; REMARKS: remark: {{.*}}: Branch condition (icmp) known to be 'undef' is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Branch condition known to be icmp is undefined behavior; replacing with 'unreachable'.
   %cond = icmp ne i32 1, undef
   br i1 %cond, label %t, label %e
 t:
@@ -588,7 +588,7 @@ define internal i32 @callee(i1 %C, ptr %A) {
 ; CGSCC:       F:
 ; CGSCC-NEXT:    ret i32 1
 ;
-; REMARKS: remark: {{.*}}: Memory access through a constant null pointer (null) is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Memory access through a pointer known to be null is undefined behavior; replacing with 'unreachable'.
 entry:
   %A.0 = load i32, ptr null
   br i1 %C, label %T, label %F
@@ -748,7 +748,7 @@ define void @arg_nonnull_violation1_1() {
 ; CGSCC-SAME: () #[[ATTR3]] {
 ; CGSCC-NEXT:    unreachable
 ;
-; REMARKS: remark: {{.*}}: Argument 0 passed to 'nonnull' parameter of arg_nonnull_1 is known to be null, which is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 0 passed to parameter of arg_nonnull_1 known to be null is undefined behavior; replacing with 'unreachable'.
   call void @arg_nonnull_1(ptr null)
   ret void
 }
@@ -764,7 +764,7 @@ define void @arg_nonnull_violation1_2() {
 ; CGSCC-SAME: () #[[ATTR3]] {
 ; CGSCC-NEXT:    unreachable
 ;
-; REMARKS: remark: {{.*}}: Argument 0 passed to 'nonnull' parameter of arg_nonnull_1_noundef_1 is known to be null, which is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 0 passed to parameter of arg_nonnull_1_noundef_1 known to be null is undefined behavior; replacing with 'unreachable'.
   call void @arg_nonnull_1_noundef_1(ptr null)
   ret void
 }
@@ -781,7 +781,7 @@ define void @arg_nonnull_violation2_1(i1 %c) {
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR3]] {
 ; CGSCC-NEXT:    unreachable
 ;
-; REMARKS: remark: {{.*}}: Argument 0 passed to 'nonnull' parameter of arg_nonnull_1 is known to be null, which is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 0 passed to parameter of arg_nonnull_1 known to be null is undefined behavior; replacing with 'unreachable'.
   %mustnull = select i1 %c, ptr null, ptr null
   call void @arg_nonnull_1(ptr %mustnull)
   ret void
@@ -798,7 +798,7 @@ define void @arg_nonnull_violation2_2(i1 %c) {
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR3]] {
 ; CGSCC-NEXT:    unreachable
 ;
-; REMARKS: remark: {{.*}}: Argument 0 passed to 'nonnull' parameter of arg_nonnull_1_noundef_1 is known to be null, which is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 0 passed to parameter of arg_nonnull_1_noundef_1 known to be null is undefined behavior; replacing with 'unreachable'.
   %mustnull = select i1 %c, ptr null, ptr null
   call void @arg_nonnull_1_noundef_1(ptr %mustnull)
   ret void
@@ -834,12 +834,12 @@ define void @arg_nonnull_violation3_1(i1 %c) {
 ; CGSCC:       ret:
 ; CGSCC-NEXT:    ret void
 ;
-; REMARKS: remark: {{.*}}: Argument 1 passed to 'nonnull' parameter of arg_nonnull_12 is known to be null, which is undefined behavior; replacing with 'unreachable'.
-; REMARKS: remark: {{.*}}: Argument 1 passed to 'nonnull' parameter of arg_nonnull_12 is known to be null, which is undefined behavior; replacing with 'unreachable'.
-; REMARKS: remark: {{.*}}: Argument 0 passed to 'nonnull' parameter of arg_nonnull_12 is known to be null, which is undefined behavior; replacing with 'unreachable'.
-; REMARKS: remark: {{.*}}: Argument 0 passed to 'nonnull' parameter of arg_nonnull_12 is known to be null, which is undefined behavior; replacing with 'unreachable'.
-; REMARKS: remark: {{.*}}: Argument 0 passed to 'nonnull' parameter of arg_nonnull_12 is known to be null, which is undefined behavior; replacing with 'unreachable'.
-; REMARKS: remark: {{.*}}: Argument 0 passed to 'nonnull' parameter of arg_nonnull_12 is known to be null, which is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 1 passed to parameter of arg_nonnull_12 known to be null is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 1 passed to parameter of arg_nonnull_12 known to be null is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 0 passed to parameter of arg_nonnull_12 known to be null is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 0 passed to parameter of arg_nonnull_12 known to be null is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 0 passed to parameter of arg_nonnull_12 known to be null is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 0 passed to parameter of arg_nonnull_12 known to be null is undefined behavior; replacing with 'unreachable'.
   %ptr = alloca i32
   br i1 %c, label %t, label %f
 t:
@@ -887,12 +887,12 @@ define void @arg_nonnull_violation3_2(i1 %c) {
 ; CGSCC:       ret:
 ; CGSCC-NEXT:    ret void
 ;
-; REMARKS: remark: {{.*}}: Argument 1 passed to 'nonnull' parameter of arg_nonnull_12_noundef_2 is known to be null, which is undefined behavior; replacing with 'unreachable'.
-; REMARKS: remark: {{.*}}: Argument 1 passed to 'nonnull' parameter of arg_nonnull_12_noundef_2 is known to be null, which is undefined behavior; replacing with 'unreachable'.
-; REMARKS: remark: {{.*}}: Argument 0 passed to 'nonnull' parameter of arg_nonnull_12_noundef_2 is known to be null, which is undefined behavior; replacing with 'unreachable'.
-; REMARKS: remark: {{.*}}: Argument 0 passed to 'nonnull' parameter of arg_nonnull_12_noundef_2 is known to be null, which is undefined behavior; replacing with 'unreachable'.
-; REMARKS: remark: {{.*}}: Argument 0 passed to 'nonnull' parameter of arg_nonnull_12_noundef_2 is known to be null, which is undefined behavior; replacing with 'unreachable'.
-; REMARKS: remark: {{.*}}: Argument 0 passed to 'nonnull' parameter of arg_nonnull_12_noundef_2 is known to be null, which is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 1 passed to parameter of arg_nonnull_12_noundef_2 known to be null is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 1 passed to parameter of arg_nonnull_12_noundef_2 known to be null is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 0 passed to parameter of arg_nonnull_12_noundef_2 known to be null is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 0 passed to parameter of arg_nonnull_12_noundef_2 known to be null is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 0 passed to parameter of arg_nonnull_12_noundef_2 known to be null is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 0 passed to parameter of arg_nonnull_12_noundef_2 known to be null is undefined behavior; replacing with 'unreachable'.
   %ptr = alloca i32
   br i1 %c, label %t, label %f
 t:
@@ -956,7 +956,7 @@ define noundef ptr @returned_noundef(i32 %c) {
 ; CHECK:       ondefault:
 ; CHECK-NEXT:    unreachable
 ;
-; REMARKS: remark: {{.*}}: Value returned (undef) from a 'noundef' position is known to be 'undef', which is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Value returned known to be undef is undefined behavior; replacing with 'unreachable'.
   switch i32 %c, label %ondefault [ i32 0, label %onzero
   i32 1, label %onone ]
 onzero:
@@ -984,8 +984,8 @@ define nonnull noundef ptr @returned_nonnnull_noundef(i32 %c) {
 ; CHECK:       ondefault:
 ; CHECK-NEXT:    unreachable
 ;
-; REMARKS: remark: {{.*}}: Value returned (null) from a 'nonnull' position is known to be null, which is undefined behavior; replacing with 'unreachable'.
-; REMARKS: remark: {{.*}}: Value returned (undef) from a 'noundef' position is known to be 'undef', which is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Value returned known to be null is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Value returned known to be undef is undefined behavior; replacing with 'unreachable'.
   switch i32 %c, label %ondefault [ i32 0, label %onzero
   i32 1, label %onone ]
 onzero:
@@ -1023,7 +1023,7 @@ define void @callsite_noundef_2() {
 ; CHECK-LABEL: define {{[^@]+}}@callsite_noundef_2() {
 ; CHECK-NEXT:    unreachable
 ;
-; REMARKS: remark: {{.*}}: Argument 0 passed to 'noundef' parameter of callee_ptr_arg is known to be 'undef', which is undefined behavior; replacing with 'unreachable'.
+; REMARKS: remark: {{.*}}: Argument 0 passed to parameter of callee_ptr_arg known to be undef is undefined behavior; replacing with 'unreachable'.
   call void @callee_ptr_arg(ptr noundef undef)
   ret void
 }
@@ -1048,7 +1048,7 @@ define i32 @violate_noundef_nonpointer() {
 ; CGSCC-SAME: () #[[ATTR3]] {
 ; CGSCC-NEXT:    unreachable
 ;
-; REMARKS-CGSCC: remark: {{.*}}: Argument 0 passed to 'noundef' parameter of argument_noundef1 is known to be 'undef', which is undefined behavior; replacing with 'unreachable'.
+; REMARKS-CGSCC: remark: {{.*}}: Argument 0 passed to parameter of argument_noundef1 known to be undef is undefined behavior; replacing with 'unreachable'.
   %ret = call i32 @argument_noundef1(i32 undef)
   ret i32 %ret
 }
