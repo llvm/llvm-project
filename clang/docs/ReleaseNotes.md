@@ -246,7 +246,6 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - `__is_trivially_equality_comparable` no longer returns false for all enum types. (#GH132672)
 - `auto` parameters are now available in all C++ language modes as an extension.
-- Clang now supports friend declarations with a dependent nested name specifier. (#GH104057)
 
 #### C++2d Feature Support
 
@@ -461,6 +460,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - The `-cl` `/Brepro` option was modified to match the original CL's option
   and now defines the standard macros `__DATE__`, `__TIME__` and `__TIMESTAMP__` to
   "1". The previous functionality remains unchanged.
+- The `-fms-kernel` flag will now implicitly add `-fno-delete-null-pointer-checks`.
+  Still `-fdelete-null-pointer-checks` can be used to override this behavior.
 
 ### Removed Compiler Flags
 
@@ -569,6 +570,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   This new coverage is added under the subgroup `-Wunused-but-set-global`,
   allowing it to be disabled independently with `-Wno-unused-but-set-global`.
   (#GH148361)
+
+- `-Wunused-template` is now part of `-Wunused` (which is enabled by `-Wall`).
+  It diagnoses unused function and variable templates with internal linkage,
+  which in a header is a latent ODR hazard. It can be disabled with
+  `-Wno-unused-template`. (#GH202945)
 
 - Added `-Wlifetime-safety` to enable lifetime safety analysis,
   a CFG-based intra-procedural analysis that detects use-after-free and related
@@ -973,6 +979,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
   - Arm AGI CPU (armagicpu).
   - Hisilicon hip12 core (hip12).
+  - NVIDIA Rigel core (rigel).
 
 #### Android Support
 

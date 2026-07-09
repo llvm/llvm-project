@@ -108,8 +108,8 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
     return CGF->EmitPPCBuiltinExpr(BuiltinID, E);
+  case llvm::Triple::amdgpu:
   case llvm::Triple::r600:
-  case llvm::Triple::amdgcn:
     return CGF->EmitAMDGPUBuiltinExpr(BuiltinID, E);
   case llvm::Triple::systemz:
     return CGF->EmitSystemZBuiltinExpr(BuiltinID, E);
@@ -6257,6 +6257,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin_ptrauth_auth:
   case Builtin::BI__builtin_ptrauth_auth_and_resign:
+  case Builtin::BI__builtin_ptrauth_auth_with_pc_and_resign:
   case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
   case Builtin::BI__builtin_ptrauth_blend_discriminator:
   case Builtin::BI__builtin_ptrauth_sign_generic_data:
@@ -6273,6 +6274,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Args[0] = Builder.CreatePtrToInt(Args[0], IntPtrTy);
 
     switch (BuiltinID) {
+    case Builtin::BI__builtin_ptrauth_auth_with_pc_and_resign:
+      // Convert oldDiscriminator (arg 2), oldPC (arg 3) and newDiscriminator
+      // (arg 5) to intptr_t
+      if (Args[2]->getType()->isPointerTy())
+        Args[2] = Builder.CreatePtrToInt(Args[2], IntPtrTy);
+      if (Args[3]->getType()->isPointerTy())
+        Args[3] = Builder.CreatePtrToInt(Args[3], IntPtrTy);
+      if (Args[5]->getType()->isPointerTy())
+        Args[5] = Builder.CreatePtrToInt(Args[5], IntPtrTy);
+      break;
+
     case Builtin::BI__builtin_ptrauth_auth_and_resign:
     case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
       if (Args[4]->getType()->isPointerTy())
@@ -6302,6 +6314,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         return Intrinsic::ptrauth_auth;
       case Builtin::BI__builtin_ptrauth_auth_and_resign:
         return Intrinsic::ptrauth_resign;
+      case Builtin::BI__builtin_ptrauth_auth_with_pc_and_resign:
+        return Intrinsic::ptrauth_auth_with_pc_and_resign;
       case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
         return Intrinsic::ptrauth_resign_load_relative;
       case Builtin::BI__builtin_ptrauth_blend_discriminator:
