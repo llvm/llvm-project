@@ -19,8 +19,6 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
-// #include <iostream>
-
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
