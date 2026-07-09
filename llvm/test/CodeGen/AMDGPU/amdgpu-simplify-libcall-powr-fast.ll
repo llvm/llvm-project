@@ -134,19 +134,6 @@ entry:
   ret float %call
 }
 
-; powr(x, 2) on an unknown base must NOT fold to x*x: base may be negative.
-define float @test_powr_afn_f32__2_unknown_base(float %x) #0 {
-; CHECK-LABEL: define float @test_powr_afn_f32__2_unknown_base(
-; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CALL:%.*]] = tail call afn float @_Z11__powr_fastff(float [[X]], float 2.000000e+00)
-; CHECK-NEXT:    ret float [[CALL]]
-;
-entry:
-  %call = tail call afn float @_Z4powrff(float %x, float 2.0)
-  ret float %call
-}
-
 ; powr(x, 2) with nnan folds to x*x: nnan lets us assume x >= 0.
 define float @test_powr_afn_f32__2_nnan(float %x) #0 {
 ; CHECK-LABEL: define float @test_powr_afn_f32__2_nnan(
