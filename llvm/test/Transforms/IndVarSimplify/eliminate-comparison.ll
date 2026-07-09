@@ -1158,8 +1158,7 @@ define void @smin_bound_requires_induction(i32 %n) {
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[BOUND]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[LOOP_BODY:%.*]], label [[LOOP_EXIT:%.*]]
+; CHECK-NEXT:    br i1 true, label [[LOOP_BODY:%.*]], label [[LOOP_EXIT:%.*]]
 ; CHECK:       loop.body:
 ; CHECK-NEXT:    call void @side_effect()
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
