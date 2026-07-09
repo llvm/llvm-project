@@ -115,6 +115,11 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return (ty)builtin(__rs1, __rs2, __rd);                                    \
   }
 
+#define __packed_psabs(name, ty, builtin)                                      \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {           \
+    return builtin(__rs1);                                                     \
+  }
+
 /* Packed Reverse: reverse the order of the elements. Lowered to a single
  * rev8/rev16/ppairoe.* by the backend's packed reverse-shuffle handling. */
 #define __packed_reverse2(name, ty)                                            \
@@ -562,6 +567,14 @@ __packed_abdsum(pabdsumu_u8x8_u64, uint64_t, uint8x8_t, __builtin_riscv_pabdsumu
 __packed_abdsum_acc(pabdsumau_u8x8_u32, uint32_t, uint8x8_t, __builtin_riscv_pabdsumau_u8x8_u32)
 __packed_abdsum_acc(pabdsumau_u8x8_u64, uint64_t, uint8x8_t, __builtin_riscv_pabdsumau_u8x8_u64)
 
+/* Packed Saturating Absolute Value (32-bit) */
+__packed_psabs(psabs_i8x4, int8x4_t, __builtin_riscv_psabs_i8x4)
+__packed_psabs(psabs_i16x2, int16x2_t, __builtin_riscv_psabs_i16x2)
+
+/* Packed Saturating Absolute Value (64-bit) */
+__packed_psabs(psabs_i8x8, int8x8_t, __builtin_riscv_psabs_i8x8)
+__packed_psabs(psabs_i16x4, int16x4_t, __builtin_riscv_psabs_i16x4)
+
 // clang-format on
 
 #undef __packed_splat2
@@ -583,6 +596,7 @@ __packed_abdsum_acc(pabdsumau_u8x8_u64, uint64_t, uint8x8_t, __builtin_riscv_pab
 #undef __packed_binary_builtin_cast
 #undef __packed_reduction
 #undef __packed_merge_builtin
+#undef __packed_psabs
 #undef __packed_reverse2
 #undef __packed_reverse4
 #undef __packed_reverse8
