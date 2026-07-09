@@ -21348,8 +21348,9 @@ static bool actOnOMPReductionKindClause(
 
     // Check for unsupported reduction forms on structured bindings.
     auto *BD = dyn_cast<BindingDecl>(D);
-    if (BD && D->getType().getNonReferenceType()->isArrayType()) {
-      // Array-type reductions are not supported.
+    if (BD && !D->getType().getNonReferenceType()->isScalarType()) {
+      // FIXME: Array-type and class-type reductions on bindings are
+      // rejected.
       S.Diag(ELoc, diag::err_omp_unsupported_on_binding) << 0;
       continue;
     }

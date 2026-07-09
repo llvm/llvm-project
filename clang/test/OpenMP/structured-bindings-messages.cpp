@@ -338,3 +338,28 @@ void test_reduction_inscan() {
     a += i;
   }
 }
+
+void test_reduction_binding_nontrivial() {
+  struct NonTrivial {
+    int value;
+    NonTrivial() : value(0) {}
+    NonTrivial(int v) : value(v) {}
+    ~NonTrivial() {}
+    NonTrivial& operator+=(int x) { value += x; return *this; }
+    NonTrivial& operator+=(const NonTrivial& other) { value += other.value; return *this; }
+  };
+  struct PairNonTrivial {
+    NonTrivial a;
+    NonTrivial b;
+  };
+
+  PairNonTrivial p{NonTrivial(0), NonTrivial(0)};
+  auto [a, b] = p;
+
+  // expected-error@+1{{array-type or class-type reductions on structured bindings are not yet supported}}
+#pragma omp parallel for reduction(+:a)
+  for (int i = 0; i < 10; ++i) {
+    a += i;
+  }
+  use(a.value);
+}
