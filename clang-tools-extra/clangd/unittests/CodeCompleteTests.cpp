@@ -699,10 +699,11 @@ TEST(CompletionTest, PrivateMemberDefinition) {
 }
 
 TEST(CompletionTest, DeclParamName) {
-  // This is 1/2 regression tests to make sure signatures
+  // This is 1/3 regression tests to make sure signatures
   // 1) have consistent variable names between header and source file
   // 2) find variable names in other declarations
-  // See IndexActionTest.DeclParamName for the other test.
+  // See SignatureHelpTest.DeclParamName and IndexActionTest.DeclParamName for
+  // the other tests.
   clangd::CodeCompleteOptions Opts;
   Opts.EnableSnippets = true;
   auto FuncFromSource = completions(R"cpp(
@@ -1694,6 +1695,25 @@ TEST(SignatureHelpTest, Overloads) {
   // We always prefer the first signature.
   EXPECT_EQ(0, Results.activeSignature);
   EXPECT_EQ(0, Results.activeParameter);
+}
+
+TEST(SignatureHelpTest, DeclParamName) {
+  // This is 2/3 regression tests to make sure signatures
+  // 1) have consistent variable names between header and source file
+  // 2) find variable names in other declarations
+  // See CompletionTest.DeclParamName and IndexActionTest.DeclParamName for the
+  // other tests.
+  auto FuncFromSource = signatures(R"cpp(
+      void sun(int);
+      void sun(int night);
+      void sun(int day);
+      void sun(int);
+      void position() {
+        sun(^);
+      }
+      )cpp");
+  EXPECT_THAT(FuncFromSource.signatures,
+              UnorderedElementsAre(sig("sun([[int day]]) -> void")));
 }
 
 TEST(SignatureHelpTest, FunctionPointers) {
