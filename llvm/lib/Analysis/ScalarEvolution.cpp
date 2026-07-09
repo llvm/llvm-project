@@ -11494,10 +11494,11 @@ bool ScalarEvolution::isKnownViaInduction(CmpPredicate Pred, SCEVUse LHS,
          isLoopEntryGuardedByCond(MDL, Pred, SplitLHS.first, SplitRHS.first);
 }
 
-/// Try to prove \p LHS \p Pred \p RHS by decomposing a max expression on the
-/// LHS into its operands:
+/// Try to prove \p LHS \p Pred \p RHS by decomposing a min/max expression on
+/// either side into its operands:
 ///
-///   max(X0, ..., Xn) Pred RHS  if  Xi Pred RHS for all i.
+///   max(X0, ..., Xn) Pred RHS  if  Xi Pred RHS for all i, and
+///   LHS Pred min(Y0, ..., Yn)  if  LHS Pred Yi for all i.
 static bool isKnownViaMinMaxDecomposition(ScalarEvolution &SE,
                                           CmpPredicate Pred, const SCEV *LHS,
                                           const SCEV *RHS) {
@@ -11516,6 +11517,11 @@ static bool isKnownViaMinMaxDecomposition(ScalarEvolution &SE,
   if (isa<SCEVSMaxExpr, SCEVUMaxExpr>(LHS))
     if (all_of(cast<SCEVMinMaxExpr>(LHS)->operands(), [&](const SCEV *Op) {
           return SE.isKnownPredicate(Pred, Op, RHS);
+        }))
+      return true;
+  if (isa<SCEVSMinExpr, SCEVUMinExpr>(RHS))
+    if (all_of(cast<SCEVMinMaxExpr>(RHS)->operands(), [&](const SCEV *Op) {
+          return SE.isKnownPredicate(Pred, LHS, Op);
         }))
       return true;
   return false;
