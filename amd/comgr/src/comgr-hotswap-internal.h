@@ -841,6 +841,22 @@ bool rewriteKernelEntryDescriptorOffsets(
     llvm::StringRef TargetCpu,
     llvm::ArrayRef<KernelEntryTrampolineFixup> Fixups);
 
+/// Add a `<kernel_name>.stub` STT_FUNC symbol to the code object's `.symtab`
+/// for each appended kernel-entry stub, so tools that resolve a dispatch's
+/// entry address to a name (e.g. rocgdb `info dispatches`, which reads the
+/// non-alloc `.symtab`) report the stub instead of a bare address. Returns a
+/// newly allocated buffer with the grown `.symtab` / `.strtab`, or nullptr if
+/// no symbols were added (empty fixups, missing `.symtab`, or a structural
+/// problem) -- callers treat nullptr as "keep the existing buffer", since the
+/// symbol is a debugging aid and its absence is not a correctness failure.
+///
+/// Only the trailing non-alloc `.symtab` / `.strtab` sections grow, so no
+/// virtual addresses, program headers, or relocations change; `.dynsym` (used
+/// by the loader) is left untouched.
+std::unique_ptr<llvm::WritableMemoryBuffer> addKernelEntryTrampolineSymbols(
+    llvm::WritableMemoryBuffer &In, unsigned TextSectionIndex, uint64_t TextAddr,
+    uint64_t OldTextSize, llvm::ArrayRef<KernelEntryTrampolineFixup> Fixups);
+
 // -- Function declarations (GFX1250 hotswap policy layer) ---------------------
 
 struct Gfx1250RewriteOptions {

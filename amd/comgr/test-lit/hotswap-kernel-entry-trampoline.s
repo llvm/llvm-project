@@ -55,6 +55,12 @@
 // METADATA: .name:           entry_tramp_kernel
 // METADATA: .sgpr_count:     10
 
+// COM: Each appended stub gets a <kernel>.stub symbol so a dispatch whose entry
+// COM: points at the stub still resolves to a name (e.g. rocgdb info dispatches).
+// RUN: %llvm-readelf -s %t.out.elf | %FileCheck --check-prefix=SYMS %s
+// SYMS-DAG: FUNC {{.*}} entry_tramp_kernel.stub
+// SYMS-DAG: FUNC {{.*}} hipblaslt_entry_kernel.stub
+
 // RUN: hotswap-rewrite %t.out.elf \
 // RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
 // RUN:   --entry-trampolines --output %t.out2.elf \

@@ -1099,6 +1099,180 @@ std::optional<uint64_t> ElfView::trampolinePoolVAddr() const {
   return alignTo(MaxAllocEnd, TrampolinePoolAlign);
 }
 
+// -- addKernelEntryTrampolineSymbols ------------------------------------------
+
+std::unique_ptr<WritableMemoryBuffer> addKernelEntryTrampolineSymbols(
+    WritableMemoryBuffer &In, unsigned TextSectionIndex, uint64_t TextAddr,
+    uint64_t OldTextSize, ArrayRef<KernelEntryTrampolineFixup> Fixups) {
+  if (Fixups.empty())
+    return nullptr;
+
+  const uint8_t *Data = reinterpret_cast<const uint8_t *>(In.getBufferStart());
+  const size_t Size = In.getBufferSize();
+
+  Expected<ELFFileT> FileOrErr =
+      ELFFileT::create(StringRef(reinterpret_cast<const char *>(Data), Size));
+  if (!FileOrErr) {
+    log() << "hotswap: error: addKernelEntryTrampolineSymbols: failed to parse "
+          << "grown ELF: " << toString(FileOrErr.takeError()) << "\n";
+    return nullptr;
+  }
+  ELFFileT File = std::move(*FileOrErr);
+  Expected<ELFT::ShdrRange> SecsOrErr = File.sections();
+  if (!SecsOrErr) {
+    consumeError(SecsOrErr.takeError());
+    return nullptr;
+  }
+  ELFT::ShdrRange Secs = *SecsOrErr;
+
+  // Locate .symtab and its linked string table. Scan from the end, since the
+  // symbol table sits near the end of the section list in these code objects.
+  const ELFT::Shdr *SymShdr = nullptr;
+  unsigned SymIdx = 0;
+  for (unsigned I = Secs.size(); I-- > 0;)
+    if (Secs[I].sh_type == ELF::SHT_SYMTAB) {
+      SymShdr = &Secs[I];
+      SymIdx = I;
+      break;
+    }
+  if (!SymShdr) {
+    log() << "hotswap: addKernelEntryTrampolineSymbols: no .symtab present; "
+          << "skipping stub symbols.\n";
+    return nullptr;
+  }
+  const unsigned StrIdx = SymShdr->sh_link;
+  if (StrIdx == 0 || StrIdx >= Secs.size()) {
+    log() << "hotswap: error: addKernelEntryTrampolineSymbols: .symtab has an "
+          << "invalid sh_link (" << StrIdx << ").\n";
+    return nullptr;
+  }
+  if (SymShdr->sh_entsize != sizeof(ELF::Elf64_Sym)) {
+    log() << "hotswap: error: addKernelEntryTrampolineSymbols: unexpected "
+          << ".symtab entry size " << SymShdr->sh_entsize << ".\n";
+    return nullptr;
+  }
+  const ELFT::Shdr &StrShdr = Secs[StrIdx];
+
+  const uint64_t SymOff = SymShdr->sh_offset;
+  const uint64_t SymEnd = SymOff + SymShdr->sh_size;
+  const uint64_t StrOff = StrShdr.sh_offset;
+  const uint64_t StrEnd = StrOff + StrShdr.sh_size;
+  if (SymEnd > Size || StrEnd > Size || SymEnd < SymOff || StrEnd < StrOff) {
+    log() << "hotswap: error: addKernelEntryTrampolineSymbols: symbol/string "
+          << "table extends past the ELF buffer.\n";
+    return nullptr;
+  }
+
+  // Build the appended string names and symbol entries.
+  SmallVector<uint8_t> StrBlob, SymBlob;
+  for (const KernelEntryTrampolineFixup &F : Fixups) {
+    std::string Name = F.KernelName + ".stub";
+    uint32_t NameOff =
+        static_cast<uint32_t>(StrShdr.sh_size + StrBlob.size());
+    StrBlob.append(Name.begin(), Name.end());
+    StrBlob.push_back(0);
+
+    std::optional<uint64_t> StubOff = checkedAddUint64(
+        OldTextSize, F.StubTextOffset, "stub symbol .text offset");
+    if (!StubOff)
+      return nullptr;
+    std::optional<uint64_t> StubVAddr =
+        checkedAddUint64(TextAddr, *StubOff, "stub symbol vaddr");
+    if (!StubVAddr)
+      return nullptr;
+
+    ELF::Elf64_Sym Sym{};
+    Sym.st_name = NameOff;
+    Sym.st_info = (ELF::STB_GLOBAL << 4) | ELF::STT_FUNC;
+    Sym.st_other = ELF::STV_DEFAULT;
+    Sym.st_shndx = static_cast<uint16_t>(TextSectionIndex);
+    Sym.st_value = *StubVAddr;
+    Sym.st_size = KernelEntryStubStride;
+    const uint8_t *P = reinterpret_cast<const uint8_t *>(&Sym);
+    SymBlob.append(P, P + sizeof(Sym));
+  }
+  // The section header table must stay 8-byte aligned (LLVM's ELF reader
+  // rejects a misaligned table). SymBlob is a multiple of 8 (24-byte entries),
+  // so pad the string blob up to a multiple of 8 with unreferenced NULs.
+  StrBlob.append((8 - (StrBlob.size() % 8)) % 8, 0);
+
+  const uint64_t SymDelta = SymBlob.size();
+  const uint64_t StrDelta = StrBlob.size();
+  const size_t NewSize = Size + SymDelta + StrDelta;
+
+  std::unique_ptr<WritableMemoryBuffer> Out =
+      WritableMemoryBuffer::getNewUninitMemBuffer(NewSize);
+  if (!Out) {
+    log() << "hotswap: error: addKernelEntryTrampolineSymbols: allocation of "
+          << NewSize << " bytes failed.\n";
+    return nullptr;
+  }
+  uint8_t *O = reinterpret_cast<uint8_t *>(Out->getBufferStart());
+
+  // Insert the new symbol entries right after the existing .symtab contents and
+  // the new strings right after the existing .strtab contents. Both insertion
+  // points are expressed in original-file coordinates; copying in ascending
+  // order keeps the arithmetic order-independent (either table may come first).
+  struct Insertion {
+    uint64_t Pos;
+    const SmallVector<uint8_t> *Bytes;
+  };
+  Insertion A{SymEnd, &SymBlob}, B{StrEnd, &StrBlob};
+  if (A.Pos > B.Pos)
+    std::swap(A, B);
+
+  size_t OutPos = 0, InPos = 0;
+  auto CopyThrough = [&](uint64_t Upto) {
+    std::memcpy(O + OutPos, Data + InPos, Upto - InPos);
+    OutPos += Upto - InPos;
+    InPos = Upto;
+  };
+  CopyThrough(A.Pos);
+  std::memcpy(O + OutPos, A.Bytes->data(), A.Bytes->size());
+  OutPos += A.Bytes->size();
+  CopyThrough(B.Pos);
+  std::memcpy(O + OutPos, B.Bytes->data(), B.Bytes->size());
+  OutPos += B.Bytes->size();
+  std::memcpy(O + OutPos, Data + InPos, Size - InPos);
+
+  // Anything at or beyond an insertion point shifts by that insertion's size.
+  auto Shift = [&](uint64_t X) -> uint64_t {
+    return X + (X >= SymEnd ? SymDelta : 0) + (X >= StrEnd ? StrDelta : 0);
+  };
+
+  uint64_t Shoff;
+  uint16_t Shentsize, Shnum;
+  std::memcpy(&Shoff, O + offsetof(Ehdr, e_shoff), sizeof(Shoff));
+  std::memcpy(&Shentsize, O + offsetof(Ehdr, e_shentsize), sizeof(Shentsize));
+  std::memcpy(&Shnum, O + offsetof(Ehdr, e_shnum), sizeof(Shnum));
+  uint64_t NewShoff = Shift(Shoff);
+  std::memcpy(O + offsetof(Ehdr, e_shoff), &NewShoff, sizeof(NewShoff));
+  if (Shentsize < sizeof(Shdr))
+    return nullptr;
+
+  for (uint16_t I = 0; I < Shnum; ++I) {
+    uint64_t P = NewShoff + static_cast<uint64_t>(I) * Shentsize;
+    if (P + sizeof(Shdr) > NewSize)
+      break;
+    uint8_t *Sh = O + P;
+    uint64_t ShOffset;
+    std::memcpy(&ShOffset, Sh + offsetof(Shdr, sh_offset), sizeof(ShOffset));
+    uint64_t NewOff = Shift(ShOffset);
+    std::memcpy(Sh + offsetof(Shdr, sh_offset), &NewOff, sizeof(NewOff));
+
+    if (I == SymIdx || I == StrIdx) {
+      uint64_t ShSize;
+      std::memcpy(&ShSize, Sh + offsetof(Shdr, sh_size), sizeof(ShSize));
+      ShSize += (I == SymIdx) ? SymDelta : StrDelta;
+      std::memcpy(Sh + offsetof(Shdr, sh_size), &ShSize, sizeof(ShSize));
+    }
+  }
+
+  log() << "hotswap: added " << Fixups.size()
+        << " kernel-entry stub symbol(s) to .symtab\n";
+  return Out;
+}
+
 // -- ElfView::growWithTrampolines ---------------------------------------------
 
 std::unique_ptr<WritableMemoryBuffer>

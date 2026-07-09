@@ -924,6 +924,20 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
     if (!rewriteKernelEntryDescriptorOffsets(*Result, PoolVAddr, LS.Cpu,
                                              EntryFixups))
       return AMD_COMGR_STATUS_ERROR;
+
+    // Give each appended entry stub a `<kernel>.stub` symbol so a dispatch
+    // whose entry now points at the stub still resolves to a name (e.g. rocgdb
+    // `info dispatches`). This grows only the non-alloc .symtab/.strtab and
+    // returns a new buffer; failure is non-fatal (the rewritten code object is
+    // still correct, just missing the debug-only symbol).
+    if (!EntryFixups.empty()) {
+      std::unique_ptr<WritableMemoryBuffer> WithSyms =
+          addKernelEntryTrampolineSymbols(*Result, Elf.textSectionIndex(),
+                                          Elf.textAddr(), Elf.textSize(),
+                                          EntryFixups);
+      if (WithSyms)
+        Result = std::move(WithSyms);
+    }
   } else {
     Result = copyOutputBuffer(Buf.data(), ElfSize, "patched");
     if (!Result)

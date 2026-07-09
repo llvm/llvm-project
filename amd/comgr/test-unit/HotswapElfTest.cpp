@@ -526,6 +526,101 @@ TEST(ElfView, GrowWithTrampolinesKeepsDwarfConsistentWithSymbol) {
   EXPECT_EQ(DwarfAddr, SymbolVAddr);
 }
 
+// Covers: addKernelEntryTrampolineSymbols attaches a distinct, correctly
+// placed `<kernel>.stub` symbol for every appended entry-trampoline stub, so a
+// dispatch whose entry now points at a stub still resolves to a name.
+//
+// How: build a synthetic AMDGPU code object that has a .symtab, then grow .text
+// by two entry-stub-sized (KernelEntryStubStride) blocks with
+// growWithTrampolines -- mirroring the pass appending one stub per kernel.
+// Call addKernelEntryTrampolineSymbols with two fixups that use distinct kernel
+// names and the two stub offsets (0 and KernelEntryStubStride). Re-parse the
+// returned buffer with llvm::object::ELFFile and, for each fixup, assert a
+// "<name>.stub" symbol exists in .symtab that is (a) STT_FUNC, (b) defined in
+// the .text section (st_shndx), (c) located at TextAddr + OldTextSize +
+// StubTextOffset, and (d) sized to KernelEntryStubStride. Two fixups (rather
+// than one) prove each stub gets its own name at its own address, not a single
+// shared or mis-placed entry.
+TEST(ElfView, AddKernelEntryTrampolineSymbolsNamesEachStub) {
+  comgr_test::KernelDescriptorElfOptions Opts;
+  Opts.KernelName = "entry_kernel";
+  comgr_test::KernelDescriptorElf Obj =
+      comgr_test::makeKernelDescriptorElf(makeText(), Opts);
+
+  llvm::Expected<ElfView> ViewOrErr =
+      ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
+  ASSERT_TRUE((bool)ViewOrErr) << llvm::toString(ViewOrErr.takeError());
+  const unsigned TextIdx = ViewOrErr->textSectionIndex();
+  const uint64_t TextAddr = ViewOrErr->textAddr();
+  const uint64_t OldTextSize = ViewOrErr->textSize();
+
+  // Grow .text by two entry-stub-sized blocks, mirroring the entry-trampoline
+  // pass appending one stub per kernel.
+  Trampoline Stub;
+  Stub.Bytes.assign(2 * KernelEntryStubStride, 0);
+  std::vector<Trampoline> Growth{Stub};
+  const uint8_t SNop[4] = {};
+  std::unique_ptr<llvm::WritableMemoryBuffer> Grown =
+      ViewOrErr->growWithTrampolines(Growth, SNop);
+  ASSERT_NE(Grown, nullptr);
+
+  // One fixup per appended stub; the names need not match real kernels, since
+  // addKernelEntryTrampolineSymbols only attaches a symbol at each stub address.
+  std::vector<KernelEntryTrampolineFixup> Fixups = {
+      {"kernel_a", /*StubTextOffset=*/0, /*RequiredSgprs=*/10},
+      {"kernel_b", /*StubTextOffset=*/KernelEntryStubStride, /*RequiredSgprs=*/12},
+  };
+  std::unique_ptr<llvm::WritableMemoryBuffer> WithSyms =
+      addKernelEntryTrampolineSymbols(*Grown, TextIdx, TextAddr, OldTextSize,
+                                      Fixups);
+  ASSERT_NE(WithSyms, nullptr);
+
+  using ELFT = llvm::object::ELF64LE;
+  const uint8_t *Data =
+      reinterpret_cast<const uint8_t *>(WithSyms->getBufferStart());
+  llvm::Expected<llvm::object::ELFFile<ELFT>> FileOrErr =
+      llvm::object::ELFFile<ELFT>::create(llvm::StringRef(
+          reinterpret_cast<const char *>(Data), WithSyms->getBufferSize()));
+  ASSERT_TRUE((bool)FileOrErr) << llvm::toString(FileOrErr.takeError());
+  llvm::object::ELFFile<ELFT> &File = *FileOrErr;
+
+  llvm::Expected<ELFT::ShdrRange> SecsOrErr = File.sections();
+  ASSERT_TRUE((bool)SecsOrErr) << llvm::toString(SecsOrErr.takeError());
+  const ELFT::Shdr *SymtabShdr = nullptr;
+  for (const ELFT::Shdr &S : *SecsOrErr)
+    if (S.sh_type == llvm::ELF::SHT_SYMTAB) {
+      SymtabShdr = &S;
+      break;
+    }
+  ASSERT_NE(SymtabShdr, nullptr);
+  llvm::Expected<ELFT::SymRange> SymsOrErr = File.symbols(SymtabShdr);
+  ASSERT_TRUE((bool)SymsOrErr) << llvm::toString(SymsOrErr.takeError());
+  llvm::Expected<llvm::StringRef> StrTabOrErr =
+      File.getStringTableForSymtab(*SymtabShdr);
+  ASSERT_TRUE((bool)StrTabOrErr) << llvm::toString(StrTabOrErr.takeError());
+
+  auto FindSym = [&](llvm::StringRef Name) -> const ELFT::Sym * {
+    for (const ELFT::Sym &Sym : *SymsOrErr) {
+      llvm::Expected<llvm::StringRef> N = Sym.getName(*StrTabOrErr);
+      if (N && *N == Name)
+        return &Sym;
+    }
+    return nullptr;
+  };
+
+  // Every appended stub must have a <kernel>.stub STT_FUNC symbol covering the
+  // stub, in the .text section, at the stub's virtual address.
+  for (const KernelEntryTrampolineFixup &F : Fixups) {
+    const ELFT::Sym *Sym = FindSym(F.KernelName + ".stub");
+    ASSERT_NE(Sym, nullptr) << "missing stub symbol for " << F.KernelName;
+    EXPECT_EQ(static_cast<unsigned>(Sym->getType()),
+              static_cast<unsigned>(llvm::ELF::STT_FUNC));
+    EXPECT_EQ(Sym->st_shndx, TextIdx);
+    EXPECT_EQ(Sym->st_value, TextAddr + OldTextSize + F.StubTextOffset);
+    EXPECT_EQ(Sym->st_size, KernelEntryStubStride);
+  }
+}
+
 TEST(ElfView, UpdateKernelDescriptorSgprCountUpdatesMetadataAndDescriptor) {
   comgr_test::KernelDescriptorElfOptions Opts;
   Opts.KernelName = "entry_kernel";
