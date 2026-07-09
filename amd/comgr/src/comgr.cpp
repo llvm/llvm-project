@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "comgr.h"
+#include "amd_comgr.h"
 #include "comgr-compiler.h"
 #include "comgr-device-libs.h"
 #include "comgr-disassembly.h"
@@ -80,6 +81,8 @@ amd_comgr_status_t dispatchCompilerAction(amd_comgr_action_kind_t ActionKind,
     return Compiler.compileToBitcode();
   case AMD_COMGR_ACTION_UNBUNDLE:
     return Compiler.unbundle();
+  case AMD_COMGR_ACTION_UNPACKAGE:
+    return Compiler.unpackage();
   case AMD_COMGR_ACTION_LINK_BC_TO_BC:
     return Compiler.linkBitcodeToBitcode();
   case AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE:
@@ -199,6 +202,8 @@ StringRef getActionKindName(amd_comgr_action_kind_t ActionKind) {
     return "AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC";
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_SPIRV:
     return "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_SPIRV";
+  case AMD_COMGR_ACTION_UNPACKAGE:
+    return "AMD_COMGR_ACTION_UNPACKAGE";
   }
 
   assert(false && "invalid action");
@@ -421,6 +426,20 @@ DataAction::setBundleEntryIDs(ArrayRef<const char *> EntryIDs) {
 }
 
 ArrayRef<std::string> DataAction::getBundleEntryIDs() { return BundleEntryIDs; }
+
+amd_comgr_status_t
+DataAction::setPackageEntryIDs(llvm::ArrayRef<amd_comgr_target_id_t> EntryIDs) {
+  PackageEntryIDs.clear();
+  for (const amd_comgr_target_id_t &ID : EntryIDs) {
+    PackageEntryIDs.emplace_back(ID.triple, ID.arch);
+  }
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+llvm::ArrayRef<std::pair<std::string, std::string>>
+DataAction::getPackageEntryIDs() {
+  return PackageEntryIDs;
+}
 
 amd_comgr_metadata_kind_t DataMeta::getMetadataKind() {
   if (DocNode.isScalar()) {
@@ -1119,6 +1138,73 @@ amd_comgr_status_t AMD_COMGR_API
 
 amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_action_info_get_package_entry_id_count
+    //
+    (amd_comgr_action_info_t ActionInfo, size_t *Count) {
+  DataAction *ActionP = DataAction::convert(ActionInfo);
+
+  if (!ActionP) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  *Count = ActionP->getPackageEntryIDs().size();
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_COMGR_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_action_info_get_package_entry_id
+    //
+    (amd_comgr_action_info_t ActionInfo, size_t Index, size_t *TripleSize,
+     char *Triple, size_t *ArchSize, char *Arch) {
+  DataAction *ActionP = DataAction::convert(ActionInfo);
+
+  if (!ActionP || !TripleSize || !ArchSize) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  ArrayRef<std::pair<std::string, std::string>> ActionPackageEntryIDs =
+      ActionP->getPackageEntryIDs();
+
+  if (Index >= ActionPackageEntryIDs.size()) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  const std::pair<std::string, std::string> &EntryID =
+      ActionPackageEntryIDs[Index];
+
+  // First return the sizes of the triple and arch strings; once the caller has
+  // allocated memory and passed in both buffers, copy the strings.
+  if (!Triple || !Arch) {
+    *TripleSize = EntryID.first.size() + 1;
+    *ArchSize = EntryID.second.size() + 1;
+  } else {
+    memcpy(Triple, EntryID.first.c_str(), *TripleSize);
+    memcpy(Arch, EntryID.second.c_str(), *ArchSize);
+  }
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_COMGR_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_action_info_set_package_entry_ids
+    //
+    (amd_comgr_action_info_t ActionInfo, const amd_comgr_target_id_t EntryIDs[],
+     size_t Count) {
+  DataAction *ActionP = DataAction::convert(ActionInfo);
+
+  if (!ActionP || (!EntryIDs && Count)) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  return ActionP->setPackageEntryIDs(
+      ArrayRef<amd_comgr_target_id_t>(EntryIDs, Count));
+}
+
+amd_comgr_status_t AMD_COMGR_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_set_vfs
     //
     (amd_comgr_action_info_t ActionInfo, bool ShouldUseVFS) {
@@ -1364,6 +1450,7 @@ amd_comgr_status_t AMD_COMGR_API
     case AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR:
     case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC:
     case AMD_COMGR_ACTION_UNBUNDLE:
+    case AMD_COMGR_ACTION_UNPACKAGE:
     case AMD_COMGR_ACTION_LINK_BC_TO_BC:
     case AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE:
     case AMD_COMGR_ACTION_CODEGEN_BC_TO_ASSEMBLY:

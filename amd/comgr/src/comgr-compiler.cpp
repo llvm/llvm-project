@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "comgr-compiler.h"
+#include "amd_comgr.h"
 #include "comgr-cache.h"
 #include "comgr-clang-command.h"
 #include "comgr-device-libs.h"
@@ -22,6 +23,7 @@
 #include "comgr-resource-directory.h"
 #include "comgr-spirv-command.h"
 #include "comgr-unbundle-command.h"
+#include "comgr-unpackage-command.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Driver.h"
 #include "clang/CodeGen/CodeGenAction.h"
@@ -35,7 +37,11 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Options/Options.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
@@ -59,9 +65,11 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
@@ -1785,6 +1793,148 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
       if (auto Status = amd_comgr_data_set_add(OutSetT, ResultT)) {
         return Status;
       }
+    }
+  }
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+// Determine the output file extension and Comgr data kind for an unpackaged
+// offload image by inspecting the image's magic bytes
+static amd_comgr_status_t
+getUnpackagedImageInfo(StringRef Image, const char *&FileExtension,
+                       amd_comgr_data_kind_t &DataKind) {
+  switch (llvm::identify_magic(Image)) {
+  case llvm::file_magic::elf:
+  case llvm::file_magic::elf_relocatable:
+  case llvm::file_magic::elf_executable:
+  case llvm::file_magic::elf_shared_object:
+  case llvm::file_magic::elf_core:
+    FileExtension = "o";
+    DataKind = AMD_COMGR_DATA_KIND_EXECUTABLE;
+    break;
+  case llvm::file_magic::bitcode:
+    FileExtension = "bc";
+    DataKind = AMD_COMGR_DATA_KIND_BC;
+    break;
+  case llvm::file_magic::cuda_fatbinary:
+    FileExtension = "fatbin";
+    DataKind = AMD_COMGR_DATA_KIND_FATBIN;
+    break;
+  case llvm::file_magic::spirv_object:
+    FileExtension = "spv";
+    DataKind = AMD_COMGR_DATA_KIND_SPIRV;
+    break;
+  default:
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMDGPUCompiler::unpackage() {
+  if (auto Status = createTmpDirs()) {
+    return Status;
+  }
+
+  for (auto *Input : InSet->DataObjects) {
+    // if supplied file isn't a package, return an error
+    if (Input->DataKind != AMD_COMGR_DATA_KIND_PACKAGE)
+      return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+    // Generate random name if none provided
+    if (StringRef(Input->Name).empty()) {
+      llvm::SmallString<22> Result;
+      llvm::sys::fs::createUniquePath("comgr-package-%%%%%%%%", Result, false);
+
+      Input->setName(Result);
+    }
+
+    llvm::SmallVector<llvm::object::OffloadFile> Files;
+
+    llvm::MemoryBufferRef DataBufferRef(StringRef(Input->Data, Input->Size),
+                                        Input->Name);
+    if (llvm::Error E =
+            llvm::object::extractOffloadBinaries(DataBufferRef, Files)) {
+      llvm::logAllUnhandledErrors(std::move(E), llvm::errs(),
+                                  "Failed to extract offload binaries: ");
+      return AMD_COMGR_STATUS_ERROR;
+    }
+
+    // Generate prefix for output files
+    StringRef OutputPrefix = llvm::sys::path::stem(Input->Name);
+
+    // TODO: Log Command (see linkBitcodeToBitcode() unbundling)
+    if (env::shouldEmitVerboseLogs()) {
+      LogS << "   Extracting Package:\n"
+           << "   Input Filename: " << Input->Name << "\n";
+    }
+
+    SmallVector<std::string> OutputFileNames;
+    SmallVector<llvm::object::OffloadFile::TargetID> TargetIDs;
+    SmallVector<amd_comgr_data_kind_t> DataKinds;
+    for (const llvm::object::OffloadFile &File : Files) {
+      const llvm::object::OffloadBinary *Binary = File.getBinary();
+      StringRef Triple = Binary->getTriple();
+      StringRef Arch = Binary->getArch();
+      std::string Target = (Triple + "-" + Arch).str();
+      llvm::object::OffloadFile::TargetID FileTarget = File;
+
+      for (const std::pair<std::string, std::string> &Entry :
+           ActionInfo->PackageEntryIDs) {
+        llvm::object::OffloadFile::TargetID EntryTarget =
+            std::make_pair(StringRef(Entry.first), StringRef(Entry.second));
+        // Select files whose target matches the requested entry exactly, or is
+        // compatible with it. areTargetsCompatible() reports false for an exact
+        // match, so the equality check handles the common case.
+        if (EntryTarget == FileTarget ||
+            llvm::object::areTargetsCompatible(EntryTarget, FileTarget)) {
+          const char *FileExtension;
+          amd_comgr_data_kind_t DataKind;
+          if (auto Status = getUnpackagedImageInfo(Binary->getImage(),
+                                                   FileExtension, DataKind))
+            return Status;
+          DataKinds.push_back(DataKind);
+
+          SmallString<128> OutputFilePath = OutputDir;
+          sys::path::append(OutputFilePath,
+                            OutputPrefix + "-" + Target + "." + FileExtension);
+
+          OutputFileNames.emplace_back(OutputFilePath);
+          TargetIDs.push_back(File);
+
+          if (env::shouldEmitVerboseLogs()) {
+            LogS << "\tPackage Entry Target: " << Target << "\n"
+                << "\tOutput Filename: " << OutputFilePath << "\n";
+            LogS.flush();
+          }
+        }
+      }
+    }
+
+    UnpackageCommand Unpackage(Files, TargetIDs, OutputFileNames);
+    if (auto Status = Unpackage.execute(LogS))
+      return Status;
+
+    for (const auto &[DataKind, OutputFilePath] :
+         llvm::zip_equal(DataKinds, OutputFileNames)) {
+
+      amd_comgr_data_t ResultT;
+
+      if (auto Status = amd_comgr_create_data(DataKind, &ResultT))
+        return Status;
+
+      // ResultT can be released after addition to the data_set
+      ScopedDataObjectReleaser SDOR(ResultT);
+
+      DataObject *Result = DataObject::convert(ResultT);
+      if (auto Status = inputFromFile(Result, OutputFilePath))
+        return Status;
+
+      StringRef OutputFileName = sys::path::filename(OutputFilePath);
+      Result->setName(OutputFileName);
+
+      if (auto Status = amd_comgr_data_set_add(OutSetT, ResultT))
+        return Status;
     }
   }
 

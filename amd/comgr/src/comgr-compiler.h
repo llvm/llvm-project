@@ -77,6 +77,7 @@ public:
   amd_comgr_status_t compileToBitcode(bool WithDeviceLibs = false);
   amd_comgr_status_t compileToRelocatable();
   amd_comgr_status_t unbundle();
+  amd_comgr_status_t unpackage();
   amd_comgr_status_t linkBitcodeToBitcode();
   amd_comgr_status_t codeGenBitcodeToRelocatable();
   amd_comgr_status_t codeGenBitcodeToAssembly();

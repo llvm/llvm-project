@@ -255,6 +255,12 @@ extern "C" {
  */
 #define AMD_COMGR_VERSION_3_4
 
+/**
+ * The function was introduced or changed in version 3.5 of the interface
+ * and has the symbol version string of ``"@amd_comgr_NAME@_3.5"``.
+ */
+#define AMD_COMGR_VERSION_3_5
+
 /** @} */
 
 /**
@@ -393,6 +399,10 @@ typedef enum amd_comgr_data_kind_s {
    * The data is a block of bytes.
    */
   AMD_COMGR_DATA_KIND_BYTES = 0x9,
+  /**
+   * The data is an llvm-offload-binary package.
+   */
+  AMD_COMGR_DATA_KIND_PACKAGE = 0xA,
   /**
    * The data is a fat binary (clang-offload-bundler output).
    */
@@ -1451,6 +1461,106 @@ amd_comgr_action_info_get_bundle_entry_id(
   char *bundle_entry_id) AMD_COMGR_VERSION_2_8;
 
 /**
+ * @brief A target identifier naming an offload target as a (triple, arch)
+ * pair, for example {"amdgcn-amd-amdhsa", "gfx900"}. Both members point to
+ * null-terminated strings owned by the caller.
+ */
+typedef struct {
+  const char *triple;
+  const char *arch;
+} amd_comgr_target_id_t;
+
+/**
+ * @brief Set the package entry IDs of an action info object.
+ *
+ * When an action info object is created it has no package entry IDs. Some
+ * actions require that the action info object has package entry IDs
+ * defined.
+ *
+ * @param[in] action_info A handle to the action info object to be
+ * updated.
+ *
+ * @param[in] package_entry_ids An array of target identifiers, each naming a
+ * package entry as a (triple, arch) pair. If NULL then the package entry IDs
+ * are cleared.
+ *
+ * @param[in] count The number of entries in @p package_entry_ids.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
+ * been executed successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p
+ * action_info is an invalid action info object. @p contains an invalid
+ * package ID not supported by this version of the code object manager
+ * library.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
+ * Unable to update action info object as out of resources.
+ */
+amd_comgr_status_t AMD_COMGR_API amd_comgr_action_info_set_package_entry_ids(
+    amd_comgr_action_info_t action_info,
+    const amd_comgr_target_id_t package_entry_ids[],
+    size_t count) AMD_COMGR_VERSION_3_5;
+
+/**
+ * @brief Get number of package entry IDs
+ *
+ * @param[in] action_info The action info object to query.
+ *
+ * @param[out] count The number of package entry IDs availible. This value
+ * can be used as an upper bound to the Index provided to the corresponding
+ * amd_comgr_get_package_entry_id() call.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
+ * been executed successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p
+ * action_info is an invalid action info object. @p size is NULL.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
+ * Unable to update the data object as out of resources.
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_action_info_get_package_entry_id_count(
+    amd_comgr_action_info_t action_info, size_t *count) AMD_COMGR_VERSION_3_5;
+
+/**
+ * @brief Fetch the Nth package entry ID (its triple and arch) or their lengths.
+ *
+ * @param[in] action_info The action info object to query.
+ *
+ * @param[in] index The index of the package entry ID to be returned.
+ *
+ * @param[in, out] triple_size For out, the number of characters to copy into
+ * @p triple. For in, if @p triple is NULL, set to the size of the Nth triple
+ * string including the terminating null character.
+ *
+ * @param[out] triple If not NULL, then the first @p triple_size characters of
+ * the Nth entry's triple are copied into @p triple. If NULL, nothing is copied
+ * and only the sizes are updated (useful to size the buffers first).
+ *
+ * @param[in, out] arch_size For out, the number of characters to copy into
+ * @p arch. For in, if @p arch is NULL, set to the size of the Nth arch string
+ * including the terminating null character.
+ *
+ * @param[out] arch If not NULL, then the first @p arch_size characters of the
+ * Nth entry's arch are copied into @p arch.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
+ * been executed successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p
+ * action_info is an invalid action info object. @p triple_size or @p arch_size
+ * is NULL.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
+ * Unable to update the data object as out of resources.
+ */
+amd_comgr_status_t AMD_COMGR_API amd_comgr_action_info_get_package_entry_id(
+    amd_comgr_action_info_t action_info, size_t index, size_t *triple_size,
+    char *triple, size_t *arch_size, char *arch) AMD_COMGR_VERSION_3_5;
+
+/**
  * @brief Set whether the specified action should use an 
  * in-memory virtual file system (VFS).
  *
@@ -1921,6 +2031,20 @@ typedef enum amd_comgr_action_kind_s {
    * if any input is not SPIR-V.
    */
   AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE = 0x10,
+
+
+  /**
+   * Unpackage each source data object in @p input. For each successful
+   * unpackaging, add a bc object or archive object to @p result, depending on
+   * the corresponding input.
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR if any unpackaging
+   * fails.
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
+   * if @p is not a package.
+   */
+  AMD_COMGR_ACTION_UNPACKAGE = 0x11,
 
    /**
    * Translate each source SPIR-V object in @p input into LLVM IR Bitcode.
