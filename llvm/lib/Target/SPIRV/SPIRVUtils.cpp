@@ -321,7 +321,7 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
     uint32_t Dec = static_cast<uint32_t>(DecorationId->getZExtValue());
     if (Dec == static_cast<uint32_t>(SPIRV::Decoration::UniformId)) {
       ConstantInt *ScopeV =
-          OpMD->getNumOperands() > 1
+          OpMD->getNumOperands() == 2
               ? mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(1))
               : nullptr;
       if (!ScopeV || !isUInt<32>(ScopeV->getZExtValue()))
