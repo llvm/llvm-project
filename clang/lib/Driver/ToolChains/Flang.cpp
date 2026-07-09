@@ -240,6 +240,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
                     options::OPT_fno_experimental_loop_fusion);
+  Args.addOptInFlag(CmdArgs, options::OPT_freal_sum_reassociation,
+                    options::OPT_fno_real_sum_reassociation);
 
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
