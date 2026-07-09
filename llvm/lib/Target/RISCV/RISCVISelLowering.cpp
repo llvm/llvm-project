@@ -6325,19 +6325,17 @@ static SDValue lowerVECTOR_SHUFFLEAsPZip(ShuffleVectorSDNode *SVN,
   unsigned NumElts = VT.getVectorNumElements();
   ArrayRef<int> Mask = SVN->getMask();
 
-  if ((VT != MVT::v8i8 && VT != MVT::v4i16) ||
-      V1.getSimpleValueType() != VT || V2.getSimpleValueType() != VT)
+  if (VT != MVT::v8i8 && VT != MVT::v4i16)
     return SDValue();
 
   SmallVector<unsigned, 2> StartIndexes;
   if (!V2.isUndef() &&
-      ShuffleVectorInst::isInterleaveMask(Mask, 2, NumElts * 2,
-                                          StartIndexes)) {
-    int EvenSrc = StartIndexes[0];
-    int OddSrc = StartIndexes[1];
-    if (EvenSrc == 0 && OddSrc == (int)NumElts)
+      ShuffleVectorInst::isInterleaveMask(Mask, 2, NumElts * 2, StartIndexes)) {
+    unsigned EvenSrc = StartIndexes[0];
+    unsigned OddSrc = StartIndexes[1];
+    if (EvenSrc == 0 && OddSrc == NumElts)
       return DAG.getNode(RISCVISD::PZIP, DL, VT, V1, V2);
-    if (EvenSrc == (int)NumElts && OddSrc == 0)
+    if (EvenSrc == NumElts && OddSrc == 0)
       return DAG.getNode(RISCVISD::PZIP, DL, VT, V2, V1);
   }
 
