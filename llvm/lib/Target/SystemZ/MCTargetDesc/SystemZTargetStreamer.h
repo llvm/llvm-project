@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZTARGETSTREAMER_H
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZTARGETSTREAMER_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -71,11 +72,42 @@ public:
   virtual void emitADA(MCSymbol *Sym, MCSection *Section) {}
 };
 
-class SystemZTargetGOFFStreamer : public SystemZTargetStreamer {
+class SystemZzOSStreamer : public SystemZTargetStreamer {
 public:
-  SystemZTargetGOFFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
-  const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
-                                   const MCSymbol *Lo) override;
+  /// Information about a single function needed to emit a PPA1 block.
+  struct PPA1Info {
+    StringRef Name;
+    MCSymbol *Fn = nullptr;          // Symbol marking function begin.
+    MCSymbol *FnEnd = nullptr;       // Symbol marking function end.
+    MCSymbol *PPA1 = nullptr;        // Symbol marking PPA1 begin.
+    MCSymbol *EPMarker = nullptr;    // Symbol marking entry point.
+    MCSymbol *EndOfProlog = nullptr; // Symbol marking the end of the prolog.
+    MCSymbol *StackUpdate = nullptr; // Symbol marking the stack updating instr.
+    MCSymbol *PersonalityRoutine = nullptr;
+    MCSymbol *GCCEH = nullptr;
+    int64_t OffsetFPR = 0;
+    int64_t OffsetVR = 0;
+    uint64_t CallFrameSize = 0;
+    uint64_t PersonalityADADisp = 0; // ADA displacement for personality routine.
+    uint64_t GCCEHADADisp = 0;       // ADA displacement for GCCEH symbol.
+    unsigned SizeOfFnParams = 0;
+    uint32_t FrameAndFPROffset;
+    uint32_t FrameAndVROffset;
+    uint16_t SavedGPRMask = 0;
+    uint16_t SavedFPRMask = 0;
+    uint8_t SavedVRMask = 0;
+    uint8_t FrameReg = 0;
+    uint8_t AllocaReg = 0;
+    bool IsVarArg = false;
+    bool HasStackProtector = false;
+  };
+
+  SmallVector<PPA1Info, 0> DeferredPPA1;
+
+  MCSymbol *PPA2Sym = nullptr;
+
+  SystemZzOSStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
+
   virtual void emitExternalName(MCSymbol *Sym, StringRef Name) override {
     static_cast<MCSymbolGOFF *>(Sym)->setExternalName(Name);
   }
@@ -86,27 +118,27 @@ public:
     static_cast<MCSymbolGOFF *>(Sym)->setADA(
         static_cast<MCSectionGOFF *>(Section));
   }
+
+  void emitConstantPools() override;
+  void emitPPA1(PPA1Info &Info);
 };
 
-class SystemZTargetHLASMStreamer : public SystemZTargetStreamer {
+class SystemZTargetGOFFStreamer : public SystemZzOSStreamer {
+public:
+  SystemZTargetGOFFStreamer(MCStreamer &S) : SystemZzOSStreamer(S) {}
+  const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
+                                   const MCSymbol *Lo) override;
+};
+
+class SystemZTargetHLASMStreamer : public SystemZzOSStreamer {
   formatted_raw_ostream &OS;
 
 public:
   SystemZTargetHLASMStreamer(MCStreamer &S, formatted_raw_ostream &OS)
-      : SystemZTargetStreamer(S), OS(OS) {}
+      : SystemZzOSStreamer(S), OS(OS) {}
   SystemZHLASMAsmStreamer &getHLASMStreamer();
   const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                    const MCSymbol *Lo) override;
-  virtual void emitExternalName(MCSymbol *Sym, StringRef Name) override {
-    static_cast<MCSymbolGOFF *>(Sym)->setExternalName(Name);
-  }
-  virtual void emitExternalName(MCSection *Sec, StringRef Name) override {
-    static_cast<MCSectionGOFF *>(Sec)->setExternalName(Name);
-  }
-  void emitADA(MCSymbol *Sym, MCSection *Section) override {
-    static_cast<MCSymbolGOFF *>(Sym)->setADA(
-        static_cast<MCSectionGOFF *>(Section));
-  }
 };
 
 class SystemZTargetELFStreamer : public SystemZTargetStreamer {
