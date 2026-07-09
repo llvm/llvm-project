@@ -11,6 +11,7 @@
 #include "DWARFDIE.h"
 #include "DWARFFormValue.h"
 #include "DWARFUnit.h"
+#include "LogChannelDWARF.h"
 #include "SymbolFileDWARF.h"
 
 #include "lldb/Core/Value.h"
@@ -27,47 +28,51 @@ using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
 using namespace llvm::dwarf;
 
+// Array properties can be encoded directly as constants, or as DWARF
+// expression blocks whose values need to be evaluated in an execution context.
 static std::optional<uint64_t>
-EvaluateUnsignedArrayProperty(const DWARFFormValue &form_value,
-                              const DWARFDIE &parent_die,
-                              const ExecutionContext *exe_ctx) {
-  // Array properties may be encoded directly as constants.
+EvaluateArrayPropertyAsUnsigned(const DWARFFormValue &form_value,
+                                const DWARFDIE &parent_die,
+                                const ExecutionContext *exe_ctx) {
+  if (DWARFFormValue::IsBlockForm(form_value.Form())) {
+    // Block-form values carry their byte length as the stored unsigned value.
+    // Evaluate the block instead of treating that length as the property value.
+    if (!exe_ctx)
+      return std::nullopt;
+
+    DWARFUnit *unit = parent_die.GetCU();
+    SymbolFileDWARF *dwarf = parent_die.GetDWARF();
+    if (!unit || !dwarf || !dwarf->GetObjectFile())
+      return std::nullopt;
+
+    lldb::RegisterContextSP reg_ctx_sp;
+    if (lldb::StackFrameSP frame_sp = exe_ctx->GetFrameSP())
+      reg_ctx_sp = frame_sp->GetRegisterContext();
+
+    DataExtractor data(form_value.BlockData(), form_value.Unsigned(),
+                       unit->GetByteOrder(), unit->GetAddressByteSize());
+    ExecutionContext exe_ctx_copy(*exe_ctx);
+
+    // Evaluate the DWARF expression to obtain the dynamic property value.
+    llvm::Expected<Value> result = DWARFExpression::Evaluate(
+        &exe_ctx_copy, reg_ctx_sp.get(), dwarf->GetObjectFile()->GetModule(),
+        data, unit, eRegisterKindDWARF,
+        /*initial_value_ptr=*/nullptr, /*object_address_ptr=*/nullptr);
+    if (!result) {
+      LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), result.takeError(),
+                     "failed to evaluate array property expression: {0}");
+      return std::nullopt;
+    }
+
+    return result->GetScalar().ULongLong();
+  }
+
   if (std::optional<uint64_t> value = form_value.getAsUnsignedConstant())
     return value;
   if (std::optional<int64_t> value = form_value.getAsSignedConstant())
     if (*value >= 0)
       return *value;
-
-  // Otherwise, evaluate expression blocks in the current execution context.
-  // Without a context there is no frame/register state to use for operations
-  // such as DW_OP_fbreg.
-  if (!DWARFFormValue::IsBlockForm(form_value.Form()) || !exe_ctx)
-    return std::nullopt;
-
-  DWARFUnit *unit = parent_die.GetCU();
-  SymbolFileDWARF *dwarf = parent_die.GetDWARF();
-  if (!unit || !dwarf || !dwarf->GetObjectFile())
-    return std::nullopt;
-
-  lldb::RegisterContextSP reg_ctx_sp;
-  if (lldb::StackFrameSP frame_sp = exe_ctx->GetFrameSP())
-    reg_ctx_sp = frame_sp->GetRegisterContext();
-
-  DataExtractor data(form_value.BlockData(), form_value.Unsigned(),
-                     unit->GetByteOrder(), unit->GetAddressByteSize());
-  ExecutionContext exe_ctx_copy(*exe_ctx);
-
-  // Evaluate the DWARF expression to obtain the dynamic property value.
-  llvm::Expected<Value> result = DWARFExpression::Evaluate(
-      &exe_ctx_copy, reg_ctx_sp.get(), dwarf->GetObjectFile()->GetModule(),
-      data, unit, eRegisterKindDWARF,
-      /*initial_value_ptr=*/nullptr, /*object_address_ptr=*/nullptr);
-  if (!result) {
-    llvm::consumeError(result.takeError());
-    return std::nullopt;
-  }
-
-  return result->GetScalar().ULongLong();
+  return std::nullopt;
 }
 
 std::optional<SymbolFile::ArrayInfo>
@@ -113,32 +118,32 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
                 }
               }
           } else
-            num_elements =
-                EvaluateUnsignedArrayProperty(form_value, parent_die, exe_ctx);
+            num_elements = EvaluateArrayPropertyAsUnsigned(form_value,
+                                                           parent_die, exe_ctx);
           break;
 
         case DW_AT_bit_stride:
           if (std::optional<uint64_t> bit_stride =
-                  EvaluateUnsignedArrayProperty(form_value, parent_die,
-                                                exe_ctx))
+                  EvaluateArrayPropertyAsUnsigned(form_value, parent_die,
+                                                  exe_ctx))
             array_info.bit_stride = *bit_stride;
           break;
 
         case DW_AT_byte_stride:
           if (std::optional<uint64_t> byte_stride =
-                  EvaluateUnsignedArrayProperty(form_value, parent_die,
-                                                exe_ctx))
+                  EvaluateArrayPropertyAsUnsigned(form_value, parent_die,
+                                                  exe_ctx))
             array_info.byte_stride = *byte_stride;
           break;
 
         case DW_AT_lower_bound:
           lower_bound =
-              EvaluateUnsignedArrayProperty(form_value, parent_die, exe_ctx);
+              EvaluateArrayPropertyAsUnsigned(form_value, parent_die, exe_ctx);
           break;
 
         case DW_AT_upper_bound:
           upper_bound =
-              EvaluateUnsignedArrayProperty(form_value, parent_die, exe_ctx);
+              EvaluateArrayPropertyAsUnsigned(form_value, parent_die, exe_ctx);
           break;
 
         default:
