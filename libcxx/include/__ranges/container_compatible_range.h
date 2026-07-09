@@ -18,16 +18,16 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Range, class _Tp>
 concept _ContainerCompatibleRange =
     ranges::input_range<_Range> && convertible_to<ranges::range_reference_t<_Range>, _Tp>;
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP___RANGES_CONTAINER_COMPATIBLE_RANGE_H

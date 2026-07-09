@@ -1009,7 +1009,7 @@ def OpWithResultShapeInterfaceOp : TEST_Op<"op_with_result_shape_interface",
 
 def ReifyShapedTypeUsingReifyResultShapesOp :
     TEST_Op<"reify_shaped_type_using_reify_result_shapes",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
             ["reifyResultShapes"]>]> {
   let description = [{
     Test that when resolving a single dimension of a result for an operation
@@ -1024,7 +1024,7 @@ def ReifyShapedTypeUsingReifyResultShapesOp :
 
 def ReifyShapedTypeUsingReifyShapeOfResultOp :
     TEST_Op<"reify_shaped_type_using_reify_shape_of_result",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
             ["reifyResultShapes", "reifyShapeOfResult"]>]> {
   let description = [{
     Test that when resolving a single dimension of a result for an operation
@@ -1040,7 +1040,7 @@ def ReifyShapedTypeUsingReifyShapeOfResultOp :
 
 def ReifyShapedTypeUsingReifyDimOfResultOp :
     TEST_Op<"reify_shaped_type_using_reify_dim_of_result",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
             ["reifyResultShapes", "reifyShapeOfResult", "reifyDimOfResult"]>]> {
   let description = [{
     Test that when resolving a single dimension of a result for an operation
@@ -1128,6 +1128,33 @@ def TestInternalBranchOp : TEST_Op<"internal_br",
                        Variadic<AnyType>:$errorOperands);
 
   let successors = (successor AnySuccessor:$successPath, AnySuccessor:$errorPath);
+}
+
+// A successor that must be the block immediately following the op's block.
+def FallthroughSuccessor : Successor<
+    CPred<"$_self == ($_op).getBlock()->getNextNode()">,
+    "the fallthrough block (the block immediately following the op's block)">;
+
+// A successor that must be a block listed after the op's block.
+def ForwardSuccessor : Successor<
+    CPred<[{
+      [&] {
+        for (::mlir::Block *block = ($_op).getBlock()->getNextNode(); block;
+             block = block->getNextNode())
+          if (block == $_self)
+            return true;
+        return false;
+      }()
+    }]>,
+    "a forward block (a block listed after the op's block)">;
+
+def TestFallthroughBranchOp : TEST_Op<"fallthrough_br", [Terminator]> {
+  let summary = "branch whose successors are constrained by predicates";
+  let successors = (successor FallthroughSuccessor:$target,
+                              VariadicSuccessor<ForwardSuccessor>:$forwardTargets);
+  let assemblyFormat = [{
+    $target `forward` `[` $forwardTargets `]` attr-dict
+  }];
 }
 
 def AttrSizedOperandOp : TEST_Op<"attr_sized_operands",
@@ -1358,10 +1385,10 @@ def OpQ : TEST_Op<"op_q"> {
   let results = (outs AnyType);
 }
 
-// Test constant-folding a pattern that maps `(F32) -> SI32`.
+// Test constant-folding a pattern that maps `(F32) -> I32`.
 def SignOp : TEST_Op<"sign", [SameOperandsAndResultShape]> {
   let arguments = (ins RankedTensorOf<[F32]>:$operand);
-  let results = (outs RankedTensorOf<[SI32]>:$result);
+  let results = (outs RankedTensorOf<[I32]>:$result);
 
   let assemblyFormat = [{
     $operand attr-dict `:` functional-type(operands, results)
@@ -4196,6 +4223,113 @@ def TestCreateTensorOp
 def TestCreateMemrefOp : TEST_Op<"create_memref_op"> {
   let arguments = (ins);
   let results = (outs Arg<Bufferization_BufferLikeTypeInterface>:$output);
+}
+
+def TestTensorWithFutureLayoutOp
+    : TEST_Op<"tensor_with_future_layout",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands", "bufferizesToAllocation"]>]> {
+  let description = [{
+    A tensor operation that creates a new value and then forces a specific
+    `TestMemRefLayoutAttr` layout during bufferization into a memref. In tensor
+    world, this op does nothing encoding/layout wise.
+  }];
+
+  let arguments = (ins TestMemRefLayoutAttr:$layout);
+  let results = (outs Bufferization_TensorLikeTypeInterface:$output);
+  let extraClassDefinition = [{
+    bool test::TestTensorWithFutureLayoutOp::bufferizesToMemoryRead(
+        ::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return false;
+    }
+    bool test::TestTensorWithFutureLayoutOp::bufferizesToMemoryWrite(
+        ::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return false;
+    }
+    bool test::TestTensorWithFutureLayoutOp::bufferizesToAllocation(
+        mlir::Value) {
+      return true;
+    }
+    ::mlir::bufferization::AliasingValueList
+    test::TestTensorWithFutureLayoutOp::getAliasingValues(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestTensorWithFutureLayoutOp::getAliasingOpOperands(::mlir::Value,
+        const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+  }];
+}
+
+def TestForceNewLayoutOp
+    : TEST_Op<"force_new_layout",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands"]>]> {
+  let description = [{
+    A tensor operation that modifies a pre-existing value and then forces a
+    specific `TestMemRefLayoutAttr` to be set during bufferization into a
+    memref. In tensor world, this op does nothing encoding/layout wise. It is
+    similar to TestTensorWithFutureLayoutOp, but it keeps the IR values
+    "connected" which can be particularly useful in e.g. SCF loop's body (one
+    can modify an initArg's layout and yield the new-layout value).
+  }];
+
+  let arguments = (ins
+    Bufferization_TensorLikeTypeInterface:$input,
+    TestMemRefLayoutAttr:$layout
+  );
+  let results = (outs Bufferization_TensorLikeTypeInterface:$output);
+  let extraClassDefinition = [{
+    bool test::TestForceNewLayoutOp::bufferizesToMemoryRead(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    bool test::TestForceNewLayoutOp::bufferizesToMemoryWrite(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    ::mlir::bufferization::AliasingValueList
+    test::TestForceNewLayoutOp::getAliasingValues(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{getOutput(), relation, /*isDefinite=*/true}};
+    }
+
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestForceNewLayoutOp::getAliasingOpOperands(::mlir::Value value,
+        const ::mlir::bufferization::AnalysisState&) {
+      if (value != getOutput())
+        return {};
+
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{&getOperation()->getOpOperand(0), relation,
+               /*isDefinite=*/true}};
+    }
+  }];
+}
+
+def TestDummyCastOp : TEST_Op<"dummy_cast_op", []> {
+  let arguments = (ins
+    Arg<Bufferization_BufferLikeTypeInterface>:$source
+  );
+  let results = (outs
+    Arg<Bufferization_BufferLikeTypeInterface>:$dest
+  );
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 }
 
 //===----------------------------------------------------------------------===//

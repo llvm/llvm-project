@@ -7,6 +7,7 @@
 void (*fnptr)(void);
 long int_discriminator;
 void *ptr_discriminator;
+void *pc_discriminator;
 long signature;
 
 // CHECK-LABEL: define {{.*}}void @test_auth()
@@ -65,6 +66,20 @@ void test_auth_load_relative_and_sign() {
   // CHECK-NEXT: [[RESULT:%.*]] = inttoptr  i64 [[T1]] to ptr
   // CHECK-NEXT: store ptr [[RESULT]], ptr @fnptr,
   fnptr = __builtin_ptrauth_auth_load_relative_and_sign(fnptr, 0, ptr_discriminator, 3, 15, 16L);
+}
+
+// CHECK-LABEL: define {{.*}}void @test_auth_with_pc_and_resign()
+void test_auth_with_pc_and_resign() {
+  // CHECK:      [[PTR:%.*]] = load ptr, ptr @fnptr,
+  // CHECK-NEXT: [[DISC0:%.*]] = load ptr, ptr @ptr_discriminator,
+  // CHECK-NEXT: [[PC:%.*]] = load ptr, ptr @pc_discriminator,
+  // CHECK-NEXT: [[T0:%.*]] = ptrtoint ptr [[PTR]] to i64
+  // CHECK-NEXT: [[DISC:%.*]] = ptrtoint ptr [[DISC0]] to i64
+  // CHECK-NEXT: [[PCVAL:%.*]] = ptrtoint ptr [[PC]] to i64
+  // CHECK-NEXT: [[T1:%.*]] = call i64 @llvm.ptrauth.auth.with.pc.and.resign(i64 [[T0]], i32 0, i64 [[DISC]], i64 [[PCVAL]], i32 3, i64 15)
+  // CHECK-NEXT: [[RESULT:%.*]] = inttoptr  i64 [[T1]] to ptr
+  // CHECK-NEXT: store ptr [[RESULT]], ptr @fnptr,
+  fnptr = __builtin_ptrauth_auth_with_pc_and_resign(fnptr, 0, ptr_discriminator, pc_discriminator, 3, 15);
 }
 
 // CHECK-LABEL: define {{.*}}void @test_blend_discriminator()

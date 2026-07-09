@@ -551,11 +551,7 @@ bool InlineAsmLowering::lowerInlineAsm(
 
       unsigned NumRegs = OpInfo.Regs.size();
       ArrayRef<Register> SourceRegs = GetOrCreateVRegs(*OpInfo.CallOperandVal);
-      assert(NumRegs == SourceRegs.size() &&
-             "Expected the number of input registers to match the number of "
-             "source registers");
-
-      if (NumRegs > 1) {
+      if (NumRegs != 1 || SourceRegs.size() != 1) {
         LLVM_DEBUG(dbgs() << "Input operands with multiple input registers are "
                              "not supported yet\n");
         return false;

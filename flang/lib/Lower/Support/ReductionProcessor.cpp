@@ -13,6 +13,7 @@
 #include "flang/Lower/Support/ReductionProcessor.h"
 
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/Support/PrivateReductionUtils.h"
@@ -47,6 +48,7 @@ template bool ReductionProcessor::processReductionArguments<
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    llvm::ArrayRef<Object> reductionObjects, lower::SymMap &symMap,
     llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache);
 
 template bool ReductionProcessor::processReductionArguments<
@@ -57,6 +59,7 @@ template bool ReductionProcessor::processReductionArguments<
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    llvm::ArrayRef<Object> reductionObjects, lower::SymMap &symMap,
     llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache);
 
 template mlir::omp::DeclareReductionOp
@@ -216,6 +219,17 @@ ReductionProcessor::getReductionName(ReductionIdentifier redId,
   return getReductionName(reductionName, kindMap, ty, isByRef);
 }
 
+std::string ReductionProcessor::getScopedUserReductionName(
+    AbstractConverter &converter, const semantics::Symbol &reductionSymbol) {
+  // Qualify the reduction symbol's ultimate name with its owning scope so that
+  // user-defined reductions with the same spelling in different modules get
+  // distinct op names. Use the (name, scope) mangleName overload: the
+  // (symbol) overload does not handle UserReductionDetails.
+  const semantics::Symbol &ultimate = reductionSymbol.GetUltimate();
+  std::string name = ultimate.name().ToString();
+  return converter.mangleName(name, ultimate.owner());
+}
+
 mlir::Value
 ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
                                           ReductionIdentifier redId,
@@ -366,6 +380,14 @@ mlir::Value ReductionProcessor::createScalarCombiner(
   }
 
   return reductionOp;
+}
+
+bool ReductionProcessor::isExpressionLoweredAsReductionObject(
+    const Object *object) {
+  if (!object || !object->ref())
+    return false;
+  const SomeExpr &expr = *object->ref();
+  return evaluate::IsArrayElement(expr);
 }
 
 template <typename ParentDeclOpType>
@@ -675,6 +697,7 @@ bool ReductionProcessor::processReductionArguments(
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    llvm::ArrayRef<Object> reductionObjects, lower::SymMap &symMap,
     llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
@@ -692,10 +715,14 @@ bool ReductionProcessor::processReductionArguments(
         if (!ReductionProcessor::supportedIntrinsicProcReduction(
                 *reductionIntrinsic)) {
           // If not an intrinsic is has to be a custom reduction op, and should
-          // be available in the module.
+          // be available in the module. The op is named using the scope in
+          // which the user-defined reduction was declared, so qualify the
+          // lookup name the same way the declaration and use sides do.
           semantics::Symbol *sym = reductionIntrinsic->v.sym();
           mlir::ModuleOp module = builder.getModule();
-          auto decl = module.lookupSymbol<OpType>(getRealName(sym).ToString());
+          std::string declName = getRealName(sym).ToString();
+          declName = converter.mangleName(declName, sym->GetUltimate().owner());
+          auto decl = module.lookupSymbol<OpType>(declName);
           if (!decl)
             return false;
         }
@@ -717,79 +744,105 @@ bool ReductionProcessor::processReductionArguments(
         builder.getRegion().getParentOfType<fir::DoConcurrentOp>());
   }
 
-  for (const semantics::Symbol *symbol : reductionSymbols) {
+  assert((reductionObjects.empty() ||
+          reductionSymbols.size() == reductionObjects.size()) &&
+         "mismatched reduction symbol and object lists");
+
+  for (unsigned i = 0; i < reductionSymbols.size(); ++i) {
+    const Object *object =
+        reductionObjects.empty() ? nullptr : &reductionObjects[i];
+    const semantics::Symbol *symbol =
+        object ? object->sym() : reductionSymbols[i];
+    const SomeExpr *expr = object && object->ref() ? &*object->ref() : nullptr;
+    const bool isObjectExpr =
+        ReductionProcessor::isExpressionLoweredAsReductionObject(object);
+
     // If a cached reduction variable exists for this symbol, reuse it.
     // This ensures that composite constructs (e.g. DO SIMD) where both
     // the outer wrapper (wsloop) and inner wrapper (simd) process the same
     // reduction clause share the same SSA value, enabling genLoopVars()'s
     // IRMapping to correctly remap inner wrapper operands to outer wrapper
-    // block arguments.
-    if (reductionVarCache) {
-      auto it = reductionVarCache->find(symbol);
-      if (it != reductionVarCache->end()) {
+    // block arguments. Array element reductions are intentionally not cached:
+    // block-argument object tracking maps their scoped uses.
+    if (reductionVarCache && !isObjectExpr) {
+      if (auto it = reductionVarCache->find(symbol);
+          it != reductionVarCache->end()) {
         reductionVars.push_back(it->second);
         reduceVarByRef.push_back(doReductionByRef(it->second));
         continue;
       }
     }
 
-    mlir::Value symVal = converter.getSymbolAddress(*symbol);
+    mlir::Value reductionVal;
+    mlir::Type refTy;
 
-    if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
-      symVal = declOp.getBase();
+    if (isObjectExpr) {
+      StatementContext stmtCtx;
+      hlfir::EntityWithAttributes entity = convertExprToHLFIR(
+          converter.getCurrentLocation(), converter, *expr, symMap, stmtCtx);
+      reductionVal = entity.getBase();
+      // TODO Add support for Boxed and Sequenced types once these are supported
+      refTy = reductionVal.getType();
+    } else {
+      mlir::Value symVal = converter.getSymbolAddress(*symbol);
 
-    mlir::Type eleType;
-    auto refType = mlir::dyn_cast_or_null<fir::ReferenceType>(symVal.getType());
-    if (refType)
-      eleType = refType.getEleTy();
-    else
-      eleType = symVal.getType();
+      if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
+        symVal = declOp.getBase();
 
-    // all arrays must be boxed so that we have convenient access to all the
-    // information needed to iterate over the array
-    if (mlir::isa<fir::SequenceType>(eleType)) {
-      // For Host associated symbols, use `SymbolBox` instead
-      lower::SymbolBox symBox = converter.lookupOneLevelUpSymbol(*symbol);
-      hlfir::Entity entity{symBox.getAddr()};
-      entity = genVariableBox(currentLocation, builder, entity);
-      mlir::Value box = entity.getBase();
+      mlir::Type eleType;
+      auto refType =
+          mlir::dyn_cast_or_null<fir::ReferenceType>(symVal.getType());
+      if (refType)
+        eleType = refType.getEleTy();
+      else
+        eleType = symVal.getType();
 
-      // Always pass the box by reference so that the OpenMP dialect
-      // verifiers don't need to know anything about fir.box
-      auto alloca =
-          fir::AllocaOp::create(builder, currentLocation, box.getType());
-      fir::StoreOp::create(builder, currentLocation, box, alloca);
+      // all arrays must be boxed so that we have convenient access to all the
+      // information needed to iterate over the array
+      if (mlir::isa<fir::SequenceType>(eleType)) {
+        // For Host associated symbols, use `SymbolBox` instead
+        lower::SymbolBox symBox = converter.lookupOneLevelUpSymbol(*symbol);
+        hlfir::Entity entity{symBox.getAddr()};
+        entity = genVariableBox(currentLocation, builder, entity);
+        mlir::Value box = entity.getBase();
 
-      symVal = alloca;
-    } else if (mlir::isa<fir::BaseBoxType>(symVal.getType())) {
-      // boxed arrays are passed as values not by reference. Unfortunately,
-      // we can't pass a box by value to omp.redution_declare, so turn it
-      // into a reference
-      auto oldIP = builder.saveInsertionPoint();
-      builder.setInsertionPointToStart(builder.getAllocaBlock());
-      auto alloca =
-          fir::AllocaOp::create(builder, currentLocation, symVal.getType());
-      builder.restoreInsertionPoint(oldIP);
-      fir::StoreOp::create(builder, currentLocation, symVal, alloca);
-      symVal = alloca;
+        // Always pass the box by reference so that the OpenMP dialect
+        // verifiers don't need to know anything about fir.box
+        auto alloca =
+            fir::AllocaOp::create(builder, currentLocation, box.getType());
+        fir::StoreOp::create(builder, currentLocation, box, alloca);
+
+        symVal = alloca;
+      } else if (mlir::isa<fir::BaseBoxType>(symVal.getType())) {
+        // boxed arrays are passed as values not by reference. Unfortunately,
+        // we can't pass a box by value to omp.redution_declare, so turn it
+        // into a reference
+        auto oldIP = builder.saveInsertionPoint();
+        builder.setInsertionPointToStart(builder.getAllocaBlock());
+        auto alloca =
+            fir::AllocaOp::create(builder, currentLocation, symVal.getType());
+        builder.restoreInsertionPoint(oldIP);
+        fir::StoreOp::create(builder, currentLocation, symVal, alloca);
+        symVal = alloca;
+      }
+
+      // this isn't the same as the by-val and by-ref passing later in the
+      // pipeline. Both styles assume that the variable is a reference at
+      // this point
+      assert(fir::isa_ref_type(symVal.getType()) &&
+             "reduction input var is passed by reference");
+      mlir::Type elementType = fir::dyn_cast_ptrEleTy(symVal.getType());
+      const bool symIsVolatile = fir::isa_volatile_type(symVal.getType());
+      refTy = fir::ReferenceType::get(elementType, symIsVolatile);
+      reductionVal = symVal;
     }
-
-    // this isn't the same as the by-val and by-ref passing later in the
-    // pipeline. Both styles assume that the variable is a reference at
-    // this point
-    assert(fir::isa_ref_type(symVal.getType()) &&
-           "reduction input var is passed by reference");
-    mlir::Type elementType = fir::dyn_cast_ptrEleTy(symVal.getType());
-    const bool symIsVolatile = fir::isa_volatile_type(symVal.getType());
-    mlir::Type refTy = fir::ReferenceType::get(elementType, symIsVolatile);
-
     reductionVars.push_back(
-        builder.createConvert(currentLocation, refTy, symVal));
+        builder.createConvert(currentLocation, refTy, reductionVal));
     reduceVarByRef.push_back(doReductionByRef(reductionVars.back()));
 
     // Cache the final SSA value for this symbol so that subsequent calls
     // (e.g. for the inner wrapper in a composite construct) reuse it.
-    if (reductionVarCache)
+    if (reductionVarCache && !isObjectExpr)
       reductionVarCache->try_emplace(symbol, reductionVars.back());
   }
 
@@ -806,6 +859,59 @@ bool ReductionProcessor::processReductionArguments(
           redOperatorList.front();
       if (const auto &redDefinedOp =
               std::get_if<omp::clause::DefinedOperator>(&redOperator.u)) {
+        if (const auto *definedOpName =
+                std::get_if<omp::clause::DefinedOperator::DefinedOpName>(
+                    &redDefinedOp->u)) {
+          // User-defined operator reduction (e.g. reduction(.myop.:x)). Resolve
+          // the use-site operator to its reduction symbol, which semantics
+          // names "op<spelling>" (MangleDefinedOperator in resolve-names), in
+          // the current scope, then reference the omp.declare_reduction op the
+          // directive materialized for it. Only a locally-declared,
+          // single-declaration, single-type reduction whose type the variable
+          // supports is handled here; anything else (imported, renamed, merged,
+          // or multiple declarations/types) is a clean TODO rather than a crash
+          // or a wrong binding.
+          const semantics::Symbol *opSym = definedOpName->v.sym();
+          std::string mangledName = "op" + opSym->name().ToString();
+          const semantics::Symbol *redSym =
+              converter.getCurrentScope().FindSymbol(
+                  parser::CharBlock{mangledName});
+          const semantics::Symbol *ultimate =
+              redSym ? &redSym->GetUltimate() : nullptr;
+          const semantics::UserReductionDetails *userDetails =
+              ultimate ? ultimate->detailsIf<semantics::UserReductionDetails>()
+                       : nullptr;
+          const semantics::DeclTypeSpec *varType =
+              reductionSymbols[idx]->GetUltimate().GetType();
+          if (!redSym || ultimate != redSym || !userDetails ||
+              userDetails->GetDeclList().size() != 1 ||
+              userDetails->GetTypeList().size() != 1 || !varType ||
+              !userDetails->SupportsType(*varType)) {
+            TODO(currentLocation,
+                 "OpenMP user-defined operator reduction is not yet supported "
+                 "for imported, renamed, or multiple-declaration/type "
+                 "reductions");
+          }
+          std::string opName = ReductionProcessor::getScopedUserReductionName(
+              converter, *redSym);
+          mlir::ModuleOp module = builder.getModule();
+          auto existingDecl = module.lookupSymbol<OpType>(opName);
+          // The MLIR verifier does not type-check these ops (they have no
+          // atomic region), so this is the only guard against binding a
+          // mismatched declaration. Compare unwrapped types: the clause redType
+          // is always a reference type, while the op stores the unwrapped type
+          // for by-value reductions.
+          if (!existingDecl || fir::unwrapRefType(existingDecl.getType()) !=
+                                   fir::unwrapRefType(redType)) {
+            TODO(currentLocation,
+                 "OpenMP user-defined operator reduction declaration was not "
+                 "materialized for this type");
+          }
+          reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+              builder.getContext(), existingDecl.getSymName()));
+          ++idx;
+          continue;
+        }
         const auto &intrinsicOp{
             std::get<omp::clause::DefinedOperator::IntrinsicOperator>(
                 redDefinedOp->u)};
@@ -843,11 +949,67 @@ bool ReductionProcessor::processReductionArguments(
           // Custom reductions we can just add to the symbols without
           // generating the declare reduction op.
           semantics::Symbol *sym = reductionIntrinsic->v.sym();
-          reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-              builder.getContext(), sym->name().ToString()));
+          // Qualify the name with the scope in which the user-defined
+          // reduction was declared so that reductions with the same name in
+          // different scopes refer to distinct omp.declare_reduction ops.
+          std::string reductionName = getRealName(sym).ToString();
+          reductionName =
+              converter.mangleName(reductionName, sym->GetUltimate().owner());
+          reductionDeclSymbols.push_back(
+              mlir::SymbolRefAttr::get(builder.getContext(), reductionName));
           ++idx;
           continue;
         }
+        // A user-defined reduction may shadow a built-in intrinsic reduction
+        // of the same name (max/min/iand/ior/ieor). Per the OpenMP spec, such
+        // reduction has the same visibility as a variable declared at the same
+        // location, so a visible declaration takes precedence over the
+        // intrinsic. Semantics names it "op<name>" (MangleSpecialFunctions in
+        // resolve-names). If one is visible in the current scope and supports
+        // the variable's type, bind to the omp.declare_reduction op the
+        // directive materialized for it instead of generating the intrinsic.
+        semantics::Symbol *sym = reductionIntrinsic->v.sym();
+        std::string mangledName = "op." + getRealName(sym).ToString();
+        if (const semantics::Symbol *redSym =
+                converter.getCurrentScope().FindSymbol(
+                    parser::CharBlock{mangledName})) {
+          const semantics::Symbol &ultimate = redSym->GetUltimate();
+          const semantics::UserReductionDetails *userDetails =
+              ultimate.detailsIf<semantics::UserReductionDetails>();
+          const semantics::DeclTypeSpec *varType =
+              reductionSymbols[idx]->GetUltimate().GetType();
+          // A user-defined reduction shadows the intrinsic only for the types
+          // it is declared for. If it does not cover this variable's type, the
+          // user has not redefined the reduction for that type and the
+          // implicit intrinsic reduction still applies, so fall through to it.
+          if (userDetails && varType && userDetails->SupportsType(*varType)) {
+            // The user declaration takes precedence over the intrinsic for this
+            // type. Only a locally-declared, single-declaration, single-type
+            // reduction is currently supported.
+            if (&ultimate != redSym || userDetails->GetDeclList().size() != 1 ||
+                userDetails->GetTypeList().size() != 1) {
+              TODO(currentLocation,
+                   "OpenMP user-defined reduction shadowing an intrinsic "
+                   "reduction is not yet supported for imported, renamed, or "
+                   "multiple-declaration/type reductions.");
+            }
+            std::string opName = ReductionProcessor::getScopedUserReductionName(
+                converter, ultimate);
+            mlir::ModuleOp module = builder.getModule();
+            auto existingDecl = module.lookupSymbol<OpType>(opName);
+            if (!existingDecl || fir::unwrapRefType(existingDecl.getType()) !=
+                                     fir::unwrapRefType(redType)) {
+              TODO(currentLocation,
+                   "OpenMP user-defined reduction declaration was not "
+                   "materialized for this type");
+            }
+            reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+                builder.getContext(), existingDecl.getSymName()));
+            ++idx;
+            continue;
+          }
+        }
+
         redId = getReductionType(*reductionIntrinsic);
         reductionName =
             getReductionName(getRealName(*reductionIntrinsic).ToString(),

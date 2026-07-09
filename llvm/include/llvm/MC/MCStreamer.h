@@ -294,7 +294,7 @@ protected:
   virtual void emitRawTextImpl(StringRef String);
 
   /// Returns true if the .cv_loc directive is in the right section.
-  bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
+  bool checkCVLocSection(unsigned FuncId, SMLoc Loc);
 
   std::unique_ptr<MCLFIRewriter> LFIRewriter;
 
@@ -853,7 +853,7 @@ public:
   /// \param MaxBytesToEmit - The maximum numbers of bytes to emit, or 0. If
   /// the alignment cannot be reached in this many bytes, no bytes are
   /// emitted.
-  virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
+  virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                                  unsigned MaxBytesToEmit = 0);
 
   virtual void emitPrefAlign(Align A, const MCSymbol &End, bool EmitNops,

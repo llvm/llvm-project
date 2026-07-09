@@ -155,7 +155,7 @@ end
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'g05'
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'g05'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = User
 !PARSE-TREE: | | OmpTraitSelector

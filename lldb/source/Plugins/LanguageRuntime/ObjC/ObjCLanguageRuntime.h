@@ -226,6 +226,11 @@ public:
         process.GetLanguageRuntime(lldb::eLanguageTypeObjC));
   }
 
+  /// Returns whether the architecture's object file format supports
+  /// Objective-C code generation. Generating Objective-C for a format that
+  /// does not aborts the compiler.
+  static bool IsSupportedForArchitecture(const ArchSpec &arch);
+
   virtual TaggedPointerVendor *GetTaggedPointerVendor() { return nullptr; }
 
   typedef std::shared_ptr<EncodingToType> EncodingToTypeSP;
@@ -301,6 +306,8 @@ public:
   virtual ObjCISA GetISA(ConstString name);
 
   virtual ObjCISA GetParentClass(ObjCISA isa);
+
+  virtual ObjCISA GetPointerISA(ObjCISA isa) { return isa; };
 
   // Finds the byte offset of the child_type ivar in parent_type.  If it can't
   // find the offset, returns LLDB_INVALID_IVAR_OFFSET.

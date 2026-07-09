@@ -1,6 +1,6 @@
 # Use a copy of inputs, as we'll mutate it (as will the background index).
 # RUN: rm -rf %/t
-# RUN: cp -r %/S/Inputs/background-index %/t
+# RUN: cp -R %/S/Inputs/background-index %/t
 # Need to embed the correct temp path in the actual JSON-RPC requests.
 # RUN: sed -e "s|DIRECTORY|%/t|" %/t/definition.jsonrpc.tmpl > %/t/definition.jsonrpc.1
 # RUN: sed -e "s|DIRECTORY|%/t|" %/t/compile_commands.json.tmpl > %/t/compile_commands.json

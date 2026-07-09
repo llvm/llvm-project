@@ -2036,7 +2036,7 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
 }
 
 bool GCNHazardRecognizer::fixVALUTransCoexecutionHazards(MachineInstr *MI) {
-  if (!ST.hasGFX1250Insts() || // Coexecution disabled.
+  if (!ST.hasTransCoexecutionHazard() || // Coexecution disabled.
       !SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/true) ||
       SIInstrInfo::isTRANS(*MI))
     return false;
@@ -2208,7 +2208,7 @@ static unsigned getWMMAHazardInstInCategory(const MachineInstr &MI,
 }
 
 int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
-  if (!ST.hasGFX1250Insts())
+  if (!ST.hasWMMACoexecutionHazards())
     return 0;
 
   const SIInstrInfo *TII = ST.getInstrInfo();

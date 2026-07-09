@@ -1020,7 +1020,7 @@ public:
 
     FileSpec src_fs(src);
     FileSystem::Instance().Resolve(src_fs);
-    FileSpec dst_fs(dst ? dst : src_fs.GetFilename().GetCString());
+    FileSpec dst_fs(dst ? dst : src_fs.GetFilename());
 
     PlatformSP platform_sp(
         GetDebugger().GetPlatformList().GetSelectedPlatform());
@@ -1248,9 +1248,9 @@ protected:
         const uint32_t matches =
             platform_sp->FindProcesses(m_options.match_info, proc_infos);
         const char *match_desc = nullptr;
-        const char *match_name =
+        llvm::StringRef match_name =
             m_options.match_info.GetProcessInfo().GetName();
-        if (match_name && match_name[0]) {
+        if (!match_name.empty()) {
           switch (m_options.match_info.GetNameMatchType()) {
           case NameMatch::Ignore:
             break;
