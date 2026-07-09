@@ -514,13 +514,6 @@ public:
   template <typename Result, typename Params, typename Fn, typename... Args>
   void Bind(llvm::StringLiteral method, Fn &&fn, Args &&...args);
 
-  /// Bind a handler for an incoming event.
-  /// e.g. `bind("peek", &ThisModule::peek, this);`
-  /// Handler should be e.g. `void peek(const PeekParams&);`
-  /// PeekParams must be JSON parsable.
-  template <typename Params, typename Fn, typename... Args>
-  void Bind(llvm::StringLiteral method, Fn &&fn, Args &&...args);
-
   /// Bind an asynchronous handler for an incoming request. The handler receives
   /// a Reply to invoke later instead of returning a result. This lets it defer
   /// the response, e.g. until a request it forwarded elsewhere is answered.
@@ -528,6 +521,13 @@ public:
   /// PeekParams must be JSON parsable and PeekResult must be serializable.
   template <typename Result, typename Params, typename Fn, typename... Args>
   void BindAsync(llvm::StringLiteral method, Fn &&fn, Args &&...args);
+
+  /// Bind a handler for an incoming event.
+  /// e.g. `bind("peek", &ThisModule::peek, this);`
+  /// Handler should be e.g. `void peek(const PeekParams&);`
+  /// PeekParams must be JSON parsable.
+  template <typename Params, typename Fn, typename... Args>
+  void Bind(llvm::StringLiteral method, Fn &&fn, Args &&...args);
 
   /// Bind a function object to be used for outgoing requests.
   /// e.g. `OutgoingRequest<Params, Result> Edit = bind("edit");`
