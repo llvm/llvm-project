@@ -24,11 +24,7 @@ int main(int argc, char** argv) {
     return std::search(first1, last1, first2, last2);
   };
   auto std_search_pred = [](auto first1, auto last1, auto first2, auto last2) {
-    return std::search(first1, last1, first2, last2, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
+    return std::search(first1, last1, first2, last2, [](auto x, auto y) { return x == y; });
   };
 
   // Benchmark {std,ranges}::search where the needle is never found (worst case).
