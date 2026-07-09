@@ -707,9 +707,11 @@ exit:
 ; as incoming value 0 and the reduction update as incoming value 1.
 ; Checks that the single use update value will be selected from either
 ; position rather than assuming it's always incoming value 0.
-define i32 @pred_reduction_incoming_1(ptr %src, ptr %cond_a, ptr %cond_b, i64 %N) #0 {
+; Placing the update block (if.then) before for.body will ensure the
+; update value comes second.
+define i32 @pred_reduction_incoming_1(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-LABEL: define i32 @pred_reduction_incoming_1(
-; CHECK-SAME: ptr [[SRC:%.*]], ptr [[COND_A:%.*]], ptr [[COND_B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[SRC:%.*]], ptr [[COND:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 5
@@ -725,20 +727,12 @@ define i32 @pred_reduction_incoming_1(ptr %src, ptr %cond_a, ptr %cond_b, i64 %N
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE6:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[COND_A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[COND]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP4]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 16 x i8>, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <vscale x 16 x i8> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <vscale x 16 x i8> [[WIDE_LOAD2]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[COND_B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 [[TMP2]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP8]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i8> poison)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP9]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i8> poison)
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_MASKED_LOAD3]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = select <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP10]], <vscale x 16 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = select <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP11]], <vscale x 16 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_LOAD2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD4:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> [[TMP12]], <vscale x 16 x i8> poison)
@@ -760,7 +754,7 @@ define i32 @pred_reduction_incoming_1(ptr %src, ptr %cond_a, ptr %cond_b, i64 %N
 ; CHECK:       [[SCALAR_PH]]:
 ;
 ; CHECK-TAILFOLD-LABEL: define i32 @pred_reduction_incoming_1(
-; CHECK-TAILFOLD-SAME: ptr [[SRC:%.*]], ptr [[COND_A:%.*]], ptr [[COND_B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-TAILFOLD-SAME: ptr [[SRC:%.*]], ptr [[COND:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-TAILFOLD-NEXT:  [[ENTRY:.*:]]
 ; CHECK-TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-TAILFOLD:       [[VECTOR_PH]]:
@@ -770,17 +764,12 @@ define i32 @pred_reduction_incoming_1(ptr %src, ptr %cond_a, ptr %cond_b, i64 %N
 ; CHECK-TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TAILFOLD:       [[VECTOR_BODY]]:
 ; CHECK-TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-TAILFOLD-NEXT:    [[TMP4:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TAILFOLD-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TAILFOLD-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[COND_A]], i64 [[INDEX]]
-; CHECK-TAILFOLD-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP2]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
-; CHECK-TAILFOLD-NEXT:    [[TMP3:%.*]] = icmp eq <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], zeroinitializer
-; CHECK-TAILFOLD-NEXT:    [[TMP4:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP3]], <vscale x 16 x i1> zeroinitializer
-; CHECK-TAILFOLD-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[COND_B]], i64 [[INDEX]]
+; CHECK-TAILFOLD-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[COND]], i64 [[INDEX]]
 ; CHECK-TAILFOLD-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP5]], <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i8> poison)
 ; CHECK-TAILFOLD-NEXT:    [[TMP6:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_MASKED_LOAD1]], zeroinitializer
-; CHECK-TAILFOLD-NEXT:    [[TMP7:%.*]] = select <vscale x 16 x i1> [[TMP3]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> zeroinitializer
-; CHECK-TAILFOLD-NEXT:    [[TMP8:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> zeroinitializer
+; CHECK-TAILFOLD-NEXT:    [[TMP8:%.*]] = select <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> zeroinitializer
 ; CHECK-TAILFOLD-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-TAILFOLD-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP9]], <vscale x 16 x i1> [[TMP8]], <vscale x 16 x i8> poison)
 ; CHECK-TAILFOLD-NEXT:    [[TMP10:%.*]] = zext <vscale x 16 x i8> [[WIDE_MASKED_LOAD2]] to <vscale x 16 x i32>
@@ -800,39 +789,29 @@ define i32 @pred_reduction_incoming_1(ptr %src, ptr %cond_a, ptr %cond_b, i64 %N
 entry:
   br label %for.body
 
+if.then:
+  %arrayidx2 = getelementptr inbounds nuw i8, ptr %src, i64 %iv
+  %val = load i8, ptr %arrayidx2, align 1
+  %conv = zext i8 %val to i32
+  %add = add nsw i32 %sum, %conv
+  br label %for.inc
+
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
-  %sum = phi i32 [ 0, %entry ], [ %sum.next, %for.inc ]
-
-  %arrayidx.cond.a = getelementptr inbounds nuw i8, ptr %cond_a, i64 %iv
-  %ca = load i8, ptr %arrayidx.cond.a, align 1
-  %cond.a = icmp ne i8 %ca, 0
-  br i1 %cond.a, label %if.end, label %if.else
-
-if.else:
-  %arrayidx.cond.b = getelementptr inbounds nuw i8, ptr %cond_b, i64 %iv
-  %cb = load i8, ptr %arrayidx.cond.b, align 1
-  %cond.b = icmp ne i8 %cb, 0
-  br i1 %cond.b, label %if.then, label %if.end
-
-if.then:
-  %arrayidx = getelementptr inbounds nuw i8, ptr %src, i64 %iv
-  %val = load i8, ptr %arrayidx, align 1
-  %ext = zext i8 %val to i32
-  %add = add nsw i32 %sum, %ext
-  br label %for.inc
-
-if.end:
-  br label %for.inc
+  %sum = phi i32 [ 0, %entry ], [ %sum.1, %for.inc ]
+  %arrayidx = getelementptr inbounds nuw i8, ptr %cond, i64 %iv
+  %c = load i8, ptr %arrayidx, align 1
+  %tobool.not = icmp eq i8 %c, 0
+  br i1 %tobool.not, label %for.inc, label %if.then
 
 for.inc:
-  %sum.next = phi i32 [ %add, %if.then ], [ %sum, %if.end ]
+  %sum.1 = phi i32 [ %add, %if.then ], [ %sum, %for.body ]
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %N
   br i1 %exitcond.not, label %exit, label %for.body
 
 exit:
-  ret i32 %sum.next
+  ret i32 %sum.1
 }
 
 ; UTC_ARGS: --disable
