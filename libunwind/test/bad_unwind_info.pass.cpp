@@ -13,6 +13,8 @@
 // REQUIRES: target={{(aarch64|s390x|x86_64)-.+}}
 // UNSUPPORTED: target={{.*-windows.*}}
 // UNSUPPORTED: target={{.*-apple.*}}
+// OHOS qemu-user does not reliably model this invalid unwind-info path.
+// UNSUPPORTED: ohos-qemu
 
 // GCC doesn't support __attribute__((naked)) on AArch64.
 // UNSUPPORTED: gcc

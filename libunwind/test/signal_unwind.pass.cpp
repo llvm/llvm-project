@@ -10,6 +10,8 @@
 // Ensure that the unwinder can cope with the signal handler.
 // REQUIRES: target={{(aarch64|loongarch64|riscv64|s390x|x86_64)-.+}}
 // UNSUPPORTED: target={{.*-windows.*}}
+// OHOS qemu-user does not provide device-equivalent signal unwinding behavior.
+// UNSUPPORTED: ohos-qemu
 
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan

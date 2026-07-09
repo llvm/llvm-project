@@ -10,6 +10,8 @@
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: libcpp-has-no-experimental-syncstream
+// This thread-heavy stress test is prohibitively slow under OHOS qemu-user.
+// UNSUPPORTED: ohos-qemu
 
 // <syncstream>
 

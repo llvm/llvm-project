@@ -23,7 +23,9 @@ import os, site
 site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
 import libcxx.test.params, libcxx.test.config
 
-executor_kind = lit_config.params.get('executor_kind', 'ohos-hdc')
+executor_kind = lit_config.params.get(
+    'executor_kind', getattr(config, 'executor_kind', 'ohos-hdc')
+)
 if executor_kind not in ('ohos-hdc', 'ohos-qemu'):
     lit_config.fatal(f'unsupported OHOS executor_kind: {executor_kind}')
 

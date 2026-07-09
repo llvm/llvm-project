@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// OHOS qemu-user does not match device fd ownership/signal behavior here.
+// UNSUPPORTED: ohos-qemu
+
 // <fstream>
 
 // basic_filebuf<charT,traits>* close();

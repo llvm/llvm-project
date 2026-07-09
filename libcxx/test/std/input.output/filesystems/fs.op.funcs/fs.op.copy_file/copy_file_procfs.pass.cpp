@@ -9,6 +9,8 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // REQUIRES: linux
 // UNSUPPORTED: no-filesystem
+// OHOS qemu-user observes the host /proc, not a real OHOS process /proc.
+// UNSUPPORTED: ohos-qemu
 // XFAIL: no-localization
 
 // <filesystem>

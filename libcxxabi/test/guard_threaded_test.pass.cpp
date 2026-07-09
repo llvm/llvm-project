@@ -9,6 +9,8 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: no-exceptions
+// This thread-heavy guard stress test is prohibitively slow under OHOS qemu-user.
+// UNSUPPORTED: ohos-qemu
 
 #define TESTING_CXA_GUARD
 #include "../src/cxa_guard_impl.h"
