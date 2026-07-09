@@ -168,7 +168,7 @@ extern "C" void
 mgpuMemHostRegisterMemRef(int64_t rank, StridedMemRefType<char, 1> *descriptor,
                           int64_t elementSizeBytes) {
   int64_t *sizes = descriptor->sizes;
-  int64_t *strides = &sizes[rank];
+  [[maybe_unused]] int64_t *strides = &sizes[rank];
   int64_t runningStride = 1;
   // Only densely packed tensors are currently supported.
   for (int64_t i = rank - 1; i >= 0; --i) {
