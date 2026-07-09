@@ -222,6 +222,8 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
                         .Default(OMPC_NUMTEAMS_unknown);
     if (LangOpts.OpenMP < 51)
       return OMPC_NUMTEAMS_unknown;
+    if (Type == OMPC_NUMTEAMS_dims && LangOpts.OpenMP < 61)
+      return OMPC_NUMTEAMS_unknown;
     return Type;
   }
   case OMPC_thread_limit: {
