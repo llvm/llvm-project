@@ -532,6 +532,34 @@ TEST(VerifierTest, AtomicRMWIntVector) {
       << Error;
 }
 
+TEST(VerifierTest, AtomicRMWXchgVector) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *FPTy = Type::getHalfTy(C);
+  Constant *CF = ConstantFP::getZero(FPTy);
+
+  // Invalid scalable type : atomicrmw xchg (<vscale x 2 x half>)
+  Constant *CV = ConstantVector::getSplat(ElementCount::getScalable(2), CF);
+  new AtomicRMWInst(AtomicRMWInst::Xchg, Ptr, CV, Align(8),
+                    AtomicOrdering::SequentiallyConsistent, SyncScope::System,
+                    /*Elementwise=*/false, Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).starts_with(
+      "atomicrmw xchg operand must have integer type, floating point type, "
+      "pointer type, or fixed vector of integer type, floating point type, or "
+      "pointer type!"))
+      << Error;
+}
+
 TEST(VerifierTest, GetElementPtrInst) {
   LLVMContext C;
   Module M("M", C);

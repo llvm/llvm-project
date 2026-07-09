@@ -9222,12 +9222,13 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   }
 
   if (Operation == AtomicRMWInst::Xchg) {
-    if (!ScalarTy->isIntegerTy() && !ScalarTy->isFloatingPointTy() &&
-        !ScalarTy->isPointerTy()) {
+    if (!ScalarTy->isIntOrIntVectorTy() && !ScalarTy->isFPOrFPVectorTy() &&
+        !ScalarTy->isPtrOrPtrVectorTy()) {
       return error(
           ValLoc,
           "atomicrmw " + AtomicRMWInst::getOperationName(Operation) +
-              " operand must be an integer, floating point, or pointer type");
+              " operand must be an integer type, floating point type, pointer type, or fixed "
+              "vector of integer type, floating point type, or pointer type");
     }
   } else if (IsFP) {
     if (!ScalarTy->isFPOrFPVectorTy()) {

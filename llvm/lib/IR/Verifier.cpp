@@ -4661,20 +4661,19 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
         "atomicrmw instructions cannot be unordered.", &RMWI);
   auto Op = RMWI.getOperation();
   Type *ElTy = RMWI.getOperand(1)->getType();
-  Type *ScalarTy = ElTy;
   if (RMWI.isElementwise()) {
     auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
     Check(VecTy, "atomicrmw elementwise operand must have fixed vector type!",
           &RMWI, ElTy);
-    if (VecTy)
-      ScalarTy = VecTy->getElementType();
   }
 
   if (Op == AtomicRMWInst::Xchg) {
-    Check(ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy() ||
-              ScalarTy->isPointerTy(),
+    Check((ElTy->isIntOrIntVectorTy() || ElTy->isFPOrFPVectorTy() ||
+           ElTy->isPtrOrPtrVectorTy()) &&
+              !isa<ScalableVectorType>(ElTy),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-              " operand must have integer or floating point type!",
+              " operand must have integer type, floating point type, pointer type, or fixed "
+              "vector of integer type, floating point type, or pointer type!",
           &RMWI, ElTy);
   } else if (AtomicRMWInst::isFPOperation(Op)) {
     Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),

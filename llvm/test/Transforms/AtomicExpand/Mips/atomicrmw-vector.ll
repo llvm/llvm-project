@@ -23,3 +23,14 @@ define <2 x i16> @test_atomicrmw_add_v2i16(ptr %ptr, <2 x i16> %value) {
   %res = atomicrmw add ptr %ptr, <2 x i16> %value seq_cst
   ret <2 x i16> %res
 }
+
+define <2 x i16> @test_atomicrmw_xchg_v2i16(ptr %ptr, <2 x i16> %value) {
+; CHECK-LABEL: @test_atomicrmw_xchg_v2i16(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[PTR:%.*]], i32 [[TMP1]] monotonic, align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to <2 x i16>
+; CHECK-NEXT:    ret <2 x i16> [[TMP3]]
+;
+  %res = atomicrmw xchg ptr %ptr, <2 x i16> %value monotonic
+  ret <2 x i16> %res
+}
