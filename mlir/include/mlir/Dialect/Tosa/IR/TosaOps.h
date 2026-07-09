@@ -92,6 +92,8 @@ public:
   }
 };
 
+LogicalResult verifyBlockScaledTensorType(mlir::Type type);
+
 } // namespace tosa
 } // namespace OpTrait
 

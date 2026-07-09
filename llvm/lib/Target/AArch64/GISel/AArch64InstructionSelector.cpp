@@ -6709,6 +6709,42 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     I.eraseFromParent();
     return true;
   }
+  case Intrinsic::ptrauth_auth_with_pc_and_resign: {
+    Register DstReg = I.getOperand(0).getReg();
+    Register ValReg = I.getOperand(2).getReg();
+    uint64_t AUTKey = I.getOperand(3).getImm();
+    Register AUTDisc = I.getOperand(4).getReg();
+    Register AUTPC = I.getOperand(5).getReg();
+    uint64_t PACKey = I.getOperand(6).getImm();
+    Register PACDisc = I.getOperand(7).getReg();
+
+    assert((AUTKey == AArch64PACKey::IA || AUTKey == AArch64PACKey::IB) &&
+           "auth_with_pc_and_resign only supports IA and IB keys");
+
+    uint16_t PACConstDiscC = 0;
+    Register PACAddrDisc;
+    std::tie(PACConstDiscC, PACAddrDisc) =
+        extractPtrauthBlendDiscriminators(PACDisc, MRI);
+
+    if (PACAddrDisc == AArch64::NoRegister)
+      PACAddrDisc = AArch64::XZR;
+
+    MIB.buildCopy({AArch64::X17}, {ValReg});
+    MIB.buildCopy({AArch64::X16}, {AUTDisc});
+    MIB.buildCopy({AArch64::X15}, {AUTPC});
+
+    MIB.buildInstr(AArch64::AUTPCPAC)
+        .addImm(AUTKey)
+        .addImm(PACKey)
+        .addImm(PACConstDiscC)
+        .addUse(PACAddrDisc)
+        .constrainAllUses(TII, TRI, RBI);
+
+    MIB.buildCopy({DstReg}, Register(AArch64::X17));
+    RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
+    I.eraseFromParent();
+    return true;
+  }
   case Intrinsic::ptrauth_auth: {
     Register DstReg = I.getOperand(0).getReg();
     Register ValReg = I.getOperand(2).getReg();

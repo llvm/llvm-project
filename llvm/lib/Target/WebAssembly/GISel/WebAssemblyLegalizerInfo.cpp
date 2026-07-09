@@ -146,8 +146,6 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
       .clampScalar(1, s32, s32);
-
-  getLegacyLegalizerInfo().computeTables();
 }
 
 bool WebAssemblyLegalizerInfo::legalizeCustom(
