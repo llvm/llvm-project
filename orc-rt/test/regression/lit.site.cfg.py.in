@@ -13,4 +13,4 @@ config.llvm_tools_dir = "@ORC_RT_LLVM_TOOLS_DIR@"
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
 # Let the main config do the real work.
-lit_config.load_config(config, "@ORC_RT_SOURCE_DIR@/test/lit.cfg.py")
+lit_config.load_config(config, "@ORC_RT_SOURCE_DIR@/test/regression/lit.cfg.py")
