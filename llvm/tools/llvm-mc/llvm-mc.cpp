@@ -529,6 +529,8 @@ int main(int argc, char **argv) {
       return 1;
     }
     Ctx.setDwarfFormat(dwarf::DWARF64);
+    if (GenDwarfForAssembly)
+      MOFI->setELFDwarf64Sections();
   }
   if (!DwarfDebugFlags.empty())
     Ctx.setDwarfDebugFlags(StringRef(DwarfDebugFlags));

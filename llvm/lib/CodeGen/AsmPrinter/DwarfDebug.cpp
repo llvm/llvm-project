@@ -442,6 +442,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
   Asm->OutStreamer->getContext().setDwarfFormat(Dwarf64 ? dwarf::DWARF64
                                                         : dwarf::DWARF32);
+  if (Dwarf64 && TT.isOSBinFormatELF())
+    Asm->TM.getObjFileLowering()->setELFDwarf64Sections();
 }
 
 // Define out of line so we don't have to include DwarfUnit.h in DwarfDebug.h.

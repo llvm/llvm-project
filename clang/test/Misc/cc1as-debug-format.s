@@ -5,6 +5,7 @@
 /// -gdwarf64 causes generating DWARF64 debug info.
 // RUN: %clang -cc1as -triple x86_64-pc-linux-gnu -filetype obj -gdwarf64 -debug-info-kind=limited -dwarf-version=4 %s -o %t
 // RUN: llvm-dwarfdump -all %t | FileCheck %s --check-prefixes=CHECK,DWARF64
+// RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix=SECTIONS
 /// -gdwarf32 is also handled and produces DWARF32 debug info.
 // RUN: %clang -cc1as -triple x86_64-pc-linux-gnu -filetype obj -gdwarf32 -debug-info-kind=limited -dwarf-version=4 %s -o %t
 // RUN: llvm-dwarfdump -all %t | FileCheck %s --check-prefixes=CHECK,DWARF32
@@ -19,6 +20,9 @@
 // CHECK-NEXT:     total_length:
 // DWARF32-NEXT:     format: DWARF32
 // DWARF64-NEXT:     format: DWARF64
+
+// SECTIONS:      Name: .debug_info
+// SECTIONS-NEXT: Type: SHT_DWARF64
 
 .text
   nop

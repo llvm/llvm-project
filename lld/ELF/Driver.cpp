@@ -65,6 +65,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cstdlib>
 #include <tuple>
 #include <utility>
@@ -1572,6 +1573,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.singleXoRx = !args.hasFlag(OPT_xosegment, OPT_no_xosegment, false);
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.sortSection = getSortSection(ctx, args);
+  ctx.arg.dwarf32BeforeDwarf64 = args.hasArg(OPT_dwarf32_before_dwarf64);
   ctx.arg.splitStackAdjustSize =
       args::getInteger(args, OPT_split_stack_adjust_size, 16384);
   ctx.arg.zSectionHeader =
@@ -1936,6 +1938,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   // it. Also disable RELRO for -r.
   if (ctx.arg.nmagic || ctx.arg.omagic || ctx.arg.relocatable)
     ctx.arg.zRelro = false;
+
+  if (ctx.arg.dwarf32BeforeDwarf64 && ctx.arg.relocatable)
+    ErrAlways(ctx) << "--dwarf32-before-dwarf64 is not supported with -r";
 
   std::tie(ctx.arg.buildId, ctx.arg.buildIdVector) = getBuildId(ctx, args);
 
@@ -3233,6 +3238,49 @@ static void postParseObjectFile(ELFFileBase *file) {
   }
 }
 
+static void
+partitionDwarf32AndDwarf64(ArrayRef<InputSectionDescription *> isds) {
+  SmallVector<InputSectionBase *, 0> sections;
+  for (InputSectionDescription *isd : isds)
+    sections.append(isd->sectionBases.begin(), isd->sectionBases.end());
+  if (sections.empty())
+    return;
+
+  std::stable_partition(sections.begin(), sections.end(),
+                        [](InputSectionBase *sec) {
+                          return sec->type != SHT_DWARF64;
+                        });
+
+  auto it = sections.begin();
+  for (InputSectionDescription *isd : isds) {
+    size_t size = isd->sectionBases.size();
+    std::copy(it, it + size, isd->sectionBases.begin());
+    it += size;
+  }
+}
+
+static void partitionDwarf32AndDwarf64(Ctx &ctx) {
+  for (SectionCommand *cmd : ctx.script->sectionCommands) {
+    auto *osd = dyn_cast<OutputDesc>(cmd);
+    if (!osd || !osd->osec.name.starts_with(".debug_"))
+      continue;
+
+    SmallVector<InputSectionDescription *, 0> isds;
+    auto flush = [&] {
+      partitionDwarf32AndDwarf64(isds);
+      isds.clear();
+    };
+    for (SectionCommand *subCmd : osd->osec.commands) {
+      if (auto *isd = dyn_cast<InputSectionDescription>(subCmd)) {
+        isds.push_back(isd);
+        continue;
+      }
+      flush();
+    }
+    flush();
+  }
+}
+
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
@@ -3556,6 +3604,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // Process that.
     ctx.script->addOrphanSections();
   }
+
+  if (ctx.arg.dwarf32BeforeDwarf64)
+    partitionDwarf32AndDwarf64(ctx);
 
   {
     llvm::TimeTraceScope timeScope("Merge/finalize input sections");

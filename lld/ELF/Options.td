@@ -71,6 +71,9 @@ defm compress_debug_sections:
   Eq<"compress-debug-sections", "Compress DWARF debug sections">,
   MetaVarName<"[none,zlib,zstd]">;
 
+def dwarf32_before_dwarf64: F<"dwarf32-before-dwarf64">,
+  HelpText<"Place DWARF32 debug input sections before DWARF64 debug input sections">;
+
 defm compress_sections: EEq<"compress-sections",
   "Compress output sections that match the glob and do not have the SHF_ALLOC flag. "
   "The sections remain uncompressed if compressed content would be larger. "

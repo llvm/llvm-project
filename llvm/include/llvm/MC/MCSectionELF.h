@@ -73,6 +73,7 @@ public:
   unsigned getType() const { return Type; }
   unsigned getFlags() const { return Flags; }
   unsigned getEntrySize() const { return EntrySize; }
+  void setType(unsigned T) { Type = T; }
   void setFlags(unsigned F) { Flags = F; }
   const MCSymbolELF *getGroup() const { return Group.getPointer(); }
   bool isComdat() const { return Group.getInt(); }

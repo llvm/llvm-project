@@ -29,6 +29,9 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
+* Added ``--dwarf32-before-dwarf64`` to place DWARF32 debug input sections
+  before DWARF64 debug input sections marked with ``SHT_DWARF64``.
+
 * Added ``--bp-compression-sort-section=<glob>[=<layout_priority>[=<match_priority>]]``,
   replacing the old coarse ``--bp-compression-sort`` modes with a way to split
   input sections into multiple compression groups, run balanced partitioning

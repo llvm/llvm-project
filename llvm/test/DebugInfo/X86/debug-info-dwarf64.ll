@@ -7,6 +7,7 @@
 ; RUN: llc -mtriple=x86_64 -dwarf-version=4 -dwarf64 -filetype=obj %s -o %t4
 ; RUN: llvm-dwarfdump -debug-abbrev -debug-info -v %t4 | \
 ; RUN:   FileCheck %s --check-prefixes=CHECK,DWARFv4
+; RUN: llvm-readobj --sections %t4 | FileCheck %s --check-prefix=SECTIONS
 
 ; CHECK:        .debug_abbrev contents:
 ; CHECK:        [1] DW_TAG_compile_unit   DW_CHILDREN_yes
@@ -36,6 +37,11 @@
 ; CHECK-NEXT:     DW_AT_type [DW_FORM_ref4]       (cu + {{.+}} => {{.+}} "int")
 ; CHECK:        DW_TAG_base_type [3]
 ; CHECK-NEXT:     DW_AT_name [DW_FORM_strp]       ( .debug_str[0x{{([[:xdigit:]]{16})}}] = "int")
+
+; SECTIONS:      Name: .debug_info
+; SECTIONS-NEXT: Type: SHT_DWARF64
+; SECTIONS:      Name: .debug_str
+; SECTIONS-NEXT: Type: SHT_DWARF64
 
 ; IR generated and reduced from:
 ; $ cat foo.c

@@ -90,7 +90,7 @@ uint64_t OutputSection::getLMA() const {
 static bool canMergeToProgbits(Ctx &ctx, unsigned type) {
   return type == SHT_NOBITS || type == SHT_PROGBITS || type == SHT_INIT_ARRAY ||
          type == SHT_PREINIT_ARRAY || type == SHT_FINI_ARRAY ||
-         type == SHT_NOTE ||
+         type == SHT_NOTE || type == SHT_DWARF64 ||
          (type == SHT_X86_64_UNWIND && ctx.arg.emachine == EM_X86_64) ||
          type == SHT_LLVM_CFI_JUMP_TABLE;
 }
@@ -233,8 +233,11 @@ void OutputSection::finalizeInputSections() {
         // section.
         //
         // SHF_STRINGS section with different alignments should not be merged.
+        // Keep DWARF32 and DWARF64 debug sections in separate buckets.
         return sec->flags == ms->flags && sec->entsize == ms->entsize &&
-               (sec->addralign == ms->addralign || !(sec->flags & SHF_STRINGS));
+               (!s->name.starts_with(".debug_") || sec->type == ms->type) &&
+               (sec->addralign == ms->addralign ||
+                !(sec->flags & SHF_STRINGS));
       });
       if (i == mergeSections.end()) {
         MergeSyntheticSection *syn = createMergeSynthetic(

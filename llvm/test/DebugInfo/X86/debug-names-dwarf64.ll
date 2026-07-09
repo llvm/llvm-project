@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=x86_64 -dwarf64 -accel-tables=Dwarf -dwarf-version=5 -filetype=obj %s -o %t
 ; RUN: llvm-dwarfdump -debug-info -debug-names %t | FileCheck %s
 ; RUN: llvm-dwarfdump -debug-names -verify %t | FileCheck --check-prefix=VERIFY %s
+; RUN: llvm-readobj --sections %t | FileCheck --check-prefix=SECTIONS %s
 
 ; CHECK:     .debug_info contents:
 ; CHECK-NEXT: 0x00000000:     Compile Unit: {{.+}}, format = DWARF64,
@@ -103,6 +104,9 @@
 ; CHECK-NEXT: }
 
 ; VERIFY: No errors.
+
+; SECTIONS:      Name: .debug_names
+; SECTIONS-NEXT: Type: SHT_DWARF64
 
 ; IR generated and reduced from:
 ; $ cat foo.c
