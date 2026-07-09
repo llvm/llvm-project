@@ -122,8 +122,7 @@ public:
 
     // Returns {level, isOneAS} for a given scope, or nullopt if unsupported.
     auto GetLevelAndOneAS =
-        [&](SyncScope::ID SSID)
-        -> std::optional<std::pair<unsigned, bool>> {
+        [&](SyncScope::ID SSID) -> std::optional<std::pair<unsigned, bool>> {
       for (unsigned I = 0; I < std::size(CrossAS); ++I) {
         if (CrossAS[I] == SSID)
           return std::make_pair(I, false);
