@@ -4909,7 +4909,7 @@ public:
     case RISCVNew:
       return "__riscv_new";
     }
-    llvm_unreachable("Invalid RISCV state value");
+    llvm_unreachable("Invalid RISC-V state value");
   }
 
   static ArmStateValue getArmZAState(unsigned AttrBits) {
