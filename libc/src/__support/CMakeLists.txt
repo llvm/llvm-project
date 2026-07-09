@@ -49,6 +49,7 @@ add_object_library(
   DEPENDS
     .block
     .freelist
+    libc.src.__support.math_extras
 )
 
 add_header_library(
