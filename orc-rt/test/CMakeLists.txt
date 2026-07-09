@@ -27,6 +27,9 @@ else()
   message(WARNING "ORC-RT testing tools missing (see cmake log for details). ORC-RT regression tests disabled.")
 endif()
 
+# Build and register the unit test suite (GoogleTest binaries run via lit).
+add_subdirectory(unit)
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/unit/lit.site.cfg.py
