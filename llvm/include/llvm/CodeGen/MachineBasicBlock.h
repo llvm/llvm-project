@@ -79,7 +79,7 @@ struct MBBSectionID {
 
 private:
   // This is only used to construct the special cold and exception sections.
-  MBBSectionID(SectionType T) : Type(T), Number(0) {}
+  constexpr MBBSectionID(SectionType T) : Type(T), Number(0) {}
 };
 
 template <> struct DenseMapInfo<MBBSectionID> {

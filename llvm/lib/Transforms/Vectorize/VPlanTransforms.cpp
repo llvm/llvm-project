@@ -1110,7 +1110,7 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
     VPValue *Mask;
     if (!match(Op, m_ExtractLane(m_LastActiveLane(m_VPValue(Mask)),
                                  m_VPValue(Incoming))) ||
-        Mask != vputils::findHeaderMask(Plan))
+        !match(Mask, m_HeaderMask()))
       return nullptr;
   }
 
@@ -1249,14 +1249,13 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
 /// an intrinsic ID.
 static std::optional<std::pair<bool, unsigned>>
 getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
+  if (Intrinsic::ID IID = vputils::getIntrinsicID(R))
+    return std::make_pair(true, IID);
   return TypeSwitch<const VPSingleDefRecipe *,
                     std::optional<std::pair<bool, unsigned>>>(R)
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
             VPReplicateRecipe>(
           [](auto *I) { return std::make_pair(false, I->getOpcode()); })
-      .Case([](const VPWidenIntrinsicRecipe *I) {
-        return std::make_pair(true, I->getVectorIntrinsicID());
-      })
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
           [](auto *I) {
             // For recipes that do not directly map to LLVM IR instructions,
@@ -1294,6 +1293,10 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
   auto FoldToIRValue = [&]() -> Value * {
     InstSimplifyFolder Folder(DL);
     if (OpcodeOrIID->first) {
+      // VPInstructions store the called intrinsic as last operand.
+      if (isa<VPInstruction>(R))
+        Ops.pop_back();
+
       auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(&R);
       return Folder.FoldIntrinsic(OpcodeOrIID->second, Ops, R.getScalarType(),
                                   RFlags ? RFlags->getFastMathFlagsOrNone()
@@ -1488,11 +1491,12 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
 
   // Drop the mask of a predicated store masked by the header mask (which is
   // guaranteed to be true at least for the first lane) and both the stored
-  // value and the address are uniform across VF and UF.
+  // value and the address are uniform across VF and UF. The header mask is
+  // still the abstract region value here.
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(Def);
       RepR && RepR->isPredicated() && RepR->getOpcode() == Instruction::Store &&
       all_of(RepR->operandsWithoutMask(), vputils::isUniformAcrossVFsAndUFs) &&
-      vputils::isHeaderMask(RepR->getMask(), *Plan)) {
+      match(RepR->getMask(), m_HeaderMask())) {
     auto *Unmasked = new VPReplicateRecipe(
         RepR->getUnderlyingInstr(), RepR->operandsWithoutMask(),
         RepR->isSingleScalar(), /*Mask=*/nullptr, *RepR, *RepR,
@@ -1875,7 +1879,50 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
   }
 }
 
+/// Removes the permutation pattern \p Perm from any elementwise operations
+/// in the plan, by constructing a new permutation via \p Build.
+/// e.g. binop(perm(x), perm(y)) -> perm(binop(x,y)).
+template <typename Match_t, typename Builder>
+static void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
+      if (!Def || !vputils::isElementwise(Def))
+        continue;
+
+      // At least one of the ops must be a permutation.
+      if (!any_of(Def->operands(), match_fn(Perm(m_VPValue()))))
+        continue;
+
+      // All operands must be permuted or a live in (splat).
+      if (!all_of(
+              Def->operands(),
+              match_fn(m_CombineOr(m_OneUse(Perm(m_VPValue())), m_LiveIn()))))
+        continue;
+
+      VPValue *X;
+      // Remove the inner permutations.
+      for (unsigned I = 0; I < Def->getNumOperands(); I++)
+        if (match(Def->getOperand(I), Perm(m_VPValue(X))))
+          Def->setOperand(I, X);
+
+      VPSingleDefRecipe *Res = Build(Def);
+      Res->insertAfter(Def);
+      Def->replaceUsesWithIf(
+          Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
+    }
+  }
+}
+
 void VPlanTransforms::simplifyReverses(VPlan &Plan) {
+  // Pull out reverses from any elementwise op.
+  // binop(reverse(x), reverse(y)) -> reverse(binop(x,y))
+  pullOutPermutations(
+      Plan, [](const auto &X) { return m_Reverse(X); },
+      [](auto *X) { return new VPInstruction(VPInstruction::Reverse, X); });
+
+  // reverse(reverse(x)) -> x
   VPValue *X;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry())))
@@ -1888,7 +1935,7 @@ void VPlanTransforms::simplifyReverses(VPlan &Plan) {
 /// header mask to be simplified further when tail folding, e.g. in
 /// optimizeEVLMasks.
 static void reassociateHeaderMask(VPlan &Plan) {
-  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
+  VPValue *HeaderMask = Plan.getVectorLoopRegion()->getHeaderMask();
   if (!HeaderMask)
     return;
 
@@ -2006,8 +2053,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
               return false;
             // Non-constant live-ins require broadcasts, while constants do not
             // need explicit broadcasts.
-            auto *IRV = dyn_cast<VPIRValue>(Op);
-            bool LiveInNeedsBroadcast = IRV && !isa<Constant>(IRV->getValue());
+            bool LiveInNeedsBroadcast =
+                isa<VPIRValue>(Op) && !isa<VPConstant>(Op);
             auto *OpR = dyn_cast<VPReplicateRecipe>(Op);
             return LiveInNeedsBroadcast || (OpR && OpR->isSingleScalar());
           }))
@@ -2487,10 +2534,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
                              C->second == Instruction::ExtractValue)))
       return false;
 
-    // During CSE, we can only handle recipes that don't read from memory: if
-    // they read from memory, there could be an intervening write to memory
-    // before the next instance is CSE'd, leading to an incorrect result.
-    return !Def->mayReadFromMemory();
+    // During CSE, we can only handle non-memory recipes, as memory can alias.
+    return !Def->mayReadOrWriteMemory();
   }
 
   /// Hash the underlying data of \p Def.
@@ -2966,32 +3011,36 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   return LaneMaskPhi;
 }
 
-void VPlanTransforms::addActiveLaneMask(VPlan &Plan,
-                                        bool UseActiveLaneMaskForControlFlow) {
+void VPlanTransforms::materializeHeaderMask(
+    VPlan &Plan, bool UseActiveLaneMask, bool UseActiveLaneMaskForControlFlow) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  auto *WideCanonicalIV =
-      findUserOf<VPWidenCanonicalIVRecipe>(LoopRegion->getCanonicalIV());
-  assert(WideCanonicalIV &&
-         "Must have widened canonical IV when tail folding!");
-  VPSingleDefRecipe *HeaderMask = vputils::findHeaderMask(Plan);
-  VPSingleDefRecipe *LaneMask;
+  VPValue *HeaderMask = LoopRegion->getUsedHeaderMask();
+  if (!HeaderMask)
+    return;
+
   if (UseActiveLaneMaskForControlFlow) {
-    LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(Plan);
-  } else {
-    VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
-    VPValue *ALMMultiplier =
-        Plan.getConstantInt(LoopRegion->getCanonicalIVType(), 1);
-    LaneMask =
-        B.createNaryOp(VPInstruction::ActiveLaneMask,
-                       {WideCanonicalIV, Plan.getTripCount(), ALMMultiplier},
-                       nullptr, "active.lane.mask");
+    HeaderMask->replaceAllUsesWith(addVPLaneMaskPhiAndUpdateExitBranch(Plan));
+    return;
   }
 
-  // Walk users of WideCanonicalIV and replace the header mask of the form
-  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count) with an active-lane-mask,
-  // removing the old one to ensure there is always only a single header mask.
-  HeaderMask->replaceAllUsesWith(LaneMask);
-  HeaderMask->eraseFromParent();
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  auto *WideCanonicalIV = Builder.insert(new VPWidenCanonicalIVRecipe(
+      LoopRegion->getCanonicalIV(),
+      VPIRFlags::WrapFlagsTy(/*HasNUW=*/true, /*HasNSW=*/false)));
+  VPValue *Mask;
+  if (UseActiveLaneMask) {
+    VPValue *ALMMultiplier =
+        Plan.getConstantInt(LoopRegion->getCanonicalIVType(), 1);
+    Mask = Builder.createNaryOp(
+        VPInstruction::ActiveLaneMask,
+        {WideCanonicalIV, Plan.getTripCount(), ALMMultiplier}, nullptr,
+        "active.lane.mask");
+  } else {
+    Mask = Builder.createICmp(CmpInst::ICMP_ULE, WideCanonicalIV,
+                              Plan.getOrCreateBackedgeTakenCount());
+  }
+  HeaderMask->replaceAllUsesWith(Mask);
 }
 
 template <typename Op0_t, typename Op1_t> struct RemoveMask_match {
@@ -3212,12 +3261,35 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
     }
   }
 
+  // Pull out left splices from any elementwise op.
+  // binop(splice.left(poison, x, evl), live-in)
+  // -> splice.left(poison, binop(x,live-in), evl)
+  pullOutPermutations(
+      Plan,
+      [&EVL](const auto &X) {
+        return m_Intrinsic<Intrinsic::vector_splice_left>(m_Poison(), X,
+                                                          m_Specific(EVL));
+      },
+      [&Plan, &EVL](auto *X) {
+        return new VPWidenIntrinsicRecipe(
+            Intrinsic::vector_splice_left,
+            {Plan.getPoison(X->getScalarType()), X, EVL}, X->getScalarType(),
+            {}, {}, X->getDebugLoc());
+      });
+
   // Fold the following splice patterns:
   //   splice.right(splice.left(poison, x, evl), poison, evl) -> x
   //   vector.reverse(splice.left(poison, x, evl))  -> vp.reverse(x, true, evl)
   //   splice.right(vector.reverse(x), poison, evl) -> vp.reverse(x, true, evl)
   for (VPUser *U : collectUsersRecursively(EVL)) {
     auto *R = cast<VPRecipeBase>(U);
+    // Remove potentially dead left splices from the transform above.
+    if (match(U, m_Intrinsic<Intrinsic::vector_splice_left>()) &&
+        R->getVPSingleValue()->getNumUsers() == 0) {
+      OldRecipes.push_back(R);
+      continue;
+    }
+
     VPValue *X;
     if (match(U, m_Intrinsic<Intrinsic::vector_splice_right>(
                      m_Intrinsic<Intrinsic::vector_splice_left>(
@@ -3331,7 +3403,7 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
     }
   }
 
-  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
+  VPValue *HeaderMask = LoopRegion->getHeaderMask();
   if (!HeaderMask)
     return;
 
@@ -3346,11 +3418,8 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
     return true;
   }));
 
-  // Replace header masks with a mask equivalent to predicating by EVL:
-  //
-  // icmp ule widen-canonical-iv backedge-taken-count
-  // ->
-  // icmp ult step-vector, EVL
+  // Replace the abstract header mask with a mask equivalent to predicating by
+  // EVL: icmp ult step-vector, EVL
   VPRecipeBase *EVLR = EVL.getDefiningRecipe();
   VPBuilder Builder(EVLR->getParent(), std::next(EVLR->getIterator()));
   Type *EVLType = EVL.getScalarType();
@@ -3692,9 +3761,13 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(VPlan &Plan) {
 
   // We want to exclude the tail folding case, as we don't need to drop flags
   // for operations computing the first lane in this case: the first lane of the
-  // header mask must always be true.
-  auto IsNotHeaderMask = [&Plan](VPValue *Mask) {
-    return Mask && !vputils::isHeaderMask(Mask, Plan);
+  // header mask must always be true. For reverse memory accesses, the mask is
+  // wrapped in a Reverse, which is just a permutation of the header mask, so
+  // peel it off before checking. The header mask is still the abstract region
+  // value at this point (materialization happens later).
+  auto IsNotHeaderMask = [](VPValue *Mask) {
+    return Mask &&
+           !match(Mask, m_CombineOr(m_HeaderMask(), m_Reverse(m_HeaderMask())));
   };
 
   // Traverse all the recipes in the VPlan and collect the poison-generating
@@ -5119,8 +5192,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 
   auto *VectorPreheader = Plan.getVectorPreheader();
   for (VPValue *VPV : VPValues) {
-    if (vputils::onlyScalarValuesUsed(VPV) ||
-        (isa<VPIRValue>(VPV) && isa<Constant>(VPV->getLiveInIRValue())))
+    if (vputils::onlyScalarValuesUsed(VPV) || isa<VPConstant>(VPV))
       continue;
 
     // Add explicit broadcast at the insert point that dominates all users.
@@ -5580,8 +5652,8 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
 }
 
 void VPlanTransforms::attachAliasMaskToHeaderMask(VPlan &Plan) {
-  VPSingleDefRecipe *HeaderMask = vputils::findHeaderMask(Plan);
-  auto *HeaderMaskDef = HeaderMask->getDefiningRecipe();
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPValue *HeaderMask = LoopRegion->getHeaderMask();
   Type *I1Ty = IntegerType::getInt1Ty(Plan.getContext());
 
   VPBuilder Builder(Plan.getVectorPreheader());
@@ -5589,10 +5661,8 @@ void VPlanTransforms::attachAliasMaskToHeaderMask(VPlan &Plan) {
       VPInstruction::IncomingAliasMask, {}, nullptr, {}, {},
       DebugLoc::getUnknown(), "incoming.alias.mask", I1Ty);
 
-  if (HeaderMaskDef->isPhi())
-    Builder = VPBuilder(&*HeaderMaskDef->getParent()->getFirstNonPhi());
-  else
-    Builder = VPBuilder::getToInsertAfter(HeaderMaskDef);
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+  Builder = VPBuilder(Header, Header->getFirstNonPhi());
 
   // Update all existing users of the header mask to "HeaderMask & AliasMask".
   auto *ClampedHeaderMask = Builder.createAnd(HeaderMask, AliasMask);
@@ -6341,7 +6411,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     return std::nullopt;
   };
 
-  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
+  VPValue *HeaderMask = VectorLoopRegion->getHeaderMask();
   for (VPRecipeBase &Phi :
        make_early_inc_range(VectorLoopRegion->getEntryBasicBlock()->phis())) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);

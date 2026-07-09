@@ -1158,7 +1158,8 @@ define i32 @v_mul_add_1_i16_zext_result(i16 %x, i16 %y) {
 ; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-REAL16-NEXT:    v_mad_u16 v0.l, v0.l, v1.l, v0.l
-; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-REAL16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-FAKE16-LABEL: v_mul_add_1_i16_zext_result:
@@ -1181,7 +1182,8 @@ define i32 @v_mul_add_1_i16_zext_result(i16 %x, i16 %y) {
 ; GFX13-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-REAL16-NEXT:    v_mad_u16 v0.l, v0.l, v1.l, v0.l
-; GFX13-REAL16-NEXT:    v_mov_b16_e32 v0.h, 0
+; GFX13-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-REAL16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX13-REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %add = add i16 %y, 1
   %mul = mul i16 %x, %add

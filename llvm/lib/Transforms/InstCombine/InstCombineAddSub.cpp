@@ -1770,8 +1770,15 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
   // A+B --> A|B iff A and B have no bits set in common.
   WithCache<const Value *> LHSCache(LHS), RHSCache(RHS);
-  if (haveNoCommonBitsSet(LHSCache, RHSCache, SQ.getWithInstruction(&I)))
+  switch (
+      getNoCommonBitsSetResult(LHSCache, RHSCache, SQ.getWithInstruction(&I))) {
+  case NoCommonBitsSetResult::Known:
     return BinaryOperator::CreateDisjointOr(LHS, RHS);
+  case NoCommonBitsSetResult::OnlyIfUndefIgnored:
+    return BinaryOperator::CreateOr(LHS, RHS);
+  case NoCommonBitsSetResult::Unknown:
+    break;
+  }
 
   if (Instruction *Ext = narrowMathIfNoOverflow(I))
     return Ext;
