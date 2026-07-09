@@ -151,7 +151,8 @@ elseif ("${LIBCXX_CXX_ABI}" STREQUAL "libcxxabi")
   if (NOT TARGET cxxabi_static AND NOT TARGET cxxabi_shared
       AND NOT TARGET cxxabi_static_objects AND NOT TARGET cxxabi_shared_objects)
     message(FATAL_ERROR "Can't find any libc++abi target but LIBCXX_CXX_ABI is set to libcxxabi, "
-                        "did you forget to include libcxxabi in LLVM_ENABLE_RUNTIMES?")
+                        "did you forget to include libcxxabi in LLVM_ENABLE_RUNTIMES, or did you "
+                        "intend to use LIBCXX_CXX_ABI=system-libcxxabi instead?")
   endif()
 
 # Link against a system-provided libc++abi
