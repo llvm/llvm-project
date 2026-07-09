@@ -13290,24 +13290,25 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
 
     // If this is a fixed vector, instead of using the concat vector, we simply
     // store each fixed vector operand directly onto the stack, individually.
-    // The reason being that if the fixed vector is (much) small than the
+    // The reason being that if the fixed vector is (much) smaller than the
     // container vector, we will be wasting space on stack.
     TypeSize VecSize = VecVT.getStoreSize();
     SDValue BasePtr = StackPtr;
     MachinePointerInfo PI = PtrInfo;
+    SmallVector<SDValue, 8> Tokens(Factor);
     for (auto [Idx, FieldOp] : enumerate(Op->op_values())) {
       if (Idx) {
         // Advance the pointer.
         BasePtr = DAG.getObjectPtrOffset(DL, BasePtr, VecSize);
         PI = PI.getWithOffset(VecSize);
       }
-      Chain = DAG.getStore(Chain, DL, FieldOp, BasePtr, PI, Alignment);
+      Tokens[Idx] = DAG.getStore(Chain, DL, FieldOp, BasePtr, PI, Alignment);
     }
+    Chain = DAG.getTokenFactor(DL, Tokens);
 
     // Calculating Mask and VL for later usages.
     std::tie(Mask, VL) =
-        getDefaultVLOps(VecVT.getVectorElementCount().getFixedValue(),
-                        ContainerVecVT, DL, DAG, Subtarget);
+        getDefaultVLOps(VecVT, ContainerVecVT, DL, DAG, Subtarget);
     ConcatVT = getContainerForFixedLengthVector(ConcatVT);
   } else {
     std::tie(Mask, VL) = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);

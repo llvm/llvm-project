@@ -264,12 +264,8 @@ define {<15 x i32>, <15 x i32>, <15 x i32>} @vector_deinterleave3_v15i32_v45i32(
 ; RV32-NEXT:    vse32.v v9, (a1)
 ; RV32-NEXT:    addi a1, sp, 192
 ; RV32-NEXT:    vse32.v v8, (a1)
-; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-NEXT:    vle32.v v12, (a1)
-; RV32-NEXT:    mv a1, sp
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vse32.v v12, (a1)
 ; RV32-NEXT:    addi a2, a0, 64
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a2)
 ; RV32-NEXT:    addi a2, sp, 384
 ; RV32-NEXT:    vse32.v v8, (a2)
@@ -280,27 +276,32 @@ define {<15 x i32>, <15 x i32>, <15 x i32>} @vector_deinterleave3_v15i32_v45i32(
 ; RV32-NEXT:    vse32.v v8, (a3)
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v16, v8, 8
-; RV32-NEXT:    vslidedown.vi v12, v12, 8
-; RV32-NEXT:    addi a3, sp, 96
+; RV32-NEXT:    addi a3, sp, 64
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vse32.v v8, (a3)
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; RV32-NEXT:    vle32.v v12, (a1)
+; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
+; RV32-NEXT:    vslidedown.vi v16, v12, 8
+; RV32-NEXT:    mv a1, sp
+; RV32-NEXT:    vslidedown.vi v8, v8, 8
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vse32.v v12, (a1)
+; RV32-NEXT:    addi a3, sp, 32
 ; RV32-NEXT:    vse32.v v16, (a3)
-; RV32-NEXT:    addi a4, sp, 32
-; RV32-NEXT:    vse32.v v12, (a4)
+; RV32-NEXT:    addi a3, sp, 96
+; RV32-NEXT:    vse32.v v8, (a3)
 ; RV32-NEXT:    lw a0, 112(a0)
 ; RV32-NEXT:    sw a0, 432(sp)
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-NEXT:    vle32.v v12, (a2)
-; RV32-NEXT:    addi a0, sp, 128
+; RV32-NEXT:    vle32.v v8, (a2)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v16, v12, 8
+; RV32-NEXT:    vslidedown.vi v12, v8, 8
+; RV32-NEXT:    addi a0, sp, 128
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vse32.v v12, (a0)
-; RV32-NEXT:    addi a0, sp, 64
 ; RV32-NEXT:    vse32.v v8, (a0)
 ; RV32-NEXT:    addi a0, sp, 160
-; RV32-NEXT:    vse32.v v16, (a0)
+; RV32-NEXT:    vse32.v v12, (a0)
 ; RV32-NEXT:    vlseg3e32.v v20, (a3)
 ; RV32-NEXT:    vlseg3e32.v v12, (a1)
 ; RV32-NEXT:    vmv4r.v v28, v20
@@ -360,12 +361,8 @@ define {<15 x i32>, <15 x i32>, <15 x i32>} @vector_deinterleave3_v15i32_v45i32(
 ; RV64-NEXT:    vse32.v v9, (a1)
 ; RV64-NEXT:    addi a1, sp, 192
 ; RV64-NEXT:    vse32.v v8, (a1)
-; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV64-NEXT:    vle32.v v12, (a1)
-; RV64-NEXT:    mv a1, sp
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vse32.v v12, (a1)
 ; RV64-NEXT:    addi a2, a0, 64
+; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a2)
 ; RV64-NEXT:    addi a2, sp, 384
 ; RV64-NEXT:    vse32.v v8, (a2)
@@ -379,27 +376,32 @@ define {<15 x i32>, <15 x i32>, <15 x i32>} @vector_deinterleave3_v15i32_v45i32(
 ; RV64-NEXT:    vse32.v v24, (a3)
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV64-NEXT:    vslidedown.vi v16, v8, 8
-; RV64-NEXT:    vslidedown.vi v12, v12, 8
-; RV64-NEXT:    addi a0, sp, 96
+; RV64-NEXT:    addi a0, sp, 64
 ; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vse32.v v16, (a0)
-; RV64-NEXT:    addi a3, sp, 32
-; RV64-NEXT:    vse32.v v12, (a3)
+; RV64-NEXT:    vse32.v v8, (a0)
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV64-NEXT:    vle32.v v12, (a2)
-; RV64-NEXT:    addi a2, sp, 128
+; RV64-NEXT:    vle32.v v12, (a1)
 ; RV64-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
 ; RV64-NEXT:    vslidedown.vi v16, v12, 8
+; RV64-NEXT:    mv a0, sp
+; RV64-NEXT:    vslidedown.vi v8, v8, 8
 ; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vse32.v v12, (a2)
-; RV64-NEXT:    addi a2, sp, 64
+; RV64-NEXT:    vse32.v v12, (a0)
+; RV64-NEXT:    addi a1, sp, 32
+; RV64-NEXT:    vse32.v v16, (a1)
+; RV64-NEXT:    addi a1, sp, 96
+; RV64-NEXT:    vse32.v v8, (a1)
+; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; RV64-NEXT:    vle32.v v8, (a2)
+; RV64-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
+; RV64-NEXT:    vslidedown.vi v12, v8, 8
+; RV64-NEXT:    addi a2, sp, 128
+; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64-NEXT:    vse32.v v8, (a2)
 ; RV64-NEXT:    addi a2, sp, 160
-; RV64-NEXT:    vse32.v v16, (a2)
-; RV64-NEXT:    vlseg3e32.v v20, (a0)
-; RV64-NEXT:    vlseg3e32.v v12, (a1)
+; RV64-NEXT:    vse32.v v12, (a2)
+; RV64-NEXT:    vlseg3e32.v v20, (a1)
+; RV64-NEXT:    vlseg3e32.v v12, (a0)
 ; RV64-NEXT:    vmv4r.v v28, v20
 ; RV64-NEXT:    vmv2r.v v30, v8
 ; RV64-NEXT:    vmv4r.v v8, v12
@@ -457,12 +459,8 @@ define {<15 x i32>, <15 x i32>, <15 x i32>} @vector_deinterleave3_v15i32_v45i32(
 ; ZVZIP-NEXT:    vse32.v v9, (a1)
 ; ZVZIP-NEXT:    addi a1, sp, 192
 ; ZVZIP-NEXT:    vse32.v v8, (a1)
-; ZVZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; ZVZIP-NEXT:    vle32.v v12, (a1)
-; ZVZIP-NEXT:    mv a1, sp
-; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; ZVZIP-NEXT:    vse32.v v12, (a1)
 ; ZVZIP-NEXT:    addi a2, a0, 64
+; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; ZVZIP-NEXT:    vle32.v v8, (a2)
 ; ZVZIP-NEXT:    addi a2, sp, 384
 ; ZVZIP-NEXT:    vse32.v v8, (a2)
@@ -476,27 +474,32 @@ define {<15 x i32>, <15 x i32>, <15 x i32>} @vector_deinterleave3_v15i32_v45i32(
 ; ZVZIP-NEXT:    vse32.v v24, (a3)
 ; ZVZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; ZVZIP-NEXT:    vle32.v v8, (a0)
-; ZVZIP-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; ZVZIP-NEXT:    vslidedown.vi v16, v8, 8
-; ZVZIP-NEXT:    vslidedown.vi v12, v12, 8
-; ZVZIP-NEXT:    addi a0, sp, 96
+; ZVZIP-NEXT:    addi a0, sp, 64
 ; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; ZVZIP-NEXT:    vse32.v v16, (a0)
-; ZVZIP-NEXT:    addi a3, sp, 32
-; ZVZIP-NEXT:    vse32.v v12, (a3)
+; ZVZIP-NEXT:    vse32.v v8, (a0)
 ; ZVZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; ZVZIP-NEXT:    vle32.v v12, (a2)
-; ZVZIP-NEXT:    addi a2, sp, 128
+; ZVZIP-NEXT:    vle32.v v12, (a1)
 ; ZVZIP-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vi v16, v12, 8
+; ZVZIP-NEXT:    mv a0, sp
+; ZVZIP-NEXT:    vslidedown.vi v8, v8, 8
 ; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; ZVZIP-NEXT:    vse32.v v12, (a2)
-; ZVZIP-NEXT:    addi a2, sp, 64
+; ZVZIP-NEXT:    vse32.v v12, (a0)
+; ZVZIP-NEXT:    addi a1, sp, 32
+; ZVZIP-NEXT:    vse32.v v16, (a1)
+; ZVZIP-NEXT:    addi a1, sp, 96
+; ZVZIP-NEXT:    vse32.v v8, (a1)
+; ZVZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; ZVZIP-NEXT:    vle32.v v8, (a2)
+; ZVZIP-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
+; ZVZIP-NEXT:    vslidedown.vi v12, v8, 8
+; ZVZIP-NEXT:    addi a2, sp, 128
+; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; ZVZIP-NEXT:    vse32.v v8, (a2)
 ; ZVZIP-NEXT:    addi a2, sp, 160
-; ZVZIP-NEXT:    vse32.v v16, (a2)
-; ZVZIP-NEXT:    vlseg3e32.v v20, (a0)
-; ZVZIP-NEXT:    vlseg3e32.v v12, (a1)
+; ZVZIP-NEXT:    vse32.v v12, (a2)
+; ZVZIP-NEXT:    vlseg3e32.v v20, (a1)
+; ZVZIP-NEXT:    vlseg3e32.v v12, (a0)
 ; ZVZIP-NEXT:    vmv4r.v v28, v20
 ; ZVZIP-NEXT:    vmv2r.v v30, v8
 ; ZVZIP-NEXT:    vmv4r.v v8, v12
@@ -520,20 +523,19 @@ define {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave4_v2i32_
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v11, v8, 2
+; CHECK-NEXT:    vslidedown.vi v10, v8, 6
+; CHECK-NEXT:    vslidedown.vi v12, v8, 4
 ; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    addi a1, sp, 8
-; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 6
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vse32.v v11, (a1)
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vse32.v v10, (a1)
 ; CHECK-NEXT:    addi a1, sp, 24
+; CHECK-NEXT:    vse32.v v10, (a1)
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vse32.v v12, (a1)
+; CHECK-NEXT:    addi a1, sp, 8
 ; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    vlseg4e32.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 32
@@ -546,25 +548,26 @@ define {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} @vector_deinterle
 ; CHECK-LABEL: vector_deinterleave5_v2i16_v10i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    addi a0, sp, 12
+; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 2
-; CHECK-NEXT:    vslidedown.vi v11, v8, 4
+; CHECK-NEXT:    vslidedown.vi v9, v8, 6
+; CHECK-NEXT:    addi a0, sp, 12
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    addi a1, sp, 28
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v12, v8, 6
-; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vslidedown.vi v11, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v10, (a1)
+; CHECK-NEXT:    addi a1, sp, 24
+; CHECK-NEXT:    vse16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    addi a1, sp, 20
-; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v11, (a1)
-; CHECK-NEXT:    addi a1, sp, 24
-; CHECK-NEXT:    vse16.v v12, (a1)
-; CHECK-NEXT:    addi a1, sp, 28
+; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    vlseg5e16.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 32
@@ -579,27 +582,28 @@ define {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} @vecto
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 8
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v11, v8, 2
-; CHECK-NEXT:    vslidedown.vi v12, v8, 4
+; CHECK-NEXT:    vslidedown.vi v10, v8, 10
+; CHECK-NEXT:    vslidedown.vi v12, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
-; CHECK-NEXT:    addi a1, sp, 12
-; CHECK-NEXT:    vse16.v v11, (a1)
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v11, v8, 6
-; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vslidedown.vi v9, v8, 6
+; CHECK-NEXT:    addi a1, sp, 28
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vse16.v v10, (a1)
+; CHECK-NEXT:    addi a1, sp, 24
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v12, (a1)
 ; CHECK-NEXT:    addi a1, sp, 20
-; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 10
+; CHECK-NEXT:    vse16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vse16.v v11, (a1)
-; CHECK-NEXT:    addi a1, sp, 24
 ; CHECK-NEXT:    vse16.v v10, (a1)
-; CHECK-NEXT:    addi a1, sp, 28
+; CHECK-NEXT:    addi a1, sp, 12
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    vlseg6e16.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 32
@@ -614,31 +618,31 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @v
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    addi a0, sp, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vslidedown.vi v11, v8, 6
+; CHECK-NEXT:    vslidedown.vi v9, v8, 12
+; CHECK-NEXT:    vslidedown.vi v10, v8, 10
+; CHECK-NEXT:    vslidedown.vi v11, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a0)
-; CHECK-NEXT:    addi a1, sp, 4
+; CHECK-NEXT:    addi a1, sp, 14
 ; CHECK-NEXT:    vse8.v v9, (a1)
 ; CHECK-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 8
-; CHECK-NEXT:    addi a1, sp, 6
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vse8.v v10, (a1)
-; CHECK-NEXT:    addi a1, sp, 8
-; CHECK-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 10
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vse8.v v11, (a1)
-; CHECK-NEXT:    addi a1, sp, 10
-; CHECK-NEXT:    vse8.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 12
+; CHECK-NEXT:    vslidedown.vi v9, v8, 6
 ; CHECK-NEXT:    addi a1, sp, 12
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vse8.v v10, (a1)
-; CHECK-NEXT:    addi a1, sp, 14
+; CHECK-NEXT:    addi a1, sp, 10
+; CHECK-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vse8.v v11, (a1)
+; CHECK-NEXT:    addi a1, sp, 8
+; CHECK-NEXT:    vse8.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    addi a1, sp, 6
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vse8.v v10, (a1)
+; CHECK-NEXT:    addi a1, sp, 4
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    vlseg7e8.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -652,37 +656,37 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vslidedown.vi v11, v8, 6
+; CHECK-NEXT:    vslidedown.vi v9, v8, 14
+; CHECK-NEXT:    vslidedown.vi v10, v8, 12
+; CHECK-NEXT:    vslidedown.vi v11, v8, 10
 ; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a0)
-; CHECK-NEXT:    addi a1, sp, 2
+; CHECK-NEXT:    addi a1, sp, 14
 ; CHECK-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v12, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vse8.v v9, (a1)
-; CHECK-NEXT:    addi a1, sp, 4
+; CHECK-NEXT:    addi a1, sp, 12
 ; CHECK-NEXT:    vse8.v v10, (a1)
 ; CHECK-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 10
-; CHECK-NEXT:    addi a1, sp, 6
+; CHECK-NEXT:    vslidedown.vi v9, v8, 6
+; CHECK-NEXT:    addi a1, sp, 10
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vse8.v v11, (a1)
 ; CHECK-NEXT:    addi a1, sp, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 12
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vse8.v v12, (a1)
-; CHECK-NEXT:    addi a1, sp, 10
+; CHECK-NEXT:    addi a1, sp, 6
 ; CHECK-NEXT:    vse8.v v9, (a1)
 ; CHECK-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 14
-; CHECK-NEXT:    addi a1, sp, 12
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    addi a1, sp, 4
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vse8.v v10, (a1)
-; CHECK-NEXT:    addi a1, sp, 14
+; CHECK-NEXT:    addi a1, sp, 2
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    vlseg8e8.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -893,20 +897,19 @@ define {<2 x float>, <2 x float>, <2 x float>, <2 x float>} @vector_deinterleave
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v11, v8, 2
+; CHECK-NEXT:    vslidedown.vi v10, v8, 6
+; CHECK-NEXT:    vslidedown.vi v12, v8, 4
 ; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    addi a1, sp, 8
-; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 6
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vse32.v v11, (a1)
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vse32.v v10, (a1)
 ; CHECK-NEXT:    addi a1, sp, 24
+; CHECK-NEXT:    vse32.v v10, (a1)
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vse32.v v12, (a1)
+; CHECK-NEXT:    addi a1, sp, 8
 ; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    vlseg4e32.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 32
@@ -921,25 +924,26 @@ define {<2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>} @vector_dein
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    addi a0, sp, 12
+; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 2
-; CHECK-NEXT:    vslidedown.vi v11, v8, 4
+; CHECK-NEXT:    vslidedown.vi v9, v8, 6
+; CHECK-NEXT:    addi a0, sp, 12
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    addi a1, sp, 28
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v12, v8, 6
-; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vslidedown.vi v11, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v10, (a1)
+; CHECK-NEXT:    addi a1, sp, 24
+; CHECK-NEXT:    vse16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    addi a1, sp, 20
-; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v11, (a1)
-; CHECK-NEXT:    addi a1, sp, 24
-; CHECK-NEXT:    vse16.v v12, (a1)
-; CHECK-NEXT:    addi a1, sp, 28
+; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    vlseg5e16.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 32
@@ -954,25 +958,26 @@ define {<2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat>} @v
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    addi a0, sp, 12
+; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 2
-; CHECK-NEXT:    vslidedown.vi v11, v8, 4
+; CHECK-NEXT:    vslidedown.vi v9, v8, 6
+; CHECK-NEXT:    addi a0, sp, 12
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    addi a1, sp, 28
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v12, v8, 6
-; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vslidedown.vi v11, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v10, (a1)
+; CHECK-NEXT:    addi a1, sp, 24
+; CHECK-NEXT:    vse16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    addi a1, sp, 20
-; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v11, (a1)
-; CHECK-NEXT:    addi a1, sp, 24
-; CHECK-NEXT:    vse16.v v12, (a1)
-; CHECK-NEXT:    addi a1, sp, 28
+; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    vlseg5e16.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 32
@@ -989,27 +994,28 @@ define {<2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>} 
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 8
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v11, v8, 2
-; CHECK-NEXT:    vslidedown.vi v12, v8, 4
+; CHECK-NEXT:    vslidedown.vi v10, v8, 10
+; CHECK-NEXT:    vslidedown.vi v12, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
-; CHECK-NEXT:    addi a1, sp, 12
-; CHECK-NEXT:    vse16.v v11, (a1)
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v11, v8, 6
-; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vslidedown.vi v9, v8, 6
+; CHECK-NEXT:    addi a1, sp, 28
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vse16.v v10, (a1)
+; CHECK-NEXT:    addi a1, sp, 24
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v12, (a1)
 ; CHECK-NEXT:    addi a1, sp, 20
-; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 10
+; CHECK-NEXT:    vse16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vse16.v v11, (a1)
-; CHECK-NEXT:    addi a1, sp, 24
 ; CHECK-NEXT:    vse16.v v10, (a1)
-; CHECK-NEXT:    addi a1, sp, 28
+; CHECK-NEXT:    addi a1, sp, 12
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    vlseg6e16.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 32
@@ -1026,27 +1032,28 @@ define {<2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 8
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v11, v8, 2
-; CHECK-NEXT:    vslidedown.vi v12, v8, 4
+; CHECK-NEXT:    vslidedown.vi v10, v8, 10
+; CHECK-NEXT:    vslidedown.vi v12, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
-; CHECK-NEXT:    addi a1, sp, 12
-; CHECK-NEXT:    vse16.v v11, (a1)
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v11, v8, 6
-; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vslidedown.vi v9, v8, 6
+; CHECK-NEXT:    addi a1, sp, 28
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vse16.v v10, (a1)
+; CHECK-NEXT:    addi a1, sp, 24
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v12, (a1)
 ; CHECK-NEXT:    addi a1, sp, 20
-; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 10
+; CHECK-NEXT:    vse16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vse16.v v11, (a1)
-; CHECK-NEXT:    addi a1, sp, 24
 ; CHECK-NEXT:    vse16.v v10, (a1)
-; CHECK-NEXT:    addi a1, sp, 28
+; CHECK-NEXT:    addi a1, sp, 12
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    vlseg6e16.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 32
@@ -1063,31 +1070,31 @@ define {<1 x half>, <1 x half>, <1 x half>, <1 x half>, <1 x half>, <1 x half>, 
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    addi a0, sp, 2
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vslidedown.vi v10, v8, 2
-; CHECK-NEXT:    vslidedown.vi v11, v8, 3
+; CHECK-NEXT:    vslidedown.vi v9, v8, 6
+; CHECK-NEXT:    vslidedown.vi v10, v8, 5
+; CHECK-NEXT:    vslidedown.vi v11, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
-; CHECK-NEXT:    addi a1, sp, 4
+; CHECK-NEXT:    addi a1, sp, 14
 ; CHECK-NEXT:    vse16.v v9, (a1)
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 4
-; CHECK-NEXT:    addi a1, sp, 6
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vse16.v v10, (a1)
-; CHECK-NEXT:    addi a1, sp, 8
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 5
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vse16.v v11, (a1)
-; CHECK-NEXT:    addi a1, sp, 10
-; CHECK-NEXT:    vse16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 6
+; CHECK-NEXT:    vslidedown.vi v9, v8, 3
 ; CHECK-NEXT:    addi a1, sp, 12
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v10, (a1)
-; CHECK-NEXT:    addi a1, sp, 14
+; CHECK-NEXT:    addi a1, sp, 10
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 2
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vse16.v v11, (a1)
+; CHECK-NEXT:    addi a1, sp, 8
+; CHECK-NEXT:    vse16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    addi a1, sp, 6
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vse16.v v10, (a1)
+; CHECK-NEXT:    addi a1, sp, 4
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    vlseg7e16.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -1104,31 +1111,31 @@ define {<1 x bfloat>, <1 x bfloat>, <1 x bfloat>, <1 x bfloat>, <1 x bfloat>, <1
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    addi a0, sp, 2
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vslidedown.vi v10, v8, 2
-; CHECK-NEXT:    vslidedown.vi v11, v8, 3
+; CHECK-NEXT:    vslidedown.vi v9, v8, 6
+; CHECK-NEXT:    vslidedown.vi v10, v8, 5
+; CHECK-NEXT:    vslidedown.vi v11, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
-; CHECK-NEXT:    addi a1, sp, 4
+; CHECK-NEXT:    addi a1, sp, 14
 ; CHECK-NEXT:    vse16.v v9, (a1)
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 4
-; CHECK-NEXT:    addi a1, sp, 6
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vse16.v v10, (a1)
-; CHECK-NEXT:    addi a1, sp, 8
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 5
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vse16.v v11, (a1)
-; CHECK-NEXT:    addi a1, sp, 10
-; CHECK-NEXT:    vse16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 6
+; CHECK-NEXT:    vslidedown.vi v9, v8, 3
 ; CHECK-NEXT:    addi a1, sp, 12
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v10, (a1)
-; CHECK-NEXT:    addi a1, sp, 14
+; CHECK-NEXT:    addi a1, sp, 10
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 2
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vse16.v v11, (a1)
+; CHECK-NEXT:    addi a1, sp, 8
+; CHECK-NEXT:    vse16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    addi a1, sp, 6
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vse16.v v10, (a1)
+; CHECK-NEXT:    addi a1, sp, 4
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    vlseg7e16.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -1144,37 +1151,37 @@ define {<1 x half>, <1 x half>, <1 x half>, <1 x half>, <1 x half>, <1 x half>, 
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vslidedown.vi v10, v8, 2
-; CHECK-NEXT:    vslidedown.vi v11, v8, 3
+; CHECK-NEXT:    vslidedown.vi v9, v8, 7
+; CHECK-NEXT:    vslidedown.vi v10, v8, 6
+; CHECK-NEXT:    vslidedown.vi v11, v8, 5
 ; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
-; CHECK-NEXT:    addi a1, sp, 2
+; CHECK-NEXT:    addi a1, sp, 14
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v12, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v9, (a1)
-; CHECK-NEXT:    addi a1, sp, 4
+; CHECK-NEXT:    addi a1, sp, 12
 ; CHECK-NEXT:    vse16.v v10, (a1)
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 5
-; CHECK-NEXT:    addi a1, sp, 6
+; CHECK-NEXT:    vslidedown.vi v9, v8, 3
+; CHECK-NEXT:    addi a1, sp, 10
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v11, (a1)
 ; CHECK-NEXT:    addi a1, sp, 8
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 6
+; CHECK-NEXT:    vslidedown.vi v10, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v12, (a1)
-; CHECK-NEXT:    addi a1, sp, 10
+; CHECK-NEXT:    addi a1, sp, 6
 ; CHECK-NEXT:    vse16.v v9, (a1)
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 7
-; CHECK-NEXT:    addi a1, sp, 12
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    addi a1, sp, 4
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v10, (a1)
-; CHECK-NEXT:    addi a1, sp, 14
+; CHECK-NEXT:    addi a1, sp, 2
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    vlseg8e16.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -1190,37 +1197,37 @@ define {<1 x bfloat>, <1 x bfloat>, <1 x bfloat>, <1 x bfloat>, <1 x bfloat>, <1
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vslidedown.vi v10, v8, 2
-; CHECK-NEXT:    vslidedown.vi v11, v8, 3
+; CHECK-NEXT:    vslidedown.vi v9, v8, 7
+; CHECK-NEXT:    vslidedown.vi v10, v8, 6
+; CHECK-NEXT:    vslidedown.vi v11, v8, 5
 ; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
-; CHECK-NEXT:    addi a1, sp, 2
+; CHECK-NEXT:    addi a1, sp, 14
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v12, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v9, (a1)
-; CHECK-NEXT:    addi a1, sp, 4
+; CHECK-NEXT:    addi a1, sp, 12
 ; CHECK-NEXT:    vse16.v v10, (a1)
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 5
-; CHECK-NEXT:    addi a1, sp, 6
+; CHECK-NEXT:    vslidedown.vi v9, v8, 3
+; CHECK-NEXT:    addi a1, sp, 10
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v11, (a1)
 ; CHECK-NEXT:    addi a1, sp, 8
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 6
+; CHECK-NEXT:    vslidedown.vi v10, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v12, (a1)
-; CHECK-NEXT:    addi a1, sp, 10
+; CHECK-NEXT:    addi a1, sp, 6
 ; CHECK-NEXT:    vse16.v v9, (a1)
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 7
-; CHECK-NEXT:    addi a1, sp, 12
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    addi a1, sp, 4
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v10, (a1)
-; CHECK-NEXT:    addi a1, sp, 14
+; CHECK-NEXT:    addi a1, sp, 2
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    vlseg8e16.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 16
