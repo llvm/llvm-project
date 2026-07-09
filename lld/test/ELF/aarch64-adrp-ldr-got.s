@@ -50,7 +50,8 @@
 # RUN: llvm-objdump --no-show-raw-insn -d %t/out-of-range | \
 # RUN:   FileCheck --check-prefix=X1-NO-RELAX %s
 
-## Relocations do not appear in pairs, no relaxations should be applied.
+## Relocations do not appear in pairs, no relaxations should be applied for
+## that symbol. We can still relax other symbols.
 # RUN: ld.lld %t/unpaired.o -o %t/unpaired
 # RUN: llvm-objdump --no-show-raw-insn -d %t/unpaired | \
 # RUN:   FileCheck --check-prefix=UNPAIRED %s
@@ -59,6 +60,9 @@
 # UNPAIRED-NEXT:    b
 # UNPAIRED-NEXT:    adrp   x0
 # UNPAIRED:         ldr	   x0
+## This is a different symbol.
+# UNPAIRED:         nop
+# UNPAIRED:         adr    x1
 
 ## Relocations do not appear in pairs, no relaxations should be applied.
 # RUN: ld.lld %t/lone-ldr.o -o %t/lone-ldr
@@ -69,16 +73,21 @@
 
 ## Make sure that relaxation is not applied if not all adrp+ldr pairs for
 ## a given symbol can be relaxed. This is not legal, because there may be
-## a branch between the adrp and ldr instructions. We can still perform the
-## relaxation for other symbols.
+## a branch destination between the adrp and ldr instructions. We can still
+## perform the relaxation for other symbols, or the same symbol in a different
+## section.
 # RUN: ld.lld %t/all-or-nothing.o -o %t/all-or-nothing
 # RUN: llvm-objdump --no-show-raw-insn -d %t/all-or-nothing | \
 # RUN:   FileCheck --check-prefix=ALL-OR-NOTHING %s
 
+# ALL-OR-NOTHING-LABEL: <_start>:
 # ALL-OR-NOTHING: adrp   x1
 # ALL-OR-NOTHING: ldr    x1
 # ALL-OR-NOTHING: adrp   x1
 # ALL-OR-NOTHING: ldr    x2
+# ALL-OR-NOTHING: nop
+# ALL-OR-NOTHING: adr    x1
+# ALL-OR-NOTHING-LABEL: <foo>:
 # ALL-OR-NOTHING: nop
 # ALL-OR-NOTHING: adr    x1
 
@@ -142,6 +151,9 @@ _start:
 .hidden x
 x:
   nop
+.hidden y
+y:
+  nop
 .global _start
 _start:
   adrp    x0, :got:x
@@ -149,6 +161,8 @@ _start:
   adrp    x0, :got:x
 L:
   ldr     x0, [x0, #:got_lo12:x]
+  adrp    x1, :got:y
+  ldr     x1, [x1, #:got_lo12:y]
 
 #--- lone-ldr.s
 .text
@@ -176,3 +190,9 @@ _start:
   ldr     x2, [x1, #:got_lo12:x]
   adrp    x1, :got:y
   ldr     x1, [x1, #:got_lo12:y]
+
+.section .text.foo
+.global foo
+foo:
+  adrp    x1, :got:x
+  ldr     x1, [x1, #:got_lo12:x]

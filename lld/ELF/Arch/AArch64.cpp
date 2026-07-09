@@ -907,7 +907,7 @@ AArch64Relaxer::AArch64Relaxer(Ctx &ctx, ArrayRef<Relocation> relocs,
     return;
   // For a given symbol R_AARCH64_ADR_GOT_PAGE and R_AARCH64_LD64_GOT_LO12_NC
   // relaxation is all-or-nothing. We can't relax only some of them, as there
-  // may be a jump between the two relocations.
+  // may be a jump destination between the two relocations.
   size_t i = 0;
   const size_t size = relocs.size();
   for (; i != size; ++i) {
