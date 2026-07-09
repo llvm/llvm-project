@@ -27,6 +27,7 @@
 #include "llvm/Support/LEB128.h"
 
 #include <algorithm>
+#include <cstdint>
 
 #define DEBUG_TYPE "riscv-frame"
 
@@ -2721,4 +2722,13 @@ int RISCVFrameLowering::getInitialCFAOffset(const MachineFunction &MF) const {
 Register
 RISCVFrameLowering::getInitialCFARegister(const MachineFunction &MF) const {
   return RISCV::X2;
+}
+
+// On 64-bit systems the fixed stack can hold INT64_MAX bytes, since
+// stack-offset calculation is done in 2s-complement.
+// NOTE: In theory a register can hold any 64-bit number, so this constraint
+// might be relaxed to UINT64_MAX in the future, if anyone actually needs
+// that.
+uint64_t RISCVFrameLowering::getStackThreshold() const {
+  return STI.is64Bit() ? INT64_MAX : UINT32_MAX;
 }

@@ -1754,6 +1754,11 @@ class PatGprPairGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), (vt GPRPair:$rs2))),
           (Inst GPRPair:$rs1, GPRPair:$rs2)>;
 
+// Unary GPRPair operation, one source register pair.
+class PatGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
+    : Pat<(vt (OpNode (vt GPRPair:$rs1))),
+          (Inst GPRPair:$rs1)>;
+
 // Reduction sum. PatRedSum is the single-GPR source (predsum.bs/hs/ws), result
 // XLenVT; PatRedSumPair is the RV32 paired source (predsum.dbs/dhs), result i32.
 // Target-illegal results (i32 accumulator on RV64, i64 on RV32) don't reach
@@ -1897,6 +1902,11 @@ def SDT_RISCVPPairE_DB : SDTypeProfile<2, 4, [SDTCisVT<0, v4i8>,
                                               SDTCisSameAs<0, 4>,
                                               SDTCisSameAs<0, 5>]>;
 def riscv_ppaire_db : RVSDNode<"PPAIRE_DB", SDT_RISCVPPairE_DB>;
+
+// signed-saturating abs of each lane; an INT_MIN lane maps to INT_MAX.
+def SDT_RISCVPackedUnary : SDTypeProfile<1, 1, [SDTCisVec<0>,
+                                                SDTCisSameAs<0, 1>]>;
+def riscv_psabs : RVSDNode<"PSABS", SDT_RISCVPackedUnary>;
 
 // Add one to the immediate. Used by RISCVISD::SATI.
 def IncImm : SDNodeXForm<imm, [{
@@ -2117,6 +2127,10 @@ let Predicates = [HasStdExtP] in {
   def : PatGprGpr<umax, PMAXU_B, XLenVecI8VT>;
   def : PatGprGpr<smax, PMAX_H, XLenVecI16VT>;
   def : PatGprGpr<umax, PMAXU_H, XLenVecI16VT>;
+
+  // 8/16-bit saturating absolute value patterns
+  def : PatGpr<riscv_psabs, PSABS_B, XLenVecI8VT>;
+  def : PatGpr<riscv_psabs, PSABS_H, XLenVecI16VT>;
 
   // 8/16-bit vselect patterns
   def : Pat<(XLenVecI8VT (vselect (XLenVecI8VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
@@ -2448,6 +2462,10 @@ let append Predicates = [IsRV32] in {
   def : PatGprPairGprPair<umax, PMAXU_DH, v4i16>;
   def : PatGprPairGprPair<smax, PMAX_DW, v2i32>;
   def : PatGprPairGprPair<umax, PMAXU_DW, v2i32>;
+
+  // 8/16-bit saturating absolute value patterns
+  def : PatGprPair<riscv_psabs, PSABS_DB, v8i8>;
+  def : PatGprPair<riscv_psabs, PSABS_DH, v4i16>;
 
   // 16-bit bswap patterns
   def : Pat<(v4i16 (bswap GPRPair:$rs)),

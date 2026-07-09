@@ -11856,7 +11856,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_pasub:
   case Intrinsic::riscv_pasubu:
   case Intrinsic::riscv_pabd:
-  case Intrinsic::riscv_pabdu: {
+  case Intrinsic::riscv_pabdu:
+  case Intrinsic::riscv_psabs: {
     unsigned Opc;
     switch (IntNo) {
     case Intrinsic::riscv_paadd:
@@ -11877,7 +11878,13 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     case Intrinsic::riscv_pabdu:
       Opc = ISD::ABDU;
       break;
+    case Intrinsic::riscv_psabs:
+      Opc = RISCVISD::PSABS;
+      break;
     }
+
+    if (IntNo == Intrinsic::riscv_psabs)
+      return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1));
 
     return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
@@ -15882,7 +15889,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_pssa:
     case Intrinsic::riscv_paas:
     case Intrinsic::riscv_pasa:
-    case Intrinsic::riscv_pmerge: {
+    case Intrinsic::riscv_pmerge:
+    case Intrinsic::riscv_psabs: {
       EVT VT = N->getValueType(0);
       if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
         return;
@@ -15907,6 +15915,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       case Intrinsic::riscv_pabdu:
         Opc = ISD::ABDU;
         break;
+      case Intrinsic::riscv_psabs:
+        Opc = RISCVISD::PSABS;
+        break;
       default:
         // pas/psa/psas/pssa/paas/pasa and pmerge: re-emit at the widened type
         // rather than lowering to a generic node.
@@ -15918,20 +15929,25 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Undef = DAG.getUNDEF(VT);
       SDValue Op0 =
           DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(1), Undef);
-      SDValue Op1 =
-          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(2), Undef);
       SDValue Res;
-      if (Opc == ISD::INTRINSIC_WO_CHAIN) {
+      if (IntNo == Intrinsic::riscv_psabs) {
+        // Unary: v4i8/v2i16 is illegal on RV64, so perform the operation on
+        // the widened (legal) type v8i8/v4i16, then extract the low half.
+        Res = DAG.getNode(Opc, DL, WideVT, Op0);
+      } else if (Opc == ISD::INTRINSIC_WO_CHAIN) {
         SmallVector<SDValue, 5> Ops;
         Ops.push_back(N->getOperand(0));
         Ops.push_back(Op0);
-        Ops.push_back(Op1);
+        Ops.push_back(DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT,
+                                  N->getOperand(2), Undef));
         if (N->getNumOperands() > 3)
           Ops.push_back(DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT,
                                     N->getOperand(3), Undef));
         Res = DAG.getNode(Opc, DL, WideVT, Ops);
       } else {
-        Res = DAG.getNode(Opc, DL, WideVT, Op0, Op1);
+        Res = DAG.getNode(Opc, DL, WideVT, Op0,
+                          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT,
+                                      N->getOperand(2), Undef));
       }
       Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
                                     DAG.getVectorIdxConstant(0, DL)));
@@ -19909,14 +19925,14 @@ static SDValue performReverseEVLCombine(SDNode *N,
   SmallVector<SDValue> Worklist = {Op};
   while (!Worklist.empty()) {
     SDValue X = Worklist.pop_back_val();
+    if (DAG.isSplatValue(X))
+      continue;
     if (!X.hasOneUser())
       return SDValue();
     if (auto *VPL = dyn_cast<VPLoadSDNode>(X)) {
       if (VPLoad && VPLoad != VPL)
         return SDValue();
       VPLoad = VPL;
-    } else if (DAG.isSplatValue(X)) {
-      continue;
     } else if (DAG.getTargetLoweringInfo().isBinOp(X.getOpcode()) &&
                X->getNumValues() == 1) {
       append_range(Worklist, X->op_values());
