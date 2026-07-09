@@ -1051,17 +1051,12 @@ unsigned cir::CallOp::getNumArgOperands() {
   return this->getOperation()->getNumOperands();
 }
 
-static cir::FuncOp resolveCalleeImpl(mlir::Operation *op,
-                                     mlir::FlatSymbolRefAttr callee,
-                                     mlir::SymbolTableCollection &symbolTable) {
-  if (!callee)
-    return {};
-  return symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(op, callee);
-}
-
 cir::FuncOp
 cir::CallOp::resolveCalleeInTable(mlir::SymbolTableCollection &symbolTable) {
-  return resolveCalleeImpl(*this, getCalleeAttr(), symbolTable);
+  mlir::FlatSymbolRefAttr callee = getCalleeAttr();
+  if (!callee)
+    return {};
+  return symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(*this, callee);
 }
 
 static mlir::ParseResult
@@ -1377,7 +1372,10 @@ unsigned cir::TryCallOp::getNumArgOperands() {
 
 cir::FuncOp
 cir::TryCallOp::resolveCalleeInTable(mlir::SymbolTableCollection &symbolTable) {
-  return resolveCalleeImpl(*this, getCalleeAttr(), symbolTable);
+  mlir::FlatSymbolRefAttr callee = getCalleeAttr();
+  if (!callee)
+    return {};
+  return symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(*this, callee);
 }
 
 LogicalResult

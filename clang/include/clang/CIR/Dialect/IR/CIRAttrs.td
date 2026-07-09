@@ -1296,10 +1296,7 @@ def CIR_CXXAssignAttr : CIR_Attr<"CXXAssign", "cxx_assign"> {
 // FuncInfoAttr
 //===----------------------------------------------------------------------===//
 
-// The attributes accepted in the optional func_info slot on cir.func. Each
-// form records one kind of precomputed fact about the function. The special
-// member forms embed the record type they operate on, and the CXX ABI
-// lowering replaces them with forms holding the converted type.
+// The attributes accepted in the optional func_info slot on cir.func.
 def CIR_FuncInfoAttr : AnyAttrOf<[
   CIR_CXXCtorAttr,
   CIR_CXXDtorAttr,

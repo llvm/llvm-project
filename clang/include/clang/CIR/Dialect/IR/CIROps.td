@@ -4287,12 +4287,8 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     bool isIndirect() { return !getCallee(); }
     mlir::Value getIndirectCall();
 
-    /// Returns the function this call resolves to through the given
-    /// symbol table collection, so repeated lookups use its cache. A pass
-    /// standing at a call can then read the facts recorded on the callee,
-    /// such as the func_info attribute. Returns null when the call is
-    /// indirect, when the callee symbol does not resolve, or when it
-    /// resolves to something other than a cir.func.
+    /// Returns the `cir.func` being called or null if the call is indirect or
+    /// cannot be resolved.
     cir::FuncOp resolveCalleeInTable(mlir::SymbolTableCollection &symbolTable);
 
     void setArg(unsigned index, mlir::Value value) {
