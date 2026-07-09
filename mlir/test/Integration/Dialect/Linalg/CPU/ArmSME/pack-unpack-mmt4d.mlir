@@ -252,9 +252,8 @@ module @transforms attributes { transform.with_named_sequence } {
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
 
     // Step 2: Vectorize linalg.mmt4d (note, the M, N dim is scalable!)
-    // TODO: Lower directly to named contractions: https://github.com/llvm/llvm-project/issues/159749
-    transform.structured.vectorize %tiled_mmt4d
-      vector_sizes  [1, 1, 1, [8], [8], 1]  : !transform.any_op
+    transform.structured.vectorize %tiled_mmt4d vector_sizes  [1, 1, 1, [8], [8], 1] {create_named_contraction}
+      : !transform.any_op
 
     // Step 3: Lower vector.mask %mask { vector.transfer_* } to vector.transfer_* %mask
     transform.apply_patterns to %loop_k {
@@ -270,7 +269,6 @@ module @transforms attributes { transform.with_named_sequence } {
     %func_pre = transform.structured.match ops{["func.func"]} in %module
       : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func_pre {
-      transform.apply_patterns.vector.reduction_to_contract
       transform.apply_patterns.vector.transfer_permutation_patterns
       transform.apply_patterns.canonicalization
     } : !transform.any_op
