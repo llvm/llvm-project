@@ -61,6 +61,10 @@ rst_prolog = """
 .. |check| replace:: :raw-html:`&#x2705`
 """
 
+myst_substitutions = {
+    "check": "\N{WHITE HEAVY CHECK MARK}",
+}
+
 # The reST default role (used for this markup: `text`) to use for all documents.
 # default_role = None
 
