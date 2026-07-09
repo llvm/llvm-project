@@ -2374,9 +2374,9 @@ FastISel::createMachineMemOperandFor(const Instruction *I) const {
   if (IsInvariant)
     Flags |= MachineMemOperand::MOInvariant;
 
-  return FuncInfo.MF->getMachineMemOperand(
-      MachinePointerInfo(Ptr), Flags, Size, *Alignment,
-      MMOMetadata(AAInfo, Ranges));
+  return FuncInfo.MF->getMachineMemOperand(MachinePointerInfo(Ptr), Flags, Size,
+                                           *Alignment,
+                                           MMOMetadata(AAInfo, Ranges));
 }
 
 CmpInst::Predicate FastISel::optimizeCmpPredicate(const CmpInst *CI) const {

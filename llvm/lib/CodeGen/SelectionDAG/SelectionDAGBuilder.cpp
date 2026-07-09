@@ -4789,9 +4789,9 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
             : MachinePointerInfo();
 
     SDValue A = DAG.getObjectPtrOffset(dl, Ptr, Offsets[i]);
-    SDValue L = DAG.getLoad(MemVTs[i], dl, Root, A, PtrInfo, Alignment,
-                            MMOFlags,
-                            MMOMetadata(AAInfo, Ranges, MemCacheHint));
+    SDValue L =
+        DAG.getLoad(MemVTs[i], dl, Root, A, PtrInfo, Alignment, MMOFlags,
+                    MMOMetadata(AAInfo, Ranges, MemCacheHint));
     Chains[ChainI] = L.getValue(1);
 
     if (MemVTs[i] != ValueVTs[i])
@@ -4947,9 +4947,9 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
     SDValue Val = SDValue(Src.getNode(), Src.getResNo() + i);
     if (MemVTs[i] != ValueVTs[i])
       Val = DAG.getPtrExtOrTrunc(Val, dl, MemVTs[i]);
-    SDValue St = DAG.getStore(Root, dl, Val, Add, PtrInfo, Alignment, MMOFlags,
-                              MMOMetadata(AAInfo, /*Ranges=*/nullptr,
-                                          MemCacheHint));
+    SDValue St =
+        DAG.getStore(Root, dl, Val, Add, PtrInfo, Alignment, MMOFlags,
+                     MMOMetadata(AAInfo, /*Ranges=*/nullptr, MemCacheHint));
     Chains[ChainI] = St;
   }
 
@@ -5229,8 +5229,7 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign(), MMOMetadata(), SSID, SuccessOrdering,
-      FailureOrdering);
+      I.getAlign(), MMOMetadata(), SSID, SuccessOrdering, FailureOrdering);
 
   SDValue L = DAG.getAtomicCmpSwap(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS,
                                    dl, MemVT, VTs, InChain,
@@ -5348,8 +5347,7 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
   const MDNode *Ranges = getRangeMetadata(I);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign(), MMOMetadata(AAMDNodes(), Ranges), SSID,
-      Order);
+      I.getAlign(), MMOMetadata(AAMDNodes(), Ranges), SSID, Order);
 
   InChain = TLI.prepareVolatileOrAtomicLoad(InChain, dl, DAG);
 

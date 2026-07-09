@@ -2539,8 +2539,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD(VPLoadSDNode *LD, SDValue &Lo,
 
     MMO = DAG.getMachineFunction().getMachineMemOperand(
         MPI, MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
-        Alignment,
-        MMOMetadata(LD->getAAInfo(), LD->getRanges()));
+        Alignment, MMOMetadata(LD->getAAInfo(), LD->getRanges()));
 
     Hi = DAG.getLoadVP(LD->getAddressingMode(), ExtType, HiVT, dl, Ch, Ptr,
                        Offset, MaskHi, EVLHi, HiMemVT, MMO,
@@ -2659,8 +2658,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *SLD,
     MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
         MachinePointerInfo(SLD->getPointerInfo().getAddrSpace()),
         MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
-        Alignment,
-        MMOMetadata(SLD->getAAInfo(), SLD->getRanges()));
+        Alignment, MMOMetadata(SLD->getAAInfo(), SLD->getRanges()));
 
     Hi = DAG.getStridedLoadVP(SLD->getAddressingMode(), SLD->getExtensionType(),
                               HiVT, DL, SLD->getChain(), Ptr, SLD->getOffset(),
@@ -2720,8 +2718,7 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MLD->getPointerInfo(), MMOFlags, LocationSize::beforeOrAfterPointer(),
-      Alignment,
-      MMOMetadata(MLD->getAAInfo(), MLD->getRanges()));
+      Alignment, MMOMetadata(MLD->getAAInfo(), MLD->getRanges()));
 
   Lo = DAG.getMaskedLoad(LoVT, dl, Ch, Ptr, Offset, MaskLo, PassThruLo, LoMemVT,
                          MMO, MLD->getAddressingMode(), ExtType,
@@ -2808,8 +2805,7 @@ void DAGTypeLegalizer::SplitVecRes_Gather(MemSDNode *N, SDValue &Lo,
   MachineMemOperand::Flags MMOFlags = N->getMemOperand()->getFlags();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       N->getPointerInfo(), MMOFlags, LocationSize::beforeOrAfterPointer(),
-      Alignment,
-      MMOMetadata(N->getAAInfo(), N->getRanges()));
+      Alignment, MMOMetadata(N->getAAInfo(), N->getRanges()));
 
   if (auto *MGT = dyn_cast<MaskedGatherSDNode>(N)) {
     SDValue PassThru = MGT->getPassThru();
@@ -4719,8 +4715,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_Scatter(MemSDNode *N, unsigned OpNo) {
   MachineMemOperand::Flags MMOFlags = N->getMemOperand()->getFlags();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       N->getPointerInfo(), MMOFlags, LocationSize::beforeOrAfterPointer(),
-      Alignment,
-      MMOMetadata(N->getAAInfo(), N->getRanges()));
+      Alignment, MMOMetadata(N->getAAInfo(), N->getRanges()));
 
   if (auto *MSC = dyn_cast<MaskedScatterSDNode>(N)) {
     SDValue OpsLo[] = {Ch, DataLo, MaskLo, Ptr, IndexLo, Ops.Scale};

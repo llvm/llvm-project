@@ -9348,8 +9348,7 @@ getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
                         Align SrcAlign, bool isVol, bool AlwaysInline,
                         MachinePointerInfo DstPtrInfo,
                         MachinePointerInfo SrcPtrInfo, const AAMDNodes &AAInfo,
-                        BatchAAResults *BatchAA,
-                        const MDNode *DstMemCacheHint,
+                        BatchAAResults *BatchAA, const MDNode *DstMemCacheHint,
                         const MDNode *SrcMemCacheHint) {
   // Turn a memcpy of undef to nop.
   // FIXME: We need to honor volatile even is Src is undef.
@@ -9992,8 +9991,8 @@ SDValue SelectionDAG::getMemcpy(
 
     SDValue Result = getMemcpyLoadsAndStores(
         *this, dl, Chain, Dst, Src, ConstantSize->getZExtValue(), DstAlign,
-        SrcAlign, isVol, false, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA, DstMemCacheHint,
-        SrcMemCacheHint);
+        SrcAlign, isVol, false, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA,
+        DstMemCacheHint, SrcMemCacheHint);
     if (Result.getNode())
       return Result;
   }
@@ -10014,8 +10013,8 @@ SDValue SelectionDAG::getMemcpy(
     assert(ConstantSize && "AlwaysInline requires a constant size!");
     return getMemcpyLoadsAndStores(
         *this, dl, Chain, Dst, Src, ConstantSize->getZExtValue(), DstAlign,
-        SrcAlign, isVol, true, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA, DstMemCacheHint,
-        SrcMemCacheHint);
+        SrcAlign, isVol, true, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA,
+        DstMemCacheHint, SrcMemCacheHint);
   }
 
   checkAddrSpaceIsValidForLibcall(TLI, DstPtrInfo.getAddrSpace());
@@ -10586,11 +10585,13 @@ static MachinePointerInfo InferPointerInfo(const MachinePointerInfo &Info,
   return Info;
 }
 
-SDValue SelectionDAG::getLoad(
-    ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT, const SDLoc &dl,
-    SDValue Chain, SDValue Ptr, SDValue Offset, MachinePointerInfo PtrInfo,
-    EVT MemVT, Align Alignment, MachineMemOperand::Flags MMOFlags,
-    MMOMetadata Metadata) {
+SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
+                              EVT VT, const SDLoc &dl, SDValue Chain,
+                              SDValue Ptr, SDValue Offset,
+                              MachinePointerInfo PtrInfo, EVT MemVT,
+                              Align Alignment,
+                              MachineMemOperand::Flags MMOFlags,
+                              MMOMetadata Metadata) {
   assert(Chain.getValueType() == MVT::Other &&
         "Invalid chain type");
 
@@ -10603,8 +10604,8 @@ SDValue SelectionDAG::getLoad(
 
   TypeSize Size = MemVT.getStoreSize();
   MachineFunction &MF = getMachineFunction();
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MMOFlags, Size, Alignment, Metadata);
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(PtrInfo, MMOFlags, Size, Alignment, Metadata);
   return getLoad(AM, ExtType, VT, dl, Chain, Ptr, Offset, MemVT, MMO);
 }
 
@@ -10668,7 +10669,8 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
 SDValue SelectionDAG::getLoad(EVT VT, const SDLoc &dl, SDValue Chain,
                               SDValue Ptr, MachinePointerInfo PtrInfo,
                               MaybeAlign Alignment,
-                              MachineMemOperand::Flags MMOFlags, MMOMetadata Metadata) {
+                              MachineMemOperand::Flags MMOFlags,
+                              MMOMetadata Metadata) {
   SDValue Undef = getUNDEF(Ptr.getValueType());
   return getLoad(ISD::UNINDEXED, ISD::NON_EXTLOAD, VT, dl, Chain, Ptr, Undef,
                  PtrInfo, VT, Alignment, MMOFlags, Metadata);
@@ -10709,11 +10711,11 @@ SDValue SelectionDAG::getIndexedLoad(SDValue OrigLoad, const SDLoc &dl,
   auto MMOFlags =
       LD->getMemOperand()->getFlags() &
       ~(MachineMemOperand::MOInvariant | MachineMemOperand::MODereferenceable);
-  return getLoad(AM, LD->getExtensionType(), OrigLoad.getValueType(), dl,
-                 LD->getChain(), Base, Offset, LD->getPointerInfo(),
-                 LD->getMemoryVT(), LD->getAlign(), MMOFlags,
-                 MMOMetadata(LD->getAAInfo(), LD->getRanges(),
-                             LD->getMemCacheHint()));
+  return getLoad(
+      AM, LD->getExtensionType(), OrigLoad.getValueType(), dl, LD->getChain(),
+      Base, Offset, LD->getPointerInfo(), LD->getMemoryVT(), LD->getAlign(),
+      MMOFlags,
+      MMOMetadata(LD->getAAInfo(), LD->getRanges(), LD->getMemCacheHint()));
 }
 
 SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
@@ -10732,8 +10734,8 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
 
   MachineFunction &MF = getMachineFunction();
   TypeSize Size = Val.getValueType().getStoreSize();
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MMOFlags, Size, Alignment, Metadata);
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(PtrInfo, MMOFlags, Size, Alignment, Metadata);
   return getStore(Chain, dl, Val, Ptr, MMO);
 }
 
@@ -10847,9 +10849,8 @@ SDValue SelectionDAG::getLoadVP(
 
   TypeSize Size = MemVT.getStoreSize();
   MachineFunction &MF = getMachineFunction();
-  MachineMemOperand *MMO =
-      MF.getMachineMemOperand(PtrInfo, MMOFlags, Size, Alignment,
-                              MMOMetadata(AAInfo, Ranges));
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      PtrInfo, MMOFlags, Size, Alignment, MMOMetadata(AAInfo, Ranges));
   return getLoadVP(AM, ExtType, VT, dl, Chain, Ptr, Offset, Mask, EVL, MemVT,
                    MMO, IsExpanding);
 }

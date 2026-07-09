@@ -118,7 +118,6 @@ struct MachinePointerInfo {
   LLVM_ABI static MachinePointerInfo getUnknownStack(MachineFunction &MF);
 };
 
-
 /// LLVM IR metadata carried by a MachineMemOperand.
 struct MMOMetadata {
   AAMDNodes AAInfo;
@@ -203,19 +202,17 @@ public:
   /// specified. For cmpxchg atomic operations the atomic ordering requirements
   /// when store does not occur must also be specified.
   LLVM_ABI
-  MachineMemOperand(
-      MachinePointerInfo PtrInfo, Flags Flags, LocationSize TS, Align A,
-      MMOMetadata Metadata = MMOMetadata(),
-      SyncScope::ID SSID = SyncScope::System,
-      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
-      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
+  MachineMemOperand(MachinePointerInfo PtrInfo, Flags Flags, LocationSize TS,
+                    Align A, MMOMetadata Metadata = MMOMetadata(),
+                    SyncScope::ID SSID = SyncScope::System,
+                    AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+                    AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   LLVM_ABI
-  MachineMemOperand(
-      MachinePointerInfo PtrInfo, Flags Flags, LLT Type, Align A,
-      MMOMetadata Metadata = MMOMetadata(),
-      SyncScope::ID SSID = SyncScope::System,
-      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
-      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
+  MachineMemOperand(MachinePointerInfo PtrInfo, Flags Flags, LLT Type, Align A,
+                    MMOMetadata Metadata = MMOMetadata(),
+                    SyncScope::ID SSID = SyncScope::System,
+                    AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+                    AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
 
   const MachinePointerInfo &getPointerInfo() const { return PtrInfo; }
 

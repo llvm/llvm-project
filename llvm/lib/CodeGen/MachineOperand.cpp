@@ -1170,8 +1170,7 @@ MachinePointerInfo MachinePointerInfo::getUnknownStack(MachineFunction &MF) {
 }
 
 MachineMemOperand::MachineMemOperand(MachinePointerInfo PtrInfo, Flags F,
-                                     LLT Type, Align A,
-                                     MMOMetadata Metadata,
+                                     LLT Type, Align A, MMOMetadata Metadata,
                                      SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
                                      AtomicOrdering FailureOrdering)
@@ -1193,8 +1192,7 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo PtrInfo, Flags F,
 
 MachineMemOperand::MachineMemOperand(MachinePointerInfo PtrInfo, Flags F,
                                      LocationSize TS, Align BaseAlignment,
-                                     MMOMetadata Metadata,
-                                     SyncScope::ID SSID,
+                                     MMOMetadata Metadata, SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
                                      AtomicOrdering FailureOrdering)
     : MachineMemOperand(
