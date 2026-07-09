@@ -539,12 +539,7 @@ uint32_t patchCvtSrFp8F32(PatchContext &Ctx, size_t Idx) {
   AsmOS << "v_max_num_f32 " << OutName << ", 0, " << Src0Str << "\n";
 
   // --- Stochastic noise injection ---
-  // Add S1[31:12] as integer noise directly to the F32 bitpattern.
-  // Adding to the whole value lets mantissa overflow carry into the
-  // exponent naturally, fixing a carry-propagation bug where the old
-  // extract/add/mask path discarded the carry with & 0x007FFFFF when
-  // mantissa + noise exceeded 23 bits.  This also reduces the emitted
-  // trampoline from 6 instructions to 2.
+  // Add S1[31:12] as noise directly to F32 bits — carry propagates into exponent naturally.
   AsmOS << "v_lshrrev_b32 " << TmpName << ", 12, " << Src1Str << "\n";
   AsmOS << "v_add_u32 " << OutName << ", " << OutName << ", " << TmpName
         << "\n";
