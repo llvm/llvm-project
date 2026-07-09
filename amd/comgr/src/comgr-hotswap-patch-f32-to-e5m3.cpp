@@ -539,7 +539,8 @@ uint32_t patchCvtSrFp8F32(PatchContext &Ctx, size_t Idx) {
   AsmOS << "v_max_num_f32 " << OutName << ", 0, " << Src0Str << "\n";
 
   // --- Stochastic noise injection ---
-  // Add S1[31:12] as noise directly to F32 bits — carry propagates into exponent naturally.
+  // Add S1[31:12] as noise directly to the F32 bitpattern; carry
+  // propagates into the exponent naturally.
   AsmOS << "v_lshrrev_b32 " << TmpName << ", 12, " << Src1Str << "\n";
   AsmOS << "v_add_u32 " << OutName << ", " << OutName << ", " << TmpName
         << "\n";

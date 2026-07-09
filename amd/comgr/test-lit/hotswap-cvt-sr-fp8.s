@@ -2,8 +2,9 @@
 // COM:
 // COM: Creates a minimal gfx1250 code object containing v_cvt_sr_fp8_f32
 // COM: with clamp (E5M3 mode), runs the hotswap rewrite, and verifies the
-// COM: replacement sequence covers: NaN detection, direct stochastic noise addition,
-// COM: F32->F16->UE5M3 conversion, overflow clamping, NaN override, and byte merge.
+// COM: replacement sequence covers: NaN detection, stochastic noise
+// COM: addition, F32->F16->UE5M3 conversion, overflow clamping, NaN
+// COM: override, and byte merge.
 // COM:
 // COM: Companion tests:
 // COM:   hotswap-cvt-fp8-modifiers.s - source modifier variants
