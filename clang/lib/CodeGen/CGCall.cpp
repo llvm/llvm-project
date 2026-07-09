@@ -988,11 +988,16 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
       CoercedType = AbiReverseMapper->convertType(AbiInfo.getCoerceToType());
     if (!CoercedType)
       CoercedType = getTypes().ConvertType(Type);
+    // A transparent union is passed as its first field, so the extend keys off
+    // that field's integral type, matching the classifier's
+    // useFirstFieldIfTransparentUnion.  Passing the union type to
+    // ABIArgInfo::getSignExtend would trip its integral-type assert.
+    QualType ExtendType = useFirstFieldIfTransparentUnion(Type);
     if (AbiInfo.isSignExt())
-      return ABIArgInfo::getSignExtend(Type, CoercedType);
+      return ABIArgInfo::getSignExtend(ExtendType, CoercedType);
     if (AbiInfo.isZeroExt())
-      return ABIArgInfo::getZeroExtend(Type, CoercedType);
-    return ABIArgInfo::getExtend(Type, CoercedType);
+      return ABIArgInfo::getZeroExtend(ExtendType, CoercedType);
+    return ABIArgInfo::getExtend(ExtendType, CoercedType);
   }
   case llvm::abi::ArgInfo::Indirect: {
     CharUnits Alignment =
@@ -1056,7 +1061,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     computeSPIRKernelABIInfo(CGM, *FI);
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
-  } else if (CGM.shouldUseLLVMABILowering()) {
+  } else if (CGM.shouldUseLLVMABILowering(CC)) {
     CGM.computeABIInfoUsingLib(*FI);
   } else {
     CGM.getABIInfo().computeInfo(*FI);
