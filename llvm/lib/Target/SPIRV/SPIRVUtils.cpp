@@ -43,14 +43,6 @@ static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
   if (!NMD)
     return FTy;
 
-  constexpr auto getConstInt = [](MDNode *MD, unsigned OpId) -> ConstantInt * {
-    if (MD->getNumOperands() <= OpId)
-      return nullptr;
-    if (auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(OpId)))
-      return dyn_cast<ConstantInt>(CMeta->getValue());
-    return nullptr;
-  };
-
   auto It = find_if(NMD->operands(), [Name](MDNode *N) {
     if (auto *MDS = dyn_cast_or_null<MDString>(N->getOperand(0)))
       return MDS->getString() == Name;
@@ -67,7 +59,7 @@ static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
     MDNode *MD = dyn_cast<MDNode>((*It)->getOperand(I));
     assert(MD && "MDNode operand is expected");
 
-    if (auto *Const = getConstInt(MD, 0)) {
+    if (auto *Const = getMDOperandAsConstInt(MD, 0)) {
       auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(1));
       assert(CMeta && "ConstantAsMetadata operand is expected");
       int64_t Idx = Const->getSExtValue();
@@ -506,6 +498,14 @@ bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {
 Type *getMDOperandAsType(const MDNode *N, unsigned I) {
   Type *ElementTy = cast<ValueAsMetadata>(N->getOperand(I))->getType();
   return toTypedPointer(ElementTy);
+}
+
+ConstantInt *getMDOperandAsConstInt(const MDNode *N, unsigned I) {
+  if (N->getNumOperands() <= I)
+    return nullptr;
+  if (auto *CMeta = dyn_cast<ConstantAsMetadata>(N->getOperand(I)))
+    return dyn_cast<ConstantInt>(CMeta->getValue());
+  return nullptr;
 }
 
 static bool isEnqueueKernelBI(StringRef MangledName) {

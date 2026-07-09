@@ -881,6 +881,16 @@ struct canonical_iv_match {
 
 inline canonical_iv_match m_CanonicalIV() { return {}; }
 
+/// Match the abstract header mask of any loop region.
+struct header_mask_match {
+  template <typename ArgTy> bool match(const ArgTy *V) const {
+    const auto *RV = dyn_cast<VPRegionValue>(V);
+    return RV && RV->getDefiningRegion()->getHeaderMask() == RV;
+  }
+};
+
+inline header_mask_match m_HeaderMask() { return {}; }
+
 /// Match a canonical VPWidenIntOrFpInductionRecipe optionally capturing it.
 struct canonical_widen_iv_match {
   VPWidenIntOrFpInductionRecipe **Capture = nullptr;

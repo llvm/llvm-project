@@ -657,8 +657,8 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   // FIXME
   // getTargetHooks().getABIInfo().allowBFloatArgsAndRet();
 
-  cir::VectorType vTy = getNeonType(&cgf, neonType, hasLegalHalfType, false,
-                                    allowBFloatArgsAndRet);
+  cir::VectorType vTy = getNeonType(&cgf, neonType, hasLegalHalfType,
+                                    /*v1Ty=*/false, allowBFloatArgsAndRet);
   cir::VectorType ty = vTy;
   if (!ty)
     return nullptr;
@@ -2929,7 +2929,14 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vmaxnmh_f16:
   case NEON::BI__builtin_neon_vrecpss_f32:
   case NEON::BI__builtin_neon_vrecpsd_f64:
-  case NEON::BI__builtin_neon_vrecpsh_f16:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  case NEON::BI__builtin_neon_vrecpsh_f16: {
+    auto halfTy = builder.getFp16Ty();
+    return builder.emitIntrinsicCallOp(loc, "aarch64.neon.frecps", halfTy, ops);
+  }
   case NEON::BI__builtin_neon_vqshrun_n_v:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
