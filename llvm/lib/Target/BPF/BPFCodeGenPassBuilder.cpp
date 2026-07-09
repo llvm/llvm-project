@@ -105,10 +105,10 @@ void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   // targets that currently implement it have a ported asm-printer pass.
   if (PIC) {
     PIC->addClassToPassName(BPFAsmPrinterBeginPass::name(),
-                            "lanai-asm-printer-begin");
-    PIC->addClassToPassName(BPFAsmPrinterPass::name(), "lanai-asmprinter");
+                            "bpf-asm-printer-begin");
+    PIC->addClassToPassName(BPFAsmPrinterPass::name(), "bpf-asmprinter");
     PIC->addClassToPassName(BPFAsmPrinterEndPass::name(),
-                            "lanai-asm-printer-end");
+                            "bpf-asm-printer-end");
   }
 
   PB.registerPipelineStartEPCallback(
