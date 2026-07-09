@@ -27,8 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _OutputIterator, class _Size, class _Generator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
-__generate_n(_OutputIterator __first, _Size __orig_n, _Generator& __gen) {
-  auto __n = std::__convert_to_integral(__orig_n);
+__generate_n(_OutputIterator __first, _Size __n, _Generator& __gen) {
   if (__n <= 0)
     return __first;
 
@@ -41,7 +40,7 @@ __generate_n(_OutputIterator __first, _Size __orig_n, _Generator& __gen) {
 template <class _OutputIterator, class _Size, class _Generator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 generate_n(_OutputIterator __first, _Size __orig_n, _Generator __gen) {
-  return std::__generate_n(std::move(__first), __orig_n, __gen);
+  return std::__generate_n(std::move(__first), std::__convert_to_integral(__orig_n), __gen);
 }
 
 _LIBCPP_END_NAMESPACE_STD
