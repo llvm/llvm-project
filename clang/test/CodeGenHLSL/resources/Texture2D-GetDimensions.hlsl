@@ -1,16 +1,16 @@
 // Texture2D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,DXIL -DTEXTURE=Texture2D -DDXILTY=2 -DRW=0
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPIRV -DTEXTURE=Texture2D -DA=0 -DS=1 -DF=0
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPIRV -DTEXTURE=Texture2D -DARRAYED=0 -DSAMPLED=1 -DFORMAT=0
 
 // Texture2DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DArray -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,DXIL -DTEXTURE=Texture2DArray -DDXILTY=7 -DRW=0
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DArray -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPIRV -DTEXTURE=Texture2DArray -DA=1 -DS=1 -DF=0
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DArray -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPIRV -DTEXTURE=Texture2DArray -DARRAYED=1 -DSAMPLED=1 -DFORMAT=0
 
 // RWTexture2D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2D -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,DXIL -DTEXTURE=RWTexture2D -DDXILTY=2 -DRW=1
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2D -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPIRV -DTEXTURE=RWTexture2D -DA=0 -DS=2 -DF=1
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2D -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPIRV -DTEXTURE=RWTexture2D -DARRAYED=0 -DSAMPLED=2 -DFORMAT=1
 
-// When RWTexture2DArray is implemented, add DXIL/SPIRV runs with DXILTY=7, RW=1, A=1, S=2, F=1.
+// When RWTexture2DArray is implemented, add DXIL/SPIRV runs with DXILTY=7, RW=1, ARRAYED=1, SAMPLED=2, FORMAT=1.
 
 TEXTURE<float4> Tex;
 
@@ -25,9 +25,9 @@ void test_uint_dims() {
 // CHECK: %[[THIS_VAL:.*]] = load ptr, ptr %[[THIS]]
 // CHECK: %[[HANDLE_GEP:.*]] = getelementptr inbounds nuw %"class.hlsl::[[TEXTURE]]", ptr %[[THIS_VAL]], i32 0, i32 0
 // DXIL: %[[HANDLE:.*]] = load target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXILTY]]), ptr %[[HANDLE_GEP]]
-// SPIRV: %[[HANDLE:.*]] = load target("spirv.Image", float, 1, 2, [[A]], 0, [[S]], [[F]]), ptr %[[HANDLE_GEP]]
-// DXIL: %[[RES:.*]] = call <2 x i32> @llvm.dx.resource.getdimensions.xy.tdx.Texture_v4f32_[[RW]]_0_0_[[DXILTY]]t(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXILTY]]) %[[HANDLE]])
-// SPIRV: %[[RES:.*]] = call <2 x i32> @llvm.spv.resource.getdimensions.xy.tspirv.Image_f32_1_2_[[A]]_0_[[S]]_[[F]]t(target("spirv.Image", float, 1, 2, [[A]], 0, [[S]], [[F]]) %[[HANDLE]])
+// SPIRV: %[[HANDLE:.*]] = load target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT]]), ptr %[[HANDLE_GEP]]
+// DXIL: %[[RES:.*]] = call <2 x i32> @llvm.dx.resource.getdimensions.xy.tdx.Texture_v4f32_{{.*}}("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXILTY]]) %[[HANDLE]])
+// SPIRV: %[[RES:.*]] = call <2 x i32> @llvm.spv.resource.getdimensions.xy.tspirv.Image_f32_{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT]]) %[[HANDLE]])
 // CHECK: %[[W_PTR:.*]] = load ptr, ptr %[[WIDTH]]
 // CHECK: %[[W_VAL:.*]] = extractelement <2 x i32> %[[RES]], i64 0
 // CHECK: store i32 %[[W_VAL]], ptr %[[W_PTR]]
@@ -46,10 +46,10 @@ void test_uint_levels_dims(uint mipLevel) {
 // CHECK: %[[THIS_VAL:.*]] = load ptr, ptr %[[THIS]]
 // CHECK: %[[HANDLE_GEP:.*]] = getelementptr inbounds nuw %"class.hlsl::[[TEXTURE]]", ptr %[[THIS_VAL]], i32 0, i32 0
 // DXIL: %[[HANDLE:.*]] = load target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXILTY]]), ptr %[[HANDLE_GEP]]
-// SPIRV: %[[HANDLE:.*]] = load target("spirv.Image", float, 1, 2, [[A]], 0, [[S]], [[F]]), ptr %[[HANDLE_GEP]]
+// SPIRV: %[[HANDLE:.*]] = load target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT]]), ptr %[[HANDLE_GEP]]
 // CHECK: %[[MIP_VAL:.*]] = load i32, ptr %[[MIP]]
-// DXIL: %[[RES:.*]] = call <3 x i32> @llvm.dx.resource.getdimensions.levels.xy.tdx.Texture_v4f32_[[RW]]_0_0_[[DXILTY]]t(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXILTY]]) %[[HANDLE]], i32 %[[MIP_VAL]])
-// SPIRV: %[[RES:.*]] = call <3 x i32> @llvm.spv.resource.getdimensions.levels.xy.tspirv.Image_f32_1_2_[[A]]_0_[[S]]_[[F]]t(target("spirv.Image", float, 1, 2, [[A]], 0, [[S]], [[F]]) %[[HANDLE]], i32 %[[MIP_VAL]])
+// DXIL: %[[RES:.*]] = call <3 x i32> @llvm.dx.resource.getdimensions.levels.xy.tdx.Texture_v4f32_{{.*}}("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXILTY]]) %[[HANDLE]], i32 %[[MIP_VAL]])
+// SPIRV: %[[RES:.*]] = call <3 x i32> @llvm.spv.resource.getdimensions.levels.xy.tspirv.Image_f32_{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT]]) %[[HANDLE]], i32 %[[MIP_VAL]])
 // CHECK: %[[W_PTR:.*]] = load ptr, ptr %[[WIDTH]]
 // CHECK: %[[W_VAL:.*]] = extractelement <3 x i32> %[[RES]], i64 0
 // CHECK: store i32 %[[W_VAL]], ptr %[[W_PTR]]
@@ -71,9 +71,9 @@ void test_float_dims() {
 // CHECK: %[[THIS_VAL:.*]] = load ptr, ptr %[[THIS]]
 // CHECK: %[[HANDLE_GEP:.*]] = getelementptr inbounds nuw %"class.hlsl::[[TEXTURE]]", ptr %[[THIS_VAL]], i32 0, i32 0
 // DXIL: %[[HANDLE:.*]] = load target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXILTY]]), ptr %[[HANDLE_GEP]]
-// SPIRV: %[[HANDLE:.*]] = load target("spirv.Image", float, 1, 2, [[A]], 0, [[S]], [[F]]), ptr %[[HANDLE_GEP]]
-// DXIL: %[[RES:.*]] = call <2 x i32> @llvm.dx.resource.getdimensions.xy.tdx.Texture_v4f32_[[RW]]_0_0_[[DXILTY]]t(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXILTY]]) %[[HANDLE]])
-// SPIRV: %[[RES:.*]] = call <2 x i32> @llvm.spv.resource.getdimensions.xy.tspirv.Image_f32_1_2_[[A]]_0_[[S]]_[[F]]t(target("spirv.Image", float, 1, 2, [[A]], 0, [[S]], [[F]]) %[[HANDLE]])
+// SPIRV: %[[HANDLE:.*]] = load target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT]]), ptr %[[HANDLE_GEP]]
+// DXIL: %[[RES:.*]] = call <2 x i32> @llvm.dx.resource.getdimensions.xy.tdx.Texture_v4f32_{{.*}}("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXILTY]]) %[[HANDLE]])
+// SPIRV: %[[RES:.*]] = call <2 x i32> @llvm.spv.resource.getdimensions.xy.tspirv.Image_f32_{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT]]) %[[HANDLE]])
 // CHECK: %[[W_PTR:.*]] = load ptr, ptr %[[WIDTH]]
 // CHECK: %[[W_VAL:.*]] = extractelement <2 x i32> %[[RES]], i64 0
 // CHECK: %[[W_F:.*]] = uitofp reassoc nnan ninf nsz arcp afn i32 %[[W_VAL]] to float
@@ -94,10 +94,10 @@ void test_float_levels_dims(uint mipLevel) {
 // CHECK: %[[THIS_VAL:.*]] = load ptr, ptr %[[THIS]]
 // CHECK: %[[HANDLE_GEP:.*]] = getelementptr inbounds nuw %"class.hlsl::[[TEXTURE]]", ptr %[[THIS_VAL]], i32 0, i32 0
 // DXIL: %[[HANDLE:.*]] = load target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXILTY]]), ptr %[[HANDLE_GEP]]
-// SPIRV: %[[HANDLE:.*]] = load target("spirv.Image", float, 1, 2, [[A]], 0, [[S]], [[F]]), ptr %[[HANDLE_GEP]]
+// SPIRV: %[[HANDLE:.*]] = load target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT]]), ptr %[[HANDLE_GEP]]
 // CHECK: %[[MIP_VAL:.*]] = load i32, ptr %[[MIP]]
-// DXIL: %[[RES:.*]] = call <3 x i32> @llvm.dx.resource.getdimensions.levels.xy.tdx.Texture_v4f32_[[RW]]_0_0_[[DXILTY]]t(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXILTY]]) %[[HANDLE]], i32 %[[MIP_VAL]])
-// SPIRV: %[[RES:.*]] = call <3 x i32> @llvm.spv.resource.getdimensions.levels.xy.tspirv.Image_f32_1_2_[[A]]_0_[[S]]_[[F]]t(target("spirv.Image", float, 1, 2, [[A]], 0, [[S]], [[F]]) %[[HANDLE]], i32 %[[MIP_VAL]])
+// DXIL: %[[RES:.*]] = call <3 x i32> @llvm.dx.resource.getdimensions.levels.xy.tdx.Texture_v4f32_{{.*}}("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXILTY]]) %[[HANDLE]], i32 %[[MIP_VAL]])
+// SPIRV: %[[RES:.*]] = call <3 x i32> @llvm.spv.resource.getdimensions.levels.xy.tspirv.Image_f32_{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT]]) %[[HANDLE]], i32 %[[MIP_VAL]])
 // CHECK: %[[W_PTR:.*]] = load ptr, ptr %[[WIDTH]]
 // CHECK: %[[W_VAL:.*]] = extractelement <3 x i32> %[[RES]], i64 0
 // CHECK: %[[W_F:.*]] = uitofp reassoc nnan ninf nsz arcp afn i32 %[[W_VAL]] to float
