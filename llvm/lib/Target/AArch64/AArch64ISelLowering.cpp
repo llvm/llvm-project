@@ -32024,7 +32024,7 @@ bool AArch64TargetLowering::isOpSuitableForRCPC3(const Instruction *I) const {
   if (auto LI = dyn_cast<LoadInst>(I))
     return LI->getType()->getPrimitiveSizeInBits() == 128 &&
            LI->getAlign() >= Align(16) &&
-           LI->getOrdering() == AtomicOrdering::Acquire;
+           isAcquireOrStronger(LI->getOrdering());
 
   if (auto SI = dyn_cast<StoreInst>(I))
     return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() == 128 &&
@@ -32036,6 +32036,10 @@ bool AArch64TargetLowering::isOpSuitableForRCPC3(const Instruction *I) const {
 
 bool AArch64TargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
+  if (auto *LI = dyn_cast<LoadInst>(I);
+      LI && LI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
+      isOpSuitableForRCPC3(LI))
+    return true; // need leading LDAR
   if (isOpSuitableForRCPC3(I))
     return false;
   if (isOpSuitableForLSE128(I))
@@ -32074,11 +32078,24 @@ bool AArch64TargetLowering::shouldInsertTrailingSeqCstFenceForAtomicStore(
   return !Subtarget->hasLSE();
 }
 
+AtomicOrdering AArch64TargetLowering::atomicOperationOrderAfterFenceSplit(
+    const Instruction *I) const {
+  if (auto *LI = dyn_cast<LoadInst>(I);
+      LI && LI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
+      isOpSuitableForRCPC3(LI))
+    // With RCPC3, a 128-bit SC load should be lowered to LDAR+LDIAPP. The LDAR
+    // is considered a leading fence,  so we change the order to acquire so that
+    // an LDIAPP is emitted.
+    return AtomicOrdering::Acquire;
+
+  return TargetLoweringBase::atomicOperationOrderAfterFenceSplit(I);
+}
+
 Instruction *AArch64TargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                      Instruction *Inst,
                                                      AtomicOrdering Ord) const {
-  // Keep seq_cst 128-bit LSE2 loads ordered against v8.0-style seq_cst LL/SC
-  // stores by emitting an (unused) LDAR before the LDP.
+  // Keep seq_cst 128-bit LSE2/RCPC3 loads ordered against v8.0-style seq_cst
+  // LL/SC stores by emitting an (unused) LDAR before the 128-bit load.
   if (auto *LI = dyn_cast<LoadInst>(Inst);
       LI && Ord == AtomicOrdering::SequentiallyConsistent &&
       isOpSuitableForLDPSTP(LI)) {
@@ -32090,6 +32107,16 @@ Instruction *AArch64TargetLowering::emitLeadingFence(IRBuilderBase &Builder,
   }
 
   return TargetLoweringBase::emitLeadingFence(Builder, Inst, Ord);
+}
+
+Instruction *AArch64TargetLowering::emitTrailingFence(
+    IRBuilderBase &Builder, Instruction *Inst, AtomicOrdering Ord) const {
+  if (auto *LI = dyn_cast<LoadInst>(Inst);
+      LI && Ord == AtomicOrdering::SequentiallyConsistent &&
+      isOpSuitableForRCPC3(LI))
+    return nullptr;
+
+  return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);
 }
 
 // Loads and stores less than 128-bits are already atomic; ones above that
