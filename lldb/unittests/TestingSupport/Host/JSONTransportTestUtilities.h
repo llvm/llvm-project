@@ -37,10 +37,10 @@ public:
     return std::make_pair(std::move(transports[0]), std::move(transports[1]));
   }
 
-  /// Creates a cross-wired pair, where a message Sent on one transport is
+  /// Creates a cross-wired pair, where a message sent on one transport is
   /// delivered to the other's registered handler. This mirrors a real
   /// connected transport pair (bytes written to one end arrive at the other),
-  /// unlike createPair() where a Sent message is delivered back to the sender's
+  /// unlike createPair() where a sent message is delivered back to the sender's
   /// own handler.
   static std::pair<std::unique_ptr<TestTransport<Proto>>,
                    std::unique_ptr<TestTransport<Proto>>>
@@ -115,7 +115,7 @@ protected:
   void Log(llvm::StringRef message) override {};
 
 private:
-  /// The handler a Sent message is delivered to: the peer's when cross-wired
+  /// The handler a sent message is delivered to: the peer's when cross-wired
   /// (see createConnectedPair), otherwise this transport's own handler.
   MessageHandler *Target() { return m_peer ? m_peer->m_handler : m_handler; }
 

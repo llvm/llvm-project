@@ -521,10 +521,9 @@ public:
   template <typename Params, typename Fn, typename... Args>
   void Bind(llvm::StringLiteral method, Fn &&fn, Args &&...args);
 
-  /// Bind an asynchronous handler for an incoming request. Unlike the
-  /// synchronous overload, the handler is handed a Reply it may invoke later,
-  /// which lets a handler defer its response, e.g. until after it has forwarded
-  /// the request to another transport and received the answer.
+  /// Bind an asynchronous handler for an incoming request. The handler receives
+  /// a Reply to invoke later instead of returning a result. This lets it defer
+  /// the response, e.g. until a request it forwarded elsewhere is answered.
   /// Handler should be e.g. `void peek(const PeekParams&, Reply<PeekResult>);`
   /// PeekParams must be JSON parsable and PeekResult must be serializable.
   template <typename Result, typename Params, typename Fn, typename... Args>
