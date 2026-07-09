@@ -8,20 +8,36 @@
 
 // AIX fopen() does not support the 'x' mode.
 
-// REQUIRES: aix
+// REQUIRES: target={{.+}}-aix{{.*}}
 
 #include <fstream>
 
 void test() {
   std::filebuf fb;
-  fb.open("f", std::ios_base::out | std::ios_base::noreplace); // expected-warning {{fstream::open() with noreplace is not supported on AIX; open() will return failure}}
+  fb.open(
+      "f",
+      std::ios_base::out |
+          std::ios_base::
+              noreplace); // expected-warning {{fstream::open() with noreplace is not supported on AIX; open() will return failure}}
 
   std::ifstream ifs;
-  ifs.open("f", std::ios_base::in | std::ios_base::noreplace); // expected-warning {{fstream::open() with noreplace is not supported on AIX; open() will return failure}}
+  ifs.open(
+      "f",
+      std::ios_base::in |
+          std::ios_base::
+              noreplace); // expected-warning {{fstream::open() with noreplace is not supported on AIX; open() will return failure}}
 
   std::ofstream ofs;
-  ofs.open("f", std::ios_base::out | std::ios_base::noreplace); // expected-warning {{fstream::open() with noreplace is not supported on AIX; open() will return failure}}
+  ofs.open(
+      "f",
+      std::ios_base::out |
+          std::ios_base::
+              noreplace); // expected-warning {{fstream::open() with noreplace is not supported on AIX; open() will return failure}}
 
   std::fstream fs;
-  fs.open("f", std::ios_base::out | std::ios_base::noreplace); // expected-warning {{fstream::open() with noreplace is not supported on AIX; open() will return failure}}
+  fs.open(
+      "f",
+      std::ios_base::out |
+          std::ios_base::
+              noreplace); // expected-warning {{fstream::open() with noreplace is not supported on AIX; open() will return failure}}
 }
