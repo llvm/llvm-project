@@ -72,6 +72,7 @@ public:
     const uint32_t idx = ePropertyTimeout;
     return GetPropertyAtIndexAs<uint64_t>(
         idx, g_symbollocatorsymstore_properties[idx].default_uint_value);
+  }
 
   std::optional<std::string> GetTLSCertFingerprint() const {
     OptionValueString *s =
