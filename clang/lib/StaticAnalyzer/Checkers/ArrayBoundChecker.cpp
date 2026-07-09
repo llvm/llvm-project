@@ -126,11 +126,11 @@ public:
                          SizeUnit SU) const;
 
 private:
-  /// Return true if information about the value of `Sym` can put constraints
-  /// on some symbol which is interesting within the bug report `BR`.
-  /// In particular, this returns true when `Sym` is interesting within `BR`;
-  /// but it also returns true if `Sym` is an expression that contains integer
-  /// constants and a single symbolic operand which is interesting (in `BR`).
+  /// Return true if information about the value of \p SV can put constraints
+  /// on some symbol which is interesting within the bug report \p BR
+  /// In particular, this returns true when \p SV is interesting within \p BR;
+  /// but it also returns true if \p SV is an expression that contains integer
+  /// constants and a single symbolic operand which is interesting (in \p BR).
   /// We need to use this instead of plain `BR.isInteresting()` because if we
   /// are analyzing code like
   ///   int array[10];
@@ -140,12 +140,8 @@ private:
   /// then the byte offsets are `arg * 4` and `(arg + 10) * 4`, which are not
   /// sub-expressions of each other (but `getSimplifiedOffsets` is smart enough
   /// to detect this out of bounds access).
-  static bool providesInformationAboutInteresting(SymbolRef Sym,
-                                                  PathSensitiveBugReport &BR);
   static bool providesInformationAboutInteresting(SVal SV,
-                                                  PathSensitiveBugReport &BR) {
-    return providesInformationAboutInteresting(SV.getAsSymbol(), BR);
-  }
+                                                  PathSensitiveBugReport &BR);
 };
 
 struct Messages {
@@ -564,7 +560,8 @@ std::string CheckResult::getMessage(PathSensitiveBugReport &BR,
 }
 
 bool CheckResult::providesInformationAboutInteresting(
-    SymbolRef Sym, PathSensitiveBugReport &BR) {
+    SVal SV, PathSensitiveBugReport &BR) {
+  SymbolRef Sym = SV.getAsSymbol();
   if (!Sym)
     return false;
   for (SymbolRef PartSym : Sym->symbols()) {
