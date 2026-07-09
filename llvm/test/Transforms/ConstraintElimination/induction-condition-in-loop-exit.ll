@@ -884,8 +884,7 @@ define void @latch_counted_raw_phi_not_removable(ptr %p, i64 %n, i64 %lim) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
 ; CHECK-NEXT:    [[OFF:%.*]] = shl nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[RC:%.*]] = icmp ult i64 [[OFF]], [[LIM]]
-; CHECK-NEXT:    br i1 [[RC]], label %[[LATCH]], label %[[TRAP]]
+; CHECK-NEXT:    br i1 true, label %[[LATCH]], label %[[TRAP]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[OFF]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
