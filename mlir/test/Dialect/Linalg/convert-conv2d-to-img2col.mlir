@@ -556,3 +556,115 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// Dilated NHWC-HWCF: the im2col gather reads input at
+// oh*stride + fh*dilation, i.e. d1 floordiv 12 + (d2 floordiv 12) * 2.
+
+//  CHECK-DAG: #[[MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1 floordiv 12 + (d2 floordiv 12) * 2, d1 mod 12 + ((d2 mod 12) floordiv 4) * 2, d2 mod 4)>
+//  CHECK-DAG: #[[MAPI2C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+
+//      CHECK: func.func @conv_nhwc_hwcf_dilated
+// CHECK-SAME: (%[[INPUT:.+]]: tensor<1x16x16x4xf32>, %[[FILTER:.+]]: tensor<3x3x4x16xf32>, %[[INIT:.+]]: tensor<1x12x12x16xf32>)
+//  CHECK-DAG:   %[[CS_FILTER:.+]] = tensor.collapse_shape %[[FILTER]] {{\[}}[0, 1, 2], [3]] : tensor<3x3x4x16xf32> into tensor<36x16xf32>
+//  CHECK-DAG:   %[[CS_RESULT:.+]] = tensor.collapse_shape %[[INIT]] {{\[}}[0], [1, 2], [3]] : tensor<1x12x12x16xf32> into tensor<1x144x16xf32>
+//      CHECK:   %[[IT:.+]] = tensor.empty() : tensor<1x144x36xf32>
+//      CHECK:   %[[IMG2COL:.+]] = linalg.generic
+// CHECK-SAME:      indexing_maps = [#[[MAP]], #[[MAPI2C]]]
+// CHECK-SAME:   ins(%[[INPUT]] : tensor<1x16x16x4xf32>)
+// CHECK-SAME:   outs(%[[IT]] : tensor<1x144x36xf32>)
+//      CHECK:   %[[MATMUL:.+]] = linalg.generic
+// CHECK-SAME:   ins(%[[IMG2COL]], %[[CS_FILTER]] : tensor<1x144x36xf32>, tensor<36x16xf32>)
+// CHECK-SAME:   outs(%[[CS_RESULT]] : tensor<1x144x16xf32>)
+//      CHECK:   %[[CS_FINAL:.+]] = tensor.expand_shape %[[MATMUL]] {{\[}}[0], [1, 2], [3]] output_shape [1, 12, 12, 16] : tensor<1x144x16xf32> into tensor<1x12x12x16xf32>
+//      CHECK:   return %[[CS_FINAL]]
+func.func @conv_nhwc_hwcf_dilated(%arg0: tensor<1x16x16x4xf32>, %arg1: tensor<3x3x4x16xf32>, %arg2: tensor<1x12x12x16xf32>) -> tensor<1x12x12x16xf32> {
+    %0 = linalg.conv_2d_nhwc_hwcf
+      {dilations = dense<2> : tensor<2xi64>, strides = dense<1> : tensor<2xi64> }
+       ins(%arg0, %arg1: tensor<1x16x16x4xf32>, tensor<3x3x4x16xf32>)
+      outs(%arg2: tensor<1x12x12x16xf32>) -> tensor<1x12x12x16xf32>
+    return %0 : tensor<1x12x12x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_hwcf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:2 = transform.structured.convert_conv2d_to_img2col %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Dilated NCHW-FCHW: h index is d2 floordiv 12 + ((d1 mod 9) floordiv 3) * 2.
+
+//  CHECK-DAG: #[[MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1 floordiv 9, d2 floordiv 12 + ((d1 mod 9) floordiv 3) * 2, d2 mod 12 + (d1 mod 3) * 2)>
+//  CHECK-DAG: #[[MAPI2C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+
+//      CHECK: func.func @conv_nchw_fchw_dilated
+// CHECK-SAME: (%[[INPUT:.+]]: tensor<8x4x16x16xf32>, %[[FILTER:.+]]: tensor<16x4x3x3xf32>, %[[INIT:.+]]: tensor<8x16x12x12xf32>)
+//  CHECK-DAG:   %[[CS_FILTER:.+]] = tensor.collapse_shape %[[FILTER]] {{\[}}[0], [1, 2, 3]] : tensor<16x4x3x3xf32> into tensor<16x36xf32>
+//  CHECK-DAG:   %[[CS_RESULT:.+]] = tensor.collapse_shape %[[INIT]] {{\[}}[0], [1], [2, 3]] : tensor<8x16x12x12xf32> into tensor<8x16x144xf32>
+//      CHECK:   %[[IT:.+]] = tensor.empty() : tensor<8x36x144xf32>
+//      CHECK:   %[[IMG2COL:.+]] = linalg.generic
+// CHECK-SAME:      indexing_maps = [#[[MAP]], #[[MAPI2C]]]
+// CHECK-SAME:   ins(%[[INPUT]] : tensor<8x4x16x16xf32>)
+// CHECK-SAME:   outs(%[[IT]] : tensor<8x36x144xf32>)
+//      CHECK:   %[[MATMUL:.+]] = linalg.generic
+// CHECK-SAME:   ins(%[[CS_FILTER]], %[[IMG2COL]] : tensor<16x36xf32>, tensor<8x36x144xf32>)
+// CHECK-SAME:   outs(%[[CS_RESULT]] : tensor<8x16x144xf32>)
+//      CHECK:   %[[CS_FINAL:.+]] = tensor.expand_shape %[[MATMUL]] {{\[}}[0], [1], [2, 3]] output_shape [8, 16, 12, 12] : tensor<8x16x144xf32> into tensor<8x16x12x12xf32>
+//      CHECK:   return %[[CS_FINAL]]
+func.func @conv_nchw_fchw_dilated(%arg0: tensor<8x4x16x16xf32>, %arg1: tensor<16x4x3x3xf32>, %arg2: tensor<8x16x12x12xf32>) -> tensor<8x16x12x12xf32> {
+    %0 = linalg.conv_2d_nchw_fchw
+      {dilations = dense<2> : tensor<2xi64>, strides = dense<1> : tensor<2xi64> }
+       ins(%arg0, %arg1: tensor<8x4x16x16xf32>, tensor<16x4x3x3xf32>)
+      outs(%arg2: tensor<8x16x12x12xf32>) -> tensor<8x16x12x12xf32>
+    return %0 : tensor<8x16x12x12xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.conv_2d_nchw_fchw"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:2 = transform.structured.convert_conv2d_to_img2col %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Dilated NHWC-FHWC: same dilated input gather map as NHWC-HWCF.
+
+//  CHECK-DAG: #[[MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1 floordiv 12 + (d2 floordiv 12) * 2, d1 mod 12 + ((d2 mod 12) floordiv 4) * 2, d2 mod 4)>
+//  CHECK-DAG: #[[MAPI2C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+
+//      CHECK: func.func @conv_nhwc_fhwc_dilated
+// CHECK-SAME: (%[[INPUT:.+]]: tensor<1x16x16x4xf32>, %[[FILTER:.+]]: tensor<16x3x3x4xf32>, %[[INIT:.+]]: tensor<1x12x12x16xf32>)
+//  CHECK-DAG:   %[[CS_FILTER:.+]] = tensor.collapse_shape %[[FILTER]] {{\[}}[0], [1, 2, 3]] : tensor<16x3x3x4xf32> into tensor<16x36xf32>
+//  CHECK-DAG:   %[[CS_RESULT:.+]] = tensor.collapse_shape %[[INIT]] {{\[}}[0], [1, 2], [3]] : tensor<1x12x12x16xf32> into tensor<1x144x16xf32>
+//      CHECK:   %[[IT:.+]] = tensor.empty() : tensor<1x144x36xf32>
+//      CHECK:   %[[IMG2COL:.+]] = linalg.generic
+// CHECK-SAME:      indexing_maps = [#[[MAP]], #[[MAPI2C]]]
+// CHECK-SAME:   ins(%[[INPUT]] : tensor<1x16x16x4xf32>)
+// CHECK-SAME:   outs(%[[IT]] : tensor<1x144x36xf32>)
+//      CHECK:   %[[MATMUL:.+]] = linalg.generic
+// CHECK-SAME:   ins(%[[IMG2COL]], %[[CS_FILTER]] : tensor<1x144x36xf32>, tensor<16x36xf32>)
+// CHECK-SAME:   outs(%[[CS_RESULT]] : tensor<1x144x16xf32>)
+//      CHECK:   %[[CS_FINAL:.+]] = tensor.expand_shape %[[MATMUL]] {{\[}}[0], [1, 2], [3]] output_shape [1, 12, 12, 16] : tensor<1x144x16xf32> into tensor<1x12x12x16xf32>
+//      CHECK:   return %[[CS_FINAL]]
+func.func @conv_nhwc_fhwc_dilated(%arg0: tensor<1x16x16x4xf32>, %arg1: tensor<16x3x3x4xf32>, %arg2: tensor<1x12x12x16xf32>) -> tensor<1x12x12x16xf32> {
+    %0 = linalg.conv_2d_nhwc_fhwc
+      {dilations = dense<2> : tensor<2xi64>, strides = dense<1> : tensor<2xi64> }
+       ins(%arg0, %arg1: tensor<1x16x16x4xf32>, tensor<16x3x3x4xf32>)
+      outs(%arg2: tensor<1x12x12x16xf32>) -> tensor<1x12x12x16xf32>
+    return %0 : tensor<1x12x12x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_fhwc"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:2 = transform.structured.convert_conv2d_to_img2col %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
