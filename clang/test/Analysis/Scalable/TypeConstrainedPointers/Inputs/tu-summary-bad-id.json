@@ -5,11 +5,13 @@
         {
           "entity_id": 0,
           "entity_summary": {
-            "WrongKey": []
+            "TypeConstrainedPointersAnalysisResult": [
+              "not-an-object"
+            ]
           }
         }
       ],
-      "summary_name": "OperatorNewDeletePointers"
+      "summary_name": "TypeConstrainedPointers"
     }
   ],
   "id_table": [

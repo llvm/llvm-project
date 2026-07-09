@@ -1,16 +1,16 @@
-// End-to-end test of the operator new/delete pointer analysis.
+// End-to-end test of the Type Constrained Pointers analysis.
 
 // RUN: rm -rf %t && mkdir -p %t
 
 // RUN: %clang_cc1 -fsyntax-only %s \
-// RUN:   --ssaf-extract-summaries=OperatorNewDeletePointers \
+// RUN:   --ssaf-extract-summaries=TypeConstrainedPointers \
 // RUN:   --ssaf-tu-summary-file=%t/tu.summary.json \
 // RUN:   --ssaf-compilation-unit-id="tu-1"
 
 // RUN: clang-ssaf-linker %t/tu.summary.json -o %t/lu.json
 
 // RUN: clang-ssaf-analyzer %t/lu.json -o %t/wpa.json \
-// RUN:   -a OperatorNewDeletePointersAnalysisResult
+// RUN:   -a TypeConstrainedPointersAnalysisResult
 
 // RUN: FileCheck %s --input-file=%t/wpa.json
 
@@ -46,7 +46,7 @@ void operator delete(void *ptr, void *placement) noexcept {}
 // CHECK-DAG: "id": [[DEL_PLACE_PTR_ID:[0-9]+]],{{([^]]|[[:space:]])+\],[[:space:]]+"suffix": "1",[[:space:]]+"usr": }}"c:@F@operator delete#*v#S0_#"
 // CHECK-DAG: "id": [[DEL_PLACE_PARAM_ID:[0-9]+]],{{([^]]|[[:space:]])+\],[[:space:]]+"suffix": "2",[[:space:]]+"usr": }}"c:@F@operator delete#*v#S0_#"
 
-// CHECK: "analysis_name": "OperatorNewDeletePointersAnalysisResult"
+// CHECK: "analysis_name": "TypeConstrainedPointersAnalysisResult"
 
 // CHECK-DAG: "@": [[NEW_RET_ID]]
 // CHECK-DAG: "@": [[NEW_PLACE_RET_ID]]
