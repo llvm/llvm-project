@@ -19,7 +19,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Redeclarable.h"
 #include "clang/AST/TemplateBase.h"
@@ -2472,51 +2471,45 @@ public:
 ///   template \<typename U> friend class Foo<T>::Nested; // friend template
 /// };
 /// \endcode
-class FriendTemplateDecl final
-    : public FriendDecl,
-      private llvm::TrailingObjects<FriendTemplateDecl,
-                                    TemplateParameterList *> {
-  void anchor() override;
+///
+/// \note This class is not currently in use.  All of the above
+/// will yield a FriendDecl, not a FriendTemplateDecl.
+class FriendTemplateDecl : public Decl {
+  virtual void anchor();
+
+public:
+  using FriendUnion = llvm::PointerUnion<NamedDecl *,TypeSourceInfo *>;
 
 private:
-  unsigned NumTPLists = 0;
-  TemplateName Template;
+  // The number of template parameters;  always non-zero.
+  unsigned NumParams = 0;
 
-  FriendTemplateDecl(DeclContext *DC, SourceLocation Loc, FriendUnion Friend,
-                     SourceLocation FriendLoc, SourceLocation EllipsisLoc,
-                     ArrayRef<TemplateParameterList *> FriendTypeTPLists,
-                     TemplateName Template = {})
-      : FriendDecl(Decl::FriendTemplate, DC, Loc, Friend, FriendLoc,
-                   EllipsisLoc),
-        NumTPLists(FriendTypeTPLists.size()), Template(Template) {
-    llvm::copy(FriendTypeTPLists, getTrailingObjects());
-  }
+  // The parameter list.
+  TemplateParameterList **Params = nullptr;
 
-  FriendTemplateDecl(EmptyShell Empty, unsigned NumFriendTypeTPLists)
-      : FriendDecl(Decl::FriendTemplate, Empty),
-        NumTPLists(NumFriendTypeTPLists) {}
+  // The declaration that's a friend of this class.
+  FriendUnion Friend;
+
+  // Location of the 'friend' specifier.
+  SourceLocation FriendLoc;
+
+  FriendTemplateDecl(DeclContext *DC, SourceLocation Loc,
+                     TemplateParameterList **Params, unsigned NumParams,
+                     FriendUnion Friend, SourceLocation FriendLoc)
+      : Decl(Decl::FriendTemplate, DC, Loc), NumParams(NumParams),
+        Params(Params), Friend(Friend), FriendLoc(FriendLoc) {}
+
+  FriendTemplateDecl(EmptyShell Empty) : Decl(Decl::FriendTemplate, Empty) {}
 
 public:
   friend class ASTDeclReader;
-  friend class ASTDeclWriter;
-  friend TrailingObjects;
 
   static FriendTemplateDecl *
   Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
-         FriendUnion Friend, SourceLocation FriendLoc,
-         ArrayRef<TemplateParameterList *> FriendTypeTPLists = {},
-         SourceLocation EllipsisLoc = {});
+         MutableArrayRef<TemplateParameterList *> Params, FriendUnion Friend,
+         SourceLocation FriendLoc);
 
-  static FriendTemplateDecl *
-  Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
-         TemplateName Template, SourceLocation FriendLoc,
-         ArrayRef<TemplateParameterList *> FriendTypeTPLists = {},
-         SourceLocation EllipsisLoc = {});
-
-  static FriendTemplateDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
-                                                unsigned FriendTypeNumTPLists);
-
-  SourceRange getSourceRange() const override LLVM_READONLY;
+  static FriendTemplateDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   /// If this friend declaration names a templated type (or
   /// a dependent member type of a templated type), return that
@@ -2529,16 +2522,21 @@ public:
   /// a member function of a templated type), return that type;
   /// otherwise return null.
   NamedDecl *getFriendDecl() const {
-    if (TemplateDecl *TD = Template.getAsTemplateDecl())
-      return TD;
-    return Friend.dyn_cast<NamedDecl *>();
+    return Friend.dyn_cast<NamedDecl*>();
   }
 
-  TemplateName getFriendTemplateName() const { return Template; }
+  /// Retrieves the location of the 'friend' keyword.
+  SourceLocation getFriendLoc() const {
+    return FriendLoc;
+  }
 
-  ArrayRef<TemplateParameterList *>
-  getFriendTypeTemplateParameterLists() const {
-    return ArrayRef(getTrailingObjects(), NumTPLists);
+  TemplateParameterList *getTemplateParameterList(unsigned i) const {
+    assert(i <= NumParams);
+    return Params[i];
+  }
+
+  unsigned getNumTemplateParameters() const {
+    return NumParams;
   }
 
   // Implement isa/cast/dyncast/etc.
