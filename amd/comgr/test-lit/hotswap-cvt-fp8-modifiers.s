@@ -152,8 +152,7 @@ test_cvt_pk_fp8_negabs_both:
 // COM: --- NaN detection (anchor on v11) ---
 // SR_NEG:       v_and_b32{{.*}}0x7fffffff, v11
 // SR_NEG-NEXT:  v_cmp_lt_u32{{.*}}0x7f800000
-// COM: --- Stochastic noise injection ---
-// SR_NEG:       v_and_b32{{.*}}0x7fffff,
+// COM: --- Stochastic noise injection (direct F32 addition) ---
 // SR_NEG:       v_lshrrev_b32{{.*}}, 12, v12
 // COM: --- F32 -> F16 -> UE5M3 ---
 // SR_NEG:       v_cvt_f16_f32
@@ -186,8 +185,7 @@ test_cvt_sr_fp8_neg_src0:
 // COM: --- NaN detection (anchor on v14) ---
 // SR_ABS:       v_and_b32{{.*}}0x7fffffff, v14
 // SR_ABS-NEXT:  v_cmp_lt_u32{{.*}}0x7f800000
-// COM: --- Stochastic noise injection ---
-// SR_ABS:       v_and_b32{{.*}}0x7fffff,
+// COM: --- Stochastic noise injection (direct F32 addition) ---
 // SR_ABS:       v_lshrrev_b32{{.*}}, 12, v15
 // COM: --- F32 -> F16 -> UE5M3 ---
 // SR_ABS:       v_cvt_f16_f32
