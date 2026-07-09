@@ -19,6 +19,7 @@
 ///   B_pack = linalg.pack B
 ///   C_pack = linalg.pack C
 ///   out_pack = linalg.mmt4d(A_pack, B_pack, C_pack)
+///   out = linalg.unpack out_pack
 ///
 /// is equivalent to:
 ///
