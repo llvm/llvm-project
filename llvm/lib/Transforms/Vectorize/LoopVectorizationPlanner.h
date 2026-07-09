@@ -435,10 +435,22 @@ public:
         new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL));
   }
 
-  /// Create a VScale VPInstruction.
+  /// Create a scalar call to the intrinsic \p IntrinsicID with \p Operands, and
+  /// result type \p ResultTy
+  VPInstruction *createScalarIntrinsic(Intrinsic::ID IntrinsicID,
+                                       ArrayRef<VPValue *> Operands,
+                                       Type *ResultTy, DebugLoc DL) {
+    VPlan &Plan = getPlan();
+    SmallVector<VPValue *, 2> Ops(Operands);
+    Ops.push_back(Plan.getConstantInt(8 * sizeof(IntrinsicID), IntrinsicID));
+    return tryInsertInstruction(new VPInstructionWithType(
+        VPInstruction::Intrinsic, Ops, ResultTy, {}, {}, DL));
+  }
+
+  /// Create a scalar llvm.vscale call.
   VPInstruction *createVScale(Type *ResultTy,
                               DebugLoc DL = DebugLoc::getUnknown()) {
-    return createNaryOp(VPInstruction::VScale, {}, ResultTy, {}, DL);
+    return createScalarIntrinsic(Intrinsic::vscale, {}, ResultTy, DL);
   }
 
   VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,

@@ -3303,6 +3303,52 @@ libc_support_library(
     ],
 )
 
+############################### arpa/inet targets ##############################
+
+libc_function(
+    name = "htonl",
+    srcs = ["src/arpa/inet/htonl.cpp"],
+    hdrs = ["src/arpa/inet/htonl.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":hdr_stdint_proxy",
+    ],
+)
+
+libc_function(
+    name = "htons",
+    srcs = ["src/arpa/inet/htons.cpp"],
+    hdrs = ["src/arpa/inet/htons.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":hdr_stdint_proxy",
+    ],
+)
+
+libc_function(
+    name = "ntohl",
+    srcs = ["src/arpa/inet/ntohl.cpp"],
+    hdrs = ["src/arpa/inet/ntohl.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":hdr_stdint_proxy",
+    ],
+)
+
+libc_function(
+    name = "ntohs",
+    srcs = ["src/arpa/inet/ntohs.cpp"],
+    hdrs = ["src/arpa/inet/ntohs.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":hdr_stdint_proxy",
+    ],
+)
+
 ################################# ctype targets ################################
 
 libc_function(

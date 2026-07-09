@@ -2049,13 +2049,17 @@ public:
 
   };
 
-  /// Stashed information about a defaulted/deleted function body.
+  /// Stashed information about a defaulted/deleted function body, including
+  /// the active FP pragma overrides (FPOptionsOverride) from the declaration
+  /// site. These overrides are required to correctly synthesize the function
+  /// body.
   class DefaultedOrDeletedFunctionInfo final
       : llvm::TrailingObjects<DefaultedOrDeletedFunctionInfo, DeclAccessPair,
                               StringLiteral *> {
     friend TrailingObjects;
     unsigned NumLookups;
     bool HasDeletedMessage;
+    FPOptionsOverride FPFeatures;
 
     size_t numTrailingObjects(OverloadToken<DeclAccessPair>) const {
       return NumLookups;
@@ -2064,7 +2068,10 @@ public:
   public:
     static DefaultedOrDeletedFunctionInfo *
     Create(ASTContext &Context, ArrayRef<DeclAccessPair> Lookups,
+           FPOptionsOverride FPFeatures,
            StringLiteral *DeletedMessage = nullptr);
+
+    FPOptionsOverride getFPFeatures() const { return FPFeatures; }
 
     /// Get the unqualified lookup results that should be used in this
     /// defaulted function definition.
@@ -2130,6 +2137,34 @@ private:
   /// Provides source/type location info for the declaration name embedded in
   /// the DeclaratorDecl base class.
   DeclarationNameLoc DNLoc;
+
+  /// Specify that this function declaration is actually a function
+  /// template specialization.
+  ///
+  /// \param C the ASTContext.
+  ///
+  /// \param Template the function template that this function template
+  /// specialization specializes.
+  ///
+  /// \param TemplateArgs the template arguments that produced this
+  /// function template specialization from the template.
+  ///
+  /// \param InsertPos If non-NULL, the position in the function template
+  /// specialization set where the function template specialization data will
+  /// be inserted.
+  ///
+  /// \param TSK the kind of template specialization this is.
+  ///
+  /// \param TemplateArgsAsWritten location info of template arguments.
+  ///
+  /// \param PointOfInstantiation point at which the function template
+  /// specialization was first instantiated.
+  void setFunctionTemplateSpecialization(
+      ASTContext &C, FunctionTemplateDecl *Template,
+      TemplateArgumentList *TemplateArgs, void *InsertPos,
+      TemplateSpecializationKind TSK,
+      const TemplateArgumentListInfo *TemplateArgsAsWritten,
+      SourceLocation PointOfInstantiation);
 
   /// Specify that this record is an instantiation of the
   /// member function FD.
@@ -2225,8 +2260,6 @@ public:
       return FPT->getEllipsisLoc();
     return SourceLocation();
   }
-
-  SourceLocation getFunctionLocStart() const;
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
@@ -3057,13 +3090,8 @@ public:
   const ASTTemplateArgumentListInfo*
   getTemplateSpecializationArgsAsWritten() const;
 
-  /// Returns the template parameter list for an explicit specialization.
-  const TemplateParameterList *getTemplateSpecializationParameters() const;
-
   /// Specify that this function declaration is actually a function
   /// template specialization.
-  ///
-  /// \param C the ASTContext.
   ///
   /// \param Template the function template that this function template
   /// specialization specializes.
@@ -3077,30 +3105,25 @@ public:
   ///
   /// \param TSK the kind of template specialization this is.
   ///
-  /// \param TemplateParams the template parameters if this is an explicit
-  /// specialization.
-  ///
   /// \param TemplateArgsAsWritten location info of template arguments.
   ///
   /// \param PointOfInstantiation point at which the function template
   /// specialization was first instantiated.
-  ///
-  /// \param AddSpecialization whether to add this specialization to the
-  /// template's specialization set.
-  ///
   void setFunctionTemplateSpecialization(
-      ASTContext &C, FunctionTemplateDecl *Template,
-      TemplateArgumentList *TemplateArgs, void *InsertPos,
-      TemplateSpecializationKind TSK,
-      const TemplateParameterList *TemplateParams,
-      const TemplateArgumentListInfo *TemplateArgsAsWritten,
-      SourceLocation PointOfInstantiation, bool AddSpecialization);
+      FunctionTemplateDecl *Template, TemplateArgumentList *TemplateArgs,
+      void *InsertPos,
+      TemplateSpecializationKind TSK = TSK_ImplicitInstantiation,
+      TemplateArgumentListInfo *TemplateArgsAsWritten = nullptr,
+      SourceLocation PointOfInstantiation = SourceLocation()) {
+    setFunctionTemplateSpecialization(getASTContext(), Template, TemplateArgs,
+                                      InsertPos, TSK, TemplateArgsAsWritten,
+                                      PointOfInstantiation);
+  }
 
   /// Specifies that this function declaration is actually a
   /// dependent function template specialization.
   void setDependentTemplateSpecialization(
       ASTContext &Context, const UnresolvedSetImpl &Templates,
-      const TemplateParameterList *TemplateParams,
       const TemplateArgumentListInfo *TemplateArgs);
 
   DependentFunctionTemplateSpecializationInfo *

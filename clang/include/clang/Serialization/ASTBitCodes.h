@@ -44,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 38;
+const unsigned VERSION_MAJOR = 39;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -2107,13 +2107,6 @@ enum CtorInitializerType {
   CTOR_INITIALIZER_DELEGATING,
   CTOR_INITIALIZER_MEMBER,
   CTOR_INITIALIZER_INDIRECT_MEMBER
-};
-
-/// Kinds of friend payloads owned by FriendTemplateDecl.
-enum FriendTemplateDeclKind {
-  FTDK_Type = 0,
-  FTDK_Decl = 1,
-  FTDK_Template = 2,
 };
 
 /// Kinds of cleanup objects owned by ExprWithCleanups.
