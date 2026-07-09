@@ -1249,11 +1249,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // Widen vNf32 -> vNi8 into vNf32 -> vNi16, so we can select a packed
   // instruction.
-  if (ST.hasVCvtPkIU16F32())
+  if (ST.hasVCvtPkIU16F32()) {
     FPToISat.widenScalarIf(
         all(isVector(0), elementTypeIs(0, S8),
             isVector(1), elementTypeIs(1, S32)),
         changeElementTo(0, S16));
+  }
 
   FPToISat.narrowScalarFor({{S64, S16}}, changeTo(0, S32));
 

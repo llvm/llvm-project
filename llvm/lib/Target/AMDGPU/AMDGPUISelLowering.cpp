@@ -3939,10 +3939,8 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
 
   // Native selection also applies to some 8-bit width cases to allow use of
   // packed instructions.
-  if (SatWidth == 8 &&
-      ((DstVT == MVT::i16 && SrcVT == MVT::f32) ||
-       (DstVT == MVT::v2i16 && SrcVT == MVT::v2f32)) &&
-      ST.hasVCvtPkIU16F32())
+  if (SatWidth == 8 && DstVT.getScalarType() == MVT::i16 &&
+      SrcVT.getScalarType() == MVT::f32 && ST.hasVCvtPkIU16F32())
     return Op;
 
   // Vectors can only be selected natively.
