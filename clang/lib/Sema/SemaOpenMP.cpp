@@ -15990,8 +15990,7 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
   Stmt *Inner = addLoopVarFinalization(Context, ReversedFor, LoopHelpers);
 
   return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt, NumLoops,
-                                     Inner,
-                                     buildPreInits(Context, PreInits));
+                                     Inner, buildPreInits(Context, PreInits));
 }
 
 /// Build the AST for \#pragma omp split counts(c1, c2, ...).
