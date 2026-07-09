@@ -375,6 +375,150 @@ struct __declspec(dllexport) IB : virtual IA {
 // CHECK-X64-NEXT:      | [sizeof=16, align=8
 // CHECK-X64-NEXT:      |  nvsize=8, nvalign=8]
 
+// MSVC does not add a vtordisp for a class with a default constructor that is
+// explicitly defaulted on its first declaration (and not deleted), even when
+// other user-provided constructors exist.
+struct JA : virtual B0 {
+	JA() = default;
+	JA(int) {}
+	virtual void f() { printf("JA"); }
+};
+
+// CHECK-LABEL:   0 | struct JA{{$}}
+// CHECK-NEXT:    0 |   (JA vbtable pointer)
+// CHECK-NEXT:    4 |   struct B0 (virtual base)
+// CHECK-NEXT:    4 |     (B0 vftable pointer)
+// CHECK-NEXT:    8 |     int a
+// CHECK-NEXT:      | [sizeof=12, align=4
+// CHECK-NEXT:      |  nvsize=4, nvalign=4]
+// CHECK-X64-LABEL:   0 | struct JA{{$}}
+// CHECK-X64-NEXT:    0 |   (JA vbtable pointer)
+// CHECK-X64-NEXT:    8 |   struct B0 (virtual base)
+// CHECK-X64-NEXT:    8 |     (B0 vftable pointer)
+// CHECK-X64-NEXT:   16 |     int a
+// CHECK-X64-NEXT:      | [sizeof=24, align=8
+// CHECK-X64-NEXT:      |  nvsize=8, nvalign=8]
+
+// A destructor defaulted on its first declaration doesn't add a vtordisp
+// either (it is not user-provided).
+struct JB : virtual B0 {
+	~JB() = default;
+	virtual void f() { printf("JB"); }
+};
+
+// CHECK-LABEL:   0 | struct JB{{$}}
+// CHECK-NEXT:    0 |   (JB vbtable pointer)
+// CHECK-NEXT:    4 |   struct B0 (virtual base)
+// CHECK-NEXT:    4 |     (B0 vftable pointer)
+// CHECK-NEXT:    8 |     int a
+// CHECK-NEXT:      | [sizeof=12, align=4
+// CHECK-NEXT:      |  nvsize=4, nvalign=4]
+// CHECK-X64-LABEL:   0 | struct JB{{$}}
+// CHECK-X64-NEXT:    0 |   (JB vbtable pointer)
+// CHECK-X64-NEXT:    8 |   struct B0 (virtual base)
+// CHECK-X64-NEXT:    8 |     (B0 vftable pointer)
+// CHECK-X64-NEXT:   16 |     int a
+// CHECK-X64-NEXT:      | [sizeof=24, align=8
+// CHECK-X64-NEXT:      |  nvsize=8, nvalign=8]
+
+// The defaulted default constructor suppresses vtordisps for all of the
+// class's constructors, even a user-provided copy constructor.
+struct JC : virtual B0 {
+	JC() = default;
+	JC(const JC&) {}
+	virtual void f() { printf("JC"); }
+};
+
+// CHECK-LABEL:   0 | struct JC{{$}}
+// CHECK-NEXT:    0 |   (JC vbtable pointer)
+// CHECK-NEXT:    4 |   struct B0 (virtual base)
+// CHECK-NEXT:    4 |     (B0 vftable pointer)
+// CHECK-NEXT:    8 |     int a
+// CHECK-NEXT:      | [sizeof=12, align=4
+// CHECK-NEXT:      |  nvsize=4, nvalign=4]
+// CHECK-X64-LABEL:   0 | struct JC{{$}}
+// CHECK-X64-NEXT:    0 |   (JC vbtable pointer)
+// CHECK-X64-NEXT:    8 |   struct B0 (virtual base)
+// CHECK-X64-NEXT:    8 |     (B0 vftable pointer)
+// CHECK-X64-NEXT:   16 |     int a
+// CHECK-X64-NEXT:      | [sizeof=24, align=8
+// CHECK-X64-NEXT:      |  nvsize=8, nvalign=8]
+
+// A deleted default constructor does not suppress vtordisp creation.
+struct JD : virtual B0 {
+	JD() = delete;
+	JD(int) {}
+	virtual void f() { printf("JD"); }
+};
+
+// CHECK-LABEL:   0 | struct JD{{$}}
+// CHECK-NEXT:    0 |   (JD vbtable pointer)
+// CHECK-NEXT:    4 |   (vtordisp for vbase B0)
+// CHECK-NEXT:    8 |   struct B0 (virtual base)
+// CHECK-NEXT:    8 |     (B0 vftable pointer)
+// CHECK-NEXT:   12 |     int a
+// CHECK-NEXT:      | [sizeof=16, align=4
+// CHECK-NEXT:      |  nvsize=4, nvalign=4]
+// CHECK-X64-LABEL:   0 | struct JD{{$}}
+// CHECK-X64-NEXT:    0 |   (JD vbtable pointer)
+// CHECK-X64-NEXT:   12 |   (vtordisp for vbase B0)
+// CHECK-X64-NEXT:   16 |   struct B0 (virtual base)
+// CHECK-X64-NEXT:   16 |     (B0 vftable pointer)
+// CHECK-X64-NEXT:   24 |     int a
+// CHECK-X64-NEXT:      | [sizeof=32, align=8
+// CHECK-X64-NEXT:      |  nvsize=8, nvalign=8]
+
+// A default constructor defaulted out-of-line (not on its first declaration)
+// is user-provided and does not suppress vtordisp creation.
+struct JE : virtual B0 {
+	JE();
+	JE(int) {}
+	virtual void f() { printf("JE"); }
+};
+JE::JE() = default;
+
+// CHECK-LABEL:   0 | struct JE{{$}}
+// CHECK-NEXT:    0 |   (JE vbtable pointer)
+// CHECK-NEXT:    4 |   (vtordisp for vbase B0)
+// CHECK-NEXT:    8 |   struct B0 (virtual base)
+// CHECK-NEXT:    8 |     (B0 vftable pointer)
+// CHECK-NEXT:   12 |     int a
+// CHECK-NEXT:      | [sizeof=16, align=4
+// CHECK-NEXT:      |  nvsize=4, nvalign=4]
+// CHECK-X64-LABEL:   0 | struct JE{{$}}
+// CHECK-X64-NEXT:    0 |   (JE vbtable pointer)
+// CHECK-X64-NEXT:   12 |   (vtordisp for vbase B0)
+// CHECK-X64-NEXT:   16 |   struct B0 (virtual base)
+// CHECK-X64-NEXT:   16 |     (B0 vftable pointer)
+// CHECK-X64-NEXT:   24 |     int a
+// CHECK-X64-NEXT:      | [sizeof=32, align=8
+// CHECK-X64-NEXT:      |  nvsize=8, nvalign=8]
+
+// A user-provided destructor still adds vtordisps even when the defaulted
+// default constructor would otherwise suppress them.
+struct JF : virtual B0 {
+	JF() = default;
+	~JF() {}
+	virtual void f() { printf("JF"); }
+};
+
+// CHECK-LABEL:   0 | struct JF{{$}}
+// CHECK-NEXT:    0 |   (JF vbtable pointer)
+// CHECK-NEXT:    4 |   (vtordisp for vbase B0)
+// CHECK-NEXT:    8 |   struct B0 (virtual base)
+// CHECK-NEXT:    8 |     (B0 vftable pointer)
+// CHECK-NEXT:   12 |     int a
+// CHECK-NEXT:      | [sizeof=16, align=4
+// CHECK-NEXT:      |  nvsize=4, nvalign=4]
+// CHECK-X64-LABEL:   0 | struct JF{{$}}
+// CHECK-X64-NEXT:    0 |   (JF vbtable pointer)
+// CHECK-X64-NEXT:   12 |   (vtordisp for vbase B0)
+// CHECK-X64-NEXT:   16 |   struct B0 (virtual base)
+// CHECK-X64-NEXT:   16 |     (B0 vftable pointer)
+// CHECK-X64-NEXT:   24 |     int a
+// CHECK-X64-NEXT:      | [sizeof=32, align=8
+// CHECK-X64-NEXT:      |  nvsize=8, nvalign=8]
+
 int a[
 sizeof(A)+
 sizeof(C)+
@@ -388,4 +532,10 @@ sizeof(pragma_test4::C)+
 sizeof(GD)+
 sizeof(HC)+
 sizeof(IB)+
+sizeof(JA)+
+sizeof(JB)+
+sizeof(JC)+
+sizeof(JD)+
+sizeof(JE)+
+sizeof(JF)+
 0];

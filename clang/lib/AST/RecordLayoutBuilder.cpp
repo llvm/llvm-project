@@ -3401,11 +3401,31 @@ void MicrosoftRecordLayoutBuilder::computeVtorDispSet(
       if (bi.second.hasVtorDisp())
         HasVtordispSet.insert(bi.first);
   }
-  // We don't introduce any additional vtordisps if either:
-  // * A user declared constructor or destructor aren't declared.
-  // * #pragma vtordisp(0) or the /vd0 flag are in use.
-  if ((!RD->hasUserDeclaredConstructor() && !RD->hasUserDeclaredDestructor()) ||
-      RD->getMSVtorDispMode() == MSVtorDispMode::Never)
+  // #pragma vtordisp(0) or the /vd0 flag suppress any additional vtordisps.
+  if (RD->getMSVtorDispMode() == MSVtorDispMode::Never)
+    return;
+  // We only introduce additional vtordisps if the class has a constructor or
+  // destructor that could observe a partially constructed object. MSVC's
+  // notion of this is narrower than "any user-declared constructor or
+  // destructor" (verified against MSVC 19.44 and 19.51):
+  // * A user-declared constructor triggers vtordisps, unless the class also
+  //   has a default constructor that is explicitly defaulted on its first
+  //   declaration and not deleted. Such a default constructor suppresses
+  //   vtordisp creation for *all* of the class's constructors, even
+  //   user-provided ones (e.g. a copy constructor).
+  // * A user-declared destructor triggers vtordisps only if it is
+  //   user-provided; one defaulted on its first declaration does not count.
+  bool HasVtorDispTriggeringCtor = RD->hasUserDeclaredConstructor();
+  if (HasVtorDispTriggeringCtor)
+    for (const CXXConstructorDecl *Ctor : RD->ctors())
+      if (Ctor->isDefaultConstructor() && !Ctor->isUserProvided() &&
+          !Ctor->isDeleted()) {
+        HasVtorDispTriggeringCtor = false;
+        break;
+      }
+  bool HasVtorDispTriggeringDtor =
+      RD->hasUserDeclaredDestructor() && RD->getDestructor()->isUserProvided();
+  if (!HasVtorDispTriggeringCtor && !HasVtorDispTriggeringDtor)
     return;
   // /vd1 or #pragma vtordisp(1): Try to guess based on whether we think it's
   // possible for a partially constructed object with virtual base overrides to
