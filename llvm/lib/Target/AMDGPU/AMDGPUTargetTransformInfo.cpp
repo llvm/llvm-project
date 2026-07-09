@@ -1062,10 +1062,10 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     // to gfx9 targets that expose packed FP32 (gfx90a, gfx94x, gfx950) via
     // hasPackedFP32Ops(); gfx12+ is left unchanged pending separate evaluation.
     if (Opcode == Instruction::InsertElement && EltSize == 32 &&
-        ST->hasPackedFP32Ops() &&
-        ST->getGeneration() == AMDGPUSubtarget::GFX9)
+        ST->hasPackedFP32Ops() && ST->getGeneration() == AMDGPUSubtarget::GFX9)
       if (auto *VecTy = dyn_cast<FixedVectorType>(ValTy))
-        if (VecTy->getNumElements() == 2 && VecTy->getElementType()->isFloatTy())
+        if (VecTy->getNumElements() == 2 &&
+            VecTy->getElementType()->isFloatTy())
           return (Op1 && isa<LoadInst>(Op1)) ? 0 : 1;
 
     // Extracts are just reads of a subregister, so are free. Inserts are
@@ -1380,8 +1380,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   // f32-only and gfx9 packed-FP32 targets only, for the same reasons as in
   // getVectorInstrCost; gfx12+ is left unchanged pending separate evaluation.
   if (ScalarSize == 32 && SrcTy->getElementType()->isFloatTy() &&
-      ST->hasPackedFP32Ops() &&
-      ST->getGeneration() == AMDGPUSubtarget::GFX9) {
+      ST->hasPackedFP32Ops() && ST->getGeneration() == AMDGPUSubtarget::GFX9) {
     return 0;
   }
 
