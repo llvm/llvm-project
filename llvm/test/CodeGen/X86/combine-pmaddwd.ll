@@ -96,6 +96,133 @@ define <8 x i32> @combine_pmaddwd_concat_freeze(<8 x i16> %a0, <8 x i16> %a1) {
   ret <8 x i32> %res
 }
 
+define <8 x i32> @combine_pmaddwd_concat_add(ptr %px0, ptr %py0) {
+; SSE2-LABEL: combine_pmaddwd_concat_add:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = mem[0,2,2,3,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = mem[0,2,2,3,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,6,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = mem[0,2,2,3,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,2,2,3]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = mem[0,2,2,3,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; SSE2-NEXT:    pmaddwd %xmm1, %xmm0
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = mem[0,2,2,3,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,6,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = mem[0,2,2,3,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,6,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = mem[0,2,2,3,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,6,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[0,2,2,3]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = mem[0,2,2,3,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,6,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; SSE2-NEXT:    pmaddwd %xmm2, %xmm1
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: combine_pmaddwd_concat_add:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa (%rdi), %xmm0
+; SSE41-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE41-NEXT:    movdqa 32(%rdi), %xmm2
+; SSE41-NEXT:    movdqa 48(%rdi), %xmm3
+; SSE41-NEXT:    movdqa (%rsi), %xmm4
+; SSE41-NEXT:    movdqa 16(%rsi), %xmm5
+; SSE41-NEXT:    movdqa 32(%rsi), %xmm6
+; SSE41-NEXT:    movdqa 48(%rsi), %xmm7
+; SSE41-NEXT:    movq {{.*#+}} xmm8 = [0,1,4,5,8,9,12,13,0,0,0,0,0,0,0,0]
+; SSE41-NEXT:    pshufb %xmm8, %xmm6
+; SSE41-NEXT:    pshufb %xmm8, %xmm4
+; SSE41-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm6[0],xmm4[1],xmm6[1],xmm4[2],xmm6[2],xmm4[3],xmm6[3]
+; SSE41-NEXT:    pshufb %xmm8, %xmm2
+; SSE41-NEXT:    pshufb %xmm8, %xmm0
+; SSE41-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; SSE41-NEXT:    pmaddwd %xmm4, %xmm0
+; SSE41-NEXT:    pshufb %xmm8, %xmm7
+; SSE41-NEXT:    pshufb %xmm8, %xmm5
+; SSE41-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm7[0],xmm5[1],xmm7[1],xmm5[2],xmm7[2],xmm5[3],xmm7[3]
+; SSE41-NEXT:    pshufb %xmm8, %xmm3
+; SSE41-NEXT:    pshufb %xmm8, %xmm1
+; SSE41-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; SSE41-NEXT:    pmaddwd %xmm5, %xmm1
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: combine_pmaddwd_concat_add:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
+; AVX1-NEXT:    vmovdqa 32(%rdi), %xmm2
+; AVX1-NEXT:    vmovdqa 48(%rdi), %xmm3
+; AVX1-NEXT:    vmovdqa (%rsi), %xmm4
+; AVX1-NEXT:    vmovdqa 16(%rsi), %xmm5
+; AVX1-NEXT:    vmovdqa 32(%rsi), %xmm6
+; AVX1-NEXT:    vmovdqa 48(%rsi), %xmm7
+; AVX1-NEXT:    vmovq {{.*#+}} xmm8 = [0,1,4,5,8,9,12,13,0,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vpshufb %xmm8, %xmm7, %xmm7
+; AVX1-NEXT:    vpshufb %xmm8, %xmm5, %xmm5
+; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm5[0],xmm7[0],xmm5[1],xmm7[1],xmm5[2],xmm7[2],xmm5[3],xmm7[3]
+; AVX1-NEXT:    vpshufb %xmm8, %xmm3, %xmm3
+; AVX1-NEXT:    vpshufb %xmm8, %xmm1, %xmm1
+; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; AVX1-NEXT:    vpmaddwd %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpshufb %xmm8, %xmm6, %xmm3
+; AVX1-NEXT:    vpshufb %xmm8, %xmm4, %xmm4
+; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; AVX1-NEXT:    vpshufb %xmm8, %xmm2, %xmm2
+; AVX1-NEXT:    vpshufb %xmm8, %xmm0, %xmm0
+; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; AVX1-NEXT:    vpmaddwd %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_pmaddwd_concat_add:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpblendw {{.*#+}} ymm1 = mem[0],ymm0[1],mem[2],ymm0[3],mem[4],ymm0[5],mem[6],ymm0[7],mem[8],ymm0[9],mem[10],ymm0[11],mem[12],ymm0[13],mem[14],ymm0[15]
+; AVX2-NEXT:    vpmaddwd (%rdi), %ymm1, %ymm1
+; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = mem[0],ymm0[1],mem[2],ymm0[3],mem[4],ymm0[5],mem[6],ymm0[7],mem[8],ymm0[9],mem[10],ymm0[11],mem[12],ymm0[13],mem[14],ymm0[15]
+; AVX2-NEXT:    vpmaddwd 32(%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+  %px1 = getelementptr inbounds nuw i8, ptr %px0, i64 16
+  %py1 = getelementptr inbounds nuw i8, ptr %py0, i64 16
+  %px2 = getelementptr inbounds nuw i8, ptr %px0, i64 32
+  %py2 = getelementptr inbounds nuw i8, ptr %py0, i64 32
+  %px3 = getelementptr inbounds nuw i8, ptr %px0, i64 48
+  %py3 = getelementptr inbounds nuw i8, ptr %py0, i64 48
+  %x0 = load <8 x i16>, ptr %px0
+  %x1 = load <8 x i16>, ptr %px1
+  %x2 = load <8 x i16>, ptr %px2
+  %x3 = load <8 x i16>, ptr %px3
+  %y0 = load <8 x i16>, ptr %py0
+  %y1 = load <8 x i16>, ptr %py1
+  %y2 = load <8 x i16>, ptr %py2
+  %y3 = load <8 x i16>, ptr %py3
+  %ym0 = and <8 x i16> %y0, <i16 65535, i16 0, i16 65535, i16 0, i16 65535, i16 0, i16 65535, i16 0>
+  %ym1 = and <8 x i16> %y1, <i16 65535, i16 0, i16 65535, i16 0, i16 65535, i16 0, i16 65535, i16 0>
+  %ym2 = and <8 x i16> %y2, <i16 65535, i16 0, i16 65535, i16 0, i16 65535, i16 0, i16 65535, i16 0>
+  %ym3 = and <8 x i16> %y3, <i16 65535, i16 0, i16 65535, i16 0, i16 65535, i16 0, i16 65535, i16 0>
+  %m0 = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %x0, <8 x i16> %ym0)
+  %m1 = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %x1, <8 x i16> %ym1)
+  %m2 = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %x2, <8 x i16> %ym2)
+  %m3 = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %x3, <8 x i16> %ym3)
+  %m01 = shufflevector <4 x i32> %m0, <4 x i32> %m1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %m23 = shufflevector <4 x i32> %m2, <4 x i32> %m3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %add = add <8 x i32> %m01, %m23
+  ret <8 x i32> %add
+}
+
 define <4 x i32> @combine_pmaddwd_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSE-LABEL: combine_pmaddwd_demandedelts:
 ; SSE:       # %bb.0:
