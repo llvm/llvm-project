@@ -1019,6 +1019,20 @@ void testWinWcsdupContentIsDefined(const wchar_t *s, unsigned validIndex) {
   free(s2);
 }
 
+struct if_nameindex { char x; };
+struct if_nameindex *if_nameindex(void);
+void if_freenameindex(struct if_nameindex *ptr);
+
+char testIfnameindex() {
+  struct if_nameindex *i = if_nameindex();
+  return i->x; // expected-warning {{Potential leak of memory pointed to by}}
+}
+
+void testIffreenameindex() {
+  struct if_nameindex *i = if_nameindex();
+  if_freenameindex(i);
+} // no warning
+
 // ----------------------------------------------------------------------------
 // Test the system library functions to which the pointer can escape.
 // This tests false positive suppression.
