@@ -69,7 +69,8 @@ AnalysisDeclContextManager::AnalysisDeclContextManager(
     bool addLoopExit, bool addScopes, bool synthesizeBodies,
     bool addStaticInitBranch, bool addCXXNewAllocator,
     bool addRichCXXConstructors, bool markElidedCXXConstructors,
-    bool addVirtualBaseBranches, std::unique_ptr<CodeInjector> injector)
+    bool addVirtualBaseBranches, bool addImplicitCoroutinePromiseConstruction,
+    std::unique_ptr<CodeInjector> injector)
     : Injector(std::move(injector)), FunctionBodyFarm(ASTCtx, Injector.get()),
       SynthesizeBodies(synthesizeBodies) {
   cfgBuildOptions.PruneTriviallyFalseEdges = !useUnoptimizedCFG;
@@ -84,6 +85,8 @@ AnalysisDeclContextManager::AnalysisDeclContextManager(
   cfgBuildOptions.AddRichCXXConstructors = addRichCXXConstructors;
   cfgBuildOptions.MarkElidedCXXConstructors = markElidedCXXConstructors;
   cfgBuildOptions.AddVirtualBaseBranches = addVirtualBaseBranches;
+  cfgBuildOptions.AddImplicitCoroutinePromiseConstruction =
+      addImplicitCoroutinePromiseConstruction;
 }
 
 void AnalysisDeclContextManager::clear() { Contexts.clear(); }

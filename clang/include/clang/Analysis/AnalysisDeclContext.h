@@ -375,6 +375,7 @@ public:
       bool synthesizeBodies = false, bool addStaticInitBranches = false,
       bool addCXXNewAllocator = true, bool addRichCXXConstructors = true,
       bool markElidedCXXConstructors = true, bool addVirtualBaseBranches = true,
+      bool addImplicitCoroutinePromiseConstruction = false,
       std::unique_ptr<CodeInjector> injector = nullptr);
 
   AnalysisDeclContext *getContext(const Decl *D);
