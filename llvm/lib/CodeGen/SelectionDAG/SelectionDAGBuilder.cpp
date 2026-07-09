@@ -7733,23 +7733,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // before code generation. Surviving until here usually indicates a
     // misconfiguration, for instance when devirtualization is enabled but LTO
     // does not actually run.
-    const char *Name = [&] {
-      switch (Intrinsic) {
-      case Intrinsic::type_test:
-        return "llvm.type.test";
-      case Intrinsic::public_type_test:
-        return "llvm.public.type.test";
-      case Intrinsic::type_checked_load:
-        return "llvm.type.checked.load";
-      default:
-        return "llvm.type.checked.load.relative";
-      }
-    }();
-
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         *I.getFunction(),
-        Twine(Name) + " intrinsic must be lowered by the LowerTypeTests pass "
-                      "before code generation",
+        Intrinsic::getBaseName(Intrinsic) +
+            " intrinsic must be lowered by the LowerTypeTests pass "
+            "before code generation",
         sdl.getDebugLoc()));
 
     // Lower the result to poison so that compilation can continue and collect

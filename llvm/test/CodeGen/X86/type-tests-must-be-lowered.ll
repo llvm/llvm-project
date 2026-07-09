@@ -6,7 +6,7 @@
 ; LowerTypeTests pass before code generation. If one survives, emit a clean
 ; diagnostic instead of crashing (see issues #142937 and #164663).
 
-; CHECK: llvm.type.test intrinsic must be lowered by the LowerTypeTests pass before code generation
+; CHECK: type.test intrinsic must be lowered by the LowerTypeTests pass before code generation
 define void @type_test() {
 bb:
   %call = tail call i1 @llvm.type.test(ptr null, metadata !"typeinfo")
@@ -20,7 +20,7 @@ bb2:
   ret void
 }
 
-; CHECK: llvm.public.type.test intrinsic must be lowered by the LowerTypeTests pass before code generation
+; CHECK: public.type.test intrinsic must be lowered by the LowerTypeTests pass before code generation
 define void @public_type_test() {
 bb:
   %call = call i1 @llvm.public.type.test(ptr null, metadata !"typeinfo")
@@ -31,14 +31,14 @@ bb1:
   ret void
 }
 
-; CHECK: llvm.type.checked.load intrinsic must be lowered by the LowerTypeTests pass before code generation
+; CHECK: type.checked.load intrinsic must be lowered by the LowerTypeTests pass before code generation
 define i1 @type_checked_load(ptr %vtable) {
   %pair = call { ptr, i1 } @llvm.type.checked.load(ptr %vtable, i32 4, metadata !"typeid")
   %ok = extractvalue { ptr, i1 } %pair, 1
   ret i1 %ok
 }
 
-; CHECK: llvm.type.checked.load.relative intrinsic must be lowered by the LowerTypeTests pass before code generation
+; CHECK: type.checked.load.relative intrinsic must be lowered by the LowerTypeTests pass before code generation
 define i1 @type_checked_load_relative(ptr %vtable) {
   %pair = call { ptr, i1 } @llvm.type.checked.load.relative(ptr %vtable, i32 4, metadata !"typeid")
   %ok = extractvalue { ptr, i1 } %pair, 1
