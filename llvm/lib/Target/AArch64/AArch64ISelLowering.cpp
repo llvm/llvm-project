@@ -5211,7 +5211,9 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   EVT SrcElementVT = SrcVT.getVectorElementType();
 
   // In the absence of FP16 support, promote f16 to f32 and saturate the result.
+  // Note that SatWidth stays unchanged.
   SDLoc DL(Op);
+  unsigned Opc = Op.getOpcode();
   if ((SrcElementVT == MVT::f16 &&
        (!Subtarget->hasFullFP16() || DstElementWidth > 16)) ||
       SrcElementVT == MVT::bf16) {
@@ -5219,17 +5221,12 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
     SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, SrcVal);
     // If we are extending to a v8f32, split into two v4f32 to produce legal
     // types.
-    if (F32VT.getSizeInBits() > 128) {
-      SDValue SrcVal2;
-      std::tie(SrcVal, SrcVal2) = DAG.SplitVector(SrcVal, DL);
-      EVT IntVT = SrcVal.getValueType().changeVectorElementTypeToInteger();
-      SDValue Lo =
-          DAG.getNode(Op.getOpcode(), DL, IntVT, SrcVal, Op.getOperand(1));
-      SDValue Hi =
-          DAG.getNode(Op.getOpcode(), DL, IntVT, SrcVal2, Op.getOperand(1));
-      EVT HalfDstVT = DstVT.getHalfNumVectorElementsVT(*DAG.getContext());
-      Lo = DAG.getNode(ISD::TRUNCATE, DL, HalfDstVT, Lo);
-      Hi = DAG.getNode(ISD::TRUNCATE, DL, HalfDstVT, Hi);
+    if (F32VT == MVT::v8f32) {
+      auto [SrcValLo, SrcValHi] = DAG.SplitVector(SrcVal, DL);
+      SDValue Lo = DAG.getNode(Opc, DL, MVT::v4i32, SrcValLo, Op.getOperand(1));
+      SDValue Hi = DAG.getNode(Opc, DL, MVT::v4i32, SrcValHi, Op.getOperand(1));
+      Lo = DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i16, Lo);
+      Hi = DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i16, Hi);
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Lo, Hi);
     }
     SrcVT = F32VT;
@@ -5240,7 +5237,7 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
     return SDValue();
 
   // Expand to f64 if we are saturating to i64, to help keep the lanes the same
-  // width and produce a fcvtzu.
+  // width and produce a fcvtzu. Note that SatWidth stays unchanged.
   if (SatWidth == 64 && SrcElementWidth < 64) {
     MVT F64VT = MVT::getVectorVT(MVT::f64, SrcVT.getVectorNumElements());
     SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, F64VT, SrcVal);
@@ -5250,7 +5247,7 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   }
   // Cases that we can emit directly.
   if (SrcElementWidth == DstElementWidth && SrcElementWidth == SatWidth)
-    return DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal,
+    return DAG.getNode(Opc, DL, DstVT, SrcVal,
                        DAG.getValueType(DstVT.getScalarType()));
 
   // Otherwise we emit a cvt that saturates to a higher BW, and saturate the
@@ -5264,10 +5261,10 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
          (SrcElementWidth == DstElementWidth && SatWidth < DstElementWidth));
 
   EVT IntVT = SrcVT.changeVectorElementTypeToInteger();
-  SDValue NativeCvt = DAG.getNode(Op.getOpcode(), DL, IntVT, SrcVal,
+  SDValue NativeCvt = DAG.getNode(Opc, DL, IntVT, SrcVal,
                                   DAG.getValueType(IntVT.getScalarType()));
   SDValue Sat;
-  if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
+  if (Opc == ISD::FP_TO_SINT_SAT) {
     SDValue MinC = DAG.getConstant(
         APInt::getSignedMaxValue(SatWidth).sext(SrcElementWidth), DL, IntVT);
     SDValue Min = DAG.getNode(ISD::SMIN, DL, IntVT, NativeCvt, MinC);
