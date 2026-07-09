@@ -125,17 +125,21 @@ func.func private @matmul(%A: tensor<7x16xf32>, %B: tensor<16x13xf32>, %C: tenso
 //
 // Implements matrix-multiplication via linalg.mmt4d
 //===----------------------------------------------------------------------===//
-func.func private @pack_lhs(%A: tensor<7x16xf32>) -> tensor<1x16x8x1xf32> {
+func.func private @pack_lhs(%A: tensor<7x16xf32>) -> tensor<1x16x?x1xf32> {
   %pad = arith.constant 0.0 : f32
 
-  %A_pack_empty = tensor.empty() : tensor<1x16x8x1xf32>
+  %vs = vector.vscale
+  %c8 = arith.constant 8 : index
+  %vs_c8 = arith.muli %vs, %c8 : index
+
+  %A_pack_empty = tensor.empty(%vs_c8) : tensor<1x16x?x1xf32>
   %A_pack = linalg.pack %A
     padding_value(%pad : f32)
     inner_dims_pos = [0, 1]
-    inner_tiles = [8, 1]
-    into %A_pack_empty : tensor<7x16xf32> -> tensor<1x16x8x1xf32>
+    inner_tiles = [%vs_c8, 1]
+    into %A_pack_empty : tensor<7x16xf32> -> tensor<1x16x?x1xf32>
 
-  return %A_pack : tensor<1x16x8x1xf32>
+  return %A_pack : tensor<1x16x?x1xf32>
 }
 
 //===----------------------------------------------------------------------===//
@@ -219,12 +223,12 @@ func.func private @unpack_acc(%C_packed: tensor<1x?x8x?xf32>) -> tensor<7x13xf32
 //===----------------------------------------------------------------------===//
 func.func private @matmul_via_mmt4d(%A: tensor<7x16xf32>, %B: tensor<16x13xf32>, %C: tensor<7x13xf32>) -> tensor<7x13xf32> {
   // Pack input matrices
-  %A_pack = func.call @pack_lhs(%A): (tensor<7x16xf32>) -> tensor<1x16x8x1xf32>
+  %A_pack = func.call @pack_lhs(%A): (tensor<7x16xf32>) -> tensor<1x16x?x1xf32>
   %B_pack = func.call @pack_rhs(%B): (tensor<16x13xf32>) -> tensor<?x16x?x1xf32>
   %C_pack = func.call @pack_acc(%C): (tensor<7x13xf32>) -> tensor<1x?x8x?xf32>
 
   // MMT4D
-  %mmt4d = linalg.mmt4d ins(%A_pack, %B_pack : tensor<1x16x8x1xf32>, tensor<?x16x?x1xf32>) outs(%C_pack : tensor<1x?x8x?xf32>) -> tensor<1x?x8x?xf32>
+  %mmt4d = linalg.mmt4d ins(%A_pack, %B_pack : tensor<1x16x?x1xf32>, tensor<?x16x?x1xf32>) outs(%C_pack : tensor<1x?x8x?xf32>) -> tensor<1x?x8x?xf32>
 
   // Unpack the output
   %C_out_unpack = func.call @unpack_acc(%mmt4d) : (tensor<1x?x8x?xf32>) -> tensor<7x13xf32>
