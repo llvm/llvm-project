@@ -1023,7 +1023,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::MUL, MVT::i1, Promote);
 
   if (Subtarget->hasBF16ConversionInsts()) {
-    setOperationAction(ISD::FP_ROUND, {MVT::bf16, MVT::v2bf16}, Custom);
+    setOperationAction({ISD::FP_ROUND, ISD::STRICT_FP_ROUND},
+                       {MVT::bf16, MVT::v2bf16}, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
@@ -8644,7 +8645,8 @@ SDValue SITargetLowering::splitFP_ROUNDVectorOp(SDValue Op,
 }
 
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
-  SDValue Src = Op.getOperand(0);
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Op.getValueType();
 
@@ -8687,6 +8689,11 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   // hardware f32 -> bf16 instruction.
   EVT F32VT = SrcVT.changeElementType(*DAG.getContext(), MVT::f32);
   SDValue Rod = expandRoundInexactToOdd(F32VT, Src, DL, DAG);
+  if (IsStrict) {
+    return DAG.getNode(
+        ISD::STRICT_FP_ROUND, DL, {DstVT, MVT::Other},
+        {Op.getOperand(0), Rod, DAG.getTargetConstant(0, DL, MVT::i32)});
+  }
   return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Rod,
                      DAG.getTargetConstant(0, DL, MVT::i32));
 }
