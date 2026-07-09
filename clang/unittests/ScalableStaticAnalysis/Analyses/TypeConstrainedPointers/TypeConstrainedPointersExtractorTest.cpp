@@ -257,4 +257,31 @@ TEST_F(TypeConstrainedPointersExtractorTest, NoOperatorNewOrDeleteSummary) {
   ASSERT_EQ(TUSummariesIter, TUData.end());
 }
 
+TEST_F(TypeConstrainedPointersExtractorTest, MainPointerParams) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int main(int argc, char **argv) { return 0; }
+  )cpp"));
+
+  const auto *S = getEntitySummary("main");
+
+  ASSERT_TRUE(S);
+
+  auto ArgvId = getEntityId("argv");
+
+  ASSERT_TRUE(ArgvId);
+  // argc is not a pointer — only argv and envp are extracted.
+  EXPECT_EQ(*S, (std::set{*ArgvId}));
+}
+
+TEST_F(TypeConstrainedPointersExtractorTest, MainNoPointerParams) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int main();
+    int main() { return 0; }
+  )cpp"));
+
+  const auto *S = getEntitySummary("main");
+
+  EXPECT_FALSE(S);
+}
+
 } // namespace

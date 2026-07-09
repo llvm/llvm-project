@@ -55,6 +55,9 @@ namespace {
 //      pointer to the memory block to deallocate (or a null pointer);
 //    4 the second parameter of `operator delete(void*, void*)` representing
 //      the placement pointer matching the corresponding placement `new`.
+//
+// From the `main` function:
+//    5 pointer-typed parameters of `main`.
 class TypeConstrainedPointersExtractor final : public TUSummaryExtractor {
 public:
   using TUSummaryExtractor::TUSummaryExtractor;
@@ -103,6 +106,14 @@ TypeConstrainedPointersExtractor::extractEntitySummary(
         Summary->Entities.insert(*Id);
       break;
     default:
+      // Extract case 5: pointer-typed parameters of main.
+      if (FD->isMain())
+        for (unsigned I = 0; I < FD->getNumParams(); ++I) {
+          if (!hasPtrOrArrType(FD->getParamDecl(I)))
+            continue;
+          if (auto Id = addEntity(FD->getParamDecl(I)))
+            Summary->Entities.insert(*Id);
+        }
       return;
     };
     // Extract case 2 & 4: only `operator new(size_t, void*)` and
