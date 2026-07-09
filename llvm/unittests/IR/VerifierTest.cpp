@@ -554,9 +554,8 @@ TEST(VerifierTest, AtomicRMWXchgVector) {
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
   EXPECT_TRUE(StringRef(Error).starts_with(
-      "atomicrmw xchg operand must have integer type, floating point type, "
-      "pointer type, or fixed vector of integer type, floating point type, or "
-      "pointer type!"))
+      "atomicrmw xchg operand must be an integer type, a floating-point "
+      "type, a pointer type, or a fixed vector of any of these types!"))
       << Error;
 }
 
