@@ -10,9 +10,9 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcSharedBuiltinsTest, SinglePrecisionArithmtic) {
-  using shared = LIBC_NAMESPACE::shared;
+using shared = LIBC_NAMESPACE::shared;
 
+TEST(LlvmLibcSharedBuiltinsTest, SinglePrecisionArithmtic) {
   EXPECT_FP_EQ(3.0f, shared::addsf3(1.0f, 2.0f));
   EXPECT_FP_EQ(3.0f, shared::divsf3(6.0f, 2.0f));
   EXPECT_FP_EQ(6.0f, shared::mulsf3(2.0f, 3.0f));
@@ -21,8 +21,6 @@ TEST(LlvmLibcSharedBuiltinsTest, SinglePrecisionArithmtic) {
 }
 
 TEST(LlvmLibcSharedBuiltinsTest, DoublePrecisionArithmtic) {
-  using shared = LIBC_NAMESPACE::shared;
-
   EXPECT_FP_EQ(3.0, shared::adddf3(1.0, 2.0));
   EXPECT_FP_EQ(3.0, shared::divdf3(6.0, 2.0));
   EXPECT_FP_EQ(6.0, shared::muldf3(2.0, 3.0));
@@ -33,8 +31,6 @@ TEST(LlvmLibcSharedBuiltinsTest, DoublePrecisionArithmtic) {
 #ifdef LIBC_TYPES_HAS_FLOAT128
 
 TEST(LlvmLibcSharedBuiltinsTest, QuadPrecisionArithmtic) {
-  using shared = LIBC_NAMESPACE::shared;
-
   EXPECT_FP_EQ(float128(3.0), shared::addtf3(float128(1.0), float128(2.0)));
   EXPECT_FP_EQ(float128(3.0), shared::divtf3(float128(6.0), float128(2.0)));
   EXPECT_FP_EQ(float128(6.0), shared::multf3(float128(2.0), float128(3.0)));
