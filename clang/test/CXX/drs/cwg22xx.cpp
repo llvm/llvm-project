@@ -213,10 +213,11 @@ void f() {
   (void)new A;
   // since-cxx17-error@-1 {{call to deleted function 'operator new'}}
   //   since-cxx17-note@#cwg2282-A-operator-new-aligned {{candidate function has been explicitly deleted}}
-  // since-cxx17-note@#cwg2282-A-operator-new-aligned-placement {{candidate function not viable: requires 3 arguments, but 2 were provided}}
-  (void)new (1.5) A; // since-cxx17-error {{call to deleted function 'operator new'}}
-  // since-cxx17-note@#cwg2282-A-operator-new-aligned-placement {{candidate function has been explicitly deleted}}
-  // since-cxx17-note@#cwg2282-A-operator-new-aligned {{candidate function not viable: requires 2 arguments, but 3 were provided}}
+  //   since-cxx17-note@#cwg2282-A-operator-new-aligned-placement {{candidate function not viable: requires 3 arguments, but 2 were provided}}
+  (void)new (1.5) A;
+  // since-cxx17-error@-1 {{call to deleted function 'operator new'}}
+  //   since-cxx17-note@#cwg2282-A-operator-new-aligned-placement {{candidate function has been explicitly deleted}}
+  //   since-cxx17-note@#cwg2282-A-operator-new-aligned {{candidate function not viable: requires 2 arguments, but 3 were provided}}
 }
 #endif
 } // namespace cwg2282
