@@ -163,3 +163,20 @@ subroutine sub1()
   end do
   !$omp end do simd
 end
+
+! No diagnostic when ORDERED THREADS SIMD is in a called routine (enclosing
+! DO SIMD region is not visible to the static checker).
+subroutine contains_ordered_threads_simd()
+  !$omp ordered threads simd
+  !$omp end ordered
+end subroutine
+
+subroutine sub2()
+  integer :: i, N = 10
+  external :: contains_ordered_threads_simd
+  !$omp do simd ordered
+  do i = 1, N
+    call contains_ordered_threads_simd()
+  end do
+  !$omp end do simd
+end subroutine
