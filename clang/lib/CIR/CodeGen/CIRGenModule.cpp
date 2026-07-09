@@ -2306,12 +2306,12 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   const auto *mpt = e->getType()->castAs<MemberPointerType>();
   const auto *destClass = mpt->getMostRecentCXXRecordDecl();
 
-  if (fieldDecl->hasAttr<NoUniqueAddressAttr>()) {
-    assert(!cir::MissingFeatures::noUniqueAddressLayout());
-    errorNYI(e->getExprLoc(),
-             "emitMemberPointerConstant: no_unique_address field");
-    return {};
-  }
+  // Empty [[no_unique_address]] fields have no CIR field index; represent the
+  // pointer-to-data-member by its concrete byte offset within the class.
+  if (std::optional<uint64_t> offset =
+          getEmptyFieldMemberPointerOffset(destClass, fieldDecl))
+    return cir::ConstantOp::create(builder, loc,
+                                   cir::DataMemberOffsetAttr::get(ty, *offset));
 
   std::optional<llvm::SmallVector<int32_t>> path =
       buildMemberPath(destClass, fieldDecl);
@@ -2324,8 +2324,6 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
 std::optional<llvm::SmallVector<int32_t>>
 CIRGenModule::buildMemberPath(const CXXRecordDecl *destClass,
                               const FieldDecl *field) {
-  assert(!field->hasAttr<NoUniqueAddressAttr>());
-
   llvm::SmallVector<int32_t> path;
   if (!findFieldMemberPath(destClass, field, path))
     return std::nullopt;
@@ -2393,6 +2391,40 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
     path.pop_back();
   }
   return false;
+}
+
+/// Computes the byte offset of \p field within \p cls, descending through base
+/// subobjects when the field is inherited.
+static uint64_t getFieldByteOffsetInClass(const ASTContext &ctx,
+                                          const CXXRecordDecl *cls,
+                                          const FieldDecl *field) {
+  const ASTRecordLayout &layout = ctx.getASTRecordLayout(cls);
+  const auto *fieldParent = cast<CXXRecordDecl>(field->getParent());
+  if (fieldParent == cls)
+    return ctx
+        .toCharUnitsFromBits(layout.getFieldOffset(field->getFieldIndex()))
+        .getQuantity();
+
+  for (const CXXBaseSpecifier &base : cls->bases()) {
+    const auto *baseDecl = base.getType()->getAsCXXRecordDecl();
+    if (baseDecl == fieldParent || baseDecl->isDerivedFrom(fieldParent))
+      return layout.getBaseClassOffset(baseDecl).getQuantity() +
+             getFieldByteOffsetInClass(ctx, baseDecl, field);
+  }
+
+  llvm_unreachable("field is not a member of the given class");
+}
+
+std::optional<uint64_t>
+CIRGenModule::getEmptyFieldMemberPointerOffset(const CXXRecordDecl *destClass,
+                                               const FieldDecl *field) {
+  // Only empty, potentially-overlapping fields are omitted from the CIR record
+  // (see CIRRecordLowering::accumulateFields).
+  if (!isEmptyFieldForLayout(astContext, field) ||
+      !field->isPotentiallyOverlapping())
+    return std::nullopt;
+
+  return getFieldByteOffsetInClass(astContext, destClass, field);
 }
 
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {

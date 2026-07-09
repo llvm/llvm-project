@@ -55,6 +55,10 @@ public:
       cir::DataMemberAttr attr, const mlir::DataLayout &layout,
       const mlir::TypeConverter &typeConverter) const override;
 
+  mlir::TypedAttr lowerDataMemberOffsetConstant(
+      cir::DataMemberOffsetAttr attr, const mlir::DataLayout &layout,
+      const mlir::TypeConverter &typeConverter) const override;
+
   mlir::TypedAttr
   lowerMethodConstant(cir::MethodAttr attr, const mlir::DataLayout &layout,
                       const mlir::TypeConverter &typeConverter) const override;
@@ -215,6 +219,17 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
 
   mlir::Type abiTy = lowerDataMemberType(attr.getType(), typeConverter);
   return cir::IntAttr::get(abiTy, memberOffset);
+}
+
+mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberOffsetConstant(
+    cir::DataMemberOffsetAttr attr, const mlir::DataLayout &layout,
+    const mlir::TypeConverter &typeConverter) const {
+  // Itanium C++ ABI 2.3:
+  //   A pointer to data member is an offset from the base address of the class
+  //   object containing it, represented as a ptrdiff_t.
+  // The offset is already known (the member has no CIR field index).
+  mlir::Type abiTy = lowerDataMemberType(attr.getType(), typeConverter);
+  return cir::IntAttr::get(abiTy, static_cast<int64_t>(attr.getOffset()));
 }
 
 mlir::TypedAttr LowerItaniumCXXABI::lowerMethodConstant(
