@@ -64,7 +64,9 @@ define ptr @get_weak_dsolocal_var() nounwind {
 ; PIC-NEXT:    .p2align 2
 ; PIC-NEXT:  @ %bb.1:
 ; PIC-NEXT:  .LCPI2_0:
-; PIC-NEXT:    .long weak_dsolocal_var-(.LPC2_0+8)
+; PIC-NEXT:  .Ltmp1:
+; PIC-NEXT:    .long .Ltmp1-(.LPC2_0+8)
+; PIC-NEXT:    .reloc .Ltmp1, R_ARM_REL32, weak_dsolocal_var
   ret ptr @weak_dsolocal_var
 }
 
@@ -126,8 +128,8 @@ define dso_preemptable ptr @preemptable_func() nounwind {
 ; PIC-NEXT:    .p2align 2
 ; PIC-NEXT:  @ %bb.1:
 ; PIC-NEXT:  .LCPI5_0:
-; PIC-NEXT:  .Ltmp1:
-; PIC-NEXT:    .long preemptable_func(GOT_PREL)-(.LPC5_0+8-.Ltmp1)
+; PIC-NEXT:  .Ltmp2:
+; PIC-NEXT:    .long preemptable_func(GOT_PREL)-(.LPC5_0+8-.Ltmp2)
   ret ptr @preemptable_func
 }
 
@@ -137,17 +139,6 @@ define dso_local ptr @dsolocal_func() nounwind {
 ; STATIC-NEXT:    movw r0, :lower16:dsolocal_func
 ; STATIC-NEXT:    movt r0, :upper16:dsolocal_func
 ; STATIC-NEXT:    bx lr
-;
-; PIC-LABEL: dsolocal_func:
-; PIC:       @ %bb.0:
-; PIC-NEXT:    ldr r0, .LCPI6_0
-; PIC-NEXT:  .LPC6_0:
-; PIC-NEXT:    add r0, pc, r0
-; PIC-NEXT:    bx lr
-; PIC-NEXT:    .p2align 2
-; PIC-NEXT:  @ %bb.1:
-; PIC-NEXT:  .LCPI6_0:
-; PIC-NEXT:    .long .Ldsolocal_func$local-(.LPC6_0+8)
   ret ptr @dsolocal_func
 }
 
@@ -167,7 +158,9 @@ define weak dso_local ptr @weak_dsolocal_func() nounwind {
 ; PIC-NEXT:    .p2align 2
 ; PIC-NEXT:  @ %bb.1:
 ; PIC-NEXT:  .LCPI7_0:
-; PIC-NEXT:    .long weak_dsolocal_func-(.LPC7_0+8)
+; PIC-NEXT:  .Ltmp3:
+; PIC-NEXT:    .long .Ltmp3-(.LPC7_0+8)
+; PIC-NEXT:    .reloc .Ltmp3, R_ARM_REL32, weak_dsolocal_func
   ret ptr @weak_dsolocal_func
 }
 
@@ -180,13 +173,6 @@ define dso_local void @call_dsolocal_func() nounwind {
 ; STATIC-NEXT:    push {r11, lr}
 ; STATIC-NEXT:    bl dsolocal_func
 ; STATIC-NEXT:    pop {r11, pc}
-;
-; PIC-LABEL: call_dsolocal_func:
-; PIC:       @ %bb.0:
-; PIC-NEXT:    .save {r11, lr}
-; PIC-NEXT:    push {r11, lr}
-; PIC-NEXT:    bl .Ldsolocal_func$local
-; PIC-NEXT:    pop {r11, pc}
   call ptr @dsolocal_func()
   ret void
 }
