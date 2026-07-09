@@ -554,6 +554,15 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - The `modular_format` attribute now supports the `fixed` aspect for C
   ISO 18037 fixed-point `printf` specifiers.
 
+- The `lifetime_capture_by` attribute now accepts three new spelling forms:
+  `lifetime_capture_by_this`, `lifetime_capture_by_global`, and
+  `lifetime_capture_by_unknown`. These replace passing `this`, `global`, and
+  `unknown` as arguments to `lifetime_capture_by`; that argument form is now
+  deprecated because those names can conflict with user-defined parameters.
+  They will be removed in the next release. Distinct `lifetime_capture_by`
+  spellings may also be combined on the same declaration, but each spelling may
+  appear at most once.
+
 - The `const` and `pure` attributes only apply to functions; they are now
   diagnosed and ignored when applied to anything else.
 
