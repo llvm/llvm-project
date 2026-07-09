@@ -48,18 +48,18 @@ using namespace llvm;
 using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
-/// Check if the pointer operand \p Addr of a memory access is consecutive
-/// w.r.t. \p OuterLoop, i.e. it is an affine AddRec with unit stride in units
-/// of \p ElemTy.
-static bool isStride1Access(VPValue *Addr, Type *ElemTy,
-                            PredicatedScalarEvolution &PSE, Loop *OuterLoop) {
-  const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, OuterLoop);
+/// If the pointer operand \p Addr of a memory access is an affine AddRec
+/// w.r.t. \p L with a constant stride, return the stride in units of
+/// \p AccessTy. Otherwise return std::nullopt.
+static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
+                                                PredicatedScalarEvolution &PSE,
+                                                const Loop *L) {
+  const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
   auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
   if (!AddRec)
-    return false;
+    return {};
 
-  return getStrideFromAddRec(AddRec, OuterLoop, ElemTy, /*Ptr=*/nullptr, PSE) ==
-         1;
+  return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
 }
 
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
@@ -93,15 +93,17 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
         // Create VPWidenMemoryRecipe for loads and stores.
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
-          bool IsConsecutive = isStride1Access(
-              VPI->getOperand(0), VPI->getScalarType(), PSE, OuterLoop);
+          bool IsConsecutive =
+              getConstantStride(VPI->getOperand(0), VPI->getScalarType(), PSE,
+                                OuterLoop) == 1;
           NewRecipe = new VPWidenLoadRecipe(*Load, Ingredient.getOperand(0),
                                             nullptr /*Mask*/, IsConsecutive,
                                             *VPI, Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
-          bool IsConsecutive = isStride1Access(
-              VPI->getOperand(1), VPI->getOperand(0)->getScalarType(), PSE,
-              OuterLoop);
+          bool IsConsecutive =
+              getConstantStride(VPI->getOperand(1),
+                                VPI->getOperand(0)->getScalarType(), PSE,
+                                OuterLoop) == 1;
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
               nullptr /*Mask*/, IsConsecutive, *VPI, Ingredient.getDebugLoc());
@@ -7278,20 +7280,6 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   for (auto &[Phi, Chains] : ChainsByPhi)
     for (const VPPartialReductionChain &Chain : Chains)
       transformToPartialReduction(Chain, Plan, Phi);
-}
-
-/// If the pointer operand \p Addr of a memory access is an affine AddRec
-/// w.r.t. \p L with a constant stride, return the stride in units of
-/// \p AccessTy. Otherwise return std::nullopt.
-static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
-                                                PredicatedScalarEvolution &PSE,
-                                                const Loop *L) {
-  const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
-  auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
-  if (!AddRec)
-    return {};
-
-  return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
 }
 
 void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
