@@ -27,6 +27,8 @@ extensions += [
     "sphinx_reredirects",
 ]
 
+myst_enable_extensions += ["deflist"]
+
 # General information about the project.
 project = "libc"
 copyright = "2011-%d, LLVM Project" % date.today().year

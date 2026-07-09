@@ -74,16 +74,13 @@ changes will be overwritten the next time the docs are built.
 
 ## Troubleshooting
 
-- `Extension error: Could not import extension myst_parser`
-
-  On Debian/Ubuntu: `sudo apt-get install python3-myst-parser`.
+`Extension error: Could not import extension myst_parser`
+: On Debian/Ubuntu: `sudo apt-get install python3-myst-parser`.
   Otherwise: `pip install -r llvm/docs/requirements.txt`.
 
-- `WARNING: document isn't included in any toctree`
-
-  A new RST/Markdown file needs a `toctree` entry. Add it to the
+`WARNING: document isn't included in any toctree`
+: A new RST/Markdown file needs a `toctree` entry. Add it to the
   appropriate `index.rst` or its parent toctree.
 
-- `Extension error: No module named 'sphinx_reredirects'`
-
-  Same fix: `pip install -r llvm/docs/requirements.txt`.
+`Extension error: No module named 'sphinx_reredirects'`
+: Same fix: `pip install -r llvm/docs/requirements.txt`.
