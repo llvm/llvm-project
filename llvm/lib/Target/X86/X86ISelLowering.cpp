@@ -51995,8 +51995,8 @@ static SDValue combineI8AndNotIntoI32AndNot(SDNode *N, const SDLoc &DL,
 
   SDValue ExtX = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, X);
   SDValue ExtY = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Y);
-  SDValue And = DAG.getNode(ISD::AND, DL, MVT::i32,
-                            DAG.getNOT(DL, ExtX, MVT::i32), ExtY);
+  SDValue And =
+      DAG.getNode(ISD::AND, DL, MVT::i32, DAG.getNOT(DL, ExtX, MVT::i32), ExtY);
   return DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, And);
 }
 
