@@ -96,9 +96,6 @@ bool BPFMIPeephole::isCopyFrom32Def(MachineInstr *CopyMI)
 {
   MachineOperand &opnd = CopyMI->getOperand(1);
 
-  if (!opnd.isReg())
-    return false;
-
   // Return false if getting value from a 32bit physical register.
   // Most likely, this physical register is aliased to
   // function call return value or current function parameters.
@@ -120,9 +117,6 @@ bool BPFMIPeephole::isPhiFrom32Def(MachineInstr *PhiMI)
 {
   for (unsigned i = 1, e = PhiMI->getNumOperands(); i < e; i += 2) {
     MachineOperand &opnd = PhiMI->getOperand(i);
-
-    if (!opnd.isReg())
-      return false;
 
     MachineInstr *PhiDef = MRI->getVRegDef(opnd.getReg());
     if (!PhiDef)

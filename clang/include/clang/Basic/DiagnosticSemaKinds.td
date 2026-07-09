@@ -1018,7 +1018,7 @@ def err_ptrauth_invalid_key :
         "the current target">;
 def err_ptrauth_value_bad_type :
   Error<"%select{signed value|extra discriminator|blended pointer|blended "
-        "integer}0 must have %select{pointer|integer|pointer or integer}1 "
+        "integer|blended pc}0 must have %select{pointer|integer|pointer or integer}1 "
         "type; type here is %2">;
 def err_ptrauth_bad_constant_pointer :
   Error<"argument to ptrauth_sign_constant must refer to a global variable "
@@ -1033,6 +1033,8 @@ def warn_ptrauth_sign_null_pointer :
 def warn_ptrauth_auth_null_pointer :
   Warning<"authenticating a null pointer will almost certainly trap">,
   InGroup<PtrAuthNullPointers>;
+def err_ptrauth_auth_with_pc_and_resign_invalid_key :
+  Error<"ptrauth_auth_with_pc_and_resign only supports auth with IA and IB keys, not %0">;
 def err_ptrauth_string_not_literal : Error<
   "argument must be a string literal%select{| of char type}0">;
 def err_ptrauth_type_disc_undiscriminated : Error<
@@ -3564,18 +3566,23 @@ def err_callback_callee_is_variadic : Error<
 def err_callback_implicit_this_not_available : Error<
   "'callback' argument at position %0 references unavailable implicit 'this'">;
 
-def err_capture_by_attribute_multiple : Error<
-  "multiple 'lifetime_capture' attributes specified">;
 def err_capture_by_attribute_no_entity : Error<
   "'lifetime_capture_by' attribute specifies no capturing entity">;
 def err_capture_by_implicit_this_not_available : Error<
   "'lifetime_capture_by' argument references unavailable implicit 'this'">;
+def err_capture_by_this_attr_without_implicit_this : Error<
+  "'lifetime_capture_by_this' attribute requires an implicit object parameter">;
 def err_capture_by_attribute_argument_unknown : Error<
   "'lifetime_capture_by' attribute argument %0 is not a known function parameter"
   "; must be a function parameter, 'this', 'global' or 'unknown'">;
 def err_capture_by_references_itself : Error<"'lifetime_capture_by' argument references itself">;
 def err_capture_by_param_uses_reserved_name : Error<
-  "parameter cannot be named '%select{global|unknown}0' while using 'lifetime_capture_by(%select{global|unknown}0)'">;
+  "parameter cannot be named '%0' while using 'lifetime_capture_by(%0)'">;
+def err_capture_by_attribute_multiple : Error<
+  "multiple '%0' attributes specified">;
+def warn_deprecated_capture_by_special_entity : Warning<
+  "'lifetime_capture_by(%0)' is deprecated; use '%1' instead">,
+  InGroup<DeprecatedAttributes>;
 
 def err_init_method_bad_return_type : Error<
   "init methods must return an object pointer type, not %0">;

@@ -1686,6 +1686,15 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
     return BinaryOperator::CreateXor(Builder.CreateAnd(X, ZC), ZC);
   }
 
+  // zext(sub(0, trunc(X))) -> and(sub(0, X), mask)
+  if (match(Src, m_Sub(m_Zero(), m_Trunc(m_Value(X)))) &&
+      X->getType() == DestTy) {
+    APInt Mask = APInt::getLowBitsSet(DestTy->getScalarSizeInBits(),
+                                      SrcTy->getScalarSizeInBits());
+    Value *Neg = Builder.CreateSub(ConstantInt::get(DestTy, 0), X);
+    return BinaryOperator::CreateAnd(Neg, ConstantInt::get(DestTy, Mask));
+  }
+
   // If we are truncating, masking, and then zexting back to the original type,
   // that's just a mask. This is not handled by canEvaluateZextd if the
   // intermediate values have extra uses. This could be generalized further for
@@ -3407,9 +3416,7 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       // If our destination is not a vector, then make this a straight
       // scalar-scalar cast.
       if (!DestTy->isVectorTy()) {
-        Value *Elem =
-          Builder.CreateExtractElement(Src,
-                     Constant::getNullValue(Type::getInt32Ty(CI.getContext())));
+        Value *Elem = Builder.CreateExtractElement(Src, uint64_t{0});
         return CastInst::Create(Instruction::BitCast, Elem, DestTy);
       }
 
