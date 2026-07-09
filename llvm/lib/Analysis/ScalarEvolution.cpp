@@ -11494,8 +11494,40 @@ bool ScalarEvolution::isKnownViaInduction(CmpPredicate Pred, SCEVUse LHS,
          isLoopEntryGuardedByCond(MDL, Pred, SplitLHS.first, SplitRHS.first);
 }
 
+/// Try to prove \p LHS \p Pred \p RHS by decomposing a max expression on the
+/// LHS into its operands:
+///
+///   max(X0, ..., Xn) Pred RHS  if  Xi Pred RHS for all i.
+static bool isKnownViaMinMaxDecomposition(ScalarEvolution &SE,
+                                          CmpPredicate Pred, const SCEV *LHS,
+                                          const SCEV *RHS) {
+  if (!isa<SCEVMinMaxExpr>(LHS) && !isa<SCEVMinMaxExpr>(RHS))
+    return false;
+
+  // Normalize predicates to less-than(or equal).
+  if (ICmpInst::isGT(Pred) || ICmpInst::isGE(Pred)) {
+    std::swap(LHS, RHS);
+    Pred = ICmpInst::getSwappedCmpPredicate(Pred);
+  }
+
+  if (!ICmpInst::isLT(Pred) && !ICmpInst::isLE(Pred))
+    return false;
+
+  if (isa<SCEVSMaxExpr, SCEVUMaxExpr>(LHS))
+    if (all_of(cast<SCEVMinMaxExpr>(LHS)->operands(), [&](const SCEV *Op) {
+          return SE.isKnownPredicate(Pred, Op, RHS);
+        }))
+      return true;
+  return false;
+}
+
 bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
                                        SCEVUse RHS) {
+  // Try to prove the predicate by decomposing a min/max expression before
+  // canonicalizing the operands, which may hide the min/max structure.
+  if (isKnownViaMinMaxDecomposition(*this, Pred, LHS, RHS))
+    return true;
+
   // Canonicalize the inputs first.
   (void)SimplifyICmpOperands(Pred, LHS, RHS);
 
