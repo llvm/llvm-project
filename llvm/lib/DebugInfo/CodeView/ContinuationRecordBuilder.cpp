@@ -55,12 +55,9 @@ void ContinuationRecordBuilder::begin(ContinuationRecordKind RecordKind) {
   assert(SegmentWriter.getOffset() == 0);
   assert(SegmentWriter.getLength() == 0);
 
-  SegmentInjection FLI(RecordKind == ContinuationRecordKind::FieldList
-                           ? TypeLeafKind::LF_FIELDLIST
-                           : TypeLeafKind::LF_METHODLIST);
+  SegmentInjection FLI(getTypeLeafKind(RecordKind));
   const uint8_t *FLIB = reinterpret_cast<const uint8_t *>(&FLI);
-  InjectedSegmentBytes =
-      ArrayRef<uint8_t>(FLIB, FLIB + sizeof(SegmentInjection));
+  InjectedSegmentBytes.assign(FLIB, FLIB + sizeof(SegmentInjection));
 
   // Seed the first record with an appropriate record prefix.
   RecordPrefix Prefix(getTypeLeafKind(RecordKind));
