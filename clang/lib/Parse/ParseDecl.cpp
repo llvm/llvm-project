@@ -3870,6 +3870,19 @@ void Parser::ParseDeclarationSpecifiers(
         goto DoneWithDeclSpec;
       }
 
+      // If 'auto' is set and the next token indicates this identifier is the
+      // declarator-id, stop parsing declaration specifiers before doing type
+      // lookup. Looking up the declarator-id can produce bogus ambiguity errors
+      // when a variable name matches a type brought in by a using-directive.
+      if (DS.getTypeSpecType() == DeclSpec::TST_auto) {
+        Token Next = NextToken();
+        if (Next.isOneOf(tok::equal, tok::l_paren, tok::l_square, tok::amp,
+                         tok::ampamp, tok::star, tok::coloncolon, tok::comma,
+                         tok::semi, tok::colon, tok::greater, tok::r_paren,
+                         tok::arrow))
+          goto DoneWithDeclSpec;
+      }
+
       ParsedType TypeRep = Actions.getTypeName(
           *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), nullptr,
           false, false, nullptr, false, false,
@@ -3896,25 +3909,6 @@ void Parser::ParseDeclarationSpecifiers(
           continue;
         }
         goto DoneWithDeclSpec;
-      }
-
-      // If 'auto' is set and this identifier is a type name, stop parsing
-      // declaration specifiers when the next token indicates this is the
-      // declarator-id rather than another type specifier.
-      if (DS.getTypeSpecType() == DeclSpec::TST_auto && TypeRep) {
-        Token Next = NextToken();
-        if (Next.isOneOf(tok::equal, tok::l_paren, tok::l_square, tok::amp,
-                         tok::ampamp, tok::star, tok::coloncolon, tok::comma,
-                         tok::semi, tok::colon, tok::greater, tok::r_paren,
-                         tok::arrow)) {
-          // This identifier is likely the variable/parameter name, stop parsing
-          // decl specifiers. Note: ':' is for range-based for loops:
-          // for (auto Arg: x).
-          // Note: '>' is for template parameters: template<auto V>
-          // Note: ')' is for function/lambda parameters: [](auto c)
-          // Note: '->' is for lambda return types: [](auto c) -> int
-          goto DoneWithDeclSpec;
-        }
       }
 
       // Likewise, if this is a context where the identifier could be a template
