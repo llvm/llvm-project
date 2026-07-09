@@ -114,9 +114,19 @@ add_unittest_framework_library(
 add_unittest_framework_library(
   LibcHermeticTestSupport
   SRCS
+    HermeticHeap.cpp
     HermeticTestUtils.cpp
   DEPENDS
     libc.hdr.stdint_proxy
+    libc.src.__support.block
+    libc.src.__support.freelist_heap
+    libc.src.__support.CPP.mutex
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.span
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.math_extras
+    libc.src.__support.threads.raw_mutex
+    libc.src.string.memory_utils.inline_memset
 )
 
 add_header_library(

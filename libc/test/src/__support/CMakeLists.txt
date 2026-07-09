@@ -71,6 +71,21 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
       libc.src.string.memcpy
       libc.src.string.memory_utils.inline_memset
   )
+  add_libc_test(
+    sbrk_heap_test
+    HERMETIC_TEST_ONLY
+    SUITE
+      libc-support-tests
+    SRCS
+      sbrk_heap_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.span
+      libc.src.__support.freelist_heap
+      libc.src.__support.block
+      libc.src.__support.CPP.mutex
+      libc.src.__support.threads.raw_mutex
+      libc.src.string.memory_utils.inline_memset
+  )
 endif()
 
 add_libc_test(
