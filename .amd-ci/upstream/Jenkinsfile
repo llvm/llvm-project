@@ -146,11 +146,9 @@ if (isPrBranch) { // Sic; don't want postsub on upstream-main to go through this
         )
     )
 }
-if (postsub) {
-    propsList.add(
-        pipelineTriggers([cron('TZ=Asia/Kolkata\nH 0 * * *')])
-    )
-}
+// Timer (cron) trigger disabled: this job now runs on push events only.
+// Previously postsub added a daily cron ('TZ=Asia/Kolkata\nH 0 * * *') which
+// caused a second daily run alongside the push-to-upstream-main build.
 
 // ===========================================================================
 // Parallel SPEC Build CI parameters
