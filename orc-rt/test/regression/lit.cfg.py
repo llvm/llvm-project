@@ -11,7 +11,7 @@ from lit.llvm.subst import ToolSubst
 config.name = "ORC-RT"
 config.test_format = lit.formats.ShTest()
 config.test_source_root = os.path.dirname(__file__)
-config.test_exec_root = os.path.join(config.orc_rt_obj_root, "test")
+config.test_exec_root = os.path.join(config.orc_rt_obj_root, "test", "regression")
 config.suffixes = [
     ".test"
 ]
