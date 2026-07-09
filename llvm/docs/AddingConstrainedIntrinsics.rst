@@ -95,4 +95,4 @@ Add documentation and tests
 
 ::
 
-  docs/LangRef.rst
+  docs/LangRef.md
