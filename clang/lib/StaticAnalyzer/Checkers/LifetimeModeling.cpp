@@ -150,7 +150,7 @@ public:
 
 bool DebugLifetimeModeling::evalCall(const CallEvent &Call,
                                      CheckerContext &C) const {
-  if (isa_and_nonnull<CallExpr>(Call.getOriginExpr()))
+  if (!isa_and_nonnull<CallExpr>(Call.getOriginExpr()))
     return false;
 
   const FnCheck *Handler = Callbacks.lookup(Call);
