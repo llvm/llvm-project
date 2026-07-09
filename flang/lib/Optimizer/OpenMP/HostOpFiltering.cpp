@@ -65,6 +65,15 @@ static void collectRewrite(Value value, llvm::SetVector<Value> &rewrites) {
   rewrites.insert(value);
 }
 
+/// Provide the `device_type` of an `omp.declare_target` attribute, if defined.
+static std::optional<omp::DeclareTargetDeviceType>
+getDeclareTargetDevice(Operation &op) {
+  auto declareTargetOp = dyn_cast<omp::DeclareTargetInterface>(op);
+  if (declareTargetOp && declareTargetOp.isDeclareTarget())
+    return declareTargetOp.getDeclareTargetDeviceType();
+  return std::nullopt;
+}
+
 namespace {
 class HostOpFilteringPass
     : public flangomp::impl::HostOpFilteringPassBase<HostOpFilteringPass> {
@@ -78,11 +87,8 @@ public:
 
     op->walk<WalkOrder::PreOrder>([&](func::FuncOp funcOp) {
       omp::DeclareTargetDeviceType declareType =
-          omp::DeclareTargetDeviceType::host;
-      auto declareTargetOp =
-          dyn_cast<omp::DeclareTargetInterface>(funcOp.getOperation());
-      if (declareTargetOp && declareTargetOp.isDeclareTarget())
-        declareType = declareTargetOp.getDeclareTargetDeviceType();
+          getDeclareTargetDevice(*funcOp.getOperation())
+              .value_or(omp::DeclareTargetDeviceType::host);
 
       // Only process host function definitions.
       if (funcOp.isExternal() ||
@@ -94,6 +100,15 @@ public:
         return WalkResult::interrupt();
       }
       return WalkResult::advance();
+    });
+
+    // Make non-declare target globals internal for the device. They cannot be
+    // deleted, because they are needed in order to properly lower map clauses.
+    // However, no uses will remain in the device module, so we make them
+    // internal to prevent link time issues.
+    op->walk([&](fir::GlobalOp globalOp) {
+      if (!getDeclareTargetDevice(*globalOp.getOperation()).has_value())
+        globalOp.setLinkName("internal");
     });
   }
 
