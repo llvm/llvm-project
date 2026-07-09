@@ -21,19 +21,11 @@
 int main(int argc, char** argv) {
   auto std_is_heap      = [](auto first, auto last) { return std::is_heap(first, last); };
   auto std_is_heap_pred = [](auto first, auto last) {
-    return std::is_heap(first, last, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x < y;
-    });
+    return std::is_heap(first, last, [](auto x, auto y) { return x < y; });
   };
   auto std_is_heap_until      = [](auto first, auto last) { return std::is_heap_until(first, last); };
   auto std_is_heap_until_pred = [](auto first, auto last) {
-    return std::is_heap_until(first, last, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x < y;
-    });
+    return std::is_heap_until(first, last, [](auto x, auto y) { return x < y; });
   };
 
   // Benchmark {std,ranges}::{is_heap,is_heap_until} on a valid heap. This is the worst case since the
