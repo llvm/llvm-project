@@ -1109,6 +1109,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         if (SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Q, Depth + 1))
           return I;
 
+        Value *X;
+        if (match(I->getOperand(0),
+                  m_c_And(m_Value(X), m_Specific(I->getOperand(1))))) {
+          replaceOperand(*I, 0, X);
+          return I;
+        }
+
         APInt DemandedMaskLHS(BitWidth, 0);
         unsigned M0 = 0, M1 = 0;
         for (unsigned I = 0; I != BitWidth; ++I) {
