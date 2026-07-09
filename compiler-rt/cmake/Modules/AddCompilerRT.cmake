@@ -794,6 +794,17 @@ function(rt_externalize_debuginfo name)
 endfunction()
 
 
+# Wire a sanitizer runtime target up to the sanitizer-ignorelists target so
+# that building/installing the runtime also builds/installs the ignorelists.
+macro(add_sanitizer_ignorelists_dependency name)
+  add_dependencies(${name} sanitizer-ignorelists)
+  if(TARGET install-${name})
+    add_dependencies(install-${name} install-sanitizer-ignorelists)
+    add_dependencies(install-${name}-stripped install-sanitizer-ignorelists)
+  endif()
+endmacro()
+
+
 # Configure lit configuration files, including compiler-rt specific variables.
 function(configure_compiler_rt_lit_site_cfg input output)
   set_llvm_build_mode()

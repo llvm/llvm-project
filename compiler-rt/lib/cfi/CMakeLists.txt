@@ -43,12 +43,4 @@ if(OS_NAME MATCHES "Linux" OR OS_NAME MATCHES "FreeBSD" OR OS_NAME MATCHES "NetB
   endforeach()
 endif()
 
-# Build the sanitizer ignorelists alongside cfi when they are enabled.
-if(TARGET sanitizer-ignorelists)
-  add_dependencies(cfi sanitizer-ignorelists)
-  # Installing/distributing cfi also installs the sanitizer ignorelists.
-  if(TARGET install-cfi)
-    add_dependencies(install-cfi install-sanitizer-ignorelists)
-    add_dependencies(install-cfi-stripped install-sanitizer-ignorelists)
-  endif()
-endif()
+add_sanitizer_ignorelists_dependency(cfi)
