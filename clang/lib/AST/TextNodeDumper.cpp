@@ -3015,6 +3015,18 @@ void TextNodeDumper::VisitFriendDecl(const FriendDecl *D) {
     OS << "...";
 }
 
+void TextNodeDumper::VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
+  TemplateName TN = D->getFriendTemplateName();
+  if (TN.isNull()) {
+    VisitFriendDecl(D);
+    return;
+  }
+
+  dumpBareTemplateName(TN);
+  if (D->isPackExpansion())
+    OS << "...";
+}
+
 void TextNodeDumper::VisitObjCIvarDecl(const ObjCIvarDecl *D) {
   dumpName(D);
   dumpType(D->getType());

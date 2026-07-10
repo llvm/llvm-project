@@ -791,6 +791,11 @@ public:
     }
   }
 
+  void VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
+    if (D->getFriendTemplateName().isNull())
+      VisitFriendDecl(D);
+  }
+
   void VisitObjCMethodDecl(const ObjCMethodDecl *D) {
     if (D->isThisDeclarationADefinition())
       dumpDeclContext(D);

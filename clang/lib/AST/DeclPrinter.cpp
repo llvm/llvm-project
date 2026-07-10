@@ -917,6 +917,9 @@ void DeclPrinter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
     VisitFriendDecl(D);
   } else {
     Out << "friend ";
+    if (auto *CTD =
+            dyn_cast_if_present<ClassTemplateDecl>(TN.getAsTemplateDecl()))
+      Out << CTD->getTemplatedDecl()->getKindName() << ' ';
     TN.print(Out, Policy,
              Policy.SuppressScope ? TemplateName::Qualified::None
                                   : TemplateName::Qualified::AsWritten);
