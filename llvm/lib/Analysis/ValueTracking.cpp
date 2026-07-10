@@ -5715,16 +5715,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       const fltSemantics SrcSemantics =
           *(APFloat::getArbitraryFPSemantics(FormatStr));
 
-      Type *DestTy = II->getType()->getScalarType();
-      const fltSemantics DestSemantics = DestTy->getFltSemantics();
-
+      if (!APFloat::semanticsHasNaN(SrcSemantics))
+        Known.knownNot(fcNan);
       if (!APFloat::semanticsHasInf(SrcSemantics))
         Known.knownNot(fcInf);
-
-      const bool SrcSupportsNaN = APFloat::semanticsHasNaN(SrcSemantics);
-      // If the source format doesn't have NaN, the output cannot be NaN
-      if (!SrcSupportsNaN)
-        Known.knownNot(fcNan);
 
       break;
     }
