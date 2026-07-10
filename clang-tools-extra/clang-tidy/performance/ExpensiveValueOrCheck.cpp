@@ -12,7 +12,7 @@
 #include "../utils/TypeTraits.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Lex/Lexer.h"
+#include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
 
@@ -52,10 +52,11 @@ static std::string buildSuggestion(const CXXRecordDecl *OptionalClass) {
   return "consider avoiding the copy";
 }
 
-static std::optional<FixItHint>
-buildFixIt(const CXXMemberCallExpr *Call, const Expr *ObjExpr,
-           const Expr *FallbackArg, const CXXRecordDecl *OptionalClass,
-           const SourceManager &SM, const LangOptions &LO) {
+static std::optional<FixItHint> buildFixIt(const CXXMemberCallExpr *Call,
+                                           const Expr *ObjExpr,
+                                           const Expr *FallbackArg,
+                                           const CXXRecordDecl *OptionalClass,
+                                           const ASTContext &Ctx) {
   if (Call->getBeginLoc().isMacroID())
     return std::nullopt;
   if (!ObjExpr->isLValue())
@@ -63,10 +64,8 @@ buildFixIt(const CXXMemberCallExpr *Call, const Expr *ObjExpr,
   if (!hasOperatorStar(OptionalClass))
     return std::nullopt;
 
-  StringRef ObjText = Lexer::getSourceText(
-      CharSourceRange::getTokenRange(ObjExpr->getSourceRange()), SM, LO);
-  StringRef ArgText = Lexer::getSourceText(
-      CharSourceRange::getTokenRange(FallbackArg->getSourceRange()), SM, LO);
+  StringRef ObjText = tooling::fixit::getText(*ObjExpr, Ctx);
+  StringRef ArgText = tooling::fixit::getText(*FallbackArg, Ctx);
 
   if (ObjText.empty() || ArgText.empty())
     return std::nullopt;
@@ -158,8 +157,7 @@ void ExpensiveValueOrCheck::check(const MatchFinder::MatchResult &Result) {
                 << buildSuggestion(OptionalClass);
 
     if (!HasSideEffects) {
-      if (auto Fix = buildFixIt(Call, ObjExpr, FallbackArg, OptionalClass,
-                                Ctx.getSourceManager(), Ctx.getLangOpts()))
+      if (auto Fix = buildFixIt(Call, ObjExpr, FallbackArg, OptionalClass, Ctx))
         Diag << *Fix;
     }
   }

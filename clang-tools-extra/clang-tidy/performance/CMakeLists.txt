@@ -45,4 +45,5 @@ clang_target_link_libraries(clangTidyPerformanceModule
   clangAnalysis
   clangBasic
   clangLex
+  clangTooling
   )
