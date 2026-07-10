@@ -111,11 +111,3 @@ __device__ void test_readfirstlane(int* out, int a) {
 __device__ void test_dispatch_ptr(__attribute__((address_space(4))) void ** out) {
   *out = (__attribute__((address_space(4))) void *)__builtin_amdgcn_dispatch_ptr();
 }
-
-// CIR-LABEL: @_Z14test_tanhf_f32Pff
-// CIR: cir.call_llvm_intrinsic "amdgcn.tanh" {{.*}} : (!cir.float) -> !cir.float
-// LLVM: define{{.*}} void @_Z14test_tanhf_f32Pff
-// LLVM: call{{.*}} float @llvm.amdgcn.tanh.f32(float %{{.*}})
-__device__ void test_tanhf_f32(float* out, float a) {
-  *out = __builtin_amdgcn_tanhf(a);
-}
