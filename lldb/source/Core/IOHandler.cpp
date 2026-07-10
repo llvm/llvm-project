@@ -267,9 +267,10 @@ IOHandlerEditline::IOHandlerEditline(
     m_editline_up->SetRedrawCallback([this]() { this->RedrawCallback(); });
 
     if (debugger.GetAutosuggestionMode() != eAutosuggestionOff) {
-      m_editline_up->SetSuggestionCallback([this](llvm::StringRef line) {
-        return this->SuggestionCallback(line);
-      });
+      m_editline_up->SetSuggestionCallback(
+          [this](llvm::StringRef line, std::string &description) {
+            return this->SuggestionCallback(line, description);
+          });
       m_editline_up->SetSuggestionAnsiPrefix(ansi::FormatAnsiTerminalCodes(
           debugger.GetAutosuggestionAnsiPrefix()));
       m_editline_up->SetSuggestionAnsiSuffix(ansi::FormatAnsiTerminalCodes(
@@ -439,7 +440,8 @@ int IOHandlerEditline::FixIndentationCallback(Editline *editline,
 }
 
 std::optional<std::string>
-IOHandlerEditline::SuggestionCallback(llvm::StringRef line) {
+IOHandlerEditline::SuggestionCallback(llvm::StringRef line,
+                                     std::string &description) {
   // In tab-mode, we just display what tab would complete if the user
   // would tab.
   if (m_debugger.GetAutosuggestionMode() == eAutosuggestionTabMode) {
@@ -450,8 +452,17 @@ IOHandlerEditline::SuggestionCallback(llvm::StringRef line) {
     result.GetMatches(matches);
     std::string longest_prefix = matches.LongestCommonPrefix();
     llvm::StringRef cursor_arg_prefix = request.GetCursorArgumentPrefix();
-    if (longest_prefix.size() > cursor_arg_prefix.size())
+    if (longest_prefix.size() > cursor_arg_prefix.size()) {
+      // When the suggestion corresponds to a single completion, also surface
+      // its description (if any) so the user can see what the completion means.
+      if (result.GetNumberOfResults() == 1) {
+        StringList descriptions;
+        result.GetDescriptions(descriptions);
+        if (descriptions.GetSize() == 1)
+          description = descriptions[0];
+      }
       return longest_prefix.substr(cursor_arg_prefix.size());
+    }
     return std::nullopt;
   }
   return m_delegate.IOHandlerSuggestion(*this, line);
