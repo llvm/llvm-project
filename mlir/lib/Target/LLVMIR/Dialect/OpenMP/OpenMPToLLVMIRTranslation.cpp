@@ -8859,16 +8859,35 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       llvm::Constant *entryAddr = llvm::cast<llvm::Constant>(gVal);
       std::function<llvm::GlobalValue::LinkageTypes()> variableLinkage;
       llvm::SmallString<128> entryNameStorage;
-      if ((attribute.getCaptureClause().getValue() ==
-               mlir::omp::DeclareTargetCaptureClause::to ||
-           attribute.getCaptureClause().getValue() ==
-               mlir::omp::DeclareTargetCaptureClause::enter) &&
-          !isDeclaration &&
+      bool requiresUSM = ompBuilder->Config.hasRequiresUnifiedSharedMemory();
+      bool isToOrEnter =
+          captureClause == omp::DeclareTargetCaptureClause::to ||
+          captureClause == omp::DeclareTargetCaptureClause::enter;
+      bool isHostOnly = attribute.getDeviceType().getValue() ==
+                        omp::DeclareTargetDeviceType::host;
+
+      // A to/enter declare-target variable needs a device-resident,
+      // name-resolvable copy and a host offloading entry. A local-linkage
+      // global provides neither, so we promote it to external.
+      if (isToOrEnter && !isHostOnly && !requiresUSM &&
+          gVar->hasLocalLinkage()) {
+        gVar->setLinkage(llvm::GlobalValue::ExternalLinkage);
+        isExternallyVisible = true;
+
+        // Clear the stale dso_local flag so it is referenced like a
+        // module-scope declare target global.
+        if (ompBuilder->Config.isTargetDevice())
+          gVar->setDSOLocal(false);
+      }
+
+      if (isToOrEnter &&
+          deviceClause ==
+              llvm::OffloadEntriesInfoManager::OMPTargetDeviceClauseAny &&
+          !requiresUSM && !isDeclaration &&
           (gVal->hasLocalLinkage() || gVal->hasHiddenVisibility())) {
-        // Keep the original symbol local so target code can address it using
-        // target-specific local relocations, but create a visible alias for
-        // the offload entry so libomptarget can associate the host global with
-        // the actual device global.
+        // Keep the original symbol as-is for target code, but create a visible
+        // alias for the offload entry so libomptarget can associate the host
+        // global with the actual device global.
         entryNameStorage = (mangledName + llvm::Twine("_decl_tgt_entry")).str();
         entryMangledName = entryNameStorage;
         if (llvm::GlobalValue *existing =
@@ -8907,27 +8926,6 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
         return std::pair<std::string, std::uint64_t>(llvm::StringRef(filename),
                                                      lineNo);
       };
-
-      bool requiresUSM = ompBuilder->Config.hasRequiresUnifiedSharedMemory();
-      bool isToOrEnter =
-          captureClause == omp::DeclareTargetCaptureClause::to ||
-          captureClause == omp::DeclareTargetCaptureClause::enter;
-      bool isHostOnly = attribute.getDeviceType().getValue() ==
-                        omp::DeclareTargetDeviceType::host;
-
-      // A to/enter declare-target variable needs a device-resident,
-      // name-resolvable copy and a host offloading entry. A local-linkage
-      // global provides neither, so we promote it to external.
-      if (isToOrEnter && !isHostOnly && !requiresUSM &&
-          gVar->hasLocalLinkage()) {
-        gVar->setLinkage(llvm::GlobalValue::ExternalLinkage);
-        isExternallyVisible = true;
-
-        // Clear the stale dso_local flag so it is referenced like a
-        // module-scope declare target global.
-        if (ompBuilder->Config.isTargetDevice())
-          gVar->setDSOLocal(false);
-      }
 
       llvm::vfs::FileSystem &vfs = moduleTranslation.getFileSystem();
       ompBuilder->registerTargetGlobalVariable(
