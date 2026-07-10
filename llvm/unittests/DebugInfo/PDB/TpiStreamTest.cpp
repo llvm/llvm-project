@@ -49,7 +49,7 @@ openSimplePdb(BumpPtrAllocator &Allocator) {
     return Err;
   if (Error Err = File->parseStreamData())
     return Err;
-  return File;
+  return std::move(File);
 }
 
 TEST(TpiStreamTest, getType) {
