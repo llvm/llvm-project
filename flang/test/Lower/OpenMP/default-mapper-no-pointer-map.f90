@@ -73,4 +73,4 @@ end program test_default_mapper_no_pointer_map
 ! CHECK: %[[PTR_SCALAR_DESC:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(always, to){{.*}}{name = "obj%ptr_scalar"}
 ! CHECK: %[[PTR_SCALAR_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(attach, ref_ptr, ref_ptee){{.*}}{name = "obj%ptr_scalar"}
 ! CHECK: %[[OBJ_MAP:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(tofrom){{.*}}members(%[[PTR_SCALAR_DESC]], %[[PTR_SCALAR_DATA]] : [4], [4, 0] :{{.*}}){{.*}}{name = "obj"}
-! CHECK: omp.target map_entries(%[[OBJ_MAP]] -> %{{.*}}, %[[PTR_SCALAR_DESC]] -> %{{.*}}, %[[PTR_SCALAR_ATTACH]] -> %{{.*}}, %[[PTR_SCALAR_DATA]] -> %{{.*}} :
+! CHECK: omp.target kernel_type(generic) map_entries(%[[OBJ_MAP]] -> %{{.*}}, %[[PTR_SCALAR_DESC]] -> %{{.*}}, %[[PTR_SCALAR_ATTACH]] -> %{{.*}}, %[[PTR_SCALAR_DATA]] -> %{{.*}} :

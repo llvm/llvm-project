@@ -1130,6 +1130,33 @@ def TestInternalBranchOp : TEST_Op<"internal_br",
   let successors = (successor AnySuccessor:$successPath, AnySuccessor:$errorPath);
 }
 
+// A successor that must be the block immediately following the op's block.
+def FallthroughSuccessor : Successor<
+    CPred<"$_self == ($_op).getBlock()->getNextNode()">,
+    "the fallthrough block (the block immediately following the op's block)">;
+
+// A successor that must be a block listed after the op's block.
+def ForwardSuccessor : Successor<
+    CPred<[{
+      [&] {
+        for (::mlir::Block *block = ($_op).getBlock()->getNextNode(); block;
+             block = block->getNextNode())
+          if (block == $_self)
+            return true;
+        return false;
+      }()
+    }]>,
+    "a forward block (a block listed after the op's block)">;
+
+def TestFallthroughBranchOp : TEST_Op<"fallthrough_br", [Terminator]> {
+  let summary = "branch whose successors are constrained by predicates";
+  let successors = (successor FallthroughSuccessor:$target,
+                              VariadicSuccessor<ForwardSuccessor>:$forwardTargets);
+  let assemblyFormat = [{
+    $target `forward` `[` $forwardTargets `]` attr-dict
+  }];
+}
+
 def AttrSizedOperandOp : TEST_Op<"attr_sized_operands",
                                  [AttrSizedOperandSegments]> {
   let arguments = (ins
@@ -1358,10 +1385,10 @@ def OpQ : TEST_Op<"op_q"> {
   let results = (outs AnyType);
 }
 
-// Test constant-folding a pattern that maps `(F32) -> SI32`.
+// Test constant-folding a pattern that maps `(F32) -> I32`.
 def SignOp : TEST_Op<"sign", [SameOperandsAndResultShape]> {
   let arguments = (ins RankedTensorOf<[F32]>:$operand);
-  let results = (outs RankedTensorOf<[SI32]>:$result);
+  let results = (outs RankedTensorOf<[I32]>:$result);
 
   let assemblyFormat = [{
     $operand attr-dict `:` functional-type(operands, results)
@@ -4212,7 +4239,7 @@ def TestTensorWithFutureLayoutOp
   }];
 
   let arguments = (ins TestMemRefLayoutAttr:$layout);
-  let results = (outs AnyRankedTensor:$output);
+  let results = (outs Bufferization_TensorLikeTypeInterface:$output);
   let extraClassDefinition = [{
     bool test::TestTensorWithFutureLayoutOp::bufferizesToMemoryRead(
         ::mlir::OpOperand&,
@@ -4258,10 +4285,10 @@ def TestForceNewLayoutOp
   }];
 
   let arguments = (ins
-    AnyRankedTensor:$input,
+    Bufferization_TensorLikeTypeInterface:$input,
     TestMemRefLayoutAttr:$layout
   );
-  let results = (outs AnyRankedTensor:$output);
+  let results = (outs Bufferization_TensorLikeTypeInterface:$output);
   let extraClassDefinition = [{
     bool test::TestForceNewLayoutOp::bufferizesToMemoryRead(::mlir::OpOperand&,
         const ::mlir::bufferization::AnalysisState&) {
@@ -4293,6 +4320,16 @@ def TestForceNewLayoutOp
                /*isDefinite=*/true}};
     }
   }];
+}
+
+def TestDummyCastOp : TEST_Op<"dummy_cast_op", []> {
+  let arguments = (ins
+    Arg<Bufferization_BufferLikeTypeInterface>:$source
+  );
+  let results = (outs
+    Arg<Bufferization_BufferLikeTypeInterface>:$dest
+  );
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 }
 
 //===----------------------------------------------------------------------===//

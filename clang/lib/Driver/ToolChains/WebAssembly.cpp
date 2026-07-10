@@ -85,12 +85,21 @@ static bool WantsPthread(const llvm::Triple &Triple, const ArgList &Args) {
   if (Triple.isOSWASI() && Triple.getEnvironmentName() == "threads")
     WantsPthread = true;
 
+  // WASIp3 also implies pthreads support
+  if (Triple.getOS() == llvm::Triple::WASIp3)
+    WantsPthread = true;
+
   return WantsPthread;
 }
 
-static bool WantsLibcallThreadContext(const llvm::Triple &Triple,
-                                      const ArgList &Args) {
+static bool WantsCooperativeMultithreading(const llvm::Triple &Triple,
+                                           const ArgList &Args) {
   return Triple.getOS() == llvm::Triple::WASIp3;
+}
+
+static bool WantsSharedMemory(const llvm::Triple &Triple, const ArgList &Args) {
+  return WantsPthread(Triple, Args) &&
+         !WantsCooperativeMultithreading(Triple, Args);
 }
 
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -174,10 +183,10 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  if (WantsLibcallThreadContext(ToolChain.getTriple(), Args))
-    CmdArgs.push_back("--libcall-thread-context");
+  if (WantsCooperativeMultithreading(ToolChain.getTriple(), Args))
+    CmdArgs.push_back("--cooperative-threading");
 
-  if (WantsPthread(ToolChain.getTriple(), Args))
+  if (WantsSharedMemory(ToolChain.getTriple(), Args))
     CmdArgs.push_back("--shared-memory");
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
@@ -325,16 +334,18 @@ bool WebAssembly::SupportsProfiling() const { return false; }
 bool WebAssembly::HasNativeLLVMSupport() const { return true; }
 
 void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
-                                        ArgStringList &CC1Args,
-                                        StringRef BoundArch,
+                                        ArgStringList &CC1Args, BoundArch BA,
                                         Action::OffloadKind) const {
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fno-use-init-array");
 
-  // '-pthread' implies atomics, bulk-memory, mutable-globals, and sign-ext
+  // '-pthread' implies bulk-memory, mutable-globals, and sign-ext.
+  // It also implies atomics, so long as we're not targeting a cooperative
+  // threading environment.
   if (WantsPthread(getTriple(), DriverArgs)) {
-    if (DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
+    if (!WantsCooperativeMultithreading(getTriple(), DriverArgs) &&
+        DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
                            false))
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
           << "-pthread"
@@ -354,8 +365,10 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
           << "-pthread"
           << "-mno-sign-ext";
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+atomics");
+    if (!WantsCooperativeMultithreading(getTriple(), DriverArgs)) {
+      CC1Args.push_back("-target-feature");
+      CC1Args.push_back("+atomics");
+    }
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+bulk-memory");
     CC1Args.push_back("-target-feature");
@@ -572,9 +585,8 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
 }
 
 SanitizerMask WebAssembly::getSupportedSanitizers(
-    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   if (getTriple().isOSEmscripten()) {
     Res |= SanitizerKind::Vptr | SanitizerKind::Leak;
   }

@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_X86_X86_H
 
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -33,6 +34,11 @@ class X86TargetMachine;
 
 /// This pass converts a legalized DAG into a X86-specific DAG, ready for
 /// instruction scheduling.
+class X86ISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  X86ISelDAGToDAGPass(X86TargetMachine &TM);
+};
+
 FunctionPass *createX86ISelDag(X86TargetMachine &TM, CodeGenOptLevel OptLevel);
 
 /// This pass initializes a global base register for PIC on x86-32.

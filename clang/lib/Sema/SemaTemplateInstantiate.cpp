@@ -1886,6 +1886,19 @@ namespace {
         SmallVectorImpl<QualType> &PTypes,
         SmallVectorImpl<ParmVarDecl *> &TransParams,
         Sema::ExtParameterInfoBuilder &PInfos);
+
+    ExprResult TransformCXXDynamicCastExpr(CXXDynamicCastExpr *E) {
+      ExprResult Ret = inherited::TransformCXXDynamicCastExpr(E);
+      if (Ret.isInvalid())
+        return Ret;
+      QualType T = Ret.get()->getType();
+      if (const auto *PT = T->getAsCanonical<PointerType>())
+        T = PT->getPointeeType();
+      auto *DestDecl = T->getAsCXXRecordDecl();
+      if (DestDecl && DestDecl->isEffectivelyFinal())
+        getSema().MarkVTableUsed(Ret.get()->getExprLoc(), DestDecl);
+      return Ret;
+    }
   };
 }
 
@@ -3065,7 +3078,7 @@ bool Sema::SubstTypeConstraint(
   const ASTTemplateArgumentListInfo *TemplArgInfo =
       TC->getTemplateArgsAsWritten();
 
-  if (!EvaluateConstraints && !inParameterMappingSubstitution()) {
+  if (!EvaluateConstraints) {
     UnsignedOrNone Index = TC->getArgPackSubstIndex();
     bool ContainsUnexpandedPack =
         TemplArgInfo &&

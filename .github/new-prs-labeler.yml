@@ -698,11 +698,11 @@ clang:analysis:
 clang:ssaf:
   - changed-files:
     - any-glob-to-any-file:
-      - clang/docs/ScalableStaticAnalysisFramework/**
-      - clang/include/clang/ScalableStaticAnalysisFramework/**
-      - clang/lib/ScalableStaticAnalysisFramework/**
+      - clang/docs/ScalableStaticAnalysis/**
+      - clang/include/clang/ScalableStaticAnalysis/**
+      - clang/lib/ScalableStaticAnalysis/**
       - clang/test/Analysis/Scalable/**
-      - clang/unittests/ScalableStaticAnalysisFramework/**
+      - clang/unittests/ScalableStaticAnalysis/**
 
 clang:static analyzer:
   - changed-files:
@@ -832,7 +832,7 @@ llvm:ir:
     - any-glob-to-any-file:
       - llvm/lib/IR/**
       - llvm/include/llvm/IR/**
-      - llvm/docs/LangRef.rst
+      - llvm/docs/LangRef.md
       - llvm/unittests/IR/**
 
 llvm:SandboxIR:
@@ -1083,11 +1083,9 @@ backend:MIPS:
 
 backend:RISC-V:
   - changed-files:
-    - any-glob-to-any-file:
-      - '**/*riscv*'
-      - '**/*RISCV*'
-      - '**/*riscv*/**'
-      - '**/*RISCV*/**'
+    - all-globs-to-any-file:
+      - '{**/*riscv**,**/*RISCV**,**/*riscv*/**,**/*RISCV*/**}'
+      - '!libc/config/**'
 
 backend:Xtensa:
   - changed-files:

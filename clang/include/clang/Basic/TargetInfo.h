@@ -273,6 +273,9 @@ protected:
   unsigned HasBuiltinMSVaList : 1;
 
   LLVM_PREFERRED_TYPE(bool)
+  unsigned HasBuiltinZOSVaList : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasAArch64ACLETypes : 1;
 
   LLVM_PREFERRED_TYPE(bool)
@@ -1017,16 +1020,6 @@ public:
     return ComplexLongDoubleUsesFP2Ret;
   }
 
-  /// Check whether conversions to and from __fp16 should go through an integer
-  /// bitcast with i16.
-  ///
-  /// FIXME: This function should be removed. The intrinsics / no longer exist,
-  /// and are emulated with bitcast + fp cast. This only exists because of
-  /// misuse in ABI determining contexts.
-  virtual bool useFP16ConversionIntrinsics() const {
-    return true;
-  }
-
   /// Specify if mangling based on address space map should be used or
   /// not for language specific address spaces
   bool useAddressSpaceMapMangling() const {
@@ -1071,6 +1064,10 @@ public:
   /// Returns whether or not type \c __builtin_ms_va_list type is
   /// available on this target.
   bool hasBuiltinMSVaList() const { return HasBuiltinMSVaList; }
+
+  /// Returns whether or not type \c __builtin_zos_va_list type is
+  /// available on this target.
+  bool hasBuiltinZOSVaList() const { return HasBuiltinZOSVaList; }
 
   /// Returns whether or not the AArch64 ACLE built-in types are
   /// available on this target.
@@ -1324,10 +1321,10 @@ public:
     return Triple;
   }
 
-  /// Returns the target ID if supported.
-  virtual std::optional<std::string> getTargetID() const {
-    return std::nullopt;
-  }
+  /// Returns true if the target's processor is compatible with the processor
+  /// named by \p Name, i.e. \p Name names this target's processor or a
+  /// compatible processor.
+  virtual bool isProcessorName(StringRef Name) const { return false; }
 
   const char *getDataLayoutString() const {
     assert(!DataLayoutString.empty() && "Uninitialized DataLayout!");
@@ -1404,9 +1401,7 @@ public:
   /// Target the specified CPU.
   ///
   /// \return  False on error (invalid CPU name).
-  virtual bool setCPU(const std::string &Name) {
-    return false;
-  }
+  virtual bool setCPU(StringRef Name) { return false; }
 
   /// Fill a SmallVectorImpl with the valid values to setCPU.
   virtual void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {}
@@ -1588,6 +1583,13 @@ public:
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());
+  }
+
+  // Default encoding on z/OS is IBM-1047 and UTF-8 otherwise
+  StringRef getDefaultOrdinaryLiteralEncoding() const {
+    if (getTriple().getOS() == llvm::Triple::ZOS)
+      return "IBM-1047";
+    return "UTF-8";
   }
 
   // Identify whether this target supports __builtin_cpu_supports and
@@ -1800,6 +1802,10 @@ public:
   /// with GCC/Itanium ABI, and remains disqualifying for targets that need
   /// Clang backwards compatibility rather than GCC/Itanium ABI compatibility.
   virtual bool areDefaultedSMFStillPOD(const LangOptions&) const;
+
+  /// Returns whether the target's ABI guarantees that a class's vtable has a
+  /// unique address program-wide.
+  virtual VTableUniquenessKind getVTableUniqueness() const;
 
   /// Controls whether global operator delete is called by the deleting
   /// destructor or at the point where ::delete was called. Historically Clang
