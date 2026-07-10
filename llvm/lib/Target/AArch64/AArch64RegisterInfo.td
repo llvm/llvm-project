@@ -1246,7 +1246,8 @@ def ZPR4b64 : ZPRRegOp<"d", ZPRAsmOp4b64, ElementSizeD, ZPR_4b>;
 class ZPRMul2_MinToMaxRegOp<string Suffix, AsmOperandClass C, int  Min, int Max, ElementSizeEnum  Width, RegisterClass RC>
     : ZPRRegOp<Suffix, C, Width, RC> {
   let EncoderMethod = "EncodeRegMul_MinMax<2," # Min # ", " # Max # ">";
-  let DecoderMethod = "DecodeZPRMul2_MinMax<" # Min # ", " # Max # ">";
+  let DecoderMethod = "DecodeMulMinMaxRegisterClass<AArch64::ZPRRegClassID, "
+                      # "2, " # Min # ", " # Max # ">";
 }
 
 def ZPRMul2AsmOp8_Lo  : ZPRAsmOperand<"VectorB_Lo",  8, "Mul2_Lo">;
@@ -1307,6 +1308,10 @@ def ZPR2   : RegisterClass<"AArch64", [untyped], 128, (add ZSeqPairs)>  {
 def ZPR3  : RegisterClass<"AArch64", [untyped], 128, (add ZSeqTriples)> {
   let Size = 384;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR3RegClassID, 0, 32>";
+}
+def ZPR3_3b : RegisterClass<"AArch64", [untyped], 128,
+                            (add (trunc ZSeqTriples, 8))> {
+  let Size = 384;
 }
 def ZPR4 : RegisterClass<"AArch64", [untyped], 128, (add ZSeqQuads)> {
   let Size = 512;
@@ -1435,11 +1440,6 @@ class ZPRVectorListMinMax<int ElementWidth, int NumRegs, int Min, int Max,
                                  # NumRegs # ", 0, "
                                  # ElementWidth #  ", "
                                  # Min # ", " # Max # ">";
-}
-
-def ZPR3_3b : RegisterClass<"AArch64", [untyped], 128,
-                            (add (trunc ZSeqTriples, 8))> {
-  let Size = 384;
 }
 
 let EncoderMethod = "EncodeRegMul_MinMax<1, 0, 7>",

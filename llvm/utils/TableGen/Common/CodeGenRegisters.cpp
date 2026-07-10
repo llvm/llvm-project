@@ -2568,6 +2568,9 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
       // When SubRC is already an inferred class, prefer a name of the form
       // "<RC>_with_<CompositeSubIdx>_in_<SubSubRC>" over a chain of the form
       // "<RC>_with_<SubIdx>_in_<OtherRc>_with_<SubSubIdx>_in_<SubSubRC>".
+      // If that preferred name is already used, fall back to the uncomposed
+      // form so that different inferred classes do not alias through the same
+      // composed name.
       CodeGenSubRegIndex *CompositeSubIdx = SubIdx;
       CodeGenRegisterClass *CompositeSubRC = &SubRC;
       if (CodeGenSubRegIndex *SubSubIdx = SubRC.getInferredFromSubRegIdx()) {
@@ -2578,20 +2581,17 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
         }
       }
 
-      std::string Name =
-          (Twine(RC->getName()) + "_with_" + CompositeSubIdx->getName() +
-           "_in_" + CompositeSubRC->getName())
-              .str();
+      std::string Name = RC->getName() + "_with_" + CompositeSubIdx->getName() +
+                         "_in_" + CompositeSubRC->getName();
 
-      auto HasRegClassNamed = [&](StringRef Candidate) {
-        return llvm::any_of(RegClasses, [&](const CodeGenRegisterClass &RC) {
-          return RC.getName() == Candidate;
-        });
-      };
-      if (HasRegClassNamed(Name) && &SubRC != CompositeSubRC)
-        Name = (Twine(RC->getName()) + "_with_" + SubIdx->getName() + "_in_" +
-                SubRC.getName())
-                   .str();
+      bool HasRegClassNamed =
+          llvm::any_of(RegClasses, [&](const CodeGenRegisterClass &RC) {
+            return RC.getName() == Name;
+          });
+
+      if (HasRegClassNamed)
+        Name = RC->getName() + "_with_" + SubIdx->getName() + "_in_" +
+               SubRC.getName();
 
       auto [SubSetRC, Inserted] = getOrCreateSubClass(RC, &SubSetVec, Name);
 
