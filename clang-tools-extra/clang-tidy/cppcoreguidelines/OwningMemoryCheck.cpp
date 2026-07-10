@@ -57,11 +57,11 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
   // owner. Best example is `::free()`.
   const auto LegacyOwnerConsumers = functionDecl(LegacyConsumerFunctions);
 
-  const auto CreatesOwner =
+  const auto CreatesOwner = ignoringImpCasts(
       anyOf(cxxNewExpr(),
             callExpr(callee(
                 functionDecl(returns(qualType(hasDeclaration(OwnerDecl)))))),
-            CreatesLegacyOwner, LegacyOwnerCast);
+            CreatesLegacyOwner, LegacyOwnerCast));
 
   const auto ConsideredOwner = eachOf(IsOwnerType, CreatesOwner);
   const auto ScopeDeclaration = anyOf(translationUnitDecl(), namespaceDecl(),

@@ -398,6 +398,24 @@ namespace PR63994 {
   }
 }
 
+namespace PR64361 {
+  struct C {
+    virtual ~C() {}
+  };
+
+  struct D : public C {};
+
+  void testDerivedAssignment() {
+    C* x = new D;
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: initializing non-owner 'C *' with a newly created 'gsl::owner<>'
+  }
+
+  C* testDerivedReturn() {
+    return new D;
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: returning a newly created resource of type 'C *' or 'gsl::owner<>' from a function whose return type is not 'gsl::owner<>'
+  }
+}
+
 namespace PR59389 {
   struct S {
     S();
