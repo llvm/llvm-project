@@ -4302,6 +4302,16 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     }
   }];
 
+  let extraClassDefinition = [{
+    cir::FuncOp $cppClass::resolveCalleeInTable(
+        mlir::SymbolTableCollection &symbolTable) {
+      mlir::FlatSymbolRefAttr callee = getCalleeAttr();
+      if (!callee)
+        return {};
+      return symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(*this, callee);
+    }
+  }];
+
   let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
 
