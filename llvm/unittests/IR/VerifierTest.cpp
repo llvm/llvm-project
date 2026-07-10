@@ -532,6 +532,33 @@ TEST(VerifierTest, AtomicRMWIntVector) {
       << Error;
 }
 
+TEST(VerifierTest, AtomicCmpXchgVector) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *IntTy = Type::getInt16Ty(C);
+  Constant *CI = ConstantInt::get(IntTy, 0);
+
+  // Invalid scalable type : cmpxchg (<vscale x 2 x i16>)
+  Constant *CV = ConstantVector::getSplat(ElementCount::getScalable(2), CI);
+  new AtomicCmpXchgInst(Ptr, CV, CV, Align(8),
+                        AtomicOrdering::SequentiallyConsistent,
+                        AtomicOrdering::Monotonic, SyncScope::System, Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).starts_with(
+      "cmpxchg operand must have integer, floating point, pointer, or fixed "
+      "vector of one of these types"))
+      << Error;
+}
+
 TEST(VerifierTest, GetElementPtrInst) {
   LLVMContext C;
   Module M("M", C);

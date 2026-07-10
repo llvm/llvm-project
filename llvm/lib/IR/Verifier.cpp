@@ -4650,8 +4650,12 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
 
 void Verifier::visitAtomicCmpXchgInst(AtomicCmpXchgInst &CXI) {
   Type *ElTy = CXI.getOperand(1)->getType();
-  Check(ElTy->isIntOrPtrTy(),
-        "cmpxchg operand must have integer or pointer type", ElTy, &CXI);
+  Check((ElTy->isIntOrIntVectorTy() || ElTy->isFPOrFPVectorTy() ||
+         ElTy->isPtrOrPtrVectorTy()) &&
+            !isa<ScalableVectorType>(ElTy),
+        "cmpxchg operand must have integer, floating point, pointer, or fixed "
+        "vector of one of these types",
+        ElTy, &CXI);
   checkAtomicMemAccessSize(ElTy, &CXI);
   visitInstruction(CXI);
 }
