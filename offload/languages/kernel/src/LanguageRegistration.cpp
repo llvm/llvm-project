@@ -194,8 +194,9 @@ extern "C" {
 void __llvmRegisterFunction(const char *Binary, const char *KernelID,
                             char *KernelName, const char *KernelName1, int,
                             uint3 *, uint3 *, dim3 *, dim3 *, int *) {
-  printf("%s :: %p :: %p : %s : %s \n", __PRETTY_FUNCTION__, Binary, KernelID,
-         KernelName, KernelName1);
+  // printf("%s :: %p :: %p : %s : %s \n", __PRETTY_FUNCTION__, Binary,
+  // KernelID,
+  //        KernelName, KernelName1);
   ol_symbol_handle_t Kernel;
   ol_program_handle_t Program = olKGetProgram(Binary);
   ol_result_t Result = olGetSymbol(
@@ -206,7 +207,7 @@ void __llvmRegisterFunction(const char *Binary, const char *KernelID,
     abort();
   }
 
-  printf("K %p : %p\n", KernelID, Kernel);
+  // printf("K %p : %p\n", KernelID, Kernel);
   olKRegisterKernel(KernelID, Kernel);
 }
 

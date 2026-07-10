@@ -16,6 +16,7 @@
 
 enum Error_t : uint32_t {
   Success = 0,
+  ErrorInvalidValue = 1,
 };
 
 struct DeviceProp_t {

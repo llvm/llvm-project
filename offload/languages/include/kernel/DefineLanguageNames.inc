@@ -18,6 +18,7 @@
 #define Memcpy COMBINE(LANGUAGE, Memcpy)
 #define DeviceSynchronize COMBINE(LANGUAGE, DeviceSynchronize)
 #define Success COMBINE(LANGUAGE, Success)
+#define ErrorInvalidValue COMBINE(LANGUAGE, ErrorInvalidValue)
 #define MemcpyKind COMBINE(LANGUAGE, MemcpyKind)
 #define MemcpyHostToHost COMBINE(LANGUAGE, MemcpyHostToHost)
 #define MemcpyHostToDevice COMBINE(LANGUAGE, MemcpyHostToDevice)

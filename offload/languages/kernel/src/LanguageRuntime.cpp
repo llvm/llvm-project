@@ -28,7 +28,16 @@
 #define STR(X) #X
 #define LANGUAGE_STR STR(LANGUAGE)
 
-Error_t olKConvertResult(ol_result_t Result) { return Success; }
+static Error_t olKConvertResult(ol_result_t Result) {
+  if (Result == OL_SUCCESS)
+    return Success;
+  switch (Result->Code) {
+  case OL_ERRC_INVALID_VALUE:
+    return ErrorInvalidValue;
+  default:
+    return ErrorInvalidValue;
+  }
+}
 
 Error_t Malloc(void **DevPtr, size_t Size) {
   ol_device_handle_t Device = olKGetDefaultDevice();
@@ -145,9 +154,9 @@ Error_t DriverGetVersion(int *Version) {
 Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo) {
   // TODO: [h15] add remaining pci/mem fields
   ol_device_handle_t Device = olKGetDefaultDevice();
-  size_t name_size = 0;
-  olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NAME, &name_size);
-  olGetDeviceInfo(Device, OL_DEVICE_INFO_NAME, name_size, &DeviceProp->name[0]);
+  size_t nameSize = 0;
+  olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NAME, &nameSize);
+  olGetDeviceInfo(Device, OL_DEVICE_INFO_NAME, nameSize, &DeviceProp->name[0]);
   olGetDeviceInfo(Device, OL_DEVICE_INFO_GLOBAL_MEM_SIZE, sizeof(size_t),
                   &DeviceProp->totalGlobalMem);
   olGetDeviceInfo(Device, OL_DEVICE_INFO_WARP_SIZE, sizeof(uint32_t),
@@ -158,26 +167,44 @@ Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo) {
   return Success;
 }
 
+static Error_t getQueueFromStream(Stream_t Stream, ol_queue_handle_t *Queue) {
+  if (!Stream)
+    return ErrorInvalidValue;
+  *Queue = reinterpret_cast<ol_queue_handle_t>(Stream);
+  return Success;
+}
+
 Error_t StreamCreate(Stream_t *Stream) {
-  // TODO: [h15] implement
-  fprintf(stderr, LANGUAGE_STR "StreamCreate is not implemented yet");
-  abort();
+  ol_queue_handle_t Queue;
+  olCreateQueue(olKGetDefaultDevice(), &Queue);
+  *Stream = reinterpret_cast<Stream_t>(Queue);
+  return Success;
 }
 
 Error_t StreamCreateWithFlags(Stream_t *Stream, unsigned int Flags) {
-  // TODO: [h15] implement
-  fprintf(stderr, LANGUAGE_STR "StreamCreateWithFlags is not implemented yet");
-  abort();
+  if (Flags == StreamCreateWithFlagsFlags::StreamDefault)
+    return StreamCreate(Stream);
+  if (Flags == StreamCreateWithFlagsFlags::StreamNonBlocking) {
+    // FIXME: [h15] implement non-blocking stream creation
+    return StreamCreate(Stream);
+  }
+  return ErrorInvalidValue;
 }
 
 Error_t StreamDestroy(Stream_t Stream) {
-  // TODO: [h15] implement
-  fprintf(stderr, LANGUAGE_STR "StreamDestroy is not implemented yet");
-  abort();
+  ol_queue_handle_t Queue;
+  Error_t Err = getQueueFromStream(Stream, &Queue);
+  if (Err != Success)
+    return Err;
+  ol_result_t Result = olDestroyQueue(Queue);
+  return olKConvertResult(Result);
 }
 
 Error_t StreamSynchronize(Stream_t Stream) {
-  // TODO: [h15] implement
-  fprintf(stderr, LANGUAGE_STR "StreamSynchronize is not implemented yet");
-  abort();
+  ol_queue_handle_t Queue;
+  Error_t Err = getQueueFromStream(Stream, &Queue);
+  if (Err != Success)
+    return Err;
+  ol_result_t Result = olSyncQueue(Queue);
+  return olKConvertResult(Result);
 }
