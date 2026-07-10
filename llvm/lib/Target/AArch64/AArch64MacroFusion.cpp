@@ -73,7 +73,11 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   if (SecondMI.getOpcode() != AArch64::CBZW &&
       SecondMI.getOpcode() != AArch64::CBZX &&
       SecondMI.getOpcode() != AArch64::CBNZW &&
-      SecondMI.getOpcode() != AArch64::CBNZX)
+      SecondMI.getOpcode() != AArch64::CBNZX &&
+      SecondMI.getOpcode() != AArch64::TBZW &&
+      SecondMI.getOpcode() != AArch64::TBZX &&
+      SecondMI.getOpcode() != AArch64::TBNZW &&
+      SecondMI.getOpcode() != AArch64::TBNZX)
     return false;
 
   // Assume the 1st instr to be a wildcard if it is unspecified.
@@ -97,15 +101,25 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   case AArch64::ORRWrr:
   case AArch64::ORRXri:
   case AArch64::ORRXrr:
+  case AArch64::ORNWrr:
+  case AArch64::ORNXrr:
   case AArch64::SUBWri:
   case AArch64::SUBWrr:
   case AArch64::SUBXri:
   case AArch64::SUBXrr:
+  case AArch64::BICWrr:
+  case AArch64::BICXrr:
     return true;
   case AArch64::ADDWrs:
   case AArch64::ADDXrs:
   case AArch64::ANDWrs:
   case AArch64::ANDXrs:
+  case AArch64::EORWrs:
+  case AArch64::EORXrs:
+  case AArch64::ORNWrs:
+  case AArch64::ORNXrs:
+  case AArch64::ORRWrs:
+  case AArch64::ORRXrs:
   case AArch64::SUBWrs:
   case AArch64::SUBXrs:
   case AArch64::BICWrs:

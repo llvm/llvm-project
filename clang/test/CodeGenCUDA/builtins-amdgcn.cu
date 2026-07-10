@@ -164,6 +164,35 @@ __global__ void endpgm() {
   __builtin_amdgcn_endpgm();
 }
 
+// Check the 64 bit argument is correctly passed to the intrinsic without truncation or assertion.
+
+// CHECK-LABEL: @_Z14test_uicmp_i64Pyyy(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(5) [[OUT]], align 8
+// CHECK-NEXT:    [[OUT1:%.*]] = load ptr, ptr addrspace(5) [[OUT]], align 8
+// CHECK-NEXT:    store ptr [[OUT1]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i64 [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i64 [[B:%.*]], ptr [[B_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[B_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[TMP0]], [[TMP1]]
+// CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i64 [[TMP3]], ptr [[TMP4]], align 8
+// CHECK-NEXT:    ret void
+//
+__global__ void test_uicmp_i64(unsigned long long *out, unsigned long long a, unsigned long long b)
+{
+  *out = __builtin_amdgcn_uicmpl(a, b, 30+5);
+}
+
 // Check the 64 bit return value is correctly returned without truncation or assertion.
 
 // CHECK-LABEL: @_Z14test_s_memtimePy(

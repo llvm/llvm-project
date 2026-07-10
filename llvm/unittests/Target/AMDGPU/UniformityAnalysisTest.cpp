@@ -55,7 +55,7 @@ TEST_F(AMDGPUTestBase, NewValueIsConservativelyDivergent) {
   ASSERT_TRUE(F);
 
   auto TM =
-      createAMDGPUTargetMachine("amdgcn-amd-", "gfx1010", "+wavefrontsize32");
+      createAMDGPUTargetMachine("amdgpu10.10-amd-", "", "+wavefrontsize32");
   ASSERT_TRUE(TM);
   TargetTransformInfo TTI = TM->getTargetTransformInfo(*F);
 

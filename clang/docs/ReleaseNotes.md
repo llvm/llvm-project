@@ -156,6 +156,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   nested template types (for example, ones containing local lambdas) could
   produce very large writable `.data` sections. Emitted RTTI name strings
   change only for types whose name exceeds the length limit. (#GH206313)
+- Fixed Itanium mangling for lambdas in default member initializers of local
+  classes to use `<local-name>` encoding, preventing mangling collisions between
+  distinct local classes.
 
 ### AST Dumping Potentially Breaking Changes
 
@@ -457,6 +460,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - The `-cl` `/Brepro` option was modified to match the original CL's option
   and now defines the standard macros `__DATE__`, `__TIME__` and `__TIMESTAMP__` to
   "1". The previous functionality remains unchanged.
+- The `-fms-kernel` flag will now implicitly add `-fno-delete-null-pointer-checks`.
+  Still `-fdelete-null-pointer-checks` can be used to override this behavior.
 
 ### Removed Compiler Flags
 
@@ -549,6 +554,15 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - The `modular_format` attribute now supports the `fixed` aspect for C
   ISO 18037 fixed-point `printf` specifiers.
 
+- The `lifetime_capture_by` attribute now accepts three new spelling forms:
+  `lifetime_capture_by_this`, `lifetime_capture_by_global`, and
+  `lifetime_capture_by_unknown`. These replace passing `this`, `global`, and
+  `unknown` as arguments to `lifetime_capture_by`; that argument form is now
+  deprecated because those names can conflict with user-defined parameters.
+  They will be removed in the next release. Distinct `lifetime_capture_by`
+  spellings may also be combined on the same declaration, but each spelling may
+  appear at most once.
+
 - The `const` and `pure` attributes only apply to functions; they are now
   diagnosed and ignored when applied to anything else.
 
@@ -565,6 +579,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   This new coverage is added under the subgroup `-Wunused-but-set-global`,
   allowing it to be disabled independently with `-Wno-unused-but-set-global`.
   (#GH148361)
+
+- `-Wunused-template` is now part of `-Wunused` (which is enabled by `-Wall`).
+  It diagnoses unused function and variable templates with internal linkage,
+  which in a header is a latent ODR hazard. It can be disabled with
+  `-Wno-unused-template`. (#GH202945)
 
 - Added `-Wlifetime-safety` to enable lifetime safety analysis,
   a CFG-based intra-procedural analysis that detects use-after-free and related
@@ -780,7 +799,12 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
 - Fixed assertion failures involving code completion with delayed default arguments and exception specifications. (#GH200879)
 - Fixed a regression where calling a function that takes a class-type parameter by value inside `decltype` of a concept could be incorrectly rejected when used as a non-type template argument. (#GH175831)
+- Clang no longer crashes if `__attribute__((cleanup))` is applied to an invalid declaration. Furthermore, in declarations that
+  contain multiple `cleanup` attributes, Clang now only uses the last one, matching GCC's behaviour (previously, Clang
+  would only use the first one). A new warning that diagnoses such declarations has been added to `-Wignored-attributes`.
+  (#GH191829)
 - Fixed a crash in the constant evaluator when an ill-formed array new-expression whose bound could not be determined (e.g. `new int[]()`) was used in a constant expression. (#GH200139)
+- Clang now defines the GCC-compatible predefined macros `__WCHAR_MIN__`, `__WINT_MIN__`, and `__SIG_ATOMIC_MIN__`. (#GH199678)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -826,6 +850,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Clang no longer errors on overloads with different ref-qualifiers and constraints. (#GH120812)
 - Fixed a crash when a default argument is passed to an explicit object parameter. (#GH176639)
 - Fixed an alias template CTAD crash.
+- Improvements to typo correction involving template names. (#GH207498)
 - Correctly diagnose uses of `co_await` / `co_yield` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
@@ -922,6 +947,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   immediate-escalated callable. (#GH192846)
 - Fixed a crash when passing one sized implicitly casted vector to a `abs` function. (#GH204777)
 - Fixed a crash when diagnosing an invalid out-of-line definition of a member class template. (#GH201490)
+- Fixed a crash in the parser when a missing semicolon after a tag definition is followed by a template-id not preceded by `::`. (#GH207992)
 
 ### OpenACC Specific Changes
 
@@ -969,6 +995,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
   - Arm AGI CPU (armagicpu).
   - Hisilicon hip12 core (hip12).
+  - NVIDIA Rigel core (rigel).
 
 #### Android Support
 
