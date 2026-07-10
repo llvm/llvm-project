@@ -245,13 +245,15 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
       Diag(Expr->getBeginLoc(), diag::err_asm_operand_empty_string)
           << SL->getSourceRange();
     }
-    if (Context.getTargetInfo().TargetStrConverter) {
+    if (Context.getTargetInfo().FromSystemEncodingConverter) {
       SmallString<16> ConvertedAsm;
-      Context.getTargetInfo().TargetStrConverter->convert(SL->getString(),
-                                                          ConvertedAsm);
+      Context.getTargetInfo().FromSystemEncodingConverter->convert(
+          SL->getString(), ConvertedAsm);
+      QualType StrTy = Context.getStringLiteralArrayType(Context.CharTy,
+                                                         ConvertedAsm.size());
       return StringLiteral::Create(Context, ConvertedAsm,
                                    StringLiteralKind::Ordinary,
-                                   /*Pascal*/ false, {}, SL->getBeginLoc());
+                                   /*Pascal*/ false, StrTy, SL->getBeginLoc());
     }
     return SL;
   }

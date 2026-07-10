@@ -199,7 +199,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
 
   MaxBitIntWidth.reset();
 
-  TargetStrConverter = nullptr;
+  FromSystemEncodingConverter = nullptr;
 }
 
 // Out of line virtual dtor for TargetInfo.
