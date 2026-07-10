@@ -38,3 +38,18 @@ func.func @byref(%arg0: !test.smpla {llvm.byref = !test.smpla}) -> !test.smpla {
 // CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr {llvm.byref = !llvm.struct<(i8, i8)>}) -> !llvm.struct<(i8, i8)>
 //      CHECK: %[[LD:.*]] = llvm.load %[[ARG0]] : !llvm.ptr -> !llvm.struct<(i8, i8)>
 //      CHECK: llvm.return %[[LD]] : !llvm.struct<(i8, i8)>
+
+// -----
+
+// CHECK-LABEL: llvm.func @affine_for_iter_args
+func.func @affine_for_iter_args(%arg0: memref<10xf32>) {
+  %0 = affine.for %arg1 = 0 to 10 iter_args(%arg2 = %arg0) -> (memref<10xf32>) {
+    affine.yield %arg0 : memref<10xf32>
+  }
+  return
+}
+
+// CHECK: builtin.unrealized_conversion_cast
+// CHECK: affine.for
+// CHECK: affine.yield
+// CHECK: llvm.return

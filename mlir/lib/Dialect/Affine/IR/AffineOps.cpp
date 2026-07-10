@@ -2595,9 +2595,8 @@ static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
     if (val == forOp.getInductionVar())
       return {};
     if (iterArgIt == iterArgs.end()) {
-      // `val` is defined outside of the loop.
-      assert(forOp.isDefinedOutsideOfLoop(val) &&
-             "must be defined outside of the loop");
+      if (!forOp.isDefinedOutsideOfLoop(val))
+        return {};
       hasValDefinedOutsideLoop = true;
       replacements.push_back(val);
     } else {
