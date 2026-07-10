@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 %s -triple %itanium_abi_triple -Wno-unused-value -std=c++11 -fclangir -emit-llvm -o - -std=c++11 | FileCheck %s --check-prefixes=CIR-TO-LLVM
 // RUN: %clang_cc1 %s -triple %itanium_abi_triple -Wno-unused-value -std=c++11 -emit-llvm -o - -std=c++11 | FileCheck %s --check-prefixes=LLVM
 
-// FIXME: CIR-TO-LLVM output is incorrect. It should be same as LLVM output.
+// FIXME: missing `inbounds` in `getelementptr` in CIR-TO-LLVM output.
 
 namespace std {
   class type_info {};
@@ -21,6 +21,7 @@ struct Final final : Base {
 };
 
 void func();
+void ForceLoadingVTable(const std::type_info &);
 
 // Most derived
 void base_by_value(Base b) { typeid(b); }
@@ -98,7 +99,7 @@ void base_ref(Base &b) { typeid(b); }
 // CIR-TO-LLVM:       ret void
 
 // Not most derived
-void base_deref(Base *b) { typeid(*b); }
+void base_deref(Base *b) { ForceLoadingVTable(typeid(*b)); }
 // CIR-LABEL:  cir.func {{.*}}@_Z10base_derefP4Base
 // CIR:        cir.vtable.get_vptr
 // CIR:        cir.return
@@ -106,7 +107,7 @@ void base_deref(Base *b) { typeid(*b); }
 // LLVM:       getelementptr inbounds ptr, ptr
 // LLVM:       ret void
 // CIR-TO-LLVM-LABEL: define {{.*}}void @_Z10base_derefP4Base
-// CIR-TO-LLVM-NOT:   getelementptr
+// CIR-TO-LLVM:       getelementptr ptr, ptr
 // CIR-TO-LLVM:       ret void
 
 // Not most derived
@@ -122,7 +123,7 @@ void nonfinal_ref(NonFinal &d) { typeid(d); }
 // CIR-TO-LLVM:       ret void
 
 // Not most derived
-void nonfinal_deref(NonFinal *d) { typeid(*d); }
+void nonfinal_deref(NonFinal *d) { ForceLoadingVTable(typeid(*d)); }
 // CIR-LABEL:  cir.func {{.*}}@_Z14nonfinal_derefP8NonFinal
 // CIR:        cir.vtable.get_vptr
 // CIR:        cir.return
@@ -130,5 +131,5 @@ void nonfinal_deref(NonFinal *d) { typeid(*d); }
 // LLVM:       getelementptr inbounds ptr, ptr
 // LLVM:       ret void
 // CIR-TO-LLVM-LABEL: define {{.*}}void @_Z14nonfinal_derefP8NonFinal
-// CIR-TO-LLVM-NOT:   getelementptr
+// CIR-TO-LLVM:       getelementptr ptr, ptr
 // CIR-TO-LLVM:       ret void
