@@ -172,7 +172,6 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
     return false;
   }
 
-  const VPlan &Plan = *LastActiveLane.getParent()->getPlan();
   // All operands must be prefix-mask. This means an icmp ult/ule LHS, RHS where
   // the LHS is monotonically increasing and RHS is uniform across VFs and UF.
   for (VPValue *Op : LastActiveLane.operands()) {
@@ -214,7 +213,7 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
 
     errs() << "LastActiveLane operand ";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    VPSlotTracker Tracker(&Plan);
+    VPSlotTracker Tracker(LastActiveLane.getParent()->getPlan());
     Op->printAsOperand(errs(), Tracker);
 #endif
     errs() << " must be prefix mask (a header mask or an "
