@@ -30,8 +30,8 @@ target triple = "spir64-unknown-unknown"
 ; CHECK: %[[ParamVec3Char:.*]] = OpFunctionParameter %[[CharVec3]]
 ; CHECK: %[[Vec3CharItem0:.*]] = OpCompositeExtract %[[Char]] %[[ParamVec3Char]] 0
 ; CHECK: %[[Vec3CharItem1:.*]] = OpCompositeExtract %[[Char]] %[[ParamVec3Char]] 1
-; CHECK: %[[Vec3CharItem2:.*]] = OpCompositeExtract %[[Char]] %[[ParamVec3Char]] 2
 ; CHECK: %[[Vec3CharR1:.*]] = OpBitwiseOr %[[Char]] %[[Vec3CharItem0]] %[[Vec3CharItem1]]
+; CHECK: %[[Vec3CharItem2:.*]] = OpCompositeExtract %[[Char]] %[[ParamVec3Char]] 2
 ; CHECK: %[[Vec3CharR2:.*]] = OpBitwiseOr %[[Char]] %[[Vec3CharR1]] %[[Vec3CharItem2]]
 ; CHECK: OpReturnValue %[[Vec3CharR2]]
 ; CHECK: OpFunctionEnd
@@ -47,8 +47,8 @@ target triple = "spir64-unknown-unknown"
 ; CHECK: %[[ParamVec3Short:.*]] = OpFunctionParameter %[[ShortVec3]]
 ; CHECK: %[[Vec3ShortItem0:.*]] = OpCompositeExtract %[[Short]] %[[ParamVec3Short]] 0
 ; CHECK: %[[Vec3ShortItem1:.*]] = OpCompositeExtract %[[Short]] %[[ParamVec3Short]] 1
-; CHECK: %[[Vec3ShortItem2:.*]] = OpCompositeExtract %[[Short]] %[[ParamVec3Short]] 2
 ; CHECK: %[[Vec3ShortR1:.*]] = OpBitwiseOr %[[Short]] %[[Vec3ShortItem0]] %[[Vec3ShortItem1]]
+; CHECK: %[[Vec3ShortItem2:.*]] = OpCompositeExtract %[[Short]] %[[ParamVec3Short]] 2
 ; CHECK: %[[Vec3ShortR2:.*]] = OpBitwiseOr %[[Short]] %[[Vec3ShortR1]] %[[Vec3ShortItem2]]
 ; CHECK: OpReturnValue %[[Vec3ShortR2]]
 ; CHECK: OpFunctionEnd
@@ -64,8 +64,8 @@ target triple = "spir64-unknown-unknown"
 ; CHECK: %[[ParamVec3Int:.*]] = OpFunctionParameter %[[IntVec3]]
 ; CHECK: %[[Vec3IntItem0:.*]] = OpCompositeExtract %[[Int]] %[[ParamVec3Int]] 0
 ; CHECK: %[[Vec3IntItem1:.*]] = OpCompositeExtract %[[Int]] %[[ParamVec3Int]] 1
-; CHECK: %[[Vec3IntItem2:.*]] = OpCompositeExtract %[[Int]] %[[ParamVec3Int]] 2
 ; CHECK: %[[Vec3IntR1:.*]] = OpBitwiseOr %[[Int]] %[[Vec3IntItem0]] %[[Vec3IntItem1]]
+; CHECK: %[[Vec3IntItem2:.*]] = OpCompositeExtract %[[Int]] %[[ParamVec3Int]] 2
 ; CHECK: %[[Vec3IntR2:.*]] = OpBitwiseOr %[[Int]] %[[Vec3IntR1]] %[[Vec3IntItem2]]
 ; CHECK: OpReturnValue %[[Vec3IntR2]]
 ; CHECK: OpFunctionEnd
@@ -81,8 +81,8 @@ target triple = "spir64-unknown-unknown"
 ; CHECK: %[[ParamVec3Long:.*]] = OpFunctionParameter %[[LongVec3]]
 ; CHECK: %[[Vec3LongItem0:.*]] = OpCompositeExtract %[[Long]] %[[ParamVec3Long]] 0
 ; CHECK: %[[Vec3LongItem1:.*]] = OpCompositeExtract %[[Long]] %[[ParamVec3Long]] 1
-; CHECK: %[[Vec3LongItem2:.*]] = OpCompositeExtract %[[Long]] %[[ParamVec3Long]] 2
 ; CHECK: %[[Vec3LongR1:.*]] = OpBitwiseOr %[[Long]] %[[Vec3LongItem0]] %[[Vec3LongItem1]]
+; CHECK: %[[Vec3LongItem2:.*]] = OpCompositeExtract %[[Long]] %[[ParamVec3Long]] 2
 ; CHECK: %[[Vec3LongR2:.*]] = OpBitwiseOr %[[Long]] %[[Vec3LongR1]] %[[Vec3LongItem2]]
 ; CHECK: OpReturnValue %[[Vec3LongR2]]
 ; CHECK: OpFunctionEnd

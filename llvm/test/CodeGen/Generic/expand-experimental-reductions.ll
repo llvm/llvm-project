@@ -305,7 +305,11 @@ entry:
 define i8 @test_v3i8(<3 x i8> %a) nounwind {
 ; CHECK-LABEL: @test_v3i8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.vector.reduce.and.v3i8(<3 x i8> [[A:%.*]])
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x i8> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <3 x i8> [[A]], i64 1
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = and i8 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x i8> [[A]], i64 2
+; CHECK-NEXT:    [[B:%.*]] = and i8 [[BIN_RDX]], [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[B]]
 ;
 entry:

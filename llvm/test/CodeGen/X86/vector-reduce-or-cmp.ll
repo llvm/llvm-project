@@ -2072,35 +2072,82 @@ define zeroext i1 @PR44781(ptr %0) {
 }
 
 define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
-; SSE-LABEL: mask_v3i1:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pxor %xmm0, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; SSE-NEXT:    por %xmm0, %xmm1
-; SSE-NEXT:    movd %xmm1, %eax
-; SSE-NEXT:    testb $1, %al
-; SSE-NEXT:    je .LBB30_2
-; SSE-NEXT:  # %bb.1:
-; SSE-NEXT:    xorl %eax, %eax
-; SSE-NEXT:    ret{{[l|q]}}
-; SSE-NEXT:  .LBB30_2:
-; SSE-NEXT:    movl $1, %eax
-; SSE-NEXT:    ret{{[l|q]}}
+; X86-SSE2-LABEL: mask_v3i1:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pushl %ebp
+; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
+; X86-SSE2-NEXT:    movl %esp, %ebp
+; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
+; X86-SSE2-NEXT:    andl $-16, %esp
+; X86-SSE2-NEXT:    subl $32, %esp
+; X86-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; X86-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; X86-SSE2-NEXT:    pxor %xmm0, %xmm1
+; X86-SSE2-NEXT:    movdqa %xmm1, (%esp)
+; X86-SSE2-NEXT:    movzbl (%esp), %eax
+; X86-SSE2-NEXT:    orb {{[0-9]+}}(%esp), %al
+; X86-SSE2-NEXT:    orb {{[0-9]+}}(%esp), %al
+; X86-SSE2-NEXT:    testb $1, %al
+; X86-SSE2-NEXT:    je .LBB30_3
+; X86-SSE2-NEXT:  # %bb.1:
+; X86-SSE2-NEXT:    xorl %eax, %eax
+; X86-SSE2-NEXT:    jmp .LBB30_2
+; X86-SSE2-NEXT:  .LBB30_3:
+; X86-SSE2-NEXT:    movl $1, %eax
+; X86-SSE2-NEXT:  .LBB30_2:
+; X86-SSE2-NEXT:    movl %ebp, %esp
+; X86-SSE2-NEXT:    popl %ebp
+; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
+; X86-SSE2-NEXT:    retl
+;
+; X64-SSE2-LABEL: mask_v3i1:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; X64-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; X64-SSE2-NEXT:    pxor %xmm0, %xmm1
+; X64-SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
+; X64-SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-SSE2-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; X64-SSE2-NEXT:    orb -{{[0-9]+}}(%rsp), %al
+; X64-SSE2-NEXT:    testb $1, %al
+; X64-SSE2-NEXT:    je .LBB30_2
+; X64-SSE2-NEXT:  # %bb.1:
+; X64-SSE2-NEXT:    xorl %eax, %eax
+; X64-SSE2-NEXT:    retq
+; X64-SSE2-NEXT:  .LBB30_2:
+; X64-SSE2-NEXT:    movl $1, %eax
+; X64-SSE2-NEXT:    retq
+;
+; SSE4-LABEL: mask_v3i1:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE4-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE4-NEXT:    pxor %xmm0, %xmm1
+; SSE4-NEXT:    movd %xmm1, %eax
+; SSE4-NEXT:    pextrb $4, %xmm1, %ecx
+; SSE4-NEXT:    orl %eax, %ecx
+; SSE4-NEXT:    pextrb $8, %xmm1, %eax
+; SSE4-NEXT:    orl %ecx, %eax
+; SSE4-NEXT:    testb $1, %al
+; SSE4-NEXT:    je .LBB30_2
+; SSE4-NEXT:  # %bb.1:
+; SSE4-NEXT:    xorl %eax, %eax
+; SSE4-NEXT:    ret{{[l|q]}}
+; SSE4-NEXT:  .LBB30_2:
+; SSE4-NEXT:    movl $1, %eax
+; SSE4-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1OR2-LABEL: mask_v3i1:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX1OR2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX1OR2-NEXT:    vpor %xmm1, %xmm0, %xmm1
-; AVX1OR2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; AVX1OR2-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; AVX1OR2-NEXT:    vmovd %xmm0, %eax
+; AVX1OR2-NEXT:    vpextrb $4, %xmm0, %ecx
+; AVX1OR2-NEXT:    orl %eax, %ecx
+; AVX1OR2-NEXT:    vpextrb $8, %xmm0, %eax
+; AVX1OR2-NEXT:    orl %ecx, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je .LBB30_2
 ; AVX1OR2-NEXT:  # %bb.1:
@@ -2116,11 +2163,13 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftrw $2, %k0, %k1
-; AVX512F-NEXT:    korw %k1, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $1, %k0, %k0
-; AVX512F-NEXT:    korw %k0, %k1, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    kshiftrw $1, %k0, %k1
+; AVX512F-NEXT:    kmovw %k1, %ecx
+; AVX512F-NEXT:    kmovw %k0, %edx
+; AVX512F-NEXT:    orb %cl, %dl
+; AVX512F-NEXT:    orb %al, %dl
+; AVX512F-NEXT:    testb $1, %dl
 ; AVX512F-NEXT:    je .LBB30_2
 ; AVX512F-NEXT:  # %bb.1:
 ; AVX512F-NEXT:    xorl %eax, %eax
@@ -2137,11 +2186,13 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512BW-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
 ; AVX512BW-NEXT:    kshiftrw $2, %k0, %k1
-; AVX512BW-NEXT:    korw %k1, %k0, %k1
-; AVX512BW-NEXT:    kshiftrw $1, %k0, %k0
-; AVX512BW-NEXT:    korw %k0, %k1, %k0
-; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    testb $1, %al
+; AVX512BW-NEXT:    kmovd %k1, %eax
+; AVX512BW-NEXT:    kshiftrw $1, %k0, %k1
+; AVX512BW-NEXT:    kmovd %k1, %ecx
+; AVX512BW-NEXT:    kmovd %k0, %edx
+; AVX512BW-NEXT:    orb %cl, %dl
+; AVX512BW-NEXT:    orb %al, %dl
+; AVX512BW-NEXT:    testb $1, %dl
 ; AVX512BW-NEXT:    je .LBB30_2
 ; AVX512BW-NEXT:  # %bb.1:
 ; AVX512BW-NEXT:    xorl %eax, %eax
@@ -2156,11 +2207,13 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpcmpneqd %xmm1, %xmm0, %k0
 ; AVX512VL-NEXT:    kshiftrb $2, %k0, %k1
-; AVX512VL-NEXT:    korw %k1, %k0, %k1
-; AVX512VL-NEXT:    kshiftrb $1, %k0, %k0
-; AVX512VL-NEXT:    korw %k0, %k1, %k0
-; AVX512VL-NEXT:    kmovd %k0, %eax
-; AVX512VL-NEXT:    testb $1, %al
+; AVX512VL-NEXT:    kmovd %k1, %eax
+; AVX512VL-NEXT:    kshiftrb $1, %k0, %k1
+; AVX512VL-NEXT:    kmovd %k1, %ecx
+; AVX512VL-NEXT:    kmovd %k0, %edx
+; AVX512VL-NEXT:    orb %cl, %dl
+; AVX512VL-NEXT:    orb %al, %dl
+; AVX512VL-NEXT:    testb $1, %dl
 ; AVX512VL-NEXT:    je .LBB30_2
 ; AVX512VL-NEXT:  # %bb.1:
 ; AVX512VL-NEXT:    xorl %eax, %eax
