@@ -6374,18 +6374,16 @@ static void collectMapDataFromMapOperands(
   // Process MapOperands
   for (Value mapValue : mapVars) {
     auto mapOp = cast<omp::MapInfoOp>(mapValue.getDefiningOp());
-    bool isAttachMap =
-        bitEnumContainsAll(mapOp.getMapType(), omp::ClauseMapFlags::attach);
     bool isRefPtrOrPteeMapWithAttach =
         checkRefPtrOrPteeMapWithAttach(mapOp.getMapType());
     Value offloadPtr = (mapOp.getVarPtrPtr() && !isRefPtrOrPteeMapWithAttach)
                            ? mapOp.getVarPtrPtr()
                            : mapOp.getVarPtr();
-    Value pointeePtr = isRefPtrOrPteeMapWithAttach
-                           ? mapOp.getVarPtrPtr()
-                           : (isAttachMap ? mapOp.getVarPtr() : offloadPtr);
     mapData.OriginalValue.push_back(moduleTranslation.lookupValue(offloadPtr));
-    mapData.Pointers.push_back(moduleTranslation.lookupValue(pointeePtr));
+    mapData.Pointers.push_back(
+        isRefPtrOrPteeMapWithAttach
+            ? moduleTranslation.lookupValue(mapOp.getVarPtrPtr())
+            : mapData.OriginalValue.back());
 
     if (llvm::Value *refPtr =
             getRefPtrIfDeclareTarget(offloadPtr, moduleTranslation)) {
@@ -7199,10 +7197,6 @@ createAlteredByCaptureMap(MapInfoData &mapData,
         ((convertClauseMapFlags(mapOp.getMapType()) &
           llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH) ==
          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
-    bool isRefPtrOrPteeMapWithAttach =
-        isAttachMap &&
-        (bitEnumContainsAll(mapOp.getMapType(), omp::ClauseMapFlags::ref_ptr) ||
-         bitEnumContainsAll(mapOp.getMapType(), omp::ClauseMapFlags::ref_ptee));
 
     // If it's declare target, skip it, it's handled separately. However, if
     // it's declare target, and an attach map, we want to calculate the exact
@@ -7225,7 +7219,7 @@ createAlteredByCaptureMap(MapInfoData &mapData,
         std::vector<llvm::Value *> offsetIdx = calculateBoundsOffset(
             moduleTranslation, builder, mapData.BaseType[i]->isArrayTy(),
             mapOp.getBounds());
-        if (isPtrTy && (!isAttachMap || isRefPtrOrPteeMapWithAttach))
+        if (isPtrTy)
           newV = builder.CreateLoad(builder.getPtrTy(), newV);
 
         if (!offsetIdx.empty())
