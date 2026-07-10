@@ -354,6 +354,9 @@ namespace llvm {
                                                     TargetLoweringOpt &TLO,
                                                     unsigned Depth) const;
 
+    unsigned getPreferredShrunkVectorSizeInBits(
+        SDValue Op, const APInt &DemandedElts) const override;
+
     bool SimplifyDemandedBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedBits,
                                            const APInt &DemandedElts,
@@ -565,6 +568,9 @@ namespace llvm {
     bool reduceSelectOfFPConstantLoads(EVT CmpOpVT) const override;
 
     bool convertSelectOfConstantsToMath(EVT VT) const override;
+
+    bool shouldNormalizeToSelectSequence(LLVMContext &Context, EVT VT,
+                                         EVT CCVT) const override;
 
     bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                 SDValue C) const override;

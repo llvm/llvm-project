@@ -18,6 +18,7 @@
 #include "VPlan.h"
 #include "VPlanUtils.h"
 #include "llvm/Support/PatternMatchHelpers.h"
+#include <utility>
 
 using namespace llvm::PatternMatchHelpers;
 
@@ -880,6 +881,16 @@ struct canonical_iv_match {
 
 inline canonical_iv_match m_CanonicalIV() { return {}; }
 
+/// Match the abstract header mask of any loop region.
+struct header_mask_match {
+  template <typename ArgTy> bool match(const ArgTy *V) const {
+    const auto *RV = dyn_cast<VPRegionValue>(V);
+    return RV && RV->getDefiningRegion()->getHeaderMask() == RV;
+  }
+};
+
+inline header_mask_match m_HeaderMask() { return {}; }
+
 /// Match a canonical VPWidenIntOrFpInductionRecipe optionally capturing it.
 struct canonical_widen_iv_match {
   VPWidenIntOrFpInductionRecipe **Capture = nullptr;
@@ -993,7 +1004,8 @@ template <typename Opnd_t> struct Argument_match {
       if (R->getOpcode() == Instruction::Call)
         return Val.match(R->getOperand(OpI));
     if (const auto *R = dyn_cast<VPInstruction>(V))
-      if (R->getOpcode() == Instruction::Call)
+      if (R->getOpcode() == Instruction::Call ||
+          R->getOpcode() == VPInstruction::Intrinsic)
         return Val.match(R->getOperand(OpI));
     return false;
   }
@@ -1016,64 +1028,24 @@ struct IntrinsicID_match {
   }
 };
 
-/// Intrinsic matches are combinations of ID matchers, and argument
-/// matchers. Higher arity matcher are defined recursively in terms of and-ing
-/// them with lower arity matchers. Here's some convenient typedefs for up to
-/// several arguments, and more can be added as needed
-template <typename T0 = void, typename T1 = void, typename T2 = void,
-          typename T3 = void>
-struct m_Intrinsic_Ty;
-template <typename T0> struct m_Intrinsic_Ty<T0> {
-  using Ty = match_combine_and<IntrinsicID_match, Argument_match<T0>>;
-};
-template <typename T0, typename T1> struct m_Intrinsic_Ty<T0, T1> {
-  using Ty =
-      match_combine_and<typename m_Intrinsic_Ty<T0>::Ty, Argument_match<T1>>;
-};
-template <typename T0, typename T1, typename T2>
-struct m_Intrinsic_Ty<T0, T1, T2> {
-  using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1>::Ty,
-                               Argument_match<T2>>;
-};
-template <typename T0, typename T1, typename T2, typename T3>
-struct m_Intrinsic_Ty {
-  using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1, T2>::Ty,
-                               Argument_match<T3>>;
-};
-
-/// Match intrinsic calls like this:
-/// m_Intrinsic<Intrinsic::fabs>(m_VPValue(X), ...)
-template <Intrinsic::ID IntrID> inline IntrinsicID_match m_Intrinsic() {
-  return IntrinsicID_match(IntrID);
-}
-
 /// Match intrinsic calls with a runtime intrinsic ID.
 inline IntrinsicID_match m_Intrinsic(Intrinsic::ID IntrID) {
   return IntrinsicID_match(IntrID);
 }
 
-template <Intrinsic::ID IntrID, typename T0>
-inline typename m_Intrinsic_Ty<T0>::Ty m_Intrinsic(const T0 &Op0) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(), m_Argument<0>(Op0));
-}
+struct IntrinsicMatchImpl {
+  template <Intrinsic::ID IntrID, typename... Ts, size_t... Is>
+  static auto impl(std::index_sequence<Is...>, const Ts &...Ops) {
+    return m_CombineAnd(IntrinsicID_match(IntrID), m_Argument<Is>(Ops)...);
+  }
+};
 
-template <Intrinsic::ID IntrID, typename T0, typename T1>
-inline typename m_Intrinsic_Ty<T0, T1>::Ty m_Intrinsic(const T0 &Op0,
-                                                       const T1 &Op1) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0), m_Argument<1>(Op1));
-}
-
-template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2>
-inline typename m_Intrinsic_Ty<T0, T1, T2>::Ty
-m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1), m_Argument<2>(Op2));
-}
-
-template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2,
-          typename T3>
-inline typename m_Intrinsic_Ty<T0, T1, T2, T3>::Ty
-m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2), m_Argument<3>(Op3));
+/// Match intrinsic calls like this:
+/// m_Intrinsic<Intrinsic::fabs>(m_VPValue(X), ...)
+template <Intrinsic::ID IntrID, typename... Ts>
+inline auto m_Intrinsic(const Ts &...Ops) {
+  return IntrinsicMatchImpl::impl<IntrID>(
+      std::make_index_sequence<sizeof...(Ts)>{}, Ops...);
 }
 
 template <Intrinsic::ID IntrID, typename... T>
@@ -1091,9 +1063,7 @@ struct LiveIn_match {
   }
 };
 
-inline VPInstruction_match<VPInstruction::VScale> m_VScale() {
-  return m_VPInstruction<VPInstruction::VScale>();
-}
+inline auto m_VScale() { return m_Intrinsic<Intrinsic::vscale>(); }
 
 inline auto m_LiveIn() { return m_Isa<VPIRValue, VPSymbolicValue>(); }
 

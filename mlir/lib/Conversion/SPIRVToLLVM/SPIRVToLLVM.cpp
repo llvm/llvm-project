@@ -1048,6 +1048,18 @@ public:
   }
 };
 
+class UnreachablePattern : public SPIRVToLLVMConversion<spirv::UnreachableOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::UnreachableOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::UnreachableOp unreachableOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<LLVM::UnreachableOp>(unreachableOp);
+    return success();
+  }
+};
+
 static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
                                               StringRef name,
                                               ArrayRef<Type> paramTypes,
@@ -2023,6 +2035,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       ClampPattern<spirv::GLUClampOp, LLVM::UMinOp, LLVM::UMaxOp>,
       DirectConversionPattern<spirv::GLFMaxOp, LLVM::MaxNumOp>,
       DirectConversionPattern<spirv::GLFMinOp, LLVM::MinNumOp>,
+      DirectConversionPattern<spirv::GLNMaxOp, LLVM::MaxNumOp>,
+      DirectConversionPattern<spirv::GLNMinOp, LLVM::MinNumOp>,
       DirectConversionPattern<spirv::GLLogOp, LLVM::LogOp>,
       DirectConversionPattern<spirv::GLLog2Op, LLVM::Log2Op>,
       DirectConversionPattern<spirv::GLPowOp, LLVM::PowOp>,
@@ -2071,6 +2085,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::CLAtan2Op, LLVM::ATan2Op>,
       DirectConversionPattern<spirv::CLSqrtOp, LLVM::SqrtOp>,
       DirectConversionPattern<spirv::CLTruncOp, LLVM::FTruncOp>,
+      DirectConversionPattern<spirv::CLCopysignOp, LLVM::CopySignOp>,
+      DirectConversionPattern<spirv::CLFmodOp, LLVM::FRemOp>,
       DirectConversionPattern<spirv::CLSMaxOp, LLVM::SMaxOp>,
       DirectConversionPattern<spirv::CLSMinOp, LLVM::SMinOp>,
       DirectConversionPattern<spirv::CLUMaxOp, LLVM::UMaxOp>,
@@ -2100,6 +2116,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
 
       // Return ops
       ReturnPattern, ReturnValuePattern,
+
+      // Unreachable op
+      UnreachablePattern,
 
       // Barrier ops
       ControlBarrierPattern<spirv::ControlBarrierOp>,
