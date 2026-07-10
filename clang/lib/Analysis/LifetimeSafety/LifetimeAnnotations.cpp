@@ -11,6 +11,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/OperatorKinds.h"
@@ -103,6 +105,87 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   if (getImplicitObjectParamLifetimeBoundAttr(FD))
     return true;
   return isNormalAssignmentOperator(FD);
+}
+
+std::optional<LifetimeBoundParamInfo>
+getLifetimeBoundParamInfo(const FunctionDecl *FD, unsigned I) {
+  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+  if (!FD)
+    return std::nullopt;
+
+  const ParmVarDecl *PVD = nullptr;
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
+    if (I == 0)
+      return implicitObjectParamIsLifetimeBound(Method)
+                 ? std::optional<LifetimeBoundParamInfo>(
+                       LifetimeBoundParamInfo(Method))
+                 : std::nullopt;
+    if ((I - 1) < Method->getNumParams())
+      PVD = Method->getParamDecl(I - 1);
+  } else if (I < FD->getNumParams()) {
+    PVD = FD->getParamDecl(I);
+  }
+
+  if (PVD && PVD->hasAttr<clang::LifetimeBoundAttr>())
+    return LifetimeBoundParamInfo(PVD);
+  return std::nullopt;
+}
+
+static bool isExprInCallArg(const Expr *Arg, const Expr *Source) {
+  if (!Arg || !Source)
+    return false;
+
+  Arg = Arg->IgnoreParenImpCasts();
+  Source = Source->IgnoreParenImpCasts();
+  if (Arg == Source || Arg->getSourceRange() == Source->getSourceRange())
+    return true;
+
+  for (const Stmt *Child : Arg->children())
+    if (const auto *ChildExpr = dyn_cast_or_null<Expr>(Child))
+      if (isExprInCallArg(ChildExpr, Source))
+        return true;
+
+  return false;
+}
+
+std::optional<LifetimeBoundParamInfo>
+getLifetimeBoundParamInfoForCallArg(const Expr *Call, const Expr *Source) {
+  if (!Call || !Source)
+    return std::nullopt;
+
+  Call = Call->IgnoreParenImpCasts();
+
+  const FunctionDecl *FD = nullptr;
+  llvm::SmallVector<const Expr *, 4> Args;
+
+  if (const auto *CCE = dyn_cast<CXXConstructExpr>(Call)) {
+    FD = CCE->getConstructor();
+    Args.append(CCE->getArgs(), CCE->getArgs() + CCE->getNumArgs());
+  } else if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(Call)) {
+    FD = MCE->getMethodDecl();
+    Args.push_back(MCE->getImplicitObjectArgument());
+    Args.append(MCE->getArgs(), MCE->getArgs() + MCE->getNumArgs());
+  } else if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(Call)) {
+    FD = OCE->getDirectCallee();
+    Args.append(OCE->getArgs(), OCE->getArgs() + OCE->getNumArgs());
+    if (FD && OCE->getOperator() == OO_Call && FD->isStatic())
+      Args.erase(Args.begin());
+  } else if (const auto *CE = dyn_cast<CallExpr>(Call)) {
+    FD = CE->getDirectCallee();
+    Args.append(CE->getArgs(), CE->getArgs() + CE->getNumArgs());
+  }
+
+  if (!FD)
+    return std::nullopt;
+
+  for (unsigned I = 0; I < Args.size(); ++I)
+    if (isExprInCallArg(Args[I], Source))
+      if (std::optional<LifetimeBoundParamInfo> Info =
+              getLifetimeBoundParamInfo(FD, I))
+        return Info;
+
+  return std::nullopt;
 }
 
 bool isInStlNamespace(const Decl *D) {

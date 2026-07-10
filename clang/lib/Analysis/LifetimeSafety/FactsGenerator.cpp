@@ -1096,25 +1096,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     flow(CallList, getOriginsList(*Args[0]), /*Kill=*/true);
     return;
   }
-  auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
-    const ParmVarDecl *PVD = nullptr;
-    if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-        Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
-      if (I == 0)
-        // For the 'this' argument, the attribute is on the method itself.
-        return implicitObjectParamIsLifetimeBound(Method);
-      if ((I - 1) < Method->getNumParams())
-        // For explicit arguments, find the corresponding parameter
-        // declaration.
-        PVD = Method->getParamDecl(I - 1);
-    } else if (I < FD->getNumParams()) {
-      // For free functions or static methods.
-      PVD = FD->getParamDecl(I);
-    }
-    return PVD ? PVD->hasAttr<clang::LifetimeBoundAttr>() : false;
-  };
-  auto ShouldTrackArg = [FD, &Args, IsArgLifetimeBound](unsigned I) -> bool {
-    if (IsArgLifetimeBound(I))
+  auto ShouldTrackArg = [FD, &Args](unsigned I) -> bool {
+    if (getLifetimeBoundParamInfo(FD, I))
       return true;
     if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
         Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD))

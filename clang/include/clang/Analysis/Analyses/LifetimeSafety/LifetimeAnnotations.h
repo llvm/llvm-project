@@ -12,8 +12,10 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
+#include "llvm/ADT/PointerUnion.h"
+#include <optional>
 
-namespace clang ::lifetimes {
+namespace clang::lifetimes {
 
 // This function is needed because Decl::isInStdNamespace will return false for
 // iterators in some STL implementations due to them being defined in a
@@ -55,6 +57,19 @@ getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD);
 /// lifetimebound, either due to an explicit lifetimebound attribute on the
 /// method or because it's a normal assignment operator.
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
+
+using LifetimeBoundParamInfo =
+    llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
+
+/// Returns the lifetimebound parameter corresponding to argument I.
+/// For instance methods, argument 0 is the implicit object argument.
+std::optional<LifetimeBoundParamInfo>
+getLifetimeBoundParamInfo(const FunctionDecl *FD, unsigned I);
+
+/// Returns the lifetimebound parameter in Call whose argument corresponds to
+/// Source, if any.
+std::optional<LifetimeBoundParamInfo>
+getLifetimeBoundParamInfoForCallArg(const Expr *Call, const Expr *Source);
 
 // Returns true if the implicit object argument (this) of a method call should
 // be tracked for GSL lifetime analysis. This applies to STL methods that return

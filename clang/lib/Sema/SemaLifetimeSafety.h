@@ -21,7 +21,6 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
-#include <cassert>
 #include <string>
 
 namespace clang::lifetimes {
@@ -106,10 +105,9 @@ class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
 public:
   LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
 
-  void
-  reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
-                      const Expr *MovedExpr, SourceLocation FreeLoc,
-                      llvm::ArrayRef<AliasChainEntry> AliasChain) override {
+  void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
+                           const Expr *MovedExpr, SourceLocation FreeLoc,
+                           llvm::ArrayRef<const Expr *> ExprChain) override {
     unsigned DiagID = MovedExpr
                           ? diag::warn_lifetime_safety_use_after_scope_moved
                           : diag::warn_lifetime_safety_use_after_scope;
@@ -123,7 +121,7 @@ public:
     S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here)
         << DestroyedSubject;
 
-    reportAliasingChain(AliasChain);
+    reportAliasingChain(ExprChain);
 
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
@@ -666,28 +664,31 @@ private:
     return CurrExpr->getSourceRange() != LastExpr->getSourceRange();
   }
 
-  void reportAliasingChain(llvm::ArrayRef<AliasChainEntry> OriginExprChain) {
+  void reportAliasingChain(llvm::ArrayRef<const Expr *> OriginExprChain) {
     if (OriginExprChain.empty())
       return;
 
-    AliasChainEntry Last = OriginExprChain.back();
-    const Expr *LastExpr = Last.E;
+    const Expr *LastExpr = OriginExprChain.back();
     std::string IssueStr = getDiagSubjectDescription(LastExpr);
+    std::optional<LifetimeBoundParamInfo> HiddenLifetimeBound;
 
-    for (AliasChainEntry Curr : reverse(OriginExprChain.drop_back())) {
-      const Expr *CurrExpr = Curr.E;
+    for (const Expr *CurrExpr : reverse(OriginExprChain.drop_back())) {
+      std::optional<LifetimeBoundParamInfo> LifetimeBound =
+          getLifetimeBoundParamInfoForCallArg(CurrExpr, LastExpr);
       if (!shouldShowInAliasChain(CurrExpr, LastExpr)) {
-        if (!Last.LifetimeBound && Curr.LifetimeBound)
-          Last.LifetimeBound = Curr.LifetimeBound;
+        if (!HiddenLifetimeBound && LifetimeBound)
+          HiddenLifetimeBound = LifetimeBound;
         continue;
       }
-      if (Last.LifetimeBound) {
-        bool IsImplicitObject = isa<const CXXMethodDecl *>(*Last.LifetimeBound);
+
+      if (!LifetimeBound)
+        LifetimeBound = HiddenLifetimeBound;
+
+      if (LifetimeBound) {
+        bool IsImplicitObject = isa<const CXXMethodDecl *>(*LifetimeBound);
         std::string ParamName;
         if (!IsImplicitObject) {
-          const auto *Param = cast<const ParmVarDecl *>(*Last.LifetimeBound);
-          assert(Param &&
-                 "lifetimebound parameter info should identify a parameter");
+          const auto *Param = cast<const ParmVarDecl *>(*LifetimeBound);
           ParamName = Param->getIdentifier()
                           ? "'" + Param->getNameAsString() + "'"
                           : "'<unnamed>'";
@@ -701,7 +702,7 @@ private:
                diag::note_lifetime_safety_aliases_storage)
             << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
             << IssueStr;
-      Last = Curr;
+      HiddenLifetimeBound.reset();
       LastExpr = CurrExpr;
     }
   }
