@@ -34,6 +34,9 @@ bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID) const {
   if (RequiredFeatures.empty())
     return true;
 
+  if (RequiredFeatures == Intrinsic::CustomTargetFeatures)
+    return false;
+
   auto [It, Inserted] = IntrinsicSupportCache.try_emplace(IntrinsicID);
   if (Inserted)
     It->second = checkFeatureExpression(RequiredFeatures);
@@ -42,9 +45,15 @@ bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID) const {
 
 bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID,
                                                const FunctionType *FTy) const {
-  StringRef RequiredFeatures =
-      getRequiredTargetFeaturesForIntrinsic(IntrinsicID, FTy);
-  return RequiredFeatures.empty() || checkFeatureExpression(RequiredFeatures);
+  StringRef RequiredFeatures = Intrinsic::getRequiredTargetFeatures(
+      static_cast<Intrinsic::ID>(IntrinsicID));
+  if (RequiredFeatures != Intrinsic::CustomTargetFeatures)
+    return isIntrinsicSupported(IntrinsicID);
+
+  RequiredFeatures = getRequiredTargetFeaturesForIntrinsic(IntrinsicID, FTy);
+  return RequiredFeatures.empty() ||
+         (RequiredFeatures != Intrinsic::CustomTargetFeatures &&
+          checkFeatureExpression(RequiredFeatures));
 }
 
 StringRef TargetSubtargetInfo::getRequiredTargetFeaturesForIntrinsic(

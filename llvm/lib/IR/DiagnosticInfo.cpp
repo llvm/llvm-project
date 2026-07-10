@@ -435,6 +435,9 @@ DiagnosticInfoUnsupportedTargetIntrinsic::
 }
 
 std::string DiagnosticInfoUnsupportedTargetIntrinsic::getMessage() const {
+  if (RequiredFeatures == Intrinsic::CustomTargetFeatures)
+    return (Twine(IntrinsicName) + " is not supported on this target").str();
+
   return (Twine(IntrinsicName) + " requires target feature '" +
           RequiredFeatures + "'")
       .str();

@@ -66,6 +66,10 @@ LLVM_ABI StringRef getBaseName(ID id);
 /// \returns the target feature expression required by an intrinsic.
 LLVM_ABI StringRef getRequiredTargetFeatures(ID id);
 
+/// Sentinel used when an intrinsic's required target features depend on its
+/// resolved overload type and must be provided by the target.
+inline constexpr StringLiteral CustomTargetFeatures = "$custom";
+
 /// Return the LLVM name for an intrinsic, such as "llvm.ppc.altivec.lvx" or
 /// "llvm.ssa.copy.p0s_s.1". Note, this version of getName supports overloads.
 /// This is less efficient than the StringRef version of this function.  If no

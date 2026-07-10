@@ -95,14 +95,15 @@ public:
   /// \returns true if the target intrinsic \p IntrinsicID is supported by this
   /// subtarget.
   bool isIntrinsicSupported(unsigned IntrinsicID) const;
+
+  /// Like the overload above, but uses \p FTy to resolve the feature expression
+  /// for intrinsics marked as requiring custom target features.
   bool isIntrinsicSupported(unsigned IntrinsicID,
                             const FunctionType *FTy) const;
 
   /// \returns the target features required by the target intrinsic
-  /// \p IntrinsicID with signature \p FTy.
-  ///
-  /// The intrinsic TargetFeatures table is keyed by intrinsic ID. Targets can
-  /// override this when support also depends on the resolved overload type.
+  /// \p IntrinsicID with signature \p FTy. Targets override this for
+  /// intrinsics marked as requiring custom target features.
   virtual StringRef
   getRequiredTargetFeaturesForIntrinsic(unsigned IntrinsicID,
                                         const FunctionType *FTy) const;
