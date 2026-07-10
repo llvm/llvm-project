@@ -1030,6 +1030,7 @@ char testIfnameindex() {
 
 void testIffreenameindex() {
   struct if_nameindex *i = if_nameindex();
+  char x = i->x;
   if_freenameindex(i);
 } // no warning
 
