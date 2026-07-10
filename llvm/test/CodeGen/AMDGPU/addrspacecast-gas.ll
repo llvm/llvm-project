@@ -9,6 +9,8 @@ target triple = "amdgcn-amd-amdhsa"
 define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 ; GFX1250-SDAG-LABEL: use_private_to_flat_addrspacecast:
 ; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    global_wb
+; GFX1250-SDAG-NEXT:    v_nop
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x24 nv
 ; GFX1250-SDAG-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
@@ -27,6 +29,8 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
 ;
 ; GFX1250-GISEL-LABEL: use_private_to_flat_addrspacecast:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    global_wb
+; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    s_load_b32 s0, s[4:5], 0x24 nv
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], src_flat_scratch_base_lo
@@ -52,6 +56,8 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
 define amdgpu_kernel void @use_private_to_flat_addrspacecast_nonnull(ptr addrspace(5) %ptr) {
 ; GFX1250-SDAG-LABEL: use_private_to_flat_addrspacecast_nonnull:
 ; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    global_wb
+; GFX1250-SDAG-NEXT:    v_nop
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x24 nv
 ; GFX1250-SDAG-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
@@ -66,6 +72,8 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast_nonnull(ptr addrspa
 ;
 ; GFX1250-GISEL-LABEL: use_private_to_flat_addrspacecast_nonnull:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    global_wb
+; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    s_load_b32 s0, s[4:5], 0x24 nv
 ; GFX1250-GISEL-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
@@ -88,6 +96,8 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast_nonnull(ptr addrspa
 define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) {
 ; GFX1250-LABEL: use_flat_to_private_addrspacecast:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
@@ -106,6 +116,8 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) {
 define amdgpu_kernel void @use_flat_to_private_addrspacecast_nonnull(ptr %ptr) {
 ; GFX1250-SDAG-LABEL: use_flat_to_private_addrspacecast_nonnull:
 ; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    global_wb
+; GFX1250-SDAG-NEXT:    v_nop
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x24 nv
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, 0
@@ -117,6 +129,8 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast_nonnull(ptr %ptr) {
 ;
 ; GFX1250-GISEL-LABEL: use_flat_to_private_addrspacecast_nonnull:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    global_wb
+; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, 0
