@@ -2,9 +2,6 @@
 How To Add A Constrained Floating-Point Intrinsic
 ==================================================
 
-.. contents::
-   :local:
-
 .. warning::
   This is a work in progress.
 
@@ -98,4 +95,4 @@ Add documentation and tests
 
 ::
 
-  docs/LangRef.rst
+  docs/LangRef.md

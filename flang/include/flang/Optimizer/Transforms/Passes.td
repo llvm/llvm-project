@@ -588,6 +588,13 @@ def CUFDeviceFuncTransform
 def CUFFunctionRewrite : Pass<"cuf-function-rewrite", ""> {
   let summary = "Convert some CUDA Fortran specific call";
   let dependentDialects = ["fir::FIROpsDialect"];
+  let options = [Option<
+      "deferAccRoutines", "defer-acc-routines", "bool", /*default=*/"false",
+      "Do not fold device-detection intrinsics located in the host copy of an "
+      "OpenACC routine. Such a routine is later cloned to build its device "
+      "counterpart, so folding it to the host value here would bake that value "
+      "into the device clone. Deferred calls are folded by a later run that "
+      "executes after device specialization.">];
 }
 
 def CUFLaunchAttachAttr : Pass<"cuf-launch-attach-attr", ""> {
