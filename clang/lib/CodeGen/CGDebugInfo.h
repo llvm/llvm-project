@@ -244,6 +244,7 @@ private:
 
   llvm::DIType *CreateType(const VectorType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const ConstantMatrixType *Ty, llvm::DIFile *F);
+  llvm::DIType *CreateType(const CooperativeMatrixType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const ArrayType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const LValueReferenceType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const RValueReferenceType *Ty, llvm::DIFile *Unit);
