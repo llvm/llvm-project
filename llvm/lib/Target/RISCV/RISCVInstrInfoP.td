@@ -2237,7 +2237,8 @@ let append Predicates = [IsRV32] in {
   def : Pat<(riscv_nsra GPR:$lo, GPR:$hi, shiftMask64:$shamt),
             (NSRA (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
 
-  def : Pat<(riscv_paire GPR:$lo, GPR:$hi), (PACK GPR:$lo, GPR:$hi)>;
+  def : Pat<(XLenVT (riscv_paire GPR:$lo, GPR:$hi)),
+          (PACK GPR:$lo, GPR:$hi)>;
 
   // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
   // bits [15:0] coming from a zero extended value. We can use pack with
