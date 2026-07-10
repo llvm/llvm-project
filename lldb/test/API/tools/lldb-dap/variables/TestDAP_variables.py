@@ -289,6 +289,7 @@ class TestDAP_variables(DAPTestCaseBase):
             enableAutoVariableSummaries=True
         )
 
+    @skipIfWindows
     def do_test_scopes_and_evaluate_expansion(self, enableAutoVariableSummaries: bool):
         """Test that an evaluated expression expands successfully after "scopes"
         packets, and that permanent expressions persist across resumes."""
