@@ -1095,7 +1095,7 @@ void MachObjectWriter::writeDataInCodeRegion(MCAssembler &Asm) {
     if (Data.End)
       End = getSymbolAddress(*Data.End);
     else
-      report_fatal_error("Data region not terminated");
+      report_fatal_error("data region not terminated");
 
     LLVM_DEBUG(dbgs() << "data in code region-- kind: " << Data.Kind
                       << "  start: " << Start << "(" << Data.Start->getName()
