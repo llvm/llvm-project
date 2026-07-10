@@ -1,12 +1,12 @@
 // RUN: %check_clang_tidy -check-suffixes=NON-OWNING %s \
 // RUN:   performance-expensive-value-or %t -- \
 // RUN:   -config='{CheckOptions: { \
-// RUN:     performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional;::custom::CamelOptional;::custom::PascalOptional" \
+// RUN:     performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional;::custom::CamelOptional;::custom::PascalOptional;::inherited::Optional" \
 // RUN:   }}'
 // RUN: %check_clang_tidy -check-suffixes=OWNING %s \
 // RUN:   performance-expensive-value-or %t -- \
 // RUN:   -config='{CheckOptions: { \
-// RUN:     performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional;::custom::CamelOptional;::custom::PascalOptional", \
+// RUN:     performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional;::custom::CamelOptional;::custom::PascalOptional;::inherited::Optional", \
 // RUN:     performance-expensive-value-or.WarnOnOwnershipTaking: true \
 // RUN:   }}'
 
@@ -196,4 +196,36 @@ void positiveValueOrPascal(custom::PascalOptional<std::string> opt) {
 void positiveMacro(std::optional<std::string> opt) {
   auto val = GET_OR_DEFAULT(opt, "default");
   // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:14: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+}
+
+// Inherited methods via using declarations (libc++ pattern).
+
+namespace inherited {
+
+template <typename T>
+struct OptionalBase {
+  const T &operator*() const & noexcept;
+  T &operator*() & noexcept;
+  T &value() &;
+  const T &value() const &;
+};
+
+template <typename T>
+struct Optional : OptionalBase<T> {
+  using OptionalBase<T>::operator*;
+  using OptionalBase<T>::value;
+
+  template <class U = T>
+  T value_or(U &&default_value) const &;
+};
+
+} // namespace inherited
+
+void positiveInheritedRef(inherited::Optional<std::string> opt,
+                          const std::string &fallback) {
+  const std::string &ref = opt.value_or(fallback);
+  // CHECK-MESSAGES-NON-OWNING: :[[@LINE-1]]:32: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback
+  // CHECK-MESSAGES-OWNING: :[[@LINE-2]]:32: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback
+  // CHECK-FIXES-NON-OWNING: const std::string &ref = (opt ? *opt : fallback);
+  // CHECK-FIXES-OWNING: const std::string &ref = (opt ? *opt : fallback);
 }

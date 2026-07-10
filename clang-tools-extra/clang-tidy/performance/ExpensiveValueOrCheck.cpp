@@ -19,17 +19,16 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::performance {
 
 static bool hasOperatorStar(const CXXRecordDecl *RD) {
-  return llvm::any_of(RD->methods(), [](const CXXMethodDecl *M) {
-    return M->getOverloadedOperator() == OO_Star;
-  });
+  DeclarationName OpStar =
+      RD->getASTContext().DeclarationNames.getCXXOperatorName(OO_Star);
+  return !RD->lookup(OpStar).empty();
 }
 
 static StringRef findValueMethod(const CXXRecordDecl *RD) {
-  for (const auto *M : RD->methods()) {
-    if (!M->getDeclName().isIdentifier())
-      continue;
-    StringRef Name = M->getName();
-    if (Name == "value" || Name == "Value")
+  ASTContext &Ctx = RD->getASTContext();
+  for (StringRef Name : {"value", "Value"}) {
+    DeclarationName DN = &Ctx.Idents.get(Name);
+    if (!RD->lookup(DN).empty())
       return Name;
   }
   return {};
