@@ -443,10 +443,6 @@ protected:
   }
 
 private:
-  // TODO: This is a temporary solution.
-  uint32_t getHeaderSize() const {
-    return dwarf::getUnitLengthFieldByteSize(Format) + 4;
-  }
   std::optional<uint64_t> AddrOffsetSectionBase = std::nullopt;
   dwarf::DwarfFormat Format = dwarf::DwarfFormat::DWARF32;
 };

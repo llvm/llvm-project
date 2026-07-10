@@ -131,6 +131,10 @@ writeAddressRanges(raw_svector_ostream &Stream,
   return AddressRanges.size() * 16 + 16;
 }
 
+static uint32_t getHeaderSize(dwarf::DwarfFormat Format) {
+  return dwarf::getUnitLengthFieldByteSize(Format) + 4;
+}
+
 DebugRangesSectionWriter::DebugRangesSectionWriter() {
   RangesBuffer = std::make_unique<DebugBufferVector>();
   RangesStream = std::make_unique<raw_svector_ostream>(*RangesBuffer);
@@ -507,7 +511,7 @@ void DebugAddrWriterDwarf5::updateAddrBase(DIEBuilder &DIEBlder, DWARFUnit &CU,
                                            const uint64_t Offset) {
   /// Header for DWARF5 has size 8 bytes in DWARF32 or 16 bytes in DWARF64,
   /// so we add it to the offset.
-  updateAddressBase(DIEBlder, *this, CU, Offset + getHeaderSize());
+  updateAddressBase(DIEBlder, *this, CU, Offset + getHeaderSize(Format));
 }
 
 DenseMap<uint64_t, uint64_t> DebugAddrWriter::UnmodifiedAddressOffsets;
@@ -530,7 +534,7 @@ DebugAddrWriterDwarf5::finalize(const size_t BufferSize) {
     if (!AddrOffsetSectionBase)
       return std::nullopt;
     // Address base offset is to the first entry.
-    uint64_t Offset = *AddrOffsetSectionBase - getHeaderSize();
+    uint64_t Offset = *AddrOffsetSectionBase - getHeaderSize(Format);
     auto Iter = UnmodifiedAddressOffsets.find(Offset);
     if (Iter != UnmodifiedAddressOffsets.end())
       return Iter->second;
