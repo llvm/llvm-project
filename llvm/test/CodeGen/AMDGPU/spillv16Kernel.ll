@@ -5,6 +5,8 @@
 define amdgpu_kernel void @spill_i16_alu() #0 {
 ; GFX1250-TRUE16-LABEL: spill_i16_alu:
 ; GFX1250-TRUE16:       ; %bb.0: ; %entry
+; GFX1250-TRUE16-NEXT:    global_wb
+; GFX1250-TRUE16-NEXT:    v_nop
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-TRUE16-NEXT:    scratch_load_u16 v0, off, off scope:SCOPE_SYS
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
@@ -23,6 +25,8 @@ define amdgpu_kernel void @spill_i16_alu() #0 {
 ;
 ; GFX1250-FAKE16-LABEL: spill_i16_alu:
 ; GFX1250-FAKE16:       ; %bb.0: ; %entry
+; GFX1250-FAKE16-NEXT:    global_wb
+; GFX1250-FAKE16-NEXT:    v_nop
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-FAKE16-NEXT:    scratch_load_u16 v0, off, off scope:SCOPE_SYS
 ; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
