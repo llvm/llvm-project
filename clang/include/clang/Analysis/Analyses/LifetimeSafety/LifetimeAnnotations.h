@@ -15,7 +15,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include <optional>
 
-namespace clang::lifetimes {
+namespace clang ::lifetimes {
 
 // This function is needed because Decl::isInStdNamespace will return false for
 // iterators in some STL implementations due to them being defined in a
