@@ -761,7 +761,15 @@ public:
 
   static TargetProperties &GetGlobalProperties();
 
+  /// Returns the mutex a caller should serialize on before touching the
+  /// target through the SB API. When the current thread's policy says it
+  /// doesn't need to serialize, this returns a mutex private to that thread
+  /// instead, so callers can lock it unconditionally without ever
+  /// contending with whichever thread holds the real one.
   std::recursive_mutex &GetAPIMutex();
+
+  /// Convenience wrapper that locks the mutex returned by GetAPIMutex().
+  std::unique_lock<std::recursive_mutex> GetAPIMutexLock();
 
   void DeleteCurrentProcess();
 

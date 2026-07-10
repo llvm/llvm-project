@@ -561,8 +561,8 @@ protected:
 };
 
 /// A wrapper class representing an execution context with non-null Target
-/// and Process pointers, a locked API mutex and a locked ProcessRunLock.
-/// The locks are private by design: to unlock them, destroy the
+/// and Process pointers, a locked ProcessRunLock, and a locked API mutex.
+/// The locks are private by design; to unlock them, destroy the
 /// StoppedExecutionContext.
 struct StoppedExecutionContext : ExecutionContext {
   StoppedExecutionContext(lldb::TargetSP &target_sp,

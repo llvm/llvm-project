@@ -5994,10 +5994,24 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
 
 std::recursive_mutex &Target::GetAPIMutex() {
   Policy policy = PolicyStack::Get().Current();
+
+  // A thread whose policy says it doesn't need to serialize on the API mutex
+  // gets a mutex of its own instead of a no-op: every caller still locks
+  // *something*, but since it's thread-local, that lock never contends with
+  // whatever other thread holds the real mutex.
+  if (policy.capabilities.can_reenter_target_api_mutex) {
+    static thread_local std::recursive_mutex s_bypass_mutex;
+    return s_bypass_mutex;
+  }
+
   if (policy.view == Policy::View::Private)
     return m_private_mutex;
 
   return m_mutex;
+}
+
+std::unique_lock<std::recursive_mutex> Target::GetAPIMutexLock() {
+  return std::unique_lock<std::recursive_mutex>(GetAPIMutex());
 }
 
 /// Get metrics associated with this target in JSON format.
