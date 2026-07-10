@@ -4014,6 +4014,8 @@ The LLVM IR does not define any way to start parallel threads of
 execution or to register signal handlers. Nonetheless, there are
 platform-specific ways to create them, and we define LLVM IR's behavior
 in their presence. This model is inspired by the C++ memory model.
+The memory model is defined axiomatically: it provides constraints that valid
+executions of multi-threaded LLVM IR programs must satisfy.
 
 For a more informal introduction to this model, see the {doc}`Atomics`.
 
