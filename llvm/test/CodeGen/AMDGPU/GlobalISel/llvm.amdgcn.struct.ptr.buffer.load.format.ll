@@ -218,35 +218,33 @@ define amdgpu_cs void @struct_ptr_buffer_load_format_v4i32_tfe(ptr addrspace(8) 
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr2
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr3
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr(i32) = COPY $sgpr4
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr(i32) = COPY $sgpr5
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:vreg_64(p1) = G_MERGE_VALUES [[COPY4]](i32), [[COPY5]](i32)
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr(i32) = COPY $vgpr2
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY $vgpr3
-  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:vreg_64(p1) = G_MERGE_VALUES [[COPY6]](i32), [[COPY7]](i32)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; CHECK-NEXT:   [[AMDGPU_BUFFER_LOAD_FORMAT_TFE:%[0-9]+]]:vreg_160(<5 x s32>) = G_AMDGPU_BUFFER_LOAD_FORMAT_TFE [[BUILD_VECTOR]](<4 x s32>), [[COPY8]](i32), [[COPY9]], [[C]], 0, 0, -1 :: (dereferenceable load (<4 x i32>) from %ir.rsrc, align 1, addrspace 8)
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD_FORMAT_TFE]].sub0(<5 x s32>)
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD_FORMAT_TFE]].sub1(<5 x s32>)
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD_FORMAT_TFE]].sub2(<5 x s32>)
-  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD_FORMAT_TFE]].sub3(<5 x s32>)
-  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD_FORMAT_TFE]].sub4(<5 x s32>)
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY10]](s32), implicit $exec
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY11]](s32), implicit $exec
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY12]](s32), implicit $exec
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY13]](s32), implicit $exec
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128(<4 x i32>) = REG_SEQUENCE [[V_READFIRSTLANE_B32_]](s32), %subreg.sub0, [[V_READFIRSTLANE_B32_1]](s32), %subreg.sub1, [[V_READFIRSTLANE_B32_2]](s32), %subreg.sub2, [[V_READFIRSTLANE_B32_3]](s32), %subreg.sub3
-  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:vreg_128(<4 x i32>) = COPY [[REG_SEQUENCE]](<4 x i32>)
-  ; CHECK-NEXT:   FLAT_STORE_DWORDX4 [[MV]](p1), [[COPY15]](<4 x i32>), 0, 0, implicit $exec, implicit $flat_scr :: (store (<4 x i32>) into %ir.value, addrspace 1)
-  ; CHECK-NEXT:   FLAT_STORE_DWORD [[MV1]](p1), [[COPY14]](s32), 0, 0, implicit $exec, implicit $flat_scr :: (store (i32) into %ir.status, addrspace 1)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XYZW_TFE_IDXEN:%[0-9]+]]:vreg_160 = BUFFER_LOAD_FORMAT_XYZW_TFE_IDXEN [[COPY8]], [[REG_SEQUENCE2]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x i32>) from %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_TFE_IDXEN]].sub0
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_TFE_IDXEN]].sub1
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_TFE_IDXEN]].sub2
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_TFE_IDXEN]].sub3
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_TFE_IDXEN]].sub4
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
+  ; CHECK-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE3]]
+  ; CHECK-NEXT:   FLAT_STORE_DWORDX4 [[REG_SEQUENCE]], [[COPY14]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<4 x i32>) into %ir.value, addrspace 1)
+  ; CHECK-NEXT:   FLAT_STORE_DWORD [[REG_SEQUENCE1]], [[COPY13]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32) into %ir.status, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %load = call { <4 x i32>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v4i32i32s(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0, i32 0)
 
@@ -264,33 +262,31 @@ define amdgpu_cs void @struct_ptr_buffer_load_format_v3i32_tfe(ptr addrspace(8) 
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr2
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr3
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr(i32) = COPY $sgpr4
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr(i32) = COPY $sgpr5
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:vreg_64(p1) = G_MERGE_VALUES [[COPY4]](i32), [[COPY5]](i32)
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr(i32) = COPY $vgpr2
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY $vgpr3
-  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:vreg_64(p1) = G_MERGE_VALUES [[COPY6]](i32), [[COPY7]](i32)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; CHECK-NEXT:   [[AMDGPU_BUFFER_LOAD_FORMAT_TFE:%[0-9]+]]:vreg_128(<4 x s32>) = G_AMDGPU_BUFFER_LOAD_FORMAT_TFE [[BUILD_VECTOR]](<4 x s32>), [[COPY8]](i32), [[COPY9]], [[C]], 0, 0, -1 :: (dereferenceable load (<3 x i32>) from %ir.rsrc, align 1, addrspace 8)
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD_FORMAT_TFE]].sub0(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD_FORMAT_TFE]].sub1(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD_FORMAT_TFE]].sub2(<4 x s32>)
-  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD_FORMAT_TFE]].sub3(<4 x s32>)
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY10]](s32), implicit $exec
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY11]](s32), implicit $exec
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY12]](s32), implicit $exec
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_96(<3 x i32>) = REG_SEQUENCE [[V_READFIRSTLANE_B32_]](s32), %subreg.sub0, [[V_READFIRSTLANE_B32_1]](s32), %subreg.sub1, [[V_READFIRSTLANE_B32_2]](s32), %subreg.sub2
-  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:vreg_96(<3 x i32>) = COPY [[REG_SEQUENCE]](<3 x i32>)
-  ; CHECK-NEXT:   FLAT_STORE_DWORDX3 [[MV]](p1), [[COPY14]](<3 x i32>), 0, 0, implicit $exec, implicit $flat_scr :: (store (<3 x i32>) into %ir.value, align 16, addrspace 1)
-  ; CHECK-NEXT:   FLAT_STORE_DWORD [[MV1]](p1), [[COPY13]](s32), 0, 0, implicit $exec, implicit $flat_scr :: (store (i32) into %ir.status, addrspace 1)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_XYZ_TFE_IDXEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZ_TFE_IDXEN [[COPY8]], [[REG_SEQUENCE2]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (<3 x i32>) from %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZ_TFE_IDXEN]].sub0
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZ_TFE_IDXEN]].sub1
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZ_TFE_IDXEN]].sub2
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZ_TFE_IDXEN]].sub3
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
+  ; CHECK-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_96 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:vreg_96 = COPY [[REG_SEQUENCE3]]
+  ; CHECK-NEXT:   FLAT_STORE_DWORDX3 [[REG_SEQUENCE]], [[COPY13]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<3 x i32>) into %ir.value, align 16, addrspace 1)
+  ; CHECK-NEXT:   FLAT_STORE_DWORD [[REG_SEQUENCE1]], [[COPY12]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32) into %ir.status, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %load = call { <3 x i32>, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v3i32i32s(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0, i32 0)
 
@@ -308,26 +304,24 @@ define amdgpu_cs void @struct_ptr_buffer_load_format_i32_tfe(ptr addrspace(8) in
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr2
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr3
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr(i32) = COPY $sgpr4
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr(i32) = COPY $sgpr5
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:vreg_64(p1) = G_MERGE_VALUES [[COPY4]](i32), [[COPY5]](i32)
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr(i32) = COPY $vgpr2
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY $vgpr3
-  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:vreg_64(p1) = G_MERGE_VALUES [[COPY6]](i32), [[COPY7]](i32)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; CHECK-NEXT:   [[AMDGPU_BUFFER_LOAD_FORMAT_TFE:%[0-9]+]]:vreg_64(<2 x s32>) = G_AMDGPU_BUFFER_LOAD_FORMAT_TFE [[BUILD_VECTOR]](<4 x s32>), [[COPY8]](i32), [[COPY9]], [[C]], 0, 0, -1 :: (dereferenceable load (i32) from %ir.rsrc, align 1, addrspace 8)
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD_FORMAT_TFE]].sub0(<2 x s32>)
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD_FORMAT_TFE]].sub1(<2 x s32>)
-  ; CHECK-NEXT:   FLAT_STORE_DWORD [[MV]](p1), [[COPY10]](s32), 0, 0, implicit $exec, implicit $flat_scr :: (store (i32) into %ir.value, addrspace 1)
-  ; CHECK-NEXT:   FLAT_STORE_DWORD [[MV1]](p1), [[COPY11]](s32), 0, 0, implicit $exec, implicit $flat_scr :: (store (i32) into %ir.status, addrspace 1)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_TFE_IDXEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_FORMAT_X_TFE_IDXEN [[COPY8]], [[REG_SEQUENCE2]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (i32) from %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_X_TFE_IDXEN]].sub0
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_X_TFE_IDXEN]].sub1
+  ; CHECK-NEXT:   FLAT_STORE_DWORD [[REG_SEQUENCE]], [[COPY9]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32) into %ir.value, addrspace 1)
+  ; CHECK-NEXT:   FLAT_STORE_DWORD [[REG_SEQUENCE1]], [[COPY10]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32) into %ir.status, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %load = call { i32, i32 } @llvm.amdgcn.struct.ptr.buffer.load.format.sl_i32i32s(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0, i32 0)
 

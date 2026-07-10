@@ -1,6 +1,6 @@
 ;RUN: llc < %s -global-isel=0 -mtriple=amdgcn -mcpu=verde -amdgpu-atomic-optimizer-strategy=None | FileCheck %s
 ;RUN: llc < %s -global-isel=0 -mtriple=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None | FileCheck %s
-;RUN: llc < %s -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None | FileCheck %s
+;RUN: llc < %s -global-isel=1 -mtriple=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None | FileCheck %s
 
 ;CHECK-LABEL: {{^}}test1:
 ;CHECK-NOT: s_waitcnt

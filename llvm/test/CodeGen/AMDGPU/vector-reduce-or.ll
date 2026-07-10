@@ -793,13 +793,20 @@ entry:
 }
 
 define i16 @test_vector_reduce_or_v2i16(<2 x i16> %v) {
-; GFX7-LABEL: test_vector_reduce_or_v2i16:
-; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-SDAG-LABEL: test_vector_reduce_or_v2i16:
+; GFX7-SDAG:       ; %bb.0: ; %entry
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX7-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX7-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-GISEL-LABEL: test_vector_reduce_or_v2i16:
+; GFX7-GISEL:       ; %bb.0: ; %entry
+; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX7-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_vector_reduce_or_v2i16:
 ; GFX8:       ; %bb.0: ; %entry

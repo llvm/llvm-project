@@ -51,8 +51,8 @@ define amdgpu_ps void @raw_tbuffer_store_i8__vgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; UNPACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr5
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(i32) = COPY $sgpr2
   ; UNPACKED-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; UNPACKED-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; UNPACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; UNPACKED-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
+  ; UNPACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; UNPACKED-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; UNPACKED-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; UNPACKED-NEXT: {{  $}}
@@ -102,8 +102,8 @@ define amdgpu_ps void @raw_tbuffer_store_i8__vgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; PACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr5
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(i32) = COPY $sgpr2
   ; PACKED-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; PACKED-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; PACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; PACKED-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
+  ; PACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; PACKED-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; PACKED-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; PACKED-NEXT: {{  $}}
@@ -158,8 +158,8 @@ define amdgpu_ps void @raw_tbuffer_store_i8__vgpr_rsrc__vgpr_voffset__vgpr_soffs
   ; UNPACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr5
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr6
   ; UNPACKED-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; UNPACKED-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; UNPACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; UNPACKED-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
+  ; UNPACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; UNPACKED-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; UNPACKED-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; UNPACKED-NEXT: {{  $}}
@@ -212,8 +212,8 @@ define amdgpu_ps void @raw_tbuffer_store_i8__vgpr_rsrc__vgpr_voffset__vgpr_soffs
   ; PACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr5
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr6
   ; PACKED-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; PACKED-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; PACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; PACKED-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
+  ; PACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; PACKED-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; PACKED-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; PACKED-NEXT: {{  $}}
@@ -271,8 +271,8 @@ define amdgpu_ps void @raw_tbuffer_store_i8__vgpr_rsrc__sgpr_voffset__vgpr_soffs
   ; UNPACKED-NEXT:   [[COPY5:%[0-9]+]]:sgpr(i32) = COPY $sgpr2
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr5
   ; UNPACKED-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; UNPACKED-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; UNPACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; UNPACKED-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
+  ; UNPACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; UNPACKED-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32(i32) = COPY [[COPY5]](i32)
   ; UNPACKED-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; UNPACKED-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
@@ -326,8 +326,8 @@ define amdgpu_ps void @raw_tbuffer_store_i8__vgpr_rsrc__sgpr_voffset__vgpr_soffs
   ; PACKED-NEXT:   [[COPY5:%[0-9]+]]:sgpr(i32) = COPY $sgpr2
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr5
   ; PACKED-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; PACKED-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; PACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; PACKED-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
+  ; PACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; PACKED-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32(i32) = COPY [[COPY5]](i32)
   ; PACKED-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; PACKED-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec

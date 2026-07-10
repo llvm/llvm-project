@@ -171,10 +171,9 @@ define <2 x ptr addrspace(1)> @buffer_load_v2p1(ptr addrspace(8) inreg %buf) {
   ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:sgpr(i32) = COPY $sgpr19
   ; GFX9-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
   ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32)
-  ; GFX9-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vreg_128_align2(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](s32), [[COPY5]], [[C]], 0, 0, 0 :: (dereferenceable load (<2 x i64>) from %ir.buf, align 1, addrspace 8)
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+  ; GFX9-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vreg_128_align2(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](i32), [[COPY5]], [[C]], 0, 0, 0 :: (dereferenceable load (<2 x i64>) from %ir.buf, align 1, addrspace 8)
   ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD]].sub0(<4 x s32>)
   ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD]].sub1(<4 x s32>)
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD]].sub2(<4 x s32>)
@@ -211,10 +210,9 @@ define void @buffer_store_v2p5(<2 x ptr addrspace(1)> %data, ptr addrspace(8) in
   ; GFX9-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
   ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:vgpr(<4 x s32>) = G_BITCAST [[BUILD_VECTOR]](<2 x p1>)
   ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
-  ; GFX9-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; GFX9-NEXT:   G_AMDGPU_BUFFER_STORE [[BITCAST]](<4 x s32>), [[BUILD_VECTOR1]](<4 x s32>), [[COPY8]](s32), [[COPY9]], [[C]], 0, 0, 0 :: (dereferenceable store (<2 x i64>) into %ir.buf, align 1, addrspace 8)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+  ; GFX9-NEXT:   G_AMDGPU_BUFFER_STORE [[BITCAST]](<4 x s32>), [[BUILD_VECTOR1]](<4 x s32>), [[COPY8]](i32), [[COPY9]], [[C]], 0, 0, 0 :: (dereferenceable store (<2 x i64>) into %ir.buf, align 1, addrspace 8)
   ; GFX9-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.ptr.buffer.store.v2p1(<2 x ptr addrspace(1)> %data, ptr addrspace(8) inreg %buf, i32 0, i32 0, i32 0)
   ret void
@@ -231,10 +229,9 @@ define <3 x ptr addrspace(5)> @buffer_load_v3p5(ptr addrspace(8) inreg %buf) {
   ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:sgpr(i32) = COPY $sgpr19
   ; GFX9-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
   ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32)
-  ; GFX9-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vreg_96_align2(<3 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](s32), [[COPY5]], [[C]], 0, 0, 0 :: (dereferenceable load (<3 x i32>) from %ir.buf, align 1, addrspace 8)
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+  ; GFX9-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vreg_96_align2(<3 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](i32), [[COPY5]], [[C]], 0, 0, 0 :: (dereferenceable load (<3 x i32>) from %ir.buf, align 1, addrspace 8)
   ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD]].sub0(<3 x s32>)
   ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD]].sub1(<3 x s32>)
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD]].sub2(<3 x s32>)
@@ -265,10 +262,9 @@ define void @buffer_store_v3p5(<3 x ptr addrspace(5)> %data, ptr addrspace(8) in
   ; GFX9-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
   ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:vgpr(<3 x s32>) = G_BITCAST [[BUILD_VECTOR]](<3 x p5>)
   ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32)
-  ; GFX9-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; GFX9-NEXT:   G_AMDGPU_BUFFER_STORE [[BITCAST]](<3 x s32>), [[BUILD_VECTOR1]](<4 x s32>), [[COPY7]](s32), [[COPY8]], [[C]], 0, 0, 0 :: (dereferenceable store (<3 x i32>) into %ir.buf, align 1, addrspace 8)
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+  ; GFX9-NEXT:   G_AMDGPU_BUFFER_STORE [[BITCAST]](<3 x s32>), [[BUILD_VECTOR1]](<4 x s32>), [[COPY7]](i32), [[COPY8]], [[C]], 0, 0, 0 :: (dereferenceable store (<3 x i32>) into %ir.buf, align 1, addrspace 8)
   ; GFX9-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.ptr.buffer.store.v3p5(<3 x ptr addrspace(5)> %data, ptr addrspace(8) inreg %buf, i32 0, i32 0, i32 0)
   ret void
@@ -285,10 +281,9 @@ define <4 x ptr addrspace(5)> @buffer_load_v4p5(ptr addrspace(8) inreg %buf) {
   ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:sgpr(i32) = COPY $sgpr19
   ; GFX9-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
   ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32)
-  ; GFX9-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vreg_128_align2(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](s32), [[COPY5]], [[C]], 0, 0, 0 :: (dereferenceable load (<4 x i32>) from %ir.buf, align 1, addrspace 8)
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+  ; GFX9-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vreg_128_align2(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](i32), [[COPY5]], [[C]], 0, 0, 0 :: (dereferenceable load (<4 x i32>) from %ir.buf, align 1, addrspace 8)
   ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD]].sub0(<4 x s32>)
   ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD]].sub1(<4 x s32>)
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32(s32) = COPY [[AMDGPU_BUFFER_LOAD]].sub2(<4 x s32>)
@@ -323,10 +318,9 @@ define void @buffer_store_v4p5(<4 x ptr addrspace(5)> %data, ptr addrspace(8) in
   ; GFX9-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
   ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:vgpr(<4 x s32>) = G_BITCAST [[BUILD_VECTOR]](<4 x p5>)
   ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
-  ; GFX9-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-  ; GFX9-NEXT:   G_AMDGPU_BUFFER_STORE [[BITCAST]](<4 x s32>), [[BUILD_VECTOR1]](<4 x s32>), [[COPY8]](s32), [[COPY9]], [[C]], 0, 0, 0 :: (dereferenceable store (<4 x i32>) into %ir.buf, align 1, addrspace 8)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+  ; GFX9-NEXT:   G_AMDGPU_BUFFER_STORE [[BITCAST]](<4 x s32>), [[BUILD_VECTOR1]](<4 x s32>), [[COPY8]](i32), [[COPY9]], [[C]], 0, 0, 0 :: (dereferenceable store (<4 x i32>) into %ir.buf, align 1, addrspace 8)
   ; GFX9-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.ptr.buffer.store.v4p5(<4 x ptr addrspace(5)> %data, ptr addrspace(8) inreg %buf, i32 0, i32 0, i32 0)
   ret void

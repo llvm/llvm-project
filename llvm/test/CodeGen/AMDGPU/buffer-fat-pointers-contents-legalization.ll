@@ -1979,7 +1979,9 @@ define <2 x i8> @load_v2i8(ptr addrspace(8) inreg %buf) {
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    buffer_load_ushort v0, off, s[16:19], 0
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
+; GISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-NEXT:    s_lshr_b32 s4, s4, 8
+; GISEL-NEXT:    v_mov_b32_e32 v1, s4
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
   %ret = load <2 x i8>, ptr addrspace(7) %p
@@ -2027,7 +2029,9 @@ define <3 x i8> @load_v3i8(ptr addrspace(8) inreg %buf) {
 ; GISEL-NEXT:    buffer_load_ushort v0, off, s[16:19], 0
 ; GISEL-NEXT:    buffer_load_ubyte v2, off, s[16:19], 0 offset:2
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GISEL-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
+; GISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-NEXT:    s_lshr_b32 s4, s4, 8
+; GISEL-NEXT:    v_mov_b32_e32 v1, s4
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -2276,11 +2280,17 @@ define <7 x i8> @load_v7i8(ptr addrspace(8) inreg %buf) {
 ; GISEL-NEXT:    buffer_load_ushort v4, off, s[16:19], 0 offset:4
 ; GISEL-NEXT:    buffer_load_ubyte v6, off, s[16:19], 0 offset:6
 ; GISEL-NEXT:    s_waitcnt vmcnt(2)
-; GISEL-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
-; GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GISEL-NEXT:    v_lshrrev_b32_e32 v3, 24, v0
+; GISEL-NEXT:    v_readfirstlane_b32 s4, v0
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GISEL-NEXT:    v_lshrrev_b32_e32 v5, 8, v4
+; GISEL-NEXT:    v_readfirstlane_b32 s5, v4
+; GISEL-NEXT:    s_lshr_b32 s6, s4, 8
+; GISEL-NEXT:    s_lshr_b32 s7, s4, 16
+; GISEL-NEXT:    s_lshr_b32 s4, s4, 24
+; GISEL-NEXT:    s_lshr_b32 s5, s5, 8
+; GISEL-NEXT:    v_mov_b32_e32 v1, s6
+; GISEL-NEXT:    v_mov_b32_e32 v2, s7
+; GISEL-NEXT:    v_mov_b32_e32 v3, s4
+; GISEL-NEXT:    v_mov_b32_e32 v5, s5
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -3228,11 +3238,9 @@ define <2 x i4> @load_v2i4(ptr addrspace(8) inreg %buf) {
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    buffer_load_ubyte v0, off, s[16:19], 0
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    buffer_store_byte v0, off, s[0:3], s32
-; GISEL-NEXT:    buffer_load_ubyte v1, off, s[0:3], s32
-; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v0, 15, v1
-; GISEL-NEXT:    v_lshrrev_b16_e32 v1, 4, v1
+; GISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-NEXT:    s_lshr_b32 s4, s4, 4
+; GISEL-NEXT:    v_mov_b32_e32 v1, s4
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
   %ret = load <2 x i4>, ptr addrspace(7) %p
@@ -3288,13 +3296,13 @@ define <4 x i4> @load_v4i4(ptr addrspace(8) inreg %buf) {
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    buffer_load_ushort v0, off, s[16:19], 0
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    buffer_store_short v0, off, s[0:3], s32
-; GISEL-NEXT:    buffer_load_ushort v2, off, s[0:3], s32
-; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v0, 15, v2
-; GISEL-NEXT:    v_lshrrev_b16_e32 v3, 12, v2
-; GISEL-NEXT:    v_bfe_u32 v1, v2, 4, 4
-; GISEL-NEXT:    v_bfe_u32 v2, v2, 8, 4
+; GISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-NEXT:    s_lshr_b32 s5, s4, 4
+; GISEL-NEXT:    s_lshr_b32 s6, s4, 8
+; GISEL-NEXT:    s_lshr_b32 s4, s4, 12
+; GISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GISEL-NEXT:    v_mov_b32_e32 v3, s4
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
   %ret = load <4 x i4>, ptr addrspace(7) %p
@@ -3475,11 +3483,11 @@ define void @store_v2i6(<2 x i6> %data, ptr addrspace(8) inreg %buf) {
 ; GISEL-LABEL: store_v2i6:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_lshlrev_b16_e32 v1, 6, v1
+; GISEL-NEXT:    v_and_b32_e32 v1, 63, v1
 ; GISEL-NEXT:    v_and_b32_e32 v0, 63, v0
+; GISEL-NEXT:    v_lshlrev_b16_e32 v1, 6, v1
 ; GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GISEL-NEXT:    v_and_b32_e32 v0, 0xfff, v0
-; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GISEL-NEXT:    buffer_store_short v0, off, s[16:19], 0
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]

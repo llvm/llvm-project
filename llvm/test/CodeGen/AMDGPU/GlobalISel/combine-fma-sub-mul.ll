@@ -5,7 +5,7 @@
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1010 -fp-contract=fast < %s | FileCheck -check-prefix=GFX10-CONTRACT %s
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1010 --denormal-fp-math=preserve-sign < %s | FileCheck -check-prefix=GFX10-DENORM %s
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -fp-contract=fast < %s | FileCheck -check-prefixes=GFX11-CONTRACT,GFX11-CONTRACT-TRUE16 %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -fp-contract=fast < %s | FileCheck -check-prefixes=GFX11-CONTRACT,GFX11-CONTRACT-TRUE16 %s
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -fp-contract=fast < %s | FileCheck -check-prefixes=GFX11-CONTRACT,GFX11-CONTRACT-FAKE16 %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 --denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=GFX11-DENORM,GFX11-DENORM-TRUE16 %s
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 --denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=GFX11-DENORM,GFX11-DENORM-FAKE16 %s

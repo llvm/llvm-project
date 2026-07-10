@@ -152,9 +152,9 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc_
   ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:sgpr(i32) = COPY $sgpr3
   ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr4
   ; GFX908-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; GFX908-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+  ; GFX908-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
   ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32(f32) = COPY [[COPY]](f32)
-  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32(i32) = COPY [[COPY5]](i32)
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
@@ -208,9 +208,9 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc_
   ; GFX90A-NEXT:   [[COPY5:%[0-9]+]]:sgpr(i32) = COPY $sgpr3
   ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr4
   ; GFX90A-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128_align2(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; GFX90A-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+  ; GFX90A-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
   ; GFX90A-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32(f32) = COPY [[COPY]](f32)
-  ; GFX90A-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; GFX90A-NEXT:   [[COPY8:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; GFX90A-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32(i32) = COPY [[COPY5]](i32)
   ; GFX90A-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
@@ -267,11 +267,11 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc_
   ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
   ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr3
   ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr4
+  ; GFX908-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
   ; GFX908-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; GFX908-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32(f32) = COPY [[COPY]](f32)
-  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -322,11 +322,11 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc_
   ; GFX90A-NEXT:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
   ; GFX90A-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr3
   ; GFX90A-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr4
+  ; GFX90A-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
   ; GFX90A-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vreg_128_align2(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; GFX90A-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32(f32) = COPY [[COPY]](f32)
-  ; GFX90A-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GFX90A-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; GFX90A-NEXT:   [[COPY7:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+  ; GFX90A-NEXT:   [[COPY8:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; GFX90A-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX90A-NEXT: {{  $}}
