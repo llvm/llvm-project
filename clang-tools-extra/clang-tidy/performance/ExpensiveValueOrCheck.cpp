@@ -19,7 +19,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::performance {
 
 static bool hasOperatorStar(const CXXRecordDecl *RD) {
-  DeclarationName OpStar =
+  const DeclarationName OpStar =
       RD->getASTContext().DeclarationNames.getCXXOperatorName(OO_Star);
   return !RD->lookup(OpStar).empty();
 }
@@ -27,7 +27,7 @@ static bool hasOperatorStar(const CXXRecordDecl *RD) {
 static StringRef findValueMethod(const CXXRecordDecl *RD) {
   ASTContext &Ctx = RD->getASTContext();
   for (StringRef Name : {"value", "Value"}) {
-    DeclarationName DN = &Ctx.Idents.get(Name);
+    const DeclarationName DN = &Ctx.Idents.get(Name);
     if (!RD->lookup(DN).empty())
       return Name;
   }
