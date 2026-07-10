@@ -216,21 +216,11 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
         builtinId == AMDGPU::BI__builtin_amdgcn_permlane16
             ? "amdgcn.permlane16"
             : "amdgcn.permlanex16";
-    mlir::Value src0 = emitScalarExpr(expr->getArg(0));
-    mlir::Value src1 = emitScalarExpr(expr->getArg(1));
-    mlir::Value src2 = emitScalarExpr(expr->getArg(2));
-    mlir::Value src3 = emitScalarExpr(expr->getArg(3));
-    mlir::Value src4 = emitScalarExpr(expr->getArg(4));
-    mlir::Value src5 = emitScalarExpr(expr->getArg(5));
-    return builder.emitIntrinsicCallOp(
-        getLoc(expr->getExprLoc()), intrinsicName, src0.getType(),
-        mlir::ValueRange{src0, src1, src2, src3, src4, src5});
+    return emitBuiltinWithOneOverloadedType<6>(expr, intrinsicName).getValue();
   }
   case AMDGPU::BI__builtin_amdgcn_permlane64: {
-    mlir::Value src = emitScalarExpr(expr->getArg(0));
-    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
-                                       "amdgcn.permlane64", src.getType(),
-                                       mlir::ValueRange{src});
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.permlane64")
+        .getValue();
   }
   case AMDGPU::BI__builtin_amdgcn_readlane:
     return emitBuiltinWithOneOverloadedType<2>(expr, "amdgcn.readlane")
