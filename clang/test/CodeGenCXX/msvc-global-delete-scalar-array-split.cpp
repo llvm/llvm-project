@@ -47,14 +47,14 @@ void test() {
 // CHECK: call void @"?__global_delete@@YAXPEAX_K@Z"(
 
 // It forwards to the scalar ??3@ (::operator delete).
-// CHECK: define linkonce_odr void @"?__global_delete@@YAXPEAX_K@Z"(ptr %0, i64 %1)
+// CHECK: define linkonce_odr void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
 // CHECK-NEXT: call void @"??3@YAXPEAX_K@Z"(ptr %0, i64 %1)
 
 // The vector deleting destructor's global array path calls __global_array_delete.
 // CHECK: call void @"?__global_array_delete@@YAXPEAX_K@Z"(
 
 // It forwards to the array ??_V@ (::operator delete[]).
-// CHECK: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr %0, i64 %1)
+// CHECK: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
 // CHECK-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr %0, i64 %1)
 
 // Both wrappers share a single __empty_global_delete fallback, wired via

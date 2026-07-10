@@ -96,7 +96,7 @@ void TesttheTest() {
 
 // Verify that the dllexport class triggers __global_array_delete forwarding
 // body emission even without a ::delete expression in the TU.
-// X64: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr %0, i64 %1)
+// X64: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
 // X64-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr %0, i64 %1)
 // X64-NEXT: ret void
 

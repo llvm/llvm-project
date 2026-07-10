@@ -1478,7 +1478,12 @@ getOrCreateMSVCGlobalDeleteWrapper(CodeGenModule &CGM,
         FnTy, llvm::GlobalValue::LinkOnceODRLinkage, EmptyGlobalDeleteName, &M);
     EmptyFn->setComdat(M.getOrInsertComdat(EmptyGlobalDeleteName));
     EmptyFn->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+    CGM.SetLLVMFunctionAttributes(
+        GlobalDecl(GlobOD),
+        CGM.getTypes().arrangeGlobalDeclaration(GlobalDecl(GlobOD)), EmptyFn,
+        /*IsThunk=*/false);
     CGM.SetLLVMFunctionAttributesForDefinition(GlobOD, EmptyFn);
+    CGM.getTargetCodeGenInfo().setTargetAttributes(GlobOD, EmptyFn, CGM);
     auto *BB = llvm::BasicBlock::Create(LLVMCtx, "", EmptyFn);
     llvm::Function *TrapFn =
         llvm::Intrinsic::getOrInsertDeclaration(&M, llvm::Intrinsic::trap);

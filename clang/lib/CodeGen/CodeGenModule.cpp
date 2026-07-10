@@ -8953,6 +8953,12 @@ void CodeGenModule::emitGlobalDeleteForwardingBodies() {
     // Use LinkOnceODR so multiple TUs can emit this without conflicts.
     GlobDelFn->setLinkage(llvm::GlobalValue::LinkOnceODRLinkage);
     GlobDelFn->setComdat(getModule().getOrInsertComdat(GlobDelFn->getName()));
+    SetLLVMFunctionAttributes(
+        GlobalDecl(OperatorDeleteFD),
+        getTypes().arrangeGlobalDeclaration(GlobalDecl(OperatorDeleteFD)),
+        GlobDelFn, /*IsThunk=*/false);
     SetLLVMFunctionAttributesForDefinition(OperatorDeleteFD, GlobDelFn);
+    getTargetCodeGenInfo().setTargetAttributes(OperatorDeleteFD, GlobDelFn,
+                                               *this);
   }
 }

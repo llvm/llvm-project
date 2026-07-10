@@ -288,13 +288,13 @@ void kernelTest() {
 // referencing ::operator delete. This is critical for environments like
 // kernel mode where no global ::operator delete exists.
 // Verify __empty_global_delete traps (the code path is unreachable at runtime).
-// X64: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr %0, i64 %1)
+// X64: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
 // X64-NEXT: call void @llvm.trap()
 // X64-NEXT: unreachable
 
 // Verify that when ::delete is used in the TU, a real __global_array_delete
 // forwarding body is emitted that calls through to the actual ::operator delete[].
-// X64: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr %0, i64 %1)
+// X64: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
 // X64-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr %0, i64 %1)
 // X64-NEXT: ret void
 

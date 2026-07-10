@@ -35,7 +35,7 @@ void test() {
 // CHECK-NEXT: call void @"??3Base@@SAXPEAX@Z"(ptr noundef %{{.*}})
 
 // __empty_global_delete should be emitted with a trap.
-// CHECK: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr %0, i64 %1)
+// CHECK: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
 // CHECK-NEXT: call void @llvm.trap()
 // CHECK-NEXT: unreachable
 
