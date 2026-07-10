@@ -1082,13 +1082,8 @@ public:
     ShouldApplyLifetimeExtensionToPreamble = Apply;
   }
 
-  SourceLocation getBeginLoc() const {
-    return Parent->getExpansionPattern()->getBeginLoc();
-  }
-
-  SourceLocation getEndLoc() const {
-    return Parent->getExpansionPattern()->getEndLoc();
-  }
+  SourceLocation getBeginLoc() const;
+  SourceLocation getEndLoc() const;
 
   CXXExpansionStmtDecl *getParent() { return Parent; }
   const CXXExpansionStmtDecl *getParent() const { return Parent; }

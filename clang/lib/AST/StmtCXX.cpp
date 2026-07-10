@@ -280,3 +280,11 @@ CXXExpansionStmtInstantiation::CreateEmpty(ASTContext &C, EmptyShell Empty,
   return new (Mem)
       CXXExpansionStmtInstantiation(Empty, NumInstantiations, NumPreambleStmts);
 }
+
+SourceLocation CXXExpansionStmtInstantiation::getBeginLoc() const {
+  return Parent->getExpansionPattern()->getBeginLoc();
+}
+
+SourceLocation CXXExpansionStmtInstantiation::getEndLoc() const {
+  return Parent->getExpansionPattern()->getEndLoc();
+}
