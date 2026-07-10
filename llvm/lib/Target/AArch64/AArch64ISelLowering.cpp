@@ -2341,6 +2341,7 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
   setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+  setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
   setOperationAction(ISD::SRL, VT, Custom);
@@ -8543,6 +8544,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerZERO_EXTEND_VECTOR_INREG(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::VECTOR_SHUFFLE_VAR:
+    return LowerVECTOR_SHUFFLE_VAR(Op, DAG);
   case ISD::SPLAT_VECTOR:
     return LowerSPLAT_VECTOR(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
@@ -15880,6 +15883,75 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   // Fall back to generating a TBL
   return GenerateTBL(Op, ShuffleMask, DAG);
+}
+
+SDValue
+AArch64TargetLowering::LowerVECTOR_SHUFFLE_VAR(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  SDValue V1 = Op.getOperand(0);
+  SDValue V2 = Op.getOperand(1);
+  SDValue Mask = Op.getOperand(2);
+  SDLoc DL(Op);
+
+  // Only handle NEON-sized shuffles that keep the source element count; the
+  // generic expansion handles the rest.
+  if (VT.isScalableVector() || !Subtarget->isNeonAvailable() ||
+      VT != V1.getValueType() || VT.getScalarSizeInBits() % 8 != 0 ||
+      (VT.getSizeInBits() != 64 && VT.getSizeInBits() != 128))
+    return SDValue();
+
+  // Turn the mask of element indices into a mask of byte indices for TBL:
+  //   ByteIdx = Mask * <EltBytes repeated in every byte of the lane>
+  //             + <0, 1, ..., EltBytes - 1 across the bytes of the lane>
+  // computed in lanes of the element width. The byte-replicating multiply
+  // only overflows across bytes for out-of-range indices, whose lanes are
+  // poison anyway, and TBL yields 0 for out-of-range byte indices, which
+  // poison also permits, so no clamping is needed.
+  unsigned EltBytes = VT.getScalarSizeInBits() / 8;
+  EVT IdxVT = VT.changeVectorElementTypeToInteger();
+  SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IdxVT);
+  if (EltBytes > 1) {
+    uint64_t RepEltBytes = 0, ByteOffsets = 0;
+    for (unsigned I = 0; I < EltBytes; ++I) {
+      RepEltBytes |= (uint64_t)EltBytes << (8 * I);
+      ByteOffsets |= (uint64_t)I << (8 * I);
+    }
+    Idx = DAG.getNode(ISD::MUL, DL, IdxVT, Idx,
+                      DAG.getConstant(RepEltBytes, DL, IdxVT));
+    Idx = DAG.getNode(ISD::ADD, DL, IdxVT, Idx,
+                      DAG.getConstant(ByteOffsets, DL, IdxVT));
+  }
+
+  MVT IndexVT = VT.getSizeInBits() == 128 ? MVT::v16i8 : MVT::v8i8;
+  SDValue ByteIdx = DAG.getNode(ISD::BITCAST, DL, IndexVT, Idx);
+  SDValue V1Cst = DAG.getNode(ISD::BITCAST, DL, IndexVT, V1);
+
+  SDValue Shuffle;
+  if (IndexVT == MVT::v8i8) {
+    // The concatenation of the two 64-bit sources forms one 128-bit table.
+    SDValue V2Cst = V2.isUndef() ? DAG.getUNDEF(IndexVT)
+                                 : DAG.getNode(ISD::BITCAST, DL, IndexVT, V2);
+    SDValue Table =
+        DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, V1Cst, V2Cst);
+    Shuffle = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, IndexVT,
+        DAG.getTargetConstant(Intrinsic::aarch64_neon_tbl1, DL, MVT::i32),
+        Table, ByteIdx);
+  } else if (V2.isUndef()) {
+    // Byte indices >= 16 would read V2, which is poison; tbl1 returns 0.
+    Shuffle = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, IndexVT,
+        DAG.getTargetConstant(Intrinsic::aarch64_neon_tbl1, DL, MVT::i32),
+        V1Cst, ByteIdx);
+  } else {
+    SDValue V2Cst = DAG.getNode(ISD::BITCAST, DL, IndexVT, V2);
+    Shuffle = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, IndexVT,
+        DAG.getTargetConstant(Intrinsic::aarch64_neon_tbl2, DL, MVT::i32),
+        V1Cst, V2Cst, ByteIdx);
+  }
+  return DAG.getNode(ISD::BITCAST, DL, VT, Shuffle);
 }
 
 SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
