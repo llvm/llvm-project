@@ -2799,10 +2799,9 @@ bool AMDGPULegalizerInfo::legalizeIntrinsicTrunc(
   const LLT S1 = LLT::scalar(1);
   const LLT I32 = LLT::integer(32);
   const LLT I64 = LLT::integer(64);
-  const LLT F64 = LLT::float64();
 
   Register Src = MI.getOperand(1).getReg();
-  assert(MRI.getType(Src) == F64);
+  assert(MRI.getType(Src) == LLT::float64());
 
   auto SrcInt = B.buildBitcast(I64, Src);
 
