@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -414,8 +415,12 @@ void CodeGenRegister::checkSubRegIndexSizes(CodeGenRegBank &RegBank) const {
     // Only trust a register-class size that is backed by a real value type.
     // An 'untyped' class carries a placeholder size, not the register's bit
     // width, so its size cannot be compared against sub-register extents.
+    // getValueTypes() is indexed by HwMode; DefaultMode is the first entry.
     ArrayRef<ValueTypeByHwMode> VTs = RC.getValueTypes();
-    if (VTs.empty() || !VTs[0].isSimple() || VTs[0].getSimple() == MVT::Untyped)
+    if (VTs.empty())
+      continue;
+    const ValueTypeByHwMode &VT = VTs[DefaultMode];
+    if (!VT.isSimple() || VT.getSimple() == MVT::Untyped)
       continue;
     ParentSize = std::max(ParentSize, RC.RSI.get(DefaultMode).RegSize);
   }
@@ -451,12 +456,10 @@ void CodeGenRegister::checkSubRegIndexSizes(CodeGenRegBank &RegBank) const {
   }
 
   if (Pos > ParentSize)
-    PrintFatalError(TheDef->getLoc(),
-                    Twine("register '") + getName() + "' has size " +
-                        Twine(ParentSize) +
-                        " but its explicit sub-registers cover " + Twine(Pos) +
-                        " bits; a SubRegIndex 'Size' is larger than the "
-                        "sub-register it describes");
+    PrintFatalError(TheDef,
+                    formatv("register '{}' has size {} but its explicit "
+                            "sub-registers cover {} bits",
+                            getName(), ParentSize, Pos));
 }
 
 // In a register that is covered by its sub-registers, try to find redundant

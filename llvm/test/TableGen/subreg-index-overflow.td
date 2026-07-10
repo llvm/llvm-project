@@ -26,4 +26,4 @@ def PairRegs : MyClass<64, [i64], (add P0, P1)>;
 
 def TestTarget : Target;
 
-// CHECK: error: register 'P0' has size 64 but its explicit sub-registers cover 96 bits; a SubRegIndex 'Size' is larger than the sub-register it describes
+// CHECK: error: register 'P0' has size 64 but its explicit sub-registers cover 96 bits
