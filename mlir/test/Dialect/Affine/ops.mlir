@@ -316,6 +316,48 @@ func.func @linearize_mixed(%index0: index, %index1: index, %index2: index, %basi
   return %1 : index
 }
 
+// CHECK-LABEL: @delinearize_vector
+func.func @delinearize_vector(%vec: vector<16xindex>) -> (vector<16xindex>, vector<16xindex>) {
+  // CHECK: affine.delinearize_index %{{.+}} into (4, 8) : vector<16xindex>, vector<16xindex>
+  %0:2 = affine.delinearize_index %vec into (4, 8) : vector<16xindex>, vector<16xindex>
+  return %0#0, %0#1 : vector<16xindex>, vector<16xindex>
+}
+
+// CHECK-LABEL: @delinearize_vector_3d
+func.func @delinearize_vector_3d(%vec: vector<8xindex>) -> (vector<8xindex>, vector<8xindex>, vector<8xindex>) {
+  // CHECK: affine.delinearize_index %{{.+}} into (2, 3, 4) : vector<8xindex>, vector<8xindex>, vector<8xindex>
+  %0:3 = affine.delinearize_index %vec into (2, 3, 4) : vector<8xindex>, vector<8xindex>, vector<8xindex>
+  return %0#0, %0#1, %0#2 : vector<8xindex>, vector<8xindex>, vector<8xindex>
+}
+
+// CHECK-LABEL: @delinearize_vector_dynamic_basis
+func.func @delinearize_vector_dynamic_basis(%vec: vector<4xindex>, %b0: index, %b1: index) -> (vector<4xindex>, vector<4xindex>) {
+  // CHECK: affine.delinearize_index %{{.+}} into (%{{.+}}, %{{.+}}) : vector<4xindex>, vector<4xindex>
+  %0:2 = affine.delinearize_index %vec into (%b0, %b1) : vector<4xindex>, vector<4xindex>
+  return %0#0, %0#1 : vector<4xindex>, vector<4xindex>
+}
+
+// CHECK-LABEL: @linearize_vector
+func.func @linearize_vector(%v0: vector<16xindex>, %v1: vector<16xindex>) -> vector<16xindex> {
+  // CHECK: affine.linearize_index [%{{.+}}, %{{.+}}] by (4, 8) : vector<16xindex>
+  %0 = affine.linearize_index [%v0, %v1] by (4, 8) : vector<16xindex>
+  return %0 : vector<16xindex>
+}
+
+// CHECK-LABEL: @linearize_vector_disjoint
+func.func @linearize_vector_disjoint(%v0: vector<16xindex>, %v1: vector<16xindex>) -> vector<16xindex> {
+  // CHECK: affine.linearize_index disjoint [%{{.+}}, %{{.+}}] by (4, 8) : vector<16xindex>
+  %0 = affine.linearize_index disjoint [%v0, %v1] by (4, 8) : vector<16xindex>
+  return %0 : vector<16xindex>
+}
+
+// CHECK-LABEL: @linearize_vector_3d
+func.func @linearize_vector_3d(%v0: vector<8xindex>, %v1: vector<8xindex>, %v2: vector<8xindex>) -> vector<8xindex> {
+  // CHECK: affine.linearize_index [%{{.+}}, %{{.+}}, %{{.+}}] by (2, 3, 4) : vector<8xindex>
+  %0 = affine.linearize_index [%v0, %v1, %v2] by (2, 3, 4) : vector<8xindex>
+  return %0 : vector<8xindex>
+}
+
 // -----
 
 // CHECK-LABEL: @gpu_launch_affine

@@ -509,7 +509,7 @@ define float @test_shrink_float_convertible_constant_intrin_trunc() {
 
 define float @test_shrink_float_convertible_constant_intrin_fabs() {
 ; CHECK-LABEL: @test_shrink_float_convertible_constant_intrin_fabs(
-; CHECK-NEXT:    ret float 0x4000CCCCC0000000
+; CHECK-NEXT:    ret float 2.100000e+00
 ;
   %E = call double @llvm.fabs.f64(double 2.1)
   %F = fptrunc double %E to float
@@ -519,7 +519,7 @@ define float @test_shrink_float_convertible_constant_intrin_fabs() {
 ; Make sure fast math flags are preserved
 define float @test_shrink_float_convertible_constant_intrin_fabs_fast() {
 ; CHECK-LABEL: @test_shrink_float_convertible_constant_intrin_fabs_fast(
-; CHECK-NEXT:    ret float 0x4000CCCCC0000000
+; CHECK-NEXT:    ret float 2.100000e+00
 ;
   %E = call fast double @llvm.fabs.f64(double 2.1)
   %F = fptrunc double %E to float

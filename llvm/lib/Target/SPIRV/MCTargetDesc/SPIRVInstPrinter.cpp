@@ -135,7 +135,7 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     recordIntType(MI);
   }
 
-  if (OpCode == SPIRV::OpDecorate) {
+  if (OpCode == SPIRV::OpDecorate || OpCode == SPIRV::OpDecorateId) {
     printOpDecorate(MI, OS);
   } else if (OpCode == SPIRV::OpExtInstImport) {
     recordOpExtInstImport(MI);

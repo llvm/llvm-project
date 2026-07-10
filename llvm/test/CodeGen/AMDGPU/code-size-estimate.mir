@@ -32,6 +32,21 @@ body:             |
   WAVE_BARRIER
 ...
 
+# WAIT_ASYNCMARK is a meta instruction that emits zero bytes.
+# codeLenInByte = s_waitcnt (4) + WAIT_ASYNCMARK (0) = 4.
+# CHECK: wait_asyncmark_meta:                    ; @wait_asyncmark_meta
+# CHECK: ; wait_asyncmark(1)
+# CHECK: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
+# CHECK: ; codeLenInByte = 4
+---
+name:            wait_asyncmark_meta
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+  WAIT_ASYNCMARK 1
+...
+
 # CHECK: align4:                                 ; @align4
 # CHECK: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
 # CHECK: s_cbranch_scc1 .LBB{{[0-9_]+}}          ; encoding: [A,A,0x85,0xbf]

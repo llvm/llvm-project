@@ -14,16 +14,16 @@ entry:
   %cmp8 = icmp sgt i32 %N, 0
   br i1 %cmp8, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.09 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %B, i32 %i.09
   %0 = load i32, ptr %arrayidx, align 4
@@ -46,10 +46,10 @@ entry:
   %cmp6 = icmp eq i32 %N, 0
   br i1 %cmp6, label %while.end, label %while.body.preheader
 
-while.body.preheader:                             ; preds = %entry
+while.body.preheader:
   br label %while.body
 
-while.body:                                       ; preds = %while.body.preheader, %while.body
+while.body:
   %blkCnt.09 = phi i32 [ %dec, %while.body ], [ %N, %while.body.preheader ]
   %sum.08 = phi float [ %add, %while.body ], [ 0.000000e+00, %while.body.preheader ]
   %Input.addr.07 = phi ptr [ %incdec.ptr, %while.body ], [ %Input, %while.body.preheader ]
@@ -60,11 +60,11 @@ while.body:                                       ; preds = %while.body.preheade
   %cmp = icmp eq i32 %dec, 0
   br i1 %cmp, label %while.end.loopexit, label %while.body
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   %add.lcssa = phi float [ %add, %while.body ]
   br label %while.end
 
-while.end:                                        ; preds = %while.end.loopexit, %entry
+while.end:
   %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %add.lcssa, %while.end.loopexit ]
   %conv = uitofp i32 %N to float
   %div = fdiv fast float %sum.0.lcssa, %conv
@@ -81,10 +81,10 @@ entry:
   %cmp6 = icmp eq i32 %N, 0
   br i1 %cmp6, label %while.end, label %while.body.preheader
 
-while.body.preheader:                             ; preds = %entry
+while.body.preheader:
   br label %while.body
 
-while.body:                                       ; preds = %while.body.preheader, %while.body
+while.body:
   %blkCnt.09 = phi i32 [ %dec, %while.body ], [ %N, %while.body.preheader ]
   %sum.08 = phi half [ %add, %while.body ], [ 0.000000e+00, %while.body.preheader ]
   %Input.addr.07 = phi ptr [ %incdec.ptr, %while.body ], [ %Input, %while.body.preheader ]
@@ -95,11 +95,11 @@ while.body:                                       ; preds = %while.body.preheade
   %cmp = icmp eq i32 %dec, 0
   br i1 %cmp, label %while.end.loopexit, label %while.body
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   %add.lcssa = phi half [ %add, %while.body ]
   br label %while.end
 
-while.end:                                        ; preds = %while.end.loopexit, %entry
+while.end:
   %sum.0.lcssa = phi half [ 0.000000e+00, %entry ], [ %add.lcssa, %while.end.loopexit ]
   %conv = uitofp i32 %N to half
   %div = fdiv fast half %sum.0.lcssa, %conv
@@ -193,18 +193,18 @@ entry:
   %cmp6 = icmp sgt i32 %N, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   %or.lcssa = phi i32 [ %or, %for.body ]
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %S.0.lcssa = phi i32 [ 1, %entry ], [ %or.lcssa, %for.cond.cleanup.loopexit ]
   ret i32 %S.0.lcssa
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %S.07 = phi i32 [ %or, %for.body ], [ 1, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %B, i32 %i.08
@@ -224,18 +224,18 @@ entry:
   %cmp5 = icmp sgt i32 %N, 0
   br i1 %cmp5, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   %and.lcssa = phi i32 [ %and, %for.body ]
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   %S.addr.0.lcssa = phi i32 [ %S, %entry ], [ %and.lcssa, %for.cond.cleanup.loopexit ]
   ret i32 %S.addr.0.lcssa
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %S.addr.06 = phi i32 [ %and, %for.body ], [ %S, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.07

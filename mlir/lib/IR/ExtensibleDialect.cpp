@@ -304,6 +304,8 @@ DynamicOpDefinition::DynamicOpDefinition(
       getCanonicalizationPatternsFn(std::move(getCanonicalizationPatternsFn)),
       populateDefaultAttrsFn(std::move(populateDefaultAttrsFn)) {
   typeID = dialect->allocateTypeID();
+  // DynamicOpDefinition doesn't support properties, so use the ID of void.
+  propertiesTypeID = TypeID();
 }
 
 std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(

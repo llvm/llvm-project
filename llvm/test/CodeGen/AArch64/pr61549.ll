@@ -23,7 +23,7 @@ define i35 @f(i35 %0) {
 ; GISEL-NEXT:    and x8, x8, #0x7ffffffff
 ; GISEL-NEXT:    clz x8, x8
 ; GISEL-NEXT:    sub x8, x8, #29
-; GISEL-NEXT:    ubfx x0, x8, #5, #30
+; GISEL-NEXT:    lsr x0, x8, #5
 ; GISEL-NEXT:    ret
   %2 = srem i35 1, %0
   %3 = call i35 @llvm.ctlz.i35(i35 %2, i1 false)

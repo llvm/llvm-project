@@ -344,21 +344,6 @@ static_assert(alignof(Use) >= alignof(User),
 static_assert(alignof(Use *) >= alignof(User),
               "Alignment is insufficient after objects prepended to User");
 
-template<> struct simplify_type<User::op_iterator> {
-  using SimpleType = Value*;
-
-  static SimpleType getSimplifiedValue(User::op_iterator &Val) {
-    return Val->get();
-  }
-};
-template<> struct simplify_type<User::const_op_iterator> {
-  using SimpleType = /*const*/ Value*;
-
-  static SimpleType getSimplifiedValue(User::const_op_iterator &Val) {
-    return Val->get();
-  }
-};
-
 } // end namespace llvm
 
 #endif // LLVM_IR_USER_H

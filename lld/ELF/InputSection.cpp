@@ -1356,16 +1356,6 @@ template <class ELFT> void InputSection::writeTo(Ctx &ctx, uint8_t *buf) {
 void InputSection::replace(InputSection *other) {
   addralign = std::max(addralign, other->addralign);
 
-  // When a section is replaced with another section that was allocated to
-  // another partition, the replacement section (and its associated sections)
-  // need to be placed in the main partition so that both partitions will be
-  // able to access it.
-  if (partition != other->partition) {
-    partition = 1;
-    for (InputSection *isec : dependentSections)
-      isec->partition = 1;
-  }
-
   other->repl = repl;
   other->markDead();
 }
@@ -1548,13 +1538,26 @@ void MergeInputSection::splitIntoPieces() {
 }
 
 SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
+  // Pre-resolved by splitSections: pieceIdx + 1 in upper bits,
+  // intra-piece offset in lower bits.
+  if (uint32_t idx = offset >> mergeValueShift)
+    return pieces[idx - 1];
   assert(offset < content().size());
+  // For non-string fixed-size records, piece index = offset / entsize.
+  if (!(flags & SHF_STRINGS))
+    return pieces[offset / entsize];
   return partition_point(
-      pieces, [=](SectionPiece p) { return p.inputOff <= offset; })[-1];
+      pieces,
+      [=](const SectionPiece &p) { return p.inputOff <= offset; })[-1];
 }
 
 // Return the offset in an output section for a given input offset.
 uint64_t MergeInputSection::getParentOffset(uint64_t offset) const {
+  // Pre-resolved by splitSections: pieceIdx + 1 in upper bits,
+  // intra-piece offset in lower bits.
+  if (uint32_t idx = offset >> mergeValueShift)
+    return pieces[idx - 1].outputOff +
+           (offset & llvm::maskTrailingOnes<uint64_t>(mergeValueShift));
   const SectionPiece &piece = getSectionPiece(offset);
   return piece.outputOff + (offset - piece.inputOff);
 }

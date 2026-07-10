@@ -55,12 +55,17 @@ controller and can make no further calls to the controller.
 `Service` is an interface for classes that provide services to the Session.
 E.g. memory managers, or dynamic library loaders.
 
-The `Service` interface provides two operations: `detach` and `shutdown`. The
-`shutdown` operation will be called at `Session` destruction time. The `detach`
-operation will be called if the controller detaches. Since this means that no
-further requests for service will be made by the controller, Services may
-implement this operation to abandon any fine-grained book-keeping that is
-needed to provide ongoing services to the controller.
+The `Service` interface provides two operations: `onDetach` and `onShutdown`.
+`onDetach` signals that controller access is permanently unavailable. It is
+always called before `onShutdown`, regardless of how the Session reaches
+shutdown -- including when no controller was ever attached. Since no further
+requests will be made by the controller after `onDetach`, Services may use it
+to abandon any fine-grained book-keeping that is only needed to service
+controller requests. Many Services will implement `onDetach` as a no-op.
+
+The `onShutdown` operation will be called at `Session` destruction time, after
+all in-flight managed code calls have completed. Services should release all
+held resources during `onShutdown`.
 
 ### TaskDispatcher
 

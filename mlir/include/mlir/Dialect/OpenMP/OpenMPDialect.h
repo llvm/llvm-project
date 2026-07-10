@@ -24,6 +24,7 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 
 #define GET_TYPEDEF_CLASSES
@@ -41,7 +42,7 @@
 /// Operations implementing LoopWrapperInterface.
 #define OMP_LOOP_WRAPPER_OPS                                                   \
   mlir::omp::WorkshareLoopWrapperOp, mlir::omp::LoopOp, mlir::omp::WsloopOp,   \
-      mlir::omp::SimdOp, mlir::omp::DistributeOp, mlir::omp::TaskloopOp
+      mlir::omp::SimdOp, mlir::omp::DistributeOp, mlir::omp::TaskloopWrapperOp
 
 /// Operations implementing OutlineableOpenMPOpInterface.
 #define OMP_OUTLINEABLE_OPS                                                    \
@@ -51,6 +52,11 @@
 namespace mlir::omp {
 /// Find the omp.new_cli, generator, and consumer of a canonical loop info.
 std::tuple<NewCliOp, OpOperand *, OpOperand *> decodeCli(mlir::Value cli);
+
+/// Convert a proc_bind kind from the LLVM frontend enum to the corresponding
+/// OpenMP dialect enum. The LLVM 'default' and 'unknown' kinds have no dialect
+/// counterpart and are not valid inputs.
+ClauseProcBindKind convertProcBindKind(llvm::omp::ProcBindKind kind);
 } // namespace mlir::omp
 
 #endif // MLIR_DIALECT_OPENMP_OPENMPDIALECT_H_

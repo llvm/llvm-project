@@ -1,11 +1,8 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncountedCallArgsChecker -verify %s -std=c++2c
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncheckedLocalVarsChecker -verify %s -std=c++2c
-
-// expected-no-diagnostics
 
 #include "mock-types.h"
 
-class Node {
+class Node : public CanMakeWeakPtr<Node> {
 public:
     Node* nextSibling() const;
 
@@ -33,4 +30,17 @@ pair<RefPtr<Node>, RefPtr<Node>> &getPair();
 static void testUnpackedAssignment() {
     auto [a, b] = getPair();
     a->nextSibling();
+}
+
+pair<RefPtr<Node>, WeakPtr<Node>> getStrongWeakPair();
+pair<WeakPtr<Node>, RefPtr<Node>> getWeakStrongPair();
+static void testUnpackedAssignmentWithWeak() {
+  auto [a, b] = getStrongWeakPair();
+  a->nextSibling();
+  b->nextSibling();
+  // expected-warning@-1{{Function argument 'b' (parameter 'this' to 'Node::nextSibling') is a raw pointer to RefPtr-capable type 'Node'}}
+  auto [c, d] = getWeakStrongPair();
+  c->nextSibling();
+  // expected-warning@-1{{Function argument 'c' (parameter 'this' to 'Node::nextSibling') is a raw pointer to RefPtr-capable type 'Node'}}
+  d->nextSibling();
 }

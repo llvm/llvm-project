@@ -11,6 +11,7 @@
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 
 namespace mlir {
@@ -29,7 +30,8 @@ namespace tensor {
 /// transform dialect that control is done within the transform dialect. Other
 /// use cases can inherit from this pattern and add necessary controls.
 FailureOr<TilingResult> replaceExtractSliceWithTiledProducer(
-    OpBuilder &builder, tensor::ExtractSliceOp sliceOp, OpResult producerOp);
+    OpBuilder &builder, tensor::ExtractSliceOp sliceOp, OpResult producerOp,
+    ArrayRef<InnerTileAlignment> innerTileAlignments = {});
 
 /// Method to swap `tensor.insert_slice`s with their consumers when the
 /// consumer implements the `TilingInterface`. The size of `sliceOps` and
@@ -37,10 +39,10 @@ FailureOr<TilingResult> replaceExtractSliceWithTiledProducer(
 /// `consumerOperands` represents a use of the the corresponding
 /// entry in `sliceOps` in the consumer. All entries of `consumerOperands` is
 /// expected to be uses in the same consumer.
-FailureOr<TilingResult>
-replaceInsertSlicesWithTiledConsumer(OpBuilder &builder,
-                                     ArrayRef<tensor::InsertSliceOp> sliceOps,
-                                     ArrayRef<OpOperand *> consumerOperands);
+FailureOr<TilingResult> replaceInsertSlicesWithTiledConsumer(
+    OpBuilder &builder, ArrayRef<tensor::InsertSliceOp> sliceOps,
+    ArrayRef<OpOperand *> consumerOperands,
+    ArrayRef<InnerTileAlignment> innerTileAlignments = {});
 
 //===----------------------------------------------------------------------===//
 // Populate functions.
@@ -95,11 +97,6 @@ void populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
 /// used as a fallback tensor -> tensor lowering that decomposes concat such
 /// that it can be bufferized into a sequence of copies.
 void populateDecomposeTensorConcatPatterns(RewritePatternSet &patterns);
-
-/// Populates `patterns` with patterns that forward concat-generated
-/// `tensor.insert_slice` destinations into single-use destination-style source
-/// producers.
-void populateForwardConcatInsertSliceDestPatterns(RewritePatternSet &patterns);
 
 using ControlFoldFn = std::function<bool(OpOperand *)>;
 

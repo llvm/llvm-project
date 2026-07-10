@@ -309,7 +309,7 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
   llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
 
   if (CurBB) {
-    assert(!CurBB->getTerminator() && "Unexpected terminated block.");
+    assert(!CurBB->hasTerminator() && "Unexpected terminated block.");
 
     // We have a valid insert point, reuse it if it is empty or there are no
     // explicit jumps to the return block.
@@ -1033,9 +1033,11 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   }
 
   // If we are checking function types, emit a function type signature as
-  // prologue data.
+  // prologue data. Kernel functions have strict alignment requirements and
+  // cannot be call indirectly so we do not instrument them.
   if (FD && SanOpts.has(SanitizerKind::Function) &&
-      !FD->getType()->isCFIUncheckedCalleeFunctionType()) {
+      !FD->getType()->isCFIUncheckedCalleeFunctionType() &&
+      llvm::isCallableCC(Fn->getCallingConv())) {
     if (llvm::Constant *PrologueSig = getPrologueSignature(CGM, FD)) {
       llvm::LLVMContext &Ctx = Fn->getContext();
       llvm::MDBuilder MDB(Ctx);
@@ -1200,6 +1202,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         << "-mpacked-stack";
     Fn->addFnAttr("packed-stack");
   }
+
+  if (!CGM.getCodeGenOpts().ZOSPPA1Name)
+    Fn->addFnAttr("zos-ppa1-name", "none");
 
   if (CGM.getCodeGenOpts().WarnStackSize != UINT_MAX &&
       !CGM.getDiags().isIgnored(diag::warn_fe_backend_frame_larger_than, Loc))
@@ -2696,6 +2701,10 @@ Address CodeGenFunction::EmitVAListRef(const Expr* E) {
 
 Address CodeGenFunction::EmitMSVAListRef(const Expr *E) {
   return EmitLValue(E).getAddress();
+}
+
+Address CodeGenFunction::EmitZOSVAListRef(const Expr *E) {
+  return EmitPointerWithAlignment(E);
 }
 
 void CodeGenFunction::EmitDeclRefExprDbgValue(const DeclRefExpr *E,

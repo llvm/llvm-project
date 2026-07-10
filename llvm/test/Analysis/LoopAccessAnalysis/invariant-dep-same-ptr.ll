@@ -2,40 +2,46 @@
 ; RUN: opt -passes='print<access-info>' -disable-output %s 2>&1 | FileCheck %s
 
 ; Store and load to same invariant address through a phi.
-; FIXME: Incorrectly considered safe with runtime checks.
 define void @conditional_store_load_same_invariant_via_phi(ptr %p0, ptr %p1, ptr %p2, i64 %n, i1 %c) {
 ; CHECK-LABEL: 'conditional_store_load_same_invariant_via_phi'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unknown data dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %x = load i32, ptr %gep0, align 4 ->
+; CHECK-NEXT:            store i32 %y, ptr %gep1, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:        InvariantUnsafe:
+; CHECK-NEXT:            store i32 %x, ptr %p2, align 4 ->
+; CHECK-NEXT:            %y = load i32, ptr %phi, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %p2
+; CHECK-NEXT:        ptr %p2
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
+; CHECK-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %p2
+; CHECK-NEXT:        ptr %p2
 ; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
-; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %p2 High: (4 + %p2))
 ; CHECK-NEXT:            Member: %p2
+; CHECK-NEXT:            Member: %p2
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %phip High: ((4 * %n) + %phip))
-; CHECK-NEXT:            Member: {%phip,+,4}<%loop>
-; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %p0 High: ((4 * %n) + %p0))
 ; CHECK-NEXT:            Member: {%p0,+,4}<%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %phip High: ((4 * %n) + %phip))
+; CHECK-NEXT:            Member: {%phip,+,4}<%loop>
 ; CHECK-EMPTY:
-; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      Non vectorizable stores to invariant address were found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
@@ -69,53 +75,46 @@ exit:
 }
 
 ; Same invariant address via two distinct GEPs.
-; FIXME: Incorrectly considered safe with runtime checks.
 define void @store_load_same_invariant_via_different_geps(ptr %p0, ptr %p1, ptr %base, i64 %n, i1 %c) {
 ; CHECK-LABEL: 'store_load_same_invariant_via_different_geps'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unknown data dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %x = load i32, ptr %gep0, align 4 ->
+; CHECK-NEXT:            store i32 %y, ptr %gep1, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:        InvariantUnsafe:
+; CHECK-NEXT:            store i32 %x, ptr %gep.st, align 4 ->
+; CHECK-NEXT:            %y = load i32, ptr %gep.ld, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.ld = getelementptr i32, ptr %base, i64 1
 ; CHECK-NEXT:          %gep.st = getelementptr i32, ptr %base, i64 1
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
+; CHECK-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.ld = getelementptr i32, ptr %base, i64 1
 ; CHECK-NEXT:          %gep.st = getelementptr i32, ptr %base, i64 1
 ; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
-; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.st = getelementptr i32, ptr %base, i64 1
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %gep.ld = getelementptr i32, ptr %base, i64 1
-; CHECK-NEXT:      Check 3:
-; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
-; CHECK-NEXT:      Check 4:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %gep.ld = getelementptr i32, ptr %base, i64 1
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (4 + %base) High: (8 + %base))
 ; CHECK-NEXT:            Member: (4 + %base)
+; CHECK-NEXT:            Member: (4 + %base)
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %phip High: ((4 * %n) + %phip))
-; CHECK-NEXT:            Member: {%phip,+,4}<%loop>
-; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %p0 High: ((4 * %n) + %p0))
 ; CHECK-NEXT:            Member: {%p0,+,4}<%loop>
-; CHECK-NEXT:        Group GRP3:
-; CHECK-NEXT:          (Low: (4 + %base) High: (8 + %base))
-; CHECK-NEXT:            Member: (4 + %base)
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %phip High: ((4 * %n) + %phip))
+; CHECK-NEXT:            Member: {%phip,+,4}<%loop>
 ; CHECK-EMPTY:
-; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      Non vectorizable stores to invariant address were found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
@@ -143,35 +142,41 @@ exit:
 }
 
 ; Phi with incoming values loaded from the same address
-; FIXME: Incorrectly considered safe with runtime checks.
 define void @phi_with_loads_from_same_addr(ptr %p0, ptr %p1, ptr %x, i64 %n, i1 %c0) {
 ; CHECK-LABEL: 'phi_with_loads_from_same_addr'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unknown data dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %v = load i32, ptr %gep0, align 4 ->
+; CHECK-NEXT:            store i32 %y, ptr %gep1, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:        InvariantUnsafe:
+; CHECK-NEXT:            store i32 %v, ptr %ld1, align 4 ->
+; CHECK-NEXT:            %y = load i32, ptr %phi, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %ld1 = load ptr, ptr %x, align 8
+; CHECK-NEXT:          %ld1 = load ptr, ptr %x, align 8
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
+; CHECK-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %ld1 = load ptr, ptr %x, align 8
+; CHECK-NEXT:          %ld1 = load ptr, ptr %x, align 8
 ; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
+; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
 ; CHECK-NEXT:      Check 2:
 ; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %ld1 = load ptr, ptr %x, align 8
 ; CHECK-NEXT:          %ld1 = load ptr, ptr %x, align 8
 ; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %ld2 = load ptr, ptr %x, align 8
 ; CHECK-NEXT:      Check 3:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
-; CHECK-NEXT:      Check 4:
-; CHECK-NEXT:        Comparing group GRP1:
+; CHECK-NEXT:        Comparing group GRP2:
 ; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
 ; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %ld2 = load ptr, ptr %x, align 8
@@ -179,17 +184,18 @@ define void @phi_with_loads_from_same_addr(ptr %p0, ptr %p1, ptr %x, i64 %n, i1 
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %ld1 High: (4 + %ld1))
 ; CHECK-NEXT:            Member: %ld1
+; CHECK-NEXT:            Member: %ld1
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %phip High: ((4 * %n) + %phip))
-; CHECK-NEXT:            Member: {%phip,+,4}<%loop>
-; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %p0 High: ((4 * %n) + %p0))
 ; CHECK-NEXT:            Member: {%p0,+,4}<%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %phip High: ((4 * %n) + %phip))
+; CHECK-NEXT:            Member: {%phip,+,4}<%loop>
 ; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: %ld2 High: (4 + %ld2))
 ; CHECK-NEXT:            Member: %ld2
 ; CHECK-EMPTY:
-; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      Non vectorizable stores to invariant address were found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:

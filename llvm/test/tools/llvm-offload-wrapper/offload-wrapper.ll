@@ -31,7 +31,7 @@
 ; HIP-NEXT: @__dummy.llvm_offload_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries", align 8
 ; HIP-NEXT: @llvm.compiler.used = appending global [1 x ptr] [ptr @__dummy.llvm_offload_entries], section "llvm.metadata"
 ; HIP-NEXT: @.fatbin_image = internal constant {{.*}}, section ".hip_fatbin"
-; HIP-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section ".hipFatBinSegment", align 8
+; HIP-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section ".hipFatBinSegment", no_sanitize_address, no_sanitize_hwaddress, align 8
 ; HIP-NEXT: @.hip.binary_handle = internal global ptr null
 ; HIP-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.hip.fatbin_reg, ptr null }]
 
@@ -51,6 +51,34 @@
 ; HIP-NEXT:   ret void
 ; HIP-NEXT: }
 
+; RUN: llvm-offload-wrapper --triple=x86_64-apple-macosx10.15.0 -kind=hip %s -o %t.bc
+; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=HIP-MACHO
+
+;      HIP-MACHO: @"\01section$start$__LLVM$offload_entries" = external hidden constant [0 x %struct.__tgt_offload_entry]
+; HIP-MACHO-NEXT: @"\01section$end$__LLVM$offload_entries" = external hidden constant [0 x %struct.__tgt_offload_entry]
+; HIP-MACHO-NEXT: @"__dummy.__LLVM,offload_entries" = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "__LLVM,offload_entries", align 8
+; HIP-MACHO-NEXT: @llvm.compiler.used = appending global [1 x ptr] [ptr @"__dummy.__LLVM,offload_entries"], section "llvm.metadata"
+; HIP-MACHO-NEXT: @.fatbin_image = internal constant {{.*}}, section "__HIP,__hip_fatbin"
+; HIP-MACHO-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section "__HIP,__fatbin", no_sanitize_address, no_sanitize_hwaddress, align 8
+; HIP-MACHO-NEXT: @.hip.binary_handle = internal global ptr null
+; HIP-MACHO-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.hip.fatbin_reg, ptr null }]
+
+;      HIP-MACHO: define internal void @.hip.fatbin_reg() section "__TEXT,__StaticInit" {
+; HIP-MACHO-NEXT: entry:
+; HIP-MACHO-NEXT:   %0 = call ptr @__hipRegisterFatBinary(ptr @.fatbin_wrapper)
+; HIP-MACHO-NEXT:   store ptr %0, ptr @.hip.binary_handle, align 8
+; HIP-MACHO-NEXT:   call void @.hip.globals_reg(ptr %0)
+; HIP-MACHO-NEXT:   %1 = call i32 @atexit(ptr @.hip.fatbin_unreg)
+; HIP-MACHO-NEXT:   ret void
+; HIP-MACHO-NEXT: }
+
+;      HIP-MACHO: define internal void @.hip.fatbin_unreg() section "__TEXT,__StaticInit" {
+; HIP-MACHO-NEXT: entry:
+; HIP-MACHO-NEXT:   %0 = load ptr, ptr @.hip.binary_handle, align 8
+; HIP-MACHO-NEXT:   call void @__hipUnregisterFatBinary(ptr %0)
+; HIP-MACHO-NEXT:   ret void
+; HIP-MACHO-NEXT: }
+
 ; RUN: llvm-offload-wrapper --triple=x86_64-unknown-linux-gnu -kind=cuda %s -o %t.bc
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=CUDA
 
@@ -59,7 +87,7 @@
 ; CUDA-NEXT: @__dummy.llvm_offload_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries", align 8
 ; CUDA-NEXT: @llvm.compiler.used = appending global [1 x ptr] [ptr @__dummy.llvm_offload_entries], section "llvm.metadata"
 ; CUDA-NEXT: @.fatbin_image = internal constant {{.*}}, section ".nv_fatbin"
-; CUDA-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1180844977, i32 1, ptr @.fatbin_image, ptr null }, section ".nvFatBinSegment", align 8
+; CUDA-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1180844977, i32 1, ptr @.fatbin_image, ptr null }, section ".nvFatBinSegment", no_sanitize_address, no_sanitize_hwaddress, align 8
 ; CUDA-NEXT: @.cuda.binary_handle = internal global ptr null
 ; CUDA-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.cuda.fatbin_reg, ptr null }]
 
@@ -79,3 +107,27 @@
 ; CUDA-NEXT:   call void @__cudaUnregisterFatBinary(ptr %0)
 ; CUDA-NEXT:   ret void
 ; CUDA-NEXT: }
+
+; RUN: llvm-offload-wrapper --triple=x86_64-unknown-linux-gnu -kind=sycl %s -o %t.bc
+; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=SYCL
+
+;      SYCL: @.sycl_offloading.binary = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"{{.*}}", section ".llvm.offloading"
+; SYCL-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @sycl.descriptor_reg, ptr null }]
+; SYCL-NEXT: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @sycl.descriptor_unreg, ptr null }]
+
+;      SYCL: define internal void @sycl.descriptor_reg() section ".text.startup" {
+; SYCL-NEXT: entry:
+; SYCL-NEXT:   call void @__sycl_register_lib(ptr @.sycl_offloading.binary, i64 [[SIZE]])
+; SYCL-NEXT:   ret void
+; SYCL-NEXT: }
+
+;      SYCL: define internal void @sycl.descriptor_unreg() section ".text.startup" {
+; SYCL-NEXT: entry:
+; SYCL-NEXT:   call void @__sycl_unregister_lib(ptr @.sycl_offloading.binary, i64 [[SIZE]])
+; SYCL-NEXT:   ret void
+; SYCL-NEXT: }
+
+; RUN: llvm-offload-wrapper --triple=x86_64-unknown-linux-gnu -kind=openmp --relocatable %s -o %t.bc
+; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=OMP-RELOCATABLE
+
+; OMP-RELOCATABLE: @.omp_offloading.device_image = internal unnamed_addr constant [{{[0-9]+}} x i8] c"{{.*}}", section ".llvm.offloading.relocatable", align 8

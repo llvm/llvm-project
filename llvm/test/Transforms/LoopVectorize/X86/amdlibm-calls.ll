@@ -8,81 +8,51 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare double @sin(double) #0
 declare float @sinf(float) #0
-declare double @llvm.sin.f64(double) #0
-declare float @llvm.sin.f32(float) #0
 
 declare double @cos(double) #0
 declare float @cosf(float) #0
-declare double @llvm.cos.f64(double) #0
-declare float @llvm.cos.f32(float) #0
 
 declare double @tan(double) #0
 declare float @tanf(float) #0
-declare double @llvm.tan.f64(double) #0
-declare float @llvm.tan.f32(float) #0
 
 declare double @acos(double) #0
 declare float @acosf(float) #0
-declare double @llvm.acos.f64(double) #0
-declare float @llvm.acos.f32(float) #0
 
 declare double @asin(double) #0
 declare float @asinf(float) #0
-declare double @llvm.asin.f64(double) #0
-declare float @llvm.asin.f32(float) #0
 
 declare double @atan(double) #0
 declare float @atanf(float) #0
-declare double @llvm.atan.f64(double) #0
-declare float @llvm.atan.f32(float) #0
 
 declare double @sinh(double) #0
 declare float @sinhf(float) #0
-declare double @llvm.sinh.f64(double) #0
-declare float @llvm.sinh.f32(float) #0
 
 declare double @cosh(double) #0
 declare float @coshf(float) #0
-declare double @llvm.cosh.f64(double) #0
-declare float @llvm.cosh.f32(float) #0
 
 declare double @tanh(double) #0
 declare float @tanhf(float) #0
-declare double @llvm.tanh.f64(double) #0
-declare float @llvm.tanh.f32(float) #0
 
 declare double @pow(double, double) #0
 declare float @powf(float, float) #0
-declare double @llvm.pow.f64(double, double) #0
-declare float @llvm.pow.f32(float, float) #0
 
 declare double @exp(double) #0
 declare float @expf(float) #0
-declare double @llvm.exp.f64(double) #0
-declare float @llvm.exp.f32(float) #0
 
 declare double @log(double) #0
 declare float @logf(float) #0
-declare double @llvm.log.f64(double) #0
-declare float @llvm.log.f32(float) #0
 
 declare double @log2(double) #0
 declare float @log2f(float) #0
-declare double @llvm.log2.f64(double) #0
-declare float @llvm.log2.f32(float) #0
 
 declare double @log10(double) #0
 declare float @log10f(float) #0
-declare double @llvm.log10.f64(double) #0
-declare float @llvm.log10.f32(float) #0
 
 declare double @sqrt(double) #0
 declare float @sqrtf(float) #0
 
 declare double @exp2(double) #0
 declare float @exp2f(float) #0
-declare double @llvm.exp2.f64(double) #0
-declare float @llvm.exp2.f32(float) #0
 
 define void @sin_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @sin_f64(
@@ -1809,6 +1779,54 @@ for.cond.cleanup:
   ret void
 }
 
+; ======================= erfinv ============================
+define void @erfinv_f64(ptr nocapture %varray) {
+; CHECK-LABEL: @erfinv_f64(
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_erfinv(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_erfinv(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_erfinv(<8 x double> [[TMP4:%.*]])
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @erfinv(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+; ======================= erfcinv ============================
+define void @erfcinv_f64(ptr nocapture %varray) {
+; CHECK-LABEL: @erfcinv_f64(
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_erfcinv(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_erfcinv(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_erfcinv(<8 x double> [[TMP4:%.*]])
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @erfcinv(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
 
 ; ======================= erfc ============================
 define void @erfc_f64(ptr nocapture %varray) {
@@ -1825,6 +1843,33 @@ for.body:
   %tmp = trunc i64 %iv to i32
   %conv = sitofp i32 %tmp to double
   %call = tail call double @erfc(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+; ======================= cdfnorminv ============================
+define void @cdfnorminv_f64(ptr nocapture %varray) {
+; CHECK-LABEL: @cdfnorminv_f64(
+; CHECK-VF2:    [[TMP5:%.*]] = call <2 x double> @amd_vrd2_cdfnorminv(<2 x double> [[TMP4:%.*]])
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x double> @amd_vrd4_cdfnorminv(<4 x double> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x double> @amd_vrd8_cdfnorminv(<8 x double> [[TMP4:%.*]])
+; CHECK-VF16:   {{.*}} = tail call double @cdfnorminv(double {{.*}})
+; CHECK:        ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @cdfnorminv(double %conv)
   %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
   store double %call, ptr %arrayidx, align 4
   %iv.next = add nuw nsw i64 %iv, 1
@@ -1992,18 +2037,75 @@ for.end:
   ret void
 }
 
+; ======================= expm1 ============================
+define void @expm1_f64(ptr nocapture %varray) {
+; CHECK-LABEL: @expm1_f64(
+;
+; CHECK-VF2:    {{.*}} = tail call double @expm1(double {{.*}})
+; CHECK-VF4:    {{.*}} = tail call double @expm1(double {{.*}})
+; CHECK-VF8:    {{.*}} = tail call double @expm1(double {{.*}})
+; CHECK-VF16:   {{.*}} = tail call double @expm1(double {{.*}})
+; CHECK:        ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @expm1(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+; ======================= expm1f ============================
+define void @expm1f_f32(ptr nocapture %varray) {
+; CHECK-LABEL: @expm1f_f32(
+;
+; CHECK-VF2:    {{.*}} = tail call float @expm1f(float {{.*}})
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_expm1f(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    {{.*}} = tail call float @expm1f(float {{.*}})
+; CHECK-VF16:   {{.*}} = tail call float @expm1f(float {{.*}})
+; CHECK:        ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @expm1f(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
 attributes #0 = { nounwind readnone }
 
 declare double @exp10(double) #0
 declare float @exp10f(float) #0
-declare double @llvm.exp10.f64(double) #0
-declare float @llvm.exp10.f32(float) #0
 declare void @sincos(double, ptr, ptr)
 declare void @sincosf(float, ptr, ptr)
+declare double @erfinv(double) #0
+declare double @erfcinv(double) #0
 declare double @erfc(double) #0
 declare float @erfcf(float) #0
 declare double @cdfnorm(double) #0
+declare double @cdfnorminv(double) #0
 declare double @round(double) #0
 declare float @roundf(float) #0
-declare double @llvm.round.f64(double) #0
-declare float @llvm.round.f32(float) #0
+declare double @expm1(double) #0
+declare float @expm1f(float) #0

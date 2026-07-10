@@ -2322,3 +2322,41 @@ func.func @iter_args_cycles_non_cycle_start(%lb : index, %ub : index, %step : in
   }
   return %res#0, %res#1, %res#2 : i32, i32, i32
 }
+
+// -----
+
+// Test that FoldTensorCastOfOutputIntoForallOp correctly handles the case
+// where parallel_insert_slice ops write to shared outputs in a non-sequential
+// order. The fix ensures that each yielding op's destination is matched to the
+// correct regionIterArg based on what it actually writes to, not positionally.
+// CHECK-LABEL: func @fold_tensor_cast_into_forall_non_sequential_writes
+//  CHECK-SAME:   (%[[ARG0:.*]]: tensor<8x32xf32>, %[[ARG1:.*]]: tensor<8x32xf32>)
+//       CHECK:   %[[FORALL:.*]]:2 = scf.forall
+//  CHECK-SAME:     shared_outs(%[[ITER0:.*]] = {{.*}}, %[[ITER1:.*]] = {{.*}}) -> (tensor<32x32xf32>, tensor<32x32xf32>)
+//       CHECK:     scf.forall.in_parallel {
+// CHECK-NEXT:        tensor.parallel_insert_slice %[[ARG0]] into %[[ITER1]]
+// CHECK-NEXT:        tensor.parallel_insert_slice %[[ARG1]] into %[[ITER0]]
+//       CHECK:     }
+//       CHECK:   %[[CAST0:.*]] = tensor.cast %[[FORALL]]#0 : tensor<32x32xf32> to tensor<?x32xf32>
+//       CHECK:   %[[CAST1:.*]] = tensor.cast %[[FORALL]]#1 : tensor<32x32xf32> to tensor<?x32xf32>
+//       CHECK:   return %[[CAST0]], %[[CAST1]]
+func.func @fold_tensor_cast_into_forall_non_sequential_writes(
+    %arg0: tensor<8x32xf32>, %arg1: tensor<8x32xf32>) -> (tensor<?x32xf32>, tensor<?x32xf32>) {
+  %c8 = arith.constant 8 : index
+  %c32 = arith.constant 32 : index
+  %init = tensor.empty(%c32) : tensor<?x32xf32>
+  %0:2 = scf.forall (%tidx) in (4) shared_outs(%arg2 = %init, %arg3 = %init)
+      -> (tensor<?x32xf32>, tensor<?x32xf32>) {
+    %pos = arith.muli %c8, %tidx : index
+    scf.forall.in_parallel {
+      // Write %arg0 to %arg3 (second shared output).
+      tensor.parallel_insert_slice %arg0 into %arg3[%pos, 0] [8, 32] [1, 1]
+          : tensor<8x32xf32> into tensor<?x32xf32>
+      // Write %arg1 to %arg2 (first shared output).
+      tensor.parallel_insert_slice %arg1 into %arg2[%pos, 0] [8, 32] [1, 1]
+          : tensor<8x32xf32> into tensor<?x32xf32>
+    }
+  }
+  // %0#0 contains %arg1 data; %0#1 contains %arg0 data.
+  return %0#0, %0#1 : tensor<?x32xf32>, tensor<?x32xf32>
+}

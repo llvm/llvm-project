@@ -286,6 +286,10 @@ public:
     /// is no file information.
     uint16_t file_idx = 0;
   };
+  static_assert(
+      sizeof(Entry) <=
+          sizeof(lldb::addr_t) + sizeof(uint32_t) + 2 * sizeof(uint16_t),
+      "High-volume object, size of object must be increased with care");
 
   class Sequence {
   public:

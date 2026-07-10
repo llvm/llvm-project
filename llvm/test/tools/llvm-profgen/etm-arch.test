@@ -1,0 +1,81 @@
+; REQUIRES: opencsd, arm-registered-target
+; RUN: split-file %s %t
+; RUN: printf '\200' > %t.etm
+
+; Test 1: ARM binary with Cortex-M attributes should pass.
+; RUN: yaml2obj %t/arm-valid.yaml -o %t.arm.valid.bin
+; RUN: llvm-profgen --etm=%t.etm --binary=%t.arm.valid.bin --output=%t.out 2>&1 | FileCheck %s --check-prefix=ARM-VALID
+
+; Test 2: ARM binary without Cortex-M attributes should fail.
+; RUN: yaml2obj %t/arm-no-attr.yaml -o %t.arm.noattr.bin
+; RUN: not llvm-profgen --etm=%t.etm --binary=%t.arm.noattr.bin --output=%t.out 2>&1 | FileCheck %s --check-prefix=ARM-NOT-VALID
+
+; Test 3: Non-ARM binary (X86) should fail.
+; RUN: yaml2obj %t/x86.yaml -o %t.x86.bin
+; RUN: not llvm-profgen --etm=%t.etm --binary=%t.x86.bin --output=%t.out 2>&1 | FileCheck %s --check-prefix=X86
+
+; ARM-VALID-NOT: OpenCSD: Unsupported processor architecture
+
+; ARM-NOT-VALID: OpenCSD: Unsupported processor architecture. Only Arm M-profile (Cortex-M) with ETM support is currently supported.
+
+; X86: OpenCSD: Unsupported processor architecture. Only Arm M-profile (Cortex-M) with ETM support is currently supported.
+
+;--- arm-valid.yaml
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_ARM
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    VAddr:           0x1000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Content:         C3
+  - Name:            .ARM.attributes
+    Type:            SHT_ARM_ATTRIBUTES
+    Content:         4140000000616561626900013600000043322E30390005636F727465782D6D3300060A074D080009020E0011011204140115001703180119011A021E0622012601
+
+;--- arm-no-attr.yaml
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_ARM
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    VAddr:           0x1000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Content:         C3
+
+;--- x86.yaml
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    VAddr:           0x1000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Content:         C3

@@ -8,6 +8,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class CppUnionStaticMembersTestCase(TestBase):
     def test_print_union(self):
         """Tests that frame variable and expr work

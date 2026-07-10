@@ -18,6 +18,5 @@
 int foo(int);
 
 void test(void) {
-  // expected-no-diagnostics
-  foo(1); // no-warning. Ignoring "Language mismatch."
+  foo(1); // expected-warning-re{{imported AST from '{{.+}}simple-extern-c.cpp' had been generated for a different language, current: non-C++, imported: C++14}}
 }

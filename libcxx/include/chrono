@@ -46,6 +46,7 @@ public:
 template <class Rep, class Period = ratio<1>>
 class duration
 {
+    static_assert(__is_unqualified_v<Rep>, "A duration representation cannot be qualified");
     static_assert(!__is_duration<Rep>::value, "A duration representation can not be a duration");
     static_assert(__is_ratio<Period>::value, "Second template parameter of duration must be a std::ratio");
     static_assert(Period::num > 0, "duration period must be positive");
@@ -1148,13 +1149,13 @@ namespace std {
 #    pragma GCC system_header
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 17
 #    include <cstdint>
 #    include <stdexcept>
 #    include <string_view>
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <bit>
 #    include <concepts>
 #    include <cstring>
@@ -1164,7 +1165,7 @@ namespace std {
 #    include <vector>
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER == 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER == 20
 #    include <charconv>
 #    if _LIBCPP_HAS_LOCALIZATION
 #      include <locale>

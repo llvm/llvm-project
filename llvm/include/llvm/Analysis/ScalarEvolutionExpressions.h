@@ -234,7 +234,7 @@ public:
   ArrayRef<SCEVUse> operands() const { return ArrayRef(Operands, NumOperands); }
 
   NoWrapFlags getNoWrapFlags(NoWrapFlags Mask = NoWrapMask) const {
-    return (NoWrapFlags)(SubclassData & Mask);
+    return static_cast<NoWrapFlags>(SubclassData) & Mask;
   }
 
   bool hasNoUnsignedWrap() const {
@@ -274,7 +274,9 @@ public:
   }
 
   /// Set flags for a non-recurrence without clearing previously set flags.
-  void setNoWrapFlags(NoWrapFlags Flags) { SubclassData |= Flags; }
+  void setNoWrapFlags(NoWrapFlags Flags) {
+    SubclassData |= static_cast<unsigned short>(Flags);
+  }
 };
 
 /// This node represents an addition of some number of SCEVs.
@@ -402,9 +404,9 @@ public:
   /// For AddRec, either NUW or NSW implies NW. Keep track of this fact here
   /// to make it easier to propagate flags.
   void setNoWrapFlags(NoWrapFlags Flags) {
-    if (Flags & (FlagNUW | FlagNSW))
+    if (any(Flags & (FlagNUW | FlagNSW)))
       Flags = ScalarEvolution::setFlags(Flags, FlagNW);
-    SubclassData |= Flags;
+    SubclassData |= static_cast<unsigned short>(Flags);
   }
 
   /// Return the value of this chain of recurrences at the specified
@@ -453,7 +455,7 @@ protected:
       : SCEVCommutativeExpr(ID, T, O, N) {
     assert(isMinMaxType(T));
     // Min and max never overflow
-    setNoWrapFlags((NoWrapFlags)(FlagNUW | FlagNSW));
+    setNoWrapFlags(FlagNUW | FlagNSW);
   }
 
 public:
@@ -539,7 +541,9 @@ class SCEVSequentialMinMaxExpr : public SCEVNAryExpr {
   }
 
   /// Set flags for a non-recurrence without clearing previously set flags.
-  void setNoWrapFlags(NoWrapFlags Flags) { SubclassData |= Flags; }
+  void setNoWrapFlags(NoWrapFlags Flags) {
+    SubclassData |= static_cast<unsigned short>(Flags);
+  }
 
 protected:
   /// Note: Constructing subclasses via this constructor is allowed
@@ -548,7 +552,7 @@ protected:
       : SCEVNAryExpr(ID, T, O, N) {
     assert(isSequentialMinMaxType(T));
     // Min and max never overflow
-    setNoWrapFlags((NoWrapFlags)(FlagNUW | FlagNSW));
+    setNoWrapFlags(FlagNUW | FlagNSW);
   }
 
 public:
@@ -668,6 +672,71 @@ template <typename SC, typename RetVal = void> struct SCEVVisitor {
   }
 
   RetVal visitCouldNotCompute(const SCEVCouldNotCompute *S) {
+    llvm_unreachable("Invalid use of SCEVCouldNotCompute!");
+  }
+};
+
+/// A visitor class for SCEVUse.
+template <typename SC, typename RetVal = void> struct SCEVUseVisitor {
+  RetVal visit(SCEVUse S) {
+    switch (S->getSCEVType()) {
+    case scConstant:
+      return ((SC *)this)
+          ->visitConstant(cast<SCEVUseT<const SCEVConstant *>>(S));
+    case scVScale:
+      return ((SC *)this)->visitVScale(cast<SCEVUseT<const SCEVVScale *>>(S));
+    case scPtrToAddr:
+      return ((SC *)this)
+          ->visitPtrToAddrExpr(cast<SCEVUseT<const SCEVPtrToAddrExpr *>>(S));
+    case scPtrToInt:
+      return ((SC *)this)
+          ->visitPtrToIntExpr(cast<SCEVUseT<const SCEVPtrToIntExpr *>>(S));
+    case scTruncate:
+      return ((SC *)this)
+          ->visitTruncateExpr(cast<SCEVUseT<const SCEVTruncateExpr *>>(S));
+    case scZeroExtend:
+      return ((SC *)this)
+          ->visitZeroExtendExpr(cast<SCEVUseT<const SCEVZeroExtendExpr *>>(S));
+    case scSignExtend:
+      return ((SC *)this)
+          ->visitSignExtendExpr(cast<SCEVUseT<const SCEVSignExtendExpr *>>(S));
+    case scAddExpr:
+      return ((SC *)this)->visitAddExpr(cast<SCEVUseT<const SCEVAddExpr *>>(S));
+    case scMulExpr:
+      return ((SC *)this)->visitMulExpr(cast<SCEVUseT<const SCEVMulExpr *>>(S));
+    case scUDivExpr:
+      return ((SC *)this)
+          ->visitUDivExpr(cast<SCEVUseT<const SCEVUDivExpr *>>(S));
+    case scAddRecExpr:
+      return ((SC *)this)
+          ->visitAddRecExpr(cast<SCEVUseT<const SCEVAddRecExpr *>>(S));
+    case scSMaxExpr:
+      return ((SC *)this)
+          ->visitSMaxExpr(cast<SCEVUseT<const SCEVSMaxExpr *>>(S));
+    case scUMaxExpr:
+      return ((SC *)this)
+          ->visitUMaxExpr(cast<SCEVUseT<const SCEVUMaxExpr *>>(S));
+    case scSMinExpr:
+      return ((SC *)this)
+          ->visitSMinExpr(cast<SCEVUseT<const SCEVSMinExpr *>>(S));
+    case scUMinExpr:
+      return ((SC *)this)
+          ->visitUMinExpr(cast<SCEVUseT<const SCEVUMinExpr *>>(S));
+    case scSequentialUMinExpr:
+      return ((SC *)this)
+          ->visitSequentialUMinExpr(
+              cast<SCEVUseT<const SCEVSequentialUMinExpr *>>(S));
+    case scUnknown:
+      return ((SC *)this)->visitUnknown(cast<SCEVUseT<const SCEVUnknown *>>(S));
+    case scCouldNotCompute:
+      return ((SC *)this)
+          ->visitCouldNotCompute(
+              cast<SCEVUseT<const SCEVCouldNotCompute *>>(S));
+    }
+    llvm_unreachable("Unknown SCEV kind!");
+  }
+
+  RetVal visitCouldNotCompute(SCEVUseT<const SCEVCouldNotCompute *> S) {
     llvm_unreachable("Invalid use of SCEVCouldNotCompute!");
   }
 };
@@ -980,6 +1049,15 @@ public:
 private:
   LoopToScevMapT &Map;
 };
+
+template <typename SCEVPtrT>
+inline SCEVNoWrapFlags
+SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVNoWrapFlags Mask) const {
+  SCEVNoWrapFlags Flags = SCEVNoWrapFlags::FlagAnyWrap;
+  if (auto *NAry = dyn_cast<SCEVNAryExpr>(Base::getPointer()))
+    Flags = NAry->getNoWrapFlags();
+  return (Flags | getUseNoWrapFlags()) & Mask;
+}
 
 } // end namespace llvm
 

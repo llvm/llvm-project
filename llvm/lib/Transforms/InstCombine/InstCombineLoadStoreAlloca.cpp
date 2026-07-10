@@ -412,11 +412,9 @@ void PointerReplacer::replace(Instruction *I) {
   if (auto *LT = dyn_cast<LoadInst>(I)) {
     auto *V = getReplacement(LT->getPointerOperand());
     assert(V && "Operand not replaced");
-    auto *NewI = new LoadInst(LT->getType(), V, "", LT->isVolatile(),
-                              LT->getAlign(), LT->getOrdering(),
-                              LT->getSyncScopeID());
+    auto *NewI = new LoadInst(LT->getType(), V, "", LT->getProperties());
     NewI->takeName(LT);
-    copyMetadataForLoad(*NewI, *LT);
+    NewI->copyMetadata(*LT);
 
     IC.InsertNewInstWith(NewI, LT->getIterator());
     IC.replaceInstUsesWith(*LT, NewI);
@@ -602,10 +600,8 @@ LoadInst *InstCombinerImpl::combineLoadToNewType(LoadInst &LI, Type *NewTy,
   assert((!LI.isAtomic() || isSupportedAtomicType(NewTy)) &&
          "can't fold an atomic load to requested type");
 
-  LoadInst *NewLoad =
-      Builder.CreateAlignedLoad(NewTy, LI.getPointerOperand(), LI.getAlign(),
-                                LI.isVolatile(), LI.getName() + Suffix);
-  NewLoad->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
+  LoadInst *NewLoad = Builder.CreateLoad(
+      NewTy, LI.getPointerOperand(), LI.getProperties(), LI.getName() + Suffix);
   copyMetadataForLoad(*NewLoad, LI);
   return NewLoad;
 }
@@ -622,9 +618,7 @@ static StoreInst *combineStoreToNewValue(InstCombinerImpl &IC, StoreInst &SI,
   SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
   SI.getAllMetadata(MD);
 
-  StoreInst *NewStore =
-      IC.Builder.CreateAlignedStore(V, Ptr, SI.getAlign(), SI.isVolatile());
-  NewStore->setAtomic(SI.getOrdering(), SI.getSyncScopeID());
+  StoreInst *NewStore = IC.Builder.CreateStore(V, Ptr, SI.getProperties());
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
     MDNode *N = MDPair.second;
@@ -1159,17 +1153,15 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
           return Op;
         };
         Value *LoadOp1 = MaybeCastedLoadOperand(SI->getOperand(1));
-        LoadInst *V1 = Builder.CreateLoad(LI.getType(), LoadOp1,
-                                          LoadOp1->getName() + ".val");
+        LoadInst *V1 =
+            Builder.CreateLoad(LI.getType(), LoadOp1, LI.getProperties(),
+                               LoadOp1->getName() + ".val");
 
         Value *LoadOp2 = MaybeCastedLoadOperand(SI->getOperand(2));
-        LoadInst *V2 = Builder.CreateLoad(LI.getType(), LoadOp2,
-                                          LoadOp2->getName() + ".val");
+        LoadInst *V2 =
+            Builder.CreateLoad(LI.getType(), LoadOp2, LI.getProperties(),
+                               LoadOp2->getName() + ".val");
         assert(LI.isUnordered() && "implied by above");
-        V1->setAlignment(Alignment);
-        V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
-        V2->setAlignment(Alignment);
-        V2->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
         // It is safe to copy any metadata that does not trigger UB. Copy any
         // poison-generating metadata.
         V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
@@ -1183,6 +1175,37 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   if (!NullPointerIsDefined(LI.getFunction(), LI.getPointerAddressSpace()))
     if (Value *V = simplifyNonNullOperand(Op, /*HasDereferenceable=*/true))
       return replaceOperand(LI, 0, V);
+
+  // load(llvm.protected.field.ptr(ptr)) -> llvm.ptrauth.auth(load(ptr))
+  if (isa<PointerType>(LI.getType())) {
+    if (auto *II = dyn_cast<IntrinsicInst>(Op)) {
+      if (II->getIntrinsicID() == Intrinsic::protected_field_ptr) {
+        std::vector<OperandBundleDef> DSBundle;
+        if (auto Bundle =
+                II->getOperandBundle(LLVMContext::OB_deactivation_symbol))
+          DSBundle.push_back(OperandBundleDef(
+              "deactivation-symbol", cast<GlobalValue>(Bundle->Inputs[0])));
+
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(&LI);
+
+        auto *NewLI = cast<LoadInst>(LI.clone());
+        NewLI->setOperand(0, II->getOperand(0));
+        Builder.Insert(NewLI);
+
+        Function *AuthIntr = Intrinsic::getOrInsertDeclaration(
+            F.getParent(), Intrinsic::ptrauth_auth, {});
+        auto *LIInt = Builder.CreatePtrToInt(NewLI, Builder.getInt64Ty());
+        Value *Auth = Builder.CreateCall(
+            AuthIntr,
+            {LIInt, Builder.getInt32(/*AArch64PACKey::DA*/ 2),
+             II->getOperand(1)},
+            DSBundle);
+        Auth = Builder.CreateIntToPtr(Auth, Builder.getPtrTy());
+        return replaceInstUsesWith(LI, Auth);
+      }
+    }
+  }
 
   return nullptr;
 }
@@ -1547,9 +1570,47 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   if (isa<UndefValue>(Val))
     return eraseInstFromFunction(SI);
 
+  // Replace byte constants with integer constants in stores.
+  Constant *C;
+  if (Val->getType()->isByteOrByteVectorTy() && match(Val, m_ImmConstant(C)))
+    return replaceOperand(
+        SI, 0,
+        ConstantExpr::getBitCast(C, Type::getIntFromByteType(C->getType())));
+
   if (!NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace()))
     if (Value *V = simplifyNonNullOperand(Ptr, /*HasDereferenceable=*/true))
       return replaceOperand(SI, 1, V);
+
+  // store(ptr1, llvm.protected.field.ptr(ptr2)) ->
+  // store(llvm.ptrauth.sign(ptr1), ptr2)
+  if (isa<PointerType>(Val->getType())) {
+    if (auto *II = dyn_cast<IntrinsicInst>(Ptr)) {
+      if (II->getIntrinsicID() == Intrinsic::protected_field_ptr) {
+        std::vector<OperandBundleDef> DSBundle;
+        if (auto Bundle =
+                II->getOperandBundle(LLVMContext::OB_deactivation_symbol))
+          DSBundle.push_back(OperandBundleDef(
+              "deactivation-symbol", cast<GlobalValue>(Bundle->Inputs[0])));
+
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(&SI);
+
+        Function *SignIntr = Intrinsic::getOrInsertDeclaration(
+            F.getParent(), Intrinsic::ptrauth_sign, {});
+        auto *ValInt = Builder.CreatePtrToInt(Val, Builder.getInt64Ty());
+        Value *Sign = Builder.CreateCall(
+            SignIntr,
+            {ValInt, Builder.getInt32(/*AArch64PACKey::DA*/ 2),
+             II->getOperand(1)},
+            DSBundle);
+        Sign = Builder.CreateIntToPtr(Sign, Builder.getPtrTy());
+
+        replaceOperand(SI, 0, Sign);
+        replaceOperand(SI, 1, II->getOperand(0));
+        return &SI;
+      }
+    }
+  }
 
   return nullptr;
 }
@@ -1664,8 +1725,7 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   // Advance to a place where it is safe to insert the new store and insert it.
   BBI = DestBB->getFirstInsertionPt();
   StoreInst *NewSI =
-      new StoreInst(MergedVal, SI.getOperand(1), SI.isVolatile(), SI.getAlign(),
-                    SI.getOrdering(), SI.getSyncScopeID());
+      new StoreInst(MergedVal, SI.getOperand(1), SI.getProperties());
   InsertNewInstBefore(NewSI, BBI);
   NewSI->setDebugLoc(MergedLoc);
   NewSI->mergeDIAssignID({&SI, OtherStore});

@@ -429,10 +429,9 @@ define i32 @test_no-use-jump-tables3(i32 %i) "no-jump-tables"="true" {
 ; CHECK-NEXT: ret i32
 }
 
-; Callee with null_pointer_is_valid attribute should not be inlined
-; into a caller without this attribute.
-; Exception: alwaysinline callee can still be inlined but
-; null_pointer_is_valid should get copied to caller.
+; Callee with null_pointer_is_valid attribute should be inlined
+; into a caller without this attribute, and set the attribute on
+; the caller.
 
 define i32 @null-pointer-is-valid_callee0(i32 %i) null_pointer_is_valid {
   ret i32 %i
@@ -440,43 +439,24 @@ define i32 @null-pointer-is-valid_callee0(i32 %i) null_pointer_is_valid {
 ; CHECK-NEXT: ret i32
 }
 
-define i32 @null-pointer-is-valid_callee1(i32 %i) alwaysinline null_pointer_is_valid {
+define i32 @null-pointer-is-valid_callee1(i32 %i)  {
   ret i32 %i
 ; CHECK: @null-pointer-is-valid_callee1(i32 %i)
 ; CHECK-NEXT: ret i32
 }
 
-define i32 @null-pointer-is-valid_callee2(i32 %i)  {
-  ret i32 %i
-; CHECK: @null-pointer-is-valid_callee2(i32 %i)
-; CHECK-NEXT: ret i32
-}
-
-; No inlining since caller does not have null_pointer_is_valid attribute.
 define i32 @test_null-pointer-is-valid0(i32 %i) {
   %1 = call i32 @null-pointer-is-valid_callee0(i32 %i)
   ret i32 %1
-; CHECK: @test_null-pointer-is-valid0(
-; CHECK: call i32 @null-pointer-is-valid_callee0
+; CHECK: @test_null-pointer-is-valid0(i32 %i) [[NULLPOINTERISVALID:#[0-9]+]] {
 ; CHECK-NEXT: ret i32
 }
 
-; alwaysinline should force inlining even when caller does not have
-; null_pointer_is_valid attribute. However, the attribute should be
-; copied to caller.
-define i32 @test_null-pointer-is-valid1(i32 %i) {
+; Nothing to do since calleer already has null_pointer_is_valid attribute.
+define i32 @test_null-pointer-is-valid1(i32 %i) null_pointer_is_valid {
   %1 = call i32 @null-pointer-is-valid_callee1(i32 %i)
   ret i32 %1
-; CHECK: @test_null-pointer-is-valid1(i32 %i) [[NULLPOINTERISVALID:#[0-9]+]] {
-; CHECK-NEXT: ret i32
-}
-
-; Can inline since both caller and callee have null_pointer_is_valid
-; attribute.
-define i32 @test_null-pointer-is-valid2(i32 %i) null_pointer_is_valid {
-  %1 = call i32 @null-pointer-is-valid_callee2(i32 %i)
-  ret i32 %1
-; CHECK: @test_null-pointer-is-valid2(i32 %i) [[NULLPOINTERISVALID]] {
+; CHECK: @test_null-pointer-is-valid1(i32 %i) [[NULLPOINTERISVALID]] {
 ; CHECK-NEXT: ret i32
 }
 

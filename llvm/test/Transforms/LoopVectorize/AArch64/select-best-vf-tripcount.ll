@@ -15,7 +15,7 @@ define void @test_vf_8_better_vf_than_16_given_tripcount_of_24(ptr %a, ptr %b){
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %a.iv = getelementptr inbounds nuw i8, ptr %a, i64 %iv
   %a.ld = load i8, ptr %a.iv
@@ -30,6 +30,6 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, 24
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                 ; preds = %for.body
+exit:
   ret void
 }

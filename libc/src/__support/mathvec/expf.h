@@ -74,6 +74,12 @@ LIBC_INLINE cpp::simd<float, N> expf(cpp::simd<float, N> x) {
   cpp::simd<double, N> x_d = cpp::simd_cast<double, float, N>(x);
   cpp::simd<double, N> y = inline_exp(x_d);
   cpp::simd<float, N> ret = cpp::simd_cast<float, double, N>(y);
+
+#ifndef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+  cpp::simd<bool, N> is_hard_to_round = (x == FPBits(0xc169'12cdU).get_val());
+  ret = is_hard_to_round ? 0x1.fa6635bp-22f : ret;
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+
   return is_special ? special_res : ret;
 }
 

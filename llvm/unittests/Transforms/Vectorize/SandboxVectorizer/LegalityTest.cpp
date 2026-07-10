@@ -137,7 +137,8 @@ bb:
   auto *Sel1 = cast<sandboxir::SelectInst>(&*It++);
 
   llvm::sandboxir::InstrMaps IMaps;
-  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps,
+                                       sandboxir::SchedDirection::BottomUp);
   const auto &Result =
       Legality.canVectorize({St0, St1}, /*SkipScheduling=*/true);
   EXPECT_TRUE(isa<sandboxir::Widen>(Result));
@@ -289,7 +290,8 @@ define void @foo(ptr %ptr) {
   auto *St1 = cast<sandboxir::StoreInst>(&*It++);
 
   llvm::sandboxir::InstrMaps IMaps;
-  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps,
+                                       sandboxir::SchedDirection::BottomUp);
   {
     // Can vectorize St0,St1.
     const auto &Result = Legality.canVectorize({St0, St1});
@@ -325,7 +327,8 @@ define void @foo() {
 
   sandboxir::Context Ctx(C);
   llvm::sandboxir::InstrMaps IMaps;
-  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps,
+                                       sandboxir::SchedDirection::BottomUp);
   EXPECT_TRUE(
       Matches(Legality.createLegalityResult<sandboxir::Widen>(), "Widen"));
   EXPECT_TRUE(Matches(Legality.createLegalityResult<sandboxir::Pack>(

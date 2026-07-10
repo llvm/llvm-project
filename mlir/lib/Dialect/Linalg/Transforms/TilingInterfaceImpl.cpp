@@ -96,6 +96,16 @@ template <typename LinalgOpTy>
 struct LinalgOpTilingInterface
     : public TilingInterface::ExternalModel<LinalgOpTilingInterface<LinalgOpTy>,
                                             LinalgOpTy> {
+  using Base =
+      TilingInterface::ExternalModel<LinalgOpTilingInterface<LinalgOpTy>,
+                                     LinalgOpTy>;
+  // Inherit the defaulted hint-bearing overloads; these ops do not require the
+  // hint (no inner tiles).
+  using Base::generateResultTileValue;
+  using Base::getIterationDomainTileFromOperandTiles;
+  using Base::getTiledImplementation;
+  using Base::getTiledImplementationFromOperandTiles;
+
   /// Return the loop iterator type.
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     LinalgOpTy concreteOp = cast<LinalgOpTy>(op);
@@ -434,13 +444,22 @@ struct InitSliceInfo {
 static InitSliceInfo getInitSliceInfoForOuterReduction(
     MLIRContext *context, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, const SetVector<unsigned> &reductionDims,
-    ArrayRef<OpFoldResult> splitReductionIvs, AffineMap partialReductionMap) {
+    ArrayRef<OpFoldResult> splitReductionIvs, AffineMap partialReductionMap,
+    ArrayRef<OpFoldResult> initOperandShape) {
   int64_t initRank = partialReductionMap.getNumResults();
   SmallVector<OpFoldResult> initOffsets, initSizes;
   Attribute zero = IntegerAttr::get(IndexType::get(context), 0);
   Attribute one = IntegerAttr::get(IndexType::get(context), 1);
   SmallVector<OpFoldResult> initStrides(initRank, one);
-  for (AffineExpr dimExpr : partialReductionMap.getResults()) {
+  for (auto [resultIdx, dimExpr] :
+       llvm::enumerate(partialReductionMap.getResults())) {
+    if (isa<AffineConstantExpr>(dimExpr)) {
+      // A constant index in the output map accesses a fixed position; keep
+      // the full output dimension to match the original output operand shape.
+      initOffsets.push_back(zero);
+      initSizes.push_back(initOperandShape[resultIdx]);
+      continue;
+    }
     unsigned dim = cast<AffineDimExpr>(dimExpr).getPosition();
     if (reductionDims.contains(dim)) {
       initOffsets.push_back(zero);
@@ -460,13 +479,24 @@ static InitSliceInfo getInitSliceInfoForOuterReduction(
 static InitSliceInfo getInitSliceInfoForOuterParallel(
     MLIRContext *context, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, const SetVector<unsigned> &reductionDims,
-    ArrayRef<OpFoldResult> splitReductionIvs, AffineMap partialReductionMap) {
+    ArrayRef<OpFoldResult> splitReductionIvs, AffineMap partialReductionMap,
+    ArrayRef<OpFoldResult> initOperandShape) {
   int64_t initRank = partialReductionMap.getNumResults();
   SmallVector<OpFoldResult> initOffsets, initSizes;
+  Attribute zero = IntegerAttr::get(IndexType::get(context), 0);
   Attribute one = IntegerAttr::get(IndexType::get(context), 1);
   SmallVector<OpFoldResult> initStrides(initRank, one);
   SmallVector<OpFoldResult> resultShape;
-  for (AffineExpr dimExpr : partialReductionMap.getResults()) {
+  for (auto [resultIdx, dimExpr] :
+       llvm::enumerate(partialReductionMap.getResults())) {
+    if (isa<AffineConstantExpr>(dimExpr)) {
+      // A constant index accesses a fixed position; keep the full output
+      // dimension to match the original output operand shape.
+      initOffsets.push_back(zero);
+      initSizes.push_back(initOperandShape[resultIdx]);
+      resultShape.push_back(initOperandShape[resultIdx]);
+      continue;
+    }
     unsigned dim = cast<AffineDimExpr>(dimExpr).getPosition();
     if (std::optional<unsigned> dimPos = getPositionIn(reductionDims, dim)) {
       initOffsets.push_back(splitReductionIvs[dimPos.value()]);
@@ -490,17 +520,18 @@ static InitSliceInfo getInitSliceInfo(MLIRContext *context,
                                       ArrayRef<OpFoldResult> sizes,
                                       const SetVector<unsigned> &reductionDims,
                                       ArrayRef<OpFoldResult> splitReductionIvs,
-                                      AffineMap partialReductionMap) {
+                                      AffineMap partialReductionMap,
+                                      ArrayRef<OpFoldResult> initOperandShape) {
   if (strategy == ReductionTilingStrategy::PartialReductionOuterReduction) {
-    return getInitSliceInfoForOuterReduction(context, offsets, sizes,
-                                             reductionDims, splitReductionIvs,
-                                             partialReductionMap);
+    return getInitSliceInfoForOuterReduction(
+        context, offsets, sizes, reductionDims, splitReductionIvs,
+        partialReductionMap, initOperandShape);
   }
   assert(strategy == ReductionTilingStrategy::PartialReductionOuterParallel &&
          "unexpected ReductionTilingStrategy");
-  return getInitSliceInfoForOuterParallel(context, offsets, sizes,
-                                          reductionDims, splitReductionIvs,
-                                          partialReductionMap);
+  return getInitSliceInfoForOuterParallel(
+      context, offsets, sizes, reductionDims, splitReductionIvs,
+      partialReductionMap, initOperandShape);
 }
 
 /// External model implementation of PartialReductionInterface for
@@ -538,7 +569,17 @@ struct LinalgOpPartialReductionInterface
 
       // Append the new partial result dimensions.
       SmallVector<OpFoldResult> partialResultShape;
-      for (AffineExpr dimExpr : partialMap.getResults()) {
+      Value initValue = linalgOp.getDpsInits()[initIdx];
+      SmallVector<OpFoldResult> initShape =
+          tensor::getMixedSizes(b, loc, initValue);
+      for (auto [resultIdx, dimExpr] :
+           llvm::enumerate(partialMap.getResults())) {
+        if (isa<AffineConstantExpr>(dimExpr)) {
+          // A constant index in the output map accesses a fixed position; use
+          // the actual output dimension size (not a hardcoded 1).
+          partialResultShape.push_back(initShape[resultIdx]);
+          continue;
+        }
         auto dim = cast<AffineDimExpr>(dimExpr);
         partialResultShape.push_back(sizes[dim.getPosition()]);
       }
@@ -591,11 +632,15 @@ struct LinalgOpPartialReductionInterface
 
     // Step 2b: Extract a slice of the init operands.
     SmallVector<Value, 1> tiledInits;
-    for (auto [partialReductionMap, valueToTile] :
-         llvm::zip_equal(partialReductionMaps, init)) {
+    for (auto [partialReductionMap, valueToTile, initOperandValue] :
+         llvm::zip_equal(partialReductionMaps, init, linalgOp.getDpsInits())) {
+      // Compute the actual shape of the original init operand for handling
+      // constant expressions in the partial reduction map.
+      SmallVector<OpFoldResult> initOperandShape =
+          tensor::getMixedSizes(b, loc, initOperandValue);
       InitSliceInfo sliceInfo = getInitSliceInfo(
           b.getContext(), tilingStrategy, offsets, sizes, reductionDims,
-          splitReductionIvs, partialReductionMap);
+          splitReductionIvs, partialReductionMap, initOperandShape);
       auto valueToTileType = cast<RankedTensorType>(valueToTile.getType());
       RankedTensorType sliceResultType = RankedTensorType::get(
           sliceInfo.resultShape, valueToTileType.getElementType(),
@@ -670,6 +715,8 @@ struct LinalgOpPartialReductionInterface
       SmallVector<int64_t> partialReductionDims;
       for (auto [resultNum, dimExpr] :
            llvm::enumerate(partialMap.getResults())) {
+        if (isa<AffineConstantExpr>(dimExpr))
+          continue; // Constant dims are never reduction dims.
         unsigned dim = cast<AffineDimExpr>(dimExpr).getPosition();
         if (llvm::is_contained(reductionDims, dim)) {
           partialReductionDims.push_back(resultNum);
@@ -707,9 +754,16 @@ struct LinalgOpPartialReductionInterface
     auto linalgOp = cast<LinalgOp>(op);
     SmallVector<AffineMap> partialReductionMaps =
         getPartialResultAffineMaps(linalgOp, reductionDims);
-    InitSliceInfo sliceInfo = getInitSliceInfo(
-        b.getContext(), tilingStrategy, offsets, sizes, reductionDims,
-        splitReductionIvs, partialReductionMaps[resultNumber]);
+    // Compute the actual shape of the init operand for handling constant
+    // expressions in the partial reduction map.
+    Value initOperandValue = linalgOp.getDpsInits()[resultNumber];
+    Location loc = op->getLoc();
+    SmallVector<OpFoldResult> initOperandShape =
+        tensor::getMixedSizes(b, loc, initOperandValue);
+    InitSliceInfo sliceInfo =
+        getInitSliceInfo(b.getContext(), tilingStrategy, offsets, sizes,
+                         reductionDims, splitReductionIvs,
+                         partialReductionMaps[resultNumber], initOperandShape);
     std::swap(resultOffsets, sliceInfo.offsets);
     std::swap(resultSizes, sliceInfo.sizes);
 
@@ -880,6 +934,8 @@ static void generatePackOpScalarImplementationBody(PackOp packOp,
 
 struct PackOpTiling
     : public TilingInterface::ExternalModel<PackOpTiling, linalg::PackOp> {
+  using Base = TilingInterface::ExternalModel<PackOpTiling, linalg::PackOp>;
+  using Base::getTiledImplementation;
 
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     // Note that here we only consider untiled dimensions and outer tiled data
@@ -1011,20 +1067,39 @@ struct PackOpTiling
   generateResultTileValue(Operation *op, OpBuilder &b, unsigned resultNumber,
                           ArrayRef<OpFoldResult> offsets,
                           ArrayRef<OpFoldResult> sizes) const {
+    return generateResultTileValue(op, b, resultNumber, offsets, sizes,
+                                   /*innerTileAlignments=*/{});
+  }
+
+  FailureOr<TilingResult> generateResultTileValue(
+      Operation *op, OpBuilder &b, unsigned resultNumber,
+      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+      ArrayRef<InnerTileAlignment> innerTileAlignments) const {
     auto packOp = cast<PackOp>(op);
     int64_t numTiles = packOp.getInnerDimsPos().size();
 
-    // tensor.pack op is fusible (as a producer) only if full inner tiles are
+    // linalg.pack op is fusible (as a producer) only if full inner tiles are
     // iterated or inner dims are not tiled. Otherwise, it will generate a
     // sequence of non-trivial ops (for partial tiles).
     for (auto offset : offsets.take_back(numTiles))
       if (!isZeroInteger(offset))
         return failure();
 
-    for (auto iter :
-         llvm::zip_equal(packOp.getMixedTiles(), sizes.take_back(numTiles)))
-      if (!isEqualConstantIntOrValue(std::get<0>(iter), std::get<1>(iter)))
+    // Each requested inner-dim size must cover a full inner tile. A caller may
+    // instead assert this via an `Equal` alignment hint. The hint is indexed by
+    // source dim, matching the consumer-fusion path.
+    ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
+    SmallVector<OpFoldResult> mixedTiles = packOp.getMixedTiles();
+    ArrayRef<OpFoldResult> innerSizes = sizes.take_back(numTiles);
+    for (auto [i, pos] : llvm::enumerate(innerDimsPos)) {
+      InnerTileAlignment alignment =
+          pos < static_cast<int64_t>(innerTileAlignments.size())
+              ? innerTileAlignments[pos]
+              : InnerTileAlignment::Unknown;
+      if (alignment != InnerTileAlignment::Equal &&
+          !isEqualConstantIntOrValue(mixedTiles[i], innerSizes[i]))
         return failure();
+    }
 
     FailureOr<TilingResult> tilingResult = getTiledImplementation(
         op, b, offsets.drop_back(numTiles), sizes.drop_back(numTiles));
@@ -1079,15 +1154,27 @@ struct PackOpTiling
     return success();
   }
 
-  /// Method to return the position of iteration domain tile computed by the
-  /// tiled operation. In current `tensor.pack` context, the `resultOffsets` and
-  /// `resultSizes` only cover outer dimensions.
   LogicalResult getIterationDomainTileFromOperandTiles(
       Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
       ArrayRef<SmallVector<OpFoldResult>> allOffsets,
       ArrayRef<SmallVector<OpFoldResult>> allSizes,
       SmallVectorImpl<OpFoldResult> &resultOffsets,
       SmallVectorImpl<OpFoldResult> &resultSizes) const {
+    return getIterationDomainTileFromOperandTiles(
+        op, b, operandNumbers, allOffsets, allSizes, resultOffsets, resultSizes,
+        /*innerTileAlignments=*/{});
+  }
+
+  /// Method to return the position of iteration domain tile computed by the
+  /// tiled operation. In current `linalg.pack` context, the `resultOffsets` and
+  /// `resultSizes` only cover outer dimensions.
+  LogicalResult getIterationDomainTileFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes,
+      SmallVectorImpl<OpFoldResult> &resultOffsets,
+      SmallVectorImpl<OpFoldResult> &resultSizes,
+      ArrayRef<InnerTileAlignment> innerTileAlignments) const {
     if (operandNumbers.size() != 1 || operandNumbers[0] != 0) {
       LLVM_DEBUG(
           { llvm::dbgs() << "unsupported operands for consumer fusion"; });
@@ -1113,9 +1200,18 @@ struct PackOpTiling
         FailureOr<int64_t> cstTileSize =
             ValueBoundsConstraintSet::computeConstantBound(
                 presburger::BoundType::UB, sizes[dim],
-                /*stopCondition=*/nullptr, /*closedUB=*/true);
+                /*stopCondition=*/nullptr,
+                ValueBoundsOptions{/*closedUB=*/true});
         std::optional<int64_t> cstInnerSize =
             getConstantIntValue(dimAndTileMapping[dim]);
+
+        // A caller-supplied alignment hint (see InnerTileAlignment) asserts
+        // that this packed dimension is tiled and how its loop tile size
+        // relates to the pack op inner tile size.
+        InnerTileAlignment innerTileAlignment =
+            dim < static_cast<int64_t>(innerTileAlignments.size())
+                ? innerTileAlignments[dim]
+                : InnerTileAlignment::Unknown;
 
         // If a dimension is not tiled, it is always valid to fuse the pack op,
         // even if the op has padding semantics. Because it always generates a
@@ -1124,9 +1220,14 @@ struct PackOpTiling
         // dimension is tiled.
         // TODO: It could be untiled if the `srcDimSize` is dynamic. It is a
         // hard check to determine if a dimension is tiled or not.
+        // A non-`Unknown` hint also means the caller asserts the dimension is
+        // tiled: `cstTileSize` is an upper bound, so a scalable/`min`-shaped
+        // tile (whose bound equals `srcDimSize`) would otherwise be mistaken
+        // for untiled and bypass the hint below.
         int64_t srcDimSize = packOp.getSourceType().getDimSize(dim);
         int64_t destDimSize = outerShapeWithoutTranspose[dim];
-        bool isTiled = failed(cstTileSize) ||
+        bool isTiled = innerTileAlignment != InnerTileAlignment::Unknown ||
+                       failed(cstTileSize) ||
                        ShapedType::isDynamic(srcDimSize) ||
                        cstTileSize.value() < srcDimSize;
         if (!isTiled) {
@@ -1154,9 +1255,30 @@ struct PackOpTiling
         // another word, we can only support tiling with consumer if the tile
         // size for the producer is a multiple of the inner tile size for the
         // packed dimensions at this moment.
-        if ((failed(cstTileSize) || !cstInnerSize ||
-             *cstTileSize % *cstInnerSize != 0))
-          return failure();
+
+        // The caller may assert how this packed dimension's loop tile size
+        // relates to the inner tile size via `innerTileAlignments` (see
+        // InnerTileAlignment). The hint is the source of truth and is honored
+        // when present. When both sizes are also statically known we assert the
+        // hint agrees with them (a contradicting hint is a caller bug). When
+        // the hint is `Unknown`, fall back to requiring a statically-provable
+        // multiple.
+        bool assumeInnerTileSizesMatchTiles =
+            innerTileAlignment == InnerTileAlignment::Equal;
+        bool staticallyDecidable =
+            !failed(cstTileSize) && cstInnerSize.has_value();
+        if (innerTileAlignment == InnerTileAlignment::Unknown) {
+          if (!staticallyDecidable || *cstTileSize % *cstInnerSize != 0)
+            return failure();
+        } else if (staticallyDecidable) {
+          assert(*cstTileSize % *cstInnerSize == 0 &&
+                 "InnerTileAlignment hint contradicts statically known tile "
+                 "sizes");
+          assert((innerTileAlignment != InnerTileAlignment::Equal ||
+                  *cstTileSize == *cstInnerSize) &&
+                 "InnerTileAlignment::Equal contradicts statically known tile "
+                 "sizes");
+        }
 
         using AV = affine::AffineValueExpr;
         affine::AffineBuilder ab(b, loc);
@@ -1167,7 +1289,11 @@ struct PackOpTiling
         auto avSize = AV(dim0).bind(sizes[dim]);
         auto avTileSize = AV(sym).bind(dimAndTileMapping[dim]);
         outerDimOffsets.push_back(ab.floor(avOffset, avTileSize));
-        outerDimSizes.push_back(ab.ceil(avSize, avTileSize));
+        // If the tile size equals the inner tile size, the outer dims are
+        // always 1.
+        outerDimSizes.push_back(assumeInnerTileSizesMatchTiles
+                                    ? b.getIndexAttr(1)
+                                    : ab.ceil(avSize, avTileSize));
       } else {
         outerDimOffsets.push_back(offsets[dim]);
         outerDimSizes.push_back(sizes[dim]);
@@ -1179,14 +1305,23 @@ struct PackOpTiling
     return success();
   }
 
-  /// Method to return the tiled implementation of tensor.pack as a consumer.
   FailureOr<TilingResult> getTiledImplementationFromOperandTiles(
       Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
       ArrayRef<SmallVector<OpFoldResult>> allOffsets,
       ArrayRef<SmallVector<OpFoldResult>> allSizes) const {
+    return getTiledImplementationFromOperandTiles(op, b, operandNumbers,
+                                                  allOffsets, allSizes,
+                                                  /*innerTileAlignments=*/{});
+  }
+
+  /// Method to return the tiled implementation of linalg.pack as a consumer.
+  FailureOr<TilingResult> getTiledImplementationFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes,
+      ArrayRef<InnerTileAlignment> innerTileAlignments) const {
     if (operandNumbers.size() != 1 || operandNumbers[0] != 0) {
-      LLVM_DEBUG(
-          { llvm ::dbgs() << "unhandled operands for consumer fusion"; });
+      LLVM_DEBUG({ llvm::dbgs() << "unhandled operands for consumer fusion"; });
       return failure();
     }
 
@@ -1212,7 +1347,7 @@ struct PackOpTiling
     SmallVector<OpFoldResult> outerDimOffsets, outerDimSizes;
     if (failed(getIterationDomainTileFromOperandTiles(
             op, b, operandNumbers, allOffsets, allSizes, outerDimOffsets,
-            outerDimSizes)))
+            outerDimSizes, innerTileAlignments)))
       return failure();
 
     SmallVector<OpFoldResult> outputOffsets, outputSizes;
@@ -1251,10 +1386,10 @@ struct UnpackTileDimInfo {
 /// Returns the needed information for tiling unpack op on `tileDim` with given
 /// `tileOffset` and `tileSize`. For more details, see the comment of the
 /// `getTiledImplementation`.
-static UnpackTileDimInfo getUnpackTileDimInfo(OpBuilder &b, UnPackOp unpackOp,
-                                              int64_t tileDim,
-                                              OpFoldResult tileOffset,
-                                              OpFoldResult tileSize) {
+static UnpackTileDimInfo
+getUnpackTileDimInfo(OpBuilder &b, UnPackOp unpackOp, int64_t tileDim,
+                     OpFoldResult tileOffset, OpFoldResult tileSize,
+                     InnerTileAlignment innerTileAlignment) {
   UnpackTileDimInfo info;
   Attribute zeroAttr = b.getIndexAttr(0);
   Attribute oneAttr = b.getIndexAttr(1);
@@ -1282,15 +1417,38 @@ static UnpackTileDimInfo getUnpackTileDimInfo(OpBuilder &b, UnPackOp unpackOp,
   info.isAlignedToInnerTileSize = false;
   FailureOr<int64_t> cstSize = ValueBoundsConstraintSet::computeConstantBound(
       presburger::BoundType::UB, tileSize,
-      /*stopCondition=*/nullptr, /*closedUB=*/true);
+      /*stopCondition=*/nullptr, ValueBoundsOptions{/*closedUB=*/true});
   std::optional<int64_t> cstInnerSize = getConstantIntValue(innerTileSize);
-  if (!failed(cstSize) && cstInnerSize) {
-    if (*cstSize % *cstInnerSize == 0)
+  // The caller may assert how this dimension's loop tile size relates to the
+  // op's inner tile size via `innerTileAlignment` (see InnerTileAlignment). The
+  // hint is the source of truth and is honored when present: `Equal`/`Multiple`
+  // both mean the tile is aligned to (a multiple of) the inner tile, and
+  // `Equal` additionally collapses the source slice to a single inner tile.
+  // When both sizes are also statically known we assert the hint agrees with
+  // them (a contradicting hint is a caller bug). When `Unknown`, fall back to
+  // the static upper-bound path below.
+  bool assumeInnerTileSizesMatchTiles =
+      innerTileAlignment == InnerTileAlignment::Equal;
+  bool staticallyDecidable = !failed(cstSize) && cstInnerSize.has_value();
+  if (innerTileAlignment != InnerTileAlignment::Unknown) {
+    info.isAlignedToInnerTileSize = true;
+    if (staticallyDecidable) {
+      assert(*cstSize % *cstInnerSize == 0 &&
+             "InnerTileAlignment hint contradicts statically known tile sizes");
+      assert((innerTileAlignment != InnerTileAlignment::Equal ||
+              *cstSize == *cstInnerSize) &&
+             "InnerTileAlignment::Equal contradicts statically known tile "
+             "sizes");
+    }
+  }
+  if (info.isAlignedToInnerTileSize || (!failed(cstSize) && cstInnerSize)) {
+    if (!info.isAlignedToInnerTileSize && *cstSize % *cstInnerSize == 0)
       info.isAlignedToInnerTileSize = true;
 
     // If the tiling size equals to the inner tiling size, the outer dims are
     // always 1.
-    if (*cstInnerSize == *cstSize) {
+    if (assumeInnerTileSizesMatchTiles ||
+        (cstInnerSize && !failed(cstSize) && *cstInnerSize == *cstSize)) {
       auto lhs = AV(dim0).bind(tileOffset);
       auto rhs = AV(dim1).bind(innerTileSize);
       info.sourceOffset = ab.floor(lhs, rhs);
@@ -1346,6 +1504,8 @@ static UnpackTileDimInfo getUnpackTileDimInfo(OpBuilder &b, UnPackOp unpackOp,
 
 struct UnPackOpTiling
     : public TilingInterface::ExternalModel<UnPackOpTiling, linalg::UnPackOp> {
+  using Base = TilingInterface::ExternalModel<UnPackOpTiling, linalg::UnPackOp>;
+  using Base::getIterationDomainTileFromOperandTiles;
 
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     auto unpackOp = cast<UnPackOp>(op);
@@ -1376,6 +1536,14 @@ struct UnPackOpTiling
   getTiledImplementation(Operation *op, OpBuilder &b,
                          ArrayRef<OpFoldResult> offsets,
                          ArrayRef<OpFoldResult> sizes) const {
+    return getTiledImplementation(op, b, offsets, sizes,
+                                  /*innerTileAlignments=*/{});
+  }
+
+  FailureOr<TilingResult> getTiledImplementation(
+      Operation *op, OpBuilder &b, ArrayRef<OpFoldResult> offsets,
+      ArrayRef<OpFoldResult> sizes,
+      ArrayRef<InnerTileAlignment> innerTileAlignments) const {
     auto unpackOp = cast<UnPackOp>(op);
     // TODO: Support Memref UnPackOp. Temporarily return failure.
     if (!unpackOp.hasPureTensorSemantics())
@@ -1395,8 +1563,11 @@ struct UnPackOpTiling
     SmallVector<OpFoldResult> sliceSrcIndices, sliceSrcSizes;
     SmallVector<OpFoldResult> destExpandedSizes, resultOffsetsFromDest;
     for (auto dim : llvm::seq<int64_t>(0, destRank)) {
-      UnpackTileDimInfo info =
-          getUnpackTileDimInfo(b, unpackOp, dim, offsets[dim], sizes[dim]);
+      UnpackTileDimInfo info = getUnpackTileDimInfo(
+          b, unpackOp, dim, offsets[dim], sizes[dim],
+          dim < static_cast<int64_t>(innerTileAlignments.size())
+              ? innerTileAlignments[dim]
+              : InnerTileAlignment::Unknown);
       if (!info.isAlignedToInnerTileSize)
         isPerfectTilingCase = false;
       sliceSrcIndices.push_back(info.sourceOffset);
@@ -1465,8 +1636,16 @@ struct UnPackOpTiling
   generateResultTileValue(Operation *op, OpBuilder &b, unsigned resultNumber,
                           ArrayRef<OpFoldResult> offsets,
                           ArrayRef<OpFoldResult> sizes) const {
+    return generateResultTileValue(op, b, resultNumber, offsets, sizes,
+                                   /*innerTileAlignments=*/{});
+  }
+
+  FailureOr<TilingResult> generateResultTileValue(
+      Operation *op, OpBuilder &b, unsigned resultNumber,
+      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+      ArrayRef<InnerTileAlignment> innerTileAlignments) const {
     FailureOr<TilingResult> tilingResult =
-        getTiledImplementation(op, b, offsets, sizes);
+        getTiledImplementation(op, b, offsets, sizes, innerTileAlignments);
     if (failed(tilingResult))
       return failure();
     return tilingResult.value();
@@ -1597,11 +1776,21 @@ struct UnPackOpTiling
     return success();
   }
 
-  /// Method to return the tiled implementation of tensor.unpack as a consumer.
   FailureOr<TilingResult> getTiledImplementationFromOperandTiles(
       Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
       ArrayRef<SmallVector<OpFoldResult>> allOffsets,
       ArrayRef<SmallVector<OpFoldResult>> allSizes) const {
+    return getTiledImplementationFromOperandTiles(op, b, operandNumbers,
+                                                  allOffsets, allSizes,
+                                                  /*innerTileAlignments=*/{});
+  }
+
+  /// Method to return the tiled implementation of linalg.unpack as a consumer.
+  FailureOr<TilingResult> getTiledImplementationFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes,
+      ArrayRef<InnerTileAlignment> innerTileAlignments) const {
     if (operandNumbers.size() != 1 || operandNumbers[0] != 0) {
       LLVM_DEBUG({ llvm::dbgs() << "unhandled operands for consumer fusion"; });
       return failure();
@@ -1614,13 +1803,37 @@ struct UnPackOpTiling
     ArrayRef<OpFoldResult> offsets(allOffsets[0]);
     ArrayRef<OpFoldResult> sizes(allSizes[0]);
 
-    // tensor.unpack op is fusible (as a consumer) only if inner dims are not
-    // tiled.
+    // linalg.unpack op is fusible (as a consumer) only if the inner dims are
+    // not tiled, i.e. each inner-dim loop tile size equals the inner tile size.
+    // The caller may assert this per inner dim via InnerTileAlignment::Equal;
+    // otherwise we require a statically-provable equality.
     int64_t numTiles = unPackOp.getInnerDimsPos().size();
-    for (auto iter :
-         llvm::zip_equal(unPackOp.getMixedTiles(), sizes.take_back(numTiles))) {
-      if (!isEqualConstantIntOrValue(std::get<0>(iter), std::get<1>(iter)))
-        return failure();
+    ArrayRef<int64_t> innerDimsPos = unPackOp.getInnerDimsPos();
+    SmallVector<OpFoldResult> mixedTiles = unPackOp.getMixedTiles();
+    ArrayRef<OpFoldResult> innerSizes = sizes.take_back(numTiles);
+    for (int64_t i = 0; i < numTiles; ++i) {
+      // `innerTileAlignments` is indexed by the unpack iteration domain (the
+      // dest dims); the i-th inner tile lives on dest dim `innerDimsPos[i]`.
+      int64_t destDim = innerDimsPos[i];
+      bool hintedEqual =
+          destDim < static_cast<int64_t>(innerTileAlignments.size()) &&
+          innerTileAlignments[destDim] == InnerTileAlignment::Equal;
+      // The hint is the source of truth: honor a caller `Equal` assertion. When
+      // both sizes are also statically known, assert the hint agrees with them
+      // (a contradicting hint is a caller bug) rather than silently ignoring
+      // it. Without an `Equal` hint, require a statically-provable equality
+      // (the inner dim must not be tiled).
+      if (hintedEqual) {
+        assert((!getConstantIntValue(mixedTiles[i]) ||
+                !getConstantIntValue(innerSizes[i]) ||
+                isEqualConstantIntOrValue(mixedTiles[i], innerSizes[i])) &&
+               "InnerTileAlignment::Equal contradicts statically known tile "
+               "sizes");
+        continue;
+      }
+      if (isEqualConstantIntOrValue(mixedTiles[i], innerSizes[i]))
+        continue;
+      return failure();
     }
 
     Location loc = unPackOp.getLoc();

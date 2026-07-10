@@ -10,7 +10,7 @@ end
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: ExecutionPart -> Block
-!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPUtilityConstruct -> OmpNothingDirective
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpUtilityDirective -> OmpNothingDirective
 
 subroutine f01
   block
@@ -39,7 +39,7 @@ end
 !PARSE-TREE: | | EntityDecl
 !PARSE-TREE: | | | Name = 'x'
 !PARSE-TREE: Block
-!PARSE-TREE: | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPUtilityConstruct -> OmpNothingDirective
+!PARSE-TREE: | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpUtilityDirective -> OmpNothingDirective
 !PARSE-TREE: | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'x=x+1_4'
 !PARSE-TREE: | | Variable = 'x'
 !PARSE-TREE: | | | Designator -> DataRef -> Name = 'x'
@@ -68,7 +68,7 @@ end
 !PARSE-TREE: | | EntityDecl
 !PARSE-TREE: | | | Name = 'x'
 !PARSE-TREE: ExecutionPart -> Block
-!PARSE-TREE: | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPUtilityConstruct -> OmpNothingDirective
+!PARSE-TREE: | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpUtilityDirective -> OmpNothingDirective
 
 subroutine f03
   block
@@ -92,7 +92,7 @@ end
 !PARSE-TREE: | ExecutionPartConstruct -> ExecutableConstruct -> BlockConstruct
 !PARSE-TREE: | | BlockStmt ->
 !PARSE-TREE: | | BlockSpecificationPart -> SpecificationPart
-!PARSE-TREE: | | | OpenMPDeclarativeConstruct -> OpenMPUtilityConstruct -> OmpNothingDirective
+!PARSE-TREE: | | | OpenMPDeclarativeConstruct -> OmpUtilityDirective -> OmpNothingDirective
 !PARSE-TREE: | | | ImportStmt
 !PARSE-TREE: | | | ImplicitPart ->
 !PARSE-TREE: | | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt

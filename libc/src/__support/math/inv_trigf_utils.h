@@ -171,7 +171,7 @@ LIBC_INLINE_VAR constexpr double ASIN_COEFFS[12] = {
 };
 
 // Evaluate P(x^2) - 1, where P(x^2) ~ asin(x)/x
-LIBC_INLINE double asin_eval(double xsq) {
+LIBC_INLINE LIBC_CONSTEXPR double asin_eval(double xsq) {
   double x4 = xsq * xsq;
   double c0 = fputil::multiply_add(xsq, ASIN_COEFFS[1], ASIN_COEFFS[0]);
   double c1 = fputil::multiply_add(xsq, ASIN_COEFFS[3], ASIN_COEFFS[2]);

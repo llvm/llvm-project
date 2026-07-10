@@ -32,7 +32,7 @@
 // RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify %t/cwg2947_ext2.cpp
 // RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify %t/cwg2947_ext3.cpp
 
-// cwg2947: 23 tentatively ready 2026-03-06
+// cwg2947: 23
 
 //--- cwg2947_example1.cpp
 // #define DOT_BAR .bar

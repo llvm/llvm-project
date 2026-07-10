@@ -81,6 +81,16 @@ func.func @ceil(%arg0: f32, %arg1: f64) {
     return
 }
 
+func.func @sqrt(%arg0: f32, %arg1: f64) {
+    // c99: emitc.call_opaque "sqrtf"
+    // c99-NEXT: emitc.call_opaque "sqrt"
+    // cpp11: emitc.call_opaque "std::sqrt"
+    // cpp11-NEXT: emitc.call_opaque "std::sqrt"
+    %0 = math.sqrt %arg0 : f32
+    %1 = math.sqrt %arg1 : f64
+    return
+}
+
 func.func @exp(%arg0: f32, %arg1: f64) {
     // c99: emitc.call_opaque "expf"
     // c99-NEXT: emitc.call_opaque "exp"
@@ -109,4 +119,14 @@ func.func @round(%arg0: f32, %arg1: f64) {
     %0 = math.round %arg0 : f32
     %1 = math.round %arg1 : f64
     return
+}
+
+func.func @roundeven(%arg0: f32, %arg1: f64) {
+  // c99: emitc.call_opaque "roundevenf"
+  // c99-NEXT: emitc.call_opaque "roundeven"
+  // cpp11: emitc.call_opaque "std::roundeven"
+  // cpp11-NEXT: emitc.call_opaque "std::roundeven"
+  %0 = math.roundeven %arg0 : f32
+  %1 = math.roundeven %arg1 : f64
+  return
 }

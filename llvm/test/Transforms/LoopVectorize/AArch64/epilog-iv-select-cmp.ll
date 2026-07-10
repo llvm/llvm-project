@@ -234,6 +234,5 @@ exit:
   ret i32 %red.next
 }
 
-declare void @llvm.assume(i1 noundef)
 
 attributes #0 = { "target-cpu"="apple-m1" }

@@ -622,15 +622,14 @@ public:
 };
 
 /// Printer pass for the \c DXILResourceAnalysis results.
-class DXILResourcePrinterPass : public PassInfoMixin<DXILResourcePrinterPass> {
+class DXILResourcePrinterPass
+    : public RequiredPassInfoMixin<DXILResourcePrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit DXILResourcePrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI DXILResourceWrapperPass : public ModulePass {

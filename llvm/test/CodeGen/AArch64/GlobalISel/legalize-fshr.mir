@@ -377,8 +377,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 9
-    ; CHECK-NEXT: [[FSHR:%[0-9]+]]:_(s32) = G_FSHR [[COPY]], [[COPY1]], [[C]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 9
+    ; CHECK-NEXT: [[FSHR:%[0-9]+]]:_(s32) = G_FSHR [[COPY]], [[COPY1]], [[C]](i64)
     ; CHECK-NEXT: $w0 = COPY [[FSHR]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
@@ -403,8 +403,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 10
-    ; CHECK-NEXT: [[FSHR:%[0-9]+]]:_(s32) = G_FSHR [[COPY]], [[COPY1]], [[C]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 10
+    ; CHECK-NEXT: [[FSHR:%[0-9]+]]:_(s32) = G_FSHR [[COPY]], [[COPY1]], [[C]](i64)
     ; CHECK-NEXT: $w0 = COPY [[FSHR]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
@@ -475,8 +475,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK-NEXT: [[FSHR:%[0-9]+]]:_(s64) = G_FSHR [[COPY]], [[COPY1]], [[C]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: [[FSHR:%[0-9]+]]:_(s64) = G_FSHR [[COPY]], [[COPY1]], [[C]](i64)
     ; CHECK-NEXT: $x0 = COPY [[FSHR]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0

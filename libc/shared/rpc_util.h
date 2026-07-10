@@ -453,8 +453,13 @@ template <typename T, typename U> RPC_ATTRS T *advance(T *ptr, U bytes) {
 
 /// Wrapper around the optimal memory copy implementation for the target.
 RPC_ATTRS void rpc_memcpy(void *dst, const void *src, uint64_t count) {
+#if __has_builtin(__builtin_memcpy)
   if (count)
     __builtin_memcpy(dst, src, count);
+#else
+  for (uint64_t i = 0; i < count; ++i)
+    static_cast<uint8_t *>(dst)[i] = static_cast<const uint8_t *>(src)[i];
+#endif
 }
 
 /// Minimal string length function.

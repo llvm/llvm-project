@@ -220,8 +220,8 @@ probOfNextInRemainder(BranchProbability OriginalLoopProb, unsigned N) {
   // loop body might have unique blocks that execute a finite number of times
   // if, for example, the original loop body contains conditionals like i <
   // UnrollCount.
-  if (OriginalLoopProb == BranchProbability::getOne())
-    return BranchProbability::getOne();
+  if (OriginalLoopProb.isOne())
+    return OriginalLoopProb;
 
   // Each of these variables holds the original loop's probability that the
   // number of iterations it will execute is some m in the specified range.

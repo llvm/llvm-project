@@ -405,7 +405,8 @@ void Decl::setLexicalDeclContext(DeclContext *DC) {
   }
 
   assert(
-      (getModuleOwnershipKind() != ModuleOwnershipKind::VisibleWhenImported ||
+      ((getModuleOwnershipKind() != ModuleOwnershipKind::VisibleWhenImported &&
+        getModuleOwnershipKind() != ModuleOwnershipKind::VisiblePromoted) ||
        getOwningModule()) &&
       "hidden declaration has no owning module");
 }
@@ -804,6 +805,7 @@ AvailabilityResult Decl::getAvailability(std::string *Message,
     }
 
     if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
+      Availability = Availability->getEffectiveAttr();
       AvailabilityResult AR = CheckAvailability(getASTContext(), Availability,
                                                 Message, EnclosingVersion);
 
@@ -832,10 +834,11 @@ VersionTuple Decl::getVersionIntroduced() const {
   StringRef TargetPlatform = Context.getTargetInfo().getPlatformName();
   for (const auto *A : attrs()) {
     if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
-      if (getRealizedPlatform(Availability, Context) != TargetPlatform)
-        continue;
-      if (!Availability->getIntroduced().empty())
-        return Availability->getIntroduced();
+      Availability = Availability->getEffectiveAttr();
+      if (getRealizedPlatform(Availability, Context) == TargetPlatform) {
+        if (!Availability->getIntroduced().empty())
+          return Availability->getIntroduced();
+      }
     }
   }
   return {};
@@ -880,6 +883,7 @@ bool Decl::isWeakImported() const {
       return true;
 
     if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
+      Availability = Availability->getEffectiveAttr();
       if (CheckAvailability(getASTContext(), Availability, nullptr,
                             VersionTuple()) == AR_NotYetIntroduced)
         return true;
@@ -1021,6 +1025,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case ImplicitConceptSpecialization:
     case OpenACCDeclare:
     case OpenACCRoutine:
+    case ExplicitInstantiation:
     case CXXExpansionStmt:
       // Never looked up by name.
       return 0;

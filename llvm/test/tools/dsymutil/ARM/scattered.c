@@ -1,4 +1,4 @@
-RUN: dsymutil -y %p/dummy-debug-map.map -oso-prepend-path \
+RUN: dsymutil --linker classic -y %p/dummy-debug-map.map -oso-prepend-path \
 RUN:  %p/../Inputs/scattered-reloc/ -f -o - | \
 RUN:  llvm-dwarfdump -debug-info - | FileCheck %s
 

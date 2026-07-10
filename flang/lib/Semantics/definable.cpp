@@ -171,7 +171,9 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
             "'%s' is not device or managed or shared data and is not definable in a device subprogram"_err_en_US,
             original);
       }
-    } else if (!isOwnedByDeviceCode) {
+    } else if (!isOwnedByDeviceCode &&
+        !scope.context().languageFeatures().IsEnabled(
+            common::LanguageFeature::CudaUnified)) {
       return BlameSymbol(at,
           "'%s' is a host variable and is not definable in a device subprogram"_err_en_US,
           original);
@@ -315,6 +317,10 @@ public:
       }
     }
     return anyVector ? false : (*this)(aRef.base());
+  }
+  template <typename T> bool operator()(const evaluate::ConditionalExpr<T> &) {
+    // A conditional expression is not a variable and cannot be definable.
+    return false;
   }
 
 private:

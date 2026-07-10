@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/xxhash.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -29,14 +30,6 @@ static void fillTestBuffer(uint8_t *buffer, size_t len) {
     buffer[i] = (uint8_t)(byteGen >> 56);
     byteGen *= PRIME64;
   }
-}
-
-TEST(xxhashTest, Basic) {
-  EXPECT_EQ(0xef46db3751d8e999U, xxHash64(StringRef()));
-  EXPECT_EQ(0x33bf00a859c4ba3fU, xxHash64("foo"));
-  EXPECT_EQ(0x48a37c90ad27a659U, xxHash64("bar"));
-  EXPECT_EQ(0x69196c1b3af0bff9U,
-            xxHash64("0123456789abcdefghijklmnopqrstuvwxyz"));
 }
 
 TEST(xxhashTest, xxh3) {

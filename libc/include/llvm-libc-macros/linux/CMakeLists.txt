@@ -41,6 +41,12 @@ add_header(
 )
 
 add_header(
+  sys_personality_macros
+  HDR
+    sys-personality-macros.h
+)
+
+add_header(
   sys_random_macros
   HDR
     sys-random-macros.h
@@ -56,6 +62,12 @@ add_header(
   sys_socket_macros
   HDR
     sys-socket-macros.h
+)
+
+add_header(
+  net_if_macros
+  HDR
+    net-if-macros.h
 )
 
 add_header(

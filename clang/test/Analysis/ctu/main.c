@@ -101,6 +101,8 @@ void testStructDefInArgument(void) {
   // Not imported, thus remains unknown both in stu and ctu.
   clang_analyzer_eval(structInProto(&d) == 0); // newctu-warning{{UNKNOWN}}
                                                // oldctu-warning@-1{{UNKNOWN}}
+                                               // newctu-warning@-2{{import of an external symbol for CTU failed: Failed to import the definition.}}
+                                               // oldctu-warning@-3{{import of an external symbol for CTU failed: Failed to import the definition.}}
 }
 
 int switchWithoutCases(int);

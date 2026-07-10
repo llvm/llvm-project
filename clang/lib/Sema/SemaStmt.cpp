@@ -34,6 +34,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1820,7 +1821,6 @@ StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
     return StmtError();
 
   auto CondVal = Cond.get();
-  CheckBreakContinueBinding(CondVal.second);
 
   if (CondVal.second &&
       !Diags.isIgnored(diag::warn_comma_operator, CondVal.second->getExprLoc()))
@@ -1848,7 +1848,6 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
                   Expr *Cond, SourceLocation CondRParen) {
   assert(Cond && "ActOnDoStmt(): missing expression");
 
-  CheckBreakContinueBinding(Cond);
   ExprResult CondResult = CheckBooleanCondition(DoLoc, Cond);
   if (CondResult.isInvalid())
     return StmtError();
@@ -1858,11 +1857,6 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
   if (CondResult.isInvalid())
     return StmtError();
   Cond = CondResult.get();
-
-  // Only call the CommaVisitor for C89 due to differences in scope flags.
-  if (Cond && !getLangOpts().C99 && !getLangOpts().CPlusPlus &&
-      !Diags.isIgnored(diag::warn_comma_operator, Cond->getExprLoc()))
-    CommaVisitor(*this).Visit(Cond);
 
   // OpenACC3.3 2.14.4:
   // The update directive is executable.  It must not appear in place of the
@@ -2281,25 +2275,6 @@ namespace {
 
 } // end namespace
 
-
-void Sema::CheckBreakContinueBinding(Expr *E) {
-  if (!E || getLangOpts().CPlusPlus)
-    return;
-  BreakContinueFinder BCFinder(*this, E);
-  Scope *BreakParent = CurScope->getBreakParent();
-  if (BCFinder.BreakFound() && BreakParent) {
-    if (BreakParent->getFlags() & Scope::SwitchScope) {
-      Diag(BCFinder.GetBreakLoc(), diag::warn_break_binds_to_switch);
-    } else {
-      Diag(BCFinder.GetBreakLoc(), diag::warn_loop_ctrl_binds_to_inner)
-          << "break";
-    }
-  } else if (BCFinder.ContinueFound() && CurScope->getContinueParent()) {
-    Diag(BCFinder.GetContinueLoc(), diag::warn_loop_ctrl_binds_to_inner)
-        << "continue";
-  }
-}
-
 StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
                               Stmt *First, ConditionResult Second,
                               FullExprArg third, SourceLocation RParenLoc,
@@ -2342,9 +2317,6 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
                                : diag::ext_c23_non_variable_decl_in_for);
     }
   }
-
-  CheckBreakContinueBinding(Second.get().second);
-  CheckBreakContinueBinding(third.get());
 
   if (!Second.get().first)
     CheckForLoopConditionalStatement(*this, Second.get().second, third.get(),
@@ -3057,7 +3029,8 @@ StmtResult Sema::BuildCXXForRangeStmt(
           ActOnFinishFullExpr(NotEqExpr.get(), /*DiscardedValue*/ false);
     if (NotEqExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
-          << RangeLoc << 0 << BeginRangeRefTy;
+          << RangeLoc << diag::InvalidRangeForIterator::OpNotEq
+          << BeginRef.get()->getType();
       NoteForRangeBeginEndFunction(*this, BeginExpr, BEF_begin);
       if (!Context.hasSameType(BeginType, EndType))
         NoteForRangeBeginEndFunction(*this, EndExpr, BEF_end);
@@ -3080,7 +3053,8 @@ StmtResult Sema::BuildCXXForRangeStmt(
       IncrExpr = ActOnFinishFullExpr(IncrExpr.get(), /*DiscardedValue*/ false);
     if (IncrExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
-          << RangeLoc << 2 << BeginRangeRefTy;
+          << RangeLoc << diag::InvalidRangeForIterator::OpAdvance
+          << BeginRef.get()->getType();
       NoteForRangeBeginEndFunction(*this, BeginExpr, BEF_begin);
       return StmtError();
     }
@@ -3094,7 +3068,8 @@ StmtResult Sema::BuildCXXForRangeStmt(
     ExprResult DerefExpr = ActOnUnaryOp(S, ColonLoc, tok::star, BeginRef.get());
     if (DerefExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
-          << RangeLoc << 1 << BeginRangeRefTy;
+          << RangeLoc << diag::InvalidRangeForIterator::OpDeref
+          << BeginRef.get()->getType();
       NoteForRangeBeginEndFunction(*this, BeginExpr, BEF_begin);
       return StmtError();
     }
@@ -3449,12 +3424,6 @@ StmtResult Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope,
     // C99 6.8.6.2p1: A break shall appear only in or as a loop body.
     return StmtError(Diag(ContinueLoc, diag::err_continue_not_in_loop));
   }
-  if (S->isConditionVarScope()) {
-    // We cannot 'continue;' from within a statement expression in the
-    // initializer of a condition variable because we would jump past the
-    // initialization of that variable.
-    return StmtError(Diag(ContinueLoc, diag::err_continue_from_cond_var_init));
-  }
 
   // A 'continue' that would normally have execution continue on a block outside
   // of a compute construct counts as 'branching out of' the compute construct,
@@ -3759,7 +3728,8 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
         // initializer list, because it is not an expression (even
         // though we represent it as one). We still deduce 'void'.
         Diag(ReturnLoc, diag::err_lambda_return_init_list)
-          << RetValExp->getSourceRange();
+            << RetValExp->getSourceRange();
+        RetValExp = nullptr;
       }
 
       FnRetType = Context.VoidTy;
@@ -3799,15 +3769,18 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
     // Delay processing for now.  TODO: there are lots of dependent
     // types we can conclusively prove aren't void.
   } else if (FnRetType->isVoidType()) {
-    if (RetValExp && !isa<InitListExpr>(RetValExp) &&
-        !(getLangOpts().CPlusPlus &&
-          (RetValExp->isTypeDependent() ||
-           RetValExp->getType()->isVoidType()))) {
-      if (!getLangOpts().CPlusPlus &&
-          RetValExp->getType()->isVoidType())
+    if (isa_and_nonnull<InitListExpr>(RetValExp)) {
+      Diag(ReturnLoc, diag::err_return_block_has_expr)
+          << (CurLambda != nullptr);
+      RetValExp = nullptr;
+    } else if (RetValExp && !(getLangOpts().CPlusPlus &&
+                              (RetValExp->isTypeDependent() ||
+                               RetValExp->getType()->isVoidType()))) {
+      if (!getLangOpts().CPlusPlus && RetValExp->getType()->isVoidType())
         Diag(ReturnLoc, diag::ext_return_has_void_expr) << "literal" << 2;
       else {
-        Diag(ReturnLoc, diag::err_return_block_has_expr);
+        Diag(ReturnLoc, diag::err_return_block_has_expr)
+            << (CurLambda != nullptr);
         RetValExp = nullptr;
       }
     }
@@ -4336,6 +4309,11 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
       }
       RetValExp = Res.getAs<Expr>();
 
+      // A returned HLSL matrix may need its layout reconciled with the
+      // function's row_major/column_major return type.
+      if (getLangOpts().HLSL && RetValExp && RetType->isMatrixType())
+        HLSL().propagateContextualMatrixLayout(RetValExp, RetType);
+
       // If we have a related result type, we need to implicitly
       // convert back to the formal result type.  We can't pretend to
       // initialize the result again --- we might end double-retaining
@@ -4390,11 +4368,7 @@ class CatchHandlerType {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsPointer : 1;
 
-  // This is a special constructor to be used only with DenseMapInfo's
-  // getEmptyKey() and getTombstoneKey() functions.
   friend struct llvm::DenseMapInfo<CatchHandlerType>;
-  enum Unique { ForDenseMap };
-  CatchHandlerType(QualType QT, Unique) : QT(QT), IsPointer(false) {}
 
 public:
   /// Used when creating a CatchHandlerType from a handler type; will determine
@@ -4431,16 +4405,6 @@ public:
 
 namespace llvm {
 template <> struct DenseMapInfo<CatchHandlerType> {
-  static CatchHandlerType getEmptyKey() {
-    return CatchHandlerType(DenseMapInfo<QualType>::getEmptyKey(),
-                       CatchHandlerType::ForDenseMap);
-  }
-
-  static CatchHandlerType getTombstoneKey() {
-    return CatchHandlerType(DenseMapInfo<QualType>::getTombstoneKey(),
-                       CatchHandlerType::ForDenseMap);
-  }
-
   static unsigned getHashValue(const CatchHandlerType &Base) {
     return DenseMapInfo<QualType>::getHashValue(Base.underlying());
   }

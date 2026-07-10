@@ -28,6 +28,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/DOTGraphTraits.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -40,6 +41,29 @@
 using namespace clang;
 using namespace serialization;
 
+std::optional<ModuleFileKey>
+ModuleManager::makeKey(const ModuleFileName &Name) const {
+  if (unsigned SuffixLen = Name.getImplicitModuleSuffixLength()) {
+    StringRef ModuleCachePath = StringRef(Name).drop_back(SuffixLen);
+    StringRef ImplicitModuleSuffix = StringRef(Name).take_back(SuffixLen);
+    if (auto *ModuleCacheDir = ModCache.getDirectoryPtr(ModuleCachePath))
+      return ModuleFileKey(ModuleCacheDir, ImplicitModuleSuffix);
+  } else if (Name.isInMemory()) {
+    off_t Size;
+    time_t ModTime;
+    if (auto *Buf =
+            ModCache.getInMemoryModuleCache().lookupPCM(Name, Size, ModTime))
+      return ModuleFileKey(Buf);
+  } else {
+    if (auto ModuleFile = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/true,
+                                                     /*CacheFailure=*/false,
+                                                     /*IsText=*/false))
+      return ModuleFileKey(*ModuleFile);
+  }
+
+  return std::nullopt;
+}
+
 ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
   if (const Module *Mod = HeaderSearchInfo.getModuleMap().findModule(Name))
     if (const ModuleFileName *FileName = Mod->getASTFileName())
@@ -49,7 +73,7 @@ ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
 }
 
 ModuleFile *ModuleManager::lookupByFileName(ModuleFileName Name) const {
-  std::optional<ModuleFileKey> Key = Name.makeKey(FileMgr);
+  std::optional<ModuleFileKey> Key = makeKey(Name);
   return Key ? lookup(*Key) : nullptr;
 }
 
@@ -57,37 +81,30 @@ ModuleFile *ModuleManager::lookup(ModuleFileKey Key) const {
   return Modules.lookup(Key);
 }
 
-std::unique_ptr<llvm::MemoryBuffer>
-ModuleManager::lookupBuffer(StringRef Name) {
-  auto Entry = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/false,
-                                          /*CacheFailure=*/false);
-  if (!Entry)
-    return nullptr;
-  return std::move(InMemoryBuffers[*Entry]);
-}
-
-static bool checkModuleFile(off_t Size, time_t ModTime, off_t ExpectedSize,
-                            time_t ExpectedModTime, std::string &ErrorStr) {
+bool ModuleManager::isModuleFileOutOfDate(off_t Size, time_t ModTime,
+                                          off_t ExpectedSize,
+                                          time_t ExpectedModTime,
+                                          AddModuleResult &Result) {
+  bool OutOfDate = false;
   if (ExpectedSize && ExpectedSize != Size) {
-    ErrorStr = "module file has a different size than expected";
-    return true;
+    Result.Changes.push_back({Change::Size, ExpectedSize, Size});
+    OutOfDate = true;
   }
 
   if (ExpectedModTime && ExpectedModTime != ModTime) {
-    ErrorStr = "module file has a different modification time than expected";
-    return true;
+    Result.Changes.push_back({Change::ModTime, ExpectedModTime, ModTime});
+    OutOfDate = true;
   }
 
-  return false;
+  return OutOfDate;
 }
 
-static bool checkSignature(ASTFileSignature Signature,
-                           ASTFileSignature ExpectedSignature,
-                           std::string &ErrorStr) {
+bool ModuleManager::checkSignature(ASTFileSignature Signature,
+                                   ASTFileSignature ExpectedSignature,
+                                   AddModuleResult &Result) {
   if (!ExpectedSignature || Signature == ExpectedSignature)
     return false;
-
-  ErrorStr =
+  Result.SignatureError =
       Signature ? "signature mismatch" : "could not read module signature";
   return true;
 }
@@ -105,13 +122,12 @@ static void updateModuleImports(ModuleFile &MF, ModuleFile *ImportedBy,
   }
 }
 
-ModuleManager::AddModuleResult ModuleManager::addModule(
+AddModuleResult ModuleManager::addModule(
     ModuleFileName FileName, ModuleKind Type, SourceLocation ImportLoc,
     ModuleFile *ImportedBy, unsigned Generation, off_t ExpectedSize,
     time_t ExpectedModTime, ASTFileSignature ExpectedSignature,
-    ASTFileSignatureReader ReadSignature, ModuleFile *&Module,
-    std::string &ErrorStr) {
-  Module = nullptr;
+    ASTFileSignatureReader ReadSignature) {
+  AddModuleResult Result;
 
   uint64_t InputFilesValidationTimestamp = 0;
   if (Type == MK_ImplicitModule)
@@ -129,26 +145,33 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
     ExpectedModTime = 0;
   }
 
-  std::optional<ModuleFileKey> FileKey = FileName.makeKey(FileMgr);
+  std::optional<ModuleFileKey> FileKey = makeKey(FileName);
   if (!FileKey) {
-    ErrorStr = "module file not found";
-    return Missing;
+    Result.K = AddModuleResult::Missing;
+    return Result;
   }
 
-  // Check whether we already loaded this module, before
+  // Check whether we already loaded this module before.
+  // Note: `isModuleFileOutOfDate` and `checkSignature` are mutually exclusive
+  // in practice. If a signature is stored, it means size/mtime values have been
+  // zeroed out. If size/mtime are non-NULL, the signature is empty.
   if (ModuleFile *ModuleEntry = lookup(*FileKey)) {
-    // Check file properties.
-    if (checkModuleFile(ModuleEntry->Size, ModuleEntry->ModTime, ExpectedSize,
-                        ExpectedModTime, ErrorStr))
-      return OutOfDate;
+    if (isModuleFileOutOfDate(ModuleEntry->Size, ModuleEntry->ModTime,
+                              ExpectedSize, ExpectedModTime, Result)) {
+      Result.setOutOfDate(ModuleEntry->InputFilesValidationStatus);
+      return Result;
+    }
 
     // Check the stored signature.
-    if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
-      return OutOfDate;
+    if (checkSignature(ModuleEntry->Signature, ExpectedSignature, Result)) {
+      Result.setOutOfDate(ModuleEntry->InputFilesValidationStatus);
+      return Result;
+    }
 
-    Module = ModuleEntry;
+    Result.Module = ModuleEntry;
     updateModuleImports(*ModuleEntry, ImportedBy, ImportLoc);
-    return AlreadyLoaded;
+    Result.K = AddModuleResult::AlreadyLoaded;
+    return Result;
   }
 
   // Load the contents of the module
@@ -156,70 +179,61 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
   time_t ModTime = ExpectedModTime;
   llvm::MemoryBuffer *ModuleBuffer = nullptr;
   std::unique_ptr<llvm::MemoryBuffer> NewFileBuffer = nullptr;
-  if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
-    // The buffer was already provided for us.
-    ModuleBuffer = &getModuleCache().getInMemoryModuleCache().addBuiltPCM(
-        FileName, std::move(Buffer));
-  } else if (llvm::MemoryBuffer *Buffer =
-                 getModuleCache().getInMemoryModuleCache().lookupPCM(
-                     FileName)) {
+  if (llvm::MemoryBuffer *Buffer =
+          getModuleCache().getInMemoryModuleCache().lookupPCM(FileName, Size,
+                                                              ModTime)) {
     ModuleBuffer = Buffer;
-    if (!FileName.getImplicitModuleSuffixLength()) {
-      // Explicitly-built PCM files maintain consistency via mtime/size
-      // expectations on their imports. Even if we've previously successfully
-      // loaded a PCM file and stored it in the in-memory module cache, that
-      // does not mean its mtime/size matches current importer's expectations.
-      // Get that information so that it can be checked below.
-      // FIXME: Even though this FileManager access is likely already cached, we
-      // should store this directly in the in-memory module cache.
-      OptionalFileEntryRef Entry =
-          FileMgr.getOptionalFileRef(FileName, /*OpenFile=*/true,
-                                     /*CacheFailure=*/false);
-      if (!Entry) {
-        ErrorStr = "module file not found";
-        return Missing;
-      }
-      ModTime = Entry->getModificationTime();
-      Size = Entry->getSize();
-    }
   } else if (getModuleCache().getInMemoryModuleCache().shouldBuildPCM(
                  FileName)) {
     // Report that the module is out of date, since we tried (and failed) to
-    // import it earlier.
-    return OutOfDate;
+    // import it earlier. No ModuleFile exists yet, so derive the validation
+    // status from the module kind being loaded.
+    Result.setOutOfDate(Type == MK_ExplicitModule || Type == MK_PrebuiltModule
+                            ? InputFilesValidation::Disabled
+                            : InputFilesValidation::NotStarted);
+    return Result;
   } else {
-    OptionalFileEntryRef Entry =
-        expectedToOptional(FileName == StringRef("-")
-                               ? FileMgr.getSTDIN()
-                               : FileMgr.getFileRef(FileName, /*OpenFile=*/true,
-                                                    /*CacheFailure=*/false));
-    if (!Entry) {
-      ErrorStr = "module file not found";
-      return Missing;
-    }
+    auto Buf = [&]() -> Expected<std::unique_ptr<llvm::MemoryBuffer>> {
+      assert(!FileName.isInMemory() && "In-memory module not found");
 
-    // Get a buffer of the file and close the file descriptor when done.
-    // The file is volatile because in a parallel build we expect multiple
-    // compiler processes to use the same module file rebuilding it if needed.
-    //
-    // RequiresNullTerminator is false because module files don't need it, and
-    // this allows the file to still be mmapped.
-    auto Buf = FileMgr.getBufferForFile(*Entry,
-                                        /*IsVolatile=*/true,
-                                        /*RequiresNullTerminator=*/false);
+      // Implicit modules live in the module cache.
+      if (FileName.getImplicitModuleSuffixLength())
+        return ModCache.read(FileName, Size, ModTime);
+
+      // Explicit modules are treated as any other compiler input file, load
+      // them via FileManager.
+      Expected<FileEntryRef> Entry =
+          FileName == StringRef("-")
+              ? FileMgr.getSTDIN()
+              : FileMgr.getFileRef(FileName, /*OpenFile=*/true,
+                                   /*CacheFailure=*/false,
+                                   /*IsText=*/false);
+      if (!Entry)
+        return Entry.takeError();
+
+      Size = Entry->getSize();
+      ModTime = Entry->getModificationTime();
+
+      // RequiresNullTerminator is false because module files don't need it, and
+      // this allows the file to still be mmapped.
+      return llvm::errorOrToExpected(
+          FileMgr.getBufferForFile(*Entry, /*IsVolatile=*/false,
+                                   /*RequiresNullTerminator=*/false,
+                                   /*MaybeLimit=*/std::nullopt,
+                                   /*IsText=*/false));
+    }();
 
     if (!Buf) {
-      ErrorStr = Buf.getError().message();
-      return Missing;
+      Result.BufferError = llvm::toString(Buf.takeError());
+      Result.K = AddModuleResult::Missing;
+      return Result;
     }
 
-    Size = Entry->getSize();
-    ModTime = Entry->getModificationTime();
     NewFileBuffer = std::move(*Buf);
     ModuleBuffer = NewFileBuffer.get();
   }
 
-  // Allocate a new module.
+  // Allocate bookkeeping for a module file not yet loaded into this reader.
   auto NewModule = std::make_unique<ModuleFile>(Type, *FileKey, Generation);
   NewModule->Index = Chain.size();
   NewModule->FileName = FileName;
@@ -232,21 +246,26 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
   NewModule->Data = PCHContainerRdr.ExtractPCH(*NewModule->Buffer);
 
   // Check file properties.
-  if (checkModuleFile(Size, ModTime, ExpectedSize, ExpectedModTime, ErrorStr))
-    return OutOfDate;
+  if (isModuleFileOutOfDate(Size, ModTime, ExpectedSize, ExpectedModTime,
+                            Result)) {
+    Result.setOutOfDate(NewModule->InputFilesValidationStatus);
+    return Result;
+  }
 
   // Read the signature eagerly now so that we can check it.  Avoid calling
   // ReadSignature unless there's something to check though.
   if (ExpectedSignature && checkSignature(ReadSignature(NewModule->Data),
-                                          ExpectedSignature, ErrorStr))
-    return OutOfDate;
+                                          ExpectedSignature, Result)) {
+    Result.setOutOfDate(NewModule->InputFilesValidationStatus);
+    return Result;
+  }
 
   if (NewFileBuffer)
-    getModuleCache().getInMemoryModuleCache().addPCM(FileName,
-                                                     std::move(NewFileBuffer));
+    getModuleCache().getInMemoryModuleCache().addPCM(
+        FileName, std::move(NewFileBuffer), Size, ModTime);
 
   // We're keeping this module. Store it in the map.
-  Module = Modules[*FileKey] = NewModule.get();
+  Result.Module = Modules[*FileKey] = NewModule.get();
 
   updateModuleImports(*NewModule, ImportedBy, ImportLoc);
 
@@ -256,7 +275,8 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
     Roots.push_back(NewModule.get());
 
   Chain.push_back(std::move(NewModule));
-  return NewlyLoaded;
+  Result.K = AddModuleResult::NewlyLoaded;
+  return Result;
 }
 
 void ModuleManager::removeModules(ModuleIterator First) {
@@ -295,14 +315,6 @@ void ModuleManager::removeModules(ModuleIterator First) {
     Modules.erase(victim->FileKey);
 
   Chain.erase(Chain.begin() + (First - begin()), Chain.end());
-}
-
-void
-ModuleManager::addInMemoryBuffer(StringRef FileName,
-                                 std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-  FileEntryRef Entry =
-      FileMgr.getVirtualFileRef(FileName, Buffer->getBufferSize(), 0);
-  InMemoryBuffers[Entry] = std::move(Buffer);
 }
 
 std::unique_ptr<ModuleManager::VisitState> ModuleManager::allocateVisitState() {

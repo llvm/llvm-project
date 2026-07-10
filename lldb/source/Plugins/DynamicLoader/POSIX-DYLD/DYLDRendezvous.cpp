@@ -497,7 +497,6 @@ bool DYLDRendezvous::RemoveSOEntriesFromRemote(
 
 bool DYLDRendezvous::AddSOEntries() {
   SOEntry entry;
-  iterator pos;
 
   assert(m_previous.state == eAdd);
 
@@ -525,7 +524,6 @@ bool DYLDRendezvous::AddSOEntries() {
 
 bool DYLDRendezvous::RemoveSOEntries() {
   SOEntryList entry_list;
-  iterator pos;
 
   assert(m_previous.state == eDelete);
 
@@ -656,7 +654,7 @@ void DYLDRendezvous::UpdateFileSpecIfNecessary(SOEntry &entry) {
     Status region_status =
         m_process->GetMemoryRegionInfo(entry.dyn_addr, region);
     if (!region.GetName().IsEmpty())
-      entry.file_spec.SetFile(region.GetName().AsCString(),
+      entry.file_spec.SetFile(region.GetName().GetStringRef(),
                               FileSpec::Style::native);
   }
 }

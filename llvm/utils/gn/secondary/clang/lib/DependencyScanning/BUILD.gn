@@ -12,6 +12,7 @@ static_library("DependencyScanning") {
     "//llvm/lib/TargetParser",
   ]
   sources = [
+    "DependencyGraph.cpp",
     "DependencyScannerImpl.cpp",
     "DependencyScanningFilesystem.cpp",
     "DependencyScanningService.cpp",

@@ -33,7 +33,7 @@
 // non-loop SCC might contain a sub-SCC which is a Loop.
 //
 // For an overview of terminology used in this API (and thus all of our loop
-// analyses or transforms), see docs/LoopTerminology.rst.
+// analyses or transforms), see docs/LoopTerminology.md.
 //
 //===----------------------------------------------------------------------===//
 
@@ -524,10 +524,13 @@ raw_ostream &operator<<(raw_ostream &OS, const LoopBase<BlockT, LoopT> &Loop) {
 ///
 
 template <class BlockT, class LoopT> class LoopInfoBase {
-  // BBMap - Mapping of basic blocks to the inner most loop they occur in
-  std::conditional_t<GraphHasNodeNumbers<const BlockT *>, SmallVector<LoopT *>,
-                     DenseMap<const BlockT *, LoopT *>>
-      BBMap;
+  static_assert(GraphHasNodeNumbers<const BlockT *>,
+                "LoopInfo requires GraphTraits<BlockT *>::getNumber (see "
+                "GraphHasNodeNumbers)");
+
+  // Mapping of each block, indexed by its number, to the innermost loop it
+  // occurs in (or null).
+  SmallVector<LoopT *> BBMap;
 
   using ParentT = decltype(std::declval<const BlockT *>()->getParent());
   ParentT ParentPtr = nullptr;
@@ -615,25 +618,20 @@ public:
 private:
   /// Verify that used block numbers are still valid.
   void verifyBlockNumberEpoch(ParentT BBParent) const {
-    if constexpr (GraphHasNodeNumbers<BlockT *>) {
-      assert(ParentPtr == BBParent &&
-             "loop info queried with block of other function");
-      assert(BlockNumberEpoch ==
-                 GraphTraits<ParentT>::getNumberEpoch(ParentPtr) &&
-             "loop info used with outdated block numbers");
-    }
+    assert(ParentPtr == BBParent &&
+           "loop info queried with block of other function");
+    assert(BlockNumberEpoch ==
+               GraphTraits<ParentT>::getNumberEpoch(ParentPtr) &&
+           "loop info used with outdated block numbers");
   }
 
 public:
   /// Return the inner most loop that BB lives in. If a basic block is in no
   /// loop (for example the entry node), null is returned.
   LoopT *getLoopFor(const BlockT *BB) const {
-    if constexpr (GraphHasNodeNumbers<const BlockT *>) {
-      verifyBlockNumberEpoch(BB->getParent());
-      unsigned Number = GraphTraits<const BlockT *>::getNumber(BB);
-      return Number < BBMap.size() ? BBMap[Number] : nullptr;
-    } else
-      return BBMap.lookup(BB);
+    verifyBlockNumberEpoch(BB->getParent());
+    unsigned Number = GraphTraits<const BlockT *>::getNumber(BB);
+    return Number < BBMap.size() ? BBMap[Number] : nullptr;
   }
 
   /// Same as getLoopFor.
@@ -684,22 +682,15 @@ public:
   /// This should be used by transformations that restructure the loop hierarchy
   /// tree.
   void changeLoopFor(const BlockT *BB, LoopT *L) {
-    if constexpr (GraphHasNodeNumbers<const BlockT *>) {
-      verifyBlockNumberEpoch(BB->getParent());
-      unsigned Number = GraphTraits<const BlockT *>::getNumber(BB);
-      if (Number >= BBMap.size()) {
-        unsigned Max = GraphTraits<decltype(BB->getParent())>::getMaxNumber(
-            BB->getParent());
-        BBMap.resize(Number >= Max ? Number + 1 : Max);
-      }
-      BBMap[Number] = L;
-    } else {
-      if (!L) {
-        BBMap.erase(BB);
-        return;
-      }
-      BBMap[BB] = L;
+    verifyBlockNumberEpoch(BB->getParent());
+    unsigned Number = GraphTraits<const BlockT *>::getNumber(BB);
+    if (Number >= BBMap.size()) {
+      unsigned Max =
+          GraphTraits<decltype(BB->getParent())>::getMaxNumber(BB->getParent());
+      assert(Number < Max);
+      BBMap.resize(Max);
     }
+    BBMap[Number] = L;
   }
 
   /// Replace the specified loop in the top-level loops list with the indicated
@@ -722,24 +713,14 @@ public:
   /// including all of the Loop objects it is nested in and our mapping from
   /// BasicBlocks to loops.
   void removeBlock(BlockT *BB) {
-    if constexpr (GraphHasNodeNumbers<BlockT *>) {
-      verifyBlockNumberEpoch(BB->getParent());
-      unsigned Number = GraphTraits<BlockT *>::getNumber(BB);
-      if (Number >= BBMap.size())
-        return;
+    verifyBlockNumberEpoch(BB->getParent());
+    unsigned Number = GraphTraits<BlockT *>::getNumber(BB);
+    if (Number >= BBMap.size())
+      return;
 
-      for (LoopT *L = BBMap[Number]; L; L = L->getParentLoop())
-        L->removeBlockFromLoop(BB);
-      BBMap[Number] = nullptr;
-    } else {
-      auto I = BBMap.find(BB);
-      if (I != BBMap.end()) {
-        for (LoopT *L = I->second; L; L = L->getParentLoop())
-          L->removeBlockFromLoop(BB);
-
-        BBMap.erase(I);
-      }
-    }
+    for (LoopT *L = BBMap[Number]; L; L = L->getParentLoop())
+      L->removeBlockFromLoop(BB);
+    BBMap[Number] = nullptr;
   }
 
   // Internals

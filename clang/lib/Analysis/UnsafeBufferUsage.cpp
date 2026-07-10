@@ -2975,63 +2975,6 @@ static void populateStmtsForFindingGadgets(SmallVector<const Stmt *> &Stmts,
   }
 }
 
-std::set<const Expr *> clang::findUnsafePointers(const Decl *D) {
-  class MockReporter : public UnsafeBufferUsageHandler {
-  public:
-    MockReporter() {}
-    void handleUnsafeOperation(const Stmt *, bool, ASTContext &) override {}
-    void handleUnsafeLibcCall(const CallExpr *, unsigned, ASTContext &,
-                              const Expr *UnsafeArg = nullptr) override {}
-    void handleUnsafeOperationInContainer(const Stmt *, bool,
-                                          ASTContext &) override {}
-    void handleUnsafeVariableGroup(const VarDecl *,
-                                   const VariableGroupsManager &, FixItList &&,
-                                   const Decl *,
-                                   const FixitStrategy &) override {}
-    void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
-                                          bool IsRelatedToDecl,
-                                          ASTContext &Ctx) override {}
-    bool ignoreUnsafeBufferInContainer(const SourceLocation &) const override {
-      return false;
-    }
-    bool isSafeBufferOptOut(const SourceLocation &) const override {
-      return false;
-    }
-    bool ignoreUnsafeBufferInLibcCall(const SourceLocation &) const override {
-      return false;
-    }
-    bool ignoreUnsafeBufferInStaticSizedArray(
-        const SourceLocation &Loc) const override {
-      return false;
-    }
-    std::string getUnsafeBufferUsageAttributeTextAt(
-        SourceLocation, StringRef WSSuffix = "") const override {
-      return "";
-    }
-  };
-
-  FixableGadgetList FixableGadgets;
-  WarningGadgetList WarningGadgets;
-  DeclUseTracker Tracker;
-  MockReporter IgnoreHandler;
-  ASTContext &Ctx = D->getASTContext();
-  SmallVector<const Stmt *> Stmts;
-
-  populateStmtsForFindingGadgets(Stmts, D);
-  for (auto *Stmt : Stmts)
-    findGadgets(Stmt, Ctx, IgnoreHandler, false, FixableGadgets, WarningGadgets,
-                Tracker);
-
-  std::set<const Expr *> Result;
-  for (auto &G : WarningGadgets) {
-    for (const Expr *E : G->getUnsafePtrs()) {
-      Result.insert(E);
-    }
-  }
-
-  return Result;
-}
-
 struct WarningGadgetSets {
   std::map<const VarDecl *, std::set<const WarningGadget *>,
            // To keep keys sorted by their locations in the map so that the
@@ -4748,4 +4691,70 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   }
   applyGadgets(D, std::move(FixableGadgets), std::move(WarningGadgets),
                std::move(Tracker), Handler, EmitSuggestions);
+}
+
+bool clang::matchUnsafePointers(const DynTypedNode &N, ASTContext &Ctx,
+                                std::set<const Expr *> &UnsafePointers) {
+  class MockReporter : public UnsafeBufferUsageHandler {
+  public:
+    MockReporter() {}
+    void handleUnsafeOperation(const Stmt *, bool, ASTContext &) override {}
+    void handleUnsafeLibcCall(const CallExpr *, unsigned, ASTContext &,
+                              const Expr *UnsafeArg = nullptr) override {}
+    void handleUnsafeOperationInContainer(const Stmt *, bool,
+                                          ASTContext &) override {}
+    void handleUnsafeVariableGroup(const VarDecl *,
+                                   const VariableGroupsManager &, FixItList &&,
+                                   const Decl *,
+                                   const FixitStrategy &) override {}
+    void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
+                                          bool IsRelatedToDecl,
+                                          ASTContext &Ctx) override {}
+    bool ignoreUnsafeBufferInContainer(const SourceLocation &) const override {
+      return false;
+    }
+    bool isSafeBufferOptOut(const SourceLocation &) const override {
+      return false;
+    }
+    bool ignoreUnsafeBufferInLibcCall(const SourceLocation &) const override {
+      return false;
+    }
+    bool ignoreUnsafeBufferInStaticSizedArray(
+        const SourceLocation &Loc) const override {
+      return false;
+    }
+    std::string getUnsafeBufferUsageAttributeTextAt(
+        SourceLocation, StringRef WSSuffix = "") const override {
+      return "";
+    }
+  } Handler;
+
+  const Stmt *S = N.get<Stmt>();
+  if (!S)
+    return false;
+
+  MatchResult Result;
+  WarningGadgetList WarningGadgets;
+  bool Matched = false;
+
+  // FIXME: By design, we don't need MockReporter, and we are supposed to
+  // only define WARNING_GADGET when we want to treat WARNING_OPTIONAL_GADGET
+  // the same as WARNING_GADGET. The reason we have to do it this way now is
+  // that some WARNING_OPTIONAL_GADGETs do not have the 3-argument `matches`
+  // overload. We need to fix this problem in a separate patch.
+
+#define WARNING_GADGET(name)                                                   \
+  if (name##Gadget::matches(S, Ctx, Result))                                   \
+    WarningGadgets.push_back(std::make_unique<name##Gadget>(Result));
+#define WARNING_OPTIONAL_GADGET(name)                                          \
+  if (name##Gadget::matches(S, Ctx, &Handler, Result))                         \
+    WarningGadgets.push_back(std::make_unique<name##Gadget>(Result));
+#include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
+
+  for (auto &WG : WarningGadgets)
+    for (auto *E : WG->getUnsafePtrs()) {
+      UnsafePointers.insert(E);
+      Matched = true;
+    }
+  return Matched;
 }

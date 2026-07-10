@@ -120,7 +120,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::ReciprocalOp>(op) && isa<FloatType>(elementTy)) {
     auto one =
         arith::ConstantOp::create(rewriter, loc, FloatAttr::get(elementTy, 1));
-    return arith::DivFOp::create(rewriter, loc, resultTypes, one, args[0]);
+    return arith::DivFOp::create(rewriter, loc, one, args[0]);
   }
 
   // tosa::MulOp
@@ -140,8 +140,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
                                           "Cannot have shift value for float");
         return nullptr;
       }
-      return arith::MulFOp::create(rewriter, loc, resultTypes, args[0],
-                                   args[1]);
+      return arith::MulFOp::create(rewriter, loc, args[0], args[1]);
     }
 
     if (isa<IntegerType>(elementTy)) {
@@ -538,8 +537,8 @@ static Value createLinalgBodyCalculationForElementwiseOp(
         arith::ConstantOp::create(rewriter, loc, FloatAttr::get(elementTy, 1));
     auto negate = arith::NegFOp::create(rewriter, loc, resultTypes, args[0]);
     auto exp = mlir::math::ExpOp::create(rewriter, loc, resultTypes, negate);
-    auto added = arith::AddFOp::create(rewriter, loc, resultTypes, exp, one);
-    return arith::DivFOp::create(rewriter, loc, resultTypes, one, added);
+    auto added = arith::AddFOp::create(rewriter, loc, exp, one);
+    return arith::DivFOp::create(rewriter, loc, one, added);
   }
 
   // tosa::CastOp
@@ -2060,7 +2059,7 @@ public:
         //  dx = x - ix * scale_n;
         Value val = arith::MulIOp::create(b, in, scaleD);
         val = arith::AddIOp::create(b, val, offset);
-        index = arith::DivSIOp::create(b, val, scaleN);
+        index = arith::FloorDivSIOp::create(b, val, scaleN);
         delta = arith::MulIOp::create(b, index, scaleN);
         delta = arith::SubIOp::create(b, val, delta);
       };

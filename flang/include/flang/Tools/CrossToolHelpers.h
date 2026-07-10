@@ -20,7 +20,6 @@
 #include <cstdint>
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -106,6 +105,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
         ApproxFuncFPMath && mathOpts.getFPContractEnabled();
     Reciprocals = opts.Reciprocals;
     PreferVectorWidth = opts.PreferVectorWidth;
+    UseSampleProfile = !opts.SampleProfileFile.empty();
     DebugInfoForProfiling = opts.DebugInfoForProfiling;
     if (opts.InstrumentFunctions) {
       InstrumentFunctionEntry = "__cyg_profile_func_enter";
@@ -140,7 +140,10 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
                                       ///< functions.
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
-  bool DebugInfoForProfiling = false; /// Enable extra debugging info
+  bool EnableOpenMPIsTargetDevice =
+      false; ///< Compiling for an OpenMP target device.
+  bool UseSampleProfile = false; ///< Enable sample based profiling
+  bool DebugInfoForProfiling = false; ///< Enable extra debugging info
   bool EnableOpenMPSimd = false; ///< Enable OpenMP simd-only mode.
   bool SkipConvertComplexPow = false; ///< Do not run complex pow conversion.
   std::string InstrumentFunctionEntry =

@@ -1,0 +1,19 @@
+# REQUIRES: python, native && system-darwin
+
+# RUN: %clang_host -g %S/Inputs/inline_test.c -o %t.out
+# RUN: cp %S/Inputs/a.out.inline.crash %t.crash
+# RUN: %python %S/patch-crashlog.py --binary %t.out --crashlog %t.crash --offsets '{"main":20, "bar":16}'
+# RUN: %lldb %t.out \
+# RUN:   -o 'command script import lldb.macosx.crashlog' \
+# RUN:   -o 'crashlog -a -i %t.crash' \
+# RUN:   -o 'thread backtrace' 2>&1 | FileCheck %s
+
+# CHECK: "crashlog" {{.*}} commands have been installed, use the "--help" options on these commands
+
+# Verify that the inlined frame (foo) and its containing function (bar) both
+# appear in the backtrace, even though the crashlog listed them at the same PC.
+# CHECK:      (lldb) thread backtrace
+# CHECK-NEXT: * thread #1
+# CHECK-NEXT:   * frame #0: {{.*}}out`foo{{.*}} [synthetic] [inlined]
+# CHECK-NEXT:     frame #1: {{.*}}out`bar
+# CHECK:          frame #{{[0-9]+}}: {{.*}}out`main{{.*}} [synthetic]

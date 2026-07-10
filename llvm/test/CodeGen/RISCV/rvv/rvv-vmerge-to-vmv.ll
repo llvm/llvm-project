@@ -90,7 +90,7 @@ define <vscale x 2 x i32> @preserve_false(ptr %p, <vscale x 2 x i32> %pt, <vscal
 define <vscale x 2 x i32> @preserve_false_avl_known_le(ptr %p, <vscale x 2 x i32> %pt, <vscale x 2 x i32> %false, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: preserve_false_avl_known_le:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
 ; CHECK-NEXT:    vle32.v v9, (a0), v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v9

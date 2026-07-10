@@ -20,14 +20,13 @@
 #include <optional>
 
 namespace lldb_private {
-class ConstString;
 
 /// A ValueObject that represents a given value represented as a different type.
 class ValueObjectCast : public ValueObject {
 public:
   ~ValueObjectCast() override;
 
-  static lldb::ValueObjectSP Create(ValueObject &parent, ConstString name,
+  static lldb::ValueObjectSP Create(ValueObject &parent, llvm::StringRef name,
                                     const CompilerType &cast_type);
 
   llvm::Expected<uint64_t> GetByteSize() override;
@@ -47,7 +46,7 @@ public:
   }
 
 protected:
-  ValueObjectCast(ValueObject &parent, ConstString name,
+  ValueObjectCast(ValueObject &parent, llvm::StringRef name,
                   const CompilerType &cast_type);
 
   bool UpdateValue() override;

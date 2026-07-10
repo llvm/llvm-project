@@ -24,6 +24,19 @@ namespace clang {
 namespace driver {
 namespace tools {
 
+struct OffloadJobsOpt {
+  enum class Kind { Missing, Invalid, Jobserver, Fixed };
+
+  Kind K = Kind::Missing;
+  llvm::opt::Arg *A = nullptr;
+  StringRef Value;
+  unsigned NumThreads = 0;
+
+  bool isValid() const { return K == Kind::Jobserver || K == Kind::Fixed; }
+};
+
+OffloadJobsOpt parseOffloadJobs(const llvm::opt::ArgList &Args);
+
 void addPathIfExists(const Driver &D, const Twine &Path,
                      ToolChain::path_list &Paths);
 
@@ -161,6 +174,11 @@ llvm::StringRef getLTOParallelism(const llvm::opt::ArgList &Args,
 bool areOptimizationsEnabled(const llvm::opt::ArgList &Args);
 
 bool isUseSeparateSections(const llvm::Triple &Triple);
+/// Append -ffunction-sections / -fdata-sections to \p CmdArgs when the
+/// corresponding flags are enabled (explicitly or by target default).
+void addSeparateSectionFlags(const llvm::Triple &Triple,
+                             const llvm::opt::ArgList &Args,
+                             llvm::opt::ArgStringList &CmdArgs);
 // Parse -mtls-dialect=. Return true if the target supports both general-dynamic
 // and TLSDESC, and TLSDESC is requested.
 bool isTLSDESCEnabled(const ToolChain &TC, const llvm::opt::ArgList &Args);
@@ -275,15 +293,16 @@ const char *renderEscapedCommandLine(const ToolChain &TC,
 /// line options that were passed.
 bool shouldRecordCommandLine(const ToolChain &TC,
                              const llvm::opt::ArgList &Args,
-                             bool &FRecordCommandLine,
-                             bool &GRecordCommandLine);
+                             bool &FRecordCommandLine, bool &GRecordCommandLine,
+                             bool &DXRecordCommandLine);
 
 void renderGlobalISelOptions(const Driver &D, const llvm::opt::ArgList &Args,
                              llvm::opt::ArgStringList &CmdArgs,
                              const llvm::Triple &Triple);
 
 void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
-                                        llvm::opt::ArgStringList &CmdArgs);
+                                        llvm::opt::ArgStringList &CmdArgs,
+                                        bool IsMSVCCompat);
 
 bool shouldEnableVectorizerAtOLevel(const llvm::opt::ArgList &Args,
                                     bool isSlpVec);

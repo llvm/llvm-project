@@ -2961,6 +2961,8 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::L2_ploadruhf_io:
   case Hexagon::S2_pstorerht_io:
   case Hexagon::S2_pstorerhf_io:
+  case Hexagon::S2_pstorerft_io:
+  case Hexagon::S2_pstorerff_io:
     return isShiftedUInt<6,1>(Offset);
 
   case Hexagon::L2_ploadrit_io:
@@ -4631,7 +4633,7 @@ unsigned HexagonInstrInfo::getSize(const MachineInstr &MI) const {
   if (BranchRelaxAsmLarge && MI.getOpcode() == Hexagon::INLINEASM) {
     const MachineBasicBlock &MBB = *MI.getParent();
     const MachineFunction *MF = MBB.getParent();
-    const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
+    const MCAsmInfo &MAI = MF->getTarget().getMCAsmInfo();
 
     // Count the number of register definitions to find the asm string.
     unsigned NumDefs = 0;
@@ -4642,7 +4644,7 @@ unsigned HexagonInstrInfo::getSize(const MachineInstr &MI) const {
     assert(MI.getOperand(NumDefs).isSymbol() && "No asm string?");
     // Disassemble the AsmStr and approximate number of instructions.
     const char *AsmStr = MI.getOperand(NumDefs).getSymbolName();
-    Size = getInlineAsmLength(AsmStr, *MAI);
+    Size = getInlineAsmLength(AsmStr, MAI);
   }
 
   return Size;
@@ -4948,6 +4950,30 @@ bool HexagonInstrInfo::isQFP16Instr(MachineInstr *MI) const {
 
 bool HexagonInstrInfo::isQFPInstr(MachineInstr *MI) const {
   return isQFP32Instr(MI) || isQFP16Instr(MI);
+}
+
+// Return true if the function contains any qf-generating instructions.
+bool HexagonInstrInfo::hasQFPInstrs(const MachineFunction &MF) const {
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      if (isQFPInstr(const_cast<MachineInstr *>(&MI)))
+        return true;
+  return false;
+}
+
+// Returns true if A appears before B within the same basic block.
+bool HexagonInstrInfo::isMIBefore(const MachineInstr *A,
+                                  const MachineInstr *B) const {
+  if (!A || !B || A->getParent() != B->getParent())
+    return false;
+
+  for (const MachineInstr &MI : *A->getParent()) {
+    if (&MI == A)
+      return true;
+    if (&MI == B)
+      return false;
+  }
+  return false;
 }
 
 // Addressing mode relations.

@@ -38,10 +38,11 @@ public:
     llvm::StringRef pattern; ///< Regex pattern for highlighting.
     llvm::StringRef prefix;  ///< ANSI color code to start colorization.
     llvm::StringRef suffix;  ///< ANSI color code to end colorization.
+    bool ignore_case = false; ///< Whether to match case-insensitively.
 
     HighlightSettings(llvm::StringRef p, llvm::StringRef pre,
-                      llvm::StringRef suf)
-        : pattern(p), prefix(pre), suffix(suf) {}
+                      llvm::StringRef suf, bool ic = false)
+        : pattern(p), prefix(pre), suffix(suf), ignore_case(ic) {}
   };
 
   /// Utility class for counting the bytes that were written to a stream in a
@@ -65,10 +66,9 @@ public:
 
   /// Construct with flags and address size and byte order.
   ///
-  /// Construct with dump flags \a flags and the default address size. \a
-  /// flags can be any of the above enumeration logical OR'ed together.
-  Stream(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order,
-         bool colors = false);
+  /// Construct with dump flags \a flags.
+  /// \a flags can be any of the above enumeration logical OR'ed together.
+  Stream(uint32_t flags, lldb::ByteOrder byte_order, bool colors = false);
 
   /// Construct a default Stream, not binary, host byte order and host addr
   /// size.
@@ -80,7 +80,6 @@ public:
 
   Stream &operator=(const Stream &rhs) {
     m_flags = rhs.m_flags;
-    m_addr_size = rhs.m_addr_size;
     m_byte_order = rhs.m_byte_order;
     m_indent_level = rhs.m_indent_level;
     return *this;
@@ -235,6 +234,8 @@ public:
   ///     in one statement.
   Stream &operator<<(const llvm::formatv_object_base &obj);
 
+  Stream &operator<<(bool b) { return *this << (b ? "true" : "false"); }
+
   Stream &operator<<(uint8_t uval) = delete;
   Stream &operator<<(uint16_t uval) = delete;
   Stream &operator<<(uint32_t uval) = delete;
@@ -278,13 +279,6 @@ public:
 
   /// Output and End of Line character to the stream.
   size_t EOL();
-
-  /// Get the address size in bytes.
-  ///
-  /// \return
-  ///     The size of an address in bytes that is used when outputting
-  ///     address and pointer values to the stream.
-  uint32_t GetAddressByteSize() const;
 
   /// The flags accessor.
   ///
@@ -389,13 +383,6 @@ public:
   ///     The optional C string format that can be overridden.
   void QuotedCString(const char *cstr, const char *format = "\"%s\"");
 
-  /// Set the address size in bytes.
-  ///
-  /// \param[in] addr_size
-  ///     The new size in bytes of an address to use when outputting
-  ///     address and pointer values.
-  void SetAddressByteSize(uint32_t addr_size);
-
   /// Output a SLEB128 number to the stream.
   ///
   /// Put an SLEB128 \a uval out to the stream using the printf format in \a
@@ -421,8 +408,7 @@ public:
 
 protected:
   // Member variables
-  Flags m_flags;        ///< Dump flags.
-  uint32_t m_addr_size = 4; ///< Size of an address in bytes.
+  Flags m_flags; ///< Dump flags.
   lldb::ByteOrder
       m_byte_order;   ///< Byte order to use when encoding scalar types.
   unsigned m_indent_level = 0;     ///< Indention level.

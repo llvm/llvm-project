@@ -135,6 +135,9 @@ public:
   static uptr getRegionInfoArraySize() { return 0; }
 
   // Not supported in SizeClassAllocator32.
+  BlockInfo findNearestBlock(UNUSED uptr Ptr) { return {}; }
+
+  // Not supported in SizeClassAllocator32.
   static BlockInfo findNearestBlock(UNUSED const char *RegionInfoData,
                                     UNUSED uptr Ptr) {
     return {};
@@ -454,6 +457,8 @@ void SizeClassAllocator32<Config>::iterateOverBlocks(F Callback) {
 template <typename Config>
 void SizeClassAllocator32<Config>::getStats(ScopedString *Str) {
   // TODO(kostyak): get the RSS per region.
+  Str->append("\nConfig Stats Primary32: ");
+  Config::getConfigValues(Str);
   uptr TotalMapped = 0;
   uptr PoppedBlocks = 0;
   uptr PushedBlocks = 0;

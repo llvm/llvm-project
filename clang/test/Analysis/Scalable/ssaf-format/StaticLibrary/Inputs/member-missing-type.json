@@ -1,0 +1,20 @@
+{
+  "members": [
+    {
+      "target_triple": "arm64-apple-macosx",
+      "tu_namespace": {
+        "kind": "CompilationUnit",
+        "name": "a.cpp"
+      },
+      "id_table": [],
+      "linkage_table": [],
+      "data": []
+    }
+  ],
+  "namespace": {
+    "kind": "StaticLibrary",
+    "name": "libfoo"
+  },
+  "target_triple": "arm64-apple-macosx",
+  "type": "StaticLibrary"
+}

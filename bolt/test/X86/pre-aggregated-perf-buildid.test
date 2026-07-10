@@ -30,6 +30,14 @@ CHECK-FDATA: 1 usqrt 35 1 usqrt 39 0 22
 CHECK-FDATA: 1 usqrt 3d 1 usqrt 10 0 58
 CHECK-FDATA: 1 usqrt 3d 1 usqrt 3f 0 22
 
+## Test with empty buildid prefix on main binary addresses (`:addr` format).
+## An omitted buildid with a preserved colon should be treated as the main
+## binary. The output should be identical to the non-empty buildid version.
+RUN: perf2bolt %t.exe -o %t.fdata2 --pa \
+RUN:   -p %p/Inputs/pre-aggregated-buildid-empty.txt \
+RUN:   --profile-format=fdata 2>&1 | FileCheck %s --check-prefix=CHECK-BUILDID
+RUN: diff %t.fdata %t.fdata2
+
 ## Test YAML output with buildid-prefixed input.
 RUN: perf2bolt %t.exe -o %t.yaml --pa -p %p/Inputs/pre-aggregated-buildid.txt \
 RUN:   --profile-format=yaml --profile-use-dfs 2>&1

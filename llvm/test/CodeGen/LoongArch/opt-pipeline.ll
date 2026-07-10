@@ -25,8 +25,8 @@
 ; LAXX-NEXT: Library Function Lowering Analysis
 ; LAXX-NEXT: Type-Based Alias Analysis
 ; LAXX-NEXT: Scoped NoAlias Alias Analysis
-; LAXX-NEXT: Profile summary info
 ; LAXX-NEXT: Create Garbage Collector Module Metadata
+; LAXX-NEXT: Profile summary info
 ; LAXX-NEXT: Machine Branch Probability Analysis
 ; LAXX-NEXT: Default Regalloc Eviction Advisor
 ; LAXX-NEXT: Default Regalloc Priority Advisor
@@ -50,13 +50,6 @@
 ; LAXX-NEXT:         Canonicalize Freeze Instructions in Loops
 ; LAXX-NEXT:         Induction Variable Users
 ; LAXX-NEXT:         Loop Strength Reduction
-; LAXX-NEXT:       Basic Alias Analysis (stateless AA impl)
-; LAXX-NEXT:       Function Alias Analysis Results
-; LAXX-NEXT:       Merge contiguous icmps into a memcmp
-; LAXX-NEXT:       Natural Loop Information
-; LAXX-NEXT:       Lazy Branch Probability Analysis
-; LAXX-NEXT:       Lazy Block Frequency Analysis
-; LAXX-NEXT:       Expand memcmp() to load/stores
 ; LAXX-NEXT:       Lower Garbage Collection Instructions
 ; LAXX-NEXT:       Shadow Stack GC Lowering
 ; LAXX-NEXT:       Remove unreachable blocks from the CFG

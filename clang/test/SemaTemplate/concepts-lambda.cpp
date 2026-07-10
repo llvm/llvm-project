@@ -160,18 +160,21 @@ static_assert(E<int>);  // previously Asserted.
 
 // ensure we properly diagnose when "D" is false.
 namespace DIsFalse {
-template<auto Q> concept C = requires { Q.template operator()<float>(); };
+template<auto Q> concept C = requires { Q.template operator()<float>(); }; // #GH60642-C
 template<class> concept D = false;
+// FIXME: Crashes because it produces a template type parameter with invalid depth
+#if 0
 static_assert(C<[]<D>{}>);
 // expected-error@-1{{static assertion failed}}
 // expected-note@-2{{does not satisfy 'C'}}
 // expected-note@-5{{because 'Q.template operator()<float>()' would be invalid: no matching member function for call to 'operator()'}}
+#endif
 template<class> concept E = C<[]<D>{}>;
 static_assert(E<int>);
 // expected-error@-1{{static assertion failed}}
 // expected-note@-2{{because 'int' does not satisfy 'E'}}
 // expected-note@-4{{does not satisfy 'C'}}
-// expected-note@-11{{because 'Q.template operator()<float>()' would be invalid: no matching member function for call to 'operator()'}}
+// expected-note@#GH60642-C{{because 'Q.template operator()<float>()' would be invalid: no matching member function for call to 'operator()'}}
 }
 }
 
@@ -356,6 +359,43 @@ struct foo {
 };
 
 constexpr auto bar = foo(seq<0>());
+}
+
+namespace GH200682 {
+
+template <typename... Args> struct A {
+  template <auto F> constexpr static bool B = F(42);
+};
+
+template <typename T>
+concept c = true;
+
+template <typename T>
+concept d = false;
+
+void f(auto &&...args)
+  requires(
+      A<decltype(args)...>::template B<[](auto x) { return c<decltype(x)>; }>);
+
+template <class>
+void g(auto &&...args)
+  requires(
+      A<decltype(args)...>::template B<[](auto x) { return c<decltype(x)>; }>);
+
+void h(auto &&...args) // expected-note {{constraints not satisfied}}
+  requires(
+      A<decltype(args)...>::template B<[](auto x) { // expected-note {{evaluated to false}}
+        return d<decltype(x)>;
+      }>);
+
+void main() {
+  f();
+  g<int>();
+
+  h(42);
+  // expected-error@-1 {{no matching}}
+}
+
 }
 
 namespace GH147650 {

@@ -833,6 +833,11 @@ void StmtPrinter::VisitOMPInterchangeDirective(OMPInterchangeDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPSplitDirective(OMPSplitDirective *Node) {
+  Indent() << "#pragma omp split";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPFuseDirective(OMPFuseDirective *Node) {
   Indent() << "#pragma omp fuse";
   PrintOMPExecutableDirective(Node);
@@ -1358,42 +1363,49 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
     TPOD->printAsExpr(OS, Policy);
     return;
   }
-  Node->getQualifier().print(OS, Policy);
-  if (Node->hasTemplateKeyword())
-    OS << "template ";
-
   bool ForceAnonymous =
       Policy.PrintAsCanonical && VD->getKind() == Decl::NonTypeTemplateParm;
-  DeclarationNameInfo NameInfo = Node->getNameInfo();
-  if (IdentifierInfo *ID = NameInfo.getName().getAsIdentifierInfo();
-      !ForceAnonymous &&
-      (ID || NameInfo.getName().getNameKind() != DeclarationName::Identifier)) {
-    if (Policy.CleanUglifiedParameters &&
-        isa<ParmVarDecl, NonTypeTemplateParmDecl>(VD) && ID)
-      OS << ID->deuglifiedName();
-    else
-      NameInfo.printName(OS, Policy);
+  bool CleanUglifiedParameter = Policy.CleanUglifiedParameters &&
+                                isa<ParmVarDecl, NonTypeTemplateParmDecl>(VD);
+
+  if (Policy.FullyQualifiedName && !ForceAnonymous && !CleanUglifiedParameter) {
+    VD->printQualifiedName(OS, Policy);
   } else {
-    switch (VD->getKind()) {
-    case Decl::NonTypeTemplateParm: {
-      auto *TD = cast<NonTypeTemplateParmDecl>(VD);
-      OS << "value-parameter-" << TD->getDepth() << '-' << TD->getIndex() << "";
-      break;
-    }
-    case Decl::ParmVar: {
-      auto *PD = cast<ParmVarDecl>(VD);
-      OS << "function-parameter-" << PD->getFunctionScopeDepth() << '-'
-         << PD->getFunctionScopeIndex();
-      break;
-    }
-    case Decl::Decomposition:
-      OS << "decomposition";
-      for (const auto &I : cast<DecompositionDecl>(VD)->bindings())
-        OS << '-' << I->getName();
-      break;
-    default:
-      OS << "unhandled-anonymous-" << VD->getDeclKindName();
-      break;
+    Node->getQualifier().print(OS, Policy);
+    if (Node->hasTemplateKeyword())
+      OS << "template ";
+
+    DeclarationNameInfo NameInfo = Node->getNameInfo();
+    if (IdentifierInfo *ID = NameInfo.getName().getAsIdentifierInfo();
+        !ForceAnonymous && (ID || NameInfo.getName().getNameKind() !=
+                                      DeclarationName::Identifier)) {
+      if (CleanUglifiedParameter && ID)
+        OS << ID->deuglifiedName();
+      else
+        NameInfo.printName(OS, Policy);
+    } else {
+      switch (VD->getKind()) {
+      case Decl::NonTypeTemplateParm: {
+        auto *TD = cast<NonTypeTemplateParmDecl>(VD);
+        OS << "value-parameter-" << TD->getDepth() << '-' << TD->getIndex()
+           << "";
+        break;
+      }
+      case Decl::ParmVar: {
+        auto *PD = cast<ParmVarDecl>(VD);
+        OS << "function-parameter-" << PD->getFunctionScopeDepth() << '-'
+           << PD->getFunctionScopeIndex();
+        break;
+      }
+      case Decl::Decomposition:
+        OS << "decomposition";
+        for (const auto &I : cast<DecompositionDecl>(VD)->bindings())
+          OS << '-' << I->getName();
+        break;
+      default:
+        OS << "unhandled-anonymous-" << VD->getDeclKindName();
+        break;
+      }
     }
   }
   if (Node->hasExplicitTemplateArgs()) {
@@ -2496,7 +2508,7 @@ void StmtPrinter::VisitLambdaExpr(LambdaExpr *Node) {
 
   // Print the body.
   OS << ' ';
-  if (Policy.TerseOutput)
+  if (Policy.TerseOutput || Policy.SuppressLambdaBody)
     OS << "{}";
   else
     PrintRawCompoundStmt(Node->getCompoundStmtBody());

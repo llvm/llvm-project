@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/dmull.h"
-#include "src/__support/FPUtil/generic/mul.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/dmull.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, dmull, (long double x, long double y)) {
-  return fputil::generic::mul<double>(x, y);
+  return math::dmull(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

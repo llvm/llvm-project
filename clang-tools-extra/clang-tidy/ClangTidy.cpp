@@ -105,10 +105,13 @@ public:
         DiagPrinter(new TextDiagnosticPrinter(llvm::outs(), DiagOpts)),
         Diags(DiagnosticIDs::create(), DiagOpts, DiagPrinter),
         SourceMgr(Diags, Files), Context(Context), ApplyFixes(ApplyFixes) {
-    DiagOpts.ShowColors = Context.getOptions().UseColor.value_or(
-        llvm::sys::Process::StandardOutHasColors());
+    DiagOpts.setShowColors(Context.getOptions().UseColor.value_or(
+                               llvm::sys::Process::StandardOutHasColors())
+                               ? ShowColorsKind::On
+                               : ShowColorsKind::Off);
     DiagPrinter->BeginSourceFile(LangOpts);
-    if (DiagOpts.ShowColors && !llvm::sys::Process::StandardOutIsDisplayed())
+    if (DiagOpts.showColors(llvm::sys::Process::StandardOutHasColors()) &&
+        !llvm::sys::Process::StandardOutIsDisplayed())
       llvm::sys::Process::UseANSIEscapeCodes(true);
   }
 
@@ -433,6 +436,9 @@ ClangTidyASTConsumerFactory::createASTConsumer(CompilerInstance &Compiler,
       CheckFactories->createChecksForLanguage(&Context);
 
   ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
+
+  // We should always skip the declarations in modules.
+  FinderOptions.SkipDeclsInModules = true;
 
   std::unique_ptr<ClangTidyProfiling> Profiling;
   if (Context.getEnableProfiling()) {

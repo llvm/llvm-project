@@ -61,7 +61,7 @@ define nofpclass(nan norm sub zero) float @ret_only_inf__floor(float %x) {
 define nofpclass(nan pinf norm sub zero) float @ret_only_ninf__floor(float %x) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub norm) float @ret_only_ninf__floor(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %result = call float @llvm.floor.f32(float %x)
   ret float %result
@@ -70,7 +70,7 @@ define nofpclass(nan pinf norm sub zero) float @ret_only_ninf__floor(float %x) {
 define nofpclass(nan ninf norm sub zero) float @ret_only_pinf__floor(float %x) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub norm) float @ret_only_pinf__floor(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float +inf
 ;
   %result = call float @llvm.floor.f32(float %x)
   ret float %result
@@ -335,7 +335,7 @@ define nofpclass(snan) float @source_known_nsub__floor(float nofpclass(inf nan n
 define nofpclass(snan) float @source_known_pinf__floor(float nofpclass(nan ninf norm sub zero) %pinf) {
 ; CHECK-LABEL: define nofpclass(snan) float @source_known_pinf__floor(
 ; CHECK-SAME: float nofpclass(nan ninf zero sub norm) [[PINF:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float +inf
 ;
   %result = call float @llvm.floor.f32(float %pinf)
   ret float %result
@@ -353,7 +353,7 @@ define nofpclass(snan) float @source_known_pinf_or_nan__floor(float nofpclass(ni
 define nofpclass(snan) float @source_known_ninf__floor(float nofpclass(nan pinf norm sub zero) %ninf) {
 ; CHECK-LABEL: define nofpclass(snan) float @source_known_ninf__floor(
 ; CHECK-SAME: float nofpclass(nan pinf zero sub norm) [[NINF:%.*]]) {
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %result = call float @llvm.floor.f32(float %ninf)
   ret float %result

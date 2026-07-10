@@ -1238,6 +1238,15 @@ StyleKind IdentifierNamingCheck::findStyleKind(
   if (const auto *Decl = dyn_cast<VarDecl>(D))
     return findStyleKindForVar(Decl, Decl->getType(), NamingStyles);
 
+  // C++17 structured bindings: treat each binding as if it were a variable
+  // with the same storage and qualifiers as the parent DecompositionDecl.
+  if (const auto *BD = dyn_cast<BindingDecl>(D)) {
+    if (const auto *Decomp = dyn_cast_or_null<VarDecl>(BD->getDecomposedDecl()))
+      if (!BD->getType().isNull())
+        return findStyleKindForVar(Decomp, BD->getType(), NamingStyles);
+    return SK_Invalid;
+  }
+
   if (const auto *Decl = dyn_cast<CXXMethodDecl>(D)) {
     if (Decl->isMain() || !Decl->isUserProvided() ||
         Decl->size_overridden_methods() > 0 || Decl->hasAttr<OverrideAttr>())
@@ -1293,6 +1302,13 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (NamingStyles[SK_Function])
       return SK_Function;
   }
+
+  // Ignore template wrapper decls. Their underlying decls are checked with the
+  // right naming kind, checking the wrappers too can fall back to DefaultCase
+  // and emit diagnostic for the same identifier.
+  if (isa<FunctionTemplateDecl, ClassTemplateDecl, VarTemplateDecl,
+          TypeAliasTemplateDecl>(D))
+    return SK_Invalid;
 
   if (isa<TemplateTypeParmDecl>(D)) {
     if (NamingStyles[SK_TypeTemplateParameter])
