@@ -23350,7 +23350,7 @@ public:
         }
         return false;
       }
-      if (auto *ASE = dyn_cast_or_null<ArraySubscriptExpr>(BindingExpr)) {
+      if (dyn_cast_or_null<ArraySubscriptExpr>(BindingExpr)) {
         if (getOriginalVarOrDiagnose(SemaRef, DD, DRE->getExprLoc())) {
           DeclarationNameInfo NameInfo(D->getDeclName(), DRE->getLocation());
           E = DeclRefExpr::Create(SemaRef.Context, DRE->getQualifierLoc(),
