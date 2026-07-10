@@ -89,7 +89,7 @@ namespace {
 /// preserve a consumer's layout as far up the def chain as possible, minimizing
 /// layout conversions. This is a hint, not an optimum. `programOrder` is never
 /// propagated up the chain - each visited op stamps its own index - so it is
-/// deliberately excluded from `operator==`.
+/// excluded from `operator==`.
 
 struct LayoutInfo {
 private:
@@ -107,8 +107,6 @@ public:
   //  - one assigned, the other not -> not equal;
   //  - both unassigned             -> equal;
   //  - both assigned               -> equal iff the layouts match.
-  // `programOrder` is intentionally excluded: it is not propagated, so a pure
-  // order refinement must not be reported as a change.
   bool operator==(const LayoutInfo &other) const {
     if (isAssigned() != other.isAssigned())
       return false;
