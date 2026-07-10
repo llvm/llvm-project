@@ -103,9 +103,8 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
   OwnsHeaderSearch = OwnsHeaders;
 
   // Only record check points if we might highlight diagnostic snippets.
-  RecordCheckPoints =
-      getDiagnostics().getDiagnosticOptions().getShowColors() !=
-      ShowColorsKind::Off;
+  RecordCheckPoints = getDiagnostics().getDiagnosticOptions().getShowColors() !=
+                      ShowColorsKind::Off;
 
   // Default to discarding comments.
   KeepComments = false;
