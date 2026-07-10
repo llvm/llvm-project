@@ -98,10 +98,10 @@ ProcessSP ProcessWindows::CreateInstance(lldb::TargetSP target_sp,
 
 static bool ShouldUseLLDBServer() {
   llvm::StringRef use_lldb_server = ::getenv("LLDB_USE_LLDB_SERVER");
-  return use_lldb_server.equals_insensitive("on") ||
-         use_lldb_server.equals_insensitive("yes") ||
-         use_lldb_server.equals_insensitive("1") ||
-         use_lldb_server.equals_insensitive("true");
+  return !(use_lldb_server.equals_insensitive("off") ||
+           use_lldb_server.equals_insensitive("no") ||
+           use_lldb_server.equals_insensitive("0") ||
+           use_lldb_server.equals_insensitive("false"));
 }
 
 void ProcessWindows::Initialize() {
