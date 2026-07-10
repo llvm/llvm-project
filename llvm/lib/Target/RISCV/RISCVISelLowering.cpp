@@ -4746,7 +4746,8 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     }
 
     if (VT == MVT::v4i8) {
-      // <4 x i8> BUILD_VECTOR a, b, c, d -> PACK(PPACK.DH pair(a, c), pair(b, d))
+      // <4 x i8> BUILD_VECTOR a, b, c, d -> PACK(PPACK.DH pair(a, c), pair(b,
+      // d))
       SDValue Val0 =
           DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(0));
       SDValue Val1 =
@@ -4761,13 +4762,12 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
       return DAG.getNode(
           ISD::BITCAST, DL, MVT::v4i8,
-          SDValue(
-              DAG.getMachineNode(RISCV::PACK, DL, MVT::i32,
-                                 {DAG.getNode(ISD::BITCAST, DL, MVT::i32,
-                                              PPairDB.getValue(0)),
-                                  DAG.getNode(ISD::BITCAST, DL, MVT::i32,
-                                              PPairDB.getValue(1))}),
-              0));
+          SDValue(DAG.getMachineNode(RISCV::PACK, DL, MVT::i32,
+                                     {DAG.getNode(ISD::BITCAST, DL, MVT::i32,
+                                                  PPairDB.getValue(0)),
+                                      DAG.getNode(ISD::BITCAST, DL, MVT::i32,
+                                                  PPairDB.getValue(1))}),
+                  0));
     }
 
     llvm_unreachable("Unexpected RV32 P BUILD_VECTOR type");
