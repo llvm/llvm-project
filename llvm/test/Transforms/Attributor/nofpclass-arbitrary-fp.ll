@@ -25,7 +25,7 @@ define float @ret_arbitrary_fp_nan_only(i8 %bits) {
   ret float %fp
 }
 
-; Test 3: Vector variation checking that your getScalarType() unpacks cleanly.
+; Test 3: Vector variation.
 ; The Attributor should successfully attach nofpclass(nan inf) to the returning vector topology.
 define <4 x float> @ret_arbitrary_fp_vector(<4 x i8> %bits) {
 ; CHECK-LABEL: define nofpclass(nan inf) <4 x float> @ret_arbitrary_fp_vector
