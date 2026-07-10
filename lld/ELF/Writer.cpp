@@ -860,7 +860,7 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
 
   // .rela_iplt_{start,end} mark the start and the end of the section containing
   // IRELATIVE relocations.
-  updateRelIpltSymbols(ctx);
+  (void)updateRelIpltSymbols(ctx);
 
   PhdrEntry *last = nullptr;
   OutputSection *lastRO = nullptr;

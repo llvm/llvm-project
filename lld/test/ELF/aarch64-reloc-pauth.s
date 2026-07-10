@@ -246,7 +246,7 @@
 
 ## .relr.auth.dyn relocations that do not fit 32 bits are moved to .rela.dyn.
 ## If some relocations are moved to the previously empty .rela.dyn and some stay
-## in .relr.auth.dyn, the dynamic section needs contain tags for both these
+## in .relr.auth.dyn, the dynamic section needs to contain tags for both these
 ## sections and have enough space for storing these tags.
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64 dynamic-section-growth.s -o dynamic-section-growth.o
