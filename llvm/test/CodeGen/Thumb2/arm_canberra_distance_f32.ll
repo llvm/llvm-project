@@ -10,16 +10,13 @@ define nofpclass(nan inf) float @arm_canberra_distance_f32(ptr noundef readonly 
 ; CHECK-NEXT:    bxeq lr
 ; CHECK-NEXT:  .LBB0_1: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldr s2, [r1]
 ; CHECK-NEXT:    vldr s4, [r0]
-; CHECK-NEXT:    vcmp.f32 s2, #0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vldr s2, [r1]
 ; CHECK-NEXT:    vcmp.f32 s4, #0
-; CHECK-NEXT:    cset r12, ne
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    cset r3, ne
-; CHECK-NEXT:    orr.w r3, r3, r12
-; CHECK-NEXT:    lsls r3, r3, #31
+; CHECK-NEXT:    itt eq
+; CHECK-NEXT:    vcmpeq.f32 s2, #0
+; CHECK-NEXT:    vmrseq APSR_nzcv, fpscr
 ; CHECK-NEXT:    beq .LBB0_3
 ; CHECK-NEXT:  @ %bb.2: @ %if.then
 ; CHECK-NEXT:    @ in Loop: Header=BB0_1 Depth=1
