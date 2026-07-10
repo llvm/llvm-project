@@ -9,12 +9,12 @@ class TestSwiftImportSearchPaths(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @skipIfWindows
+    @skipEmbeddedSwiftOnWindows
     def test_positive(self):
         self.do_test('true')
 
     @swiftTest
-    @skipIfWindows
+    @skipEmbeddedSwiftOnWindows
     def test_negative(self):
         self.do_test('false')
 
@@ -27,9 +27,11 @@ class TestSwiftImportSearchPaths(lldbtest.TestBase):
         self.expect('settings set '
                     + 'target.experimental.swift-discover-implicit-search-paths '
                     + flag)
+        indirect_name = self.platformContext.getFullLibName("Indirect").split(".")[0]
+        indirect = f"hidden/{indirect_name}"
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'),
-            extra_images=['Direct', self.getBuildArtifact('hidden/libIndirect')])
+            extra_images=['Direct', self.getBuildArtifact(indirect)])
 
         types_log = self.getBuildArtifact("types.log")
         self.expect("log enable lldb types -f " + types_log)

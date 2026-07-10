@@ -740,8 +740,9 @@ LoadFoundationValueTypesFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
   lldb_private::formatters::AddCXXSummary(
       swift_category_sp,
       lldb_private::formatters::swift::Decimal_SummaryProvider,
-      "Decimal summary provider", ConstString("Foundation.Decimal"),
-      TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+      "Decimal summary provider",
+      ConstString("^Foundation(Essentials)?\\.Decimal$"),
+      TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true), true);
 
   lldb_private::formatters::AddCXXSummary(
       swift_category_sp, lldb_private::formatters::NSTimeZoneSummaryProvider,

@@ -38,7 +38,6 @@ class TestLibraryIndirect(TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
     def test_implementation_only_import_library(self):
         """Test `@_implementationOnly import` behind some indirection in a library used by the main executable
 
@@ -73,8 +72,7 @@ class TestLibraryIndirect(TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
-    def test_implementation_only_import_library_no_library_module(self):
+    def test_impl_only_import_lib_no_lib_module(self):
         """Test `@_implementationOnly import` behind some indirection in a library used by the main executable, after removing the implementation-only library's swiftmodule
 
         See the ReadMe.md in the parent directory for more information.

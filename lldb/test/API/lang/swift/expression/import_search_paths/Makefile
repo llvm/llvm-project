@@ -3,6 +3,12 @@ SWIFT_SOURCES := main.swift
 SWIFTFLAGS_EXTRAS = -I$(BUILDDIR)
 LD_EXTRAS = -L$(BUILDDIR) -lDirect
 
+# rpath is a Unix loader concept rejected by lld-link.
+RPATH_HIDDEN = -Xlinker -rpath -Xlinker $(BUILDDIR)/hidden
+ifeq "$(OS)" "Windows_NT"
+RPATH_HIDDEN =
+endif
+
 all: libDirect $(EXE)
 .phony: libDirect libHidden
 
@@ -26,6 +32,6 @@ libDirect: $(SRCDIR)/Direct.swift libHidden
 		DYLIB_SWIFT_SOURCES=Direct.swift \
 		DYLIB_MODULENAME=Direct \
 		SWIFTFLAGS_EXTRAS="-I$(BUILDDIR)/hidden" \
-		LD_EXTRAS="-L$(BUILDDIR)/hidden -lIndirect -Xlinker -rpath -Xlinker $(BUILDDIR)/hidden" \
+		LD_EXTRAS="-L$(BUILDDIR)/hidden -lIndirect $(RPATH_HIDDEN)" \
 		MAKE_DSYM=NO
 

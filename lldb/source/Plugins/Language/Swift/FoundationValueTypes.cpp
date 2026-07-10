@@ -565,35 +565,26 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
 bool lldb_private::formatters::swift::Decimal_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
 
-  // The layout of the type is:
-  // public struct Decimal {
-  //   fileprivate var __exponent : Int8
-  //   fileprivate var __lengthAndFlags: UInt8
-  //   fileprivate var __reserved: UInt16
-  //   public var _mantissa: (UInt16, UInt16, UInt16, UInt16, UInt16, UInt16,
-  //   UInt16, UInt16)
-  // We do have to harcode the offset of the variables because they're
-  // fileprivate, but we can access `_mantissa` by name.
-
-  ProcessSP process(valobj.GetProcessSP());
-  if (!process)
-    return false;
+  // The value's bytes follow the NSDecimal C ABI on every platform:
+  //   __exponent: Int8 @0, __lengthAndFlags: UInt8 @1, __reserved: UInt16 @2,
+  //   _mantissa: (UInt16 x 8) @4.
 
   Status error;
   DataExtractor data_extractor;
   if (!valobj.GetData(data_extractor, error))
     return false;
 
+  // exponent @0 (Int8), lengthAndFlags @1 (UInt8), reserved @2 (UInt16),
+  // _mantissa @4 (UInt16 x 8).
+  const uint8_t num_children = 8;
+  if (data_extractor.GetByteSize() < 4 + num_children * 2)
+    return false;
+
   offset_t offset_ptr = 0;
-  int8_t exponent = data_extractor.GetU8(&offset_ptr);
+  int8_t exponent = (int8_t)data_extractor.GetU8(&offset_ptr);
   uint8_t length_and_flags = data_extractor.GetU8(&offset_ptr);
   uint8_t length = length_and_flags & 0xf;
   bool isNegative = length_and_flags & 0x10;
-
-  static constexpr llvm::StringLiteral g_mantissa("_mantissa");
-  ValueObjectSP mantissa_sp = valobj.GetChildAtNamePath({g_mantissa});
-  if (!mantissa_sp)
-    return false;
 
   // Easy case. length == 0 is either `NaN` or `0`.
   if (length == 0) {
@@ -604,23 +595,12 @@ bool lldb_private::formatters::swift::Decimal_SummaryProvider(
     return true;
   }
 
-  // Mantissa is represented as a tuple of 8 UInt16.
-  const uint8_t num_children = 8;
-  if (mantissa_sp->GetNumChildrenIgnoringErrors() != num_children)
-    return false;
-
+  // _mantissa is a tuple of 8 UInt16 at offset 4 (after the 2-byte reserved).
   std::vector<double> mantissa_elements;
-  for (int i = 0; i < 8; ++i) {
-    ValueObjectSP child_sp = mantissa_sp->GetChildAtIndex(i, true);
-    if (!child_sp)
-      return false;
-    static constexpr llvm::StringLiteral g_value("_value");
-    ValueObjectSP value_sp = child_sp->GetChildAtNamePath({g_value});
-    if (!value_sp)
-      return false;
-    auto val = value_sp->GetValueAsUnsigned(0) & 0xffff;
-    mantissa_elements.push_back(static_cast<double>(val));
-  }
+  offset_ptr = 4;
+  for (int i = 0; i < num_children; ++i)
+    mantissa_elements.push_back(
+        static_cast<double>(data_extractor.GetU16(&offset_ptr)));
 
   // Compute the value using mantissa and exponent
   double d = 0.0;
