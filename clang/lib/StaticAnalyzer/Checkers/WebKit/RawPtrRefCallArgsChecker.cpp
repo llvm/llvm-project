@@ -502,7 +502,7 @@ public:
   virtual PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
                                      const Type *T) const {
     T = T->getUnqualifiedDesugaredType();
-    bool IsPtr = isa<PointerType,ObjCObjectPointerType>(T);
+    bool IsPtr = isa<PointerType, ObjCObjectPointerType>(T);
     Os << "raw " << (IsPtr ? "pointer" : "reference") << " to " << typeName();
     return PrintDeclKind::Pointee;
   }
