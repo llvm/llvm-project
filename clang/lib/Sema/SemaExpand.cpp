@@ -560,11 +560,11 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
   CXXExpansionStmtDecl *ESD = Expansion->getDecl();
   QualType PtrDiffT = Context.getPointerDiffType();
   unsigned PtrDiffTWidth = Context.getIntWidth(PtrDiffT);
-  bool PtrDiffTIsSigned = PtrDiffT->isSignedIntegerType();
+  bool PtrDiffTIsUnsigned = PtrDiffT->isUnsignedIntegerType();
   for (uint64_t I = 0; I < *NumInstantiations; ++I) {
     llvm::APInt IVal{PtrDiffTWidth, I};
     TemplateArgument Arg{
-        Context, llvm::APSInt{std::move(IVal), PtrDiffTIsSigned}, PtrDiffT};
+        Context, llvm::APSInt{std::move(IVal), PtrDiffTIsUnsigned}, PtrDiffT};
     MultiLevelTemplateArgumentList MTArgList(ESD, Arg, true);
     MTArgList.addOuterRetainedLevels(
         Expansion->getDecl()->getIndexTemplateParm()->getDepth());
