@@ -321,7 +321,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   }
   case AMDGPU::BI__builtin_amdgcn_ldexp:
   case AMDGPU::BI__builtin_amdgcn_ldexpf: {
-    return emitBuiltinWithOneOverloadedType<2>(expr, "amdgcn.readlane")
+    return emitBuiltinWithOneOverloadedType<2>(expr, "amdgcn.ldexp")
         .getValue();
   }
   case AMDGPU::BI__builtin_amdgcn_ldexph: {
