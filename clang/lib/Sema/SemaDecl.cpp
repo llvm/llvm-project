@@ -14474,7 +14474,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     }
     // C++1z [dcl.dcl]p1 grammar implies that an initializer is mandatory.
     if (isa<DecompositionDecl>(RealDecl)) {
-      // point carat to the token immediately after the closing bracket
+      // Point the caret to the token immediately after the closing bracket.
       auto NextLoc = dyn_cast<DecompositionDecl>(RealDecl)->getRSquareLoc();
       NextLoc =
           Lexer::findNextToken(NextLoc, PP.getSourceManager(), PP.getLangOpts())
