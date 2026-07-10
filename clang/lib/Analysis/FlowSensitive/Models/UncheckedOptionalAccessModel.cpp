@@ -320,7 +320,9 @@ auto isOptionalNulloptAssignment() {
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName("="),
       callee(cxxMethodDecl(ofClass(optionalOrDerivedClass()))),
-      argumentCountIs(2), hasArgument(1, hasNulloptType()));
+      argumentCountIs(2),
+      anyOf(hasArgument(1, hasNulloptType()),
+          callee(cxxMethodDecl(hasAnalyzeAsMethodName("operator=(nullopt_t)")))));
 }
 
 auto isStdSwapCall() {
@@ -1041,11 +1043,12 @@ auto buildTransferMatchSwitch() {
                                        transferValueOrConversionConstructor)
 
       // optional::operator=
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(isOptionalNulloptAssignment(),
+                                          transferNulloptAssignment)
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
           isOptionalValueOrConversionAssignment(),
           transferValueOrConversionAssignment)
-      .CaseOfCFGStmt<CXXOperatorCallExpr>(isOptionalNulloptAssignment(),
-                                          transferNulloptAssignment)
+
 
       // optional::value
       .CaseOfCFGStmt<CXXMemberCallExpr>(

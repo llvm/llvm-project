@@ -102,6 +102,10 @@ public:
   // Assignment
   template <typename U>
   HickettsOptional &operator=(const U &u) { return *this; }
+
+  [[clang::analyze_as_method("operator=(nullopt_t)")]]
+  HickettsOptional &operator=(mylib::nothing_t){ storage_ = nullptr; return *this;}
+
 };
 
 } // namespace mylib

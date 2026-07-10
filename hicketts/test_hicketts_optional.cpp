@@ -106,3 +106,9 @@ static void unwrapOrIsAlwaysSafe(mylib::HickettsOptional<int> &Val) {
   int X = Val.unwrapOr(0); // safe — fallback provided
   (void)X;
 }
+
+static void unsafeAfterNullAssign() {
+  mylib::HickettsOptional<int> A(5);
+  A = mylib::nothing;
+  A.unwrap();  // should warn WIP
+}
