@@ -2193,9 +2193,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         << A->getSpelling() << T.str();
   }
 
-  if (!T.isOSzOS() && Args.hasArg(OPT_mzos_ppa1_name, OPT_mno_zos_ppa1_name))
-    Opts.ZOSPPA1Name = true;
-
   bool NeedLocTracking = false;
 
   if (!Opts.OptRecordFile.empty())
