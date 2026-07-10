@@ -37,8 +37,6 @@ class SampleProfileMatcher {
   // mapping from the source location of current build to the source location
   // in the profile.
   StringMap<LocToLocMap> FuncMappings;
-  // Hash mapping cache for matched anchor pairs in stale profile matching
-  DenseMap<FunctionId, const Function *> MatchedAnchorCache;
 
   // Match state for an anchor/callsite.
   enum class MatchState {
@@ -71,6 +69,11 @@ class SampleProfileMatcher {
   // the new(renamed) function pointer and the value is old(unused) profile
   // name.
   MapVector<Function *, FunctionId> FuncToProfileNameMap;
+  // Mapping from matched(renamed) profile name to IR function to during call
+  // graph matching. This is a reversed FuncToProfileNameMap to track duplicated
+  // profile matching and resolve multiple IR functions being mapped to a single
+  // profile.
+  DenseMap<FunctionId, const Function *> ProfileNameToFuncMap;
 
   // A map pointer to the FuncNameToProfNameMap in SampleProfileLoader,
   // which maps the function name to the matched profile name. This is used
