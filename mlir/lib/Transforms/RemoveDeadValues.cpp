@@ -511,6 +511,11 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
     // Do (2)
     BitVector successorNonLive =
         markLives(operandValues, nonLiveSet, la).flip();
+    // A dead incoming edge does not make the successor argument globally dead.
+    for (auto [argIndex, arg] : llvm::enumerate(successorBlock->getArguments()))
+      if (successorNonLive[argIndex] && hasLive(arg, nonLiveSet, la))
+        successorNonLive.reset(argIndex);
+
     collectNonLiveValues(nonLiveSet, successorBlock->getArguments(),
                          successorNonLive);
 

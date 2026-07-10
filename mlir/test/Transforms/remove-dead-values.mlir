@@ -850,6 +850,40 @@ func.func @replace_dead_operation_results_with_poison(%0: vector<1xindex>) -> ve
 
 // -----
 
+// CHECK-LABEL: func.func @dont_mark_live_successor_arg_dead_from_unreachable_pred
+// CHECK-CANONICALIZE-LABEL: func.func @dont_mark_live_successor_arg_dead_from_unreachable_pred
+func.func @dont_mark_live_successor_arg_dead_from_unreachable_pred(%arg0: memref<?x8x16xf32>, %arg1: memref<4x?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  cf.br ^bb1(%c0 : index)
+^bb1(%0: index):
+  %1 = arith.cmpi slt, %0, %c4 : index
+  cf.cond_br %1, ^bb2, ^bb7
+^bb2:
+  cf.br ^bb3(%c0 : index)
+^bb3(%2: index):
+  %3 = arith.cmpi slt, %2, %c4 : index
+  cf.cond_br %3, ^bb4, ^bb6
+^bb4:
+  %4 = memref.load %arg0[%0, %2, %c1] : memref<?x8x16xf32>
+  %5 = arith.addf %4, %cst : f32
+  memref.store %5, %arg1[%0, %2] : memref<4x?xf32>
+  %6 = arith.addi %2, %c1 : index
+  cf.br ^bb3(%6 : index)
+^bb5:
+  %7 = arith.addi %0, %c1 : index
+  cf.br ^bb1(%7 : index)
+^bb6:
+  %8 = arith.addi %0, %c1 : index
+  cf.br ^bb1(%8 : index)
+^bb7:
+  return
+}
+
+// -----
+
 // Verify that a referenced by a non-call op (spirv.EntryPoint),
 // while still having another usual call site is preserved as-is
 // since the pass cannot analyse non-call users.
