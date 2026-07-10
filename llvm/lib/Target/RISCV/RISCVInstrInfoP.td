@@ -1903,6 +1903,11 @@ def SDT_RISCVPPairE_DB : SDTypeProfile<2, 4, [SDTCisVT<0, v4i8>,
                                               SDTCisSameAs<0, 5>]>;
 def riscv_ppaire_db : RVSDNode<"PPAIRE_DB", SDT_RISCVPPairE_DB>;
 
+def SDT_RISCVPackedBinary : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                                 SDTCisSameAs<0, 1>,
+                                                 SDTCisSameAs<0, 2>]>;
+def riscv_ppairoe_h : RVSDNode<"PPAIROE_H", SDT_RISCVPackedBinary>;
+
 // signed-saturating abs of each lane; an INT_MIN lane maps to INT_MAX.
 def SDT_RISCVPackedUnary : SDTypeProfile<1, 1, [SDTCisVec<0>,
                                                 SDTCisSameAs<0, 1>]>;
@@ -2144,9 +2149,11 @@ let Predicates = [HasStdExtP] in {
   def : Pat<(XLenVecI16VT (vselect (XLenVecI16VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
             (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
 
-  // 16-bit bswap patterns
+  // 16-bit permute patterns
   def : Pat<(XLenVecI16VT (bswap GPR:$rs)),
             (PPAIROE_B GPR:$rs, GPR:$rs)>;
+  def : Pat<(XLenVecI16VT (riscv_ppairoe_h GPR:$rs1, GPR:$rs2)),
+            (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
 
 let append Predicates = [IsRV32] in {
   def : PatGpr<bitreverse, REV_RV32>;
