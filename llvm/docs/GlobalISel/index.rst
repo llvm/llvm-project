@@ -6,6 +6,10 @@ Global Instruction Selection
    This document is a work in progress.  It reflects the current state of the
    implementation, as well as open design and implementation issues.
 
+.. contents::
+   :local:
+   :depth: 1
+
 .. toctree::
    :hidden:
 

@@ -2,6 +2,9 @@
 How To Add A Constrained Floating-Point Intrinsic
 ==================================================
 
+.. contents::
+   :local:
+
 .. warning::
   This is a work in progress.
 
