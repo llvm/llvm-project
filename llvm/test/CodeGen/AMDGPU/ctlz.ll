@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global | FileCheck %s -enable-var-scope --check-prefix=VI
 ; RUN: llc < %s -mtriple=r600 -mcpu=cypress | FileCheck %s -enable-var-scope --check-prefix=EG
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -enable-var-scope --check-prefix=GFX10
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -enable-var-scope --check-prefix=GFX10-GISEL
+; RUN: llc < %s -global-isel -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -enable-var-scope --check-prefix=GFX10-GISEL
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 | FileCheck %s -enable-var-scope --check-prefixes=GFX11,GFX11-TRUE16
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 | FileCheck %s -enable-var-scope --check-prefixes=GFX11,GFX11-FAKE16
 

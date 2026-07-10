@@ -406,7 +406,7 @@ public:
   /// induction with \p Start and \p Step values, using \p Start + \p Current *
   /// \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
-                                     FPMathOperator *FPBinOp, VPIRValue *Start,
+                                     FPMathOperator *FPBinOp, VPValue *Start,
                                      VPValue *Current, VPValue *Step) {
     return tryInsertInstruction(
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step));
@@ -527,8 +527,7 @@ public:
   /// with element type \p SourceElementTy.
   VPSingleDefRecipe *createConsecutiveVectorPointer(VPValue *Ptr,
                                                     Type *SourceElementTy,
-                                                    bool Reverse, bool FoldTail,
-                                                    DebugLoc DL);
+                                                    bool Reverse, DebugLoc DL);
 
   VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
       Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
@@ -969,6 +968,10 @@ public:
   /// Returns true if \p Plan requires a scalar epilogue after the vector
   /// loop. Asserts that the VPlan decision matches the legacy cost model.
   bool requiresScalarEpilogue(VPlan &Plan, ElementCount VF) const;
+
+  /// Returns true if \p Plan folds the tail by masking. Asserts that the
+  /// VPlan-based decision matches the legacy cost model.
+  bool hasTailFolded(const VPlan &Plan) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,

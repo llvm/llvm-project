@@ -102,6 +102,12 @@ static cl::opt<bool> EmitDotVerify(
              "potential LVI gadgets, used for testing purposes only"),
     cl::init(false), cl::Hidden);
 
+static llvm::sys::DynamicLibrary OptimizeDL;
+typedef int (*OptimizeCutT)(unsigned int *Nodes, unsigned int NodesSize,
+                            unsigned int *Edges, int *EdgeValues,
+                            int *CutEdges /* out */, unsigned int EdgesSize);
+static OptimizeCutT OptimizeCut = nullptr;
+
 namespace {
 
 struct MachineGadgetGraph : ImmutableGraph<MachineInstr *, int> {
@@ -155,9 +161,6 @@ private:
   using Node = MachineGadgetGraph::Node;
   using EdgeSet = MachineGadgetGraph::EdgeSet;
   using NodeSet = MachineGadgetGraph::NodeSet;
-  using OptimizeCutT = int (*)(unsigned int *Nodes, unsigned int NodesSize,
-                               unsigned int *Edges, int *EdgeValues,
-                               int *CutEdges /* out */, unsigned int EdgesSize);
 
   const X86Subtarget *STI = nullptr;
   const TargetInstrInfo *TII = nullptr;
@@ -167,7 +170,7 @@ private:
   getGadgetGraph(MachineFunction &MF, const MachineLoopInfo &MLI,
                  const MachineDominatorTree &MDT,
                  const MachineDominanceFrontier &MDF) const;
-  int hardenLoadsWithPlugin(OptimizeCutT OptimizeCut, MachineFunction &MF,
+  int hardenLoadsWithPlugin(MachineFunction &MF,
                             std::unique_ptr<MachineGadgetGraph> Graph) const;
   int hardenLoadsWithHeuristic(MachineFunction &MF,
                                std::unique_ptr<MachineGadgetGraph> Graph) const;
@@ -294,8 +297,6 @@ bool X86LoadValueInjectionLoadHardeningImpl::run(
 
   int FencesInserted;
   if (!OptimizePluginPath.empty()) {
-    static llvm::sys::DynamicLibrary OptimizeDL;
-    static OptimizeCutT OptimizeCut = nullptr;
     if (!OptimizeDL.isValid()) {
       std::string ErrorMsg;
       OptimizeDL = llvm::sys::DynamicLibrary::getPermanentLibrary(
@@ -307,7 +308,7 @@ bool X86LoadValueInjectionLoadHardeningImpl::run(
       if (!OptimizeCut)
         report_fatal_error("Invalid optimization plugin");
     }
-    FencesInserted = hardenLoadsWithPlugin(OptimizeCut, MF, std::move(Graph));
+    FencesInserted = hardenLoadsWithPlugin(MF, std::move(Graph));
   } else { // Use the default greedy heuristic
     FencesInserted = hardenLoadsWithHeuristic(MF, std::move(Graph));
   }
@@ -604,8 +605,7 @@ X86LoadValueInjectionLoadHardeningImpl::trimMitigatedEdges(
 }
 
 int X86LoadValueInjectionLoadHardeningImpl::hardenLoadsWithPlugin(
-    OptimizeCutT OptimizeCut, MachineFunction &MF,
-    std::unique_ptr<MachineGadgetGraph> Graph) const {
+    MachineFunction &MF, std::unique_ptr<MachineGadgetGraph> Graph) const {
   int FencesInserted = 0;
 
   do {

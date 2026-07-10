@@ -2049,13 +2049,17 @@ public:
 
   };
 
-  /// Stashed information about a defaulted/deleted function body.
+  /// Stashed information about a defaulted/deleted function body, including
+  /// the active FP pragma overrides (FPOptionsOverride) from the declaration
+  /// site. These overrides are required to correctly synthesize the function
+  /// body.
   class DefaultedOrDeletedFunctionInfo final
       : llvm::TrailingObjects<DefaultedOrDeletedFunctionInfo, DeclAccessPair,
                               StringLiteral *> {
     friend TrailingObjects;
     unsigned NumLookups;
     bool HasDeletedMessage;
+    FPOptionsOverride FPFeatures;
 
     size_t numTrailingObjects(OverloadToken<DeclAccessPair>) const {
       return NumLookups;
@@ -2064,7 +2068,10 @@ public:
   public:
     static DefaultedOrDeletedFunctionInfo *
     Create(ASTContext &Context, ArrayRef<DeclAccessPair> Lookups,
+           FPOptionsOverride FPFeatures,
            StringLiteral *DeletedMessage = nullptr);
+
+    FPOptionsOverride getFPFeatures() const { return FPFeatures; }
 
     /// Get the unqualified lookup results that should be used in this
     /// defaulted function definition.

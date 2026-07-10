@@ -5,7 +5,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 < %s | FileCheck --check-prefix=GFX11 %s
 
 ; FIXME:
-; XUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=tahiti < %s | FileCheck --check-prefix=GFX6 %s
+; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn-amd-amdpal -mcpu=tahiti < %s | FileCheck --check-prefix=GFX6 %s
 
 define amdgpu_kernel void @store_lds_v3i32(ptr addrspace(3) %out, <3 x i32> %x) {
 ; GFX9-LABEL: store_lds_v3i32:
@@ -60,6 +60,23 @@ define amdgpu_kernel void @store_lds_v3i32(ptr addrspace(3) %out, <3 x i32> %x) 
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-NEXT:    ds_store_b96 v3, v[0:2]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX6-LABEL: store_lds_v3i32:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_load_dword s3, s[4:5], 0x0
+; GFX6-NEXT:    s_mov_b32 m0, -1
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-NEXT:    v_mov_b32_e32 v1, s1
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    v_mov_b32_e32 v2, s3
+; GFX6-NEXT:    s_add_u32 s0, s3, 8
+; GFX6-NEXT:    ds_write_b64 v2, v[0:1]
+; GFX6-NEXT:    v_mov_b32_e32 v0, s2
+; GFX6-NEXT:    v_mov_b32_e32 v1, s0
+; GFX6-NEXT:    ds_write_b32 v1, v0
+; GFX6-NEXT:    s_endpgm
   store <3 x i32> %x, ptr addrspace(3) %out
   ret void
 }
@@ -244,6 +261,71 @@ define amdgpu_kernel void @store_lds_v3i32_align1(ptr addrspace(3) %out, <3 x i3
 ; GFX11-NEXT:    ds_store_b8_d16_hi v6, v3 offset:10
 ; GFX11-NEXT:    ds_store_b8_d16_hi v6, v4 offset:11
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX6-LABEL: store_lds_v3i32_align1:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_load_dword s3, s[4:5], 0x0
+; GFX6-NEXT:    s_mov_b32 m0, -1
+; GFX6-NEXT:    s_bfe_u32 s6, s0, 0x80008
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_add_u32 s7, s3, 1
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-NEXT:    v_mov_b32_e32 v1, s3
+; GFX6-NEXT:    s_lshr_b32 s4, s0, 16
+; GFX6-NEXT:    s_add_u32 s5, s3, 2
+; GFX6-NEXT:    ds_write_b8 v1, v0
+; GFX6-NEXT:    v_mov_b32_e32 v0, s6
+; GFX6-NEXT:    v_mov_b32_e32 v1, s7
+; GFX6-NEXT:    ds_write_b8 v1, v0
+; GFX6-NEXT:    s_lshr_b32 s0, s0, 24
+; GFX6-NEXT:    s_add_u32 s6, s3, 3
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
+; GFX6-NEXT:    v_mov_b32_e32 v1, s5
+; GFX6-NEXT:    ds_write_b8 v1, v0
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-NEXT:    v_mov_b32_e32 v1, s6
+; GFX6-NEXT:    s_add_u32 s0, s3, 4
+; GFX6-NEXT:    ds_write_b8 v1, v0
+; GFX6-NEXT:    s_bfe_u32 s6, s1, 0x80008
+; GFX6-NEXT:    s_add_u32 s7, s3, 5
+; GFX6-NEXT:    v_mov_b32_e32 v0, s1
+; GFX6-NEXT:    v_mov_b32_e32 v1, s0
+; GFX6-NEXT:    s_lshr_b32 s4, s1, 16
+; GFX6-NEXT:    s_add_u32 s5, s3, 6
+; GFX6-NEXT:    ds_write_b8 v1, v0
+; GFX6-NEXT:    v_mov_b32_e32 v0, s6
+; GFX6-NEXT:    v_mov_b32_e32 v1, s7
+; GFX6-NEXT:    ds_write_b8 v1, v0
+; GFX6-NEXT:    s_lshr_b32 s0, s1, 24
+; GFX6-NEXT:    s_add_u32 s1, s3, 7
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
+; GFX6-NEXT:    v_mov_b32_e32 v1, s5
+; GFX6-NEXT:    ds_write_b8 v1, v0
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-NEXT:    v_mov_b32_e32 v1, s1
+; GFX6-NEXT:    s_add_u32 s0, s3, 8
+; GFX6-NEXT:    ds_write_b8 v1, v0
+; GFX6-NEXT:    s_bfe_u32 s5, s2, 0x80008
+; GFX6-NEXT:    s_add_u32 s6, s3, 9
+; GFX6-NEXT:    v_mov_b32_e32 v0, s2
+; GFX6-NEXT:    v_mov_b32_e32 v1, s0
+; GFX6-NEXT:    s_lshr_b32 s1, s2, 16
+; GFX6-NEXT:    s_add_u32 s4, s3, 10
+; GFX6-NEXT:    ds_write_b8 v1, v0
+; GFX6-NEXT:    v_mov_b32_e32 v0, s5
+; GFX6-NEXT:    v_mov_b32_e32 v1, s6
+; GFX6-NEXT:    ds_write_b8 v1, v0
+; GFX6-NEXT:    s_lshr_b32 s0, s2, 24
+; GFX6-NEXT:    s_add_u32 s2, s3, 11
+; GFX6-NEXT:    v_mov_b32_e32 v0, s1
+; GFX6-NEXT:    v_mov_b32_e32 v1, s4
+; GFX6-NEXT:    ds_write_b8 v1, v0
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-NEXT:    v_mov_b32_e32 v1, s2
+; GFX6-NEXT:    ds_write_b8 v1, v0
+; GFX6-NEXT:    s_endpgm
   store <3 x i32> %x, ptr addrspace(3) %out, align 1
   ret void
 }
@@ -344,6 +426,41 @@ define amdgpu_kernel void @store_lds_v3i32_align2(ptr addrspace(3) %out, <3 x i3
 ; GFX11-NEXT:    ds_store_b16 v1, v4 offset:8
 ; GFX11-NEXT:    ds_store_b16 v1, v6 offset:10
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX6-LABEL: store_lds_v3i32_align2:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_load_dword s3, s[4:5], 0x0
+; GFX6-NEXT:    s_mov_b32 m0, -1
+; GFX6-NEXT:    s_lshr_b32 s4, s0, 16
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_add_u32 s5, s3, 2
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-NEXT:    v_mov_b32_e32 v1, s3
+; GFX6-NEXT:    ds_write_b16 v1, v0
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
+; GFX6-NEXT:    v_mov_b32_e32 v1, s5
+; GFX6-NEXT:    s_add_u32 s0, s3, 4
+; GFX6-NEXT:    ds_write_b16 v1, v0
+; GFX6-NEXT:    s_lshr_b32 s4, s1, 16
+; GFX6-NEXT:    s_add_u32 s5, s3, 6
+; GFX6-NEXT:    v_mov_b32_e32 v0, s1
+; GFX6-NEXT:    v_mov_b32_e32 v1, s0
+; GFX6-NEXT:    ds_write_b16 v1, v0
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
+; GFX6-NEXT:    v_mov_b32_e32 v1, s5
+; GFX6-NEXT:    s_add_u32 s0, s3, 8
+; GFX6-NEXT:    ds_write_b16 v1, v0
+; GFX6-NEXT:    s_lshr_b32 s1, s2, 16
+; GFX6-NEXT:    s_add_u32 s3, s3, 10
+; GFX6-NEXT:    v_mov_b32_e32 v0, s2
+; GFX6-NEXT:    v_mov_b32_e32 v1, s0
+; GFX6-NEXT:    ds_write_b16 v1, v0
+; GFX6-NEXT:    v_mov_b32_e32 v0, s1
+; GFX6-NEXT:    v_mov_b32_e32 v1, s3
+; GFX6-NEXT:    ds_write_b16 v1, v0
+; GFX6-NEXT:    s_endpgm
   store <3 x i32> %x, ptr addrspace(3) %out, align 2
   ret void
 }
@@ -405,6 +522,20 @@ define amdgpu_kernel void @store_lds_v3i32_align4(ptr addrspace(3) %out, <3 x i3
 ; GFX11-NEXT:    ds_store_2addr_b32 v1, v0, v2 offset1:1
 ; GFX11-NEXT:    ds_store_b32 v1, v3 offset:8
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX6-LABEL: store_lds_v3i32_align4:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_load_dword s6, s[4:5], 0x0
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
+; GFX6-NEXT:    s_mov_b32 m0, -1
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    v_mov_b32_e32 v0, s6
+; GFX6-NEXT:    v_mov_b32_e32 v1, s2
+; GFX6-NEXT:    v_mov_b32_e32 v2, s0
+; GFX6-NEXT:    ds_write_b32 v0, v1 offset:8
+; GFX6-NEXT:    v_mov_b32_e32 v1, s1
+; GFX6-NEXT:    ds_write2_b32 v0, v2, v1 offset1:1
+; GFX6-NEXT:    s_endpgm
   store <3 x i32> %x, ptr addrspace(3) %out, align 4
   ret void
 }
@@ -466,6 +597,23 @@ define amdgpu_kernel void @store_lds_v3i32_align8(ptr addrspace(3) %out, <3 x i3
 ; GFX11-NEXT:    ds_store_2addr_b32 v1, v0, v2 offset1:1
 ; GFX11-NEXT:    ds_store_b32 v1, v3 offset:8
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX6-LABEL: store_lds_v3i32_align8:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_load_dword s3, s[4:5], 0x0
+; GFX6-NEXT:    s_mov_b32 m0, -1
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-NEXT:    v_mov_b32_e32 v1, s1
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    v_mov_b32_e32 v2, s3
+; GFX6-NEXT:    s_add_u32 s0, s3, 8
+; GFX6-NEXT:    ds_write_b64 v2, v[0:1]
+; GFX6-NEXT:    v_mov_b32_e32 v0, s2
+; GFX6-NEXT:    v_mov_b32_e32 v1, s0
+; GFX6-NEXT:    ds_write_b32 v1, v0
+; GFX6-NEXT:    s_endpgm
   store <3 x i32> %x, ptr addrspace(3) %out, align 8
   ret void
 }
@@ -523,6 +671,23 @@ define amdgpu_kernel void @store_lds_v3i32_align16(ptr addrspace(3) %out, <3 x i
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-NEXT:    ds_store_b96 v3, v[0:2]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX6-LABEL: store_lds_v3i32_align16:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_load_dword s3, s[4:5], 0x0
+; GFX6-NEXT:    s_mov_b32 m0, -1
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-NEXT:    v_mov_b32_e32 v1, s1
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    v_mov_b32_e32 v2, s3
+; GFX6-NEXT:    s_add_u32 s0, s3, 8
+; GFX6-NEXT:    ds_write_b64 v2, v[0:1]
+; GFX6-NEXT:    v_mov_b32_e32 v0, s2
+; GFX6-NEXT:    v_mov_b32_e32 v1, s0
+; GFX6-NEXT:    ds_write_b32 v1, v0
+; GFX6-NEXT:    s_endpgm
   store <3 x i32> %x, ptr addrspace(3) %out, align 16
   ret void
 }

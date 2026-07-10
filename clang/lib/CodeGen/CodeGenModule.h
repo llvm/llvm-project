@@ -1557,6 +1557,11 @@ public:
   /// of the given class.
   llvm::GlobalVariable::LinkageTypes getVTableLinkage(const CXXRecordDecl *RD);
 
+  /// Returns true if a vtable with the given linkage may be emitted with more
+  /// than one address in the program, because the vtable is weak and the
+  /// target's ABI allows weak vtables to be duplicated across images.
+  bool mayVTableBeDuplicated(llvm::GlobalValue::LinkageTypes Linkage) const;
+
   /// Return the store size, in character units, of the given LLVM type.
   CharUnits GetTargetTypeStoreSize(llvm::Type *Ty) const;
 

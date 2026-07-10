@@ -62,7 +62,7 @@ namespace llvm {
     SlotIndex def;
 
     /// VNInfo constructor.
-    constexpr VNInfo(unsigned i, SlotIndex d) : id(i), def(d) {}
+    VNInfo(unsigned i, SlotIndex d) : id(i), def(d) {}
 
     /// VNInfo constructor, copies values from orig, except for the value number.
     VNInfo(unsigned i, const VNInfo &orig) : id(i), def(orig.def) {}

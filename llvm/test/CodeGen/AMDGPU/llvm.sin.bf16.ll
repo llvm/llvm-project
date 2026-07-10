@@ -11,6 +11,8 @@ declare bfloat @llvm.sin.bf16(bfloat) #0
 define amdgpu_kernel void @sin_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 ; FAKE16-LABEL: sin_bf16:
 ; FAKE16:       ; %bb.0:
+; FAKE16-NEXT:    global_wb
+; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; FAKE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
 ; FAKE16-NEXT:    s_mov_b32 s3, 0x3e230000
@@ -25,6 +27,8 @@ define amdgpu_kernel void @sin_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 ;
 ; REAL16-LABEL: sin_bf16:
 ; REAL16:       ; %bb.0:
+; REAL16-NEXT:    global_wb
+; REAL16-NEXT:    v_nop
 ; REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; REAL16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
 ; REAL16-NEXT:    s_mov_b32 s3, 0x3e230000
@@ -44,6 +48,8 @@ define amdgpu_kernel void @sin_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 define amdgpu_kernel void @sin_bf16_constant_4(ptr addrspace(1) %out) #1 {
 ; FAKE16-LABEL: sin_bf16_constant_4:
 ; FAKE16:       ; %bb.0:
+; FAKE16-NEXT:    global_wb
+; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; FAKE16-NEXT:    v_sin_bf16_e32 v0, 0x3f23
@@ -54,6 +60,8 @@ define amdgpu_kernel void @sin_bf16_constant_4(ptr addrspace(1) %out) #1 {
 ;
 ; REAL16-LABEL: sin_bf16_constant_4:
 ; REAL16:       ; %bb.0:
+; REAL16-NEXT:    global_wb
+; REAL16-NEXT:    v_nop
 ; REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; REAL16-NEXT:    v_sin_bf16_e32 v0.l, 0x3f23
@@ -69,6 +77,8 @@ define amdgpu_kernel void @sin_bf16_constant_4(ptr addrspace(1) %out) #1 {
 define amdgpu_kernel void @sin_bf16_constant_100(ptr addrspace(1) %out) #1 {
 ; FAKE16-LABEL: sin_bf16_constant_100:
 ; FAKE16:       ; %bb.0:
+; FAKE16-NEXT:    global_wb
+; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; FAKE16-NEXT:    v_sin_bf16_e32 v0, 0x417f
@@ -79,6 +89,8 @@ define amdgpu_kernel void @sin_bf16_constant_100(ptr addrspace(1) %out) #1 {
 ;
 ; REAL16-LABEL: sin_bf16_constant_100:
 ; REAL16:       ; %bb.0:
+; REAL16-NEXT:    global_wb
+; REAL16-NEXT:    v_nop
 ; REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; REAL16-NEXT:    v_sin_bf16_e32 v0.l, 0x417f
