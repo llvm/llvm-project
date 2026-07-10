@@ -2979,7 +2979,6 @@ StmtResult Sema::BuildCXXForRangeStmt(
           RangeVar->getInit(), RangeVar->getLocation(), RParenLoc);
     };
 
-    auto BeginRangeRefTy = RangeVar->getType().getNonReferenceType();
     ForRangeBeginEndInfo ForRangeInfo = BuildCXXForRangeBeginEndVars(
         S, RangeVar, ColonLoc, CoawaitLoc, LifetimeExtendTemps, Kind,
         /*Constexpr=*/false, &RebuildResult, RebuildWithDereference);

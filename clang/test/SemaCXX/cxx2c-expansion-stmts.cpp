@@ -798,7 +798,8 @@ void not_constant_expression() {
                                              expected-note {{in instantiation of expansion statement requested here}} \
                                              old-interp-note {{read of variable '[__u0]' whose value is not known}} \
                                              old-interp-note {{declared here}} \
-                                             new-interp-note {{cannot access field of null pointer}}
+                                             new-interp-note {{temporary created here}} \
+                                             new-interp-note {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}}
     g(x);
   }
 }

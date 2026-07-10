@@ -266,7 +266,7 @@ static StmtResult BuildDestructuringDecompositionDecl(
   TypeSourceInfo *TSI = S.Context.getTrivialTypeSourceInfo(AutoRRef);
   auto *DD =
       DecompositionDecl::Create(S.Context, S.CurContext, ColonLoc, ColonLoc,
-                                AutoRRef, TSI, SC_Auto, Bindings);
+                                ColonLoc, AutoRRef, TSI, SC_Auto, Bindings);
 
   if (VarIsConstexpr)
     DD->setConstexpr(true);
@@ -307,7 +307,8 @@ Sema::BuildCXXExpansionStmtDecl(DeclContext *Ctx, SourceLocation TemplateKWLoc,
 ExprResult Sema::ActOnCXXExpansionInitList(MultiExprArg SubExprs,
                                            SourceLocation LBraceLoc,
                                            SourceLocation RBraceLoc) {
-  return new (Context) InitListExpr(Context, LBraceLoc, SubExprs, RBraceLoc);
+  return new (Context) InitListExpr(Context, LBraceLoc, SubExprs, RBraceLoc,
+                                    /*IsExplicit=*/true);
 }
 
 StmtResult Sema::ActOnCXXExpansionStmtPattern(
@@ -476,7 +477,8 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
   }
 
   ExprResult Select = BuildCXXExpansionSelectExpr(
-      new (Context) InitListExpr(Context, ColonLoc, Bindings, ColonLoc),
+      new (Context) InitListExpr(Context, ColonLoc, Bindings, ColonLoc,
+                                 /*IsExplicit=*/false),
       Index);
 
   if (Select.isInvalid()) {
