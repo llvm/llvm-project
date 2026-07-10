@@ -528,12 +528,12 @@ public:
   /// to declarations (rather than expressions) are skipped.
   llvm::SmallVector<const Expr *>
   getExprChain(llvm::ArrayRef<OriginID> OriginFlowChain) {
-    llvm::SmallVector<const Expr *> Result;
-    for (OriginID OID : OriginFlowChain)
+    llvm::SmallVector<const Expr *> rs;
+    for (const OriginID CurrOID : OriginFlowChain)
       if (const Expr *CurrExpr =
-              FactMgr.getOriginMgr().getOrigin(OID).getExpr())
-        Result.push_back(CurrExpr);
-    return Result;
+              FactMgr.getOriginMgr().getOrigin(CurrOID).getExpr())
+        rs.push_back(CurrExpr);
+    return rs;
   }
 };
 } // namespace
