@@ -62,7 +62,7 @@ typedef enum {
 /**
  * Logging levels are integers. Valid values are ORC_RT_LOG_LEVEL_DEBUG,
  * ORC_RT_LOG_LEVEL_INFO, ORC_RT_LOG_LEVEL_WARNING, ORC_RT_LOG_LEVEL_ERROR, and
- * ORC_RT_LOG_LEVEL_NONE.
+ * ORC_RT_LOG_LEVEL_OFF.
  */
 typedef int orc_rt_log_Level;
 

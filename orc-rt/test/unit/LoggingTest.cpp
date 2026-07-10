@@ -31,7 +31,7 @@ TEST(LoggingTest, LevelGetName) {
   EXPECT_STREQ("info", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_INFO));
   EXPECT_STREQ("warning", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_WARNING));
   EXPECT_STREQ("error", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_ERROR));
-  EXPECT_STREQ("none", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_NONE));
+  EXPECT_STREQ("off", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_OFF));
 
   // Out-of-range levels have no name.
   EXPECT_EQ(nullptr, orc_rt_log_Level_getName(-1));
@@ -44,7 +44,7 @@ TEST(LoggingTest, LevelParse) {
   EXPECT_EQ(ORC_RT_LOG_LEVEL_INFO, orc_rt_log_Level_parse("info"));
   EXPECT_EQ(ORC_RT_LOG_LEVEL_WARNING, orc_rt_log_Level_parse("warning"));
   EXPECT_EQ(ORC_RT_LOG_LEVEL_ERROR, orc_rt_log_Level_parse("error"));
-  EXPECT_EQ(ORC_RT_LOG_LEVEL_NONE, orc_rt_log_Level_parse("none"));
+  EXPECT_EQ(ORC_RT_LOG_LEVEL_OFF, orc_rt_log_Level_parse("off"));
 
   // Parsing is case-insensitive.
   EXPECT_EQ(ORC_RT_LOG_LEVEL_INFO, orc_rt_log_Level_parse("INFO"));
