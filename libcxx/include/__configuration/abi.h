@@ -88,15 +88,6 @@
 #  endif
 #endif
 
-// TODO(LLVM 22): Remove this check
-#if defined(_LIBCPP_ABI_NO_ITERATOR_BASES) && !defined(_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER)
-#  ifndef _LIBCPP_ONLY_NO_ITERATOR_BASES
-#    error "You probably want to define _LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER. This has been split out from"   \
- " _LIBCPP_ABI_NO_ITERATOR_BASES to allow only removing the second iterator member, since they aren't really related." \
- "If you actually want this ABI configuration, please define _LIBCPP_ONLY_NO_ITERATOR_BASES instead."
-#  endif
-#endif
-
 // We had some bugs where we use [[no_unique_address]] together with construct_at,
 // which causes UB as the call on construct_at could write to overlapping subobjects
 //
