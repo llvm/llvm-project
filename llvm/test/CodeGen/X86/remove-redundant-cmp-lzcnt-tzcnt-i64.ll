@@ -2,11 +2,11 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+bmi,+lzcnt | FileCheck %s
 
 define i64 @remove_redundant_cmp_lzcnt_i64(i64 %0) {
-; X64-LABEL: remove_redundant_cmp_lzcnt_i64:
-; X64:       # %bb.0:
-; X64-NEXT:    lzcntq %rdi, %rax
-; X64-NEXT:    adcq $0, %rax
-; X64-NEXT:    retq
+; CHECK-LABEL: remove_redundant_cmp_lzcnt_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lzcntq %rdi, %rax
+; CHECK-NEXT:    adcq $0, %rax
+; CHECK-NEXT:    retq
   %2 = tail call i64 @llvm.ctlz.i64(i64 %0, i1 false)
   %3 = icmp eq i64 %0, 0
   %4 = zext i1 %3 to i64
@@ -15,11 +15,11 @@ define i64 @remove_redundant_cmp_lzcnt_i64(i64 %0) {
 }
 
 define i64 @remove_redundant_cmp_tzcnt_i64(i64 %0) {
-; X64-LABEL: remove_redundant_cmp_tzcnt_i64:
-; X64:       # %bb.0:
-; X64-NEXT:    tzcntq %rdi, %rax
-; X64-NEXT:    adcq $0, %rax
-; X64-NEXT:    retq
+; CHECK-LABEL: remove_redundant_cmp_tzcnt_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tzcntq %rdi, %rax
+; CHECK-NEXT:    adcq $0, %rax
+; CHECK-NEXT:    retq
   %2 = tail call i64 @llvm.cttz.i64(i64 %0, i1 false)
   %3 = icmp eq i64 %0, 0
   %4 = zext i1 %3 to i64
