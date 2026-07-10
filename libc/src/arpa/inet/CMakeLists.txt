@@ -52,6 +52,22 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  inet_ntoa
+  SRCS
+    inet_ntoa.cpp
+  HDRS
+    inet_ntoa.h
+  DEPENDS
+    libc.include.arpa_inet
+    libc.hdr.inet_address_macros
+    libc.hdr.types.struct_in_addr
+    libc.src.__support.common
+    libc.src.__support.CPP.span
+    libc.src.__support.macros.config
+    libc.src.__support.net.address
+)
+
+add_entrypoint_object(
   inet_ntop
   SRCS
     inet_ntop.cpp
@@ -71,7 +87,6 @@ add_entrypoint_object(
     libc.src.__support.macros.null_check
     libc.src.__support.net.address
 )
-
 
 add_entrypoint_object(
   ntohl
