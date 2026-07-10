@@ -26401,15 +26401,15 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_mul_f32_e64 v41, 1.0, s46
 ; SI-NEXT:    v_mul_f32_e64 v54, 1.0, s44
 ; SI-NEXT:    v_mul_f32_e64 v52, 1.0, s42
-; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; SI-NEXT:    s_cbranch_scc0 .LBB19_2
 ; SI-NEXT:  ; %bb.1: ; %cmp.false
 ; SI-NEXT:    v_lshrrev_b32_e32 v44, 16, v55
@@ -26443,8 +26443,8 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    s_waitcnt vmcnt(6)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
 ; SI-NEXT:    v_mov_b32_e32 v1, v43
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[1:2], v[43:44], 16
 ; SI-NEXT:    v_mov_b32_e32 v2, v34
@@ -26453,19 +26453,19 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[2:3], v[34:35], 16
 ; SI-NEXT:    v_mov_b32_e32 v3, v17
-; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[3:4], v[17:18], 16
 ; SI-NEXT:    v_mov_b32_e32 v4, v20
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[4:5], v[20:21], 16
 ; SI-NEXT:    v_mov_b32_e32 v5, v19
 ; SI-NEXT:    v_lshrrev_b32_e32 v20, 16, v6
-; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[5:6], v[19:20], 16
 ; SI-NEXT:    v_mov_b32_e32 v6, v13
@@ -26474,13 +26474,13 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[6:7], v[13:14], 16
 ; SI-NEXT:    v_mov_b32_e32 v7, v31
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[7:8], v[31:32], 16
 ; SI-NEXT:    v_mov_b32_e32 v8, v23
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[8:9], v[23:24], 16
 ; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
@@ -26495,8 +26495,8 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    s_waitcnt vmcnt(4)
 ; SI-NEXT:    v_lshrrev_b32_e32 v26, 16, v9
 ; SI-NEXT:    v_mov_b32_e32 v9, v25
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[9:10], v[25:26], 16
 ; SI-NEXT:    v_mov_b32_e32 v10, v30
@@ -26505,8 +26505,8 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[10:11], v[30:31], 16
 ; SI-NEXT:    v_mov_b32_e32 v11, v27
-; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[11:12], v[27:28], 16
 ; SI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
@@ -26529,13 +26529,13 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[12:13], v[61:62], 16
 ; SI-NEXT:    v_mov_b32_e32 v13, v29
-; SI-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[13:14], v[29:30], 16
 ; SI-NEXT:    v_mov_b32_e32 v14, v15
-; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v62, v39
 ; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v62
 ; SI-NEXT:    v_lshrrev_b32_e32 v39, 16, v21
@@ -26565,8 +26565,8 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[16:17], v[33:34], 16
 ; SI-NEXT:    v_mov_b32_e32 v17, v57
-; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[17:18], v[57:58], 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v60, 16, v47
@@ -26632,40 +26632,40 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_mov_b32_e32 v41, v40
 ; SI-NEXT:    s_branch .LBB19_3
 ; SI-NEXT:  .LBB19_2:
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v34, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v35, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v24, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v25, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v24, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v25, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v60, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v34, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v32, v59
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v58, v56
@@ -26702,8 +26702,8 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    buffer_load_dword v57, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
 ; SI-NEXT:    s_cbranch_scc1 .LBB19_5
 ; SI-NEXT:  ; %bb.4: ; %cmp.true
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v55
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff0000, v43
 ; SI-NEXT:    v_add_f32_e32 v1, 0x40c00000, v1
@@ -26718,8 +26718,8 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v19, 0xffff0000, v47
@@ -26736,7 +26736,7 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff0000, v2
 ; SI-NEXT:    v_add_f32_e32 v2, 0x40c00000, v2
 ; SI-NEXT:    v_lshr_b64 v[1:2], v[2:3], 16
-; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff0000, v34
 ; SI-NEXT:    v_add_f32_e32 v2, 0x40c00000, v2
 ; SI-NEXT:    s_waitcnt vmcnt(14)
@@ -26791,9 +26791,9 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_add_f32_e32 v3, 0x40c00000, v3
 ; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
 ; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], 16
-; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v3, 0xffff0000, v3
 ; SI-NEXT:    v_add_f32_e32 v3, 0x40c00000, v3
@@ -26802,8 +26802,8 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_add_f32_e32 v4, 0x40c00000, v4
 ; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v4
 ; SI-NEXT:    v_lshr_b64 v[3:4], v[3:4], 16
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff0000, v62
 ; SI-NEXT:    v_add_f32_e32 v5, 0x40c00000, v5
@@ -26811,9 +26811,9 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_and_b32_e32 v4, 0xffff0000, v4
 ; SI-NEXT:    v_add_f32_e32 v4, 0x40c00000, v4
 ; SI-NEXT:    v_lshr_b64 v[4:5], v[4:5], 16
-; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff0000, v5
 ; SI-NEXT:    v_add_f32_e32 v5, 0x40c00000, v5
@@ -26825,9 +26825,9 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_and_b32_e32 v6, 0xffff0000, v40
 ; SI-NEXT:    v_add_f32_e32 v6, 0x40c00000, v6
 ; SI-NEXT:    v_lshr_b64 v[6:7], v[6:7], 16
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v7, 0xffff0000, v7
 ; SI-NEXT:    v_add_f32_e32 v7, 0x40c00000, v7
@@ -26836,9 +26836,9 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_add_f32_e32 v8, 0x40c00000, v8
 ; SI-NEXT:    v_lshrrev_b32_e32 v8, 16, v8
 ; SI-NEXT:    v_lshr_b64 v[7:8], v[7:8], 16
-; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v8, 0xffff0000, v8
 ; SI-NEXT:    v_add_f32_e32 v8, 0x40c00000, v8
@@ -26847,8 +26847,8 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_add_f32_e32 v9, 0x40c00000, v9
 ; SI-NEXT:    v_lshrrev_b32_e32 v9, 16, v9
 ; SI-NEXT:    v_lshr_b64 v[8:9], v[8:9], 16
-; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v9, 0xffff0000, v9
@@ -26861,9 +26861,9 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_and_b32_e32 v10, 0xffff0000, v50
 ; SI-NEXT:    v_add_f32_e32 v10, 0x40c00000, v10
 ; SI-NEXT:    v_lshr_b64 v[10:11], v[10:11], 16
-; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v11, 0xffff0000, v11
 ; SI-NEXT:    v_add_f32_e32 v11, 0x40c00000, v11
@@ -26875,9 +26875,9 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_and_b32_e32 v12, 0xffff0000, v38
 ; SI-NEXT:    v_add_f32_e32 v12, 0x40c00000, v12
 ; SI-NEXT:    v_lshr_b64 v[12:13], v[12:13], 16
-; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v13, 0xffff0000, v13
 ; SI-NEXT:    v_add_f32_e32 v13, 0x40c00000, v13
@@ -26886,8 +26886,8 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_add_f32_e32 v14, 0x40c00000, v14
 ; SI-NEXT:    v_lshrrev_b32_e32 v14, 16, v14
 ; SI-NEXT:    v_lshr_b64 v[13:14], v[13:14], 16
-; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v15, 0xffff0000, v39
 ; SI-NEXT:    v_add_f32_e32 v15, 0x40c00000, v15
@@ -26909,8 +26909,8 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_add_f32_e32 v16, 0x40c00000, v16
 ; SI-NEXT:    v_lshrrev_b32_e32 v17, 16, v17
 ; SI-NEXT:    v_lshr_b64 v[16:17], v[16:17], 16
-; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v32, 0xffff0000, v52
 ; SI-NEXT:    v_add_f32_e32 v32, 0x40c00000, v32
@@ -44693,110 +44693,110 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_lshrrev_b64 v[15:16], 24, v[11:12]
 ; VI-NEXT:    v_add_f32_e64 v14, s41, 1.0
 ; VI-NEXT:    v_add_f32_e64 v13, s40, 1.0
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[15:16], 24, v[13:14]
 ; VI-NEXT:    v_add_f32_e64 v22, s43, 1.0
 ; VI-NEXT:    v_add_f32_e64 v21, s42, 1.0
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[15:16], 24, v[21:22]
 ; VI-NEXT:    v_add_f32_e64 v24, s45, 1.0
 ; VI-NEXT:    v_add_f32_e64 v23, s44, 1.0
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[15:16], 24, v[23:24]
 ; VI-NEXT:    v_add_f32_e64 v26, s29, 1.0
 ; VI-NEXT:    v_add_f32_e64 v25, s28, 1.0
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b64 v[15:16], 24, v[25:26]
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v2
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v2
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v2
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v1
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v1
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v4
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v4
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v4
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v3
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v3
+; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b64 v[15:16], 24, v[25:26]
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v6
+; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v2
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v6
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v6
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v2
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v5
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v2
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v1
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v5
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v1
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v8
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v4
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v8
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v4
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v8
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v4
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v7
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v3
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v7
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v3
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v10
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v6
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v10
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v6
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v10
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v6
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v9
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v5
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v9
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v5
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v12
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v8
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v12
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v8
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v12
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v8
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v11
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v11
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v14
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v14
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v14
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v7
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v7
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v10
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v13
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v13
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v22
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v10
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v10
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v9
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v9
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v12
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v22
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v12
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v12
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v11
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v11
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v14
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v14
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v14
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v13
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v13
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v22
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v22
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v22
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v21
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v21
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v24
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v24
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v15, 8, v24
 ; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v26
@@ -44804,11 +44804,11 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_add_f32_e64 v32, s23, 1.0
 ; VI-NEXT:    v_add_f32_e64 v31, s22, 1.0
 ; VI-NEXT:    v_add_f32_e64 v28, s27, 1.0
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v26
 ; VI-NEXT:    v_add_f32_e64 v33, s20, 1.0
 ; VI-NEXT:    v_lshrrev_b64 v[39:40], 24, v[31:32]
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v28
 ; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v34
 ; VI-NEXT:    v_add_f32_e64 v38, s17, 1.0
@@ -44817,29 +44817,29 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_add_f32_e64 v30, s25, 1.0
 ; VI-NEXT:    v_add_f32_e64 v27, s26, 1.0
 ; VI-NEXT:    v_lshrrev_b64 v[40:41], 24, v[33:34]
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v28
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v34
 ; VI-NEXT:    v_add_f32_e64 v37, s16, 1.0
 ; VI-NEXT:    v_add_f32_e64 v29, s24, 1.0
 ; VI-NEXT:    v_lshrrev_b64 v[53:54], 24, v[27:28]
 ; VI-NEXT:    v_lshrrev_b64 v[41:42], 24, v[35:36]
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v15, 24, v30
 ; VI-NEXT:    v_lshrrev_b32_e32 v16, 24, v32
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v36
 ; VI-NEXT:    v_lshrrev_b32_e32 v19, 24, v38
 ; VI-NEXT:    v_lshrrev_b64 v[54:55], 24, v[29:30]
 ; VI-NEXT:    v_lshrrev_b64 v[42:43], 24, v[37:38]
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v30
-; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v16, 16, v32
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v36
-; VI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v19, 16, v38
 ; VI-NEXT:    v_lshrrev_b32_e32 v44, 16, v23
 ; VI-NEXT:    v_lshrrev_b32_e32 v43, 8, v23
@@ -44849,22 +44849,22 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_lshrrev_b32_e32 v56, 8, v28
 ; VI-NEXT:    v_lshrrev_b32_e32 v58, 16, v27
 ; VI-NEXT:    v_lshrrev_b32_e32 v57, 8, v27
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v48, 8, v30
 ; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v29
 ; VI-NEXT:    v_lshrrev_b32_e32 v59, 8, v29
-; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v49, 8, v32
 ; VI-NEXT:    v_lshrrev_b32_e32 v16, 16, v31
 ; VI-NEXT:    v_lshrrev_b32_e32 v60, 8, v31
 ; VI-NEXT:    v_lshrrev_b32_e32 v61, 8, v34
 ; VI-NEXT:    v_lshrrev_b32_e32 v51, 16, v33
 ; VI-NEXT:    v_lshrrev_b32_e32 v50, 8, v33
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v36
 ; VI-NEXT:    v_lshrrev_b32_e32 v52, 16, v35
 ; VI-NEXT:    v_lshrrev_b32_e32 v18, 8, v35
-; VI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v19, 8, v38
 ; VI-NEXT:    v_lshrrev_b32_e32 v55, 16, v37
 ; VI-NEXT:    v_lshrrev_b32_e32 v20, 8, v37
@@ -44875,28 +44875,28 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v53, s56
 ; VI-NEXT:    v_mov_b32_e32 v15, s68
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v15, s67
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v15, s55
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v15, s54
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v15, s50
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v15, s87
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v15, s83
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v15, s82
 ; VI-NEXT:    v_readlane_b32 s4, v62, 0
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v15, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 1
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 2
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 3
 ; VI-NEXT:    v_mov_b32_e32 v57, s4
@@ -44905,10 +44905,10 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_readlane_b32 s4, v62, 5
 ; VI-NEXT:    v_mov_b32_e32 v56, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 6
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 7
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 8
 ; VI-NEXT:    v_mov_b32_e32 v46, s4
@@ -44917,26 +44917,26 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_readlane_b32 s4, v62, 10
 ; VI-NEXT:    v_mov_b32_e32 v45, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 11
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 12
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 13
 ; VI-NEXT:    v_mov_b32_e32 v43, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 14
 ; VI-NEXT:    v_mov_b32_e32 v44, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 15
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 16
 ; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 17
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 18
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 19
 ; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
@@ -44945,121 +44945,121 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 21
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 22
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 23
 ; VI-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v53, s58
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 24
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 25
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 26
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 27
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 28
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 29
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 30
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 31
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 32
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 33
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 34
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 35
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 36
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 37
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 38
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 39
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 40
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 41
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 42
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 43
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 44
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 45
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 46
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 47
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 48
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v53, s60
 ; VI-NEXT:    v_readlane_b32 s4, v62, 49
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 50
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 51
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 52
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 53
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 54
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 55
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 56
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 57
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
 ; VI-NEXT:    v_mov_b32_e32 v37, s16
 ; VI-NEXT:    v_mov_b32_e32 v38, s17
@@ -45106,7 +45106,7 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_mov_b32_e32 v49, s85
 ; VI-NEXT:    v_mov_b32_e32 v59, s81
 ; VI-NEXT:    v_mov_b32_e32 v48, s80
-; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v39, s30
 ; VI-NEXT:    v_mov_b32_e32 v40, s34
 ; VI-NEXT:    v_mov_b32_e32 v41, s36
@@ -45117,20 +45117,20 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v53, s72
-; VI-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v53, s74
-; VI-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v53, s76
-; VI-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v53, s78
-; VI-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v53, s88
-; VI-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v53, s90
 ; VI-NEXT:    v_mov_b32_e32 v54, vcc_lo
 ; VI-NEXT:  .LBB37_6: ; %end
@@ -45139,8 +45139,8 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_perm_b32 v32, v32, v49, s4
 ; VI-NEXT:    v_perm_b32 v36, v15, v54, s4
 ; VI-NEXT:    v_perm_b32 v30, v30, v48, s4
-; VI-NEXT:    buffer_load_dword v48, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v48, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
 ; VI-NEXT:    v_perm_b32 v16, v16, v39, s4
 ; VI-NEXT:    v_perm_b32 v33, v33, v50, s4
@@ -45195,12 +45195,12 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_readlane_b32 s34, v63, 0
 ; VI-NEXT:    s_waitcnt vmcnt(2)
 ; VI-NEXT:    v_perm_b32 v39, v47, v48, s4
-; VI-NEXT:    buffer_load_dword v48, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v48, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(2)
 ; VI-NEXT:    v_perm_b32 v24, v24, v15, s4
-; VI-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(4)
 ; VI-NEXT:    v_perm_b32 v48, v44, v48, s4
@@ -45209,19 +45209,19 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v21, v21, v15, s4
-; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v22, v22, v15, s4
-; VI-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v15, v15, v50, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v50, 16, v55
 ; VI-NEXT:    v_or_b32_e32 v20, v20, v50
 ; VI-NEXT:    buffer_store_dword v20, v0, s[0:3], 0 offen
-; VI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
 ; VI-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v20, v20, v50, s4
@@ -45231,8 +45231,8 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_lshlrev_b32_e32 v19, 16, v37
 ; VI-NEXT:    v_or_b32_e32 v18, v18, v19
 ; VI-NEXT:    buffer_store_dword v18, v0, s[0:3], 0 offen offset:8
-; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v18, v18, v19, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
@@ -45241,16 +45241,16 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_lshlrev_b32_e32 v17, 16, v35
 ; VI-NEXT:    v_or_b32_e32 v17, v33, v17
 ; VI-NEXT:    buffer_store_dword v17, v0, s[0:3], 0 offen offset:16
-; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:24
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v17, v17, v18, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
 ; VI-NEXT:    v_or_b32_e32 v17, v34, v17
 ; VI-NEXT:    buffer_store_dword v17, v0, s[0:3], 0 offen offset:20
-; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -45259,8 +45259,8 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_lshlrev_b32_e32 v16, 16, v36
 ; VI-NEXT:    v_or_b32_e32 v16, v29, v16
 ; VI-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:32
-; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -45269,8 +45269,8 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_lshlrev_b32_e32 v16, 16, v38
 ; VI-NEXT:    v_or_b32_e32 v16, v27, v16
 ; VI-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:40
-; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -45279,8 +45279,8 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_lshlrev_b32_e32 v16, 16, v39
 ; VI-NEXT:    v_or_b32_e32 v16, v25, v16
 ; VI-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:48
-; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -45289,8 +45289,8 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_lshlrev_b32_e32 v16, 16, v48
 ; VI-NEXT:    v_or_b32_e32 v16, v23, v16
 ; VI-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:56
-; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -45299,149 +45299,149 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; VI-NEXT:    v_lshlrev_b32_e32 v16, 16, v49
 ; VI-NEXT:    v_or_b32_e32 v16, v21, v16
 ; VI-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:64
-; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
 ; VI-NEXT:    v_or_b32_e32 v16, v22, v16
 ; VI-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:68
-; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v13, v13, v16, s4
 ; VI-NEXT:    v_or_b32_e32 v13, v13, v15
 ; VI-NEXT:    buffer_store_dword v13, v0, s[0:3], 0 offen offset:72
-; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v13, v14, v13, s4
-; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v14, v14, v15, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
 ; VI-NEXT:    v_or_b32_e32 v13, v13, v14
 ; VI-NEXT:    buffer_store_dword v13, v0, s[0:3], 0 offen offset:76
-; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v11, v11, v13, s4
-; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v13, v14, v13, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
 ; VI-NEXT:    v_or_b32_e32 v11, v11, v13
 ; VI-NEXT:    buffer_store_dword v11, v0, s[0:3], 0 offen offset:80
-; VI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v11, v12, v11, s4
-; VI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v12, v12, v13, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
 ; VI-NEXT:    v_or_b32_e32 v11, v11, v12
 ; VI-NEXT:    buffer_store_dword v11, v0, s[0:3], 0 offen offset:84
-; VI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v9, v9, v11, s4
 ; VI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v11, v12, v11, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
 ; VI-NEXT:    v_or_b32_e32 v9, v9, v11
 ; VI-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:88
-; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v9, v10, v9, s4
-; VI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v10, v10, v11, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
 ; VI-NEXT:    v_or_b32_e32 v9, v9, v10
 ; VI-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:92
-; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v7, v7, v9, s4
 ; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v9, v10, v9, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
 ; VI-NEXT:    v_or_b32_e32 v7, v7, v9
 ; VI-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:96
-; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v7, v8, v7, s4
-; VI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v8, v8, v9, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; VI-NEXT:    v_or_b32_e32 v7, v7, v8
 ; VI-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:100
-; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v5, v5, v7, s4
 ; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v7, v8, v7, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
 ; VI-NEXT:    v_or_b32_e32 v5, v5, v7
 ; VI-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:104
-; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v5, v6, v5, s4
-; VI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v6, v6, v7, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; VI-NEXT:    v_or_b32_e32 v5, v5, v6
 ; VI-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:108
-; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v3, v3, v5, s4
 ; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v5, v6, v5, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; VI-NEXT:    v_or_b32_e32 v3, v3, v5
 ; VI-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:112
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v3, v4, v3, s4
-; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v4, v4, v5, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; VI-NEXT:    v_or_b32_e32 v3, v3, v4
 ; VI-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:116
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v3, s4
 ; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v3, v4, v3, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v3
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:120
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v2, v1, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -45885,158 +45885,158 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[11:12]
 ; GFX9-NEXT:    v_add_f32_e64 v14, s41, 1.0
 ; GFX9-NEXT:    v_add_f32_e64 v13, s40, 1.0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[13:14]
 ; GFX9-NEXT:    v_add_f32_e64 v22, s43, 1.0
 ; GFX9-NEXT:    v_add_f32_e64 v21, s42, 1.0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[21:22]
 ; GFX9-NEXT:    v_add_f32_e64 v24, s45, 1.0
 ; GFX9-NEXT:    v_add_f32_e64 v23, s44, 1.0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[23:24]
 ; GFX9-NEXT:    v_add_f32_e64 v26, s29, 1.0
 ; GFX9-NEXT:    v_add_f32_e64 v25, s28, 1.0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[25:26]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v2
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v2
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v2
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v1
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v1
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v4
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v4
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v4
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v3
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v3
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[25:26]
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v6
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v2
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v6
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v6
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v2
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v5
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v2
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v1
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v5
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v1
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v8
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v4
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v8
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v4
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v8
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v4
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v7
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v3
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v7
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v3
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v10
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v6
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v10
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v6
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v10
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v6
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v9
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v5
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v9
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v5
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v12
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v8
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v12
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v8
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v12
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v8
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v11
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v11
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v14
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v14
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v14
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v7
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v7
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v10
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v13
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v13
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v22
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v10
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v10
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v9
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v9
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v12
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v22
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v12
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v12
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v11
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v11
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v14
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v14
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v14
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v13
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v13
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v22
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v22
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v22
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v21
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v21
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v24
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v24
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v24
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v26
 ; GFX9-NEXT:    v_add_f32_e64 v28, s27, 1.0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v26
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v28
 ; GFX9-NEXT:    v_add_f32_e64 v32, s23, 1.0
 ; GFX9-NEXT:    v_add_f32_e64 v31, s22, 1.0
 ; GFX9-NEXT:    v_add_f32_e64 v30, s25, 1.0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v28
 ; GFX9-NEXT:    v_add_f32_e64 v34, s21, 1.0
 ; GFX9-NEXT:    v_add_f32_e64 v33, s20, 1.0
 ; GFX9-NEXT:    v_lshrrev_b64 v[39:40], 24, v[31:32]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v30
 ; GFX9-NEXT:    v_add_f32_e64 v49, s17, 1.0
 ; GFX9-NEXT:    v_add_f32_e64 v36, s19, 1.0
 ; GFX9-NEXT:    v_add_f32_e64 v35, s18, 1.0
 ; GFX9-NEXT:    v_add_f32_e64 v27, s26, 1.0
 ; GFX9-NEXT:    v_lshrrev_b64 v[40:41], 24, v[33:34]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v30
 ; GFX9-NEXT:    v_add_f32_e64 v48, s16, 1.0
 ; GFX9-NEXT:    v_add_f32_e64 v29, s24, 1.0
 ; GFX9-NEXT:    v_lshrrev_b64 v[53:54], 24, v[27:28]
 ; GFX9-NEXT:    v_lshrrev_b64 v[41:42], 24, v[35:36]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v32
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v16, 24, v34
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v17, 24, v36
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v19, 24, v49
 ; GFX9-NEXT:    v_lshrrev_b64 v[54:55], 24, v[29:30]
 ; GFX9-NEXT:    v_lshrrev_b64 v[42:43], 24, v[48:49]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v32
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v16, 16, v34
-; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v17, 16, v36
-; GFX9-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v19, 16, v49
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v44, 16, v23
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v43, 8, v23
@@ -46049,19 +46049,19 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v38, 8, v30
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v59, 16, v29
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v37, 8, v29
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v32
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v50, 16, v31
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v60, 8, v31
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v16, 8, v34
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v51, 16, v33
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v61, 8, v33
-; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v17, 8, v36
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v52, 16, v35
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v18, 8, v35
-; GFX9-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v19, 8, v49
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v55, 16, v48
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v20, 8, v48
@@ -46075,38 +46075,38 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s96
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 0
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s87
 ; GFX9-NEXT:    v_mov_b32_e32 v46, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 1
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s83
 ; GFX9-NEXT:    v_mov_b32_e32 v47, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 2
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s82
 ; GFX9-NEXT:    v_mov_b32_e32 v45, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 3
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 4
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 5
 ; GFX9-NEXT:    v_mov_b32_e32 v43, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 6
 ; GFX9-NEXT:    v_mov_b32_e32 v44, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 7
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 8
 ; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 9
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 10
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 11
 ; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
@@ -46115,137 +46115,137 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 13
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 14
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 15
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 16
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 17
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 18
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 19
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 20
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 21
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 22
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 23
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 24
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v53, s58
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 25
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 26
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 27
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 28
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 29
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 30
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 31
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 32
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 33
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 34
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 35
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 36
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 37
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 38
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 39
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 40
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 41
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 42
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 43
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 44
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s70
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 45
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s69
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 46
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s65
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 47
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s64
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v53, s60
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 48
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s52
 ; GFX9-NEXT:    v_mov_b32_e32 v37, s39
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 49
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s51
-; GFX9-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v37, s38
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v48, s16
 ; GFX9-NEXT:    v_mov_b32_e32 v49, s17
@@ -46287,18 +46287,18 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    v_mov_b32_e32 v61, s55
 ; GFX9-NEXT:    v_mov_b32_e32 v51, s53
 ; GFX9-NEXT:    v_mov_b32_e32 v16, s54
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v60, s50
 ; GFX9-NEXT:    v_mov_b32_e32 v50, s48
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s49
-; GFX9-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v37, s99
 ; GFX9-NEXT:    v_mov_b32_e32 v59, s97
 ; GFX9-NEXT:    v_mov_b32_e32 v38, s98
 ; GFX9-NEXT:    v_mov_b32_e32 v57, s86
 ; GFX9-NEXT:    v_mov_b32_e32 v58, s84
 ; GFX9-NEXT:    v_mov_b32_e32 v56, s85
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s94
 ; GFX9-NEXT:    v_mov_b32_e32 v40, vcc_lo
 ; GFX9-NEXT:    v_mov_b32_e32 v41, s30
@@ -46311,25 +46311,25 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v53, s72
-; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v53, s74
-; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v53, s76
-; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v53, s78
-; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v53, s88
-; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v53, s90
 ; GFX9-NEXT:    v_mov_b32_e32 v54, s92
 ; GFX9-NEXT:  .LBB37_6: ; %end
@@ -46339,11 +46339,11 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    v_perm_b32 v19, v49, v19, s4
 ; GFX9-NEXT:    v_perm_b32 v16, v34, v16, s4
 ; GFX9-NEXT:    v_perm_b32 v34, v50, v39, s4
-; GFX9-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v30, v30, v38, s4
-; GFX9-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v18, v35, v18, s4
 ; GFX9-NEXT:    v_perm_b32 v35, v51, v40, s4
 ; GFX9-NEXT:    v_perm_b32 v55, v55, v42, s4
@@ -46400,8 +46400,8 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    v_perm_b32 v24, v24, v15, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v39, v44, v49, s4
-; GFX9-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v38, v47, v38, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -46409,20 +46409,20 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v21, v21, v15, s4
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v22, v22, v15, s4
-; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v15, v15, v50, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v50, 16, v55
 ; GFX9-NEXT:    v_or_b32_e32 v20, v20, v50
 ; GFX9-NEXT:    buffer_store_dword v20, v0, s[0:3], 0 offen
-; GFX9-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v20, v20, v50, s4
@@ -46432,9 +46432,9 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v19, 16, v48
 ; GFX9-NEXT:    v_or_b32_e32 v18, v18, v19
 ; GFX9-NEXT:    buffer_store_dword v18, v0, s[0:3], 0 offen offset:8
-; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v18, v18, v19, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
@@ -46443,9 +46443,9 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v17, 16, v35
 ; GFX9-NEXT:    v_or_b32_e32 v17, v33, v17
 ; GFX9-NEXT:    buffer_store_dword v17, v0, s[0:3], 0 offen offset:16
-; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v17, v17, v18, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
@@ -46454,9 +46454,9 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v34
 ; GFX9-NEXT:    v_or_b32_e32 v16, v31, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:24
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -46465,9 +46465,9 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v36
 ; GFX9-NEXT:    v_or_b32_e32 v16, v29, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:32
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -46476,9 +46476,9 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v37
 ; GFX9-NEXT:    v_or_b32_e32 v16, v27, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:40
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -46487,9 +46487,9 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v38
 ; GFX9-NEXT:    v_or_b32_e32 v16, v25, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:48
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -46498,9 +46498,9 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v39
 ; GFX9-NEXT:    v_or_b32_e32 v16, v23, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:56
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -46509,150 +46509,150 @@ define inreg <128 x i8> @bitcast_v32f32_to_v128i8_scalar(<32 x float> inreg %a, 
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v49
 ; GFX9-NEXT:    v_or_b32_e32 v16, v21, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:64
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
 ; GFX9-NEXT:    v_or_b32_e32 v16, v22, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:68
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v13, v13, v16, s4
 ; GFX9-NEXT:    v_or_b32_e32 v13, v13, v15
 ; GFX9-NEXT:    buffer_store_dword v13, v0, s[0:3], 0 offen offset:72
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v13, v14, v13, s4
-; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v14, v14, v15, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
 ; GFX9-NEXT:    v_or_b32_e32 v13, v13, v14
 ; GFX9-NEXT:    buffer_store_dword v13, v0, s[0:3], 0 offen offset:76
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v11, v11, v13, s4
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v13, v14, v13, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
 ; GFX9-NEXT:    v_or_b32_e32 v11, v11, v13
 ; GFX9-NEXT:    buffer_store_dword v11, v0, s[0:3], 0 offen offset:80
-; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v11, v12, v11, s4
-; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v12, v12, v13, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
 ; GFX9-NEXT:    v_or_b32_e32 v11, v11, v12
 ; GFX9-NEXT:    buffer_store_dword v11, v0, s[0:3], 0 offen offset:84
-; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v9, v9, v11, s4
 ; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v11, v12, v11, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
 ; GFX9-NEXT:    v_or_b32_e32 v9, v9, v11
 ; GFX9-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:88
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v9, v10, v9, s4
-; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v10, v10, v11, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
 ; GFX9-NEXT:    v_or_b32_e32 v9, v9, v10
 ; GFX9-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:92
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v7, v9, s4
 ; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v9, v10, v9, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v9
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:96
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v8, v7, s4
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v8, v8, v9, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:100
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v5, v5, v7, s4
 ; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v8, v7, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
 ; GFX9-NEXT:    v_or_b32_e32 v5, v5, v7
 ; GFX9-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:104
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v5, v6, v5, s4
-; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v6, v6, v7, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; GFX9-NEXT:    v_or_b32_e32 v5, v5, v6
 ; GFX9-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:108
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v3, v3, v5, s4
 ; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v5, v6, v5, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; GFX9-NEXT:    v_or_b32_e32 v3, v3, v5
 ; GFX9-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:112
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v3, v4, v3, s4
-; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v4, v4, v5, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GFX9-NEXT:    v_or_b32_e32 v3, v3, v4
 ; GFX9-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:116
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v3, s4
 ; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v3, v4, v3, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:120
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v1, v2, v1, s4
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -58528,7 +58528,7 @@ define inreg <64 x bfloat> @bitcast_v32f32_to_v64bf16_scalar(<32 x float> inreg 
 ; SI-NEXT:    v_and_b32_e32 v30, 0xffff0000, v29
 ; SI-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
 ; SI-NEXT:    v_add_f32_e64 v27, s8, 1.0
-; SI-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v29, 0xffff0000, v28
 ; SI-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
@@ -58540,7 +58540,7 @@ define inreg <64 x bfloat> @bitcast_v32f32_to_v64bf16_scalar(<32 x float> inreg 
 ; SI-NEXT:    v_add_f32_e64 v14, s45, 1.0
 ; SI-NEXT:    v_add_f32_e64 v15, s44, 1.0
 ; SI-NEXT:    v_add_f32_e64 v26, s9, 1.0
-; SI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v28, 0xffff0000, v27
 ; SI-NEXT:    v_add_f32_e64 v2, s20, 1.0
@@ -58552,9 +58552,9 @@ define inreg <64 x bfloat> @bitcast_v32f32_to_v64bf16_scalar(<32 x float> inreg 
 ; SI-NEXT:    v_add_f32_e64 v23, s12, 1.0
 ; SI-NEXT:    v_add_f32_e64 v24, s11, 1.0
 ; SI-NEXT:    v_add_f32_e64 v25, s10, 1.0
-; SI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; SI-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
 ; SI-NEXT:    v_and_b32_e32 v49, 0xffff0000, v26
 ; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
@@ -58586,8 +58586,8 @@ define inreg <64 x bfloat> @bitcast_v32f32_to_v64bf16_scalar(<32 x float> inreg 
 ; SI-NEXT:    v_add_f32_e64 v19, s40, 1.0
 ; SI-NEXT:    v_add_f32_e64 v20, s15, 1.0
 ; SI-NEXT:    v_add_f32_e64 v21, s14, 1.0
-; SI-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; SI-NEXT:    v_and_b32_e32 v51, 0xffff0000, v25
 ; SI-NEXT:    v_lshlrev_b32_e32 v50, 16, v25
 ; SI-NEXT:    v_and_b32_e32 v53, 0xffff0000, v24
@@ -58636,24 +58636,24 @@ define inreg <64 x bfloat> @bitcast_v32f32_to_v64bf16_scalar(<32 x float> inreg 
 ; SI-NEXT:    s_branch .LBB41_6
 ; SI-NEXT:  .LBB41_5:
 ; SI-NEXT:    v_mov_b32_e32 v7, s63
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v7, s61
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v7, s60
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v7, s59
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v7, s58
 ; SI-NEXT:    v_readlane_b32 s4, v62, 0
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v7, s4
 ; SI-NEXT:    v_readlane_b32 s4, v62, 1
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v7, s4
 ; SI-NEXT:    v_mov_b32_e32 v0, s57
@@ -58713,7 +58713,7 @@ define inreg <64 x bfloat> @bitcast_v32f32_to_v64bf16_scalar(<32 x float> inreg 
 ; SI-NEXT:    v_mov_b32_e32 v50, s73
 ; SI-NEXT:    v_mov_b32_e32 v51, s72
 ; SI-NEXT:    v_mov_b32_e32 v49, s62
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; SI-NEXT:  .LBB41_6: ; %end
 ; SI-NEXT:    v_mul_f32_e32 v34, 1.0, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v3
@@ -58725,8 +58725,8 @@ define inreg <64 x bfloat> @bitcast_v32f32_to_v64bf16_scalar(<32 x float> inreg 
 ; SI-NEXT:    v_lshrrev_b32_e32 v35, 16, v1
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v6
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v9
 ; SI-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
@@ -58734,15 +58734,15 @@ define inreg <64 x bfloat> @bitcast_v32f32_to_v64bf16_scalar(<32 x float> inreg 
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v10
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v13
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v12
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v15
 ; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v0
@@ -58791,15 +58791,15 @@ define inreg <64 x bfloat> @bitcast_v32f32_to_v64bf16_scalar(<32 x float> inreg 
 ; SI-NEXT:    v_lshrrev_b32_e32 v51, 16, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v49
 ; SI-NEXT:    v_lshrrev_b32_e32 v49, 16, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; SI-NEXT:    v_mul_f32_e32 v9, 1.0, v48
 ; SI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
 ; SI-NEXT:    v_mul_f32_e32 v7, 1.0, v4
 ; SI-NEXT:    v_lshr_b64 v[33:34], v[34:35], 16
 ; SI-NEXT:    v_lshr_b64 v[34:35], v[2:3], 16
 ; SI-NEXT:    v_lshr_b64 v[2:3], v[7:8], 16
-; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
 ; SI-NEXT:    v_mul_f32_e32 v5, 1.0, v38
 ; SI-NEXT:    v_mul_f32_e32 v19, 1.0, v36
 ; SI-NEXT:    v_mul_f32_e32 v22, 1.0, v22
@@ -58856,23 +58856,23 @@ define inreg <64 x bfloat> @bitcast_v32f32_to_v64bf16_scalar(<32 x float> inreg 
 ; SI-NEXT:    v_readlane_b32 s34, v63, 0
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_mul_f32_e32 v48, 1.0, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_lshr_b64 v[3:4], v[3:4], 16
 ; SI-NEXT:    v_lshr_b64 v[4:5], v[5:6], 16
-; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_lshrrev_b32_e32 v39, 16, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_lshr_b64 v[5:6], v[5:6], 16
-; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_mul_f32_e32 v38, 1.0, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_lshr_b64 v[6:7], v[6:7], 16
 ; SI-NEXT:    v_lshr_b64 v[7:8], v[15:16], 16
@@ -58915,16 +58915,16 @@ define inreg <64 x bfloat> @bitcast_v32f32_to_v64bf16_scalar(<32 x float> inreg 
 ; SI-NEXT:    s_waitcnt vmcnt(14)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_lshrrev_b32_e32 v37, 16, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_mul_f32_e32 v36, 1.0, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
 ; SI-NEXT:    v_lshr_b64 v[30:31], v[36:37], 16
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_lshr_b64 v[31:32], v[0:1], 16
@@ -62546,15 +62546,15 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    v_mul_f32_e64 v41, 1.0, s46
 ; SI-NEXT:    v_mul_f32_e64 v54, 1.0, s44
 ; SI-NEXT:    v_mul_f32_e64 v52, 1.0, s42
-; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; SI-NEXT:    s_cbranch_scc0 .LBB43_2
 ; SI-NEXT:  ; %bb.1: ; %cmp.false
 ; SI-NEXT:    v_lshrrev_b32_e32 v44, 16, v55
@@ -62588,8 +62588,8 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    s_waitcnt vmcnt(6)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
 ; SI-NEXT:    v_mov_b32_e32 v1, v43
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[1:2], v[43:44], 16
 ; SI-NEXT:    v_mov_b32_e32 v2, v34
@@ -62598,19 +62598,19 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[2:3], v[34:35], 16
 ; SI-NEXT:    v_mov_b32_e32 v3, v17
-; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[3:4], v[17:18], 16
 ; SI-NEXT:    v_mov_b32_e32 v4, v20
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[4:5], v[20:21], 16
 ; SI-NEXT:    v_mov_b32_e32 v5, v19
 ; SI-NEXT:    v_lshrrev_b32_e32 v20, 16, v6
-; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[5:6], v[19:20], 16
 ; SI-NEXT:    v_mov_b32_e32 v6, v13
@@ -62619,13 +62619,13 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[6:7], v[13:14], 16
 ; SI-NEXT:    v_mov_b32_e32 v7, v31
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[7:8], v[31:32], 16
 ; SI-NEXT:    v_mov_b32_e32 v8, v23
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[8:9], v[23:24], 16
 ; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
@@ -62640,8 +62640,8 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    s_waitcnt vmcnt(4)
 ; SI-NEXT:    v_lshrrev_b32_e32 v26, 16, v9
 ; SI-NEXT:    v_mov_b32_e32 v9, v25
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[9:10], v[25:26], 16
 ; SI-NEXT:    v_mov_b32_e32 v10, v30
@@ -62650,8 +62650,8 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[10:11], v[30:31], 16
 ; SI-NEXT:    v_mov_b32_e32 v11, v27
-; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[11:12], v[27:28], 16
 ; SI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
@@ -62674,13 +62674,13 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[12:13], v[61:62], 16
 ; SI-NEXT:    v_mov_b32_e32 v13, v29
-; SI-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[13:14], v[29:30], 16
 ; SI-NEXT:    v_mov_b32_e32 v14, v15
-; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v62, v39
 ; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v62
 ; SI-NEXT:    v_lshrrev_b32_e32 v39, 16, v21
@@ -62710,8 +62710,8 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[16:17], v[33:34], 16
 ; SI-NEXT:    v_mov_b32_e32 v17, v57
-; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[17:18], v[57:58], 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v60, 16, v47
@@ -62777,40 +62777,40 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    v_mov_b32_e32 v41, v40
 ; SI-NEXT:    s_branch .LBB43_3
 ; SI-NEXT:  .LBB43_2:
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v34, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v35, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v24, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v25, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v24, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v25, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v60, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v34, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v32, v59
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v58, v56
@@ -62847,8 +62847,8 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    buffer_load_dword v57, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
 ; SI-NEXT:    s_cbranch_scc1 .LBB43_5
 ; SI-NEXT:  ; %bb.4: ; %cmp.true
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v55
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff0000, v43
 ; SI-NEXT:    v_add_f32_e32 v1, 0x40c00000, v1
@@ -62863,8 +62863,8 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v19, 0xffff0000, v47
@@ -62881,7 +62881,7 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff0000, v2
 ; SI-NEXT:    v_add_f32_e32 v2, 0x40c00000, v2
 ; SI-NEXT:    v_lshr_b64 v[1:2], v[2:3], 16
-; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff0000, v34
 ; SI-NEXT:    v_add_f32_e32 v2, 0x40c00000, v2
 ; SI-NEXT:    s_waitcnt vmcnt(14)
@@ -62936,9 +62936,9 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    v_add_f32_e32 v3, 0x40c00000, v3
 ; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
 ; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], 16
-; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v3, 0xffff0000, v3
 ; SI-NEXT:    v_add_f32_e32 v3, 0x40c00000, v3
@@ -62947,8 +62947,8 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    v_add_f32_e32 v4, 0x40c00000, v4
 ; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v4
 ; SI-NEXT:    v_lshr_b64 v[3:4], v[3:4], 16
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff0000, v62
 ; SI-NEXT:    v_add_f32_e32 v5, 0x40c00000, v5
@@ -62956,9 +62956,9 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    v_and_b32_e32 v4, 0xffff0000, v4
 ; SI-NEXT:    v_add_f32_e32 v4, 0x40c00000, v4
 ; SI-NEXT:    v_lshr_b64 v[4:5], v[4:5], 16
-; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff0000, v5
 ; SI-NEXT:    v_add_f32_e32 v5, 0x40c00000, v5
@@ -62970,9 +62970,9 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    v_and_b32_e32 v6, 0xffff0000, v40
 ; SI-NEXT:    v_add_f32_e32 v6, 0x40c00000, v6
 ; SI-NEXT:    v_lshr_b64 v[6:7], v[6:7], 16
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v7, 0xffff0000, v7
 ; SI-NEXT:    v_add_f32_e32 v7, 0x40c00000, v7
@@ -62981,9 +62981,9 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    v_add_f32_e32 v8, 0x40c00000, v8
 ; SI-NEXT:    v_lshrrev_b32_e32 v8, 16, v8
 ; SI-NEXT:    v_lshr_b64 v[7:8], v[7:8], 16
-; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v8, 0xffff0000, v8
 ; SI-NEXT:    v_add_f32_e32 v8, 0x40c00000, v8
@@ -62992,8 +62992,8 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    v_add_f32_e32 v9, 0x40c00000, v9
 ; SI-NEXT:    v_lshrrev_b32_e32 v9, 16, v9
 ; SI-NEXT:    v_lshr_b64 v[8:9], v[8:9], 16
-; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v9, 0xffff0000, v9
@@ -63006,9 +63006,9 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    v_and_b32_e32 v10, 0xffff0000, v50
 ; SI-NEXT:    v_add_f32_e32 v10, 0x40c00000, v10
 ; SI-NEXT:    v_lshr_b64 v[10:11], v[10:11], 16
-; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v11, 0xffff0000, v11
 ; SI-NEXT:    v_add_f32_e32 v11, 0x40c00000, v11
@@ -63020,9 +63020,9 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    v_and_b32_e32 v12, 0xffff0000, v38
 ; SI-NEXT:    v_add_f32_e32 v12, 0x40c00000, v12
 ; SI-NEXT:    v_lshr_b64 v[12:13], v[12:13], 16
-; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v13, 0xffff0000, v13
 ; SI-NEXT:    v_add_f32_e32 v13, 0x40c00000, v13
@@ -63031,8 +63031,8 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    v_add_f32_e32 v14, 0x40c00000, v14
 ; SI-NEXT:    v_lshrrev_b32_e32 v14, 16, v14
 ; SI-NEXT:    v_lshr_b64 v[13:14], v[13:14], 16
-; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v15, 0xffff0000, v39
 ; SI-NEXT:    v_add_f32_e32 v15, 0x40c00000, v15
@@ -63054,8 +63054,8 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; SI-NEXT:    v_add_f32_e32 v16, 0x40c00000, v16
 ; SI-NEXT:    v_lshrrev_b32_e32 v17, 16, v17
 ; SI-NEXT:    v_lshr_b64 v[16:17], v[16:17], 16
-; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v32, 0xffff0000, v52
 ; SI-NEXT:    v_add_f32_e32 v32, 0x40c00000, v32
@@ -96281,15 +96281,15 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_mul_f32_e64 v41, 1.0, s46
 ; SI-NEXT:    v_mul_f32_e64 v54, 1.0, s44
 ; SI-NEXT:    v_mul_f32_e64 v52, 1.0, s42
-; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; SI-NEXT:    s_cbranch_scc0 .LBB63_2
 ; SI-NEXT:  ; %bb.1: ; %cmp.false
 ; SI-NEXT:    v_lshrrev_b32_e32 v44, 16, v55
@@ -96323,8 +96323,8 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    s_waitcnt vmcnt(6)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
 ; SI-NEXT:    v_mov_b32_e32 v1, v43
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[1:2], v[43:44], 16
 ; SI-NEXT:    v_mov_b32_e32 v2, v34
@@ -96333,19 +96333,19 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[2:3], v[34:35], 16
 ; SI-NEXT:    v_mov_b32_e32 v3, v17
-; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[3:4], v[17:18], 16
 ; SI-NEXT:    v_mov_b32_e32 v4, v20
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[4:5], v[20:21], 16
 ; SI-NEXT:    v_mov_b32_e32 v5, v19
 ; SI-NEXT:    v_lshrrev_b32_e32 v20, 16, v6
-; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[5:6], v[19:20], 16
 ; SI-NEXT:    v_mov_b32_e32 v6, v13
@@ -96354,13 +96354,13 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[6:7], v[13:14], 16
 ; SI-NEXT:    v_mov_b32_e32 v7, v31
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[7:8], v[31:32], 16
 ; SI-NEXT:    v_mov_b32_e32 v8, v23
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[8:9], v[23:24], 16
 ; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
@@ -96375,8 +96375,8 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    s_waitcnt vmcnt(4)
 ; SI-NEXT:    v_lshrrev_b32_e32 v26, 16, v9
 ; SI-NEXT:    v_mov_b32_e32 v9, v25
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[9:10], v[25:26], 16
 ; SI-NEXT:    v_mov_b32_e32 v10, v30
@@ -96385,8 +96385,8 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[10:11], v[30:31], 16
 ; SI-NEXT:    v_mov_b32_e32 v11, v27
-; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[11:12], v[27:28], 16
 ; SI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
@@ -96409,13 +96409,13 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[12:13], v[61:62], 16
 ; SI-NEXT:    v_mov_b32_e32 v13, v29
-; SI-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[13:14], v[29:30], 16
 ; SI-NEXT:    v_mov_b32_e32 v14, v15
-; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v62, v39
 ; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v62
 ; SI-NEXT:    v_lshrrev_b32_e32 v39, 16, v21
@@ -96445,8 +96445,8 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[16:17], v[33:34], 16
 ; SI-NEXT:    v_mov_b32_e32 v17, v57
-; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[17:18], v[57:58], 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v60, 16, v47
@@ -96512,40 +96512,40 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_mov_b32_e32 v41, v40
 ; SI-NEXT:    s_branch .LBB63_3
 ; SI-NEXT:  .LBB63_2:
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v34, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v35, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v24, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v25, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v24, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v25, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v60, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v34, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v32, v59
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v58, v56
@@ -96582,8 +96582,8 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    buffer_load_dword v57, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
 ; SI-NEXT:    s_cbranch_scc1 .LBB63_5
 ; SI-NEXT:  ; %bb.4: ; %cmp.true
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v55
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff0000, v43
 ; SI-NEXT:    v_add_f32_e32 v1, 0x40c00000, v1
@@ -96598,8 +96598,8 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v19, 0xffff0000, v47
@@ -96616,7 +96616,7 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff0000, v2
 ; SI-NEXT:    v_add_f32_e32 v2, 0x40c00000, v2
 ; SI-NEXT:    v_lshr_b64 v[1:2], v[2:3], 16
-; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff0000, v34
 ; SI-NEXT:    v_add_f32_e32 v2, 0x40c00000, v2
 ; SI-NEXT:    s_waitcnt vmcnt(14)
@@ -96671,9 +96671,9 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_add_f32_e32 v3, 0x40c00000, v3
 ; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
 ; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], 16
-; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v3, 0xffff0000, v3
 ; SI-NEXT:    v_add_f32_e32 v3, 0x40c00000, v3
@@ -96682,8 +96682,8 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_add_f32_e32 v4, 0x40c00000, v4
 ; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v4
 ; SI-NEXT:    v_lshr_b64 v[3:4], v[3:4], 16
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff0000, v62
 ; SI-NEXT:    v_add_f32_e32 v5, 0x40c00000, v5
@@ -96691,9 +96691,9 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_and_b32_e32 v4, 0xffff0000, v4
 ; SI-NEXT:    v_add_f32_e32 v4, 0x40c00000, v4
 ; SI-NEXT:    v_lshr_b64 v[4:5], v[4:5], 16
-; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff0000, v5
 ; SI-NEXT:    v_add_f32_e32 v5, 0x40c00000, v5
@@ -96705,9 +96705,9 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_and_b32_e32 v6, 0xffff0000, v40
 ; SI-NEXT:    v_add_f32_e32 v6, 0x40c00000, v6
 ; SI-NEXT:    v_lshr_b64 v[6:7], v[6:7], 16
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v7, 0xffff0000, v7
 ; SI-NEXT:    v_add_f32_e32 v7, 0x40c00000, v7
@@ -96716,9 +96716,9 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_add_f32_e32 v8, 0x40c00000, v8
 ; SI-NEXT:    v_lshrrev_b32_e32 v8, 16, v8
 ; SI-NEXT:    v_lshr_b64 v[7:8], v[7:8], 16
-; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v8, 0xffff0000, v8
 ; SI-NEXT:    v_add_f32_e32 v8, 0x40c00000, v8
@@ -96727,8 +96727,8 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_add_f32_e32 v9, 0x40c00000, v9
 ; SI-NEXT:    v_lshrrev_b32_e32 v9, 16, v9
 ; SI-NEXT:    v_lshr_b64 v[8:9], v[8:9], 16
-; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v9, 0xffff0000, v9
@@ -96741,9 +96741,9 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_and_b32_e32 v10, 0xffff0000, v50
 ; SI-NEXT:    v_add_f32_e32 v10, 0x40c00000, v10
 ; SI-NEXT:    v_lshr_b64 v[10:11], v[10:11], 16
-; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v11, 0xffff0000, v11
 ; SI-NEXT:    v_add_f32_e32 v11, 0x40c00000, v11
@@ -96755,9 +96755,9 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_and_b32_e32 v12, 0xffff0000, v38
 ; SI-NEXT:    v_add_f32_e32 v12, 0x40c00000, v12
 ; SI-NEXT:    v_lshr_b64 v[12:13], v[12:13], 16
-; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v13, 0xffff0000, v13
 ; SI-NEXT:    v_add_f32_e32 v13, 0x40c00000, v13
@@ -96766,8 +96766,8 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_add_f32_e32 v14, 0x40c00000, v14
 ; SI-NEXT:    v_lshrrev_b32_e32 v14, 16, v14
 ; SI-NEXT:    v_lshr_b64 v[13:14], v[13:14], 16
-; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v15, 0xffff0000, v39
 ; SI-NEXT:    v_add_f32_e32 v15, 0x40c00000, v15
@@ -96789,8 +96789,8 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; SI-NEXT:    v_add_f32_e32 v16, 0x40c00000, v16
 ; SI-NEXT:    v_lshrrev_b32_e32 v17, 16, v17
 ; SI-NEXT:    v_lshr_b64 v[16:17], v[16:17], 16
-; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v32, 0xffff0000, v52
 ; SI-NEXT:    v_add_f32_e32 v32, 0x40c00000, v32
@@ -111574,171 +111574,171 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; VI-NEXT:    v_add_f64 v[15:16], s[42:43], 1.0
 ; VI-NEXT:    v_lshrrev_b64 v[17:18], 24, v[11:12]
 ; VI-NEXT:    v_add_f64 v[19:20], s[44:45], 1.0
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[17:18], 24, v[1:2]
 ; VI-NEXT:    v_add_f64 v[23:24], s[28:29], 1.0
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[17:18], 24, v[3:4]
 ; VI-NEXT:    v_add_f64 v[27:28], s[26:27], 1.0
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[17:18], 24, v[5:6]
 ; VI-NEXT:    v_add_f64 v[31:32], s[24:25], 1.0
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[17:18], 24, v[7:8]
 ; VI-NEXT:    v_add_f64 v[35:36], s[22:23], 1.0
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[17:18], 24, v[9:10]
 ; VI-NEXT:    v_add_f64 v[37:38], s[20:21], 1.0
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[17:18], 24, v[13:14]
 ; VI-NEXT:    v_add_f64 v[48:49], s[18:19], 1.0
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[17:18], 24, v[15:16]
 ; VI-NEXT:    v_add_f64 v[50:51], s[16:17], 1.0
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[17:18], 24, v[19:20]
 ; VI-NEXT:    v_lshrrev_b32_e32 v53, 8, v16
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[17:18], 24, v[23:24]
 ; VI-NEXT:    v_lshrrev_b32_e32 v25, 8, v24
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[17:18], 24, v[27:28]
 ; VI-NEXT:    v_lshrrev_b64 v[46:47], 24, v[50:51]
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[17:18], 24, v[31:32]
 ; VI-NEXT:    v_lshrrev_b32_e32 v47, 8, v20
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[17:18], 24, v[35:36]
 ; VI-NEXT:    v_lshrrev_b32_e32 v52, 8, v28
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[17:18], 24, v[37:38]
 ; VI-NEXT:    v_lshrrev_b32_e32 v30, 24, v32
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[17:18], 24, v[48:49]
 ; VI-NEXT:    v_lshrrev_b32_e32 v34, 16, v32
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v12
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v12
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v12
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v11
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v11
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v2
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v2
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v2
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v1
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v1
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v4
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v4
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v4
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v3
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v3
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v6
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v6
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v6
+; VI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v12
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v5
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v5
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v8
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v12
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v8
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v8
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v12
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v7
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v7
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v10
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v10
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v10
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v9
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v11
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v11
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v2
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v9
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v2
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v2
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v14
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v14
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v1
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v1
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v4
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v14
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v4
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v13
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v4
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v3
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v3
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v6
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v6
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v13
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v16
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v16
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v15
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v6
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v5
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v5
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v8
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v8
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v15
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v8
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v20
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v20
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v19
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v7
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v7
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v10
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v10
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v10
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v19
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v9
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v24
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v24
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v23
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v9
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v14
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v14
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v14
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v13
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v23
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v13
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v16
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v16
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v15
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v15
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v20
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v20
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v19
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v19
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v24
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v24
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v23
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v23
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v17, 24, v28
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v28
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v27
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v27
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v31
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v17, 8, v31
 ; VI-NEXT:    v_lshrrev_b32_e32 v18, 8, v32
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v21, 24, v36
 ; VI-NEXT:    v_lshrrev_b32_e32 v41, 16, v36
 ; VI-NEXT:    v_lshrrev_b32_e32 v22, 8, v36
@@ -111763,166 +111763,166 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; VI-NEXT:  .LBB73_5:
 ; VI-NEXT:    v_mov_b32_e32 v56, s66
 ; VI-NEXT:    v_mov_b32_e32 v55, s36
-; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v55, s34
 ; VI-NEXT:    v_mov_b32_e32 v17, s55
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s54
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s87
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s53
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s52
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s86
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s51
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s50
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s85
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s84
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s83
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s82
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s81
 ; VI-NEXT:    v_mov_b32_e32 v11, s4
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s80
 ; VI-NEXT:    v_readlane_b32 s4, v62, 0
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 1
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 2
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 3
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 4
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 5
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 6
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 7
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 8
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 9
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 10
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 11
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 12
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 13
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 14
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 15
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v55, s30
-; VI-NEXT:    v_readlane_b32 s4, v62, 16
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 17
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 18
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 19
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 20
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 21
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 22
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 23
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 24
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 25
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 26
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 27
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 28
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 29
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 30
+; VI-NEXT:    v_readlane_b32 s4, v62, 3
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 4
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 5
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 6
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 7
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 8
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 9
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 10
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 11
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 12
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 13
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 14
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 15
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v55, s30
+; VI-NEXT:    v_readlane_b32 s4, v62, 16
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 17
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 31
+; VI-NEXT:    v_readlane_b32 s4, v62, 18
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 32
+; VI-NEXT:    v_readlane_b32 s4, v62, 19
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 20
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 21
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 22
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 23
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 24
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 25
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 26
 ; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 27
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 28
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 29
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 30
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 31
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v17, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 32
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 33
 ; VI-NEXT:    v_mov_b32_e32 v53, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 34
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 35
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 36
 ; VI-NEXT:    v_mov_b32_e32 v47, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 37
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 38
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 39
 ; VI-NEXT:    v_mov_b32_e32 v25, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 40
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 41
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v17, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 42
-; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v55, vcc_lo
 ; VI-NEXT:    v_mov_b32_e32 v52, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 43
@@ -111995,47 +111995,47 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; VI-NEXT:    v_mov_b32_e32 v54, s64
 ; VI-NEXT:    v_mov_b32_e32 v33, s4
 ; VI-NEXT:    v_mov_b32_e32 v46, s38
-; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v55, s90
-; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v55, s88
-; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v55, s78
 ; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v55, s76
-; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v55, s74
-; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v55, s72
-; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v55, s62
-; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v55, s60
-; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v55, s58
-; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v55, s56
 ; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v55, s46
+; VI-NEXT:    v_mov_b32_e32 v55, s60
+; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v55, s58
+; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v55, s56
 ; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v55, s46
+; VI-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
 ; VI-NEXT:  .LBB73_6: ; %end
 ; VI-NEXT:    s_mov_b32 s4, 0xc0c0004
 ; VI-NEXT:    v_perm_b32 v55, v58, v46, s4
 ; VI-NEXT:    v_perm_b32 v49, v49, v45, s4
-; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
 ; VI-NEXT:    v_perm_b32 v36, v36, v22, s4
 ; VI-NEXT:    v_perm_b32 v17, v38, v17, s4
 ; VI-NEXT:    v_perm_b32 v18, v32, v18, s4
@@ -112043,8 +112043,8 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; VI-NEXT:    v_perm_b32 v35, v35, v54, s4
 ; VI-NEXT:    v_perm_b32 v24, v24, v25, s4
 ; VI-NEXT:    v_perm_b32 v50, v50, v59, s4
-; VI-NEXT:    buffer_load_dword v58, off, s[0:3], s32 offset:376 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v59, off, s[0:3], s32 offset:380 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v58, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v59, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
 ; VI-NEXT:    v_perm_b32 v29, v44, v29, s4
 ; VI-NEXT:    v_perm_b32 v33, v51, v33, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
@@ -112087,57 +112087,57 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; VI-NEXT:    v_readlane_b32 s36, v63, 2
 ; VI-NEXT:    v_readlane_b32 s35, v63, 1
 ; VI-NEXT:    v_readlane_b32 s34, v63, 0
-; VI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(4)
 ; VI-NEXT:    v_perm_b32 v39, v39, v45, s4
-; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(4)
 ; VI-NEXT:    v_perm_b32 v51, v40, v58, s4
 ; VI-NEXT:    s_waitcnt vmcnt(2)
 ; VI-NEXT:    v_perm_b32 v25, v15, v25, s4
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v26, v26, v45, s4
-; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:364 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:372 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v38, v22, v45, s4
-; VI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:368 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:376 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v31, v31, v22, s4
-; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v32, v22, v45, s4
-; VI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v27, v27, v22, s4
-; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v52, v22, v45, s4
-; VI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v54, v23, v22, s4
 ; VI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v22, v23, v22, s4
-; VI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v19, v19, v23, s4
-; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v23, v23, v45, s4
-; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_store_dword v29, v0, s[0:3], 0 offen offset:4
 ; VI-NEXT:    v_lshlrev_b32_e32 v29, 16, v51
 ; VI-NEXT:    v_or_b32_e32 v29, v48, v29
@@ -112171,7 +112171,7 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; VI-NEXT:    v_or_b32_e32 v17, v27, v17
 ; VI-NEXT:    buffer_store_dword v50, v0, s[0:3], 0 offen
 ; VI-NEXT:    buffer_store_dword v17, v0, s[0:3], 0 offen offset:40
-; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:372 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:380 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:384 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(13)
 ; VI-NEXT:    v_perm_b32 v15, v15, v45, s4
@@ -112184,8 +112184,8 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; VI-NEXT:    v_lshlrev_b32_e32 v17, 16, v52
 ; VI-NEXT:    v_or_b32_e32 v17, v54, v17
 ; VI-NEXT:    buffer_store_dword v17, v0, s[0:3], 0 offen offset:48
-; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:364 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:368 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v17, v18, v17, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
@@ -112194,8 +112194,8 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; VI-NEXT:    v_lshlrev_b32_e32 v17, 16, v22
 ; VI-NEXT:    v_or_b32_e32 v17, v19, v17
 ; VI-NEXT:    buffer_store_dword v17, v0, s[0:3], 0 offen offset:56
-; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v17, v18, v17, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
@@ -112204,146 +112204,146 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; VI-NEXT:    v_lshlrev_b32_e32 v17, 16, v23
 ; VI-NEXT:    v_or_b32_e32 v17, v25, v17
 ; VI-NEXT:    buffer_store_dword v17, v0, s[0:3], 0 offen offset:64
-; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v17, v18, v17, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
 ; VI-NEXT:    v_or_b32_e32 v16, v16, v17
 ; VI-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:68
-; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v13, v13, v16, s4
 ; VI-NEXT:    v_or_b32_e32 v13, v13, v15
 ; VI-NEXT:    buffer_store_dword v13, v0, s[0:3], 0 offen offset:72
-; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v13, v14, v13, s4
-; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v14, v15, v14, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
 ; VI-NEXT:    v_or_b32_e32 v13, v13, v14
 ; VI-NEXT:    buffer_store_dword v13, v0, s[0:3], 0 offen offset:76
-; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v9, v9, v13, s4
-; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v13, v13, v14, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
 ; VI-NEXT:    v_or_b32_e32 v9, v9, v13
 ; VI-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:80
-; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v9, v10, v9, s4
-; VI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v10, v13, v10, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
 ; VI-NEXT:    v_or_b32_e32 v9, v9, v10
 ; VI-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:84
-; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v7, v7, v9, s4
-; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v9, v9, v13, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
 ; VI-NEXT:    v_or_b32_e32 v7, v7, v9
 ; VI-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:88
-; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v7, v8, v7, s4
-; VI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v8, v9, v8, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; VI-NEXT:    v_or_b32_e32 v7, v7, v8
 ; VI-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:92
-; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v5, v5, v7, s4
-; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v7, v7, v8, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
 ; VI-NEXT:    v_or_b32_e32 v5, v5, v7
 ; VI-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:96
-; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v5, v6, v5, s4
-; VI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v6, v7, v6, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; VI-NEXT:    v_or_b32_e32 v5, v5, v6
 ; VI-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:100
-; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v3, v3, v5, s4
-; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v5, v5, v6, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; VI-NEXT:    v_or_b32_e32 v3, v3, v5
 ; VI-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:104
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v3, v4, v3, s4
-; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v4, v5, v4, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; VI-NEXT:    v_or_b32_e32 v3, v3, v4
 ; VI-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:108
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v3, s4
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v3, v3, v4, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v3
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:112
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v2, v1, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:116
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; VI-NEXT:    v_perm_b32 v1, v11, v1, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:120
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v2, v3, v2, s4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -112764,54 +112764,54 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; GFX9-NEXT:    v_add_f64 v[17:18], s[42:43], 1.0
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[11:12]
 ; GFX9-NEXT:    v_add_f64 v[21:22], s[44:45], 1.0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[1:2]
 ; GFX9-NEXT:    v_add_f64 v[23:24], s[28:29], 1.0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[3:4]
 ; GFX9-NEXT:    v_add_f64 v[28:29], s[26:27], 1.0
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[5:6]
+; GFX9-NEXT:    v_add_f64 v[32:33], s[24:25], 1.0
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[7:8]
+; GFX9-NEXT:    v_add_f64 v[34:35], s[22:23], 1.0
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[9:10]
+; GFX9-NEXT:    v_add_f64 v[36:37], s[20:21], 1.0
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[13:14]
+; GFX9-NEXT:    v_add_f64 v[38:39], s[18:19], 1.0
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[5:6]
-; GFX9-NEXT:    v_add_f64 v[32:33], s[24:25], 1.0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[7:8]
-; GFX9-NEXT:    v_add_f64 v[34:35], s[22:23], 1.0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[9:10]
-; GFX9-NEXT:    v_add_f64 v[36:37], s[20:21], 1.0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[13:14]
-; GFX9-NEXT:    v_add_f64 v[38:39], s[18:19], 1.0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[17:18]
 ; GFX9-NEXT:    v_add_f64 v[48:49], s[16:17], 1.0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[21:22]
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v57, 16, v11
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[23:24]
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v55, 8, v22
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[28:29]
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v58, 8, v24
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
@@ -112819,135 +112819,135 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[32:33]
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v50, 8, v29
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[34:35]
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v51, 16, v28
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[36:37]
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v31, 16, v33
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[38:39]
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v54, 24, v35
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[48:49]
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v47, 16, v35
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:388 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v12
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v12
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v12
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v11
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v2
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v2
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v2
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v1
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v1
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v4
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v4
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v4
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v3
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v3
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v6
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v6
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v6
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v5
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v5
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v8
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v12
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v8
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v8
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v12
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v7
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v7
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v10
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v10
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v12
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v10
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v9
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v11
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v2
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v2
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v9
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v14
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v14
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v14
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v13
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v13
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v2
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v18
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v18
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v18
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v17
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v1
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v1
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v4
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v4
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v4
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v3
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v3
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v6
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v6
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v6
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v5
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v5
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v8
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v8
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v17
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v8
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v22
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v22
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v21
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v7
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v7
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v10
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v10
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v10
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v9
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v9
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v21
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v24
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v24
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v23
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v14
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v14
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v14
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v23
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v13
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v13
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v18
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v18
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v18
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:388 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v17
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v17
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v29
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v29
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v28
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v22
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v22
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v21
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v21
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v24
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v24
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v23
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v23
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v29
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v29
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v28
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v33
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:396 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v32
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v32
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v34
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v16, 8, v33
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v30, 8, v35
@@ -112973,211 +112973,211 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s66
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:392 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s65
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s64
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s54
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s53
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s52
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s51
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s50
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s49
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s48
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s39
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s38
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s99
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s98
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s97
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s96
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s87
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s86
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s85
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s84
 ; GFX9-NEXT:    v_mov_b32_e32 v11, s4
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s83
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s82
 ; GFX9-NEXT:    v_mov_b32_e32 v51, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 1
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 2
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 3
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 4
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 5
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 6
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 7
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 8
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 9
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 10
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 11
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 12
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 13
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 14
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 15
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 16
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 17
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 18
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 19
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 2
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 3
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 4
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 5
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 20
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 6
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 21
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 7
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 22
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 8
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 23
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 9
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 24
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 10
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 11
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 12
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 13
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 14
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 15
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 16
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 17
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 18
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
-; GFX9-NEXT:    v_readlane_b32 s4, v62, 25
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 19
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 20
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 21
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 22
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 23
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 24
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
+; GFX9-NEXT:    v_readlane_b32 s4, v62, 25
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 26
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:388 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 27
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 28
 ; GFX9-NEXT:    v_mov_b32_e32 v55, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 29
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 30
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 31
 ; GFX9-NEXT:    v_mov_b32_e32 v58, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v57, s30
-; GFX9-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v57, vcc_lo
-; GFX9-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v57, s94
-; GFX9-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v57, s92
-; GFX9-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v52, s34
-; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:388 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v57, s90
 ; GFX9-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v57, v51
 ; GFX9-NEXT:    v_mov_b32_e32 v51, s88
-; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v51, s78
-; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v51, s76
-; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v51, s74
-; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v51, s72
-; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v51, s62
-; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v51, s60
-; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v51, s58
 ; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v51, s56
-; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v51, s72
+; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v51, s62
+; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v51, s60
+; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v51, s58
+; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v51, s56
+; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 32
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 33
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 34
 ; GFX9-NEXT:    v_mov_b32_e32 v50, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 35
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 36
 ; GFX9-NEXT:    v_mov_b32_e32 v31, s4
@@ -113208,9 +113208,9 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; GFX9-NEXT:    v_mov_b32_e32 v51, s46
 ; GFX9-NEXT:    v_mov_b32_e32 v43, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 49
-; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v12, s5
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s6
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s7
@@ -113257,12 +113257,12 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:392 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v49, v49, v20, s4
 ; GFX9-NEXT:    v_perm_b32 v36, v36, v19, s4
-; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v30, v35, v30, s4
 ; GFX9-NEXT:    v_perm_b32 v16, v33, v16, s4
-; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:384 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s32 offset:388 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v48, v48, v60, s4
 ; GFX9-NEXT:    v_perm_b32 v25, v41, v25, s4
 ; GFX9-NEXT:    v_perm_b32 v37, v37, v44, s4
@@ -113314,61 +113314,61 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; GFX9-NEXT:    v_perm_b32 v34, v34, v15, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(3)
 ; GFX9-NEXT:    v_perm_b32 v27, v27, v19, s4
-; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:368 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:376 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(4)
 ; GFX9-NEXT:    v_perm_b32 v45, v59, v52, s4
-; GFX9-NEXT:    buffer_load_dword v59, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v60, off, s[0:3], s32 offset:364 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v59, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v60, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    v_perm_b32 v35, v15, v19, s4
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:372 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:380 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(4)
 ; GFX9-NEXT:    v_perm_b32 v56, v56, v59, s4
-; GFX9-NEXT:    buffer_load_dword v59, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v60, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v59, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v60, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(3)
 ; GFX9-NEXT:    v_perm_b32 v19, v51, v19, s4
 ; GFX9-NEXT:    v_perm_b32 v32, v32, v15, s4
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:368 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    v_perm_b32 v40, v46, v59, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v20, v28, v15, s4
 ; GFX9-NEXT:    v_perm_b32 v28, v29, v50, s4
-; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v29, v15, v50, s4
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v23, v23, v15, s4
-; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v33, v15, v50, s4
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v21, v21, v15, s4
-; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v50, v15, v50, s4
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v17, v17, v15, s4
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:380 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:388 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v18, v18, v15, s4
-; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v15, v15, v51, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v51, 16, v45
@@ -113406,9 +113406,9 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v19
 ; GFX9-NEXT:    v_or_b32_e32 v16, v20, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:40
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:372 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:376 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:384 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v19, v16, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -113417,9 +113417,9 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v29
 ; GFX9-NEXT:    v_or_b32_e32 v16, v23, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:48
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:364 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v19, v16, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -113428,9 +113428,9 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v33
 ; GFX9-NEXT:    v_or_b32_e32 v16, v21, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:56
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v19, v16, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -113439,149 +113439,149 @@ define inreg <128 x i8> @bitcast_v16f64_to_v128i8_scalar(<16 x double> inreg %a,
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v50
 ; GFX9-NEXT:    v_or_b32_e32 v16, v17, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:64
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v17, v16, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
 ; GFX9-NEXT:    v_or_b32_e32 v16, v18, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:68
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v13, v13, v16, s4
 ; GFX9-NEXT:    v_or_b32_e32 v13, v13, v15
 ; GFX9-NEXT:    buffer_store_dword v13, v0, s[0:3], 0 offen offset:72
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v13, v14, v13, s4
-; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v14, v15, v14, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
 ; GFX9-NEXT:    v_or_b32_e32 v13, v13, v14
 ; GFX9-NEXT:    buffer_store_dword v13, v0, s[0:3], 0 offen offset:76
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v9, v9, v13, s4
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v13, v14, v13, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
 ; GFX9-NEXT:    v_or_b32_e32 v9, v9, v13
 ; GFX9-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:80
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v9, v10, v9, s4
-; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v10, v13, v10, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
 ; GFX9-NEXT:    v_or_b32_e32 v9, v9, v10
 ; GFX9-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:84
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v7, v9, s4
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v9, v10, v9, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v9
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:88
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v8, v7, s4
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v8, v9, v8, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:92
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v5, v5, v7, s4
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v7, v7, v8, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
 ; GFX9-NEXT:    v_or_b32_e32 v5, v5, v7
 ; GFX9-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:96
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v5, v6, v5, s4
-; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v6, v7, v6, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; GFX9-NEXT:    v_or_b32_e32 v5, v5, v6
 ; GFX9-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:100
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v3, v3, v5, s4
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v5, v5, v6, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; GFX9-NEXT:    v_or_b32_e32 v3, v3, v5
 ; GFX9-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:104
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v3, v4, v3, s4
-; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v4, v5, v4, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GFX9-NEXT:    v_or_b32_e32 v3, v3, v4
 ; GFX9-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:108
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v3, s4
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v3, v3, v4, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:112
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v1, v2, v1, s4
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v2, v3, v2, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:116
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v2, v57, v2, s4
 ; GFX9-NEXT:    v_perm_b32 v1, v11, v1, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:120
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v2, v3, v2, s4
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v1, v12, v1, s4
@@ -125380,13 +125380,13 @@ define inreg <64 x bfloat> @bitcast_v16f64_to_v64bf16_scalar(<16 x double> inreg
 ; SI-NEXT:    v_add_f64 v[24:25], s[6:7], 1.0
 ; SI-NEXT:    v_and_b32_e32 v34, 0xffff0000, v23
 ; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
-; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v23, 0xffff0000, v22
 ; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
 ; SI-NEXT:    v_add_f64 v[10:11], s[42:43], 1.0
 ; SI-NEXT:    v_add_f64 v[18:19], s[10:11], 1.0
-; SI-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v22, 0xffff0000, v25
 ; SI-NEXT:    v_and_b32_e32 v43, 0xffff0000, v17
@@ -125400,13 +125400,13 @@ define inreg <64 x bfloat> @bitcast_v16f64_to_v64bf16_scalar(<16 x double> inreg
 ; SI-NEXT:    v_and_b32_e32 v15, 0xffff0000, v1
 ; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v1
 ; SI-NEXT:    v_add_f64 v[1:2], s[20:21], 1.0
-; SI-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v25
 ; SI-NEXT:    v_add_f64 v[4:5], s[26:27], 1.0
 ; SI-NEXT:    v_add_f64 v[12:13], s[40:41], 1.0
 ; SI-NEXT:    v_add_f64 v[20:21], s[8:9], 1.0
-; SI-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v22, 0xffff0000, v24
 ; SI-NEXT:    v_and_b32_e32 v55, 0xffff0000, v19
@@ -125422,13 +125422,13 @@ define inreg <64 x bfloat> @bitcast_v16f64_to_v64bf16_scalar(<16 x double> inreg
 ; SI-NEXT:    v_and_b32_e32 v11, 0xffff0000, v2
 ; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v2
 ; SI-NEXT:    v_add_f64 v[2:3], s[18:19], 1.0
-; SI-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v24
 ; SI-NEXT:    v_add_f64 v[6:7], s[28:29], 1.0
 ; SI-NEXT:    v_add_f64 v[8:9], s[44:45], 1.0
-; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; SI-NEXT:    v_and_b32_e32 v51, 0xffff0000, v21
 ; SI-NEXT:    v_lshlrev_b32_e32 v50, 16, v21
 ; SI-NEXT:    v_and_b32_e32 v53, 0xffff0000, v20
@@ -125470,26 +125470,26 @@ define inreg <64 x bfloat> @bitcast_v16f64_to_v64bf16_scalar(<16 x double> inreg
 ; SI-NEXT:    s_branch .LBB77_6
 ; SI-NEXT:  .LBB77_5:
 ; SI-NEXT:    v_mov_b32_e32 v0, s56
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s99
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s98
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s97
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s96
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s87
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s86
 ; SI-NEXT:    v_readlane_b32 s4, v62, 0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    v_readlane_b32 s4, v62, 1
@@ -125565,16 +125565,16 @@ define inreg <64 x bfloat> @bitcast_v16f64_to_v64bf16_scalar(<16 x double> inreg
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v11
 ; SI-NEXT:    v_lshrrev_b32_e32 v11, 16, v0
 ; SI-NEXT:    v_mul_f32_e32 v10, 1.0, v10
-; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v12
 ; SI-NEXT:    v_mul_f32_e32 v34, 1.0, v9
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_lshrrev_b32_e32 v10, 16, v0
 ; SI-NEXT:    v_mul_f32_e32 v9, 1.0, v36
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v15
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v17
 ; SI-NEXT:    s_waitcnt expcnt(0)
@@ -125595,8 +125595,8 @@ define inreg <64 x bfloat> @bitcast_v16f64_to_v64bf16_scalar(<16 x double> inreg
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v31
 ; SI-NEXT:    v_lshrrev_b32_e32 v31, 16, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v33
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mul_f32_e32 v11, 1.0, v18
 ; SI-NEXT:    v_lshrrev_b32_e32 v18, 16, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v38
@@ -125624,14 +125624,14 @@ define inreg <64 x bfloat> @bitcast_v16f64_to_v64bf16_scalar(<16 x double> inreg
 ; SI-NEXT:    v_lshrrev_b32_e32 v53, 16, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v51
 ; SI-NEXT:    v_lshrrev_b32_e32 v51, 16, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; SI-NEXT:    v_mul_f32_e32 v9, 1.0, v49
 ; SI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
 ; SI-NEXT:    v_lshr_b64 v[33:34], v[34:35], 16
 ; SI-NEXT:    v_lshr_b64 v[34:35], v[2:3], 16
 ; SI-NEXT:    v_lshr_b64 v[2:3], v[7:8], 16
-; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
 ; SI-NEXT:    v_mul_f32_e32 v19, 1.0, v37
 ; SI-NEXT:    v_mul_f32_e32 v22, 1.0, v22
 ; SI-NEXT:    v_mul_f32_e32 v24, 1.0, v24
@@ -125688,23 +125688,23 @@ define inreg <64 x bfloat> @bitcast_v16f64_to_v64bf16_scalar(<16 x double> inreg
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_lshrrev_b32_e32 v49, 16, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_lshr_b64 v[3:4], v[3:4], 16
 ; SI-NEXT:    v_lshr_b64 v[4:5], v[5:6], 16
-; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_mul_f32_e32 v48, 1.0, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_lshr_b64 v[5:6], v[5:6], 16
-; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_lshrrev_b32_e32 v39, 16, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_lshr_b64 v[6:7], v[6:7], 16
 ; SI-NEXT:    v_lshr_b64 v[7:8], v[15:16], 16
@@ -125745,17 +125745,17 @@ define inreg <64 x bfloat> @bitcast_v16f64_to_v64bf16_scalar(<16 x double> inreg
 ; SI-NEXT:    v_lshr_b64 v[28:29], v[48:49], 16
 ; SI-NEXT:    s_waitcnt vmcnt(14)
 ; SI-NEXT:    v_mul_f32_e32 v38, 1.0, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
 ; SI-NEXT:    v_lshr_b64 v[29:30], v[38:39], 16
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_lshrrev_b32_e32 v37, 16, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_mul_f32_e32 v36, 1.0, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v1
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
 ; SI-NEXT:    v_lshr_b64 v[30:31], v[36:37], 16
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
@@ -129330,15 +129330,15 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    v_mul_f32_e64 v41, 1.0, s46
 ; SI-NEXT:    v_mul_f32_e64 v54, 1.0, s44
 ; SI-NEXT:    v_mul_f32_e64 v52, 1.0, s42
-; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; SI-NEXT:    s_cbranch_scc0 .LBB79_2
 ; SI-NEXT:  ; %bb.1: ; %cmp.false
 ; SI-NEXT:    v_lshrrev_b32_e32 v44, 16, v55
@@ -129372,8 +129372,8 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    s_waitcnt vmcnt(6)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
 ; SI-NEXT:    v_mov_b32_e32 v1, v43
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[1:2], v[43:44], 16
 ; SI-NEXT:    v_mov_b32_e32 v2, v34
@@ -129382,19 +129382,19 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[2:3], v[34:35], 16
 ; SI-NEXT:    v_mov_b32_e32 v3, v17
-; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[3:4], v[17:18], 16
 ; SI-NEXT:    v_mov_b32_e32 v4, v20
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[4:5], v[20:21], 16
 ; SI-NEXT:    v_mov_b32_e32 v5, v19
 ; SI-NEXT:    v_lshrrev_b32_e32 v20, 16, v6
-; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[5:6], v[19:20], 16
 ; SI-NEXT:    v_mov_b32_e32 v6, v13
@@ -129403,13 +129403,13 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[6:7], v[13:14], 16
 ; SI-NEXT:    v_mov_b32_e32 v7, v31
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[7:8], v[31:32], 16
 ; SI-NEXT:    v_mov_b32_e32 v8, v23
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[8:9], v[23:24], 16
 ; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
@@ -129424,8 +129424,8 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    s_waitcnt vmcnt(4)
 ; SI-NEXT:    v_lshrrev_b32_e32 v26, 16, v9
 ; SI-NEXT:    v_mov_b32_e32 v9, v25
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[9:10], v[25:26], 16
 ; SI-NEXT:    v_mov_b32_e32 v10, v30
@@ -129434,8 +129434,8 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[10:11], v[30:31], 16
 ; SI-NEXT:    v_mov_b32_e32 v11, v27
-; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[11:12], v[27:28], 16
 ; SI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
@@ -129458,13 +129458,13 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[12:13], v[61:62], 16
 ; SI-NEXT:    v_mov_b32_e32 v13, v29
-; SI-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[13:14], v[29:30], 16
 ; SI-NEXT:    v_mov_b32_e32 v14, v15
-; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v62, v39
 ; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v62
 ; SI-NEXT:    v_lshrrev_b32_e32 v39, 16, v21
@@ -129494,8 +129494,8 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[16:17], v[33:34], 16
 ; SI-NEXT:    v_mov_b32_e32 v17, v57
-; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[17:18], v[57:58], 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v60, 16, v47
@@ -129561,40 +129561,40 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    v_mov_b32_e32 v41, v40
 ; SI-NEXT:    s_branch .LBB79_3
 ; SI-NEXT:  .LBB79_2:
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v34, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v35, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v24, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v25, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v24, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v25, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v60, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v34, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v32, v59
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v58, v56
@@ -129631,8 +129631,8 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    buffer_load_dword v57, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
 ; SI-NEXT:    s_cbranch_scc1 .LBB79_5
 ; SI-NEXT:  ; %bb.4: ; %cmp.true
-; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v55
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff0000, v43
 ; SI-NEXT:    v_add_f32_e32 v1, 0x40c00000, v1
@@ -129647,8 +129647,8 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v19, 0xffff0000, v47
@@ -129665,7 +129665,7 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff0000, v2
 ; SI-NEXT:    v_add_f32_e32 v2, 0x40c00000, v2
 ; SI-NEXT:    v_lshr_b64 v[1:2], v[2:3], 16
-; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff0000, v34
 ; SI-NEXT:    v_add_f32_e32 v2, 0x40c00000, v2
 ; SI-NEXT:    s_waitcnt vmcnt(14)
@@ -129720,9 +129720,9 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    v_add_f32_e32 v3, 0x40c00000, v3
 ; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
 ; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], 16
-; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v3, 0xffff0000, v3
 ; SI-NEXT:    v_add_f32_e32 v3, 0x40c00000, v3
@@ -129731,8 +129731,8 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    v_add_f32_e32 v4, 0x40c00000, v4
 ; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v4
 ; SI-NEXT:    v_lshr_b64 v[3:4], v[3:4], 16
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff0000, v62
 ; SI-NEXT:    v_add_f32_e32 v5, 0x40c00000, v5
@@ -129740,9 +129740,9 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    v_and_b32_e32 v4, 0xffff0000, v4
 ; SI-NEXT:    v_add_f32_e32 v4, 0x40c00000, v4
 ; SI-NEXT:    v_lshr_b64 v[4:5], v[4:5], 16
-; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff0000, v5
 ; SI-NEXT:    v_add_f32_e32 v5, 0x40c00000, v5
@@ -129754,9 +129754,9 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    v_and_b32_e32 v6, 0xffff0000, v40
 ; SI-NEXT:    v_add_f32_e32 v6, 0x40c00000, v6
 ; SI-NEXT:    v_lshr_b64 v[6:7], v[6:7], 16
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v7, 0xffff0000, v7
 ; SI-NEXT:    v_add_f32_e32 v7, 0x40c00000, v7
@@ -129765,9 +129765,9 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    v_add_f32_e32 v8, 0x40c00000, v8
 ; SI-NEXT:    v_lshrrev_b32_e32 v8, 16, v8
 ; SI-NEXT:    v_lshr_b64 v[7:8], v[7:8], 16
-; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v8, 0xffff0000, v8
 ; SI-NEXT:    v_add_f32_e32 v8, 0x40c00000, v8
@@ -129776,8 +129776,8 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    v_add_f32_e32 v9, 0x40c00000, v9
 ; SI-NEXT:    v_lshrrev_b32_e32 v9, 16, v9
 ; SI-NEXT:    v_lshr_b64 v[8:9], v[8:9], 16
-; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v9, 0xffff0000, v9
@@ -129790,9 +129790,9 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    v_and_b32_e32 v10, 0xffff0000, v50
 ; SI-NEXT:    v_add_f32_e32 v10, 0x40c00000, v10
 ; SI-NEXT:    v_lshr_b64 v[10:11], v[10:11], 16
-; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v11, 0xffff0000, v11
 ; SI-NEXT:    v_add_f32_e32 v11, 0x40c00000, v11
@@ -129804,9 +129804,9 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    v_and_b32_e32 v12, 0xffff0000, v38
 ; SI-NEXT:    v_add_f32_e32 v12, 0x40c00000, v12
 ; SI-NEXT:    v_lshr_b64 v[12:13], v[12:13], 16
-; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v13, 0xffff0000, v13
 ; SI-NEXT:    v_add_f32_e32 v13, 0x40c00000, v13
@@ -129815,8 +129815,8 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    v_add_f32_e32 v14, 0x40c00000, v14
 ; SI-NEXT:    v_lshrrev_b32_e32 v14, 16, v14
 ; SI-NEXT:    v_lshr_b64 v[13:14], v[13:14], 16
-; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v15, 0xffff0000, v39
 ; SI-NEXT:    v_add_f32_e32 v15, 0x40c00000, v15
@@ -129838,8 +129838,8 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; SI-NEXT:    v_add_f32_e32 v16, 0x40c00000, v16
 ; SI-NEXT:    v_lshrrev_b32_e32 v17, 16, v17
 ; SI-NEXT:    v_lshr_b64 v[16:17], v[16:17], 16
-; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v32, 0xffff0000, v52
 ; SI-NEXT:    v_add_f32_e32 v32, 0x40c00000, v32
@@ -153839,7 +153839,7 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_or_b32_e32 v32, 0x400000, v18
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v18, v18
 ; GFX9-NEXT:    v_bfe_u32 v18, v17, 16, 1
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_perm_b32 v16, v0, v15, s7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v31, v32, vcc
 ; GFX9-NEXT:    v_add3_u32 v18, v18, v17, s6
@@ -153847,7 +153847,7 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v17, v17
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v17, 16, v20
 ; GFX9-NEXT:    v_add_f32_e32 v17, 0x40c00000, v17
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_cndmask_b32_e32 v15, v18, v31, vcc
 ; GFX9-NEXT:    v_bfe_u32 v18, v17, 16, 1
 ; GFX9-NEXT:    v_add3_u32 v18, v18, v17, s6
@@ -153862,8 +153862,8 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v17, v17
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v17, 16, v19
 ; GFX9-NEXT:    v_add_f32_e32 v17, 0x40c00000, v17
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_perm_b32 v15, v15, v0, s7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v18, v20, vcc
 ; GFX9-NEXT:    v_bfe_u32 v18, v17, 16, 1
@@ -153882,7 +153882,7 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v17, v17
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v17, 16, v22
 ; GFX9-NEXT:    v_add_f32_e32 v17, 0x40c00000, v17
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_perm_b32 v16, v0, v62, s7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v18, v19, vcc
 ; GFX9-NEXT:    v_bfe_u32 v18, v17, 16, 1
@@ -153898,8 +153898,8 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v17, v17
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v17, 16, v21
 ; GFX9-NEXT:    v_add_f32_e32 v17, 0x40c00000, v17
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_perm_b32 v15, v0, v15, s7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v18, v19, vcc
 ; GFX9-NEXT:    v_bfe_u32 v18, v17, 16, 1
@@ -153918,7 +153918,7 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:448 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_add_f32_e32 v17, 0x40c00000, v17
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_perm_b32 v16, v0, v43, s7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v18, v19, vcc
 ; GFX9-NEXT:    v_bfe_u32 v18, v17, 16, 1
@@ -153927,7 +153927,7 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v17, v17
 ; GFX9-NEXT:    v_and_b32_e32 v17, 0xffff0000, v24
 ; GFX9-NEXT:    v_add_f32_e32 v17, 0x40c00000, v17
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_perm_b32 v15, v0, v44, s7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v18, v19, vcc
 ; GFX9-NEXT:    v_bfe_u32 v18, v17, 16, 1
@@ -153946,7 +153946,7 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v17, v17
 ; GFX9-NEXT:    v_and_b32_e32 v17, 0xffff0000, v23
 ; GFX9-NEXT:    v_add_f32_e32 v17, 0x40c00000, v17
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_perm_b32 v16, v15, v0, s7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v18, v19, vcc
 ; GFX9-NEXT:    v_bfe_u32 v18, v17, 16, 1
@@ -153955,7 +153955,7 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v17, v17
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v17, 16, v26
 ; GFX9-NEXT:    v_add_f32_e32 v17, 0x40c00000, v17
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_cndmask_b32_e32 v15, v18, v19, vcc
 ; GFX9-NEXT:    v_bfe_u32 v18, v17, 16, 1
 ; GFX9-NEXT:    v_add3_u32 v18, v18, v17, s6
@@ -153963,8 +153963,8 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v17, v17
 ; GFX9-NEXT:    v_and_b32_e32 v17, 0xffff0000, v26
 ; GFX9-NEXT:    v_add_f32_e32 v17, 0x40c00000, v17
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_perm_b32 v15, v15, v0, s7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v18, v19, vcc
 ; GFX9-NEXT:    v_bfe_u32 v18, v17, 16, 1
@@ -153982,7 +153982,7 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v17, v17
 ; GFX9-NEXT:    v_and_b32_e32 v17, 0xffff0000, v25
 ; GFX9-NEXT:    v_add_f32_e32 v17, 0x40c00000, v17
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_perm_b32 v16, v15, v0, s7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v18, v19, vcc
 ; GFX9-NEXT:    v_bfe_u32 v18, v17, 16, 1
@@ -153991,7 +153991,7 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v17, v17
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v17, 16, v28
 ; GFX9-NEXT:    v_add_f32_e32 v17, 0x40c00000, v17
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_cndmask_b32_e32 v15, v18, v19, vcc
 ; GFX9-NEXT:    v_bfe_u32 v18, v17, 16, 1
 ; GFX9-NEXT:    v_add3_u32 v18, v18, v17, s6
@@ -153999,8 +153999,8 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v17, v17
 ; GFX9-NEXT:    v_and_b32_e32 v17, 0xffff0000, v28
 ; GFX9-NEXT:    v_add_f32_e32 v17, 0x40c00000, v17
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_perm_b32 v15, v15, v0, s7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v18, v19, vcc
 ; GFX9-NEXT:    v_bfe_u32 v18, v17, 16, 1
@@ -154064,8 +154064,8 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v17, v17
 ; GFX9-NEXT:    v_and_b32_e32 v17, 0xffff0000, v61
 ; GFX9-NEXT:    v_add_f32_e32 v17, 0x40c00000, v17
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_perm_b32 v15, v15, v0, s7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v18, v19, vcc
 ; GFX9-NEXT:    v_bfe_u32 v18, v17, 16, 1
@@ -154405,6 +154405,9 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v46
 ; GFX9-NEXT:    v_lshrrev_b64 v[46:47], 24, v[40:41]
+; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v50, off, s[0:3], s32 offset:476 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:480 ; 4-byte Folded Spill
@@ -154425,141 +154428,15 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:464 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[31:32]
 ; GFX9-NEXT:    v_perm_b32 v58, v11, v2, s7
-; GFX9-NEXT:    v_perm_b32 v57, v10, v5, s7
-; GFX9-NEXT:    v_lshrrev_b32_e32 v8, 16, v17
-; GFX9-NEXT:    v_lshrrev_b32_e32 v11, 16, v2
-; GFX9-NEXT:    v_lshrrev_b32_e32 v10, 16, v5
-; GFX9-NEXT:    s_waitcnt vmcnt(23)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_lshrrev_b32_e32 v5, 16, v20
-; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 16, v29
-; GFX9-NEXT:    v_lshrrev_b32_e32 v29, 16, v39
-; GFX9-NEXT:    v_lshrrev_b32_e32 v20, 16, v62
-; GFX9-NEXT:    buffer_load_dword v62, off, s[0:3], s32 offset:452 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v63, off, s[0:3], s32 offset:456 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
-; GFX9-NEXT:    v_lshrrev_b32_e32 v6, 16, v21
-; GFX9-NEXT:    v_lshrrev_b32_e32 v21, 16, v44
-; GFX9-NEXT:    v_lshrrev_b32_e32 v44, 8, v48
-; GFX9-NEXT:    v_lshrrev_b32_e32 v61, 16, v61
-; GFX9-NEXT:    s_waitcnt vmcnt(18)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v39, 24, v38
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v39, 8, v38
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v39, 8, v37
-; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_waitcnt vmcnt(5)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v28, 16, v0
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v27, 16, v0
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v26, 16, v0
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v25, 16, v0
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b64 v[46:47], 24, v[37:38]
-; GFX9-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v24, 16, v0
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[58:59]
-; GFX9-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v23, 16, v0
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_waitcnt vmcnt(27)
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b64 v[46:47], 24, v[33:34]
-; GFX9-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:424 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:428 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_waitcnt vmcnt(4)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_waitcnt vmcnt(4)
-; GFX9-NEXT:    v_lshrrev_b64 v[46:47], 24, v[33:34]
-; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b64 v[46:47], 24, v[50:51]
-; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:444 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:448 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_lshrrev_b32_e32 v33, 8, v33
-; GFX9-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:424 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_waitcnt vmcnt(7)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v19, 16, v0
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b64 v[46:47], 24, v[62:63]
-; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v62, 8, v62
-; GFX9-NEXT:    s_waitcnt vmcnt(4)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v18, 16, v0
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; GFX9-NEXT:    v_perm_b32 v57, v10, v5, s7
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
@@ -154571,18 +154448,84 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v8, 16, v17
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[35:36]
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v11, 16, v2
+; GFX9-NEXT:    v_lshrrev_b32_e32 v10, 16, v5
+; GFX9-NEXT:    v_lshrrev_b32_e32 v5, 16, v20
+; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 16, v29
+; GFX9-NEXT:    v_lshrrev_b32_e32 v29, 16, v39
+; GFX9-NEXT:    v_lshrrev_b32_e32 v20, 16, v62
+; GFX9-NEXT:    buffer_load_dword v62, off, s[0:3], s32 offset:452 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v63, off, s[0:3], s32 offset:456 ; 4-byte Folded Reload
+; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
+; GFX9-NEXT:    v_lshrrev_b32_e32 v6, 16, v21
+; GFX9-NEXT:    v_lshrrev_b32_e32 v21, 16, v44
+; GFX9-NEXT:    v_lshrrev_b32_e32 v44, 8, v48
+; GFX9-NEXT:    v_lshrrev_b32_e32 v61, 16, v61
+; GFX9-NEXT:    s_waitcnt vmcnt(30)
+; GFX9-NEXT:    v_lshrrev_b64 v[46:47], 24, v[37:38]
+; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b64 v[46:47], 24, v[33:34]
+; GFX9-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:424 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:428 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v39, 24, v38
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v39, 8, v38
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v39, 8, v37
+; GFX9-NEXT:    s_waitcnt vmcnt(29)
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[54:55]
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_waitcnt vmcnt(30)
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[42:43]
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:468 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:472 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v48, 24, v55
+; GFX9-NEXT:    buffer_store_dword v48, off, s[0:3], s32 offset:396 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v48, 24, v43
+; GFX9-NEXT:    v_lshrrev_b32_e32 v54, 8, v54
+; GFX9-NEXT:    buffer_store_dword v48, off, s[0:3], s32 offset:420 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_waitcnt vmcnt(25)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v28, 16, v0
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:364 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(12)
+; GFX9-NEXT:    v_lshrrev_b64 v[46:47], 24, v[33:34]
+; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b64 v[46:47], 24, v[50:51]
+; GFX9-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:444 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:448 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b64 v[46:47], 24, v[62:63]
+; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v33, 8, v33
+; GFX9-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:424 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v62, 8, v62
+; GFX9-NEXT:    s_waitcnt vmcnt(9)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(7)
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[50:51]
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
@@ -154590,12 +154533,75 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:436 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:440 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_lshrrev_b32_e32 v48, 24, v55
-; GFX9-NEXT:    buffer_store_dword v48, off, s[0:3], s32 offset:396 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v48, 24, v43
-; GFX9-NEXT:    v_lshrrev_b32_e32 v54, 8, v54
-; GFX9-NEXT:    buffer_store_dword v48, off, s[0:3], s32 offset:420 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_waitcnt vmcnt(18)
+; GFX9-NEXT:    s_waitcnt vmcnt(4)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v27, 16, v0
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_lshrrev_b64 v[46:47], 24, v[15:16]
+; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v47, 8, v57
+; GFX9-NEXT:    v_lshrrev_b32_e32 v46, 8, v56
+; GFX9-NEXT:    s_waitcnt vmcnt(2)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v26, 16, v0
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v25, 16, v0
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v24, 16, v0
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v23, 16, v0
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v19, 16, v0
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:368 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v18, 16, v0
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:372 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v17, 16, v0
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 24, v41
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
@@ -154629,22 +154635,14 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v37, 8, v35
 ; GFX9-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:412 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:416 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_waitcnt vmcnt(15)
-; GFX9-NEXT:    v_lshrrev_b64 v[46:47], 24, v[15:16]
+; GFX9-NEXT:    v_lshrrev_b64 v[58:59], 24, v[52:53]
 ; GFX9-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v38, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:476 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:480 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b64 v[58:59], 24, v[52:53]
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v59, 24, v57
-; GFX9-NEXT:    v_lshrrev_b32_e32 v47, 8, v57
-; GFX9-NEXT:    v_lshrrev_b32_e32 v46, 8, v56
+; GFX9-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_load_dword v56, off, s[0:3], s32 offset:460 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v57, off, s[0:3], s32 offset:464 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_mov_b32_e32 v53, v44
@@ -154652,14 +154650,14 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v32, 8, v55
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v40, 8, v43
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v55, 8, v42
-; GFX9-NEXT:    s_waitcnt vmcnt(9)
+; GFX9-NEXT:    s_waitcnt vmcnt(7)
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v37, 24, v36
 ; GFX9-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:392 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v37, 8, v35
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v35, 24, v34
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v36, 8, v36
 ; GFX9-NEXT:    buffer_store_dword v35, off, s[0:3], s32 offset:412 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_waitcnt vmcnt(7)
+; GFX9-NEXT:    s_waitcnt vmcnt(5)
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v35, 8, v39
 ; GFX9-NEXT:    buffer_store_dword v36, off, s[0:3], s32 offset:404 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v35, off, s[0:3], s32 offset:432 ; 4-byte Folded Spill
@@ -160098,148 +160096,148 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_mov_b32_e32 v58, v46
 ; VI-NEXT:    v_lshrrev_b64 v[1:2], 24, v[57:58]
 ; VI-NEXT:    v_mov_b32_e32 v61, v59
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:392 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:396 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[1:2], 24, v[60:61]
 ; VI-NEXT:    v_mov_b32_e32 v11, v6
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[1:2], 24, v[10:11]
 ; VI-NEXT:    v_mov_b32_e32 v23, v21
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[1:2], 24, v[22:23]
 ; VI-NEXT:    v_mov_b32_e32 v16, v14
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[1:2], 24, v[15:16]
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[1:2], 24, v[26:27]
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[1:2], 24, v[24:25]
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:388 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[1:2], 24, v[8:9]
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v46
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v46
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v46
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v57
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v57
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v54
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v54
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v54
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v40
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v40
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v51
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v51
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v46
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v51
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v52
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v48
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v48
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v48
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v37
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v37
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v46
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v57
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v34
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v34
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v57
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v31
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v54
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v54
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v54
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v40
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v31
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v40
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v51
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v51
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v51
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v52
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v48
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v48
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v48
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:396 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v37
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v37
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v34
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v34
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v28
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v31
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v31
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v28
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v28
 ; VI-NEXT:    v_mov_b32_e32 v53, v51
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:392 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v59
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[52:53]
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v59
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v2, v59
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v59
 ; VI-NEXT:    buffer_load_dword v58, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v59, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v60
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v2, v60
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v60
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
 ; VI-NEXT:    s_waitcnt vmcnt(6)
 ; VI-NEXT:    v_mov_b32_e32 v2, v58
 ; VI-NEXT:    v_lshrrev_b32_e32 v16, 24, v2
-; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v16, 16, v2
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v2
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v10
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v2, v10
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v10
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v21
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v21
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v2, v21
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v21
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v22
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v2, v22
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v22
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 24, v14
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v14
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v2, v14
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v14
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v15
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v2, v15
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v15
 ; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_load_dword v58, off, s[0:3], s32 offset:400 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v59, off, s[0:3], s32 offset:404 ; 4-byte Folded Reload
 ; VI-NEXT:    v_mov_b32_e32 v41, v54
@@ -160269,7 +160267,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_lshrrev_b32_e32 v50, 8, v28
 ; VI-NEXT:    v_lshrrev_b32_e32 v23, 16, v29
 ; VI-NEXT:    v_lshrrev_b32_e32 v53, 8, v29
-; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v16, 8, v24
 ; VI-NEXT:    v_mov_b32_e32 v60, v8
 ; VI-NEXT:    v_lshrrev_b32_e32 v39, 8, v8
@@ -160282,18 +160280,18 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:408 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:412 ; 4-byte Folded Reload
 ; VI-NEXT:    v_lshrrev_b32_e32 v10, 24, v2
-; VI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v2
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v26
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v2, v26
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 8, v26
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v10, v33
 ; VI-NEXT:    v_lshrrev_b32_e32 v26, 16, v24
 ; VI-NEXT:    s_waitcnt vmcnt(10)
@@ -160303,12 +160301,12 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_waitcnt vmcnt(8)
 ; VI-NEXT:    v_mov_b32_e32 v2, v14
 ; VI-NEXT:    v_lshrrev_b32_e32 v14, 24, v2
-; VI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v14, 16, v2
 ; VI-NEXT:    v_mov_b32_e32 v41, v2
 ; VI-NEXT:    v_lshrrev_b32_e32 v22, 8, v2
 ; VI-NEXT:    v_mov_b32_e32 v2, v58
-; VI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:388 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v14, v24
 ; VI-NEXT:    v_lshrrev_b32_e32 v61, 24, v2
 ; VI-NEXT:    s_waitcnt vmcnt(9)
@@ -160322,68 +160320,68 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_readlane_b32 s47, v62, 0
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 1
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 2
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 3
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 4
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 5
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s47
-; VI-NEXT:    v_readlane_b32 s47, v62, 6
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
+; VI-NEXT:    v_readlane_b32 s47, v62, 6
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 7
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 8
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 9
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 10
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 11
 ; VI-NEXT:    v_mov_b32_e32 v10, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 12
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 13
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 14
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 15
 ; VI-NEXT:    v_mov_b32_e32 v8, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 16
 ; VI-NEXT:    v_mov_b32_e32 v7, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 17
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 18
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 19
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 20
 ; VI-NEXT:    v_mov_b32_e32 v5, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 21
 ; VI-NEXT:    v_mov_b32_e32 v13, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 22
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:396 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 23
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 24
 ; VI-NEXT:    v_mov_b32_e32 v11, s47
@@ -160392,10 +160390,10 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_readlane_b32 s47, v62, 26
 ; VI-NEXT:    v_mov_b32_e32 v20, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 27
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 28
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 29
 ; VI-NEXT:    v_mov_b32_e32 v9, s47
@@ -160404,10 +160402,10 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_readlane_b32 s47, v62, 31
 ; VI-NEXT:    v_mov_b32_e32 v30, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 32
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 33
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 34
 ; VI-NEXT:    v_mov_b32_e32 v27, s47
@@ -160416,77 +160414,77 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_readlane_b32 s47, v62, 36
 ; VI-NEXT:    v_mov_b32_e32 v53, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 37
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s47
-; VI-NEXT:    v_readlane_b32 s47, v62, 38
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
+; VI-NEXT:    v_readlane_b32 s47, v62, 38
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s47
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:392 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s71
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s70
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s69
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s68
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s67
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s66
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s65
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s64
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s55
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s54
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s87
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s86
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s53
+; VI-NEXT:    v_mov_b32_e32 v1, s70
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s52
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s51
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s85
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s84
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s50
+; VI-NEXT:    v_mov_b32_e32 v1, s69
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s68
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s67
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s66
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s65
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s83
+; VI-NEXT:    v_mov_b32_e32 v1, s64
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s55
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s54
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s87
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s86
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s53
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s52
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s51
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s85
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s84
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s50
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s83
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s82
 ; VI-NEXT:    v_readlane_b32 s47, v62, 39
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s81
 ; VI-NEXT:    v_mov_b32_e32 v50, s47
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s80
 ; VI-NEXT:    v_readlane_b32 s47, v62, 40
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 41
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 42
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 43
 ; VI-NEXT:    v_mov_b32_e32 v26, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 44
 ; VI-NEXT:    v_mov_b32_e32 v16, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 45
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 46
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s47
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:388 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s6
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
@@ -160519,23 +160517,23 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v2, s45
 ; VI-NEXT:    v_mov_b32_e32 v1, s46
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:392 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:396 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s78
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s88
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s90
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, vcc_lo
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s30
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; VI-NEXT:    v_readlane_b32 s47, v62, 47
 ; VI-NEXT:    v_mov_b32_e32 v22, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 48
@@ -160558,8 +160556,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_mov_b32_e32 v1, s34
 ; VI-NEXT:    v_mov_b32_e32 v55, s47
 ; VI-NEXT:    v_readlane_b32 s47, v62, 57
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:388 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v47, s47
 ; VI-NEXT:    v_mov_b32_e32 v57, s4
 ; VI-NEXT:    v_mov_b32_e32 v46, s5
@@ -160594,7 +160592,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:  .LBB91_6: ; %end
 ; VI-NEXT:    s_mov_b32 s4, 0xc0c0004
 ; VI-NEXT:    v_perm_b32 v17, v5, v43, s4
-; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:380 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:396 ; 4-byte Folded Reload
 ; VI-NEXT:    v_perm_b32 v6, v8, v6, s4
 ; VI-NEXT:    v_perm_b32 v12, v25, v12, s4
 ; VI-NEXT:    v_perm_b32 v25, v31, v27, s4
@@ -160655,41 +160653,41 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_readlane_b32 s34, v63, 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v8, v48, v5, s4
-; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:372 ; 4-byte Folded Reload
 ; VI-NEXT:    v_perm_b32 v48, v58, v56, s4
 ; VI-NEXT:    v_or_b32_e32 v4, v48, v4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v27, v5, v3, s4
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:376 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v30, v51, v3, s4
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v31, v40, v3, s4
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v32, v3, v42, s4
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v34, v54, v3, s4
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v35, v57, v3, s4
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:392 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:396 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v37, v3, v37, s4
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v38, v46, v3, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:384 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:388 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_store_dword v19, v0, s[0:3], 0 offen
 ; VI-NEXT:    s_waitcnt vmcnt(2)
 ; VI-NEXT:    v_perm_b32 v26, v26, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:368 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:376 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:384 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:392 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v5, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
@@ -160698,8 +160696,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v12
 ; VI-NEXT:    v_or_b32_e32 v5, v28, v5
 ; VI-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:8
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:364 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:368 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v5, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
@@ -160708,8 +160706,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v18
 ; VI-NEXT:    v_or_b32_e32 v5, v20, v5
 ; VI-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:16
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v5, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
@@ -160718,8 +160716,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v17
 ; VI-NEXT:    v_or_b32_e32 v5, v13, v5
 ; VI-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:24
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v5, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
@@ -160728,8 +160726,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
 ; VI-NEXT:    v_or_b32_e32 v5, v7, v5
 ; VI-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:32
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v5, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
@@ -160738,8 +160736,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v27
 ; VI-NEXT:    v_or_b32_e32 v5, v10, v5
 ; VI-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:40
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v5, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
@@ -160748,8 +160746,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v32
 ; VI-NEXT:    v_or_b32_e32 v5, v31, v5
 ; VI-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:48
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v5, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
@@ -160758,8 +160756,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v37
 ; VI-NEXT:    v_or_b32_e32 v5, v35, v5
 ; VI-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:56
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:72
 ; VI-NEXT:    v_perm_b32 v1, v15, v61, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
@@ -160778,8 +160776,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; VI-NEXT:    v_or_b32_e32 v5, v38, v5
 ; VI-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:60
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:364 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:372 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:380 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:388 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v2, v1, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
@@ -160787,12 +160785,12 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:84
 ; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -160800,11 +160798,11 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:88
 ; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -160812,12 +160810,12 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:92
 ; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -160825,11 +160823,11 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:96
 ; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -160837,12 +160835,12 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:100
 ; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -160850,11 +160848,11 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:104
 ; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -160862,12 +160860,12 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:108
 ; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -160875,11 +160873,11 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:112
 ; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -160887,12 +160885,12 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:116
 ; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -160900,11 +160898,11 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:120
 ; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -161332,14 +161330,14 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX9-NEXT:    s_and_b32 s45, s44, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v2, v4, 16, v1
 ; GFX9-NEXT:    v_add_f32_e32 v1, s45, v13
 ; GFX9-NEXT:    v_bfe_u32 v3, v1, 16, 1
 ; GFX9-NEXT:    v_add_u32_e32 v3, v3, v1
-; GFX9-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_add_u32_e32 v3, 0x7fff, v3
 ; GFX9-NEXT:    v_or_b32_e32 v4, 0x400000, v1
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
@@ -161357,10 +161355,10 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_add_f32_e32 v3, s44, v13
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX9-NEXT:    v_bfe_u32 v4, v3, 16, 1
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX9-NEXT:    v_add_u32_e32 v4, v4, v3
-; GFX9-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshl_or_b32 v1, v5, 16, v1
 ; GFX9-NEXT:    v_add_u32_e32 v4, 0x7fff, v4
 ; GFX9-NEXT:    v_or_b32_e32 v5, 0x400000, v3
@@ -161376,14 +161374,14 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, v4, v5, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
-; GFX9-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; GFX9-NEXT:    s_and_b32 s43, s42, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v4, v6, 16, v3
 ; GFX9-NEXT:    v_add_f32_e32 v3, s43, v13
 ; GFX9-NEXT:    v_bfe_u32 v5, v3, 16, 1
 ; GFX9-NEXT:    v_add_u32_e32 v5, v5, v3
-; GFX9-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_add_u32_e32 v5, 0x7fff, v5
 ; GFX9-NEXT:    v_or_b32_e32 v6, 0x400000, v3
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
@@ -161401,10 +161399,10 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_add_f32_e32 v5, s42, v13
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
 ; GFX9-NEXT:    v_bfe_u32 v6, v5, 16, 1
-; GFX9-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; GFX9-NEXT:    v_add_u32_e32 v6, v6, v5
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshl_or_b32 v3, v7, 16, v3
 ; GFX9-NEXT:    v_add_u32_e32 v6, 0x7fff, v6
 ; GFX9-NEXT:    v_or_b32_e32 v7, 0x400000, v5
@@ -161420,14 +161418,14 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v5, v5
 ; GFX9-NEXT:    v_cndmask_b32_e32 v5, v6, v7, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
-; GFX9-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v5, 0xffff, v5
 ; GFX9-NEXT:    s_and_b32 s41, s40, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v6, v8, 16, v5
 ; GFX9-NEXT:    v_add_f32_e32 v5, s41, v13
 ; GFX9-NEXT:    v_bfe_u32 v7, v5, 16, 1
 ; GFX9-NEXT:    v_add_u32_e32 v7, v7, v5
-; GFX9-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_add_u32_e32 v7, 0x7fff, v7
 ; GFX9-NEXT:    v_or_b32_e32 v8, 0x400000, v5
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v5, v5
@@ -161445,10 +161443,10 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_add_f32_e32 v7, s40, v13
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
-; GFX9-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v5, 0xffff, v5
 ; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
-; GFX9-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshl_or_b32 v5, v9, 16, v5
 ; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
 ; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
@@ -161464,7 +161462,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s13, s12, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v11, v10, 16, v7
@@ -161476,7 +161474,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    s_lshl_b32 s12, s12, 16
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v10, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s12, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
@@ -161486,10 +161484,10 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s12, s15, 0xffff0000
-; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshl_or_b32 v10, v10, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s12, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
@@ -161508,7 +161506,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s12, s14, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v17, v12, 16, v7
@@ -161520,7 +161518,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    s_lshl_b32 s12, s14, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s12, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
@@ -161530,7 +161528,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s12, s11, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v16, v12, 16, v7
@@ -161542,7 +161540,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    s_lshl_b32 s11, s11, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s11, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
@@ -161552,7 +161550,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s11, s10, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v19, v12, 16, v7
@@ -161564,7 +161562,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    s_lshl_b32 s10, s10, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s10, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
@@ -161574,7 +161572,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s10, s9, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v18, v12, 16, v7
@@ -161586,7 +161584,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    s_lshl_b32 s9, s9, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s9, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
@@ -161596,7 +161594,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s9, s8, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v23, v12, 16, v7
@@ -161608,7 +161606,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    s_lshl_b32 s8, s8, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s8, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
@@ -161618,7 +161616,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s8, s7, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v22, v12, 16, v7
@@ -161630,7 +161628,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    s_lshl_b32 s7, s7, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s7, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
@@ -161640,7 +161638,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s7, s6, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v25, v12, 16, v7
@@ -161652,7 +161650,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    s_lshl_b32 s6, s6, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
@@ -161662,7 +161660,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s6, s17, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v24, v12, 16, v7
@@ -161674,7 +161672,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    s_lshl_b32 s6, s17, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
@@ -161684,7 +161682,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s6, s16, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v27, v12, 16, v7
@@ -161696,139 +161694,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    s_lshl_b32 s6, s16, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
-; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
-; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
-; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
-; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
-; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
-; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
-; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX9-NEXT:    s_and_b32 s6, s19, 0xffff0000
-; GFX9-NEXT:    v_lshl_or_b32 v26, v12, 16, v7
-; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
-; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
-; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
-; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
-; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
-; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
-; GFX9-NEXT:    s_lshl_b32 s6, s19, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
-; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
-; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
-; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
-; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
-; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
-; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
-; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX9-NEXT:    s_and_b32 s6, s18, 0xffff0000
-; GFX9-NEXT:    v_lshl_or_b32 v29, v12, 16, v7
-; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
-; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
-; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
-; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
-; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
-; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
-; GFX9-NEXT:    s_lshl_b32 s6, s18, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
-; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
-; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
-; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
-; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
-; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
-; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
-; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX9-NEXT:    s_and_b32 s6, s21, 0xffff0000
-; GFX9-NEXT:    v_lshl_or_b32 v28, v12, 16, v7
-; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
-; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
-; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
-; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
-; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
-; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
-; GFX9-NEXT:    s_lshl_b32 s6, s21, 16
 ; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
-; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
-; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
-; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
-; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
-; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
-; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
-; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX9-NEXT:    s_and_b32 s6, s20, 0xffff0000
-; GFX9-NEXT:    v_lshl_or_b32 v53, v12, 16, v7
-; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
-; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
-; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
-; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
-; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
-; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
-; GFX9-NEXT:    s_lshl_b32 s6, s20, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
-; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
-; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
-; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
-; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
-; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
-; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
-; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX9-NEXT:    s_and_b32 s6, s23, 0xffff0000
-; GFX9-NEXT:    v_lshl_or_b32 v52, v12, 16, v7
-; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
-; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
-; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
-; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
-; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
-; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
-; GFX9-NEXT:    s_lshl_b32 s6, s23, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
-; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
-; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
-; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
-; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
-; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
-; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
-; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX9-NEXT:    s_and_b32 s6, s22, 0xffff0000
-; GFX9-NEXT:    v_lshl_or_b32 v55, v12, 16, v7
-; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
-; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
-; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
-; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
-; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
-; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
-; GFX9-NEXT:    s_lshl_b32 s6, s22, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
@@ -161840,8 +161706,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
 ; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX9-NEXT:    s_and_b32 s6, s25, 0xffff0000
-; GFX9-NEXT:    v_lshl_or_b32 v54, v12, 16, v7
+; GFX9-NEXT:    s_and_b32 s6, s19, 0xffff0000
+; GFX9-NEXT:    v_lshl_or_b32 v26, v12, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
 ; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
@@ -161849,8 +161715,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
-; GFX9-NEXT:    s_lshl_b32 s6, s25, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_lshl_b32 s6, s19, 16
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
@@ -161862,8 +161728,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
 ; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX9-NEXT:    s_and_b32 s6, s24, 0xffff0000
-; GFX9-NEXT:    v_lshl_or_b32 v41, v12, 16, v7
+; GFX9-NEXT:    s_and_b32 s6, s18, 0xffff0000
+; GFX9-NEXT:    v_lshl_or_b32 v29, v12, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
 ; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
@@ -161871,8 +161737,30 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
-; GFX9-NEXT:    s_lshl_b32 s6, s24, 16
-; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_lshl_b32 s6, s18, 16
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
+; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
+; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
+; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
+; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
+; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
+; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
+; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; GFX9-NEXT:    s_and_b32 s6, s21, 0xffff0000
+; GFX9-NEXT:    v_lshl_or_b32 v28, v12, 16, v7
+; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
+; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
+; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
+; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
+; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
+; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
+; GFX9-NEXT:    s_lshl_b32 s6, s21, 16
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
@@ -161883,6 +161771,116 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
 ; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; GFX9-NEXT:    s_and_b32 s6, s20, 0xffff0000
+; GFX9-NEXT:    v_lshl_or_b32 v53, v12, 16, v7
+; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
+; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
+; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
+; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
+; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
+; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
+; GFX9-NEXT:    s_lshl_b32 s6, s20, 16
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
+; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
+; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
+; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
+; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
+; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
+; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
+; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; GFX9-NEXT:    s_and_b32 s6, s23, 0xffff0000
+; GFX9-NEXT:    v_lshl_or_b32 v52, v12, 16, v7
+; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
+; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
+; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
+; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
+; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
+; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
+; GFX9-NEXT:    s_lshl_b32 s6, s23, 16
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
+; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
+; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
+; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
+; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
+; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
+; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
+; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; GFX9-NEXT:    s_and_b32 s6, s22, 0xffff0000
+; GFX9-NEXT:    v_lshl_or_b32 v55, v12, 16, v7
+; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
+; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
+; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
+; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
+; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
+; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
+; GFX9-NEXT:    s_lshl_b32 s6, s22, 16
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
+; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
+; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
+; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
+; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
+; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
+; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
+; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; GFX9-NEXT:    s_and_b32 s6, s25, 0xffff0000
+; GFX9-NEXT:    v_lshl_or_b32 v54, v12, 16, v7
+; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
+; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
+; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
+; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
+; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
+; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
+; GFX9-NEXT:    s_lshl_b32 s6, s25, 16
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
+; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
+; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
+; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
+; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
+; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
+; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
+; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; GFX9-NEXT:    s_and_b32 s6, s24, 0xffff0000
+; GFX9-NEXT:    v_lshl_or_b32 v41, v12, 16, v7
+; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
+; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
+; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
+; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
+; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
+; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
+; GFX9-NEXT:    s_lshl_b32 s6, s24, 16
+; GFX9-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
+; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
+; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
+; GFX9-NEXT:    v_add_u32_e32 v8, v8, v7
+; GFX9-NEXT:    v_add_u32_e32 v8, 0x7fff, v8
+; GFX9-NEXT:    v_or_b32_e32 v9, 0x400000, v7
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
+; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
+; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s6, s27, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v40, v12, 16, v7
@@ -161903,7 +161901,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s6, s26, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v43, v14, 16, v7
@@ -161924,7 +161922,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s6, s29, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v42, v57, 16, v7
@@ -161945,7 +161943,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s6, s28, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v45, v56, 16, v7
@@ -161957,7 +161955,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    s_lshl_b32 s6, s28, 16
-; GFX9-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v14, 16, v7
 ; GFX9-NEXT:    v_add_f32_e32 v7, s6, v13
 ; GFX9-NEXT:    v_bfe_u32 v8, v7, 16, 1
@@ -161967,7 +161965,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
 ; GFX9-NEXT:    v_cndmask_b32_e32 v7, v8, v9, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX9-NEXT:    s_and_b32 s6, s5, 0xffff0000
 ; GFX9-NEXT:    v_lshl_or_b32 v44, v14, 16, v7
@@ -162011,21 +162009,21 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_and_b32_e32 v7, 0xffff, v13
 ; GFX9-NEXT:    v_lshl_or_b32 v46, v59, 16, v7
 ; GFX9-NEXT:    v_lshrrev_b64 v[7:8], 24, v[24:25]
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[7:8], 24, v[22:23]
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[7:8], 24, v[18:19]
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[7:8], 24, v[16:17]
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[7:8], 24, v[10:11]
 ; GFX9-NEXT:    v_lshrrev_b64 v[36:37], 24, v[42:43]
 ; GFX9-NEXT:    v_lshrrev_b64 v[48:49], 24, v[52:53]
@@ -162033,9 +162031,9 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_lshrrev_b64 v[33:34], 24, v[44:45]
 ; GFX9-NEXT:    v_lshrrev_b64 v[37:38], 24, v[40:41]
 ; GFX9-NEXT:    v_lshrrev_b64 v[49:50], 24, v[28:29]
-; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v24, 8, v24
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v22
 ; GFX9-NEXT:    v_lshrrev_b64 v[38:39], 24, v[54:55]
@@ -162099,94 +162097,94 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_branch .LBB91_6
 ; GFX9-NEXT:  .LBB91_5:
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s28
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s29
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s26
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s27
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s24
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s25
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s22
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s23
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s20
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s21
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s18
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s19
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s16
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s17
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s6
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s8
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX9-NEXT:    v_mov_b32_e32 v13, s4
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s10
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 0
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX9-NEXT:    v_mov_b32_e32 v59, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 1
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s14
 ; GFX9-NEXT:    v_mov_b32_e32 v58, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 2
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s15
 ; GFX9-NEXT:    v_mov_b32_e32 v14, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 3
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s12
 ; GFX9-NEXT:    v_mov_b32_e32 v56, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 4
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s13
 ; GFX9-NEXT:    v_mov_b32_e32 v57, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 5
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 6
 ; GFX9-NEXT:    v_mov_b32_e32 v12, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 7
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 8
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 9
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 10
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 11
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 12
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 13
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 14
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 15
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 16
 ; GFX9-NEXT:    v_mov_b32_e32 v39, s4
@@ -162223,81 +162221,81 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 32
 ; GFX9-NEXT:    v_mov_b32_e32 v21, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v20, s78
-; GFX9-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v20, s88
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s81
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s68
-; GFX9-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v20, s90
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s80
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s67
-; GFX9-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v20, s92
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v1, s71
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v1, s66
-; GFX9-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v1, s70
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v1, s65
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v1, s69
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v1, s64
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_mov_b32_e32 v1, s40
 ; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v1, s71
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v1, s66
+; GFX9-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v1, s70
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v1, s65
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v1, s69
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v1, s64
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v1, s40
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s55
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s41
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s54
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s42
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 33
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s53
 ; GFX9-NEXT:    v_mov_b32_e32 v53, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 34
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s43
 ; GFX9-NEXT:    v_mov_b32_e32 v8, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 35
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s52
 ; GFX9-NEXT:    v_mov_b32_e32 v60, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 36
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s44
 ; GFX9-NEXT:    v_mov_b32_e32 v7, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 37
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s51
 ; GFX9-NEXT:    v_mov_b32_e32 v26, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 38
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s45
 ; GFX9-NEXT:    v_mov_b32_e32 v9, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 39
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s50
 ; GFX9-NEXT:    v_mov_b32_e32 v27, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 40
-; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s49
 ; GFX9-NEXT:    v_mov_b32_e32 v28, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 41
@@ -162331,9 +162329,9 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_mov_b32_e32 v20, s94
 ; GFX9-NEXT:    v_mov_b32_e32 v22, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 49
-; GFX9-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v61, s5
 ; GFX9-NEXT:    v_mov_b32_e32 v18, s98
 ; GFX9-NEXT:    v_mov_b32_e32 v19, s39
@@ -162356,9 +162354,9 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_mov_b32_e32 v34, s34
 ; GFX9-NEXT:  .LBB91_6: ; %end
 ; GFX9-NEXT:    s_mov_b32 s4, 0xc0c0004
-; GFX9-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v14, v14, v33, s4
-; GFX9-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v12, v12, v37, s4
 ; GFX9-NEXT:    v_perm_b32 v36, v57, v36, s4
 ; GFX9-NEXT:    v_perm_b32 v30, v59, v30, s4
@@ -162400,59 +162398,59 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_readlane_b32 s34, v63, 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v50, v23, v50, s4
-; GFX9-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v33, v33, v34, s4
-; GFX9-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v49, v23, v49, s4
-; GFX9-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v31, v34, v31, s4
-; GFX9-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v48, v23, v48, s4
-; GFX9-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v26, v34, v26, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v34, 16, v50
 ; GFX9-NEXT:    v_or_b32_e32 v26, v26, v34
 ; GFX9-NEXT:    buffer_store_dword v26, v0, s[0:3], 0 offen
-; GFX9-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    v_perm_b32 v38, v23, v38, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v26, v26, v27, s4
-; GFX9-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v9, v27, v9, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
 ; GFX9-NEXT:    v_or_b32_e32 v9, v26, v9
 ; GFX9-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:4
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v8, v9, v8, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v9, 16, v49
 ; GFX9-NEXT:    v_or_b32_e32 v8, v8, v9
 ; GFX9-NEXT:    buffer_store_dword v8, v0, s[0:3], 0 offen offset:8
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v8, v7, s4
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v8, v8, v60, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:12
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v48
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v7, v52, s4
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:16
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v7, v7, v53, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -162460,15 +162458,15 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:20
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v38
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v7, v54, s4
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:24
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v7, v7, v55, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -162476,15 +162474,15 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:28
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v12
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v7, v40, s4
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:32
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v7, v7, v41, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -162492,15 +162490,15 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:36
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v36
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v7, v42, s4
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:40
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v7, v7, v43, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -162508,13 +162506,13 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:44
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v14
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v7, v44, s4
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:48
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v8, v56, v51, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -162530,30 +162528,30 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:60
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v1, v7, v1, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v7, 16, v33
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v7
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:64
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v2, s4
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v2, v2, v22, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:68
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v31
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v3, s4
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:72
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v4, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -162561,9 +162559,9 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:76
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v5, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -162571,9 +162569,9 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:80
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v6, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -162581,20 +162579,20 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:84
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v10, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:88
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v11, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -162602,20 +162600,20 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:92
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v16, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:96
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v17, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -162623,71 +162621,71 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:100
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v18, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:104
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v2, v2, v3, s4
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v19, s4
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:108
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v2, s4
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:112
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v2, s4
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:116
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v2, s4
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:120
-; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v1, v1, v2, s4
-; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v2, v2, v3, s4
@@ -178513,7 +178511,7 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    v_lshrrev_b32_e32 v29, 16, v24
 ; VI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v30, 16, v21
-; VI-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
 ; VI-NEXT:    s_waitcnt vmcnt(12)
 ; VI-NEXT:    v_lshrrev_b32_e32 v29, 16, v23
 ; VI-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
@@ -178611,40 +178609,40 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    ; implicit-def: $vgpr40
 ; VI-NEXT:    ; implicit-def: $vgpr47
 ; VI-NEXT:    ; implicit-def: $vgpr3
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; VI-NEXT:    ; implicit-def: $vgpr3
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; VI-NEXT:    ; implicit-def: $vgpr3
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
 ; VI-NEXT:    ; implicit-def: $vgpr3
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
 ; VI-NEXT:    ; implicit-def: $vgpr3
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
 ; VI-NEXT:    ; implicit-def: $vgpr41
 ; VI-NEXT:    ; implicit-def: $vgpr55
 ; VI-NEXT:    ; implicit-def: $vgpr3
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; VI-NEXT:    ; implicit-def: $vgpr3
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
 ; VI-NEXT:    ; implicit-def: $vgpr3
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; VI-NEXT:    ; implicit-def: $vgpr3
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; VI-NEXT:    ; implicit-def: $vgpr3
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
 ; VI-NEXT:    ; implicit-def: $vgpr3
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_cbranch_execz .LBB94_2
@@ -178707,21 +178705,21 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    v_lshrrev_b64 v[40:41], 24, v[15:16]
 ; VI-NEXT:    v_mov_b32_e32 v44, v31
 ; VI-NEXT:    v_mov_b32_e32 v31, v4
-; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[40:41], 24, v[13:14]
-; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[40:41], 24, v[11:12]
-; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[40:41], 24, v[9:10]
-; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[40:41], 24, v[7:8]
 ; VI-NEXT:    v_lshrrev_b32_e32 v55, 8, v2
-; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[40:41], 24, v[51:52]
 ; VI-NEXT:    v_lshrrev_b32_e32 v32, 8, v50
 ; VI-NEXT:    v_lshrrev_b32_e32 v6, 8, v49
@@ -178764,20 +178762,20 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    v_lshrrev_b64 v[47:48], 24, v[49:50]
 ; VI-NEXT:    v_mov_b32_e32 v48, v3
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[23:24]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[53:54]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[29:30]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[27:28]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[25:26]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v30, v55
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[21:22]
 ; VI-NEXT:    v_mov_b32_e32 v29, v56
@@ -178785,15 +178783,15 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    v_mov_b32_e32 v56, v29
 ; VI-NEXT:    v_mov_b32_e32 v29, v42
 ; VI-NEXT:    v_lshrrev_b64 v[41:42], 24, v[17:18]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v42, v29
 ; VI-NEXT:  .LBB94_2: ; %Flow
 ; VI-NEXT:    s_or_saveexec_b64 s[4:5], s[4:5]
-; VI-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; VI-NEXT:    s_xor_b64 exec, exec, s[4:5]
@@ -178828,7 +178826,7 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    v_add_f16_e32 v7, 0x200, v7
 ; VI-NEXT:    v_add_f16_sdwa v15, v10, v44 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v10, 0x200, v10
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
 ; VI-NEXT:    v_add_f16_sdwa v14, v12, v44 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v12, 0x200, v12
 ; VI-NEXT:    v_or_b32_e32 v45, v17, v29
@@ -178856,8 +178854,8 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    v_add_f16_sdwa v3, v26, v44 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v26, 0x200, v26
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:444 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; VI-NEXT:    v_or_b32_e32 v57, v21, v29
 ; VI-NEXT:    v_lshlrev_b32_e32 v29, 16, v3
 ; VI-NEXT:    v_add_f16_sdwa v21, v25, v44 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
@@ -178963,13 +178961,13 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    v_add_f16_e32 v19, 0x200, v19
 ; VI-NEXT:    v_lshlrev_b32_e32 v29, 16, v21
 ; VI-NEXT:    v_or_b32_e32 v32, v20, v29
-; VI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshlrev_b32_e32 v29, 16, v3
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v31, v19, v29
-; VI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_add_f16_sdwa v3, v19, v44 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -178978,8 +178976,8 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    v_add_f16_e32 v19, 0x200, v19
 ; VI-NEXT:    v_lshlrev_b32_e32 v29, 16, v35
 ; VI-NEXT:    v_or_b32_e32 v30, v20, v29
-; VI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshlrev_b32_e32 v29, 16, v3
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v30
@@ -179001,8 +178999,8 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v51
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v50
-; VI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:396 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v49
 ; VI-NEXT:    v_lshrrev_b64 v[19:20], 24, v[31:32]
@@ -179015,8 +179013,8 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v42
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:412 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v34
-; VI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v33
 ; VI-NEXT:    v_lshrrev_b64 v[19:20], 24, v[53:54]
@@ -179029,43 +179027,43 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    v_mov_b32_e32 v51, v4
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[33:34]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v62
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v61
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[61:62]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v37
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v36
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[36:37]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v60
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v59
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[59:60]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v39
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v38
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[38:39]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v58
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v57
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[57:58]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v56
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v55
@@ -179083,8 +179081,8 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    v_bfe_u32 v3, v22, 8, 8
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
 ; VI-NEXT:    v_bfe_u32 v3, v63, 8, 8
-; VI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:392 ; 4-byte Folded Spill
 ; VI-NEXT:    v_bfe_u32 v3, v13, 8, 8
 ; VI-NEXT:    v_lshrrev_b32_e32 v5, 8, v41
@@ -179096,7 +179094,7 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:404 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:416 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:420 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:456 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v56, off, s[0:3], s32 offset:464 ; 4-byte Folded Reload
 ; VI-NEXT:    v_lshrrev_b64 v[41:42], 24, v[45:46]
@@ -179105,12 +179103,12 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:444 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:452 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:468 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[16:17], 24, v[49:50]
 ; VI-NEXT:    v_lshrrev_b32_e32 v60, 8, v45
-; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:432 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:436 ; 4-byte Folded Reload
 ; VI-NEXT:    v_mov_b32_e32 v57, v18
@@ -179151,8 +179149,8 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:412 ; 4-byte Folded Reload
 ; VI-NEXT:    s_mov_b32 s4, 0xc0c0004
 ; VI-NEXT:    v_perm_b32 v4, v52, v5, s4
-; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
 ; VI-NEXT:    v_perm_b32 v2, v2, v30, s4
 ; VI-NEXT:    v_perm_b32 v29, v39, v43, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
@@ -179177,8 +179175,8 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v8, v8, v13, s4
 ; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v39, v13, v14, s4
 ; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:380 ; 4-byte Folded Reload
@@ -179188,8 +179186,8 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v10, v10, v13, s4
 ; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v48, v13, v14, s4
 ; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
@@ -179199,12 +179197,12 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v12, v12, v13, s4
 ; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v49, v13, v14, s4
-; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v13, v13, v15, s4
@@ -179212,12 +179210,12 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v14, v14, v15, s4
 ; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v50, v15, v21, s4
-; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v15, v15, v21, s4
@@ -179328,8 +179326,8 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v2, v1, s4
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v2, v2, v4, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -179346,8 +179344,8 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:84
 ; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; VI-NEXT:    v_perm_b32 v1, v25, v1, s4
@@ -179365,8 +179363,8 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:92
 ; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; VI-NEXT:    v_perm_b32 v1, v27, v1, s4
@@ -179388,8 +179386,8 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v2, v1, s4
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v2, v2, v4, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -179406,8 +179404,8 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:108
 ; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; VI-NEXT:    v_perm_b32 v1, v53, v1, s4
@@ -179425,15 +179423,15 @@ define <128 x i8> @bitcast_v64f16_to_v128i8(<64 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:116
 ; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; VI-NEXT:    v_perm_b32 v1, v23, v1, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:120
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
@@ -183314,7 +183312,7 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    s_lshr_b32 s45, s44, 16
 ; VI-NEXT:    v_or_b32_e32 v38, v2, v1
 ; VI-NEXT:    v_add_f16_e32 v1, s45, v8
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_add_f16_e32 v2, s44, v8
@@ -183326,7 +183324,7 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_add_f16_e32 v2, s43, v8
 ; VI-NEXT:    s_lshr_b32 s43, s42, 16
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v55, v2, v1
 ; VI-NEXT:    v_add_f16_e32 v1, s43, v8
 ; VI-NEXT:    v_add_f16_e32 v2, s42, v8
@@ -183334,69 +183332,69 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_add_f16_e32 v60, s42, v8
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v54, v2, v1
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v60
 ; VI-NEXT:    v_add_f16_e32 v2, s41, v8
 ; VI-NEXT:    s_lshr_b32 s41, s40, 16
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v26, v2, v1
 ; VI-NEXT:    v_add_f16_e32 v1, s41, v8
 ; VI-NEXT:    v_add_f16_e32 v2, s40, v8
 ; VI-NEXT:    s_lshr_b32 s40, s15, 16
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_add_f16_e32 v42, s40, v8
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v25, v2, v1
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v42
 ; VI-NEXT:    v_add_f16_e32 v2, s15, v8
 ; VI-NEXT:    s_lshr_b32 s15, s14, 16
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v24, v2, v1
 ; VI-NEXT:    v_add_f16_e32 v1, s15, v8
 ; VI-NEXT:    v_add_f16_e32 v2, s14, v8
 ; VI-NEXT:    s_lshr_b32 s14, s13, 16
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_add_f16_e32 v57, s14, v8
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v23, v2, v1
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v57
 ; VI-NEXT:    v_add_f16_e32 v2, s13, v8
 ; VI-NEXT:    s_lshr_b32 s13, s12, 16
 ; VI-NEXT:    v_or_b32_e32 v28, v2, v1
 ; VI-NEXT:    v_add_f16_e32 v1, s13, v8
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_add_f16_e32 v2, s12, v8
 ; VI-NEXT:    s_lshr_b32 s12, s11, 16
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v27, v2, v1
 ; VI-NEXT:    v_add_f16_e32 v58, s12, v8
 ; VI-NEXT:    v_add_f16_e32 v2, s11, v8
 ; VI-NEXT:    s_lshr_b32 s11, s10, 16
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v58
 ; VI-NEXT:    v_add_f16_e32 v44, s11, v8
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v22, v2, v1
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v44
 ; VI-NEXT:    v_add_f16_e32 v2, s10, v8
 ; VI-NEXT:    s_lshr_b32 s10, s9, 16
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v21, v2, v1
 ; VI-NEXT:    v_add_f16_e32 v40, s10, v8
 ; VI-NEXT:    v_add_f16_e32 v2, s9, v8
 ; VI-NEXT:    s_lshr_b32 s9, s8, 16
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v40
 ; VI-NEXT:    v_add_f16_e32 v47, s9, v8
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v30, v2, v1
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v47
 ; VI-NEXT:    v_add_f16_e32 v2, s8, v8
 ; VI-NEXT:    s_lshr_b32 s8, s7, 16
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v29, v2, v1
 ; VI-NEXT:    v_add_f16_e32 v43, s8, v8
 ; VI-NEXT:    v_add_f16_e32 v2, s7, v8
@@ -183405,12 +183403,12 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    v_add_f16_e32 v45, s7, v8
 ; VI-NEXT:    v_add_f16_e32 v3, s6, v8
 ; VI-NEXT:    s_lshr_b32 s6, s17, 16
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v2, v2, v1
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v45
 ; VI-NEXT:    v_add_f16_e32 v36, s6, v8
 ; VI-NEXT:    s_lshr_b32 s6, s16, 16
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v1, v3, v1
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v36
 ; VI-NEXT:    v_add_f16_e32 v50, s17, v8
@@ -183436,12 +183434,12 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    v_add_f16_e32 v9, s21, v8
 ; VI-NEXT:    v_add_f16_e32 v56, s7, v8
 ; VI-NEXT:    s_lshr_b32 s6, s23, 16
-; VI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v34, v9, v3
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v56
 ; VI-NEXT:    v_add_f16_e32 v9, s20, v8
 ; VI-NEXT:    v_add_f16_e32 v14, s6, v8
-; VI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v33, v9, v3
 ; VI-NEXT:    s_lshr_b32 s7, s22, 16
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v14
@@ -183449,12 +183447,12 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    v_or_b32_e32 v16, v9, v3
 ; VI-NEXT:    v_add_f16_e32 v3, s7, v8
 ; VI-NEXT:    s_lshr_b32 s6, s25, 16
-; VI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; VI-NEXT:    v_add_f16_e32 v9, s22, v8
 ; VI-NEXT:    v_add_f16_e32 v5, s6, v8
-; VI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v15, v9, v3
 ; VI-NEXT:    s_lshr_b32 s7, s24, 16
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v5
@@ -183462,26 +183460,26 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    v_or_b32_e32 v13, v9, v3
 ; VI-NEXT:    v_add_f16_e32 v3, s7, v8
 ; VI-NEXT:    s_lshr_b32 s6, s27, 16
-; VI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; VI-NEXT:    v_add_f16_e32 v9, s24, v8
 ; VI-NEXT:    s_lshr_b32 s7, s26, 16
 ; VI-NEXT:    v_add_f16_e32 v51, s6, v8
-; VI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v12, v9, v3
 ; VI-NEXT:    v_lshlrev_b32_e32 v9, 16, v51
 ; VI-NEXT:    v_add_f16_e32 v10, s27, v8
 ; VI-NEXT:    v_add_f16_e32 v3, s7, v8
 ; VI-NEXT:    s_lshr_b32 s6, s29, 16
 ; VI-NEXT:    v_or_b32_e32 v18, v10, v9
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshlrev_b32_e32 v9, 16, v3
 ; VI-NEXT:    v_add_f16_e32 v3, s26, v8
 ; VI-NEXT:    s_lshr_b32 s7, s28, 16
 ; VI-NEXT:    v_add_f16_e32 v7, s6, v8
 ; VI-NEXT:    s_lshr_b32 s6, s5, 16
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v17, v3, v9
 ; VI-NEXT:    v_lshlrev_b32_e32 v9, 16, v7
 ; VI-NEXT:    v_add_f16_e32 v49, s29, v8
@@ -183489,85 +183487,85 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    s_lshr_b32 s7, s4, 16
 ; VI-NEXT:    v_add_f16_e32 v6, s6, v8
 ; VI-NEXT:    v_or_b32_e32 v11, v49, v9
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshlrev_b32_e32 v9, 16, v3
 ; VI-NEXT:    v_add_f16_e32 v53, s28, v8
 ; VI-NEXT:    v_add_f16_e32 v46, s5, v8
 ; VI-NEXT:    v_add_f16_e32 v4, s7, v8
 ; VI-NEXT:    v_add_f16_e32 v3, s4, v8
 ; VI-NEXT:    v_lshlrev_b32_e32 v8, 16, v6
-; VI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v10, v53, v9
 ; VI-NEXT:    v_or_b32_e32 v9, v46, v8
 ; VI-NEXT:    v_lshlrev_b32_e32 v8, 16, v4
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; VI-NEXT:    v_or_b32_e32 v8, v3, v8
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v9
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v8
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[8:9]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v11
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v10
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[10:11]
 ; VI-NEXT:    v_lshrrev_b64 v[10:11], 24, v[17:18]
 ; VI-NEXT:    v_lshrrev_b32_e32 v11, 8, v2
-; VI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v11, 8, v1
 ; VI-NEXT:    v_lshrrev_b64 v[1:2], 24, v[1:2]
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v30
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v29
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[1:2], 24, v[29:30]
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v22
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v21
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v18
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[1:2], 24, v[21:22]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v17
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v13
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v12
 ; VI-NEXT:    v_lshrrev_b64 v[1:2], 24, v[27:28]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v16
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v15
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v34
 ; VI-NEXT:    v_lshrrev_b64 v[1:2], 24, v[23:24]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v33
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v20
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v19
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v26
 ; VI-NEXT:    v_lshrrev_b64 v[16:17], 24, v[15:16]
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 8, v24
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b64 v[1:2], 24, v[25:26]
 ; VI-NEXT:    v_bfe_u32 v26, v40, 8, 8
 ; VI-NEXT:    v_lshrrev_b64 v[8:9], 24, v[12:13]
@@ -183575,25 +183573,25 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    v_lshrrev_b32_e32 v4, 8, v23
 ; VI-NEXT:    v_mov_b32_e32 v23, v3
 ; VI-NEXT:    v_bfe_u32 v3, v43, 8, 8
-; VI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
 ; VI-NEXT:    v_bfe_u32 v26, v57, 8, 8
 ; VI-NEXT:    v_lshrrev_b64 v[18:19], 24, v[19:20]
 ; VI-NEXT:    v_lshrrev_b32_e32 v9, 8, v28
 ; VI-NEXT:    v_lshrrev_b32_e32 v13, 8, v27
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; VI-NEXT:    v_bfe_u32 v3, v58, 8, 8
-; VI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
 ; VI-NEXT:    v_bfe_u32 v26, v42, 8, 8
 ; VI-NEXT:    v_lshrrev_b32_e32 v33, 8, v31
 ; VI-NEXT:    v_lshrrev_b64 v[19:20], 24, v[31:32]
-; VI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v54
 ; VI-NEXT:    v_lshrrev_b64 v[11:12], 24, v[54:55]
-; VI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
 ; VI-NEXT:    v_bfe_u32 v15, v5, 8, 8
-; VI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; VI-NEXT:    v_bfe_u32 v2, v14, 8, 8
 ; VI-NEXT:    v_mov_b32_e32 v5, v35
 ; VI-NEXT:    v_bfe_u32 v21, v35, 8, 8
@@ -183601,9 +183599,9 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    v_bfe_u32 v22, v39, 8, 8
 ; VI-NEXT:    v_mov_b32_e32 v31, v36
 ; VI-NEXT:    v_bfe_u32 v27, v36, 8, 8
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v60, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v60, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; VI-NEXT:    v_bfe_u32 v3, v60, 8, 8
 ; VI-NEXT:    buffer_load_dword v60, off, s[0:3], s32 offset:364 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:380 ; 4-byte Folded Reload
@@ -183627,7 +183625,7 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    v_mov_b32_e32 v6, v7
 ; VI-NEXT:    v_bfe_u32 v24, v7, 8, 8
 ; VI-NEXT:    v_bfe_u32 v32, v51, 8, 8
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
 ; VI-NEXT:    s_waitcnt vmcnt(6)
 ; VI-NEXT:    v_bfe_u32 v12, v60, 8, 8
 ; VI-NEXT:    s_waitcnt vmcnt(3)
@@ -183635,94 +183633,94 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    s_branch .LBB95_6
 ; VI-NEXT:  .LBB95_5:
 ; VI-NEXT:    v_mov_b32_e32 v1, s45
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s42
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s43
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s40
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s41
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s14
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s15
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s12
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s13
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s10
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s11
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s8
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s9
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s6
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s7
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s20
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s21
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s22
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s23
+; VI-NEXT:    v_mov_b32_e32 v1, s14
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s15
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s12
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s13
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s10
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s11
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s8
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s9
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s6
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s7
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s20
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s21
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s22
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s23
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s24
 ; VI-NEXT:    v_readlane_b32 s6, v62, 0
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s25
 ; VI-NEXT:    v_mov_b32_e32 v9, s6
 ; VI-NEXT:    v_readlane_b32 s6, v62, 1
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s26
 ; VI-NEXT:    v_mov_b32_e32 v31, s6
 ; VI-NEXT:    v_readlane_b32 s6, v62, 2
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s27
 ; VI-NEXT:    v_mov_b32_e32 v13, s6
 ; VI-NEXT:    v_readlane_b32 s6, v62, 3
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s67
 ; VI-NEXT:    v_mov_b32_e32 v28, s6
 ; VI-NEXT:    v_readlane_b32 s6, v62, 4
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s66
 ; VI-NEXT:    v_mov_b32_e32 v56, s6
 ; VI-NEXT:    v_readlane_b32 s6, v62, 5
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s65
 ; VI-NEXT:    v_mov_b32_e32 v5, s6
 ; VI-NEXT:    v_readlane_b32 s6, v62, 6
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s6
 ; VI-NEXT:    v_readlane_b32 s6, v62, 7
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s6
 ; VI-NEXT:    v_readlane_b32 s6, v62, 8
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s6
 ; VI-NEXT:    v_readlane_b32 s6, v62, 9
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s6
 ; VI-NEXT:    v_readlane_b32 s6, v62, 10
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s6
 ; VI-NEXT:    v_readlane_b32 s6, v62, 11
 ; VI-NEXT:    v_mov_b32_e32 v51, s6
 ; VI-NEXT:    v_readlane_b32 s6, v62, 12
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s6
 ; VI-NEXT:    v_readlane_b32 s6, v62, 13
 ; VI-NEXT:    v_mov_b32_e32 v6, s6
 ; VI-NEXT:    v_readlane_b32 s6, v62, 14
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s6
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 16
 ; VI-NEXT:    v_mov_b32_e32 v38, s4
@@ -183741,82 +183739,82 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    v_readlane_b32 s4, v62, 23
 ; VI-NEXT:    v_mov_b32_e32 v27, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 24
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 25
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s80
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s81
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s82
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s83
 ; VI-NEXT:    v_readlane_b32 s4, v62, 26
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 27
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 28
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 29
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 30
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 31
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 32
+; VI-NEXT:    v_readlane_b32 s4, v62, 28
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 33
+; VI-NEXT:    v_readlane_b32 s4, v62, 29
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 34
+; VI-NEXT:    v_readlane_b32 s4, v62, 30
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 35
+; VI-NEXT:    v_readlane_b32 s4, v62, 31
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 36
+; VI-NEXT:    v_readlane_b32 s4, v62, 32
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 37
+; VI-NEXT:    v_readlane_b32 s4, v62, 33
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 38
+; VI-NEXT:    v_readlane_b32 s4, v62, 34
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    v_readlane_b32 s4, v62, 39
+; VI-NEXT:    v_readlane_b32 s4, v62, 35
 ; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 36
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 37
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 38
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; VI-NEXT:    v_mov_b32_e32 v1, s4
+; VI-NEXT:    v_readlane_b32 s4, v62, 39
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 40
 ; VI-NEXT:    v_mov_b32_e32 v33, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 41
 ; VI-NEXT:    v_mov_b32_e32 v34, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 42
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 43
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 44
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 45
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 46
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 47
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 48
 ; VI-NEXT:    v_mov_b32_e32 v39, s4
@@ -183825,35 +183823,35 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    v_readlane_b32 s4, v62, 50
 ; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s46
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v3, s56
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v3, s78
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v3, s88
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v3, s90
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v3, vcc_lo
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v3, s30
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
 ; VI-NEXT:    v_readlane_b32 s4, v62, 51
 ; VI-NEXT:    v_mov_b32_e32 v23, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 52
 ; VI-NEXT:    v_mov_b32_e32 v29, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 53
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 54
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v1, s4
 ; VI-NEXT:    v_readlane_b32 s4, v62, 55
 ; VI-NEXT:    v_mov_b32_e32 v30, s4
@@ -183893,12 +183891,12 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    v_mov_b32_e32 v17, s72
 ; VI-NEXT:    v_mov_b32_e32 v18, s74
 ; VI-NEXT:    v_mov_b32_e32 v19, s76
-; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; VI-NEXT:    v_mov_b32_e32 v11, s36
 ; VI-NEXT:    v_mov_b32_e32 v37, s38
 ; VI-NEXT:  .LBB95_6: ; %end
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
 ; VI-NEXT:    s_mov_b32 s4, 0xc0c0004
 ; VI-NEXT:    v_perm_b32 v18, v13, v18, s4
 ; VI-NEXT:    v_perm_b32 v19, v9, v19, s4
@@ -183946,122 +183944,122 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    v_readlane_b32 s34, v63, 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v16, v3, v16, s4
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
 ; VI-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v13, v3, v8, s4
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
 ; VI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v10, v3, v10, s4
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
 ; VI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v9, v3, v7, s4
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_store_dword v19, v0, s[0:3], 0 offen
 ; VI-NEXT:    v_perm_b32 v19, v54, v34, s4
 ; VI-NEXT:    v_or_b32_e32 v19, v19, v27
 ; VI-NEXT:    buffer_store_dword v19, v0, s[0:3], 0 offen offset:4
 ; VI-NEXT:    s_waitcnt vmcnt(2)
 ; VI-NEXT:    v_perm_b32 v8, v3, v7, s4
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v19, v61, v3, s4
 ; VI-NEXT:    v_or_b32_e32 v18, v19, v18
 ; VI-NEXT:    buffer_store_dword v18, v0, s[0:3], 0 offen offset:8
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
 ; VI-NEXT:    v_perm_b32 v19, v28, v22, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v18, v52, v3, s4
 ; VI-NEXT:    v_or_b32_e32 v18, v18, v19
 ; VI-NEXT:    buffer_store_dword v18, v0, s[0:3], 0 offen offset:12
-; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v18, v18, v3, s4
 ; VI-NEXT:    v_or_b32_e32 v17, v18, v17
 ; VI-NEXT:    buffer_store_dword v17, v0, s[0:3], 0 offen offset:16
-; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
 ; VI-NEXT:    v_perm_b32 v18, v5, v21, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v17, v17, v3, s4
 ; VI-NEXT:    v_or_b32_e32 v17, v17, v18
 ; VI-NEXT:    buffer_store_dword v17, v0, s[0:3], 0 offen offset:20
-; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v17, v17, v3, s4
 ; VI-NEXT:    v_or_b32_e32 v16, v17, v16
 ; VI-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:24
-; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v16, v16, v3, s4
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v3, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_or_b32_e32 v2, v16, v2
 ; VI-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:28
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; VI-NEXT:    v_or_b32_e32 v2, v2, v13
 ; VI-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:32
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v2, v3, s4
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v13, v3, v15, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
 ; VI-NEXT:    v_or_b32_e32 v2, v2, v13
 ; VI-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:36
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; VI-NEXT:    v_or_b32_e32 v2, v2, v10
 ; VI-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:40
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; VI-NEXT:    v_perm_b32 v3, v51, v32, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; VI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:44
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v9
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v53, v2, s4
 ; VI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:48
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
 ; VI-NEXT:    v_perm_b32 v3, v6, v24, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v49, v2, s4
 ; VI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:52
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v8
 ; VI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:56
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
 ; VI-NEXT:    v_perm_b32 v3, v55, v38, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -184072,60 +184070,60 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v14
 ; VI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:64
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
 ; VI-NEXT:    v_perm_b32 v3, v60, v12, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v2, v25, s4
 ; VI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen offset:68
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v2, v1, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v11
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:72
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
 ; VI-NEXT:    v_perm_b32 v2, v50, v26, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v30, s4
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:76
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v2, v2, v5, s4
 ; VI-NEXT:    v_perm_b32 v1, v1, v29, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:80
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:84
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v4, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v2, v2, v3, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:88
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v1, v1, v23, s4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -184133,17 +184131,17 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:92
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v2, v41, v2, s4
 ; VI-NEXT:    v_perm_b32 v1, v1, v39, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:96
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v1, v1, v48, s4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -184151,64 +184149,64 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:100
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v2, v44, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:104
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v58, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:108
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v2, v47, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:112
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v40, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:116
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_perm_b32 v2, v45, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:120
-; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v1, v1, v2, s4
-; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, v43, v2, s4
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
@@ -184651,165 +184649,165 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_pk_add_f16 v28, s29, v15 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_f16 v27, s28, v15 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[25:26]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[27:28]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[29:30]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[31:32]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[33:34]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[35:36]
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v38
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v38
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v49
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[1:2]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v49
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v1
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v4
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[3:4]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v4
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v4
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v3
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[5:6]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v3
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v6
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v6
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[7:8]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v6
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v5
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v5
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[9:10]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v8
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v8
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v8
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[11:12]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v7
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v7
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v10
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[13:14]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v10
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v10
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v9
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[19:20]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v9
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v12
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v12
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v26
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v12
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v26
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v11
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v26
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v11
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v25
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v14
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v28
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v14
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v28
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v14
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v30
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v13
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v30
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v13
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v32
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v20
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v32
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v20
 ; GFX9-NEXT:    v_lshrrev_b64 v[43:44], 24, v[37:38]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v34
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v16, 24, v36
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v20
 ; GFX9-NEXT:    v_lshrrev_b64 v[44:45], 24, v[48:49]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v34
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v16, 16, v36
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v19
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v51, 16, v25
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v17, 8, v28
@@ -184821,11 +184819,11 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v59, 8, v32
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v60, 16, v31
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v53, 8, v31
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v23, 8, v34
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v61, 16, v33
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v33
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v16, 8, v36
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v18, 16, v35
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v21, 8, v35
@@ -184839,90 +184837,90 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v40, 16, v2
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v41, 8, v2
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v45, 8, v1
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v19
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_branch .LBB95_6
 ; GFX9-NEXT:  .LBB95_5:
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s81
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s71
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s80
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s70
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s69
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s68
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s66
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s67
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s65
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s64
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s55
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s53
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s54
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s52
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s51
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s50
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s48
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s49
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s39
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s38
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s99
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s97
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s98
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s96
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s87
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s86
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s84
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s85
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s83
 ; GFX9-NEXT:    v_mov_b32_e32 v25, s4
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s82
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 1
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 2
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 3
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 4
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 5
 ; GFX9-NEXT:    v_mov_b32_e32 v22, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 6
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 7
 ; GFX9-NEXT:    v_mov_b32_e32 v45, s4
@@ -184937,10 +184935,10 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 12
 ; GFX9-NEXT:    v_mov_b32_e32 v50, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 13
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 14
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 15
 ; GFX9-NEXT:    v_mov_b32_e32 v52, s4
@@ -184949,10 +184947,10 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 17
 ; GFX9-NEXT:    v_mov_b32_e32 v24, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 18
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 19
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 20
 ; GFX9-NEXT:    v_mov_b32_e32 v21, s4
@@ -184961,13 +184959,13 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 22
 ; GFX9-NEXT:    v_mov_b32_e32 v16, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 23
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 24
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 25
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 26
 ; GFX9-NEXT:    v_mov_b32_e32 v61, s4
@@ -184976,7 +184974,7 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 28
 ; GFX9-NEXT:    v_mov_b32_e32 v17, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 29
-; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v17, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 30
 ; GFX9-NEXT:    v_mov_b32_e32 v53, s4
@@ -184985,10 +184983,10 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 32
 ; GFX9-NEXT:    v_mov_b32_e32 v59, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 33
-; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v17, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 34
-; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v17, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 35
 ; GFX9-NEXT:    v_mov_b32_e32 v57, s4
@@ -184997,25 +184995,25 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 37
 ; GFX9-NEXT:    v_mov_b32_e32 v56, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 38
-; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v17, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 39
-; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v17, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 40
 ; GFX9-NEXT:    v_mov_b32_e32 v46, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 41
 ; GFX9-NEXT:    v_mov_b32_e32 v47, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 42
-; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v17, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 43
 ; GFX9-NEXT:    v_mov_b32_e32 v51, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 44
-; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v51, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 45
-; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v51, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 46
 ; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
@@ -185026,33 +185024,33 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 49
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s4
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s46
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s56
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s58
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s60
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s62
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s72
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s78
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
@@ -185098,48 +185096,48 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_mov_b32_e32 v41, v45
 ; GFX9-NEXT:    v_mov_b32_e32 v45, v22
 ; GFX9-NEXT:    v_mov_b32_e32 v22, s90
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v22, s92
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v22, s94
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v22, vcc_lo
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v22, s30
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v22, s34
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
 ; GFX9-NEXT:  .LBB95_6: ; %end
 ; GFX9-NEXT:    s_mov_b32 s4, 0xc0c0004
 ; GFX9-NEXT:    v_perm_b32 v37, v37, v52, s4
 ; GFX9-NEXT:    v_perm_b32 v31, v31, v53, s4
-; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v33, v33, v15, s4
 ; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:380 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v21, v35, v21, s4
 ; GFX9-NEXT:    v_perm_b32 v16, v36, v16, s4
-; GFX9-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:364 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v24, v38, v24, s4
 ; GFX9-NEXT:    v_perm_b32 v17, v28, v17, s4
 ; GFX9-NEXT:    v_perm_b32 v48, v48, v55, s4
 ; GFX9-NEXT:    v_perm_b32 v49, v49, v50, s4
 ; GFX9-NEXT:    v_perm_b32 v50, v54, v43, s4
-; GFX9-NEXT:    buffer_load_dword v54, off, s[0:3], s32 offset:368 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v55, off, s[0:3], s32 offset:372 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v54, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v55, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v39, v39, v44, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v39, 16, v39
 ; GFX9-NEXT:    v_or_b32_e32 v39, v48, v39
@@ -185187,47 +185185,47 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_readlane_b32 s34, v63, 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    v_perm_b32 v36, v58, v52, s4
-; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v22, v25, v15, s4
 ; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:376 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v35, v61, v35, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(4)
 ; GFX9-NEXT:    v_perm_b32 v18, v18, v54, s4
-; GFX9-NEXT:    buffer_load_dword v54, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v55, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v54, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v55, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
 ; GFX9-NEXT:    v_or_b32_e32 v18, v21, v18
 ; GFX9-NEXT:    s_waitcnt vmcnt(4)
 ; GFX9-NEXT:    v_perm_b32 v38, v47, v52, s4
-; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(4)
 ; GFX9-NEXT:    v_perm_b32 v25, v26, v15, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(3)
 ; GFX9-NEXT:    v_perm_b32 v34, v60, v54, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v28, v51, v52, s4
-; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:372 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v26, v15, v51, s4
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:364 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v19, v19, v15, s4
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v20, v20, v15, s4
-; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v15, v15, v51, s4
 ; GFX9-NEXT:    buffer_store_dword v39, v0, s[0:3], 0 offen
-; GFX9-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v48, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v48, off, s[0:3], s32 offset:368 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v39, v39, v48, s4
@@ -185237,18 +185235,18 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v39, 16, v50
 ; GFX9-NEXT:    v_or_b32_e32 v37, v37, v39
 ; GFX9-NEXT:    buffer_store_dword v37, v0, s[0:3], 0 offen offset:8
-; GFX9-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v37, v37, v39, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v37, 16, v37
 ; GFX9-NEXT:    v_or_b32_e32 v24, v24, v37
 ; GFX9-NEXT:    buffer_store_dword v24, v0, s[0:3], 0 offen offset:12
 ; GFX9-NEXT:    buffer_store_dword v18, v0, s[0:3], 0 offen offset:16
-; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v18, v18, v21, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
@@ -185257,9 +185255,9 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v35
 ; GFX9-NEXT:    v_or_b32_e32 v16, v33, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:24
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v18, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -185268,9 +185266,9 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v34
 ; GFX9-NEXT:    v_or_b32_e32 v16, v31, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:32
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v18, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -185279,9 +185277,9 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v36
 ; GFX9-NEXT:    v_or_b32_e32 v16, v29, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:40
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v18, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -185290,9 +185288,9 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v38
 ; GFX9-NEXT:    v_or_b32_e32 v16, v27, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:48
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v18, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -185301,9 +185299,9 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v28
 ; GFX9-NEXT:    v_or_b32_e32 v16, v22, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:56
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -185312,129 +185310,129 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v26
 ; GFX9-NEXT:    v_or_b32_e32 v16, v19, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:64
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
 ; GFX9-NEXT:    v_or_b32_e32 v16, v20, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:68
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v13, v13, v16, s4
 ; GFX9-NEXT:    v_or_b32_e32 v13, v13, v15
 ; GFX9-NEXT:    buffer_store_dword v13, v0, s[0:3], 0 offen offset:72
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v13, v14, v13, s4
-; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v14, v14, v15, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
 ; GFX9-NEXT:    v_or_b32_e32 v13, v13, v14
 ; GFX9-NEXT:    buffer_store_dword v13, v0, s[0:3], 0 offen offset:76
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v11, v11, v13, s4
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v13, v14, v13, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
 ; GFX9-NEXT:    v_or_b32_e32 v11, v11, v13
 ; GFX9-NEXT:    buffer_store_dword v11, v0, s[0:3], 0 offen offset:80
-; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v11, v12, v11, s4
-; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v12, v12, v13, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
 ; GFX9-NEXT:    v_or_b32_e32 v11, v11, v12
 ; GFX9-NEXT:    buffer_store_dword v11, v0, s[0:3], 0 offen offset:84
-; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v9, v9, v11, s4
-; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v11, v12, v11, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
 ; GFX9-NEXT:    v_or_b32_e32 v9, v9, v11
 ; GFX9-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:88
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v9, v10, v9, s4
-; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v10, v10, v11, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
 ; GFX9-NEXT:    v_or_b32_e32 v9, v9, v10
 ; GFX9-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:92
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v7, v9, s4
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v9, v10, v9, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v9
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:96
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v8, v7, s4
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v8, v8, v9, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:100
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v5, v5, v7, s4
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v8, v7, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
 ; GFX9-NEXT:    v_or_b32_e32 v5, v5, v7
 ; GFX9-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:104
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v5, v6, v5, s4
-; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v6, v6, v7, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; GFX9-NEXT:    v_or_b32_e32 v5, v5, v6
 ; GFX9-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:108
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v3, v3, v5, s4
 ; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v5, v6, v5, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; GFX9-NEXT:    v_or_b32_e32 v3, v3, v5
 ; GFX9-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:112
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v3, v4, v3, s4
-; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v4, v4, v5, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
@@ -185443,7 +185441,7 @@ define inreg <128 x i8> @bitcast_v64f16_to_v128i8_scalar(<64 x half> inreg %a, i
 ; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v3, v4, v3, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
@@ -205059,193 +205057,193 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[25:26]
 ; GFX9-NEXT:    v_pk_add_u16 v28, s29, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_u16 v27, s28, 3 op_sel_hi:[1,0]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[27:28]
 ; GFX9-NEXT:    v_pk_add_u16 v30, s27, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_u16 v29, s26, 3 op_sel_hi:[1,0]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[29:30]
 ; GFX9-NEXT:    v_pk_add_u16 v32, s25, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_u16 v31, s24, 3 op_sel_hi:[1,0]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[31:32]
 ; GFX9-NEXT:    v_pk_add_u16 v34, s23, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_u16 v33, s22, 3 op_sel_hi:[1,0]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[33:34]
 ; GFX9-NEXT:    v_pk_add_u16 v38, s19, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_u16 v36, s21, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_u16 v35, s20, 3 op_sel_hi:[1,0]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[35:36]
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v38
 ; GFX9-NEXT:    v_pk_add_u16 v49, s17, 3 op_sel_hi:[1,0]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v38
 ; GFX9-NEXT:    v_pk_add_u16 v2, s7, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_u16 v1, s6, 3 op_sel_hi:[1,0]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v49
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[1:2]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v49
 ; GFX9-NEXT:    v_pk_add_u16 v4, s9, 3 op_sel_hi:[1,0]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v1
 ; GFX9-NEXT:    v_pk_add_u16 v3, s8, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v4
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[3:4]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v4
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v4
 ; GFX9-NEXT:    v_pk_add_u16 v6, s11, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_u16 v5, s10, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v3
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[5:6]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v3
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v6
 ; GFX9-NEXT:    v_pk_add_u16 v8, s13, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_u16 v7, s12, 3 op_sel_hi:[1,0]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v6
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[7:8]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v6
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v5
 ; GFX9-NEXT:    v_pk_add_u16 v10, s15, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_u16 v9, s14, 3 op_sel_hi:[1,0]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v5
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[9:10]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v8
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v8
 ; GFX9-NEXT:    v_pk_add_u16 v12, s41, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_u16 v11, s40, 3 op_sel_hi:[1,0]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v8
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[11:12]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v7
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v7
 ; GFX9-NEXT:    v_pk_add_u16 v14, s43, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_u16 v13, s42, 3 op_sel_hi:[1,0]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v10
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[13:14]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v10
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v10
 ; GFX9-NEXT:    v_pk_add_u16 v20, s45, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_pk_add_u16 v19, s44, 3 op_sel_hi:[1,0]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v9
 ; GFX9-NEXT:    v_lshrrev_b64 v[15:16], 24, v[19:20]
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v9
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v12
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v12
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v26
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v12
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v26
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v11
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v26
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v11
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v25
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v14
 ; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v28
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v14
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v28
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v14
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v30
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v13
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v30
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v13
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v32
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 24, v20
 ; GFX9-NEXT:    v_pk_add_u16 v37, s18, 3 op_sel_hi:[1,0]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v32
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v20
 ; GFX9-NEXT:    v_pk_add_u16 v48, s16, 3 op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_lshrrev_b64 v[43:44], 24, v[37:38]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 24, v34
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v16, 24, v36
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v20
 ; GFX9-NEXT:    v_lshrrev_b64 v[44:45], 24, v[48:49]
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 16, v34
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v16, 16, v36
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 16, v19
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v51, 16, v25
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v17, 8, v28
@@ -205257,11 +205255,11 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v59, 8, v32
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v60, 16, v31
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v53, 8, v31
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v23, 8, v34
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v61, 16, v33
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v33
-; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v16, 8, v36
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v18, 16, v35
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v21, 8, v35
@@ -205275,90 +205273,90 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v40, 16, v2
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v41, 8, v2
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v45, 8, v1
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v22, 8, v19
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_branch .LBB99_6
 ; GFX9-NEXT:  .LBB99_5:
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s81
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s71
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s80
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s70
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s69
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s68
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s66
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s67
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s65
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s64
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s55
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s53
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s54
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s52
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s51
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s50
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s48
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s49
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s39
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s38
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s99
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s97
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s98
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s96
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s87
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s86
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s84
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s85
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s83
 ; GFX9-NEXT:    v_mov_b32_e32 v25, s4
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s82
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 0
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 1
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:184 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 2
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:188 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 3
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:172 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 4
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 5
 ; GFX9-NEXT:    v_mov_b32_e32 v22, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 6
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 7
 ; GFX9-NEXT:    v_mov_b32_e32 v45, s4
@@ -205373,10 +205371,10 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 12
 ; GFX9-NEXT:    v_mov_b32_e32 v50, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 13
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:168 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 14
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 15
 ; GFX9-NEXT:    v_mov_b32_e32 v52, s4
@@ -205385,10 +205383,10 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 17
 ; GFX9-NEXT:    v_mov_b32_e32 v24, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 18
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 19
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 20
 ; GFX9-NEXT:    v_mov_b32_e32 v21, s4
@@ -205397,13 +205395,13 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 22
 ; GFX9-NEXT:    v_mov_b32_e32 v16, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 23
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 24
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 25
-; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v15, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 26
 ; GFX9-NEXT:    v_mov_b32_e32 v61, s4
@@ -205412,7 +205410,7 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 28
 ; GFX9-NEXT:    v_mov_b32_e32 v17, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 29
-; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v17, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 30
 ; GFX9-NEXT:    v_mov_b32_e32 v53, s4
@@ -205421,10 +205419,10 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 32
 ; GFX9-NEXT:    v_mov_b32_e32 v59, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 33
-; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v17, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 34
-; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v17, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 35
 ; GFX9-NEXT:    v_mov_b32_e32 v57, s4
@@ -205433,25 +205431,25 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 37
 ; GFX9-NEXT:    v_mov_b32_e32 v56, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 38
-; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v17, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 39
-; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v17, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 40
 ; GFX9-NEXT:    v_mov_b32_e32 v46, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 41
 ; GFX9-NEXT:    v_mov_b32_e32 v47, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 42
-; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v17, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 43
 ; GFX9-NEXT:    v_mov_b32_e32 v51, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 44
-; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v51, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 45
-; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v51, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 46
 ; GFX9-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
@@ -205462,33 +205460,33 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s4
 ; GFX9-NEXT:    v_readlane_b32 s4, v62, 49
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s4
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s46
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s56
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s58
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s60
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:144 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:148 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s62
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s72
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:160 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:164 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v40, s78
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
@@ -205534,48 +205532,48 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_mov_b32_e32 v41, v45
 ; GFX9-NEXT:    v_mov_b32_e32 v45, v22
 ; GFX9-NEXT:    v_mov_b32_e32 v22, s90
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v22, s92
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:120 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v22, s94
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:152 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:156 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v22, vcc_lo
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v22, s30
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:112 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:116 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v22, s34
-; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:128 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:132 ; 4-byte Folded Spill
 ; GFX9-NEXT:  .LBB99_6: ; %end
 ; GFX9-NEXT:    s_mov_b32 s4, 0xc0c0004
 ; GFX9-NEXT:    v_perm_b32 v37, v37, v52, s4
 ; GFX9-NEXT:    v_perm_b32 v31, v31, v53, s4
-; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v33, v33, v15, s4
 ; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:380 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v21, v35, v21, s4
 ; GFX9-NEXT:    v_perm_b32 v16, v36, v16, s4
-; GFX9-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:364 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v24, v38, v24, s4
 ; GFX9-NEXT:    v_perm_b32 v17, v28, v17, s4
 ; GFX9-NEXT:    v_perm_b32 v48, v48, v55, s4
 ; GFX9-NEXT:    v_perm_b32 v49, v49, v50, s4
 ; GFX9-NEXT:    v_perm_b32 v50, v54, v43, s4
-; GFX9-NEXT:    buffer_load_dword v54, off, s[0:3], s32 offset:368 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v55, off, s[0:3], s32 offset:372 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v54, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v55, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v39, v39, v44, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v39, 16, v39
 ; GFX9-NEXT:    v_or_b32_e32 v39, v48, v39
@@ -205623,47 +205621,47 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_readlane_b32 s34, v63, 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    v_perm_b32 v36, v58, v52, s4
-; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v22, v25, v15, s4
 ; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:376 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_perm_b32 v35, v61, v35, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(4)
 ; GFX9-NEXT:    v_perm_b32 v18, v18, v54, s4
-; GFX9-NEXT:    buffer_load_dword v54, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v55, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v54, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v55, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
 ; GFX9-NEXT:    v_or_b32_e32 v18, v21, v18
 ; GFX9-NEXT:    s_waitcnt vmcnt(4)
 ; GFX9-NEXT:    v_perm_b32 v38, v47, v52, s4
-; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v53, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(4)
 ; GFX9-NEXT:    v_perm_b32 v25, v26, v15, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(3)
 ; GFX9-NEXT:    v_perm_b32 v34, v60, v54, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_perm_b32 v28, v51, v52, s4
-; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:372 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v26, v15, v51, s4
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:364 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v19, v19, v15, s4
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v20, v20, v15, s4
-; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v15, v15, v51, s4
 ; GFX9-NEXT:    buffer_store_dword v39, v0, s[0:3], 0 offen
-; GFX9-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v48, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v48, off, s[0:3], s32 offset:368 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v39, v39, v48, s4
@@ -205673,18 +205671,18 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v39, 16, v50
 ; GFX9-NEXT:    v_or_b32_e32 v37, v37, v39
 ; GFX9-NEXT:    buffer_store_dword v37, v0, s[0:3], 0 offen offset:8
-; GFX9-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v37, v37, v39, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v37, 16, v37
 ; GFX9-NEXT:    v_or_b32_e32 v24, v24, v37
 ; GFX9-NEXT:    buffer_store_dword v24, v0, s[0:3], 0 offen offset:12
 ; GFX9-NEXT:    buffer_store_dword v18, v0, s[0:3], 0 offen offset:16
-; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v18, v18, v21, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
@@ -205693,9 +205691,9 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v35
 ; GFX9-NEXT:    v_or_b32_e32 v16, v33, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:24
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v18, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -205704,9 +205702,9 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v34
 ; GFX9-NEXT:    v_or_b32_e32 v16, v31, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:32
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v18, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -205715,9 +205713,9 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v36
 ; GFX9-NEXT:    v_or_b32_e32 v16, v29, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:40
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v18, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -205726,9 +205724,9 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v38
 ; GFX9-NEXT:    v_or_b32_e32 v16, v27, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:48
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v18, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -205737,9 +205735,9 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v28
 ; GFX9-NEXT:    v_or_b32_e32 v16, v22, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:56
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
@@ -205748,129 +205746,129 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v26
 ; GFX9-NEXT:    v_or_b32_e32 v16, v19, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:64
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v16, v16, v17, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
 ; GFX9-NEXT:    v_or_b32_e32 v16, v20, v16
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:68
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v13, v13, v16, s4
 ; GFX9-NEXT:    v_or_b32_e32 v13, v13, v15
 ; GFX9-NEXT:    buffer_store_dword v13, v0, s[0:3], 0 offen offset:72
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v13, v14, v13, s4
-; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v14, v14, v15, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
 ; GFX9-NEXT:    v_or_b32_e32 v13, v13, v14
 ; GFX9-NEXT:    buffer_store_dword v13, v0, s[0:3], 0 offen offset:76
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v11, v11, v13, s4
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v13, v14, v13, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
 ; GFX9-NEXT:    v_or_b32_e32 v11, v11, v13
 ; GFX9-NEXT:    buffer_store_dword v11, v0, s[0:3], 0 offen offset:80
-; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v11, v12, v11, s4
-; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v12, v12, v13, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
 ; GFX9-NEXT:    v_or_b32_e32 v11, v11, v12
 ; GFX9-NEXT:    buffer_store_dword v11, v0, s[0:3], 0 offen offset:84
-; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v9, v9, v11, s4
-; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:152 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:156 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v11, v12, v11, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
 ; GFX9-NEXT:    v_or_b32_e32 v9, v9, v11
 ; GFX9-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:88
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v9, v10, v9, s4
-; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v10, v10, v11, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
 ; GFX9-NEXT:    v_or_b32_e32 v9, v9, v10
 ; GFX9-NEXT:    buffer_store_dword v9, v0, s[0:3], 0 offen offset:92
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:148 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v7, v9, s4
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:144 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v9, v10, v9, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v9
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:96
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v8, v7, s4
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:136 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v8, v8, v9, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v8
 ; GFX9-NEXT:    buffer_store_dword v7, v0, s[0:3], 0 offen offset:100
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v5, v5, v7, s4
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v7, v8, v7, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
 ; GFX9-NEXT:    v_or_b32_e32 v5, v5, v7
 ; GFX9-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:104
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v5, v6, v5, s4
-; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v6, v6, v7, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; GFX9-NEXT:    v_or_b32_e32 v5, v5, v6
 ; GFX9-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen offset:108
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v3, v3, v5, s4
 ; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v5, v6, v5, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; GFX9-NEXT:    v_or_b32_e32 v3, v3, v5
 ; GFX9-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:112
-; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v3, v4, v3, s4
-; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v4, v4, v5, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
@@ -205879,7 +205877,7 @@ define inreg <128 x i8> @bitcast_v64i16_to_v128i8_scalar(<64 x i16> inreg %a, i3
 ; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
-; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v3, v4, v3, s4
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
@@ -210541,8 +210539,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    v_lshrrev_b32_e32 v14, 16, v14
 ; SI-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v24, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v24, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; SI-NEXT:    v_lshrrev_b32_e32 v20, 16, v18
 ; SI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:176 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:180 ; 4-byte Folded Spill
@@ -210684,8 +210682,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    v_mov_b32_e32 v1, v42
 ; SI-NEXT:    v_lshrrev_b32_e32 v41, 16, v5
 ; SI-NEXT:    v_lshr_b64 v[49:50], v[31:32], 16
-; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v19, 16, v51
 ; SI-NEXT:    v_lshrrev_b32_e32 v31, 16, v15
@@ -210711,8 +210709,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v19, v24
 ; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:528 ; 4-byte Folded Reload
@@ -210744,8 +210742,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    v_lshrrev_b32_e32 v29, 16, v20
 ; SI-NEXT:    v_lshrrev_b32_e32 v20, 16, v11
 ; SI-NEXT:    v_lshrrev_b32_e32 v18, 16, v38
-; SI-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
 ; SI-NEXT:    v_lshr_b64 v[34:35], v[35:36], 16
 ; SI-NEXT:    v_mov_b32_e32 v51, v4
 ; SI-NEXT:    v_mov_b32_e32 v50, v3
@@ -210754,8 +210752,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_lshr_b64 v[3:4], v[3:4], 16
-; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:636 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt expcnt(0)
@@ -210764,8 +210762,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_mov_b32_e32 v8, v4
 ; SI-NEXT:    v_lshr_b64 v[3:4], v[3:4], 16
-; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:648 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt expcnt(0)
@@ -210774,16 +210772,16 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v5, v10
 ; SI-NEXT:    v_lshr_b64 v[9:10], v[9:10], 16
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[9:10], v[50:51], 16
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:392 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:396 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[9:10], v[46:47], 16
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:400 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:404 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt expcnt(0)
@@ -210792,30 +210790,30 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    v_mov_b32_e32 v22, v4
 ; SI-NEXT:    v_mov_b32_e32 v21, v3
 ; SI-NEXT:    v_mov_b32_e32 v3, v47
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:424 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:428 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:432 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_mov_b32_e32 v3, v45
 ; SI-NEXT:    v_lshr_b64 v[21:22], v[21:22], 16
-; SI-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:388 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v22, v7
 ; SI-NEXT:    v_mov_b32_e32 v47, v36
 ; SI-NEXT:    v_lshr_b64 v[35:36], v[0:1], 16
 ; SI-NEXT:    s_waitcnt vmcnt(6)
 ; SI-NEXT:    v_lshr_b64 v[9:10], v[9:10], 16
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:408 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:412 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:660 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:664 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:668 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:436 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:440 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:444 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_mov_b32_e32 v3, v58
 ; SI-NEXT:    v_lshr_b64 v[57:58], v[57:58], 16
@@ -210823,35 +210821,35 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    v_mov_b32_e32 v59, v53
 ; SI-NEXT:    v_mov_b32_e32 v48, v0
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[40:41], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[42:43], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt vmcnt(8)
 ; SI-NEXT:    v_mov_b32_e32 v21, v10
 ; SI-NEXT:    v_lshr_b64 v[9:10], v[9:10], 16
-; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:416 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:420 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[9:10], v[44:45], 16
 ; SI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:448 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:452 ; 4-byte Folded Reload
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[32:33], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v44, v23
 ; SI-NEXT:    v_mov_b32_e32 v23, v38
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:412 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:416 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:420 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_mov_b32_e32 v3, v49
 ; SI-NEXT:    v_lshr_b64 v[49:50], v[6:7], 16
 ; SI-NEXT:    v_lshr_b64 v[6:7], v[54:55], 16
-; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:424 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:428 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:672 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt expcnt(0)
@@ -210859,17 +210857,17 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    v_lshr_b64 v[53:54], v[52:53], 16
 ; SI-NEXT:    v_lshr_b64 v[51:52], v[26:27], 16
 ; SI-NEXT:    v_mov_b32_e32 v54, v27
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:392 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:396 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:400 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt vmcnt(12)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[45:46], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[17:18], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt vmcnt(8)
 ; SI-NEXT:    v_mov_b32_e32 v52, v6
 ; SI-NEXT:    s_waitcnt vmcnt(7)
@@ -210878,33 +210876,33 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:684 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[28:29], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[19:20], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[14:15], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[12:13], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[24:25], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:404 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:408 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:440 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:444 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[60:61], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:388 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:432 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:436 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[30:31], 16
 ; SI-NEXT:    v_mov_b32_e32 v46, v9
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v9, v28
 ; SI-NEXT:    v_mov_b32_e32 v3, v32
 ; SI-NEXT:    s_waitcnt vmcnt(14)
@@ -210964,77 +210962,77 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    ; implicit-def: $vgpr55
 ; SI-NEXT:    ; implicit-def: $vgpr59
 ; SI-NEXT:    ; implicit-def: $vgpr54
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr10
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr35
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr40
+; SI-NEXT:    ; implicit-def: $vgpr10
 ; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
+; SI-NEXT:    ; implicit-def: $vgpr35
 ; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr46
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:388 ; 4-byte Folded Spill
 ; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr57
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr58
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr49
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
-; SI-NEXT:    ; implicit-def: $vgpr34
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:404 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:408 ; 4-byte Folded Spill
 ; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
 ; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:388 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:392 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:396 ; 4-byte Folded Spill
+; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:400 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:404 ; 4-byte Folded Spill
+; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:408 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:412 ; 4-byte Folded Spill
+; SI-NEXT:    ; implicit-def: $vgpr40
+; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:416 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:420 ; 4-byte Folded Spill
+; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; SI-NEXT:    ; implicit-def: $vgpr46
+; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; SI-NEXT:    ; implicit-def: $vgpr57
+; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; SI-NEXT:    ; implicit-def: $vgpr58
+; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; SI-NEXT:    ; implicit-def: $vgpr49
+; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
+; SI-NEXT:    ; implicit-def: $vgpr34
+; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:440 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:444 ; 4-byte Folded Spill
+; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:424 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:428 ; 4-byte Folded Spill
+; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:432 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:436 ; 4-byte Folded Spill
 ; SI-NEXT:    ; implicit-def: $vgpr53
 ; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; SI-NEXT:    ; implicit-def: $vgpr51
 ; SI-NEXT:    ; implicit-def: $vgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
@@ -211048,26 +211046,26 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; SI-NEXT:    ; implicit-def: $vgpr1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:424 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:428 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:432 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; SI-NEXT:    ; implicit-def: $vgpr1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; SI-NEXT:    ; implicit-def: $vgpr21
 ; SI-NEXT:    ; implicit-def: $vgpr1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:436 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:440 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:444 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; SI-NEXT:    ; implicit-def: $vgpr1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:412 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:416 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:420 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
 ; SI-NEXT:    ; implicit-def: $vgpr1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:392 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:396 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:400 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_load_dword v30, off, s[0:3], s32 offset:536 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:540 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt expcnt(2)
@@ -211282,8 +211280,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    v_add_f32_e32 v0, 0x40c00000, v2
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v62
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:580 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -211293,8 +211291,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:576 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -211304,8 +211302,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v20
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:572 ; 4-byte Folded Reload
 ; SI-NEXT:    v_lshr_b64 v[28:29], v[36:37], 16
@@ -211316,8 +211314,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v21
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:472 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -211327,8 +211325,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v5
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:568 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v16, 0xffff0000, v5
@@ -211351,8 +211349,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v7
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:484 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -211362,8 +211360,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v8
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:280 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:284 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:560 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -211373,8 +211371,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v9
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:288 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:292 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:468 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v9, 0xffff0000, v9
@@ -211385,8 +211383,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v10
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:296 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:300 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:556 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -211396,8 +211394,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v11
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:304 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:308 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:552 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v27, 0xffff0000, v11
@@ -211408,8 +211406,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v12
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:404 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:408 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:440 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:444 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:456 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -211419,8 +211417,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v13
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:388 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:432 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:436 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:460 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v44, 0xffff0000, v13
@@ -211431,8 +211429,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v14
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v1, v35
 ; SI-NEXT:    v_lshr_b64 v[34:35], v[22:23], 16
@@ -211545,20 +211543,20 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(2)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:312 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:316 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[5:6], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[51:52], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:336 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:340 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:384 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:388 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[21:22], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:328 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:332 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v1, v19
 ; SI-NEXT:    v_lshr_b64 v[51:52], v[42:43], 16
@@ -211570,17 +211568,17 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[18:19], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:344 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:348 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:392 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:396 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v1, v24
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:424 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:428 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:432 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:248 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[23:24], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:352 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:356 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:400 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:404 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v1, v17
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
@@ -211588,48 +211586,48 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[16:17], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:360 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:364 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:408 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:412 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[37:38], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:368 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:372 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:416 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:420 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v1, v50
 ; SI-NEXT:    v_lshr_b64 v[49:50], v[12:13], 16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:436 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:440 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:444 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:260 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:264 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:268 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_mov_b32_e32 v1, v36
-; SI-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:412 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:416 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:420 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:236 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:240 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:244 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_mov_b32_e32 v1, v10
 ; SI-NEXT:    v_mov_b32_e32 v10, v15
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:392 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:396 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:400 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:224 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:228 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:232 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[54:55], 16
 ; SI-NEXT:    v_lshr_b64 v[53:54], v[44:45], 16
 ; SI-NEXT:    v_mov_b32_e32 v54, v43
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:424 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:428 ; 4-byte Folded Spill
 ; SI-NEXT:  .LBB101_5: ; %end
 ; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:392 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:396 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:400 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v4
 ; SI-NEXT:    v_and_b32_e32 v7, 0xffff, v5
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:312 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:316 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:364 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt expcnt(0)
@@ -211637,9 +211635,9 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v26
-; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:436 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:440 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:444 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:264 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:268 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v3, 0xffff, v8
 ; SI-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
@@ -211653,25 +211651,25 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    v_readlane_b32 s35, v63, 1
 ; SI-NEXT:    v_readlane_b32 s34, v63, 0
 ; SI-NEXT:    v_and_b32_e32 v9, 0xffff, v12
-; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:424 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:428 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:432 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v15, 0xffff, v21
-; SI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:412 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:416 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:420 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v21, 0xffff, v24
 ; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
 ; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v4
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v2
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:368 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:372 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; SI-NEXT:    v_and_b32_e32 v18, 0xffff, v17
 ; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
@@ -211687,8 +211685,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
 ; SI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v10
-; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:384 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:388 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(7)
 ; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v4
@@ -211698,8 +211696,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(3)
 ; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v10
-; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:232 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:236 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
 ; SI-NEXT:    v_or_b32_e32 v3, v3, v4
 ; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v35
 ; SI-NEXT:    v_or_b32_e32 v4, v4, v5
@@ -211708,36 +211706,36 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    v_or_b32_e32 v5, v6, v5
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v10
-; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:376 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:380 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:176 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:180 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(3)
 ; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
 ; SI-NEXT:    v_or_b32_e32 v6, v6, v10
 ; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v17
-; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:392 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:396 ; 4-byte Folded Reload
 ; SI-NEXT:    v_or_b32_e32 v7, v7, v10
-; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:240 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:244 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(3)
 ; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v16
-; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:400 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:404 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(3)
 ; SI-NEXT:    v_and_b32_e32 v10, 0xffff, v10
 ; SI-NEXT:    v_or_b32_e32 v8, v10, v8
 ; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v39
 ; SI-NEXT:    v_or_b32_e32 v9, v9, v10
-; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:248 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:252 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:184 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:188 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v16
-; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:256 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:260 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v10, 0xffff, v10
 ; SI-NEXT:    v_or_b32_e32 v10, v10, v11
 ; SI-NEXT:    s_waitcnt vmcnt(2)
@@ -211745,14 +211743,14 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    v_or_b32_e32 v11, v12, v11
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_and_b32_e32 v12, 0xffff, v16
-; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:360 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:364 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:408 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:412 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v16
 ; SI-NEXT:    v_or_b32_e32 v12, v12, v14
 ; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v25
-; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:368 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:372 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:416 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:420 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:168 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:172 ; 4-byte Folded Reload
 ; SI-NEXT:    v_or_b32_e32 v13, v13, v14
@@ -211763,8 +211761,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v16, 16, v25
 ; SI-NEXT:    v_or_b32_e32 v15, v15, v16
-; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:320 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:324 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:160 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:164 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
@@ -211773,8 +211771,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    v_or_b32_e32 v16, v16, v17
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v17, 16, v25
-; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:280 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:284 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:328 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:332 ; 4-byte Folded Reload
 ; SI-NEXT:    v_or_b32_e32 v17, v18, v17
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_and_b32_e32 v18, 0xffff, v24
@@ -211783,8 +211781,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    v_or_b32_e32 v18, v18, v20
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v25
-; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:288 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:292 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:336 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:340 ; 4-byte Folded Reload
 ; SI-NEXT:    v_or_b32_e32 v19, v19, v20
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_and_b32_e32 v20, 0xffff, v24
@@ -211793,8 +211791,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    v_or_b32_e32 v20, v20, v22
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v25
-; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:296 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:300 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:344 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:348 ; 4-byte Folded Reload
 ; SI-NEXT:    v_or_b32_e32 v21, v21, v22
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_and_b32_e32 v22, 0xffff, v24
@@ -211805,8 +211803,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v25
 ; SI-NEXT:    v_or_b32_e32 v23, v23, v24
-; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:304 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:308 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:352 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:356 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v34
 ; SI-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:128 ; 4-byte Folded Reload
@@ -211817,10 +211815,10 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v35
 ; SI-NEXT:    v_or_b32_e32 v25, v25, v26
-; SI-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:404 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:408 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:376 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 offset:380 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:440 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:444 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:424 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 offset:428 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:120 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:124 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(5)
@@ -211832,8 +211830,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v29, 16, v35
 ; SI-NEXT:    v_or_b32_e32 v27, v27, v29
-; SI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 offset:384 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v29, off, s[0:3], s32 offset:388 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 offset:432 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v29, off, s[0:3], s32 offset:436 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:112 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:116 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
@@ -211859,8 +211857,8 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; SI-NEXT:    s_waitcnt vmcnt(14)
 ; SI-NEXT:    v_lshlrev_b32_e32 v30, 16, v35
 ; SI-NEXT:    v_or_b32_e32 v29, v29, v30
-; SI-NEXT:    buffer_load_dword v30, off, s[0:3], s32 offset:224 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:228 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v30, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v31, 16, v51
 ; SI-NEXT:    v_and_b32_e32 v30, 0xffff, v30
@@ -216365,16 +216363,16 @@ define inreg <64 x bfloat> @bitcast_v64f16_to_v64bf16_scalar(<64 x half> inreg %
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v3, s16
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v1
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v2, s18
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, s38
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, s36
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
@@ -216383,30 +216381,30 @@ define inreg <64 x bfloat> @bitcast_v64f16_to_v64bf16_scalar(<64 x half> inreg %
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, s31
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, vcc_hi
 ; SI-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, vcc_lo
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, s95
 ; SI-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, s94
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, s93
 ; SI-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
@@ -216414,7 +216412,7 @@ define inreg <64 x bfloat> @bitcast_v64f16_to_v64bf16_scalar(<64 x half> inreg %
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v51, v1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, s91
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, s92
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
@@ -216529,7 +216527,7 @@ define inreg <64 x bfloat> @bitcast_v64f16_to_v64bf16_scalar(<64 x half> inreg %
 ; SI-NEXT:    v_cvt_f16_f32_e32 v21, v1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v52, 16, v7
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, s15
 ; SI-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v20, v0
@@ -216611,7 +216609,7 @@ define inreg <64 x bfloat> @bitcast_v64f16_to_v64bf16_scalar(<64 x half> inreg %
 ; SI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v49, 16, v7
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
 ; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
 ; SI-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
 ; SI-NEXT:    v_lshlrev_b32_e32 v50, 16, v36
@@ -216641,43 +216639,43 @@ define inreg <64 x bfloat> @bitcast_v64f16_to_v64bf16_scalar(<64 x half> inreg %
 ; SI-NEXT:    v_lshlrev_b32_e32 v54, 16, v8
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v51, 16, v7
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v39, 16, v7
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
 ; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
-; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
-; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
-; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
-; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
-; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; SI-NEXT:    s_branch .LBB103_6
 ; SI-NEXT:  .LBB103_5:
 ; SI-NEXT:    v_readlane_b32 s4, v62, 8
@@ -216720,37 +216718,37 @@ define inreg <64 x bfloat> @bitcast_v64f16_to_v64bf16_scalar(<64 x half> inreg %
 ; SI-NEXT:    v_mov_b32_e32 v0, s87
 ; SI-NEXT:    v_mov_b32_e32 v48, s4
 ; SI-NEXT:    v_readlane_b32 s4, v62, 27
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s13
 ; SI-NEXT:    v_mov_b32_e32 v6, s4
 ; SI-NEXT:    v_readlane_b32 s4, v62, 28
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s86
 ; SI-NEXT:    v_mov_b32_e32 v5, s4
 ; SI-NEXT:    v_readlane_b32 s4, v62, 29
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s12
 ; SI-NEXT:    v_mov_b32_e32 v4, s4
 ; SI-NEXT:    v_readlane_b32 s4, v62, 30
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s85
 ; SI-NEXT:    v_mov_b32_e32 v3, s4
 ; SI-NEXT:    v_readlane_b32 s4, v62, 31
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s84
 ; SI-NEXT:    v_mov_b32_e32 v2, s4
 ; SI-NEXT:    v_readlane_b32 s4, v62, 32
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s11
 ; SI-NEXT:    v_mov_b32_e32 v1, s4
 ; SI-NEXT:    v_readlane_b32 s4, v62, 33
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v39, s83
 ; SI-NEXT:    v_mov_b32_e32 v51, s82
 ; SI-NEXT:    v_mov_b32_e32 v49, s10
@@ -216795,8 +216793,8 @@ define inreg <64 x bfloat> @bitcast_v64f16_to_v64bf16_scalar(<64 x half> inreg %
 ; SI-NEXT:    v_lshrrev_b32_e32 v35, 16, v1
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v6
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v9
 ; SI-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
@@ -216804,15 +216802,15 @@ define inreg <64 x bfloat> @bitcast_v64f16_to_v64bf16_scalar(<64 x half> inreg %
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v10
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v13
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v12
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v15
 ; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v0
@@ -216859,7 +216857,7 @@ define inreg <64 x bfloat> @bitcast_v64f16_to_v64bf16_scalar(<64 x half> inreg %
 ; SI-NEXT:    v_lshrrev_b32_e32 v53, 16, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v51
 ; SI-NEXT:    v_lshrrev_b32_e32 v51, 16, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; SI-NEXT:    v_mul_f32_e32 v9, 1.0, v50
 ; SI-NEXT:    v_mul_f32_e32 v50, 1.0, v49
 ; SI-NEXT:    v_mul_f32_e32 v48, 1.0, v39
@@ -216868,8 +216866,8 @@ define inreg <64 x bfloat> @bitcast_v64f16_to_v64bf16_scalar(<64 x half> inreg %
 ; SI-NEXT:    v_lshr_b64 v[33:34], v[34:35], 16
 ; SI-NEXT:    v_lshr_b64 v[34:35], v[2:3], 16
 ; SI-NEXT:    v_lshr_b64 v[2:3], v[7:8], 16
-; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
 ; SI-NEXT:    v_mul_f32_e32 v5, 1.0, v38
 ; SI-NEXT:    v_mul_f32_e32 v19, 1.0, v36
 ; SI-NEXT:    v_mul_f32_e32 v22, 1.0, v22
@@ -216926,23 +216924,23 @@ define inreg <64 x bfloat> @bitcast_v64f16_to_v64bf16_scalar(<64 x half> inreg %
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_lshrrev_b32_e32 v49, 16, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_lshr_b64 v[3:4], v[3:4], 16
 ; SI-NEXT:    v_lshr_b64 v[4:5], v[5:6], 16
-; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_lshrrev_b32_e32 v39, 16, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_lshr_b64 v[5:6], v[5:6], 16
-; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_mul_f32_e32 v38, 1.0, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_lshr_b64 v[6:7], v[6:7], 16
 ; SI-NEXT:    v_lshr_b64 v[7:8], v[15:16], 16
@@ -216985,16 +216983,16 @@ define inreg <64 x bfloat> @bitcast_v64f16_to_v64bf16_scalar(<64 x half> inreg %
 ; SI-NEXT:    s_waitcnt vmcnt(14)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_lshrrev_b32_e32 v37, 16, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_mul_f32_e32 v36, 1.0, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
 ; SI-NEXT:    v_lshr_b64 v[30:31], v[36:37], 16
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_lshr_b64 v[31:32], v[0:1], 16
@@ -228081,7 +228079,7 @@ define inreg <64 x i16> @bitcast_v64f16_to_v64i16_scalar(<64 x half> inreg %a, i
 ; SI-NEXT:    v_or_b32_e32 v0, v3, v28
 ; SI-NEXT:    v_add_f32_e32 v32, 0x38000000, v32
 ; SI-NEXT:    v_or_b32_e32 v54, v1, v58
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[38:39], 16
 ; SI-NEXT:    v_mov_b32_e32 v38, v61
@@ -228096,8 +228094,8 @@ define inreg <64 x i16> @bitcast_v64f16_to_v64i16_scalar(<64 x half> inreg %a, i
 ; SI-NEXT:    v_lshr_b64 v[44:45], v[43:44], 16
 ; SI-NEXT:    v_mov_b32_e32 v45, v42
 ; SI-NEXT:    v_lshr_b64 v[42:43], v[41:42], 16
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v7, v6
 ; SI-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
 ; SI-NEXT:    v_mov_b32_e32 v6, v8
@@ -228115,14 +228113,14 @@ define inreg <64 x i16> @bitcast_v64f16_to_v64i16_scalar(<64 x half> inreg %a, i
 ; SI-NEXT:    v_mov_b32_e32 v21, v37
 ; SI-NEXT:    v_lshr_b64 v[36:37], v[36:37], 16
 ; SI-NEXT:    v_mov_b32_e32 v3, v39
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v39, v32
 ; SI-NEXT:    v_mov_b32_e32 v37, v33
 ; SI-NEXT:    v_lshr_b64 v[32:33], v[30:31], 16
@@ -228143,20 +228141,20 @@ define inreg <64 x i16> @bitcast_v64f16_to_v64i16_scalar(<64 x half> inreg %a, i
 ; SI-NEXT:    v_mov_b32_e32 v41, v55
 ; SI-NEXT:    v_mov_b32_e32 v55, v59
 ; SI-NEXT:    v_lshr_b64 v[58:59], v[58:59], 16
-; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v50, v7
 ; SI-NEXT:    s_branch .LBB109_6
 ; SI-NEXT:  .LBB109_5:
 ; SI-NEXT:    v_mov_b32_e32 v6, s20
 ; SI-NEXT:    v_mov_b32_e32 v7, s25
-; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v8, s22
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v7, s95
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_mov_b32_e32 v7, s94
 ; SI-NEXT:    v_mov_b32_e32 v0, s7
@@ -228177,7 +228175,7 @@ define inreg <64 x i16> @bitcast_v64f16_to_v64i16_scalar(<64 x half> inreg %a, i
 ; SI-NEXT:    v_mov_b32_e32 v27, s14
 ; SI-NEXT:    v_mov_b32_e32 v2, s13
 ; SI-NEXT:    v_mov_b32_e32 v39, s6
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:108 ; 4-byte Folded Spill
 ; SI-NEXT:    v_mov_b32_e32 v54, s8
 ; SI-NEXT:    v_mov_b32_e32 v25, s9
 ; SI-NEXT:    v_mov_b32_e32 v24, s12
@@ -228217,20 +228215,20 @@ define inreg <64 x i16> @bitcast_v64f16_to_v64i16_scalar(<64 x half> inreg %a, i
 ; SI-NEXT:    v_mov_b32_e32 v58, s74
 ; SI-NEXT:    v_mov_b32_e32 v49, s63
 ; SI-NEXT:    v_mov_b32_e32 v32, s61
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:96 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_mov_b32_e32 v7, s91
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:92 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:88 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_mov_b32_e32 v7, s79
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; SI-NEXT:    s_waitcnt expcnt(1)
 ; SI-NEXT:    v_mov_b32_e32 v7, s77
-; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; SI-NEXT:  .LBB109_6: ; %end
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
@@ -228262,8 +228260,8 @@ define inreg <64 x i16> @bitcast_v64f16_to_v64i16_scalar(<64 x half> inreg %a, i
 ; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v13
 ; SI-NEXT:    v_and_b32_e32 v10, 0xffff, v10
 ; SI-NEXT:    v_or_b32_e32 v8, v10, v8
-; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v12, 0xffff, v12
 ; SI-NEXT:    v_and_b32_e32 v14, 0xffff, v14
 ; SI-NEXT:    v_and_b32_e32 v13, 0xffff, v45
@@ -228294,18 +228292,18 @@ define inreg <64 x i16> @bitcast_v64f16_to_v64i16_scalar(<64 x half> inreg %a, i
 ; SI-NEXT:    v_or_b32_e32 v12, v14, v12
 ; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v35
 ; SI-NEXT:    v_or_b32_e32 v13, v13, v14
-; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v15, 0xffff, v53
 ; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
 ; SI-NEXT:    v_or_b32_e32 v14, v16, v14
 ; SI-NEXT:    v_lshlrev_b32_e32 v16, 16, v33
 ; SI-NEXT:    v_or_b32_e32 v15, v15, v16
-; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:92 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:96 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:88 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_and_b32_e32 v17, 0xffff, v22
 ; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v36
@@ -228324,8 +228322,8 @@ define inreg <64 x i16> @bitcast_v64f16_to_v64i16_scalar(<64 x half> inreg %a, i
 ; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v23
 ; SI-NEXT:    v_or_b32_e32 v21, v21, v22
 ; SI-NEXT:    v_and_b32_e32 v22, 0xffff, v24
-; SI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v23
 ; SI-NEXT:    v_or_b32_e32 v22, v22, v24
@@ -228333,8 +228331,8 @@ define inreg <64 x i16> @bitcast_v64f16_to_v64i16_scalar(<64 x half> inreg %a, i
 ; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v46
 ; SI-NEXT:    v_or_b32_e32 v23, v23, v24
 ; SI-NEXT:    v_and_b32_e32 v24, 0xffff, v25
-; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v25
 ; SI-NEXT:    v_or_b32_e32 v24, v24, v26
@@ -228361,7 +228359,7 @@ define inreg <64 x i16> @bitcast_v64f16_to_v64i16_scalar(<64 x half> inreg %a, i
 ; SI-NEXT:    v_or_b32_e32 v26, v26, v28
 ; SI-NEXT:    v_lshlrev_b32_e32 v28, 16, v30
 ; SI-NEXT:    v_or_b32_e32 v27, v27, v28
-; SI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
 ; SI-NEXT:    v_lshlrev_b32_e32 v30, 16, v49
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v28, 0xffff, v28
