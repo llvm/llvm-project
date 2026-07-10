@@ -2439,13 +2439,6 @@ static bool CheckLiteralType(EvalInfo &Info, const Expr *E,
   return false;
 }
 
-static void CheckMicrosoftRelaxations(EvalInfo &Info,
-                                      const SourceLocation &Loc) {
-  auto *Diag = Info.EvalStatus.Diag;
-  if (Diag && Diag->empty() && Info.EvalStatus.SeenCastOrNull)
-    Info.report(Loc, diag::warn_relaxed_constant_fold);
-}
-
 static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
                                   EvalInfo &Info, SourceLocation DiagLoc,
                                   QualType Type, const APValue &Value,
@@ -2558,9 +2551,6 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
       CERK == CheckEvaluationResultKind::ConstantExpression)
     return CheckMemberPointerConstantExpression(Info, DiagLoc, Type, Value, Kind);
 
-  // Emit warning if expression is not LValue, member pointer,
-  // and contains C-style casts under -fms-compatibility
-  CheckMicrosoftRelaxations(Info, DiagLoc);
   // Everything else is fine.
   return true;
 }

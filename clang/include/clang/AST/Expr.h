@@ -623,10 +623,6 @@ public:
     /// whether @ref #Diag is set or not.
     bool DiagEmitted = false;
 
-    /// Whether we've seen a ptr to int cast or null subobject while evaluating
-    /// constant expression in MS compatibility mode.
-    bool SeenCastOrNull = false;
-
     /// Diag - If this is non-null, it will be filled in with a stack of notes
     /// indicating why evaluation failed (or why it failed to produce a constant
     /// expression).
@@ -642,6 +638,10 @@ public:
     /// (which may include expensive operations like converting APValue objects
     /// to a string representation).
     SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr;
+
+    /// Location where we spot ptr to int cast or null subobject while
+    /// evaluating constant expression in MS compatibility mode.
+    SourceLocation CastOrNull;
 
     EvalStatus() = default;
 

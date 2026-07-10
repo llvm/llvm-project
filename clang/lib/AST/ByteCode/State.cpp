@@ -18,13 +18,13 @@ using namespace clang::interp;
 
 State::~State() {}
 
-bool State::shouldRelaxDiag(diag::kind DiagId) {
+bool State::shouldRelaxDiag(const SourceLocation &Loc, diag::kind DiagId) {
   if (!Ctx.getLangOpts().MSVCCompat)
     return false;
   switch (DiagId) {
   case diag::note_constexpr_invalid_cast_ptrtoint:
   case diag::note_constexpr_null_subobject:
-    EvalStatus.SeenCastOrNull = true;
+    EvalStatus.CastOrNull = Loc;
     return true;
   default:
     return false;
@@ -56,7 +56,7 @@ OptionalDiagnostic State::FFDiag(SourceInfo SI, diag::kind DiagId,
 
 OptionalDiagnostic State::CCEDiag(SourceLocation Loc, diag::kind DiagId,
                                   unsigned ExtraNotes) {
-  if (shouldRelaxDiag(DiagId)) {
+  if (shouldRelaxDiag(Loc, DiagId)) {
     setActiveDiagnostic(false);
     return OptionalDiagnostic();
   }

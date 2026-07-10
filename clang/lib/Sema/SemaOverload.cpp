@@ -12,6 +12,7 @@
 
 #include "CheckExprLifetime.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -6728,8 +6729,10 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
     Value = Eval.Val;
     // For -fms-compatibility mode we relax some requirements
     // for constant folding in non-SFINAE contexts
-    bool CantFold = isSFINAEContext() && Eval.SeenCastOrNull;
+    bool CantFold = isSFINAEContext() && Eval.CastOrNull.isValid();
     if (Notes.empty() && !CantFold) {
+      if (Eval.CastOrNull.isValid())
+        Diag(Eval.CastOrNull, diag::warn_relaxed_constant_fold);
       // It's a constant expression.
       Expr *E = Result.get();
       if (const auto *CE = dyn_cast<ConstantExpr>(E)) {
