@@ -7,22 +7,21 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Linux implementation of alarm.
+/// Proxy header for sys/time.h macros.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/unistd/alarm.h"
-#include "src/__support/OSUtil/linux/syscall_wrappers/alarm.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#ifndef LLVM_LIBC_HDR_SYS_TIME_MACROS_H
+#define LLVM_LIBC_HDR_SYS_TIME_MACROS_H
 
-namespace LIBC_NAMESPACE_DECL {
+#ifdef LIBC_FULL_BUILD
 
-LLVM_LIBC_FUNCTION(unsigned int, alarm, (unsigned int seconds)) {
-  ErrorOr<unsigned int> ret = linux_syscalls::alarm(seconds);
-  if (!ret)
-    return 0;
-  return ret.value();
-}
+#include "include/llvm-libc-macros/sys-time-macros.h"
 
-} // namespace LIBC_NAMESPACE_DECL
+#else // Overlay mode
+
+#include <sys/time.h>
+
+#endif // LIBC_FULL_BUILD
+
+#endif // LLVM_LIBC_HDR_SYS_TIME_MACROS_H
