@@ -21,8 +21,8 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_bf16(<16 x bfloat> %A, <32 x bfl
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 index_key:1
 ; GISEL-NEXT:    s_clause 0x1
-; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
+; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
   %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
@@ -79,8 +79,8 @@ define amdgpu_ps void @test_swmmac_bf16f32_16x16x64_bf16(<16 x bfloat> %A, <32 x
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 index_key:1
 ; GISEL-NEXT:    s_clause 0x1
-; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
+; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
   %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4

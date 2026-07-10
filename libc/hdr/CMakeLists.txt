@@ -78,6 +78,24 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  inet_address_macros
+  HDRS
+    inet-address-macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.arpa_inet
+    libc.include.llvm-libc-macros.inet_address_macros
+)
+
+add_proxy_header_library(
+  net_if_macros
+  HDRS
+    net_if_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.net_if
+    libc.include.llvm-libc-macros.net_if_macros
+)
+
+add_proxy_header_library(
   netinet_in_macros
   HDRS
     netinet_in_macros.h
@@ -211,6 +229,15 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.sys_ptrace
     libc.include.llvm-libc-macros.sys_ptrace_macros
+)
+
+add_proxy_header_library(
+  sys_time_macros
+  HDRS
+    sys_time_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_time
+    libc.include.llvm-libc-macros.sys_time_macros
 )
 
 add_header_library(unistd_overlay HDRS unistd_overlay.h)

@@ -115,6 +115,14 @@ def foldable_fneg : GICombineRule<
          [{ return Helper.matchFoldableFneg(*${ffn}, ${matchinfo}); }]),
   (apply [{ Helper.applyFoldableFneg(*${ffn}, ${matchinfo}); }])>;
 
+// fabs (fptrunc x) -> fptrunc (fabs x)
+def fold_fabs_fptrunc : GICombineRule<
+  (defs root:$dst),
+  (match (G_FABS $dst, $round):$fabs,
+         (G_FPTRUNC $round, $src):$fptrunc,
+         [{ return Helper.matchFoldFAbsFptrunc(*${fabs}, *${fptrunc}); }]),
+  (apply [{ Helper.applyFoldFAbsFptrunc(*${fabs}, *${fptrunc}); }])>;
+
 // Detects s_mul_u64 instructions whose higher bits are zero/sign extended.
 def smulu64 : GICombineRule<
   (defs root:$smul, unsigned_matchinfo:$matchinfo),
@@ -237,7 +245,8 @@ def gfx8_combines : GICombineGroup<[expand_promoted_fmed3]>;
 def AMDGPUPreLegalizerCombiner: GICombiner<
   "AMDGPUPreLegalizerCombinerImpl",
   [all_combines, combine_fmul_with_select_to_fldexp, clamp_i64_to_i16,
-   foldable_fneg, combine_shuffle_vector, combine_shuffle_vector_to_build_vector,
+   foldable_fneg, fold_fabs_fptrunc, combine_shuffle_vector,
+   combine_shuffle_vector_to_build_vector,
    binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
@@ -246,7 +255,8 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
   "AMDGPUPostLegalizerCombinerImpl",
   [all_combines, gfx6gfx7_combines, gfx8_combines, combine_fmul_with_select_to_fldexp,
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
-   rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16, sign_extension_in_reg, smulu64,
+   fold_fabs_fptrunc, rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16,
+   sign_extension_in_reg, smulu64,
    binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
