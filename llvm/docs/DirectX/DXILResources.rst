@@ -2,6 +2,9 @@
 DXIL Resource Handling
 ======================
 
+.. contents::
+   :local:
+
 .. toctree::
    :hidden:
 

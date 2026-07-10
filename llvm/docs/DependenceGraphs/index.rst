@@ -2,6 +2,9 @@
 Dependence Graphs in LLVM
 =========================
 
+.. contents::
+   :local:
+
 Introduction
 ============
 Dependence graphs are useful tools in compilers for analyzing relationships

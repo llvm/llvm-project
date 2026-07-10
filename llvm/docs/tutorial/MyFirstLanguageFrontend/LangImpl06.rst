@@ -2,6 +2,9 @@
 Kaleidoscope: Extending the Language: User-defined Operators
 ============================================================
 
+.. contents::
+   :local:
+
 Chapter 6 Introduction
 ======================
 

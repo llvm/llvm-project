@@ -4,6 +4,9 @@
 Convergence And Uniformity
 ==========================
 
+.. contents::
+   :local:
+
 Introduction
 ============
 

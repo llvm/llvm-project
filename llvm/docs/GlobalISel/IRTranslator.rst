@@ -3,6 +3,9 @@
 IRTranslator
 ============
 
+.. contents::
+  :local:
+
 This pass translates the input LLVM-IR ``Function`` to a :doc:`GMIR`
 ``MachineFunction``. This is typically a direct translation but does
 occasionally get a bit more involved. For example:

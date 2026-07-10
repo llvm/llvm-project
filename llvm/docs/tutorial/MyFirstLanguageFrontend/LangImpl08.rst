@@ -2,6 +2,9 @@
  Kaleidoscope: Compiling to Object Code
 ========================================
 
+.. contents::
+   :local:
+
 Chapter 8 Introduction
 ======================
 
