@@ -31,6 +31,8 @@ public:
 
 private:
   const unsigned SizeThreshold;
+  /// Semicolon-separated regex patterns matching fully-qualified optional
+  /// types.
   const std::vector<StringRef> OptionalTypes;
   const bool WarnOnOwnershipTaking;
 };
