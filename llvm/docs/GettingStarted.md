@@ -1,5 +1,9 @@
 # Getting Started with the LLVM System
 
+```{contents}
+:local:
+```
+
 ## Overview
 
 Welcome to the LLVM project!

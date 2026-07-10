@@ -2,6 +2,9 @@
 Memory Model Relaxation Annotations
 ===================================
 
+.. contents::
+   :local:
+
 Introduction
 ============
 

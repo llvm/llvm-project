@@ -108,10 +108,9 @@ def FeatureMMX     : SubtargetFeature<"mmx","HasMMX", "true",
 def FeatureX86_64   : SubtargetFeature<"64bit", "HasX86_64", "true",
                                       "Support 64-bit instructions", [],
                                       InlineIgnore>;
-// TODO: This should not be InlineIgnore, as it affects the atomics ABI.
 def FeatureCX16     : SubtargetFeature<"cx16", "HasCX16", "true",
                                        "64-bit with cmpxchg16b (this is true for most x86-64 chips, but not the first AMD chips)",
-                                       [FeatureCX8], InlineIgnore>;
+                                       [FeatureCX8]>;
 def FeatureSSE4A   : SubtargetFeature<"sse4a", "HasSSE4A", "true",
                                       "Support SSE 4a instructions",
                                       [FeatureSSE3]>;

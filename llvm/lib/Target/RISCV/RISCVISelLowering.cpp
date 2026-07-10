@@ -6314,6 +6314,34 @@ static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
   return DAG.getBitcast(VT, DAG.getVectorShuffle(NewVT, DL, V0, V1, NewMask));
 }
 
+// Match an interleave shuffle that forms a P-extension packed zip:
+//   <a0, b0, a1, b1, ...> -> zip*p/wzip*p
+static SDValue lowerVECTOR_SHUFFLEAsPZip(ShuffleVectorSDNode *SVN,
+                                         SelectionDAG &DAG) {
+  SDValue V1 = SVN->getOperand(0);
+  SDValue V2 = SVN->getOperand(1);
+  SDLoc DL(SVN);
+  MVT VT = SVN->getSimpleValueType(0);
+  unsigned NumElts = VT.getVectorNumElements();
+  ArrayRef<int> Mask = SVN->getMask();
+
+  if (VT != MVT::v8i8 && VT != MVT::v4i16)
+    return SDValue();
+
+  SmallVector<unsigned, 2> StartIndexes;
+  if (!V2.isUndef() &&
+      ShuffleVectorInst::isInterleaveMask(Mask, 2, NumElts * 2, StartIndexes)) {
+    unsigned EvenSrc = StartIndexes[0];
+    unsigned OddSrc = StartIndexes[1];
+    if (EvenSrc == 0 && OddSrc == NumElts)
+      return DAG.getNode(RISCVISD::PZIP, DL, VT, V1, V2);
+    if (EvenSrc == NumElts && OddSrc == 0)
+      return DAG.getNode(RISCVISD::PZIP, DL, VT, V2, V1);
+  }
+
+  return SDValue();
+}
+
 SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDValue V1 = Op.getOperand(0);
@@ -6348,6 +6376,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
                       DAG.getConstant(VT.getSizeInBits() / 2, DL, MVT::i64));
       return DAG.getBitcast(VT, Srl);
     }
+
+    if (SDValue V = lowerVECTOR_SHUFFLEAsPZip(SVN, DAG))
+      return V;
     return SDValue();
   }
 
