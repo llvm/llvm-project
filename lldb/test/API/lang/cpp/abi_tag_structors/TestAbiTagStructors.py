@@ -36,7 +36,7 @@ class AbiTagStructorsTestCase(TestBase):
             result_type="Tagged",
             result_children=[ValueCheck(name="x", value="-17")],
         )
-        self.expect_expr("t1 = t2", result_type="Tagged")
+        self.expect_expr("t1 = t2", result_type="Tagged", stop_on_fail=True)
 
         self.expect("expr Tagged t3(t1)", error=False)
         self.expect("expr t1.~Tagged()", error=False)

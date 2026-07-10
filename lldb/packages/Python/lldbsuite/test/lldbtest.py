@@ -2979,6 +2979,7 @@ FileCheck output:
         result_type=None,
         result_children=None,
         options=None,
+        stop_on_fail=False,
     ):
         """
         Evaluates the given expression and verifies the result.
@@ -2989,6 +2990,10 @@ FileCheck output:
         :param result_children: The expected children of the expression result
                                 as a list of ValueChecks. None if the children shouldn't be checked.
         :param options: Expression evaluation options. None if a default set of options should be used.
+        :param stop_on_fail: If True, a failing check aborts the whole test.
+                             If False (the default), a failing check is recorded
+                             as a test failure but the rest of the test keeps
+                             running.
         """
         self.assertTrue(
             expr.strip() == expr,
@@ -3023,11 +3028,23 @@ FileCheck output:
             summary=result_summary,
             children=result_children,
         )
-        value_check.check_value(self, eval_result)
+        if stop_on_fail:
+            value_check.check_value(self, eval_result)
+        else:
+            # Run the checks in a subtest so that a failing check is reported
+            # as a test failure but doesn't abort the rest of the test.
+            with self.subTest(expr=expr):
+                value_check.check_value(self, eval_result)
         return eval_result
 
     def expect_var_path(
-        self, var_path, summary=None, value=None, type=None, children=None
+        self,
+        var_path,
+        summary=None,
+        value=None,
+        type=None,
+        children=None,
+        stop_on_fail=False,
     ):
         """
         Evaluates the given variable path and verifies the result.
@@ -3038,6 +3055,10 @@ FileCheck output:
         :param type: The type that the variable result should have. None if the type should not be checked.
         :param children: The expected children of the variable  as a list of ValueChecks.
                          None if the children shouldn't be checked.
+        :param stop_on_fail: If True, a failing check aborts the whole test.
+                             If False (the default), a failing check is recorded
+                             as a test failure but the rest of the test keeps
+                             running.
         """
         self.assertTrue(
             var_path.strip() == var_path,
@@ -3050,7 +3071,13 @@ FileCheck output:
         value_check = ValueCheck(
             type=type, value=value, summary=summary, children=children
         )
-        value_check.check_value(self, eval_result)
+        if stop_on_fail:
+            value_check.check_value(self, eval_result)
+        else:
+            # Run the checks in a subtest so that a failing check is reported
+            # as a test failure but doesn't abort the rest of the test.
+            with self.subTest(var_path=var_path):
+                value_check.check_value(self, eval_result)
         return eval_result
 
     """Assert that an lldb.SBError is in the "success" state."""
