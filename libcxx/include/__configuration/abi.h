@@ -96,7 +96,7 @@
 //
 // To fix the bug we had to change the ABI of some classes to remove [[no_unique_address]] under certain conditions.
 // The macro below is used for all classes whose ABI have changed as part of fixing these bugs.
-#define _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS __attribute__((__abi_tag__("llvm18_nua")))
+#define _LIBCPP_LLVM18_NO_UNIQUE_ADDRESS_ABI_TAG __attribute__((__abi_tag__("llvm18_nua")))
 
 // [[msvc::no_unique_address]] seems to mostly affect empty classes, so the padding scheme for Itanium doesn't work.
 #if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING)
