@@ -261,8 +261,9 @@ Error HTTPClient::perform(const HTTPRequest &Request,
   // Set timeouts for all 4 phases: resolve, connect, send and receive. Resolve
   // and connect are hard-coded since they don't vary with different payloads.
   // Send and receive is configurable and defaults to 30000.
-  WinHttpSetTimeouts(Session->SessionHandle, 5000, 10000, Session->TimeoutMs,
-                     Session->TimeoutMs);
+  if (!WinHttpSetTimeouts(Session->SessionHandle, 5000, 10000,
+                          Session->TimeoutMs, Session->TimeoutMs))
+    return createStringError(errc::io_error, "Failed to set WinHTTP timeout");
 
   // Prevent fallback to TLS 1.0/1.1
   DWORD SecureProtocols =
