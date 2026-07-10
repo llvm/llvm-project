@@ -1,8 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -Wnonportable-sycl -Wno-vla-cxx-extension -fsycl-is-host -verify %s
-// RUN: %clang_cc1 -triple spirv64 -std=c++17 -fsyntax-only -Wnonportable-sycl -Wno-vla-cxx-extension -fsycl-is-device -verify %s
-
-// TODO conditionally toggle Wnonportable-sycl
-
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -Wno-vla-cxx-extension -fsycl-is-host -verify=expected %s
+// RUN: %clang_cc1 -triple spirv64 -std=c++17 -fsyntax-only -Wno-vla-cxx-extension -fsycl-is-device -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -Wnonportable-sycl -Wno-vla-cxx-extension -fsycl-is-host -verify=expected,nonportable %s
+// RUN: %clang_cc1 -triple spirv64 -std=c++17 -fsyntax-only -Wnonportable-sycl -Wno-vla-cxx-extension -fsycl-is-device -verify=expected,nonportable %s
 
 // A unique kernel name type is required for each declared kernel entry point.
 template<int, int = 0> struct KN;
@@ -271,50 +270,27 @@ void test() {
 
 } // namespace fam1
 
-// Check for variably modified types -- would not be copyable to device
-namespace vmt1 {
-// Kernel entry point template definition.
-template<typename KNT, typename T>
-[[clang::sycl_kernel_entry_point(KNT)]]
-void kernel_single_task(T t) {} // expected-note-re {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
-
-void test() {
-  int n;
-  int Vmt[n];
-  // VLAs as parameters are lowered to a pointer, preventing test cases with VLAs
-  // as normal lambda parameters. The below test case uses technically invalid
-  // code, but preserves the VLA in the lambda.
-  // As a result, suppress "variable-sized object may not be initialized" is needed.
-  kernel_single_task<class KN<23>>([=]{ (void)Vmt; });
-  // expected-error@-1 {{'int[n]' is a variably modified type and cannot be used as a SYCL kernel parameter}}
-  // expected-note-re@-2 {{in instantiation of function template specialization 'vmt1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
-  // expected-note@-3 {{within capture 'Vmt' of lambda expression here}}
-  // expected-error@-4 {{variable-sized object may not be initialized}}
-}
-
-} // namespace vmt1
- 
 // Check for pointer parameters
 namespace nonportable1 {
 // Kernel entry point template definition.
 template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
-void kernel_single_task(T t) {} // expected-note-re {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
-                                // expected-note-re@-1 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
-                                // expected-note-re@-2 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
-                                // expected-note-re@-3 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
+void kernel_single_task(T t) {} // nonportable-note-re {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
+                                // nonportable-note-re@-1 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
+                                // nonportable-note-re@-2 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
+                                // nonportable-note-re@-3 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
 
-struct S { // expected-note {{within field of type 'S' declared here}}
-           // expected-note@-1 {{within field of type 'S' declared here}}
+struct S { // nonportable-note {{within field of type 'S' declared here}}
+           // nonportable-note@-1 {{within field of type 'S' declared here}}
   int *ptr;
-  // expected-warning@-1 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
-  // expected-warning@-2 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
+  // nonportable-warning@-1 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
+  // nonportable-warning@-2 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
 };
 
-class C { // expected-note {{within field of type 'C' declared here}}
+class C { // nonportable-note {{within field of type 'C' declared here}}
 private:
   int *ptr;
-  // expected-warning@-1 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
+  // nonportable-warning@-1 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
   // TODO double-check this warning actually tells me what field is the problem
 public:
   C(int *p) : ptr(p) {}
@@ -323,24 +299,24 @@ public:
 void test() {
   int *ptr;
   kernel_single_task<class KN<25>>([=]{ (void)ptr; });
-  // expected-warning@-1 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
-  // expected-note-re@-2 {{in instantiation of function template specialization 'nonportable1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
-  // expected-note@-3 {{within capture 'ptr' of lambda expression here}}
+  // nonportable-warning@-1 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
+  // nonportable-note-re@-2 {{in instantiation of function template specialization 'nonportable1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+  // nonportable-note@-3 {{within capture 'ptr' of lambda expression here}}
 
   S s{ptr};
   kernel_single_task<class KN<26>>([=]{ (void)s; });
-  // expected-note-re@-1 {{in instantiation of function template specialization 'nonportable1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
-  // expected-note@-2 {{within capture 's' of lambda expression here}}
+  // nonportable-note-re@-1 {{in instantiation of function template specialization 'nonportable1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+  // nonportable-note@-2 {{within capture 's' of lambda expression here}}
   
   C c{ptr};
   kernel_single_task<class KN<27>>([=]{ (void)c; });
-  // expected-note-re@-1 {{in instantiation of function template specialization 'nonportable1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
-  // expected-note@-2 {{within capture 'c' of lambda expression here}}
+  // nonportable-note-re@-1 {{in instantiation of function template specialization 'nonportable1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+  // nonportable-note@-2 {{within capture 'c' of lambda expression here}}
   
   S arr[3] = {{ptr}, {ptr}, {ptr}};
   kernel_single_task<class KN<28>>([=]{ (void)arr; });
-  // expected-note-re@-1 {{in instantiation of function template specialization 'nonportable1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
-  // expected-note@-2 {{within capture 'arr' of lambda expression here}}
+  // nonportable-note-re@-1 {{in instantiation of function template specialization 'nonportable1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+  // nonportable-note@-2 {{within capture 'arr' of lambda expression here}}
 }
 
 } // namespace nonportable1

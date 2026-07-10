@@ -770,10 +770,6 @@ public:
       emitDiagnostic(diag::err_bad_kernel_param_type);
       IsValid = false;
       return false;
-    } else if (Ty->isVariablyModifiedType()) {
-      emitDiagnostic(diag::err_sycl_kernel_param_has_vmt);
-      IsValid = false;
-      return false;
     } else if (Ty->isStructureTypeWithFlexibleArrayMember()) {
       emitDiagnostic(diag::err_sycl_kernel_param_has_fam);
       IsValid = false;
