@@ -105,6 +105,10 @@ infrastructure are described first, followed by tool-specific sections.
   piping from {program}`git` to {program}`clang-tidy-diff.py`, where slashes
   will now be automatically normalized.
 
+- Added a new {program}`clang-tidy` command line option `-export-sarif=<file>`
+  in which clang-tidy diagnostics are exported in the `SARIF https://sarifweb.azurewebsites.net/`
+  format.
+  
 #### New checks
 
 - New {doc}`llvm-invalid-regex-pattern
