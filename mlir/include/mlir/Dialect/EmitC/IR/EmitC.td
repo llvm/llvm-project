@@ -65,6 +65,39 @@ class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
   }];
 }
 
+// Base class for increment and decrement operations.
+class EmitC_IncDecOp<string mnemonic, string summaryStr>
+    : EmitC_Op<mnemonic, [
+        CExpressionInterface,
+        TypesMatchWith<"input and result reference the same type",
+                       "operand", "result",
+                       "::llvm::cast<emitc::LValueType>($_self).getValueType()">
+      ]> {
+  let summary = summaryStr;
+  let description = [{
+    This operation models a C/C++ increment or decrement operator on an lvalue.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.pre_increment %arg0 : !emitc.lvalue<i32>
+    ```
+  }];
+
+  let arguments = (ins
+    Res<EmitC_LValueType, "",
+        [MemRead<DefaultResource, 0, FullEffect>,
+         MemWrite<DefaultResource, 0, FullEffect>]>:$operand);
+  let results = (outs EmitCType:$result);
+  let assemblyFormat = "$operand attr-dict `:` type($operand)";
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      return true;
+    }
+  }];
+}
+
 // Types only used in binary arithmetic operations.
 def IntegerIndexOrOpaqueType : Type<CPred<"emitc::isIntegerIndexOrOpaqueType($_self)">,
 "integer, index or opaque type supported by EmitC">;
@@ -1258,6 +1291,18 @@ def EmitC_ConditionalOp : EmitC_Op<"conditional",
     }
   }];
 }
+
+def EmitC_PreIncrementOp
+    : EmitC_IncDecOp<"pre_increment", "Pre-increment operation">;
+
+def EmitC_PostIncrementOp
+    : EmitC_IncDecOp<"post_increment", "Post-increment operation">;
+
+def EmitC_PreDecrementOp
+    : EmitC_IncDecOp<"pre_decrement", "Pre-decrement operation">;
+
+def EmitC_PostDecrementOp
+    : EmitC_IncDecOp<"post_decrement", "Post-decrement operation">;
 
 def EmitC_UnaryMinusOp : EmitC_UnaryOp<"unary_minus", []> {
   let summary = "Unary minus operation";

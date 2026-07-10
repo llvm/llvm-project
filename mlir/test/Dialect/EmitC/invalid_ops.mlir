@@ -981,3 +981,19 @@ func.func @dereference(%arg0: !emitc.ptr<i32>) {
   %1 = "emitc.dereference"(%arg0) : (!emitc.ptr<i32>) -> !emitc.lvalue<i8>
   return
 }
+
+// -----
+
+func.func @pre_increment_unmatch_type(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.pre_increment"(%arg0) : (!emitc.lvalue<i32>) -> i8
+  return
+}
+
+// -----
+
+func.func @post_decrement_unmatch_type(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.post_decrement"(%arg0) : (!emitc.lvalue<i32>) -> i8
+  return
+}
