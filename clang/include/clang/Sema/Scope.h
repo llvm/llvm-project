@@ -140,8 +140,8 @@ public:
     /// This is the scope of a C++ catch statement.
     CatchScope = 0x1000000,
 
-    /// This bit is currently unused.
-    Unused = 0x2000000,
+    /// This is the scope of a C++26 expansion statement.
+    ExpansionStmtScope = 0x2000000,
 
     /// This is a scope of some OpenMP directive with
     /// order clause which specifies concurrent
@@ -193,16 +193,6 @@ private:
   /// PrototypeIndex - This is the number of parameters currently
   /// declared in this scope.
   unsigned short PrototypeIndex;
-
-  /// IsExpansionStmtScope - This is the scope corresponding to a C++26
-  /// expansion statement.
-  ///
-  /// FIXME: This should be part of ScopeFlags, but we're out of bits, so we
-  /// need to update every place that uses 'unsigned' to hold scope flags. We
-  /// should probably redefine ScopeFlags as an 'enum class : uint64_t' and
-  /// use LLVM_MARK_AS_BITMASK_ENUM() and friends so we can continue to '|'
-  /// scope flags together.
-  bool IsExpansionStmtScope;
 
   /// FnParent - If this scope has a parent scope that is a function body, this
   /// pointer is non-null and points to it.  This is used for label processing.
@@ -309,11 +299,9 @@ public:
     return const_cast<Scope*>(this)->getContinueParent();
   }
 
-  void setIsExpansionStmtScope(bool Value = true) {
-    IsExpansionStmtScope = Value;
+  bool isExpansionStmtScope() const {
+    return getFlags() & Scope::ExpansionStmtScope;
   }
-
-  bool isExpansionStmtScope() const { return IsExpansionStmtScope; }
 
   /// getBreakParent - Return the closest scope that a break statement
   /// would be affected by.
