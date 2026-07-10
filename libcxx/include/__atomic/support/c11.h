@@ -30,13 +30,16 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <typename _Tp>
 struct __cxx_atomic_base_impl {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __cxx_atomic_base_impl() _NOEXCEPT : __a_value() {
-    std::__clear_padding_if_needed(__a_value);
+  _LIBCPP_HIDE_FROM_ABI
+#ifndef _LIBCPP_CXX03_LANG
+  __cxx_atomic_base_impl() _NOEXCEPT = default;
+#else
+  __cxx_atomic_base_impl() _NOEXCEPT : __a_value() {
   }
+#endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT : __a_value(__value) {
-    std::__clear_padding_if_needed(__a_value);
-  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT
+      : __a_value(std::__clear_padding_if_needed(__value)) {}
 
   _Atomic(_Tp) __a_value;
 };
