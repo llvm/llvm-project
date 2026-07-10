@@ -1043,7 +1043,6 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
 
   uint32_t adrpInstr = read32le(buf + adrpRel.offset);
   uint32_t adrpDestReg = adrpInstr & 0x1f;
-
   Relocation adrpSymRel = {RE_AARCH64_PAGE_PC, R_AARCH64_ADR_PREL_PG_HI21,
                            adrpRel.offset, /*addend=*/0, sym};
   Relocation addRel = {R_ABS, R_AARCH64_ADD_ABS_LO12_NC, ldrRel.offset,
