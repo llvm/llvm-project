@@ -7,21 +7,22 @@ define i32 @f(ptr %a, i32 %k) {
 ; CHECK-LABEL: define i32 @f(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[K:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[K]] to i64
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[CHECK:.*]] ]
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = zext i32 [[IV]] to i64
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[CHECK:.*]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp ne i32 [[V]], 0
-; CHECK-NEXT:    [[LT:%.*]] = icmp ult i32 [[IV]], [[K]]
+; CHECK-NEXT:    [[LT:%.*]] = icmp samesign ult i64 [[INDVARS_IV]], [[TMP0]]
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[DONE]], i1 [[LT]], i1 false
 ; CHECK-NEXT:    br i1 [[OR_COND]], label %[[CHECK]], label %[[EXIT:.*]]
 ; CHECK:       [[CHECK]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[IV]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_LCSSA_WIDE:%.*]] = phi i64 [ [[INDVARS_IV]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[IV_LCSSA_WIDE]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
@@ -51,21 +52,22 @@ define i32 @f_sext(ptr %a, i32 %k) {
 ; CHECK-LABEL: define i32 @f_sext(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[K:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[K]] to i64
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[CHECK:.*]] ]
-; CHECK-NEXT:    [[IDX:%.*]] = sext i32 [[IV]] to i64
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[CHECK:.*]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[A]], i64 [[IDX]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp ne i32 [[V]], 0
-; CHECK-NEXT:    [[LT:%.*]] = icmp slt i32 [[IV]], [[K]]
+; CHECK-NEXT:    [[LT:%.*]] = icmp slt i64 [[IDX]], [[TMP0]]
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[DONE]], i1 [[LT]], i1 false
 ; CHECK-NEXT:    br i1 [[OR_COND]], label %[[CHECK]], label %[[EXIT:.*]]
 ; CHECK:       [[CHECK]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[IDX]], 1
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_LCSSA_WIDE:%.*]] = phi i64 [ [[IDX]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = trunc nuw nsw i64 [[IV_LCSSA_WIDE]] to i32
 ; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
 ;
 entry:
