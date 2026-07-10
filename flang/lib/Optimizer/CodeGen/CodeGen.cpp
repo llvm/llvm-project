@@ -1486,10 +1486,11 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
             loc, mallocTy, rewriter, static_cast<std::int64_t>(*alignment - 1));
         mlir::Value sizePlus = mlir::LLVM::AddOp::create(
             rewriter, loc, mallocTy, size, alignMinusOne);
-        mlir::Value div = mlir::LLVM::UDivOp::create(rewriter, loc, mallocTy,
-                                                     sizePlus, alignVal);
-        mlir::Value roundedSize =
-            mlir::LLVM::MulOp::create(rewriter, loc, mallocTy, div, alignVal);
+        mlir::Value notAlignMinusOne = fir::genConstantIndex(
+            loc, mallocTy, rewriter,
+            ~static_cast<std::int64_t>(*alignment - 1));
+        mlir::Value roundedSize = mlir::LLVM::AndOp::create(
+            rewriter, loc, mallocTy, sizePlus, notAlignMinusOne);
         heap->setAttr("callee", getAlignedAlloc(heap, rewriter, mallocTy));
         rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
             heap, ::getLlvmPtrType(heap.getContext()),

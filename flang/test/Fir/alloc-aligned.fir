@@ -21,8 +21,7 @@ func.func @allocmem_array_aligned() -> !fir.heap<!fir.array<1000xf32>> {
 // CHECK: %[[SIZE:.*]] = mul i64 4, %{{.*}}
 // CHECK: %[[NONZERO:.*]] = select i1 %{{.*}}, i64 %[[SIZE]], i64 1
 // POSIX: %[[PLUS:.*]] = add i64 %[[NONZERO]], 63
-// POSIX: %[[DIV:.*]] = udiv i64 %[[PLUS]], 64
-// POSIX: %[[ROUNDED:.*]] = mul i64 %[[DIV]], 64
+// POSIX: %[[ROUNDED:.*]] = and i64 %[[PLUS]], -64
 // POSIX: call ptr @aligned_alloc(i64 64, i64 %[[ROUNDED]])
 // DARWIN: store ptr null, ptr %[[MEMPTR]]
 // DARWIN: %{{.*}} = call i32 @posix_memalign(ptr %[[MEMPTR]], i64 64, i64 %[[NONZERO]])
