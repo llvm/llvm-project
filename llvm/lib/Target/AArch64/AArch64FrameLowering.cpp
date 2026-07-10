@@ -1800,7 +1800,6 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
       unsigned SpillCount = NeedsWinCFI ? FirstReg - i : i;
       int Aligned = AlignOffset(ByteOffset, Scale);
       int PairOffset = IsWindows ? Aligned : Aligned + StackFillDir * 2 * Scale;
-      // True when the pair's ldp/stp offset fits the signed 7-bit scaled imm.
       bool PairFitsImmRange =
           PairOffset / Scale >= -64 && PairOffset / Scale <= 63;
       switch (RPI.Type) {
