@@ -3592,10 +3592,10 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
 
     VPlan &CurrentPlan = getPlanFor(NextVF.Width);
     ElementCount EffectiveVF = GetEffectiveVF(CurrentPlan, NextVF.Width);
-    // Skip fixed vector VFs >= to the (estimated) runtime VF, or any VF > than
+    // Skip fixed vector VFs > to the estimated runtime VF, or any VF > than
     // the VF of the main loop.
     if ((!EffectiveVF.isScalable() && MainLoopVF.isScalable() &&
-         ElementCount::isKnownGE(EffectiveVF, EstimatedRuntimeVF)) ||
+         ElementCount::isKnownGT(EffectiveVF, EstimatedRuntimeVF)) ||
         ElementCount::isKnownGT(EffectiveVF, MainLoopVF))
       continue;
 
