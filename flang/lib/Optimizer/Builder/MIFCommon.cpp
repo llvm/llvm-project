@@ -82,23 +82,22 @@ mlir::Value mif::genImageIndex(fir::FirOpBuilder &builder, mlir::Location loc,
   return imageIndex;
 }
 
-mlir::func::FuncOp mif::getOrCreateInitFunc(mlir::OpBuilder &builder,
+mlir::func::FuncOp mif::getOrCreateInitFunc(fir::FirOpBuilder &builder,
                                             mlir::ModuleOp mod,
                                             llvm::StringRef name) {
-
-  if (auto func = mod.lookupSymbol<mlir::func::FuncOp>(name))
+  mlir::Location loc = mod.getLoc();
+  auto funcType = builder.getFunctionType({}, {});
+  auto func = builder.createFunction(loc, name, funcType);
+  if (!func.empty())
     return func;
 
-  auto funcType = builder.getFunctionType({}, {});
+  func.setPublic();
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(mod.getBody());
 
-  mlir::Location loc = mod.getLoc();
-  auto func = mlir::func::FuncOp::create(builder, loc, name, funcType);
-  func.setPublic();
-
   func.addEntryBlock();
   builder.setInsertionPointToEnd(&func.getBody().front());
+  mif::InitOp::create(builder, loc);
   mlir::func::ReturnOp::create(builder, loc);
 
   return func;

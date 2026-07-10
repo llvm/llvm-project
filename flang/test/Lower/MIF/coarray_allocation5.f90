@@ -15,6 +15,7 @@ end program
 ! CHECK-LABEL: func.func @__mif_save_coarrays_allocate()
 ! CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.array<0xi64>
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.array<1xi64>
+! CHECK:  %[[INIT_STAT:.*]] = mif.init -> i32
 ! CHECK:  %[[VAL_2:.*]] = fir.address_of(@_QMm_coarray_testEmodule_coarray) : !fir.ref<f32>
 ! CHECK:  %c1_i64 = arith.constant 1 : i64
 ! CHECK:  %c1_i64_0 = arith.constant 1 : i64

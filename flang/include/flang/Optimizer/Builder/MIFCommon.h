@@ -24,7 +24,7 @@ mlir::Value genImageIndex(fir::FirOpBuilder &, mlir::Location loc,
                           mlir::Value coarray, mlir::Value sub,
                           mlir::Value team);
 
-mlir::func::FuncOp getOrCreateInitFunc(mlir::OpBuilder &builder,
+mlir::func::FuncOp getOrCreateInitFunc(fir::FirOpBuilder &builder,
                                        mlir::ModuleOp mod,
                                        llvm::StringRef name);
 

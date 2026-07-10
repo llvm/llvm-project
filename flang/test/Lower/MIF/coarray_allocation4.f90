@@ -38,6 +38,7 @@ end program
 ! CHECK:   %[[VAL_3:.*]] = fir.alloca !fir.array<1xi64>
 ! CHECK:   %[[VAL_4:.*]] = fir.alloca !fir.array<0xi64>
 ! CHECK:   %[[VAL_5:.*]] = fir.alloca !fir.array<1xi64>
+! CHECK:   %[[INIT_STAT:.*]] = mif.init -> i32
 ! CHECK:   %[[VAL_6:.*]] = fir.address_of(@_QFtest_coarray_saveEm) : !fir.ref<f32>
 ! CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
 ! CHECK:   %[[C1_I64_0:.*]] = arith.constant 1 : i64
