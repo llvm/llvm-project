@@ -820,6 +820,9 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       bool DoFold = CanFold(Base.LHSNW & Base.RHSNW);
 
       if (!DoFold) {
+        // Without the flags, we can still fold if the offsets are constant and
+        // they cross the base's alignment boundary the same number of times, so
+        // either both arguments will wrap, or none of them will.
         unsigned BW = DL.getIndexTypeSizeInBits(GEPLHS->getType());
         APInt Alignment = APInt(BW, Base.Ptr->getPointerAlignment(DL).value());
         APInt LOff(BW, 0);

@@ -1204,6 +1204,29 @@ define i1 @gep_const_edge_case_3(ptr align 16 %foo) {
   ret i1 %cmp
 }
 
+define i1 @gep_const_edge_case_4(ptr align 16 %foo) {
+; CHECK-LABEL: @gep_const_edge_case_4(
+; CHECK-NEXT:    ret i1 false
+;
+  %gep1 = getelementptr i8, ptr %foo, i64 -15
+  %gep2 = getelementptr i8, ptr %foo, i64 -16
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_const_edge_case_5(ptr align 16 %foo) {
+; CHECK-LABEL: @gep_const_edge_case_5(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 -16
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO]], i64 -17
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i8, ptr %foo, i64 -16
+  %gep2 = getelementptr i8, ptr %foo, i64 -17
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
 define i1 @gep_variable_offsets(ptr align 16 %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @gep_variable_offsets(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 [[I:%.*]]
