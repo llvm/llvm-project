@@ -368,6 +368,20 @@ void DiagnosticIDs::initCustomDiagMapping(DiagnosticMapping &Mapping,
       diag::Flavor DiagFlavor = Diag.GetClass() == CLASS_REMARK
                                     ? diag::Flavor::Remark
                                     : diag::Flavor::WarningOrError;
+      // -Wuser-defined-warnings is the least-specific control over every runtime
+      // plugin group: it is the static root the "plugin" umbrella nests under,
+      // so -Wno-user-defined-warnings / -Werror=user-defined-warnings reach
+      // plugin diagnostics too. Seed a warning's mapping from a flag on it; a
+      // more specific plugin-group flag below overrides. Remarks are not
+      // warnings and follow -R flags only, so they do not inherit it.
+      if (DiagFlavor == diag::Flavor::WarningOrError)
+        if (std::optional<diag::Group> UDW =
+                getGroupForWarningOption("user-defined-warnings")) {
+          auto Sev = static_cast<diag::Severity>(
+              GroupInfos[static_cast<size_t>(*UDW)].Severity);
+          if (Sev != diag::Severity())
+            Mapping.setSeverity(Sev);
+        }
       const DynamicGroupInfo *Best = nullptr;
       size_t BestLen = 0;
       for (const auto &Entry : DynamicGroups)
@@ -482,6 +496,58 @@ unsigned DiagnosticIDs::getCustomDiagID(CustomDiagDesc Diag) {
       Info.Members.push_back(ID);
   }
   return ID;
+}
+
+unsigned DiagnosticIDs::getCustomDiagID(Level Level, StringRef Message,
+                                        StringRef Group) {
+  unsigned Class = CLASS_WARNING;
+  diag::Severity Sev = diag::Severity::Warning;
+  switch (Level) {
+  case DiagnosticIDs::Level::Ignored:
+    Sev = diag::Severity::Ignored;
+    break;
+  case DiagnosticIDs::Level::Note:
+    Sev = diag::Severity::Fatal;
+    Class = CLASS_NOTE;
+    break;
+  case DiagnosticIDs::Level::Remark:
+    Sev = diag::Severity::Remark;
+    Class = CLASS_REMARK;
+    break;
+  case DiagnosticIDs::Level::Warning:
+    Sev = diag::Severity::Warning;
+    break;
+  case DiagnosticIDs::Level::Error:
+    Sev = diag::Severity::Error;
+    Class = CLASS_ERROR;
+    break;
+  case DiagnosticIDs::Level::Fatal:
+    Sev = diag::Severity::Fatal;
+    Class = CLASS_ERROR;
+    break;
+  }
+  // If Group names a built-in (static) group, join it directly so the
+  // diagnostic is controlled like any other member of that group (e.g. a
+  // -Wdeprecated addition). Otherwise it is a runtime-registered group kept in
+  // the dynamic registry, whose name need not be known at build time.
+  std::optional<diag::Group> StaticGroup = getGroupForWarningOption(Group);
+  return getCustomDiagID(CustomDiagDesc(
+      Sev, std::string(Message), Class,
+      /*ShowInSystemHeader=*/false, /*ShowInSystemMacro=*/false, StaticGroup,
+      StaticGroup ? std::string() : std::string(Group)));
+}
+
+unsigned DiagnosticIDs::getCustomPluginDiagID(Level Level, StringRef Message,
+                                              StringRef PluginName,
+                                              StringRef Subgroup) {
+  // A thin convention over getCustomDiagID: place the diagnostic in the
+  // plugin's own runtime group "<plugin>-plugin[-<sub>]" that the -Wplugin
+  // umbrella controls. A plugin that wants to join an existing group instead
+  // calls getCustomDiagID(Level, Message, Group) with that group's name.
+  std::string Group = (Twine(PluginName) + "-plugin").str();
+  if (!Subgroup.empty())
+    Group = (Twine(Group) + "-" + Subgroup).str();
+  return getCustomDiagID(Level, Message, Group);
 }
 
 bool DiagnosticIDs::isWarningOrExtension(unsigned DiagID) const {
@@ -845,6 +911,36 @@ static bool getDiagnosticsInGroup(diag::Flavor Flavor,
   return NotFound;
 }
 
+bool DiagnosticIDs::appendPluginGroupDiags(
+    diag::Flavor Flavor, StringRef Ctrl,
+    SmallVectorImpl<diag::kind> &Diags) const {
+  // Add the members of every registered plugin group that \p Ctrl controls and
+  // that match the requested flavor -- a plugin group may hold warnings, errors
+  // (both WarningOrError) and remarks. Returns whether any group matched, i.e.
+  // whether \p Ctrl names a known (registered) plugin group.
+  bool Any = false;
+  for (const auto &Entry : DynamicGroups)
+    if (pluginGroupControls(Ctrl, Entry.first())) {
+      Any = true;
+      if (!CustomDiagInfo)
+        continue;
+      for (unsigned ID : Entry.second.Members) {
+        DiagnosticIDs::Class Class =
+            CustomDiagInfo->getDescription(ID).GetClass();
+        // Errors are not controllable by -W/-R group flags; leave them out so
+        // the mapping is never asked to downgrade an error.
+        if (Class == CLASS_ERROR)
+          continue;
+        diag::Flavor MemberFlavor = Class == CLASS_REMARK
+                                        ? diag::Flavor::Remark
+                                        : diag::Flavor::WarningOrError;
+        if (MemberFlavor == Flavor)
+          Diags.push_back(ID);
+      }
+    }
+  return Any;
+}
+
 bool
 DiagnosticIDs::getDiagnosticsInGroup(diag::Flavor Flavor, StringRef Group,
                                      SmallVectorImpl<diag::kind> &Diags) const {
@@ -852,39 +948,24 @@ DiagnosticIDs::getDiagnosticsInGroup(diag::Flavor Flavor, StringRef Group,
     if (CustomDiagInfo)
       llvm::copy(CustomDiagInfo->getDiagsInGroup(*G),
                  std::back_inserter(Diags));
+    // -Wuser-defined-warnings is the static root every runtime plugin group
+    // nests under, so a flag on it reaches plugin diagnostics too, just like the
+    // "plugin" umbrella does. Add their members before descending the static
+    // subgroups.
+    if (Group == "user-defined-warnings")
+      appendPluginGroupDiags(Flavor, "plugin", Diags);
     return ::getDiagnosticsInGroup(Flavor,
                                    &OptionTable[static_cast<unsigned>(*G)],
                                    Diags, CustomDiagInfo.get());
   }
   // A runtime plugin group. "plugin" is the umbrella over every plugin group;
-  // "<plugin>-plugin" also controls its "<plugin>-plugin-<sub>" subgroups. Add
-  // the members of every registered group this name controls that match the
-  // requested flavor -- a plugin group may hold warnings, errors (both
-  // WarningOrError) and remarks. The group counts as "known" once it (or a
-  // subgroup) is registered -- by a -W/-R flag or by a plugin -- so it is not
-  // reported as an unknown option; genuine typos are caught later by
-  // reportUnclaimedPluginGroups.
+  // "<plugin>-plugin" also controls its "<plugin>-plugin-<sub>" subgroups. The
+  // group counts as "known" once it (or a subgroup) is registered -- by a -W/-R
+  // flag or by a plugin -- so it is not reported as an unknown option; genuine
+  // typos are caught later by reportUnclaimedPluginGroups.
   if (isPluginGroupName(Group)) {
     bool Known = DynamicGroups.contains(Group);
-    for (const auto &Entry : DynamicGroups)
-      if (pluginGroupControls(Group, Entry.first())) {
-        Known = true;
-        for (unsigned ID : Entry.second.Members) {
-          if (!CustomDiagInfo)
-            continue;
-          DiagnosticIDs::Class Class =
-              CustomDiagInfo->getDescription(ID).GetClass();
-          // Errors are not controllable by -W/-R group flags; leave them out so
-          // the mapping is never asked to downgrade an error.
-          if (Class == CLASS_ERROR)
-            continue;
-          diag::Flavor MemberFlavor = Class == CLASS_REMARK
-                                          ? diag::Flavor::Remark
-                                          : diag::Flavor::WarningOrError;
-          if (MemberFlavor == Flavor)
-            Diags.push_back(ID);
-        }
-      }
+    Known |= appendPluginGroupDiags(Flavor, Group, Diags);
     return !Known;
   }
   return true;

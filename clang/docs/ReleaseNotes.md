@@ -127,13 +127,17 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Improvements to Clang's diagnostics
 
-- Plugin diagnostics can now be placed in a warning group. `getCustomDiagID`
-  accepts a group name, so a plugin's diagnostics can be controlled with `-W`
-  and `-R` flags like built-in ones: by convention a plugin uses
-  `<plugin>-plugin`, silenced with `-Wno-<plugin>-plugin` (or the `-Wno-plugin`
-  umbrella over every loaded plugin), promoted with `-Werror=<plugin>-plugin`,
-  and remarks controlled with `-R<plugin>-plugin`. Errors keep their severity.
-  See [ClangPlugins](ClangPlugins.rst).
+- Custom diagnostics can now be placed in a warning group. A new
+  `getCustomDiagID(Level, Message, Group)` overload puts a diagnostic in any
+  warning group named by `Group`, whether an existing built-in group or a
+  runtime-registered one whose name is not known at build time, so it can be
+  controlled with `-W` and `-R` flags like a built-in diagnostic. Plugins get a
+  thin convenience, `getCustomPluginDiagID`, that derives the group from the
+  plugin's name as `<plugin>-plugin`: silenced with `-Wno-<plugin>-plugin` (the
+  `-Wno-plugin` umbrella over every loaded plugin, or `-Wno-user-defined-warnings`
+  over every runtime group), promoted with `-Werror=<plugin>-plugin`, and remarks
+  controlled with `-R<plugin>-plugin`. Errors keep their severity. See
+  [ClangPlugins](ClangPlugins.rst).
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 

@@ -504,9 +504,8 @@ private:
 
 // -Wno-<group> silences a plugin diagnostic tagged with that group.
 TEST_F(PluginWarningGroupTest, WnoSuppressesPluginGroup) {
-  unsigned ID =
-      Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                            "plugin reused an AST node", "example-plugin");
+  unsigned ID = Diags.getCustomPluginDiagID(
+      DiagnosticsEngine::Warning, "plugin reused an AST node", "example");
   EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
 
   DiagOpts.Warnings = {"no-example-plugin"};
@@ -523,9 +522,8 @@ TEST_F(PluginWarningGroupTest, WnoBeforePluginRegistersGroup) {
   ProcessWarningOptions(Diags, DiagOpts, *FS);
   EXPECT_THAT(diags(), IsEmpty());
 
-  unsigned ID =
-      Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                            "plugin reused an AST node", "example-plugin");
+  unsigned ID = Diags.getCustomPluginDiagID(
+      DiagnosticsEngine::Warning, "plugin reused an AST node", "example");
   EXPECT_TRUE(Diags.isIgnored(ID, SourceLocation()));
 }
 
@@ -534,18 +532,18 @@ TEST_F(PluginWarningGroupTest, WnoPluginUmbrellaSuppressesEveryPluginGroup) {
   DiagOpts.Warnings = {"no-plugin"};
   ProcessWarningOptions(Diags, DiagOpts, *FS);
 
-  unsigned First = Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                                         "first diag", "example-plugin");
-  unsigned Other = Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                                         "other diag", "othertool-plugin");
+  unsigned First = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                               "first diag", "example");
+  unsigned Other = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                               "other diag", "othertool");
   EXPECT_TRUE(Diags.isIgnored(First, SourceLocation()));
   EXPECT_TRUE(Diags.isIgnored(Other, SourceLocation()));
 }
 
 // -Wno-<group> only touches diagnostics in that group.
 TEST_F(PluginWarningGroupTest, LeavesOtherDiagnosticsAlone) {
-  unsigned Grouped = Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                                           "grouped", "example-plugin");
+  unsigned Grouped = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                                 "grouped", "example");
   unsigned Ungrouped =
       Diags.getCustomDiagID(DiagnosticsEngine::Warning, "ungrouped");
 
@@ -557,8 +555,8 @@ TEST_F(PluginWarningGroupTest, LeavesOtherDiagnosticsAlone) {
 
 // -Werror=<group> promotes a plugin warning to an error.
 TEST_F(PluginWarningGroupTest, WerrorPromotesPluginGroup) {
-  unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Warning, "plugin diag",
-                                      "example-plugin");
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                            "plugin diag", "example");
   DiagOpts.Warnings = {"error=example-plugin"};
   ProcessWarningOptions(Diags, DiagOpts, *FS);
   EXPECT_EQ(Diags.getDiagnosticLevel(ID, SourceLocation()),
@@ -567,8 +565,8 @@ TEST_F(PluginWarningGroupTest, WerrorPromotesPluginGroup) {
 
 // Global -Werror promotes a plugin warning like any other warning.
 TEST_F(PluginWarningGroupTest, GlobalWerrorPromotesPluginWarning) {
-  unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Warning, "plugin diag",
-                                      "example-plugin");
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                            "plugin diag", "example");
   DiagOpts.Warnings = {"error"};
   ProcessWarningOptions(Diags, DiagOpts, *FS);
   EXPECT_EQ(Diags.getDiagnosticLevel(ID, SourceLocation()),
@@ -592,7 +590,7 @@ TEST_F(PluginWarningGroupTest, UnclaimedPluginGroupReportedAfterLoad) {
 TEST_F(PluginWarningGroupTest, ClaimedPluginGroupNotReported) {
   DiagOpts.Warnings = {"no-example-plugin"};
   ProcessWarningOptions(Diags, DiagOpts, *FS);
-  Diags.getCustomDiagID(DiagnosticsEngine::Warning, "diag", "example-plugin");
+  Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning, "diag", "example");
 
   Diags.getDiagnosticIDs()->reportUnclaimedPluginGroups(Diags);
   EXPECT_THAT(diags(), IsEmpty());
@@ -601,8 +599,8 @@ TEST_F(PluginWarningGroupTest, ClaimedPluginGroupNotReported) {
 // A diagnostic in a "<plugin>-plugin-<sub>" subgroup is silenced by its own
 // name.
 TEST_F(PluginWarningGroupTest, SubgroupSilencedByOwnName) {
-  unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Warning, "reuse",
-                                      "example-plugin-loop");
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning, "reuse",
+                                            "example", "loop");
   EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
 
   DiagOpts.Warnings = {"no-example-plugin-loop"};
@@ -616,17 +614,17 @@ TEST_F(PluginWarningGroupTest, SubgroupSilencedByParentGroup) {
   DiagOpts.Warnings = {"no-example-plugin"};
   ProcessWarningOptions(Diags, DiagOpts, *FS);
 
-  unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Warning, "reuse",
-                                      "example-plugin-loop");
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning, "reuse",
+                                            "example", "loop");
   EXPECT_TRUE(Diags.isIgnored(ID, SourceLocation()));
 }
 
 // -Wno-<subgroup> does not affect a sibling subgroup of the same plugin.
 TEST_F(PluginWarningGroupTest, SiblingSubgroupUnaffected) {
-  unsigned Reuse = Diags.getCustomDiagID(DiagnosticsEngine::Warning, "reuse",
-                                         "example-plugin-loop");
-  unsigned Other = Diags.getCustomDiagID(DiagnosticsEngine::Warning, "other",
-                                         "example-plugin-cast");
+  unsigned Reuse = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                               "reuse", "example", "loop");
+  unsigned Other = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                               "other", "example", "cast");
 
   DiagOpts.Warnings = {"no-example-plugin-loop"};
   ProcessWarningOptions(Diags, DiagOpts, *FS);
@@ -641,8 +639,8 @@ TEST_F(PluginWarningGroupTest, MostSpecificGroupWins) {
   DiagOpts.Warnings = {"no-example-plugin", "example-plugin-loop"};
   ProcessWarningOptions(Diags, DiagOpts, *FS);
 
-  unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Warning, "reuse",
-                                      "example-plugin-loop");
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning, "reuse",
+                                            "example", "loop");
   EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
 }
 
@@ -651,28 +649,18 @@ TEST_F(PluginWarningGroupTest, WerrorUmbrellaPromotesAllPlugins) {
   DiagOpts.Warnings = {"error=plugin"};
   ProcessWarningOptions(Diags, DiagOpts, *FS);
 
-  unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Warning, "diag",
-                                      "example-plugin-loop");
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning, "diag",
+                                            "example", "loop");
   EXPECT_EQ(Diags.getDiagnosticLevel(ID, SourceLocation()),
             DiagnosticsEngine::Error);
-}
-
-// A plugin that (unconventionally) names a built-in group joins that group
-// directly, so the built-in flag controls it.
-TEST_F(PluginWarningGroupTest, BuiltinGroupNameJoinsBuiltinGroup) {
-  unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                                      "unused thing", "unused");
-  DiagOpts.Warnings = {"no-unused"};
-  ProcessWarningOptions(Diags, DiagOpts, *FS);
-  EXPECT_TRUE(Diags.isIgnored(ID, SourceLocation()));
 }
 
 // A plugin remark is off by default and enabled by -R<group>; a -W flag on the
 // same group does not touch it, so warnings, errors and remarks can share a
 // group namespace.
 TEST_F(PluginWarningGroupTest, RemarkGroupControlledByROption) {
-  unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Remark, "spent %0 ms",
-                                      "example-plugin-perf");
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Remark,
+                                            "spent %0 ms", "example", "perf");
   EXPECT_TRUE(Diags.isIgnored(ID, SourceLocation()));
 
   // A -W flag on the group does not enable the remark.
@@ -690,8 +678,8 @@ TEST_F(PluginWarningGroupTest, RemarkGroupControlledByROption) {
 // "[-W<group>]"), but a group flag must not silence it: -W/-R control warnings
 // and remarks, never errors.
 TEST_F(PluginWarningGroupTest, ErrorDiagnosticJoinsGroupButIsNotSuppressible) {
-  unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                      "unsupported '%0'", "example-plugin");
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Error,
+                                            "unsupported '%0'", "example");
   EXPECT_EQ(Diags.getDiagnosticIDs()->getWarningOptionForDiag(ID),
             "example-plugin");
 
@@ -709,8 +697,8 @@ TEST_F(PluginWarningGroupTest,
   DiagOpts.Warnings = {"no-example-plugin"};
   ProcessWarningOptions(Diags, DiagOpts, *FS);
 
-  unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                      "unsupported '%0'", "example-plugin");
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Error,
+                                            "unsupported '%0'", "example");
   EXPECT_EQ(Diags.getDiagnosticLevel(ID, SourceLocation()),
             DiagnosticsEngine::Error);
 }
@@ -718,8 +706,80 @@ TEST_F(PluginWarningGroupTest,
 // A -R flag does not touch a warning in the same group (flavor separation).
 TEST_F(PluginWarningGroupTest, RemarkFlagDoesNotAffectWarning) {
   unsigned ID =
-      Diags.getCustomDiagID(DiagnosticsEngine::Warning, "w", "example-plugin");
+      Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning, "w", "example");
   DiagOpts.Remarks = {"no-example-plugin"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+  EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
+}
+
+// A custom diagnostic may join an existing (built-in) group by naming it, and
+// is then controlled by that group's flag like any other member.
+TEST_F(PluginWarningGroupTest, CustomDiagJoinsBuiltinGroup) {
+  unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Warning,
+                                      "custom deprecation", "deprecated");
+  EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
+
+  DiagOpts.Warnings = {"no-deprecated"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+  EXPECT_TRUE(Diags.isIgnored(ID, SourceLocation()));
+}
+
+// -Werror on a built-in group also promotes a custom diagnostic that joined it.
+TEST_F(PluginWarningGroupTest, WerrorPromotesCustomDiagInBuiltinGroup) {
+  unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Warning,
+                                      "custom deprecation", "deprecated");
+  DiagOpts.Warnings = {"error=deprecated"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+  EXPECT_EQ(Diags.getDiagnosticLevel(ID, SourceLocation()),
+            DiagnosticsEngine::Error);
+}
+
+// -Wno-user-defined-warnings is the root over every runtime plugin group, so it
+// silences a plugin diagnostic even though the flag names neither the plugin
+// group nor the -Wplugin umbrella. The flag is parsed before the plugin loads.
+TEST_F(PluginWarningGroupTest, UserDefinedWarningsSilencesPluginGroup) {
+  DiagOpts.Warnings = {"no-user-defined-warnings"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+  EXPECT_THAT(diags(), IsEmpty());
+
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                            "plugin warning", "example");
+  EXPECT_TRUE(Diags.isIgnored(ID, SourceLocation()));
+}
+
+// A more specific plugin-group flag wins over -Wuser-defined-warnings: the root
+// silences the plugin, but re-enabling the plugin's own group brings it back.
+TEST_F(PluginWarningGroupTest, PluginGroupOverridesUserDefinedWarningsRoot) {
+  DiagOpts.Warnings = {"no-user-defined-warnings", "example-plugin"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                            "plugin warning", "example");
+  EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
+}
+
+// -Werror=user-defined-warnings promotes a plugin warning through the root.
+TEST_F(PluginWarningGroupTest, UserDefinedWarningsPromotesPluginGroup) {
+  DiagOpts.Warnings = {"error=user-defined-warnings"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                            "plugin warning", "example");
+  EXPECT_EQ(Diags.getDiagnosticLevel(ID, SourceLocation()),
+            DiagnosticsEngine::Error);
+}
+
+// The root controls warnings only: -Rno-user-defined-warnings does not exist as
+// a remark root, and a -W root flag must not touch a grouped remark.
+TEST_F(PluginWarningGroupTest, UserDefinedWarningsRootLeavesRemarksAlone) {
+  DiagOpts.Warnings = {"no-user-defined-warnings"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Remark,
+                                            "plugin remark", "example");
+  // A grouped remark is off by default regardless; enabling it via -R shows the
+  // -W root did not force it off in a way -R cannot revert.
+  DiagOpts.Remarks = {"example-plugin"};
   ProcessWarningOptions(Diags, DiagOpts, *FS);
   EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
 }

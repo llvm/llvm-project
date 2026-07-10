@@ -908,9 +908,9 @@ public:
   /// and mapped to a unique DiagID.
   template <unsigned N>
   // A diagnostic created here belongs to no diagnostic group, so users cannot
-  // control it with -W flags. Prefer the overload below that takes a group
-  // name whenever the diagnostic should be user-controllable; uses of this
-  // ungrouped form in Clang should only ever be reduced, not increased.
+  // control it with -W flags. Prefer the group-taking overload below whenever
+  // the diagnostic should be user-controllable; uses of this ungrouped form in
+  // Clang should only ever be reduced, not increased.
   // [[deprecated("Pass a group name, or use a CustomDiagDesc instead of a "
   //              "Level")]]
   unsigned getCustomDiagID(Level L, const char (&FormatString)[N]) {
@@ -918,15 +918,31 @@ public:
                                   StringRef(FormatString, N - 1));
   }
 
-  /// Compute the diagnostic ID for a plugin diagnostic in the runtime warning
-  /// group \p Group (by convention "<plugin>-plugin"). Unlike the overload
-  /// above, the diagnostic can be controlled by the user with -W<group> /
-  /// -Wno-<group> / -Werror=<group>, like a built-in warning.
+  /// Compute the diagnostic ID for a custom diagnostic placed in the warning
+  /// group \p Group. The group may be an existing (TableGen) group, so the
+  /// diagnostic can join a built-in group such as -Wdeprecated, or a
+  /// runtime-registered group whose name is not known at build time. Either way
+  /// it is controllable with -W<group> / -Wno-<group> / -Werror=<group> (and
+  /// -R<group> for a remark), like a built-in warning.
   template <unsigned N>
   unsigned getCustomDiagID(Level L, const char (&FormatString)[N],
                            StringRef Group) {
     return Diags->getCustomDiagID((DiagnosticIDs::Level)L,
                                   StringRef(FormatString, N - 1), Group);
+  }
+
+  /// Convenience over the group-taking getCustomDiagID that places a plugin's
+  /// diagnostic in its own runtime group "<PluginName>-plugin" (or the subgroup
+  /// "<PluginName>-plugin-<Subgroup>"), the naming convention behind the
+  /// -Wplugin umbrella. A plugin that instead wants to join an existing group
+  /// can call getCustomDiagID(L, FormatString, Group) directly.
+  template <unsigned N>
+  unsigned getCustomPluginDiagID(Level L, const char (&FormatString)[N],
+                                 StringRef PluginName,
+                                 StringRef Subgroup = {}) {
+    return Diags->getCustomPluginDiagID((DiagnosticIDs::Level)L,
+                                        StringRef(FormatString, N - 1),
+                                        PluginName, Subgroup);
   }
 
   /// Converts a diagnostic argument (as an intptr_t) into the string

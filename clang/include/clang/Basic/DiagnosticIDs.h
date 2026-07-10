@@ -327,6 +327,14 @@ private:
            G[Ctrl.size()] == '-';
   }
 
+  /// Append to \p Diags the runtime plugin-group diagnostics of \p Flavor that
+  /// the plugin group named \p Ctrl controls (errors excluded, since -W/-R
+  /// group flags never remap an error). Returns whether \p Ctrl names a
+  /// registered plugin group. Shared by the "plugin" umbrella and the
+  /// -Wuser-defined-warnings root.
+  bool appendPluginGroupDiags(diag::Flavor Flavor, StringRef Ctrl,
+                              SmallVectorImpl<diag::kind> &Diags) const;
+
 public:
   DiagnosticIDs();
   ~DiagnosticIDs();
@@ -378,46 +386,23 @@ public:
     }());
   }
 
-  /// Return an ID for a plugin diagnostic that belongs to the runtime warning
-  /// group \p Group (by convention "<plugin>-plugin"). Unlike the two-argument
-  /// form above, the resulting diagnostic *can* be controlled by the user with
-  /// -W<group> / -Wno-<group> / -Werror=<group>, just like a built-in warning.
-  unsigned getCustomDiagID(Level Level, StringRef Message, StringRef Group) {
-    unsigned Class = CLASS_WARNING;
-    diag::Severity Sev = diag::Severity::Warning;
-    switch (Level) {
-    case DiagnosticIDs::Level::Ignored:
-      Sev = diag::Severity::Ignored;
-      break;
-    case DiagnosticIDs::Level::Note:
-      Sev = diag::Severity::Fatal;
-      Class = CLASS_NOTE;
-      break;
-    case DiagnosticIDs::Level::Remark:
-      Sev = diag::Severity::Remark;
-      Class = CLASS_REMARK;
-      break;
-    case DiagnosticIDs::Level::Warning:
-      Sev = diag::Severity::Warning;
-      break;
-    case DiagnosticIDs::Level::Error:
-      Sev = diag::Severity::Error;
-      Class = CLASS_ERROR;
-      break;
-    case DiagnosticIDs::Level::Fatal:
-      Sev = diag::Severity::Fatal;
-      Class = CLASS_ERROR;
-      break;
-    }
-    // If Group names a built-in (static) group, join it directly so it is
-    // controlled like any other member of that group; otherwise it is a runtime
-    // plugin group kept in the dynamic registry.
-    std::optional<diag::Group> StaticGroup = getGroupForWarningOption(Group);
-    return getCustomDiagID(CustomDiagDesc(
-        Sev, std::string(Message), Class,
-        /*ShowInSystemHeader=*/false, /*ShowInSystemMacro=*/false, StaticGroup,
-        StaticGroup ? std::string() : std::string(Group)));
-  }
+  /// Return an ID for a custom diagnostic placed in the warning group \p Group.
+  /// \p Group may name an existing (TableGen) group, so a caller can put a
+  /// custom diagnostic into a built-in group such as -Wdeprecated; or a
+  /// runtime-registered group whose name is not known at build time (e.g. a
+  /// plugin's). Either way the diagnostic participates in -W<group> /
+  /// -Wno-<group> / -Werror=<group> (and -R<group> for a remark), just like a
+  /// built-in warning. Two callers may share a group name; that simply groups
+  /// their diagnostics together.
+  unsigned getCustomDiagID(Level Level, StringRef Message, StringRef Group);
+
+  /// Convenience over getCustomDiagID(Level, Message, Group) that places a
+  /// plugin's diagnostic in its own runtime group "<PluginName>-plugin" (or the
+  /// subgroup "<PluginName>-plugin-<Subgroup>"), the naming convention that the
+  /// -Wplugin umbrella is built on. A plugin that instead wants to join an
+  /// existing group can call getCustomDiagID(Level, Message, Group) directly.
+  unsigned getCustomPluginDiagID(Level Level, StringRef Message,
+                                 StringRef PluginName, StringRef Subgroup = {});
 
   /// Ensure a runtime plugin group named \p Name exists, so a -W flag can
   /// target it before the plugin that owns it is loaded. Returns true if
