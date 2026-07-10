@@ -625,6 +625,8 @@ constexpr const char *saveTempsValues[] = {
 
 LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
 
+void LinkerDriver::cleanupLTO() { lto.reset(); }
+
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ELFOptTable parser;
   opt::InputArgList args = parser.parse(ctx, argsArr.slice(1));
@@ -706,6 +708,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
     invokeELFT(link, args);
   }
+
+  cleanupLTO();
 
   if (ctx.arg.timeTraceEnabled) {
     checkError(ctx.e, timeTraceProfilerWrite(

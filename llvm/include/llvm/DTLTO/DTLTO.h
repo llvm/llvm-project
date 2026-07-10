@@ -19,10 +19,12 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/ThreadPool.h"
 
 #include <functional>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -359,6 +361,19 @@ private:
 
   // Cleanup files list.
   std::vector<std::string> CleanupList;
+
+  // There can be many temporary files to remove. Performing deletion in the
+  // background can save a few seconds on Windows hosts.
+  struct BackgroundDeletion : DefaultThreadPool {
+    BackgroundDeletion();
+    ~BackgroundDeletion();
+
+    void remove(std::vector<std::string> &&Files, const Config &Conf);
+
+    std::vector<std::string> Warnings;
+  };
+
+  BackgroundDeletion BackgroundDeleter;
 
   // Record a file for cleanup and register signal-time removal if requested.
   void addToCleanup(StringRef Filename) {

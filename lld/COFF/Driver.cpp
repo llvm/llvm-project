@@ -2960,6 +2960,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Write the result.
   writeResult(ctx);
+  ctx.forEachSymtab([](SymbolTable &symtab) { symtab.cleanupLTO(); });
 
   // Stop early so we can print the results.
   rootTimer.stop();
