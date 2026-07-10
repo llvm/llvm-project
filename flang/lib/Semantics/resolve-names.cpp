@@ -3935,10 +3935,20 @@ void ModuleVisitor::AddImplicitUseModules() {
         *implicitUseModuleBeingResolved_ == module) {
       continue;
     }
-    const Scope *containingModule{FindModuleOrSubmoduleContaining(currScope())};
-    std::optional<SourceName> currModuleName{
-        containingModule ? containingModule->GetName() : std::nullopt};
-    if (currModuleName && *currModuleName == moduleName) {
+    bool isContainedInImplicitModule{false};
+    for (const Scope *scope{&currScope()}; !scope->IsTopLevel();
+        scope = &scope->parent()) {
+      if (scope->kind() == Scope::Kind::Module) {
+        if (std::optional<SourceName> scopeName{scope->GetName()};
+            scopeName && scopeName->ToString() == module) {
+          // Do not implicitly USE a module while resolving anything contained
+          // in that module; doing so would be a self USE.
+          isContainedInImplicitModule = true;
+          break;
+        }
+      }
+    }
+    if (isContainedInImplicitModule) {
       continue;
     }
     if (auto it{context().globalScope().find(moduleName)};
