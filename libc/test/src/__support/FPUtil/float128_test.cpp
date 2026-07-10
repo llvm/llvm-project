@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/FPUtil/float128.h"
 #include "test/UnitTest/Test.h"
 
@@ -78,6 +79,14 @@ TEST(LlvmLibcFloat128Test, IntegerConversion) {
   ASSERT_EQ(static_cast<int>(Float128(-1.5)), -1);
   ASSERT_EQ(static_cast<int>(Float128(-1.9)), -1);
   ASSERT_EQ(static_cast<int>(Float128(1.9f)), 1);
+
+  // Extreme values
+  ASSERT_EQ(static_cast<int>(Float128(INT_MAX)), INT_MAX);
+  ASSERT_EQ(static_cast<int>(Float128(INT_MIN)), INT_MIN);
+  ASSERT_EQ(static_cast<long long>(Float128(LLONG_MAX)), LLONG_MAX);
+  ASSERT_EQ(static_cast<long long>(Float128(LLONG_MIN)), LLONG_MIN);
+  ASSERT_EQ(static_cast<unsigned>(Float128(UINT_MAX)), UINT_MAX);
+  ASSERT_EQ(static_cast<unsigned>(Float128(0U)), 0U);
 }
 
 TEST(LlvmLibcFloat128Test, FromIntegralTypes) {

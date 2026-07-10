@@ -47,6 +47,7 @@ add_libc_test(
     float128_test.cpp
   DEPENDS
     libc.src.__support.FPUtil.float128
+    libc.src.__support.CPP.limits
 )
 
 # TODO: Temporally disable bfloat16 test until MPCommon target is updated
