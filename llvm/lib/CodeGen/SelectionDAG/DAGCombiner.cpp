@@ -27047,7 +27047,7 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
   }
 
   unsigned Fast = 0;
-  Align NewAlign = L00->getAlign();
+  Align NewAlign = Base->getAlign();
   if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), WideVT,
                               Base->getAddressSpace(), NewAlign,
                               Base->getMemOperand()->getFlags(), &Fast) ||
