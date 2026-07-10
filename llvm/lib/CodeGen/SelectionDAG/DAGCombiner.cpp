@@ -27014,9 +27014,12 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
                                              const TargetLowering &TLI) {
   SDValue A, B;
   ArrayRef<int> M0, M1;
-  if (!sd_match(N, m_Node(ISD::CONCAT_VECTORS,
-                          m_Shuffle(m_Value(A), m_Value(B), m_Mask(M0)),
-                          m_Shuffle(m_Deferred(A), m_Deferred(B), m_Mask(M1)))))
+  if (!sd_match(N,
+                m_Node(ISD::CONCAT_VECTORS,
+                       m_OneUse(m_Shuffle(m_NUses<2>(m_Value(A)),
+                                          m_NUses<2>(m_Value(B)), m_Mask(M0))),
+                       m_OneUse(m_Shuffle(m_Deferred(A), m_Deferred(B),
+                                          m_Mask(M1))))))
     return SDValue();
   auto *L00 = dyn_cast<LoadSDNode>(A.getNode());
   auto *L01 = dyn_cast<LoadSDNode>(B.getNode());
@@ -27031,14 +27034,6 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
   EVT WideVT =
       L00->getMemoryVT().getDoubleNumVectorElementsVT(*DAG.getContext());
 
-  unsigned Fast = 0;
-  Align NewAlign = L00->getAlign();
-  if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), WideVT,
-                              L00->getAddressSpace(), NewAlign,
-                              L00->getMemOperand()->getFlags(), &Fast) ||
-      !Fast)
-    return SDValue();
-
   // Check if the loads are consecutive.
   LoadSDNode *Base = nullptr;
   if (DAG.areNonVolatileConsecutiveLoads(
@@ -27050,6 +27045,14 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
   } else {
     return SDValue(); // not adjacent
   }
+
+  unsigned Fast = 0;
+  Align NewAlign = L00->getAlign();
+  if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), WideVT,
+                              Base->getAddressSpace(), NewAlign,
+                              Base->getMemOperand()->getFlags(), &Fast) ||
+      !Fast)
+    return SDValue();
 
   // Check if this is big endian target. If yes, we need to reverse the wide
   // load order using bswap, which requires a scalar size that is a multiple
