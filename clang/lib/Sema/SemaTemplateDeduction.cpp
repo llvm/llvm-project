@@ -3182,16 +3182,36 @@ CheckDeducedArgumentConstraints(Sema &S, NamedDecl *Template,
                                 ArrayRef<TemplateArgument> CanonicalDeducedArgs,
                                 TemplateDeductionInfo &Info) {
   llvm::SmallVector<AssociatedConstraint, 3> AssociatedConstraints;
-  if (auto *TD = dyn_cast<ClassTemplatePartialSpecializationDecl>(Template))
+  bool DeducedArgsNeedReplacement = false;
+  if (auto *TD = dyn_cast<ClassTemplatePartialSpecializationDecl>(Template)) {
     TD->getAssociatedConstraints(AssociatedConstraints);
-  else if (auto *TD = dyn_cast<VarTemplatePartialSpecializationDecl>(Template))
+    DeducedArgsNeedReplacement = !TD->isClassScopeExplicitSpecialization();
+  } else if (auto *TD =
+                 dyn_cast<VarTemplatePartialSpecializationDecl>(Template)) {
     TD->getAssociatedConstraints(AssociatedConstraints);
-  else
+    DeducedArgsNeedReplacement = !TD->isClassScopeExplicitSpecialization();
+  } else {
     cast<TemplateDecl>(Template)->getAssociatedConstraints(
         AssociatedConstraints);
+  }
 
-  MultiLevelTemplateArgumentList MLTAL =
-      S.getTemplateInstantiationArgs(Template, SugaredDeducedArgs);
+  std::optional<ArrayRef<TemplateArgument>> Innermost;
+  // If we don't need to replace the deduced template arguments,
+  // we can add them immediately as the inner-most argument list.
+  if (!DeducedArgsNeedReplacement)
+    Innermost = SugaredDeducedArgs;
+
+  MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
+      Template, Template->getDeclContext(), /*Final=*/false, Innermost,
+      /*RelativeToPrimary=*/true, /*Pattern=*/
+      nullptr, /*ForConstraintInstantiation=*/true);
+
+  // getTemplateInstantiationArgs picks up the non-deduced version of the
+  // template args when this is a variable template partial specialization and
+  // not class-scope explicit specialization, so replace with Deduced Args
+  // instead of adding to inner-most.
+  if (!Innermost)
+    MLTAL.replaceInnermostTemplateArguments(Template, SugaredDeducedArgs);
 
   if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints, MLTAL,
                                     Info.getLocation(),
@@ -3954,8 +3974,9 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   bool IsLambda = isLambdaCallOperator(FD) || isLambdaConversionOperator(FD);
   if (!IsLambda && !IsIncomplete) {
     if (CheckFunctionTemplateConstraints(
-            Info.getLocation(), FunctionTemplate, CTAI.CanonicalConverted,
-            Info.AssociatedConstraintsSatisfaction))
+            Info.getLocation(),
+            FunctionTemplate->getCanonicalDecl()->getTemplatedDecl(),
+            CTAI.CanonicalConverted, Info.AssociatedConstraintsSatisfaction))
       return TemplateDeductionResult::MiscellaneousDeductionFailure;
     if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
       Info.reset(Info.takeSugared(), TemplateArgumentList::CreateCopy(
@@ -4001,8 +4022,8 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   //   ([temp.constr.constr]). If the constraints are not satisfied, type
   //   deduction fails.
   if (IsLambda && !IsIncomplete) {
-    if (CheckFunctionSpecializationConstraints(
-            Info.getLocation(), Specialization,
+    if (CheckFunctionTemplateConstraints(
+            Info.getLocation(), Specialization, CTAI.CanonicalConverted,
             Info.AssociatedConstraintsSatisfaction))
       return TemplateDeductionResult::MiscellaneousDeductionFailure;
 
@@ -6028,7 +6049,7 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
   //   function parameters that positionally correspond between the two
   //   templates are not of the same type, neither template is more specialized
   //   than the other.
-  if (!TemplateParameterListsAreEqual(FT1, TPL1, FT2, TPL2, false,
+  if (!TemplateParameterListsAreEqual(TPL1, TPL2, false,
                                       Sema::TPL_TemplateParamsEquivalent))
     return nullptr;
 
@@ -6383,7 +6404,7 @@ getMoreSpecialized(Sema &S, QualType T1, QualType T2, TemplateLikeDecl *P1,
   // function parameters that positionally correspond between the two
   // templates are not of the same type, neither template is more specialized
   // than the other.
-  if (!S.TemplateParameterListsAreEqual(P1, TPL1, P2, TPL2, false,
+  if (!S.TemplateParameterListsAreEqual(TPL1, TPL2, false,
                                         Sema::TPL_TemplateParamsEquivalent))
     return nullptr;
 

@@ -510,12 +510,12 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %2:fpr(<2 x i32>) = COPY $d0
     %3:fpr(<2 x i32>) = COPY $d1
-    %13:gpr(s32) = G_CONSTANT i32 65535
-    %14:fpr(<2 x i32>) = G_BUILD_VECTOR %13(s32), %13(s32)
+    %13:gpr(i32) = G_CONSTANT i32 65535
+    %14:fpr(<2 x i32>) = G_BUILD_VECTOR %13(i32), %13(i32)
     %15:fpr(<2 x i32>) = COPY %2(<2 x i32>)
     %7:fpr(<2 x i32>) = G_AND %15, %14
-    %10:gpr(s32) = G_CONSTANT i32 65535
-    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(s32), %10(s32)
+    %10:gpr(i32) = G_CONSTANT i32 65535
+    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(i32), %10(i32)
     %12:fpr(<2 x i32>) = COPY %3(<2 x i32>)
     %8:fpr(<2 x i32>) = G_AND %12, %11
     %9:fpr(<2 x i32>) = G_ICMP intpred(eq), %7(<2 x i32>), %8
@@ -800,12 +800,12 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %2:fpr(<2 x i32>) = COPY $d0
     %3:fpr(<2 x i32>) = COPY $d1
-    %13:gpr(s32) = G_CONSTANT i32 65535
-    %14:fpr(<2 x i32>) = G_BUILD_VECTOR %13(s32), %13(s32)
+    %13:gpr(i32) = G_CONSTANT i32 65535
+    %14:fpr(<2 x i32>) = G_BUILD_VECTOR %13(i32), %13(i32)
     %15:fpr(<2 x i32>) = COPY %2(<2 x i32>)
     %7:fpr(<2 x i32>) = G_AND %15, %14
-    %10:gpr(s32) = G_CONSTANT i32 65535
-    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(s32), %10(s32)
+    %10:gpr(i32) = G_CONSTANT i32 65535
+    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(i32), %10(i32)
     %12:fpr(<2 x i32>) = COPY %3(<2 x i32>)
     %8:fpr(<2 x i32>) = G_AND %12, %11
     %9:fpr(<2 x i32>) = G_ICMP intpred(ugt), %7(<2 x i32>), %8
@@ -1090,12 +1090,12 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %2:fpr(<2 x i32>) = COPY $d0
     %3:fpr(<2 x i32>) = COPY $d1
-    %13:gpr(s32) = G_CONSTANT i32 65535
-    %14:fpr(<2 x i32>) = G_BUILD_VECTOR %13(s32), %13(s32)
+    %13:gpr(i32) = G_CONSTANT i32 65535
+    %14:fpr(<2 x i32>) = G_BUILD_VECTOR %13(i32), %13(i32)
     %15:fpr(<2 x i32>) = COPY %2(<2 x i32>)
     %7:fpr(<2 x i32>) = G_AND %15, %14
-    %10:gpr(s32) = G_CONSTANT i32 65535
-    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(s32), %10(s32)
+    %10:gpr(i32) = G_CONSTANT i32 65535
+    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(i32), %10(i32)
     %12:fpr(<2 x i32>) = COPY %3(<2 x i32>)
     %8:fpr(<2 x i32>) = G_AND %12, %11
     %9:fpr(<2 x i32>) = G_ICMP intpred(uge), %7(<2 x i32>), %8
@@ -1380,12 +1380,12 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %2:fpr(<2 x i32>) = COPY $d0
     %3:fpr(<2 x i32>) = COPY $d1
-    %13:gpr(s32) = G_CONSTANT i32 65535
-    %14:fpr(<2 x i32>) = G_BUILD_VECTOR %13(s32), %13(s32)
+    %13:gpr(i32) = G_CONSTANT i32 65535
+    %14:fpr(<2 x i32>) = G_BUILD_VECTOR %13(i32), %13(i32)
     %15:fpr(<2 x i32>) = COPY %2(<2 x i32>)
     %7:fpr(<2 x i32>) = G_AND %15, %14
-    %10:gpr(s32) = G_CONSTANT i32 65535
-    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(s32), %10(s32)
+    %10:gpr(i32) = G_CONSTANT i32 65535
+    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(i32), %10(i32)
     %12:fpr(<2 x i32>) = COPY %3(<2 x i32>)
     %8:fpr(<2 x i32>) = G_AND %12, %11
     %9:fpr(<2 x i32>) = G_ICMP intpred(ult), %7(<2 x i32>), %8
@@ -1670,12 +1670,12 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %2:fpr(<2 x i32>) = COPY $d0
     %3:fpr(<2 x i32>) = COPY $d1
-    %13:gpr(s32) = G_CONSTANT i32 65535
-    %14:fpr(<2 x i32>) = G_BUILD_VECTOR %13(s32), %13(s32)
+    %13:gpr(i32) = G_CONSTANT i32 65535
+    %14:fpr(<2 x i32>) = G_BUILD_VECTOR %13(i32), %13(i32)
     %15:fpr(<2 x i32>) = COPY %2(<2 x i32>)
     %7:fpr(<2 x i32>) = G_AND %15, %14
-    %10:gpr(s32) = G_CONSTANT i32 65535
-    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(s32), %10(s32)
+    %10:gpr(i32) = G_CONSTANT i32 65535
+    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(i32), %10(i32)
     %12:fpr(<2 x i32>) = COPY %3(<2 x i32>)
     %8:fpr(<2 x i32>) = G_AND %12, %11
     %9:fpr(<2 x i32>) = G_ICMP intpred(ule), %7(<2 x i32>), %8
@@ -1966,13 +1966,13 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %2:fpr(<2 x i32>) = COPY $d0
     %3:fpr(<2 x i32>) = COPY $d1
-    %14:gpr(s32) = G_CONSTANT i32 16
-    %15:fpr(<2 x i32>) = G_BUILD_VECTOR %14(s32), %14(s32)
+    %14:gpr(i32) = G_CONSTANT i32 16
+    %15:fpr(<2 x i32>) = G_BUILD_VECTOR %14(i32), %14(i32)
     %16:fpr(<2 x i32>) = COPY %2(<2 x i32>)
     %17:fpr(<2 x i32>) = G_SHL %16, %15(<2 x i32>)
     %7:fpr(<2 x i32>) = G_ASHR %17, %15(<2 x i32>)
-    %10:gpr(s32) = G_CONSTANT i32 16
-    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(s32), %10(s32)
+    %10:gpr(i32) = G_CONSTANT i32 16
+    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(i32), %10(i32)
     %12:fpr(<2 x i32>) = COPY %3(<2 x i32>)
     %13:fpr(<2 x i32>) = G_SHL %12, %11(<2 x i32>)
     %8:fpr(<2 x i32>) = G_ASHR %13, %11(<2 x i32>)
@@ -2264,13 +2264,13 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %2:fpr(<2 x i32>) = COPY $d0
     %3:fpr(<2 x i32>) = COPY $d1
-    %14:gpr(s32) = G_CONSTANT i32 16
-    %15:fpr(<2 x i32>) = G_BUILD_VECTOR %14(s32), %14(s32)
+    %14:gpr(i32) = G_CONSTANT i32 16
+    %15:fpr(<2 x i32>) = G_BUILD_VECTOR %14(i32), %14(i32)
     %16:fpr(<2 x i32>) = COPY %2(<2 x i32>)
     %17:fpr(<2 x i32>) = G_SHL %16, %15(<2 x i32>)
     %7:fpr(<2 x i32>) = G_ASHR %17, %15(<2 x i32>)
-    %10:gpr(s32) = G_CONSTANT i32 16
-    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(s32), %10(s32)
+    %10:gpr(i32) = G_CONSTANT i32 16
+    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(i32), %10(i32)
     %12:fpr(<2 x i32>) = COPY %3(<2 x i32>)
     %13:fpr(<2 x i32>) = G_SHL %12, %11(<2 x i32>)
     %8:fpr(<2 x i32>) = G_ASHR %13, %11(<2 x i32>)
@@ -2562,13 +2562,13 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %2:fpr(<2 x i32>) = COPY $d0
     %3:fpr(<2 x i32>) = COPY $d1
-    %14:gpr(s32) = G_CONSTANT i32 16
-    %15:fpr(<2 x i32>) = G_BUILD_VECTOR %14(s32), %14(s32)
+    %14:gpr(i32) = G_CONSTANT i32 16
+    %15:fpr(<2 x i32>) = G_BUILD_VECTOR %14(i32), %14(i32)
     %16:fpr(<2 x i32>) = COPY %2(<2 x i32>)
     %17:fpr(<2 x i32>) = G_SHL %16, %15(<2 x i32>)
     %7:fpr(<2 x i32>) = G_ASHR %17, %15(<2 x i32>)
-    %10:gpr(s32) = G_CONSTANT i32 16
-    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(s32), %10(s32)
+    %10:gpr(i32) = G_CONSTANT i32 16
+    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(i32), %10(i32)
     %12:fpr(<2 x i32>) = COPY %3(<2 x i32>)
     %13:fpr(<2 x i32>) = G_SHL %12, %11(<2 x i32>)
     %8:fpr(<2 x i32>) = G_ASHR %13, %11(<2 x i32>)
@@ -2860,13 +2860,13 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %2:fpr(<2 x i32>) = COPY $d0
     %3:fpr(<2 x i32>) = COPY $d1
-    %14:gpr(s32) = G_CONSTANT i32 16
-    %15:fpr(<2 x i32>) = G_BUILD_VECTOR %14(s32), %14(s32)
+    %14:gpr(i32) = G_CONSTANT i32 16
+    %15:fpr(<2 x i32>) = G_BUILD_VECTOR %14(i32), %14(i32)
     %16:fpr(<2 x i32>) = COPY %2(<2 x i32>)
     %17:fpr(<2 x i32>) = G_SHL %16, %15(<2 x i32>)
     %7:fpr(<2 x i32>) = G_ASHR %17, %15(<2 x i32>)
-    %10:gpr(s32) = G_CONSTANT i32 16
-    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(s32), %10(s32)
+    %10:gpr(i32) = G_CONSTANT i32 16
+    %11:fpr(<2 x i32>) = G_BUILD_VECTOR %10(i32), %10(i32)
     %12:fpr(<2 x i32>) = COPY %3(<2 x i32>)
     %13:fpr(<2 x i32>) = G_SHL %12, %11(<2 x i32>)
     %8:fpr(<2 x i32>) = G_ASHR %13, %11(<2 x i32>)

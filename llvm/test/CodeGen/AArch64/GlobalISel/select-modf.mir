@@ -27,21 +27,21 @@ body:             |
     ; CHECK-NEXT: BL &modfl, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $q0, implicit $x0, implicit-def $q0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui %stack.0, 0 :: (load (s128) from %stack.0)
+    ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui %stack.0, 0 :: (load (i128) from %stack.0)
     ; CHECK-NEXT: $q0 = COPY [[COPY1]]
     ; CHECK-NEXT: $q1 = COPY [[LDRQui]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1
-    %0:fpr(s128) = COPY $q0
+    %0:fpr(i128) = COPY $q0
     %3:gpr(p0) = G_FRAME_INDEX %stack.0
     ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    $q0 = COPY %0(s128)
+    $q0 = COPY %0(i128)
     $x0 = COPY %3(p0)
     BL &modfl, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $q0, implicit $x0, implicit-def $q0
     ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    %1:fpr(s128) = COPY $q0
-    %2:fpr(s128) = G_LOAD %3(p0) :: (load (s128) from %stack.0)
-    $q0 = COPY %1(s128)
-    $q1 = COPY %2(s128)
+    %1:fpr(i128) = COPY $q0
+    %2:fpr(i128) = G_LOAD %3(p0) :: (load (i128) from %stack.0)
+    $q0 = COPY %1(i128)
+    $q1 = COPY %2(i128)
     RET_ReallyLR implicit $q0, implicit $q1
 ...
 ---
@@ -72,21 +72,21 @@ body:             |
     ; CHECK-NEXT: BL &modf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $x0, implicit-def $d0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK-NEXT: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui %stack.0, 0 :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui %stack.0, 0 :: (load (i64) from %stack.0)
     ; CHECK-NEXT: $d0 = COPY [[COPY1]]
     ; CHECK-NEXT: $d1 = COPY [[LDRDui]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0, implicit $d1
-    %0:fpr(s64) = COPY $d0
+    %0:fpr(i64) = COPY $d0
     %3:gpr(p0) = G_FRAME_INDEX %stack.0
     ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    $d0 = COPY %0(s64)
+    $d0 = COPY %0(i64)
     $x0 = COPY %3(p0)
     BL &modf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $x0, implicit-def $d0
     ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    %1:fpr(s64) = COPY $d0
-    %2:fpr(s64) = G_LOAD %3(p0) :: (load (s64) from %stack.0)
-    $d0 = COPY %1(s64)
-    $d1 = COPY %2(s64)
+    %1:fpr(i64) = COPY $d0
+    %2:fpr(i64) = G_LOAD %3(p0) :: (load (i64) from %stack.0)
+    $d0 = COPY %1(i64)
+    $d1 = COPY %2(i64)
     RET_ReallyLR implicit $d0, implicit $d1
 ...
 ---
@@ -117,20 +117,20 @@ body:             |
     ; CHECK-NEXT: BL &modf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $x0, implicit-def $d0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK-NEXT: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui %stack.0, 0 :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui %stack.0, 0 :: (load (i64) from %stack.0)
     ; CHECK-NEXT: $d0 = COPY [[COPY1]]
     ; CHECK-NEXT: $d1 = COPY [[LDRDui]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0, implicit $d1
-    %0:fpr(s64) = COPY $d0
+    %0:fpr(i64) = COPY $d0
     %3:gpr(p0) = G_FRAME_INDEX %stack.0
     ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    $d0 = COPY %0(s64)
+    $d0 = COPY %0(i64)
     $x0 = COPY %3(p0)
     BL &modf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $x0, implicit-def $d0
     ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    %1:fpr(s64) = COPY $d0
-    %2:fpr(s64) = G_LOAD %3(p0) :: (load (s64) from %stack.0)
-    $d0 = COPY %1(s64)
-    $d1 = COPY %2(s64)
+    %1:fpr(i64) = COPY $d0
+    %2:fpr(i64) = G_LOAD %3(p0) :: (load (i64) from %stack.0)
+    $d0 = COPY %1(i64)
+    $d1 = COPY %2(i64)
     RET_ReallyLR implicit $d0, implicit $d1
 ...

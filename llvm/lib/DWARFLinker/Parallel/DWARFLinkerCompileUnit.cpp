@@ -51,8 +51,7 @@ CompileUnit::CompileUnit(LinkingGlobalData &GlobalData, DWARFUnit &OrigUnit,
   if (!CUDie)
     return;
 
-  if (std::optional<DWARFFormValue> Val = CUDie.find(dwarf::DW_AT_language))
-    Language = dwarf::toUnsigned(Val, 0);
+  Language = CUDie.getLanguage();
 
   if (!GlobalData.getOptions().NoODR && Language.has_value() &&
       isODRLanguage(*Language))
