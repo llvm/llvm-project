@@ -1006,7 +1006,10 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
 
   TemplateArgumentListInfo OutArgs(Ori->LAngleLoc, Ori->RAngleLoc);
 
-  if (ConceptId == TopLevelConceptId) {
+  // There's a concern that even with the same concept, they may not have the
+  // same ConceptReference, if they come from modules.
+  if (TopLevelConceptId &&
+      ConceptId->getNamedConcept() == TopLevelConceptId->getNamedConcept()) {
     for (auto &A : Ori->arguments())
       OutArgs.addArgument(A);
   } else if (S.SubstTemplateArguments(Ori->arguments(), *SubstitutedArgs,
