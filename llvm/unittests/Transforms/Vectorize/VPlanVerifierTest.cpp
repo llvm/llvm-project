@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/Transforms/Vectorize/VPlanVerifier.h"
+#include "../lib/Transforms/Vectorize/LoopVectorizationPlanner.h"
 #include "../lib/Transforms/Vectorize/VPlan.h"
-#include "../lib/Transforms/Vectorize/VPlanCFG.h"
 #include "VPlanTestBase.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -335,19 +335,12 @@ TEST_F(VPVerifierTest, DerivedIVWithStartInLoopRegions) {
   auto *I32Ty = Type::getInt32Ty(C);
   VPBasicBlock *Entry = Plan.getEntry();
   VPBasicBlock *Latch = Plan.createVPBasicBlock("latch");
-  VPInstruction *DefI = new VPInstruction(
-      Instruction::Add, {Plan.getPoison(I32Ty), Plan.getPoison(I32Ty)},
-      VPIRFlags::getDefaultFlags(Instruction::Add));
-  Entry->appendRecipe(DefI);
 
-  auto *Start = new VPInstruction(VPInstruction::Not, Plan.getPoison(I32Ty));
-  Latch->appendRecipe(Start);
-  auto *DIV = new VPDerivedIVRecipe(InductionDescriptor::IK_IntInduction,
-                                    nullptr, Start, Plan.getPoison(I32Ty),
-                                    Plan.getPoison(I32Ty));
-  Latch->appendRecipe(DIV);
-  Latch->appendRecipe(
-      new VPInstruction(VPInstruction::BranchOnCond, Plan.getTrue()));
+  VPBuilder Builder(Latch);
+  VPValue *Start = Builder.createNot(Plan.getPoison(I32Ty));
+  Builder.createDerivedIV(InductionDescriptor::IK_IntInduction, nullptr, Start,
+                          Plan.getPoison(I32Ty), Plan.getPoison(I32Ty));
+  Builder.createNaryOp(VPInstruction::BranchOnCond, Plan.getTrue());
 
   VPRegionBlock *LoopR = Plan.createLoopRegion(I32Ty, DebugLoc::getUnknown(),
                                                "loop", Latch, Latch);
