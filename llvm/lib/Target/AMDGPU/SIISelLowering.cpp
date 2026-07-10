@@ -2683,7 +2683,7 @@ SDValue SITargetLowering::getPreloadedValue(
     SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
     AMDGPUFunctionArgInfo::PreloadedValue PVID) const {
   const ArgDescriptor *Reg = nullptr;
-  const TargetRegisterClass *RC;
+  const TargetRegisterClass *RC = nullptr;
   LLT Ty;
 
   CallingConv::ID CC = DAG.getMachineFunction().getFunction().getCallingConv();
