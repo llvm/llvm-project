@@ -6377,28 +6377,22 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
           return false;
       return true;
     };
-    auto GetZeroVector = [&]() { return DAG.getConstant(0, DL, VT); };
 
     SDValue Src = V2;
     if (V2.getOpcode() == ISD::CONCAT_VECTORS && V2.getOperand(1).isUndef())
       Src = V2.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
-    if (IsBuildVectorAllZeros(V1) && SrcVT.isFixedLengthVector() &&
+    if (Subtarget.isRV32() && IsBuildVectorAllZeros(V1) &&
+        SrcVT.isFixedLengthVector() &&
         SrcVT.getVectorNumElements() * 2 == NumElts &&
         V2.getSimpleValueType().getVectorNumElements() == NumElts) {
       unsigned SrcNumElts = SrcVT.getVectorNumElements();
       if (IsWidenHighMask(SrcNumElts) &&
           (SrcVT == MVT::v4i8 || SrcVT == MVT::v2i16)) {
-        if (Subtarget.is64Bit()) {
-          MVT WideSrcVT = SrcVT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
-          SDValue WideSrc = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64,
-                                        DAG.getBitcast(MVT::i32, Src));
-          Src = DAG.getBitcast(WideSrcVT, WideSrc);
-        } else {
-          Src = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Src,
-                            DAG.getUNDEF(SrcVT));
-        }
-        return DAG.getNode(RISCVISD::PZIP, DL, VT, GetZeroVector(), Src);
+        Src =
+            DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Src, DAG.getUNDEF(SrcVT));
+        return DAG.getNode(RISCVISD::PZIP, DL, VT, DAG.getConstant(0, DL, VT),
+                           Src);
       }
     }
 
@@ -6407,7 +6401,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       unsigned SrcNumElts = NumElts / 2;
       if (IsWidenHighMask(SrcNumElts)) {
         Src = V2;
-        return DAG.getNode(RISCVISD::PZIP, DL, VT, GetZeroVector(), Src);
+        return DAG.getNode(RISCVISD::PZIP, DL, VT, DAG.getConstant(0, DL, VT),
+                           Src);
       }
     }
 
