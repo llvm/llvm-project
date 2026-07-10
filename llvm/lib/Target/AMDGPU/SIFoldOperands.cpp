@@ -2363,6 +2363,60 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
 
     return std::pair(nullptr, SIOutMods::NONE);
   }
+  case AMDGPU::V_FMA_MIXLO_BF16:
+  case AMDGPU::V_FMA_MIX_BF16_t16: {
+    if (MFI->getMode().FP32Denormals.Output != DenormalMode::PreserveSign ||
+        MI.mayRaiseFPException())
+      return {nullptr, SIOutMods::NONE};
+
+    const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+    const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
+    const MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+
+    if (!Src2->isImm() || Src2->getImm() != 0)
+      return {nullptr, SIOutMods::NONE};
+
+    // op_sel bits are in src*_modifiers but don't affect folding
+    const MachineOperand *Src0Mods =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers);
+    const MachineOperand *Src1Mods =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
+    if ((Src0Mods &&
+         (Src0Mods->getImm() & (SISrcMods::NEG | SISrcMods::ABS))) ||
+        (Src1Mods &&
+         (Src1Mods->getImm() & (SISrcMods::NEG | SISrcMods::ABS))) ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::omod) ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::clamp))
+      return {nullptr, SIOutMods::NONE};
+
+    if (!Src0->isReg() || !Src1->isReg())
+      return {nullptr, SIOutMods::NONE};
+
+    const MachineOperand *RegOp = nullptr;
+    int64_t ImmValue = 0;
+
+    const MachineInstr *Src1Def = MRI->getVRegDef(Src1->getReg());
+    if (Src1Def && Src1Def->isMoveImmediate() &&
+        Src1Def->getOperand(1).isImm()) {
+      ImmValue = Src1Def->getOperand(1).getImm();
+      RegOp = Src0;
+    } else {
+      const MachineInstr *Src0Def = MRI->getVRegDef(Src0->getReg());
+      if (Src0Def && Src0Def->isMoveImmediate() &&
+          Src0Def->getOperand(1).isImm()) {
+        ImmValue = Src0Def->getOperand(1).getImm();
+        RegOp = Src1;
+      } else {
+        return {nullptr, SIOutMods::NONE};
+      }
+    }
+
+    int OMod = getOModValue(AMDGPU::V_MUL_F32_e64, ImmValue);
+    if (OMod == SIOutMods::NONE)
+      return {nullptr, SIOutMods::NONE};
+
+    return {RegOp, OMod};
+  }
   default:
     return std::pair(nullptr, SIOutMods::NONE);
   }
@@ -2379,6 +2433,25 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
     return false;
 
   MachineInstr *Def = MRI->getVRegDef(RegOp->getReg());
+
+  // Look through REG_SEQUENCE to find the actual instruction.
+  // For BF16 operations, the result is often packed via REG_SEQUENCE with
+  // lo16 subreg for the actual value.
+  if (Def->isRegSequence()) {
+    if (Def->getNumOperands() < 2 || !Def->getOperand(1).isReg())
+      return false;
+
+    Register SrcReg = Def->getOperand(1).getReg();
+    // Only fold if this is the only use of the source register, otherwise
+    // we would need to update all uses.
+    if (!MRI->hasOneNonDBGUse(SrcReg))
+      return false;
+
+    Def = MRI->getVRegDef(SrcReg);
+    if (!Def)
+      return false;
+  }
+
   MachineOperand *DefOMod = TII->getNamedOperand(*Def, AMDGPU::OpName::omod);
   if (!DefOMod || DefOMod->getImm() != SIOutMods::NONE)
     return false;
