@@ -1,9 +1,9 @@
 // REQUIRES: can-symbolize
 // UNSUPPORTED: android
 
-// # Baseline test for UBSan suppressions with -fno-inline.
+// # Baseline test for UBSan suppressions with no optimization.
 //
-// RUN: %clang -fsanitize=integer -O1 -fno-inline -g %s -o %t
+// RUN: %clang -fsanitize=integer -O0 -g %s -o %t
 //
 // # Only the directly suppressed my_make_signed hit should disappear.
 //
