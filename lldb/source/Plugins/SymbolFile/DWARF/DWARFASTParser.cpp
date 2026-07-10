@@ -21,6 +21,10 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/ValueObject/ValueObject.h"
+
+#include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Support/Error.h"
+
 #include <optional>
 
 using namespace lldb;
@@ -28,9 +32,9 @@ using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
 using namespace llvm::dwarf;
 
-// Array properties can be encoded directly as constants, or as DWARF
-// expression blocks whose values need to be evaluated in an execution context.
-static std::optional<uint64_t>
+/// Array properties can be encoded directly as constants, or as DWARF
+/// expression blocks whose values need to be evaluated in an execution context.
+static llvm::Expected<uint64_t>
 EvaluateArrayPropertyAsUnsigned(const DWARFFormValue &form_value,
                                 const DWARFDIE &parent_die,
                                 const ExecutionContext *exe_ctx) {
@@ -38,12 +42,15 @@ EvaluateArrayPropertyAsUnsigned(const DWARFFormValue &form_value,
     // Block-form values carry their byte length as the stored unsigned value.
     // Evaluate the block instead of treating that length as the property value.
     if (!exe_ctx)
-      return std::nullopt;
+      return llvm::createStringError(
+          "cannot evaluate array property expression without an execution "
+          "context");
 
     DWARFUnit *unit = parent_die.GetCU();
     SymbolFileDWARF *dwarf = parent_die.GetDWARF();
     if (!unit || !dwarf || !dwarf->GetObjectFile())
-      return std::nullopt;
+      return llvm::createStringError(
+          "cannot evaluate array property expression without DWARF context");
 
     lldb::RegisterContextSP reg_ctx_sp;
     if (lldb::StackFrameSP frame_sp = exe_ctx->GetFrameSP())
@@ -58,21 +65,35 @@ EvaluateArrayPropertyAsUnsigned(const DWARFFormValue &form_value,
         &exe_ctx_copy, reg_ctx_sp.get(), dwarf->GetObjectFile()->GetModule(),
         data, unit, eRegisterKindDWARF,
         /*initial_value_ptr=*/nullptr, /*object_address_ptr=*/nullptr);
-    if (!result) {
-      LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), result.takeError(),
-                     "failed to evaluate array property expression: {0}");
-      return std::nullopt;
-    }
+    if (!result)
+      return result.takeError();
 
     return result->GetScalar().ULongLong();
   }
 
   if (std::optional<uint64_t> value = form_value.getAsUnsignedConstant())
-    return value;
-  if (std::optional<int64_t> value = form_value.getAsSignedConstant())
+    return *value;
+  if (std::optional<int64_t> value = form_value.getAsSignedConstant()) {
     if (*value >= 0)
       return *value;
-  return std::nullopt;
+    return llvm::createStringError("array property value is negative: %lld",
+                                   static_cast<long long>(*value));
+  }
+  return llvm::createStringError("unsupported array property form");
+}
+
+static std::optional<uint64_t>
+GetDefaultArrayLowerBound(const DWARFDIE &parent_die) {
+  DWARFUnit *unit = parent_die.GetCU();
+  if (!unit)
+    return std::nullopt;
+
+  std::optional<unsigned> lower_bound = LanguageLowerBound(
+      static_cast<llvm::dwarf::SourceLanguage>(unit->GetDWARFLanguageType()));
+  if (!lower_bound)
+    return std::nullopt;
+
+  return *lower_bound;
 }
 
 std::optional<SymbolFile::ArrayInfo>
@@ -92,8 +113,21 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
       continue;
 
     std::optional<uint64_t> num_elements;
-    std::optional<uint64_t> lower_bound = 0;
+    std::optional<uint64_t> lower_bound = GetDefaultArrayLowerBound(parent_die);
     std::optional<uint64_t> upper_bound;
+
+    auto evaluate_array_property =
+        [&](const DWARFFormValue &form_value) -> std::optional<uint64_t> {
+      llvm::Expected<uint64_t> value =
+          EvaluateArrayPropertyAsUnsigned(form_value, parent_die, exe_ctx);
+      if (!value) {
+        LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), value.takeError(),
+                       "failed to evaluate array property: {0}");
+        return std::nullopt;
+      }
+      return value.get();
+    };
+
     for (size_t i = 0; i < attributes.Size(); ++i) {
       const dw_attr_t attr = attributes.AttributeAtIndex(i);
       DWARFFormValue form_value;
@@ -118,32 +152,27 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
                 }
               }
           } else
-            num_elements = EvaluateArrayPropertyAsUnsigned(form_value,
-                                                           parent_die, exe_ctx);
+            num_elements = evaluate_array_property(form_value);
           break;
 
         case DW_AT_bit_stride:
           if (std::optional<uint64_t> bit_stride =
-                  EvaluateArrayPropertyAsUnsigned(form_value, parent_die,
-                                                  exe_ctx))
+                  evaluate_array_property(form_value))
             array_info.bit_stride = *bit_stride;
           break;
 
         case DW_AT_byte_stride:
           if (std::optional<uint64_t> byte_stride =
-                  EvaluateArrayPropertyAsUnsigned(form_value, parent_die,
-                                                  exe_ctx))
+                  evaluate_array_property(form_value))
             array_info.byte_stride = *byte_stride;
           break;
 
         case DW_AT_lower_bound:
-          lower_bound =
-              EvaluateArrayPropertyAsUnsigned(form_value, parent_die, exe_ctx);
+          lower_bound = evaluate_array_property(form_value);
           break;
 
         case DW_AT_upper_bound:
-          upper_bound =
-              EvaluateArrayPropertyAsUnsigned(form_value, parent_die, exe_ctx);
+          upper_bound = evaluate_array_property(form_value);
           break;
 
         default:

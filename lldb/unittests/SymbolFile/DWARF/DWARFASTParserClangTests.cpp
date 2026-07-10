@@ -213,13 +213,19 @@ DWARF:
           Attributes:
             - Attribute:       DW_AT_count
               Form:            DW_FORM_data1
+        - Code:            0x00000005
+          Tag:             DW_TAG_subrange_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_upper_bound
+              Form:            DW_FORM_data1
   debug_info:
     - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
           Values:
-            - Value:           0x000000000000000C
+            - Value:           0x0000000000000008
         - AbbrCode:        0x00000002
         - AbbrCode:        0x00000003
           Values:
@@ -230,6 +236,9 @@ DWARF:
         - AbbrCode:        0x00000004
           Values:
             - Value:           0x0000000000000003
+        - AbbrCode:        0x00000005
+          Values:
+            - Value:           0x0000000000000005
         - AbbrCode:        0x00000000
         - AbbrCode:        0x00000000
 )";
@@ -245,11 +254,13 @@ DWARF:
       DWARFASTParser::ParseChildArrayInfo(array_die);
   ASSERT_TRUE(array_info);
 
-  ASSERT_EQ(array_info->element_orders.size(), 2u);
+  ASSERT_EQ(array_info->element_orders.size(), 3u);
   ASSERT_TRUE(array_info->element_orders[0]);
   EXPECT_EQ(*array_info->element_orders[0], 4u);
   ASSERT_TRUE(array_info->element_orders[1]);
   EXPECT_EQ(*array_info->element_orders[1], 3u);
+  ASSERT_TRUE(array_info->element_orders[2]);
+  EXPECT_EQ(*array_info->element_orders[2], 5u);
   EXPECT_EQ(array_info->byte_stride, 4u);
   EXPECT_EQ(array_info->bit_stride, 32u);
 }
