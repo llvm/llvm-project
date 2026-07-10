@@ -6421,12 +6421,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       break;
     if (auto Opt = cast<GCStatepointInst>(StatepointCall)
                        .getOperandBundle(LLVMContext::OB_gc_live)) {
-      // Avoid printing extra information as that would cause the Base or
-      // Derived pointers to get read, causing an out-of-bounds access.
       Check(BaseIndex < Opt->Inputs.size(),
-            "gc.relocate: statepoint base index out of bounds");
+            "gc.relocate: statepoint base index out of bounds", Call);
       Check(DerivedIndex < Opt->Inputs.size(),
-            "gc.relocate: statepoint derived index out of bounds");
+            "gc.relocate: statepoint derived index out of bounds", Call);
     }
 
     // Relocated value must be either a pointer type or vector-of-pointer type,
