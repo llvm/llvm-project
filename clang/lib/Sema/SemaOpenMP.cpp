@@ -24366,15 +24366,6 @@ static void checkMappableExpressionList(
     }
 
     Expr *SimpleExpr = RE->IgnoreParenCasts();
-
-    // Skip entries with unnamed decls (can happen with transformed expressions)
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(SimpleExpr)) {
-      if (const auto *D = dyn_cast<NamedDecl>(DRE->getDecl())) {
-        if (!D->getDeclName())
-          continue;
-      }
-    }
-
     if (!RE->isLValue()) {
       if (SemaRef.getLangOpts().OpenMP < 50) {
         SemaRef.Diag(
