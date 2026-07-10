@@ -16,7 +16,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 OptionValue::OptionValue(const OptionValue &other) {
-  std::lock_guard<std::mutex> lock(other.m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(other.m_mutex);
 
   m_parent_wp = other.m_parent_wp;
   m_callback = other.m_callback;
@@ -24,8 +24,9 @@ OptionValue::OptionValue(const OptionValue &other) {
 
 }
 
-OptionValue& OptionValue::operator=(const OptionValue &other) {
-  std::scoped_lock<std::mutex, std::mutex> lock(m_mutex, other.m_mutex);
+OptionValue &OptionValue::operator=(const OptionValue &other) {
+  std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lock(
+      m_mutex, other.m_mutex);
 
   m_parent_wp = other.m_parent_wp;
   m_callback = other.m_callback;
@@ -269,14 +270,14 @@ const OptionValueUUID *OptionValue::GetAsUUID() const {
 }
 
 std::optional<bool> OptionValue::GetBooleanValue() const {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (const OptionValueBoolean *option_value = GetAsBoolean())
     return option_value->GetCurrentValue();
   return {};
 }
 
 bool OptionValue::SetBooleanValue(bool new_value) {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (OptionValueBoolean *option_value = GetAsBoolean()) {
     option_value->SetCurrentValue(new_value);
     return true;
@@ -285,14 +286,14 @@ bool OptionValue::SetBooleanValue(bool new_value) {
 }
 
 std::optional<char> OptionValue::GetCharValue() const {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (const OptionValueChar *option_value = GetAsChar())
     return option_value->GetCurrentValue();
   return {};
 }
 
 bool OptionValue::SetCharValue(char new_value) {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (OptionValueChar *option_value = GetAsChar()) {
     option_value->SetCurrentValue(new_value);
     return true;
@@ -301,14 +302,14 @@ bool OptionValue::SetCharValue(char new_value) {
 }
 
 std::optional<int64_t> OptionValue::GetEnumerationValue() const {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (const OptionValueEnumeration *option_value = GetAsEnumeration())
     return option_value->GetCurrentValue();
   return {};
 }
 
 bool OptionValue::SetEnumerationValue(int64_t value) {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (OptionValueEnumeration *option_value = GetAsEnumeration()) {
     option_value->SetCurrentValue(value);
     return true;
@@ -317,14 +318,14 @@ bool OptionValue::SetEnumerationValue(int64_t value) {
 }
 
 std::optional<FileSpec> OptionValue::GetFileSpecValue() const {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (const OptionValueFileSpec *option_value = GetAsFileSpec())
     return option_value->GetCurrentValue();
   return {};
 }
 
 bool OptionValue::SetFileSpecValue(FileSpec file_spec) {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (OptionValueFileSpec *option_value = GetAsFileSpec()) {
     option_value->SetCurrentValue(file_spec, false);
     return true;
@@ -333,7 +334,7 @@ bool OptionValue::SetFileSpecValue(FileSpec file_spec) {
 }
 
 bool OptionValue::AppendFileSpecValue(FileSpec file_spec) {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (OptionValueFileSpecList *option_value = GetAsFileSpecList()) {
     option_value->AppendCurrentValue(file_spec);
     return true;
@@ -342,21 +343,21 @@ bool OptionValue::AppendFileSpecValue(FileSpec file_spec) {
 }
 
 std::optional<FileSpecList> OptionValue::GetFileSpecListValue() const {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (const OptionValueFileSpecList *option_value = GetAsFileSpecList())
     return option_value->GetCurrentValue();
   return {};
 }
 
 std::optional<lldb::Format> OptionValue::GetFormatValue() const {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (const OptionValueFormat *option_value = GetAsFormat())
     return option_value->GetCurrentValue();
   return {};
 }
 
 bool OptionValue::SetFormatValue(lldb::Format new_value) {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (OptionValueFormat *option_value = GetAsFormat()) {
     option_value->SetCurrentValue(new_value);
     return true;
@@ -365,14 +366,14 @@ bool OptionValue::SetFormatValue(lldb::Format new_value) {
 }
 
 std::optional<lldb::LanguageType> OptionValue::GetLanguageValue() const {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (const OptionValueLanguage *option_value = GetAsLanguage())
     return option_value->GetCurrentValue();
   return {};
 }
 
 bool OptionValue::SetLanguageValue(lldb::LanguageType new_language) {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (OptionValueLanguage *option_value = GetAsLanguage()) {
     option_value->SetCurrentValue(new_language);
     return true;
@@ -381,28 +382,28 @@ bool OptionValue::SetLanguageValue(lldb::LanguageType new_language) {
 }
 
 FormatEntity::Entry OptionValue::GetFormatEntityValue() const {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (const OptionValueFormatEntity *option_value = GetAsFormatEntity())
     return option_value->GetCurrentValue();
   return {};
 }
 
 const RegularExpression *OptionValue::GetRegexValue() const {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (const OptionValueRegex *option_value = GetAsRegex())
     return option_value->GetCurrentValue();
   return nullptr;
 }
 
 std::optional<int64_t> OptionValue::GetSInt64Value() const {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (const OptionValueSInt64 *option_value = GetAsSInt64())
     return option_value->GetCurrentValue();
   return {};
 }
 
 bool OptionValue::SetSInt64Value(int64_t new_value) {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (OptionValueSInt64 *option_value = GetAsSInt64()) {
     option_value->SetCurrentValue(new_value);
     return true;
@@ -411,14 +412,14 @@ bool OptionValue::SetSInt64Value(int64_t new_value) {
 }
 
 std::optional<llvm::StringRef> OptionValue::GetStringValue() const {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (const OptionValueString *option_value = GetAsString())
     return option_value->GetCurrentValueAsRef();
   return {};
 }
 
 bool OptionValue::SetStringValue(llvm::StringRef new_value) {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (OptionValueString *option_value = GetAsString()) {
     option_value->SetCurrentValue(new_value);
     return true;
@@ -427,14 +428,14 @@ bool OptionValue::SetStringValue(llvm::StringRef new_value) {
 }
 
 std::optional<uint64_t> OptionValue::GetUInt64Value() const {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (const OptionValueUInt64 *option_value = GetAsUInt64())
     return option_value->GetCurrentValue();
   return {};
 }
 
 bool OptionValue::SetUInt64Value(uint64_t new_value) {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (OptionValueUInt64 *option_value = GetAsUInt64()) {
     option_value->SetCurrentValue(new_value);
     return true;
@@ -443,14 +444,14 @@ bool OptionValue::SetUInt64Value(uint64_t new_value) {
 }
 
 std::optional<UUID> OptionValue::GetUUIDValue() const {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (const OptionValueUUID *option_value = GetAsUUID())
     return option_value->GetCurrentValue();
   return {};
 }
 
 bool OptionValue::SetUUIDValue(const UUID &uuid) {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (OptionValueUUID *option_value = GetAsUUID()) {
     option_value->SetCurrentValue(uuid);
     return true;
@@ -459,14 +460,14 @@ bool OptionValue::SetUUIDValue(const UUID &uuid) {
 }
 
 std::optional<ArchSpec> OptionValue::GetArchSpecValue() const {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (const OptionValueArch *option_value = GetAsArch())
     return option_value->GetCurrentValue();
   return {};
 }
 
 bool OptionValue::SetArchSpecValue(ArchSpec arch_spec) {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (OptionValueArch *option_value = GetAsArch()) {
     option_value->SetCurrentValue(arch_spec, false);
     return true;
@@ -475,7 +476,7 @@ bool OptionValue::SetArchSpecValue(ArchSpec arch_spec) {
 }
 
 bool OptionValue::SetFormatEntityValue(const FormatEntity::Entry &entry) {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   if (OptionValueFormatEntity *option_value = GetAsFormatEntity()) {
     option_value->SetCurrentValue(entry);
     return true;
