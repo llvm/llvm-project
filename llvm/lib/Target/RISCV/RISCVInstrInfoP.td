@@ -1866,10 +1866,10 @@ def shiftMask16 : ComplexPattern<XLenVT, 1, "selectShiftMask<16>", [], [], 0>;
 def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
   (REG_SEQUENCE GPRPair, $lo, sub_gpr_even, $hi, sub_gpr_odd)>;
 
-def SDT_RISCVPack : SDTypeProfile<1, 2, [SDTCisVT<0, XLenVT>,
-                                          SDTCisSameAs<0, 1>,
-                                          SDTCisSameAs<0, 2>]>;
-def riscv_pack : RVSDNode<"PACK", SDT_RISCVPack>;
+def SDT_RISCVPairEven : SDTypeProfile<1, 2, [SDTCisVT<0, XLenVT>,
+                                              SDTCisSameAs<0, 1>,
+                                              SDTCisSameAs<0, 2>]>;
+def riscv_paire : RVSDNode<"PAIRE", SDT_RISCVPairEven>;
 
 // Averaging subtraction, (a - b) >> 2
 def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
@@ -2237,7 +2237,7 @@ let append Predicates = [IsRV32] in {
   def : Pat<(riscv_nsra GPR:$lo, GPR:$hi, shiftMask64:$shamt),
             (NSRA (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
 
-  def : Pat<(riscv_pack GPR:$lo, GPR:$hi), (PACK GPR:$lo, GPR:$hi)>;
+  def : Pat<(riscv_paire GPR:$lo, GPR:$hi), (PACK GPR:$lo, GPR:$hi)>;
 
   // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
   // bits [15:0] coming from a zero extended value. We can use pack with
