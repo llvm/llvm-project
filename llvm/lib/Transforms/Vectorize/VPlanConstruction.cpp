@@ -1540,9 +1540,25 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
     ElementCount EpilogueVF, unsigned EpilogueUF, unsigned MainLoopStep,
     unsigned EpilogueLoopStep, ScalarEvolution &SE) {
   // Add the minimum iteration check for the epilogue vector loop.
+  VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
+
+  if (Plan.isCompatibleWithTF(/*TF*/ true)) {
+    Builder.createNaryOp(VPInstruction::BranchOnCond, Plan.getFalse());
+    return;
+  }
+  // if (Plan.isCompatibleWithTF(/*TF*/ true)) {
+  //   VPBasicBlock *EntryVPBB = cast<VPBasicBlock>(Plan.getEntry());
+  //   // Successor 0 is the "taken" (scalar) edge, successor 1 is the vector
+  //   // path — see BranchOnCond's execute() and removeBranchOnConst's
+  //   // RemovedIdx convention. Drop the scalar edge directly, leaving Entry
+  //   // with a single successor (which needs no BranchOnCond terminator at
+  //   // all — VPlan codegen emits a plain unconditional `br` for that case).
+  //   VPBlockUtils::disconnectBlocks(EntryVPBB, EntryVPBB->getSuccessors()[0]);
+  //   return;
+  // }
+
   VPValue *TC = Plan.getTripCount();
   Value *TripCount = TC->getLiveInIRValue();
-  VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
   VPValue *VFxUF = Builder.createExpandSCEV(SE.getElementCount(
       TripCount->getType(), (EpilogueVF * EpilogueUF), SCEV::FlagNUW));
   VPValue *Count = Builder.createSub(TC, Plan.getOrAddLiveIn(VectorTripCount),

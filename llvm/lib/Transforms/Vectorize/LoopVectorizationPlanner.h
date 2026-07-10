@@ -931,16 +931,17 @@ public:
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
   /// interleaving should be avoided up-front, no plans are generated.
-  void plan(ElementCount UserVF, unsigned UserIC);
+  void plan(ElementCount UserVF, unsigned UserIC, bool IsEpilogueTFEnabled);
 
   /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
   /// for each VF.
-  VPlan &getPlanFor(ElementCount VF) const;
+  VPlan &getPlanFor(ElementCount VF, bool TF) const;
 
   /// Compute and return the most profitable vectorization factor and the
   /// corresponding best VPlan. Also collect all profitable VFs in
   /// ProfitableVFs.
-  std::pair<VectorizationFactor, VPlan *> computeBestVF();
+  std::pair<VectorizationFactor, VPlan *>
+  computeBestVF(bool IsEpilogueTFEnabled);
 
   /// \return The desired interleave count.
   /// If interleave count has been specified by metadata it will be returned.
@@ -966,6 +967,7 @@ public:
   DenseMap<const SCEV *, Value *>
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
               InnerLoopVectorizer &LB, DominatorTree *DT,
+              bool IsEpilogueTFEnabled,
               EpilogueVectorizationKind EpilogueVecKind =
                   EpilogueVectorizationKind::None);
 
@@ -975,10 +977,7 @@ public:
 
   /// Look through the existing plans and return true if we have one with
   /// vectorization factor \p VF.
-  bool hasPlanWithVF(ElementCount VF) const {
-    return any_of(VPlans,
-                  [&](const VPlanPtr &Plan) { return Plan->hasVF(VF); });
-  }
+  bool hasPlanWithVF(ElementCount VF, bool TF) const;
 
   /// Test a \p Predicate on a \p Range of VF's. Return the value of applying
   /// \p Predicate on Range.Start, possibly decreasing Range.End such that the
@@ -992,10 +991,13 @@ public:
   /// Returns nullptr if epilogue vectorization is not supported or not
   /// profitable for the loop. \p ScalarEpilogueAllowed indicates whether the
   /// epilogue lowering policy permits creating a scalar epilogue at all.
+  /// \p IsEpilogueTFEnabled indicates whether the epilogue loop should be
+  /// tail-folded rather than left with a scalar epilogue of its own.
   std::unique_ptr<VPlan> selectBestEpiloguePlan(VPlan &MainPlan,
                                                 ElementCount MainLoopVF,
                                                 unsigned IC,
-                                                bool ScalarEpilogueAllowed);
+                                                bool ScalarEpilogueAllowed,
+                                                bool IsEpilogueTFEnabled);
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
@@ -1029,7 +1031,7 @@ private:
   /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
   /// scalar transformations applied. Returns null if an initial VPlan cannot
   /// be built.
-  VPlanPtr tryToBuildVPlan1();
+  VPlanPtr tryToBuildVPlan1(bool IsEpilogueTFEnabled);
 
   /// Build a VPlan using VPRecipes according to the information gathered by
   /// Legal and VPlan-based analysis. For outer loops, performs basic recipe
@@ -1044,7 +1046,8 @@ private:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// based on \p VPlan1 and according to the information gathered by Legal
   /// when it checked if it is legal to vectorize the loop.
-  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF);
+  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF,
+                   bool IsEpilogueTFEnabled);
 
   /// Add ComputeReductionResult recipes to the middle block to compute the
   /// final reduction results. Add Select recipes to the latch block when

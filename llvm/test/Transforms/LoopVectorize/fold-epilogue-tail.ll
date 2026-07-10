@@ -23,8 +23,7 @@
 
 define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ; CHECK-LABEL: LV: Checking a loop in 'test_epilogue_tf'
-; CHECK: LV: epilogue tail-folding is not supported yet
-; CHECK: remark: <unknown>:0:0: The epilogue-tail-folding policy prefer-fold-tail is not supported yet, fall back to a normal epilogue
+; CHECK: LV: epilogue tail-folding is enabled
 ;
 ; CHECK-DISABLED-EPILOG-LABEL: LV: Checking a loop in 'test_epilogue_tf'
 ; CHECK-DISABLED-EPILOG: remark: <unknown>:0:0: Options conflict, epilogue vectorization is disallowed while epilogue tail-folding allowed!
