@@ -331,7 +331,7 @@ public:
     return isUncountedPtr(QT.getCanonicalType());
   }
 
-  const char *typeName() const final { return "RefPtr capable type"; }
+  const char *typeName() const final { return "RefPtr-capable type"; }
 };
 
 class NoUncheckedPtrMemberChecker final : public RawPtrRefMemberChecker {
@@ -344,7 +344,7 @@ public:
     return isUncheckedPtr(QT.getCanonicalType());
   }
 
-  const char *typeName() const final { return "CheckedPtr capable type"; }
+  const char *typeName() const final { return "CheckedPtr-capable type"; }
 };
 
 class NoUnretainedMemberChecker final : public RawPtrRefMemberChecker {
@@ -361,7 +361,7 @@ public:
     return RTC->isUnretained(QT, ignoreARC);
   }
 
-  const char *typeName() const final { return "RetainPtr capable type"; }
+  const char *typeName() const final { return "RetainPtr-capable type"; }
 
   PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
                              const Type *T) const final {
