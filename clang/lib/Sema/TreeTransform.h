@@ -1047,6 +1047,12 @@ public:
   QualType RebuildConstantMatrixType(QualType ElementType, unsigned NumRows,
                                      unsigned NumColumns);
 
+  /// Build a new cooperative matrix type given the element type and
+  /// scope and use and dimensions.
+  QualType RebuildCooperativeMatrixType(QualType ElementType, unsigned Scope,
+                                        unsigned NumRows, unsigned NumColumns,
+                                        unsigned Use);
+                                 
   /// Build a new matrix type given the type and dependently-defined
   /// dimensions.
   QualType RebuildDependentSizedMatrixType(QualType ElementType, Expr *RowExpr,
@@ -6298,6 +6304,34 @@ TreeTransform<Derived>::TransformConstantMatrixType(TypeLocBuilder &TLB,
   NewTL.setAttrOperandParensRange(TL.getAttrOperandParensRange());
   NewTL.setAttrRowOperand(TL.getAttrRowOperand());
   NewTL.setAttrColumnOperand(TL.getAttrColumnOperand());
+
+  return Result;
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformCooperativeMatrixType(
+    TypeLocBuilder &TLB, CooperativeMatrixTypeLoc TL) {
+  const CooperativeMatrixType *T = TL.getTypePtr();
+  QualType ElementType = getDerived().TransformType(T->getElementType());
+  if (ElementType.isNull())
+    return QualType();
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || ElementType != T->getElementType()) {
+    Result = getDerived().RebuildCooperativeMatrixType(
+        ElementType, T->getScope(), T->getNumRows(), T->getNumColumns(),
+        T->getUse());
+    if (Result.isNull())
+      return QualType();
+  }
+
+  CooperativeMatrixTypeLoc NewTL = TLB.push<CooperativeMatrixTypeLoc>(Result);
+  NewTL.setAttrNameLoc(TL.getAttrNameLoc());
+  NewTL.setAttrOperandParensRange(TL.getAttrOperandParensRange());
+  NewTL.setAttrScopeOperand(TL.getAttrScopeOperand());
+  NewTL.setAttrRowOperand(TL.getAttrRowOperand());
+  NewTL.setAttrColumnOperand(TL.getAttrColumnOperand());
+  NewTL.setAttrUseOperand(TL.getAttrUseOperand());
 
   return Result;
 }
@@ -18163,6 +18197,14 @@ QualType TreeTransform<Derived>::RebuildConstantMatrixType(
     QualType ElementType, unsigned NumRows, unsigned NumColumns) {
   return SemaRef.Context.getConstantMatrixType(ElementType, NumRows,
                                                NumColumns);
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::RebuildCooperativeMatrixType(
+    QualType ElementType, unsigned Scope, unsigned NumRows, unsigned NumColumns,
+    unsigned Use) {
+  return SemaRef.Context.getCooperativeMatrixType(ElementType, Scope, NumRows,
+                                                  NumColumns, Use);
 }
 
 template <typename Derived>
