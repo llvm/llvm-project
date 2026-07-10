@@ -18,6 +18,10 @@
 // RUN: %clang_cc1 -load %llvmshlibdir/PrintFunctionNames%pluginext \
 // RUN:   -plugin print-fns -plugin-arg-print-fns -warn-decls \
 // RUN:   -Wno-plugin %t/simple.cpp 2>&1 | FileCheck --check-prefix=SILENT %s
+// A warning is silenced by the -Wno-user-defined-warnings root over every group.
+// RUN: %clang_cc1 -load %llvmshlibdir/PrintFunctionNames%pluginext \
+// RUN:   -plugin print-fns -plugin-arg-print-fns -warn-decls \
+// RUN:   -Wno-user-defined-warnings %t/simple.cpp 2>&1 | FileCheck --check-prefix=SILENT %s
 // A warning is promoted by -Werror=<group>.
 // RUN: not %clang_cc1 -load %llvmshlibdir/PrintFunctionNames%pluginext \
 // RUN:   -plugin print-fns -plugin-arg-print-fns -warn-decls \

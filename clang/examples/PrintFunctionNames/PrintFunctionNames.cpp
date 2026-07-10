@@ -41,18 +41,21 @@ public:
                          bool ErrorOnDecls)
       : Instance(Instance), ParsedTemplates(ParsedTemplates) {
     DiagnosticsEngine &Diags = Instance.getDiagnostics();
+    // The plugin is registered under "print-fns", so its group is
+    // "print-fns-plugin"; passing the plugin's own name keeps the diagnostics
+    // in that namespace automatically.
     if (RemarkOnDecls)
-      RemarkID = Diags.getCustomDiagID(DiagnosticsEngine::Remark,
-                                       "saw top-level declaration '%0'",
-                                       "print-fns-plugin");
+      RemarkID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Remark,
+                                             "saw top-level declaration '%0'",
+                                             "print-fns");
     if (WarnOnDecls)
-      WarnID = Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                                     "suspicious top-level declaration '%0'",
-                                     "print-fns-plugin");
+      WarnID = Diags.getCustomPluginDiagID(
+          DiagnosticsEngine::Warning, "suspicious top-level declaration '%0'",
+          "print-fns");
     if (ErrorOnDecls)
-      ErrorID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                      "forbidden top-level declaration '%0'",
-                                      "print-fns-plugin");
+      ErrorID = Diags.getCustomPluginDiagID(
+          DiagnosticsEngine::Error, "forbidden top-level declaration '%0'",
+          "print-fns");
   }
 
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
