@@ -25,6 +25,15 @@ namespace {
 class SPIRVABIInfo : public ABIInfo {
 public:
   SPIRVABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+
+  cir::VectorType getOptimalVectorMemoryType(
+      cir::VectorType type, const clang::LangOptions &langOpts) const override {
+    // Logical SPIR-V does not describe the underlying hardware or guarantee
+    // that a smaller vector occupies storage for a larger vector.
+    if (cgt.getCGModule().getTarget().getTriple().isSPIRVLogical())
+      return type;
+    return ABIInfo::getOptimalVectorMemoryType(type, langOpts);
+  }
 };
 
 class SPIRVTargetCIRGenInfo : public TargetCIRGenInfo {

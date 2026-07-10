@@ -462,20 +462,34 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isNontemporal) {
 
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
+    mlir::Type srcTy = value.getType();
+
     // Boolean vectors use `iN` as storage type.
     if (clangVecTy->isExtVectorBoolType())
       cgm.errorNYI(addr.getPointer().getLoc(),
                    "emitStoreOfScalar ExtVectorBoolType");
 
-    // Handle vectors of size 3 like size 4 for better performance.
-    const mlir::Type elementType = addr.getElementType();
-    const auto vecTy = cast<cir::VectorType>(elementType);
+    if (const auto vecTy = mlir::dyn_cast<cir::VectorType>(value.getType())) {
+      const cir::VectorType newVecTy =
+          getTargetHooks().getABIInfo().getOptimalVectorMemoryType(
+              vecTy, getLangOpts());
 
-    // TODO(CIR): Use `ABIInfo::getOptimalVectorMemoryType` once it upstreamed
-    assert(!cir::MissingFeatures::cirgenABIInfo());
-    if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
-      cgm.errorNYI(addr.getPointer().getLoc(),
-                   "emitStoreOfScalar Vec3 & PreserveVec3Type disabled");
+      if (!clangVecTy->isPackedVectorBoolType(getContext()) &&
+          vecTy != newVecTy) {
+        SmallVector<int64_t, 16> mask(newVecTy.getSize(), vecTy.getSize());
+        std::iota(mask.begin(), mask.begin() + vecTy.getSize(), 0);
+
+        // Keep padding lanes undef rather than poison. Poison padding can make
+        // a later whole-vector coercion poison as well.
+        value = builder.createVecShuffle(
+            *currSrcLoc, value,
+            builder.getConstant(*currSrcLoc, cir::UndefAttr::get(vecTy)), mask);
+        srcTy = newVecTy;
+      }
+
+      if (addr.getElementType() != srcTy)
+        addr = addr.withElementType(builder, srcTy);
+    }
   }
 
   value = emitToMemory(value, ty);
@@ -748,13 +762,22 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
       return nullptr;
     }
 
+    // Handles vectors of sizes that are likely to be expanded to a larger size
+    // to optimize performance.
     const auto vecTy = cast<cir::VectorType>(eltTy);
-
-    // Handle vectors of size 3 like size 4 for better performance.
-    assert(!cir::MissingFeatures::cirgenABIInfo());
-    if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
-      cgm.errorNYI(addr.getPointer().getLoc(),
-                   "emitLoadOfScalar Vec3 & PreserveVec3Type disabled");
+    const auto newVecTy =
+        getTargetHooks().getABIInfo().getOptimalVectorMemoryType(vecTy,
+                                                                 getLangOpts());
+    if (vecTy != newVecTy) {
+      const mlir::Location loadLoc = getLoc(loc);
+      const Address castAddr = addr.withElementType(builder, newVecTy);
+      mlir::Value value =
+          builder.createLoad(loadLoc, castAddr, isVolatile, isNontemporal);
+      SmallVector<int64_t, 16> mask(vecTy.getSize());
+      std::iota(mask.begin(), mask.end(), 0);
+      value = builder.createVecShuffle(loadLoc, value, mask);
+      return emitFromMemory(value, ty);
+    }
   }
 
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
