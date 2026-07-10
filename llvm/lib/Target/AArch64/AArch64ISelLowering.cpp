@@ -2522,7 +2522,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
 
   // Mark floating-point truncating stores/extending loads as having custom
   // lowering
-  if (VT.isFloatingPoint()) {
+  if (VT.isFloatingPoint() && !VT.isVectorOf(MVT::bf16)) {
     MVT InnerVT = VT.changeVectorElementType(MVT::f16);
     while (InnerVT != VT) {
       setTruncStoreAction(VT, InnerVT, Custom);
