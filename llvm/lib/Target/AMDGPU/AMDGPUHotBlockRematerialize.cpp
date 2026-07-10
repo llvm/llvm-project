@@ -289,8 +289,10 @@ static unsigned collectMBBPressure(MachineBasicBlock &MBB, LiveIntervals *LIS,
   for (auto I = MBB.rbegin(), B = MBB.rend(); I != B; ++I) {
     MachineInstr &MI = *I;
     RPTracker.recede(MI);
-    if (MI.mayStore() ||
-        (MI.isBarrier() && MI.getOpcode() != AMDGPU::S_BRANCH))
+    // Record blocks that write memory so loads are not sunk across them.
+    // Control-flow terminators (S_BRANCH, S_CBRANCH_EXECZ) and S_ENDPGM are
+    // barriers but not memory writes, so gate on mayStore only.
+    if (MI.mayStore())
       Status.MemWriteMBBSet.insert(&MBB);
   }
 
@@ -853,6 +855,14 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(
   RematStatus Status = getRematStatus(MF, MLI, LIS, MRI, ST);
 
   const unsigned MaxOcc = ST->getWavesPerEU(MF.getFunction()).second;
+  LLVM_DEBUG(dbgs() << "remat: TargetOcc=" << Status.TargetOcc
+                    << " MaxOcc=" << MaxOcc
+                    << " TargetSLimit=" << Status.TargetSLimit
+                    << " TargetVLimit=" << Status.TargetVLimit
+                    << " MaxSPressure=" << Status.MaxSPressure
+                    << " InputPhysS=" << Status.InputPhysicalSPressure
+                    << " SGPRBound=" << Status.SGPRBound
+                    << " MemBound=" << Status.MemBound << "\n");
   if (Status.TargetOcc >= MaxOcc)
     return false;
 
@@ -897,23 +907,33 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(
     const GCNRPTracker::LiveRegSet InputLive = Status.MBBInputLiveMap[MBB];
     const GCNRPTracker::LiveRegSet OutputLive = Status.MBBOutputLiveMap[MBB];
 
-    GCNDownwardRPTracker Tracker(*LIS);
-    Tracker.reset(*MBB->begin(), MBB->end(), &InputLive);
+    // Drive the tracker from the first non-PHI instruction: PHI incoming
+    // operands are not live at the block-entry slot, so feeding PHIs to the
+    // downward tracker would trip its "register isn't live" invariant. Let the
+    // tracker self-compute its live-in set from LiveIntervals.
+    auto ScanBegin = MBB->getFirstNonPHI();
+    ScanBegin = skipDebugInstructionsForward(ScanBegin, MBB->end());
+    if (ScanBegin != MBB->end()) {
+      GCNDownwardRPTracker Tracker(*LIS);
+      Tracker.reset(*ScanBegin, MBB->end());
+      while (true) {
+        GCNRPTracker::LiveRegSet LISLR = Tracker.getLiveRegs();
+        updateLiveInfo(SRematMap, LISLR, InputLive, MBB, RPOTIndexMap);
 
-    for (MachineInstr &MI : *MBB) {
-      if (MI.isDebugInstr())
-        continue;
-      Tracker.advance();
-      GCNRPTracker::LiveRegSet LISLR = Tracker.getLiveRegs();
-      updateLiveInfo(SRematMap, LISLR, InputLive, MBB, RPOTIndexMap);
+        unsigned VPressure = 0;
+        unsigned SPressure = 0;
+        collectLiveSetPressure(LISLR, MRI, SIRI, VPressure, SPressure);
+        MaxVPressure = std::max(MaxVPressure, VPressure);
+        MaxSPressure = std::max(MaxSPressure, SPressure);
 
-      unsigned VPressure = 0;
-      unsigned SPressure = 0;
-      collectLiveSetPressure(LISLR, MRI, SIRI, VPressure, SPressure);
-      MaxVPressure = std::max(MaxVPressure, VPressure);
-      MaxSPressure = std::max(MaxSPressure, SPressure);
+        if (!Tracker.advance())
+          break;
+      }
     }
     MaxSPressure += RegForVCC + Status.InputPhysicalSPressure;
+    LLVM_DEBUG(dbgs() << "remat: bb." << MBB->getNumber()
+                      << " MaxSPressure=" << MaxSPressure
+                      << " MaxVPressure=" << MaxVPressure << "\n");
     if (MaxVPressure <= Status.TargetVLimit &&
         MaxSPressure <= Status.TargetSLimit)
       continue;
@@ -929,6 +949,9 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(
         getReducedSize(SRematMap, CandidateRegs, MRI, LiveInfo, RPOTIndexMap);
 
     const int RematSCnt = MaxSPressure - SReduced - Status.TargetSLimit;
+    LLVM_DEBUG(dbgs() << "remat: bb." << MBB->getNumber()
+                      << " HOT, SReduced=" << SReduced
+                      << " RematSCnt=" << RematSCnt << "\n");
 
     bool IsSGPRSpill = false;
     if (RematSCnt > 0)
@@ -946,20 +969,31 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(
       for (RematNode &Node : Candidates) {
         Register Reg = Node.Reg;
         if (!isSafeToMoveOrClone(Node.DefMI, MRI)) {
+          LLVM_DEBUG(dbgs() << "remat:   reject " << printReg(Reg, SIRI)
+                            << " unsafe\n");
           PinnedRegSet.insert(Reg);
           continue;
         }
         if (MRI.hasOneNonDBGUse(Reg)) {
           MachineInstr &UseMI = *MRI.use_instr_nodbg_begin(Reg);
-          if (isImplicitDefUse(Node.DefMI, &UseMI))
+          if (isImplicitDefUse(Node.DefMI, &UseMI)) {
+            LLVM_DEBUG(dbgs() << "remat:   reject " << printReg(Reg, SIRI)
+                              << " implicit-def-use\n");
             continue;
+          }
           MachineBasicBlock *InsertBB = findSinkTarget(
               Node.DefMI, Reg, DT, PDT, MLI, MRI, Status.MemBound);
-          if (!InsertBB)
+          if (!InsertBB) {
+            LLVM_DEBUG(dbgs() << "remat:   reject " << printReg(Reg, SIRI)
+                              << " no sink target\n");
             continue;
+          }
           if (hasInterleavedMemoryWrite(Node.DefMI, Node.DefMI->getParent(),
-                                        InsertBB, Status, DT))
+                                        InsertBB, Status, DT)) {
+            LLVM_DEBUG(dbgs() << "remat:   reject " << printReg(Reg, SIRI)
+                              << " interleaved mem write\n");
             continue;
+          }
           RematNode SinkNode = Node;
           SinkNode.Kind = RematKind::Sink;
           SinkNode.InsertBlock = InsertBB;
@@ -986,6 +1020,10 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(
         AccumulatedGain += E.GainInDwords;
       }
       NewRematSCnt = RematSCnt - AccumulatedGain;
+      LLVM_DEBUG(dbgs() << "remat: bb." << MBB->getNumber() << " candidates="
+                        << Candidates.size() << " entries=" << AllEntries.size()
+                        << " selected(gain)=" << AccumulatedGain
+                        << " NewRematSCnt=" << NewRematSCnt << "\n");
     }
 
     if (RematSCnt > 0)

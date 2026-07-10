@@ -15,6 +15,8 @@
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 
+#include "llvm/ADT/SmallVector.h"
+
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -72,11 +74,13 @@ void AMDGPULatencyTracker::scan(const MachineInstr &MI) {
           Latency = Cycle;
       }
     }
-    for (auto It = LatencyMIs.begin(); It != LatencyMIs.end();) {
-      auto Prev = It;
-      int Cycle = (It++)->second;
+    // Collect the registers whose pending latency fully retires this cycle;
+    // erase them after iterating so we do not mutate the map while walking it.
+    SmallVector<unsigned, 8> RetiredRegs;
+    for (auto &Entry : LatencyMIs) {
+      int Cycle = Entry.second;
       if (Cycle <= Latency) {
-        LatencyMIs.erase(Prev);
+        RetiredRegs.push_back(Entry.first);
         if (IsWaitCnt && Cycle == Latency) {
           Score.MemLatency += Cycle;
           // Count the exposed memory latency only once; the rest is hidden.
@@ -85,10 +89,12 @@ void AMDGPULatencyTracker::scan(const MachineInstr &MI) {
           Score.LatencyHide += Cycle;
         }
       } else {
-        Prev->second -= Latency;
+        Entry.second -= Latency;
         Score.LatencyHide += Latency;
       }
     }
+    for (unsigned Reg : RetiredRegs)
+      LatencyMIs.erase(Reg);
   } else {
     auto GetAluStatus = [](const MachineInstr &MI, const SIInstrInfo *SIII) {
       if (SIII->isVALU(MI.getOpcode(), false))
