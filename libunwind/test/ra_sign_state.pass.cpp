@@ -138,7 +138,7 @@ __attribute__((naked, target("pauth"))) static uint64_t check_negate() {
 }
 
 #if defined(HAVE_CFI_SET_RA_STATE)
-__attribute__((naked)) uint64_t check_set() {
+__attribute__((naked, target("pauth"))) uint64_t check_set() {
   // clang-format off
   asm(".cfi_set_ra_state 1, 0\n"
       "pacibsp\n"
