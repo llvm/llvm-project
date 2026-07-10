@@ -1,0 +1,18 @@
+15 warnings generated.
+/Users/khicketts/github_com/llvm-project/hicketts_test/test_hicketts_optional.cpp:13:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+   13 |   Val.unwrap(); // unchecked access — may be empty
+      |   ^~~
+/Users/khicketts/github_com/llvm-project/hicketts_test/test_hicketts_optional.cpp:17:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+   17 |   Val.value(); // unchecked access — may be empty
+      |   ^~~
+/Users/khicketts/github_com/llvm-project/hicketts_test/test_hicketts_optional.cpp:21:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+   21 |   Val.deref(); // unchecked access — may be empty
+      |   ^~~
+/Users/khicketts/github_com/llvm-project/hicketts_test/test_hicketts_optional.cpp:60:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+   60 |   Val.unwrap(); // unsafe — value was cleared
+      |   ^~~
+/Users/khicketts/github_com/llvm-project/hicketts_test/test_hicketts_optional.cpp:67:5: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+   67 |     A.unwrap(); // unsafe — a's state is now unknown
+      |     ^
+Suppressed 10 warnings (10 in non-user code).
+Use -header-filter=.* or leave it as default to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.

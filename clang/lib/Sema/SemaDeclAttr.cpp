@@ -6490,7 +6490,58 @@ static bool isValidAnalyzeAsMethodAttr(Decl *D, StringRef Tag) {
   // no validation is done currently.  if someone writes something with a nonsense name,
   // it simply won't be validated but also no warning will be emitted
   // would be nice to do something smarter in the real implementation
-  return true;
+
+  if(Tag.empty())
+    return false;
+
+  size_t OpenParen = Tag.find('(');
+  if(OpenParen == StringRef::npos)
+    return true;    // simple function name with no arguments
+
+  if(OpenParen == 0)
+    return false;  // no method name before parentheses
+
+  if (Tag.back() != ')')
+    return false;  // some trailing rubbish after close parenthesis
+
+  StringRef AllParams = Tag.slice(OpenParen + 1, Tag.size() - 1);
+
+  llvm::errs() << "AllParams: " << AllParams << "\n";
+
+  if (AllParams.empty())
+    return true;  // verbose but valid
+
+  // look through all the parameters
+  // check () and <> are balanced
+  // split on ','
+  SmallVector<char, 4> BalanceCheckStack;
+  size_t SegStart = 0;
+
+  // TODO currently something like  blah<,> would pass validation
+  // we should improve this past POC stage
+  for (size_t I = 0, End = AllParams.size(); I != End; ++I )
+  {
+    char C = AllParams[I];
+    if(C == '('|| C == '<'){
+      BalanceCheckStack.push_back(C);
+    }
+    else if(C == ')')
+    {
+      if(BalanceCheckStack.empty() || BalanceCheckStack.back() != '(')
+        return false;
+      BalanceCheckStack.pop_back();
+    }
+    else if(C == '>'){
+      if(BalanceCheckStack.empty() || BalanceCheckStack.back() != '<')
+        return false;
+      BalanceCheckStack.pop_back();
+    }
+    else if(C == ',' && BalanceCheckStack.empty()){
+      // TODO more detailed param checks
+    }
+  }
+
+  return BalanceCheckStack.empty();
 }
 
 static void handleAnalyzeAsMethod(Sema &S, Decl *D, const ParsedAttr &AL) {

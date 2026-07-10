@@ -236,11 +236,13 @@ AST_MATCHER(CXXOperatorCallExpr, hasOptionalOperatorObjectType) {
   return hasReceiverTypeDesugaringToOptional(Node.getArg(0));
 }
 
-AST_MATCHER_P(NamedDecl, hasAnalyzeAsMethodName, std::string, MethodName) {
+AST_MATCHER_P(NamedDecl, hasAnalyzeAsMethodName, std::string, MethodMatcher) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(&Node)) {
     if (const auto *Attr = MD->getAttr<AnalyzeAsMethodAttr>()) {
       StringRef AttrValue = Attr->getMethodName();
-      return AttrValue == MethodName;
+      if (StringRef(MethodMatcher).contains('('))
+        return AttrValue == MethodMatcher;                // method + args
+      return AttrValue.split('(').first == MethodMatcher; // just method name
     }
   }
   return false;
@@ -286,8 +288,9 @@ auto inPlaceClass() {
 
 auto isOptionalNulloptConstructor() {
   return cxxConstructExpr(
-      hasDeclaration(cxxConstructorDecl(parameterCountIs(1),
-                                        hasParameter(0, hasNulloptType()))),
+      hasDeclaration(cxxConstructorDecl(
+          anyOf(allOf(parameterCountIs(1), hasParameter(0, hasNulloptType())),
+                hasAnalyzeAsMethodName("optional(std::nullopt_t)")))),
       hasOptionalOrDerivedType());
 }
 
