@@ -5,13 +5,12 @@
 ; (phi <-> add) in the use walk that propagates the NonUniformEXT decoration.
 ; Check that codegen terminates and still decorates both the loop-carried index
 ; phi and the access chain derived from it.
-
 target triple = "spirv1.6-unknown-vulkan1.3-compute"
 
 ; CHECK-DAG: OpCapability Shader
 ; CHECK-DAG: OpCapability ShaderNonUniformEXT
 ; CHECK-DAG: OpCapability StorageTexelBufferArrayNonUniformIndexingEXT
-; CHECK-DAG: %[[#phi:]] = OpPhi {{.*}}
+; CHECK-DAG: %[[#phi:]] = OpPhi %[[#]]
 ; CHECK-DAG: %[[#access:]] = OpAccessChain {{%[0-9]+}} {{%[0-9]+}} %[[#phi]]
 ; CHECK-DAG: OpDecorate %[[#phi]] NonUniformEXT
 ; CHECK-DAG: OpDecorate %[[#access]] NonUniformEXT
