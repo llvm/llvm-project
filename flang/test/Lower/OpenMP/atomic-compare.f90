@@ -218,6 +218,101 @@ subroutine atomic_compare_capture_int_gt(x, e, d, v)
   !$omp end atomic
 end
 
+! Min/max (postfix) compare-capture: update first, capture the new value.
+! CHECK-LABEL: func.func @_QPatomic_compare_capture_min_postfix(
+! CHECK-SAME:    %[[X:.*]]: !fir.ref<i32> {fir.bindc_name = "x"},
+! CHECK-SAME:    %[[E:.*]]: !fir.ref<i32> {fir.bindc_name = "e"},
+! CHECK-SAME:    %[[V:.*]]: !fir.ref<i32> {fir.bindc_name = "v"})
+! CHECK:         %[[E_DECL:.*]]:2 = hlfir.declare %[[E]] {{.*}}
+! CHECK:         %[[V_DECL:.*]]:2 = hlfir.declare %[[V]] {{.*}}
+! CHECK:         %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {{.*}}
+! CHECK:         %[[EVAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<i32>
+! CHECK:         %[[DVAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<i32>
+! CHECK:         omp.atomic.capture memory_order(relaxed) {
+! CHECK:           omp.atomic.compare %[[X_DECL]]#0 : !fir.ref<i32> {
+! CHECK:           ^bb0(%[[XVAL:.*]]: i32):
+! CHECK:             %[[CMP:.*]] = arith.cmpi sgt, %[[XVAL]], %[[EVAL]] : i32
+! CHECK:             %[[SEL:.*]] = arith.select %[[CMP]], %[[DVAL]], %[[XVAL]] : i32
+! CHECK:             omp.yield(%[[SEL]] : i32)
+! CHECK:           }
+! CHECK:           omp.atomic.read %[[V_DECL]]#0 = %[[X_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
+! CHECK:         }
+subroutine atomic_compare_capture_min_postfix(x, e, v)
+  integer :: x, e, v
+  !$omp atomic compare capture
+    if (x > e) x = e
+    v = x
+  !$omp end atomic
+end
+
+! Min/max fail-only compare-capture: v is captured in the else branch (when the
+! comparison, and hence the update, does not happen).
+! CHECK-LABEL: func.func @_QPatomic_compare_capture_min_failonly(
+! CHECK:         omp.atomic.capture memory_order(relaxed) {
+! CHECK:           omp.atomic.compare %[[X_DECL:.*]]#0 : !fir.ref<i32> {
+! CHECK:           ^bb0(%[[XVAL:.*]]: i32):
+! CHECK:             %[[CMP:.*]] = arith.cmpi sgt, %[[XVAL]], %{{.*}} : i32
+! CHECK:             %[[SEL:.*]] = arith.select %[[CMP]], %{{.*}}, %[[XVAL]] : i32
+! CHECK:             omp.yield(%[[SEL]] : i32)
+! CHECK:           }
+! CHECK:           omp.atomic.read %{{.*}}#0 = %[[X_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
+! CHECK:         } {fail_only}
+subroutine atomic_compare_capture_min_failonly(x, e, v)
+  integer :: x, e, v
+  !$omp atomic compare capture
+    if (x > e) then
+      x = e
+    else
+      v = x
+    end if
+  !$omp end atomic
+end
+
+! REAL min (postfix): if (x > e) x = e ; v = x -> compare region uses arith.cmpf.
+! CHECK-LABEL: func.func @_QPatomic_compare_capture_real_min(
+! CHECK:         %[[E_DECL:.*]]:2 = hlfir.declare %{{.*}}Ee"
+! CHECK:         %[[V_DECL:.*]]:2 = hlfir.declare %{{.*}}Ev"
+! CHECK:         %[[X_DECL:.*]]:2 = hlfir.declare %{{.*}}Ex"
+! CHECK:         %[[EVAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<f32>
+! CHECK:         %[[DVAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<f32>
+! CHECK:         omp.atomic.capture memory_order(relaxed) {
+! CHECK:           omp.atomic.compare %[[X_DECL]]#0 : !fir.ref<f32> {
+! CHECK:           ^bb0(%[[XVAL:.*]]: f32):
+! CHECK:             %[[CMP:.*]] = arith.cmpf ogt, %[[XVAL]], %[[EVAL]] fastmath<contract> : f32
+! CHECK:             %[[SEL:.*]] = arith.select %[[CMP]], %[[DVAL]], %[[XVAL]] : f32
+! CHECK:             omp.yield(%[[SEL]] : f32)
+! CHECK:           }
+! CHECK:           omp.atomic.read %[[V_DECL]]#0 = %[[X_DECL]]#0 : !fir.ref<f32>, !fir.ref<f32>, f32
+! CHECK:         }
+subroutine atomic_compare_capture_real_min(x, e, v)
+  real :: x, e, v
+  !$omp atomic compare capture
+    if (x > e) x = e
+    v = x
+  !$omp end atomic
+end
+
+! REAL max (postfix): if (x < e) x = e ; v = x.
+! CHECK-LABEL: func.func @_QPatomic_compare_capture_real_max(
+! CHECK:         %[[E_DECL:.*]]:2 = hlfir.declare %{{.*}}Ee"
+! CHECK:         %[[X_DECL:.*]]:2 = hlfir.declare %{{.*}}Ex"
+! CHECK:         omp.atomic.capture memory_order(relaxed) {
+! CHECK:           omp.atomic.compare %[[X_DECL]]#0 : !fir.ref<f32> {
+! CHECK:           ^bb0(%[[XVAL:.*]]: f32):
+! CHECK:             %[[CMP:.*]] = arith.cmpf olt, %[[XVAL]], %{{.*}} fastmath<contract> : f32
+! CHECK:             %[[SEL:.*]] = arith.select %[[CMP]], %{{.*}}, %[[XVAL]] : f32
+! CHECK:             omp.yield(%[[SEL]] : f32)
+! CHECK:           }
+! CHECK:           omp.atomic.read %{{.*}}#0 = %[[X_DECL]]#0 : !fir.ref<f32>, !fir.ref<f32>, f32
+! CHECK:         }
+subroutine atomic_compare_capture_real_max(x, e, v)
+  real :: x, e, v
+  !$omp atomic compare capture
+    if (x < e) x = e
+    v = x
+  !$omp end atomic
+end
+
 ! CHECK-LABEL: func.func @_QPatomic_compare_capture_postfix(
 ! CHECK-SAME:    %[[X:.*]]: !fir.ref<i32> {fir.bindc_name = "x"},
 ! CHECK-SAME:    %[[E:.*]]: !fir.ref<i32> {fir.bindc_name = "e"},
@@ -299,6 +394,27 @@ end
 ! CHECK:         }
 subroutine atomic_compare_capture_real(x, e, d, v)
   real :: x, e, d, v
+  !$omp atomic compare capture
+    if (x == e) x = d
+    v = x
+  !$omp end atomic
+end
+
+! Complex compare-capture (postfix form): the compare region decomposes into
+! per-field comparisons combined with fir.cmpc/arith and the desired value is
+! selected as a whole complex value.
+! CHECK-LABEL: func.func @_QPatomic_compare_capture_complex(
+! CHECK:         omp.atomic.capture memory_order(relaxed) {
+! CHECK:           omp.atomic.compare %[[X_DECL:.*]]#0 : !fir.ref<complex<f32>> {
+! CHECK:           ^bb0(%[[XVAL:.*]]: complex<f32>):
+! CHECK:             %[[CMP:.*]] = fir.cmpc "oeq", %[[XVAL]], %{{.*}} : complex<f32>
+! CHECK:             %[[SEL:.*]] = arith.select %[[CMP]], %{{.*}}, %[[XVAL]] : complex<f32>
+! CHECK:             omp.yield(%[[SEL]] : complex<f32>)
+! CHECK:           }
+! CHECK:           omp.atomic.read %{{.*}}#0 = %[[X_DECL]]#0 : !fir.ref<complex<f32>>, !fir.ref<complex<f32>>, complex<f32>
+! CHECK:         }
+subroutine atomic_compare_capture_complex(x, e, d, v)
+  complex :: x, e, d, v
   !$omp atomic compare capture
     if (x == e) x = d
     v = x

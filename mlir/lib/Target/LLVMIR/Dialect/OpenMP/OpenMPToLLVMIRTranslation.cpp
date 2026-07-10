@@ -5370,6 +5370,99 @@ convertFCmpPredicateToAtomicCompareOp(LLVM::FCmpPredicate predicate) {
   }
 }
 
+/// Result of matching the decomposed complex equality pattern inside an atomic
+/// compare region.
+struct ComplexComparePattern {
+  bool isComplex = false;
+  bool isNE = false;         // `or` of the field compares => NE (unsupported).
+  mlir::Value eAggregate;    // The complex expected value (`e`).
+  bool isXBinopExpr = false; // True if x is the first fcmp operand.
+};
+
+/// Detect a decomposed complex equality comparison in an atomic compare region:
+///   %re_x = llvm.extractvalue %xval[0]
+///   %re_e = llvm.extractvalue %eStruct[0]
+///   %cmp_re = llvm.fcmp "oeq" %re_x, %re_e
+///   %im_x = llvm.extractvalue %xval[1]
+///   %im_e = llvm.extractvalue %eStruct[1]
+///   %cmp_im = llvm.fcmp "oeq" %im_x, %im_e
+///   %cmp = llvm.and %cmp_re, %cmp_im   (llvm.or would be NE)
+/// It is recognised by an and/or whose operands are both fcmps operating on
+/// extractvalues, one chain rooted at the block argument (x) and the other at
+/// the expected complex value (e).
+static ComplexComparePattern detectComplexCompareEq(Block &block) {
+  ComplexComparePattern result;
+  auto traceToAggregate = [](mlir::Value v) -> mlir::Value {
+    if (auto extractOp = v.getDefiningOp<LLVM::ExtractValueOp>())
+      return extractOp.getContainer();
+    return nullptr;
+  };
+  for (Operation &op : block.getOperations()) {
+    if (!isa<LLVM::AndOp, LLVM::OrOp>(op))
+      continue;
+    auto lhsFcmp = op.getOperand(0).getDefiningOp<LLVM::FCmpOp>();
+    auto rhsFcmp = op.getOperand(1).getDefiningOp<LLVM::FCmpOp>();
+    if (!lhsFcmp || !rhsFcmp)
+      continue;
+    mlir::Value lhsAgg0 = traceToAggregate(lhsFcmp.getOperand(0));
+    mlir::Value lhsAgg1 = traceToAggregate(lhsFcmp.getOperand(1));
+    bool lhsXIsOp0 = (lhsAgg0 == block.getArgument(0));
+    bool lhsXIsOp1 = (lhsAgg1 == block.getArgument(0));
+    if (!lhsXIsOp0 && !lhsXIsOp1)
+      continue;
+    mlir::Value eAggregate = lhsXIsOp0 ? lhsAgg1 : lhsAgg0;
+    if (!eAggregate)
+      continue;
+    result.isComplex = true;
+    result.isNE = isa<LLVM::OrOp>(op);
+    result.eAggregate = eAggregate;
+    result.isXBinopExpr = lhsXIsOp0;
+    break;
+  }
+  return result;
+}
+
+/// Emit a bitcast-to-integer `cmpxchg` for a complex (struct-typed) atomic
+/// compare. The expected/desired complex values are spilled to allocas and
+/// reloaded as an integer of the same width, then compared and swapped. Returns
+/// the cmpxchg (result type `{iN, i1}`); `maxAlign` receives the alignment used
+/// so callers can reinterpret the captured old value through memory.
+static llvm::AtomicCmpXchgInst *
+emitComplexAtomicCmpXchg(llvm::IRBuilderBase &builder, llvm::Value *llvmX,
+                         llvm::Type *complexTy, llvm::Value *eVal,
+                         llvm::Value *dVal, llvm::AtomicOrdering atomicOrdering,
+                         bool isWeak, llvm::Align &maxAlign) {
+  const llvm::DataLayout &DL =
+      builder.GetInsertBlock()->getModule()->getDataLayout();
+  unsigned totalBits = DL.getTypeStoreSizeInBits(complexTy).getFixedValue();
+  llvm::IntegerType *intTy =
+      llvm::IntegerType::get(builder.getContext(), totalBits);
+  llvm::Align complexAlign = DL.getABITypeAlign(complexTy);
+  llvm::Align intAlign = DL.getABITypeAlign(intTy);
+  maxAlign = std::max(complexAlign, intAlign);
+
+  llvm::AllocaInst *eAlloca =
+      builder.CreateAlloca(complexTy, nullptr, "cmplx.e");
+  eAlloca->setAlignment(maxAlign);
+  llvm::AllocaInst *dAlloca =
+      builder.CreateAlloca(complexTy, nullptr, "cmplx.d");
+  dAlloca->setAlignment(maxAlign);
+
+  builder.CreateAlignedStore(eVal, eAlloca, maxAlign);
+  llvm::Value *eInt =
+      builder.CreateAlignedLoad(intTy, eAlloca, maxAlign, "cmplx.e.int");
+  builder.CreateAlignedStore(dVal, dAlloca, maxAlign);
+  llvm::Value *dInt =
+      builder.CreateAlignedLoad(intTy, dAlloca, maxAlign, "cmplx.d.int");
+
+  llvm::AtomicOrdering failOrdering =
+      llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(atomicOrdering);
+  auto *cmpXchg = builder.CreateAtomicCmpXchg(llvmX, eInt, dInt, maxAlign,
+                                              atomicOrdering, failOrdering);
+  cmpXchg->setWeak(isWeak);
+  return cmpXchg;
+}
+
 /// Holds the extracted comparison pattern information from an atomic compare
 /// region.
 struct AtomicComparePatternInfo {
@@ -5379,7 +5472,6 @@ struct AtomicComparePatternInfo {
   bool isXBinopExpr = false;
   bool isSigned = false;
 };
-
 /// Extract comparison predicate, expected value (e), desired value (d), and
 /// related flags from an atomic compare region block by scanning for
 /// icmp/fcmp/select/min/max operations.
@@ -5387,6 +5479,27 @@ static LogicalResult extractAtomicComparePattern(
     Block &block,
     llvm::function_ref<llvm::Value *(mlir::Value)> materializeValue,
     omp::AtomicCompareOp atomicCompareOp, AtomicComparePatternInfo &info) {
+  // Complex equality is a decomposed per-field pattern (extractvalue + fcmp +
+  // and) rather than a single scalar compare. Detect it first so the scalar
+  // icmp/fcmp handling below does not mistake a real/imaginary field for the
+  // whole expected value.
+  if (ComplexComparePattern cplx = detectComplexCompareEq(block);
+      cplx.isComplex) {
+    if (cplx.isNE)
+      return atomicCompareOp.emitError(
+          "unsupported comparison predicate (NE) for complex atomic compare");
+    info.compareOp = llvm::omp::OMPAtomicCompareOp::EQ;
+    info.isXBinopExpr = cplx.isXBinopExpr;
+    info.eVal = materializeValue(cplx.eAggregate);
+    for (Operation &op : block.getOperations()) {
+      if (auto selectOp = dyn_cast<LLVM::SelectOp>(op)) {
+        info.dVal = materializeValue(selectOp.getTrueValue());
+        break;
+      }
+    }
+    return success();
+  }
+
   for (Operation &op : block.getOperations()) {
     // Pre-filter: skip icmps that don't involve the block argument
     // (e.g., truthiness extractions from logical-to-integer conversion).
@@ -5573,22 +5686,101 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
     bool isPostfixCapture = !isReadFirst;
     bool isFailOnly = atomicCaptureOp.getFailOnly();
 
+    // Complex equality capture: x is struct-typed, which the OMPIRBuilder
+    // cannot handle, so emit a bitcast-to-integer cmpxchg (as in the
+    // non-capture complex path) and reconstruct the captured value from its
+    // result through memory. Complex only supports the == comparison.
+    if (llvmXElementType->isStructTy()) {
+      llvm::Align maxAlign;
+      llvm::AtomicCmpXchgInst *cmpXchg = emitComplexAtomicCmpXchg(
+          builder, llvmX, llvmXElementType, eVal, dVal, atomicOrdering,
+          atomicCompareOp.getWeak(), maxAlign);
+
+      llvm::Value *oldInt = builder.CreateExtractValue(cmpXchg, 0);
+      llvm::Value *cmpOk = builder.CreateExtractValue(cmpXchg, 1);
+
+      // Reinterpret the old integer value as the complex struct via memory.
+      llvm::AllocaInst *oldAlloca =
+          builder.CreateAlloca(llvmXElementType, nullptr, "cmplx.old");
+      oldAlloca->setAlignment(maxAlign);
+      builder.CreateAlignedStore(oldInt, oldAlloca, maxAlign);
+      llvm::Value *oldComplex = builder.CreateAlignedLoad(
+          llvmXElementType, oldAlloca, maxAlign, "cmplx.old.val");
+
+      if (isFailOnly) {
+        // v is written only when the compare fails (cmpOk == false).
+        llvm::Value *cmpFailed = builder.CreateNot(cmpOk);
+        llvm::BasicBlock *curBB = builder.GetInsertBlock();
+        llvm::Function *fn = curBB->getParent();
+        llvm::BasicBlock *contBB = llvm::BasicBlock::Create(
+            builder.getContext(), "omp.atomic.cont", fn);
+        llvm::BasicBlock *exitBB = llvm::BasicBlock::Create(
+            builder.getContext(), "omp.atomic.exit", fn);
+        builder.CreateCondBr(cmpFailed, contBB, exitBB);
+        builder.SetInsertPoint(contBB);
+        builder.CreateStore(oldComplex, llvmAtomicV.Var,
+                            llvmAtomicV.IsVolatile);
+        builder.CreateBr(exitBB);
+        builder.SetInsertPoint(exitBB);
+      } else if (isPostfixCapture) {
+        // v gets the new value of x: d on success, old x otherwise.
+        llvm::Value *newComplex = builder.CreateSelect(cmpOk, dVal, oldComplex);
+        builder.CreateStore(newComplex, llvmAtomicV.Var,
+                            llvmAtomicV.IsVolatile);
+      } else {
+        // Prefix: v gets the old value of x.
+        builder.CreateStore(oldComplex, llvmAtomicV.Var,
+                            llvmAtomicV.IsVolatile);
+      }
+
+      // Emit flush after atomic compare if needed (release/acq_rel/seq_cst).
+      if (atomicOrdering == llvm::AtomicOrdering::Release ||
+          atomicOrdering == llvm::AtomicOrdering::AcquireRelease ||
+          atomicOrdering == llvm::AtomicOrdering::SequentiallyConsistent) {
+        llvm::OpenMPIRBuilder::LocationDescription flushLoc(builder);
+        ompBuilder->createFlush(flushLoc);
+      }
+      return success();
+    }
+
+    // Min/max (<, >) comparisons lower to an atomicrmw. The OMPIRBuilder has no
+    // notion of a failed compare for an atomicrmw, so the fail-only capture
+    // form (v written only when the compare fails) has no valid mapping and is
+    // Min/max (<, >) comparisons lower to an atomicrmw. The OMPIRBuilder has no
+    // notion of a failed compare for an atomicrmw (it asserts on IsFailOnly),
+    // so for min/max the fail-only capture is reconstructed manually below.
+    bool isMinMax = compareOp != llvm::omp::OMPAtomicCompareOp::EQ;
+
     llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicVForCall = llvmAtomicV;
-    // Postfix: bypass V in OMPIRBuilder, handled manually below.
-    if (isPostfixCapture && !isFailOnly)
+    // Capture into V is reconstructed manually below for:
+    //   * postfix capture (v gets the new value of x): equality from the
+    //     cmpxchg result, min/max from the atomicrmw result;
+    //   * min/max fail-only capture (the OMPIRBuilder cannot express it).
+    // Bypass V in the OMPIRBuilder for those cases so it does not also emit its
+    // own (for min/max, incorrect or unsupported) capture store.
+    bool minMaxManualCapture = isMinMax && (isPostfixCapture || isFailOnly);
+    bool eqPostfixManualCapture = !isMinMax && isPostfixCapture && !isFailOnly;
+    if (minMaxManualCapture || eqPostfixManualCapture)
       llvmAtomicVForCall = {nullptr, nullptr, false, false};
 
-    // Prefix: IsPostfixUpdate=true → direct store of old value.
-    // Fail-only: IsPostfixUpdate=false → conditional store on failure.
-    bool isPostfixUpdate = !isFailOnly;
+    // The OMPIRBuilder only understands IsFailOnly for the equality (cmpxchg)
+    // path; for min/max it would assert. Min/max fail-only is handled here.
+    bool builderFailOnly = isFailOnly && !isMinMax;
+
+    // IsPostfixUpdate selects which value the OMPIRBuilder captures into V:
+    //   * min/max prefix and equality prefix: a direct store of the old value
+    //     (IsPostfixUpdate=true).
+    //   * equality fail-only: a conditional store (IsPostfixUpdate=false).
+    // Manually-reconstructed captures bypass V above.
+    bool isPostfixUpdate = !builderFailOnly;
 
     bool isWeak = atomicCompareOp.getWeak();
     bool savedHandleFPNegZero = ompBuilder->setHandleFPNegZero(true);
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
-        ompBuilder->createAtomicCompare(ompLoc, llvmAtomicX, llvmAtomicVForCall,
-                                        llvmAtomicR, eVal, dVal, atomicOrdering,
-                                        compareOp, isXBinopExpr,
-                                        isPostfixUpdate, isFailOnly, isWeak);
+        ompBuilder->createAtomicCompare(
+            ompLoc, llvmAtomicX, llvmAtomicVForCall, llvmAtomicR, eVal, dVal,
+            atomicOrdering, compareOp, isXBinopExpr, isPostfixUpdate,
+            builderFailOnly, isWeak);
     ompBuilder->setHandleFPNegZero(savedHandleFPNegZero);
 
     if (failed(handleError(afterIP, *atomicCaptureOp)))
@@ -5596,8 +5788,99 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
 
     builder.restoreIP(*afterIP);
 
-    // Postfix: v = select(success, D, old) — captures new value of x.
-    if (isPostfixCapture && !isFailOnly) {
+    // Min/max capture is reconstructed from the atomicrmw the OMPIRBuilder
+    // emits (its result is the old value of x). V was bypassed above.
+    //   * postfix: v gets the new value min/max(old, e);
+    //   * fail-only: v gets the old value, but only when the compare failed
+    //     (i.e. the atomicrmw did not change x).
+    // (Prefix min/max captures the old value directly through V, so nothing
+    // extra is needed there.)
+    if (isMinMax && (isPostfixCapture || isFailOnly)) {
+      llvm::BasicBlock *curBB = builder.GetInsertBlock();
+      llvm::AtomicRMWInst *rmw = nullptr;
+      for (auto &inst : llvm::reverse(*curBB)) {
+        if (auto *r = dyn_cast<llvm::AtomicRMWInst>(&inst)) {
+          rmw = r;
+          break;
+        }
+      }
+      assert(rmw && "expected atomicrmw for min/max compare capture");
+      llvm::Value *oldVal = rmw;
+      llvm::Value *rhs = rmw->getValOperand();
+
+      if (isFailOnly) {
+        // The compare "failed" (the else branch runs) exactly when the
+        // atomicrmw did not change x. Recompute the original update condition
+        // on the old value and negate it. v is stored only in that case.
+        llvm::CmpInst::Predicate updatePred;
+        switch (rmw->getOperation()) {
+        case llvm::AtomicRMWInst::Min:
+          updatePred = llvm::CmpInst::ICMP_SGT;
+          break;
+        case llvm::AtomicRMWInst::Max:
+          updatePred = llvm::CmpInst::ICMP_SLT;
+          break;
+        case llvm::AtomicRMWInst::UMin:
+          updatePred = llvm::CmpInst::ICMP_UGT;
+          break;
+        case llvm::AtomicRMWInst::UMax:
+          updatePred = llvm::CmpInst::ICMP_ULT;
+          break;
+        case llvm::AtomicRMWInst::FMin:
+          updatePred = llvm::CmpInst::FCMP_OGT;
+          break;
+        case llvm::AtomicRMWInst::FMax:
+          updatePred = llvm::CmpInst::FCMP_OLT;
+          break;
+        default:
+          llvm_unreachable(
+              "unexpected atomicrmw op for min/max compare capture");
+        }
+        llvm::Value *updated = builder.CreateCmp(updatePred, oldVal, rhs);
+        llvm::Value *failed = builder.CreateNot(updated);
+        llvm::Function *fn = curBB->getParent();
+        llvm::BasicBlock *contBB = llvm::BasicBlock::Create(
+            builder.getContext(), "omp.atomic.cont", fn);
+        llvm::BasicBlock *exitBB = llvm::BasicBlock::Create(
+            builder.getContext(), "omp.atomic.exit", fn);
+        builder.CreateCondBr(failed, contBB, exitBB);
+        builder.SetInsertPoint(contBB);
+        builder.CreateStore(oldVal, llvmAtomicV.Var, llvmAtomicV.IsVolatile);
+        builder.CreateBr(exitBB);
+        builder.SetInsertPoint(exitBB);
+      } else {
+        llvm::Intrinsic::ID id;
+        switch (rmw->getOperation()) {
+        case llvm::AtomicRMWInst::Min:
+          id = llvm::Intrinsic::smin;
+          break;
+        case llvm::AtomicRMWInst::Max:
+          id = llvm::Intrinsic::smax;
+          break;
+        case llvm::AtomicRMWInst::UMin:
+          id = llvm::Intrinsic::umin;
+          break;
+        case llvm::AtomicRMWInst::UMax:
+          id = llvm::Intrinsic::umax;
+          break;
+        case llvm::AtomicRMWInst::FMin:
+          id = llvm::Intrinsic::minnum;
+          break;
+        case llvm::AtomicRMWInst::FMax:
+          id = llvm::Intrinsic::maxnum;
+          break;
+        default:
+          llvm_unreachable(
+              "unexpected atomicrmw op for min/max compare capture");
+        }
+        llvm::Value *newVal = builder.CreateBinaryIntrinsic(id, oldVal, rhs);
+        builder.CreateStore(newVal, llvmAtomicV.Var, llvmAtomicV.IsVolatile);
+      }
+    }
+
+    // Equality postfix: v = select(success, D, old) — reconstructs the new
+    // value of x from the cmpxchg result.
+    if (!isMinMax && isPostfixCapture && !isFailOnly) {
       llvm::BasicBlock *curBB = builder.GetInsertBlock();
       llvm::Value *oldVal = nullptr;
       llvm::Value *successVal = nullptr;
@@ -5848,56 +6131,18 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
   llvm::Value *dVal = nullptr;
   bool isXBinopExpr = false;
 
-  auto traceToAggregate = [](mlir::Value v) -> mlir::Value {
-    if (auto extractOp = v.getDefiningOp<LLVM::ExtractValueOp>())
-      return extractOp.getContainer();
-    return nullptr;
-  };
-
-  // Check for a decomposed complex comparison pattern:
-  //   %re_x = llvm.extractvalue %xval[0]
-  //   %re_e = llvm.extractvalue %eStruct[0]
-  //   %cmp_re = llvm.fcmp "oeq" %re_x, %re_e
-  //   %im_x = llvm.extractvalue %xval[1]
-  //   %im_e = llvm.extractvalue %eStruct[1]
-  //   %cmp_im = llvm.fcmp "oeq" %im_x, %im_e
-  //   %cmp = llvm.and %cmp_re, %cmp_im   (for EQ)
-  // Detect this by looking for AndOp/OrOp whose operands are both FCmpOps
-  // operating on ExtractValueOps from the block argument.
-  bool isComplexPattern = false;
-  for (Operation &op : block.getOperations()) {
-    if (!isa<LLVM::AndOp, LLVM::OrOp>(op))
-      continue;
-
-    // Using : %cmp = llvm.and %cmp_re, %cmp_im
-    auto lhsFcmp = op.getOperand(0).getDefiningOp<LLVM::FCmpOp>();
-    auto rhsFcmp = op.getOperand(1).getDefiningOp<LLVM::FCmpOp>();
-    if (!lhsFcmp || !rhsFcmp)
-      continue;
-
-    // Using : %cmp_re = llvm.fcmp "oeq" %re_x, %re_e
-    // Check presence of x (block argument) and get e.
-    mlir::Value lhsAgg0 = traceToAggregate(lhsFcmp.getOperand(0));
-    mlir::Value lhsAgg1 = traceToAggregate(lhsFcmp.getOperand(1));
-    bool lhsXIsOp0 = (lhsAgg0 == block.getArgument(0));
-    bool lhsXIsOp1 = (lhsAgg1 == block.getArgument(0));
-    if (!lhsXIsOp0 && !lhsXIsOp1)
-      continue;
-    mlir::Value eAggregate = lhsXIsOp0 ? lhsAgg1 : lhsAgg0;
-    if (!eAggregate)
-      continue;
-
-    if (isa<LLVM::AndOp>(op))
-      compareOp = llvm::omp::OMPAtomicCompareOp::EQ;
-    else
+  // Check for a decomposed complex comparison pattern (extractvalue + fcmp +
+  // and/or of the real/imaginary fields).
+  ComplexComparePattern cplx = detectComplexCompareEq(block);
+  bool isComplexPattern = cplx.isComplex;
+  if (isComplexPattern) {
+    if (cplx.isNE)
       // OrOp corresponds to NE, which is not a valid atomic compare op.
       return atomicCompareOp.emitError(
           "unsupported comparison predicate (NE) for complex atomic compare");
-
-    isXBinopExpr = lhsXIsOp0;
-    eVal = materializeValue(eAggregate);
-    isComplexPattern = true;
-    break;
+    compareOp = llvm::omp::OMPAtomicCompareOp::EQ;
+    isXBinopExpr = cplx.isXBinopExpr;
+    eVal = materializeValue(cplx.eAggregate);
   }
 
   if (isComplexPattern) {
@@ -5916,37 +6161,10 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
       dVal = materializeValue(yieldOp.getResults()[0]);
     }
 
-    const llvm::DataLayout &DL =
-        builder.GetInsertBlock()->getModule()->getDataLayout();
-    unsigned totalBits =
-        DL.getTypeStoreSizeInBits(llvmXElementType).getFixedValue();
-
-    llvm::IntegerType *intTy =
-        llvm::IntegerType::get(builder.getContext(), totalBits);
-
-    llvm::Align complexAlign = DL.getABITypeAlign(llvmXElementType);
-    llvm::Align intAlign = DL.getABITypeAlign(intTy);
-    llvm::Align maxAlign = std::max(complexAlign, intAlign);
-
-    llvm::AllocaInst *eAlloca =
-        builder.CreateAlloca(llvmXElementType, nullptr, "cmplx.e");
-    eAlloca->setAlignment(maxAlign);
-    llvm::AllocaInst *dAlloca =
-        builder.CreateAlloca(llvmXElementType, nullptr, "cmplx.d");
-    dAlloca->setAlignment(maxAlign);
-
-    builder.CreateAlignedStore(eVal, eAlloca, maxAlign);
-    llvm::Value *eInt =
-        builder.CreateAlignedLoad(intTy, eAlloca, maxAlign, "cmplx.e.int");
-    builder.CreateAlignedStore(dVal, dAlloca, maxAlign);
-    llvm::Value *dInt =
-        builder.CreateAlignedLoad(intTy, dAlloca, maxAlign, "cmplx.d.int");
-
-    llvm::AtomicOrdering failOrdering =
-        llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(atomicOrdering);
-    auto *cmpXchg = builder.CreateAtomicCmpXchg(llvmX, eInt, dInt, maxAlign,
-                                                atomicOrdering, failOrdering);
-    cmpXchg->setWeak(atomicCompareOp.getWeak());
+    llvm::Align maxAlign;
+    emitComplexAtomicCmpXchg(builder, llvmX, llvmXElementType, eVal, dVal,
+                             atomicOrdering, atomicCompareOp.getWeak(),
+                             maxAlign);
 
     // Emit flush after atomic compare if needed (for release, acq_rel,
     // seq_cst orderings).

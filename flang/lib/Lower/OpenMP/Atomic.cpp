@@ -606,6 +606,20 @@ void Fortran::lower::omp::lowerAtomic(
       TODO(loc, "Compound clauses of OpenMP ATOMIC COMPARE");
     }
 
+    // The comparison-result forms of atomic compare
+    //     (e.g. `r = x == e;
+    //           if (r) x = d`)
+    // are accepted by semantics, but the assignment to `r` is
+    // not captured by the atomic analysis and would be silently dropped.
+    // Detect the extra assignment here and emit an explicit TODO instead of
+    // generating incorrect code.
+    if (!construct.IsCapture()) {
+      const parser::Block &body = std::get<parser::Block>(construct.t);
+      if (body.size() > 1)
+        TODO(loc, "atomic compare capturing the comparison result "
+                  "(e.g. 'r = x == e')");
+    }
+
     common::RelationalOperator relOpr = common::RelationalOperator::EQ;
     std::optional<semantics::SomeExpr> expectedExprStorage;
     bool isUnsigned = false;
