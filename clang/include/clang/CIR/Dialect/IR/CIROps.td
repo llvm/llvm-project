@@ -4024,7 +4024,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
-    OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member,
+    OptionalAttr<CIR_FuncInfoAttr>:$func_info,
     OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
   );
 
@@ -4287,6 +4287,10 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     bool isIndirect() { return !getCallee(); }
     mlir::Value getIndirectCall();
 
+    /// Returns the `cir.func` being called or null if the call is indirect or
+    /// cannot be resolved.
+    cir::FuncOp resolveCalleeInTable(mlir::SymbolTableCollection &symbolTable);
+
     void setArg(unsigned index, mlir::Value value) {
       if (!isIndirect()) {
         setOperand(index, value);
@@ -4295,6 +4299,16 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
       // For indirect call, the operand list is shifted by one.
       setOperand(index + 1, value);
+    }
+  }];
+
+  let extraClassDefinition = [{
+    cir::FuncOp $cppClass::resolveCalleeInTable(
+        mlir::SymbolTableCollection &symbolTable) {
+      mlir::FlatSymbolRefAttr callee = getCalleeAttr();
+      if (!callee)
+        return {};
+      return symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(*this, callee);
     }
   }];
 

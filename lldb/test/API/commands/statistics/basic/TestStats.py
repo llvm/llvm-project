@@ -348,6 +348,8 @@ class TestCase(TestBase):
         strings = memory["strings"]
         strings_keys = [
             "bytesTotal",
+            "bytesUsed",
+            "bytesUnused",
         ]
         self.verify_keys(strings, '"strings"', strings_keys, None)
 
