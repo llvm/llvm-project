@@ -5,11 +5,8 @@ define <4 x i32> @masked_shl_v4i32(<4 x i32> %x, <4 x i32> %amt) {
 ; CHECK-LABEL: masked_shl_v4i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.4s, #63
-; CHECK-NEXT:    movi v3.4s, #32
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ushl v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmhi v1.4s, v3.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
 entry:
   %m = and <4 x i32> %amt, splat (i32 63)
@@ -23,11 +20,8 @@ define <4 x i32> @masked_shl_v4i32_swapped(<4 x i32> %x, <4 x i32> %amt) {
 ; CHECK-LABEL: masked_shl_v4i32_swapped:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.4s, #63
-; CHECK-NEXT:    movi v3.4s, #32
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ushl v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmhi v1.4s, v3.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
 entry:
   %m = and <4 x i32> %amt, splat (i32 63)
@@ -42,11 +36,8 @@ define <4 x i32> @masked_srl_v4i32(<4 x i32> %x, <4 x i32> %amt) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.4s, #63
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    movi v2.4s, #32
-; CHECK-NEXT:    neg v3.4s, v1.4s
-; CHECK-NEXT:    cmhi v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    ushl v0.4s, v0.4s, v3.4s
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    ushl v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
   %m = and <4 x i32> %amt, splat (i32 63)
@@ -60,11 +51,8 @@ define <16 x i8> @masked_shl_v16i8(<16 x i8> %x, <16 x i8> %amt) {
 ; CHECK-LABEL: masked_shl_v16i8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.16b, #15
-; CHECK-NEXT:    movi v3.16b, #8
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ushl v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    cmhi v1.16b, v3.16b, v1.16b
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
 entry:
   %m = and <16 x i8> %amt, splat (i8 15)
@@ -78,11 +66,8 @@ define <8 x i16> @masked_shl_v8i16(<8 x i16> %x, <8 x i16> %amt) {
 ; CHECK-LABEL: masked_shl_v8i16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.8h, #31
-; CHECK-NEXT:    movi v3.8h, #16
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ushl v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    cmhi v1.8h, v3.8h, v1.8h
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
 entry:
   %m = and <8 x i16> %amt, splat (i16 31)
@@ -97,12 +82,8 @@ define <2 x i64> @masked_shl_v2i64(<2 x i64> %x, <2 x i64> %amt) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, #127 // =0x7f
 ; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    mov w8, #64 // =0x40
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    dup v2.2d, x8
 ; CHECK-NEXT:    ushl v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    cmhi v1.2d, v2.2d, v1.2d
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
 entry:
   %m = and <2 x i64> %amt, splat (i64 127)
@@ -116,11 +97,8 @@ define <2 x i32> @masked_shl_v2i32(<2 x i32> %x, <2 x i32> %amt) {
 ; CHECK-LABEL: masked_shl_v2i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.2s, #63
-; CHECK-NEXT:    movi v3.2s, #32
 ; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ushl v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    cmhi v1.2s, v3.2s, v1.2s
-; CHECK-NEXT:    and v0.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    ret
 entry:
   %m = and <2 x i32> %amt, splat (i32 63)
@@ -134,9 +112,8 @@ define <4 x i32> @unbounded_shl_v4i32(<4 x i32> %x, <4 x i32> %amt) {
 ; CHECK-LABEL: unbounded_shl_v4i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.4s, #32
+; CHECK-NEXT:    umin v1.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    ushl v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmhi v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
 entry:
   %shl = shl <4 x i32> %x, %amt
@@ -149,10 +126,9 @@ define <4 x i32> @unbounded_srl_v4i32(<4 x i32> %x, <4 x i32> %amt) {
 ; CHECK-LABEL: unbounded_srl_v4i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.4s, #32
-; CHECK-NEXT:    neg v3.4s, v1.4s
-; CHECK-NEXT:    ushl v0.4s, v0.4s, v3.4s
-; CHECK-NEXT:    cmhi v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    umin v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    ushl v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
   %srl = lshr <4 x i32> %x, %amt
@@ -167,9 +143,8 @@ define <4 x i32> @masked_shl_v4i32_mask255(<4 x i32> %x, <4 x i32> %amt) {
 ; CHECK-NEXT:    movi v2.2d, #0x0000ff000000ff
 ; CHECK-NEXT:    movi v3.4s, #32
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    umin v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    ushl v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmhi v1.4s, v3.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
 entry:
   %m = and <4 x i32> %amt, splat (i32 255)
@@ -182,16 +157,37 @@ entry:
 define <2 x i64> @unbounded_shl_v2i64_sve(<2 x i64> %x, <2 x i64> %amt) #0 {
 ; CHECK-LABEL: unbounded_shl_v2i64_sve:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.d, #64 // =0x40
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    umin z1.d, z1.d, #64
 ; CHECK-NEXT:    ushl v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    cmhi v1.2d, v2.2d, v1.2d
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
 entry:
   %shl = shl <2 x i64> %x, %amt
   %ok = icmp ult <2 x i64> %amt, splat (i64 64)
   %res = select <2 x i1> %ok, <2 x i64> %shl, <2 x i64> zeroinitializer
   ret <2 x i64> %res
+}
+
+define <1 x i128> @neg_masked_shl_v1i128(<1 x i128> %x, <1 x i128> %amt) {
+; CHECK-LABEL: neg_masked_shl_v1i128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and x8, x2, #0x3f
+; CHECK-NEXT:    lsr x9, x0, #1
+; CHECK-NEXT:    lsl x11, x1, x2
+; CHECK-NEXT:    eor x10, x8, #0x3f
+; CHECK-NEXT:    cmp x8, #128
+; CHECK-NEXT:    lsr x9, x9, x10
+; CHECK-NEXT:    lsl x10, x0, x2
+; CHECK-NEXT:    orr x9, x11, x9
+; CHECK-NEXT:    csel x0, x10, xzr, lo
+; CHECK-NEXT:    csel x1, x9, xzr, lo
+; CHECK-NEXT:    ret
+entry:
+  %m = and <1 x i128> %amt, splat (i128 63)
+  %shl = shl <1 x i128> %x, %m
+  %ok = icmp ult <1 x i128> %m, splat (i128 128)
+  %res = select <1 x i1> %ok, <1 x i128> %shl, <1 x i128> zeroinitializer
+  ret <1 x i128> %res
 }
 
 define <2 x i64> @neg_unbounded_shl_v2i64(<2 x i64> %x, <2 x i64> %amt) {
