@@ -520,14 +520,14 @@ static const MemoryMapParams Linux_Hexagon_MemoryMapParams = {
 // FIXME: Remove -msan-origin-base -msan-and-mask added by PR #109284 to tests
 // after picking good constants
 
-// riscv64 Linux — SV39 (256GB). Zero-aliasing split layout requires -no-pie.
-// Binary at <4GB, libs near 256GB. Fold by bit 37 (128GB) separates the two
-// clusters with no overlap. Inspired by LoongArch's multi-shadow design.
+// riscv64 Linux — SV39 (256GB). Three app regions share a single 48GB shadow
+// via AndMask=0x3C00000000 (clears bits 34-37). Shadow and origin are
+// non-overlapping. x86/Arm use simple linear maps but have ≥1000× larger VMA.
 static const MemoryMapParams Linux_RISCV64_MemoryMapParams = {
-    0x2000000000, // AndMask (clear bit 37)
+    0x3C00000000, // AndMask
     0,            // XorMask
-    0x100000000,  // ShadowBase (4GB)
-    0x200000000,  // OriginBase (8GB)
+    0x1000000000, // ShadowBase
+    0x3000000000, // OriginBase
 };
 
 // aarch64 FreeBSD

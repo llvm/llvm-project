@@ -13,8 +13,8 @@ define void @Store(ptr nocapture %p, i32 %x) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -137438953473
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 4294967296
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -257698037761
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 68719476736
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    store i32 [[X]], ptr [[P]], align 4
@@ -28,10 +28,10 @@ define void @Store(ptr nocapture %p, i32 %x) nounwind sanitize_memory {
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
-; ORIGIN-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], -137438953473
-; ORIGIN-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 4294967296
+; ORIGIN-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], -257698037761
+; ORIGIN-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 68719476736
 ; ORIGIN-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
-; ORIGIN-NEXT:    [[TMP7:%.*]] = add i64 [[TMP4]], 8589934592
+; ORIGIN-NEXT:    [[TMP7:%.*]] = add i64 [[TMP4]], 206158430208
 ; ORIGIN-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
 ; ORIGIN-NEXT:    store i32 [[TMP1]], ptr [[TMP6]], align 4
 ; ORIGIN-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP1]], 0
@@ -56,8 +56,8 @@ define i32 @Load(ptr nocapture %p) nounwind sanitize_memory {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -137438953473
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 4294967296
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -257698037761
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 68719476736
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    store i32 [[_MSLD]], ptr @__msan_retval_tls, align 8
@@ -70,10 +70,10 @@ define i32 @Load(ptr nocapture %p) nounwind sanitize_memory {
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P]], align 4
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
-; ORIGIN-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -137438953473
-; ORIGIN-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 4294967296
+; ORIGIN-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -257698037761
+; ORIGIN-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 68719476736
 ; ORIGIN-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; ORIGIN-NEXT:    [[TMP6:%.*]] = add i64 [[TMP3]], 8589934592
+; ORIGIN-NEXT:    [[TMP6:%.*]] = add i64 [[TMP3]], 206158430208
 ; ORIGIN-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; ORIGIN-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP5]], align 4
 ; ORIGIN-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
