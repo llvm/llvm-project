@@ -80,11 +80,11 @@ jobs:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
           echo "[]" > comments &&
-          python llvm/utils/git/ids-check-helper.py \
+          python ./llvm-project/llvm/utils/git/ids-check-helper.py \
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
             --idt-path $(which idt) \
-            --compile-commands $(pwd)/llvm-project/build/compile_commands.json \
+            --compile-commands ./llvm-project/build/compile_commands.json \
             --start-rev HEAD~1 \
             --end-rev HEAD \
             --changed-files "$CHANGED_FILES" \
