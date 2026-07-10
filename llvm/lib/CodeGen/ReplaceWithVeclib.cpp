@@ -94,6 +94,10 @@ static void replaceWithTLIFunction(IntrinsicInst *II, VFInfo &Info,
   // safe for non-FP intrinsics, whose flags are simply empty).
   auto *Replacement = IRBuilder.CreateCall(
       TLIVecFunc, Args, OpBundles, /*FMFSource=*/II->getFastMathFlagsOrNone());
+  // Preserve fpmath for FP math
+  if (isa<FPMathOperator>(Replacement)) {
+    Replacement->copyMetadata(*II, {LLVMContext::MD_fpmath});
+  }
   II->replaceAllUsesWith(Replacement);
   Replacement->setCallingConv(TLIVecFunc->getCallingConv());
 }
@@ -272,10 +276,8 @@ static bool trySplitVectorSinCos(const TargetLibraryInfo &TLI,
       Intrinsic::getOrInsertDeclaration(M, Intrinsic::sin, Arg->getType());
   Function *CosFn =
       Intrinsic::getOrInsertDeclaration(M, Intrinsic::cos, Arg->getType());
-  CallInst *SinCall = B.CreateCall(SinFn, {Arg}, "sin");
-  CallInst *CosCall = B.CreateCall(CosFn, {Arg}, "cos");
-  SinCall->copyFastMathFlags(II);
-  CosCall->copyFastMathFlags(II);
+  CallInst *SinCall = B.CreateCall(SinFn, {Arg}, /*FMFSource=*/II, "sin");
+  CallInst *CosCall = B.CreateCall(CosFn, {Arg}, /*FMFSource=*/II, "cos");
   SinCall->copyMetadata(*II, {LLVMContext::MD_fpmath});
   CosCall->copyMetadata(*II, {LLVMContext::MD_fpmath});
 
