@@ -17,6 +17,7 @@
     SANITIZER_SOLARIS || SANITIZER_HAIKU
 
 #  include "sanitizer_common.h"
+#  include "sanitizer_dl.h"
 #  include "sanitizer_flags.h"
 #  include "sanitizer_getauxval.h"
 #  include "sanitizer_internal_defs.h"
@@ -1394,6 +1395,47 @@ bool LibraryNameIs(const char *full_name, const char *base_name) {
     return false;
   return (name[base_name_length] == '-' || name[base_name_length] == '.');
 }
+
+#  if !SANITIZER_ANDROID && !SANITIZER_HAIKU
+// Call cb for each region mapped by map.
+void ForEachMappedRegion(link_map *map, void (*cb)(const void *, uptr)) {
+  CHECK_NE(map, nullptr);
+#    if !SANITIZER_FREEBSD && !SANITIZER_HAIKU
+  typedef ElfW(Phdr) Elf_Phdr;
+  typedef ElfW(Ehdr) Elf_Ehdr;
+#    endif  // !SANITIZER_FREEBSD
+  char *base = DladdrElfHeaderBase((void *)map->l_ld, (char *)map->l_ld);
+  Elf_Ehdr *ehdr = (Elf_Ehdr *)base;
+  char *phdrs = base + ehdr->e_phoff;
+  char *phdrs_end = phdrs + ehdr->e_phnum * ehdr->e_phentsize;
+
+  // Find the segment with the minimum base so we can "relocate" the p_vaddr
+  // fields.  Typically ET_DYN objects (DSOs) have base of zero and ET_EXEC
+  // objects have a non-zero base.
+  uptr preferred_base = (uptr)-1;
+  for (char *iter = phdrs; iter != phdrs_end; iter += ehdr->e_phentsize) {
+    Elf_Phdr *phdr = (Elf_Phdr *)iter;
+    if (phdr->p_type == PT_LOAD && preferred_base > (uptr)phdr->p_vaddr)
+      preferred_base = (uptr)phdr->p_vaddr;
+  }
+
+  // Compute the delta from the real base to get a relocation delta.
+  sptr delta = (uptr)base - preferred_base;
+  // Now we can figure out what the loader really mapped.
+  for (char *iter = phdrs; iter != phdrs_end; iter += ehdr->e_phentsize) {
+    Elf_Phdr *phdr = (Elf_Phdr *)iter;
+    if (phdr->p_type == PT_LOAD) {
+      uptr seg_start = phdr->p_vaddr + delta;
+      uptr seg_end = seg_start + phdr->p_memsz;
+      // None of these values are aligned.  We consider the ragged edges of the
+      // load command as defined, since they are mapped from the file.
+      seg_start = RoundDownTo(seg_start, GetPageSizeCached());
+      seg_end = RoundUpTo(seg_end, GetPageSizeCached());
+      cb((void *)seg_start, seg_end - seg_start);
+    }
+  }
+}
+#  endif
 
 #  if SANITIZER_LINUX
 #    if defined(__x86_64__)
