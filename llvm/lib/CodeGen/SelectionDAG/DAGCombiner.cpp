@@ -27021,33 +27021,33 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
                        m_OneUse(m_Shuffle(m_Deferred(A), m_Deferred(B),
                                           m_Mask(M1))))))
     return SDValue();
-  auto *L00 = dyn_cast<LoadSDNode>(A.getNode());
-  auto *L01 = dyn_cast<LoadSDNode>(B.getNode());
-  if (!L00 || !L01 || !ISD::isNON_EXTLoad(L00) || !ISD::isNON_EXTLoad(L01))
+  auto *LoadA = dyn_cast<LoadSDNode>(A.getNode());
+  auto *LoadB = dyn_cast<LoadSDNode>(B.getNode());
+  if (!LoadA || !LoadB || !ISD::isNON_EXTLoad(LoadA) ||
+      !ISD::isNON_EXTLoad(LoadB))
     return SDValue();
 
   // Check if the address spaces of both loads are the same.
-  if (L00->getAddressSpace() != L01->getAddressSpace())
+  if (LoadA->getAddressSpace() != LoadB->getAddressSpace())
     return SDValue();
-
-  // Check if the wide load would be faster than the two separate loads.
-  EVT WideVT =
-      L00->getMemoryVT().getDoubleNumVectorElementsVT(*DAG.getContext());
 
   // Check if the loads are consecutive.
   LoadSDNode *Base = nullptr;
   if (DAG.areNonVolatileConsecutiveLoads(
-          L01, L00, L01->getMemoryVT().getStoreSize(), /*Dist=*/1)) {
-    Base = L00;
+          LoadB, LoadA, LoadB->getMemoryVT().getStoreSize(), /*Dist=*/1)) {
+    Base = LoadA;
   } else if (DAG.areNonVolatileConsecutiveLoads(
-                 L00, L01, L00->getMemoryVT().getStoreSize(), /*Dist=*/1)) {
-    Base = L01;
+                 LoadA, LoadB, LoadA->getMemoryVT().getStoreSize(),
+                 /*Dist=*/1)) {
+    Base = LoadB;
   } else {
     return SDValue(); // not adjacent
   }
 
   unsigned Fast = 0;
   Align NewAlign = Base->getAlign();
+  EVT WideVT =
+      LoadA->getMemoryVT().getDoubleNumVectorElementsVT(*DAG.getContext());
   if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), WideVT,
                               Base->getAddressSpace(), NewAlign,
                               Base->getMemOperand()->getFlags(), &Fast) ||
@@ -27058,7 +27058,7 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
   // load order using bswap, which requires a scalar size that is a multiple
   // of 16 bits.
   bool NeedBSwap = DAG.getDataLayout().isBigEndian();
-  if (NeedBSwap && L00->getMemoryVT().getScalarSizeInBits() % 16 != 0)
+  if (NeedBSwap && LoadA->getMemoryVT().getScalarSizeInBits() % 16 != 0)
     return SDValue();
 
   // Create a wide load of twice the size of the original load.
@@ -27067,29 +27067,27 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
       Base->getMemOperand(), /*Offset=*/0, WideVT.getStoreSize());
   SDValue WideLoad = DAG.getLoad(WideVT, SDLoc(N), Base->getChain(),
                                  Base->getBasePtr(), WideMMO);
-  SDValue WideMemOp = WideLoad;
   // Redirect old chain users to the new chain.
-  DAG.makeEquivalentMemoryOrdering(L00, WideMemOp);
-  DAG.makeEquivalentMemoryOrdering(L01, WideMemOp);
+  DAG.makeEquivalentMemoryOrdering(LoadA, WideLoad);
+  DAG.makeEquivalentMemoryOrdering(LoadB, WideLoad);
   if (NeedBSwap)
     WideLoad = DAG.getNode(ISD::BSWAP, SDLoc(N), WideVT, WideLoad);
 
   // Create a shuffle of the wide load.
   SmallVector<int, 32> Mask;
-  if (Base == L00) {
+  if (Base == LoadA) {
     llvm::append_range(Mask, M0);
     llvm::append_range(Mask, M1);
   } else {
-    int Sz = L00->getMemoryVT().getVectorNumElements();
-    for (int I = 0; I < Sz; ++I)
-      Mask.push_back(M0[I] < Sz ? M0[I] + Sz : M0[I] - Sz);
-    for (int I = 0; I < Sz; ++I)
-      Mask.push_back(M1[I] < Sz ? M1[I] + Sz : M1[I] - Sz);
+    SmallVector<int, 16> C0(M0), C1(M1);
+    ShuffleVectorSDNode::commuteMask(C0);
+    ShuffleVectorSDNode::commuteMask(C1);
+    llvm::append_range(Mask, C0);
+    llvm::append_range(Mask, C1);
   }
   // Create a new shuffle with the new mask.
-  SDValue NewShuffle = DAG.getVectorShuffle(WideVT, SDLoc(N), WideLoad,
-                                            DAG.getPOISON(WideVT), Mask);
-  return NewShuffle;
+  return DAG.getVectorShuffle(WideVT, SDLoc(N), WideLoad, DAG.getPOISON(WideVT),
+                              Mask);
 }
 
 static SDValue combineConcatVectorOfSplats(SDNode *N, SelectionDAG &DAG,

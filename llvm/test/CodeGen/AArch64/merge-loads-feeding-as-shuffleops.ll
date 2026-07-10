@@ -167,3 +167,87 @@ define void @combine_loads_v8i16_v16i16(ptr %a) {
     store <16 x i16> %result, ptr %a
     ret void
 }
+
+define void @combine_loads_v16i8_v16i8_multi_use_load(ptr %a, ptr %b) {
+; VBITS_GE_128-LABEL: combine_loads_v16i8_v16i8_multi_use_load:
+; VBITS_GE_128:       // %bb.0:
+; VBITS_GE_128-NEXT:    ldp q0, q1, [x0]
+; VBITS_GE_128-NEXT:    ext v2.16b, v0.16b, v1.16b, #1
+; VBITS_GE_128-NEXT:    ext v1.16b, v0.16b, v1.16b, #2
+; VBITS_GE_128-NEXT:    stp q2, q1, [x0]
+; VBITS_GE_128-NEXT:    str q0, [x1]
+; VBITS_GE_128-NEXT:    ret
+;
+; VBITS_GE_256-LABEL: combine_loads_v16i8_v16i8_multi_use_load:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    ldp q0, q1, [x0]
+; VBITS_GE_256-NEXT:    ptrue p0.b, vl16
+; VBITS_GE_256-NEXT:    ext v2.16b, v0.16b, v1.16b, #2
+; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v1.16b, #1
+; VBITS_GE_256-NEXT:    splice z1.b, p0, z1.b, z2.b
+; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_256-NEXT:    st1b { z1.b }, p0, [x0]
+; VBITS_GE_256-NEXT:    str q0, [x1]
+; VBITS_GE_256-NEXT:    ret
+;
+; BE_VBITS_GE_256-LABEL: combine_loads_v16i8_v16i8_multi_use_load:
+; BE_VBITS_GE_256:       // %bb.0:
+; BE_VBITS_GE_256-NEXT:    add x8, x0, #16
+; BE_VBITS_GE_256-NEXT:    ld1 { v0.16b }, [x0]
+; BE_VBITS_GE_256-NEXT:    ptrue p0.b, vl16
+; BE_VBITS_GE_256-NEXT:    ld1 { v1.16b }, [x8]
+; BE_VBITS_GE_256-NEXT:    ext v2.16b, v0.16b, v1.16b, #2
+; BE_VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v1.16b, #1
+; BE_VBITS_GE_256-NEXT:    splice z1.b, p0, z1.b, z2.b
+; BE_VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; BE_VBITS_GE_256-NEXT:    st1b { z1.b }, p0, [x0]
+; BE_VBITS_GE_256-NEXT:    st1 { v0.16b }, [x1]
+; BE_VBITS_GE_256-NEXT:    ret
+    %gep = getelementptr <16 x i8>, ptr %a, i64 1
+    %l1 = load <16 x i8>, ptr %a
+    %l2 = load <16 x i8>, ptr %gep
+    %result = shufflevector <16 x i8> %l1, <16 x i8> %l2, <32 x i32><i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16,i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17>
+    store <32 x i8> %result, ptr %a
+    store <16 x i8> %l1, ptr %b
+    ret void
+}
+
+define void @combine_loads_v16i8_v32i8_shuffle_with_poison_mask_indices(ptr %a, ptr %b) {
+; VBITS_GE_128-LABEL: combine_loads_v16i8_v32i8_shuffle_with_poison_mask_indices:
+; VBITS_GE_128:       // %bb.0:
+; VBITS_GE_128-NEXT:    ldp q1, q0, [x0]
+; VBITS_GE_128-NEXT:    ext v2.16b, v1.16b, v0.16b, #1
+; VBITS_GE_128-NEXT:    ext v0.16b, v1.16b, v0.16b, #2
+; VBITS_GE_128-NEXT:    stp q2, q0, [x0]
+; VBITS_GE_128-NEXT:    ret
+;
+; VBITS_GE_256-LABEL: combine_loads_v16i8_v32i8_shuffle_with_poison_mask_indices:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI5_0
+; VBITS_GE_256-NEXT:    add x8, x8, :lo12:.LCPI5_0
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x8]
+; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    tbl z0.b, { z1.b }, z0.b
+; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x0]
+; VBITS_GE_256-NEXT:    ret
+;
+; BE_VBITS_GE_256-LABEL: combine_loads_v16i8_v32i8_shuffle_with_poison_mask_indices:
+; BE_VBITS_GE_256:       // %bb.0:
+; BE_VBITS_GE_256-NEXT:    add x8, x0, #16
+; BE_VBITS_GE_256-NEXT:    ld1 { v0.16b }, [x0]
+; BE_VBITS_GE_256-NEXT:    ptrue p0.b, vl16
+; BE_VBITS_GE_256-NEXT:    ld1 { v1.16b }, [x8]
+; BE_VBITS_GE_256-NEXT:    ext v2.16b, v0.16b, v1.16b, #2
+; BE_VBITS_GE_256-NEXT:    ext v0.16b, v0.16b, v1.16b, #1
+; BE_VBITS_GE_256-NEXT:    splice z0.b, p0, z0.b, z2.b
+; BE_VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; BE_VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x0]
+; BE_VBITS_GE_256-NEXT:    ret
+    %gep = getelementptr <16 x i8>, ptr %a, i64 1
+    %l1 = load <16 x i8>, ptr %a
+    %l2 = load <16 x i8>, ptr %gep
+    %result = shufflevector <16 x i8> %l1, <16 x i8> %l2, <32 x i32><i32 1, i32 2, i32 poison, i32 poison, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16,i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 poison, i32 15, i32 poison, i32 17>
+    store <32 x i8> %result, ptr %a
+    ret void
+}
