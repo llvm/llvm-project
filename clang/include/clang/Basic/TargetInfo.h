@@ -331,7 +331,7 @@ public:
 
   virtual ~TargetInfo();
 
-  std::unique_ptr<llvm::TextEncodingConverter> TargetStrConverter;
+  std::unique_ptr<llvm::TextEncodingConverter> FromSystemEncodingConverter;
 
   /// Retrieve the target options.
   TargetOptions &getTargetOpts() const {

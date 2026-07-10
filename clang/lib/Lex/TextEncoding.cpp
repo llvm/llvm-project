@@ -62,7 +62,7 @@ TextEncoding::setConvertersFromOptions(TextEncoding &TE,
       TInfo.getDefaultOrdinaryLiteralEncoding(), UTF8);
 
   if (ErrorOrConverter)
-    TInfo.TargetStrConverter =
+    TInfo.FromSystemEncodingConverter =
         std::make_unique<TextEncodingConverter>(std::move(*ErrorOrConverter));
   else
     return ErrorOrConverter.getError();

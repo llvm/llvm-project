@@ -71,3 +71,7 @@ void asm_labeled_fn(void) __asm__("\174asm_sym");
 void asm_labeled_fn(void) {}
 //CHECK: define{{.*}}void @"@asm_sym"(
 //CHECK-UTF8: define{{.*}}void @"@asm_sym"(
+
+void asm_stmt_fn(void) { __asm__("\225\226\227nop"); }
+//CHECK: call void asm{{.*}}"nopnop"
+//CHECK-UTF8: call void asm{{.*}}"nopnop"
