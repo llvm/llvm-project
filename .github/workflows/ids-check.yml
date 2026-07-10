@@ -41,8 +41,8 @@ jobs:
           cmake -B ./llvm-project/build/ \
                 -S ./llvm-project/llvm/ \
                 -D CMAKE_BUILD_TYPE=Release \
-                -D CMAKE_C_COMPILER=clang-22 \
-                -D CMAKE_CXX_COMPILER=clang++-22 \
+                -D CMAKE_C_COMPILER=clang \
+                -D CMAKE_CXX_COMPILER=clang++ \
                 -D LLVM_ENABLE_PROJECTS=clang \
                 -D LLVM_TARGETS_TO_BUILD="host" \
                 -D LLVM_INCLUDE_TESTS=OFF \
