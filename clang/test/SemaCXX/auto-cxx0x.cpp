@@ -32,11 +32,11 @@ void rdar47689465() {
 
 namespace auto_declarator_name_lookup {
 namespace llvm {
-class Use;
+  class Use;
 namespace rdf {
-template <class T> struct NodeAddr {};
-class UseNode;
-using Use = NodeAddr<UseNode *>;
+  template <class T> struct NodeAddr {};
+  class UseNode;
+  using Use = NodeAddr<UseNode *>;
 } // namespace rdf
 } // namespace llvm
 
