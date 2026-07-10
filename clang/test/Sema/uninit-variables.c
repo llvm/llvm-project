@@ -583,3 +583,22 @@ void aggregate() {
 
   (void)sizeof({ struct with_explicit_field a; a; });  // no warning -- unevaluated operand
 }
+
+// These builtins never read their arguments' values. Each uses its own
+// variable because only the first use of a variable is diagnosed.
+int unevaluated_builtin_args(void) {
+  int a, b, c;
+  char *p, *q;
+  int classify = __builtin_classify_type(a);        // no-warning
+  int constant = __builtin_constant_p(b);           // no-warning
+  unsigned long size = __builtin_object_size(p, 0); // no-warning
+  unsigned long dsize = __builtin_dynamic_object_size(q, 0); // no-warning
+  unsigned long token = __builtin_infer_alloc_token(sizeof(int) * c); // no-warning
+  return classify + constant + (int)size + (int)dsize + (int)token;
+}
+
+// __builtin_os_log_format, not this size query, evaluates the arguments.
+unsigned long unevaluated_os_log_buffer_size(void) {
+  int x;
+  return __builtin_os_log_format_buffer_size("%d", x); // no-warning
+}
