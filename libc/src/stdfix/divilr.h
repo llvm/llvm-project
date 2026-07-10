@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-long int divilr(long int, long fract);
+long int divilr(long int n, long fract d);
 
 } // namespace LIBC_NAMESPACE_DECL
 

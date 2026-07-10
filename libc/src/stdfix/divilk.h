@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-long int divilk(long int, long accum);
+long int divilk(long int n, long accum d);
 
 } // namespace LIBC_NAMESPACE_DECL
 
