@@ -8,9 +8,7 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
-class Radar9974002DataFormatterTestCase(TestBase):
-    # test for rdar://problem/9974002 ()
-
+class SummaryStringOnFailDataFormatterTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
