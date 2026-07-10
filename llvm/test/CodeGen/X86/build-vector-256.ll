@@ -171,23 +171,14 @@ define <16 x i16> @test_buildvector_v16i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3, i
 ;
 ; AVX2-32-LABEL: test_buildvector_v16i16:
 ; AVX2-32:       # %bb.0:
-; AVX2-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX2-32-NEXT:    vpinsrw $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrw $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrw $3, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrw $4, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrw $5, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrw $6, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrw $7, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX2-32-NEXT:    vpinsrw $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrw $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrw $3, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrw $4, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrw $5, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrw $6, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrw $7, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-32-NEXT:    vmovdqa {{.*#+}} ymm0 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-32-NEXT:    vmovdqu {{[0-9]+}}(%esp), %ymm1
+; AVX2-32-NEXT:    vmovdqu {{[0-9]+}}(%esp), %ymm2
+; AVX2-32-NEXT:    vpshufb %ymm0, %ymm2, %ymm2
+; AVX2-32-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[0,2,2,3]
+; AVX2-32-NEXT:    vpshufb %ymm0, %ymm1, %ymm0
+; AVX2-32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-32-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; AVX2-32-NEXT:    retl
 ;
 ; AVX2-64-LABEL: test_buildvector_v16i16:

@@ -5,6 +5,10 @@
 MIR Patterns in TableGen
 ========================
 
+.. contents::
+   :local:
+
+
 User's Guide
 ============
 

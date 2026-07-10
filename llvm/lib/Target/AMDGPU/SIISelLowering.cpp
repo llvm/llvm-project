@@ -6015,7 +6015,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
         Register Op1L_Op0H_Reg =
             MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-        Register CarryReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register CarryReg =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
         Register AddReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
         Register NegatedValLo =
             MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
@@ -6042,9 +6043,23 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DestSub0)
             .addReg(Op1L)
             .addReg(LowOpcode);
-        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_HI_U32), CarryReg)
-            .addReg(Op1L)
-            .addReg(LowOpcode);
+        if (ST.hasScalarMulHiInsts()) {
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_HI_U32), CarryReg)
+              .addReg(Op1L)
+              .addReg(LowOpcode);
+        } else {
+          Register VCarryReg =
+              MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+          Register LowOpVGPR =
+              MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::COPY), LowOpVGPR)
+              .addReg(LowOpcode);
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::V_MUL_HI_U32_e64), VCarryReg)
+              .addReg(Op1L)
+              .addReg(LowOpVGPR);
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), CarryReg)
+              .addReg(VCarryReg);
+        }
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), Op1H_Op0L_Reg)
             .addReg(Op1H)
             .addReg(LowOpcode);
@@ -6365,10 +6380,23 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       ActiveBits.addReg(NewActiveBitsReg).addMBB(ComputeLoop);
 
       // Creating branching
-      unsigned CMPOpc = IsWave32 ? AMDGPU::S_CMP_LG_U32 : AMDGPU::S_CMP_LG_U64;
-      BuildMI(*ComputeLoop, I, DL, TII->get(CMPOpc))
-          .addReg(NewActiveBitsReg)
-          .addImm(0);
+      MachineInstrBuilder SetSCCInstr;
+      if (!ST.hasScalarCompareEq64()) {
+        // For targets <= gfx7, use an S_OR_B32/B64 instruction to set SCC.
+        Register LaneMaskReg = MRI.createVirtualRegister(WaveMaskRegClass);
+        unsigned CMPOpc = IsWave32 ? AMDGPU::S_OR_B32 : AMDGPU::S_OR_B64;
+        SetSCCInstr =
+            BuildMI(*ComputeLoop, I, DL, TII->get(CMPOpc), LaneMaskReg);
+      } else {
+        unsigned CMPOpc =
+            IsWave32 ? AMDGPU::S_CMP_LG_U32 : AMDGPU::S_CMP_LG_U64;
+        SetSCCInstr = BuildMI(*ComputeLoop, I, DL, TII->get(CMPOpc));
+      }
+      SetSCCInstr.addReg(NewActiveBitsReg);
+      if (ST.hasScalarCompareEq64())
+        SetSCCInstr.addImm(0);
+      else
+        SetSCCInstr.addReg(NewActiveBitsReg);
       BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::S_CBRANCH_SCC1))
           .addMBB(ComputeLoop);
 
@@ -8236,6 +8264,30 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IID = N->getConstantOperandVal(0);
     switch (IID) {
+    case Intrinsic::amdgcn_wave_reduce_min:
+    case Intrinsic::amdgcn_wave_reduce_umin:
+    case Intrinsic::amdgcn_wave_reduce_max:
+    case Intrinsic::amdgcn_wave_reduce_umax:
+    case Intrinsic::amdgcn_wave_reduce_add:
+    case Intrinsic::amdgcn_wave_reduce_sub:
+    case Intrinsic::amdgcn_wave_reduce_and:
+    case Intrinsic::amdgcn_wave_reduce_or:
+    case Intrinsic::amdgcn_wave_reduce_xor: {
+      EVT VT = N->getValueType(0);
+      if (isTypeLegal(VT))
+        return;
+      SDLoc SL(N);
+      bool NeedsSignExt = IID == Intrinsic::amdgcn_wave_reduce_min ||
+                          IID == Intrinsic::amdgcn_wave_reduce_max ||
+                          IID == Intrinsic::amdgcn_wave_reduce_add ||
+                          IID == Intrinsic::amdgcn_wave_reduce_sub;
+      unsigned ExtOpc = NeedsSignExt ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+      SDValue ExtSrc = DAG.getNode(ExtOpc, SL, MVT::i32, N->getOperand(1));
+      SDValue Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32,
+                                   N->getOperand(0), ExtSrc, N->getOperand(2));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, SL, VT, Result));
+      return;
+    }
     case Intrinsic::amdgcn_make_buffer_rsrc:
       Results.push_back(lowerPointerAsRsrcIntrin(N, DAG));
       return;

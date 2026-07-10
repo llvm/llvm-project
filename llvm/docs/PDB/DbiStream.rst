@@ -2,6 +2,9 @@
 The PDB DBI (Debug Info) Stream
 =====================================
 
+.. contents::
+   :local:
+
 .. _dbi_intro:
 
 Introduction

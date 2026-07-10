@@ -30506,10 +30506,12 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
            SDNode::hasPredecessorHelper(RLD, Visited, Worklist)))
         return false;
 
-      Addr = DAG.getSelect(SDLoc(TheSelect),
-                           LLD->getBasePtr().getValueType(),
-                           TheSelect->getOperand(0), LLD->getBasePtr(),
-                           RLD->getBasePtr());
+      // If the condition is poison, originally this would result in a poison
+      // result. After the transform, this would result in a load of poison,
+      // which is UB. Freeze the condition to prevent this.
+      Addr = DAG.getSelect(SDLoc(TheSelect), LLD->getBasePtr().getValueType(),
+                           DAG.getFreeze(TheSelect->getOperand(0)),
+                           LLD->getBasePtr(), RLD->getBasePtr());
     } else {  // Otherwise SELECT_CC
       // We cannot do this optimization if any pair of {RLD, LLD} is a
       // predecessor to {RLD, LLD, CondLHS, CondRHS}. As we've already compared
@@ -30528,10 +30530,10 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
            SDNode::hasPredecessorHelper(RLD, Visited, Worklist)))
         return false;
 
+      SDValue FrozenOp0 = DAG.getFreeze(TheSelect->getOperand(0));
+      SDValue FrozenOp1 = DAG.getFreeze(TheSelect->getOperand(1));
       Addr = DAG.getNode(ISD::SELECT_CC, SDLoc(TheSelect),
-                         LLD->getBasePtr().getValueType(),
-                         TheSelect->getOperand(0),
-                         TheSelect->getOperand(1),
+                         LLD->getBasePtr().getValueType(), FrozenOp0, FrozenOp1,
                          LLD->getBasePtr(), RLD->getBasePtr(),
                          TheSelect->getOperand(4));
     }

@@ -2,6 +2,9 @@
 Segmented Stacks in LLVM
 ========================
 
+.. contents::
+   :local:
+
 Introduction
 ============
 
