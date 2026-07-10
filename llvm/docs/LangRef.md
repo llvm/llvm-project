@@ -8429,6 +8429,9 @@ access group metadata nodes (see `llvm.access.group`). It denotes that
 no loop-carried memory dependence exist between it and other instructions
 in the loop with this metadata.
 
+It does not relax any other semantics of the annotated instructions, like atomic
+ordering constraints or volatile accesses.
+
 Let `m1` and `m2` be two instructions that both have the
 `llvm.access.group` metadata to the access group `g1`, respectively
 `g2` (which might be identical). If a loop contains both access groups
