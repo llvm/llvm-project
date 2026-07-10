@@ -10,6 +10,9 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s --check-prefix=CHECK-EXT
 ; RUN: llc -verify-machineinstrs -O2 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s --check-prefix=CHECK-EXT
 
+; TODO: Update when spirv-val accepts OpTypePointer with an OpTypeFunction pointee.
+; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
+
 ; CHECK-ERROR: error:{{.*}}Function used as a data pointer requires SPV_INTEL_function_pointers extension
 
 ; CHECK-EXT-DAG: OpCapability FunctionPointersINTEL
