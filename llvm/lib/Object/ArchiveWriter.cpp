@@ -261,7 +261,7 @@ printBSDMemberHeader(raw_ostream &Out, uint64_t Pos, StringRef Name,
 }
 
 static void
-printZOSMemberHeader(raw_ostream &Out, uint64_t Pos, StringRef Name,
+printZOSMemberHeader(raw_ostream &Out, StringRef Name,
                      const sys::TimePoint<std::chrono::seconds> &ModTime,
                      unsigned UID, unsigned GID, unsigned Perms,
                      uint64_t Size) {
@@ -271,10 +271,17 @@ printZOSMemberHeader(raw_ostream &Out, uint64_t Pos, StringRef Name,
     printWithSpacePadding(AOut, Twine(Name), 16);
     printRestOfMemberHeader(AOut, ModTime, UID, GID, Perms, Size);
   } else {
-    printBSDMemberHeader(AOut, Pos, Name, ModTime, UID, GID, Perms, Size);
+    // z/OS ar stores the exact name length inline with no extra alignment
+    // padding, unlike the BSD format which pads to an 8-byte boundary.
+    printWithSpacePadding(AOut, Twine("#1/") + Twine(Name.size()), 16);
+    printRestOfMemberHeader(AOut, ModTime, UID, GID, Perms,
+                            Name.size() + Size);
+    AOut << Name;
   }
   SmallString<256> EHeader;
-  ConverterEBCDIC::convertToEBCDIC(AHeader, EHeader);
+  if (std::error_code EC = ConverterEBCDIC::convertToEBCDIC(AHeader, EHeader))
+    report_fatal_error(Twine("failed to convert z/OS member header to EBCDIC: ") +
+                       EC.message());
   Out << EHeader.str();
 }
 
@@ -332,7 +339,7 @@ printMemberHeader(raw_ostream &Out, uint64_t Pos, raw_ostream &StringTable,
     return printBSDMemberHeader(Out, Pos, MemberName, ModTime, M.UID, M.GID,
                                 M.Perms, Size);
   if (isZOSArchive(Kind))
-    return printZOSMemberHeader(Out, Pos, MemberName, ModTime, M.UID, M.GID,
+    return printZOSMemberHeader(Out, MemberName, ModTime, M.UID, M.GID,
                                 M.Perms, Size);
   if (!useStringTable(Thin, MemberName))
     return printGNUSmallMemberHeader(Out, MemberName, ModTime, M.UID, M.GID,
@@ -487,8 +494,7 @@ static void writeSymbolTableHeader(raw_ostream &Out, object::Archive::Kind Kind,
                                 PrevMemberOffset, NextMemberOffset);
   } else if (isZOSArchive(Kind)) {
     const char *Name = "__.SYMDEF";
-    printZOSMemberHeader(Out, Out.tell(), Name, now(Deterministic), 0, 0, 0,
-                         Size);
+    printZOSMemberHeader(Out, Name, now(Deterministic), 0, 0, 0, Size);
   } else {
     const char *Name = is64BitKind(Kind) ? "/SYM64" : "";
     printGNUSmallMemberHeader(Out, Name, now(Deterministic), 0, 0, 0, Size);
@@ -684,7 +690,10 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
     printNBits(Out, Kind, StringTable.size());
   if (isZOSArchive(Kind)) {
     SmallString<256> EStringTable;
-    ConverterEBCDIC::convertToEBCDIC(StringTable, EStringTable);
+    if (std::error_code EC =
+            ConverterEBCDIC::convertToEBCDIC(StringTable, EStringTable))
+      report_fatal_error(Twine("failed to convert z/OS symbol table to EBCDIC: ") +
+                         EC.message());
     Out << EStringTable.str();
   } else {
     Out << StringTable;
