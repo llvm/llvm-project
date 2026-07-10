@@ -2,6 +2,9 @@
 User Guide for RISC-V Target
 =============================
 
+.. contents::
+   :local:
+
 Introduction
 ============
 

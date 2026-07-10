@@ -2,6 +2,9 @@
 How to Update Debug Info: A Guide for LLVM Pass Authors
 =======================================================
 
+.. contents::
+   :local:
+
 Introduction
 ============
 

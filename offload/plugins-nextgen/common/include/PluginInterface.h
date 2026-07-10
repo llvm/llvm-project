@@ -98,7 +98,8 @@ inline Error error(error::ErrorCode Code, Error &&OtherError,
 /// the plugin-specific code.
 /// TODO: Refactor this, must be defined individually by each plugin.
 template <typename... ArgsTy>
-static Error check(int32_t ErrorCode, const char *ErrFmt, ArgsTy... Args);
+[[maybe_unused]] static Error check(int32_t ErrorCode, const char *ErrFmt,
+                                    ArgsTy... Args);
 } // namespace Plugin
 
 /// Class that wraps the __tgt_async_info to simply its usage. In case the

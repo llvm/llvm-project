@@ -2,6 +2,9 @@
 JITLink and ORC's ObjectLinkingLayer
 ====================================
 
+.. contents::
+   :local:
+
 Introduction
 ============
 

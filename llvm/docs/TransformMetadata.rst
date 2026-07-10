@@ -4,6 +4,9 @@
 Code Transformation Metadata
 ============================
 
+.. contents::
+   :local:
+
 Overview
 ========
 
