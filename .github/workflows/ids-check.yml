@@ -53,7 +53,7 @@ jobs:
 
           # Build the generated-header prerequisites that idt needs to parse
           # LLVM source.
-          BUILD_DIR=${{ github.workspace }}/llvm-project/build
+          BUILD_DIR=./llvm-project/build
           ninja -C "$BUILD_DIR" \
             llvm_vcsrevision_h \
             intrinsics_gen omp_gen acc_gen analysis_gen target_parser_gen vt_gen \
