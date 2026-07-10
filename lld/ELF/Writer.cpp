@@ -836,7 +836,7 @@ static bool updateRelIpltSymbols(Ctx &ctx) {
       ctx.sym.relaIpltEnd->section = &dyn;
       ctx.sym.relaIpltEnd->value = dyn.getSize();
       return (oldSec != ctx.sym.relaIpltEnd->section ||
-                  oldVal != ctx.sym.relaIpltEnd->value);
+              oldVal != ctx.sym.relaIpltEnd->value);
     }
   }
   return false;
