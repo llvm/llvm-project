@@ -1667,8 +1667,7 @@ bool LoopVectorizationPlanner::getDecisionAndClampRange(
 
 VPSingleDefRecipe *
 VPBuilder::createConsecutiveVectorPointer(VPValue *Ptr, Type *SourceElementTy,
-                                          bool Reverse, bool FoldTail,
-                                          DebugLoc DL) {
+                                          bool Reverse, DebugLoc DL) {
   VPlan &Plan = getPlan();
   GEPNoWrapFlags Flags = vputils::getGEPFlagsForPtr(Ptr);
   if (Reverse) {
@@ -1676,8 +1675,9 @@ VPBuilder::createConsecutiveVectorPointer(VPValue *Ptr, Type *SourceElementTy,
     // original scalar loop: drop the GEP no-wrap flags in this case. Otherwise
     // preserve existing flags without no-unsigned-wrap, as we will emit
     // negative indices.
-    GEPNoWrapFlags ReverseFlags =
-        FoldTail ? GEPNoWrapFlags::none() : Flags.withoutNoUnsignedWrap();
+    GEPNoWrapFlags ReverseFlags = Plan.hasTailFolded()
+                                      ? GEPNoWrapFlags::none()
+                                      : Flags.withoutNoUnsignedWrap();
     return tryInsertInstruction(new VPVectorEndPointerRecipe(
         Ptr, &Plan.getVF(), SourceElementTy, /*Stride=*/-1, ReverseFlags, DL));
   }

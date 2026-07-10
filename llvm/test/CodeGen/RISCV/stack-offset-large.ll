@@ -11,8 +11,7 @@ declare void @inspect(...)
 ; Should fail on 32-bit systems.
 ; RV32: LLVM ERROR: Frame offsets outside of the signed 32-bit range not supported on RV32
 
-; RV64-NOT: warning: {{.*}} stack frame size ({{.*}}) exceeds limit (9223372036854775807) in function 'stack_bigger_than_32bit'
-; RV64:     warning: {{.*}} stack frame size ({{.*}}) exceeds limit (9223372036854775807) in function 'stack_larger_than_signed_64bit_warning'
+; RV64-NOT: warning: {{.*}} stack frame size ({{.*}}) exceeds limit (9223372036854775807) in function 'stack_bigger_than_32bit_unsigned'
 
 define void @stack_bigger_than_32bit() {
 ; RV64-LABEL: stack_bigger_than_32bit:
@@ -43,6 +42,45 @@ define void @stack_bigger_than_32bit() {
   %p1 = alloca [2 x i64], align 1
   %p2 = alloca [2147483648 x i8], align 1
   call void (...) @inspect(ptr %p1, ptr %p2)
+  ret void
+}
+
+define void @stack_bigger_than_32bit_unsigned() {
+; RV64-LABEL: stack_bigger_than_32bit_unsigned:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -2032
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
+; RV64-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    li a0, 1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    addi a0, a0, -2000
+; RV64-NEXT:    sub sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa_offset 4294967328
+; RV64-NEXT:    li a0, 1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    addi a0, a0, 8
+; RV64-NEXT:    add a0, sp, a0
+; RV64-NEXT:    li a1, 1
+; RV64-NEXT:    slli a1, a1, 31
+; RV64-NEXT:    addi a1, a1, 8
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    addi a2, sp, 8
+; RV64-NEXT:    call inspect
+; RV64-NEXT:    li a0, 1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    addi a0, a0, -2000
+; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
+; RV64-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    ret
+  %p1 = alloca [2 x i64], align 1
+  %p2 = alloca [2147483648 x i8], align 1
+  %p3 = alloca [2147483648 x i8], align 1
+  call void (...) @inspect(ptr %p1, ptr %p2, ptr %p3)
   ret void
 }
 
@@ -192,11 +230,4 @@ define <vscale x 1 x i64> @rvv_spill(<vscale x 1 x i64> %vector) {
   %p2 = alloca [2147483648 x i8], align 1
   call void (...) @inspect(ptr %p1, ptr %p2)
   ret <vscale x 1 x i64> %vector
-}
-
-define void @stack_larger_than_signed_64bit_warning() {
-  %p1 = alloca [2 x i8], align 1
-  %p2 = alloca [9223372036854775807 x i8], align 1
-  call void (...) @inspect(ptr %p1, ptr %p2)
-  ret void
 }

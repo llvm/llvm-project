@@ -459,7 +459,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__invariants() 
     return false;
   return __end_ <= __capacity_;
 }
-#endif // _LIBCPP_ABI_SIZE_BASED_VECTOR
+#endif // _LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED
 
 _LIBCPP_END_NAMESPACE_STD
 

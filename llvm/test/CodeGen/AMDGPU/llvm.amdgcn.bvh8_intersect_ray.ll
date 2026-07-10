@@ -116,22 +116,36 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray_ssssss(i64 inreg %node_p
 ; GFX12-GISEL-NEXT:    s_mov_b32 s21, s7
 ; GFX12-GISEL-NEXT:    s_mov_b32 s22, s8
 ; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v10, v0 :: v_dual_mov_b32 v11, v1
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v12, v2 :: v_dual_mov_b32 v13, v3
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v4, s0
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v7, s3 :: v_dual_mov_b32 v6, s2
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v14, s16 :: v_dual_mov_b32 v15, s17
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v16, s18 :: v_dual_mov_b32 v17, s20
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v18, s21 :: v_dual_mov_b32 v19, s22
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v4, s9
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v8, s9
 ; GFX12-GISEL-NEXT:    s_mov_b32 s4, s10
 ; GFX12-GISEL-NEXT:    s_mov_b32 s5, s11
 ; GFX12-GISEL-NEXT:    s_mov_b32 s6, s12
 ; GFX12-GISEL-NEXT:    s_mov_b32 s7, s13
-; GFX12-GISEL-NEXT:    image_bvh8_intersect_ray v[0:9], [v[0:1], v[2:3], v[14:16], v[17:19], v4], s[4:7]
+; GFX12-GISEL-NEXT:    image_bvh8_intersect_ray v[4:13], [v[4:5], v[6:7], v[14:16], v[17:19], v8], s[4:7]
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    global_store_b96 v[10:11], v[14:16], off
-; GFX12-GISEL-NEXT:    global_store_b96 v[12:13], v[17:19], off
+; GFX12-GISEL-NEXT:    global_store_b96 v[0:1], v[14:16], off
+; GFX12-GISEL-NEXT:    global_store_b96 v[2:3], v[17:19], off
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v4
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v5
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v6
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v7
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s4, v8
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s5, v9
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s6, v10
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s7, v11
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s8, v12
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s9, v13
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v5, s5
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v6, s6 :: v_dual_mov_b32 v7, s7
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v8, s8 :: v_dual_mov_b32 v9, s9
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %v = call {<10 x i32>, <3 x float>, <3 x float>} @llvm.amdgcn.image.bvh8.intersect.ray(i64 %node_ptr, float %ray_extent, i8 0, <3 x float> %ray_origin, <3 x float> %ray_dir, i32 %offset, <4 x i32> %tdescr)
   %a = extractvalue {<10 x i32>, <3 x float>, <3 x float>} %v, 0

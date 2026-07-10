@@ -1464,8 +1464,12 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
   if (auto *Array = N.getRawGlobalVariables()) {
     CheckDI(isa<MDTuple>(Array), "invalid global variable list", &N, Array);
     for (Metadata *Op : N.getGlobalVariables()->operands()) {
-      CheckDI(Op && (isa<DIGlobalVariableExpression>(Op)),
-              "invalid global variable ref", &N, Op);
+      auto *GVE = dyn_cast_or_null<DIGlobalVariableExpression>(Op);
+      CheckDI(GVE, "invalid global variable ref", &N, Op);
+      CheckDI(!isa_and_nonnull<DILocalScope>(GVE->getVariable()->getScope()),
+              "function-local variables are not allowed in a DICompileUnit's "
+              "global variables list",
+              &N, Op);
     }
   }
   if (auto *Array = N.getRawImportedEntities()) {
@@ -1516,13 +1520,13 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
       auto True = [](const Metadata *) { return true; };
       auto False = [](const Metadata *) { return false; };
       bool IsTypeCorrect = DISubprogram::visitRetainedNode<bool>(
-          Op, True, True, True, True, False);
+          Op, True, True, True, True, True, False);
       CheckDI(IsTypeCorrect,
               "invalid retained nodes, expected DILocalVariable, DILabel, "
-              "DIImportedEntity or DIType",
+              "DIImportedEntity, DIType or DIGlobalVariableExpression",
               &N, Node, Op);
 
-      auto *RetainedNode = cast<DINode>(Op);
+      auto *RetainedNode = cast<MDNode>(Op);
       auto *RetainedNodeScope = dyn_cast_or_null<DILocalScope>(
           DISubprogram::getRawRetainedNodeScope(RetainedNode));
       CheckDI(RetainedNodeScope,
@@ -4684,9 +4688,9 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
               "type!",
           &RMWI, ElTy);
   } else {
-    Check(ScalarTy->isIntegerTy(),
+    Check(ElTy->isIntOrIntVectorTy() && !isa<ScalableVectorType>(ElTy),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-              " operand must have integer type!",
+              " operand must have integer or fixed vector of integer type!",
           &RMWI, ElTy);
   }
   checkAtomicMemAccessSize(ElTy, &RMWI);

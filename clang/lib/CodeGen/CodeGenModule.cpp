@@ -5164,7 +5164,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
 }
 
 // Symbols with this prefix are used as deactivation symbols for PFP fields.
-// See clang/docs/StructureProtection.rst for more information.
+// See clang/docs/StructureProtection.md for more information.
 static const char PFPDeactivationSymbolPrefix[] = "__pfp_ds_";
 
 llvm::GlobalValue *
