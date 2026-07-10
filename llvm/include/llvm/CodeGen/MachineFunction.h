@@ -533,6 +533,11 @@ public:
     /// or definition of the target function and might be indirect.
     MDNode *CallTarget = nullptr;
 
+    enum class StackArgumentsStatus { Unknown, Yes, No };
+
+    /// Whether this call passes arguments on the stack.
+    StackArgumentsStatus HasStackArguments = StackArgumentsStatus::Unknown;
+
     CallSiteInfo() = default;
 
     /// Extracts the numeric type id from the CallBase's callee_type Metadata,
@@ -1505,6 +1510,11 @@ public:
   /// is used when we are replacing one call instruction with another one to
   /// the same callee.
   void moveAdditionalCallInfo(const MachineInstr *Old, const MachineInstr *New);
+
+  /// Reconcile the call site info of \p Survivor with that of \p Victim when
+  /// the two identical call instructions are merged into one.
+  void mergeCallSiteInfo(const MachineInstr *Survivor,
+                         const MachineInstr *Victim);
 
   unsigned getNewDebugInstrNum() {
     return ++DebugInstrNumberingCount;

@@ -534,6 +534,7 @@ bool MIRParserImpl::initializeCallSiteInfo(
       }
     }
 
+    CSInfo.HasStackArguments = YamlCSInfo.HasStackArguments;
     if (TM.Options.EmitCallSiteInfo || TM.Options.EmitCodeGenCallSiteInfo ||
         TM.Options.EmitCallGraphSection)
       MF.addCallSiteInfo(&*CallI, std::move(CSInfo));

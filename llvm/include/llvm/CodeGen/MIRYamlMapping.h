@@ -495,6 +495,22 @@ struct MachineInstrLoc {
   }
 };
 
+template <>
+struct ScalarEnumerationTraits<
+    MachineFunction::CallSiteInfo::StackArgumentsStatus> {
+  static void
+  enumeration(IO &YamlIO,
+              MachineFunction::CallSiteInfo::StackArgumentsStatus &Value) {
+    YamlIO.enumCase(
+        Value, "unknown",
+        MachineFunction::CallSiteInfo::StackArgumentsStatus::Unknown);
+    YamlIO.enumCase(Value, "yes",
+                    MachineFunction::CallSiteInfo::StackArgumentsStatus::Yes);
+    YamlIO.enumCase(Value, "no",
+                    MachineFunction::CallSiteInfo::StackArgumentsStatus::No);
+  }
+};
+
 /// Serializable representation of CallSiteInfo.
 struct CallSiteInfo {
   // Representation of call argument and register which is used to
@@ -512,6 +528,9 @@ struct CallSiteInfo {
   std::vector<ArgRegPair> ArgForwardingRegs;
   /// Numeric callee type identifiers for the callgraph section.
   std::vector<uint64_t> CalleeTypeIds;
+  /// Whether the call has arguments on the stack.
+  MachineFunction::CallSiteInfo::StackArgumentsStatus HasStackArguments =
+      MachineFunction::CallSiteInfo::StackArgumentsStatus::Unknown;
 
   bool operator==(const CallSiteInfo &Other) const {
     return CallLocation.BlockNum == Other.CallLocation.BlockNum &&
@@ -542,6 +561,12 @@ template <> struct MappingTraits<CallSiteInfo> {
     YamlIO.mapOptional("fwdArgRegs", CSInfo.ArgForwardingRegs,
                        std::vector<CallSiteInfo::ArgRegPair>());
     YamlIO.mapOptional("calleeTypeIds", CSInfo.CalleeTypeIds);
+    if (!YamlIO.outputting() ||
+        CSInfo.HasStackArguments !=
+            MachineFunction::CallSiteInfo::StackArgumentsStatus::Unknown)
+      YamlIO.mapOptional(
+          "hasStackArguments", CSInfo.HasStackArguments,
+          MachineFunction::CallSiteInfo::StackArgumentsStatus::Unknown);
   }
 
   static const bool flow = true;

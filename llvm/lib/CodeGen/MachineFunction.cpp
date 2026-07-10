@@ -1071,6 +1071,26 @@ void MachineFunction::moveAdditionalCallInfo(const MachineInstr *Old,
   }
 }
 
+void MachineFunction::mergeCallSiteInfo(const MachineInstr *Survivor,
+                                        const MachineInstr *Victim) {
+  assert(Survivor->shouldUpdateAdditionalCallInfo() &&
+         Victim->shouldUpdateAdditionalCallInfo() &&
+         "Call info refers only to call (MI) candidates or "
+         "candidates inside bundles");
+
+  CallSiteInfoMap::iterator SurvivorCSIt =
+      getCallSiteInfo(getCallInstr(Survivor));
+  if (SurvivorCSIt == CallSitesInfo.end())
+    return;
+
+  CallSiteInfoMap::iterator VictimCSIt = getCallSiteInfo(getCallInstr(Victim));
+  if (VictimCSIt == CallSitesInfo.end() ||
+      VictimCSIt->second.HasStackArguments !=
+          SurvivorCSIt->second.HasStackArguments)
+    SurvivorCSIt->second.HasStackArguments =
+        CallSiteInfo::StackArgumentsStatus::Unknown;
+}
+
 void MachineFunction::setDebugInstrNumberingCount(unsigned Num) {
   DebugInstrNumberingCount = Num;
 }

@@ -910,6 +910,8 @@ void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
       }
       assert(MI.isIdenticalTo(*Pos) && "Expected matching MIIs!");
       DL = DebugLoc::getMergedLocation(DL, Pos->getDebugLoc());
+      if (MI.shouldUpdateAdditionalCallInfo())
+        MBB->getParent()->mergeCallSiteInfo(&MI, &*Pos);
       NextCommonInsts[i] = ++Pos;
     }
     MI.setDebugLoc(DL);
