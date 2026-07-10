@@ -826,6 +826,22 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
       addOptionalRegular(ctx, name, ctx.out.elfHeader.get(), 0, STV_HIDDEN);
 }
 
+static bool updateRelIpltSymbols(Ctx &ctx) {
+  if (ctx.sym.relaIpltStart) {
+    auto &dyn = getIRelativeSection(ctx);
+    if (dyn.isNeeded()) {
+      SectionBase *oldSec = ctx.sym.relaIpltEnd->section;
+      uint64_t oldVal = ctx.sym.relaIpltEnd->value;
+      ctx.sym.relaIpltStart->section = &dyn;
+      ctx.sym.relaIpltEnd->section = &dyn;
+      ctx.sym.relaIpltEnd->value = dyn.getSize();
+      return (oldSec != ctx.sym.relaIpltEnd->section ||
+                  oldVal != ctx.sym.relaIpltEnd->value);
+    }
+  }
+  return false;
+}
+
 // This function generates assignments for predefined symbols (e.g. _end or
 // _etext) and inserts them into the commands sequence to be processed at the
 // appropriate time. This ensures that the value is going to be correct by the
@@ -841,6 +857,10 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
                            : cast<InputSection>(ctx.in.got.get());
     ctx.sym.globalOffsetTable->section = sec;
   }
+
+  // .rela_iplt_{start,end} mark the start and the end of the section containing
+  // IRELATIVE relocations.
+  updateRelIpltSymbols(ctx);
 
   PhdrEntry *last = nullptr;
   OutputSection *lastRO = nullptr;
@@ -1576,18 +1596,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     // containing IRELATIVE relocations. Update them on each iteration because
     // they might be affected by the above move of relocations from
     // .relr.auth.dyn to .rela.dyn.
-    if (ctx.sym.relaIpltStart) {
-      auto &dyn = getIRelativeSection(ctx);
-      if (dyn.isNeeded()) {
-        SectionBase *oldSec = ctx.sym.relaIpltEnd->section;
-        uint64_t oldVal = ctx.sym.relaIpltEnd->value;
-        ctx.sym.relaIpltStart->section = &dyn;
-        ctx.sym.relaIpltEnd->section = &dyn;
-        ctx.sym.relaIpltEnd->value = dyn.getSize();
-        changed |= (oldSec != ctx.sym.relaIpltEnd->section ||
-                    oldVal != ctx.sym.relaIpltEnd->value);
-      }
-    }
+    changed |= updateRelIpltSymbols(ctx);
 
     if (ctx.in.memtagGlobalDescriptors)
       changed |= ctx.in.memtagGlobalDescriptors->updateAllocSize(ctx);
