@@ -9403,7 +9403,7 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtPattern(
   // This is required because some parts of an expansion statement (e.g. the
   // init-statement) are not in a dependent context and must thus be transformed
   // in the parent context.
-  auto TransformStmtInParentContext = [&] (Stmt *SubStmt) -> StmtResult {
+  auto TransformStmtInParentContext = [&](Stmt *SubStmt) -> StmtResult {
     Sema::ContextRAII CtxGuard(SemaRef, SemaRef.CurContext->getParent(),
                                /*NewThis=*/false);
     return getDerived().TransformStmt(SubStmt);

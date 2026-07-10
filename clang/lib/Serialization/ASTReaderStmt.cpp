@@ -1803,8 +1803,7 @@ void ASTStmtReader::VisitCXXExpansionStmtInstantiation(
   S->setShouldApplyLifetimeExtensionToPreamble(Record.readBool());
 }
 
-void ASTStmtReader::VisitCXXExpansionSelectExpr(
-    CXXExpansionSelectExpr *E) {
+void ASTStmtReader::VisitCXXExpansionSelectExpr(CXXExpansionSelectExpr *E) {
   VisitExpr(E);
   E->setRangeExpr(cast<InitListExpr>(Record.readSubExpr()));
   E->setIndexExpr(Record.readSubExpr());

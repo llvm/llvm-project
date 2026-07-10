@@ -2035,8 +2035,8 @@ CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
 CXXExpansionSelectExpr::CXXExpansionSelectExpr(EmptyShell Empty)
     : Expr(CXXExpansionSelectExprClass, Empty) {}
 
-CXXExpansionSelectExpr::CXXExpansionSelectExpr(
-    const ASTContext &C, InitListExpr *Range, Expr *Idx)
+CXXExpansionSelectExpr::CXXExpansionSelectExpr(const ASTContext &C,
+                                               InitListExpr *Range, Expr *Idx)
     : Expr(CXXExpansionSelectExprClass, C.DependentTy, VK_PRValue,
            OK_Ordinary) {
   setDependence(ExprDependence::TypeValueInstantiation);

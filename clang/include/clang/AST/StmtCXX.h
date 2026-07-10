@@ -760,7 +760,7 @@ public:
   static CXXExpansionStmtPattern *
   CreateIterating(ASTContext &Context, CXXExpansionStmtDecl *ESD, Stmt *Init,
                   DeclStmt *ExpansionVar, DeclStmt *Range, DeclStmt *Begin,
-                  DeclStmt* Iter, SourceLocation LParenLoc,
+                  DeclStmt *Iter, SourceLocation LParenLoc,
                   SourceLocation ColonLoc, SourceLocation RParenLoc);
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
@@ -886,7 +886,6 @@ public:
     assert(isIterating());
     return cast<VarDecl>(getIterVarStmt()->getSingleDecl());
   }
-
 
   // Accessors for destructuring statements.
   Stmt *getDecompositionDeclStmt() {
@@ -1063,7 +1062,9 @@ public:
     return getTrailingObjects(getNumSubStmts());
   }
 
-  unsigned getNumSubStmts() const { return NumInstantiations + NumPreambleStmts; }
+  unsigned getNumSubStmts() const {
+    return NumInstantiations + NumPreambleStmts;
+  }
 
   ArrayRef<Stmt *> getInstantiations() const {
     return getTrailingObjects(NumInstantiations);

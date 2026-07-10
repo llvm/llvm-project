@@ -475,8 +475,7 @@ void StmtPrinter::VisitCXXExpansionStmtInstantiation(
   llvm_unreachable("should never be printed");
 }
 
-void StmtPrinter::VisitCXXExpansionSelectExpr(
-    CXXExpansionSelectExpr *Node) {
+void StmtPrinter::VisitCXXExpansionSelectExpr(CXXExpansionSelectExpr *Node) {
   PrintExpr(Node->getRangeExpr());
 }
 

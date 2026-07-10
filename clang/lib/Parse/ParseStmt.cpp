@@ -1968,10 +1968,9 @@ void Parser::ParseForRangeInitializerAfterColon(ForRangeInit &FRI,
       std::move(Actions.ExprEvalContexts.back().ForRangeLifetimeExtendTemps);
 }
 
-StmtResult
-Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
-                          LabelDecl *PrecedingLabel,
-                          CXXExpansionStmtDecl *ESD) {
+StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
+                                     LabelDecl *PrecedingLabel,
+                                     CXXExpansionStmtDecl *ESD) {
   assert(Tok.is(tok::kw_for) && "Not a for stmt!");
   SourceLocation ForLoc = ConsumeToken();  // eat the 'for'.
 
@@ -2144,7 +2143,7 @@ Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   } else {
     // An expression here should not be inside the expansion statement context.
     ExpansionStmtContextRAII EnterParentContext{
-      Actions, ForRangeInfo, Actions.CurContext->getParent()};
+        Actions, ForRangeInfo, Actions.CurContext->getParent()};
     ProhibitAttributes(attrs);
     Value = ParseExpression();
 
@@ -2182,8 +2181,7 @@ Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
       // User tried to write the reasonable, but ill-formed, for-range-statement
       //   for (expr : expr) { ... }
       Diag(Tok, diag::err_for_range_expected_decl)
-          << (ESD != nullptr)
-          << FirstPart.get()->getSourceRange();
+          << (ESD != nullptr) << FirstPart.get()->getSourceRange();
       SkipUntil(tok::r_paren, StopBeforeMatch);
       SecondPart = Sema::ConditionError();
     } else {

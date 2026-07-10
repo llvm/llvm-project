@@ -1752,7 +1752,7 @@ private:
     SourceLocation ColonLoc;
     ExprResult RangeExpr;
     SmallVector<MaterializeTemporaryExpr *, 8> LifetimeExtendTemps;
-    CXXExpansionStmtDecl* ExpansionStmt = nullptr;
+    CXXExpansionStmtDecl *ExpansionStmt = nullptr;
     bool ParsedForRangeDecl() { return !ColonLoc.isInvalid(); }
   };
   struct ForRangeInfo : ForRangeInit {

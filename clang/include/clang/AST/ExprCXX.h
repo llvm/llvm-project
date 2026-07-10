@@ -5561,9 +5561,7 @@ public:
   CXXExpansionSelectExpr(EmptyShell Empty);
   CXXExpansionSelectExpr(const ASTContext &C, InitListExpr *Range, Expr *Idx);
 
-  InitListExpr *getRangeExpr() {
-    return cast<InitListExpr>(SubExprs[RANGE]);
-  }
+  InitListExpr *getRangeExpr() { return cast<InitListExpr>(SubExprs[RANGE]); }
 
   const InitListExpr *getRangeExpr() const {
     return cast<InitListExpr>(SubExprs[RANGE]);

@@ -7556,8 +7556,8 @@ ExpectedStmt ASTNodeImporter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
       ToBody, ToForLoc, ToCoawaitLoc, ToColonLoc, ToRParenLoc);
 }
 
-ExpectedStmt ASTNodeImporter::VisitCXXExpansionStmtPattern(
-    CXXExpansionStmtPattern *S) {
+ExpectedStmt
+ASTNodeImporter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
   Error Err = Error::success();
   auto ToESD = importChecked(Err, S->getDecl());
   auto ToInit = importChecked(Err, S->getInit());
@@ -9526,8 +9526,8 @@ ASTNodeImporter::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
                                       ToInitLoc, ToBeginLoc, ToEndLoc);
 }
 
-ExpectedStmt ASTNodeImporter::VisitCXXExpansionSelectExpr(
-    CXXExpansionSelectExpr *E) {
+ExpectedStmt
+ASTNodeImporter::VisitCXXExpansionSelectExpr(CXXExpansionSelectExpr *E) {
   Error Err = Error::success();
   auto ToRange = importChecked(Err, E->getRangeExpr());
   auto ToIndex = importChecked(Err, E->getIndexExpr());

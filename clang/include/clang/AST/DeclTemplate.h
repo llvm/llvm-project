@@ -3434,9 +3434,7 @@ public:
                                                   GlobalDeclID ID);
 
   CXXExpansionStmtPattern *getExpansionPattern() { return Pattern; }
-  const CXXExpansionStmtPattern *getExpansionPattern() const {
-    return Pattern;
-  }
+  const CXXExpansionStmtPattern *getExpansionPattern() const { return Pattern; }
   void setExpansionPattern(CXXExpansionStmtPattern *S) { Pattern = S; }
 
   CXXExpansionStmtInstantiation *getInstantiations() { return Instantiations; }

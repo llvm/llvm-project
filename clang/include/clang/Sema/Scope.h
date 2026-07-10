@@ -313,9 +313,7 @@ public:
     IsExpansionStmtScope = Value;
   }
 
-  bool isExpansionStmtScope() const {
-    return IsExpansionStmtScope;
-  }
+  bool isExpansionStmtScope() const { return IsExpansionStmtScope; }
 
   /// getBreakParent - Return the closest scope that a break statement
   /// would be affected by.

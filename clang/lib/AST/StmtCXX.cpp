@@ -193,8 +193,8 @@ CXXExpansionStmtPattern *CXXExpansionStmtPattern::CreateEnumerating(
 
 CXXExpansionStmtPattern *CXXExpansionStmtPattern::CreateIterating(
     ASTContext &Context, CXXExpansionStmtDecl *ESD, Stmt *Init,
-    DeclStmt *ExpansionVar, DeclStmt *Range, DeclStmt *Begin,
-    DeclStmt *Iter, SourceLocation LParenLoc, SourceLocation ColonLoc,
+    DeclStmt *ExpansionVar, DeclStmt *Range, DeclStmt *Begin, DeclStmt *Iter,
+    SourceLocation LParenLoc, SourceLocation ColonLoc,
     SourceLocation RParenLoc) {
   CXXExpansionStmtPattern *Pattern =
       AllocateAndConstruct(Context, ExpansionStmtKind::Iterating, ESD, Init,
@@ -209,8 +209,7 @@ SourceLocation CXXExpansionStmtPattern::getBeginLoc() const {
   return ParentDecl->getLocation();
 }
 
-DecompositionDecl *
-CXXExpansionStmtPattern::getDecompositionDecl() {
+DecompositionDecl *CXXExpansionStmtPattern::getDecompositionDecl() {
   assert(isDestructuring());
   return cast<DecompositionDecl>(
       cast<DeclStmt>(getDecompositionDeclStmt())->getSingleDecl());

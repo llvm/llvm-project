@@ -1764,7 +1764,7 @@ void ASTStmtWriter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
   Record.AddSourceLocation(S->getColonLoc());
   Record.AddSourceLocation(S->getRParenLoc());
   Record.AddDeclRef(S->getDecl());
-  for (Stmt* SubStmt : S->children())
+  for (Stmt *SubStmt : S->children())
     Record.AddStmt(SubStmt);
   Code = serialization::STMT_CXX_EXPANSION_PATTERN;
 }
@@ -1781,8 +1781,7 @@ void ASTStmtWriter::VisitCXXExpansionStmtInstantiation(
   Code = serialization::STMT_CXX_EXPANSION_INSTANTIATION;
 }
 
-void ASTStmtWriter::VisitCXXExpansionSelectExpr(
-    CXXExpansionSelectExpr *E) {
+void ASTStmtWriter::VisitCXXExpansionSelectExpr(CXXExpansionSelectExpr *E) {
   VisitExpr(E);
   Record.AddStmt(E->getRangeExpr());
   Record.AddStmt(E->getIndexExpr());

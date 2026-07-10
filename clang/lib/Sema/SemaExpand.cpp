@@ -289,8 +289,8 @@ Sema::ActOnCXXExpansionStmtDecl(unsigned TemplateDepth,
 
   auto *TParam = NonTypeTemplateParmDecl::Create(
       Context, Context.getTranslationUnitDecl(), TemplateKWLoc, TemplateKWLoc,
-      TemplateDepth, /*Position=*/0, /*Id=*/nullptr, ParmTy, /*ParameterPack=*/false,
-      ParmTI);
+      TemplateDepth, /*Position=*/0, /*Id=*/nullptr, ParmTy,
+      /*ParameterPack=*/false, ParmTI);
 
   return BuildCXXExpansionStmtDecl(CurContext, TemplateKWLoc, TParam);
 }
