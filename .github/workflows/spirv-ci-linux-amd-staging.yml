@@ -7,6 +7,19 @@ name: SPIRV Compiler CI - Linux - amd-staging
 on:
   workflow_call:
 
+env:
+  LLVM_BUILD: build
+  DEVLIBS_BUILD: build-device-libs
+  COMGR_BUILD: build-comgr
+  ROCR_BUILD: build-rocr
+  CLR_BUILD: build-clr
+  ROCPRIM_BUILD: build-rocprim
+  HIPCUB_BUILD: build-hipcub
+  ROCRAND_BUILD: build-rocrand
+  HIPRAND_BUILD: build-hiprand
+  STAGING: staging
+  TRANSLATOR_SRC: llvm-project/llvm/projects/SPIRV-LLVM-Translator
+
 jobs:
   # =====================================================================
   # Build LLVM + Clang + amd-llvm-spirv + device-libs + Comgr.
@@ -27,7 +40,7 @@ jobs:
       - name: Checkout llvm-project (PR head)
         # On pull_request events: PR head from the (possibly fork) head repo.
         # On workflow_dispatch: the branch the dispatch was on.
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -40,41 +53,43 @@ jobs:
         # the translator. Without an explicit repository/ref, checkout
         # defaults to the workflow's own repo (llvm-project) and clobbers
         # the translator path with llvm-project content.
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: ROCm/SPIRV-LLVM-Translator
           ref: amd-staging
-          path: llvm-project/llvm/projects/SPIRV-LLVM-Translator
+          path: ${{ env.TRANSLATOR_SRC }}
           fetch-depth: 1
           persist-credentials: false
 
       # ---- Build LLVM + Clang + LLD + in-tree SPIRV translator --------------
       - name: Configure LLVM
         run: |
-          cmake -G Ninja -S llvm-project/llvm -B build \
-            -DCMAKE_BUILD_TYPE=Release \
+          cmake -G Ninja -S llvm-project/llvm -B "$LLVM_BUILD" \
             -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DCMAKE_INSTALL_LIBDIR=lib \
             -DLLVM_ENABLE_PROJECTS="clang;lld" \
             -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86;SPIRV" \
             -DLLVM_INCLUDE_TESTS=ON \
             -DLLVM_INSTALL_GTEST=ON \
+            -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
+            -DCOMPILER_RT_BUILD_BUILTINS=ON \
             -DLLVM_LIT_ARGS="-sv --no-progress-bar"
 
       - name: Build LLVM + Clang + amd-llvm-spirv + test deps
         # *-test-depends pull in all tools needed for lit (FileCheck, not,
         # llc, llvm-*, clang, opt, etc.) and stay current with upstream.
-        run: ninja -C build llvm-test-depends clang-test-depends amd-llvm-spirv
+        run: ninja -C "$LLVM_BUILD" llvm-test-depends clang-test-depends amd-llvm-spirv builtins
 
       # ---- Build device-libs (standalone, against built LLVM) --------------
       - name: Configure device-libs
         run: |
-          cmake -G Ninja -S llvm-project/amd/device-libs -B build-device-libs \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH=$PWD/build \
-            -DLLVM_DIR=$PWD/build/lib/cmake/llvm
+          cmake -G Ninja -S llvm-project/amd/device-libs -B "$DEVLIBS_BUILD" \
+            -DCMAKE_PREFIX_PATH=$PWD/$LLVM_BUILD \
+            -DCMAKE_INSTALL_LIBDIR=lib \
+            -DLLVM_DIR=$PWD/$LLVM_BUILD/lib/cmake/llvm
 
       - name: Build device-libs
-        run: ninja -C build-device-libs
+        run: ninja -C "$DEVLIBS_BUILD"
 
       # ---- Build Comgr (standalone, against built LLVM + device-libs) ------
       - name: Configure Comgr
@@ -82,15 +97,187 @@ jobs:
         # the in-tree translator headers so COMGR_SPIRV_TRANSLATOR_AVAILABLE
         # turns ON (otherwise translator-dependent lit tests are UNSUPPORTED).
         run: |
-          cmake -G Ninja -S llvm-project/amd/comgr -B build-comgr \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH="$PWD/build;$PWD/build-device-libs" \
-            -DLLVM_DIR=$PWD/build/lib/cmake/llvm \
-            -DLLVM_EXTERNAL_SPIRV_LLVM_TRANSLATOR_SOURCE_DIR=$PWD/llvm-project/llvm/projects/SPIRV-LLVM-Translator \
+          cmake -G Ninja -S llvm-project/amd/comgr -B "$COMGR_BUILD" \
+            -DCMAKE_INSTALL_LIBDIR=lib \
+            -DCMAKE_PREFIX_PATH="$PWD/$LLVM_BUILD;$PWD/$DEVLIBS_BUILD" \
+            -DLLVM_DIR=$PWD/$LLVM_BUILD/lib/cmake/llvm \
+            -DLLVM_EXTERNAL_SPIRV_LLVM_TRANSLATOR_SOURCE_DIR=$PWD/$TRANSLATOR_SRC \
             -DBUILD_TESTING=ON
 
       - name: Build Comgr
-        run: ninja -C build-comgr amd_comgr
+        run: ninja -C "$COMGR_BUILD" amd_comgr
+
+      - name: Install build deps for runtime build
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            numactl-devel elfutils-libelf-devel libdrm-devel
+
+      - name: Install comgr + device-libs into staging
+        run: |
+          cmake --install "$COMGR_BUILD" --prefix $PWD/$STAGING
+          cmake --install "$DEVLIBS_BUILD" --prefix $PWD/$STAGING
+
+      - name: Checkout rocm-systems
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ROCm/rocm-systems
+          ref: develop
+          path: rocm-systems
+          persist-credentials: false
+
+      - name: Checkout rocm-cmake
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ROCm/rocm-cmake
+          ref: develop
+          path: rocm-cmake
+          persist-credentials: false
+
+      - name: Configure ROCR-Runtime
+        run: |
+          cmake -G Ninja -S rocm-systems/projects/rocr-runtime -B "$ROCR_BUILD" \
+            -DCMAKE_C_COMPILER=$PWD/$LLVM_BUILD/bin/clang \
+            -DCMAKE_CXX_COMPILER=$PWD/$LLVM_BUILD/bin/clang++ \
+            -DBUILD_SHARED_LIBS=ON \
+            -DCMAKE_INSTALL_LIBDIR=lib \
+            -DCMAKE_INSTALL_PREFIX=$PWD/$STAGING \
+            -DLLVM_DIR=$PWD/$LLVM_BUILD/lib/cmake/llvm \
+            -DClang_DIR=$PWD/$LLVM_BUILD/lib/cmake/clang
+
+      - name: Build ROCR-Runtime
+        env:
+          ROCM_PATH: ${{ github.workspace }}/${{ env.STAGING }}
+        run: ninja -C "$ROCR_BUILD" install
+
+      - name: Configure CLR (HIP runtime)
+        run: |
+          cmake -G Ninja -S rocm-systems/projects/clr -B "$CLR_BUILD" \
+            -DCMAKE_C_COMPILER=$PWD/$LLVM_BUILD/bin/clang \
+            -DCMAKE_CXX_COMPILER=$PWD/$LLVM_BUILD/bin/clang++ \
+            -DBUILD_SHARED_LIBS=ON \
+            -DCMAKE_INSTALL_LIBDIR=lib \
+            -DCMAKE_INSTALL_PREFIX=$PWD/$STAGING \
+            -DCMAKE_PREFIX_PATH="$PWD/$STAGING;$PWD/$LLVM_BUILD;$PWD/rocm-cmake/share/rocm" \
+            -DHIP_PLATFORM=amd \
+            -DHIP_COMMON_DIR=$PWD/rocm-systems/projects/hip \
+            -DCLR_BUILD_HIP=ON \
+            -DROCM_KPACK_ENABLED=OFF \
+            -DHIP_ENABLE_ROCPROFILER_REGISTER=OFF
+
+      - name: Build CLR
+        run: ninja -C "$CLR_BUILD" install
+
+      - name: Stage translator binary for runtime SPIRV JIT
+        run: |
+          mkdir -p "$STAGING/bin"
+          cp -a "$LLVM_BUILD/bin/amd-llvm-spirv" "$STAGING/bin/"
+
+      # Create hipconfig script for rocPRIM/hipCUB detection.
+      - name: Create hipconfig script
+        run: |
+          mkdir -p "$STAGING/bin"
+          cat > "$STAGING/bin/hipconfig" << 'EOF'
+          #!/bin/bash
+          case "$1" in
+            --platform) echo "amd" ;;
+            --compiler) echo "clang" ;;
+            --runtime) echo "rocclr" ;;
+            --hipclangpath) echo "$PWD/$LLVM_BUILD/bin" ;;
+            *) echo "amd" ;;
+          esac
+          EOF
+          chmod +x "$STAGING/bin/hipconfig"
+
+      # Build rocPRIM.
+      - name: Checkout rocPRIM
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ROCm/rocPRIM
+          ref: develop
+          path: rocPRIM
+          persist-credentials: false
+
+      - name: Configure and install rocPRIM
+        run: |
+          export PATH=$PWD/$STAGING/bin:$PATH
+          cmake -G Ninja -S rocPRIM -B "$ROCPRIM_BUILD" \
+            -DCMAKE_CXX_COMPILER=$PWD/$LLVM_BUILD/bin/clang++ \
+            -DCMAKE_HIP_COMPILER=$PWD/$LLVM_BUILD/bin/clang++ \
+            -DCMAKE_PREFIX_PATH="$PWD/$STAGING;$PWD/$LLVM_BUILD" \
+            -DCMAKE_INSTALL_PREFIX=$PWD/$STAGING \
+            -DBUILD_TEST=OFF \
+            -DBUILD_BENCHMARK=OFF
+          ninja -C "$ROCPRIM_BUILD"
+          cmake --install "$ROCPRIM_BUILD" --prefix $PWD/$STAGING
+
+      # Build hipCUB.
+      - name: Checkout hipCUB
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ROCm/hipCUB
+          ref: develop
+          path: hipCUB
+          persist-credentials: false
+
+      - name: Configure and install hipCUB
+        run: |
+          cmake -G Ninja -S hipCUB -B "$HIPCUB_BUILD" \
+            -DCMAKE_CXX_COMPILER=$PWD/$LLVM_BUILD/bin/clang++ \
+            -DCMAKE_HIP_COMPILER=$PWD/$LLVM_BUILD/bin/clang++ \
+            -DCMAKE_PREFIX_PATH="$PWD/$STAGING;$PWD/$LLVM_BUILD" \
+            -DCMAKE_INSTALL_PREFIX=$PWD/$STAGING \
+            -DBUILD_TEST=OFF \
+            -DBUILD_BENCHMARK=OFF
+          ninja -C "$HIPCUB_BUILD"
+          cmake --install "$HIPCUB_BUILD" --prefix $PWD/$STAGING
+
+      # Build rocRAND.
+      - name: Checkout rocRAND
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ROCm/rocRAND
+          ref: develop
+          path: rocRAND
+          persist-credentials: false
+
+      - name: Configure and build rocRAND
+        env:
+          ROCM_PATH: ${{ github.workspace }}/${{ env.STAGING }}
+        run: |
+          cmake -G Ninja -S rocRAND -B "$ROCRAND_BUILD" \
+            -DCMAKE_CXX_COMPILER=$PWD/$LLVM_BUILD/bin/clang++ \
+            -DCMAKE_HIP_COMPILER=$PWD/$LLVM_BUILD/bin/clang++ \
+            -DCMAKE_PREFIX_PATH="$PWD/$STAGING;$PWD/$LLVM_BUILD" \
+            -DCMAKE_INSTALL_PREFIX=$PWD/$STAGING \
+            -DAMDGPU_TARGETS="gfx942" \
+            -DBUILD_TEST=OFF \
+            -DBUILD_BENCHMARK=OFF \
+            -DCMAKE_HIP_FLAGS="--rocm-path=$PWD/$STAGING"
+          ninja -C "$ROCRAND_BUILD"
+          cmake --install "$ROCRAND_BUILD" --prefix $PWD/$STAGING
+
+      # Build hipRAND.
+      - name: Checkout hipRAND
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ROCm/hipRAND
+          ref: develop
+          path: hipRAND
+          persist-credentials: false
+
+      - name: Configure and build hipRAND
+        env:
+          ROCM_PATH: ${{ github.workspace }}/${{ env.STAGING }}
+        run: |
+          cmake -G Ninja -S hipRAND -B "$HIPRAND_BUILD" \
+            -DCMAKE_CXX_COMPILER=$PWD/$LLVM_BUILD/bin/clang++ \
+            -DCMAKE_PREFIX_PATH="$PWD/$STAGING;$PWD/$LLVM_BUILD" \
+            -DCMAKE_INSTALL_PREFIX=$PWD/$STAGING \
+            -DBUILD_TEST=OFF \
+            -DBUILD_BENCHMARK=OFF \
+            -DROCRAND_PATH=$PWD/$STAGING
+          ninja -C "$HIPRAND_BUILD"
+          cmake --install "$HIPRAND_BUILD" --prefix $PWD/$STAGING
 
       # ---- Strip + upload artifact -----------------------------------------
       # Strip binaries to keep the artifact under GHA's 10GB cap and shorten
@@ -98,17 +285,21 @@ jobs:
       # preserves dynamic symbols needed at link/load time.
       - name: Strip binaries
         run: |
-          find build build-comgr build-device-libs \
+          find "$LLVM_BUILD" "$COMGR_BUILD" "$DEVLIBS_BUILD" "$ROCR_BUILD" "$CLR_BUILD" \
+            "$ROCPRIM_BUILD" "$HIPCUB_BUILD" "$ROCRAND_BUILD" "$HIPRAND_BUILD" "$STAGING" \
             -type f \( -executable -o -name '*.so*' -o -name '*.a' \) \
             -exec strip --strip-unneeded {} + 2>/dev/null || true
 
       # Tar before upload: actions/upload-artifact@v4 strips +x bits and
       # excludes hidden files (loses FetchContent .git dirs).
       - name: Tar build trees
-        run: tar -cf linux-build-tree.tar build build-comgr build-device-libs
+        run: |
+          tar -cf linux-build-tree.tar \
+            "$LLVM_BUILD" "$COMGR_BUILD" "$DEVLIBS_BUILD" "$ROCR_BUILD" "$CLR_BUILD" \
+            "$ROCPRIM_BUILD" "$HIPCUB_BUILD" "$ROCRAND_BUILD" "$HIPRAND_BUILD" "$STAGING"
 
       - name: Upload build tree artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: linux-build-tree
           path: linux-build-tree.tar
@@ -139,7 +330,7 @@ jobs:
       - name: Checkout llvm-project (PR head)
         # On pull_request events: PR head from the (possibly fork) head repo.
         # On workflow_dispatch: the branch the dispatch was on.
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -152,16 +343,16 @@ jobs:
         # the translator. Without an explicit repository/ref, checkout
         # defaults to the workflow's own repo (llvm-project) and clobbers
         # the translator path with llvm-project content.
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: ROCm/SPIRV-LLVM-Translator
           ref: amd-staging
-          path: llvm-project/llvm/projects/SPIRV-LLVM-Translator
+          path: ${{ env.TRANSLATOR_SRC }}
           fetch-depth: 1
           persist-credentials: false
 
       - name: Download build tree artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: linux-build-tree
 
@@ -170,21 +361,21 @@ jobs:
       - name: Untar build trees
         run: |
           tar -xmf linux-build-tree.tar
-          touch build/build.ninja build-comgr/build.ninja build-device-libs/build.ninja
+          touch "$LLVM_BUILD/build.ninja" "$COMGR_BUILD/build.ninja" "$DEVLIBS_BUILD/build.ninja"
 
       - name: Test - SPIRV Translator (check-amd-llvm-spirv) [PR head]
         id: check_spirv_xlator
         continue-on-error: true
         run: |
           set -o pipefail
-          ninja -C build check-amd-llvm-spirv 2>&1 | tee build/check-amd-llvm-spirv.log
+          ninja -C "$LLVM_BUILD" check-amd-llvm-spirv 2>&1 | tee "$LLVM_BUILD/check-amd-llvm-spirv.log"
 
       - name: Capture PR head translator failures
         if: always()
         run: |
-          grep -oE '^FAIL: LLVM_SPIRV :: \S+' build/check-amd-llvm-spirv.log \
-            | sort -u > build/spirv-fails-pr.txt || true
-          echo "PR head failures:"; cat build/spirv-fails-pr.txt
+          grep -oE '^FAIL: LLVM_SPIRV :: \S+' "$LLVM_BUILD/check-amd-llvm-spirv.log" \
+            | sort -u > "$LLVM_BUILD/spirv-fails-pr.txt"
+          echo "PR head failures:"; cat "$LLVM_BUILD/spirv-fails-pr.txt"
 
       - name: Switch llvm-project to amd-staging tip for baseline
         # PRs on llvm-project change llvm/clang/lld, not the translator, so the
@@ -206,29 +397,29 @@ jobs:
         run: |
           set -o pipefail
           # Re-configure to pick up any CMakeLists / file-list changes in the swap
-          cmake -G Ninja -S llvm-project/llvm -B build
-          ninja -C build check-amd-llvm-spirv 2>&1 \
-            | tee build/check-amd-llvm-spirv-baseline.log
+          cmake -G Ninja -S llvm-project/llvm -B "$LLVM_BUILD"
+          ninja -C "$LLVM_BUILD" check-amd-llvm-spirv 2>&1 \
+            | tee "$LLVM_BUILD/check-amd-llvm-spirv-baseline.log"
 
       - name: Capture baseline translator failures
         # Split from the lit step so a non-zero ninja exit (lit failures +
         # set -o pipefail under bash -e) doesn't skip this grep.
         if: always()
         run: |
-          grep -oE '^FAIL: LLVM_SPIRV :: \S+' build/check-amd-llvm-spirv-baseline.log \
-            | sort -u > build/spirv-fails-baseline.txt || true
-          echo "Baseline failures:"; cat build/spirv-fails-baseline.txt
+          grep -oE '^FAIL: LLVM_SPIRV :: \S+' "$LLVM_BUILD/check-amd-llvm-spirv-baseline.log" \
+            | sort -u > "$LLVM_BUILD/spirv-fails-baseline.txt"
+          echo "Baseline failures:"; cat "$LLVM_BUILD/spirv-fails-baseline.txt"
 
       # Fail the job on real regressions (PR head FAILs that aren't on
       # amd-staging baseline). Pre-existing baseline failures don't block.
       - name: Gate - new translator lit failures
         if: always()
         run: |
-          if [ ! -f build/spirv-fails-pr.txt ] || [ ! -f build/spirv-fails-baseline.txt ]; then
+          if [ ! -f "$LLVM_BUILD/spirv-fails-pr.txt" ] || [ ! -f "$LLVM_BUILD/spirv-fails-baseline.txt" ]; then
             echo "::warning::Could not compute new-failure delta (missing pr.txt or baseline.txt); not gating."
             exit 0
           fi
-          new=$(comm -23 build/spirv-fails-pr.txt build/spirv-fails-baseline.txt)
+          new=$(comm -23 "$LLVM_BUILD/spirv-fails-pr.txt" "$LLVM_BUILD/spirv-fails-baseline.txt")
           if [ -n "$new" ]; then
             count=$(printf '%s\n' "$new" | wc -l)
             echo "::error::$count new translator lit failure(s) introduced by this PR:"
@@ -252,7 +443,7 @@ jobs:
       - name: Checkout llvm-project (PR head)
         # On pull_request events: PR head from the (possibly fork) head repo.
         # On workflow_dispatch: the branch the dispatch was on.
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -265,16 +456,16 @@ jobs:
         # the translator. Without an explicit repository/ref, checkout
         # defaults to the workflow's own repo (llvm-project) and clobbers
         # the translator path with llvm-project content.
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: ROCm/SPIRV-LLVM-Translator
           ref: amd-staging
-          path: llvm-project/llvm/projects/SPIRV-LLVM-Translator
+          path: ${{ env.TRANSLATOR_SRC }}
           fetch-depth: 1
           persist-credentials: false
 
       - name: Download build tree artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: linux-build-tree
 
@@ -283,10 +474,10 @@ jobs:
       - name: Untar build trees
         run: |
           tar -xmf linux-build-tree.tar
-          touch build/build.ninja build-comgr/build.ninja build-device-libs/build.ninja
+          touch "$LLVM_BUILD/build.ninja" "$COMGR_BUILD/build.ninja" "$DEVLIBS_BUILD/build.ninja"
 
       - name: Test - LLVM SPIRV backend (check-llvm-codegen-spirv)
-        run: ninja -C build check-llvm-codegen-spirv
+        run: ninja -C "$LLVM_BUILD" check-llvm-codegen-spirv
 
   # =====================================================================
   # Test - Comgr (lit + gtest + ctest)
@@ -303,7 +494,7 @@ jobs:
       - name: Checkout llvm-project (PR head)
         # On pull_request events: PR head from the (possibly fork) head repo.
         # On workflow_dispatch: the branch the dispatch was on.
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -316,16 +507,16 @@ jobs:
         # the translator. Without an explicit repository/ref, checkout
         # defaults to the workflow's own repo (llvm-project) and clobbers
         # the translator path with llvm-project content.
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: ROCm/SPIRV-LLVM-Translator
           ref: amd-staging
-          path: llvm-project/llvm/projects/SPIRV-LLVM-Translator
+          path: ${{ env.TRANSLATOR_SRC }}
           fetch-depth: 1
           persist-credentials: false
 
       - name: Download build tree artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: linux-build-tree
 
@@ -334,14 +525,14 @@ jobs:
       - name: Untar build trees
         run: |
           tar -xmf linux-build-tree.tar
-          touch build/build.ninja build-comgr/build.ninja build-device-libs/build.ninja
+          touch "$LLVM_BUILD/build.ninja" "$COMGR_BUILD/build.ninja" "$DEVLIBS_BUILD/build.ninja"
 
       - name: Test - Comgr (check-comgr)
         # check-comgr depends on test-lit (runs lit suite) and test-unit
         # (runs gtest binaries via its COMMAND block), then runs ctest for
         # the legacy C tests. Single target = all three test layers.
         id: check_comgr
-        run: ninja -C build-comgr check-comgr
+        run: ninja -C "$COMGR_BUILD" check-comgr
 
       - name: Show failed Comgr ctest output
         # check-comgr invokes ctest without --output-on-failure, so failures
@@ -352,4 +543,145 @@ jobs:
         if: failure() && steps.check_comgr.conclusion == 'failure'
         env:
           AMD_COMGR_REDIRECT_LOGS: stderr
-        run: ctest --test-dir build-comgr --output-on-failure --rerun-failed
+        run: ctest --test-dir "$COMGR_BUILD" --output-on-failure --rerun-failed
+
+  # =====================================================================
+  # Test - rocm-examples
+  # =====================================================================
+
+  # Select the gfx942 test runner the same way TheRock CI does.
+  pick_runner:
+    name: Select gfx942 test runner
+    runs-on: azure-linux-scale-rocm
+    timeout-minutes: 5
+    outputs:
+      test_runs_on: ${{ steps.pick.outputs.label }}
+    steps:
+      - name: Checkout TheRock build_tools
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ROCm/TheRock
+          ref: compiler/amd-staging
+          sparse-checkout: build_tools
+          persist-credentials: false
+
+      - name: Weighted runner selection (gfx94X-dcgpu)
+        id: pick
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import sys
+          sys.path.insert(0, "build_tools/github_actions")
+          from amdgpu_family_matrix import (
+              amdgpu_family_info_matrix_presubmit as M,
+              select_weighted_label,
+          )
+          info = M["gfx94x"]["linux"]
+          label = select_weighted_label(info["test-runs-on-labels"], "gfx94X-dcgpu")
+          print(f"label={label}")
+          PY
+
+  test_rocm_examples:
+    name: Test rocm-examples
+    needs: [build, pick_runner]
+    runs-on: ${{ needs.pick_runner.outputs.test_runs_on }}
+    timeout-minutes: 45
+    container:
+      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:702a5133851e6d1daf1207d2c9fbb01c2667914a5b6dc5a01faeb3ce66ea6421
+      options: |
+        --device=/dev/kfd --device=/dev/dri  --group-add video
+
+
+    steps:
+      - name: Checkout rocm-examples
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ROCm/rocm-examples
+          ref: amd-staging
+          path: rocm-examples
+
+      - name: Download build tree artifact
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: linux-build-tree
+
+      - name: Untar build trees
+        run: tar -xmf linux-build-tree.tar
+
+      - name: Install libnuma
+        run: dnf install -y numactl-libs
+
+      # HIP-Basic.
+      - name: ROCm Examples build HIP-Basic
+        run: |
+          STAGING=$PWD/$STAGING
+          LLVM_PATH=$PWD/$LLVM_BUILD
+          cmake -S rocm-examples/HIP-Basic -B examples-build-hip-basic         \
+            -DCMAKE_CXX_COMPILER=$LLVM_PATH/bin/clang++                        \
+            -DCMAKE_HIP_COMPILER=$LLVM_PATH/bin/clang++                        \
+            -DCMAKE_HIP_ARCHITECTURES=amdgcnspirv                              \
+            -DCMAKE_HIP_COMPILER_ROCM_ROOT=$STAGING                            \
+            -DCMAKE_PREFIX_PATH=$STAGING                                       \
+            -DCMAKE_DISABLE_FIND_PACKAGE_Perl=TRUE                             \
+            -DCMAKE_HIP_FLAGS="--rocm-path=$STAGING"                           \
+            -DCMAKE_HIP_LINK_FLAGS="-L$STAGING/lib -Wl,-rpath,$STAGING/lib"    \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$STAGING/lib -Wl,-rpath,$STAGING/lib"
+          cmake --build examples-build-hip-basic -j $(nproc)
+
+      - name: ROCm Examples run HIP-Basic
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/${{ env.STAGING }}/lib
+        run: |
+          ctest --test-dir examples-build-hip-basic --output-on-failure -j $(nproc) \
+            -E '^hip_cooperative_groups$' # TODO: ISSUE #3143
+
+      # Applications.
+      - name: ROCm Examples build Applications
+        run: |
+          STAGING=$PWD/$STAGING
+          LLVM_PATH=$PWD/$LLVM_BUILD
+          cmake -S rocm-examples/Applications -B examples-build-Applications   \
+            -DCMAKE_CXX_COMPILER=$LLVM_PATH/bin/clang++                        \
+            -DCMAKE_HIP_COMPILER=$LLVM_PATH/bin/clang++                        \
+            -DCMAKE_HIP_ARCHITECTURES=amdgcnspirv                              \
+            -DCMAKE_HIP_COMPILER_ROCM_ROOT=$STAGING                            \
+            -DCMAKE_PREFIX_PATH=$STAGING                                       \
+            -DCMAKE_HIP_FLAGS="--rocm-path=$STAGING"                           \
+            -DCMAKE_HIP_LINK_FLAGS="-L$STAGING/lib -Wl,-rpath,$STAGING/lib"    \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$STAGING/lib -Wl,-rpath,$STAGING/lib"
+          cmake --build examples-build-Applications -j $(nproc)
+
+      - name: ROCm Examples run Applications
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/${{ env.STAGING }}/lib
+        run: |
+          ctest --test-dir examples-build-Applications --output-on-failure -j $(nproc) \
+            -E '^(applications_optical_flow|applications_monte_carlo_pi)$' # TODO: ISSUE #3143
+
+      # Libraries.
+      - name: ROCm Examples build Libraries
+        run: |
+          STAGING=$PWD/$STAGING
+          LLVM_PATH=$PWD/$LLVM_BUILD
+          cmake -S rocm-examples/Libraries -B examples-build-Libraries         \
+            -DCMAKE_CXX_COMPILER=$LLVM_PATH/bin/clang++                        \
+            -DCMAKE_HIP_COMPILER=$LLVM_PATH/bin/clang++                        \
+            -DCMAKE_HIP_COMPILER_ROCM_ROOT=$STAGING                            \
+            -DCMAKE_PREFIX_PATH=$STAGING                                       \
+            -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY                     \
+            -DHIP_PLATFORM=amd                                                 \
+            -DROCM_PATH=$STAGING                                               \
+            -DCMAKE_HIP_ARCHITECTURES=amdgcnspirv                              \
+            -DCMAKE_DISABLE_FIND_PACKAGE_Perl=TRUE                             \
+            -DCMAKE_HIP_FLAGS="-DROCPRIM_DISABLE_DPP=1 --offload-new-driver --rocm-path=$STAGING -use-spirv-backend --rtlib=libgcc -unwindlib=libgcc" \
+            -DCMAKE_HIP_LINK_FLAGS="--rtlib=libgcc -unwindlib=libgcc -L$STAGING/lib -Wl,-rpath,$STAGING/lib -Wl,--unresolved-symbols=ignore-in-shared-libs" \
+            -DCMAKE_CXX_FLAGS="--rtlib=libgcc -unwindlib=libgcc"               \
+            -DCMAKE_EXE_LINKER_FLAGS="--rtlib=libgcc -unwindlib=libgcc -L$STAGING/lib -Wl,-rpath,$STAGING/lib -Wl,--unresolved-symbols=ignore-in-shared-libs" \
+            -DCMAKE_SHARED_LINKER_FLAGS="--rtlib=libgcc -unwindlib=libgcc"
+          cmake --build examples-build-Libraries -j $(nproc)
+
+      - name: ROCm Examples run Libraries
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/${{ env.STAGING }}/lib
+        run: |
+          ctest --test-dir examples-build-Libraries --output-on-failure -j $(nproc) \
+            -E '^(hiprand_simple_distributions_cpp|rocrand_simple_distributions_cpp)$' # TODO: ISSUE #3143
