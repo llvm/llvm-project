@@ -3319,8 +3319,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     Code = bitc::FUNC_CODE_INST_SHUFFLEVEC;
     pushValueAndType(I.getOperand(0), InstID, Vals);
     pushValue(I.getOperand(1), InstID, Vals);
-    pushValue(cast<ShuffleVectorInst>(I).getShuffleMaskForBitcode(), InstID,
-              Vals);
+    pushValue(I.getOperand(2), InstID, Vals);
     break;
   case Instruction::ICmp:
   case Instruction::FCmp: {

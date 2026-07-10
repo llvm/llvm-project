@@ -1057,6 +1057,67 @@ TEST(InstructionsTest, CommuteShuffleMask) {
   EXPECT_THAT(Indices, testing::ContainerEq(ArrayRef<int>({-1, 4, 3})));
 }
 
+TEST(InstructionsTest, DynamicShuffleMask) {
+  LLVMContext C;
+  auto *VTy = FixedVectorType::get(Type::getInt32Ty(C), 4);
+  auto *MaskTy = FixedVectorType::get(Type::getInt8Ty(C), 8);
+  Argument V1(VTy, "v1"), V2(VTy, "v2"), M(MaskTy, "m");
+
+  EXPECT_TRUE(ShuffleVectorInst::isValidOperands(&V1, &V2, &M));
+  std::unique_ptr<ShuffleVectorInst> S(new ShuffleVectorInst(&V1, &V2, &M));
+  EXPECT_EQ(S->getNumOperands(), 3u);
+  EXPECT_EQ(S->getMaskOperand(), &M);
+  EXPECT_FALSE(S->isConstantMask());
+  EXPECT_EQ(S->getType(), FixedVectorType::get(Type::getInt32Ty(C), 8));
+  EXPECT_TRUE(S->changesLength());
+  EXPECT_TRUE(S->increasesLength());
+
+  // Replacing the mask operand with a (same-typed, hence non-canonical i8)
+  // constant must be picked up by the lazy cache: still not "constant mask".
+  S->setOperand(2, ConstantVector::getSplat(ElementCount::getFixed(8),
+                                            ConstantInt::get(Type::getInt8Ty(C), 1)));
+  EXPECT_FALSE(S->isConstantMask());
+
+  // A canonical constant mask via the ArrayRef ctor behaves exactly as before.
+  std::unique_ptr<ShuffleVectorInst> SC(
+      new ShuffleVectorInst(&V1, &V2, ArrayRef<int>{0, 4, PoisonMaskElem, 7}));
+  EXPECT_EQ(SC->getNumOperands(), 3u);
+  EXPECT_TRUE(SC->isConstantMask());
+  EXPECT_EQ(SC->getShuffleMask(), (ArrayRef<int>{0, 4, PoisonMaskElem, 7}));
+  EXPECT_EQ(SC->getMaskValue(1), 4);
+  // Cache invalidation on setOperand to a *different* canonical constant.
+  SC->setOperand(2, ConstantVector::getSplat(ElementCount::getFixed(4),
+                                             ConstantInt::get(Type::getInt32Ty(C), 2)));
+  EXPECT_TRUE(SC->isConstantMask());
+  EXPECT_EQ(SC->getShuffleMask(), (ArrayRef<int>{2, 2, 2, 2}));
+  // An out-of-bounds i32 constant is valid IR but NOT canonical.
+  SC->setOperand(2, ConstantVector::getSplat(ElementCount::getFixed(4),
+                                             ConstantInt::get(Type::getInt32Ty(C), 99)));
+  EXPECT_FALSE(SC->isConstantMask());
+
+  // Regression test: the mask cache must be refreshed unconditionally (not
+  // merely as a side effect of an assert), so a cold cache is still
+  // correctly populated even if isConstantMask() is never called first.
+  Constant *CanonMask =
+      ConstantVector::get({ConstantInt::get(Type::getInt32Ty(C), 5),
+                           ConstantInt::get(Type::getInt32Ty(C), 1),
+                           PoisonValue::get(Type::getInt32Ty(C)),
+                           ConstantInt::get(Type::getInt32Ty(C), 3)});
+  std::unique_ptr<ShuffleVectorInst> SCold(
+      new ShuffleVectorInst(&V1, &V2, CanonMask));
+  // Cold cache (built via the Value*-mask ctor): call getShuffleMask()
+  // directly first, with no preceding isConstantMask() call.
+  EXPECT_EQ(SCold->getShuffleMask(), (ArrayRef<int>{5, 1, PoisonMaskElem, 3}));
+
+  // Stale cache: after setOperand to a different canonical constant, call
+  // getMaskValue() directly (no intervening isConstantMask()/getShuffleMask()
+  // call) and confirm it reflects the new operand, not the old cached value.
+  Constant *CanonMask2 = ConstantVector::getSplat(
+      ElementCount::getFixed(4), ConstantInt::get(Type::getInt32Ty(C), 0));
+  SCold->setOperand(2, CanonMask2);
+  EXPECT_EQ(SCold->getMaskValue(2), 0);
+}
+
 TEST(InstructionsTest, ShuffleMaskQueries) {
   // Create the elements for various constant vectors.
   LLVMContext Ctx;

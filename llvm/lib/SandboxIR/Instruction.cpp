@@ -1560,8 +1560,8 @@ void ShuffleVectorInst::commute() {
 }
 
 Constant *ShuffleVectorInst::getShuffleMaskForBitcode() const {
-  return Ctx.getOrCreateConstant(
-      cast<llvm::ShuffleVectorInst>(Val)->getShuffleMaskForBitcode());
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(
+      cast<llvm::ShuffleVectorInst>(Val)->getMaskOperand()));
 }
 
 Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,

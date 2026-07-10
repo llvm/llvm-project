@@ -2348,7 +2348,7 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
     Code = bitc::FUNC_CODE_INST_SHUFFLEVEC;
     pushValueAndType(I.getOperand(0), InstID, Vals);
     pushValue(I.getOperand(1), InstID, Vals);
-    pushValue(cast<ShuffleVectorInst>(&I)->getShuffleMaskForBitcode(), InstID,
+    pushValue(cast<ShuffleVectorInst>(&I)->getMaskOperand(), InstID,
               Vals);
     break;
   case Instruction::ICmp:

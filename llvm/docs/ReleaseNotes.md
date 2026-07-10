@@ -53,6 +53,14 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* `shufflevector` now accepts a run-time (non-constant) mask operand of any
+  integer element width. Out-of-bounds mask indices — constant or run-time —
+  produce `poison` for that lane instead of being invalid IR. For C++ API
+  users, the mask is now operand 2 of `ShuffleVectorInst` (constant masks
+  included); `getShuffleMask()` and related accessors may only be used when
+  `isConstantMask()` is true, and `getShuffleMaskForBitcode()` has been
+  removed.
+
 * Removed `llvm.convert.to.fp16` and `llvm.convert.from.fp16`
   intrinsics. These are equivalent to `fptrunc` and `fpext` with half
   with a bitcast.
@@ -328,6 +336,10 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the Python bindings
 
 ### Changes to the C API
+
+* ``LLVMBuildShuffleVector`` now accepts a non-constant mask.
+  ``LLVMGetMaskValue`` may only be called when the shuffle's mask is a
+  canonical constant; ``LLVMGetNumMaskElements`` works for any mask.
 
 * Replaced opcode ``LLVMBr`` with ``LLVMUncondBr`` and ``LLVMCondBr``.
 

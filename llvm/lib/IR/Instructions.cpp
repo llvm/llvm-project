@@ -1790,9 +1790,7 @@ ShuffleVectorInst::ShuffleVectorInst(Value *V1, Value *V2, Value *Mask,
 
   Op<0>() = V1;
   Op<1>() = V2;
-  SmallVector<int, 16> MaskArr;
-  getShuffleMask(cast<Constant>(Mask), MaskArr);
-  setShuffleMask(MaskArr);
+  Op<2>() = Mask;
   setName(Name);
 }
 
@@ -1812,6 +1810,8 @@ ShuffleVectorInst::ShuffleVectorInst(Value *V1, Value *V2, ArrayRef<int> Mask,
 }
 
 void ShuffleVectorInst::commute() {
+  [[maybe_unused]] bool Canonical = isConstantMask(); // always refreshes cache
+  assert(Canonical && "commute requires a canonical constant mask");
   int NumOpElts = cast<FixedVectorType>(Op<0>()->getType())->getNumElements();
   int NumMaskElts = ShuffleMask.size();
   SmallVector<int, 16> NewMask(NumMaskElts);
@@ -1855,6 +1855,17 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   if (!V1->getType()->isVectorTy() || V1->getType() != V2->getType())
     return false;
 
+  // Mask must be a vector of integers whose scalability matches the inputs.
+  // Any element width is allowed; out-of-bounds indices yield poison lanes,
+  // so no bounds requirement applies (constant or not).
+  auto *MaskTy = dyn_cast<VectorType>(Mask->getType());
+  return MaskTy && MaskTy->getElementType()->isIntegerTy() &&
+         isa<ScalableVectorType>(MaskTy) ==
+             isa<ScalableVectorType>(V1->getType());
+}
+
+bool ShuffleVectorInst::isCanonicalConstantMask(const Value *V1,
+                                                const Constant *Mask) {
   // Mask must be vector of i32, and must be the same kind of vector as the
   // input vectors
   auto *MaskTy = dyn_cast<VectorType>(Mask->getType());
@@ -1929,8 +1940,24 @@ void ShuffleVectorInst::getShuffleMask(const Constant *Mask,
 }
 
 void ShuffleVectorInst::setShuffleMask(ArrayRef<int> Mask) {
+  Constant *MaskC = convertShuffleMaskForBitcode(Mask, getType());
+  Op<2>() = MaskC;
   ShuffleMask.assign(Mask.begin(), Mask.end());
-  ShuffleMaskForBitcode = convertShuffleMaskForBitcode(Mask, getType());
+  MaskCacheKey = MaskC;
+  MaskCacheCanonical = true;
+}
+
+bool ShuffleVectorInst::refreshMaskCache() const {
+  Value *M = getOperand(2);
+  MaskCacheKey = M;
+  MaskCacheCanonical = false;
+  ShuffleMask.clear();
+  auto *C = dyn_cast<Constant>(M);
+  if (!C || !isCanonicalConstantMask(getOperand(0), C))
+    return false;
+  getShuffleMask(C, ShuffleMask);
+  MaskCacheCanonical = true;
+  return true;
 }
 
 Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,
@@ -2352,11 +2379,12 @@ bool ShuffleVectorInst::isReplicationMask(int &ReplicationFactor,
     return false;
 
   VF = cast<FixedVectorType>(Op<0>()->getType())->getNumElements();
-  if (ShuffleMask.size() % VF != 0)
+  ArrayRef<int> Mask = getShuffleMask();
+  if (Mask.size() % VF != 0)
     return false;
-  ReplicationFactor = ShuffleMask.size() / VF;
+  ReplicationFactor = Mask.size() / VF;
 
-  return isReplicationMaskWithParams(ShuffleMask, ReplicationFactor, VF);
+  return isReplicationMaskWithParams(Mask, ReplicationFactor, VF);
 }
 
 bool ShuffleVectorInst::isOneUseSingleSourceMask(ArrayRef<int> Mask, int VF) {
@@ -2384,10 +2412,11 @@ bool ShuffleVectorInst::isOneUseSingleSourceMask(int VF) const {
   // case.
   if (isa<ScalableVectorType>(getType()))
     return false;
-  if (!isSingleSourceMask(ShuffleMask, VF))
+  ArrayRef<int> Mask = getShuffleMask();
+  if (!isSingleSourceMask(Mask, VF))
     return false;
 
-  return isOneUseSingleSourceMask(ShuffleMask, VF);
+  return isOneUseSingleSourceMask(Mask, VF);
 }
 
 bool ShuffleVectorInst::isInterleave(unsigned Factor) {
@@ -2398,7 +2427,7 @@ bool ShuffleVectorInst::isInterleave(unsigned Factor) {
     return false;
   unsigned OpNumElts = OpTy->getNumElements();
 
-  return isInterleaveMask(ShuffleMask, Factor, OpNumElts * 2);
+  return isInterleaveMask(getShuffleMask(), Factor, OpNumElts * 2);
 }
 
 bool ShuffleVectorInst::isInterleaveMask(
@@ -4577,7 +4606,7 @@ InsertElementInst *InsertElementInst::cloneImpl() const {
 }
 
 ShuffleVectorInst *ShuffleVectorInst::cloneImpl() const {
-  return new ShuffleVectorInst(getOperand(0), getOperand(1), getShuffleMask());
+  return new ShuffleVectorInst(getOperand(0), getOperand(1), getOperand(2));
 }
 
 PHINode *PHINode::cloneImpl() const { return new (AllocMarker) PHINode(*this); }

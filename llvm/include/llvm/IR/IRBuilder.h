@@ -2683,9 +2683,13 @@ public:
 
   Value *CreateShuffleVector(Value *V1, Value *V2, Value *Mask,
                              const Twine &Name = "") {
-    SmallVector<int, 16> IntMask;
-    ShuffleVectorInst::getShuffleMask(cast<Constant>(Mask), IntMask);
-    return CreateShuffleVector(V1, V2, IntMask, Name);
+    if (auto *MaskC = dyn_cast<Constant>(Mask);
+        MaskC && ShuffleVectorInst::isCanonicalConstantMask(V1, MaskC)) {
+      SmallVector<int, 16> IntMask;
+      ShuffleVectorInst::getShuffleMask(MaskC, IntMask);
+      return CreateShuffleVector(V1, V2, IntMask, Name);
+    }
+    return Insert(new ShuffleVectorInst(V1, V2, Mask), Name);
   }
 
   /// See class ShuffleVectorInst for a description of the mask representation.

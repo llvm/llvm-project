@@ -4344,8 +4344,16 @@ void Verifier::visitInsertElementInst(InsertElementInst &IE) {
 
 void Verifier::visitShuffleVectorInst(ShuffleVectorInst &SV) {
   Check(ShuffleVectorInst::isValidOperands(SV.getOperand(0), SV.getOperand(1),
-                                           SV.getShuffleMask()),
+                                           SV.getMaskOperand()),
         "Invalid shufflevector operands!", &SV);
+  Check(SV.getType() ==
+            VectorType::get(
+                cast<VectorType>(SV.getOperand(0)->getType())->getElementType(),
+                cast<VectorType>(SV.getMaskOperand()->getType())
+                    ->getElementCount()),
+        "shufflevector result type must take its element count from the mask "
+        "and its element type from the inputs",
+        &SV);
   visitInstruction(SV);
 }
 

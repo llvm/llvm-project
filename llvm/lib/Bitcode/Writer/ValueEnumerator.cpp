@@ -162,8 +162,6 @@ static OrderMap orderModule(const Module &M) {
       for (const Instruction &I : BB) {
         for (const Value *Op : I.operands())
           orderConstantValue(Op);
-        if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
-          orderValue(SVI->getShuffleMaskForBitcode(), OM);
         if (auto *SI = dyn_cast<SwitchInst>(&I)) {
           for (const auto &Case : SI->cases())
             orderValue(Case.getCaseValue(), OM);
@@ -303,9 +301,6 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
           if (const auto *MAV = dyn_cast<MetadataAsValue>(Op))
             PredictValueOrderFromMetadata(MAV->getMetadata());
         }
-        if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
-          predictValueUseListOrder(SVI->getShuffleMaskForBitcode(), &F, OM,
-                                   Stack);
         predictValueUseListOrder(&I, &F, OM, Stack);
       }
     }
@@ -474,8 +469,6 @@ ValueEnumerator::ValueEnumerator(const Module &M,
 
           EnumerateNonLocalValuesFromMetadata(MD->getMetadata());
         }
-        if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
-          EnumerateType(SVI->getShuffleMaskForBitcode()->getType());
         if (auto *GEP = dyn_cast<GetElementPtrInst>(&I))
           EnumerateType(GEP->getSourceElementType());
         if (auto *AI = dyn_cast<AllocaInst>(&I))
@@ -1094,8 +1087,6 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
         if ((isa<Constant>(OI) && !isa<GlobalValue>(OI)) || isa<InlineAsm>(OI))
           EnumerateValue(OI);
       }
-      if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
-        EnumerateValue(SVI->getShuffleMaskForBitcode());
       if (auto *SI = dyn_cast<SwitchInst>(&I)) {
         for (const auto &Case : SI->cases())
           EnumerateValue(Case.getCaseValue());

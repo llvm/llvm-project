@@ -1993,10 +1993,25 @@ constexpr int PoisonMaskElem = -1;
 /// For scalable vectors, all the elements of the mask must be 0 or -1. This
 /// requirement may be relaxed in the future.
 class ShuffleVectorInst : public Instruction {
-  constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{3};
 
-  SmallVector<int, 4> ShuffleMask;
-  Constant *ShuffleMaskForBitcode;
+  /// Cached integer form of the mask. Valid iff MaskCacheKey == getOperand(2)
+  /// and MaskCacheCanonical. Lazily refreshed because the mask operand can be
+  /// replaced behind our back by setOperand()/RAUW.
+  mutable SmallVector<int, 4> ShuffleMask;
+  /// Keyed on the operand's pointer identity rather than its value. This is
+  /// theoretically vulnerable to ABA (the cached constant is freed and a
+  /// different constant is reallocated at the same address and installed as
+  /// the mask operand), but that window cannot occur in practice: the values
+  /// this cache stores come only from canonical constant masks (ConstantInt /
+  /// ConstantDataVector / ConstantVector-of-int / PoisonValue /
+  /// ConstantAggregateZero), and those constants are never destroyConstant'd
+  /// while the LLVMContext is alive.
+  mutable Value *MaskCacheKey = nullptr;
+  mutable bool MaskCacheCanonical = false;
+
+  /// Recompute the mask cache from operand 2. Returns MaskCacheCanonical.
+  LLVM_ABI bool refreshMaskCache() const;
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -2033,6 +2048,12 @@ public:
   LLVM_ABI static bool isValidOperands(const Value *V1, const Value *V2,
                                        ArrayRef<int> Mask);
 
+  /// Return true if Mask is a canonical constant mask for a shuffle of
+  /// V1/V2-typed vectors: <M x i32> with in-bounds or poison elements
+  /// (splat-of-zero/poison for scalable vectors).
+  LLVM_ABI static bool isCanonicalConstantMask(const Value *V1,
+                                               const Constant *Mask);
+
   /// Overload to return most specific vector type.
   ///
   VectorType *getType() const {
@@ -2042,33 +2063,55 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
+  /// Return the mask operand (operand 2). May be any value of integer-vector
+  /// type: a canonical constant mask, a non-canonical constant, or a run-time
+  /// mask.
+  Value *getMaskOperand() const { return getOperand(2); }
+
+  /// Return true if the mask operand is a canonical constant mask: a constant
+  /// <M x i32> whose elements are in-bounds indices or poison. Only then may
+  /// the getShuffleMask()/getMaskValue() family be used. Non-canonical
+  /// constant masks (other element widths, out-of-bounds indices) are valid
+  /// IR with poison semantics for OOB lanes and are canonicalized by
+  /// InstCombine; run-time masks always answer false.
+  bool isConstantMask() const {
+    if (MaskCacheKey == getOperand(2))
+      return MaskCacheCanonical;
+    return refreshMaskCache();
+  }
+
   /// Return the shuffle mask value of this instruction for the given element
-  /// index. Return PoisonMaskElem if the element is undef.
-  int getMaskValue(unsigned Elt) const { return ShuffleMask[Elt]; }
+  /// index. Return PoisonMaskElem if the element is undef. Only valid when
+  /// isConstantMask().
+  int getMaskValue(unsigned Elt) const { return getShuffleMask()[Elt]; }
+
 
   /// Convert the input shuffle mask operand to a vector of integers. Undefined
   /// elements of the mask are returned as PoisonMaskElem.
   LLVM_ABI static void getShuffleMask(const Constant *Mask,
                                       SmallVectorImpl<int> &Result);
 
-  /// Return the mask for this instruction as a vector of integers. Undefined
-  /// elements of the mask are returned as PoisonMaskElem.
+  /// Return the mask for this instruction as a vector of integers. Poison
+  /// elements of the mask are returned as PoisonMaskElem. Only valid when
+  /// isConstantMask().
   void getShuffleMask(SmallVectorImpl<int> &Result) const {
-    Result.assign(ShuffleMask.begin(), ShuffleMask.end());
+    ArrayRef<int> M = getShuffleMask();
+    Result.assign(M.begin(), M.end());
   }
-
-  /// Return the mask for this instruction, for use in bitcode.
-  ///
-  /// TODO: This is temporary until we decide a new bitcode encoding for
-  /// shufflevector.
-  Constant *getShuffleMaskForBitcode() const { return ShuffleMaskForBitcode; }
 
   LLVM_ABI static Constant *convertShuffleMaskForBitcode(ArrayRef<int> Mask,
                                                          Type *ResultTy);
 
   LLVM_ABI void setShuffleMask(ArrayRef<int> Mask);
 
-  ArrayRef<int> getShuffleMask() const { return ShuffleMask; }
+  /// Return the mask for this instruction as a vector of integers. Poison
+  /// elements of the mask are returned as PoisonMaskElem. Only valid when
+  /// isConstantMask().
+  ArrayRef<int> getShuffleMask() const {
+    [[maybe_unused]] bool Canonical = isConstantMask(); // always refreshes cache
+    assert(Canonical && "mask is not a canonical constant mask");
+    return ShuffleMask;
+  }
 
   /// Return true if this shuffle returns a vector with a different number of
   /// elements than its source vectors.
@@ -2078,7 +2121,8 @@ public:
     unsigned NumSourceElts = cast<VectorType>(Op<0>()->getType())
                                  ->getElementCount()
                                  .getKnownMinValue();
-    unsigned NumMaskElts = ShuffleMask.size();
+    unsigned NumMaskElts =
+        cast<VectorType>(getType())->getElementCount().getKnownMinValue();
     return NumSourceElts != NumMaskElts;
   }
 
@@ -2089,7 +2133,8 @@ public:
     unsigned NumSourceElts = cast<VectorType>(Op<0>()->getType())
                                  ->getElementCount()
                                  .getKnownMinValue();
-    unsigned NumMaskElts = ShuffleMask.size();
+    unsigned NumMaskElts =
+        cast<VectorType>(getType())->getElementCount().getKnownMinValue();
     return NumSourceElts < NumMaskElts;
   }
 
@@ -2112,7 +2157,7 @@ public:
   /// TODO: Optionally allow length-changing shuffles.
   bool isSingleSource() const {
     return !changesLength() &&
-           isSingleSourceMask(ShuffleMask, ShuffleMask.size());
+           isSingleSourceMask(getShuffleMask(), getShuffleMask().size());
   }
 
   /// Return true if this shuffle mask chooses elements from exactly one source
@@ -2144,7 +2189,8 @@ public:
     if (isa<ScalableVectorType>(getType()))
       return false;
 
-    return !changesLength() && isIdentityMask(ShuffleMask, ShuffleMask.size());
+    return !changesLength() &&
+           isIdentityMask(getShuffleMask(), getShuffleMask().size());
   }
 
   /// Return true if this shuffle lengthens exactly one source vector with
@@ -2185,7 +2231,8 @@ public:
   /// In that case, the shuffle is better classified as an identity shuffle.
   /// TODO: Optionally allow length-changing shuffles.
   bool isSelect() const {
-    return !changesLength() && isSelectMask(ShuffleMask, ShuffleMask.size());
+    return !changesLength() &&
+           isSelectMask(getShuffleMask(), getShuffleMask().size());
   }
 
   /// Return true if this shuffle mask swaps the order of elements from exactly
@@ -2206,7 +2253,8 @@ public:
   /// Example: shufflevector <4 x n> A, <4 x n> B, <3,undef,1,undef>
   /// TODO: Optionally allow length-changing shuffles.
   bool isReverse() const {
-    return !changesLength() && isReverseMask(ShuffleMask, ShuffleMask.size());
+    return !changesLength() &&
+           isReverseMask(getShuffleMask(), getShuffleMask().size());
   }
 
   /// Return true if this shuffle mask chooses all elements with the same value
@@ -2230,7 +2278,7 @@ public:
   /// TODO: Optionally allow splats from other elements.
   bool isZeroEltSplat() const {
     return !changesLength() &&
-           isZeroEltSplatMask(ShuffleMask, ShuffleMask.size());
+           isZeroEltSplatMask(getShuffleMask(), getShuffleMask().size());
   }
 
   /// Return true if this shuffle mask is a transpose mask.
@@ -2279,7 +2327,8 @@ public:
   /// exact specification.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <0,4,2,6>
   bool isTranspose() const {
-    return !changesLength() && isTransposeMask(ShuffleMask, ShuffleMask.size());
+    return !changesLength() &&
+           isTransposeMask(getShuffleMask(), getShuffleMask().size());
   }
 
   /// Return true if this shuffle mask is a splice mask, concatenating the two
@@ -2303,7 +2352,7 @@ public:
   /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
   bool isSplice(int &Index) const {
     return !changesLength() &&
-           isSpliceMask(ShuffleMask, ShuffleMask.size(), Index);
+           isSpliceMask(getShuffleMask(), getShuffleMask().size(), Index);
   }
 
   /// Return true if this shuffle mask is an extract subvector mask.
@@ -2332,7 +2381,7 @@ public:
 
     int NumSrcElts =
         cast<FixedVectorType>(Op<0>()->getType())->getNumElements();
-    return isExtractSubvectorMask(ShuffleMask, NumSrcElts, Index);
+    return isExtractSubvectorMask(getShuffleMask(), NumSrcElts, Index);
   }
 
   /// Return true if this shuffle mask is an insert subvector mask.
@@ -2362,7 +2411,8 @@ public:
 
     int NumSrcElts =
         cast<FixedVectorType>(Op<0>()->getType())->getNumElements();
-    return isInsertSubvectorMask(ShuffleMask, NumSrcElts, NumSubElts, Index);
+    return isInsertSubvectorMask(getShuffleMask(), NumSrcElts, NumSubElts,
+                                 Index);
   }
 
   /// Return true if this shuffle mask replicates each of the \p VF elements
@@ -2484,7 +2534,7 @@ public:
 
 template <>
 struct OperandTraits<ShuffleVectorInst>
-    : public FixedNumOperandTraits<ShuffleVectorInst, 2> {};
+    : public FixedNumOperandTraits<ShuffleVectorInst, 3> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ShuffleVectorInst, Value)
 

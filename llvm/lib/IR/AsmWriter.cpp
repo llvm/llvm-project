@@ -4850,7 +4850,11 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 
     Out << ' ';
     ListSeparator LS;
-    for (const Value *Op : I.operands()) {
+    // The shufflevector mask operand is printed separately below, either as
+    // shorthand (for canonical constant masks) or as a normal operand.
+    auto Ops =
+        isa<ShuffleVectorInst>(I) ? drop_end(I.operands()) : I.operands();
+    for (const Value *Op : Ops) {
       Out << LS;
       writeOperand(Op, PrintAllTypes);
     }
@@ -4878,7 +4882,12 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
   } else if (const auto *FI = dyn_cast<FenceInst>(&I)) {
     writeAtomic(FI->getContext(), FI->getOrdering(), FI->getSyncScopeID());
   } else if (const auto *SVI = dyn_cast<ShuffleVectorInst>(&I)) {
-    printShuffleMask(Out, SVI->getType(), SVI->getShuffleMask());
+    if (SVI->isConstantMask()) {
+      printShuffleMask(Out, SVI->getType(), SVI->getShuffleMask());
+    } else {
+      Out << ", ";
+      writeOperand(I.getOperand(2), true);
+    }
   }
 
   // Print Metadata info.

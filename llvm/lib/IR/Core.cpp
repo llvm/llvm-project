@@ -4576,7 +4576,9 @@ LLVMValueRef LLVMBuildAtomicCmpXchgSyncScope(LLVMBuilderRef B, LLVMValueRef Ptr,
 unsigned LLVMGetNumMaskElements(LLVMValueRef SVInst) {
   Value *P = unwrap(SVInst);
   ShuffleVectorInst *I = cast<ShuffleVectorInst>(P);
-  return I->getShuffleMask().size();
+  return cast<VectorType>(I->getMaskOperand()->getType())
+      ->getElementCount()
+      .getKnownMinValue();
 }
 
 int LLVMGetMaskValue(LLVMValueRef SVInst, unsigned Elt) {

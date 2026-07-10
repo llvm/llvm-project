@@ -5190,6 +5190,10 @@ LLVM_C_ABI int LLVMGetUndefMaskElem(void);
  *
  * \Returns the result of \c LLVMGetUndefMaskElem() if the mask value is
  * poison at that position.
+ *
+ * This may only be called when the shuffle mask is a canonical constant
+ * mask (i.e. a \c <M x i32> constant with in-bounds or poison elements);
+ * it is not valid for shuffles with a dynamic (non-constant) mask operand.
  */
 LLVM_C_ABI int LLVMGetMaskValue(LLVMValueRef ShuffleVectorInst, unsigned Elt);
 

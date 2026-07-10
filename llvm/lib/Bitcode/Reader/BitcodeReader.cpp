@@ -5640,6 +5640,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (!Vec1->getType()->isVectorTy() || !Vec2->getType()->isVectorTy())
         return error("Invalid type for value");
 
+      if (!ShuffleVectorInst::isValidOperands(Vec1, Vec2, Mask))
+        return error("Invalid shufflevector operands");
+
       I = new ShuffleVectorInst(Vec1, Vec2, Mask);
       ResTypeID =
           getVirtualTypeID(I->getType(), getContainedTypeID(Vec1TypeID));

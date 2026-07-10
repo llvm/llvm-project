@@ -11478,32 +11478,46 @@ is a {ref}`poison value <poisonvalues>`.
 ##### Syntax:
 
 ```
-<result> = shufflevector <n x <ty>> <v1>, <n x <ty>> <v2>, <m x i32> <mask>    ; yields <m x <ty>>
-<result> = shufflevector <vscale x n x <ty>> <v1>, <vscale x n x <ty>> v2, <vscale x m x i32> <mask>  ; yields <vscale x m x <ty>>
+<result> = shufflevector <n x <ty>> <v1>, <n x <ty>> <v2>, <m x <ity>> <mask>    ; yields <m x <ty>>
+<result> = shufflevector <vscale x n x <ty>> <v1>, <vscale x n x <ty>> v2, <vscale x m x <ity>> <mask>  ; yields <vscale x m x <ty>>
 ```
 
 ##### Overview:
 
 The '`shufflevector`' instruction constructs a permutation of elements
 from two input vectors, returning a vector with the same element type as
-the input and length that is the same as the shuffle mask.
+the input and length that is the same as the shuffle mask. The mask may
+be a constant or a run-time value.
 
 ##### Arguments:
 
 The first two operands of a '`shufflevector`' instruction are vectors
-with the same type. The third argument is a shuffle mask vector constant
-whose element type is `i32`. The mask vector elements must be constant
-integers or `poison` values. The result of the instruction is a vector
-whose length is the same as the shuffle mask and whose element type is the
-same as the element type of the first two operands.
+with the same type. The second input vector may be a `poison` value when
+only elements of the first input are selected.
+
+The third operand is the shuffle mask: a vector of integer values of any
+element width, either a constant or a run-time value. The mask and the
+input vectors must either all be fixed vectors or all be scalable vectors.
+
+The result of the instruction is a vector whose length is the same as the
+shuffle mask and whose element type is the same as the element type of the
+first two operands.
 
 ##### Semantics:
 
 The elements of the two input vectors are numbered from left to right
 across both of the vectors. For each element of the result vector, the
 shuffle mask selects an element from one of the input vectors to copy
-to the result. Non-negative elements in the mask represent an index
+to the result: each mask element is interpreted as an *unsigned* index
 into the concatenated pair of input vectors.
+
+For input vectors with `n` elements each, a mask element whose
+(zero-extended) value is greater than or equal to `2 * n` selects no
+input element and instead produces a `poison` value for that result
+element. This applies to constant and run-time mask elements alike, and
+for scalable vectors `n` is the run-time element count. Note that
+canonical constant masks use in-bounds `i32` indices (or `poison`
+elements); other constant masks are valid but will be canonicalized.
 
 A `poison` element in the mask vector specifies that the resulting element is
 `poison`. For backwards-compatibility reasons, LLVM temporarily also accepts
@@ -11513,9 +11527,10 @@ mask elements, also producing a `poison` element in the result.
 If the shuffle mask selects an `undef` element from one of the input
 vectors, the resulting element is `undef`.
 
-For scalable vectors, the only valid mask values at present are
+For scalable vectors, the only valid *constant* mask values at present are
 `zeroinitializer`, `undef` and `poison`, since we cannot write all indices as
-literals for a vector with a length unknown at compile time.
+literals for a vector with a length unknown at compile time; run-time masks
+carry no such restriction.
 
 ##### Example:
 
@@ -11528,6 +11543,8 @@ literals for a vector with a length unknown at compile time.
                         <4 x i32> <i32 0, i32 1, i32 2, i32 3>  ; yields <4 x i32>
 <result> = shufflevector <4 x i32> %v1, <4 x i32> %v2,
                         <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7 >  ; yields <8 x i32>
+<result> = shufflevector <4 x i32> %v1, <4 x i32> %v2,
+                        <8 x i8> %mask  ; run-time mask; yields <8 x i32>
 ```
 
 ### Aggregate Operations
