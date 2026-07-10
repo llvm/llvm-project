@@ -1110,8 +1110,10 @@ static bool diagnoseCallableDecl(InterpState &S, CodePtr OpPC,
              diag::note_constexpr_invalid_function, 1)
         << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
 
-    if (DiagDecl->getDefinition())
-      S.Note(DiagDecl->getDefinition()->getLocation(), diag::note_declared_at);
+    const FunctionDecl *Definition;
+    const Stmt *Body = DiagDecl->getBody(Definition);
+    if (Body && Definition)
+      S.Note(Definition->getLocation(), diag::note_declared_at);
     else
       S.Note(DiagDecl->getLocation(), diag::note_declared_at);
   }
