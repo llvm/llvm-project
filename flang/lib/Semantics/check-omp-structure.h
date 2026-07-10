@@ -144,6 +144,11 @@ public:
   void Enter(const parser::OmpContextSelector &);
   void Leave(const parser::OmpContextSelector &);
 
+  void Enter(const parser::OmpLoopModifier &);
+
+  void Enter(const parser::OmpClause::Apply &);
+  void Leave(const parser::OmpClause::Apply &);
+
   template <typename A> void Enter(const parser::Statement<A> &);
   void Leave(const parser::GotoStmt &);
   void Leave(const parser::ComputedGotoStmt &);
@@ -437,6 +442,7 @@ private:
 
   bool deviceConstructFound_{false};
   enum directiveNestType : int {
+    ApplyNest,
     SIMDNest,
     TargetBlockOnlyTeams,
     TargetNest,

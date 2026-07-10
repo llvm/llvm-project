@@ -2075,6 +2075,32 @@ unix
 ^^^^
 POSIX/Unix checkers.
 
+.. _unix-generic-options:
+
+unix generic options
+""""""""""""""""""""
+These are common options that affect multiple checkers in the ``unix`` group.
+
+* ``unix.DynamicMemoryModeling:Optimistic``
+
+  If set to ``true``, the static analyzer assumes that all memory allocations
+  and deallocations (like ``malloc`` or ``free``) are marked with
+  ``ownership_holds``, ``ownership_takes`` and ``ownership_returns``
+  attributes. For more information see
+  `Attributes in Clang <../AttributeReference.html#ownership-holds-ownership-returns-ownership-takes-clang-static-analyzer>`_.
+  Default value is ``false``.
+
+* ``unix.DynamicMemoryModeling:ModelAllocationFailure``
+
+  Setting this option to ``true`` enforces that the return value of memory
+  allocation functions is tested for null by the programmer (if applicable).
+  By default the analyzer does not know if a returned pointer is null or
+  non-null after an allocation and access of this pointer is not reported as
+  null pointer access. If the option is set to ``true`` the analyzer adds a
+  specific execution branch where the return value is known to be null and a
+  possible null pointer access can be found by other checkers. Default value of
+  the option is ``false``.
+
 .. _unix-API:
 
 unix.API (C)
@@ -3940,6 +3966,23 @@ alpha.webkit.UncheckedCallArgsChecker
 The goal of this rule is to make sure that lifetime of any dynamically allocated CheckedPtr capable object passed as a call argument keeps its memory region past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. CheckedPtr capable objects aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to unchecked types.
 
 The rules of when to use and not to use CheckedPtr / CheckedRef are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+
+alpha.webkit.UncheckedLambdaCapturesChecker
+"""""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to unchecked types can't be captured in lambdas. Only CheckedPtr or CheckedRef is allowed.
+
+.. code-block:: cpp
+
+ struct CheckedObject {
+   void incrementCheckedPtr() {}
+   void decrementCheckedPtr() {}
+ };
+
+ void foo(CheckedObject* a, CheckedObject& b) {
+   [&, a](){ // warn about 'a'
+     do_something(b); // warn about 'b'
+   };
+ };
 
 alpha.webkit.UnretainedCallArgsChecker
 """"""""""""""""""""""""""""""""""""""

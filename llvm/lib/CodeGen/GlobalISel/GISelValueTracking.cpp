@@ -315,7 +315,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_FRAME_INDEX: {
     int FrameIdx = MI.getOperand(1).getIndex();
-    TL.computeKnownBitsForFrameIndex(FrameIdx, Known, MF);
+    TL.computeKnownBitsForStackObjectPointer(
+        Known, MF, MF.getFrameInfo().getObjectAlign(FrameIdx));
     break;
   }
   case TargetOpcode::G_SUB: {
@@ -2482,20 +2483,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
   // Finally, if we can prove that the top bits of the result are 0's or 1's,
   // use this information.
   KnownBits Known = getKnownBits(R, DemandedElts, Depth);
-  APInt Mask;
-  if (Known.isNonNegative()) { // sign bit is 0
-    Mask = Known.Zero;
-  } else if (Known.isNegative()) { // sign bit is 1;
-    Mask = Known.One;
-  } else {
-    // Nothing known.
-    return FirstAnswer;
-  }
-
-  // Okay, we know that the sign bit in Mask is set.  Use CLO to determine
-  // the number of identical bits in the top of the input value.
-  Mask <<= Mask.getBitWidth() - TyBits;
-  return std::max(FirstAnswer, Mask.countl_one());
+  return std::max(FirstAnswer, Known.countMinSignBits());
 }
 
 unsigned GISelValueTracking::computeNumSignBits(Register R, unsigned Depth) {
