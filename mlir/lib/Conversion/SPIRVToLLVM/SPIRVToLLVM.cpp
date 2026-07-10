@@ -2035,6 +2035,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       ClampPattern<spirv::GLUClampOp, LLVM::UMinOp, LLVM::UMaxOp>,
       DirectConversionPattern<spirv::GLFMaxOp, LLVM::MaxNumOp>,
       DirectConversionPattern<spirv::GLFMinOp, LLVM::MinNumOp>,
+      DirectConversionPattern<spirv::GLNMaxOp, LLVM::MaxNumOp>,
+      DirectConversionPattern<spirv::GLNMinOp, LLVM::MinNumOp>,
       DirectConversionPattern<spirv::GLLogOp, LLVM::LogOp>,
       DirectConversionPattern<spirv::GLLog2Op, LLVM::Log2Op>,
       DirectConversionPattern<spirv::GLPowOp, LLVM::PowOp>,
