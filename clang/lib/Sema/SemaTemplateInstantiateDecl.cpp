@@ -1766,9 +1766,9 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   // Build the instantiated declaration.
   VarDecl *Var;
   if (Bindings)
-    Var = DecompositionDecl::Create(SemaRef.Context, DC, D->getInnerLocStart(),
-                                    D->getLocation(), TSI->getType(), TSI,
-                                    D->getStorageClass(), *Bindings);
+    Var = DecompositionDecl::Create(
+        SemaRef.Context, DC, D->getInnerLocStart(), D->getLocation(),
+        D->getEndLoc(), TSI->getType(), TSI, D->getStorageClass(), *Bindings);
   else
     Var = VarDecl::Create(SemaRef.Context, DC, D->getInnerLocStart(),
                           D->getLocation(), D->getIdentifier(), TSI->getType(),
