@@ -141,8 +141,16 @@ public:
   void Enter(const parser::OmpMetadirectiveDirective &);
   void Leave(const parser::OmpMetadirectiveDirective &);
 
+  void Enter(const parser::ExecutionPartConstruct &);
+  void Leave(const parser::OmpClause::When &);
+
   void Enter(const parser::OmpContextSelector &);
   void Leave(const parser::OmpContextSelector &);
+
+  void Enter(const parser::OmpLoopModifier &);
+
+  void Enter(const parser::OmpClause::Apply &);
+  void Leave(const parser::OmpClause::Apply &);
 
   template <typename A> void Enter(const parser::Statement<A> &);
   void Leave(const parser::GotoStmt &);
@@ -275,6 +283,7 @@ private:
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
 
   // check-omp-variant.cpp
+  void CheckMetadirectiveVariantsWithoutLoop();
   void CheckOmpDeclareVariantDirective(
       const parser::OmpDeclareVariantDirective &);
   void CheckDeclareVariantUserConditions(const parser::OmpContextSelector &);
@@ -437,6 +446,7 @@ private:
 
   bool deviceConstructFound_{false};
   enum directiveNestType : int {
+    ApplyNest,
     SIMDNest,
     TargetBlockOnlyTeams,
     TargetNest,
@@ -481,6 +491,14 @@ private:
     ExecutionPart,
   };
   std::vector<PartKind> partStack_;
+
+  struct MetadirectiveLoopVariant {
+    const parser::traits::OmpContextSelectorSpecification *selector;
+    const parser::OmpDirectiveSpecification *spec;
+  };
+  std::vector<MetadirectiveLoopVariant> metadirectiveLoopVariants_;
+  const parser::traits::OmpContextSelectorSpecification *currentWhenSelector_{
+      nullptr};
 
   std::multimap<const parser::Label,
       std::pair<parser::CharBlock, const parser::OpenMPConstruct *>>

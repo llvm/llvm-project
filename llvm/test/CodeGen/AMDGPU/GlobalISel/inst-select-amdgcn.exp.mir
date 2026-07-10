@@ -10,12 +10,12 @@ regBankSelected: true
 body: |
   bb.0:
     liveins: $vgpr0
-    %0:vgpr(s32) = COPY $vgpr0
+    %0:vgpr(i32) = COPY $vgpr0
 
     ; CHECK: EXP 1, %0, %0, %0, %0, 0, 0, 15, implicit $exec
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp),1, 15, %0:vgpr(s32), %0:vgpr(s32), %0:vgpr(s32), %0:vgpr(s32), 0, 0
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp),1, 15, %0:vgpr(i32), %0:vgpr(i32), %0:vgpr(i32), %0:vgpr(i32), 0, 0
 
     ; CHECK: EXP_DONE 1, %0, %0, %0, %0, 0, 0, 15, implicit $exec
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 1, 15, %0:vgpr(s32), %0:vgpr(s32), %0:vgpr(s32), %0:vgpr(s32), -1, 0
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 1, 15, %0:vgpr(i32), %0:vgpr(i32), %0:vgpr(i32), %0:vgpr(i32), -1, 0
 
 ...

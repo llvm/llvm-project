@@ -2179,11 +2179,40 @@ static std::optional<Instruction *> instCombineXorSVECmpCC(InstCombiner &IC,
   return &II;
 }
 
+// zext(cmpne(ptrue, %v, 0))
+// -> umin(%pg, %v, 1)
+static std::optional<Instruction *> instCombineZExtSVECmpNE(InstCombiner &IC,
+                                                            IntrinsicInst &II) {
+  if (!isAllActivePredicate(II.getOperand(0)) ||
+      !match(II.getOperand(2), m_Zero()))
+    return std::nullopt;
+
+  for (auto *U : II.users()) {
+    if (match(U, m_ZExt(m_Specific(&II)))) {
+      auto *User = cast<Instruction>(U);
+      Type *Ty = II.getOperand(1)->getType();
+      if (User->getType() != Ty)
+        continue;
+      IC.Builder.SetInsertPoint(User);
+      Value *UMin = IC.Builder.CreateIntrinsic(
+          Intrinsic::aarch64_sve_umin, Ty,
+          {II.getOperand(0), II.getOperand(1), ConstantInt::get(Ty, 1)});
+      IC.replaceInstUsesWith(*User, UMin);
+      IC.eraseInstFromFunction(*User);
+      return &II;
+    }
+  }
+  return std::nullopt;
+}
+
 static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
                                                         IntrinsicInst &II) {
   LLVMContext &Ctx = II.getContext();
 
   if (auto Res = instCombineXorSVECmpCC(IC, II))
+    return Res;
+
+  if (auto Res = instCombineZExtSVECmpNE(IC, II))
     return Res;
 
   if (!isAllActivePredicate(II.getArgOperand(0)))
