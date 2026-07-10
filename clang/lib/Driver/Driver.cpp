@@ -3370,19 +3370,6 @@ class OffloadingActionBuilder final {
       ABRT_Ignore_Host,
     };
 
-    /// ID to identify each device compilation. For CUDA it is simply the
-    /// GPU arch string. For HIP it is either the GPU arch string or GPU
-    /// arch string plus feature strings delimited by a plus sign, e.g.
-    /// gfx906+xnack.
-    struct TargetID {
-      /// Target ID string which is persistent throughout the compilation.
-      const char *ID;
-      TargetID(OffloadArch Arch) { ID = OffloadArchToString(Arch); }
-      TargetID(const char *ID) : ID(ID) {}
-      operator const char *() { return ID; }
-      operator StringRef() { return StringRef(ID); }
-    };
-
   protected:
     /// Compilation associated with this builder.
     Compilation &C;
