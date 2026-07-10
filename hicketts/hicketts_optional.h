@@ -84,10 +84,13 @@ public:
   [[clang::analyze_as_method("emplace(Args&&...)")]]
   T& construct(Args&&... args) { return *storage_; }
 
-  // Currently emits   hicketts_optional.h:66:5: warning: 'clang::analyze_as_method' attribute argument not supported:
-  //   66 |   [[clang::analyze_as_method("emplace(oops))")]]
-  [[clang::analyze_as_method("emplace(oops))")]]
-  T& load() { return *storage_; }
+  // Demo of malformed-signature rejection — disabled. The parameter-balance
+  // validation in Sema (isValidAnalyzeAsMethodAttr) that rejected this string
+  // was removed, since matching is now a flat string compare that never parses
+  // parameters. With validation gone this annotation would be accepted silently
+  // (and simply never match), so the case no longer demonstrates anything.
+  // [[clang::analyze_as_method("emplace(oops))")]]
+  // T& load() { return *storage_; }
 
   // Equivalent to std::optional::reset()
   [[clang::analyze_as_method("reset")]] void clear() noexcept { storage_ = nullptr; }

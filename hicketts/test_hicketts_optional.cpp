@@ -107,8 +107,12 @@ static void unwrapOrIsAlwaysSafe(mylib::HickettsOptional<int> &Val) {
   (void)X;
 }
 
+// nothing_t is not std::nullopt_t, so the structural nullopt matcher misses.
+// The "operator=(nullopt_t)" annotation routes this assignment to the nullopt
+// transfer (empty) — checked before the value/conversion-assignment case — so
+// the following unwrap is correctly flagged.
 static void unsafeAfterNullAssign() {
   mylib::HickettsOptional<int> A(5);
   A = mylib::nothing;
-  A.unwrap();  // should warn WIP
+  A.unwrap(); // warns (empty) — routed to nullopt via the annotation
 }
