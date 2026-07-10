@@ -14,6 +14,7 @@ define weak dso_local hidden void @weak_hidden_func() {
 }
 
 ; CHECK-LABEL: weak_hidden_func_addr:
+; CHECK:       .long .Ltmp{{[0-9]+}}-(.LPC{{[0-9]+}}_0+{{[48]}})
 ; CHECK:       .reloc .Ltmp{{[0-9]+}}, R_ARM_REL32, weak_hidden_func
 define i8* @weak_hidden_func_addr() {
   ret i8* bitcast (void()* @weak_hidden_func to i8*)
