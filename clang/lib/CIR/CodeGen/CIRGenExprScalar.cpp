@@ -2929,6 +2929,12 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
       yieldTy = branch.getType();
       cir::YieldOp::create(b, loc, branch);
     } else {
+      // A noreturn branch (e.g. throw) leaves the insertion point in a dead
+      // block that LexicalScope cleanup erases; no yield is needed and saving
+      // an insertion point into it would dangle.
+      mlir::Block *curBlock = b.getInsertionBlock();
+      if (curBlock->empty() && !curBlock->isEntryBlock())
+        return;
       // If LHS or RHS is a throw or void expression we need to patch
       // arms as to properly match yield types.
       insertPoints.push_back(b.saveInsertionPoint());
