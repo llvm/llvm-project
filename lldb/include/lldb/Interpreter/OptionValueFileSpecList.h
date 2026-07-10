@@ -67,7 +67,6 @@ public:
 protected:
   lldb::OptionValueSP Clone() const override;
 
-  mutable std::recursive_mutex m_mutex;
   FileSpecList m_current_value;
 };
 
