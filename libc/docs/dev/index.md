@@ -1,25 +1,24 @@
-.. _developer_guides:
+(developer_guides)=
 
-================
-Developer Guides
-================
+# Developer Guides
 
 Navigate to the links below for information on the respective topics:
 
-.. toctree::
-   :maxdepth: 1
+```{toctree}
+:maxdepth: 1
 
-   building_docs
-   code_style
-   source_tree_layout
-   entrypoints
-   implementing_a_function
-   config_options
-   fuzzing
-   header_generation
-   implementation_standard
-   undefined_behavior
-   printf_behavior
-   builtin_compatibility
-   syscall_wrapper_refactor
-   modular_format
+building_docs
+code_style
+source_tree_layout
+entrypoints
+implementing_a_function
+config_options
+fuzzing
+header_generation
+implementation_standard
+undefined_behavior
+printf_behavior
+builtin_compatibility
+syscall_wrapper_refactor
+modular_format
+```
