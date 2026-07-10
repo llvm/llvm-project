@@ -214,11 +214,8 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    if (CC == CC_SpirFunction || CC == CC_DeviceKernel)
-      return CCCR_OK;
-    if (HostTarget && HostTarget->checkCallingConvention(CC) == CCCR_OK)
-      return CCCR_OK;
-    return CCCR_Warning;
+    return (CC == CC_SpirFunction || CC == CC_DeviceKernel) ? CCCR_OK
+                                                           : CCCR_Warning;
   }
 
   CallingConv getDefaultCallingConv() const override {
