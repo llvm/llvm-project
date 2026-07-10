@@ -590,8 +590,8 @@ static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx,
     const uint64_t NextCUOffset = CU->getNextUnitOffset();
     DWARFDataExtractor DebugInfoData = CU->getDebugInfoExtractor();
     DWARFDebugInfoEntry DIEEntry;
-    // extractFast() here only attributes are inspected here, so ParentIdx is passed
-    // as a dummy value.
+    // extractFast() here only attributes are inspected here, so ParentIdx is
+    // passed as a dummy value.
     while (DIEOffset < NextCUOffset) {
       if (!DIEEntry.extractFast(*CU, &DIEOffset, DebugInfoData, NextCUOffset,
                                 /*ParentIdx=*/0))
