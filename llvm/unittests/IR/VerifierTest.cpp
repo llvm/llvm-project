@@ -399,9 +399,8 @@ TEST(VerifierTest, AtomicRMW) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
-  EXPECT_TRUE(StringRef(Error).starts_with(
-      "atomicrmw fadd operand must have floating-point or "
-      "fixed vector of floating-point type!"))
+  EXPECT_TRUE(
+      StringRef(Error).starts_with("atomicrmw operand may not be scalable"))
       << Error;
 }
 
@@ -527,8 +526,7 @@ TEST(VerifierTest, AtomicRMWIntVector) {
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
   EXPECT_TRUE(
-      StringRef(Error).starts_with("atomicrmw add operand must have integer or "
-                                   "fixed vector of integer type!"))
+      StringRef(Error).starts_with("atomicrmw operand may not be scalable"))
       << Error;
 }
 
@@ -553,9 +551,8 @@ TEST(VerifierTest, AtomicRMWXchgVector) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
-  EXPECT_TRUE(StringRef(Error).starts_with(
-      "atomicrmw xchg operand must be an integer type, a floating-point "
-      "type, a pointer type, or a fixed vector of any of these types!"))
+  EXPECT_TRUE(
+      StringRef(Error).starts_with("atomicrmw operand may not be scalable"))
       << Error;
 }
 
