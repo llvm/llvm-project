@@ -653,8 +653,9 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
 
   MCRegister LineReg =
       emitOpConstantI32(static_cast<uint32_t>(GV->getLine()), I32TypeReg, MAI);
-  // DIGlobalVariable metadata carries no column field.
-  // Column is hardcoded to 0, matching SPIRV-LLVM-Translator.
+  // DIGlobalVariable or DIGlobalVariableExpression metadata carry no column
+  // field. Column is hardcoded to 0 (because it can't be determined), matching
+  // SPIRV-LLVM-Translator.
   MCRegister ColReg = emitOpConstantI32(0, I32TypeReg, MAI);
 
   // Variable: @g OpVariable id when !dbg matches; else a DebugExpression for
