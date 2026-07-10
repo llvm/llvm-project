@@ -1003,6 +1003,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Arm and AArch64 Support
 
+- On Apple AArch64 targets, `__GCC_DESTRUCTIVE_SIZE` is now `128` (down from `256`)
+  to match the 128-byte cache line used by Apple cores, avoiding needless
+  over-alignment. This value is implementation-defined and should not be relied upon
+  in an ABI-sensitive way.
+
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
 
   - Arm AGI CPU (armagicpu).
