@@ -931,7 +931,8 @@ void AMDGPUToolChain::addClangTargetOptions(
     if (DriverArgs.hasArg(options::OPT_nostdlib))
       return;
 
-    addOpenCLBuiltinsLib(getDriver(), getTriple(), DriverArgs, CC1Args);
+    if (addOpenCLBuiltinsLib(getDriver(), getTriple(), DriverArgs, CC1Args))
+      return;
   }
 
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,

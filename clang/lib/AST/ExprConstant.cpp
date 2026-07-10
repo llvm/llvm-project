@@ -1558,7 +1558,7 @@ namespace {
         return;
       }
       if (checkSubobject(Info, E, CSK_ArrayToPointer)) {
-        assert(getType(Base).getNonReferenceType()->isPointerType() ||
+        assert(!Base || getType(Base).getNonReferenceType()->isPointerType() ||
                getType(Base).getNonReferenceType()->isArrayType());
         Designator.FirstEntryIsAnUnsizedArray = true;
         Designator.addUnsizedArrayUnchecked(ElemTy);
