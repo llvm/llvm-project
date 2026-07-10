@@ -942,6 +942,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   immediate-escalated callable. (#GH192846)
 - Fixed a crash when passing one sized implicitly casted vector to a `abs` function. (#GH204777)
 - Fixed a crash when diagnosing an invalid out-of-line definition of a member class template. (#GH201490)
+- Fixed a crash in the parser when a missing semicolon after a tag definition is followed by a template-id not preceded by `::`. (#GH207992)
 
 ### OpenACC Specific Changes
 
