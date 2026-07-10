@@ -160,10 +160,9 @@ define i32 @fold_add_i32(i32 %x) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpl $5, %ecx
+; X86-NEXT:    subl $5, %ecx
 ; X86-NEXT:    jl .LBB4_2
 ; X86-NEXT:  # %bb.1: # %bb.nph
-; X86-NEXT:    addl $-5, %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:  .LBB4_2: # %ret
 ; X86-NEXT:    retl
@@ -171,10 +170,9 @@ define i32 @fold_add_i32(i32 %x) {
 ; X64-LABEL: fold_add_i32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpl $5, %edi
+; X64-NEXT:    subl $5, %edi
 ; X64-NEXT:    jl .LBB4_2
 ; X64-NEXT:  # %bb.1: # %bb.nph
-; X64-NEXT:    addl $-5, %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:  .LBB4_2: # %ret
 ; X64-NEXT:    retq
@@ -196,28 +194,22 @@ define i8 @fold_sub_i8(i8 %x)  {
 ; X86-LABEL: fold_sub_i8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpb $5, %al
-; X86-NEXT:    jl .LBB5_1
-; X86-NEXT:  # %bb.2: # %bb.nph
-; X86-NEXT:    addb $-5, %al
-; X86-NEXT:    # kill: def $al killed $al killed $eax
-; X86-NEXT:    retl
-; X86-NEXT:  .LBB5_1:
+; X86-NEXT:    subb $5, %al
+; X86-NEXT:    jge .LBB5_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:  .LBB5_2: # %ret
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fold_sub_i8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    cmpb $5, %al
-; X64-NEXT:    jl .LBB5_1
-; X64-NEXT:  # %bb.2: # %bb.nph
-; X64-NEXT:    addb $-5, %al
-; X64-NEXT:    # kill: def $al killed $al killed $eax
-; X64-NEXT:    retq
-; X64-NEXT:  .LBB5_1:
+; X64-NEXT:    subb $5, %al
+; X64-NEXT:    jge .LBB5_2
+; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:  .LBB5_2: # %ret
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 entry:
@@ -340,12 +332,11 @@ define internal void @example.emit(ptr %0, i64 %1, ptr  %2, i64 %3)  {
 ; X64-NEXT:    movups %xmm0, (%rdx)
 ; X64-NEXT:    movups %xmm1, 16(%rdx)
 ; X64-NEXT:    movups %xmm2, 32(%rdx)
-; X64-NEXT:    cmpq $64, %rsi
+; X64-NEXT:    subq $64, %rsi
 ; X64-NEXT:    jbe .LBB6_2
 ; X64-NEXT:  # %bb.3: # %Else
 ; X64-NEXT:    # in Loop: Header=BB6_1 Depth=1
 ; X64-NEXT:    addq $64, %rdi
-; X64-NEXT:    addq $-64, %rsi
 ; X64-NEXT:    addq $48, %rdx
 ; X64-NEXT:    jmp .LBB6_1
 ; X64-NEXT:  .LBB6_2: # %Then
