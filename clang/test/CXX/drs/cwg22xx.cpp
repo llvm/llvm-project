@@ -205,19 +205,19 @@ void g() {
 namespace cwg2282 { // cwg2282: 23
 #if __cplusplus >= 201703L
 struct A {
-  void *operator new(size_t, std::align_val_t) = delete; // #cwg2282-A-operator-new-aligned
-  void *operator new(size_t, std::align_val_t, double) = delete; // #cwg2282-A-operator-new-aligned-placement
+  void *operator new(size_t, std::align_val_t) = delete; // #cwg2282-new-align
+  void *operator new(size_t, std::align_val_t, double) = delete; // #cwg2282-new-align-placement
 };
 
 void f() {
   (void)new A;
   // since-cxx17-error@-1 {{call to deleted function 'operator new'}}
-  //   since-cxx17-note@#cwg2282-A-operator-new-aligned {{candidate function has been explicitly deleted}}
-  //   since-cxx17-note@#cwg2282-A-operator-new-aligned-placement {{candidate function not viable: requires 3 arguments, but 2 were provided}}
+  //   since-cxx17-note@#cwg2282-new-align {{candidate function has been explicitly deleted}}
+  //   since-cxx17-note@#cwg2282-new-align-placement {{candidate function not viable: requires 3 arguments, but 2 were provided}}
   (void)new (1.5) A;
   // since-cxx17-error@-1 {{call to deleted function 'operator new'}}
-  //   since-cxx17-note@#cwg2282-A-operator-new-aligned-placement {{candidate function has been explicitly deleted}}
-  //   since-cxx17-note@#cwg2282-A-operator-new-aligned {{candidate function not viable: requires 2 arguments, but 3 were provided}}
+  //   since-cxx17-note@#cwg2282-new-align-placement {{candidate function has been explicitly deleted}}
+  //   since-cxx17-note@#cwg2282-new-align {{candidate function not viable: requires 2 arguments, but 3 were provided}}
 }
 #endif
 } // namespace cwg2282
