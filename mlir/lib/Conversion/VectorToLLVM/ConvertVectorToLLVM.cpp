@@ -18,6 +18,7 @@
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
@@ -223,16 +224,6 @@ static void replaceLoadOrStoreOp(vector::MaskedStoreOp storeOp,
       storeOp, adaptor.getValueToStore(), ptr, adaptor.getMask(), align);
 }
 
-/// Returns true if all strides of `memRefTy` are static and non-negative. A
-/// negative (or dynamic, hence unknown-sign) stride would make `mul nuw` on the
-/// index arithmetic wrap, so `nuw` must not be emitted in that case.
-static bool hasNonNegativeStrides(MemRefType memRefTy) {
-  auto [strides, offset] = memRefTy.getStridesAndOffset();
-  return llvm::all_of(strides, [](int64_t stride) {
-    return !ShapedType::isDynamic(stride) && stride >= 0;
-  });
-}
-
 /// Conversion pattern for a vector.load, vector.store, vector.maskedload, and
 /// vector.maskedstore.
 template <class LoadOrStoreOp>
@@ -283,10 +274,12 @@ public:
              "vector.load/store requires unit trailing memref stride");
       if (enableGEPInboundsNuw) {
         noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::inbounds;
-        // `nuw` additionally requires non-negative strides; skip it when the
-        // memref has dynamic or negative strides to avoid emitting poison.
-        if (hasNonNegativeStrides(memRefTy))
-          noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::nuw;
+
+        // `nuw` additionally requires non-negative strides.
+        assert(
+            !(memref::hasNegativeStaticStride(memRefTy)) &&
+            "Invalid MemRef type - should have been rejected by Op verifier.");
+        noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::nuw;
       }
     }
     auto vtype = cast<VectorType>(
@@ -2030,17 +2023,12 @@ struct VectorToElementsLowering
 };
 
 /// Conversion pattern for vector.step.
-struct VectorScalableStepOpLowering
-    : public ConvertOpToLLVMPattern<vector::StepOp> {
+struct VectorStepOpLowering : public ConvertOpToLLVMPattern<vector::StepOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(vector::StepOp stepOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto resultType = cast<VectorType>(stepOp.getType());
-    if (!resultType.isScalable()) {
-      return failure();
-    }
     Type llvmType = typeConverter->convertType(stepOp.getType());
     rewriter.replaceOpWithNewOp<LLVM::StepVectorOp>(stepOp, llvmType);
     return success();
@@ -2275,8 +2263,7 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorScalableInsertOpLowering, VectorScalableExtractOpLowering,
                MaskedReductionOpConversion, VectorInterleaveOpLowering,
                VectorDeinterleaveOpLowering, VectorFromElementsLowering,
-               VectorToElementsLowering, VectorScalableStepOpLowering>(
-      converter);
+               VectorToElementsLowering, VectorStepOpLowering>(converter);
 }
 
 namespace {

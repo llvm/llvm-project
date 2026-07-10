@@ -851,6 +851,9 @@ def ConstantImmzAsmOperandClass : AsmOperandClass {
 def Simm19Lsl2AsmOperand
     : SimmLslAsmOperandClass<19, [], 2>;
 
+def Simm18Lsl3AsmOperand
+    : SimmLslAsmOperandClass<18, [], 3>;
+
 def MipsJumpTargetAsmOperand : AsmOperandClass {
   let Name = "JumpTarget";
   let ParserMethod = "parseJumpTarget";
@@ -905,7 +908,7 @@ def simm19_lsl2 : Operand<i32> {
 def simm18_lsl3 : Operand<i32> {
   let EncoderMethod = "getSimm18Lsl3Encoding";
   let DecoderMethod = "DecodeSimm18Lsl3";
-  let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let ParserMatchClass = Simm18Lsl3AsmOperand;
 }
 
 // Zero

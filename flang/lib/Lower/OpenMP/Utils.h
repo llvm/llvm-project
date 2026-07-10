@@ -30,6 +30,9 @@ namespace Fortran {
 
 namespace semantics {
 class Symbol;
+namespace omp {
+class OmpVariantMatchContext;
+} // namespace omp
 } // namespace semantics
 
 namespace parser {
@@ -258,39 +261,18 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
 
 /// Walk the already-emitted MLIR parent operations starting from \p op and
 /// collect the implied OpenMP construct traits in outermost-to-innermost
-/// order. Used by metadirective lowering to build the `ConstructTraits` of an
-/// `OMPContext`.
+/// order. Used by metadirective lowering and declare-variant call resolution
+/// to build the `ConstructTraits` of an `OMPContext`.
 void collectEnclosingConstructTraits(
     mlir::Operation *op,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
 
-/// Non-constant user condition expression and source for runtime lowering.
-struct DynamicUserCondition {
-  const parser::ScalarExpr *expr;
-  parser::CharBlock source;
-};
-
-/// Populate \p vmi from a parsed OpenMP context selector. Constant user
-/// conditions are folded into user_condition_true/false traits. A non-constant
-/// user condition is recorded as user_condition_unknown and returned for later
-/// lowering as a runtime condition.
-std::optional<DynamicUserCondition>
-makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
-                     const parser::modifier::OmpContextSelector &ctxSel,
-                     semantics::SemanticsContext &semaCtx, mlir::Location loc);
-
-/// `OMPContext` flavour used by Flang's OpenMP variant matching. Adds an
-/// ISA-trait override based on the module's target-features attribute.
-class FlangOMPContext final : public llvm::omp::OMPContext {
-public:
-  FlangOMPContext(mlir::ModuleOp module,
-                  llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits);
-  bool matchesISATrait(llvm::StringRef rawString) const override;
-
-private:
-  static bool isDeviceCompilation(mlir::ModuleOp module);
-  mlir::LLVM::TargetFeaturesAttr targetFeatures;
-};
+/// Build the OpenMP variant-matching context for \p module. The device flag,
+/// host triple, offload triple, and target features are read from the module;
+/// \p constructTraits seeds the enclosing-construct traits.
+semantics::omp::OmpVariantMatchContext makeVariantMatchContext(
+    mlir::ModuleOp module,
+    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits);
 
 } // namespace omp
 } // namespace lower

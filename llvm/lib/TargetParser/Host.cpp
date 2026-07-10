@@ -292,6 +292,8 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
         .Case("0x004", "carmel")
         .Case("0x10", "olympus")
         .Case("0x010", "olympus")
+        .Case("0x11", "rigel")
+        .Case("0x011", "rigel")
         .Default("generic");
   }
 
@@ -567,6 +569,9 @@ StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
       .Case("eswin,eic770x", "sifive-p550")
       .Case("sifive,u74-mc", "sifive-u74")
       .Case("sifive,bullet0", "sifive-u74")
+      .Case("spacemit,x60", "spacemit-x60")
+      .Case("spacemit,x100", "spacemit-x100")
+      .Case("spacemit,a100", "spacemit-a100")
       .Default("");
 }
 
@@ -1385,6 +1390,11 @@ static StringRef getHygonProcessorTypeAndSubtype(unsigned Family,
       *Type = X86::HYGONFAM18H;
       *Subtype = X86::HYGONFAM18H_C86_4G_M7;
       break; // c86-4g-m7
+    case 8:
+      CPU = "c86-4g-m8";
+      *Type = X86::HYGONFAM18H;
+      *Subtype = X86::HYGONFAM18H_C86_4G_M8;
+      break; // c86-4g-m8
     }
     break; // Hygon Family 18H
   default:
@@ -2136,6 +2146,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
                       !getX86CpuIDAndInfo(0x80000021, &EAX, &EBX, &ECX, &EDX);
   // AMD cpuid bit for prefetchi is different from Intel
   Features["prefetchi"] = HasExtLeaf21 && ((EAX >> 20) & 1);
+  Features["avx512bmm"] = HasExtLeaf21 && ((EAX >> 23) & 1) && HasAVX512Save;
 
   bool HasLeaf7 =
       MaxLevel >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
@@ -2255,7 +2266,6 @@ StringMap<bool> sys::getHostCPUFeatures() {
   bool HasLeaf1E = MaxLevel >= 0x1e &&
                    !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
   Features["amx-fp8"] = HasLeaf1E && ((EAX >> 4) & 1) && HasAMXSave;
-  Features["amx-tf32"] = HasLeaf1E && ((EAX >> 6) & 1) && HasAMXSave;
   Features["amx-avx512"] = HasLeaf1E && ((EAX >> 7) & 1) && HasAMXSave;
   Features["amx-movrs"] = HasLeaf1E && ((EAX >> 8) & 1) && HasAMXSave;
 
@@ -2508,7 +2518,8 @@ StringMap<bool> sys::getHostCPUFeatures() {
 StringMap<bool> sys::getHostCPUFeatures() {
   RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_BASE_BEHAVIOR=*/3, 0},
                        {/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0},
-                       {/*RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF=*/9, 0}};
+                       {/*RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF=*/9, 0},
+                       {/*RISCV_HWPROBE_KEY_IMA_EXT_1=*/16, 0}};
   int Ret = syscall(/*__NR_riscv_hwprobe=*/258, /*pairs=*/Query,
                     /*pair_count=*/std::size(Query), /*cpu_count=*/0,
                     /*cpus=*/0, /*flags=*/0);
@@ -2590,6 +2601,9 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["zicbop"] = ExtMask & (1ULL << 60);   // RISCV_HWPROBE_EXT_ZICBOP
   Features["zilsd"] = ExtMask & (1ULL << 61);    // RISCV_HWPROBE_EXT_ZILSD
   Features["zclsd"] = ExtMask & (1ULL << 62);    // RISCV_HWPROBE_EXT_ZCLSD
+
+  uint64_t Ext1Mask = Query[3].Value;
+  Features["zicfiss"] = Ext1Mask & (1ULL << 0); // RISCV_HWPROBE_EXT_ZICFISS
 
   // Check whether the processor supports fast misaligned scalar memory access.
   // NOTE: RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF is only available on

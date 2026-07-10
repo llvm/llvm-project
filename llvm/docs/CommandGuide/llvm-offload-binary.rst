@@ -78,6 +78,11 @@ OPTIONS
   during extraction, all images are automatically extracted with descriptive
   filenames.
 
+  When extracting from a static archive, the ``member`` key restricts the output
+  to a single archive member for cases when `--archive` is insufficient.
+  , e.g.
+  ``--image=member=foo.o,triple=nvptx64,arch=sm_70,file=out.o``.
+
 .. option:: -o <file>
 
   Write output to <file>. When bundling, this specifies the fat binary filename.

@@ -10,7 +10,6 @@
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_CHARACTER_H
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 
 namespace fir {
 class ExtendedValue;

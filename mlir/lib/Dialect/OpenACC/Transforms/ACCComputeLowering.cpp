@@ -138,10 +138,6 @@ static bool isOpInSerialRegion(Operation *op) {
   return false;
 }
 
-static void setParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
-  op->setAttr(GPUParallelDimsAttr::name, attr);
-}
-
 /// Clone defining ops of constant live-in values into `region`, rewrite uses
 /// inside the region to the clones, and remove those values from
 /// `liveInValues` so they are not threaded through `acc.compute_region` ins.
@@ -170,19 +166,6 @@ static void materializeConstantLiveInsIntoRegion(Region &region,
     replaceAllUsesInRegionWith(v, newV, region);
     liveInValues.remove(v);
   }
-}
-
-/// Insert a parallel dimension into the list, maintaining order by
-/// GPUParallelDimAttr::getOrder (descending).
-static void insertParDim(SmallVectorImpl<GPUParallelDimAttr> &parDims,
-                         GPUParallelDimAttr parDim) {
-  GPUParallelDimAttr *lb = llvm::lower_bound(
-      parDims, parDim,
-      [](const GPUParallelDimAttr &a, const GPUParallelDimAttr &b) {
-        return a.getOrder() > b.getOrder();
-      });
-  if (lb == parDims.end() || *lb != parDim)
-    parDims.insert(lb, parDim);
 }
 
 /// Return the device type from which gang/worker/vector clauses should be read.
@@ -313,15 +296,14 @@ public:
     LoopParMode parMode = loopOp.getDefaultOrDeviceTypeParallelism(deviceType);
 
     if (parMode == LoopParMode::loop_seq || isOpInSerialRegion(loopOp)) {
-      // Although it might seem unintuitive, scf.parallel is used here because
-      // the parallelism of the loop is already predetermined (as sequential).
-      // scf.for will become a candidate for auto-parallelization analysis.
-      auto parallelOp = convertACCLoopToSCFParallel(loopOp, rewriter);
-      if (!parallelOp)
+      // Use scf.for with sequential loops, because the loop's parallelism is
+      // already determined.
+      auto forOp =
+          convertACCLoopToSCFFor(loopOp, rewriter, /*enableCollapse=*/true);
+      if (!forOp)
         return failure();
-      setParDimsAttr(parallelOp,
-                     GPUParallelDimsAttr::seq(loopOp->getContext()));
-      rewriter.replaceOp(loopOp, parallelOp);
+      setParDimsAttr(forOp, GPUParallelDimsAttr::seq(loopOp->getContext()));
+      rewriter.replaceOp(loopOp, forOp);
     } else if (parMode == LoopParMode::loop_auto) {
       // All loops in serial regions should have already been handled.
       assert(!isOpInSerialRegion(loopOp) &&

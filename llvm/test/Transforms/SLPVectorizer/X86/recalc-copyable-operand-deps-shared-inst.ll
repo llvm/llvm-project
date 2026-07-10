@@ -6,29 +6,26 @@ define i32 @test(ptr %r, i32 %0) {
 ; CHECK-SAME: ptr [[R:%.*]], i32 [[TMP0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SHR_I:%.*]] = lshr i32 6, [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP15:%.*]] = add <2 x i32> [[TMP13]], splat (i32 1)
-; CHECK-NEXT:    [[TMP16:%.*]] = and <2 x i32> [[TMP13]], splat (i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP15]], <2 x i32> [[TMP16]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> <i32 -1, i32 poison>, i32 [[SHR_I]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sub <2 x i32> [[TMP20]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP13]], <2 x i32> [[TMP7]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr <2 x i32> <i32 8, i32 0>, [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = sub <2 x i32> <i32 8, i32 0>, [[TMP9]]
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> [[TMP11]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[TMP12]], <i32 0, i32 1>
+; CHECK-NEXT:    [[SUB8_I:%.*]] = sub i32 0, [[SHR_I]]
+; CHECK-NEXT:    [[XOR_I:%.*]] = xor i32 [[SUB8_I]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> <i32 -1, i32 poison>, i32 [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> <i32 8, i32 1>, [[TMP1]]
+; CHECK-NEXT:    [[MUL47_NEG_I:%.*]] = shl i32 [[SUB8_I]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[SUB8_I]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> <i32 1, i32 poison>, <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP14:%.*]] = add <2 x i32> [[TMP8]], [[TMP12]]
-; CHECK-NEXT:    [[MUL47_NEG_I:%.*]] = extractelement <2 x i32> [[TMP14]], i32 1
 ; CHECK-NEXT:    store i32 [[MUL47_NEG_I]], ptr [[R]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[XOR_I]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr <2 x i32> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP17:%.*]] = add <2 x i32> [[TMP4]], [[TMP14]]
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x i32> [[TMP17]], <2 x i32> <i32 -805306497, i32 poison>, <2 x i32> <i32 2, i32 1>
-; CHECK-NEXT:    [[TMP19:%.*]] = add <2 x i32> [[TMP17]], [[TMP18]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP11:%.*]] = add <2 x i32> [[TMP14]], [[TMP10]]
+; CHECK-NEXT:    [[TMP19:%.*]] = shl <2 x i32> [[TMP11]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP19]], i32 0
+; CHECK-NEXT:    [[NOT263_I:%.*]] = add i32 [[TMP5]], -805306497
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP19]], i32 1
-; CHECK-NEXT:    [[SUB265_I:%.*]] = or i32 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[SUB265_I:%.*]] = or i32 [[NOT263_I]], [[TMP6]]
 ; CHECK-NEXT:    ret i32 [[SUB265_I]]
 ;
 entry:

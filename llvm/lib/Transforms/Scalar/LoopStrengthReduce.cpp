@@ -1486,9 +1486,19 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
 
     // Add the step value register, if it needs one.
     // TODO: The non-affine case isn't precisely modeled here.
-    if (!AR->isAffine() || !isa<SCEVConstant>(AR->getOperand(1))) {
-      if (!Regs.count(AR->getOperand(1))) {
-        RateRegister(F, AR->getOperand(1), Regs, LU, HardwareLoopProfitable);
+    const SCEV *StepReg = AR->getOperand(1);
+    if (!AR->isAffine() || !isa<SCEVConstant>(StepReg)) {
+      // If the step amount is a constant multiplied by vscale then it can form
+      // the immediate value of an add and doesn't use a register, so long as
+      // the immediate value is legal.
+      auto IsVScaleStep = [](const SCEV *Reg, const TargetTransformInfo *TTI) {
+        const APInt *X;
+        if (!match(Reg, m_scev_Mul(m_scev_APInt(X), m_SCEVVScale())))
+          return false;
+        return TTI->isLegalAddScalableImmediate(X->getLimitedValue());
+      };
+      if (!Regs.count(StepReg) && !IsVScaleStep(StepReg, TTI)) {
+        RateRegister(F, StepReg, Regs, LU, HardwareLoopProfitable);
         if (isLoser())
           return;
       }
@@ -2180,6 +2190,7 @@ class LSRInstance {
   mutable SCEVExpander Rewriter;
   bool Changed = false;
   bool HardwareLoopProfitable = false;
+  bool ShouldPreserveLCSSA = false;
 
   /// This is the insert position that the current loop's induction variable
   /// increment should be placed. In simple loops, this is the latch block's
@@ -2326,9 +2337,14 @@ class LSRInstance {
   void ImplementSolution(const SmallVectorImpl<const Formula *> &Solution);
 
 public:
+  // TODO(boomanaiden154): The PreserveLCSSA flag is a hack to allow
+  // experimentation with the NewPM which requires LCSSA preservation while
+  // some of the details are worked out in LSR. Eventually it should be set
+  // to true and removed.
   LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE, DominatorTree &DT,
               LoopInfo &LI, const TargetTransformInfo &TTI, AssumptionCache &AC,
-              TargetLibraryInfo &TLI, MemorySSAUpdater *MSSAU);
+              TargetLibraryInfo &TLI, MemorySSAUpdater *MSSAU,
+              bool PreserveLCSSA);
 
   bool getChanged() const { return Changed; }
   const SmallVectorImpl<WeakVH> &getScalarEvolutionIVs() const {
@@ -5232,7 +5248,10 @@ void LSRInstance::NarrowSearchSpaceByMergingUsesOutsideLoop() {
 
   for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx) {
     LSRUse &LU = Uses[LUIdx];
-    if (!LU.AllFixupsOutsideLoop || LU.Formulae.empty())
+    // Don't merge ICmpZero uses outside the loop, as ICmpZero needs to be
+    // handled specially when expanding.
+    if (!LU.AllFixupsOutsideLoop || LU.Formulae.empty() ||
+        LU.Kind == LSRUse::ICmpZero)
       continue;
 
     LLVM_DEBUG(dbgs() << "  Trying to eliminate use "; LU.print(dbgs());
@@ -5666,11 +5685,11 @@ void LSRInstance::Solve(SmallVectorImpl<const Formula *> &Solution) const {
 
   const bool EnableDropUnprofitableSolution = [&] {
     switch (AllowDropSolutionIfLessProfitable) {
-    case cl::BOU_TRUE:
+    case cl::boolOrDefault::BOU_TRUE:
       return true;
-    case cl::BOU_FALSE:
+    case cl::boolOrDefault::BOU_FALSE:
       return false;
-    case cl::BOU_UNSET:
+    case cl::boolOrDefault::BOU_UNSET:
       return TTI.shouldDropLSRSolutionIfLessProfitable();
     }
     llvm_unreachable("Unhandled cl::boolOrDefault enum");
@@ -5824,10 +5843,6 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
 
   // This is the type that the user actually needs.
   Type *OpTy = LF.OperandValToReplace->getType();
-  // For ICmpZero with pointer-typed operands, keep the comparison in the
-  // integer domain to avoid generating inttoptr casts.
-  if (LU.Kind == LSRUse::ICmpZero && OpTy->isPointerTy())
-    OpTy = SE.getEffectiveSCEVType(OpTy);
   // This will be the type that we'll initially expand to.
   Type *Ty = F.getType();
   if (!Ty)
@@ -5838,6 +5853,14 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
     Ty = OpTy;
   // This is the type to do integer arithmetic in.
   Type *IntTy = SE.getEffectiveSCEVType(Ty);
+  // For ICmpZero with pointer-typed operands, keep the comparison in the
+  // integer domain to avoid generating inttoptr casts. Use IntTy (the
+  // formula's arithmetic width) so that both icmp operands match even when
+  // the IV is wider than the pointer.
+  if (LU.Kind == LSRUse::ICmpZero && OpTy->isPointerTy()) {
+    OpTy = IntTy;
+    Ty = IntTy;
+  }
 
   // Build up a list of operands to add together to form the full base.
   SmallVector<SCEVUse, 8> Ops;
@@ -6024,13 +6047,14 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
           // Split the critical edge.
           BasicBlock *NewBB = nullptr;
           if (!Parent->isLandingPad()) {
-            NewBB =
-                SplitCriticalEdge(BB, Parent,
-                                  CriticalEdgeSplittingOptions(&DT, &LI, MSSAU)
-                                      .setMergeIdenticalEdges()
-                                      .setKeepOneInputPHIs());
+            CriticalEdgeSplittingOptions SplitOptions(&DT, &LI, MSSAU);
+            SplitOptions =
+                SplitOptions.setMergeIdenticalEdges().setKeepOneInputPHIs();
+            if (ShouldPreserveLCSSA)
+              SplitOptions = SplitOptions.setPreserveLCSSA();
+            NewBB = SplitCriticalEdge(BB, Parent, SplitOptions);
           } else {
-            SmallVector<BasicBlock*, 2> NewBBs;
+            SmallVector<BasicBlock *, 2> NewBBs;
             DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
             SplitLandingPadPredecessors(Parent, BB, "", "", NewBBs, &DTU, &LI);
             NewBB = NewBBs[0];
@@ -6283,12 +6307,14 @@ void LSRInstance::ImplementSolution(
 LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                          DominatorTree &DT, LoopInfo &LI,
                          const TargetTransformInfo &TTI, AssumptionCache &AC,
-                         TargetLibraryInfo &TLI, MemorySSAUpdater *MSSAU)
+                         TargetLibraryInfo &TLI, MemorySSAUpdater *MSSAU,
+                         bool PreserveLCSSA)
     : IU(IU), SE(SE), DT(DT), LI(LI), AC(AC), TLI(TLI), TTI(TTI), L(L),
       MSSAU(MSSAU), AMK(PreferredAddresingMode.getNumOccurrences() > 0
                             ? PreferredAddresingMode
                             : TTI.getPreferredAddressingMode(L, &SE)),
-      Rewriter(SE, "lsr", false), BaselineCost(L, SE, TTI, AMK) {
+      Rewriter(SE, "lsr", PreserveLCSSA), ShouldPreserveLCSSA(PreserveLCSSA),
+      BaselineCost(L, SE, TTI, AMK) {
   // If LoopSimplify form is not available, stay out of trouble.
   if (!L->isLoopSimplifyForm())
     return;
@@ -7162,7 +7188,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                                DominatorTree &DT, LoopInfo &LI,
                                const TargetTransformInfo &TTI,
                                AssumptionCache &AC, TargetLibraryInfo &TLI,
-                               MemorySSA *MSSA) {
+                               MemorySSA *MSSA, bool PreserveLCSSA) {
 
   // Debug preservation - before we start removing anything identify which DVI
   // meet the salvageable criteria and store their DIExpression and SCEVs.
@@ -7176,7 +7202,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
 
   // Run the main LSR transformation.
   const LSRInstance &Reducer =
-      LSRInstance(L, IU, SE, DT, LI, TTI, AC, TLI, MSSAU.get());
+      LSRInstance(L, IU, SE, DT, LI, TTI, AC, TLI, MSSAU.get(), PreserveLCSSA);
   Changed |= Reducer.getChanged();
 
   // Remove any extra phis created by processing inner loops.
@@ -7254,14 +7280,16 @@ bool LoopStrengthReduce::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   MemorySSA *MSSA = nullptr;
   if (MSSAAnalysis)
     MSSA = &MSSAAnalysis->getMSSA();
-  return ReduceLoopStrength(L, IU, SE, DT, LI, TTI, AC, TLI, MSSA);
+  return ReduceLoopStrength(L, IU, SE, DT, LI, TTI, AC, TLI, MSSA,
+                            /*PreserveLCSSA=*/false);
 }
 
 PreservedAnalyses LoopStrengthReducePass::run(Loop &L, LoopAnalysisManager &AM,
                                               LoopStandardAnalysisResults &AR,
                                               LPMUpdater &) {
   if (!ReduceLoopStrength(&L, AM.getResult<IVUsersAnalysis>(L, AR), AR.SE,
-                          AR.DT, AR.LI, AR.TTI, AR.AC, AR.TLI, AR.MSSA))
+                          AR.DT, AR.LI, AR.TTI, AR.AC, AR.TLI, AR.MSSA,
+                          /*PreserveLCSSA=*/true))
     return PreservedAnalyses::all();
 
   auto PA = getLoopPassPreservedAnalyses();

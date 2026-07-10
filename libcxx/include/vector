@@ -39,7 +39,7 @@ public:
         noexcept(is_nothrow_default_constructible<allocator_type>::value);
     explicit vector(const allocator_type&);
     explicit vector(size_type n);
-    explicit vector(size_type n, const allocator_type&); // C++14
+    explicit vector(size_type n, const allocator_type&);
     vector(size_type n, const value_type& value, const allocator_type& = allocator_type());
     template <class InputIterator>
         vector(InputIterator first, InputIterator last, const allocator_type& = allocator_type());
@@ -171,7 +171,7 @@ public:
     vector()
         noexcept(is_nothrow_default_constructible<allocator_type>::value);
     explicit vector(const allocator_type&) noexcept;
-    explicit vector(size_type n, const allocator_type& a = allocator_type()); // C++14
+    explicit vector(size_type n, const allocator_type& a = allocator_type());
     vector(size_type n, const value_type& value, const allocator_type& = allocator_type());
     template <class InputIterator>
         vector(InputIterator first, InputIterator last, const allocator_type& = allocator_type());

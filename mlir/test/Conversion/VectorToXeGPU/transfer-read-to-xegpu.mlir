@@ -667,3 +667,34 @@ gpu.func @load_1D_vector_alloca_promoted_unsupported(%offset: index)
 // LOAD-GATHER-NOT: xegpu.load_matrix
 
 }
+
+// -----
+gpu.module @xevm_module {
+gpu.func @load_0D_memref_unsupported(%source: memref<f16>) -> vector<f16> {
+  %c0 = arith.constant 0.0 : f16
+  %0 = vector.transfer_read %source[], %c0 : memref<f16>, vector<f16>
+  gpu.return %0 : vector<f16>
+}
+
+// CHECK-LABEL: @load_0D_memref_unsupported
+// CHECK: vector.transfer_read
+
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @load_0D_vector_unsupported(%source: memref<3xf32>,
+    %offset: index) -> vector<f32> {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %source[%offset], %c0
+    : memref<3xf32>, vector<f32>
+  gpu.return %0 : vector<f32>
+}
+
+// LOAD-ND-LABEL: @load_0D_vector_unsupported
+// LOAD-ND: vector.transfer_read
+
+// LOAD-GATHER-LABEL: @load_0D_vector_unsupported
+// LOAD-GATHER: vector.transfer_read
+
+}

@@ -54,6 +54,31 @@ exit:
   ret void
 }
 
+;; Exit-condition load on the RHS of the icmp must still be accepted.
+define void @swapped_cmp_operands(ptr noalias %array, ptr %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'swapped_cmp_operands'
+; CHECK:       LV: We can vectorize this loop!
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %st.addr = getelementptr i16, ptr %array, i64 %iv
+  store i16 0, ptr %st.addr, align 2
+  %ee.addr = getelementptr i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp slt i16 500, %ee.val
+  br i1 %ee.cond, label %exit, label %latch
+
+latch:
+  %iv.next = add i64 %iv, 1
+  %latch.cond = icmp eq i64 %iv.next, 20
+  br i1 %latch.cond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ;; Avoid vectorization because we will either exit on the first iteration, or
 ;; never exit early.
 ;; We shouldn't see IR like this if LV-LICM has done its job.
@@ -935,6 +960,30 @@ invalid.block:
   unreachable
 }
 
+define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %src, ptr align 4 dereferenceable(80) noalias %dst, ptr align 4 dereferenceable(80) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'combined_exit_conditions'
+; CHECK:       LV:  Not vectorizing: Cannot vectorize uncountable loop.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %src.ptr = getelementptr inbounds nuw [4 x i8], ptr %src, i64 %iv
+  %data = load i32, ptr %src.ptr, align 4
+  %add = add nsw i32 %data, 1
+  %dst.ptr = getelementptr inbounds nuw [4 x i8], ptr %dst, i64 %iv
+  store i32 %add, ptr %dst.ptr, align 4
+  %ee.ptr = getelementptr inbounds nuw [4 x i8], ptr %pred, i64 %iv
+  %ee.val = load i32, ptr %ee.ptr, align 4
+  %ee.cmp = icmp ne i32 %ee.val, 0
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cmp = icmp eq i64 %iv.next, 20
+  %combined.cond = select i1 %ee.cmp, i1 true, i1 %counted.cmp
+  br i1 %combined.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
 
 declare void @init_mem(ptr, i64);
 declare i64 @get_an_unknown_offset();

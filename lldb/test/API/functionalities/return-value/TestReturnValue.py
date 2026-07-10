@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # return value is unrecoverable from the operand stack at a step-out
 class ReturnValueTestCase(TestBase):
     def affected_by_pr33042(self):
         return (

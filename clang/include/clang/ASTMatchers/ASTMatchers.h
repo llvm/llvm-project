@@ -8367,9 +8367,9 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CUDAKernelCallExpr>
 ///   matches the initializer for v1, v2, v3, cp, and ip. Does not match the
 ///   initializer for i.
 AST_MATCHER_FUNCTION(internal::Matcher<Expr>, nullPointerConstant) {
-  return anyOf(
-      gnuNullExpr(), cxxNullPtrLiteralExpr(),
-      integerLiteral(equals(0), hasParent(expr(hasType(pointerType())))));
+  return anyOf(gnuNullExpr(), cxxNullPtrLiteralExpr(),
+               integerLiteral(equals(0), hasParent(castExpr(
+                                             hasCastKind(CK_NullToPointer)))));
 }
 
 /// Matches the DecompositionDecl the binding belongs to.

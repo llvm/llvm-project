@@ -67,6 +67,9 @@ DLWRAP(cuMemFree, 1)
 DLWRAP(cuMemFreeHost, 1)
 DLWRAP(cuMemFreeAsync, 2)
 
+DLWRAP(cuMemPrefetchAsync, 4)
+DLWRAP(cuPointerGetAttribute, 3)
+
 DLWRAP(cuModuleGetFunction, 3)
 DLWRAP(cuModuleGetGlobal, 4)
 
@@ -84,7 +87,6 @@ DLWRAP(cuDevicePrimaryCtxRetain, 2)
 DLWRAP(cuModuleLoadDataEx, 5)
 DLWRAP(cuOccupancyMaxPotentialBlockSize, 6)
 DLWRAP(cuOccupancyMaxActiveBlocksPerMultiprocessor, 4)
-DLWRAP(cuFuncGetParamInfo, 4)
 
 DLWRAP(cuDeviceCanAccessPeer, 3)
 DLWRAP(cuCtxEnablePeerAccess, 2)

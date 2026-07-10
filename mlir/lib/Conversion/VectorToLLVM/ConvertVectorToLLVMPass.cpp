@@ -87,7 +87,6 @@ void ConvertVectorToLLVMPass::runOnOperation() {
     populateVectorMaskMaterializationPatterns(patterns,
                                               force32BitVectorIndices);
     populateVectorInsertExtractStridedSliceTransforms(patterns);
-    populateVectorStepLoweringPatterns(patterns);
     populateVectorRankReducingFMAPattern(patterns);
     populateVectorGatherLoweringPatterns(patterns);
     populateVectorFromElementsUnrollPatterns(patterns);

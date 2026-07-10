@@ -270,28 +270,6 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
   return Changed;
 }
 
-template <typename PredT>
-Instruction *
-NaryReassociatePass::matchAndReassociateMinOrMax(Instruction *I,
-                                                 SCEVUse &OrigSCEV) {
-  Value *LHS = nullptr;
-  Value *RHS = nullptr;
-
-  auto MinMaxMatcher =
-      MaxMin_match<ICmpInst, match_bind<Value>, match_bind<Value>, PredT>(
-          m_Value(LHS), m_Value(RHS));
-  if (match(I, MinMaxMatcher)) {
-    OrigSCEV = SE->getSCEV(I);
-    if (auto *NewMinMax = dyn_cast_or_null<Instruction>(
-            tryReassociateMinOrMax(I, MinMaxMatcher, LHS, RHS)))
-      return NewMinMax;
-    if (auto *NewMinMax = dyn_cast_or_null<Instruction>(
-            tryReassociateMinOrMax(I, MinMaxMatcher, RHS, LHS)))
-      return NewMinMax;
-  }
-  return nullptr;
-}
-
 Instruction *NaryReassociatePass::tryReassociate(Instruction *I,
                                                  SCEVUse &OrigSCEV) {
 
@@ -311,16 +289,11 @@ Instruction *NaryReassociatePass::tryReassociate(Instruction *I,
   }
 
   // Try to match signed/unsigned Min/Max.
-  Instruction *ResI = nullptr;
-  // TODO: Currently min/max reassociation is restricted to integer types only
-  // due to use of SCEVExpander which my introduce incompatible forms of min/max
-  // for pointer types.
-  if (I->getType()->isIntegerTy())
-    if ((ResI = matchAndReassociateMinOrMax<umin_pred_ty>(I, OrigSCEV)) ||
-        (ResI = matchAndReassociateMinOrMax<smin_pred_ty>(I, OrigSCEV)) ||
-        (ResI = matchAndReassociateMinOrMax<umax_pred_ty>(I, OrigSCEV)) ||
-        (ResI = matchAndReassociateMinOrMax<smax_pred_ty>(I, OrigSCEV)))
-      return ResI;
+  if (match(I, m_MaxOrMin(m_Value(), m_Value()))) {
+    OrigSCEV = SE->getSCEV(I);
+    return dyn_cast_or_null<Instruction>(
+        tryReassociateMinOrMax(cast<IntrinsicInst>(I)));
+  }
 
   return nullptr;
 }
@@ -442,7 +415,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
   // sizeof(S) = 100 is indivisible by sizeof(int64) = 8.
   //
   // TODO: bail out on this case for now. We could emit uglygep.
-  if (IndexedSize % ElementSize != 0)
+  if (ElementSize == 0 || IndexedSize % ElementSize != 0)
     return nullptr;
 
   // NewGEP = &Candidate[RHS * (sizeof(IndexedType) / sizeof(Candidate[0])));
@@ -583,34 +556,33 @@ NaryReassociatePass::findClosestMatchingDominator(SCEVUse CandidateExpr,
   return nullptr;
 }
 
-template <typename MaxMinT> static SCEVTypes convertToSCEVType(MaxMinT &MM) {
-  if (std::is_same_v<smax_pred_ty, typename MaxMinT::PredType>)
+static SCEVTypes convertToSCEVType(Intrinsic::ID IntrinID) {
+  switch (IntrinID) {
+  case Intrinsic::smax:
     return scSMaxExpr;
-  else if (std::is_same_v<umax_pred_ty, typename MaxMinT::PredType>)
+  case Intrinsic::umax:
     return scUMaxExpr;
-  else if (std::is_same_v<smin_pred_ty, typename MaxMinT::PredType>)
+  case Intrinsic::smin:
     return scSMinExpr;
-  else if (std::is_same_v<umin_pred_ty, typename MaxMinT::PredType>)
+  case Intrinsic::umin:
     return scUMinExpr;
-
-  llvm_unreachable("Can't convert MinMax pattern to SCEV type");
-  return scUnknown;
+  default:
+    llvm_unreachable("Can't convert MinMax pattern to SCEV type");
+    return scUnknown;
+  }
 }
 
-// Parameters:
-//  I - instruction matched by MaxMinMatch matcher
-//  MaxMinMatch - min/max idiom matcher
-//  LHS - first operand of I
-//  RHS - second operand of I
-template <typename MaxMinT>
-Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
-                                                   MaxMinT MaxMinMatch,
-                                                   Value *LHS, Value *RHS) {
-  Value *A = nullptr, *B = nullptr;
-  MaxMinT m_MaxMin(m_Value(A), m_Value(B));
-
-  if (!match(LHS, m_MaxMin))
+Value *NaryReassociatePass::tryReassociateMinOrMax(IntrinsicInst *I) {
+  Value *LHS = I->getArgOperand(0);
+  Value *RHS = I->getArgOperand(1);
+  if (auto *RHSI = dyn_cast<IntrinsicInst>(RHS);
+      RHSI && RHSI->getIntrinsicID() == I->getIntrinsicID())
+    std::swap(LHS, RHS);
+  auto *LHSI = dyn_cast<IntrinsicInst>(LHS);
+  if (!LHSI || LHSI->getIntrinsicID() != I->getIntrinsicID())
     return nullptr;
+
+  Value *A = LHSI->getArgOperand(0), *B = LHSI->getArgOperand(1);
 
   if (LHS->hasNUsesOrMore(3) ||
       // The optimization is profitable only if LHS can be removed in the end.
@@ -623,7 +595,7 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
   auto tryCombination = [&](Value *A, SCEVUse AExpr, Value *B, SCEVUse BExpr,
                             Value *C, SCEVUse CExpr) -> Value * {
     SmallVector<SCEVUse, 2> Ops1{BExpr, AExpr};
-    const SCEVTypes SCEVType = convertToSCEVType(m_MaxMin);
+    SCEVTypes SCEVType = convertToSCEVType(I->getIntrinsicID());
     SCEVUse R1Expr = SE->getMinMaxExpr(SCEVType, Ops1);
 
     Instruction *R1MinMax = findClosestMatchingDominator(R1Expr, I);

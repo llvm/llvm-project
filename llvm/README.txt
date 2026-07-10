@@ -9,7 +9,7 @@ LLVM is open source software. You may freely distribute it under the terms of
 the license agreement found in LICENSE.txt.
 
 Please see the documentation provided in docs/ for further
-assistance with LLVM, and in particular docs/GettingStarted.rst for getting
+assistance with LLVM, and in particular docs/GettingStarted.md for getting
 started with LLVM and docs/README.txt for an overview of LLVM's
 documentation setup.
 
