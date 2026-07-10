@@ -362,6 +362,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FP_EXTEND, MVT::v4f32, Expand);
 
+  setOperationAction(ISD::TRUNCATE, MVT::v2i64, Legal);
+
   // TODO: For dynamic 64-bit vector inserts/extracts, should emit a pseudo that
   // is expanded to avoid having two separate loops in case the index is a VGPR.
 
@@ -920,9 +922,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     }
 
     if (Subtarget->hasPackedU64Ops()) {
-      setOperationAction(
-          {ISD::ADD, ISD::SUB, ISD::SHL, ISD::BUILD_VECTOR, ISD::TRUNCATE},
-          MVT::v2i64, Legal);
+      setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::BUILD_VECTOR},
+                         MVT::v2i64, Legal);
       setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL},
                          {MVT::v4i64, MVT::v8i64, MVT::v16i64, MVT::v32i64},
                          Custom);
