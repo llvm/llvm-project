@@ -540,9 +540,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SADDSAT, ISD::SSUBSAT}, {MVT::i16, MVT::i32},
                        Legal);
 
-  setOperationAction(
-      {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
-      {MVT::f32, MVT::f64}, Custom);
+  // FMINNUM and FMAXNUM are legal, don't need to custom lower them.
+  setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, {MVT::f32, MVT::f64}, Legal);
+
+  setOperationAction({ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM}, {MVT::f32, MVT::f64},
+                     Custom);
 
   // These are really only legal for ieee_mode functions. We should be avoiding
   // them for functions that don't have ieee_mode enabled, so just say they are
@@ -819,10 +821,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                         MVT::v32f16, MVT::v32bf16},
                        Custom);
 
+    setOperationAction({ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM}, MVT::f16, Custom);
     setOperationAction(
-        {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
-        MVT::f16, Custom);
-    setOperationAction({ISD::FMAXNUM_IEEE, ISD::FMINNUM_IEEE}, MVT::f16, Legal);
+        {ISD::FMAXNUM_IEEE, ISD::FMINNUM_IEEE, ISD::FMAXNUM, ISD::FMINNUM},
+        MVT::f16, Legal);
 
     setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE, ISD::FMINIMUMNUM,
                         ISD::FMAXIMUMNUM},
@@ -877,9 +879,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                           ISD::FCANONICALIZE},
                          VT, Custom);
 
-    setOperationAction(
-        {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
-        {MVT::v2f16, MVT::v4f16}, Custom);
+    setOperationAction({ISD::FMAXNUM, ISD::FMINNUM}, MVT::v2f16, Legal);
+    setOperationAction({ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+                       {MVT::v2f16, MVT::v4f16}, Custom);
+    setOperationAction({ISD::FMAXNUM, ISD::FMINNUM}, MVT::v4f16, Custom);
 
     setOperationAction(ISD::FEXP, MVT::v2f16, Custom);
     setOperationAction(ISD::SELECT, {MVT::v4i16, MVT::v4f16, MVT::v4bf16},
@@ -909,9 +912,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                           ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE,
                           ISD::FCANONICALIZE, ISD::BUILD_VECTOR},
                          MVT::v2f64, Legal);
-      setOperationAction(
-          {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
-          MVT::v2f64, Custom);
+      setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, MVT::v2f64, Legal);
+      setOperationAction({ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM}, MVT::v2f64,
+                         Custom);
       setOperationAction(
           {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FMINNUM_IEEE,
            ISD::FMAXNUM_IEEE, ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM,

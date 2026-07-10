@@ -142,11 +142,9 @@ define void @atomicrmw_fmax_flat_f64_vv_noret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (load (s32) from %ir.7, align 8, addrspace 5)
   ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN1:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (load (s32) from %ir.7 + 4, basealign 8, addrspace 5)
   ; GFX10-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[BUFFER_LOAD_DWORD_OFFEN]], %subreg.sub0, [[BUFFER_LOAD_DWORD_OFFEN1]], %subreg.sub1
-  ; GFX10-NEXT:   [[V_MAX_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE2]], 0, [[REG_SEQUENCE2]], 0, 0, implicit $mode, implicit $exec
-  ; GFX10-NEXT:   [[V_MAX_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE1]], 0, [[REG_SEQUENCE1]], 0, 0, implicit $mode, implicit $exec
-  ; GFX10-NEXT:   [[V_MAX_F64_e64_2:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[V_MAX_F64_e64_]], 0, [[V_MAX_F64_e64_1]], 0, 0, implicit $mode, implicit $exec
-  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[V_MAX_F64_e64_2]].sub0
-  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[V_MAX_F64_e64_2]].sub1
+  ; GFX10-NEXT:   [[V_MAX_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE2]], 0, [[REG_SEQUENCE1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[V_MAX_F64_e64_]].sub0
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[V_MAX_F64_e64_]].sub1
   ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY11]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.7, align 8, addrspace 5)
   ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY12]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (store (s32) into %ir.7 + 4, basealign 8, addrspace 5)
   ; GFX10-NEXT:   S_BRANCH %bb.5
@@ -205,11 +203,9 @@ define double @atomicrmw_fmax_flat_f64_vv_ret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (load (s32) from %ir.8, align 8, addrspace 5)
   ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN1:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (load (s32) from %ir.8 + 4, basealign 8, addrspace 5)
   ; GFX10-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[BUFFER_LOAD_DWORD_OFFEN]], %subreg.sub0, [[BUFFER_LOAD_DWORD_OFFEN1]], %subreg.sub1
-  ; GFX10-NEXT:   [[V_MAX_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE2]], 0, [[REG_SEQUENCE2]], 0, 0, implicit $mode, implicit $exec
-  ; GFX10-NEXT:   [[V_MAX_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE1]], 0, [[REG_SEQUENCE1]], 0, 0, implicit $mode, implicit $exec
-  ; GFX10-NEXT:   [[V_MAX_F64_e64_2:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[V_MAX_F64_e64_]], 0, [[V_MAX_F64_e64_1]], 0, 0, implicit $mode, implicit $exec
-  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[V_MAX_F64_e64_2]].sub0
-  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[V_MAX_F64_e64_2]].sub1
+  ; GFX10-NEXT:   [[V_MAX_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE2]], 0, [[REG_SEQUENCE1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[V_MAX_F64_e64_]].sub0
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[V_MAX_F64_e64_]].sub1
   ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY11]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.8, align 8, addrspace 5)
   ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY12]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (store (s32) into %ir.8 + 4, basealign 8, addrspace 5)
   ; GFX10-NEXT:   S_BRANCH %bb.5
@@ -438,9 +434,7 @@ define void @atomicrmw_fmin_flat_f64_vv_noret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (load (s32) from %ir.7, align 8, addrspace 5)
   ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN1:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (load (s32) from %ir.7 + 4, basealign 8, addrspace 5)
   ; GFX10-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[BUFFER_LOAD_DWORD_OFFEN]], %subreg.sub0, [[BUFFER_LOAD_DWORD_OFFEN1]], %subreg.sub1
-  ; GFX10-NEXT:   [[V_MAX_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE2]], 0, [[REG_SEQUENCE2]], 0, 0, implicit $mode, implicit $exec
-  ; GFX10-NEXT:   [[V_MAX_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE1]], 0, [[REG_SEQUENCE1]], 0, 0, implicit $mode, implicit $exec
-  ; GFX10-NEXT:   [[V_MIN_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[V_MAX_F64_e64_]], 0, [[V_MAX_F64_e64_1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX10-NEXT:   [[V_MIN_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[REG_SEQUENCE2]], 0, [[REG_SEQUENCE1]], 0, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[V_MIN_F64_e64_]].sub0
   ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[V_MIN_F64_e64_]].sub1
   ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY11]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.7, align 8, addrspace 5)
@@ -501,9 +495,7 @@ define double @atomicrmw_fmin_flat_f64_vv_ret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (load (s32) from %ir.8, align 8, addrspace 5)
   ; GFX10-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN1:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec :: (load (s32) from %ir.8 + 4, basealign 8, addrspace 5)
   ; GFX10-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[BUFFER_LOAD_DWORD_OFFEN]], %subreg.sub0, [[BUFFER_LOAD_DWORD_OFFEN1]], %subreg.sub1
-  ; GFX10-NEXT:   [[V_MAX_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE2]], 0, [[REG_SEQUENCE2]], 0, 0, implicit $mode, implicit $exec
-  ; GFX10-NEXT:   [[V_MAX_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[REG_SEQUENCE1]], 0, [[REG_SEQUENCE1]], 0, 0, implicit $mode, implicit $exec
-  ; GFX10-NEXT:   [[V_MIN_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[V_MAX_F64_e64_]], 0, [[V_MAX_F64_e64_1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX10-NEXT:   [[V_MIN_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[REG_SEQUENCE2]], 0, [[REG_SEQUENCE1]], 0, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[V_MIN_F64_e64_]].sub0
   ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[V_MIN_F64_e64_]].sub1
   ; GFX10-NEXT:   BUFFER_STORE_DWORD_OFFEN [[COPY11]], [[V_CNDMASK_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.8, align 8, addrspace 5)

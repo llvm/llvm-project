@@ -78,8 +78,6 @@ define amdgpu_kernel void @kernel_ieee_mode_default() #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -168,8 +166,6 @@ define amdgpu_kernel void @kernel_ieee_mode_on() #1 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -279,8 +275,6 @@ define void @func_ieee_mode_default() #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[4:7], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -302,8 +296,6 @@ define void @func_ieee_mode_on() #1 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[4:7], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -365,8 +357,6 @@ define amdgpu_cs void @cs_ieee_mode_on() #1 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -427,8 +417,6 @@ define amdgpu_ps void @ps_ieee_mode_on() #1 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)

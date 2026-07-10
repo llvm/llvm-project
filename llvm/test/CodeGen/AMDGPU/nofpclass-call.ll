@@ -245,11 +245,10 @@ define { float, float } @aggregate_use(float %z) #0 {
 ; CHECK-NEXT:    s_addc_u32 s17, s17, aggregate_f32@rel32@hi+12
 ; CHECK-NEXT:    v_mov_b32_e32 v40, v0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    v_max_f32_e32 v2, v40, v40
+; CHECK-NEXT:    v_min_f32_e32 v0, v0, v40
+; CHECK-NEXT:    v_min_f32_e32 v1, v1, v40
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_readlane_b32 s30, v41, 0
-; CHECK-NEXT:    v_min_f32_e32 v0, v0, v2
-; CHECK-NEXT:    v_min_f32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_readlane_b32 s31, v41, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s4, v41, 2
