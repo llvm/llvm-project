@@ -180,11 +180,11 @@ public:
 
 template <class _Tp>
 consteval bool __range_fits_in_alignment(std::size_t __num_elems) {
-  auto __bits = std::countr_zero(alignof(_Tp));
+  std::size_t __bits = std::countr_zero(alignof(_Tp));
 
   // Example: For alignof(T) == 4, we have two bits free, which has a range of 0-3. We need to
   // reserve one for the end position, so __num_elems must be < 3.
-  auto __allowed_range = (1 << __bits) - 1;
+  std::size_t __allowed_range = (1 << __bits) - 1;
   return __allowed_range > __num_elems;
 }
 
