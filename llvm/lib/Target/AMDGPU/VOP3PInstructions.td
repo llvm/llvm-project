@@ -3268,10 +3268,10 @@ multiclass CvtPkF32ToI16Pat<SDPatternOperator dagOp, Instruction inst> {
                           (inst $src0_modifiers, $src0, 0, (f32 (IMPLICIT_DEF)))>;
 }
 
-multiclass FPToSSatI16Pat<dag lhs, int hi, int lo> {
+multiclass FPToSSatI16Pat<dag lhs, dag hiOp, dag loOp> {
   defm : FPToIntSatI16Pat<lhs,
       (V_MED3_I32_e64 (V_CVT_I32_F32_e64 $src0_modifiers, $src0),
-                      (V_MOV_B32_e32 (i32 lo)), (S_MOV_B32 (i32 hi)))>;
+                      hiOp, loOp)>;
 }
 multiclass FPToUSatI16Pat<dag lhs, int hi> {
   defm : FPToIntSatI16Pat<lhs,
@@ -3282,11 +3282,31 @@ let SubtargetPredicate = isGFX11Plus in {
   // f32 -> i16 saturated conversion (vector and scalar types).
   defm : CvtPkF32ToI16Pat<fp_to_sint_sat, V_CVT_PK_I16_F32_e64>;
   defm : CvtPkF32ToI16Pat<fp_to_uint_sat, V_CVT_PK_U16_F32_e64>;
+
+  // Packed f32 -> i8 saturated conversion.
+  def : GCNPat<(v2i16 (fp_to_sint_sat v2f32:$src, i8)),
+    (V_PK_MAX_I16 SRCMODS.OP_SEL_1,
+      (V_PK_MIN_I16 SRCMODS.OP_SEL_1,
+        (V_CVT_PK_I16_F32_e64 0, (EXTRACT_SUBREG $src, sub0),
+                              0, (EXTRACT_SUBREG $src, sub1)),
+        SRCMODS.OP_SEL_1, (i32 0x007f007f), DSTCLAMP.NONE),
+      SRCMODS.OP_SEL_1, (i32 0xff80ff80), DSTCLAMP.NONE)>;
+  def : GCNPat<(v2i16 (fp_to_uint_sat v2f32:$src, i8)),
+    (V_PK_MIN_U16 SRCMODS.OP_SEL_1,
+      (V_CVT_PK_U16_F32_e64 0, (EXTRACT_SUBREG $src, sub0),
+                            0, (EXTRACT_SUBREG $src, sub1)),
+      SRCMODS.OP_SEL_1, (i32 0x00ff00ff), DSTCLAMP.NONE)>;
 }
 
 // Fallback for f32 -> i16 saturated conversion on pre-GFX11. Required because
 // f32 -> i16 has to be legal so that the packed pattern above can match.
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
-  defm : FPToSSatI16Pat<(i16 (fp_to_sint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)), 0x7fff, 0x8000>;
+  defm : FPToSSatI16Pat<(i16 (fp_to_sint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)),
+                        (V_MOV_B32_e32 (i32 0x7fff)), (S_MOV_B32 (i32 0x8000))>;
   defm : FPToUSatI16Pat<(i16 (fp_to_uint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)), 0xffff>;
 }
+
+// Fallback for f32 -> i8.
+defm : FPToSSatI16Pat<(i16 (fp_to_sint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i8)),
+                      (S_MOV_B32 (i32 0x7f)), (i32 -128)>;
+defm : FPToUSatI16Pat<(i16 (fp_to_uint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i8)), 0xff>;
