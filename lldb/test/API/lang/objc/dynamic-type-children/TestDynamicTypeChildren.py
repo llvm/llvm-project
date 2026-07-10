@@ -14,7 +14,7 @@ from lldbsuite.test import lldbutil
 # test if WindowServer isn't available.
 # Note: Simply applying the @skipIf decorator here confuses the test harness
 # and gives a spurious failure.
-class Rdar12408181TestCase(TestBase):
+class DynamicTypeChildrenTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
 
     def setUp(self):

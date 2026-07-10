@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class Rdar10967107TestCase(TestBase):
+class CoalescedCFTypesTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
 
     def setUp(self):

@@ -3859,6 +3859,33 @@ TEST(TransferTest, StaticCastBaseToDerivedUnknown) {
       });
 }
 
+TEST(TransferTest, StaticCastBaseToDerivedWithSyntheticFieldsNoModeledFields) {
+  std::string Code = R"cc(
+    struct Base {};
+    struct Derived : public Base {};
+    void target(Base* BPtr) {
+      Derived* DPtr = static_cast<Derived*>(BPtr);
+      (void)DPtr;
+      // [[p]]
+    }
+  )cc";
+  ASSERT_THAT_ERROR(
+      checkDataflowWithNoopAnalysis(
+          Code, ast_matchers::hasName("target"),
+          [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+             ASTContext &ASTCtx) {
+            ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+          },
+          {BuiltinOptions()}, LangStandard::lang_cxx17,
+          [](QualType Ty) -> llvm::StringMap<QualType> {
+            RecordDecl *RD = Ty->getAsRecordDecl();
+            if (RD != nullptr && RD->getName() == "Derived")
+              return {{"synth", RD->getASTContext().IntTy}};
+            return {};
+          }),
+      llvm::Succeeded());
+}
+
 TEST(TransferTest, MultipleConstructionsFromStaticCastsBaseToDerived) {
   std::string Code = R"cc(
  struct Base {};

@@ -19,7 +19,7 @@
 static const char *CategoryNames[orc_rt_log_Category_Count] = {"General"};
 
 static const char *LevelNames[ORC_RT_LOG_LEVEL_COUNT] = {
-    "debug", "info", "warning", "error", "none",
+    "debug", "info", "warning", "error", "off",
 };
 
 const char *orc_rt_log_Category_getName(orc_rt_log_Category Cat) noexcept {

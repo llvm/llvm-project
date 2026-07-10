@@ -51,7 +51,7 @@ define amdgpu_kernel void @ds2align1(ptr addrspace(3) %in, ptr addrspace(3) %out
 ; ALIGNED-GISEL-NEXT:    v_readfirstlane_b32 s1, v0
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s1, s1, 8
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s0, s1, s0
-; ALIGNED-GISEL-NEXT:    s_and_b32 s1, 0xffff, s0
+; ALIGNED-GISEL-NEXT:    s_bfe_u32 s1, s0, 0x100000
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; ALIGNED-GISEL-NEXT:    s_lshr_b32 s0, s1, 8
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v2, v0
@@ -134,7 +134,7 @@ define amdgpu_kernel void @ds4align1(ptr addrspace(3) %in, ptr addrspace(3) %out
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s0, s2, s0
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s2, s4, s3
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s0, s2, s0
-; ALIGNED-GISEL-NEXT:    s_and_b32 s3, 0xffff, s0
+; ALIGNED-GISEL-NEXT:    s_bfe_u32 s3, s0, 0x100000
 ; ALIGNED-GISEL-NEXT:    s_lshr_b32 s3, s3, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -299,7 +299,7 @@ define amdgpu_kernel void @ds8align1(ptr addrspace(3) %in, ptr addrspace(3) %out
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s4, s4, 24
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s3, s3, 16
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s3, s4, s3
-; ALIGNED-GISEL-NEXT:    s_and_b32 s4, 0xffff, s0
+; ALIGNED-GISEL-NEXT:    s_bfe_u32 s4, s0, 0x100000
 ; ALIGNED-GISEL-NEXT:    s_lshr_b32 s4, s4, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -312,7 +312,7 @@ define amdgpu_kernel void @ds8align1(ptr addrspace(3) %in, ptr addrspace(3) %out
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:2
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    s_and_b32 s1, 0xffff, s2
+; ALIGNED-GISEL-NEXT:    s_bfe_u32 s1, s2, 0x100000
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:3
 ; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s1, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s2
@@ -535,7 +535,7 @@ define amdgpu_kernel void @ds12align1(ptr addrspace(3) %in, ptr addrspace(3) %ou
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s5, s5, 24
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s4, s4, 16
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s4, s5, s4
-; ALIGNED-GISEL-NEXT:    s_and_b32 s5, 0xffff, s0
+; ALIGNED-GISEL-NEXT:    s_bfe_u32 s5, s0, 0x100000
 ; ALIGNED-GISEL-NEXT:    s_lshr_b32 s5, s5, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -548,7 +548,7 @@ define amdgpu_kernel void @ds12align1(ptr addrspace(3) %in, ptr addrspace(3) %ou
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:2
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    s_and_b32 s1, 0xffff, s2
+; ALIGNED-GISEL-NEXT:    s_bfe_u32 s1, s2, 0x100000
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:3
 ; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s1, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s2
@@ -560,7 +560,7 @@ define amdgpu_kernel void @ds12align1(ptr addrspace(3) %in, ptr addrspace(3) %ou
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:6
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; ALIGNED-GISEL-NEXT:    s_and_b32 s1, 0xffff, s3
+; ALIGNED-GISEL-NEXT:    s_bfe_u32 s1, s3, 0x100000
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:7
 ; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s1, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s3
@@ -909,7 +909,7 @@ define amdgpu_kernel void @ds16align1(ptr addrspace(3) %in, ptr addrspace(3) %ou
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s6, s6, 24
 ; ALIGNED-GISEL-NEXT:    s_lshl_b32 s5, s5, 16
 ; ALIGNED-GISEL-NEXT:    s_or_b32 s5, s6, s5
-; ALIGNED-GISEL-NEXT:    s_and_b32 s6, 0xffff, s0
+; ALIGNED-GISEL-NEXT:    s_bfe_u32 s6, s0, 0x100000
 ; ALIGNED-GISEL-NEXT:    s_lshr_b32 s6, s6, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -922,7 +922,7 @@ define amdgpu_kernel void @ds16align1(ptr addrspace(3) %in, ptr addrspace(3) %ou
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s5
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:2
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-GISEL-NEXT:    s_and_b32 s1, 0xffff, s2
+; ALIGNED-GISEL-NEXT:    s_bfe_u32 s1, s2, 0x100000
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:3
 ; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s1, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s2
@@ -934,7 +934,7 @@ define amdgpu_kernel void @ds16align1(ptr addrspace(3) %in, ptr addrspace(3) %ou
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:6
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; ALIGNED-GISEL-NEXT:    s_and_b32 s1, 0xffff, s3
+; ALIGNED-GISEL-NEXT:    s_bfe_u32 s1, s3, 0x100000
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:7
 ; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s1, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s3
@@ -946,7 +946,7 @@ define amdgpu_kernel void @ds16align1(ptr addrspace(3) %in, ptr addrspace(3) %ou
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:10
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; ALIGNED-GISEL-NEXT:    s_and_b32 s1, 0xffff, s4
+; ALIGNED-GISEL-NEXT:    s_bfe_u32 s1, s4, 0x100000
 ; ALIGNED-GISEL-NEXT:    ds_write_b8 v1, v0 offset:11
 ; ALIGNED-GISEL-NEXT:    s_lshr_b32 s1, s1, 8
 ; ALIGNED-GISEL-NEXT:    v_mov_b32_e32 v0, s4
