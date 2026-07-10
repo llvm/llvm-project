@@ -760,7 +760,7 @@ func.func @negative_shape_cast_multi_group_target_not_contiguous(%v: vector<2x32
 // CHECK:   return %[[SC]] : vector<2x8x4xf32>
 
 
-// Negative multi-group case: the target tile is contiguous within the result
+// Negative multi-group case: the target tile [2, 4] is contiguous within the result
 // group [24], but its elements cannot be extracted contiguously from the
 // source group [8, 3], so the cast is left un-unrolled.
 func.func @negative_shape_cast_multi_group_source_not_determinable(%v: vector<2x8x3xf32>) -> vector<2x24xf32> {
