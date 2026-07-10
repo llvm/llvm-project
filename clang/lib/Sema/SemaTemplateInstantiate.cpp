@@ -1891,7 +1891,9 @@ namespace {
       if (!OrigTPL || !OrigTPL->size()) return OrigTPL;
 
       DeclContext *Owner = OrigTPL->getParam(0)->getDeclContext();
-      TemplateDeclInstantiator DeclInstantiator(getSema(), Owner, TemplateArgs);
+      TemplateDeclInstantiator DeclInstantiator(getSema(),
+                                                /* DeclContext *Owner */ Owner,
+                                                TemplateArgs);
       DeclInstantiator.setEvaluateConstraints(EvaluateConstraints);
       return DeclInstantiator.SubstTemplateParams(OrigTPL);
     }
