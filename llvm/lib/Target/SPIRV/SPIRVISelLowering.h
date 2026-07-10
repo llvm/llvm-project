@@ -64,13 +64,8 @@ public:
   // the standard.
   void finalizeLowering(MachineFunction &MF) const override;
 
-  // Return a width no larger than the condition so CodeGenPrepare never widens
-  // it. Odd-width integers are extended EVTs, so getSimpleVT would fail, so
-  // falling back to i1.
   MVT getPreferredSwitchConditionType(LLVMContext &Context,
                                       EVT ConditionVT) const override {
-    if (ConditionVT.isSimple())
-      return ConditionVT.getSimpleVT();
     return MVT::i1;
   }
 

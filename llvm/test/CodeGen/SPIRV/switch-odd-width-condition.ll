@@ -7,7 +7,7 @@
 ; CHECK: %[[#COND:]] = OpFunctionParameter %[[#I32]]
 ; CHECK: OpSwitch %[[#COND]] %[[#]] 0 %[[#]] 1 %[[#]] 2 %[[#]]
 
-define spir_kernel void @fuzz_kernel(ptr addrspace(1) %in, ptr addrspace(1) %out, i31 %n) {
+define spir_func void @fuzz_kernel(ptr addrspace(1) %in, ptr addrspace(1) %out, i31 %n) {
 entry:
   switch i31 %n, label %d [
     i31 0, label %m
@@ -31,7 +31,7 @@ m:
 ; CHECK: %[[#COND2:]] = OpFunctionParameter %[[#I32]]
 ; CHECK: OpSwitch %[[#COND2]] %[[#]] 0 %[[#]] 1 %[[#]] 2 %[[#]]
 
-define spir_kernel void @cond_used_elsewhere(ptr addrspace(1) %out, i31 %n) {
+define spir_func void @cond_used_elsewhere(ptr addrspace(1) %out, i31 %n) {
 entry:
   switch i31 %n, label %d [
     i31 0, label %a
