@@ -844,6 +844,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a preprocessor assertion failure triggered when parsing an invalid template-id starting with `::template operator`. (#GH186582)
 - Fixed a crash when a function template is defined as a non-template friend with a global scope qualifier. (#GH185341)
 - Fixed a bug of incorrect template depth for abbreviated templates. (#GH200682)
+- Fixed valid C++ code that uses an address-of-function-template expression,
+  such as `decltype(&T::func<Args...>)`, in SFINAE checks when substituting the
+  function template's trailing return type fails, such as when the return type
+  contains a `decltype` probe that calls a deleted function.
 - Clang now rejects constant template parameters with block pointer types, since these are not implemented anyway and would lead to crashes. (#GH189247)
 - Fixed some concept bugs introduced in Clang 22 (#GH197597)
 - Clang no longer reject call expressions whose type is a not-yet-deduced auto type. (#GH207565)
