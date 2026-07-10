@@ -789,9 +789,10 @@ ClangModulesDeclVendor::Create(Target &target) {
   const bool skipFunctionBodies = false;
   std::unique_ptr<clang::Parser> parser(new clang::Parser(
       instance->getPreprocessor(), instance->getSema(), skipFunctionBodies));
+  parser->Initialize();
 
   instance->getPreprocessor().EnterMainSourceFile();
-  parser->Initialize();
+  parser->ConsumeToken();
 
   clang::Parser::DeclGroupPtrTy parsed;
   auto ImportState = clang::Sema::ModuleImportState::NotACXX20Module;
