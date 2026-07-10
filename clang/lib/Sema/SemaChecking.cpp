@@ -2232,7 +2232,7 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
     return PPC().CheckPPCBuiltinFunctionCall(TI, BuiltinID, TheCall);
-  case llvm::Triple::amdgcn:
+  case llvm::Triple::amdgpu:
     return AMDGPU().CheckAMDGCNBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
@@ -3033,6 +3033,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
   case Builtin::BI__builtin_ms_va_start:
+  case Builtin::BI__builtin_zos_va_start:
   case Builtin::BI__builtin_stdarg_start:
   case Builtin::BI__builtin_va_start:
   case Builtin::BI__builtin_c23_va_start:
@@ -3078,7 +3079,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (CheckBuiltinTargetInSupported(
             *this, TheCall,
             {llvm::Triple::x86_64, llvm::Triple::arm, llvm::Triple::thumb,
-             llvm::Triple::aarch64, llvm::Triple::amdgcn}))
+             llvm::Triple::aarch64, llvm::Triple::amdgpu}))
       return ExprError();
     break;
 
@@ -3097,7 +3098,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (CheckBuiltinTargetInSupported(
             *this, TheCall,
             {llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::arm,
-             llvm::Triple::thumb, llvm::Triple::aarch64, llvm::Triple::amdgcn,
+             llvm::Triple::thumb, llvm::Triple::aarch64, llvm::Triple::amdgpu,
              llvm::Triple::ppc, llvm::Triple::ppc64, llvm::Triple::ppcle,
              llvm::Triple::ppc64le}))
       return ExprError();
@@ -4404,8 +4405,9 @@ void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
     }
   };
   for (unsigned I = 0; I < FD->getNumParams(); ++I)
-    HandleCaptureByAttr(FD->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>(),
-                        I + IsMemberFunction);
+    for (const auto *A :
+         FD->getParamDecl(I)->specific_attrs<LifetimeCaptureByAttr>())
+      HandleCaptureByAttr(A, I + IsMemberFunction);
   // Check when the implicit object param is captured.
   if (IsMemberFunction) {
     TypeSourceInfo *TSI = FD->getTypeSourceInfo();

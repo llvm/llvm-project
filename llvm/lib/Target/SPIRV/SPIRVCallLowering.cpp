@@ -417,11 +417,14 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   // Handle entry points and function linkage.
   if (isEntryPoint(F)) {
+    if (F.getName().empty())
+      report_fatal_error("SPIR-V entry point function must have a name");
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpEntryPoint)
                    .addImm(static_cast<uint32_t>(getExecutionModel(*ST, F)))
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
-  } else if (const auto LnkTy = getSpirvLinkageTypeFor(*ST, F)) {
+  } else if (const auto LnkTy = getSpirvLinkageTypeFor(*ST, F);
+             LnkTy && !F.getName().empty()) {
     buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
                     {static_cast<uint32_t>(*LnkTy)}, F.getName());
   }
