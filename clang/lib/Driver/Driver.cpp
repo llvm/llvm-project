@@ -9,7 +9,6 @@
 #include "clang/Driver/Driver.h"
 #include "ToolChains/AIX.h"
 #include "ToolChains/AMDGPU.h"
-#include "ToolChains/AMDGPUOpenMP.h"
 #include "ToolChains/AVR.h"
 #include "ToolChains/Arch/RISCV.h"
 #include "ToolChains/BareMetal.h"
@@ -616,10 +615,9 @@ static void setZosTargetVersion(const Driver &D, llvm::Triple &Target,
 ///
 /// This routine provides the logic to compute a target triple from various
 /// args passed to the driver and the default triple string.
-static llvm::Triple computeTargetTriple(const Driver &D,
-                                        StringRef TargetTriple,
+static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
                                         const ArgList &Args,
-                                        StringRef DarwinArchName = "") {
+                                        StringRef ArchName = "") {
   // FIXME: Already done in Compilation *Driver::BuildCompilation
   if (const Arg *A = Args.getLastArg(options::OPT_target))
     TargetTriple = A->getValue();
@@ -635,9 +633,8 @@ static llvm::Triple computeTargetTriple(const Driver &D,
   // Handle Apple-specific options available here.
   if (Target.isOSBinFormatMachO()) {
     // If an explicit Darwin arch name is given, that trumps all.
-    if (!DarwinArchName.empty()) {
-      tools::darwin::setTripleTypeForMachOArchName(Target, DarwinArchName,
-                                                   Args);
+    if (!ArchName.empty()) {
+      tools::darwin::setTripleTypeForMachOArchName(Target, ArchName, Args);
       return llvm::Triple(Target.normalize());
     }
 
@@ -646,6 +643,9 @@ static llvm::Triple computeTargetTriple(const Driver &D,
       StringRef ArchName = A->getValue();
       tools::darwin::setTripleTypeForMachOArchName(Target, ArchName, Args);
     }
+  } else if (!ArchName.empty()) {
+    Target.setArchName(ArchName);
+    return Target;
   }
 
   // Handle pseudo-target flags '-mlittle-endian'/'-EL' and
@@ -941,10 +941,8 @@ static TripleSet inferOffloadToolchains(Compilation &C,
   for (llvm::StringRef Arch : Archs) {
     OffloadArch ID = StringToOffloadArch(Arch);
     if (ID == OffloadArch::Unknown)
-      ID = StringToOffloadArch(getProcessorFromTargetID(
-          llvm::Triple(llvm::Triple::amdgcn, llvm::Triple::NoSubArch,
-                       llvm::Triple::AMD, llvm::Triple::AMDHSA),
-          Arch));
+      ID = StringToOffloadArch(
+          getProcessorFromTargetID(llvm::Triple("amdgcn-amd-amdhsa"), Arch));
 
     if (Kind == Action::OFK_HIP && !IsAMDOffloadArch(ID)) {
       C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
@@ -990,8 +988,7 @@ static TripleSet inferOffloadToolchains(Compilation &C,
 
   // Infer the default target triple if no specific architectures are given.
   if (Archs.empty() && Kind == Action::OFK_HIP)
-    Triples.insert(llvm::Triple(llvm::Triple::amdgcn, llvm::Triple::NoSubArch,
-                                llvm::Triple::AMD, llvm::Triple::AMDHSA));
+    Triples.insert(llvm::Triple("amdgcn-amd-amdhsa"));
   else if (Archs.empty() && Kind == Action::OFK_Cuda) {
     llvm::Triple::ArchType Arch =
         C.getDefaultToolChain().getTriple().isArch64Bit()
@@ -4807,9 +4804,11 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     if (TC.requiresObjcopy(Args)) {
       Action *LastAction = Actions.back();
       // llvm-objcopy expects an unvalidated DXIL container (TY_OBJECT).
-      if (LastAction->getType() == types::TY_Object)
+      if (LastAction->getType() == types::TY_Object) {
+        ActionList ObjcopyActions({LastAction});
         Actions.push_back(
-            C.MakeAction<ObjcopyJobAction>(LastAction, types::TY_Object));
+            C.MakeAction<ObjcopyJobAction>(ObjcopyActions, types::TY_Object));
+      }
     }
 
     // Call validator when -Vd not in Args.
@@ -5401,6 +5400,17 @@ Action *Driver::ConstructPhaseAction(
     return C.MakeAction<BackendJobAction>(Input, types::TY_PP_Asm);
   }
   case phases::Assemble:
+    // When -marm64x is used, construct jobs for the EC and native targets and
+    // merge them into an archive with llvm-objcopy.
+    const llvm::Triple Target(llvm::Triple::normalize(TargetTriple));
+    if (Target.isOSWindows() && Args.hasArg(options::OPT_marm64x)) {
+      Action *Act =
+          C.MakeAction<AssembleJobAction>(std::move(Input), types::TY_Object);
+      ActionList Inputs;
+      Inputs.push_back(C.MakeAction<BindArchAction>(Act, BoundArch("aarch64")));
+      Inputs.push_back(C.MakeAction<BindArchAction>(Act, BoundArch("arm64ec")));
+      return C.MakeAction<ObjcopyJobAction>(Inputs, types::TY_Object);
+    }
     return C.MakeAction<AssembleJobAction>(std::move(Input), types::TY_Object);
   }
 
@@ -5495,7 +5505,8 @@ void Driver::BuildJobs(Compilation &C) const {
     BuildJobsForAction(C, A, &C.getDefaultToolChain(),
                        /*BA=*/{},
                        /*AtTopLevel*/ true,
-                       /*MultipleArchs*/ ArchNames.size() > 1,
+                       /*MultipleArchs*/ ArchNames.size() > 1 ||
+                           C.getArgs().hasArgNoClaim(options::OPT_marm64x),
                        /*LinkingOutput*/ LinkingOutput, CachedResults,
                        /*TargetDeviceOffloadKind*/ Action::OFK_None);
   }
@@ -6982,12 +6993,12 @@ const ToolChain &Driver::getOffloadToolChain(
                                                        Args);
       break;
     case llvm::Triple::AMDHSA:
-      if (Kind == Action::OFK_HIP)
-        TC = std::make_unique<toolchains::HIPAMDToolChain>(*this, Target,
-                                                           *HostTC, Args);
-      else if (Kind == Action::OFK_OpenMP)
-        TC = std::make_unique<toolchains::AMDGPUOpenMPToolChain>(*this, Target,
-                                                                 *HostTC, Args);
+      // For AMDHSA offloading (HIP, OpenMP), use the unified AMDGPUToolChain
+      // This handles both amdgpu-amd-amdhsa and spirv64-amd-amdhsa
+      // FIXME: This should not key off language or OS.
+      if (Kind == Action::OFK_HIP || Kind == Action::OFK_OpenMP)
+        TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args,
+                                                           HostTC.get(), Kind);
       break;
     default:
       break;
@@ -6996,6 +7007,11 @@ const ToolChain &Driver::getOffloadToolChain(
   if (!TC) {
     // Detect the toolchain based off of the target architecture if that failed.
     switch (Target.getArch()) {
+    case llvm::Triple::amdgpu:
+    case llvm::Triple::r600:
+      TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args,
+                                                         HostTC.get(), Kind);
+      break;
     case llvm::Triple::spir:
     case llvm::Triple::spir64:
     case llvm::Triple::spirv:
@@ -7113,12 +7129,12 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         TC = std::make_unique<toolchains::SPIRVAMDToolChain>(*this, Target,
                                                              Args);
       } else {
-        bool DL = usesInput(Args, types::isOpenCL) ||
-                  usesInput(Args, types::isLLVMIR);
-        TC = DL ? std::make_unique<toolchains::ROCMToolChain>(*this, Target,
-                                                              Args)
-                : std::make_unique<toolchains::AMDGPUToolChain>(*this, Target,
-                                                                Args);
+        // Only link device libraries for OpenCL and LLVM IR inputs
+        bool ShouldLinkDeviceLibs = usesInput(Args, types::isOpenCL) ||
+                                    usesInput(Args, types::isLLVMIR);
+        TC = std::make_unique<toolchains::AMDGPUToolChain>(
+            *this, Target, Args, nullptr, Action::OFK_None,
+            ShouldLinkDeviceLibs);
       }
       break;
     }
@@ -7238,7 +7254,7 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       case llvm::Triple::csky:
         TC = std::make_unique<toolchains::CSKYToolChain>(*this, Target, Args);
         break;
-      case llvm::Triple::amdgcn:
+      case llvm::Triple::amdgpu:
       case llvm::Triple::r600:
         TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args);
         break;

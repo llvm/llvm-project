@@ -1094,6 +1094,9 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
       StringLiteral *DeletedMessage =
           HasMessage ? cast<StringLiteral>(Record.readExpr()) : nullptr;
 
+      FPOptionsOverride FPFeatures =
+          FPOptionsOverride::getFromOpaqueInt(Record.readInt());
+
       unsigned NumLookups = Record.readInt();
       SmallVector<DeclAccessPair, 8> Lookups;
       for (unsigned I = 0; I != NumLookups; ++I) {
@@ -1104,7 +1107,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
 
       FD->setDefaultedOrDeletedInfo(
           FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
-              Reader.getContext(), Lookups, DeletedMessage));
+              Reader.getContext(), Lookups, FPFeatures, DeletedMessage));
     }
   }
 
@@ -2338,7 +2341,7 @@ void ASTDeclReader::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
     CXXDefaultArgExpr **Args =
         new (Reader.getContext()) CXXDefaultArgExpr *[NumArgs];
     for (unsigned I = 0; I != NumArgs; I++)
-      Args[I] = cast<CXXDefaultArgExpr>(Record.readStmt());
+      Args[I] = cast_or_null<CXXDefaultArgExpr>(Record.readStmt());
     D->setCtorClosureDefaultArgs(ArrayRef(Args, NumArgs));
   }
 
@@ -3415,10 +3418,20 @@ ASTDeclReader::FindExistingResult::~FindExistingResult() {
 }
 
 /// Find the declaration that should be merged into, given the declaration found
-/// by name lookup. If we're merging an anonymous declaration within a typedef,
-/// we need a matching typedef, and we merge with the type inside it.
+/// by name lookup. If we're not merging with a UsingShadowDecl but Found is a
+/// UsingShadowDecl, we need to skip the UsingShadowDecl. If we're merging an
+/// anonymous declaration within a typedef, we need a matching typedef, and we
+/// merge with the type inside it.
 static NamedDecl *getDeclForMerging(NamedDecl *Found,
-                                    bool IsTypedefNameForLinkage) {
+                                    bool IsTypedefNameForLinkage,
+                                    bool FilteringUsingShadowDecl) {
+  // If the taregt declaration we want is not a UsingShadowDecl, we don't need
+  // to return the UsingShadowDecl at all.
+  if (auto *USD = dyn_cast<UsingShadowDecl>(Found);
+      USD && FilteringUsingShadowDecl)
+    return getDeclForMerging(USD->getTargetDecl(), IsTypedefNameForLinkage,
+                             FilteringUsingShadowDecl);
+
   if (!IsTypedefNameForLinkage)
     return Found;
 
@@ -3579,7 +3592,9 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
     for (IdentifierResolver::iterator I = IdResolver.begin(Name),
                                    IEnd = IdResolver.end();
          I != IEnd; ++I) {
-      if (NamedDecl *Existing = getDeclForMerging(*I, TypedefNameForLinkage))
+      if (NamedDecl *Existing =
+              getDeclForMerging(*I, TypedefNameForLinkage,
+                                /*FilteringUsingShadowDecl=*/false))
         if (C.isSameEntity(Existing, D))
           return FindExistingResult(Reader, D, Existing, AnonymousDeclNumber,
                                     TypedefNameForLinkage);
@@ -3587,10 +3602,12 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
   } else if (DeclContext *MergeDC = getPrimaryContextForMerging(Reader, DC)) {
     DeclContext::lookup_result R = MergeDC->noload_lookup(Name);
     for (DeclContext::lookup_iterator I = R.begin(), E = R.end(); I != E; ++I) {
-      if (NamedDecl *Existing = getDeclForMerging(*I, TypedefNameForLinkage))
-        if (C.isSameEntity(Existing, D))
+      if (NamedDecl *Existing = getDeclForMerging(*I, TypedefNameForLinkage,
+                                                  !isa<UsingShadowDecl>(D)))
+        if (C.isSameEntity(Existing, D)) {
           return FindExistingResult(Reader, D, Existing, AnonymousDeclNumber,
                                     TypedefNameForLinkage);
+        }
     }
   } else {
     // Not in a mergeable context.

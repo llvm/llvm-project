@@ -265,8 +265,8 @@ body:             |
     ; GFX-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
     ; GFX-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
     ; GFX-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
-    ; GFX-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[UV2]]
-    ; GFX-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
+    ; GFX-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(i1) = G_USUBO [[UV]], [[UV2]]
+    ; GFX-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(i1) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
     ; GFX-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32)
     ; GFX-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C1]]
     ; GFX-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
@@ -418,8 +418,8 @@ body:             |
     ; GFX-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
     ; GFX-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
     ; GFX-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
-    ; GFX-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[UV2]]
-    ; GFX-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
+    ; GFX-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(i1) = G_USUBO [[UV]], [[UV2]]
+    ; GFX-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(i1) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
     ; GFX-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32)
     ; GFX-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C1]]
     ; GFX-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)

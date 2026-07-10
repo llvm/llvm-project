@@ -420,7 +420,7 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
         using namespace llvm::PatternMatch;
         if (!match(
                 Inst,
-                m_UDiv(m_ZExtOrSelf(m_Load(m_GEP(
+                m_UDiv(m_ZExtOrSelf(m_LoadSimple(m_GEP(
                            m_Intrinsic<Intrinsic::amdgcn_dispatch_ptr>(),
                            m_SpecificInt(GRID_SIZE_X + I * sizeof(uint32_t))))),
                        m_Value())))

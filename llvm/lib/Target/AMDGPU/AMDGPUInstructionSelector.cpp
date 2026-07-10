@@ -6465,7 +6465,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
 
     // TODO: Should this be inside the render function? The iterator seems to
     // move.
-    const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
+    const int64_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
     BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::V_MOV_B32_e32),
             HighBits)
         .addImm(Offset & ~MaxOffset);
