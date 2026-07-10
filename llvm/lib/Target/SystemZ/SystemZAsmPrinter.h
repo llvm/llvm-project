@@ -30,6 +30,7 @@ public:
 
 private:
   MCSymbol *PPA2Sym;
+  DenseMap<StringRef, StringRef> MappedName2OrigName;
 
   SystemZTargetStreamer *getTargetStreamer() {
     MCTargetStreamer *TS = OutStreamer->getTargetStreamer();
@@ -125,7 +126,7 @@ private:
   SmallVector<PPA1Info, 0> DeferredPPA1;
 
   void calculatePPA1();
-  void emitPPA1(PPA1Info &Info);
+  void emitPPA1(Module &M, PPA1Info &Info);
   void emitPPA2(Module &M);
   void emitADASection();
   void emitIDRLSection(Module &M);
@@ -178,6 +179,7 @@ private:
   void lowerLOAD_GLOBAL_STACKGUARD_ADDR(const MachineInstr &MI,
                                         SystemZMCInstLower &Lower);
   void emitAttributes(Module &M);
+  StringRef getPPA1Name(Module &M, StringRef MappedName);
 };
 } // end namespace llvm
 

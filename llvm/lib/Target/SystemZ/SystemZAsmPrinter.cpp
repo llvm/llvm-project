@@ -1298,7 +1298,7 @@ void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (TT.isOSzOS()) {
     OutStreamer->switchSection(getObjFileLowering().getTextSection());
     for (auto &Info : DeferredPPA1)
-      emitPPA1(Info);
+      emitPPA1(M, Info);
     emitADASection();
     emitIDRLSection(M);
     // On z/OS, we need to associate an external data reference with an ED
@@ -1556,6 +1556,8 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
 static void emitPPA1Name(std::unique_ptr<MCStreamer> &OutStreamer,
                          StringRef OutName) {
   size_t NameSize = OutName.size();
+  if (NameSize == 0)
+    return;
   uint16_t OutSize;
   if (NameSize < UINT16_MAX) {
     OutSize = static_cast<uint16_t>(NameSize);
@@ -1577,7 +1579,7 @@ static void emitPPA1Name(std::unique_ptr<MCStreamer> &OutStreamer,
   OutStreamer->emitZeros(ExtraZeros);
 }
 
-void SystemZAsmPrinter::emitPPA1(PPA1Info &Info) {
+void SystemZAsmPrinter::emitPPA1(Module &M, PPA1Info &Info) {
   assert(PPA2Sym != nullptr && "PPA2 Symbol not defined");
 
   // Optional Argument Area Length.
@@ -1697,10 +1699,28 @@ void SystemZAsmPrinter::emitPPA1(PPA1Info &Info) {
 
   // Emit name length and name optional section (0x01 of flags 4)
   if (Info.Name.size())
-    emitPPA1Name(OutStreamer, Info.Name);
+    emitPPA1Name(OutStreamer, getPPA1Name(M, Info.Name));
 
   // Emit offset to entry point optional section (0x80 of flags 4).
   OutStreamer->emitAbsoluteSymbolDiff(Info.EPMarker, Info.PPA1, 4);
+}
+
+StringRef SystemZAsmPrinter::getPPA1Name(Module &M, StringRef MappedName) {
+  if (MappedName2OrigName.empty()) {
+    if (auto *MD = M.getNamedMetadata("zos_mapped_names")) {
+      for (unsigned I = 0, E = MD->getNumOperands(); I < E; ++I) {
+        MDNode *Map = MD->getOperand(I);
+        StringRef Name = dyn_cast<MDString>(Map->getOperand(0))->getString();
+        StringRef OrigName =
+            dyn_cast<MDString>(Map->getOperand(1))->getString();
+        MappedName2OrigName[Name] = OrigName;
+      }
+    }
+  }
+  auto It = MappedName2OrigName.find(MappedName);
+  if (It != MappedName2OrigName.end())
+    return It->second;
+  return MappedName;
 }
 
 // Determine the end of the prolog and the instructions which updates the stack
