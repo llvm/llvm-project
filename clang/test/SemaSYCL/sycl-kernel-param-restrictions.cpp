@@ -237,7 +237,7 @@ void test() {
   kernel_single_task<class KN<18>>([=]{ (void)arr; });
   // expected-note-re@-1 {{in instantiation of function template specialization 'atomic1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
   // expected-note@-2 {{within capture 'arr' of lambda expression here}}
-  kernel_single_task<class KN<19>>(Kernel());
+  kernel_single_task<class KN<19>>(Kernel{});
   // expected-note-re@-1 {{in instantiation of function template specialization 'atomic1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
 }
 
