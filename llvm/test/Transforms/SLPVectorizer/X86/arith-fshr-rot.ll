@@ -5,6 +5,10 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=core-avx2 -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX2
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skx -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX256
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skx -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX512
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m7 -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=AVX512VBMI2
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m7 -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=AVX
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m8 -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=AVX512VBMI2
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m8 -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=AVX
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=znver4 -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=AVX512VBMI2
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=knl -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX512
 
