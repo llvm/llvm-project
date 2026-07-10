@@ -1556,3 +1556,11 @@ func.func @logical_or_float(%a: f32, %b: f32) {
   %0 = fir.logical_or %a, %b : f32
   return
 }
+
+// -----
+
+func.func @allocmem_bad_alignment() -> !fir.heap<!fir.array<10xf32>> {
+  // expected-error@+1 {{'fir.allocmem' op alignment must be a positive power of two}}
+  %0 = fir.allocmem !fir.array<10xf32> {alignment = 3 : i64}
+  return %0 : !fir.heap<!fir.array<10xf32>>
+}
