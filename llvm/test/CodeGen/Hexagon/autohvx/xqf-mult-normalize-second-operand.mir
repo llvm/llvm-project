@@ -1,0 +1,32 @@
+# Tests qf32 multiply normalization when only the second operand needs
+# converting: the vmpy must keep the first operand and use the normalized
+# second operand.
+
+# RUN: llc -mtriple=hexagon-unknown-elf -mattr=+hvxv79,+hvx-length128b,+hvx-qfloat \
+# RUN:   -run-pass=hexagon-xqfloat-generator -hexagon-qfloat-mode=strict-ieee \
+# RUN:   -enable-xqf-gen=true %s -o - | FileCheck %s
+
+--- |
+  define void @mul_secondconv() { ret void }
+...
+---
+name:            mul_secondconv
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $v0, $v1, $v2
+    ; CHECK-LABEL: name: mul_secondconv
+    ; The second operand (from the adder) is converted to IEEE and normalized
+    ; through a vadd_qf32_mix; the multiply must consume that normalized value
+    ; together with the untouched first operand %1 - not the raw adder result.
+    ; CHECK: [[CONV:%[0-9]+]]:hvxvr = V6_vconv_sf_qf32 %3
+    ; CHECK: [[NORM:%[0-9]+]]:hvxvr = V6_vadd_qf32_mix %{{[0-9]+}}, [[CONV]]
+    ; CHECK: %4:hvxvr = V6_vmpy_qf32 %1, [[NORM]]
+    %0:hvxvr = COPY $v0
+    %1:hvxvr = COPY $v1
+    %2:hvxvr = COPY $v2
+    %3:hvxvr = V6_vadd_qf32 %0, %2
+    %4:hvxvr = V6_vmpy_qf32 %1, %3
+    $v0 = COPY %4
+    PS_jmpret $r31, implicit-def dead $pc, implicit $v0
+...
