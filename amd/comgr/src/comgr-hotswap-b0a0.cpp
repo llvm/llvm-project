@@ -433,16 +433,17 @@ SmallVector<uint8_t> encodeLongBranch(const LLVMState &LS, uint64_t FromOffset,
   T.Bytes.insert(T.Bytes.end(), Replacement.begin(), Replacement.end());
 
   if (Far) {
-    if (InstSize < LongBranchFwdBytes) {
-      log() << "hotswap: long trampoline: site 0x" << utohexstr(InstOffset)
-            << " is " << InstSize << " B < " << LongBranchFwdBytes
-            << " B forward branch; declining (site left unpatched)\n";
-      return false;
-    }
-    T.Long = true;
-    // Reserve the long branch-back slot (worst-case 64-bit-literal size).
-    T.Bytes.insert(T.Bytes.end(), LongBranchMaxBytes, uint8_t{0});
-  } else {
+    // HSV-009: the far pool's backward s_add_pc_i64 branch corrupts wave state
+    // on gfx1250 A0 (forward is fine). Decline the site (keep the original
+    // instruction) instead of emitting the crashing redirect; in-place and
+    // near-sled patches are unaffected. TODO: patch via an s_getpc/s_setpc
+    // backward branch once SGPR-liveness can supply the scratch registers.
+    log() << "hotswap: far trampoline at 0x" << utohexstr(InstOffset)
+          << " declined (backward s_add_pc_i64 unreliable on gfx1250 A0, "
+          << "HSV-009); site left unpatched\n";
+    return false;
+  }
+  {
     // Reserve the short branch-back slot; fixupTrampolineBranches fills it in.
     T.Bytes.insert(T.Bytes.end(), MinInstSize, uint8_t{0});
   }
@@ -650,7 +651,8 @@ fixupTrampolineBranches(std::vector<Trampoline> &Trampolines, uint8_t *Text,
 
     // Long trampolines reserve a wider branch-back slot and use s_add_pc_i64
     // on both edges; short ones use s_branch. Both slots are s_nop-padded to
-    // their reserved size after the branch is written.
+    // their reserved size after the branch is written. (Long/far sites are
+    // currently declined in emitToTrampoline on gfx1250 A0 -- HSV-009.)
     const uint32_t BackReserve = T.Long ? LongBranchMaxBytes : MinInstSize;
     const uint64_t BackSlot = TP + T.Bytes.size() - BackReserve;
     const uint64_t ReturnTo = T.OriginalOffset + T.OriginalSize;

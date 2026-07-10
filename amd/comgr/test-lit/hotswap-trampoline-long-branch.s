@@ -1,10 +1,12 @@
-// COM: Test the s_add_pc_i64 long-branch trampoline path. When the appended
-// COM: trampoline pool sits farther than s_branch's +-128 KB reach from the
-// COM: patch site, both trampoline edges use s_add_pc_i64 (a PC-relative long
-// COM: branch that reaches anywhere, needs no scratch register, and does not
-// COM: touch SCC) instead of s_branch. A large .rept filler (~160 KB, non-NOP
-// COM: so it forms no usable sled) pushes the pool past s_branch's real reach
-// COM: from the tensor_load_to_lds at the top of the kernel.
+// COM: HSV-009 / PLAT-205406: on gfx1250 A0 the far trampoline's backward
+// COM: s_add_pc_i64 branch-back corrupts wave state (a GPU memory fault at
+// COM: runtime). Until a scratch-register-based long branch-back lands, a patch
+// COM: site beyond s_branch's +-128 KB reach of the appended pool is DECLINED
+// COM: (left unpatched) instead of redirected through the long branch: the
+// COM: original tensor_load_to_lds stays at the site and no s_add_pc_i64 (nor a
+// COM: relocated trampoline body) is emitted. Near sites and in-place patches
+// COM: are unaffected. A large .rept filler (~160 KB, non-NOP so it forms no
+// COM: usable sled) pushes the pool past s_branch's reach to force the far case.
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib %s -o %t.elf
 
@@ -16,19 +18,14 @@
 
 // RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
 
-// COM: Forward edge: the site is overwritten in place with an 8-byte
-// COM: s_add_pc_i64 long branch (the 12-byte tensor slot leaves room, padded
-// COM: with s_nop), NOT an s_branch.
+// COM: Declined: the site keeps its original tensor_load_to_lds (it is NOT
+// COM: overwritten with an s_add_pc_i64 forward branch), and no long-branch
+// COM: redirect or relocated trampoline body (s_pack_hh_b32_b16 mask-clear) is
+// COM: emitted anywhere.
 // DISASM-LABEL: <test_far>:
-// DISASM: s_add_pc_i64
-// DISASM-NEXT: s_nop
-// DISASM-NEXT: s_endpgm
-
-// COM: Trampoline body (appended after .text): the relocated multicast
-// COM: mask-clear + tensor_load, then an s_add_pc_i64 long branch-back.
-// DISASM: s_pack_hh_b32_b16 s4, 0, s4
 // DISASM-NEXT: tensor_load_to_lds
-// DISASM-NEXT: s_add_pc_i64
+// DISASM-NOT: s_add_pc_i64
+// DISASM-NOT: s_pack_hh_b32_b16
 
 // COM: Idempotency: rewriting the output again must be a no-op.
 // RUN: hotswap-rewrite %t.out.elf \

@@ -1,9 +1,10 @@
-// COM: WMMA-split over the s_add_pc_i64 long-branch path. WMMA-split shares
-// COM: emitToTrampoline with the other patch families, so a split site beyond
-// COM: s_branch's +-128 KB reach of the appended pool uses an s_add_pc_i64
-// COM: long branch on both edges instead of falling back. A large .rept filler
-// COM: (~160 KB, non-NOP) pushes the pool past s_branch's real reach from the
-// COM: WMMA at the top.
+// COM: HSV-009 / PLAT-205406: WMMA-split shares emitToTrampoline with the other
+// COM: patch families, so a split site beyond s_branch's +-128 KB reach of the
+// COM: appended pool takes the far path -- which on gfx1250 A0 is DECLINED
+// COM: (left unpatched) because the backward s_add_pc_i64 branch-back corrupts
+// COM: wave state at runtime. The original v_wmma_f32_16x16x128_fp8_fp8 stays at
+// COM: the site; it is neither split into two K=64 halves nor redirected. A
+// COM: large .rept filler (~160 KB, non-NOP) forces the far case.
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib %s -o %t.elf
 
@@ -15,17 +16,13 @@
 
 // RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
 
-// COM: Forward edge: the 8-byte WMMA site is overwritten in place with an
-// COM: 8-byte s_add_pc_i64 long branch (NOT an s_branch).
+// COM: Declined: the site keeps its original K=128 WMMA (it is NOT overwritten
+// COM: with an s_add_pc_i64 forward branch), and no split halves
+// COM: (v_wmma_f32_16x16x64_fp8_fp8) or long-branch redirect are emitted.
 // DISASM-LABEL: <test_wsplit_far>:
-// DISASM: s_add_pc_i64
-// DISASM-NEXT: s_endpgm
-
-// COM: Trampoline body: the two K=64 split halves, then an s_add_pc_i64
-// COM: long branch-back.
-// DISASM: v_wmma_f32_16x16x64_fp8_fp8
-// DISASM-NEXT: v_wmma_f32_16x16x64_fp8_fp8
-// DISASM-NEXT: s_add_pc_i64
+// DISASM-NEXT: v_wmma_f32_16x16x128_fp8_fp8
+// DISASM-NOT: s_add_pc_i64
+// DISASM-NOT: v_wmma_f32_16x16x64_fp8_fp8
 
 // COM: Idempotency: rewriting the output again must be a no-op.
 // RUN: hotswap-rewrite %t.out.elf \
