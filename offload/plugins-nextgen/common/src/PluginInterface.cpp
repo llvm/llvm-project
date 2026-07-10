@@ -695,6 +695,9 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     return ImageOrErr.takeError();
   DeviceImageTy *Image = *ImageOrErr;
 
+  if (identify_magic(InputTgtImage) == file_magic::bitcode)
+    Image->setIRImage(MemoryBuffer::getMemBufferCopy(InputTgtImage));
+
   // Add the image to list.
   LoadedImages.push_back(Image);
 
@@ -1151,6 +1154,15 @@ Error GenericDeviceTy::dataFill(void *TgtPtr, const void *PatternPtr,
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
   auto Err =
       dataFillImpl(TgtPtr, PatternPtr, PatternSize, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Error GenericDeviceTy::dataPrefetch(size_t Count, const void **Mems,
+                                    const size_t *Sizes, bool ToHost,
+                                    __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+  auto Err = dataPrefetchImpl(Count, Mems, Sizes, ToHost, AsyncInfoWrapper);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }

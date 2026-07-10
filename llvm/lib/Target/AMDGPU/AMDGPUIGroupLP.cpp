@@ -322,6 +322,49 @@ class PipelineSolver {
   // return the number of edges missed.
   int addEdges(SmallVectorImpl<SchedGroup> &SyncPipeline, SUnit *SU, int SGID,
                std::list<std::pair<SUnit *, SUnit *>> &AddedEdges);
+
+  /// This class is used to build the edge set implied by an
+  /// assignment of an SUnit to a SchedGroup and to compute the cost
+  /// (edges that cannot be assigned without introducing cycles) of
+  /// the assignment.
+  class EdgeSetBuilder {
+    SUnit *SU;
+    SmallVectorImpl<SchedGroup> &SyncPipeline;
+    bool IsBottomUp;
+    DenseSet<SUnit *> InitialPreds;
+    DenseSet<SUnit *> Succs;
+    bool Initialized = false;
+
+    /// Compute reachability via DFS. If ComputePreds is true, follows
+    /// predecessor edges; otherwise follows successor edges.
+    template <bool ComputePreds>
+    static void computeReachable(DenseSet<SUnit *> &Reachable, SUnit *Start);
+
+    /// Compute all nodes that can reach Start via predecessor edges, including
+    /// Start itself.
+    static void computePreds(DenseSet<SUnit *> &Preds, SUnit *Start);
+
+    /// Compute all nodes reachable from Start via successor edges, including
+    /// Start itself.
+    static void computeSuccs(DenseSet<SUnit *> &Succs, SUnit *Start);
+
+  public:
+    EdgeSetBuilder(SUnit *SU, SmallVectorImpl<SchedGroup> &SyncPipeline,
+                   bool IsBottomUp)
+        : SU(SU), SyncPipeline(SyncPipeline), IsBottomUp(IsBottomUp) {}
+
+    /// Determine the edges implied by assigning SU to the SchedGroup
+    /// with ID SGID. Edges are added to NewEdges unless they
+    /// introduce cycles.  Return the number of edges that cannot be
+    /// added.
+    int build(int SGID, std::list<std::pair<SUnit *, SUnit *>> &NewEdges);
+
+  private:
+    template <typename T>
+    int buildImpl(int SGID, const iterator_range<T> SchedGroups,
+                  std::list<std::pair<SUnit *, SUnit *>> &NewEdges);
+  };
+
   /// Link the pipeline as if \p SU was in the SchedGroup with ID \p SGID. It
   /// returns the cost (in terms of missed pipeline edges), and tracks the edges
   /// added in \p AddedEdges
@@ -469,6 +512,107 @@ int PipelineSolver::linkSUnit(
   return AddedCost;
 }
 
+template <bool ComputePreds>
+void PipelineSolver::EdgeSetBuilder::computeReachable(
+    DenseSet<SUnit *> &Reachable, SUnit *Start) {
+  if (!Reachable.insert(Start).second)
+    return;
+
+  SmallVector<SUnit *, 32> WorkList = {Start};
+
+  while (!WorkList.empty()) {
+    SUnit *Current = WorkList.pop_back_val();
+
+    for (const SDep &Dep : ComputePreds ? Current->Preds : Current->Succs) {
+      if (Reachable.insert(Dep.getSUnit()).second)
+        WorkList.push_back(Dep.getSUnit());
+    }
+  }
+}
+
+void PipelineSolver::EdgeSetBuilder::computePreds(DenseSet<SUnit *> &Preds,
+                                                  SUnit *Start) {
+  computeReachable</*ComputePreds*/ true>(Preds, Start);
+}
+
+void PipelineSolver::EdgeSetBuilder::computeSuccs(DenseSet<SUnit *> &Succs,
+                                                  SUnit *Start) {
+  computeReachable</*ComputePreds*/ false>(Succs, Start);
+}
+
+int PipelineSolver::EdgeSetBuilder::build(
+    int SGID, std::list<std::pair<SUnit *, SUnit *>> &NewEdges) {
+  if (!Initialized) {
+    computePreds(InitialPreds, SU);
+    computeSuccs(Succs, SU);
+    Initialized = true;
+  }
+
+  // See comment in addEdges concerning the iterator direction.
+  return IsBottomUp ? buildImpl(SGID, reverse(SyncPipeline), NewEdges)
+                    : buildImpl(SGID,
+                                llvm::make_range(SyncPipeline.begin(),
+                                                 SyncPipeline.end()),
+                                NewEdges);
+}
+
+template <typename T>
+int PipelineSolver::EdgeSetBuilder::buildImpl(
+    int SGID, iterator_range<T> SchedGroups,
+    std::list<std::pair<SUnit *, SUnit *>> &NewEdges) {
+
+  // Determine the edges that will be added to the DAG if SU is
+  // assigned to the SchedGroup SG with the given SGID.  It might be
+  // impossible to add some edges because they would introduce
+  // cycles. The number of such edges is counted and returned, all
+  // other edges are added to NewEdges.
+  //
+  // SU is made a successor of SUnits in SchedGroups before SG, and a
+  // predecessor of SUnits after SG.  In each case, the cycle check
+  // requires reachability information for the opposing direction.
+
+  // Nodes U that can reach SU (U ~> SU).
+  // Will be extended as new edges are added and hence cannot be
+  // shared between calls to this function, in contrast to Succs.
+  DenseSet<SUnit *> Preds = InitialPreds;
+
+  int MissedEdges = 0;
+  bool MakePred = false;
+  for (SchedGroup &SG : SchedGroups) {
+    if (SG.getSGID() == SGID) {
+      MakePred = true;
+      continue;
+    }
+
+    for (SUnit *A : SG.Collection) {
+      if (A->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
+        continue;
+
+      if (MakePred) {
+        // Try add SU -> A.
+        if (Preds.contains(A)) { // Would add cycle since A ~> SU.
+          ++MissedEdges;
+          continue;
+        }
+        // Succs does not need to be updated, since it will not be
+        // queried after entering the MakePred case.
+        NewEdges.emplace_back(SU, A);
+        continue;
+      }
+
+      // Try add A -> SU.
+      if (Succs.contains(A)) { // Would add cycle since SU ~> A.
+        ++MissedEdges;
+        continue;
+      }
+      NewEdges.emplace_back(A, SU);
+      computePreds(Preds, A);
+    }
+  }
+
+  return MissedEdges;
+}
+
 int PipelineSolver::addEdges(
     SmallVectorImpl<SchedGroup> &SyncPipeline, SUnit *SU, int SGID,
     std::list<std::pair<SUnit *, SUnit *>> &AddedEdges) {
@@ -495,12 +639,11 @@ void PipelineSolver::removeEdges(
     SUnit *Pred = PredSuccPair.first;
     SUnit *Succ = PredSuccPair.second;
 
-    auto *Match = llvm::find_if(
-        Succ->Preds, [&Pred](SDep &P) { return P.getSUnit() == Pred; });
-    if (Match != Succ->Preds.end()) {
-      assert(Match->isArtificial());
+    auto *Match = llvm::find_if(Succ->Preds, [&Pred](SDep &P) {
+      return P.getSUnit() == Pred && P.isArtificial();
+    });
+    if (Match != Succ->Preds.end())
       Succ->removePred(*Match);
-    }
   }
 }
 
@@ -628,11 +771,10 @@ bool PipelineSolver::solveExact() {
     int AddedCost = 0;
     std::list<std::pair<SUnit *, SUnit *>> AddedEdges;
     auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
-    SchedGroup *Match;
-    for (auto &SG : SyncPipeline) {
-      if (SG.getSGID() == CandSGID)
-        Match = &SG;
-    }
+    SchedGroup *Match = llvm::find_if(SyncPipeline, [CandSGID](SchedGroup &SG) {
+      return SG.getSGID() == CandSGID;
+    });
+    assert(Match);
 
     if (Match->isFull())
       continue;
@@ -707,6 +849,8 @@ void PipelineSolver::greedyFind(
   LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
                     << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
 
+  EdgeSetBuilder Builder(CurrSU.first, SyncPipeline, IsBottomUp);
+
   // Since we have added the potential SchedGroups from bottom up, but
   // traversed the DAG from top down, parse over the groups from last to
   // first. If we fail to do this for the greedy algorithm, the solution will
@@ -731,7 +875,7 @@ void PipelineSolver::greedyFind(
     }
 
     std::list<std::pair<SUnit *, SUnit *>> TempEdges;
-    int TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, TempEdges);
+    int TempCost = Builder.build(CandSGID, TempEdges);
     LLVM_DEBUG(dbgs() << "Cost of Group " << TempCost << "\n");
 
     if (!Best || TempCost < Best->Cost) {
@@ -739,8 +883,6 @@ void PipelineSolver::greedyFind(
       if (Best->Cost == 0)
         break;
     }
-
-    removeEdges(TempEdges);
   }
 
   if (Best) {
@@ -2653,36 +2795,24 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
   // allowed past the SCHED_BARRIER.
   SchedGroupMask InvertedMask = ~Mask;
 
-  // ALU implies VALU, SALU, MFMA, TRANS.
-  if ((InvertedMask & SchedGroupMask::ALU) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::VALU & ~SchedGroupMask::SALU &
-                    ~SchedGroupMask::MFMA & ~SchedGroupMask::TRANS;
-  // VALU, SALU, MFMA, TRANS implies ALU.
-  else if ((InvertedMask & SchedGroupMask::VALU) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::SALU) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::MFMA) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::TRANS) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::ALU;
+  static constexpr std::pair<SchedGroupMask, SchedGroupMask> ImpliedGroups[] = {
+      {SchedGroupMask::ALU, SchedGroupMask::VALU | SchedGroupMask::SALU |
+                                SchedGroupMask::MFMA | SchedGroupMask::TRANS},
+      {SchedGroupMask::VMEM, SchedGroupMask::VMEM_READ |
+                                 SchedGroupMask::VMEM_WRITE |
+                                 SchedGroupMask::LDSDMA},
+      {SchedGroupMask::DS, SchedGroupMask::DS_READ | SchedGroupMask::DS_WRITE |
+                               SchedGroupMask::LDSDMA},
+  };
 
-  // VMEM implies VMEM_READ, VMEM_WRITE, LDSDMA.
-  if ((InvertedMask & SchedGroupMask::VMEM) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::VMEM_READ & ~SchedGroupMask::VMEM_WRITE &
-                    ~SchedGroupMask::LDSDMA;
-  // VMEM_READ, VMEM_WRITE, LDSDMA implies VMEM.
-  else if ((InvertedMask & SchedGroupMask::VMEM_READ) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::VMEM_WRITE) ==
-               SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::LDSDMA) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::VMEM;
-
-  // DS implies DS_READ, DS_WRITE, LDSDMA.
-  if ((InvertedMask & SchedGroupMask::DS) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::DS_READ & ~SchedGroupMask::DS_WRITE &
-                    ~SchedGroupMask::LDSDMA;
-  // DS_READ, DS_WRITE implies DS.
-  else if ((InvertedMask & SchedGroupMask::DS_READ) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::DS_WRITE) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::DS;
+  for (auto [Aggregate, Members] : ImpliedGroups) {
+    // Aggregate allowed past the barrier implies all its members are too.
+    if ((InvertedMask & Aggregate) == SchedGroupMask::NONE)
+      InvertedMask &= ~Members;
+    // Any member allowed past the barrier implies the aggregate is too.
+    else if ((InvertedMask & Members) != Members)
+      InvertedMask &= ~Aggregate;
+  }
 
   LLVM_DEBUG(dbgs() << "After Inverting, SchedGroup Mask: " << (int)InvertedMask
                     << "\n");

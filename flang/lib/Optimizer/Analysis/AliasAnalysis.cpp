@@ -21,7 +21,6 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -30,6 +29,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
+#include <utility>
 
 using namespace mlir;
 
@@ -951,9 +951,14 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
 
   // TODO: limit to Fortran functions??
   // 1. Detect variables that can be accessed indirectly.
-  fir::AliasAnalysis aliasAnalysis;
+  // Reuse this AliasAnalysis instance instead of constructing a fresh one per
+  // query. getCallModRef is only reached from getModRef, and getSource/alias
+  // never call getModRef, so there is no recursion. varSrc is used only to
+  // classify var (kind/attributes); getCallModRef never inspects its
+  // scopedOrigins, so skip their (potentially expensive) collection.
   fir::AliasAnalysis::Source varSrc =
-      aliasAnalysis.getSource(var, /*getLastInstantiationPoint=*/true);
+      getSource(var, /*getLastInstantiationPoint=*/true,
+                /*collectScopedOrigins=*/false);
   // If the variable is not a user variable, we cannot safely assume that
   // Fortran semantics apply (e.g., a bare alloca/allocmem result may very well
   // be placed in an allocatable/pointer descriptor and escape).
@@ -991,8 +996,7 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   }
   // 2. Check if the variable is passed via the arguments.
   for (auto arg : call.getArgs()) {
-    if (fir::conformsWithPassByRef(arg.getType()) &&
-        !aliasAnalysis.alias(arg, var).isNo()) {
+    if (fir::conformsWithPassByRef(arg.getType()) && !alias(arg, var).isNo()) {
       // TODO: intent(in) would allow returning Ref here. This can be obtained
       // in the func.func attributes for direct calls, but the module lookup is
       // linear with the number of MLIR symbols, which would introduce a pseudo
@@ -1104,9 +1108,40 @@ static mlir::Value walkBlockArgPassThroughs(mlir::Value v) {
   return v;
 }
 
+void AliasAnalysis::enableSourceCache() { sourceCacheEnabled = true; }
+
+void AliasAnalysis::disableSourceCache() {
+  sourceCacheEnabled = false;
+  clearSourceCache();
+}
+
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                                                bool getLastInstantiationPoint,
                                                bool collectScopedOrigins) {
+  if (!sourceCacheEnabled)
+    return getSourceImpl(v, getLastInstantiationPoint, collectScopedOrigins);
+
+  // Key on the queried value and the two boolean flags. Recursive sub-queries
+  // go through this same wrapper, so the whole walk is memoized.
+  std::pair<mlir::Value, unsigned> key{v,
+                                       (getLastInstantiationPoint ? 1u : 0u) |
+                                           (collectScopedOrigins ? 2u : 0u)};
+  auto it = getSourceCache.find(key);
+  if (it != getSourceCache.end()) {
+    ++sourceCacheHits;
+    return it->second;
+  }
+
+  ++sourceCacheMisses;
+  Source source =
+      getSourceImpl(v, getLastInstantiationPoint, collectScopedOrigins);
+  getSourceCache.try_emplace(key, source);
+  return source;
+}
+
+AliasAnalysis::Source
+AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
+                             bool collectScopedOrigins) {
   // If v is a pass-through block argument (see walkBlockArgPassThroughs),
   // continue from the underlying operand so the tracking loop below has a
   // defining op to chew on. Without this, a recursive query like the one in

@@ -20,6 +20,8 @@ define amdgpu_kernel void @v_ashr_pk_i8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ;
 ; GFX1250-TRUE16-LABEL: v_ashr_pk_i8_i32:
 ; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    global_wb
+; GFX1250-TRUE16-NEXT:    v_nop
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-TRUE16-NEXT:    s_clause 0x1
 ; GFX1250-TRUE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x2c nv
@@ -35,6 +37,8 @@ define amdgpu_kernel void @v_ashr_pk_i8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ;
 ; GFX1250-FAKE16-LABEL: v_ashr_pk_i8_i32:
 ; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    global_wb
+; GFX1250-FAKE16-NEXT:    v_nop
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-FAKE16-NEXT:    s_clause 0x1
 ; GFX1250-FAKE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x2c nv
@@ -105,6 +109,8 @@ define amdgpu_kernel void @v_ashr_pk_u8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ;
 ; GFX1250-TRUE16-LABEL: v_ashr_pk_u8_i32:
 ; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    global_wb
+; GFX1250-TRUE16-NEXT:    v_nop
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-TRUE16-NEXT:    s_clause 0x1
 ; GFX1250-TRUE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x2c nv
@@ -120,6 +126,8 @@ define amdgpu_kernel void @v_ashr_pk_u8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ;
 ; GFX1250-FAKE16-LABEL: v_ashr_pk_u8_i32:
 ; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    global_wb
+; GFX1250-FAKE16-NEXT:    v_nop
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-FAKE16-NEXT:    s_clause 0x1
 ; GFX1250-FAKE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x2c nv

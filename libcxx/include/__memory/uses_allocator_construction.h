@@ -27,9 +27,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 inline constexpr bool __is_cv_std_pair = __is_pair_v<remove_cv_t<_Tp>>;
@@ -202,9 +202,7 @@ __uninitialized_construct_using_allocator(_Type* __ptr, const _Alloc& __alloc, _
       __uses_allocator_construction_args<_Type>::__apply(__alloc, std::forward<_Args>(__args)...));
 }
 
-#endif // _LIBCPP_STD_VER >= 17
-
-#if _LIBCPP_STD_VER >= 20
+#  if _LIBCPP_STD_VER >= 20
 
 template <class _Type, class _Alloc, class... _Args>
 _LIBCPP_HIDE_FROM_ABI constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, _Args&&... __args) noexcept
@@ -225,9 +223,11 @@ uninitialized_construct_using_allocator(_Type* __ptr, const _Alloc& __alloc, _Ar
   return /*--*/ std::__uninitialized_construct_using_allocator(__ptr, __alloc, std::forward<_Args>(__args)...);
 }
 
-#endif // _LIBCPP_STD_VER >= 20
+#  endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

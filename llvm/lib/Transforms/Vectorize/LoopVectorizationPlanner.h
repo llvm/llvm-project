@@ -356,9 +356,7 @@ public:
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset,
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
-    return tryInsertInstruction(
-        new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
-                          GEPNoWrapFlags::none(), {}, DL, Name));
+    return createNoWrapPtrAdd(Ptr, Offset, GEPNoWrapFlags::none(), DL, Name);
   }
 
   VPInstruction *createNoWrapPtrAdd(VPValue *Ptr, VPValue *Offset,
@@ -395,7 +393,7 @@ public:
     VPlan &Plan = *getInsertBlock()->getPlan();
     VPValue *RuntimeEC = Plan.getConstantInt(Ty, EC.getKnownMinValue());
     if (EC.isScalable()) {
-      VPValue *VScale = createNaryOp(VPInstruction::VScale, {}, Ty);
+      VPValue *VScale = createVScale(Ty);
       RuntimeEC = EC.getKnownMinValue() == 1
                       ? VScale
                       : createOverflowingOp(Instruction::Mul,
@@ -408,7 +406,7 @@ public:
   /// induction with \p Start and \p Step values, using \p Start + \p Current *
   /// \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
-                                     FPMathOperator *FPBinOp, VPIRValue *Start,
+                                     FPMathOperator *FPBinOp, VPValue *Start,
                                      VPValue *Current, VPValue *Step) {
     return tryInsertInstruction(
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step));
@@ -435,6 +433,24 @@ public:
                                   const VPIRMetadata &Metadata = {}) {
     return tryInsertInstruction(
         new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL));
+  }
+
+  /// Create a scalar call to the intrinsic \p IntrinsicID with \p Operands, and
+  /// result type \p ResultTy
+  VPInstruction *createScalarIntrinsic(Intrinsic::ID IntrinsicID,
+                                       ArrayRef<VPValue *> Operands,
+                                       Type *ResultTy, DebugLoc DL) {
+    VPlan &Plan = getPlan();
+    SmallVector<VPValue *, 2> Ops(Operands);
+    Ops.push_back(Plan.getConstantInt(8 * sizeof(IntrinsicID), IntrinsicID));
+    return tryInsertInstruction(new VPInstructionWithType(
+        VPInstruction::Intrinsic, Ops, ResultTy, {}, {}, DL));
+  }
+
+  /// Create a scalar llvm.vscale call.
+  VPInstruction *createVScale(Type *ResultTy,
+                              DebugLoc DL = DebugLoc::getUnknown()) {
+    return createScalarIntrinsic(Intrinsic::vscale, {}, ResultTy, DL);
   }
 
   VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
@@ -506,6 +522,12 @@ public:
     return tryInsertInstruction(
         new VPVectorPointerRecipe(Ptr, SourceElementTy, Stride, GEPFlags, DL));
   }
+
+  /// Create a vector pointer recipe for a consecutive memory access to \p Ptr
+  /// with element type \p SourceElementTy.
+  VPSingleDefRecipe *createConsecutiveVectorPointer(VPValue *Ptr,
+                                                    Type *SourceElementTy,
+                                                    bool Reverse, DebugLoc DL);
 
   VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
       Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
@@ -942,6 +964,14 @@ public:
   /// based on its trip count.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
+
+  /// Returns true if \p Plan requires a scalar epilogue after the vector
+  /// loop. Asserts that the VPlan decision matches the legacy cost model.
+  bool requiresScalarEpilogue(VPlan &Plan, ElementCount VF) const;
+
+  /// Returns true if \p Plan folds the tail by masking. Asserts that the
+  /// VPlan-based decision matches the legacy cost model.
+  bool hasTailFolded(const VPlan &Plan) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,

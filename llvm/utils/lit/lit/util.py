@@ -459,7 +459,7 @@ def memoize(f):
 def runCommandCached(lit_config, cmd, allow_failure, **kwargs):
     """
     Run a command with subprocess.run, with a cache global to this llvm-lit invocation
-    If allow_failure is True, lit_config.fatal will be invoked if the command fails.
+    If allow_failure is False, lit_config.fatal will be invoked if the command fails.
     All additional kwargs are passed to subprocess.run
     """
     try:
@@ -467,7 +467,7 @@ def runCommandCached(lit_config, cmd, allow_failure, **kwargs):
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, **kwargs
         )
         return result.stdout
-    except FileNotFoundError as e:
+    except (FileNotFoundError, PermissionError) as e:
         msg = f"Failed to run {cmd}: {e}"
     except subprocess.CalledProcessError as e:
         msg = f"Failed to run {cmd}\nrc:{e.returncode}\nstdout:{e.stdout}\ne.stderr{e.stderr}"
@@ -476,3 +476,28 @@ def runCommandCached(lit_config, cmd, allow_failure, **kwargs):
         lit_config.fatal(msg)
 
     return None
+
+
+def get_windows_extended_path(path: str) -> str:
+    """
+    Return *path* in Windows extended-length (``\\\\?\\``) form.
+
+    On non-Windows platforms the path is returned unchanged. On Windows,
+    the path is made absolute and given the ``\\\\?\\`` prefix so it can
+    exceed the Win32 ``MAX_PATH`` (260-character) limit. UNC paths
+    (those beginning with ``\\\\``) are converted to the ``\\\\?\\UNC\\``
+    form instead.
+
+    Args:
+        path: The filesystem path to normalize.
+
+    Returns:
+        The original path on non-Windows platforms, otherwise the
+        absolute path in extended-length form.
+    """
+    if not platform.system() == "Windows":
+        return path
+    path = os.path.abspath(path)
+    if path.startswith("\\\\"):
+        return "\\\\?\\UNC\\{0}".format(path[2:])
+    return "\\\\?\\{0}".format(path)

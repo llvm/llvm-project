@@ -353,6 +353,7 @@ void XtensaTargetLowering::LowerAsmOperandForConstraint(
 // Calling conventions
 //===----------------------------------------------------------------------===//
 
+#define GET_CALLING_CONV_IMPL
 #include "XtensaGenCallingConv.inc"
 
 static const MCPhysReg IntRegs[] = {Xtensa::A2, Xtensa::A3, Xtensa::A4,

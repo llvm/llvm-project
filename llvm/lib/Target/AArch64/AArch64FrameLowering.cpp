@@ -575,6 +575,16 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // funclets.
   if (MF.hasEHFunclets())
     return true;
+
+  // When the stack guard is mixed with the frame pointer, a dedicated FP is
+  // required so the guard value remains stable in the presence of dynamic
+  // stack allocations (e.g. _alloca on MSVCRT).
+  if (MFI.hasStackProtectorIndex()) {
+    const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+    if (Subtarget.getTargetLowering()->useStackGuardMixFP())
+      return true;
+  }
+
   // Retain behavior of always omitting the FP for leaf functions when possible.
   if (MF.getTarget().Options.DisableFramePointerElim(MF))
     return true;
@@ -2641,8 +2651,16 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       ZPRCSStackSize += SpillSize;
     else if (IsPPR)
       PPRCSStackSize += SpillSize;
-    else
-      CSStackSize += SpillSize;
+    else {
+      // A register and its super-register can both appear in SavedRegs.
+      // Only the widest register is actually spilled, so skip such
+      // sub-registers here to avoid double-counting the overlap.
+      bool SavedSuper = any_of(TRI->superregs(Reg), [&](MCPhysReg SuperReg) {
+        return SavedRegs.test(SuperReg);
+      });
+      if (!SavedSuper)
+        CSStackSize += SpillSize;
+    }
   }
 
   // Save number of saved regs, so we can easily update CSStackSize later to

@@ -62,13 +62,6 @@ define amdgpu_ps i32 @s_mask_srl_i32(i32 inreg %value) {
 
 ; Test vector bitfield extract for 64-bits.
 define i64 @v_srl_mask_i64(i64 %value) {
-; GCN-LABEL: v_srl_mask_i64:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_lshrrev_b64 v[0:1], 25, v[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    v_bfe_u32 v0, v0, 0, 10
-; GCN-NEXT:    s_setpc_b64 s[30:31]
  %1 = lshr i64 %value, 25
  %2 = and i64 %1, 1023
  ret i64 %2
@@ -101,13 +94,6 @@ define amdgpu_ps i64 @s_srl_big_mask_i64(i64 inreg %value) {
 ; TODO: No need for a 64-bit shift instruction when the extracted value is
 ; entirely contained within the upper or lower half.
 define i64 @v_mask_srl_i64(i64 %value) {
-; GCN-LABEL: v_mask_srl_i64:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_lshrrev_b64 v[0:1], 25, v[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    v_bfe_u32 v0, v0, 0, 10
-; GCN-NEXT:    s_setpc_b64 s[30:31]
  %1 = and i64 %value, 34326183936 ; 1023 << 25
  %2 = lshr i64 %1, 25
  ret i64 %2

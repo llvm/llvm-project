@@ -196,9 +196,8 @@ def compiler_wrapper(function):
         function(result, call)
     except:
         logging.exception("Compiler wrapper failed complete.")
-    finally:
-        # Always return the real compiler exit code.
-        return result
+    # Always return the real compiler exit code.
+    return result
 
 
 def wrapper_environment(args):

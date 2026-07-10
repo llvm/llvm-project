@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Instructions.h"
@@ -29,6 +30,13 @@ using namespace llvm::object;
 
 /// Pair of file index and line number representing a source location.
 typedef std::pair<uint16_t, size_t> SourceLocation;
+/// Pair of subroutine name and variable name representing a local variable.
+typedef std::pair<std::string, std::string> BitcodeVarKey;
+/// Pair of file name and line number representing a source location.
+typedef std::pair<StringRef, uint32_t> BitcodeSourceLocation;
+/// Maps local variables found in the bitcode to a set of source locations.
+typedef std::map<BitcodeVarKey, std::optional<DenseSet<BitcodeSourceLocation>>>
+    BitcodeLineMap;
 
 /// Adds source locations to the line set that correspond to an address range.
 static void addLines(const DWARFDebugLine::LineTable *LineTable,
@@ -48,14 +56,14 @@ static void addLines(const DWARFDebugLine::LineTable *LineTable,
   }
 }
 
-// Converts the file index of each line in the set to use our own internal
-// file index. This is required for a reliable comparison as the DWARF index may
-// differ across compilations.
+/// Converts the file index of each line in the set to use our own internal
+/// file index. This is required for a reliable comparison as the DWARF index
+/// may differ across compilations.
 static DenseSet<SourceLocation>
 convertFileIndices(DenseSet<SourceLocation> Lines,
                    const DWARFDebugLine::LineTable *const LineTable,
                    DenseMap<uint16_t, uint16_t> &FileIndexMap,
-                   StringMap<uint16_t> &FileNameMap) {
+                   StringMap<std::optional<uint16_t>> &FileNameMap) {
   DenseSet<SourceLocation> ResultLines;
   for (const auto &L : Lines) {
     uint16_t Index;
@@ -70,8 +78,8 @@ convertFileIndices(DenseSet<SourceLocation> Lines,
       assert(ValidIndex && "File index was not valid for its own line table");
 
       auto NameIt = FileNameMap.find(Name);
-      if (NameIt != FileNameMap.end()) {
-        Index = NameIt->second;
+      if (NameIt != FileNameMap.end() && NameIt->second) {
+        Index = *NameIt->second;
       } else {
         Index = FileNameMap.size();
         FileNameMap.insert({Name, Index});
@@ -93,7 +101,8 @@ static DenseSet<SourceLocation>
 computeVariableCoverage(DWARFDie VariableDIE,
                         const DWARFDebugLine::LineTable *const LineTable,
                         DenseMap<uint16_t, uint16_t> &FileIndexMap,
-                        StringMap<uint16_t> &FileNameMap) {
+                        StringMap<std::optional<uint16_t>> &FileNameMap,
+                        BitcodeLineMap::value_type *DefinedLines) {
   // The optionals below will be empty if no address ranges were found, and
   // present (but containing an empty set) if ranges were found but contained no
   // source locations, in order to distinguish the two cases.
@@ -132,11 +141,46 @@ computeVariableCoverage(DWARFDie VariableDIE,
   else if (ParentLines)
     set_intersect(*Lines, *ParentLines);
 
-  if (!Lines)
-    return {};
+  auto ResultLines =
+      convertFileIndices(Lines.value_or(DenseSet<SourceLocation>()), LineTable,
+                         FileIndexMap, FileNameMap);
 
-  return convertFileIndices(Lines.value_or(DenseSet<SourceLocation>()),
-                            LineTable, FileIndexMap, FileNameMap);
+  if (DefinedLines) {
+    // Remove any lines where the variable does not have a defined value.
+    auto &DL = DefinedLines->second;
+    if (DL) {
+      DenseSet<SourceLocation> IndexLines;
+      for (const auto &L : *DL) {
+        auto NameIt = FileNameMap.find(L.first);
+        if (NameIt != FileNameMap.end()) {
+          if (NameIt->second)
+            IndexLines.insert({*NameIt->second, L.second});
+        } else {
+          // LineTable::getFileNameByIndex can return absolute paths even when
+          // relative paths are requested, so search for keys that end with this
+          // path as well.
+          for (const auto &NameEntry : FileNameMap) {
+            auto Name = NameEntry.first();
+            if (Name.find(L.first, Name.size() - L.first.size()) !=
+                std::string_view::npos) {
+              FileNameMap.insert({L.first, NameEntry.second});
+              IndexLines.insert({*NameEntry.second, L.second});
+            }
+          }
+          if (FileNameMap.find(L.first) == FileNameMap.end()) {
+            assert(0 && "Files found in bitcode but not in DWARF");
+            FileNameMap.insert({L.first, std::nullopt});
+          }
+        }
+      }
+      if (!Lines)
+        assert(0 && "Source lines found in bitcode but not in DWARF");
+      else
+        set_intersect(ResultLines, IndexLines);
+    }
+  }
+
+  return ResultLines;
 }
 
 /// Adds source locations to the line set that are within an inlined subroutine.
@@ -163,7 +207,7 @@ static DenseSet<SourceLocation>
 computeSubroutineCoverage(DWARFDie SubroutineDIE,
                           const DWARFDebugLine::LineTable *const LineTable,
                           DenseMap<uint16_t, uint16_t> &FileIndexMap,
-                          StringMap<uint16_t> &FileNameMap) {
+                          StringMap<std::optional<uint16_t>> &FileNameMap) {
   auto Ranges = SubroutineDIE.getAddressRanges();
   DenseSet<SourceLocation> Lines;
   if (Ranges) {
@@ -193,6 +237,147 @@ static const SmallVector<DWARFDie> getParentSubroutines(DWARFDie DIE) {
       Parents.push_back(Parent);
   } while ((Parent = Parent.getParent()));
   return Parents;
+}
+
+static bool isInScope(MDNode *Scope, const DebugLoc &Loc) {
+  MDNode *Parent = Loc.getScope();
+  while (Parent != Scope) {
+    auto *S = dyn_cast_if_present<DIScope>(Parent);
+    if (!S)
+      return false;
+    Parent = S->getScope();
+  }
+  return true;
+}
+
+/// Determines whether an instruction stores to a location. For the purposes of
+/// this analysis, we consider any call-like instruction with the location as an
+/// argument to be a store to it.
+static bool isStoreToLocation(const DataLayout &DL, Instruction &I,
+                              Value *Loc) {
+  std::optional<at::AssignmentInfo> Info;
+  if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
+    if (SI->getPointerOperand() == Loc)
+      return true;
+    Info = at::getAssignmentInfo(DL, SI);
+  } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&I)) {
+    if (MI->getDest() == Loc)
+      return true;
+    Info = at::getAssignmentInfo(DL, MI);
+  } else if (CallBase *CI = dyn_cast<CallBase>(&I)) {
+    return CI->hasArgument(Loc);
+  }
+  return Info && Info->Base == Loc;
+}
+
+typedef SmallDenseMap<BasicBlock *, Instruction *, 8> VarDefinitionMap;
+
+struct VarState {
+  DbgVariableRecord &DVR;
+  VarDefinitionMap Definitions;
+};
+
+/// Adds source locations to the line set for instructions in a basic block,
+/// starting with a specific instruction.
+static void addModuleLines(Instruction *I, VarState &Var,
+                           DenseSet<std::pair<StringRef, uint32_t>> &Lines) {
+  auto *VarScope = Var.DVR.getVariable()->getScope();
+  do {
+    auto &Loc = I->getDebugLoc();
+    DIScope *Scope;
+    if (Loc && isInScope(VarScope, Loc) && Loc.getLine() &&
+        (Scope = dyn_cast_if_present<DIScope>(Loc.getScope()))) {
+      Lines.insert({Scope->getFilename(), Loc.getLine()});
+    }
+  } while ((I = I->getNextNode()));
+}
+
+/// Computes the defined lines of all variables in an IR module.
+static BitcodeLineMap processModule(Module *Mod) {
+  BitcodeLineMap Result;
+  std::vector<VarState> Vars;
+  for (auto &F : Mod->functions()) {
+    Vars.clear();
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+          if (DVR.isKillLocation()) {
+            assert(0 && "Variable in bitcode has been optimized out");
+            continue;
+          }
+          if (DVR.isDbgDeclare()) {
+            // For #dbg_declare, don't treat the variable as live until we find
+            // a store to it.
+            Vars.push_back(VarState{DVR, VarDefinitionMap()});
+          } else if (DVR.isDbgValue()) {
+            // For #dbg_value, the variable is live immediately from this point.
+            if (DVR.getDebugLoc().getInlinedAt() != nullptr) {
+              assert(0 && "Variable in bitcode has been inlined");
+              continue;
+            }
+            auto Var = find_if(Vars, [&](auto &Var) {
+              return Var.DVR.getVariable() == DVR.getVariable();
+            });
+            if (Var != Vars.end())
+              // If a basic block contains multiple stores to a variable, use
+              // the earliest one by allowing the insertion to silently fail if
+              // the basic block is already in the map.
+              Var->Definitions.insert({&BB, &I});
+            else
+              Vars.push_back(VarState{DVR, {{&BB, &I}}});
+          }
+        }
+      }
+    }
+
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        for (auto &Var : Vars) {
+          if (isStoreToLocation(Mod->getDataLayout(), I, Var.DVR.getValue())) {
+            // The variable is live from the instruction after the store. As
+            // above, the earliest store in this basic block will be used.
+            Var.Definitions.insert({&BB, I.getNextNode()});
+          }
+        }
+      }
+    }
+
+    for (auto &Var : Vars) {
+      SmallPtrSet<BasicBlock *, 8> Visited;
+      DenseSet<std::pair<StringRef, uint32_t>> Lines;
+
+      // Visit all basic blocks that are reachable from the entry block without
+      // going through a block that stores to the variable.
+      SmallVector<BasicBlock *> BlocksToVisit{&F.getEntryBlock()};
+      while (!BlocksToVisit.empty()) {
+        BasicBlock *BB = BlocksToVisit.pop_back_val();
+        if (!Visited.insert(BB).second)
+          continue;
+
+        auto I = Var.Definitions.find(BB);
+        if (I != Var.Definitions.end()) {
+          // Block contains a definition: add all lines after it to the set
+          if (I->second != nullptr)
+            addModuleLines(I->second, Var, Lines);
+        } else {
+          // Block does not contain a definition: visit its successors
+          auto S = successors(BB);
+          BlocksToVisit.append(S.begin(), S.end());
+        }
+      }
+
+      // All unvisited basic blocks must only be reachable by going through a
+      // block that stores to the variable, so add lines to the set for all of
+      // their instructions.
+      for (auto &BB : F)
+        if (!Visited.count(&BB))
+          addModuleLines(&*BB.begin(), Var, Lines);
+
+      BitcodeVarKey Key(F.getName(), Var.DVR.getVariable()->getName());
+      Result.emplace(Key, Lines);
+    }
+  }
+  return Result;
 }
 
 struct VarKey {
@@ -295,9 +480,21 @@ static void displayVariableCoverage(const VarKey &Key, const VarCoverage &Var,
 bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
                                      ObjectFile *BaselineObj,
                                      DWARFContext *BaselineCtx,
+                                     StringRef BitcodeFile,
                                      bool CombineInstances, raw_ostream &OS) {
+  BitcodeLineMap LM;
+  LLVMContext Context;
+  if (!BitcodeFile.empty()) {
+    SMDiagnostic Err;
+    std::unique_ptr<Module> Mod = parseIRFile(BitcodeFile, Err, Context);
+    if (!Err.getMessage().empty())
+      Err.print("llvm-dwarfdump", OS);
+    else
+      LM = processModule(Mod.get());
+  }
+
   BaselineVarMap BaselineVars;
-  StringMap<uint16_t> FileNameMap;
+  StringMap<std::optional<uint16_t>> FileNameMap;
 
   if (BaselineCtx) {
     for (const auto &U : BaselineCtx->info_section_units()) {
@@ -317,8 +514,10 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
         if (!Key)
           continue;
 
-        auto Cov =
-            computeVariableCoverage(VariableDIE, LT, FileIndexMap, FileNameMap);
+        const auto DefinedLines = LM.find({Key->SubprogramName, Key->Name});
+        auto Cov = computeVariableCoverage(
+            VariableDIE, LT, FileIndexMap, FileNameMap,
+            DefinedLines != LM.end() ? &*DefinedLines : nullptr);
         const auto SubroutineCov = computeSubroutineCoverage(
             SubroutineDIE, LT, FileIndexMap, FileNameMap);
         set_intersect(Cov, SubroutineCov);
@@ -349,8 +548,10 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
       if (!Key)
         continue;
 
-      auto Cov =
-          computeVariableCoverage(VariableDIE, LT, FileIndexMap, FileNameMap);
+      const auto DefinedLines = LM.find({Key->SubprogramName, Key->Name});
+      auto Cov = computeVariableCoverage(
+          VariableDIE, LT, FileIndexMap, FileNameMap,
+          DefinedLines != LM.end() ? &*DefinedLines : nullptr);
       const auto SubroutineCov = computeSubroutineCoverage(
           SubroutineDIE, LT, FileIndexMap, FileNameMap);
       set_intersect(Cov, SubroutineCov);
