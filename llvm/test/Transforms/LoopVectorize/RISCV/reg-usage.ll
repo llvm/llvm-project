@@ -134,27 +134,27 @@ define void @red(ptr %base.0, ptr %base.1, i64 %end) {
 ; CHECK-SCALAR-LABEL: red
 ; CHECK-SCALAR:      LV(REG): VF = 1
 ; CHECK-SCALAR-NEXT: LV(REG): Found max usage: 1 item
-; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 7 registers
 ; CHECK-LMUL1-LABEL: 'red'
 ; CHECK-LMUL1:       LV(REG): VF = vscale x 1
 ; CHECK-LMUL1-NEXT:  LV(REG): Found max usage: 2 item
-; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 4 registers
-; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 9 registers
+; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 6 registers
 ; CHECK-LMUL2-LABEL: 'red'
 ; CHECK-LMUL2:       LV(REG): VF = vscale x 2
 ; CHECK-LMUL2-NEXT:  LV(REG): Found max usage: 2 item
-; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 4 registers
-; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 18 registers
+; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 12 registers
 ; CHECK-LMUL4-LABEL: 'red'
 ; CHECK-LMUL4:       LV(REG): VF = vscale x 4
 ; CHECK-LMUL4-NEXT:  LV(REG): Found max usage: 2 item
-; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 4 registers
-; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 36 registers
+; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 24 registers
 ; CHECK-LMUL8-LABEL: 'red'
 ; CHECK-LMUL8:       LV(REG): VF = vscale x 8
 ; CHECK-LMUL8-NEXT:  LV(REG): Found max usage: 2 item
-; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 4 registers
-; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 72 registers
+; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 48 registers
 entry:
   br label %loop.body
 
