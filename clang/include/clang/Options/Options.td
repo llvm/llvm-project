@@ -6010,8 +6010,6 @@ def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Gr
 defm cumode : SimpleMFlag<"cumode",
   "Specify CU wavefront", "Specify WGP wavefront",
   " execution mode (AMDGPU only)", m_amdgpu_Features_Group>;
-defm sram_ecc_legacy : SimpleMFlag<"sram-ecc", "", "",
-  "Legacy option to specify SRAM ECC mode (AMDGPU only)">;
 defm tgsplit : SimpleMFlag<"tgsplit", "Enable", "Disable",
   " threadgroup split execution mode (AMDGPU only)", m_amdgpu_Features_Group>;
 defm xnack : SimpleMFlag<"xnack", "Enable", "Disable",

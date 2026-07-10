@@ -679,13 +679,6 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                    options::OPT_mno_wavefrontsize64, false))
     Features.push_back("+wavefrontsize64");
 
-  // TODO: Remove during upstreaming target id.
-  if (Args.getLastArg(options::OPT_msram_ecc_legacy)) {
-    Features.push_back("+sramecc");
-  }
-  if (Args.getLastArg(options::OPT_mno_sram_ecc_legacy)) {
-    Features.push_back("-sramecc");
-  }
   if (Args.hasFlag(options::OPT_mamdgpu_precise_memory_op,
                    options::OPT_mno_amdgpu_precise_memory_op, false))
     Features.push_back("+precise-memory");
