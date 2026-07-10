@@ -4661,8 +4661,7 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
         "atomicrmw instructions cannot be unordered.", &RMWI);
   auto Op = RMWI.getOperation();
   Type *ElTy = RMWI.getOperand(1)->getType();
-  Check(!ElTy->isScalableTy(), "atomicrmw operand may not be scalable",
-        &RMWI);
+  Check(!ElTy->isScalableTy(), "atomicrmw operand may not be scalable", &RMWI);
   if (RMWI.isElementwise()) {
     auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
     Check(VecTy, "atomicrmw elementwise operand must have fixed vector type!",
