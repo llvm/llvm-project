@@ -100,6 +100,10 @@ infrastructure are described first, followed by tool-specific sections.
   `-std=cXX-or-earlier` values, mirroring the existing `-std=cXX-or-later`.
   New construct expands to the given standard and every earlier one.
 
+- Added a new {program}`clang-tidy` command line option `-export-sarif=<file>`
+  in which clang-tidy diagnostics are exported in the `SARIF https://sarifweb.azurewebsites.net/`
+  format.
+
 #### New checks
 
 - New {doc}`llvm-invalid-regex-pattern

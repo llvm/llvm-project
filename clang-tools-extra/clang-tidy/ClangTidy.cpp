@@ -24,10 +24,12 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/Sarif.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/MultiplexConsumer.h"
+#include "clang/Frontend/SARIFDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -36,6 +38,7 @@
 #include "clang/Tooling/DiagnosticsYaml.h" // IWYU pragma: keep
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Process.h"
 #include <memory>
 #include <utility>
@@ -101,11 +104,18 @@ private:
 class ErrorReporter {
 public:
   ErrorReporter(ClangTidyContext &Context, FixBehaviour ApplyFixes,
-                llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS)
+                llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                llvm::raw_ostream *SarifOS = nullptr)
       : Files(FileSystemOptions(), std::move(BaseFS)),
         DiagPrinter(new TextDiagnosticPrinter(llvm::outs(), DiagOpts)),
         Diags(DiagnosticIDs::create(), DiagOpts, DiagPrinter),
-        SourceMgr(Diags, Files), Context(Context), ApplyFixes(ApplyFixes) {
+        SourceMgr(Diags, Files), Context(Context), ApplyFixes(ApplyFixes),
+        SarifOS(SarifOS) {
+    if (SarifOS) {
+      SarifWriter.emplace(SourceMgr);
+      SarifWriter->createRun("clang-tidy", "clang-tidy");
+    }
+
     DiagOpts.setShowColors(Context.getOptions().UseColor.value_or(
                                llvm::sys::Process::StandardOutHasColors())
                                ? ShowColorsKind::On
@@ -195,6 +205,97 @@ public:
     }
     for (const auto &Note : Error.Notes)
       reportNote(Note);
+
+    if (SarifWriter)
+      exportSarifResult(Error, Loc);
+  }
+
+  SmallVector<ThreadFlow, 8> createThreadFlows(const ClangTidyError &Error) {
+    SmallVector<ThreadFlow, 8> Flows;
+    if (!StringRef(Error.DiagnosticName).starts_with("clang-analyzer-"))
+      return Flows;
+
+    Flows.reserve(Error.Notes.size());
+    for (const tooling::DiagnosticMessage &Note : Error.Notes) {
+      tooling::FileByteRange FBR;
+      if (Note.Ranges.empty()) {
+        FBR.FilePath = Note.FilePath;
+        FBR.FileOffset = Note.FileOffset;
+        FBR.Length = 1;
+      } else {
+        FBR = Note.Ranges.front();
+      }
+      const CharSourceRange Range = getRange(FBR);
+      Flows.push_back(
+          ThreadFlow::create().setRange(Range).setMessage(Note.Message));
+    }
+    return Flows;
+  }
+
+  static std::string buildClangTidyHelpURI(StringRef Name) {
+    const auto [Module, Check] = Name.starts_with("clang-analyzer-")
+                                     ? Name.rsplit('-')
+                                     : Name.split('-');
+    return llvm::formatv(
+        "https://clang.llvm.org/extra/clang-tidy/checks/{0}/{1}.html",
+        Module, Check);
+  }
+
+  void exportSarifResult(const ClangTidyError &Error,
+                         const SourceLocation Loc) {
+    assert(SarifWriter &&
+           "SarifWriter must be initialized to export SARIF results");
+
+    const std::pair<llvm::StringMap<size_t>::iterator, bool> RuleIndexEntry =
+        SarifRuleIdx.try_emplace(Error.DiagnosticName, 0);
+    llvm::StringMap<size_t>::iterator RuleIndexEntryIt = RuleIndexEntry.first;
+    bool Inserted = RuleIndexEntry.second;
+    size_t &RuleIndex = RuleIndexEntryIt->second;
+
+    const DiagnosticsEngine::Level EffectiveLevel =
+        Error.IsWarningAsError
+            ? DiagnosticsEngine::Error
+            : static_cast<DiagnosticsEngine::Level>(Error.DiagLevel);
+
+    if (Inserted) {
+      const StringRef Name = Error.DiagnosticName;
+      SarifRule Rule =
+          SarifRule::create().setRuleId(Name).setName(Name).setDescription(
+              Error.Message.Message);
+
+      if (!Name.starts_with("clang-diagnostic"))
+        Rule = Rule.setHelpURI(buildClangTidyHelpURI(Name));
+
+      Rule = addDiagnosticLevelToRule(Rule, EffectiveLevel);
+      RuleIndex = SarifWriter->createRule(Rule);
+    }
+
+    SarifResult Result =
+        SarifResult::create(RuleIndex)
+            .setDiagnosticMessage(Error.Message.Message)
+            .setDiagnosticLevel(getSarifResultLevel(EffectiveLevel))
+            .setThreadFlows(createThreadFlows(Error))
+            .addLocations(getResultRanges(Error, Loc));
+
+    SarifWriter->appendResult(Result);
+  }
+
+  SmallVector<CharSourceRange, 4> getResultRanges(const ClangTidyError &Error,
+                                                  SourceLocation Loc) {
+    SmallVector<CharSourceRange, 4> Ranges;
+    Ranges.reserve(Error.Message.Ranges.size());
+    for (const FileByteRange &FBR : Error.Message.Ranges)
+      Ranges.push_back(getRange(FBR));
+
+    if (Ranges.empty() && Loc.isValid()) {
+      // Some Clang-Tidy diagnostics are issued with a single location (not a
+      // range). For these, we create a range of length 1 at the diagnostic
+      // location. As, SARIF results require a character range for each
+      // location.
+      Ranges.push_back(
+          CharSourceRange::getCharRange(Loc, Loc.getLocWithOffset(1)));
+    }
+    return Ranges;
   }
 
   void finish() {
@@ -254,6 +355,8 @@ public:
       if (OriginalCWD)
         VFS.setCurrentWorkingDirectory(*OriginalCWD);
     }
+    if (SarifWriter)
+      finalizeSarif();
   }
 
   unsigned getWarningsAsErrorsCount() const { return WarningsAsErrors; }
@@ -269,6 +372,14 @@ private:
 
     const FileID ID = SourceMgr.getOrCreateFileID(*File, SrcMgr::C_User);
     return SourceMgr.getLocForStartOfFile(ID).getLocWithOffset(Offset);
+  }
+
+  void finalizeSarif() {
+    assert(SarifWriter &&
+           "SarifWriter must be initialized to export SARIF results");
+    assert(SarifOS && "SarifOS must be initialized to export SARIF results");
+    llvm::json::Value Document = SarifWriter->createDocument();
+    *SarifOS << llvm::formatv("{0:2}", Document);
   }
 
   void reportFix(const DiagnosticBuilder &Diag,
@@ -328,6 +439,13 @@ private:
   unsigned TotalFixes = 0U;
   unsigned AppliedFixes = 0U;
   unsigned WarningsAsErrors = 0U;
+  llvm::raw_ostream *SarifOS = nullptr;
+  // ExportSarifResult is called for each SARIF rule that gets created, while a
+  // SarifWriter run is created once at ErrorReporter construction.
+  std::optional<SarifDocumentWriter> SarifWriter;
+  // SarifRuleIdx is used across multiple calls of exportSarifResult as cache to
+  // avoid creating duplicate SARIF rules.
+  llvm::StringMap<size_t> SarifRuleIdx;
 };
 
 class ClangTidyASTConsumer : public MultiplexConsumer {
@@ -613,7 +731,8 @@ runClangTidy(ClangTidyContext &Context, const CompilationDatabase &Compilations,
   Context.setEnableProfiling(EnableCheckProfile);
   Context.setProfileStoragePrefix(StoreCheckProfile);
 
-  ClangTidyDiagnosticConsumer DiagConsumer(Context, nullptr, true, ApplyAnyFix);
+  ClangTidyDiagnosticConsumer DiagConsumer(Context, nullptr, true, ApplyAnyFix,
+                                           true);
   auto DiagOpts = std::make_unique<DiagnosticOptions>();
   DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
                        /*ShouldOwnClient=*/false);
@@ -668,8 +787,9 @@ runClangTidy(ClangTidyContext &Context, const CompilationDatabase &Compilations,
 void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
                   ClangTidyContext &Context, FixBehaviour Fix,
                   unsigned &WarningsAsErrorsCount,
-                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
-  ErrorReporter Reporter(Context, Fix, std::move(BaseFS));
+                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                  llvm::raw_ostream *SarifOS) {
+  ErrorReporter Reporter(Context, Fix, std::move(BaseFS), SarifOS);
   llvm::vfs::FileSystem &FileSystem =
       Reporter.getSourceManager().getFileManager().getVirtualFileSystem();
   auto InitialWorkingDir = FileSystem.getCurrentWorkingDirectory();

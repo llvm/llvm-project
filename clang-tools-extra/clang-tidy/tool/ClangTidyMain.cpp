@@ -21,6 +21,7 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h" // IWYU pragma: keep
 #include "llvm/Support/Process.h"
@@ -307,6 +308,12 @@ static cl::opt<std::string> ExportFixes("export-fixes", desc(R"(
 YAML file to store suggested fixes in. The
 stored fixes can be applied to the input source
 code with clang-apply-replacements.
+)"),
+                                        cl::value_desc("filename"),
+                                        cl::cat(ClangTidyCategory));
+
+static cl::opt<std::string> ExportSarif("export-sarif", desc(R"(
+File in which to store diagnostics in SARIF format.
 )"),
                                         cl::value_desc("filename"),
                                         cl::cat(ClangTidyCategory));
@@ -652,6 +659,18 @@ int clangTidyMain(int argc, const char **argv) {
     FileName = PathList.front();
 
   const SmallString<256> FilePath = makeAbsolute(FileName);
+
+  std::unique_ptr<llvm::raw_fd_ostream> SarifOS;
+  if (!ExportSarif.empty()) {
+    std::error_code EC;
+    SarifOS = std::make_unique<llvm::raw_fd_ostream>(ExportSarif, EC,
+                                                     llvm::sys::fs::OF_Text);
+    if (EC) {
+      llvm::errs() << "Error opening output file: " << EC.message() << '\n';
+      return 1;
+    }
+  }
+
   ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
 
   const std::vector<std::string> EnabledChecks =
@@ -754,7 +773,7 @@ int clangTidyMain(int argc, const char **argv) {
   unsigned WErrorCount = 0;
 
   handleErrors(Errors, Context, DisableFixes ? FB_NoFix : Behaviour,
-               WErrorCount, BaseFS);
+               WErrorCount, BaseFS, SarifOS.get());
 
   if (!ExportFixes.empty() && !Errors.empty()) {
     std::error_code EC;
