@@ -261,8 +261,8 @@ FFLAGS ?= $(DEBUG_INFO_FLAG) -O0
 # it adds `-gdwarf-{version}` to the CFLAGS environment variable which causes those tests
 # to fail. Strip any existing debug flags from CFLAGS and force -g0 to prevent this.
 ifeq "$(MAKE_NO_DEBUG_INFO)" "YES"
-    CFLAGS := $(filter-out -g%,$(CFLAGS)) -g0
-		FFLAGS := $(filter-out -g%,$(FFLAGS)) -g0
+  CFLAGS := $(filter-out -g%,$(CFLAGS)) -g0
+  FFLAGS := $(filter-out -g%,$(FFLAGS)) -g0
 endif
 CFLAGS += $(SYSROOT_FLAGS)
 FFLAGS += $(SYSROOT_FLAGS)
@@ -558,12 +558,12 @@ endif
 # Check if we have any Fortran source files
 #----------------------------------------------------------------------
 ifneq "$(strip $(F_SOURCES))" ""
-	ifeq "$(FC)" ""
+  ifeq "$(FC)" ""
     $(error "No Fortran compiler found for fortran tests")
   endif
   OBJECTS +=$(strip $(F_SOURCES:.f90=.o))
 	# Override the linker with the Fortran compiler, LDC is not needed 
-	# currently so it is set to any
+	# currently so it is set to any.
 	override LD := $(FC)
 	override LDC := any
 endif

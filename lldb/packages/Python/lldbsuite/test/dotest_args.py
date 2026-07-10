@@ -54,7 +54,7 @@ def create_parser():
         dest="fortran_compiler",
         default="",
         help=textwrap.dedent(
-            """The fortran compiler used to build the test programs."""
+            """The Fortran compiler used to build the test programs."""
         ),
     )
     group.add_argument(
