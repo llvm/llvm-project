@@ -93,29 +93,6 @@ define signext i32 @sad_4x8_as_i32(<4 x i8> %a, <4 x i8> %b) {
 ; RV64ZVABD-NEXT:    vmv.x.s a0, v8
 ; RV64ZVABD-NEXT:    andi a0, a0, 1023
 ; RV64ZVABD-NEXT:    ret
-; ZVABD32-LABEL: sad_4x8_as_i32:
-; ZVABD32:       # %bb.0: # %entry
-; ZVABD32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVABD32-NEXT:    vmv.s.x v10, zero
-; ZVABD32-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; ZVABD32-NEXT:    vabdu.vv v8, v8, v9
-; ZVABD32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVABD32-NEXT:    vzext.vf4 v9, v8
-; ZVABD32-NEXT:    vredsum.vs v8, v9, v10
-; ZVABD32-NEXT:    vmv.x.s a0, v8
-; ZVABD32-NEXT:    ret
-; ZVABD64-LABEL: sad_4x8_as_i32:
-; ZVABD64:       # %bb.0: # %entry
-; ZVABD64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVABD64-NEXT:    vmv.s.x v10, zero
-; ZVABD64-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; ZVABD64-NEXT:    vabdu.vv v8, v8, v9
-; ZVABD64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVABD64-NEXT:    vzext.vf4 v9, v8
-; ZVABD64-NEXT:    vredsum.vs v8, v9, v10
-; ZVABD64-NEXT:    vmv.x.s a0, v8
-; ZVABD64-NEXT:    andi a0, a0, 1023
-; ZVABD64-NEXT:    ret
 entry:
   %1 = zext <4 x i8> %a to <4 x i32>
   %3 = zext <4 x i8> %b to <4 x i32>
@@ -181,30 +158,6 @@ define signext i16 @sad_16x8_as_i16(<16 x i8> %a, <16 x i8> %b) {
 ; RV64ZVABD-NEXT:    slli a0, a0, 52
 ; RV64ZVABD-NEXT:    srli a0, a0, 52
 ; RV64ZVABD-NEXT:    ret
-; ZVABD32-LABEL: sad_16x8_as_i16:
-; ZVABD32:       # %bb.0: # %entry
-; ZVABD32-NEXT:    vsetivli zero, 16, e16, m1, ta, ma
-; ZVABD32-NEXT:    vmv.s.x v10, zero
-; ZVABD32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; ZVABD32-NEXT:    vabdu.vv v8, v8, v9
-; ZVABD32-NEXT:    vwredsumu.vs v8, v8, v10
-; ZVABD32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD32-NEXT:    vmv.x.s a0, v8
-; ZVABD32-NEXT:    slli a0, a0, 20
-; ZVABD32-NEXT:    srli a0, a0, 20
-; ZVABD32-NEXT:    ret
-; ZVABD64-LABEL: sad_16x8_as_i16:
-; ZVABD64:       # %bb.0: # %entry
-; ZVABD64-NEXT:    vsetivli zero, 16, e16, m1, ta, ma
-; ZVABD64-NEXT:    vmv.s.x v10, zero
-; ZVABD64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; ZVABD64-NEXT:    vabdu.vv v8, v8, v9
-; ZVABD64-NEXT:    vwredsumu.vs v8, v8, v10
-; ZVABD64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD64-NEXT:    vmv.x.s a0, v8
-; ZVABD64-NEXT:    slli a0, a0, 52
-; ZVABD64-NEXT:    srli a0, a0, 52
-; ZVABD64-NEXT:    ret
 entry:
   %1 = zext <16 x i8> %a to <16 x i16>
   %3 = zext <16 x i8> %b to <16 x i16>
@@ -266,28 +219,6 @@ define signext i32 @sad_16x8_as_i32(<16 x i8> %a, <16 x i8> %b) {
 ; RV64ZVABD-NEXT:    slli a0, a0, 52
 ; RV64ZVABD-NEXT:    srli a0, a0, 52
 ; RV64ZVABD-NEXT:    ret
-; ZVABD32-LABEL: sad_16x8_as_i32:
-; ZVABD32:       # %bb.0: # %entry
-; ZVABD32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; ZVABD32-NEXT:    vabdu.vv v12, v8, v9
-; ZVABD32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVABD32-NEXT:    vzext.vf4 v8, v12
-; ZVABD32-NEXT:    vmv.s.x v12, zero
-; ZVABD32-NEXT:    vredsum.vs v8, v8, v12
-; ZVABD32-NEXT:    vmv.x.s a0, v8
-; ZVABD32-NEXT:    ret
-; ZVABD64-LABEL: sad_16x8_as_i32:
-; ZVABD64:       # %bb.0: # %entry
-; ZVABD64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; ZVABD64-NEXT:    vabdu.vv v12, v8, v9
-; ZVABD64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVABD64-NEXT:    vzext.vf4 v8, v12
-; ZVABD64-NEXT:    vmv.s.x v12, zero
-; ZVABD64-NEXT:    vredsum.vs v8, v8, v12
-; ZVABD64-NEXT:    vmv.x.s a0, v8
-; ZVABD64-NEXT:    slli a0, a0, 52
-; ZVABD64-NEXT:    srli a0, a0, 52
-; ZVABD64-NEXT:    ret
 entry:
   %1 = zext <16 x i8> %a to <16 x i32>
   %3 = zext <16 x i8> %b to <16 x i32>
@@ -449,76 +380,6 @@ define signext i32 @sad_2block_16xi8_as_i32(ptr %a, ptr %b, i32 signext %stridea
 ; RV64ZVABD-NEXT:    slli a0, a0, 50
 ; RV64ZVABD-NEXT:    srli a0, a0, 50
 ; RV64ZVABD-NEXT:    ret
-; ZVABD32-LABEL: sad_2block_16xi8_as_i32:
-; ZVABD32:       # %bb.0: # %entry
-; ZVABD32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; ZVABD32-NEXT:    vle8.v v8, (a0)
-; ZVABD32-NEXT:    vle8.v v9, (a1)
-; ZVABD32-NEXT:    add a0, a0, a2
-; ZVABD32-NEXT:    add a4, a0, a2
-; ZVABD32-NEXT:    vabdu.vv v8, v8, v9
-; ZVABD32-NEXT:    vle8.v v9, (a4)
-; ZVABD32-NEXT:    add a1, a1, a3
-; ZVABD32-NEXT:    add a5, a1, a3
-; ZVABD32-NEXT:    vle8.v v10, (a5)
-; ZVABD32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD32-NEXT:    vzext.vf2 v12, v8
-; ZVABD32-NEXT:    vle8.v v8, (a0)
-; ZVABD32-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; ZVABD32-NEXT:    vabdu.vv v9, v9, v10
-; ZVABD32-NEXT:    vle8.v v10, (a1)
-; ZVABD32-NEXT:    add a2, a4, a2
-; ZVABD32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD32-NEXT:    vzext.vf2 v14, v9
-; ZVABD32-NEXT:    vle8.v v9, (a2)
-; ZVABD32-NEXT:    add a3, a5, a3
-; ZVABD32-NEXT:    vle8.v v11, (a3)
-; ZVABD32-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; ZVABD32-NEXT:    vwabdau.vv v12, v8, v10
-; ZVABD32-NEXT:    vwabdau.vv v14, v9, v11
-; ZVABD32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD32-NEXT:    vwaddu.vv v8, v14, v12
-; ZVABD32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVABD32-NEXT:    vmv.s.x v12, zero
-; ZVABD32-NEXT:    vredsum.vs v8, v8, v12
-; ZVABD32-NEXT:    vmv.x.s a0, v8
-; ZVABD32-NEXT:    ret
-; ZVABD64-LABEL: sad_2block_16xi8_as_i32:
-; ZVABD64:       # %bb.0: # %entry
-; ZVABD64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; ZVABD64-NEXT:    vle8.v v8, (a0)
-; ZVABD64-NEXT:    vle8.v v9, (a1)
-; ZVABD64-NEXT:    add a0, a0, a2
-; ZVABD64-NEXT:    add a4, a0, a2
-; ZVABD64-NEXT:    vabdu.vv v8, v8, v9
-; ZVABD64-NEXT:    vle8.v v9, (a4)
-; ZVABD64-NEXT:    add a1, a1, a3
-; ZVABD64-NEXT:    add a5, a1, a3
-; ZVABD64-NEXT:    vle8.v v10, (a5)
-; ZVABD64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD64-NEXT:    vzext.vf2 v12, v8
-; ZVABD64-NEXT:    vle8.v v8, (a0)
-; ZVABD64-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; ZVABD64-NEXT:    vabdu.vv v9, v9, v10
-; ZVABD64-NEXT:    vle8.v v10, (a1)
-; ZVABD64-NEXT:    add a2, a4, a2
-; ZVABD64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD64-NEXT:    vzext.vf2 v14, v9
-; ZVABD64-NEXT:    vle8.v v9, (a2)
-; ZVABD64-NEXT:    add a3, a5, a3
-; ZVABD64-NEXT:    vle8.v v11, (a3)
-; ZVABD64-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; ZVABD64-NEXT:    vwabdau.vv v12, v8, v10
-; ZVABD64-NEXT:    vwabdau.vv v14, v9, v11
-; ZVABD64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD64-NEXT:    vwaddu.vv v8, v14, v12
-; ZVABD64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVABD64-NEXT:    vmv.s.x v12, zero
-; ZVABD64-NEXT:    vredsum.vs v8, v8, v12
-; ZVABD64-NEXT:    vmv.x.s a0, v8
-; ZVABD64-NEXT:    slli a0, a0, 50
-; ZVABD64-NEXT:    srli a0, a0, 50
-; ZVABD64-NEXT:    ret
 entry:
   %idx.ext8 = sext i32 %strideb to i64
   %idx.ext = sext i32 %stridea to i64
@@ -714,76 +575,6 @@ define signext i32 @sadu_2block_16xi8_as_i32(ptr %a, ptr %b, i32 signext %stride
 ; RV64ZVABD-NEXT:    slli a0, a0, 50
 ; RV64ZVABD-NEXT:    srli a0, a0, 50
 ; RV64ZVABD-NEXT:    ret
-; ZVABD32-LABEL: sadu_2block_16xi8_as_i32:
-; ZVABD32:       # %bb.0: # %entry
-; ZVABD32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; ZVABD32-NEXT:    vle8.v v8, (a0)
-; ZVABD32-NEXT:    vle8.v v9, (a1)
-; ZVABD32-NEXT:    add a0, a0, a2
-; ZVABD32-NEXT:    add a4, a0, a2
-; ZVABD32-NEXT:    vabd.vv v8, v8, v9
-; ZVABD32-NEXT:    vle8.v v9, (a4)
-; ZVABD32-NEXT:    add a1, a1, a3
-; ZVABD32-NEXT:    add a5, a1, a3
-; ZVABD32-NEXT:    vle8.v v10, (a5)
-; ZVABD32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD32-NEXT:    vzext.vf2 v12, v8
-; ZVABD32-NEXT:    vle8.v v8, (a0)
-; ZVABD32-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; ZVABD32-NEXT:    vabd.vv v9, v9, v10
-; ZVABD32-NEXT:    vle8.v v10, (a1)
-; ZVABD32-NEXT:    add a2, a4, a2
-; ZVABD32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD32-NEXT:    vzext.vf2 v14, v9
-; ZVABD32-NEXT:    vle8.v v9, (a2)
-; ZVABD32-NEXT:    add a3, a5, a3
-; ZVABD32-NEXT:    vle8.v v11, (a3)
-; ZVABD32-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; ZVABD32-NEXT:    vwabda.vv v12, v8, v10
-; ZVABD32-NEXT:    vwabda.vv v14, v9, v11
-; ZVABD32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD32-NEXT:    vwaddu.vv v8, v14, v12
-; ZVABD32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVABD32-NEXT:    vmv.s.x v12, zero
-; ZVABD32-NEXT:    vredsum.vs v8, v8, v12
-; ZVABD32-NEXT:    vmv.x.s a0, v8
-; ZVABD32-NEXT:    ret
-; ZVABD64-LABEL: sadu_2block_16xi8_as_i32:
-; ZVABD64:       # %bb.0: # %entry
-; ZVABD64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; ZVABD64-NEXT:    vle8.v v8, (a0)
-; ZVABD64-NEXT:    vle8.v v9, (a1)
-; ZVABD64-NEXT:    add a0, a0, a2
-; ZVABD64-NEXT:    add a4, a0, a2
-; ZVABD64-NEXT:    vabd.vv v8, v8, v9
-; ZVABD64-NEXT:    vle8.v v9, (a4)
-; ZVABD64-NEXT:    add a1, a1, a3
-; ZVABD64-NEXT:    add a5, a1, a3
-; ZVABD64-NEXT:    vle8.v v10, (a5)
-; ZVABD64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD64-NEXT:    vzext.vf2 v12, v8
-; ZVABD64-NEXT:    vle8.v v8, (a0)
-; ZVABD64-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; ZVABD64-NEXT:    vabd.vv v9, v9, v10
-; ZVABD64-NEXT:    vle8.v v10, (a1)
-; ZVABD64-NEXT:    add a2, a4, a2
-; ZVABD64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD64-NEXT:    vzext.vf2 v14, v9
-; ZVABD64-NEXT:    vle8.v v9, (a2)
-; ZVABD64-NEXT:    add a3, a5, a3
-; ZVABD64-NEXT:    vle8.v v11, (a3)
-; ZVABD64-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; ZVABD64-NEXT:    vwabda.vv v12, v8, v10
-; ZVABD64-NEXT:    vwabda.vv v14, v9, v11
-; ZVABD64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD64-NEXT:    vwaddu.vv v8, v14, v12
-; ZVABD64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVABD64-NEXT:    vmv.s.x v12, zero
-; ZVABD64-NEXT:    vredsum.vs v8, v8, v12
-; ZVABD64-NEXT:    vmv.x.s a0, v8
-; ZVABD64-NEXT:    slli a0, a0, 50
-; ZVABD64-NEXT:    srli a0, a0, 50
-; ZVABD64-NEXT:    ret
 entry:
   %idx.ext8 = sext i32 %strideb to i64
   %idx.ext = sext i32 %stridea to i64
