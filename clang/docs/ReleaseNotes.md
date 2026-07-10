@@ -889,6 +889,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Correctly diagnose invalid non-dependent calls in dependent contexts. (#GH135694)
 - Fix initialization of GRO when GRO-return type mismatches, as part of CWG2563. (#GH98744)
 - Fix an error using an initializer list with array new for a type that is not default-constructible. (#GH81157)
+- Fixed a crash in invalid ``#module`` preprocessing directive. (#GH179220)
 - We no longer consider conversion operators when copy-initializing from the same type. This was non
   conforming and could lead to recursive constraint satisfaction checking. (#GH149443)
 - Fixed a crash in Itanium C++ name mangling for a lambda in a local class field initializer inside a constructor/destructor. (#GH176395)
