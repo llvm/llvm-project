@@ -4181,8 +4181,8 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
 
 public:
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
-                    const FPMathOperator *FPBinOp, VPIRValue *Start,
-                    VPValue *IV, VPValue *Step)
+                    const FPMathOperator *FPBinOp, VPValue *Start, VPValue *IV,
+                    VPValue *Step)
       : VPSingleDefRecipe(VPRecipeBase::VPDerivedIVSC, {Start, IV, Step},
                           Start->getScalarType(), nullptr),
         Kind(Kind), FPBinOp(FPBinOp) {}
@@ -4204,7 +4204,7 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  VPIRValue *getStartValue() const { return cast<VPIRValue>(getOperand(0)); }
+  VPValue *getStartValue() const { return getOperand(0); }
   VPValue *getIndex() const { return getOperand(1); }
   VPValue *getStepValue() const { return getOperand(2); }
   const FPMathOperator *getFPBinOp() const { return FPBinOp; }

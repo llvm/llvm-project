@@ -51,7 +51,41 @@ ORC_RT_C_EXTERN_C_BEGIN
  */
 typedef enum {
   orc_rt_log_Category_General,
+
+  /*
+   * Count is the number of defined categories; it is not itself a valid
+   * category.
+   */
+  orc_rt_log_Category_Count
 } orc_rt_log_Category;
+
+/**
+ * Logging levels are integers. Valid values are ORC_RT_LOG_LEVEL_DEBUG,
+ * ORC_RT_LOG_LEVEL_INFO, ORC_RT_LOG_LEVEL_WARNING, ORC_RT_LOG_LEVEL_ERROR, and
+ * ORC_RT_LOG_LEVEL_OFF.
+ */
+typedef int orc_rt_log_Level;
+
+/**
+ * Returns the display name for the given category, or null if the category is
+ * unrecognized.
+ */
+const char *
+orc_rt_log_Category_getName(orc_rt_log_Category Cat) ORC_RT_C_NOTHROW;
+
+/**
+ * Returns the display name for the given log level, or null if the log level
+ * is unrecognized.
+ */
+const char *orc_rt_log_Level_getName(orc_rt_log_Level L) ORC_RT_C_NOTHROW;
+
+/**
+ * Returns the level corresponding to the given level name, or -1 if the level
+ * name is unrecognized.
+ *
+ * Comparison is case-insensitive.
+ */
+orc_rt_log_Level orc_rt_log_Level_parse(const char *Str) ORC_RT_C_NOTHROW;
 
 /**
  * Declared but never defined: referenced only in unevaluated (sizeof) contexts

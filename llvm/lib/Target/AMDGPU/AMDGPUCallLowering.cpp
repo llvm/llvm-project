@@ -36,7 +36,7 @@ static Register extendRegisterMin32(CallLowering::ValueHandler &Handler,
   if (VA.getLocVT().getSizeInBits() < 32) {
     // 16-bit types are reported as legal for 32-bit registers. We need to
     // extend and do a 32-bit copy to avoid the verifier complaining about it.
-    return Handler.MIRBuilder.buildAnyExt(LLT::scalar(32), ValVReg).getReg(0);
+    return Handler.MIRBuilder.buildAnyExt(LLT::integer(32), ValVReg).getReg(0);
   }
 
   return Handler.extendRegister(ValVReg, VA);
@@ -73,15 +73,15 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
       = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
     if (TRI->isSGPRReg(MRI, PhysReg)) {
       LLT Ty = MRI.getType(ExtReg);
-      LLT S32 = LLT::scalar(32);
-      if (Ty != S32) {
+      LLT I32 = LLT::integer(32);
+      if (Ty != I32 && Ty != LLT::float32()) {
         // FIXME: We should probably support readfirstlane intrinsics with all
         // legal 32-bit types.
         assert(Ty.getSizeInBits() == 32);
         if (Ty.isPointer())
-          ExtReg = MIRBuilder.buildPtrToInt(S32, ExtReg).getReg(0);
+          ExtReg = MIRBuilder.buildPtrToInt(I32, ExtReg).getReg(0);
         else
-          ExtReg = MIRBuilder.buildBitcast(S32, ExtReg).getReg(0);
+          ExtReg = MIRBuilder.buildBitcast(I32, ExtReg).getReg(0);
       }
 
       auto ToSGPR = MIRBuilder
@@ -123,13 +123,20 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
       // 16-bit types are reported as legal for 32-bit registers. We need to
       // do a 32-bit copy, and truncate to avoid the verifier complaining
       // about it.
-      auto Copy = MIRBuilder.buildCopy(LLT::scalar(32), PhysReg);
+      auto Copy = MIRBuilder.buildCopy(LLT::integer(32), PhysReg);
 
       // If we have signext/zeroext, it applies to the whole 32-bit register
       // before truncation.
       auto Extended =
           buildExtensionHint(VA, Copy.getReg(0), LLT(VA.getLocVT()));
-      MIRBuilder.buildTrunc(ValVReg, Extended);
+      LLT ValTy = MRI.getType(ValVReg);
+      if (ValTy.isInteger()) {
+        MIRBuilder.buildTrunc(ValVReg, Extended);
+      } else {
+        auto Trunc = MIRBuilder.buildTrunc(LLT::integer(ValTy.getSizeInBits()),
+                                           Extended);
+        MIRBuilder.buildBitcast(ValVReg, Trunc);
+      }
       return;
     }
 
@@ -149,18 +156,26 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
     // because the inreg attribute information is not preserved in MIR. We could
     // use WWM_COPY (or similar instructions) and mark it as foldable to enable
     // later optimization passes to eliminate the redundant readfirstlane.
-    auto Copy = MIRBuilder.buildCopy(LLT::scalar(32), PhysReg);
     if (VA.getLocVT().getSizeInBits() < 32) {
+      auto Copy = MIRBuilder.buildCopy(LLT::integer(32), PhysReg);
       auto ToSGPR = MIRBuilder
                         .buildIntrinsic(Intrinsic::amdgcn_readfirstlane,
                                         {MRI.getType(Copy.getReg(0))})
                         .addReg(Copy.getReg(0));
       auto Extended =
           buildExtensionHint(VA, ToSGPR.getReg(0), LLT(VA.getLocVT()));
-      MIRBuilder.buildTrunc(ValVReg, Extended);
+      LLT ValTy = MRI.getType(ValVReg);
+      if (ValTy.isInteger()) {
+        MIRBuilder.buildTrunc(ValVReg, Extended);
+      } else {
+        auto Trunc = MIRBuilder.buildTrunc(LLT::integer(ValTy.getSizeInBits()),
+                                           Extended);
+        MIRBuilder.buildBitcast(ValVReg, Trunc);
+      }
       return;
     }
 
+    auto Copy = MIRBuilder.buildCopy(MRI.getType(ValVReg), PhysReg);
     MIRBuilder.buildIntrinsic(Intrinsic::amdgcn_readfirstlane, ValVReg)
         .addReg(Copy.getReg(0));
   }
@@ -239,7 +254,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
                            ISD::ArgFlagsTy Flags) override {
     MachineFunction &MF = MIRBuilder.getMF();
     const LLT PtrTy = LLT::pointer(AMDGPUAS::PRIVATE_ADDRESS, 32);
-    const LLT S32 = LLT::scalar(32);
+    const LLT I32 = LLT::integer(32);
 
     if (IsTailCall) {
       Offset += FPDiff;
@@ -266,7 +281,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
       }
     }
 
-    auto OffsetReg = MIRBuilder.buildConstant(S32, Offset);
+    auto OffsetReg = MIRBuilder.buildConstant(I32, Offset);
 
     auto AddrReg = MIRBuilder.buildPtrAdd(PtrTy, SPReg, OffsetReg);
     MPO = MachinePointerInfo::getStack(MF, Offset);
@@ -446,7 +461,7 @@ void AMDGPUCallLowering::lowerParameterPtr(Register DstReg, MachineIRBuilder &B,
     MFI->getPreloadedReg(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
   Register KernArgSegmentVReg = MRI.getLiveInVirtReg(KernArgSegmentPtr);
 
-  auto OffsetReg = B.buildConstant(LLT::scalar(64), Offset);
+  auto OffsetReg = B.buildConstant(LLT::integer(64), Offset);
 
   B.buildPtrAdd(DstReg, KernArgSegmentVReg, OffsetReg);
 }
@@ -950,7 +965,7 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
   const ArgDescriptor *IncomingArgX = std::get<0>(WorkitemIDX);
   const ArgDescriptor *IncomingArgY = std::get<0>(WorkitemIDY);
   const ArgDescriptor *IncomingArgZ = std::get<0>(WorkitemIDZ);
-  const LLT S32 = LLT::scalar(32);
+  const LLT I32 = LLT::integer(32);
 
   const bool NeedWorkItemIDX = !Info.CB->hasFnAttr("amdgpu-no-workitem-id-x");
   const bool NeedWorkItemIDY = !Info.CB->hasFnAttr("amdgpu-no-workitem-id-y");
@@ -962,38 +977,40 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
   if (IncomingArgX && !IncomingArgX->isMasked() && CalleeArgInfo.WorkItemIDX &&
       NeedWorkItemIDX) {
     if (ST.getMaxWorkitemID(MF.getFunction(), 0) != 0) {
-      InputReg = MRI.createGenericVirtualRegister(S32);
+      InputReg = MRI.createGenericVirtualRegister(I32);
       LI->buildLoadInputValue(InputReg, MIRBuilder, IncomingArgX,
                               std::get<1>(WorkitemIDX),
                               std::get<2>(WorkitemIDX));
     } else {
-      InputReg = MIRBuilder.buildConstant(S32, 0).getReg(0);
+      InputReg = MIRBuilder.buildConstant(I32, 0).getReg(0);
     }
   }
 
   if (IncomingArgY && !IncomingArgY->isMasked() && CalleeArgInfo.WorkItemIDY &&
       NeedWorkItemIDY && ST.getMaxWorkitemID(MF.getFunction(), 1) != 0) {
-    Register Y = MRI.createGenericVirtualRegister(S32);
+    Register Y = MRI.createGenericVirtualRegister(I32);
     LI->buildLoadInputValue(Y, MIRBuilder, IncomingArgY,
                             std::get<1>(WorkitemIDY), std::get<2>(WorkitemIDY));
 
-    Y = MIRBuilder.buildShl(S32, Y, MIRBuilder.buildConstant(S32, 10)).getReg(0);
-    InputReg = InputReg ? MIRBuilder.buildOr(S32, InputReg, Y).getReg(0) : Y;
+    Y = MIRBuilder.buildShl(I32, Y, MIRBuilder.buildConstant(I32, 10))
+            .getReg(0);
+    InputReg = InputReg ? MIRBuilder.buildOr(I32, InputReg, Y).getReg(0) : Y;
   }
 
   if (IncomingArgZ && !IncomingArgZ->isMasked() && CalleeArgInfo.WorkItemIDZ &&
       NeedWorkItemIDZ && ST.getMaxWorkitemID(MF.getFunction(), 2) != 0) {
-    Register Z = MRI.createGenericVirtualRegister(S32);
+    Register Z = MRI.createGenericVirtualRegister(I32);
     LI->buildLoadInputValue(Z, MIRBuilder, IncomingArgZ,
                             std::get<1>(WorkitemIDZ), std::get<2>(WorkitemIDZ));
 
-    Z = MIRBuilder.buildShl(S32, Z, MIRBuilder.buildConstant(S32, 20)).getReg(0);
-    InputReg = InputReg ? MIRBuilder.buildOr(S32, InputReg, Z).getReg(0) : Z;
+    Z = MIRBuilder.buildShl(I32, Z, MIRBuilder.buildConstant(I32, 20))
+            .getReg(0);
+    InputReg = InputReg ? MIRBuilder.buildOr(I32, InputReg, Z).getReg(0) : Z;
   }
 
   if (!InputReg &&
       (NeedWorkItemIDX || NeedWorkItemIDY || NeedWorkItemIDZ)) {
-    InputReg = MRI.createGenericVirtualRegister(S32);
+    InputReg = MRI.createGenericVirtualRegister(I32);
     if (!IncomingArgX && !IncomingArgY && !IncomingArgZ) {
       // We're in a situation where the outgoing function requires the workitem
       // ID, but the calling function does not have it (e.g a graphics function
@@ -1007,7 +1024,7 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
         IncomingArgX ? *IncomingArgX :
         IncomingArgY ? *IncomingArgY : *IncomingArgZ, ~0u);
       LI->buildLoadInputValue(InputReg, MIRBuilder, &IncomingArg,
-                              &AMDGPU::VGPR_32RegClass, S32);
+                              &AMDGPU::VGPR_32RegClass, I32);
     }
   }
 
