@@ -11449,8 +11449,7 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
   if (LHSTy->isSveVLSBuiltinType() || RHSTy->isSveVLSBuiltinType())
     return CheckSizelessVectorOperands(LHS, RHS, Loc, IsCompAssign,
                                        ArithConvKind::Arithmetic);
-  if (!IsDiv &&
-      (LHSTy->isMatrixType() || RHSTy->isMatrixType()))
+  if (!IsDiv && (LHSTy->isMatrixType() || RHSTy->isMatrixType()))
     return CheckMatrixMultiplyOperands(LHS, RHS, Loc, IsCompAssign);
   // For division, only matrix-by-scalar is supported. Other combinations with
   // matrix types are invalid.
@@ -14081,10 +14080,11 @@ QualType Sema::CheckMatrixMultiplyOperands(ExprResult &LHS, ExprResult &RHS,
     return QualType();
 
   if (LHS.get()->getType()->isCooperativeMatrixType() ||
-    RHS.get()->getType()->isCooperativeMatrixType()) {
+      RHS.get()->getType()->isCooperativeMatrixType()) {
     auto *LHSMatType = LHS.get()->getType()->getAs<CooperativeMatrixType>();
     auto *RHSMatType = RHS.get()->getType()->getAs<CooperativeMatrixType>();
-    assert((LHSMatType || RHSMatType) && "At least one operand must be a matrix");
+    assert((LHSMatType || RHSMatType) &&
+           "At least one operand must be a matrix");
     if (LHSMatType && RHSMatType) {
       if (LHSMatType->getNumColumns() != RHSMatType->getNumRows())
         return InvalidOperands(Loc, LHS, RHS);
@@ -14095,14 +14095,14 @@ QualType Sema::CheckMatrixMultiplyOperands(ExprResult &LHS, ExprResult &RHS,
             RHS.get()->getType().getUnqualifiedType());
 
       QualType LHSELTy = LHSMatType->getElementType(),
-              RHSELTy = RHSMatType->getElementType();
+               RHSELTy = RHSMatType->getElementType();
       if (!Context.hasSameType(LHSELTy, RHSELTy))
         return InvalidOperands(Loc, LHS, RHS);
 
       return Context.getCooperativeMatrixType(
-          Context.getCommonSugaredType(LHSELTy, RHSELTy), LHSMatType->getScope(),
-          LHSMatType->getNumRows(), RHSMatType->getNumColumns(),
-          LHSMatType->getUse());
+          Context.getCommonSugaredType(LHSELTy, RHSELTy),
+          LHSMatType->getScope(), LHSMatType->getNumRows(),
+          RHSMatType->getNumColumns(), LHSMatType->getUse());
     }
   }
 
@@ -15844,17 +15844,13 @@ ExprResult Sema::CreateCoopMatBinOp(SourceLocation OpLoc,
   Args.push_back(RHSExpr);
   switch (Opc) {
   case BO_Add:
-    return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_binary_add,
-                                Args);
+    return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_binary_add, Args);
   case BO_Sub:
-    return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_binary_sub,
-                                Args);
+    return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_binary_sub, Args);
   case BO_Mul:
-    return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_binary_mul,
-                                Args);
+    return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_binary_mul, Args);
   case BO_Div:
-    return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_binary_div,
-                                Args);
+    return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_binary_div, Args);
   default:
     break;
   }
@@ -15869,8 +15865,7 @@ ExprResult Sema::CreateCoopMatScalarOp(SourceLocation OpLoc,
   Args.push_back(RHSExpr);
   switch (Opc) {
   case BO_Mul:
-    return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_scalar_mul,
-                                Args);
+    return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_scalar_mul, Args);
   default:
     break;
   }
@@ -15918,7 +15913,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
       // Check matrix types for assignment.
       if (BO_Assign == Opc) {
         if (CheckCoopMatrixTypes(LHSTy, LHSExpr->getBeginLoc(), RHSTy,
-                                RHSExpr->getBeginLoc()))
+                                 RHSExpr->getBeginLoc()))
           return ExprError();
       } else
         return CreateCoopMatBinOp(OpLoc, Opc, LHSExpr, RHSExpr);
@@ -15960,7 +15955,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
       assert(call);
       call->setType(LHSExpr->getType());
       CheckCoopMatrixLoadElementType(LHSExpr->getType(), LHSExpr->getBeginLoc(),
-                                    call);
+                                     call);
       CheckCoopMatrixMatMulOutput(call);
     }
     ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, QualType(), Opc);
