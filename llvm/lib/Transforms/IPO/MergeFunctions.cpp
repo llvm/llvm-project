@@ -270,7 +270,7 @@ private:
   /// again.
   void mergeTwoFunctions(Function *F, Function *G);
 
-  const BlockFrequencyInfo* getBFI(Function &F);
+  const BlockFrequencyInfo *getBFI(Function &F);
 
   void mergeInstrProfMetadataInto(Function *Dst, Function *Src);
 
