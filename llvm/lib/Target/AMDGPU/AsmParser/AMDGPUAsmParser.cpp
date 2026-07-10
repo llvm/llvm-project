@@ -8296,7 +8296,7 @@ bool AMDGPUAsmParser::parseDepCtr(int64_t &DepCtr, unsigned &UsedOprMask) {
     }
   }
 
-  unsigned CntValMask = PrevOprMask ^ UsedOprMask;
+  int64_t CntValMask = PrevOprMask ^ UsedOprMask;
   DepCtr = (DepCtr & ~CntValMask) | CntVal;
   return true;
 }
