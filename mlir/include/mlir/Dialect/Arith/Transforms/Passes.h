@@ -54,7 +54,8 @@ void populateEmulateUnsupportedFloatsPatterns(RewritePatternSet &patterns,
 void populateEmulateUnsupportedFloatsLegality(ConversionTarget &target,
                                               const TypeConverter &converter);
 /// Add patterns to expand Arith ceil/floor division ops.
-void populateCeilFloorDivExpandOpsPatterns(RewritePatternSet &patterns);
+void populateCeilFloorDivExpandOpsPatterns(
+    RewritePatternSet &patterns, bool enableDynamicTensorSplat = false);
 
 /// Add patterns to expand Arith bf16 patterns to lower level bitcasts/shifts.
 void populateExpandBFloat16Patterns(RewritePatternSet &patterns);

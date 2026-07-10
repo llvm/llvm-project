@@ -24,6 +24,10 @@ namespace arith {
 
 using namespace mlir;
 
+namespace {
+
+enum class DynamicTensorConstantMaterialization { Disabled, TensorSplat };
+
 /// Create an integer or index constant.
 static Value createConst(Location loc, Type type, int value,
                          PatternRewriter &rewriter) {
@@ -38,16 +42,27 @@ static Value createConst(Location loc, Type type, int value,
 /// Create an integer or index constant, using source as the dynamic shape
 /// source for ranked tensors whose splat cannot be represented as a dense
 /// attribute.
-static Value createConst(Location loc, Type type, int value,
-                         PatternRewriter &rewriter, Value source) {
+static FailureOr<Value>
+createConst(Location loc, Type type, int value, PatternRewriter &rewriter,
+            Value source,
+            DynamicTensorConstantMaterialization dynamicTensorMaterialization) {
   auto rankedTensorTy = dyn_cast<RankedTensorType>(type);
+  auto sourceTensorTy = dyn_cast<RankedTensorType>(source.getType());
   if (!rankedTensorTy || rankedTensorTy.hasStaticShape())
     return createConst(loc, type, value, rewriter);
 
+  if (!sourceTensorTy ||
+      rankedTensorTy.getShape() != sourceTensorTy.getShape() ||
+      dynamicTensorMaterialization !=
+          DynamicTensorConstantMaterialization::TensorSplat)
+    return failure();
+
+  // Dynamic shaped splats need runtime dimension operands from the source.
   Value scalar =
       createConst(loc, rankedTensorTy.getElementType(), value, rewriter);
   return tensor::SplatOp::create(rewriter, loc, scalar,
-                                 tensor::getMixedSizes(rewriter, loc, source));
+                                 tensor::getMixedSizes(rewriter, loc, source))
+      .getResult();
 }
 
 /// Create an integer constant from an APInt.
@@ -81,27 +96,42 @@ static Type cloneToShapedType(Type cloneFrom, Type cloneTo) {
   return cloneTo;
 }
 
-namespace {
-
 /// Expands CeilDivUIOp (n, m) into
 ///  n == 0 ? 0 : ((n-1) / m) + 1
 struct CeilDivUIOpConverter : public OpRewritePattern<arith::CeilDivUIOp> {
+  CeilDivUIOpConverter(
+      MLIRContext *context,
+      DynamicTensorConstantMaterialization dynamicTensorMaterialization)
+      : OpRewritePattern<arith::CeilDivUIOp>(context),
+        dynamicTensorMaterialization(dynamicTensorMaterialization) {}
+
   using Base::Base;
   LogicalResult matchAndRewrite(arith::CeilDivUIOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
     Value a = op.getLhs();
     Value b = op.getRhs();
-    Value zero = createConst(loc, a.getType(), 0, rewriter, a);
-    Value compare =
-        arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq, a, zero);
-    Value one = createConst(loc, a.getType(), 1, rewriter, a);
-    Value minusOne = arith::SubIOp::create(rewriter, loc, a, one);
+    FailureOr<Value> zero = createConst(loc, a.getType(), 0, rewriter, a,
+                                        dynamicTensorMaterialization);
+    if (failed(zero))
+      return rewriter.notifyMatchFailure(
+          op, "cannot materialize dynamically shaped tensor constants");
+    Value compare = arith::CmpIOp::create(rewriter, loc,
+                                          arith::CmpIPredicate::eq, a, *zero);
+    FailureOr<Value> one = createConst(loc, a.getType(), 1, rewriter, a,
+                                       dynamicTensorMaterialization);
+    if (failed(one))
+      return rewriter.notifyMatchFailure(
+          op, "cannot materialize dynamically shaped tensor constants");
+    Value minusOne = arith::SubIOp::create(rewriter, loc, a, *one);
     Value quotient = arith::DivUIOp::create(rewriter, loc, minusOne, b);
-    Value plusOne = arith::AddIOp::create(rewriter, loc, quotient, one);
-    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, compare, zero, plusOne);
+    Value plusOne = arith::AddIOp::create(rewriter, loc, quotient, *one);
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, compare, *zero, plusOne);
     return success();
   }
+
+private:
+  DynamicTensorConstantMaterialization dynamicTensorMaterialization;
 };
 
 /// Expands CeilDivSIOp (a, b) into
@@ -112,6 +142,12 @@ struct CeilDivUIOpConverter : public OpRewritePattern<arith::CeilDivUIOp> {
 ///   return z;
 /// }
 struct CeilDivSIOpConverter : public OpRewritePattern<arith::CeilDivSIOp> {
+  CeilDivSIOpConverter(
+      MLIRContext *context,
+      DynamicTensorConstantMaterialization dynamicTensorMaterialization)
+      : OpRewritePattern<arith::CeilDivSIOp>(context),
+        dynamicTensorMaterialization(dynamicTensorMaterialization) {}
+
   using Base::Base;
   LogicalResult matchAndRewrite(arith::CeilDivSIOp op,
                                 PatternRewriter &rewriter) const final {
@@ -120,8 +156,13 @@ struct CeilDivSIOpConverter : public OpRewritePattern<arith::CeilDivSIOp> {
     Value a = op.getLhs();
     Value b = op.getRhs();
 
-    Value zero = createConst(loc, type, 0, rewriter, a);
-    Value one = createConst(loc, type, 1, rewriter, a);
+    FailureOr<Value> zero =
+        createConst(loc, type, 0, rewriter, a, dynamicTensorMaterialization);
+    FailureOr<Value> one =
+        createConst(loc, type, 1, rewriter, a, dynamicTensorMaterialization);
+    if (failed(zero) || failed(one))
+      return rewriter.notifyMatchFailure(
+          op, "cannot materialize dynamically shaped tensor constants");
 
     Value quotient = arith::DivSIOp::create(rewriter, loc, a, b);
     Value product = arith::MulIOp::create(rewriter, loc, quotient, b);
@@ -129,21 +170,25 @@ struct CeilDivSIOpConverter : public OpRewritePattern<arith::CeilDivSIOp> {
         rewriter, loc, arith::CmpIPredicate::ne, a, product);
 
     Value aNeg = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
-                                       a, zero);
+                                       a, *zero);
     Value bNeg = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
-                                       b, zero);
+                                       b, *zero);
 
     Value signEqual = arith::CmpIOp::create(
         rewriter, loc, arith::CmpIPredicate::eq, aNeg, bNeg);
     Value cond =
         arith::AndIOp::create(rewriter, loc, notEqualDivisor, signEqual);
 
-    Value quotientPlusOne = arith::AddIOp::create(rewriter, loc, quotient, one);
+    Value quotientPlusOne =
+        arith::AddIOp::create(rewriter, loc, quotient, *one);
 
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cond, quotientPlusOne,
                                                  quotient);
     return success();
   }
+
+private:
+  DynamicTensorConstantMaterialization dynamicTensorMaterialization;
 };
 
 /// Expands FloorDivSIOp (x, y) into
@@ -154,6 +199,12 @@ struct CeilDivSIOpConverter : public OpRewritePattern<arith::CeilDivSIOp> {
 ///   return z;
 /// }
 struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
+  FloorDivSIOpConverter(
+      MLIRContext *context,
+      DynamicTensorConstantMaterialization dynamicTensorMaterialization)
+      : OpRewritePattern<arith::FloorDivSIOp>(context),
+        dynamicTensorMaterialization(dynamicTensorMaterialization) {}
+
   using Base::Base;
   LogicalResult matchAndRewrite(arith::FloorDivSIOp op,
                                 PatternRewriter &rewriter) const final {
@@ -166,26 +217,37 @@ struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
     Value product = arith::MulIOp::create(rewriter, loc, quotient, b);
     Value notEqualDivisor = arith::CmpIOp::create(
         rewriter, loc, arith::CmpIPredicate::ne, a, product);
-    Value zero = createConst(loc, type, 0, rewriter, a);
+    FailureOr<Value> zero =
+        createConst(loc, type, 0, rewriter, a, dynamicTensorMaterialization);
+    if (failed(zero))
+      return rewriter.notifyMatchFailure(
+          op, "cannot materialize dynamically shaped tensor constants");
 
     Value aNeg = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
-                                       a, zero);
+                                       a, *zero);
     Value bNeg = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
-                                       b, zero);
+                                       b, *zero);
 
     Value signOpposite = arith::CmpIOp::create(
         rewriter, loc, arith::CmpIPredicate::ne, aNeg, bNeg);
     Value cond =
         arith::AndIOp::create(rewriter, loc, notEqualDivisor, signOpposite);
 
-    Value minusOne = createConst(loc, type, -1, rewriter, a);
+    FailureOr<Value> minusOne =
+        createConst(loc, type, -1, rewriter, a, dynamicTensorMaterialization);
+    if (failed(minusOne))
+      return rewriter.notifyMatchFailure(
+          op, "cannot materialize dynamically shaped tensor constants");
     Value quotientMinusOne =
-        arith::AddIOp::create(rewriter, loc, quotient, minusOne);
+        arith::AddIOp::create(rewriter, loc, quotient, *minusOne);
 
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cond, quotientMinusOne,
                                                  quotient);
     return success();
   }
+
+private:
+  DynamicTensorConstantMaterialization dynamicTensorMaterialization;
 };
 
 template <typename OpTy, arith::CmpIPredicate pred>
@@ -921,10 +983,14 @@ struct ArithExpandOpsPass
 } // namespace
 
 void mlir::arith::populateCeilFloorDivExpandOpsPatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, bool enableDynamicTensorSplat) {
+  DynamicTensorConstantMaterialization dynamicTensorMaterialization =
+      enableDynamicTensorSplat
+          ? DynamicTensorConstantMaterialization::TensorSplat
+          : DynamicTensorConstantMaterialization::Disabled;
   patterns
       .add<CeilDivSIOpConverter, CeilDivUIOpConverter, FloorDivSIOpConverter>(
-          patterns.getContext());
+          patterns.getContext(), dynamicTensorMaterialization);
 }
 
 void mlir::arith::populateExpandBFloat16Patterns(RewritePatternSet &patterns) {
@@ -954,7 +1020,8 @@ void mlir::arith::populateExpandFlushDenormalsPatterns(
 }
 
 void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {
-  populateCeilFloorDivExpandOpsPatterns(patterns);
+  populateCeilFloorDivExpandOpsPatterns(patterns,
+                                        /*enableDynamicTensorSplat=*/true);
   populateExpandScalingExtTruncPatterns(patterns);
   // clang-format off
   patterns.add<
