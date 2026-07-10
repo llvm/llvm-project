@@ -1157,21 +1157,24 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   // trunc(u/smin(zext(a) + zext(b), MAX)) --> uadd.sat(a, b)
   if (match(Src,
             m_OneUse(m_CombineOr(
-                m_UMin(m_OneUse(m_Add(m_ZExt(m_Value(A, m_SpecificType(DestTy))),
-                                      m_ZExt(m_Value(B, m_SpecificType(DestTy))))),
-                       m_SpecificInt(APInt::getMaxValue(DestWidth))),
-                m_SMin(m_OneUse(m_Add(m_ZExt(m_Value(A, m_SpecificType(DestTy))),
-                                      m_ZExt(m_Value(B, m_SpecificType(DestTy))))),
-                       m_SpecificInt(APInt::getMaxValue(DestWidth))))))) {
+                m_UMin(
+                    m_OneUse(m_Add(m_ZExt(m_Value(A, m_SpecificType(DestTy))),
+                                   m_ZExt(m_Value(B, m_SpecificType(DestTy))))),
+                    m_SpecificInt(APInt::getMaxValue(DestWidth))),
+                m_SMin(
+                    m_OneUse(m_Add(m_ZExt(m_Value(A, m_SpecificType(DestTy))),
+                                   m_ZExt(m_Value(B, m_SpecificType(DestTy))))),
+                    m_SpecificInt(APInt::getMaxValue(DestWidth))))))) {
     return replaceInstUsesWith(
         Trunc, Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, A, B));
   }
 
   // trunc(smax(zext(a) - zext(b), 0)) --> usub.sat(a, b)
-  if (match(Src, m_OneUse(m_SMax(
-                     m_OneUse(m_Sub(m_ZExt(m_Value(A, m_SpecificType(DestTy))),
-                                    m_ZExt(m_Value(B, m_SpecificType(DestTy))))),
-                     m_Zero())))) {
+  if (match(Src,
+            m_OneUse(m_SMax(
+                m_OneUse(m_Sub(m_ZExt(m_Value(A, m_SpecificType(DestTy))),
+                               m_ZExt(m_Value(B, m_SpecificType(DestTy))))),
+                m_Zero())))) {
     return replaceInstUsesWith(
         Trunc, Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, A, B));
   }
@@ -1688,7 +1691,8 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   }
 
   // zext(sub(0, trunc(X))) -> and(sub(0, X), mask)
-  if (match(Src, m_Sub(m_Zero(), m_Trunc(m_Value(X, m_SpecificType(DestTy)))))) {
+  if (match(Src,
+            m_Sub(m_Zero(), m_Trunc(m_Value(X, m_SpecificType(DestTy)))))) {
     APInt Mask = APInt::getLowBitsSet(DestTy->getScalarSizeInBits(),
                                       SrcTy->getScalarSizeInBits());
     Value *Neg = Builder.CreateSub(ConstantInt::get(DestTy, 0), X);
@@ -1707,8 +1711,9 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   }
 
   Value *Y;
-  if (match(Src, m_OneUse(m_c_BitwiseLogic(
-                     m_NUWTrunc(m_Value(X, m_SpecificType(DestTy))), m_Value(Y))))) {
+  if (match(Src,
+            m_OneUse(m_c_BitwiseLogic(
+                m_NUWTrunc(m_Value(X, m_SpecificType(DestTy))), m_Value(Y))))) {
     Value *ZextY = Builder.CreateZExt(Y, DestTy);
     return BinaryOperator::Create(cast<BinaryOperator>(Src)->getOpcode(), X,
                                   ZextY);
@@ -1991,7 +1996,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   // TODO: Eventually this could be subsumed by EvaluateInDifferentType.
   Constant *BA = nullptr, *CA = nullptr;
   if (match(Src, m_AShr(m_Shl(m_Trunc(m_Value(A, m_SpecificType(DestTy))),
-                               m_Constant(BA)),
+                              m_Constant(BA)),
                         m_ImmConstant(CA))) &&
       BA->isElementWiseEqual(CA)) {
     Constant *WideCurrShAmt =
@@ -2047,8 +2052,9 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
                                       {CI->getLHS(), CI->getRHS()}));
 
   Value *Y;
-  if (match(Src, m_OneUse(m_c_BitwiseLogic(
-                     m_NSWTrunc(m_Value(X, m_SpecificType(DestTy))), m_Value(Y))))) {
+  if (match(Src,
+            m_OneUse(m_c_BitwiseLogic(
+                m_NSWTrunc(m_Value(X, m_SpecificType(DestTy))), m_Value(Y))))) {
     Value *SextY = Builder.CreateSExt(Y, DestTy);
     return BinaryOperator::Create(cast<BinaryOperator>(Src)->getOpcode(), X,
                                   SextY);
@@ -2351,8 +2357,9 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
     // If we are truncating a select that has an extended operand, we can
     // narrow the other operand and do the select as a narrow op.
     Value *Cond, *X, *Y;
-    if (match(Op, m_Select(m_Value(Cond), m_FPExt(m_Value(X, m_SpecificType(Ty))),
-                           m_Value(Y)))) {
+    if (match(Op,
+              m_Select(m_Value(Cond), m_FPExt(m_Value(X, m_SpecificType(Ty))),
+                       m_Value(Y)))) {
       // fptrunc (select Cond, (fpext X), Y --> select Cond, X, (fptrunc Y)
       Value *NarrowY = Builder.CreateFPTruncFMF(Y, Ty, FMF);
       Value *Sel =
@@ -2726,8 +2733,9 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
     return replaceInstUsesWith(CI, V);
 
   Value *Vec, *Scalar, *Index;
-  if (match(SrcOp, m_OneUse(m_InsertElt(m_IntToPtr(m_Value(Vec, m_SpecificType(Ty))),
-                                        m_Value(Scalar), m_Value(Index))))) {
+  if (match(SrcOp,
+            m_OneUse(m_InsertElt(m_IntToPtr(m_Value(Vec, m_SpecificType(Ty))),
+                                 m_Value(Scalar), m_Value(Index))))) {
     assert(Vec->getType()->getScalarSizeInBits() == PtrSize && "Wrong type");
     // Convert the scalar to int followed by insert to eliminate one cast:
     // p2i (ins (i2p Vec), Scalar, Index --> ins Vec, (p2i Scalar), Index
