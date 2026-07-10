@@ -264,7 +264,7 @@ private:
                        bool IsLock) const;
 
   void handleLock(const MutexDescriptor &Mutex, const CallEvent &Call,
-                  CheckerContext &C) const;
+                  CheckerContext &C, ProgramStateRef State) const;
 
   void handleUnlock(const MutexDescriptor &Mutex, const CallEvent &Call,
                     CheckerContext &C) const;
@@ -325,7 +325,7 @@ static const MemRegion *getRegion(const CallEvent &Call,
 
 void BlockInCriticalSectionChecker::handleLock(
     const MutexDescriptor &LockDescriptor, const CallEvent &Call,
-    CheckerContext &C) const {
+    CheckerContext &C, ProgramStateRef State) const {
   const MemRegion *MutexRegion =
       getRegion(Call, LockDescriptor, /*IsLock=*/true);
   if (!MutexRegion)
@@ -333,7 +333,7 @@ void BlockInCriticalSectionChecker::handleLock(
 
   const CritSectionMarker MarkToAdd{Call.getOriginExpr(), MutexRegion};
   ProgramStateRef StateWithLockEvent =
-      C.getState()->add<ActiveCritSections>(MarkToAdd);
+      State->add<ActiveCritSections>(MarkToAdd);
   C.addTransition(StateWithLockEvent, createCritSectionNote(MarkToAdd, C));
 }
 
@@ -383,7 +383,7 @@ void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
   if (std::optional<MutexDescriptor> LockDesc =
           checkDescriptorMatch(Call, C, /*IsLock=*/true)) {
     if (!std::holds_alternative<RAIIMutexDescriptor>(*LockDesc))
-      handleLock(*LockDesc, Call, C);
+      handleLock(*LockDesc, Call, C, C.getState());
     return;
   }
   if (std::optional<MutexDescriptor> UnlockDesc =
@@ -397,7 +397,16 @@ bool BlockInCriticalSectionChecker::evalCall(const CallEvent &Call,
   if (std::optional<MutexDescriptor> LockDesc =
           checkDescriptorMatch(Call, C, /*IsLock=*/true)) {
     if (std::holds_alternative<RAIIMutexDescriptor>(*LockDesc)) {
-      handleLock(*LockDesc, Call, C);
+      ProgramStateRef State = C.getState();
+      // Escape the object under construction to model the side-effects of the
+      // constructor.
+      if (const auto *Ctor = dyn_cast<AnyCXXConstructorCall>(&Call)) {
+        const MemRegion *ObjRegion = Ctor->getCXXThisVal().getAsRegion();
+        State = State->invalidateRegions(ObjRegion, C.getCFGElementRef(),
+                                         C.blockCount(), C.getStackFrame(),
+                                         /*CausesPointerEscape=*/false);
+      }
+      handleLock(*LockDesc, Call, C, State);
       return true;
     }
   }
