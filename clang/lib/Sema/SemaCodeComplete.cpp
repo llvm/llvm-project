@@ -416,6 +416,10 @@ public:
   //@}
 };
 
+// Traverse declarations of the function (in a deterministic order,
+// for consistency) to find one which has parameter names.
+// For simplicity, consider a redecl to have parameter names
+// if at least one parameter has a name.
 const FunctionDecl *BetterSignature(const FunctionDecl *Function,
                                     unsigned Start) {
   auto ParaCount = Function->getNumParams();
@@ -425,7 +429,7 @@ const FunctionDecl *BetterSignature(const FunctionDecl *Function,
     // The callers will expect to be able to use the same index from the initial
     // function on the redeclaration. While we do not expect this to happen,
     // this is a failsafe.
-    if (Redecl->getNumParams() > ParaCount)
+    if (Redecl->getNumParams() < ParaCount)
       continue;
     for (unsigned P = Start, N = Redecl->getNumParams(); P != N; ++P)
       if (Redecl->getParamDecl(P)->getIdentifier())
