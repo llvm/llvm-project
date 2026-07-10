@@ -1808,6 +1808,7 @@ static void processDoConcurrentLocalitySpecs(
 // for both DO CONCURRENT and regular do loops
 static void processDoLoopBounds(
     Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semanticsContext,
     mlir::Location currentLocation, Fortran::lower::StatementContext &stmtCtx,
     fir::FirOpBuilder &builder,
     const Fortran::parser::DoConstruct &outerDoConstruct,
@@ -1867,6 +1868,25 @@ static void processDoLoopBounds(
       const auto &name = std::get<Fortran::parser::Name>(control.t);
       privatizeIv(converter, *name.symbol, currentLocation, ivTypes, ivLocs,
                   privateOperands, ivPrivate, isDoConcurrent);
+
+      // A DO CONCURRENT index-name is a construct entity living in the
+      // construct's own (Forall-kind) scope, distinct from any like-named
+      // variable in the enclosing subprogram scope. `privatizeIv` above binds
+      // the symbol referenced by the loop control (which, inside an OpenACC
+      // compute construct, is the enclosing-scope variable). References to the
+      // index from within a *nested* explicit `!$acc loop` construct instead
+      // resolve to the construct entity, which would otherwise never be bound
+      // and trip the "lowering symbol to HLFIR" TODO. Bind that construct
+      // entity to the same privatized storage so such references resolve.
+      if (name.symbol) {
+        const Fortran::semantics::Scope &constructScope =
+            semanticsContext.FindScope(name.source);
+        auto iter = constructScope.find(name.source);
+        if (iter != constructScope.end() && &*iter->second != &*name.symbol)
+          localSymPairs.emplace_back(
+              Fortran::semantics::SymbolRef(*iter->second),
+              Fortran::semantics::SymbolRef(*name.symbol));
+      }
 
       inclusiveBounds.push_back(true);
     }
@@ -2123,11 +2143,12 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
   // this loop is lowered in an unstructured fashion, in which case bounds are
   // not represented on acc.loop and explicit control flow is used inside body.
   if (!eval.lowerAsUnstructured()) {
-    processDoLoopBounds(
-        converter, currentLocation, stmtCtx, builder, outerDoConstruct, eval,
-        lowerbounds, upperbounds, steps, privateOperands, ivPrivate, ivTypes,
-        ivLocs, inclusiveBounds, locs, loopsToProcess, reductionOperands,
-        firstprivateOperands, dataMap, localSymPairs);
+    processDoLoopBounds(converter, semanticsContext, currentLocation, stmtCtx,
+                        builder, outerDoConstruct, eval, lowerbounds,
+                        upperbounds, steps, privateOperands, ivPrivate, ivTypes,
+                        ivLocs, inclusiveBounds, locs, loopsToProcess,
+                        reductionOperands, firstprivateOperands, dataMap,
+                        localSymPairs);
   } else {
     // When the loop contains early exits, privatize induction variables, but do
     // not create acc.loop bounds. The control flow of the loop will be
