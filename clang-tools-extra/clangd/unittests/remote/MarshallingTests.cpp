@@ -455,8 +455,7 @@ TEST(RemoteMarshallingTest, CrossPlatformPathsRoundTrip) {
 
   // Simulate a Windows-built index.
   std::string RemoteIndexRoot = "C:\\remote\\project\\";
-  Marshaller ProtobufMarshaller(RemoteIndexRoot,
-                                testPath("local/project/"));
+  Marshaller ProtobufMarshaller(RemoteIndexRoot, testPath("local/project/"));
 
   clangd::Ref Ref;
   Ref.Kind = clangd::RefKind::Declaration;
