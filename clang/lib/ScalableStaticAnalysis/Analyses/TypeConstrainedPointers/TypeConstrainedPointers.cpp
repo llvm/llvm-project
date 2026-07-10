@@ -55,9 +55,6 @@ namespace {
 //      pointer to the memory block to deallocate (or a null pointer);
 //    4 the second parameter of `operator delete(void*, void*)` representing
 //      the placement pointer matching the corresponding placement `new`.
-//
-// From the `main` function:
-//    5 pointer-typed parameters of `main`.
 class TypeConstrainedPointersExtractor final : public TUSummaryExtractor {
 public:
   using TUSummaryExtractor::TUSummaryExtractor;
