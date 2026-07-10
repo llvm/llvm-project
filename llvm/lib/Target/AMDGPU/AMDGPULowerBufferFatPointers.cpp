@@ -2365,7 +2365,8 @@ PtrParts SplitPtrStructs::visitShuffleVectorInst(ShuffleVectorInst &I) {
 
   Value *V1 = I.getOperand(0);
   Value *V2 = I.getOperand(1);
-  ArrayRef<int> Mask = I.getShuffleMask();
+  // Reusing the mask operand handles constant and dynamic masks alike.
+  Value *Mask = I.getMaskOperand();
   auto [V1Rsrc, V1Off] = getPtrParts(V1);
   auto [V2Rsrc, V2Off] = getPtrParts(V2);
 

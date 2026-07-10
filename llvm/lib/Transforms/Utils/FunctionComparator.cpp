@@ -804,13 +804,20 @@ int FunctionComparator::cmpOperations(const Instruction *L,
                       cast<AtomicRMWInst>(R)->getSyncScopeID());
   }
   if (const ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(L)) {
-    ArrayRef<int> LMask = SVI->getShuffleMask();
-    ArrayRef<int> RMask = cast<ShuffleVectorInst>(R)->getShuffleMask();
-    if (int Res = cmpNumbers(LMask.size(), RMask.size()))
+    const auto *RSVI = cast<ShuffleVectorInst>(R);
+    if (int Res = cmpNumbers(SVI->isConstantMask(), RSVI->isConstantMask()))
       return Res;
-    for (size_t i = 0, e = LMask.size(); i != e; ++i) {
-      if (int Res = cmpNumbers(LMask[i], RMask[i]))
+    if (SVI->isConstantMask()) {
+      // For dynamic masks, the mask operands are compared as ordinary
+      // operands by the caller.
+      ArrayRef<int> LMask = SVI->getShuffleMask();
+      ArrayRef<int> RMask = RSVI->getShuffleMask();
+      if (int Res = cmpNumbers(LMask.size(), RMask.size()))
         return Res;
+      for (size_t i = 0, e = LMask.size(); i != e; ++i) {
+        if (int Res = cmpNumbers(LMask[i], RMask[i]))
+          return Res;
+      }
     }
   }
   if (const PHINode *PNL = dyn_cast<PHINode>(L)) {

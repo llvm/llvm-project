@@ -450,7 +450,10 @@ static void transformScalarShuffleIndiciesToVector(unsigned VecTyNumElements,
 static unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL) {
   if (VL.empty())
     return 0;
-  if (!all_of(VL, IsaPred<ShuffleVectorInst>))
+  if (!all_of(VL, [](Value *V) {
+        auto *SV = dyn_cast<ShuffleVectorInst>(V);
+        return SV && SV->isConstantMask();
+      }))
     return 0;
   auto *SV = cast<ShuffleVectorInst>(VL.front());
   unsigned SVNumElements =
@@ -6169,10 +6172,12 @@ private:
               // before reaching this code. Couple of exceptions known at the
               // moment are extracts where their second (immediate) operand is
               // not added. Since immediates do not affect scheduler behavior
-              // this is considered okay.
+              // this is considered okay. The same applies to the mask operand
+              // of shufflevectors (operand 2).
               assert(
                   In &&
-                  (isa<ExtractValueInst, ExtractElementInst, CallBase>(In) ||
+                  (isa<ExtractValueInst, ExtractElementInst, CallBase,
+                       ShuffleVectorInst>(In) ||
                    In->getNumOperands() ==
                        Bundle->getTreeEntry()->getNumOperands() ||
                    (isa<ZExtInst>(In) && Bundle->getTreeEntry()->getOpcode() ==
@@ -13815,8 +13820,12 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         Operands[0] = Ops.getVL(0);
         Operands[1] = Ops.getVL(1);
       }
+      // The mask operand of a shufflevector (operand 2) is not a vectorizable
+      // value; only build operand nodes for the two input vectors.
+      if (!S.isAltShuffle())
+        Operands.truncate(2);
       TE->setOperands(Operands);
-      for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
+      for (unsigned I : seq<unsigned>(TE->getNumOperands()))
         buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I});
       return;
     }
@@ -14389,7 +14398,7 @@ protected:
     while (auto *SV = dyn_cast<ShuffleVectorInst>(Op)) {
       // Exit if not a fixed vector type or changing size shuffle.
       auto *SVTy = dyn_cast<FixedVectorType>(SV->getType());
-      if (!SVTy)
+      if (!SVTy || !SV->isConstantMask())
         break;
       // Remember the identity or broadcast mask, if it is not a resizing
       // shuffle. If no better candidates are found, this Op and Mask will be
@@ -14541,8 +14550,10 @@ protected:
         (void)peekThroughShuffles(Op2, CombinedMask2, /*SinglePermute=*/false);
         // Check if we have 2 resizing shuffles - need to peek through operands
         // again.
-        if (auto *SV1 = dyn_cast<ShuffleVectorInst>(Op1))
-          if (auto *SV2 = dyn_cast<ShuffleVectorInst>(Op2)) {
+        if (auto *SV1 = dyn_cast<ShuffleVectorInst>(Op1);
+            SV1 && SV1->isConstantMask())
+          if (auto *SV2 = dyn_cast<ShuffleVectorInst>(Op2);
+              SV2 && SV2->isConstantMask()) {
             SmallVector<int> ExtMask1(Mask.size(), PoisonMaskElem);
             for (auto [Idx, I] : enumerate(CombinedMask1)) {
                 if (I == PoisonMaskElem)
@@ -14603,6 +14614,7 @@ protected:
           (ShuffleVectorInst::isIdentityMask(CombinedMask1, VF) ||
            (ShuffleVectorInst::isZeroEltSplatMask(CombinedMask1, VF) &&
             isa<ShuffleVectorInst>(Op1) &&
+            cast<ShuffleVectorInst>(Op1)->isConstantMask() &&
             cast<ShuffleVectorInst>(Op1)->getShuffleMask() ==
                 ArrayRef(CombinedMask1))))
         return Builder.createIdentity(Op1);
@@ -22214,7 +22226,7 @@ Value *BoUpSLP::gather(
   std::iota(Mask.begin(), Mask.end(), 0);
   Value *OriginalRoot = Root;
   if (auto *SV = dyn_cast_or_null<ShuffleVectorInst>(Root);
-      SV && isa<PoisonValue>(SV->getOperand(1)) &&
+      SV && SV->isConstantMask() && isa<PoisonValue>(SV->getOperand(1)) &&
       SV->getOperand(0)->getType() == VecTy) {
     Root = SV->getOperand(0);
     Mask.assign(SV->getShuffleMask().begin(), SV->getShuffleMask().end());
@@ -24541,7 +24553,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         setInsertPointAfterBundle(E);
         Value *Src = vectorizeOperand(E, 0);
         SmallVector<int> ThisMask(calculateShufflevectorMask(E->Scalars));
-        if (auto *SVSrc = dyn_cast<ShuffleVectorInst>(Src)) {
+        if (auto *SVSrc = dyn_cast<ShuffleVectorInst>(Src);
+            SVSrc && SVSrc->isConstantMask()) {
           SmallVector<int> NewMask(ThisMask.size());
           transform(ThisMask, NewMask.begin(), [&SVSrc](int Mask) {
             return SVSrc->getShuffleMask()[Mask];
@@ -25699,11 +25712,15 @@ void BoUpSLP::optimizeGatherSequence() {
     auto *SI2 = dyn_cast<ShuffleVectorInst>(I2);
     if (!SI1 || !SI2)
       return I1->isIdenticalTo(I2);
+    if (!SI1->isConstantMask() || !SI2->isConstantMask())
+      return SI1->isIdenticalTo(SI2);
     if (SI1->isIdenticalTo(SI2))
       return true;
-    for (int I = 0, E = SI1->getNumOperands(); I < E; ++I)
-      if (SI1->getOperand(I) != SI2->getOperand(I))
-        return false;
+    // Compare only the vector operands; the mask (operand 2) is compared
+    // value-wise below to tolerate poison-lane differences.
+    if (SI1->getOperand(0) != SI2->getOperand(0) ||
+        SI1->getOperand(1) != SI2->getOperand(1))
+      return false;
     // Check if the second instruction is more defined than the first one.
     NewMask.assign(SI2->getShuffleMask().begin(), SI2->getShuffleMask().end());
     ArrayRef<int> SM1 = SI1->getShuffleMask();

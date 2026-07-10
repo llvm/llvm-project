@@ -305,10 +305,10 @@ void CreateAndInsertInst::dump() const {
 #endif
 
 ShuffleVectorSetMask::ShuffleVectorSetMask(ShuffleVectorInst *SVI)
-    : SVI(SVI), PrevMask(SVI->getShuffleMask()) {}
+    : SVI(SVI), PrevMask(SVI->getOperand(2)) {}
 
 void ShuffleVectorSetMask::revert(Tracker &Tracker) {
-  SVI->setShuffleMask(PrevMask);
+  SVI->setOperand(2, PrevMask);
 }
 
 #ifndef NDEBUG

@@ -1726,9 +1726,10 @@ Value *NumericalStabilitySanitizer::createShadowValueWithOperandsAvailable(
                                        Insert->getOperand(2));
 
   if (auto *Shuffle = dyn_cast<ShuffleVectorInst>(&Inst))
+    // Reusing the mask operand handles constant and dynamic masks alike.
     return Builder.CreateShuffleVector(Map.getShadow(Shuffle->getOperand(0)),
                                        Map.getShadow(Shuffle->getOperand(1)),
-                                       Shuffle->getShuffleMask());
+                                       Shuffle->getMaskOperand());
   // TODO: We could make aggregate object first class citizens. For now we
   // just extend the extracted value.
   if (auto *Extract = dyn_cast<ExtractValueInst>(&Inst))

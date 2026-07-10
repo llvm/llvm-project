@@ -293,7 +293,8 @@ public:
     setType(I->getType());
 
     if (ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(I))
-      ShuffleMask = SVI->getShuffleMask().copy(A);
+      if (SVI->isConstantMask())
+        ShuffleMask = SVI->getShuffleMask().copy(A);
 
     for (auto &U : I->uses())
       op_push_back(U.getUser());

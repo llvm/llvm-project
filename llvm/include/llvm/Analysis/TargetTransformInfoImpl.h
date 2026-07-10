@@ -1630,6 +1630,17 @@ public:
       if (!Shuffle)
         return TTI::TCC_Basic; // FIXME
 
+      if (!Shuffle->isConstantMask()) {
+        // Conservative stack-expansion estimate: two vector stores plus an
+        // extract + load per result lane. Targets with native variable
+        // shuffles should override. TODO: per-target refinement.
+        auto MaskEC = cast<VectorType>(Shuffle->getMaskOperand()->getType())
+                          ->getElementCount();
+        if (MaskEC.isScalable())
+          return InstructionCost::getInvalid();
+        return 2 + 4 * MaskEC.getFixedValue();
+      }
+
       auto *VecTy = cast<VectorType>(U->getType());
       auto *VecSrcTy = cast<VectorType>(Operands[0]->getType());
       ArrayRef<int> Mask = Shuffle->getShuffleMask();

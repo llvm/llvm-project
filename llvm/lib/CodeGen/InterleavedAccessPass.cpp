@@ -309,15 +309,19 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
     }
     if (auto *BI = dyn_cast<BinaryOperator>(User)) {
       using namespace PatternMatch;
-      if (!BI->user_empty() &&
-          all_of(BI->users(), match_fn(m_Shuffle(m_Value(), m_Undef())))) {
+      if (!BI->user_empty() && all_of(BI->users(), [](const auto *U) {
+            auto *SVI = dyn_cast<ShuffleVectorInst>(U);
+            return SVI && SVI->isConstantMask() &&
+                   isa<UndefValue>(SVI->getOperand(1));
+          })) {
         for (auto *SVI : BI->users())
           BinOpShuffles.insert(cast<ShuffleVectorInst>(SVI));
         continue;
       }
     }
     auto *SVI = dyn_cast<ShuffleVectorInst>(User);
-    if (!SVI || !isa<UndefValue>(SVI->getOperand(1)))
+    if (!SVI || !SVI->isConstantMask() ||
+        !isa<UndefValue>(SVI->getOperand(1)))
       return false;
 
     Shuffles.push_back(SVI);
@@ -519,7 +523,8 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
   }
 
   auto *SVI = dyn_cast<ShuffleVectorInst>(StoredValue);
-  if (!SVI || !SVI->hasOneUse() || isa<ScalableVectorType>(SVI->getType()))
+  if (!SVI || !SVI->isConstantMask() || !SVI->hasOneUse() ||
+      isa<ScalableVectorType>(SVI->getType()))
     return false;
 
   unsigned NumStoredElements =
@@ -656,7 +661,7 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
 
   if (auto *SVI = dyn_cast<ShuffleVectorInst>(WideMask)) {
     Type *Op1Ty = SVI->getOperand(1)->getType();
-    if (!isa<FixedVectorType>(Op1Ty))
+    if (!isa<FixedVectorType>(Op1Ty) || !SVI->isConstantMask())
       return {nullptr, GapMask};
 
     // Check that the shuffle mask is: a) an interleave, b) all of the same

@@ -360,7 +360,11 @@ GVNPass::Expression GVNPass::ValueTable::createExpr(Instruction *I) {
     E.Commutative = true;
   } else if (auto *IVI = dyn_cast<InsertValueInst>(I)) {
     E.VarArgs.append(IVI->idx_begin(), IVI->idx_end());
-  } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
+  } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I);
+            SVI && SVI->isConstantMask()) {
+    // The mask operand is already appended above via I->operands(); this
+    // additionally folds in the resolved mask so that equivalent constant
+    // masks with different representations still value-number together.
     ArrayRef<int> ShuffleMask = SVI->getShuffleMask();
     E.VarArgs.append(ShuffleMask.begin(), ShuffleMask.end());
   } else if (auto *CB = dyn_cast<CallBase>(I)) {

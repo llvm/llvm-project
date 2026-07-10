@@ -1165,6 +1165,8 @@ bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
 }
 
 bool ScalarizerVisitor::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
+  if (!SVI.isConstantMask())
+    return false;
   std::optional<VectorSplit> VS = getVectorSplit(SVI.getType());
   std::optional<VectorSplit> VSOp =
       getVectorSplit(SVI.getOperand(0)->getType());

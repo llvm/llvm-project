@@ -3500,6 +3500,8 @@ using InstLane = std::pair<Value *, int>;
 
 static InstLane lookThroughShuffles(Value *V, int Lane) {
   while (auto *SV = dyn_cast<ShuffleVectorInst>(V)) {
+    if (!SV->isConstantMask())
+      break;
     unsigned NumElts =
         cast<FixedVectorType>(SV->getOperand(0)->getType())->getNumElements();
     int M = SV->getMaskValue(Lane);
@@ -4000,6 +4002,8 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
           Worklist.push(Op);
         continue;
       } else if (auto *SV = dyn_cast<ShuffleVectorInst>(CI)) {
+        if (!SV->isConstantMask())
+          return false;
         if (Shuffle && Shuffle != SV)
           return false;
         Shuffle = SV;
@@ -4121,7 +4125,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     if (auto *MMI = dyn_cast<MinMaxIntrinsic>(V))
       return CommonCallOp && MMI->getIntrinsicID() == *CommonCallOp;
     if (auto *SVI = dyn_cast<ShuffleVectorInst>(V))
-      return isa<PoisonValue>(SVI->getOperand(1));
+      return SVI->isConstantMask() && isa<PoisonValue>(SVI->getOperand(1));
     return false;
   };
 
@@ -5312,6 +5316,8 @@ static bool feedsIntoVectorReduction(ShuffleVectorInst *SVI) {
 /// number of operations if the target reports them as cheaper.
 bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   auto *SVI = cast<ShuffleVectorInst>(&I);
+  if (!SVI->isConstantMask())
+    return false;
   auto *VT = cast<FixedVectorType>(I.getType());
   auto *Op0 = dyn_cast<Instruction>(SVI->getOperand(0));
   auto *Op1 = dyn_cast<Instruction>(SVI->getOperand(1));
@@ -5324,6 +5330,12 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   auto *SVI1A = dyn_cast<Instruction>(Op1->getOperand(0));
   auto *SVI1B = dyn_cast<Instruction>(Op1->getOperand(1));
   SmallPtrSet<Instruction *, 4> InputShuffles({SVI0A, SVI0B, SVI1A, SVI1B});
+  // Any input that is a shuffle must have a constant mask for the mask
+  // arithmetic below.
+  for (Instruction *In : InputShuffles)
+    if (auto *SV = dyn_cast_or_null<ShuffleVectorInst>(In))
+      if (!SV->isConstantMask())
+        return false;
   auto checkSVNonOpUses = [&](Instruction *I) {
     if (!I || I->getOperand(0)->getType() != VT)
       return true;
@@ -5345,7 +5357,7 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   auto collectShuffles = [&](Instruction *I) {
     for (auto *U : I->users()) {
       auto *SV = dyn_cast<ShuffleVectorInst>(U);
-      if (!SV || SV->getType() != VT)
+      if (!SV || !SV->isConstantMask() || SV->getType() != VT)
         return false;
       if ((SV->getOperand(0) != Op0 && SV->getOperand(0) != Op1) ||
           (SV->getOperand(1) != Op0 && SV->getOperand(1) != Op1))
@@ -5368,7 +5380,8 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
     for (size_t Idx = 0, E = Shuffles.size(); Idx != E; ++Idx) {
       for (auto *U : Shuffles[Idx]->users()) {
         ShuffleVectorInst *SSV = dyn_cast<ShuffleVectorInst>(U);
-        if (SSV && isa<UndefValue>(SSV->getOperand(1)) && SSV->getType() == VT)
+        if (SSV && SSV->isConstantMask() &&
+            isa<UndefValue>(SSV->getOperand(1)) && SSV->getType() == VT)
           Shuffles.push_back(SSV);
       }
     }

@@ -338,7 +338,7 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
 
   ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(V);
   // Restrict the following transformation to fixed-length vector.
-  if (SVI && isa<FixedVectorType>(SVI->getType())) {
+  if (SVI && isa<FixedVectorType>(SVI->getType()) && SVI->isConstantMask()) {
     unsigned LHSWidth =
         cast<FixedVectorType>(SVI->getOperand(0)->getType())->getNumElements();
     int InEl = SVI->getMaskValue(EltNo);
@@ -417,6 +417,8 @@ bool llvm::isSplatValue(const Value *V, int Index, unsigned Depth) {
   }
 
   if (auto *Shuf = dyn_cast<ShuffleVectorInst>(V)) {
+    if (!Shuf->isConstantMask())
+      return false;
     // FIXME: We can safely allow undefs here. If Index was specified, we will
     //        check that the mask elt is defined at the required index.
     if (!all_equal(Shuf->getShuffleMask()))

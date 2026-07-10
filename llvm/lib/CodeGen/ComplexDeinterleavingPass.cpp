@@ -1987,7 +1987,7 @@ ComplexDeinterleavingGraph::identifyRoot(Instruction *RootI) {
     return nullptr;
 
   auto *SVI = dyn_cast<ShuffleVectorInst>(RootI);
-  if (!SVI)
+  if (!SVI || !SVI->isConstantMask())
     return nullptr;
 
   // Look for a shufflevector that takes separate vectors of the real and
@@ -2055,6 +2055,10 @@ ComplexDeinterleavingGraph::identifyDeinterleave(ComplexValues &Vals) {
   if (!RealShuffle || !ImagShuffle) {
     if (RealShuffle || ImagShuffle)
       LLVM_DEBUG(dbgs() << " - There's a shuffle where there shouldn't be.\n");
+    return nullptr;
+  }
+  if (!RealShuffle->isConstantMask() || !ImagShuffle->isConstantMask()) {
+    LLVM_DEBUG(dbgs() << " - Shuffle mask is not a constant.\n");
     return nullptr;
   }
 
@@ -2162,6 +2166,8 @@ ComplexDeinterleavingGraph::identifySplat(ComplexValues &Vals) {
       VTy = cast<VectorType>(Const->getType());
       Mask = Const->getShuffleMask();
     } else if (auto *Shuf = dyn_cast<ShuffleVectorInst>(V)) {
+      if (!Shuf->isConstantMask())
+        return false;
       VTy = Shuf->getType();
       Mask = Shuf->getShuffleMask();
     } else {

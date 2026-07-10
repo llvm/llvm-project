@@ -361,6 +361,8 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   case Instruction::ShuffleVector: {
     // `shufflevector` is negatible if both operands are negatible.
     auto *Shuf = cast<ShuffleVectorInst>(I);
+    if (!Shuf->isConstantMask())
+      return nullptr;
     Value *NegOp0 = negate(I->getOperand(0), IsNSW, Depth + 1);
     if (!NegOp0) // Early return.
       return nullptr;

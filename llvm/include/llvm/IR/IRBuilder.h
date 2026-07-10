@@ -2683,11 +2683,10 @@ public:
 
   Value *CreateShuffleVector(Value *V1, Value *V2, Value *Mask,
                              const Twine &Name = "") {
-    if (auto *MaskC = dyn_cast<Constant>(Mask);
-        MaskC && ShuffleVectorInst::isCanonicalConstantMask(V1, MaskC)) {
+    if (auto *MaskC = dyn_cast<Constant>(Mask)) {
       SmallVector<int, 16> IntMask;
-      ShuffleVectorInst::getShuffleMask(MaskC, IntMask);
-      return CreateShuffleVector(V1, V2, IntMask, Name);
+      if (ShuffleVectorInst::getCanonicalizedShuffleMask(V1, MaskC, IntMask))
+        return CreateShuffleVector(V1, V2, IntMask, Name);
     }
     return Insert(new ShuffleVectorInst(V1, V2, Mask), Name);
   }

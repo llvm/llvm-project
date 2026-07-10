@@ -1764,6 +1764,11 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
     assert(I);
     bool KeepInst = false;
     for (const auto &Op : I->operands()) {
+      // Keep the shufflevector mask operand (operand 2) as a plain constant;
+      // IRTranslator consumes it directly and rewriting it into a
+      // spv_const_composite call would turn it into a run-time mask.
+      if (isa<ShuffleVectorInst>(I) && Op.getOperandNo() == 2)
+        continue;
       Constant *AggrConst = nullptr;
       Type *ResTy = nullptr;
       if (auto *COp = dyn_cast<ConstantVector>(Op)) {

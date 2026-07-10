@@ -124,6 +124,9 @@ static const Instruction *safeCxtI(const Value *V, const Instruction *CxtI) {
 static bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
                                    const APInt &DemandedElts,
                                    APInt &DemandedLHS, APInt &DemandedRHS) {
+  if (!Shuf->isConstantMask())
+    return false;
+
   if (isa<ScalableVectorType>(Shuf->getType())) {
     assert(DemandedElts == APInt(1,1));
     DemandedLHS = DemandedRHS = DemandedElts;
@@ -7784,6 +7787,11 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
     return false;
   }
   case Instruction::ShuffleVector: {
+    auto *SVI = dyn_cast<ShuffleVectorInst>(Op);
+    if (SVI && !SVI->isConstantMask())
+      // A dynamic mask may pick an out-of-range index, which yields a
+      // poison lane; be conservative.
+      return includesPoison(Kind);
     ArrayRef<int> Mask = isa<ConstantExpr>(Op)
                              ? cast<ConstantExpr>(Op)->getShuffleMask()
                              : cast<ShuffleVectorInst>(Op)->getShuffleMask();

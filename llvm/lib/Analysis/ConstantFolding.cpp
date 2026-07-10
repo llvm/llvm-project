@@ -1206,9 +1206,13 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
   case Instruction::InsertValue:
     return ConstantFoldInsertValueInstruction(
         Ops[0], Ops[1], cast<InsertValueInst>(InstOrCE)->getIndices());
-  case Instruction::ShuffleVector:
-    return ConstantExpr::getShuffleVector(
-        Ops[0], Ops[1], cast<ShuffleVectorInst>(InstOrCE)->getShuffleMask());
+  case Instruction::ShuffleVector: {
+    auto *SVI = cast<ShuffleVectorInst>(InstOrCE);
+    if (!SVI->isConstantMask())
+      return nullptr; // InstCombine canonicalizes first; fold next round.
+    return ConstantExpr::getShuffleVector(Ops[0], Ops[1],
+                                          SVI->getShuffleMask());
+  }
   case Instruction::Load: {
     const auto *LI = dyn_cast<LoadInst>(InstOrCE);
     if (LI->isVolatile())

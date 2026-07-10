@@ -1712,6 +1712,8 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   }
   case Instruction::ShuffleVector: {
     auto *Shuffle = cast<ShuffleVectorInst>(I);
+    if (!Shuffle->isConstantMask())
+      break; // TODO: dynamic-mask demanded-elements reasoning.
     assert(Shuffle->getOperand(0)->getType() ==
            Shuffle->getOperand(1)->getType() &&
            "Expected shuffle operands to have same type");

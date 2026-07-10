@@ -2566,7 +2566,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
     auto *Shadow0 = getShadow(&I, 0);
     auto *Shadow1 = getShadow(&I, 1);
-    setShadow(&I, IRB.CreateShuffleVector(Shadow0, Shadow1, I.getShuffleMask(),
+    // Reusing the mask operand handles constant and dynamic masks alike.
+    // TODO: For a dynamic mask, taint of the mask itself is not propagated.
+    setShadow(&I, IRB.CreateShuffleVector(Shadow0, Shadow1, I.getMaskOperand(),
                                           "_msprop"));
     setOriginForNaryOp(I);
   }

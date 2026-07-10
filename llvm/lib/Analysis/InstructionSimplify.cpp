@@ -5712,7 +5712,8 @@ static Value *foldIdentityShuffles(int DestElt, Value *Op0, Value *Op1,
 
   // If the source operand is a shuffle itself, look through it to find the
   // matching root vector.
-  if (auto *SourceShuf = dyn_cast<ShuffleVectorInst>(SourceOp)) {
+  if (auto *SourceShuf = dyn_cast<ShuffleVectorInst>(SourceOp);
+      SourceShuf && SourceShuf->isConstantMask()) {
     return foldIdentityShuffles(
         DestElt, SourceShuf->getOperand(0), SourceShuf->getOperand(1),
         SourceShuf->getMaskValue(RootElt), RootVec, MaxRecurse);
@@ -5818,7 +5819,7 @@ static Value *simplifyShuffleVectorInst(Value *Op0, Value *Op1,
   // value type is same as the input vectors' type.
   if (auto *OpShuf = dyn_cast<ShuffleVectorInst>(Op0))
     if (Q.isUndefValue(Op1) && RetTy == InVecTy &&
-        all_equal(OpShuf->getShuffleMask()))
+        OpShuf->isConstantMask() && all_equal(OpShuf->getShuffleMask()))
       return Op0;
 
   // All remaining transformation depend on the value of the mask, which is
@@ -7789,6 +7790,8 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
     return simplifyExtractElementInst(NewOps[0], NewOps[1], Q, MaxRecurse);
   case Instruction::ShuffleVector: {
     auto *SVI = cast<ShuffleVectorInst>(I);
+    if (NewOps[2] != SVI->getMaskOperand() || !SVI->isConstantMask())
+      return nullptr; // TODO: dynamic-mask simplifications.
     return simplifyShuffleVectorInst(NewOps[0], NewOps[1],
                                      SVI->getShuffleMask(), SVI->getType(), Q,
                                      MaxRecurse);

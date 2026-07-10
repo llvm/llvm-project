@@ -3483,6 +3483,10 @@ bool IRTranslator::translateExtractVector(const User &U,
 
 bool IRTranslator::translateShuffleVector(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
+  if (auto *SVI = dyn_cast<ShuffleVectorInst>(&U))
+    if (!SVI->isConstantMask())
+      return false;
+
   // A ShuffleVector that operates on scalable vectors is a splat vector where
   // the value of the splat vector is the 0th element of the first operand,
   // since the index mask operand is the zeroinitializer (undef and

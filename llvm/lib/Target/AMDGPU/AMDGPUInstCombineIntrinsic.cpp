@@ -482,7 +482,8 @@ static APInt defaultComponentBroadcast(Value *V) {
 
   SmallVector<int> ShuffleMask;
   if (auto *SVI = dyn_cast<ShuffleVectorInst>(V))
-    SVI->getShuffleMask(ShuffleMask);
+    if (SVI->isConstantMask())
+      SVI->getShuffleMask(ShuffleMask);
 
   for (int I = VWidth - 1; I > 0; --I) {
     if (ShuffleMask.empty()) {

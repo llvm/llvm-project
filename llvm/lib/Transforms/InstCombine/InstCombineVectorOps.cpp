@@ -352,6 +352,8 @@ static bool findDemandedEltsBySingleUser(Value *V, Instruction *UserInstr,
   }
   case Instruction::ShuffleVector: {
     ShuffleVectorInst *Shuffle = cast<ShuffleVectorInst>(UserInstr);
+    if (!Shuffle->isConstantMask())
+      break;
     unsigned MaskNumElts =
         cast<FixedVectorType>(UserInstr->getType())->getNumElements();
 
@@ -564,7 +566,8 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
           return NewGEP;
         }
       }
-    } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
+    } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I);
+              SVI && SVI->isConstantMask()) {
       int SplatIndex = getSplatIndex(SVI->getShuffleMask());
       // We know the all-0 splat must be reading from the first operand, even
       // in the case of scalable vectors (vscale is always > 0).
@@ -1305,6 +1308,9 @@ Instruction *InstCombinerImpl::visitInsertValueInst(InsertValueInst &I) {
 }
 
 static bool isShuffleEquivalentToSelect(ShuffleVectorInst &Shuf) {
+  if (!Shuf.isConstantMask())
+    return false;
+
   // Can not analyze scalable type, the number of elements is not a compile-time
   // constant.
   if (isa<ScalableVectorType>(Shuf.getOperand(0)->getType()))
@@ -2919,6 +2925,22 @@ Instruction *InstCombinerImpl::simplifyBinOpSplats(ShuffleVectorInst &SVI) {
 }
 
 Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
+  if (!SVI.isConstantMask()) {
+    // Canonicalize a fixed-width constant mask (wrong element width and/or
+    // out-of-bounds indices) into canonical <M x i32> form; OOB -> poison.
+    // Constants that cannot be canonicalized (e.g. constexpr elements) and
+    // run-time masks are left alone: no folds yet.
+    if (auto *MaskC = dyn_cast<Constant>(SVI.getMaskOperand())) {
+      SmallVector<int, 16> NewMask;
+      if (ShuffleVectorInst::getCanonicalizedShuffleMask(SVI.getOperand(0),
+                                                         MaskC, NewMask))
+        return replaceInstUsesWith(
+            SVI, Builder.CreateShuffleVector(SVI.getOperand(0),
+                                             SVI.getOperand(1), NewMask));
+    }
+    return nullptr;
+  }
+
   Value *LHS = SVI.getOperand(0);
   Value *RHS = SVI.getOperand(1);
   SimplifyQuery ShufQuery = SQ.getWithInstruction(&SVI);
@@ -3190,11 +3212,13 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   ShuffleVectorInst* LHSShuffle = dyn_cast<ShuffleVectorInst>(LHS);
   ShuffleVectorInst* RHSShuffle = dyn_cast<ShuffleVectorInst>(RHS);
   if (LHSShuffle)
-    if (!match(LHSShuffle->getOperand(1), m_Poison()) &&
-        !match(RHS, m_Poison()))
+    if (!LHSShuffle->isConstantMask() ||
+        (!match(LHSShuffle->getOperand(1), m_Poison()) &&
+         !match(RHS, m_Poison())))
       LHSShuffle = nullptr;
   if (RHSShuffle)
-    if (!match(RHSShuffle->getOperand(1), m_Poison()))
+    if (!RHSShuffle->isConstantMask() ||
+        !match(RHSShuffle->getOperand(1), m_Poison()))
       RHSShuffle = nullptr;
   if (!LHSShuffle && !RHSShuffle)
     return MadeChange ? &SVI : nullptr;

@@ -2054,6 +2054,15 @@ public:
   LLVM_ABI static bool isCanonicalConstantMask(const Value *V1,
                                                const Constant *Mask);
 
+  /// Convert Mask into the canonical integer form for a shuffle of V1-typed
+  /// vectors, if possible: each element is zero-extended, with out-of-bounds
+  /// indices and poison/undef elements becoming PoisonMaskElem. Returns false
+  /// (leaving Result unspecified) if Mask cannot be converted, e.g. it has
+  /// constant-expression elements or is a non-splat scalable constant.
+  LLVM_ABI static bool getCanonicalizedShuffleMask(const Value *V1,
+                                                   const Constant *Mask,
+                                                   SmallVectorImpl<int> &Result);
+
   /// Overload to return most specific vector type.
   ///
   VectorType *getType() const {
@@ -2156,7 +2165,7 @@ public:
   /// Example: shufflevector <4 x n> A, <4 x n> B, <3,0,undef,3>
   /// TODO: Optionally allow length-changing shuffles.
   bool isSingleSource() const {
-    return !changesLength() &&
+    return isConstantMask() && !changesLength() &&
            isSingleSourceMask(getShuffleMask(), getShuffleMask().size());
   }
 
@@ -2184,6 +2193,9 @@ public:
   /// from its input vectors.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <4,undef,6,undef>
   bool isIdentity() const {
+    if (!isConstantMask())
+      return false;
+
     // Not possible to express a shuffle mask for a scalable vector for this
     // case.
     if (isa<ScalableVectorType>(getType()))
@@ -2231,7 +2243,7 @@ public:
   /// In that case, the shuffle is better classified as an identity shuffle.
   /// TODO: Optionally allow length-changing shuffles.
   bool isSelect() const {
-    return !changesLength() &&
+    return isConstantMask() && !changesLength() &&
            isSelectMask(getShuffleMask(), getShuffleMask().size());
   }
 
@@ -2253,7 +2265,7 @@ public:
   /// Example: shufflevector <4 x n> A, <4 x n> B, <3,undef,1,undef>
   /// TODO: Optionally allow length-changing shuffles.
   bool isReverse() const {
-    return !changesLength() &&
+    return isConstantMask() && !changesLength() &&
            isReverseMask(getShuffleMask(), getShuffleMask().size());
   }
 
@@ -2277,7 +2289,7 @@ public:
   /// TODO: Optionally allow length-changing shuffles.
   /// TODO: Optionally allow splats from other elements.
   bool isZeroEltSplat() const {
-    return !changesLength() &&
+    return isConstantMask() && !changesLength() &&
            isZeroEltSplatMask(getShuffleMask(), getShuffleMask().size());
   }
 
@@ -2327,7 +2339,7 @@ public:
   /// exact specification.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <0,4,2,6>
   bool isTranspose() const {
-    return !changesLength() &&
+    return isConstantMask() && !changesLength() &&
            isTransposeMask(getShuffleMask(), getShuffleMask().size());
   }
 
@@ -2351,7 +2363,7 @@ public:
   /// then extracts an original width vector starting from the splice index.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
   bool isSplice(int &Index) const {
-    return !changesLength() &&
+    return isConstantMask() && !changesLength() &&
            isSpliceMask(getShuffleMask(), getShuffleMask().size(), Index);
   }
 
@@ -2374,6 +2386,9 @@ public:
 
   /// Return true if this shuffle mask is an extract subvector mask.
   bool isExtractSubvectorMask(int &Index) const {
+    if (!isConstantMask())
+      return false;
+
     // Not possible to express a shuffle mask for a scalable vector for this
     // case.
     if (isa<ScalableVectorType>(getType()))
@@ -2404,6 +2419,9 @@ public:
 
   /// Return true if this shuffle mask is an insert subvector mask.
   bool isInsertSubvectorMask(int &NumSubElts, int &Index) const {
+    if (!isConstantMask())
+      return false;
+
     // Not possible to express a shuffle mask for a scalable vector for this
     // case.
     if (isa<ScalableVectorType>(getType()))

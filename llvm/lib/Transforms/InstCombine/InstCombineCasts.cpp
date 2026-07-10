@@ -648,7 +648,8 @@ bool TypeEvaluationHelper::canEvaluateTruncatedPred(Value *V, Type *Ty,
     return Ty->getScalarSizeInBits() >= MinBitWidth;
   }
   case Instruction::ShuffleVector:
-    return canEvaluateTruncatedImpl(I->getOperand(0), Ty, IC, CxtI) &&
+    return cast<ShuffleVectorInst>(I)->isConstantMask() &&
+           canEvaluateTruncatedImpl(I->getOperand(0), Ty, IC, CxtI) &&
            canEvaluateTruncatedImpl(I->getOperand(1), Ty, IC, CxtI);
 
   case Instruction::Call: {
@@ -3452,7 +3453,8 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
     }
   }
 
-  if (auto *Shuf = dyn_cast<ShuffleVectorInst>(Src)) {
+  if (auto *Shuf = dyn_cast<ShuffleVectorInst>(Src);
+      Shuf && Shuf->isConstantMask()) {
     // Okay, we have (bitcast (shuffle ..)).  Check to see if this is
     // a bitcast to a vector with the same # elts.
     Value *ShufOp0 = Shuf->getOperand(0);

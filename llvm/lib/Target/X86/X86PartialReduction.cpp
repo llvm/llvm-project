@@ -401,7 +401,7 @@ static Value *matchAddReduction(const ExtractElementInst &EE,
 
     // The first operand of the shuffle should be the same as the other operand
     // of the bin op.
-    if (!Shuffle || Shuffle->getOperand(0) != Op)
+    if (!Shuffle || !Shuffle->isConstantMask() || Shuffle->getOperand(0) != Op)
       return nullptr;
 
     // Verify the shuffle has the expected (at this stage of the pyramid) mask.

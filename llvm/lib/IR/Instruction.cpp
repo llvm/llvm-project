@@ -985,8 +985,12 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
            RMWI->getOrdering() == cast<AtomicRMWInst>(I2)->getOrdering() &&
            RMWI->getSyncScopeID() == cast<AtomicRMWInst>(I2)->getSyncScopeID();
   if (const ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(I1))
-    return SVI->getShuffleMask() ==
-           cast<ShuffleVectorInst>(I2)->getShuffleMask();
+    // The mask operand equality was already checked by the caller's operand
+    // comparison; getShuffleMask() only refines that for canonical constant
+    // masks (and is not valid to call on a non-constant/dynamic mask).
+    return !SVI->isConstantMask() ||
+           SVI->getShuffleMask() ==
+               cast<ShuffleVectorInst>(I2)->getShuffleMask();
   if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I1))
     return GEP->getSourceElementType() ==
            cast<GetElementPtrInst>(I2)->getSourceElementType();

@@ -785,6 +785,9 @@ public:
   /// \returns false if no sensible information can be gathered.
   static bool computeFromSVI(ShuffleVectorInst *SVI, VectorInfo &Result,
                              const DataLayout &DL) {
+    if (!SVI->isConstantMask())
+      return false;
+
     FixedVectorType *ArgTy =
         cast<FixedVectorType>(SVI->getOperand(0)->getType());
 

@@ -1859,9 +1859,23 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   // Any element width is allowed; out-of-bounds indices yield poison lanes,
   // so no bounds requirement applies (constant or not).
   auto *MaskTy = dyn_cast<VectorType>(Mask->getType());
-  return MaskTy && MaskTy->getElementType()->isIntegerTy() &&
-         isa<ScalableVectorType>(MaskTy) ==
-             isa<ScalableVectorType>(V1->getType());
+  if (!MaskTy || !MaskTy->getElementType()->isIntegerTy() ||
+      isa<ScalableVectorType>(MaskTy) !=
+          isa<ScalableVectorType>(V1->getType()))
+    return false;
+
+  // For scalable vectors, a run-time mask must have the same element count as
+  // the input vectors; codegen cannot expand a length-changing scalable
+  // shuffle. Canonical constant masks (e.g. a zeroinitializer splat mask) may
+  // still change the length.
+  if (isa<ScalableVectorType>(MaskTy) &&
+      MaskTy->getElementCount() !=
+          cast<VectorType>(V1->getType())->getElementCount() &&
+      !(isa<Constant>(Mask) &&
+        isCanonicalConstantMask(V1, cast<Constant>(Mask))))
+    return false;
+
+  return true;
 }
 
 bool ShuffleVectorInst::isCanonicalConstantMask(const Value *V1,
@@ -1908,6 +1922,34 @@ bool ShuffleVectorInst::isCanonicalConstantMask(const Value *V1,
   }
 
   return false;
+}
+
+bool ShuffleVectorInst::getCanonicalizedShuffleMask(
+    const Value *V1, const Constant *Mask, SmallVectorImpl<int> &Result) {
+  Result.clear();
+  if (isCanonicalConstantMask(V1, Mask)) {
+    getShuffleMask(Mask, Result);
+    return true;
+  }
+  auto *MaskTy = dyn_cast<FixedVectorType>(Mask->getType());
+  if (!MaskTy)
+    return false;
+  unsigned NumSrcElts =
+      cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
+  unsigned NumMaskElts = MaskTy->getNumElements();
+  Result.reserve(NumMaskElts);
+  for (unsigned I = 0; I != NumMaskElts; ++I) {
+    Constant *C = Mask->getAggregateElement(I);
+    if (auto *CI = dyn_cast_or_null<ConstantInt>(C))
+      Result.push_back(CI->getValue().ult(2 * NumSrcElts)
+                           ? (int)CI->getZExtValue()
+                           : PoisonMaskElem);
+    else if (isa_and_nonnull<UndefValue>(C))
+      Result.push_back(PoisonMaskElem);
+    else
+      return false;
+  }
+  return true;
 }
 
 void ShuffleVectorInst::getShuffleMask(const Constant *Mask,
@@ -2246,6 +2288,9 @@ bool ShuffleVectorInst::isInsertSubvectorMask(ArrayRef<int> Mask,
 }
 
 bool ShuffleVectorInst::isIdentityWithPadding() const {
+  if (!isConstantMask())
+    return false;
+
   // FIXME: Not currently possible to express a shuffle mask for a scalable
   // vector for this case.
   if (isa<ScalableVectorType>(getType()))
@@ -2270,6 +2315,9 @@ bool ShuffleVectorInst::isIdentityWithPadding() const {
 }
 
 bool ShuffleVectorInst::isIdentityWithExtract() const {
+  if (!isConstantMask())
+    return false;
+
   // FIXME: Not currently possible to express a shuffle mask for a scalable
   // vector for this case.
   if (isa<ScalableVectorType>(getType()))
@@ -2284,6 +2332,9 @@ bool ShuffleVectorInst::isIdentityWithExtract() const {
 }
 
 bool ShuffleVectorInst::isConcat() const {
+  if (!isConstantMask())
+    return false;
+
   // Vector concatenation is differentiated from identity with padding.
   if (isa<UndefValue>(Op<0>()) || isa<UndefValue>(Op<1>()))
     return false;
@@ -2373,6 +2424,9 @@ bool ShuffleVectorInst::isReplicationMask(ArrayRef<int> Mask,
 
 bool ShuffleVectorInst::isReplicationMask(int &ReplicationFactor,
                                           int &VF) const {
+  if (!isConstantMask())
+    return false;
+
   // Not possible to express a shuffle mask for a scalable vector for this
   // case.
   if (isa<ScalableVectorType>(getType()))
@@ -2408,6 +2462,9 @@ bool ShuffleVectorInst::isOneUseSingleSourceMask(ArrayRef<int> Mask, int VF) {
 
 /// Return true if this shuffle mask is a replication mask.
 bool ShuffleVectorInst::isOneUseSingleSourceMask(int VF) const {
+  if (!isConstantMask())
+    return false;
+
   // Not possible to express a shuffle mask for a scalable vector for this
   // case.
   if (isa<ScalableVectorType>(getType()))
@@ -2420,6 +2477,9 @@ bool ShuffleVectorInst::isOneUseSingleSourceMask(int VF) const {
 }
 
 bool ShuffleVectorInst::isInterleave(unsigned Factor) {
+  if (!isConstantMask())
+    return false;
+
   FixedVectorType *OpTy = dyn_cast<FixedVectorType>(getOperand(0)->getType());
   // shuffle_vector can only interleave fixed length vectors - for scalable
   // vectors, see the @llvm.vector.interleave2 intrinsic

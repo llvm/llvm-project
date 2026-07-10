@@ -6974,7 +6974,7 @@ bool AArch64TTIImpl::isLSRCostLess(
 
 static bool isSplatShuffle(Value *V) {
   if (auto *Shuf = dyn_cast<ShuffleVectorInst>(V))
-    return all_equal(Shuf->getShuffleMask());
+    return Shuf->isConstantMask() && all_equal(Shuf->getShuffleMask());
   return false;
 }
 

@@ -11530,7 +11530,8 @@ vectors, the resulting element is `undef`.
 For scalable vectors, the only valid *constant* mask values at present are
 `zeroinitializer`, `undef` and `poison`, since we cannot write all indices as
 literals for a vector with a length unknown at compile time; run-time masks
-carry no such restriction.
+carry no such restriction. For scalable vectors, a run-time mask must have
+the same element count as the input vectors.
 
 ##### Example:
 

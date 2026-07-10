@@ -1836,7 +1836,23 @@ void Interpreter::visitShuffleVectorInst(ShuffleVectorInst &I){
   Type *TyContained = Ty->getElementType();
   unsigned src1Size = (unsigned)Src1.AggregateVal.size();
   unsigned src2Size = (unsigned)Src2.AggregateVal.size();
-  unsigned src3Size = I.getShuffleMask().size();
+
+  // Evaluate the mask. A constant mask is read directly; a run-time mask is
+  // evaluated like any other operand. Out-of-bounds (and poison) mask
+  // elements produce a poison lane; lane 0 is as good a value as any.
+  SmallVector<unsigned, 16> MaskVals;
+  if (I.isConstantMask()) {
+    for (int MaskVal : I.getShuffleMask())
+      MaskVals.push_back(std::max(0, MaskVal));
+  } else {
+    GenericValue Src3 = getOperandValue(I.getMaskOperand(), SF);
+    for (const GenericValue &Elt : Src3.AggregateVal) {
+      uint64_t MaskVal = Elt.IntVal.getZExtValue();
+      MaskVals.push_back(
+          MaskVal < src1Size + src2Size ? (unsigned)MaskVal : 0u);
+    }
+  }
+  unsigned src3Size = MaskVals.size();
 
   Dest.AggregateVal.resize(src3Size);
 
@@ -1846,7 +1862,7 @@ void Interpreter::visitShuffleVectorInst(ShuffleVectorInst &I){
       break;
     case Type::IntegerTyID:
       for( unsigned i=0; i<src3Size; i++) {
-        unsigned j = std::max(0, I.getMaskValue(i));
+        unsigned j = MaskVals[i];
         if(j < src1Size)
           Dest.AggregateVal[i].IntVal = Src1.AggregateVal[j].IntVal;
         else if(j < src1Size + src2Size)
@@ -1862,7 +1878,7 @@ void Interpreter::visitShuffleVectorInst(ShuffleVectorInst &I){
       break;
     case Type::FloatTyID:
       for( unsigned i=0; i<src3Size; i++) {
-        unsigned j = std::max(0, I.getMaskValue(i));
+        unsigned j = MaskVals[i];
         if(j < src1Size)
           Dest.AggregateVal[i].FloatVal = Src1.AggregateVal[j].FloatVal;
         else if(j < src1Size + src2Size)
@@ -1873,7 +1889,7 @@ void Interpreter::visitShuffleVectorInst(ShuffleVectorInst &I){
       break;
     case Type::DoubleTyID:
       for( unsigned i=0; i<src3Size; i++) {
-        unsigned j = std::max(0, I.getMaskValue(i));
+        unsigned j = MaskVals[i];
         if(j < src1Size)
           Dest.AggregateVal[i].DoubleVal = Src1.AggregateVal[j].DoubleVal;
         else if(j < src1Size + src2Size)

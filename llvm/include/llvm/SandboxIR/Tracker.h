@@ -433,7 +433,8 @@ public:
 
 class LLVM_ABI ShuffleVectorSetMask final : public IRChangeBase {
   ShuffleVectorInst *SVI;
-  SmallVector<int, 8> PrevMask;
+  /// The previous mask operand; may be a non-constant mask value.
+  Value *PrevMask;
 
 public:
   ShuffleVectorSetMask(ShuffleVectorInst *SVI);

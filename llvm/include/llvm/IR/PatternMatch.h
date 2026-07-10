@@ -1966,6 +1966,8 @@ template <typename T0, typename T1, typename T2> struct Shuffle_match {
 
   template <typename OpTy> bool match(OpTy *V) const {
     if (auto *I = dyn_cast<ShuffleVectorInst>(V)) {
+      if (!I->isConstantMask())
+        return false;
       return Op1.match(I->getOperand(0)) && Op2.match(I->getOperand(1)) &&
              Mask.match(I->getShuffleMask());
     }
