@@ -16,6 +16,5 @@ define i32 @test(i32 %x, ptr %p) {
   %v2 = load i32, ptr %p2
   %c = trunc nuw i32 %x to i1
   %v = select i1 %c, i32 %v2, i32 %v1
-  %res = freeze i32 %v
-  ret i32 %res
+  ret i32 %v
 }
