@@ -760,32 +760,28 @@ public:
       // invalid use of a reference.
       IsValid = false;
       return false;
-    } 
-    if (Ty->isAtomicType()) {
+    } else if (Ty->isAtomicType()) {
       const auto& [Type, Loc] = getObjectAccessDebugInfo(ObjectAccessPath.back());
       SemaSYCLRef.Diag(Loc, diag::err_bad_kernel_param_type) << Type;
       emitObjectAccessPathNotes();
 
       IsValid = false;
       return false;
-    } 
-    if (Ty->isVariablyModifiedType()) {
+    } else if (Ty->isVariablyModifiedType()) {
       const auto& [Type, Loc] = getObjectAccessDebugInfo(ObjectAccessPath.back());
       SemaSYCLRef.Diag(Loc, diag::err_sycl_kernel_param_has_vmt) << Type;
       emitObjectAccessPathNotes();
 
       IsValid = false;
       return false;
-    }
-    if (Ty->isStructureTypeWithFlexibleArrayMember()) {
+    } else if (Ty->isStructureTypeWithFlexibleArrayMember()) {
       const auto& [Type, Loc] = getObjectAccessDebugInfo(ObjectAccessPath.back());
       SemaSYCLRef.Diag(Loc, diag::err_sycl_kernel_param_has_fam) << Type;
       emitObjectAccessPathNotes();
 
       IsValid = false;
       return false;
-    }
-    if (CXXRecordDecl *RD = Ty->getAsCXXRecordDecl()) {
+    } else if (CXXRecordDecl *RD = Ty->getAsCXXRecordDecl()) {
       if (RD->getNumVBases() > 0) {
         const auto& [Type, Loc] = getObjectAccessDebugInfo(ObjectAccessPath.back());
         SemaSYCLRef.Diag(Loc, diag::err_sycl_kernel_param_has_vbase) << Type;
@@ -795,6 +791,7 @@ public:
         return false;
       }
     }
+    
     // Warn about pointer parameters in SYCL kernels if non-portable SYCL
     // warnings are enabled.
     if (Ty->isPointerType()) {

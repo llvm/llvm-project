@@ -264,16 +264,14 @@ public:
 
 void test() {
   FAM fam;
-  //kernel_single_task<class KN<40>>([=]{ (void)fam; }); // Doesn't detect, FAM might not be capturable
-  //kernel_single_task<class KN<40>>([](FAM f){ (void)f; return 1; }(fam)); // DOESNT DETECT
-  //kernel_single_task<class KN<20>>([](FAM f){ return f; }(fam)); // not the result I'm looking for
-  kernel_single_task<class KN<21>>(Kernel());
+  // Flexible array members cannot be captured in a lambda, thus no lambda tests are provided.
+  kernel_single_task<class KN<21>>(Kernel{});
   // expected-note-re@-1 {{in instantiation of function template specialization 'fam1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
 }
 
 } // namespace fam1
 
-// Check for variable member array -- would not be copyable to device
+// Check for variably modified types -- would not be copyable to device
 namespace vmt1 {
 // Kernel entry point template definition.
 template<typename KNT, typename T>
@@ -283,7 +281,10 @@ void kernel_single_task(T t) {} // expected-note-re {{within parameter 't' of ty
 void test() {
   int n;
   int Vmt[n];
-  //kernel_single_task<class KN<22>>([](int n, int vmt[n]){ (void)vmt; }(n, Vmt)); // DOESNT DETECT
+  // VLAs as parameters are lowered to a pointer, preventing test cases with VLAs
+  // as normal lambda parameters. The below test case uses technically invalid
+  // code, but preserves the VLA in the lambda.
+  // As a result, suppress "variable-sized object may not be initialized" is needed.
   kernel_single_task<class KN<23>>([=]{ (void)Vmt; });
   // expected-error@-1 {{'int[n]' is a variably modified type and cannot be used as a SYCL kernel parameter}}
   // expected-note-re@-2 {{in instantiation of function template specialization 'vmt1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
