@@ -586,7 +586,9 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
 
   Value *Addr = RMWI->getPointerOperand();
   Value *Val = RMWI->getValOperand();
-  Value *NewVal = Builder.CreateBitOrPointerCast(Val, NewTy);
+  Value *NewVal = Val->getType()->isPointerTy()
+                    ? Builder.CreatePtrToInt(Val, NewTy)
+                    : Builder.CreateBitCast(Val, NewTy);
 
   auto *NewRMWI = Builder.CreateAtomicRMW(AtomicRMWInst::Xchg, Addr, NewVal,
                                           RMWI->getAlign(), RMWI->getOrdering(),
@@ -594,8 +596,10 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
   NewRMWI->setVolatile(RMWI->isVolatile());
   copyMetadataForAtomic(*NewRMWI, *RMWI);
   LLVM_DEBUG(dbgs() << "Replaced " << *RMWI << " with " << *NewRMWI << "\n");
-
-  Value *NewRVal = Builder.CreateBitOrPointerCast(NewRMWI, RMWI->getType());
+  
+  Value *NewRVal = Val->getType()->isPointerTy()
+                    ? Builder.CreatePtrToInt(Val, NewTy)
+                    : Builder.CreateBitCast(Val, NewTy);
   RMWI->replaceAllUsesWith(NewRVal);
   RMWI->eraseFromParent();
   return NewRMWI;
