@@ -747,6 +747,32 @@ func.func @shape_cast_multi_group_rank_decreasing(%v: vector<2x2x4xf32>) -> vect
 // CHECK:   %[[I3:.*]] = vector.insert_strided_slice %[[SC3]], %[[I2]] {offsets = [2, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
 // CHECK:   return %[[I3]] : vector<4x4xf32>
 
+// Negative multi-group case: target tile [2, 2, 2] is not contiguous within
+// the result reassociation group [8, 4], so the cast is left un-unrolled.
+func.func @negative_shape_cast_multi_group_target_not_contiguous(%v: vector<2x32xf32>) -> vector<2x8x4xf32> {
+  %0 = vector.shape_cast %v : vector<2x32xf32> to vector<2x8x4xf32>
+  return %0 : vector<2x8x4xf32>
+}
+
+// CHECK-LABEL: func @negative_shape_cast_multi_group_target_not_contiguous
+// CHECK-SAME: (%[[V:.*]]: vector<2x32xf32>) -> vector<2x8x4xf32> {
+// CHECK:   %[[SC:.*]] = vector.shape_cast %[[V]] : vector<2x32xf32> to vector<2x8x4xf32>
+// CHECK:   return %[[SC]] : vector<2x8x4xf32>
+
+
+// Negative multi-group case: the target tile is contiguous within the result
+// group [24], but its elements cannot be extracted contiguously from the
+// source group [8, 3], so the cast is left un-unrolled.
+func.func @negative_shape_cast_multi_group_source_not_determinable(%v: vector<2x8x3xf32>) -> vector<2x24xf32> {
+  %0 = vector.shape_cast %v : vector<2x8x3xf32> to vector<2x24xf32>
+  return %0 : vector<2x24xf32>
+}
+
+// CHECK-LABEL: func @negative_shape_cast_multi_group_source_not_determinable
+// CHECK-SAME: (%[[V:.*]]: vector<2x8x3xf32>) -> vector<2x24xf32> {
+// CHECK:   %[[SC:.*]] = vector.shape_cast %[[V]] : vector<2x8x3xf32> to vector<2x24xf32>
+// CHECK:   return %[[SC]] : vector<2x24xf32>
+
 // -----
 
 // Test BitCastOp unrolling - target shape [4, 4]

@@ -1341,6 +1341,11 @@ computeShapeCastGroups(ArrayRef<int64_t> sourceShape,
 /// vector.extract_strided_slice -> vector.shape_cast (on the slice) ->
 /// vector.insert_strided_slice.
 ///
+/// NOTE: This replaces a NOP `vector.shape_cast` with strided slices. Per-group
+/// contiguity keeps those slices contiguous, so they are expected to lower to a
+/// NOP too. Targets where strided slices do not lower to a NOP should not use
+/// this pattern, or should pick a tile that avoids introducing such slices.
+///
 /// Example (single group):
 ///   Given a shape cast operation:
 ///     %0 = vector.shape_cast %src : vector<8x2xf32> to vector<4x4xf32>
