@@ -476,11 +476,19 @@ SmallVector<uint8_t> encodeLongBranch(const LLVMState &LS, uint64_t FromOffset,
 
 /// Per-instruction patch-pass trampoline: invokes \p Fn with (\p Ctx,
 /// \p Idx) if it is non-null, or returns 0 otherwise. nullptr means
-/// the corresponding pass family has no implementation linked in
-/// (e.g. scratch today), which the dispatcher treats as a no-op slot.
-static uint32_t runPerInstPass(uint32_t (*Fn)(PatchContext &, size_t),
-                               PatchContext &Ctx, size_t Idx) {
-  return Fn ? Fn(Ctx, Idx) : 0;
+/// the corresponding pass family has no implementation linked in,
+/// which the dispatcher treats as a no-op slot. std::nullopt means the
+/// pass found a required patch failure after logging a specific reason.
+static std::optional<uint32_t> runPerInstPass(uint32_t (*Fn)(PatchContext &,
+                                                             size_t),
+                                              PatchContext &Ctx, size_t Idx) {
+  if (!Fn)
+    return 0;
+
+  uint32_t PatchCount = Fn(Ctx, Idx);
+  if (Ctx.RequiredPatchFailed)
+    return std::nullopt;
+  return PatchCount;
 }
 
 /// Main per-instruction dispatcher for the GFX1250 B0-to-A0 rewrite.
@@ -491,12 +499,11 @@ static uint32_t runPerInstPass(uint32_t (*Fn)(PatchContext &, size_t),
 /// the whole-function WMMA-hazard pass after the per-instruction loop and
 /// records per-kernel stats via ElfView::updateKernelDescriptor.
 /// Returns the total number of applied patches across all passes.
-static std::optional<uint32_t>
-applyGfx1250B0toA0Rules(std::vector<InternalDecodedInst> &Decoded,
-                        uint8_t *Text, uint64_t TextSize, const LLVMState &LS,
-                        std::vector<Trampoline> &OutTrampolines, ElfView &Elf,
-                        std::vector<ScratchPatchInfo> &OutScratchPatches,
-                        const RewriteConfig &Config) {
+static std::optional<uint32_t> applyGfx1250B0toA0Rules(
+    std::vector<InternalDecodedInst> &Decoded, uint8_t *Text, uint64_t TextSize,
+    const LLVMState &LS, std::vector<Trampoline> &OutTrampolines, ElfView &Elf,
+    std::vector<ScratchPatchInfo> &OutScratchPatches,
+    const RewriteConfig &Config, bool &OutRequiredPatchApplied) {
   uint32_t Patched = 0;
   std::vector<NopSled> Sleds = buildNopSledMap(Decoded, LS, Elf);
 
@@ -536,31 +543,26 @@ applyGfx1250B0toA0Rules(std::vector<InternalDecodedInst> &Decoded,
   // classify as a valid instruction; the dispatcher has nothing to match
   // against on these and we must not invoke the patch passes for them.
   constexpr StringLiteral UnknownMnemonic = "<unknown>";
+  using PerInstPatchFn = uint32_t (*)(PatchContext &, size_t);
+  PerInstPatchFn PerInstPasses[] = {
+      VT.applyInPlacePatches,     VT.applyTrampolinePatches,
+      VT.applyWmmaSplitPatches,   VT.applyScratchPatches,
+      VT.applyWmmaScale16Patches,
+  };
 
   for (size_t Idx = 0, E = Decoded.size(); Idx < E; ++Idx) {
     const InternalDecodedInst &DI = Decoded[Idx];
     if (DI.Mnemonic == UnknownMnemonic)
       continue;
 
-    if (uint32_t P = runPerInstPass(VT.applyInPlacePatches, Ctx, Idx)) {
-      Patched += P;
-      continue;
-    }
-    if (uint32_t P = runPerInstPass(VT.applyTrampolinePatches, Ctx, Idx)) {
-      Patched += P;
-      continue;
-    }
-    if (uint32_t P = runPerInstPass(VT.applyWmmaSplitPatches, Ctx, Idx)) {
-      Patched += P;
-      continue;
-    }
-    if (uint32_t P = runPerInstPass(VT.applyScratchPatches, Ctx, Idx)) {
-      Patched += P;
-      continue;
-    }
-    if (uint32_t P = runPerInstPass(VT.applyWmmaScale16Patches, Ctx, Idx)) {
-      Patched += P;
-      continue;
+    for (PerInstPatchFn Fn : PerInstPasses) {
+      std::optional<uint32_t> P = runPerInstPass(Fn, Ctx, Idx);
+      if (!P)
+        return std::nullopt;
+      if (*P == 0)
+        continue;
+      Patched += *P;
+      break;
     }
   }
 
@@ -621,6 +623,7 @@ applyGfx1250B0toA0Rules(std::vector<InternalDecodedInst> &Decoded,
           << ", scratch_reused=" << Stats.ScratchReused
           << ", scratch_above_kd=" << Stats.ScratchAboveKd << "\n";
   }
+  OutRequiredPatchApplied = Ctx.RequiredPatchApplied;
   return Patched;
 }
 
@@ -805,6 +808,7 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
   uint64_t Count = 0;
   std::vector<Trampoline> Deferred;
   std::vector<ScratchPatchInfo> ScratchPatches;
+  bool RequiredPatchApplied = false;
   if (Options.RunB0A0Patches) {
     std::vector<InternalDecodedInst> Decoded;
     if (!decodeTextSection(Text, Elf.textSize(), LS, Decoded)) {
@@ -813,9 +817,9 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
       return AMD_COMGR_STATUS_ERROR;
     }
 
-    std::optional<uint32_t> Patched =
-        applyGfx1250B0toA0Rules(Decoded, Text, Elf.textSize(), LS, Deferred,
-                                Elf, ScratchPatches, Config);
+    std::optional<uint32_t> Patched = applyGfx1250B0toA0Rules(
+        Decoded, Text, Elf.textSize(), LS, Deferred, Elf, ScratchPatches,
+        Config, RequiredPatchApplied);
     if (!Patched)
       return AMD_COMGR_STATUS_ERROR;
     Count = *Patched;
@@ -843,6 +847,12 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
   const uint64_t PoolBaseOffset = *PoolBaseOffsetOr;
   if (!Deferred.empty()) {
     if (!fixupTrampolineBranches(Deferred, Text, PoolBaseOffset, LS)) {
+      if (RequiredPatchApplied) {
+        log() << "hotswap: error: required patch trampoline branch fixup "
+                 "failed; refusing to return the original unsafe code "
+                 "object\n";
+        return AMD_COMGR_STATUS_ERROR;
+      }
       // A trampoline branch could not be encoded, so the local `Buf` copy
       // is half-redirected; shipping it would run corrupted code. Fall back
       // to the pristine input object (`ElfData`, untouched) so the loader

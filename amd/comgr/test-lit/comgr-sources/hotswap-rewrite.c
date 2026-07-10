@@ -16,30 +16,21 @@
 #include "amd_comgr.h"
 #include "common.h"
 
-enum RewriteOptionMode {
-  RewriteDefault,
-  RewriteEntryTrampolines,
-  RewriteBadOptionsSize,
-  RewriteBadOptionsFlags,
-};
-
-static amd_comgr_status_t runRewrite(amd_comgr_data_t InputData,
-                                     const char *SourceISA,
-                                     const char *TargetISA,
-                                     enum RewriteOptionMode OptionMode,
-                                     amd_comgr_data_t *OutputData) {
-  if (OptionMode == RewriteDefault)
+static amd_comgr_status_t
+runRewrite(amd_comgr_data_t InputData, const char *SourceISA,
+           const char *TargetISA, uint64_t RewriteFlags, int BadOptionsSize,
+           int BadOptionsFlags, amd_comgr_data_t *OutputData) {
+  if (RewriteFlags == AMD_COMGR_HOTSWAP_REWRITE_FLAG_NONE && !BadOptionsSize &&
+      !BadOptionsFlags)
     return amd_comgr_hotswap_rewrite(InputData, SourceISA, TargetISA,
                                      OutputData);
 
   amd_comgr_hotswap_rewrite_options_t Options = {
-      sizeof(amd_comgr_hotswap_rewrite_options_t), 0};
-  if (OptionMode == RewriteEntryTrampolines)
-    Options.flags = AMD_COMGR_HOTSWAP_REWRITE_FLAG_ENTRY_TRAMPOLINES;
-  else if (OptionMode == RewriteBadOptionsSize)
+      sizeof(amd_comgr_hotswap_rewrite_options_t), RewriteFlags};
+  if (BadOptionsSize)
     Options.size = 0;
-  else if (OptionMode == RewriteBadOptionsFlags)
-    Options.flags = 0x2;
+  if (BadOptionsFlags)
+    Options.flags = 0x4;
 
   return amd_comgr_hotswap_rewrite_with_options(InputData, SourceISA, TargetISA,
                                                 &Options, OutputData);
@@ -64,10 +55,11 @@ int main(int argc, char *argv[]) {
   }
 
   if (argc < 4)
-    fail("usage: hotswap-rewrite <elf_file> <source_isa> <target_isa> "
-         "[--entry-trampolines] [--bad-options-size] [--bad-options-flags] "
-         "[--zero-size] [--output <path>] [--dump <file>] "
-         "[--check-idempotent] [--expect-status <status>]");
+    fail(
+        "usage: hotswap-rewrite <elf_file> <source_isa> <target_isa> "
+        "[--entry-trampolines] [--strict-mode] [--bad-options-size] "
+        "[--bad-options-flags] [--zero-size] [--output <path>] [--dump <file>] "
+        "[--check-idempotent] [--expect-status <status>]");
 
   const char *ElfFile = argv[1];
   const char *SourceISA = argv[2];
@@ -77,17 +69,21 @@ int main(int argc, char *argv[]) {
   const char *DumpFile = NULL;
   const char *ExpectStatus = NULL;
   int CheckIdempotent = 0;
-  enum RewriteOptionMode OptionMode = RewriteDefault;
+  int BadOptionsSize = 0;
+  int BadOptionsFlags = 0;
+  uint64_t RewriteFlags = AMD_COMGR_HOTSWAP_REWRITE_FLAG_NONE;
 
   for (int I = 4; I < argc; ++I) {
     if (strcmp(argv[I], "--zero-size") == 0)
       ZeroSize = 1;
     else if (strcmp(argv[I], "--entry-trampolines") == 0)
-      OptionMode = RewriteEntryTrampolines;
+      RewriteFlags |= AMD_COMGR_HOTSWAP_REWRITE_FLAG_ENTRY_TRAMPOLINES;
+    else if (strcmp(argv[I], "--strict-mode") == 0)
+      RewriteFlags |= AMD_COMGR_HOTSWAP_REWRITE_FLAG_STRICT_MODE;
     else if (strcmp(argv[I], "--bad-options-size") == 0)
-      OptionMode = RewriteBadOptionsSize;
+      BadOptionsSize = 1;
     else if (strcmp(argv[I], "--bad-options-flags") == 0)
-      OptionMode = RewriteBadOptionsFlags;
+      BadOptionsFlags = 1;
     else if (strcmp(argv[I], "--output") == 0 && I + 1 < argc)
       OutputPath = argv[++I];
     else if (strcmp(argv[I], "--dump") == 0 && I + 1 < argc)
@@ -113,7 +109,8 @@ int main(int argc, char *argv[]) {
 
   amd_comgr_data_t OutputData;
   amd_comgr_status_t Status =
-      runRewrite(InputData, SourceISA, TargetISA, OptionMode, &OutputData);
+      runRewrite(InputData, SourceISA, TargetISA, RewriteFlags, BadOptionsSize,
+                 BadOptionsFlags, &OutputData);
 
   const char *StatusString;
   amd_comgr_(status_string(Status, &StatusString));
@@ -153,8 +150,8 @@ int main(int argc, char *argv[]) {
 
     if (CheckIdempotent) {
       amd_comgr_data_t Output2Data;
-      Status = runRewrite(OutputData, SourceISA, TargetISA, OptionMode,
-                          &Output2Data);
+      Status = runRewrite(OutputData, SourceISA, TargetISA, RewriteFlags,
+                          BadOptionsSize, BadOptionsFlags, &Output2Data);
       if (Status != AMD_COMGR_STATUS_SUCCESS)
         fail("idempotent rewrite failed with status %d", (int)Status);
 

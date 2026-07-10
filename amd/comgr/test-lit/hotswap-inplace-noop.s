@@ -11,6 +11,13 @@
 
 // RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
 
+// COM: Strict mode is accepted even when no strict rewrite matches.
+// RUN: hotswap-rewrite %t.elf \
+// RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
+// RUN:   --strict-mode --output %t.strict.elf \
+// RUN:   | %FileCheck --check-prefix=STRICT %s
+// STRICT: RESULT: SUCCESS
+
 // COM: No cluster_load or s_clause -- nothing should be patched
 // DISASM-NOT: cluster_load
 // DISASM-NOT: s_clause

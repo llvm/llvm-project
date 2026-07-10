@@ -144,7 +144,8 @@ static amd_comgr_status_t validateHotswapRewriteOptions(
   }
 
   static constexpr uint64_t SupportedFlags =
-      AMD_COMGR_HOTSWAP_REWRITE_FLAG_ENTRY_TRAMPOLINES;
+      AMD_COMGR_HOTSWAP_REWRITE_FLAG_ENTRY_TRAMPOLINES |
+      AMD_COMGR_HOTSWAP_REWRITE_FLAG_STRICT_MODE;
   if (RewriteOptions->flags & ~SupportedFlags) {
     hotswap::log() << "hotswap: error: amd_comgr_hotswap_rewrite_with_options: "
                       "unsupported rewrite option flags 0x";
@@ -163,6 +164,8 @@ hotswapRewrite(amd_comgr_data_t input, const char *source_isa_name,
                const char *ApiName, amd_comgr_data_t *output) {
   const bool RunEntryTrampolines =
       RewriteFlags & AMD_COMGR_HOTSWAP_REWRITE_FLAG_ENTRY_TRAMPOLINES;
+  const bool StrictMode =
+      RewriteFlags & AMD_COMGR_HOTSWAP_REWRITE_FLAG_STRICT_MODE;
 
   DataObject *InputP = DataObject::convert(input);
   if (!InputP) {
@@ -211,6 +214,7 @@ hotswapRewrite(amd_comgr_data_t input, const char *source_isa_name,
   Options.RunB0A0Patches = SourceIdent.Ident.Processor == "gfx1250" &&
                            shouldRunB0A0Patches(SourceIdent, TargetIdent);
   Options.RunEntryTrampolines = RunEntryTrampolines;
+  Options.StrictMode = StrictMode;
 
   std::unique_ptr<llvm::MemoryBuffer> OutBuffer;
   amd_comgr_status_t Status = hotswap::retargetCodeObject(

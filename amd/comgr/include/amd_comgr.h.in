@@ -2978,6 +2978,12 @@ typedef enum amd_comgr_hotswap_rewrite_flag_s {
    * Redirect kernel descriptors through generated entry stubs.
    */
   AMD_COMGR_HOTSWAP_REWRITE_FLAG_ENTRY_TRAMPOLINES = 0x1,
+  /**
+   * Enable opt-in strict rewrite behavior. Selected strict rewrites fail
+   * instead of returning the original unpatched code object when a required
+   * patch cannot be emitted safely.
+   */
+  AMD_COMGR_HOTSWAP_REWRITE_FLAG_STRICT_MODE = 0x2,
 } amd_comgr_hotswap_rewrite_flag_t;
 
 /**

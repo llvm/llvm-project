@@ -684,6 +684,10 @@ struct PatchContext {
   const LivenessInfo &Liveness;
   llvm::StringMap<KernelPatchStats> &KernelStats;
   std::vector<ScratchPatchInfo> &OutScratchPatches;
+  // Required patches are transformations whose unpatched original code is
+  // unsafe to return when the selected rewrite policy needs the patch.
+  bool RequiredPatchFailed = false;
+  bool RequiredPatchApplied = false;
 };
 
 // -- Trampoline emission helpers (defined in comgr-hotswap-b0a0.cpp) ----------
@@ -822,6 +826,8 @@ bool rewriteKernelEntryDescriptorOffsets(
 struct Gfx1250RewriteOptions {
   bool RunB0A0Patches = true;
   bool RunEntryTrampolines = false;
+  // Carried for opt-in rewrite policies that need fail-closed behaviour.
+  bool StrictMode = false;
 };
 
 /// Run the selected GFX1250 hotswap rewrite passes on \p ElfData / \p ElfSize.
