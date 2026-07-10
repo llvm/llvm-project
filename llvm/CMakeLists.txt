@@ -1017,6 +1017,13 @@ if (CMAKE_BUILD_TYPE AND uppercase_CMAKE_BUILD_TYPE MATCHES "^(RELWITHDEBINFO|DE
   set(LLVM_OMIT_DAGISEL_COMMENTS OFF)
 endif()
 
+option(LLVM_OMIT_SHARED_TARGETS "Do not build targets that can only be built as shared libraries" OFF)
+if(LLVM_OMIT_SHARED_TARGETS)
+  set(BUILD_SHARED_LIBS OFF)
+  set(LLVM_BUILD_LLVM_DYLIB OFF)
+  set(LLVM_BUILD_LLVM_C_DYLIB OFF)
+endif()
+
 if (MSVC_IDE)
   option(LLVM_ADD_NATIVE_VISUALIZERS_TO_SOLUTION "Configure project to use Visual Studio native visualizers" TRUE)
 endif()

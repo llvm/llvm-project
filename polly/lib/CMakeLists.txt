@@ -120,7 +120,7 @@ target_link_libraries(Polly PUBLIC
 
 # Create a loadable module Polly.so that can be loaded using
 # LLVM's/clang's "-load" option.
-if (WIN32 OR CYGWIN OR NOT LLVM_ENABLE_PIC)
+if (WIN32 OR CYGWIN OR NOT LLVM_ENABLE_PIC OR LLVM_OMIT_SHARED_TARGETS)
   # Add dummy target, either because loadable modules are not supported
   # as on Windows or because PIC code has been disabled
   add_custom_target(LLVMPolly)

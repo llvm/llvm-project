@@ -1,5 +1,5 @@
 # Building libmlir-cpp.so fails if LLVM_ENABLE_PIC=Off
-if (NOT LLVM_ENABLE_PIC)
+if (NOT LLVM_ENABLE_PIC OR LLVM_OMIT_SHARED_TARGETS)
   return()
 endif()
 

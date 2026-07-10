@@ -104,7 +104,7 @@ mlir_target_link_libraries(MLIRExecutionEngine PUBLIC
   MLIRTargetLLVMIRExport
   )
 
-if(LLVM_BUILD_LLVM_DYLIB AND NOT (WIN32 OR MINGW OR CYGWIN)) # Does not build on windows currently, see #106859
+if(LLVM_BUILD_LLVM_DYLIB AND NOT (WIN32 OR MINGW OR CYGWIN) AND NOT LLVM_OMIT_SHARED_TARGETS) # Does not build on windows currently, see #106859
   # Build a shared library for the execution engine. Some downstream projects
   # use this library to build their own CPU runners while preserving dynamic
   # linkage.
@@ -158,7 +158,7 @@ mlir_target_link_libraries(MLIRJitRunner PUBLIC
 
 # When -fPIC is not provided, shared libraries cannot be built if it links against
 # non-PIC code.
-if(LLVM_ENABLE_PIC)
+if(LLVM_ENABLE_PIC AND NOT LLVM_OMIT_SHARED_TARGETS)
   add_mlir_library(mlir_float16_utils
     SHARED
     Float16bits.cpp
