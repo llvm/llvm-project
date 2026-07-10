@@ -2,9 +2,6 @@
 MemTagSanitizer
 ================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

@@ -4303,7 +4303,7 @@ SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
       // If we have an SGPR input, we will violate the constant bus restriction.
       (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
        !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
-    MachineInstr *DefMI;
+    MachineInstr *DefMI = nullptr;
 
     int64_t Imm;
     if (!Src0Literal && getFoldableImm(Src2, Imm, &DefMI)) {
@@ -10289,7 +10289,7 @@ bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
 // offsets within the given alignment can be added to the resulting ImmOffset.
 bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
                                    uint32_t &ImmOffset, Align Alignment) const {
-  const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(ST);
+  const uint64_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(ST);
   const uint32_t MaxImm = alignDown(MaxOffset, Alignment.value());
   uint32_t Overflow = 0;
 

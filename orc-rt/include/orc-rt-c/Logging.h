@@ -60,8 +60,6 @@ typedef enum {
  */
 int orc_rt_log_format_check(const char *Fmt, ...) ORC_RT_C_FORMAT_PRINTF(1, 2);
 
-ORC_RT_C_EXTERN_C_END
-
 /*
  * A disabled log site. Validates the category token, format string, and
  * arguments at compile time, but evaluates nothing and generates no code:
@@ -99,5 +97,7 @@ ORC_RT_C_EXTERN_C_END
 #else
 #error "Unknown ORC_RT_LOG_BACKEND."
 #endif
+
+ORC_RT_C_EXTERN_C_END
 
 #endif /* ORC_RT_C_LOGGING_H */
