@@ -1150,7 +1150,7 @@ class PPRVectorListMul<int ElementWidth, int NumRegs> : PPRVectorList<ElementWid
   let Name = "SVEPredicateListMul" # NumRegs # "x" # ElementWidth;
   let DiagnosticType = "Invalid" # Name;
   let PredicateMethod =
-      "isTypedVectorListMultiple<RegKind::SVEPredicateVector, " # NumRegs # ", 0, "
+      "isTypedVectorListInRegClass<RegKind::SVEPredicateVector, " # NumRegs # ", 0, "
                                                                 # ElementWidth #
                                                                 ", AArch64::PPRMul2RegClassID>";
 }
@@ -1419,83 +1419,72 @@ def ZPR4Mul4 : RegisterClass<"AArch64", [untyped], 128, (add (decimate ZSeqQuads
   let Size = 512;
 }
 
-class ZPRVectorListMul<int ElementWidth, int NumRegs, string RegClassSuffix = "">
+class ZPRVectorListInRegClass<int ElementWidth, int NumRegs,
+                              string RegClassSuffix = "">
   : ZPRVectorList<ElementWidth, NumRegs> {
   let Name = "SVEVectorList" # NumRegs # "x" # ElementWidth # RegClassSuffix;
   let DiagnosticType = "Invalid" # Name;
   let PredicateMethod =
-      "isTypedVectorListMultiple<RegKind::SVEDataVector, "
+      "isTypedVectorListInRegClass<RegKind::SVEDataVector, "
                                  # NumRegs # ", 0, "
                                  # ElementWidth #  ", "
                                  # "AArch64::ZPR" # RegClassSuffix # "RegClassID" # ">";
 }
 
-class ZPRVectorListMinMax<int ElementWidth, int NumRegs, int Min, int Max,
-                          string RegClassSuffix = "">
-  : ZPRVectorList<ElementWidth, NumRegs> {
-  let Name = "SVEVectorList" # NumRegs # "x" # ElementWidth # RegClassSuffix;
-  let DiagnosticType = "Invalid" # Name;
-  let PredicateMethod =
-      "isTypedVectorListMinMax<RegKind::SVEDataVector, "
-                                 # NumRegs # ", 0, "
-                                 # ElementWidth #  ", "
-                                 # Min # ", " # Max # ">";
-}
-
 let EncoderMethod = "EncodeRegMul_MinMax<1, 0, 7>",
     DecoderMethod = "DecodeMulMinMaxRegisterClass<AArch64::ZPR3_3bRegClassID, 1, 0, 7>" in {
   def ZZZ_Any_3b : RegisterOperand<ZPR3_3b, "printTypedVectorList<0,0>"> {
-    let ParserMatchClass = ZPRVectorListMinMax<0, 3, 0, 7, "3_3b">;
+    let ParserMatchClass = ZPRVectorListInRegClass<0, 3, "_3b">;
   }
 }
 
 let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 30>",
     DecoderMethod = "DecodeZPR2Mul2RegisterClass<0, 30>" in {
   def ZZ_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,0>"> {
-    let ParserMatchClass = ZPRVectorListMul<0, 2, "Mul2">;
+    let ParserMatchClass = ZPRVectorListInRegClass<0, 2, "Mul2">;
   }
 
   def ZZ_b_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'b'>"> {
-    let ParserMatchClass = ZPRVectorListMul<8, 2, "Mul2">;
+    let ParserMatchClass = ZPRVectorListInRegClass<8, 2, "Mul2">;
   }
 
   def ZZ_h_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'h'>"> {
-    let ParserMatchClass = ZPRVectorListMul<16, 2, "Mul2">;
+    let ParserMatchClass = ZPRVectorListInRegClass<16, 2, "Mul2">;
   }
 
   def ZZ_s_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'s'>"> {
-    let ParserMatchClass = ZPRVectorListMul<32, 2, "Mul2">;
+    let ParserMatchClass = ZPRVectorListInRegClass<32, 2, "Mul2">;
   }
 
   def ZZ_d_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'d'>"> {
-    let ParserMatchClass = ZPRVectorListMul<64, 2, "Mul2">;
+    let ParserMatchClass = ZPRVectorListInRegClass<64, 2, "Mul2">;
   }
 
   def ZZ_q_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'q'>"> {
-    let ParserMatchClass = ZPRVectorListMul<128, 2, "Mul2">;
+    let ParserMatchClass = ZPRVectorListInRegClass<128, 2, "Mul2">;
   }
 } // end let EncoderMethod/DecoderMethod
 
 let EncoderMethod = "EncodeRegMul_MinMax<4, 0, 28>",
     DecoderMethod = "DecodeZPR4Mul4RegisterClass" in {
   def ZZZZ_b_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'b'>"> {
-    let ParserMatchClass = ZPRVectorListMul<8, 4, "Mul4">;
+    let ParserMatchClass = ZPRVectorListInRegClass<8, 4, "Mul4">;
   }
 
   def ZZZZ_h_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'h'>"> {
-    let ParserMatchClass = ZPRVectorListMul<16, 4, "Mul4">;
+    let ParserMatchClass = ZPRVectorListInRegClass<16, 4, "Mul4">;
   }
 
   def ZZZZ_s_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'s'>"> {
-    let ParserMatchClass = ZPRVectorListMul<32, 4, "Mul4">;
+    let ParserMatchClass = ZPRVectorListInRegClass<32, 4, "Mul4">;
   }
 
   def ZZZZ_d_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'d'>"> {
-    let ParserMatchClass = ZPRVectorListMul<64, 4, "Mul4">;
+    let ParserMatchClass = ZPRVectorListInRegClass<64, 4, "Mul4">;
   }
 
   def ZZZZ_q_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'q'>"> {
-    let ParserMatchClass = ZPRVectorListMul<128, 4, "Mul4">;
+    let ParserMatchClass = ZPRVectorListInRegClass<128, 4, "Mul4">;
   }
 } // end let EncoderMethod/DecoderMethod
 
@@ -1514,38 +1503,38 @@ def ZPR2Mul2_Hi : RegisterClass<"AArch64", [untyped], 128,
 let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 14>",
     DecoderMethod = "DecodeZPR2Mul2RegisterClass<0, 16>" in {
   def ZZ_b_mul_r_Lo : RegisterOperand<ZPR2Mul2_Lo, "printTypedVectorList<0,'b'>"> {
-    let ParserMatchClass = ZPRVectorListMul<8, 2, "Mul2_Lo">;
+    let ParserMatchClass = ZPRVectorListInRegClass<8, 2, "Mul2_Lo">;
   }
 
   def ZZ_h_mul_r_Lo : RegisterOperand<ZPR2Mul2_Lo, "printTypedVectorList<0,'h'>"> {
-    let ParserMatchClass = ZPRVectorListMul<16, 2, "Mul2_Lo">;
+    let ParserMatchClass = ZPRVectorListInRegClass<16, 2, "Mul2_Lo">;
   }
 
   def ZZ_s_mul_r_Lo : RegisterOperand<ZPR2Mul2_Lo, "printTypedVectorList<0,'s'>"> {
-    let ParserMatchClass = ZPRVectorListMul<32, 2, "Mul2_Lo">;
+    let ParserMatchClass = ZPRVectorListInRegClass<32, 2, "Mul2_Lo">;
   }
 
   def ZZ_d_mul_r_Lo : RegisterOperand<ZPR2Mul2_Lo, "printTypedVectorList<0,'d'>"> {
-    let ParserMatchClass = ZPRVectorListMul<64, 2, "Mul2_Lo">;
+    let ParserMatchClass = ZPRVectorListInRegClass<64, 2, "Mul2_Lo">;
   }
 }
 
 let EncoderMethod = "EncodeRegMul_MinMax<2, 16, 30>",
     DecoderMethod = "DecodeZPR2Mul2RegisterClass<16, 31>" in {
   def ZZ_b_mul_r_Hi : RegisterOperand<ZPR2Mul2_Hi, "printTypedVectorList<0,'b'>"> {
-    let ParserMatchClass = ZPRVectorListMul<8, 2, "Mul2_Hi">;
+    let ParserMatchClass = ZPRVectorListInRegClass<8, 2, "Mul2_Hi">;
   }
 
   def ZZ_h_mul_r_Hi : RegisterOperand<ZPR2Mul2_Hi, "printTypedVectorList<0,'h'>"> {
-    let ParserMatchClass = ZPRVectorListMul<16, 2, "Mul2_Hi">;
+    let ParserMatchClass = ZPRVectorListInRegClass<16, 2, "Mul2_Hi">;
   }
 
   def ZZ_s_mul_r_Hi : RegisterOperand<ZPR2Mul2_Hi, "printTypedVectorList<0,'s'>"> {
-    let ParserMatchClass = ZPRVectorListMul<32, 2, "Mul2_Hi">;
+    let ParserMatchClass = ZPRVectorListInRegClass<32, 2, "Mul2_Hi">;
   }
 
   def ZZ_d_mul_r_Hi : RegisterOperand<ZPR2Mul2_Hi, "printTypedVectorList<0,'d'>"> {
-    let ParserMatchClass = ZPRVectorListMul<64, 2, "Mul2_Hi">;
+    let ParserMatchClass = ZPRVectorListInRegClass<64, 2, "Mul2_Hi">;
   }
  } // end let EncoderMethod/DecoderMethod
 

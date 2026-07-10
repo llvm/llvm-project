@@ -2584,7 +2584,7 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
       std::string Name = RC->getName() + "_with_" + CompositeSubIdx->getName() +
                          "_in_" + CompositeSubRC->getName();
 
-      bool HasRegClassNamed =
+      const bool HasRegClassNamed =
           llvm::any_of(RegClasses, [&](const CodeGenRegisterClass &RC) {
             return RC.getName() == Name;
           });
