@@ -25,25 +25,15 @@ define amdgpu_ps void @s_fabs_f16(half inreg %in, ptr addrspace(1) %out) {
   ret void
 }
 define amdgpu_ps void @s_fabs_f16_salu_use(half inreg %in, i32 inreg %val, ptr addrspace(1) %out) {
-; GFX11-LABEL: s_fabs_f16_salu_use:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX11-NEXT:    s_cmp_eq_u32 s1, 0
-; GFX11-NEXT:    s_cselect_b32 s1, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, s0, s1
-; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX11-NEXT:    s_endpgm
-;
-; GFX12-LABEL: s_fabs_f16_salu_use:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX12-NEXT:    s_cmp_eq_u32 s1, 0
-; GFX12-NEXT:    s_cselect_b32 s0, s0, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX12-NEXT:    s_endpgm
+; GCN-LABEL: s_fabs_f16_salu_use:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_and_b32 s0, s0, 0x7fff
+; GCN-NEXT:    s_cmp_eq_u32 s1, 0
+; GCN-NEXT:    s_cselect_b32 s1, -1, 0
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    v_cndmask_b32_e64 v2, 0, s0, s1
+; GCN-NEXT:    global_store_b16 v[0:1], v2, off
+; GCN-NEXT:    s_endpgm
   %fabs = call half @llvm.fabs.f16(half %in)
   %cond = icmp eq i32 %val, 0
   %sel = select i1 %cond, half %fabs, half 0.0

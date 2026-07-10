@@ -271,58 +271,21 @@ define <4 x i32> @abs_vgpr_v4i32(<4 x i32> %arg) {
 }
 
 define amdgpu_cs <2 x i8> @abs_sgpr_v2i8(<2 x i8> inreg %arg) {
-; GFX6-LABEL: abs_sgpr_v2i8:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_sext_i32_i8 s0, s0
-; GFX6-NEXT:    s_sext_i32_i8 s1, s1
-; GFX6-NEXT:    s_abs_i32 s0, s0
-; GFX6-NEXT:    s_abs_i32 s1, s1
-; GFX6-NEXT:    ; return to shader part epilog
-;
-; GFX8-LABEL: abs_sgpr_v2i8:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_sext_i32_i8 s1, s1
-; GFX8-NEXT:    s_abs_i32 s1, s1
-; GFX8-NEXT:    s_sext_i32_i8 s0, s0
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 8
-; GFX8-NEXT:    s_abs_i32 s0, s0
-; GFX8-NEXT:    s_or_b32 s0, s0, s1
-; GFX8-NEXT:    s_bfe_u32 s1, s0, 0x80008
-; GFX8-NEXT:    ; return to shader part epilog
-;
-; GFX10-LABEL: abs_sgpr_v2i8:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_bfe_i32 s1, s1, 0x80000
-; GFX10-NEXT:    s_bfe_i32 s0, s0, 0x80000
-; GFX10-NEXT:    s_sub_i32 s3, 0, s1
-; GFX10-NEXT:    s_sub_i32 s2, 0, s0
-; GFX10-NEXT:    s_sext_i32_i16 s3, s3
-; GFX10-NEXT:    s_sext_i32_i16 s1, s1
-; GFX10-NEXT:    s_sext_i32_i16 s2, s2
-; GFX10-NEXT:    s_sext_i32_i16 s0, s0
-; GFX10-NEXT:    s_max_i32 s1, s1, s3
-; GFX10-NEXT:    s_max_i32 s0, s0, s2
-; GFX10-NEXT:    s_lshl_b32 s2, s1, 8
-; GFX10-NEXT:    s_and_b32 s1, s1, 0xff
-; GFX10-NEXT:    s_or_b32 s0, s0, s2
-; GFX10-NEXT:    ; return to shader part epilog
+; GFX-LABEL: abs_sgpr_v2i8:
+; GFX:       ; %bb.0:
+; GFX-NEXT:    s_sext_i32_i8 s0, s0
+; GFX-NEXT:    s_sext_i32_i8 s1, s1
+; GFX-NEXT:    s_abs_i32 s0, s0
+; GFX-NEXT:    s_abs_i32 s1, s1
+; GFX-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: abs_sgpr_v2i8:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_bfe_i32 s1, s1, 0x80000
-; GFX1250-NEXT:    s_bfe_i32 s0, s0, 0x80000
-; GFX1250-NEXT:    s_sub_co_i32 s3, 0, s1
-; GFX1250-NEXT:    s_sub_co_i32 s2, 0, s0
-; GFX1250-NEXT:    s_sext_i32_i16 s3, s3
-; GFX1250-NEXT:    s_sext_i32_i16 s1, s1
-; GFX1250-NEXT:    s_sext_i32_i16 s2, s2
-; GFX1250-NEXT:    s_sext_i32_i16 s0, s0
-; GFX1250-NEXT:    s_max_i32 s1, s1, s3
-; GFX1250-NEXT:    s_max_i32 s0, s0, s2
-; GFX1250-NEXT:    s_lshl_b32 s2, s1, 8
-; GFX1250-NEXT:    s_and_b32 s1, s1, 0xff
-; GFX1250-NEXT:    s_or_b32 s0, s0, s2
+; GFX1250-NEXT:    s_sext_i32_i8 s0, s0
+; GFX1250-NEXT:    s_sext_i32_i8 s1, s1
+; GFX1250-NEXT:    s_abs_i32 s0, s0
+; GFX1250-NEXT:    s_abs_i32 s1, s1
 ; GFX1250-NEXT:    ; return to shader part epilog
   %res = call <2 x i8> @llvm.abs.v2i8(<2 x i8> %arg, i1 false)
   ret <2 x i8> %res
@@ -393,76 +356,25 @@ define <2 x i8> @abs_vgpr_v2i8(<2 x i8> %arg) {
 }
 
 define amdgpu_cs <3 x i8> @abs_sgpr_v3i8(<3 x i8> inreg %arg) {
-; GFX6-LABEL: abs_sgpr_v3i8:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_sext_i32_i8 s0, s0
-; GFX6-NEXT:    s_sext_i32_i8 s1, s1
-; GFX6-NEXT:    s_sext_i32_i8 s2, s2
-; GFX6-NEXT:    s_abs_i32 s0, s0
-; GFX6-NEXT:    s_abs_i32 s1, s1
-; GFX6-NEXT:    s_abs_i32 s2, s2
-; GFX6-NEXT:    ; return to shader part epilog
-;
-; GFX8-LABEL: abs_sgpr_v3i8:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_sext_i32_i8 s2, s2
-; GFX8-NEXT:    s_sext_i32_i8 s1, s1
-; GFX8-NEXT:    s_sext_i32_i8 s0, s0
-; GFX8-NEXT:    s_abs_i32 s2, s2
-; GFX8-NEXT:    s_abs_i32 s1, s1
-; GFX8-NEXT:    s_abs_i32 s0, s0
-; GFX8-NEXT:    ; return to shader part epilog
-;
-; GFX10-LABEL: abs_sgpr_v3i8:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_bfe_i32 s0, s0, 0x80000
-; GFX10-NEXT:    s_bfe_i32 s1, s1, 0x80000
-; GFX10-NEXT:    s_sub_i32 s3, 0, s0
-; GFX10-NEXT:    s_sub_i32 s4, 0, s1
-; GFX10-NEXT:    s_bfe_i32 s2, s2, 0x80000
-; GFX10-NEXT:    s_sext_i32_i16 s3, s3
-; GFX10-NEXT:    s_sext_i32_i16 s0, s0
-; GFX10-NEXT:    s_sext_i32_i16 s4, s4
-; GFX10-NEXT:    s_sext_i32_i16 s1, s1
-; GFX10-NEXT:    s_max_i32 s0, s0, s3
-; GFX10-NEXT:    s_max_i32 s1, s1, s4
-; GFX10-NEXT:    s_sub_i32 s3, 0, s2
-; GFX10-NEXT:    s_lshl_b32 s1, s1, 8
-; GFX10-NEXT:    s_sext_i32_i16 s3, s3
-; GFX10-NEXT:    s_sext_i32_i16 s2, s2
-; GFX10-NEXT:    s_or_b32 s0, s0, s1
-; GFX10-NEXT:    s_max_i32 s2, s2, s3
-; GFX10-NEXT:    s_and_b32 s1, s0, 0xffff
-; GFX10-NEXT:    s_lshl_b32 s3, s2, 16
-; GFX10-NEXT:    s_or_b32 s1, s1, s3
-; GFX10-NEXT:    s_lshr_b32 s1, s1, 8
-; GFX10-NEXT:    ; return to shader part epilog
+; GFX-LABEL: abs_sgpr_v3i8:
+; GFX:       ; %bb.0:
+; GFX-NEXT:    s_sext_i32_i8 s0, s0
+; GFX-NEXT:    s_sext_i32_i8 s1, s1
+; GFX-NEXT:    s_sext_i32_i8 s2, s2
+; GFX-NEXT:    s_abs_i32 s0, s0
+; GFX-NEXT:    s_abs_i32 s1, s1
+; GFX-NEXT:    s_abs_i32 s2, s2
+; GFX-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: abs_sgpr_v3i8:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_bfe_i32 s0, s0, 0x80000
-; GFX1250-NEXT:    s_bfe_i32 s1, s1, 0x80000
-; GFX1250-NEXT:    s_sub_co_i32 s3, 0, s0
-; GFX1250-NEXT:    s_sub_co_i32 s4, 0, s1
-; GFX1250-NEXT:    s_bfe_i32 s2, s2, 0x80000
-; GFX1250-NEXT:    s_sext_i32_i16 s3, s3
-; GFX1250-NEXT:    s_sext_i32_i16 s0, s0
-; GFX1250-NEXT:    s_sext_i32_i16 s4, s4
-; GFX1250-NEXT:    s_sext_i32_i16 s1, s1
-; GFX1250-NEXT:    s_max_i32 s0, s0, s3
-; GFX1250-NEXT:    s_max_i32 s1, s1, s4
-; GFX1250-NEXT:    s_sub_co_i32 s3, 0, s2
-; GFX1250-NEXT:    s_lshl_b32 s1, s1, 8
-; GFX1250-NEXT:    s_sext_i32_i16 s3, s3
-; GFX1250-NEXT:    s_sext_i32_i16 s2, s2
-; GFX1250-NEXT:    s_or_b32 s0, s0, s1
-; GFX1250-NEXT:    s_max_i32 s2, s2, s3
-; GFX1250-NEXT:    s_and_b32 s1, s0, 0xffff
-; GFX1250-NEXT:    s_lshl_b32 s3, s2, 16
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_or_b32 s1, s1, s3
-; GFX1250-NEXT:    s_lshr_b32 s1, s1, 8
+; GFX1250-NEXT:    s_sext_i32_i8 s0, s0
+; GFX1250-NEXT:    s_sext_i32_i8 s1, s1
+; GFX1250-NEXT:    s_sext_i32_i8 s2, s2
+; GFX1250-NEXT:    s_abs_i32 s0, s0
+; GFX1250-NEXT:    s_abs_i32 s1, s1
+; GFX1250-NEXT:    s_abs_i32 s2, s2
 ; GFX1250-NEXT:    ; return to shader part epilog
   %res = call <3 x i8> @llvm.abs.v3i8(<3 x i8> %arg, i1 false)
   ret <3 x i8> %res
@@ -531,21 +443,18 @@ define <3 x i8> @abs_vgpr_v3i8(<3 x i8>  %arg) {
 ; GFX1250-REAL16:       ; %bb.0:
 ; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-REAL16-NEXT:    v_bfe_i32 v5, v2, 0, 8
 ; GFX1250-REAL16-NEXT:    v_bfe_i32 v3, v0, 0, 8
-; GFX1250-REAL16-NEXT:    v_bfe_i32 v4, v1, 0, 8
+; GFX1250-REAL16-NEXT:    v_bfe_i32 v1, v1, 0, 8
+; GFX1250-REAL16-NEXT:    v_bfe_i32 v2, v2, 0, 8
 ; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-REAL16-NEXT:    v_sub_nc_u16 v1.l, 0, v5.l
 ; GFX1250-REAL16-NEXT:    v_sub_nc_u16 v0.l, 0, v3.l
+; GFX1250-REAL16-NEXT:    v_sub_nc_u16 v0.h, 0, v1.l
 ; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-REAL16-NEXT:    v_sub_nc_u16 v0.h, 0, v4.l
-; GFX1250-REAL16-NEXT:    v_max_i16 v1.l, v5.l, v1.l
-; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-REAL16-NEXT:    v_sub_nc_u16 v1.h, 0, v2.l
 ; GFX1250-REAL16-NEXT:    v_max_i16 v0.l, v3.l, v0.l
-; GFX1250-REAL16-NEXT:    v_max_i16 v2.l, v4.l, v0.h
-; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v3.l, v1.l
-; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v1, v2 :: v_dual_mov_b32 v2, v3
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-REAL16-NEXT:    v_max_i16 v1.l, v1.l, v0.h
+; GFX1250-REAL16-NEXT:    v_max_i16 v2.l, v2.l, v1.h
 ; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %res = call <3 x i8> @llvm.abs.v3i8(<3 x i8> %arg, i1 false)
   ret <3 x i8> %res

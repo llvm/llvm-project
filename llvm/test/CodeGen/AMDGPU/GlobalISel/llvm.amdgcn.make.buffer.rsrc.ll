@@ -245,7 +245,7 @@ define amdgpu_ps ptr addrspace(8) @general_case(ptr inreg %p, i16 inreg %stride,
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32(i32) = COPY $sgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr(i32) = COPY $sgpr2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32(i32) = COPY $sgpr3
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32(i32) = COPY $sgpr5
   ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
@@ -274,7 +274,7 @@ define amdgpu_ps ptr addrspace(8) @general_case(ptr inreg %p, i16 inreg %stride,
   ; CHECK45-NEXT:   [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
   ; CHECK45-NEXT:   [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr1
   ; CHECK45-NEXT:   [[MV:%[0-9]+]]:sgpr(p0) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
-  ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+  ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:sgpr(i32) = COPY $sgpr2
   ; CHECK45-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
   ; CHECK45-NEXT:   [[COPY4:%[0-9]+]]:sgpr(s32) = COPY $sgpr4
   ; CHECK45-NEXT:   [[MV1:%[0-9]+]]:sgpr(i64) = G_MERGE_VALUES [[COPY3]](s32), [[COPY4]](s32)
@@ -324,7 +324,7 @@ define amdgpu_ps float @general_case_load(ptr inreg %p, i16 inreg %stride, i64 i
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32(i32) = COPY $sgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr(i32) = COPY $sgpr2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32(i32) = COPY $sgpr3
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32(i32) = COPY $sgpr5
   ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
@@ -346,7 +346,7 @@ define amdgpu_ps float @general_case_load(ptr inreg %p, i16 inreg %stride, i64 i
   ; CHECK45-NEXT:   [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
   ; CHECK45-NEXT:   [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr1
   ; CHECK45-NEXT:   [[MV:%[0-9]+]]:sgpr(p0) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
-  ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+  ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:sgpr(i32) = COPY $sgpr2
   ; CHECK45-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
   ; CHECK45-NEXT:   [[COPY4:%[0-9]+]]:sgpr(s32) = COPY $sgpr4
   ; CHECK45-NEXT:   [[MV1:%[0-9]+]]:sgpr(i64) = G_MERGE_VALUES [[COPY3]](s32), [[COPY4]](s32)
@@ -392,7 +392,7 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i6
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr(i32) = COPY $vgpr2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr3
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr5
   ; CHECK-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
@@ -452,7 +452,7 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i6
   ; CHECK45-NEXT:   [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
   ; CHECK45-NEXT:   [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
   ; CHECK45-NEXT:   [[MV:%[0-9]+]]:vgpr(p0) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
-  ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
+  ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:vgpr(i32) = COPY $vgpr2
   ; CHECK45-NEXT:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr3
   ; CHECK45-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr4
   ; CHECK45-NEXT:   [[MV1:%[0-9]+]]:vgpr(i64) = G_MERGE_VALUES [[COPY3]](s32), [[COPY4]](s32)

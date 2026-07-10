@@ -9,10 +9,10 @@
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn-amd-amdpal -mcpu=gfx803 < %s | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX9-SDAG,GFX900-SDAG,GFX900 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX9-GISEL,GFX900-GISEL,GFX900 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX9-GISEL,GFX900-GISEL,GFX900 %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx90a < %s | FileCheck -check-prefixes=GFX9,GFX90A,GFX9-SDAG,GFX90A-SDAG %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn-amd-amdpal -mcpu=gfx90a < %s | FileCheck -check-prefixes=GFX9,GFX90A,GFX9-GISEL,GFX90A-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdpal -mcpu=gfx90a < %s | FileCheck -check-prefixes=GFX9,GFX90A,GFX9-GISEL,GFX90A-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 < %s | FileCheck -check-prefixes=GFX10,GFX10-SDAG %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
@@ -28,9 +28,9 @@
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1200,GFX1200-GISEL,GFX1200-GISEL-FAKE16 %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG,GFX1250-FAKE16,GFX1250-SDAG-FAKE16 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-FAKE16,GFX1250-GISEL-FAKE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-FAKE16,GFX1250-GISEL-FAKE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG,GFX1250-REAL16,GFX1250-SDAG-REAL16 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-REAL16,GFX1250-GISEL-REAL16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-REAL16,GFX1250-GISEL-REAL16 %s
 
 ; Test for integer mad formation for patterns used in clpeak
 

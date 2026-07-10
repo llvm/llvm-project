@@ -4,7 +4,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-- -mcpu=gfx1250 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-SDAG,GFX1250-SDAG-FAKE16,GFX1250-FAKE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-- -mcpu=gfx1250 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-SDAG,GFX1250-SDAG-TRUE16,GFX1250-TRUE16 %s
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn-- -mcpu=gfx1250 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-GISEL,GFX1250-GISEL-FAKE16,GFX1250-FAKE16 %s
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn-- -mcpu=gfx1250 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-GISEL,GFX1250-GISEL-TRUE16,GFX1250-TRUE16 %s
+; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=gfx1250 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-GISEL,GFX1250-GISEL-TRUE16,GFX1250-TRUE16 %s
 
 ; ========= Single bit functions =========
 
@@ -666,7 +666,7 @@ define amdgpu_ps half @test_xor3_b16(i16 %a, i16 %b, i16 %c) {
 ; GFX1250-GISEL-TRUE16-LABEL: test_xor3_b16:
 ; GFX1250-GISEL-TRUE16:       ; %bb.0:
 ; GFX1250-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v2.l, v1.l bitop3:0x96
+; GFX1250-GISEL-TRUE16-NEXT:    v_xor3_b32 v0, v0, v1, v2
 ; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
   %xor1 = xor i16 %a, %b
   %xor2 = xor i16 %xor1, %c
@@ -701,7 +701,7 @@ define amdgpu_ps half @test_or3_b16(i16 %a, i16 %b, i16 %c) {
 ; GFX1250-GISEL-TRUE16-LABEL: test_or3_b16:
 ; GFX1250-GISEL-TRUE16:       ; %bb.0:
 ; GFX1250-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v2.l, v1.l bitop3:0xfe
+; GFX1250-GISEL-TRUE16-NEXT:    v_or3_b32 v0, v0, v1, v2
 ; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
   %or1 = or i16 %a, %b
   %or2 = or i16 %or1, %c
@@ -736,7 +736,7 @@ define amdgpu_ps half @test_and_or_b16(i16 %a, i16 %b, i16 %c) {
 ; GFX1250-GISEL-TRUE16-LABEL: test_and_or_b16:
 ; GFX1250-GISEL-TRUE16:       ; %bb.0:
 ; GFX1250-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v2.l, v1.l bitop3:0xec
+; GFX1250-GISEL-TRUE16-NEXT:    v_and_or_b32 v0, v0, v1, v2
 ; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
   %and1 = and i16 %a, %b
   %or1 = or i16 %and1, %c

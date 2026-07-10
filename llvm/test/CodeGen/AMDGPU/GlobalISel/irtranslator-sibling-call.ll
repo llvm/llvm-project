@@ -188,8 +188,8 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32_byval_parent(i32 %a, pt
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_byval_i32
   ; GCN-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
-  ; GCN-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C]](s32)
+  ; GCN-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
   ; GCN-NEXT:   G_MEMCPY [[PTR_ADD]](p5), [[COPY1]](p5), [[C1]](i32), 0 :: (dereferenceable store (s32) into stack, addrspace 5), (dereferenceable load (s32) from %ir.b.byval, addrspace 5)
   ; GCN-NEXT:   $vgpr0 = COPY [[COPY]](i32)
@@ -516,14 +516,14 @@ define fastcc i32 @no_sibling_call_callee_more_stack_space(i32 %a, i32 %b) #1 {
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32_a32i32
   ; GCN-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
-  ; GCN-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C1]](s32)
+  ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C1]](i32)
   ; GCN-NEXT:   G_STORE [[C]](i32), [[PTR_ADD]](p5) :: (store (i32) into stack, align 16, addrspace 5)
-  ; GCN-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; GCN-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C2]](s32)
+  ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+  ; GCN-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C2]](i32)
   ; GCN-NEXT:   G_STORE [[C]](i32), [[PTR_ADD1]](p5) :: (store (i32) into stack + 4, addrspace 5)
-  ; GCN-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; GCN-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C3]](s32)
+  ; GCN-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+  ; GCN-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C3]](i32)
   ; GCN-NEXT:   G_STORE [[C]](i32), [[PTR_ADD2]](p5) :: (store (i32) into stack + 8, align 8, addrspace 5)
   ; GCN-NEXT:   $vgpr0 = COPY [[COPY]](i32)
   ; GCN-NEXT:   $vgpr1 = COPY [[COPY1]](i32)
@@ -809,7 +809,7 @@ define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) #1 {
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr31
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr15
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr14
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr13
@@ -940,7 +940,7 @@ define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) #1 {
   ; GCN-NEXT:   [[COPY45:%[0-9]+]]:_(s32) = COPY [[COPY3]](s32)
   ; GCN-NEXT:   [[COPY46:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GCN-NEXT:   [[COPY47:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-  ; GCN-NEXT:   [[COPY48:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY48:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[FRAME_INDEX36:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
   ; GCN-NEXT:   [[C4:%[0-9]+]]:_(i32) = G_CONSTANT i32 12
   ; GCN-NEXT:   G_MEMCPY [[FRAME_INDEX36]](p5), [[FRAME_INDEX34]](p5), [[C4]](i32), 0 :: (dereferenceable store (s96) into %fixed-stack.1, align 16, addrspace 5), (dereferenceable load (s96) from %ir.alloca0, align 16, addrspace 5)
@@ -958,7 +958,7 @@ define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) #1 {
   ; GCN-NEXT:   $sgpr13 = COPY [[COPY45]](s32)
   ; GCN-NEXT:   $sgpr14 = COPY [[COPY46]](s32)
   ; GCN-NEXT:   $sgpr15 = COPY [[COPY47]](s32)
-  ; GCN-NEXT:   $vgpr31 = COPY [[COPY48]](s32)
+  ; GCN-NEXT:   $vgpr31 = COPY [[COPY48]](i32)
   ; GCN-NEXT:   SI_TCRETURN [[GV]](p0), @void_fastcc_multi_byval, 0, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
 entry:
   %alloca0 = alloca [3 x i32], align 16, addrspace(5)
@@ -977,7 +977,7 @@ define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr31
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr15
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr14
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr13
@@ -1104,7 +1104,7 @@ define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 
   ; GCN-NEXT:   [[COPY45:%[0-9]+]]:_(s32) = COPY [[COPY3]](s32)
   ; GCN-NEXT:   [[COPY46:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GCN-NEXT:   [[COPY47:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-  ; GCN-NEXT:   [[COPY48:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY48:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[FRAME_INDEX35:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
   ; GCN-NEXT:   [[C4:%[0-9]+]]:_(i32) = G_CONSTANT i32 12
   ; GCN-NEXT:   G_MEMCPY [[FRAME_INDEX35]](p5), [[FRAME_INDEX34]](p5), [[C4]](i32), 0 :: (dereferenceable store (s96) into %fixed-stack.2, align 16, addrspace 5), (dereferenceable load (s96) from %ir.alloca, align 16, addrspace 5)
@@ -1153,7 +1153,7 @@ define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 
   ; GCN-NEXT:   $sgpr13 = COPY [[COPY45]](s32)
   ; GCN-NEXT:   $sgpr14 = COPY [[COPY46]](s32)
   ; GCN-NEXT:   $sgpr15 = COPY [[COPY47]](s32)
-  ; GCN-NEXT:   $vgpr31 = COPY [[COPY48]](s32)
+  ; GCN-NEXT:   $vgpr31 = COPY [[COPY48]](i32)
   ; GCN-NEXT:   SI_TCRETURN [[GV]](p0), @void_fastcc_byval_and_stack_passed, 0, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
 entry:
   %alloca = alloca [3 x i32], align 16, addrspace(5)
@@ -1169,7 +1169,7 @@ define hidden fastcc i64 @sibling_call_i64_fastcc_i64(i64 %a) #1 {
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr31
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr15
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr14
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr13
@@ -1190,7 +1190,7 @@ define hidden fastcc i64 @sibling_call_i64_fastcc_i64(i64 %a) #1 {
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]](s32)
   ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[MV]](i64)
   ; GCN-NEXT:   $vgpr0 = COPY [[UV]](i32)
   ; GCN-NEXT:   $vgpr1 = COPY [[UV1]](i32)
@@ -1204,7 +1204,7 @@ define hidden fastcc i64 @sibling_call_i64_fastcc_i64(i64 %a) #1 {
   ; GCN-NEXT:   $sgpr13 = COPY [[COPY16]](s32)
   ; GCN-NEXT:   $sgpr14 = COPY [[COPY17]](s32)
   ; GCN-NEXT:   $sgpr15 = COPY [[COPY18]](s32)
-  ; GCN-NEXT:   $vgpr31 = COPY [[COPY19]](s32)
+  ; GCN-NEXT:   $vgpr31 = COPY [[COPY19]](i32)
   ; GCN-NEXT:   SI_TCRETURN [[GV]](p0), @i64_fastcc_i64, 0, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
 entry:
   %ret = tail call fastcc i64 @i64_fastcc_i64(i64 %a)
@@ -1240,7 +1240,7 @@ define hidden fastcc i16 @sibling_call_i16_fastcc_i16(i16 %a) #1 {
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr31
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr15
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr14
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr13
@@ -1249,8 +1249,8 @@ define hidden fastcc i16 @sibling_call_i16_fastcc_i16(i16 %a) #1 {
   ; GCN-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr8_sgpr9
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
-  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GCN-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY9]](s32)
+  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; GCN-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY9]](i32)
   ; GCN-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @i16_fastcc_i16
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]](p4)
   ; GCN-NEXT:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY7]](p4)
@@ -1260,9 +1260,9 @@ define hidden fastcc i16 @sibling_call_i16_fastcc_i16(i16 %a) #1 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY3]](s32)
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-  ; GCN-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](i16)
-  ; GCN-NEXT:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
+  ; GCN-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i16)
+  ; GCN-NEXT:   $vgpr0 = COPY [[ANYEXT]](i32)
   ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY19]](<4 x s32>)
   ; GCN-NEXT:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -1273,7 +1273,7 @@ define hidden fastcc i16 @sibling_call_i16_fastcc_i16(i16 %a) #1 {
   ; GCN-NEXT:   $sgpr13 = COPY [[COPY15]](s32)
   ; GCN-NEXT:   $sgpr14 = COPY [[COPY16]](s32)
   ; GCN-NEXT:   $sgpr15 = COPY [[COPY17]](s32)
-  ; GCN-NEXT:   $vgpr31 = COPY [[COPY18]](s32)
+  ; GCN-NEXT:   $vgpr31 = COPY [[COPY18]](i32)
   ; GCN-NEXT:   SI_TCRETURN [[GV]](p0), @i16_fastcc_i16, 0, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
 entry:
   %ret = tail call fastcc i16 @i16_fastcc_i16(i16 %a)
@@ -1287,7 +1287,7 @@ define hidden fastcc half @sibling_call_f16_fastcc_f16(half %a) #1 {
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr31
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr15
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr14
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr13
@@ -1296,8 +1296,9 @@ define hidden fastcc half @sibling_call_f16_fastcc_f16(half %a) #1 {
   ; GCN-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr8_sgpr9
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
-  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GCN-NEXT:   [[TRUNC:%[0-9]+]]:_(f16) = G_TRUNC [[COPY9]](s32)
+  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; GCN-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY9]](i32)
+  ; GCN-NEXT:   [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC]](i16)
   ; GCN-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @f16_fastcc_f16
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]](p4)
   ; GCN-NEXT:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY7]](p4)
@@ -1307,9 +1308,9 @@ define hidden fastcc half @sibling_call_f16_fastcc_f16(half %a) #1 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY3]](s32)
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-  ; GCN-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](f16)
-  ; GCN-NEXT:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
+  ; GCN-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST]](f16)
+  ; GCN-NEXT:   $vgpr0 = COPY [[ANYEXT]](i32)
   ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY19]](<4 x s32>)
   ; GCN-NEXT:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -1320,7 +1321,7 @@ define hidden fastcc half @sibling_call_f16_fastcc_f16(half %a) #1 {
   ; GCN-NEXT:   $sgpr13 = COPY [[COPY15]](s32)
   ; GCN-NEXT:   $sgpr14 = COPY [[COPY16]](s32)
   ; GCN-NEXT:   $sgpr15 = COPY [[COPY17]](s32)
-  ; GCN-NEXT:   $vgpr31 = COPY [[COPY18]](s32)
+  ; GCN-NEXT:   $vgpr31 = COPY [[COPY18]](i32)
   ; GCN-NEXT:   SI_TCRETURN [[GV]](p0), @f16_fastcc_f16, 0, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
 entry:
   %ret = tail call fastcc half @f16_fastcc_f16(half %a)
@@ -1334,7 +1335,7 @@ define hidden fastcc <3 x i16> @sibling_call_v3i16_fastcc_v3i16(<3 x i16> %a) #1
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr31
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr15
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr14
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr13
@@ -1357,7 +1358,7 @@ define hidden fastcc <3 x i16> @sibling_call_v3i16_fastcc_v3i16(<3 x i16> %a) #1
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]](s32)
   ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[UV4:%[0-9]+]]:_(i16), [[UV5:%[0-9]+]]:_(i16), [[UV6:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x i16>)
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(i16) = G_IMPLICIT_DEF
   ; GCN-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x i16>) = G_BUILD_VECTOR [[UV4]](i16), [[UV5]](i16), [[UV6]](i16), [[DEF]](i16)
@@ -1374,7 +1375,7 @@ define hidden fastcc <3 x i16> @sibling_call_v3i16_fastcc_v3i16(<3 x i16> %a) #1
   ; GCN-NEXT:   $sgpr13 = COPY [[COPY16]](s32)
   ; GCN-NEXT:   $sgpr14 = COPY [[COPY17]](s32)
   ; GCN-NEXT:   $sgpr15 = COPY [[COPY18]](s32)
-  ; GCN-NEXT:   $vgpr31 = COPY [[COPY19]](s32)
+  ; GCN-NEXT:   $vgpr31 = COPY [[COPY19]](i32)
   ; GCN-NEXT:   SI_TCRETURN [[GV]](p0), @v3i16_fastcc_v3i16, 0, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
 entry:
   %ret = tail call fastcc <3 x i16> @v3i16_fastcc_v3i16(<3 x i16> %a)
@@ -1388,7 +1389,7 @@ define hidden fastcc <4 x i16> @sibling_call_v4i16_fastcc_v4i16(<4 x i16> %a) #1
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr31
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr15
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr14
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr13
@@ -1409,7 +1410,7 @@ define hidden fastcc <4 x i16> @sibling_call_v4i16_fastcc_v4i16(<4 x i16> %a) #1
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]](s32)
   ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(<2 x i16>), [[UV1:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x i16>)
   ; GCN-NEXT:   $vgpr0 = COPY [[UV]](<2 x i16>)
   ; GCN-NEXT:   $vgpr1 = COPY [[UV1]](<2 x i16>)
@@ -1423,7 +1424,7 @@ define hidden fastcc <4 x i16> @sibling_call_v4i16_fastcc_v4i16(<4 x i16> %a) #1
   ; GCN-NEXT:   $sgpr13 = COPY [[COPY16]](s32)
   ; GCN-NEXT:   $sgpr14 = COPY [[COPY17]](s32)
   ; GCN-NEXT:   $sgpr15 = COPY [[COPY18]](s32)
-  ; GCN-NEXT:   $vgpr31 = COPY [[COPY19]](s32)
+  ; GCN-NEXT:   $vgpr31 = COPY [[COPY19]](i32)
   ; GCN-NEXT:   SI_TCRETURN [[GV]](p0), @v4i16_fastcc_v4i16, 0, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
 entry:
   %ret = tail call fastcc <4 x i16> @v4i16_fastcc_v4i16(<4 x i16> %a)
@@ -1437,7 +1438,7 @@ define hidden fastcc <2 x i64> @sibling_call_v2i64_fastcc_v2i64(<2 x i64> %a) #1
   ; GCN: bb.1.entry:
   ; GCN-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr31
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr15
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr14
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32(s32) = COPY $sgpr13
@@ -1462,7 +1463,7 @@ define hidden fastcc <2 x i64> @sibling_call_v2i64_fastcc_v2i64(<2 x i64> %a) #1
   ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY3]](s32)
   ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GCN-NEXT:   [[COPY20:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-  ; GCN-NEXT:   [[COPY21:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY21:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<2 x i64>)
   ; GCN-NEXT:   $vgpr0 = COPY [[UV]](i32)
   ; GCN-NEXT:   $vgpr1 = COPY [[UV1]](i32)
@@ -1478,7 +1479,7 @@ define hidden fastcc <2 x i64> @sibling_call_v2i64_fastcc_v2i64(<2 x i64> %a) #1
   ; GCN-NEXT:   $sgpr13 = COPY [[COPY18]](s32)
   ; GCN-NEXT:   $sgpr14 = COPY [[COPY19]](s32)
   ; GCN-NEXT:   $sgpr15 = COPY [[COPY20]](s32)
-  ; GCN-NEXT:   $vgpr31 = COPY [[COPY21]](s32)
+  ; GCN-NEXT:   $vgpr31 = COPY [[COPY21]](i32)
   ; GCN-NEXT:   SI_TCRETURN [[GV]](p0), @v2i64_fastcc_v2i64, 0, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
 entry:
   %ret = tail call fastcc <2 x i64> @v2i64_fastcc_v2i64(<2 x i64> %a)
