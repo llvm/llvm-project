@@ -1089,6 +1089,9 @@ DEF_TRAVERSE_TYPE(ExtVectorType, { TRY_TO(TraverseType(T->getElementType())); })
 DEF_TRAVERSE_TYPE(ConstantMatrixType,
                   { TRY_TO(TraverseType(T->getElementType())); })
 
+DEF_TRAVERSE_TYPE(CooperativeMatrixType,
+                  { TRY_TO(TraverseType(T->getElementType())); })
+
 DEF_TRAVERSE_TYPE(DependentSizedMatrixType, {
   if (T->getRowExpr())
     TRY_TO(TraverseStmt(T->getRowExpr()));
@@ -1406,6 +1409,14 @@ DEF_TRAVERSE_TYPELOC(ExtVectorType, {
 DEF_TRAVERSE_TYPELOC(ConstantMatrixType, {
   TRY_TO(TraverseStmt(TL.getAttrRowOperand()));
   TRY_TO(TraverseStmt(TL.getAttrColumnOperand()));
+  TRY_TO(TraverseType(TL.getTypePtr()->getElementType()));
+})
+
+DEF_TRAVERSE_TYPELOC(CooperativeMatrixType, {
+  TRY_TO(TraverseStmt(TL.getAttrScopeOperand()));
+  TRY_TO(TraverseStmt(TL.getAttrRowOperand()));
+  TRY_TO(TraverseStmt(TL.getAttrColumnOperand()));
+  TRY_TO(TraverseStmt(TL.getAttrUseOperand()));
   TRY_TO(TraverseType(TL.getTypePtr()->getElementType()));
 })
 
