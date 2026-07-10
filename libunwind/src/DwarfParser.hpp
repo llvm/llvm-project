@@ -869,8 +869,8 @@ bool CFI_Parser<A>::parseFDEInstructions(
         }
         offset = addressSpace.getSLEB128(p, instructionsEnd) *
                  cieInfo.codeAlignFactor;
-        results->setRegisterValue(UNW_AARCH64_RA_SIGN_STATE, value,
-                                  initialState);
+        results->setRegister(UNW_AARCH64_RA_SIGN_STATE, kRegisterIsPseudo,
+                             value, initialState);
         results->ptrAuthDiversifier = fdeInfo.pcStart + codeOffset + offset;
         _LIBUNWIND_TRACE_DWARF(
             "DW_CFA_AARCH64_set_ra_state(state=%" PRId64 ",pc=0x%" PRIx64 ")\n",
