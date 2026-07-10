@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ASTUtils.h"
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
 #include "clang/AST/Decl.h"
@@ -107,22 +108,8 @@ public:
 
     if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl())
       reportBug(Member, MemberType, MemberCXXRD, RD);
-    else if (auto *ObjCDecl = getObjCDecl(MemberType))
+    else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(MemberType))
       reportBug(Member, MemberType, ObjCDecl, RD);
-  }
-
-  ObjCInterfaceDecl *getObjCDecl(const Type *TypePtr) const {
-    auto *PointeeType = TypePtr->getPointeeType().getTypePtrOrNull();
-    if (!PointeeType)
-      return nullptr;
-    auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
-    if (!Desugared)
-      return nullptr;
-    if (auto *ObjCType = dyn_cast<ObjCInterfaceType>(Desugared))
-      return ObjCType->getDecl();
-    if (auto *ObjCType = dyn_cast<ObjCObjectType>(Desugared))
-      return ObjCType->getInterface();
-    return nullptr;
   }
 
   void visitObjCDecl(const ObjCContainerDecl *CD) const {
@@ -168,7 +155,7 @@ public:
 
     if (auto *MemberCXXRD = IvarType->getPointeeCXXRecordDecl())
       reportBug(Ivar, IvarType, MemberCXXRD, CD);
-    else if (auto *ObjCDecl = getObjCDecl(IvarType))
+    else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(IvarType))
       reportBug(Ivar, IvarType, ObjCDecl, CD);
   }
 
@@ -189,7 +176,7 @@ public:
 
     if (auto *MemberCXXRD = PropType->getPointeeCXXRecordDecl())
       reportBug(PD, PropType, MemberCXXRD, CD);
-    else if (auto *ObjCDecl = getObjCDecl(PropType))
+    else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(PropType))
       reportBug(PD, PropType, ObjCDecl, CD);
   }
 
@@ -213,7 +200,7 @@ public:
 
     if (auto *MemberCXXRD = PropType->getPointeeCXXRecordDecl())
       reportBug(PropDecl, PropType, MemberCXXRD, CD);
-    else if (auto *ObjCDecl = getObjCDecl(PropType))
+    else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(PropType))
       reportBug(PropDecl, PropType, ObjCDecl, CD);
   }
 
