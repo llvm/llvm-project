@@ -223,7 +223,28 @@
 // CHECK-ASAN:      "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}asan"
 // CHECK-ASAN-SAME: "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib"
 // -----------------------------------------------------------------------------
-// No sanitizer: no msan/asan library paths
+// Sanitizer library paths: -fsanitize=shadow-call-stack
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -fsanitize=shadow-call-stack -ffixed-r19 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-SCS %s
+// CHECK-SCS:      "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}scs"
+// CHECK-SCS-SAME: "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib"
+// -----------------------------------------------------------------------------
+// Library paths: -ffixed-r19 alone must NOT select the scs multilib
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -ffixed-r19 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-R19-ONLY %s
+// CHECK-R19-ONLY-NOT: "-L{{.*}}{{/|\\\\}}scs"
+// -----------------------------------------------------------------------------
+// No sanitizer: no msan/asan/scs library paths
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-unknown-linux-musl \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
@@ -232,6 +253,7 @@
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-NOSAN %s
 // CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}msan"
 // CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}asan"
+// CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}scs"
 // -----------------------------------------------------------------------------
 // ThinLTO passes LTO options to the linker
 // -----------------------------------------------------------------------------

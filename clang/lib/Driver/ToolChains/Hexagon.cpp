@@ -743,12 +743,17 @@ HexagonToolChain::HexagonToolChain(const Driver &D, const llvm::Triple &Triple,
     Multilibs.push_back(MultilibBuilder("asan", {}, {})
                             .flag("-fsanitize=address")
                             .makeMultilib());
+    Multilibs.push_back(MultilibBuilder("scs", {}, {})
+                            .flag("-fsanitize=shadow-call-stack")
+                            .makeMultilib());
 
     Multilib::flags_list Flags;
     addMultilibFlag(getSanitizerArgs(Args).needsMsanRt(), "-fsanitize=memory",
                     Flags);
     addMultilibFlag(getSanitizerArgs(Args).needsAsanRt(), "-fsanitize=address",
                     Flags);
+    addMultilibFlag(getSanitizerArgs(Args).hasShadowCallStack(),
+                    "-fsanitize=shadow-call-stack", Flags);
 
     if (Multilibs.select(D, Flags, SelectedMultilibs)) {
       Multilib LastSelected = SelectedMultilibs.back();
