@@ -8863,6 +8863,10 @@ bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(
   if (OverrideNEON && (VT.is128BitVector() || VT.is64BitVector()))
     return Subtarget->isSVEorStreamingSVEAvailable();
 
+  // Don't use SVE for bf16 vectors other than v8bf16 and v4bf16.
+  if (VT.isVectorOf(MVT::bf16))
+    return false;
+
   // Ensure NEON MVTs only belong to a single register class.
   if (VT.getFixedSizeInBits() <= 128)
     return false;
