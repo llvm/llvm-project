@@ -5081,6 +5081,12 @@ def PtrauthAuthAndResign : Builtin {
   let Prototype = "void*(void*,int,void*,int,void*)";
 }
 
+def PtrauthAuthWithPCAndResign : Builtin {
+  let Spellings = ["__builtin_ptrauth_auth_with_pc_and_resign"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void*(void*,int,void*,void*,int,void*)";
+}
+
 def PtrauthAuthLoadRelativeAndSign : Builtin {
   let Spellings = ["__builtin_ptrauth_auth_load_relative_and_sign"];
   let Attributes = [CustomTypeChecking, NoThrow];
@@ -5910,6 +5916,25 @@ def MSVaCopy : Builtin {
   let Spellings = ["__builtin_ms_va_copy"];
   let Attributes = [NoThrow];
   let Prototype = "void(char*&, char*&)";
+}
+
+// z/OS-compatible va_list functions.
+def ZOSVaStart : Builtin {
+  let Spellings = ["__builtin_zos_va_start"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(char**, ...)";
+}
+
+def ZOSVaEnd : Builtin {
+  let Spellings = ["__builtin_zos_va_end"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(char**)";
+}
+
+def ZOSVaCopy : Builtin {
+  let Spellings = ["__builtin_zos_va_copy"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(char**, char**)";
 }
 
 // Arithmetic Fence: to prevent FP reordering and reassociation optimizations

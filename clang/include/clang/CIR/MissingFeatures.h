@@ -120,7 +120,7 @@ struct MissingFeatures {
 
   // RecordType
   static bool astRecordDeclAttr() { return false; }
-  static bool zeroSizeRecordMembers() { return false; }
+  static bool noUniqueAddressLayout() { return false; }
 
   // Coroutines
   static bool coroOutsideFrameMD() { return false; }

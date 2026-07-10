@@ -869,6 +869,52 @@ void OmpStructureChecker::Enter(const parser::DoConstruct &x) {
   constructStack_.push_back(&x);
 }
 
+void OmpStructureChecker::Enter(const parser::OmpLoopModifier &x) {
+  DirectiveContext &dirCtx = GetContext();
+  llvm::omp::Directive dir{dirCtx.directive};
+  unsigned version{context_.langOptions().OpenMPVersion};
+  auto &m{std::get<llvm::omp::LoopModifier>(x.t)};
+  if (!llvm::omp::isAllowedLoopModifier(dir, m)) {
+    llvm::StringRef name = llvm::omp::getLoopModifierName(m);
+    context_.Say(x.source,
+        "%s modifier is not allowed on %s directive"_err_en_US,
+        parser::ToUpperCaseLetters(name),
+        parser::omp::GetUpperName(dir, version));
+  }
+  if (const auto &il{
+          std::get<std::optional<std::list<parser::ScalarIntConstantExpr>>>(
+              x.t)}) {
+    int64_t last = -1;
+    for (auto &i : il.value()) {
+      if (const auto v{GetIntValue(i)}) {
+        if (*v <= 0) {
+          context_.Say(x.source,
+              "The loop modifier indexes of the %s clause must be constant positive integer expressions"_err_en_US,
+              parser::ToUpperCaseLetters(
+                  getClauseName(llvm::omp::Clause::OMPC_apply).str()));
+        } else if (*v <= last) {
+          context_.Say(x.source,
+              "The loop modifier indexes of the %s clause must be in ascending order"_err_en_US,
+              parser::ToUpperCaseLetters(
+                  getClauseName(llvm::omp::Clause::OMPC_apply).str()));
+        } else {
+          last = *v;
+        }
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Apply &x) {
+  EnterDirectiveNest(ApplyNest);
+  OmpVerifyModifiers(
+      x.v, llvm::omp::Clause::OMPC_apply, GetContext().clauseSource, context_);
+}
+
+void OmpStructureChecker::Leave(const parser::OmpClause::Apply &x) {
+  ExitDirectiveNest(ApplyNest);
+}
+
 void OmpStructureChecker::Leave(const parser::DoConstruct &x) {
   assert(!constructStack_.empty() && "Expecting non-empty construct stack");
 #ifndef NDEBUG
