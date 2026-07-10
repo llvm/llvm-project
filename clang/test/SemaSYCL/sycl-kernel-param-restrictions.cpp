@@ -307,14 +307,14 @@ void kernel_single_task(T t) {} // expected-note-re {{within parameter 't' of ty
 struct S { // expected-note {{within field of type 'S' declared here}}
            // expected-note@-1 {{within field of type 'S' declared here}}
   int *ptr;
-  // expected-warning@-1 {{pointer parameters in SYCL kernels must point to device-accessible memory, i.e. the USM}}
-  // expected-warning@-2 {{pointer parameters in SYCL kernels must point to device-accessible memory, i.e. the USM}}
+  // expected-warning@-1 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
+  // expected-warning@-2 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
 };
 
 class C { // expected-note {{within field of type 'C' declared here}}
 private:
   int *ptr;
-  // expected-warning@-1 {{pointer parameters in SYCL kernels must point to device-accessible memory, i.e. the USM}}
+  // expected-warning@-1 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
   // TODO double-check this warning actually tells me what field is the problem
 public:
   C(int *p) : ptr(p) {}
@@ -323,7 +323,7 @@ public:
 void test() {
   int *ptr;
   kernel_single_task<class KN<25>>([=]{ (void)ptr; });
-  // expected-warning@-1 {{pointer parameters in SYCL kernels must point to device-accessible memory, i.e. the USM}}
+  // expected-warning@-1 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
   // expected-note-re@-2 {{in instantiation of function template specialization 'nonportable1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
   // expected-note@-3 {{within capture 'ptr' of lambda expression here}}
 

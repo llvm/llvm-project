@@ -675,13 +675,13 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
   SmallVector<ObjectAccess, 4> ObjectAccessPath;
 
   std::pair<QualType, SourceLocation> getObjectAccessDebugInfo(ObjectAccess o) {
-      if (auto *PVD = dyn_cast<const ParmVarDecl *>(o))
-          return std::pair{PVD->getType(), PVD->getLocation()};
-      else if (auto *FD = dyn_cast<const FieldDecl *>(o))
-          return std::pair{FD->getType(), FD->getLocation()};
-      else if (auto *BS = dyn_cast<const CXXBaseSpecifier *>(o))
-          return std::pair{BS->getType(), BS->getBaseTypeLoc()};
-      llvm_unreachable("Unexpected type in ObjectAccess");
+    if (auto *PVD = dyn_cast<const ParmVarDecl *>(o))
+      return std::pair{PVD->getType(), PVD->getLocation()};
+    else if (auto *FD = dyn_cast<const FieldDecl *>(o))
+      return std::pair{FD->getType(), FD->getLocation()};
+    else if (auto *BS = dyn_cast<const CXXBaseSpecifier *>(o))
+      return std::pair{BS->getType(), BS->getBaseTypeLoc()};
+    llvm_unreachable("Unexpected type in ObjectAccess");
   }
 
   void emitObjectAccessPathNotes() {
@@ -738,6 +738,12 @@ public:
 
   // Returns true if subobjects should be visited and false otherwise.
   bool checkType(QualType Ty) {
+    auto emitDiagnostic = [this](clang::diag::kind mesg) {
+      const auto &[Type, Loc] =
+          getObjectAccessDebugInfo(ObjectAccessPath.back());
+      SemaSYCLRef.Diag(Loc, mesg) << Type;
+      emitObjectAccessPathNotes();
+    };
     if (Ty->isReferenceType()) {
       auto DirectParent = ObjectAccessPath.back();
       // Reference cannot be a base, so just assume we came via a FieldDecl.
@@ -761,43 +767,29 @@ public:
       IsValid = false;
       return false;
     } else if (Ty->isAtomicType()) {
-      const auto& [Type, Loc] = getObjectAccessDebugInfo(ObjectAccessPath.back());
-      SemaSYCLRef.Diag(Loc, diag::err_bad_kernel_param_type) << Type;
-      emitObjectAccessPathNotes();
-
+      emitDiagnostic(diag::err_bad_kernel_param_type);
       IsValid = false;
       return false;
     } else if (Ty->isVariablyModifiedType()) {
-      const auto& [Type, Loc] = getObjectAccessDebugInfo(ObjectAccessPath.back());
-      SemaSYCLRef.Diag(Loc, diag::err_sycl_kernel_param_has_vmt) << Type;
-      emitObjectAccessPathNotes();
-
+      emitDiagnostic(diag::err_sycl_kernel_param_has_vmt);
       IsValid = false;
       return false;
     } else if (Ty->isStructureTypeWithFlexibleArrayMember()) {
-      const auto& [Type, Loc] = getObjectAccessDebugInfo(ObjectAccessPath.back());
-      SemaSYCLRef.Diag(Loc, diag::err_sycl_kernel_param_has_fam) << Type;
-      emitObjectAccessPathNotes();
-
+      emitDiagnostic(diag::err_sycl_kernel_param_has_fam);
       IsValid = false;
       return false;
     } else if (CXXRecordDecl *RD = Ty->getAsCXXRecordDecl()) {
       if (RD->getNumVBases() > 0) {
-        const auto& [Type, Loc] = getObjectAccessDebugInfo(ObjectAccessPath.back());
-        SemaSYCLRef.Diag(Loc, diag::err_sycl_kernel_param_has_vbase) << Type;
-        emitObjectAccessPathNotes();
-
+        emitDiagnostic(diag::err_sycl_kernel_param_has_vbase);
         IsValid = false;
         return false;
       }
     }
-    
+
     // Warn about pointer parameters in SYCL kernels if non-portable SYCL
     // warnings are enabled.
     if (Ty->isPointerType()) {
-      const auto& [Type, Loc] = getObjectAccessDebugInfo(ObjectAccessPath.back());
-      SemaSYCLRef.Diag(Loc, diag::warn_sycl_kernel_param_has_ptr) << Type;
-      emitObjectAccessPathNotes();
+      emitDiagnostic(diag::warn_sycl_kernel_param_has_ptr);
     }
     return true;
   }

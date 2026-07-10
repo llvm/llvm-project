@@ -13515,7 +13515,7 @@ def err_sycl_special_type_num_init_method : Error<
 def err_sycl_device_invalid_target : Error<
   "%0 is not a supported SYCL device target">;
 def warn_sycl_kernel_param_has_ptr: Warning<
-  "pointer parameters in SYCL kernels must point to device-accessible memory, "
+  "pointers used in SYCL kernels must point to device-accessible memory, "
   "i.e. the USM">,
   InGroup<NonPortableSYCL>, DefaultIgnore;
 def err_sycl_kernel_param_has_vbase : Error<
