@@ -55,10 +55,12 @@ set(MLIR_CONFIG_INCLUDE_DIRS
   "${MLIR_SOURCE_DIR}/include"
   "${MLIR_BINARY_DIR}/include"
   )
-# Refer to the best host mlir-tblgen, which might be a host-optimized version
-set(MLIR_CONFIG_TABLEGEN_EXE "${MLIR_TABLEGEN_EXE}")
-set(MLIR_CONFIG_PDLL_TABLEGEN_EXE "${MLIR_PDLL_TABLEGEN_EXE}")
-set(MLIR_CONFIG_SRC_SHARDER_TABLEGEN_EXE "${MLIR_SRC_SHARDER_TABLEGEN_EXE}")
+# Refer to the best host mlir-tblgen, which might be a host-optimized version.
+# TO_CMAKE_PATH normalizes path separators across platforms. Backslashes would
+# cause a syntax error in MLIRConfig.cmake.
+file(TO_CMAKE_PATH "${MLIR_TABLEGEN_EXE}" MLIR_CONFIG_TABLEGEN_EXE)
+file(TO_CMAKE_PATH "${MLIR_PDLL_TABLEGEN_EXE}" MLIR_CONFIG_PDLL_TABLEGEN_EXE)
+file(TO_CMAKE_PATH "${MLIR_SRC_SHARDER_TABLEGEN_EXE}" MLIR_CONFIG_SRC_SHARDER_TABLEGEN_EXE)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfig.cmake.in
