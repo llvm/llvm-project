@@ -52,7 +52,7 @@ void DWARFCompileUnit::BuildAddressRangeTable(
         return;
     } else {
       LLDB_LOG_ERRORV(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
-                     "DIE({1:x}): {0}", cu_offset);
+                      "DIE({1:x}): {0}", cu_offset);
     }
   }
 
