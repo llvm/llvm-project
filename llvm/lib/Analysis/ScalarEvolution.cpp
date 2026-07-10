@@ -1924,6 +1924,24 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
                         SCEV::FlagNSW, Depth + 1);
     }
 
+    // zext(C + X)<nsw> -> (sext(C) + zext(X))<nsw>
+    // for negative C, if X >=u abs(C) (no unsigned underflow).
+    //
+    // Let K = abs(C). Since X >=u K, X + C == X - K does not
+    // unsigned-underflow in the source type, so
+    //   zext(X - K) == zext(X) - K == zext(X) + sext(C).
+    //
+    // Unlike the smax case above, X may be unsigned-large (sign bit set),
+    // so it must be zero-extended; sign-extending would change its value.
+    if (SA->hasNoSignedWrap() &&
+        match(SA, m_scev_Add(m_scev_APInt(C), m_SCEV())) && C->isNegative() &&
+        !C->isMinSignedValue() &&
+        getUnsignedRangeMin(SA->getOperand(1)).uge(C->abs())) {
+      return getAddExpr(getSignExtendExpr(SA->getOperand(0), Ty, Depth + 1),
+                        getZeroExtendExpr(SA->getOperand(1), Ty, Depth + 1),
+                        SCEV::FlagNSW, Depth + 1);
+    }
+
     // zext(C + x + y + ...) --> (zext(D) + zext((C - D) + x + y + ...))
     // if D + (C - D + x + y + ...) could be proven to not unsigned wrap
     // where D maximizes the number of trailing zeros of (C - D + x + y + ...)
