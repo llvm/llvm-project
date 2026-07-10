@@ -37,6 +37,8 @@
 // RUN:            -target-cpu gfx1012 -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
+#define __device__ __attribute__((device))
+
 //===----------------------------------------------------------------------===//
 // Test AMDGPU builtins
 //===----------------------------------------------------------------------===//
