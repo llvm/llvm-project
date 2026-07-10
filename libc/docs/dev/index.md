@@ -13,6 +13,7 @@ source_tree_layout
 entrypoints
 implementing_a_function
 config_options
+date_and_time
 fuzzing
 header_generation
 implementation_standard
