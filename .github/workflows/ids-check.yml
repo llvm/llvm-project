@@ -85,7 +85,7 @@ jobs:
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
             --idt-path $(which idt) \
-            --compile-commands ./llvm-project/build/compile_commands.json \
+            --compile-commands $(pwd)/llvm-project/build/compile_commands.json \
             --start-rev HEAD~1 \
             --end-rev HEAD \
             --changed-files "$CHANGED_FILES" \
