@@ -18,11 +18,8 @@ using namespace lldb_mcp;
 
 namespace {
 
-/// Server identity reported to the client during initialization.
-/// @{
+/// Server name reported to the client during initialization.
 constexpr llvm::StringLiteral kServerName = "lldb-mcp";
-constexpr llvm::StringLiteral kServerVersion = "0.1.0";
-/// @}
 
 /// Client-facing tool names.
 /// @{
@@ -63,6 +60,12 @@ void Multiplexer::AddBackend(std::unique_ptr<Client> backend) {
 }
 
 llvm::Error Multiplexer::Run() {
+  // Run is called only after a backend has been added. Starting with none is a
+  // setup bug, not a usable server.
+  if (m_backends.empty())
+    return llvm::createStringError(
+        "no backends registered before Multiplexer::Run");
+
   m_client_binder->OnDisconnect(&Multiplexer::HandleDisconnect, this);
   m_client_binder->OnError([this](llvm::Error err) {
     Log(formatv("client transport error: {0}", toString(std::move(err))).str());
@@ -87,7 +90,7 @@ Multiplexer::HandleInitialize(const InitializeParams &) {
   result.capabilities.supportsToolsList = true;
   result.capabilities.supportsResourcesList = true;
   result.serverInfo.name = kServerName;
-  result.serverInfo.version = kServerVersion;
+  result.serverInfo.version = GetServerVersion();
   return result;
 }
 
