@@ -462,10 +462,165 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
   return BaseT::getInstructionCost(U, Operands, CostKind);
 }
 
+static bool isV2F32Ty(Type *Ty) {
+  // PTX has native packed arithmetic for pairs of f32 values.
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  return VTy && VTy->getNumElements() == 2 &&
+         VTy->getElementType()->isFloatTy();
+}
+
+static bool isF32VectorArithmeticOpcode(unsigned Opcode) {
+  // These opcodes map to packed f32x2 PTX arithmetic when the vector is v2f32.
+  switch (Opcode) {
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isDemandedSplat(ArrayRef<Value *> VL, const APInt &DemandedElts) {
+  // Packed f32x2 arithmetic can consume scalar f32 operands as broadcasts, so
+  // splat buildvectors are free when the demanded lanes are identical.
+  if (VL.empty() || DemandedElts.getBitWidth() != VL.size())
+    return false;
+
+  Value *Splat = nullptr;
+  for (unsigned Idx = 0, E = VL.size(); Idx != E; ++Idx) {
+    if (!DemandedElts[Idx] || isa<UndefValue>(VL[Idx]))
+      continue;
+    if (!Splat) {
+      Splat = VL[Idx];
+      continue;
+    }
+    if (VL[Idx] != Splat)
+      return false;
+  }
+  return Splat != nullptr;
+}
+
+static bool isCheapPTXVectorInsertExtract(Type *Ty, const DataLayout &DL,
+                                          const TargetLoweringBase *TLI) {
+  assert(TLI && "Expected NVPTX TargetLowering");
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  return !VTy || NVPTX::isPackedVectorTy(TLI->getValueType(DL, Ty));
+}
+
+static bool hasNativeNVPTXVectorArithmetic(unsigned Opcode, Type *Ty,
+                                           const DataLayout &DL,
+                                           const TargetLoweringBase *TLI) {
+  assert(TLI && "Expected NVPTX TargetLowering");
+  if (!isa<FixedVectorType>(Ty))
+    return false;
+
+  if (isF32VectorArithmeticOpcode(Opcode) && isV2F32Ty(Ty))
+    return true;
+
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  if (ISD == 0)
+    return false;
+
+  EVT VT = TLI->getValueType(DL, Ty);
+  return TLI->isOperationLegal(ISD, VT);
+}
+
+static InstructionCost getVectorRegisterPieceCost(Type *Ty,
+                                                  const DataLayout &DL) {
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  if (!VTy)
+    return 0;
+
+  constexpr unsigned NVPTXRegBits = 32;
+  unsigned TyBits = DL.getTypeSizeInBits(Ty).getFixedValue();
+  unsigned NumPieces = divideCeil(TyBits, NVPTXRegBits);
+  return NumPieces;
+}
+
+static InstructionCost getNonNativeVectorOpPenalty(
+    Type *Ty, const DataLayout &DL, const TargetLoweringBase *TLI) {
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  if (!VTy || isCheapPTXVectorInsertExtract(Ty, DL, TLI))
+    return 0;
+
+  // Model a non-native vector operation by the scalar lane work plus the
+  // register-sized pieces that have to be assembled/disassembled around it.
+  return VTy->getNumElements() + getVectorRegisterPieceCost(Ty, DL);
+}
+
+static InstructionCost getNonNativeVectorShufflePenalty(
+    VectorType *DstTy, VectorType *SrcTy, VectorType *SubTp,
+    const DataLayout &DL, const TargetLoweringBase *TLI) {
+  InstructionCost Cost = 0;
+  for (VectorType *Ty : {DstTy, SrcTy, SubTp}) {
+    if (!Ty)
+      continue;
+    Cost += getNonNativeVectorOpPenalty(Ty, DL, TLI);
+  }
+  return Cost;
+}
+
+InstructionCost NVPTXTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args,
+    const Instruction *CxtI) const {
+  InstructionCost Cost =
+      BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp,
+                            Args, CxtI);
+
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return Cost;
+
+  // A scalar f32 broadcast feeding f32x2 arithmetic can use the scalar operand
+  // form of the packed PTX instruction, so do not charge a shuffle for it.
+  if (isV2F32Ty(DstTy) &&
+      (Kind == TTI::SK_Broadcast ||
+       (Kind == TTI::SK_PermuteSingleSrc &&
+        ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size())))) {
+    return TTI::TCC_Free;
+  }
+
+  return Cost + getNonNativeVectorShufflePenalty(DstTy, SrcTy, SubTp, DL, TLI);
+}
+
+InstructionCost NVPTXTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
+  InstructionCost Cost =
+      BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1, VIC);
+
+  if (CostKind != TTI::TCK_RecipThroughput ||
+      (Opcode != Instruction::InsertElement &&
+       Opcode != Instruction::ExtractElement) ||
+      VIC != TTI::VectorInstrContext::None ||
+      isCheapPTXVectorInsertExtract(Val, DL, TLI))
+    return Cost;
+
+  return Cost + getNonNativeVectorOpPenalty(Val, DL, TLI);
+}
+
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+  InstructionCost Cost =
+      BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info);
+  if (CostKind == TTI::TCK_RecipThroughput) {
+    if (auto *VTy = dyn_cast<FixedVectorType>(Ty);
+        VTy && !hasNativeNVPTXVectorArithmetic(Opcode, Ty, DL, TLI)) {
+      InstructionCost ScalarCost =
+          VTy->getNumElements() *
+          BaseT::getArithmeticInstrCost(Opcode, VTy->getElementType(), CostKind,
+                                        Op1Info, Op2Info);
+      InstructionCost LegalizedCost =
+          ScalarCost + getNonNativeVectorOpPenalty(Ty, DL, TLI);
+      if (LegalizedCost > Cost)
+        Cost = LegalizedCost;
+    }
+  }
+
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
@@ -473,8 +628,7 @@ InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
 
   switch (ISD) {
   default:
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info);
+    return Cost;
   case ISD::ADD:
   case ISD::MUL:
   case ISD::XOR:
@@ -486,9 +640,96 @@ InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     if (LT.second.SimpleTy == MVT::i64)
       return 2 * LT.first;
     // Delegate other cases to the basic TTI.
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info);
+    return Cost;
   }
+}
+
+InstructionCost NVPTXTTIImpl::getScalarizationOverhead(
+    VectorType *InTy, const APInt &DemandedElts, bool Insert, bool Extract,
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,
+    TTI::VectorInstrContext VIC) const {
+  if (!InTy->getElementCount().isFixed())
+    return InstructionCost::getInvalid();
+
+  auto VT = getTLI()->getValueType(DL, InTy);
+  auto NumElements = InTy->getElementCount().getFixedValue();
+  InstructionCost Cost = 0;
+  if (Insert && !VL.empty()) {
+    bool AllConstant = all_of(seq(NumElements), [&](int Idx) {
+      return !DemandedElts[Idx] || isa<Constant>(VL[Idx]);
+    });
+    if (AllConstant) {
+      Cost += TTI::TCC_Free;
+      Insert = false;
+    } else if (isV2F32Ty(InTy) && isDemandedSplat(VL, DemandedElts)) {
+      // A splat buildvector can be represented by a scalar broadcast operand of
+      // the packed f32 instruction.
+      Cost += TTI::TCC_Free;
+      Insert = false;
+    }
+  }
+  if (Insert && NVPTX::isPackedVectorTy(VT) && VT.is32BitVector()) {
+    // Can be built in a single 32-bit mov (64-bit regs are emulated in SASS
+    // with 2x 32-bit regs)
+    Cost += 1;
+    Insert = false;
+  }
+  if (Insert && VT == MVT::v4i8) {
+    Cost += 3; // 3 x PRMT
+    for (auto Idx : seq(NumElements))
+      if (DemandedElts[Idx])
+        Cost += 1; // zext operand to i32
+    Insert = false;
+  }
+  InstructionCost BaseCost = BaseT::getScalarizationOverhead(
+      InTy, DemandedElts, Insert, Extract, CostKind, ForPoisonSrc, VL, VIC);
+
+  if (Extract && CostKind == TTI::TCK_RecipThroughput &&
+      !NVPTX::isPackedVectorTy(VT) && !VT.is32BitVector() &&
+      !VT.is16BitVector()) {
+    InstructionCost ExtractCost = DemandedElts.popcount();
+    if (!Insert)
+      return Cost + ExtractCost;
+  }
+
+  return Cost + BaseCost;
+}
+
+InstructionCost NVPTXTTIImpl::getCastInstrCost(
+    unsigned Opcode, Type *Dst, Type *Src, TTI::CastContextHint CCH,
+    TTI::TargetCostKind CostKind, const Instruction *I) const {
+  InstructionCost Cost =
+      BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return Cost;
+
+  auto *DstVTy = dyn_cast<FixedVectorType>(Dst);
+  auto *SrcVTy = dyn_cast<FixedVectorType>(Src);
+  if (!DstVTy || !SrcVTy)
+    return Cost;
+
+  if (DstVTy->getNumElements() == SrcVTy->getNumElements()) {
+    InstructionCost ScalarCost =
+        DstVTy->getNumElements() *
+        BaseT::getCastInstrCost(Opcode, DstVTy->getElementType(),
+                                SrcVTy->getElementType(), CCH, CostKind, I);
+    InstructionCost LegalizedCost =
+        ScalarCost + getNonNativeVectorOpPenalty(Dst, DL, TLI) +
+        getNonNativeVectorOpPenalty(Src, DL, TLI);
+    if (LegalizedCost > Cost)
+      Cost = LegalizedCost;
+  } else if (Opcode == Instruction::BitCast) {
+    int ISD = TLI->InstructionOpcodeToISD(Opcode);
+    if (ISD == 0)
+      return Cost + getNonNativeVectorOpPenalty(Dst, DL, TLI) +
+             getNonNativeVectorOpPenalty(Src, DL, TLI);
+
+    EVT DstVT = TLI->getValueType(DL, Dst);
+    if (!TLI->isOperationLegal(ISD, DstVT))
+      Cost += getNonNativeVectorOpPenalty(Dst, DL, TLI) +
+              getNonNativeVectorOpPenalty(Src, DL, TLI);
+  }
+  return Cost;
 }
 
 void NVPTXTTIImpl::getUnrollingPreferences(

@@ -42,6 +42,8 @@ class NVPTXTTIImpl final : public BasicTTIImplBase<NVPTXTTIImpl> {
   bool isSourceOfDivergence(const Value *V) const;
 
 public:
+  using BaseT::getVectorInstrCost;
+
   explicit NVPTXTTIImpl(const NVPTXTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl()),
         TLI(ST->getTargetLowering()) {}
@@ -82,11 +84,11 @@ public:
   // LoopVectorizer's unrolling heuristics.
   unsigned getNumberOfRegisters(unsigned ClassID) const override { return 1; }
 
-  // Only <2 x half> should be vectorized, so always return 32 for the vector
-  // register size.
+  // The types  <2 x half> and  <2 x float> can be vectorized, so return 64 for
+  // the vector register size.
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override {
-    return TypeSize::getFixed(32);
+    return TypeSize::getFixed(64);
   }
   unsigned getMinVectorRegisterBitWidth() const override { return 32; }
 
@@ -121,44 +123,32 @@ public:
       const Instruction *CxtI = nullptr) const override;
 
   InstructionCost
+  getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                   TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
+                   const Instruction *I = nullptr) const override;
+
+  InstructionCost
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask = {},
+                 TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+                 int Index = 0, VectorType *SubTp = nullptr,
+                 ArrayRef<const Value *> Args = {},
+                 const Instruction *CxtI = nullptr) const override;
+
+  InstructionCost
+  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+                     unsigned Index = -1, const Value *Op0 = nullptr,
+                     const Value *Op1 = nullptr,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override;
+
+  InstructionCost
   getScalarizationOverhead(VectorType *InTy, const APInt &DemandedElts,
                            bool Insert, bool Extract,
                            TTI::TargetCostKind CostKind,
                            bool ForPoisonSrc = true, ArrayRef<Value *> VL = {},
                            TTI::VectorInstrContext VIC =
-                               TTI::VectorInstrContext::None) const override {
-    if (!InTy->getElementCount().isFixed())
-      return InstructionCost::getInvalid();
-
-    auto VT = getTLI()->getValueType(DL, InTy);
-    auto NumElements = InTy->getElementCount().getFixedValue();
-    InstructionCost Cost = 0;
-    if (Insert && !VL.empty()) {
-      bool AllConstant = all_of(seq(NumElements), [&](int Idx) {
-        return !DemandedElts[Idx] || isa<Constant>(VL[Idx]);
-      });
-      if (AllConstant) {
-        Cost += TTI::TCC_Free;
-        Insert = false;
-      }
-    }
-    if (Insert && NVPTX::isPackedVectorTy(VT) && VT.is32BitVector()) {
-      // Can be built in a single 32-bit mov (64-bit regs are emulated in SASS
-      // with 2x 32-bit regs)
-      Cost += 1;
-      Insert = false;
-    }
-    if (Insert && VT == MVT::v4i8) {
-      InstructionCost Cost = 3; // 3 x PRMT
-      for (auto Idx : seq(NumElements))
-        if (DemandedElts[Idx])
-          Cost += 1; // zext operand to i32
-      Insert = false;
-    }
-    return Cost + BaseT::getScalarizationOverhead(InTy, DemandedElts, Insert,
-                                                  Extract, CostKind,
-                                                  ForPoisonSrc, VL);
-  }
+                               TTI::VectorInstrContext::None) const override;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
