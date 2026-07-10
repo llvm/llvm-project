@@ -1581,6 +1581,15 @@ bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
 }
 
 bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
+  // FIXME: Hexagon has a special HexagonLoopIdiom that optimizes CRC using
+  // carry-less multiplication instructions, which is more efficient than our
+  // Sarwate table-lookup optimization. Hence, until we're able to emit
+  // target-specific instructions for Hexagon, subsuming HexagonLoopIdiom,
+  // disable the optimization for Hexagon.
+  Triple TT(CurLoop->getHeader()->getModule()->getTargetTriple());
+  if (TT.getArch() == Triple::hexagon)
+    return false;
+
   // In the clmul optimization, the first clmul uses 2*TC bits, and the second
   // clmul uses CRCBW+TC bits. For simplicity, have both clmuls operate on the
   // same bit width.
@@ -1739,16 +1748,6 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
 
 bool LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     const PolynomialInfo &Info) {
-  // FIXME: Hexagon has a special HexagonLoopIdiom that optimizes CRC using
-  // carry-less multiplication instructions, which is more efficient than our
-  // Sarwate table-lookup optimization. Hence, until we're able to emit
-  // target-specific instructions for Hexagon, subsuming HexagonLoopIdiom,
-  // disable the optimization for Hexagon.
-  Module &M = *CurLoop->getHeader()->getModule();
-  Triple TT(M.getTargetTriple());
-  if (TT.getArch() == Triple::hexagon)
-    return false;
-
   // First, create a new GlobalVariable corresponding to the
   // Sarwate-lookup-table.
   Type *CRCTy = Info.LHS->getType();
@@ -1759,9 +1758,9 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
             [CRCTy](const APInt &E) { return ConstantInt::get(CRCTy, E); });
   Constant *ConstArray =
       ConstantArray::get(ArrayType::get(CRCTy, 256), CRCConstants);
-  GlobalVariable *GV =
-      new GlobalVariable(M, ConstArray->getType(), true,
-                         GlobalValue::PrivateLinkage, ConstArray, ".crctable");
+  GlobalVariable *GV = new GlobalVariable(
+      *CurLoop->getHeader()->getModule(), ConstArray->getType(), true,
+      GlobalValue::PrivateLinkage, ConstArray, ".crctable");
 
   PHINode *IV = CurLoop->getCanonicalInductionVariable();
   SmallVector<PHINode *, 2> Cleanup;
