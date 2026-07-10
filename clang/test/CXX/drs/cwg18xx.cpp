@@ -426,7 +426,7 @@ class C {
 
   template<class T>
   friend void A<T>::D::g();
-  // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
+  // expected-error@-1 {{nested name specifier 'A<T>::D' in friend declaration must end with a simple-template-id naming a class template, but 'D' is a non-template member}}
 
   template<class T>
   friend int *A<T*>::h();

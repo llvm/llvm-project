@@ -94,7 +94,7 @@ namespace cwg1909 { // cwg1909: 3.7
   };
 } // namespace cwg1909
 
-namespace cwg1918 { // cwg1918: no
+namespace cwg1918 { // cwg1918: yes
 template<typename T> struct A {
   class B {
     class C {};
@@ -104,7 +104,6 @@ class X {
   static int x; // #cwg1918-X-x
   template <typename T>
   friend class A<T>::B::C;
-  // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
 };
 template<> struct A<int> {
   typedef struct Q B;
@@ -112,8 +111,6 @@ template<> struct A<int> {
 struct Q {
   class C {
     int f() { return X::x; }
-    // expected-error@-1 {{'x' is a private member of 'cwg1918::X'}}
-    //   expected-note@#cwg1918-X-x {{implicitly declared private here}}
   };
 };
 } // namespace cwg1918
@@ -159,7 +156,7 @@ derived d2(42, 9);
 #endif
 } // namespace cwg1941
 
-namespace cwg1945 { // cwg1945: no
+namespace cwg1945 { // cwg1945: yes
 template<typename T> struct A {
   class B {
     class C {};
@@ -169,7 +166,6 @@ class X {
   static int x;
   template <typename T>
   friend class A<T>::B::C;
-  // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
 };
 } // namespace cwg1945
 

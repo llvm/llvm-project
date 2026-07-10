@@ -412,7 +412,7 @@ namespace cwg638 { // cwg638: no
     template<class T> friend void A<T>::f();
     template<class T> friend void A<T>::g();
     template<class T> friend void A<T>::C::h();
-    // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
+    // expected-error@-1 {{nested name specifier 'A<T>::C' in friend declaration must end with a simple-template-id naming a class template, but 'C' is a non-template member}}
   };
 
   template<> struct A<int> {

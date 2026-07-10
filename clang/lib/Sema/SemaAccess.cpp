@@ -409,16 +409,34 @@ GetQualifierClassTemplateSpecializationType(ASTContext &Context,
     return nullptr;
 
   QualType Ty(NNS.getAsType(), 0);
-  if (Ty.isNull())
-    return nullptr;
+  while (!Ty.isNull()) {
+    if (const auto *ICNT = Ty->getAs<InjectedClassNameType>())
+      Ty = ICNT->getDecl()->getCanonicalTemplateSpecializationType(Context);
 
-  if (const auto *ICNT = Ty->getAs<InjectedClassNameType>())
-    Ty = ICNT->getDecl()->getCanonicalTemplateSpecializationType(Context);
+    const auto *TST = Ty->getAsNonAliasTemplateSpecializationType();
+    if (TST && isa_and_nonnull<ClassTemplateDecl>(
+                   TST->getTemplateName().getAsTemplateDecl()))
+      return TST;
 
-  const auto *TST = Ty->getAsNonAliasTemplateSpecializationType();
-  if (TST && isa_and_nonnull<ClassTemplateDecl>(
-                 TST->getTemplateName().getAsTemplateDecl()))
-    return TST;
+    if (const auto *DNT = Ty->getAs<DependentNameType>()) {
+      NestedNameSpecifier Qualifier = DNT->getQualifier();
+      if (!Qualifier || Qualifier.getKind() != NestedNameSpecifier::Kind::Type)
+        return nullptr;
+
+      Ty = QualType(Qualifier.getAsType(), 0);
+      continue;
+    }
+
+    CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
+    if (!RD)
+      return nullptr;
+
+    TypeDecl *TD = dyn_cast<TypeDecl>(RD->getParent());
+    if (!TD)
+      return nullptr;
+
+    Ty = Context.getTypeDeclType(TD);
+  }
 
   return nullptr;
 }
@@ -512,6 +530,83 @@ static bool MatchesFriendContext(Sema &S, DeclContext *DC,
 
   return MatchesFriendContext(S, DC, FriendCTD, FriendArgs, FriendTPL, Loc,
                               FailedTSC);
+}
+
+static CXXRecordDecl *LookupRecordMemberType(Sema &S, CXXRecordDecl *LookupCtx,
+                                             DeclarationName Name,
+                                             SourceLocation Loc) {
+  LookupResult Result(S, Name, Loc, Sema::LookupOrdinaryName);
+  if (!S.LookupQualifiedName(Result, LookupCtx))
+    return nullptr;
+
+  if (auto *TND = Result.getAsSingle<TypedefNameDecl>())
+    return TND->getUnderlyingType()->getAsCXXRecordDecl();
+
+  return Result.getAsSingle<CXXRecordDecl>();
+}
+
+static CXXRecordDecl *ResolveFriendTypeQualifier(
+    Sema &S, NestedNameSpecifier NNS, ClassTemplateDecl *FriendCTD,
+    ClassTemplateSpecializationDecl *Spec, SourceLocation Loc) {
+  if (!NNS || NNS.getKind() != NestedNameSpecifier::Kind::Type)
+    return nullptr;
+
+  QualType Ty(NNS.getAsType(), 0);
+  if (const auto *DNT = Ty->getAs<DependentNameType>()) {
+    CXXRecordDecl *FriendRD = ResolveFriendTypeQualifier(S, DNT->getQualifier(),
+                                                         FriendCTD, Spec, Loc);
+    if (!FriendRD)
+      return nullptr;
+
+    return LookupRecordMemberType(S, FriendRD, DNT->getIdentifier(), Loc);
+  }
+
+  if (NestedNameSpecifier NNSPrefix = Ty->getPrefix()) {
+    CXXRecordDecl *FriendRD =
+        ResolveFriendTypeQualifier(S, NNSPrefix, FriendCTD, Spec, Loc);
+    if (!FriendRD)
+      return nullptr;
+
+    CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
+    if (!RD)
+      return nullptr;
+
+    if (RD->getDeclContext()->getRedeclContext() ==
+        FriendRD->getRedeclContext())
+      return RD;
+
+    return LookupRecordMemberType(S, FriendRD, RD->getDeclName(), Loc);
+  }
+
+  if (const auto *TST = Ty->getAsNonAliasTemplateSpecializationType()) {
+    auto *CTD = dyn_cast_if_present<ClassTemplateDecl>(
+        TST->getTemplateName().getAsTemplateDecl());
+    if (declaresSameEntity(CTD, FriendCTD))
+      return Spec;
+  }
+
+  return Ty->getAsCXXRecordDecl();
+}
+
+static CXXRecordDecl *LookupFriendType(Sema &S, TypeSourceInfo *FriendTSI,
+                                       ClassTemplateDecl *FriendCTD,
+                                       ClassTemplateSpecializationDecl *Spec) {
+  auto FriendDNTL = FriendTSI->getTypeLoc().getAs<DependentNameTypeLoc>();
+  if (!FriendDNTL)
+    return nullptr;
+
+  CXXRecordDecl *FriendRD = ResolveFriendTypeQualifier(
+      S, FriendDNTL.getQualifierLoc().getNestedNameSpecifier(), FriendCTD, Spec,
+      FriendDNTL.getNameLoc());
+  if (!FriendRD)
+    return nullptr;
+
+  LookupResult Result(S, FriendDNTL.getTypePtr()->getIdentifier(),
+                      FriendDNTL.getNameLoc(), Sema::LookupTagName);
+  if (!S.LookupQualifiedName(Result, FriendRD))
+    return nullptr;
+
+  return dyn_cast_or_null<CXXRecordDecl>(Result.getAsSingle<TagDecl>());
 }
 
 /// Checks whether one class might instantiate to the other.
@@ -1014,28 +1109,76 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
 }
 
 static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
-                                  FriendTemplateDecl *FTD, TypeSourceInfo *TSI,
+                                  FriendTemplateDecl *FTD,
+                                  TypeSourceInfo *FriendTSI,
+                                  ClassTemplateDecl *FriendCTD,
+                                  ArrayRef<TemplateArgument> FriendArgs,
+                                  TemplateParameterList *FriendTPL,
                                   TemplateSpecCandidateSet *FailedTSC) {
-  QualType TypeAsWritten = TSI->getType();
-  if (!TypeAsWritten->isDependentType())
-    return MatchesFriend(S, EC, S.Context.getCanonicalType(TypeAsWritten));
+  AccessResult OnFailure = EC.isDependent() ? AR_dependent : AR_inaccessible;
+
+  for (ClassTemplateSpecializationDecl *FriendSpec :
+       FriendCTD->specializations()) {
+    SmallVector<TemplateArgument, 4> DeducedArgs;
+    if (!DeduceTemplateArguments(S, FriendTPL, FriendCTD, FriendArgs,
+                                 FriendSpec->getTemplateArgs().asArray(),
+                                 FTD->getLocation(), FailedTSC, DeducedArgs))
+      continue;
+
+    if (CXXRecordDecl *FriendRD =
+            LookupFriendType(S, FriendTSI, FriendCTD, FriendSpec))
+      if (EC.includesClass(FriendRD))
+        return AR_accessible;
+
+    Sema::InstantiatingTemplate Inst(S, FTD->getLocation(), FriendCTD,
+                                     DeducedArgs);
+    if (Inst.isInvalid())
+      continue;
+
+    TemplateDeductionInfo Info(FTD->getLocation());
+    Sema::SFINAETrap Trap(S, Info);
+    MultiLevelTemplateArgumentList Args(FriendCTD, DeducedArgs,
+                                        /*Final=*/true);
+    TypeSourceInfo *InstFriendTSI =
+        S.SubstType(FriendTSI, Args, FTD->getLocation(), DeclarationName());
+    if (!InstFriendTSI || Trap.hasErrorOccurred())
+      continue;
+
+    if (CXXRecordDecl *FriendRD =
+            InstFriendTSI->getType()->getAsCXXRecordDecl())
+      if (EC.includesClass(FriendRD))
+        return AR_accessible;
+  }
+
+  return OnFailure;
+}
+
+static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
+                                  FriendTemplateDecl *FTD,
+                                  TypeSourceInfo *FriendTSI,
+                                  TemplateSpecCandidateSet *FailedTSC) {
+  QualType FriendTypeAsWritten = FriendTSI->getType();
+  if (!FriendTypeAsWritten->isDependentType())
+    return MatchesFriend(S, EC,
+                         S.Context.getCanonicalType(FriendTypeAsWritten));
 
   AccessResult OnFailure = EC.isDependent() ? AR_dependent : AR_inaccessible;
-  const auto *DNT = TypeAsWritten->getAs<DependentNameType>();
-  if (!DNT)
+  const auto *FriendDNT = FriendTypeAsWritten->getAs<DependentNameType>();
+  if (!FriendDNT)
     return OnFailure;
 
-  NestedNameSpecifier NNS = DNT->getQualifier();
-  if (!NNS)
+  NestedNameSpecifier FriendNNS = FriendDNT->getQualifier();
+  if (!FriendNNS)
     return OnFailure;
 
-  const auto *TST = GetQualifierClassTemplateSpecializationType(S.Context, NNS);
-  if (!TST)
+  const auto *FriendTST =
+      GetQualifierClassTemplateSpecializationType(S.Context, FriendNNS);
+  if (!FriendTST)
     return OnFailure;
 
-  auto *CTD =
-      dyn_cast<ClassTemplateDecl>(TST->getTemplateName().getAsTemplateDecl());
-  if (!CTD)
+  auto *FriendCTD = dyn_cast<ClassTemplateDecl>(
+      FriendTST->getTemplateName().getAsTemplateDecl());
+  if (!FriendCTD)
     return OnFailure;
 
   ArrayRef<TemplateParameterList *> FriendTPLists =
@@ -1043,29 +1186,31 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (FriendTPLists.empty())
     return OnFailure;
 
-  TemplateParameterList *TPL = FriendTPLists.front();
-  if (!TPL)
+  TemplateParameterList *FriendTPL = FriendTPLists.front();
+  if (!FriendTPL)
     return OnFailure;
 
-  for (CXXRecordDecl *RD : EC.Records) {
-    if (RD->getDeclName() != DNT->getIdentifier())
+  for (CXXRecordDecl *ContextRD : EC.Records) {
+    if (ContextRD->getDeclName() != FriendDNT->getIdentifier())
       continue;
 
-    const auto *CTSD =
-        dyn_cast<ClassTemplateSpecializationDecl>(RD->getDeclContext());
-    if (!CTSD)
+    const auto *ContextCTSD =
+        dyn_cast<ClassTemplateSpecializationDecl>(ContextRD->getDeclContext());
+    if (!ContextCTSD)
       continue;
 
-    if (!declaresSameEntity(CTSD->getSpecializedTemplate(), CTD))
+    if (!declaresSameEntity(ContextCTSD->getSpecializedTemplate(), FriendCTD))
       continue;
 
-    if (CanDeduceTemplateArguments(S, TPL, CTD, TST->template_arguments(),
-                                   CTSD->getTemplateArgs().asArray(),
+    if (CanDeduceTemplateArguments(S, FriendTPL, FriendCTD,
+                                   FriendTST->template_arguments(),
+                                   ContextCTSD->getTemplateArgs().asArray(),
                                    FTD->getLocation(), FailedTSC))
       return AR_accessible;
   }
 
-  return OnFailure;
+  return MatchesFriend(S, EC, FTD, FriendTSI, FriendCTD,
+                       FriendTST->template_arguments(), FriendTPL, FailedTSC);
 }
 
 /// Determines whether the given friend declaration matches anything
