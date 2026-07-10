@@ -364,59 +364,59 @@ void SampleProfileMatcher::runStaleProfileMatching(
 
   // Scan through the matched anchors to make sure functions and profiles are
   // 1:1 mapped. If the profile has already been mapped to another function
-  // during previous fuzzy matching, create a new profile with the same sample
-  // counts and assumed to be pre-inlined.
+  // during previous fuzzy matching, create a new profile the same as the
+  // flattened profile as a top-level function.
   for (const auto &IR : IRAnchors) {
     bool ProfileConflicted = false;
-    const auto &Loc = IR.first;
-    Function *Callee = M.getFunction(IR.second.stringRef());
-    if (!Callee)
+    const auto &IRLoc = IR.first;
+    Function *IRFunc = M.getFunction(IR.second.stringRef());
+    if (!IRFunc)
       continue;
-    FunctionId ProfAnchor;
-    auto AnchorLoc = MatchedAnchors.find(Loc);
-    if (AnchorLoc == MatchedAnchors.end()) {
+    FunctionId ProfId;
+    auto MatchedLoc = MatchedAnchors.find(IRLoc);
+    if (MatchedLoc == MatchedAnchors.end()) {
       // Search within the module and find if we have conflicts in pre-matched
       // profiles for this anchor
-      auto PreMatched = FuncToProfileNameMap.find(Callee);
+      auto PreMatched = FuncToProfileNameMap.find(IRFunc);
       if (PreMatched == FuncToProfileNameMap.end())
         continue;
-      ProfAnchor = PreMatched->second;
+      ProfId = PreMatched->second;
     } else {
-      const auto &Prof = ProfileAnchors.find(AnchorLoc->second);
-      if (Prof == ProfileAnchors.end())
+      const auto &ProfAnchor = ProfileAnchors.find(MatchedLoc->second);
+      if (ProfAnchor == ProfileAnchors.end())
         continue;
-      ProfAnchor = Prof->second;
+      ProfId = ProfAnchor->second;
     }
 
     // Conflicting profile previously matched
-    auto Cached = MatchedAnchorCache.find(ProfAnchor);
-    if (Cached == MatchedAnchorCache.end())
-      MatchedAnchorCache[ProfAnchor] = Callee;
-    else if (Cached->second != Callee)
+    auto PrevMatched = ProfileNameToFuncMap.find(ProfId);
+    if (PrevMatched == ProfileNameToFuncMap.end())
+      ProfileNameToFuncMap[ProfId] = IRFunc;
+    else if (PrevMatched->second != IRFunc)
       ProfileConflicted = true;
 
     if (ProfileConflicted) {
       // Create a flattened profile using the IR function name to avoid profile
       // name conflicts
-      const auto *FSForMatching = getFlattenedSamplesFor(ProfAnchor);
+      const auto *FSForMatching = getFlattenedSamplesFor(ProfId);
       if (!FSForMatching)
-        FSForMatching = Reader.getSamplesFor(ProfAnchor.stringRef());
+        FSForMatching = Reader.getSamplesFor(ProfId.stringRef());
       if (!FSForMatching)
         continue;
 
-      FunctionId NewAnchor(
+      FunctionId NewProfId(
           FunctionSamples::getCanonicalFnName(IR.second.stringRef()));
-      auto R = FuncProfileMatchCache.find({Callee, NewAnchor});
+      auto R = FuncProfileMatchCache.find({IRFunc, NewProfId});
       if (R != FuncProfileMatchCache.end() && R->second)
         continue;
-      FunctionSamples &NewFS = FlattenedProfiles.create(NewAnchor);
+      FunctionSamples &NewFS = FlattenedProfiles.create(NewProfId);
       NewFS.merge(*FSForMatching);
-      FuncToProfileNameMap[Callee] = NewAnchor;
-      FuncProfileMatchCache[{Callee, NewAnchor}] = true;
+      FuncToProfileNameMap[IRFunc] = NewProfId;
+      FuncProfileMatchCache[{IRFunc, NewProfId}] = true;
 
       // Update profile in the sample profile reader
       SampleProfileMap &Profiles = Reader.getProfiles();
-      SampleContext FContext(NewAnchor);
+      SampleContext FContext(NewProfId);
       auto Res = Profiles.try_emplace(FContext.getHashCode(), FContext, NewFS);
       FunctionSamples &FProfile = Res.first->second;
       FProfile.setContext(FContext);
@@ -897,7 +897,7 @@ void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
       continue;
 
     FuncToProfileNameMap[OrphanFunc] = ProfId;
-    MatchedAnchorCache[ProfId] = OrphanFunc;
+    ProfileNameToFuncMap[ProfId] = OrphanFunc;
     if (const auto *FS = Reader.getSamplesFor(ProfId.stringRef()))
       NewlyLoadedProfiles.create(FS->getFunction()).merge(*FS);
     MatchCount++;
