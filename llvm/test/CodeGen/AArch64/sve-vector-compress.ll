@@ -284,15 +284,14 @@ define <4 x double> @test_compress_v4f64_with_sve(<4 x double> %vec, <4 x i1> %m
 ; CHECK-NEXT:    ushll2 v5.2d, v2.4s, #0
 ; CHECK-NEXT:    and v2.8b, v2.8b, v4.8b
 ; CHECK-NEXT:    shl v3.2d, v3.2d, #63
-; CHECK-NEXT:    shl v4.2d, v5.2d, #63
+; CHECK-NEXT:    shl v5.2d, v5.2d, #63
 ; CHECK-NEXT:    addp v2.2s, v2.2s, v2.2s
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
-; CHECK-NEXT:    cmpne p2.d, p0/z, z4.d, #0
+; CHECK-NEXT:    cmpne p2.d, p0/z, z5.d, #0
 ; CHECK-NEXT:    fmov w8, s2
 ; CHECK-NEXT:    compact z0.d, p1, z0.d
-; CHECK-NEXT:    and x8, x8, #0x3
 ; CHECK-NEXT:    compact z1.d, p2, z1.d
-; CHECK-NEXT:    lsl x8, x8, #3
+; CHECK-NEXT:    ubfiz x8, x8, #3, #32
 ; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    str q1, [x9, x8]
 ; CHECK-NEXT:    ldp q0, q1, [sp], #32

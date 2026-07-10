@@ -7,8 +7,7 @@ define i64 @vreduce_add_assertzext_v4i32(<4 x i32> %v) nounwind {
 ; CHECK-NEXT:    movi v1.2d, #0x0000ff000000ff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    addv s0, v0.4s
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and x0, x8, #0xffff
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %masked = and <4 x i32> %v, <i32 255, i32 255, i32 255, i32 255>
   %sum = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %masked)
@@ -29,8 +28,7 @@ define i64 @vreduce_add_knownbits_v16i32(<16 x i32> %v) nounwind {
 ; CHECK-NEXT:    add v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    addv s0, v0.4s
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and x0, x8, #0xffff
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %masked = and <16 x i32> %v, splat (i32 255)
   %sum = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %masked)
@@ -45,7 +43,8 @@ define i64 @vreduce_add_knownbits_v8i16(<8 x i16> %v) nounwind {
 ; CHECK-NEXT:    movi v1.8h, #15
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    umov w0, v0.h[0]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and x0, x8, #0x7f
 ; CHECK-NEXT:    ret
   %masked = and <8 x i16> %v, splat (i16 15)
   %sum = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %masked)

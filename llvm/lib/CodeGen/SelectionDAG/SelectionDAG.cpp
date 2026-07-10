@@ -3578,6 +3578,18 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
     break;
   }
+  case ISD::VECREDUCE_ADD: {
+    SDValue Src = Op.getOperand(0);
+    if (Src.getValueType().isScalableVector())
+      break;
+
+    unsigned NumElts = Src.getValueType().getVectorNumElements();
+    KnownBits KnownAcrossElts =
+        computeKnownBits(Src, APInt::getAllOnes(NumElts), Depth + 1);
+    Known = KnownAcrossElts.reduceAdd(NumElts);
+    Known = Known.anyext(Op.getScalarValueSizeInBits());
+    break;
+  }
   case ISD::BITCAST: {
     if (Op.getValueType().isScalableVector())
       break;

@@ -514,9 +514,9 @@ entry:
 define zeroext i16 @add_v16i8_v16i16_zext(<16 x i8> %x) {
 ; CHECK-SD-LABEL: add_v16i8_v16i16_zext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    uaddlp v0.8h, v0.16b
-; CHECK-SD-NEXT:    addv h0, v0.8h
-; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    uaddlv h0, v0.16b
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    and w0, w8, #0xfff
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: add_v16i8_v16i16_zext:
@@ -554,9 +554,9 @@ entry:
 define zeroext i16 @add_v8i8_v8i16_zext(<8 x i8> %x) {
 ; CHECK-SD-LABEL: add_v8i8_v8i16_zext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    addv h0, v0.8h
-; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    uaddlv h0, v0.8b
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    and w0, w8, #0x7ff
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: add_v8i8_v8i16_zext:
@@ -3000,7 +3000,8 @@ define zeroext i16 @add_pair_v16i8_v16i16_zext(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-SD-NEXT:    uaddlp v1.8h, v1.16b
 ; CHECK-SD-NEXT:    uadalp v1.8h, v0.16b
 ; CHECK-SD-NEXT:    addv h0, v1.8h
-; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    and w0, w8, #0x1fff
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: add_pair_v16i8_v16i16_zext:
@@ -3055,7 +3056,8 @@ define zeroext i16 @add_pair_v8i8_v8i16_zext(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    uaddlv h0, v0.16b
-; CHECK-SD-NEXT:    umov w0, v0.h[0]
+; CHECK-SD-NEXT:    umov w8, v0.h[0]
+; CHECK-SD-NEXT:    and w0, w8, #0xfff
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: add_pair_v8i8_v8i16_zext:
