@@ -7821,6 +7821,9 @@ static SDValue tryLowerMultiVectorStore(StoreSDNode *StoreNode,
   if (!isValidSVEMultiVectorOp(StoreNode, VT))
     return SDValue();
 
+  if (Value->isUndef())
+    return StoreNode->getChain();
+
   MVT StoreVT = VT.getSimpleVT();
   std::optional<SVEMultiVectorInfo> MultiVecInfo =
       getSVEMultiVectorInfo(StoreVT);
