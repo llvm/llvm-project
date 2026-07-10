@@ -649,9 +649,8 @@ gpu.func @load_2D_vector_alloca_promoted_to_slm(%offset: index)
 }
 
 // -----
-// memref.alloca is unconditionally promoted to SLM (address space 3). A 1D
-// transfer_read on it is lowered to xegpu.load_matrix, which supports the
-// 1D SLM case.
+// memref.alloca is unconditionally promoted to SLM (address space 3) and,
+// lowered to xegpu.load_matrix.
 gpu.module @xevm_module {
 gpu.func @load_1D_vector_alloca_promoted_to_slm(%offset: index)
     -> vector<8xf32> {
