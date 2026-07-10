@@ -195,7 +195,7 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
       }
       check_children = addr_in_range;
     } else {
-      LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
+      LLDB_LOG_ERRORV(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
                      "DIE({1:x}): {0}", GetID());
     }
   }
