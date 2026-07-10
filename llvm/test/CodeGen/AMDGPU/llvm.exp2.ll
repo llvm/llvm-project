@@ -10,119 +10,61 @@
 ; RUN: llc -mtriple=r600 -mcpu=cayman < %s | FileCheck -check-prefix=CM %s
 
 define amdgpu_kernel void @s_exp2_f32(ptr addrspace(1) %out, float %in) {
-; SI-SDAG-LABEL: s_exp2_f32:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_load_dword s2, s[4:5], 0xb
-; SI-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-SDAG-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x42800000
-; SI-SDAG-NEXT:    s_mov_b32 s3, 0xf000
-; SI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, s2, v0
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
-; SI-SDAG-NEXT:    s_cselect_b32 s4, 0xffffffc0, 0
-; SI-SDAG-NEXT:    s_mov_b32 s2, -1
-; SI-SDAG-NEXT:    v_ldexp_f32_e64 v0, v0, s4
-; SI-SDAG-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; SI-SDAG-NEXT:    s_endpgm
+; SI-LABEL: s_exp2_f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dword s2, s[4:5], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
+; SI-NEXT:    v_mov_b32_e32 v1, 0x42800000
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; SI-NEXT:    v_add_f32_e32 v0, s2, v0
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    s_and_b64 s[4:5], vcc, exec
+; SI-NEXT:    s_cselect_b32 s4, 0xffffffc0, 0
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_ldexp_f32_e64 v0, v0, s4
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_endpgm
 ;
-; SI-GISEL-LABEL: s_exp2_f32:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dword s2, s[4:5], 0xb
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; SI-GISEL-NEXT:    s_cselect_b32 s0, 0x42800000, 0
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, s2, v0
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_cselect_b32 s3, 0xffffffc0, 0
-; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    v_ldexp_f32_e64 v0, v0, s3
-; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; SI-GISEL-NEXT:    s_endpgm
+; VI-LABEL: s_exp2_f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
+; VI-NEXT:    v_mov_b32_e32 v1, 0x42800000
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; VI-NEXT:    v_add_f32_e32 v0, s2, v0
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    s_and_b64 s[2:3], vcc, exec
+; VI-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_ldexp_f32 v2, v0, s2
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    s_endpgm
 ;
-; VI-SDAG-LABEL: s_exp2_f32:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; VI-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; VI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x42800000
-; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, s2, v0
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
-; VI-SDAG-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; VI-SDAG-NEXT:    v_ldexp_f32 v2, v0, s2
-; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; VI-SDAG-NEXT:    flat_store_dword v[0:1], v2
-; VI-SDAG-NEXT:    s_endpgm
-;
-; VI-GISEL-LABEL: s_exp2_f32:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; VI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-GISEL-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-GISEL-NEXT:    s_cselect_b32 s3, 0x42800000, 0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, s2, v0
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; VI-GISEL-NEXT:    v_ldexp_f32 v2, v0, s2
-; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; VI-GISEL-NEXT:    flat_store_dword v[0:1], v2
-; VI-GISEL-NEXT:    s_endpgm
-;
-; GFX900-SDAG-LABEL: s_exp2_f32:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX900-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0x42800000
-; GFX900-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, s2, v0
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
-; GFX900-SDAG-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, s2
-; GFX900-SDAG-NEXT:    global_store_dword v1, v0, s[0:1]
-; GFX900-SDAG-NEXT:    s_endpgm
-;
-; GFX900-GISEL-LABEL: s_exp2_f32:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_load_dword s0, s[4:5], 0x2c
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX900-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
-; GFX900-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GFX900-GISEL-NEXT:    s_cselect_b32 s1, 0x42800000, 0
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, s0, v0
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX900-GISEL-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, s2
-; GFX900-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
-; GFX900-GISEL-NEXT:    s_endpgm
+; GFX900-LABEL: s_exp2_f32:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX900-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
+; GFX900-NEXT:    v_mov_b32_e32 v1, 0x42800000
+; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX900-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; GFX900-NEXT:    v_add_f32_e32 v0, s2, v0
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    s_and_b64 s[2:3], vcc, exec
+; GFX900-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
+; GFX900-NEXT:    v_mov_b32_e32 v1, 0
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, s2
+; GFX900-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX900-NEXT:    s_endpgm
 ;
 ; R600-LABEL: s_exp2_f32:
 ; R600:       ; %bb.0:
@@ -172,157 +114,80 @@ define amdgpu_kernel void @s_exp2_f32(ptr addrspace(1) %out, float %in) {
 ; FIXME: We should be able to merge these packets together on Cayman so we
 ; have a maximum of 4 instructions.
 define amdgpu_kernel void @s_exp2_v2f32(ptr addrspace(1) %out, <2 x float> %in) {
-; SI-SDAG-LABEL: s_exp2_v2f32:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SI-SDAG-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x42800000
-; SI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s5, v0
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
-; SI-SDAG-NEXT:    s_and_b64 s[6:7], vcc, exec
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v2, s5, v2
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, s4, v0
-; SI-SDAG-NEXT:    v_exp_f32_e32 v2, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    s_cselect_b32 s6, 0xffffffc0, 0
-; SI-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
-; SI-SDAG-NEXT:    s_cselect_b32 s4, 0xffffffc0, 0
-; SI-SDAG-NEXT:    s_mov_b32 s3, 0xf000
-; SI-SDAG-NEXT:    s_mov_b32 s2, -1
-; SI-SDAG-NEXT:    v_ldexp_f32_e64 v1, v2, s6
-; SI-SDAG-NEXT:    v_ldexp_f32_e64 v0, v0, s4
-; SI-SDAG-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; SI-SDAG-NEXT:    s_endpgm
+; SI-LABEL: s_exp2_v2f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
+; SI-NEXT:    v_mov_b32_e32 v1, 0x42800000
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; SI-NEXT:    v_cmp_lt_f32_e32 vcc, s5, v0
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
+; SI-NEXT:    s_and_b64 s[6:7], vcc, exec
+; SI-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; SI-NEXT:    v_add_f32_e32 v2, s5, v2
+; SI-NEXT:    v_add_f32_e32 v0, s4, v0
+; SI-NEXT:    v_exp_f32_e32 v2, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    s_cselect_b32 s6, 0xffffffc0, 0
+; SI-NEXT:    s_and_b64 s[4:5], vcc, exec
+; SI-NEXT:    s_cselect_b32 s4, 0xffffffc0, 0
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_ldexp_f32_e64 v1, v2, s6
+; SI-NEXT:    v_ldexp_f32_e64 v0, v0, s4
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; SI-NEXT:    s_endpgm
 ;
-; SI-GISEL-LABEL: s_exp2_v2f32:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e64 s[0:1], s7, v0
-; SI-GISEL-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 0x42800000, 0
-; SI-GISEL-NEXT:    s_cselect_b32 s3, 0xffffffc0, 0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; SI-GISEL-NEXT:    s_cselect_b32 s0, 0x42800000, 0
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, s0
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, s6, v0
-; SI-GISEL-NEXT:    v_add_f32_e32 v1, s7, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_exp_f32_e32 v1, v1
-; SI-GISEL-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; SI-GISEL-NEXT:    s_mov_b32 s6, -1
-; SI-GISEL-NEXT:    v_ldexp_f32_e64 v0, v0, s3
-; SI-GISEL-NEXT:    v_ldexp_f32_e64 v1, v1, s0
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
-; SI-GISEL-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
-; SI-GISEL-NEXT:    s_endpgm
+; VI-LABEL: s_exp2_v2f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
+; VI-NEXT:    v_mov_b32_e32 v1, 0x42800000
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
+; VI-NEXT:    s_and_b64 s[4:5], vcc, exec
+; VI-NEXT:    v_add_f32_e32 v2, s3, v2
+; VI-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; VI-NEXT:    v_exp_f32_e32 v2, v2
+; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; VI-NEXT:    v_add_f32_e32 v0, s2, v0
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    s_cselect_b32 s3, 0xffffffc0, 0
+; VI-NEXT:    v_ldexp_f32 v1, v2, s3
+; VI-NEXT:    s_and_b64 s[2:3], vcc, exec
+; VI-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
+; VI-NEXT:    v_ldexp_f32 v0, v0, s2
+; VI-NEXT:    v_mov_b32_e32 v3, s1
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    s_endpgm
 ;
-; VI-SDAG-LABEL: s_exp2_v2f32:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; VI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x42800000
-; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
-; VI-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
-; VI-SDAG-NEXT:    v_add_f32_e32 v2, s3, v2
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; VI-SDAG-NEXT:    v_exp_f32_e32 v2, v2
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, s2, v0
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    s_cselect_b32 s3, 0xffffffc0, 0
-; VI-SDAG-NEXT:    v_ldexp_f32 v1, v2, s3
-; VI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
-; VI-SDAG-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, s2
-; VI-SDAG-NEXT:    v_mov_b32_e32 v3, s1
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; VI-SDAG-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
-; VI-SDAG-NEXT:    s_endpgm
-;
-; VI-GISEL-LABEL: s_exp2_v2f32:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x24
-; VI-GISEL-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e64 s[0:1], s7, v0
-; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-GISEL-NEXT:    s_cselect_b32 s2, 0x42800000, 0
-; VI-GISEL-NEXT:    s_cselect_b32 s3, 0xffffffc0, 0
-; VI-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; VI-GISEL-NEXT:    s_cselect_b32 s0, 0x42800000, 0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s0
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, s6, v0
-; VI-GISEL-NEXT:    v_add_f32_e32 v1, s7, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_exp_f32_e32 v1, v1
-; VI-GISEL-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s4
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, s3
-; VI-GISEL-NEXT:    v_ldexp_f32 v1, v1, s0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s5
-; VI-GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
-; VI-GISEL-NEXT:    s_endpgm
-;
-; GFX900-SDAG-LABEL: s_exp2_v2f32:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0x42800000
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; GFX900-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v3, 0, v1, vcc
-; GFX900-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
-; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v3, s3, v3
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, s2, v0
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v3, v3
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    s_cselect_b32 s4, 0xffffffc0, 0
-; GFX900-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
-; GFX900-SDAG-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v1, v3, s4
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, s2
-; GFX900-SDAG-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
-; GFX900-SDAG-NEXT:    s_endpgm
-;
-; GFX900-GISEL-LABEL: s_exp2_v2f32:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX900-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s10, v0
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e64 s[0:1], s11, v0
-; GFX900-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GFX900-GISEL-NEXT:    s_cselect_b32 s2, 0x42800000, 0
-; GFX900-GISEL-NEXT:    s_cselect_b32 s3, 0xffffffc0, 0
-; GFX900-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX900-GISEL-NEXT:    s_cselect_b32 s0, 0x42800000, 0
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, s0
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, s10, v0
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v1, s11, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v1, v1
-; GFX900-GISEL-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, s3
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v1, v1, s0
-; GFX900-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
-; GFX900-GISEL-NEXT:    s_endpgm
+; GFX900-LABEL: s_exp2_v2f32:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX900-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
+; GFX900-NEXT:    v_mov_b32_e32 v1, 0x42800000
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0
+; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX900-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
+; GFX900-NEXT:    v_cndmask_b32_e32 v3, 0, v1, vcc
+; GFX900-NEXT:    s_and_b64 s[4:5], vcc, exec
+; GFX900-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; GFX900-NEXT:    v_add_f32_e32 v3, s3, v3
+; GFX900-NEXT:    v_add_f32_e32 v0, s2, v0
+; GFX900-NEXT:    v_exp_f32_e32 v3, v3
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    s_cselect_b32 s4, 0xffffffc0, 0
+; GFX900-NEXT:    s_and_b64 s[2:3], vcc, exec
+; GFX900-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
+; GFX900-NEXT:    v_ldexp_f32 v1, v3, s4
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, s2
+; GFX900-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX900-NEXT:    s_endpgm
 ;
 ; R600-LABEL: s_exp2_v2f32:
 ; R600:       ; %bb.0:
@@ -388,210 +253,105 @@ define amdgpu_kernel void @s_exp2_v2f32(ptr addrspace(1) %out, <2 x float> %in) 
 }
 
 define amdgpu_kernel void @s_exp2_v3f32(ptr addrspace(1) %out, <3 x float> %in) {
-; SI-SDAG-LABEL: s_exp2_v3f32:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xd
-; SI-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
-; SI-SDAG-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
-; SI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s1, v0
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-SDAG-NEXT:    s_and_b64 s[8:9], vcc, exec
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
-; SI-SDAG-NEXT:    v_add_f32_e32 v1, s1, v1
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v3, 0, v2, vcc
-; SI-SDAG-NEXT:    v_exp_f32_e32 v1, v1
-; SI-SDAG-NEXT:    s_cselect_b32 s1, 0xffffffc0, 0
-; SI-SDAG-NEXT:    s_and_b64 s[8:9], vcc, exec
-; SI-SDAG-NEXT:    v_add_f32_e32 v3, s0, v3
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; SI-SDAG-NEXT:    v_exp_f32_e32 v3, v3
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, s2, v0
-; SI-SDAG-NEXT:    v_exp_f32_e32 v2, v0
-; SI-SDAG-NEXT:    v_ldexp_f32_e64 v1, v1, s1
-; SI-SDAG-NEXT:    s_cselect_b32 s1, 0xffffffc0, 0
-; SI-SDAG-NEXT:    v_ldexp_f32_e64 v0, v3, s1
-; SI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
-; SI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; SI-SDAG-NEXT:    s_mov_b32 s6, -1
-; SI-SDAG-NEXT:    v_ldexp_f32_e64 v2, v2, s0
-; SI-SDAG-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:8
-; SI-SDAG-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
-; SI-SDAG-NEXT:    s_endpgm
+; SI-LABEL: s_exp2_v3f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xd
+; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; SI-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_cmp_lt_f32_e32 vcc, s1, v0
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
+; SI-NEXT:    s_and_b64 s[8:9], vcc, exec
+; SI-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
+; SI-NEXT:    v_add_f32_e32 v1, s1, v1
+; SI-NEXT:    v_cndmask_b32_e32 v3, 0, v2, vcc
+; SI-NEXT:    v_exp_f32_e32 v1, v1
+; SI-NEXT:    s_cselect_b32 s1, 0xffffffc0, 0
+; SI-NEXT:    s_and_b64 s[8:9], vcc, exec
+; SI-NEXT:    v_add_f32_e32 v3, s0, v3
+; SI-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; SI-NEXT:    v_exp_f32_e32 v3, v3
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e32 v0, s2, v0
+; SI-NEXT:    v_exp_f32_e32 v2, v0
+; SI-NEXT:    v_ldexp_f32_e64 v1, v1, s1
+; SI-NEXT:    s_cselect_b32 s1, 0xffffffc0, 0
+; SI-NEXT:    v_ldexp_f32_e64 v0, v3, s1
+; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
+; SI-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
+; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    v_ldexp_f32_e64 v2, v2, s0
+; SI-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:8
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    s_endpgm
 ;
-; SI-GISEL-LABEL: s_exp2_v3f32:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0xd
-; SI-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; SI-GISEL-NEXT:    s_mov_b32 s6, -1
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s8, v0
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e64 s[0:1], s9, v0
-; SI-GISEL-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 0x42800000, 0
-; SI-GISEL-NEXT:    s_cselect_b32 s3, 0xffffffc0, 0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; SI-GISEL-NEXT:    s_cselect_b32 s0, 0x42800000, 0
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s10, v0
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; SI-GISEL-NEXT:    s_cselect_b32 s0, 0x42800000, 0
-; SI-GISEL-NEXT:    v_add_f32_e32 v1, s8, v1
-; SI-GISEL-NEXT:    v_add_f32_e32 v2, s9, v2
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; SI-GISEL-NEXT:    v_exp_f32_e32 v1, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v2, v2
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, s10, v0
-; SI-GISEL-NEXT:    v_exp_f32_e32 v3, v0
-; SI-GISEL-NEXT:    v_ldexp_f32_e64 v0, v1, s3
-; SI-GISEL-NEXT:    v_ldexp_f32_e64 v1, v2, s2
-; SI-GISEL-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; SI-GISEL-NEXT:    v_ldexp_f32_e64 v2, v3, s0
-; SI-GISEL-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
-; SI-GISEL-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:8
-; SI-GISEL-NEXT:    s_endpgm
+; VI-LABEL: s_exp2_v3f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x34
+; VI-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
+; VI-NEXT:    v_mov_b32_e32 v1, 0x42800000
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
+; VI-NEXT:    v_add_f32_e32 v2, s2, v2
+; VI-NEXT:    v_exp_f32_e32 v2, v2
+; VI-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
+; VI-NEXT:    s_and_b64 s[4:5], vcc, exec
+; VI-NEXT:    s_cselect_b32 s4, 0xffffffc0, 0
+; VI-NEXT:    v_cmp_lt_f32_e32 vcc, s1, v0
+; VI-NEXT:    v_ldexp_f32 v2, v2, s4
+; VI-NEXT:    v_cndmask_b32_e32 v3, 0, v1, vcc
+; VI-NEXT:    s_and_b64 s[4:5], vcc, exec
+; VI-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
+; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; VI-NEXT:    v_add_f32_e32 v3, s1, v3
+; VI-NEXT:    v_add_f32_e32 v0, s0, v0
+; VI-NEXT:    v_exp_f32_e32 v3, v3
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    s_cselect_b32 s4, 0xffffffc0, 0
+; VI-NEXT:    s_and_b64 s[0:1], vcc, exec
+; VI-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
+; VI-NEXT:    v_ldexp_f32 v1, v3, s4
+; VI-NEXT:    v_ldexp_f32 v0, v0, s0
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v4, s3
+; VI-NEXT:    v_mov_b32_e32 v3, s2
+; VI-NEXT:    flat_store_dwordx3 v[3:4], v[0:2]
+; VI-NEXT:    s_endpgm
 ;
-; VI-SDAG-LABEL: s_exp2_v3f32:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x34
-; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; VI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x42800000
-; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v2, s2, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v2, v2
-; VI-SDAG-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
-; VI-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
-; VI-SDAG-NEXT:    s_cselect_b32 s4, 0xffffffc0, 0
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s1, v0
-; VI-SDAG-NEXT:    v_ldexp_f32 v2, v2, s4
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v3, 0, v1, vcc
-; VI-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v3, s1, v3
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, s0, v0
-; VI-SDAG-NEXT:    v_exp_f32_e32 v3, v3
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    s_cselect_b32 s4, 0xffffffc0, 0
-; VI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
-; VI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; VI-SDAG-NEXT:    v_ldexp_f32 v1, v3, s4
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, s0
-; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-SDAG-NEXT:    v_mov_b32_e32 v4, s3
-; VI-SDAG-NEXT:    v_mov_b32_e32 v3, s2
-; VI-SDAG-NEXT:    flat_store_dwordx3 v[3:4], v[0:2]
-; VI-SDAG-NEXT:    s_endpgm
-;
-; VI-GISEL-LABEL: s_exp2_v3f32:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x34
-; VI-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
-; VI-GISEL-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s8, v0
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e64 s[0:1], s9, v0
-; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-GISEL-NEXT:    s_cselect_b32 s4, 0x42800000, 0
-; VI-GISEL-NEXT:    s_cselect_b32 s5, 0xffffffc0, 0
-; VI-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; VI-GISEL-NEXT:    s_cselect_b32 s0, 0x42800000, 0
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s10, v0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; VI-GISEL-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s4
-; VI-GISEL-NEXT:    s_cselect_b32 s1, 0x42800000, 0
-; VI-GISEL-NEXT:    v_add_f32_e32 v1, s8, v1
-; VI-GISEL-NEXT:    v_add_f32_e32 v2, s9, v2
-; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v1, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v2, v2
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, s10, v0
-; VI-GISEL-NEXT:    v_exp_f32_e32 v3, v0
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v1, s5
-; VI-GISEL-NEXT:    v_ldexp_f32 v1, v2, s0
-; VI-GISEL-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; VI-GISEL-NEXT:    v_ldexp_f32 v2, v3, s0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v4, s3
-; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s2
-; VI-GISEL-NEXT:    flat_store_dwordx3 v[3:4], v[0:2]
-; VI-GISEL-NEXT:    s_endpgm
-;
-; GFX900-SDAG-LABEL: s_exp2_v3f32:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x34
-; GFX900-SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0x42800000
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v3, 0
-; GFX900-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v2, s2, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v2, v2
-; GFX900-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
-; GFX900-SDAG-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
-; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s1, v0
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v2, v2, s2
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
-; GFX900-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
-; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v4, s1, v4
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, s0, v0
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v4, v4
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
-; GFX900-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
-; GFX900-SDAG-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v1, v4, s2
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, s0
-; GFX900-SDAG-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
-; GFX900-SDAG-NEXT:    s_endpgm
-;
-; GFX900-GISEL-LABEL: s_exp2_v3f32:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x34
-; GFX900-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; GFX900-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s8, v0
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e64 s[0:1], s9, v0
-; GFX900-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GFX900-GISEL-NEXT:    s_cselect_b32 s4, 0x42800000, 0
-; GFX900-GISEL-NEXT:    s_cselect_b32 s5, 0xffffffc0, 0
-; GFX900-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX900-GISEL-NEXT:    s_cselect_b32 s0, 0x42800000, 0
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s10, v0
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX900-GISEL-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; GFX900-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, s4
-; GFX900-GISEL-NEXT:    s_cselect_b32 s1, 0x42800000, 0
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v1, s8, v1
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v2, s9, v2
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v1, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v2, v2
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, s10, v0
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v3, v0
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v1, s5
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v1, v2, s0
-; GFX900-GISEL-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v2, v3, s0
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v3, 0
-; GFX900-GISEL-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3]
-; GFX900-GISEL-NEXT:    s_endpgm
+; GFX900-LABEL: s_exp2_v3f32:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x34
+; GFX900-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX900-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
+; GFX900-NEXT:    v_mov_b32_e32 v1, 0x42800000
+; GFX900-NEXT:    v_mov_b32_e32 v3, 0
+; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX900-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
+; GFX900-NEXT:    v_add_f32_e32 v2, s2, v2
+; GFX900-NEXT:    v_exp_f32_e32 v2, v2
+; GFX900-NEXT:    s_and_b64 s[2:3], vcc, exec
+; GFX900-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
+; GFX900-NEXT:    v_cmp_lt_f32_e32 vcc, s1, v0
+; GFX900-NEXT:    v_ldexp_f32 v2, v2, s2
+; GFX900-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
+; GFX900-NEXT:    s_and_b64 s[2:3], vcc, exec
+; GFX900-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; GFX900-NEXT:    v_add_f32_e32 v4, s1, v4
+; GFX900-NEXT:    v_add_f32_e32 v0, s0, v0
+; GFX900-NEXT:    v_exp_f32_e32 v4, v4
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
+; GFX900-NEXT:    s_and_b64 s[0:1], vcc, exec
+; GFX900-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
+; GFX900-NEXT:    v_ldexp_f32 v1, v4, s2
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, s0
+; GFX900-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
+; GFX900-NEXT:    s_endpgm
 ;
 ; R600-LABEL: s_exp2_v3f32:
 ; R600:       ; %bb.0:
@@ -680,252 +440,124 @@ define amdgpu_kernel void @s_exp2_v3f32(ptr addrspace(1) %out, <3 x float> %in) 
 ; FIXME: We should be able to merge these packets together on Cayman so we
 ; have a maximum of 4 instructions.
 define amdgpu_kernel void @s_exp2_v4f32(ptr addrspace(1) %out, <4 x float> %in) {
-; SI-SDAG-LABEL: s_exp2_v4f32:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-SDAG-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0xd
-; SI-SDAG-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x42800000
-; SI-SDAG-NEXT:    s_mov_b32 s3, 0xf000
-; SI-SDAG-NEXT:    s_mov_b32 s2, -1
-; SI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s7, v0
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
-; SI-SDAG-NEXT:    s_and_b64 s[8:9], vcc, exec
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v3, 0, v1, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v2, s7, v2
-; SI-SDAG-NEXT:    v_add_f32_e32 v3, s6, v3
-; SI-SDAG-NEXT:    v_exp_f32_e32 v2, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v4, v3
-; SI-SDAG-NEXT:    s_cselect_b32 s8, 0xffffffc0, 0
-; SI-SDAG-NEXT:    s_and_b64 s[6:7], vcc, exec
-; SI-SDAG-NEXT:    s_cselect_b32 s6, 0xffffffc0, 0
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s5, v0
-; SI-SDAG-NEXT:    v_ldexp_f32_e64 v3, v2, s8
-; SI-SDAG-NEXT:    v_ldexp_f32_e64 v2, v4, s6
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
-; SI-SDAG-NEXT:    s_and_b64 s[6:7], vcc, exec
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v4, s5, v4
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, s4, v0
-; SI-SDAG-NEXT:    v_exp_f32_e32 v4, v4
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    s_cselect_b32 s6, 0xffffffc0, 0
-; SI-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
-; SI-SDAG-NEXT:    s_cselect_b32 s4, 0xffffffc0, 0
-; SI-SDAG-NEXT:    v_ldexp_f32_e64 v1, v4, s6
-; SI-SDAG-NEXT:    v_ldexp_f32_e64 v0, v0, s4
-; SI-SDAG-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
-; SI-SDAG-NEXT:    s_endpgm
+; SI-LABEL: s_exp2_v4f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0xd
+; SI-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
+; SI-NEXT:    v_mov_b32_e32 v1, 0x42800000
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_cmp_lt_f32_e32 vcc, s7, v0
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
+; SI-NEXT:    s_and_b64 s[8:9], vcc, exec
+; SI-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
+; SI-NEXT:    v_cndmask_b32_e32 v3, 0, v1, vcc
+; SI-NEXT:    v_add_f32_e32 v2, s7, v2
+; SI-NEXT:    v_add_f32_e32 v3, s6, v3
+; SI-NEXT:    v_exp_f32_e32 v2, v2
+; SI-NEXT:    v_exp_f32_e32 v4, v3
+; SI-NEXT:    s_cselect_b32 s8, 0xffffffc0, 0
+; SI-NEXT:    s_and_b64 s[6:7], vcc, exec
+; SI-NEXT:    s_cselect_b32 s6, 0xffffffc0, 0
+; SI-NEXT:    v_cmp_lt_f32_e32 vcc, s5, v0
+; SI-NEXT:    v_ldexp_f32_e64 v3, v2, s8
+; SI-NEXT:    v_ldexp_f32_e64 v2, v4, s6
+; SI-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
+; SI-NEXT:    s_and_b64 s[6:7], vcc, exec
+; SI-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; SI-NEXT:    v_add_f32_e32 v4, s5, v4
+; SI-NEXT:    v_add_f32_e32 v0, s4, v0
+; SI-NEXT:    v_exp_f32_e32 v4, v4
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    s_cselect_b32 s6, 0xffffffc0, 0
+; SI-NEXT:    s_and_b64 s[4:5], vcc, exec
+; SI-NEXT:    s_cselect_b32 s4, 0xffffffc0, 0
+; SI-NEXT:    v_ldexp_f32_e64 v1, v4, s6
+; SI-NEXT:    v_ldexp_f32_e64 v0, v0, s4
+; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
+; SI-NEXT:    s_endpgm
 ;
-; SI-GISEL-LABEL: s_exp2_v4f32:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0xd
-; SI-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    s_mov_b32 s6, -1
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s8, v1
-; SI-GISEL-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 0x42800000, 0
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e64 s[0:1], s9, v1
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, s8, v0
-; SI-GISEL-NEXT:    s_cselect_b32 s3, 0xffffffc0, 0
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; SI-GISEL-NEXT:    s_cselect_b32 s0, 0x42800000, 0
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s10, v1
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; SI-GISEL-NEXT:    s_cselect_b32 s0, 0x42800000, 0
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s11, v1
-; SI-GISEL-NEXT:    v_ldexp_f32_e64 v0, v0, s3
-; SI-GISEL-NEXT:    v_mov_b32_e32 v3, s0
-; SI-GISEL-NEXT:    s_cselect_b32 s3, 0xffffffc0, 0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; SI-GISEL-NEXT:    s_cselect_b32 s0, 0x42800000, 0
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, s0
-; SI-GISEL-NEXT:    v_add_f32_e32 v2, s9, v2
-; SI-GISEL-NEXT:    v_add_f32_e32 v3, s10, v3
-; SI-GISEL-NEXT:    v_add_f32_e32 v1, s11, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v2, v2
-; SI-GISEL-NEXT:    v_exp_f32_e32 v3, v3
-; SI-GISEL-NEXT:    v_exp_f32_e32 v4, v1
-; SI-GISEL-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; SI-GISEL-NEXT:    v_ldexp_f32_e64 v1, v2, s2
-; SI-GISEL-NEXT:    v_ldexp_f32_e64 v2, v3, s3
-; SI-GISEL-NEXT:    v_ldexp_f32_e64 v3, v4, s0
-; SI-GISEL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
-; SI-GISEL-NEXT:    s_endpgm
+; VI-LABEL: s_exp2_v4f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x34
+; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
+; VI-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
+; VI-NEXT:    v_mov_b32_e32 v1, 0x42800000
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
+; VI-NEXT:    s_and_b64 s[6:7], vcc, exec
+; VI-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; VI-NEXT:    v_cndmask_b32_e32 v3, 0, v1, vcc
+; VI-NEXT:    v_add_f32_e32 v2, s3, v2
+; VI-NEXT:    v_add_f32_e32 v3, s2, v3
+; VI-NEXT:    v_exp_f32_e32 v2, v2
+; VI-NEXT:    v_exp_f32_e32 v4, v3
+; VI-NEXT:    s_cselect_b32 s6, 0xffffffc0, 0
+; VI-NEXT:    s_and_b64 s[2:3], vcc, exec
+; VI-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
+; VI-NEXT:    v_cmp_lt_f32_e32 vcc, s1, v0
+; VI-NEXT:    v_ldexp_f32 v3, v2, s6
+; VI-NEXT:    v_ldexp_f32 v2, v4, s2
+; VI-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
+; VI-NEXT:    s_and_b64 s[2:3], vcc, exec
+; VI-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
+; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; VI-NEXT:    v_add_f32_e32 v4, s1, v4
+; VI-NEXT:    v_add_f32_e32 v0, s0, v0
+; VI-NEXT:    v_exp_f32_e32 v4, v4
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
+; VI-NEXT:    s_and_b64 s[0:1], vcc, exec
+; VI-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
+; VI-NEXT:    v_ldexp_f32 v1, v4, s2
+; VI-NEXT:    v_ldexp_f32 v0, v0, s0
+; VI-NEXT:    v_mov_b32_e32 v4, s4
+; VI-NEXT:    v_mov_b32_e32 v5, s5
+; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
+; VI-NEXT:    s_endpgm
 ;
-; VI-SDAG-LABEL: s_exp2_v4f32:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x34
-; VI-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
-; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; VI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x42800000
-; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
-; VI-SDAG-NEXT:    s_and_b64 s[6:7], vcc, exec
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v3, 0, v1, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v2, s3, v2
-; VI-SDAG-NEXT:    v_add_f32_e32 v3, s2, v3
-; VI-SDAG-NEXT:    v_exp_f32_e32 v2, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v4, v3
-; VI-SDAG-NEXT:    s_cselect_b32 s6, 0xffffffc0, 0
-; VI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
-; VI-SDAG-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s1, v0
-; VI-SDAG-NEXT:    v_ldexp_f32 v3, v2, s6
-; VI-SDAG-NEXT:    v_ldexp_f32 v2, v4, s2
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
-; VI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v4, s1, v4
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, s0, v0
-; VI-SDAG-NEXT:    v_exp_f32_e32 v4, v4
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
-; VI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
-; VI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; VI-SDAG-NEXT:    v_ldexp_f32 v1, v4, s2
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, s0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v4, s4
-; VI-SDAG-NEXT:    v_mov_b32_e32 v5, s5
-; VI-SDAG-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; VI-SDAG-NEXT:    s_endpgm
-;
-; VI-GISEL-LABEL: s_exp2_v4f32:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x34
-; VI-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s8, v1
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e64 s[0:1], s9, v1
-; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-GISEL-NEXT:    s_cselect_b32 s4, 0x42800000, 0
-; VI-GISEL-NEXT:    s_cselect_b32 s5, 0xffffffc0, 0
-; VI-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; VI-GISEL-NEXT:    s_cselect_b32 s0, 0x42800000, 0
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s10, v1
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; VI-GISEL-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-GISEL-NEXT:    s_cselect_b32 s1, 0x42800000, 0
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s11, v1
-; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s1
-; VI-GISEL-NEXT:    s_cselect_b32 s1, 0xffffffc0, 0
-; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; VI-GISEL-NEXT:    s_cselect_b32 s4, 0x42800000, 0
-; VI-GISEL-NEXT:    v_add_f32_e32 v2, s9, v2
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s4
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, s8, v0
-; VI-GISEL-NEXT:    v_exp_f32_e32 v2, v2
-; VI-GISEL-NEXT:    v_add_f32_e32 v3, s10, v3
-; VI-GISEL-NEXT:    v_add_f32_e32 v1, s11, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_exp_f32_e32 v3, v3
-; VI-GISEL-NEXT:    v_exp_f32_e32 v4, v1
-; VI-GISEL-NEXT:    v_ldexp_f32 v1, v2, s0
-; VI-GISEL-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, s5
-; VI-GISEL-NEXT:    v_ldexp_f32 v2, v3, s1
-; VI-GISEL-NEXT:    v_ldexp_f32 v3, v4, s0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v5, s3
-; VI-GISEL-NEXT:    v_mov_b32_e32 v4, s2
-; VI-GISEL-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; VI-GISEL-NEXT:    s_endpgm
-;
-; GFX900-SDAG-LABEL: s_exp2_v4f32:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x34
-; GFX900-SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0x42800000
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v4, 0
-; GFX900-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
-; GFX900-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
-; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v3, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v2, s3, v2
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v3, s2, v3
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v2, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v5, v3
-; GFX900-SDAG-NEXT:    s_cselect_b32 s4, 0xffffffc0, 0
-; GFX900-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
-; GFX900-SDAG-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
-; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s1, v0
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v3, v2, s4
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v2, v5, s2
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v5, 0, v1, vcc
-; GFX900-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
-; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v5, s1, v5
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, s0, v0
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v5, v5
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
-; GFX900-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
-; GFX900-SDAG-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v1, v5, s2
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, s0
-; GFX900-SDAG-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
-; GFX900-SDAG-NEXT:    s_endpgm
-;
-; GFX900-GISEL-LABEL: s_exp2_v4f32:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x34
-; GFX900-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s8, v1
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e64 s[0:1], s9, v1
-; GFX900-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GFX900-GISEL-NEXT:    s_cselect_b32 s4, 0x42800000, 0
-; GFX900-GISEL-NEXT:    s_cselect_b32 s5, 0xffffffc0, 0
-; GFX900-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX900-GISEL-NEXT:    s_cselect_b32 s0, 0x42800000, 0
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s10, v1
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX900-GISEL-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; GFX900-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GFX900-GISEL-NEXT:    s_cselect_b32 s1, 0x42800000, 0
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s11, v1
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v3, s1
-; GFX900-GISEL-NEXT:    s_cselect_b32 s1, 0xffffffc0, 0
-; GFX900-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; GFX900-GISEL-NEXT:    s_cselect_b32 s4, 0x42800000, 0
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v2, s9, v2
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, s4
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, s8, v0
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v2, v2
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v3, s10, v3
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v1, s11, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v3, v3
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v4, v1
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v1, v2, s0
-; GFX900-GISEL-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, s5
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v2, v3, s1
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v3, v4, s0
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v4, 0
-; GFX900-GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
-; GFX900-GISEL-NEXT:    s_endpgm
+; GFX900-LABEL: s_exp2_v4f32:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x34
+; GFX900-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX900-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
+; GFX900-NEXT:    v_mov_b32_e32 v1, 0x42800000
+; GFX900-NEXT:    v_mov_b32_e32 v4, 0
+; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX900-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
+; GFX900-NEXT:    s_and_b64 s[4:5], vcc, exec
+; GFX900-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; GFX900-NEXT:    v_cndmask_b32_e32 v3, 0, v1, vcc
+; GFX900-NEXT:    v_add_f32_e32 v2, s3, v2
+; GFX900-NEXT:    v_add_f32_e32 v3, s2, v3
+; GFX900-NEXT:    v_exp_f32_e32 v2, v2
+; GFX900-NEXT:    v_exp_f32_e32 v5, v3
+; GFX900-NEXT:    s_cselect_b32 s4, 0xffffffc0, 0
+; GFX900-NEXT:    s_and_b64 s[2:3], vcc, exec
+; GFX900-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
+; GFX900-NEXT:    v_cmp_lt_f32_e32 vcc, s1, v0
+; GFX900-NEXT:    v_ldexp_f32 v3, v2, s4
+; GFX900-NEXT:    v_ldexp_f32 v2, v5, s2
+; GFX900-NEXT:    v_cndmask_b32_e32 v5, 0, v1, vcc
+; GFX900-NEXT:    s_and_b64 s[2:3], vcc, exec
+; GFX900-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; GFX900-NEXT:    v_add_f32_e32 v5, s1, v5
+; GFX900-NEXT:    v_add_f32_e32 v0, s0, v0
+; GFX900-NEXT:    v_exp_f32_e32 v5, v5
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
+; GFX900-NEXT:    s_and_b64 s[0:1], vcc, exec
+; GFX900-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
+; GFX900-NEXT:    v_ldexp_f32 v1, v5, s2
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, s0
+; GFX900-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
+; GFX900-NEXT:    s_endpgm
 ;
 ; R600-LABEL: s_exp2_v4f32:
 ; R600:       ; %bb.0:
@@ -1026,89 +658,47 @@ define amdgpu_kernel void @s_exp2_v4f32(ptr addrspace(1) %out, <4 x float> %in) 
 }
 
 define float @v_exp2_f32(float %in) {
-; SI-SDAG-LABEL: v_exp2_f32:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e32 v0, v0, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_f32:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_f32:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_f32:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_f32:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_f32:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_f32:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32:
 ; R600:       ; %bb.0:
@@ -1124,89 +714,47 @@ define float @v_exp2_f32(float %in) {
 }
 
 define float @v_exp2_fabs_f32(float %in) {
-; SI-SDAG-LABEL: v_exp2_fabs_f32:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e64 v0, |v0|, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_fabs_f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e64 v0, |v0|, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_fabs_f32:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e64 v0, |v0|, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_fabs_f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e64 v0, |v0|, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_fabs_f32:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e64 v0, |v0|, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_fabs_f32:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e64 v0, |v0|, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_fabs_f32:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e64 v0, |v0|, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_fabs_f32:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e64 v0, |v0|, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_fabs_f32:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e64 v0, |v0|, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_fabs_f32:
 ; R600:       ; %bb.0:
@@ -1223,89 +771,47 @@ define float @v_exp2_fabs_f32(float %in) {
 }
 
 define float @v_exp2_fneg_fabs_f32(float %in) {
-; SI-SDAG-LABEL: v_exp2_fneg_fabs_f32:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0x42fc0000
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_sub_f32_e64 v0, v2, |v0|
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_fneg_fabs_f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x42fc0000
+; SI-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_sub_f32_e64 v0, v2, |v0|
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_fneg_fabs_f32:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, -|v0|, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_sub_f32_e64 v0, v1, |v0|
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_fneg_fabs_f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0x42fc0000
+; VI-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_sub_f32_e64 v0, v2, |v0|
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_fneg_fabs_f32:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0x42fc0000
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_sub_f32_e64 v0, v2, |v0|
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_fneg_fabs_f32:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, -|v0|, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_sub_f32_e64 v0, v1, |v0|
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_fneg_fabs_f32:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x42fc0000
-; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_sub_f32_e64 v0, v2, |v0|
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_fneg_fabs_f32:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, -|v0|, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_sub_f32_e64 v0, v1, |v0|
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_fneg_fabs_f32:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0x42fc0000
+; GFX900-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_sub_f32_e64 v0, v2, |v0|
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_fneg_fabs_f32:
 ; R600:       ; %bb.0:
@@ -1323,89 +829,47 @@ define float @v_exp2_fneg_fabs_f32(float %in) {
 }
 
 define float @v_exp2_fneg_f32(float %in) {
-; SI-SDAG-LABEL: v_exp2_fneg_f32:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0x42fc0000
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_sub_f32_e32 v0, v2, v0
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_fneg_f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x42fc0000
+; SI-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_sub_f32_e32 v0, v2, v0
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_fneg_f32:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, -v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_sub_f32_e32 v0, v1, v0
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_fneg_f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0x42fc0000
+; VI-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_sub_f32_e32 v0, v2, v0
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_fneg_f32:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0x42fc0000
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_sub_f32_e32 v0, v2, v0
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_fneg_f32:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, -v0, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_sub_f32_e32 v0, v1, v0
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_fneg_f32:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x42fc0000
-; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_sub_f32_e32 v0, v2, v0
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_fneg_f32:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, -v0, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_sub_f32_e32 v0, v1, v0
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_fneg_f32:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0x42fc0000
+; GFX900-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_sub_f32_e32 v0, v2, v0
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_fneg_f32:
 ; R600:       ; %bb.0:
@@ -1422,89 +886,47 @@ define float @v_exp2_fneg_f32(float %in) {
 }
 
 define float @v_exp2_f32_fast(float %in) {
-; SI-SDAG-LABEL: v_exp2_f32_fast:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_f32_fast:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e32 v0, v0, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_f32_fast:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_f32_fast:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_f32_fast:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_f32_fast:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_f32_fast:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_f32_fast:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_f32_fast:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32_fast:
 ; R600:       ; %bb.0:
@@ -1520,89 +942,47 @@ define float @v_exp2_f32_fast(float %in) {
 }
 
 define float @v_exp2_f32_unsafe_math_attr(float %in) {
-; SI-SDAG-LABEL: v_exp2_f32_unsafe_math_attr:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_f32_unsafe_math_attr:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e32 v0, v0, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_f32_unsafe_math_attr:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_f32_unsafe_math_attr:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_f32_unsafe_math_attr:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_f32_unsafe_math_attr:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_f32_unsafe_math_attr:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_f32_unsafe_math_attr:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_f32_unsafe_math_attr:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32_unsafe_math_attr:
 ; R600:       ; %bb.0:
@@ -1618,89 +998,47 @@ define float @v_exp2_f32_unsafe_math_attr(float %in) {
 }
 
 define float @v_exp2_f32_ninf(float %in) {
-; SI-SDAG-LABEL: v_exp2_f32_ninf:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_f32_ninf:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e32 v0, v0, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_f32_ninf:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_f32_ninf:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_f32_ninf:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_f32_ninf:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_f32_ninf:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_f32_ninf:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_f32_ninf:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32_ninf:
 ; R600:       ; %bb.0:
@@ -1716,89 +1054,47 @@ define float @v_exp2_f32_ninf(float %in) {
 }
 
 define float @v_exp2_f32_afn(float %in) {
-; SI-SDAG-LABEL: v_exp2_f32_afn:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_f32_afn:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e32 v0, v0, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_f32_afn:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_f32_afn:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_f32_afn:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_f32_afn:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_f32_afn:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_f32_afn:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_f32_afn:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32_afn:
 ; R600:       ; %bb.0:
@@ -1834,89 +1130,47 @@ define float @v_exp2_f32_afn_daz(float %in) #0 {
 }
 
 define float @v_exp2_f32_afn_dynamic(float %in) #1 {
-; SI-SDAG-LABEL: v_exp2_f32_afn_dynamic:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_f32_afn_dynamic:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e32 v0, v0, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_f32_afn_dynamic:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_f32_afn_dynamic:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_f32_afn_dynamic:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_f32_afn_dynamic:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_f32_afn_dynamic:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_f32_afn_dynamic:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_f32_afn_dynamic:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32_afn_dynamic:
 ; R600:       ; %bb.0:
@@ -1932,89 +1186,47 @@ define float @v_exp2_f32_afn_dynamic(float %in) #1 {
 }
 
 define float @v_fabs_exp2_f32_afn(float %in) {
-; SI-SDAG-LABEL: v_fabs_exp2_f32_afn:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e64 v0, |v0|, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_fabs_exp2_f32_afn:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e64 v0, |v0|, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_fabs_exp2_f32_afn:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e64 v0, |v0|, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_fabs_exp2_f32_afn:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e64 v0, |v0|, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_fabs_exp2_f32_afn:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e64 v0, |v0|, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_fabs_exp2_f32_afn:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e64 v0, |v0|, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_fabs_exp2_f32_afn:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e64 v0, |v0|, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_fabs_exp2_f32_afn:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e64 v0, |v0|, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_fabs_exp2_f32_afn:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e64 v0, |v0|, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_fabs_exp2_f32_afn:
 ; R600:       ; %bb.0:
@@ -2051,89 +1263,47 @@ define float @v_exp2_f32_daz(float %in) #0 {
 }
 
 define float @v_exp2_f32_nnan(float %in) {
-; SI-SDAG-LABEL: v_exp2_f32_nnan:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_f32_nnan:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e32 v0, v0, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_f32_nnan:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_f32_nnan:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_f32_nnan:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_f32_nnan:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_f32_nnan:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_f32_nnan:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_f32_nnan:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32_nnan:
 ; R600:       ; %bb.0:
@@ -2169,89 +1339,47 @@ define float @v_exp2_f32_nnan_daz(float %in) #0 {
 }
 
 define float @v_exp2_f32_nnan_dynamic(float %in) #1 {
-; SI-SDAG-LABEL: v_exp2_f32_nnan_dynamic:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_f32_nnan_dynamic:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e32 v0, v0, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_f32_nnan_dynamic:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_f32_nnan_dynamic:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_f32_nnan_dynamic:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_f32_nnan_dynamic:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_f32_nnan_dynamic:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_f32_nnan_dynamic:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_f32_nnan_dynamic:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32_nnan_dynamic:
 ; R600:       ; %bb.0:
@@ -2287,89 +1415,47 @@ define float @v_exp2_f32_ninf_daz(float %in) #0 {
 }
 
 define float @v_exp2_f32_ninf_dynamic(float %in) #1 {
-; SI-SDAG-LABEL: v_exp2_f32_ninf_dynamic:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_f32_ninf_dynamic:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e32 v0, v0, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_f32_ninf_dynamic:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_f32_ninf_dynamic:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_f32_ninf_dynamic:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_f32_ninf_dynamic:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_f32_ninf_dynamic:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_f32_ninf_dynamic:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_f32_ninf_dynamic:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32_ninf_dynamic:
 ; R600:       ; %bb.0:
@@ -2385,89 +1471,47 @@ define float @v_exp2_f32_ninf_dynamic(float %in) #1 {
 }
 
 define float @v_exp2_f32_nnan_ninf(float %in) {
-; SI-SDAG-LABEL: v_exp2_f32_nnan_ninf:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_f32_nnan_ninf:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e32 v0, v0, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_f32_nnan_ninf:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_f32_nnan_ninf:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_f32_nnan_ninf:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_f32_nnan_ninf:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_f32_nnan_ninf:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_f32_nnan_ninf:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_f32_nnan_ninf:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32_nnan_ninf:
 ; R600:       ; %bb.0:
@@ -2503,89 +1547,47 @@ define float @v_exp2_f32_nnan_ninf_daz(float %in) #0 {
 }
 
 define float @v_exp2_f32_nnan_ninf_dynamic(float %in) #1 {
-; SI-SDAG-LABEL: v_exp2_f32_nnan_ninf_dynamic:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_f32_nnan_ninf_dynamic:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e32 v0, v0, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_f32_nnan_ninf_dynamic:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_f32_nnan_ninf_dynamic:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_f32_nnan_ninf_dynamic:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_f32_nnan_ninf_dynamic:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_f32_nnan_ninf_dynamic:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_f32_nnan_ninf_dynamic:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_f32_nnan_ninf_dynamic:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32_nnan_ninf_dynamic:
 ; R600:       ; %bb.0:
@@ -2621,89 +1623,47 @@ define float @v_exp2_f32_fast_daz(float %in) #0 {
 }
 
 define float @v_exp2_f32_dynamic_mode(float %in) #1 {
-; SI-SDAG-LABEL: v_exp2_f32_dynamic_mode:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_f32_dynamic_mode:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e32 v0, v0, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_f32_dynamic_mode:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_f32_dynamic_mode:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_f32_dynamic_mode:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_f32_dynamic_mode:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_f32_dynamic_mode:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_f32_dynamic_mode:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_f32_dynamic_mode:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32_dynamic_mode:
 ; R600:       ; %bb.0:
@@ -2781,27 +1741,16 @@ define float @v_exp2_f32_from_fpext_f16(i16 %src.i) {
 }
 
 define float @v_exp2_f32_from_fpext_math_f16(i16 %src0.i, i16 %src1.i) {
-; SI-SDAG-LABEL: v_exp2_f32_from_fpext_math_f16:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; SI-GISEL-LABEL: v_exp2_f32_from_fpext_math_f16:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_f32_from_fpext_math_f16:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_add_f32_e32 v0, v0, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_exp2_f32_from_fpext_math_f16:
 ; VI:       ; %bb.0:
@@ -3086,37 +2035,21 @@ define <2 x half> @v_exp2_v2f16(<2 x half> %in) {
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_v2f16:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    v_exp_f16_sdwa v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-SDAG-NEXT:    v_exp_f16_e32 v0, v0
-; VI-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_v2f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_exp_f16_sdwa v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
+; VI-NEXT:    v_exp_f16_e32 v0, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-GISEL-LABEL: v_exp2_v2f16:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_exp_f16_e32 v1, v0
-; VI-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_v2f16:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    v_exp_f16_sdwa v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX900-SDAG-NEXT:    v_exp_f16_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_v2f16:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_exp_f16_e32 v1, v0
-; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_v2f16:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_exp_f16_sdwa v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX900-NEXT:    v_exp_f16_e32 v0, v0
+; GFX900-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_v2f16:
 ; R600:       ; %bb.0:
@@ -3132,68 +2065,35 @@ define <2 x half> @v_exp2_v2f16(<2 x half> %in) {
 }
 
 define <2 x half> @v_exp2_fabs_v2f16(<2 x half> %in) {
-; SI-SDAG-LABEL: v_exp2_fabs_v2f16:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; SI-SDAG-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
-; SI-SDAG-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
-; SI-SDAG-NEXT:    v_exp_f32_e32 v1, v1
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; SI-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_fabs_v2f16:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; SI-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
+; SI-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
+; SI-NEXT:    v_exp_f32_e32 v1, v1
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_fabs_v2f16:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
-; SI-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-GISEL-NEXT:    v_exp_f32_e32 v1, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; SI-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_fabs_v2f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_exp_f16_sdwa v1, |v0| dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
+; VI-NEXT:    v_exp_f16_e64 v0, |v0|
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_fabs_v2f16:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    v_exp_f16_sdwa v1, |v0| dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-SDAG-NEXT:    v_exp_f16_e64 v0, |v0|
-; VI-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_fabs_v2f16:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
-; VI-GISEL-NEXT:    v_exp_f16_e32 v1, v0
-; VI-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_fabs_v2f16:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    v_exp_f16_sdwa v1, |v0| dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX900-SDAG-NEXT:    v_exp_f16_e64 v0, |v0|
-; GFX900-SDAG-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_fabs_v2f16:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
-; GFX900-GISEL-NEXT:    v_exp_f16_e32 v1, v0
-; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_fabs_v2f16:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_exp_f16_sdwa v1, |v0| dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX900-NEXT:    v_exp_f16_e64 v0, |v0|
+; GFX900-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_fabs_v2f16:
 ; R600:       ; %bb.0:
@@ -3225,39 +2125,21 @@ define <2 x half> @v_exp2_fneg_fabs_v2f16(<2 x half> %in) {
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_fneg_fabs_v2f16:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    v_exp_f16_sdwa v1, -|v0| dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-SDAG-NEXT:    v_exp_f16_e64 v0, -|v0|
-; VI-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_fneg_fabs_v2f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_exp_f16_sdwa v1, -|v0| dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
+; VI-NEXT:    v_exp_f16_e64 v0, -|v0|
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-GISEL-LABEL: v_exp2_fneg_fabs_v2f16:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
-; VI-GISEL-NEXT:    v_exp_f16_e32 v1, v0
-; VI-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_fneg_fabs_v2f16:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    v_exp_f16_sdwa v1, -|v0| dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX900-SDAG-NEXT:    v_exp_f16_e64 v0, -|v0|
-; GFX900-SDAG-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_fneg_fabs_v2f16:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
-; GFX900-GISEL-NEXT:    v_exp_f16_e32 v1, v0
-; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_fneg_fabs_v2f16:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_exp_f16_sdwa v1, -|v0| dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX900-NEXT:    v_exp_f16_e64 v0, -|v0|
+; GFX900-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_fneg_fabs_v2f16:
 ; R600:       ; %bb.0:
@@ -3290,39 +2172,21 @@ define <2 x half> @v_exp2_fneg_v2f16(<2 x half> %in) {
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_fneg_v2f16:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    v_exp_f16_sdwa v1, -v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-SDAG-NEXT:    v_exp_f16_e64 v0, -v0
-; VI-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_fneg_v2f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_exp_f16_sdwa v1, -v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
+; VI-NEXT:    v_exp_f16_e64 v0, -v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-GISEL-LABEL: v_exp2_fneg_v2f16:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; VI-GISEL-NEXT:    v_exp_f16_e32 v1, v0
-; VI-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_fneg_v2f16:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    v_exp_f16_sdwa v1, -v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX900-SDAG-NEXT:    v_exp_f16_e64 v0, -v0
-; GFX900-SDAG-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_fneg_v2f16:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX900-GISEL-NEXT:    v_exp_f16_e32 v1, v0
-; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_fneg_v2f16:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_exp_f16_sdwa v1, -v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX900-NEXT:    v_exp_f16_e64 v0, -v0
+; GFX900-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_fneg_v2f16:
 ; R600:       ; %bb.0:
@@ -3353,37 +2217,21 @@ define <2 x half> @v_exp2_v2f16_fast(<2 x half> %in) {
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_v2f16_fast:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    v_exp_f16_sdwa v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-SDAG-NEXT:    v_exp_f16_e32 v0, v0
-; VI-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_v2f16_fast:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_exp_f16_sdwa v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
+; VI-NEXT:    v_exp_f16_e32 v0, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-GISEL-LABEL: v_exp2_v2f16_fast:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_exp_f16_e32 v1, v0
-; VI-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_v2f16_fast:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    v_exp_f16_sdwa v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX900-SDAG-NEXT:    v_exp_f16_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_v2f16_fast:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_exp_f16_e32 v1, v0
-; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_v2f16_fast:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_exp_f16_sdwa v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX900-NEXT:    v_exp_f16_e32 v0, v0
+; GFX900-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_v2f16_fast:
 ; R600:       ; %bb.0:
@@ -3416,42 +2264,23 @@ define <3 x half> @v_exp_v3f16(<3 x half> %in) {
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v2
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp_v3f16:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    v_exp_f16_sdwa v2, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-SDAG-NEXT:    v_exp_f16_e32 v0, v0
-; VI-SDAG-NEXT:    v_exp_f16_e32 v1, v1
-; VI-SDAG-NEXT:    v_or_b32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp_v3f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_exp_f16_sdwa v2, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
+; VI-NEXT:    v_exp_f16_e32 v0, v0
+; VI-NEXT:    v_exp_f16_e32 v1, v1
+; VI-NEXT:    v_or_b32_e32 v0, v0, v2
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-GISEL-LABEL: v_exp_v3f16:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_exp_f16_e32 v2, v0
-; VI-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-GISEL-NEXT:    v_exp_f16_e32 v1, v1
-; VI-GISEL-NEXT:    v_or_b32_e32 v0, v2, v0
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp_v3f16:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    v_exp_f16_sdwa v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX900-SDAG-NEXT:    v_exp_f16_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_exp_f16_e32 v1, v1
-; GFX900-SDAG-NEXT:    v_pack_b32_f16 v0, v0, v2
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp_v3f16:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_exp_f16_e32 v2, v0
-; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX900-GISEL-NEXT:    v_exp_f16_e32 v1, v1
-; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
-; GFX900-GISEL-NEXT:    v_lshl_or_b32 v1, s4, 16, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp_v3f16:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_exp_f16_sdwa v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX900-NEXT:    v_exp_f16_e32 v0, v0
+; GFX900-NEXT:    v_exp_f16_e32 v1, v1
+; GFX900-NEXT:    v_pack_b32_f16 v0, v0, v2
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp_v3f16:
 ; R600:       ; %bb.0:
@@ -3484,42 +2313,23 @@ define <3 x half> @v_exp2_v3f16_afn(<3 x half> %in) {
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v2
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_v3f16_afn:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    v_exp_f16_sdwa v2, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-SDAG-NEXT:    v_exp_f16_e32 v0, v0
-; VI-SDAG-NEXT:    v_exp_f16_e32 v1, v1
-; VI-SDAG-NEXT:    v_or_b32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_v3f16_afn:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_exp_f16_sdwa v2, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
+; VI-NEXT:    v_exp_f16_e32 v0, v0
+; VI-NEXT:    v_exp_f16_e32 v1, v1
+; VI-NEXT:    v_or_b32_e32 v0, v0, v2
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-GISEL-LABEL: v_exp2_v3f16_afn:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_exp_f16_e32 v2, v0
-; VI-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-GISEL-NEXT:    v_exp_f16_e32 v1, v1
-; VI-GISEL-NEXT:    v_or_b32_e32 v0, v2, v0
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_v3f16_afn:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    v_exp_f16_sdwa v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX900-SDAG-NEXT:    v_exp_f16_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_exp_f16_e32 v1, v1
-; GFX900-SDAG-NEXT:    v_pack_b32_f16 v0, v0, v2
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_v3f16_afn:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_exp_f16_e32 v2, v0
-; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX900-GISEL-NEXT:    v_exp_f16_e32 v1, v1
-; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
-; GFX900-GISEL-NEXT:    v_lshl_or_b32 v1, s4, 16, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_v3f16_afn:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_exp_f16_sdwa v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX900-NEXT:    v_exp_f16_e32 v0, v0
+; GFX900-NEXT:    v_exp_f16_e32 v1, v1
+; GFX900-NEXT:    v_pack_b32_f16 v0, v0, v2
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_v3f16_afn:
 ; R600:       ; %bb.0:
@@ -3535,89 +2345,47 @@ define <3 x half> @v_exp2_v3f16_afn(<3 x half> %in) {
 }
 
 define float @v_exp2_f32_contract(float %in) {
-; SI-SDAG-LABEL: v_exp2_f32_contract:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_f32_contract:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e32 v0, v0, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_f32_contract:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_f32_contract:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_f32_contract:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_f32_contract:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_f32_contract:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_f32_contract:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_f32_contract:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32_contract:
 ; R600:       ; %bb.0:
@@ -3653,89 +2421,47 @@ define float @v_exp2_f32_contract_daz(float %in) #0 {
 }
 
 define float @v_exp2_f32_contract_nnan_ninf(float %in) {
-; SI-SDAG-LABEL: v_exp2_f32_contract_nnan_ninf:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_exp2_f32_contract_nnan_ninf:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; SI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; SI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; SI-NEXT:    v_add_f32_e32 v0, v0, v2
+; SI-NEXT:    v_exp_f32_e32 v0, v0
+; SI-NEXT:    v_not_b32_e32 v1, 63
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: v_exp2_f32_contract_nnan_ninf:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SI-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_exp2_f32_contract_nnan_ninf:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; VI-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; VI-NEXT:    v_add_f32_e32 v0, v0, v2
+; VI-NEXT:    v_exp_f32_e32 v0, v0
+; VI-NEXT:    v_not_b32_e32 v1, 63
+; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: v_exp2_f32_contract_nnan_ninf:
-; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-GISEL-LABEL: v_exp2_f32_contract_nnan_ninf:
-; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; VI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; VI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; VI-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; VI-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-SDAG-LABEL: v_exp2_f32_contract_nnan_ninf:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-SDAG-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX900-GISEL-LABEL: v_exp2_f32_contract_nnan_ninf:
-; GFX900-GISEL:       ; %bb.0:
-; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
-; GFX900-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
-; GFX900-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX900-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GFX900-GISEL-NEXT:    v_not_b32_e32 v1, 63
-; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
-; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_exp2_f32_contract_nnan_ninf:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX900-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-NEXT:    v_exp_f32_e32 v0, v0
+; GFX900-NEXT:    v_not_b32_e32 v1, 63
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32_contract_nnan_ninf:
 ; R600:       ; %bb.0:
@@ -3767,3 +2493,9 @@ attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN-GISEL: {{.*}}
 ; GCN-SDAG: {{.*}}
+; GFX900-GISEL: {{.*}}
+; GFX900-SDAG: {{.*}}
+; SI-GISEL: {{.*}}
+; SI-SDAG: {{.*}}
+; VI-GISEL: {{.*}}
+; VI-SDAG: {{.*}}

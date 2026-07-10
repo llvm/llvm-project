@@ -174,8 +174,8 @@ body: |
   bb.0:
 
     ; CHECK-LABEL: name: test_implicit_def_s1056
-    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: $vgpr0 = COPY [[DEF]](s32)
+    ; CHECK: [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr0 = COPY [[DEF]](i32)
     %0:_(s1056) = G_IMPLICIT_DEF
     %1:_(s32) = G_TRUNC %0
     $vgpr0 = COPY %1

@@ -6,7 +6,7 @@
 ; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR-GISEL %s
 
 ; ERR-SDAG: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.permlane32.swap
-; ERR-GISEL: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(s32), %{{[0-9]+}}:vgpr_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.permlane32.swap)
+; ERR-GISEL: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(i32), %{{[0-9]+}}:vgpr_32(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.permlane32.swap)
 
 
 declare { i32, i32 } @llvm.amdgcn.permlane32.swap(i32, i32, i1 immarg, i1 immarg)
