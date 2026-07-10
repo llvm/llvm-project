@@ -8,11 +8,6 @@
 ; RUN: llc -mtriple aarch64-linux-pauthtest -mattr +pauth -filetype=obj auth.ll -o - | \
 ; RUN:   llvm-readelf -s - | FileCheck %s --check-prefix=OBJ
 
-; RUN: llc -mtriple aarch64-linux-gnu -mattr +pauth -filetype=obj noauth1.ll -o - | \
-; RUN:   llvm-readelf -s - | FileCheck %s --check-prefix=OBJ-NOAUTH
-; RUN: llc -mtriple aarch64-linux-gnu -mattr +pauth -filetype=obj noauth2.ll -o - | \
-; RUN:   llvm-readelf -s - | FileCheck %s --check-prefix=OBJ-NOAUTH
-
 ; ASM:               .type   foo,@function
 ; ASM-LABEL: foo:
 ; ASM:               adrp    x17, :got_auth:bar
@@ -37,6 +32,30 @@
 ; OBJ:      Symbol table '.symtab' contains [[#]] entries:
 ; OBJ-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
 ; OBJ:              0000000000000000     0 FUNC    GLOBAL DEFAULT   UND bar
+
+
+; RUN: llc -mtriple aarch64-linux-pauthtest -mattr +pauth -filetype=asm noauth1.ll -o - | \
+; RUN:   FileCheck %s --check-prefix=ASM-NOAUTH
+; RUN: llc -mtriple aarch64-linux-gnu -mattr +pauth -filetype=obj noauth1.ll -o - | \
+; RUN:   llvm-readelf -s - | FileCheck %s --check-prefix=OBJ-NOAUTH
+
+; RUN: llc -mtriple aarch64-linux-pauthtest -mattr +pauth -filetype=asm noauth2.ll -o - | \
+; RUN:   FileCheck %s --check-prefix=ASM-NOAUTH
+; RUN: llc -mtriple aarch64-linux-gnu -mattr +pauth -filetype=obj noauth2.ll -o - | \
+; RUN:   llvm-readelf -s - | FileCheck %s --check-prefix=OBJ-NOAUTH
+
+; ASM-NOAUTH:               .type   foo,@function
+; ASM-NOAUTH-LABEL: foo:
+; ASM-NOAUTH:               adrp    x16, :got:bar
+; ASM-NOAUTH-NEXT:          ldr     x16, [x16, :got_lo12:bar]
+; ASM-NOAUTH-NEXT:          paciza  x16
+; ASM-NOAUTH-NEXT:          adrp    x8, .Lfptr
+; ASM-NOAUTH-NEXT:          str     x16, [x8, :lo12:.Lfptr]
+; ASM-NOAUTH-NEXT:          ret
+; ASM-NOAUTH:               .type   .Lfptr,@object
+; ASM-NOAUTH-NEXT:          .local  .Lfptr
+; ASM-NOAUTH-NEXT:          .comm   .Lfptr,8,8
+; ASM-NOAUTH-NOT:           .type   bar,@function
 
 ; OBJ-NOAUTH:      Symbol table '.symtab' contains [[#]] entries:
 ; OBJ-NOAUTH-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
