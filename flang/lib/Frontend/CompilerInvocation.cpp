@@ -48,7 +48,6 @@
 #include <cstdlib>
 #include <memory>
 #include <optional>
-#include <sstream>
 
 using namespace Fortran::frontend;
 
@@ -299,6 +298,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasFlag(clang::options::OPT_fsafe_trampoline,
                    clang::options::OPT_fno_safe_trampoline, false))
     opts.EnableSafeTrampoline = 1;
+
+  if (args.hasFlag(clang::options::OPT_freal_sum_reassociation,
+                   clang::options::OPT_fno_real_sum_reassociation, false))
+    opts.SplitSumExpressionTree = 1;
 
   if (args.getLastArg(clang::options::OPT_floop_interchange))
     opts.InterchangeLoops = 1;
@@ -1978,7 +1981,9 @@ CompilerInvocation::getSemanticsCtx(
           clang::getDriverOptTable()
               .getOptionPrefixedName(
                   clang::options::OPT_fno_openacc_default_none_scalars_strict)
-              .str());
+              .str())
+      .set_targetTriple(targetMachine.getTargetTriple().str())
+      .set_targetFeatures(targetMachine.getTargetFeatureString().str());
 
   std::string compilerVersion = Fortran::common::getFlangFullVersion();
   Fortran::tools::setUpTargetCharacteristics(
@@ -2001,6 +2006,7 @@ void CompilerInvocation::setLoweringOptions() {
   loweringOpts.setIntegerWrapAround(langOptions.getSignedOverflowBehavior() ==
                                     Fortran::common::LangOptions::SOB_Defined);
   loweringOpts.setProtectParens(codegenOpts.ProtectParens);
+  loweringOpts.setSplitSumExpressionTree(codegenOpts.SplitSumExpressionTree);
   Fortran::common::MathOptionsBase &mathOpts = loweringOpts.getMathOptions();
   // TODO: when LangOptions are finalized, we can represent
   //       the math related options using Fortran::commmon::MathOptionsBase,

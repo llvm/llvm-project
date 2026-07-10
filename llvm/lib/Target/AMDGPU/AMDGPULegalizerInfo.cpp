@@ -2302,7 +2302,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS})
       .alwaysLegal();
 
-  getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
 
@@ -4943,7 +4942,7 @@ bool AMDGPULegalizerInfo::loadInputValue(
     AMDGPUFunctionArgInfo::PreloadedValue ArgType) const {
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
   const ArgDescriptor *Arg = nullptr;
-  const TargetRegisterClass *ArgRC;
+  const TargetRegisterClass *ArgRC = nullptr;
   LLT ArgTy;
 
   CallingConv::ID CC = B.getMF().getFunction().getCallingConv();

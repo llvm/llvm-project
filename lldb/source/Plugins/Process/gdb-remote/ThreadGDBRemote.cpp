@@ -48,8 +48,8 @@ ThreadGDBRemote::ThreadGDBRemote(Process &process, lldb::tid_t tid)
   if (!gdb_process.m_register_info_sp->IsReconfigurable())
     m_reg_info_sp = gdb_process.m_register_info_sp;
   else
-    m_reg_info_sp = std::make_shared<GDBRemoteDynamicRegisterInfo>(
-        *gdb_process.m_register_info_sp);
+    m_reg_info_sp =
+        std::make_shared<DynamicRegisterInfo>(*gdb_process.m_register_info_sp);
 }
 
 ThreadGDBRemote::~ThreadGDBRemote() {

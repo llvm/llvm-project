@@ -345,10 +345,10 @@ define amdgpu_kernel void @constant_sextload_i8_align2(ptr addrspace(1) %out, pt
 ; GFX8-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX8-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX8-NEXT:    s_add_u32 s0, s0, 2
-; GFX8-NEXT:    flat_store_short v[0:1], v2
 ; GFX8-NEXT:    s_addc_u32 s1, s1, 0
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    flat_store_short v[0:1], v2
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_store_short v[0:1], v2
 ; GFX8-NEXT:    s_endpgm

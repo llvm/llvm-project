@@ -121,9 +121,6 @@ template <typename DomTreeT> struct SemiNCAInfo {
   static SmallVector<NodePtr, 8> getChildren(NodePtr N, BatchUpdatePtr BUI) {
     if (BUI)
       return BUI->PreViewCFG.template getChildren<Inversed>(N);
-    // Force the element type to NodePtr. some graphs (clang's
-    // CFGBlock::AdjacentBlock) yield a proxy convertible to NodePtr rather than
-    // NodePtr itself.
     auto Children = getChildren<Inversed>(N);
     return SmallVector<NodePtr, 8>(Children.begin(), Children.end());
   }
@@ -133,14 +130,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
   template <bool Inversed> static auto getChildren(NodePtr N) {
     using DirectedNodeT =
         std::conditional_t<Inversed, Inverse<NodePtr>, NodePtr>;
-    auto R = detail::reverse_if<!Inversed>(children<DirectedNodeT>(N));
-    // Most graphs' iterators yield NodePtr directly; return the range as is.
-    // clang's CFGBlock instead yields a CFGBlock::AdjacentBlock proxy that is
-    // convertible to NodePtr but can be null for AB_Unreachable.
-    if constexpr (std::is_same_v<std::decay_t<decltype(*R.begin())>, NodePtr>)
-      return R;
-    else
-      return llvm::make_filter_range(R, [](NodePtr C) { return C != nullptr; });
+    return detail::reverse_if<!Inversed>(children<DirectedNodeT>(N));
   }
 
   InfoRec &getNodeInfo(NodePtr BB) {
@@ -270,8 +260,9 @@ template <typename DomTreeT> struct SemiNCAInfo {
   // O(m*alpha(m,n)) running time. But it requires two auxiliary arrays (Size
   // and Child) and is unlikely to be faster than the simple implementation.
   //
-  // For each vertex V, its Label points to the vertex with the minimal sdom(U)
-  // (Semi) in its path from V (included) to NodeToInfo[V].Parent (excluded).
+  // For each vertex V, its Label is the minimal sdom (Semi) on its path from V
+  // (included) to NodeToInfo[V].Parent (excluded), held directly as a Semi
+  // value.
   unsigned eval(unsigned V, unsigned LastLinked,
                 SmallVectorImpl<InfoRec *> &Stack,
                 ArrayRef<InfoRec *> NumToInfo) {
@@ -287,17 +278,17 @@ template <typename DomTreeT> struct SemiNCAInfo {
     } while (VInfo->Parent >= LastLinked);
 
     // Path compression. Point each vertex's Parent to the root and update its
-    // Label if any of its ancestors (PInfo->Label) has a smaller Semi.
+    // Label if any of its ancestors (PLabel) has a smaller Semi.
     const InfoRec *PInfo = VInfo;
-    const InfoRec *PLabelInfo = NumToInfo[PInfo->Label];
+    unsigned PLabel = PInfo->Label;
     do {
       VInfo = Stack.pop_back_val();
       VInfo->Parent = PInfo->Parent;
-      const InfoRec *VLabelInfo = NumToInfo[VInfo->Label];
-      if (PLabelInfo->Semi < VLabelInfo->Semi)
-        VInfo->Label = PInfo->Label;
+      unsigned VLabel = VInfo->Label;
+      if (PLabel < VLabel)
+        VInfo->Label = PLabel;
       else
-        PLabelInfo = VLabelInfo;
+        PLabel = VLabel;
       PInfo = VInfo;
     } while (!Stack.empty());
     return VInfo->Label;
@@ -329,11 +320,12 @@ template <typename DomTreeT> struct SemiNCAInfo {
       for (unsigned RCIdx = WInfo.ReverseChildrenStart; RCIdx != 0;) {
         const auto &Entry = ReverseChildren[RCIdx - 1];
         RCIdx = Entry.second;
-        unsigned SemiU =
-            NumToInfo[eval(Entry.first, i + 1, EvalStack, NumToInfo)]->Semi;
+        unsigned SemiU = eval(Entry.first, i + 1, EvalStack, NumToInfo);
         if (SemiU < WInfo.Semi)
           WInfo.Semi = SemiU;
       }
+      // Label now holds the semidominator value for later eval() calls.
+      WInfo.Label = WInfo.Semi;
     }
 
     // Step #2: Explicitly define the immediate dominator of each vertex.
@@ -1442,13 +1434,13 @@ template <typename DomTreeT> struct SemiNCAInfo {
         return false;
       }
 
-      if (Children.back()->getDFSNumOut() + 1 != Node->getDFSNumOut()) {
+      if (Children.back()->getDFSNumOut() != Node->getDFSNumOut()) {
         PrintChildrenError(Children.back(), nullptr);
         return false;
       }
 
       for (size_t i = 0, e = Children.size() - 1; i != e; ++i) {
-        if (Children[i]->getDFSNumOut() + 1 != Children[i + 1]->getDFSNumIn()) {
+        if (Children[i]->getDFSNumOut() != Children[i + 1]->getDFSNumIn()) {
           PrintChildrenError(Children[i], Children[i + 1]);
           return false;
         }
