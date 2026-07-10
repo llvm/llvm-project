@@ -1,5 +1,4 @@
 # REQUIRES: aarch64-registered-target
-# REQUIRES: host-byteorder-little-endian
 
 # RUN: rm -rf %t
 # RUN: split-file %s %t
@@ -8,38 +7,27 @@
 # RUN: yaml2obj %t/b.yaml -o %t/b.o
 
 # RUN: dsymutil --linker classic -y %t/debug.map -oso-prepend-path=%t -o %t/classic.dSYM
-# RUN: llvm-objdump --section-headers %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes \
-# RUN:    | FileCheck %s --check-prefix=SIZE
-# RUN: llvm-readobj --sections %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes \
-# RUN:    | FileCheck %s --check-prefix=SEG
-# RUN: llvm-objdump -s --section=__probes --section=__probe_descs \
-# RUN:    %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=DATA
+# RUN: od -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=PROBES
+# RUN: od -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --check-prefix=DESCS
+# RUN: wc -c < %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=PROBES-SIZE
+# RUN: wc -c < %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --check-prefix=DESCS-SIZE
 
 # RUN: dsymutil --linker parallel -y %t/debug.map -oso-prepend-path=%t -o %t/parallel.dSYM
-# RUN: llvm-objdump --section-headers %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes \
-# RUN:    | FileCheck %s --check-prefix=SIZE
-# RUN: llvm-readobj --sections %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes \
-# RUN:    | FileCheck %s --check-prefix=SEG
-# RUN: llvm-objdump -s --section=__probes --section=__probe_descs \
-# RUN:    %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=DATA
+# RUN: od -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=PROBES
+# RUN: od -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --check-prefix=DESCS
+# RUN: wc -c < %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=PROBES-SIZE
+# RUN: wc -c < %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --check-prefix=DESCS-SIZE
 
-# SEG:      Name: __probes
-# SEG-NEXT: Segment: __LLVM
-# SEG:      Name: __probe_descs
-# SEG-NEXT: Segment: __LLVM
+# PROBES:      0000000 0c c1 75 b9 c0 f1 b6 a8 05 00 00 20 5c 85 5e 09
+# PROBES-NEXT: 0000020 4b df 28 4e 01 80 0c 02 80 14 03 80 0c 04 80 08
+# PROBES-NEXT: 0000040 92 eb 5f fe e6 ae 2f ec 05 00 00 20 c7 16 fb 29
+# PROBES-NEXT: 0000060 29 8a d9 6a 01 80 0c 02 80 14 03 80 0c 04 80 08
+# PROBES-SIZE: 64
 
-# SIZE: __probes      00000040
-# SIZE: __probe_descs 00000024
-
-# DATA:      Contents of section __LLVM,__probes:
-# DATA-NEXT: {{[0-9a-f]+}} 0cc175b9 c0f1b6a8 05000020 5c855e09
-# DATA-NEXT: {{[0-9a-f]+}} 4bdf284e 01800c02 80140380 0c048008
-# DATA-NEXT: {{[0-9a-f]+}} 92eb5ffe e6ae2fec 05000020 c716fb29
-# DATA-NEXT: {{[0-9a-f]+}} 298ad96a 01800c02 80140380 0c048008
-# DATA:      Contents of section __LLVM,__probe_descs:
-# DATA-NEXT: {{[0-9a-f]+}} 0cc175b9 c0f1b6a8 94da52e8 10000000
-# DATA-NEXT: {{[0-9a-f]+}} 016192eb 5ffee6ae 2fec94da 52e81000
-# DATA-NEXT: {{[0-9a-f]+}} 00000162
+# DESCS:      0000000 0c c1 75 b9 c0 f1 b6 a8 94 da 52 e8 10 00 00 00
+# DESCS-NEXT: 0000020 01 61 92 eb 5f fe e6 ae 2f ec 94 da 52 e8 10 00
+# DESCS-NEXT: 0000040 00 00 01 62
+# DESCS-SIZE: 36
 
 #--- debug.map
 ---

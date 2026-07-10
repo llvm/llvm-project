@@ -1,6 +1,5 @@
 # REQUIRES: system-darwin
 # REQUIRES: aarch64-registered-target
-# REQUIRES: host-byteorder-little-endian
 
 # RUN: rm -rf %t && split-file %s %t
 # RUN: yaml2obj %t/fat.dylib.yaml -o %t/fat.dylib
@@ -8,52 +7,31 @@
 # RUN: yaml2obj %t/e.o.yaml -o %t/e.o
 
 # RUN: dsymutil --linker classic --no-object-timestamp %t/fat.dylib -oso-prepend-path=%t -o %t/classic.dSYM
-# RUN: llvm-readobj --file-headers --sections %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64 \
-# RUN:    | FileCheck %s --check-prefix=ARM64
-# RUN: llvm-readobj --file-headers --sections %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64e \
-# RUN:    | FileCheck %s --check-prefix=ARM64E
-# RUN: llvm-objdump -s --section=__probes --section=__probe_descs %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64 \
-# RUN:    | FileCheck %s --check-prefix=DATA
+# RUN: od -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64 | FileCheck %s --check-prefix=PROBES
+# RUN: od -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64e | FileCheck %s --check-prefix=PROBES
+# RUN: od -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs-arm64 | FileCheck %s --check-prefix=DESCS
+# RUN: od -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs-arm64e | FileCheck %s --check-prefix=DESCS
+# RUN: wc -c < %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64 | FileCheck %s --check-prefix=PROBES-SIZE
+# RUN: wc -c < %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs-arm64 | FileCheck %s --check-prefix=DESCS-SIZE
 
 # RUN: dsymutil --linker parallel --no-object-timestamp %t/fat.dylib -oso-prepend-path=%t -o %t/parallel.dSYM
-# RUN: llvm-readobj --file-headers --sections %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64 \
-# RUN:    | FileCheck %s --check-prefix=ARM64
-# RUN: llvm-readobj --file-headers --sections %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64e \
-# RUN:    | FileCheck %s --check-prefix=ARM64E
-# RUN: llvm-objdump -s --section=__probes --section=__probe_descs %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64 \
-# RUN:    | FileCheck %s --check-prefix=DATA
+# RUN: od -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64 | FileCheck %s --check-prefix=PROBES
+# RUN: od -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64e | FileCheck %s --check-prefix=PROBES
+# RUN: od -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs-arm64 | FileCheck %s --check-prefix=DESCS
+# RUN: od -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs-arm64e | FileCheck %s --check-prefix=DESCS
+# RUN: wc -c < %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64 | FileCheck %s --check-prefix=PROBES-SIZE
+# RUN: wc -c < %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs-arm64 | FileCheck %s --check-prefix=DESCS-SIZE
 
-# ARM64:      CpuType: Arm64
-# ARM64:      CpuSubType: CPU_SUBTYPE_ARM64_ALL
-# ARM64:      Name: __probes
-# ARM64-NEXT: Segment: __LLVM
-# ARM64-NEXT: Address: 0x0
-# ARM64-NEXT: Size: 0x3C
-# ARM64-NEXT: Offset: 368
-# ARM64:      Name: __probe_descs
-# ARM64-NEXT: Segment: __LLVM
-# ARM64-NEXT: Address: 0x3C
-# ARM64-NEXT: Size: 0x27
-# ARM64-NEXT: Offset: 428
+# PROBES:      0000000 fa d5 8d e7 36 64 95 db 02 01 00 20 01 41 1f ae
+# PROBES-NEXT: 0000020 90 f5 72 26 01 80 00 02 8f a1 4c dd 75 4f 91 cc
+# PROBES-NEXT: 0000040 01 00 01 80 00 8f a1 4c dd 75 4f 91 cc 02 00 00
+# PROBES-NEXT: 0000060 20 e9 90 36 e9 13 02 d0 8b 01 80 00
+# PROBES-SIZE: 60
 
-# ARM64E:      CpuType: Arm64
-# ARM64E:      CpuSubType: CPU_SUBTYPE_ARM64E
-# ARM64E:      Name: __probes
-# ARM64E-NEXT: Segment: __LLVM
-# ARM64E-NEXT: Address: 0x0
-# ARM64E-NEXT: Size: 0x3C
-# ARM64E-NEXT: Offset: 368
-# ARM64E:      Name: __probe_descs
-# ARM64E-NEXT: Segment: __LLVM
-# ARM64E-NEXT: Address: 0x3C
-# ARM64E-NEXT: Size: 0x27
-# ARM64E-NEXT: Offset: 428
-
-# DATA:      Contents of section __LLVM,__probes:
-# DATA-NEXT: 0000 fad58de7 366495db
-# DATA:      Contents of section __LLVM,__probe_descs:
-# DATA-NEXT: 003c 8fa14cdd 754f91cc
-# DATA:      046d 61696e
+# DESCS:      0000000 8f a1 4c dd 75 4f 91 cc ff ff ff ff 00 00 00 00
+# DESCS-NEXT: 0000020 01 66 fa d5 8d e7 36 64 95 db ff ff ff ff 00 00
+# DESCS-NEXT: 0000040 01 00 04 6d 61 69 6e
+# DESCS-SIZE: 39
 
 
 #--- fat.dylib.yaml

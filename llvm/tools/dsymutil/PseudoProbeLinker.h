@@ -1,4 +1,4 @@
-//===- tools/dsymutil/PseudoProbeLinker.h ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,30 +19,17 @@ namespace llvm {
 class Triple;
 namespace dsymutil {
 
-class BinaryHolder;
-class DebugMap;
-
-/// Collect and merge the __probes and __probe_descs sections from the debug map
-/// object into the companion Contents/Resources/Profiling/pseudo_probes-<arch>.
-/// Note: the probe sections contain no relocations.
 class PseudoProbeLinker {
-  BinaryHolder &BinHolder;
   const LinkOptions &Options;
   std::string Probes;
   std::string ProbeDescs;
 
-  Error emit(const Triple &TheTriple) const;
-
 public:
-  PseudoProbeLinker(BinaryHolder &BinHolder, const LinkOptions &Options)
-      : BinHolder(BinHolder), Options(Options) {}
+  PseudoProbeLinker(const LinkOptions &Options) : Options(Options) {}
 
-  /// Emit the collected probe sections as a single MachO object sidecar for the
-  /// \p TheTriple architecture. No-op if nothing was collected.
-  bool link(const DebugMap &Map);
-
-  /// Append the pseudo-probe sections found in \p Obj, if any.
   void collect(const object::ObjectFile &Obj);
+
+  Error emit(const Triple &TheTriple) const;
 
   bool empty() const { return Probes.empty() && ProbeDescs.empty(); }
   StringRef getProbes() const { return Probes; }
