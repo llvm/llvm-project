@@ -14,7 +14,7 @@
 |*   ORC_RT_LOG(Level, Category, Fmt, ...)                                    *|
 |*                                                                            *|
 |* where Level is one of Error, Warning, Info, Debug; Category is one of the  *|
-|* orc_rt_LogCategory tokens (without the leading "orc_rt_LogCategory_");     *|
+|* orc_rt_log_Category tokens (without the leading "orc_rt_log_Category_");   *|
 |* and Fmt, ... are a printf-style format string and arguments, e.g.          *|
 |*                                                                            *|
 |*   ORC_RT_LOG(Error, General, "failed to map %zu bytes", Size);             *|
@@ -50,17 +50,49 @@ ORC_RT_C_EXTERN_C_BEGIN
  * categories here as call sites require them.
  */
 typedef enum {
-  orc_rt_LogCategory_General,
-} orc_rt_LogCategory;
+  orc_rt_log_Category_General,
+
+  /*
+   * Count is the number of defined categories; it is not itself a valid
+   * category.
+   */
+  orc_rt_log_Category_Count
+} orc_rt_log_Category;
+
+/**
+ * Logging levels are integers. Valid values are ORC_RT_LOG_LEVEL_DEBUG,
+ * ORC_RT_LOG_LEVEL_INFO, ORC_RT_LOG_LEVEL_WARNING, ORC_RT_LOG_LEVEL_ERROR, and
+ * ORC_RT_LOG_LEVEL_OFF.
+ */
+typedef int orc_rt_log_Level;
+
+/**
+ * Returns the display name for the given category, or null if the category is
+ * unrecognized.
+ */
+const char *
+orc_rt_log_Category_getName(orc_rt_log_Category Cat) ORC_RT_C_NOTHROW;
+
+/**
+ * Returns the display name for the given log level, or null if the log level
+ * is unrecognized.
+ */
+const char *orc_rt_log_Level_getName(orc_rt_log_Level L) ORC_RT_C_NOTHROW;
+
+/**
+ * Returns the level corresponding to the given level name, or -1 if the level
+ * name is unrecognized.
+ *
+ * Comparison is case-insensitive.
+ */
+orc_rt_log_Level orc_rt_log_Level_parse(const char *Str) ORC_RT_C_NOTHROW;
 
 /**
  * Declared but never defined: referenced only in unevaluated (sizeof) contexts
  * to type-check a printf-style format string against its arguments without
  * evaluating them or emitting any code.
  */
-int orc_rt_log_format_check(const char *Fmt, ...) ORC_RT_C_FORMAT_PRINTF(1, 2);
-
-ORC_RT_C_EXTERN_C_END
+int orc_rt_log_formatCheck(const char *Fmt, ...) ORC_RT_C_FORMAT_PRINTF(1, 2);
 
 /*
  * A disabled log site. Validates the category token, format string, and
@@ -68,7 +100,7 @@ ORC_RT_C_EXTERN_C_END
  * both operands sit in unevaluated sizeof contexts.
  */
 #define ORC_RT_LOG_DISABLED(Category, ...)                                     \
-  ((void)sizeof(Category), (void)sizeof(orc_rt_log_format_check(__VA_ARGS__)))
+  ((void)sizeof(Category), (void)sizeof(orc_rt_log_formatCheck(__VA_ARGS__)))
 
 /*
  * ORC_RT_LOG dispatches on the level token to a per-level macro, which each
@@ -78,7 +110,7 @@ ORC_RT_C_EXTERN_C_END
  * needed.
  */
 #define ORC_RT_LOG(Level, Category, ...)                                       \
-  ORC_RT_LOG_##Level(orc_rt_LogCategory_##Category, __VA_ARGS__)
+  ORC_RT_LOG_##Level(orc_rt_log_Category_##Category, __VA_ARGS__)
 
 #if ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_NONE
 
@@ -99,5 +131,7 @@ ORC_RT_C_EXTERN_C_END
 #else
 #error "Unknown ORC_RT_LOG_BACKEND."
 #endif
+
+ORC_RT_C_EXTERN_C_END
 
 #endif /* ORC_RT_C_LOGGING_H */

@@ -5,4 +5,4 @@
 foo:
      .long 0
 
-// CHECK-ERROR: LLVM ERROR: Data region not terminated
+// CHECK-ERROR: LLVM ERROR: data region not terminated

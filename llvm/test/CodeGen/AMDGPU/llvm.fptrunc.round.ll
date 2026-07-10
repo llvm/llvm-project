@@ -2,10 +2,10 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck -check-prefixes=CHECK,SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefixes=CHECK,SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=CHECK,GFX11-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=CHECK,GFX11-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck -check-prefixes=CHECK,GISEL %s
+; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=CHECK,GFX11-GISEL %s
+; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck -check-prefixes=CHECK,GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
+; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
 
 define amdgpu_gs half @v_fptrunc_round_f32_to_f16_tonearest(float %a) {
 ; SDAG-LABEL: v_fptrunc_round_f32_to_f16_tonearest:
@@ -514,9 +514,9 @@ define amdgpu_gs i32 @s_fptrunc_round_f32_to_f16_upward(float inreg %a, ptr addr
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
 ; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v0.l, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX11-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-LABEL: s_fptrunc_round_f32_to_f16_upward:
@@ -524,8 +524,8 @@ define amdgpu_gs i32 @s_fptrunc_round_f32_to_f16_upward(float inreg %a, ptr addr
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_fptrunc_round_f32_to_f16_upward:
@@ -564,9 +564,9 @@ define amdgpu_gs i32 @s_fptrunc_round_f32_to_f16_downward(float inreg %a, ptr ad
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
 ; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v0.l, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX11-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-LABEL: s_fptrunc_round_f32_to_f16_downward:
@@ -574,8 +574,8 @@ define amdgpu_gs i32 @s_fptrunc_round_f32_to_f16_downward(float inreg %a, ptr ad
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_fptrunc_round_f32_to_f16_downward:
@@ -609,17 +609,17 @@ define amdgpu_gs i32 @s_fptrunc_round_f32_to_f16_towardzero(float inreg %a, ptr 
 ;
 ; GFX11-GISEL-LABEL: s_fptrunc_round_f32_to_f16_towardzero:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    v_cvt_pk_rtz_f16_f32_e32 v0, s0, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, s0, s0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX11-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-LABEL: s_fptrunc_round_f32_to_f16_towardzero:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, s0, v0
+; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_fptrunc_round_f32_to_f16_towardzero:
@@ -968,10 +968,11 @@ define amdgpu_gs <2 x i32> @s_fptrunc_round_v2f32_to_v2f16_upward(<2 x float> in
 ; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v0.l, s0
 ; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v1.l, s1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX11-GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX11-GISEL-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GFX11-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-LABEL: s_fptrunc_round_v2f32_to_v2f16_upward:
@@ -981,10 +982,10 @@ define amdgpu_gs <2 x i32> @s_fptrunc_round_v2f32_to_v2f16_upward(<2 x float> in
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
-; GISEL-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_fptrunc_round_v2f32_to_v2f16_upward:
@@ -1035,10 +1036,11 @@ define amdgpu_gs <2 x i32> @s_fptrunc_round_v2f32_to_v2f16_downward(<2 x float> 
 ; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v0.l, s0
 ; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v1.l, s1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX11-GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX11-GISEL-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GFX11-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-LABEL: s_fptrunc_round_v2f32_to_v2f16_downward:
@@ -1048,10 +1050,10 @@ define amdgpu_gs <2 x i32> @s_fptrunc_round_v2f32_to_v2f16_downward(<2 x float> 
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
-; GISEL-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_fptrunc_round_v2f32_to_v2f16_downward:
@@ -1094,23 +1096,24 @@ define amdgpu_gs <2 x i32> @s_fptrunc_round_v2f32_to_v2f16_towardzero(<2 x float
 ;
 ; GFX11-GISEL-LABEL: s_fptrunc_round_v2f32_to_v2f16_towardzero:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    v_cvt_pk_rtz_f16_f32_e32 v0, s0, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-GISEL-NEXT:    v_cvt_pk_rtz_f16_f32_e32 v1, s1, v0
+; GFX11-GISEL-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, s0, s0
+; GFX11-GISEL-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v1, s1, s0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX11-GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX11-GISEL-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GFX11-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-LABEL: s_fptrunc_round_v2f32_to_v2f16_towardzero:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, s0, v0
 ; GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v1, s1, v0
+; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
-; GISEL-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_fptrunc_round_v2f32_to_v2f16_towardzero:
@@ -1174,103 +1177,66 @@ define amdgpu_gs void @s_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls(<2 x
 ; GFX11-GISEL-LABEL: s_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
+; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v2.h, s1
 ; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v2.l, s0
-; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v3.l, s1
-; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v4.l, s2
-; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v5.l, s3
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s4, v4
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s5, v5
+; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v3.h, s3
+; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v3.l, s2
 ; GFX11-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 2
-; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v2.l, s2
-; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v3.l, s3
-; GFX11-GISEL-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
-; GFX11-GISEL-NEXT:    s_pack_ll_b32_b16 s1, s4, s5
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v4.h, s3
+; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v4.l, s2
 ; GFX11-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 0
-; GFX11-GISEL-NEXT:    v_pk_add_f16 v2, s0, s1
-; GFX11-GISEL-NEXT:    s_pack_ll_b32_b16 s0, s2, s3
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX11-GISEL-NEXT:    v_pk_add_f16 v2, s0, v2
+; GFX11-GISEL-NEXT:    v_pk_add_f16 v2, v2, v3
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_pk_add_f16 v2, v4, v2
 ; GFX11-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX11-GISEL-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: s_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GISEL-NEXT:    v_mov_b32_e32 v3, s1
-; GISEL-NEXT:    v_mov_b32_e32 v4, s2
+; GISEL-NEXT:    v_mov_b32_e32 v3, s2
+; GISEL-NEXT:    v_mov_b32_e32 v4, s1
 ; GISEL-NEXT:    v_mov_b32_e32 v5, s3
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v6, v4
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v6, v3
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v7, v5
-; GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GISEL-NEXT:    v_readfirstlane_b32 s1, v3
-; GISEL-NEXT:    v_readfirstlane_b32 s2, v6
-; GISEL-NEXT:    v_readfirstlane_b32 s3, v7
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 2
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v4
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v3, v5
-; GISEL-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
-; GISEL-NEXT:    s_pack_ll_b32_b16 s1, s2, s3
-; GISEL-NEXT:    v_readfirstlane_b32 s2, v2
-; GISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GISEL-NEXT:    v_and_b32_e32 v6, 0xffff, v6
+; GISEL-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; GISEL-NEXT:    v_lshl_or_b32 v2, v4, 16, v2
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v4, v5
+; GISEL-NEXT:    v_lshl_or_b32 v5, v7, 16, v6
+; GISEL-NEXT:    v_lshl_or_b32 v3, v4, 16, v3
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 0
-; GISEL-NEXT:    v_pk_add_f16 v2, s0, s1
-; GISEL-NEXT:    s_pack_ll_b32_b16 s0, s2, s3
-; GISEL-NEXT:    v_pk_add_f16 v2, s0, v2
+; GISEL-NEXT:    v_pk_add_f16 v2, v2, v5
+; GISEL-NEXT:    v_pk_add_f16 v2, v3, v2
 ; GISEL-NEXT:    global_store_dword v[0:1], v2, off
 ; GISEL-NEXT:    s_endpgm
 ;
-; GFX12-SDAG-LABEL: s_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s1, s1
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s0, s0
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s4, s3
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s5, s2
-; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 2
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s3, s3
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s2, s2
-; GFX12-SDAG-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
-; GFX12-SDAG-NEXT:    s_pack_ll_b32_b16 s1, s5, s4
-; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 0
-; GFX12-SDAG-NEXT:    v_pk_add_f16 v2, s0, s1
-; GFX12-SDAG-NEXT:    s_pack_ll_b32_b16 s0, s2, s3
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_pk_add_f16 v2, s0, v2
-; GFX12-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: s_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
-; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s0, s0
-; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s1, s1
-; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s4, s2
-; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s5, s3
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 2
-; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s2, s2
-; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s3, s3
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 0
-; GFX12-GISEL-NEXT:    s_add_f16 s0, s0, s4
-; GFX12-GISEL-NEXT:    s_add_f16 s1, s1, s5
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_2)
-; GFX12-GISEL-NEXT:    s_add_f16 s0, s2, s0
-; GFX12-GISEL-NEXT:    s_add_f16 s1, s3, s1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-GISEL-NEXT:    s_endpgm
+; GFX12-LABEL: s_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
+; GFX12-NEXT:    s_cvt_f16_f32 s1, s1
+; GFX12-NEXT:    s_cvt_f16_f32 s0, s0
+; GFX12-NEXT:    s_cvt_f16_f32 s4, s3
+; GFX12-NEXT:    s_cvt_f16_f32 s5, s2
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 2
+; GFX12-NEXT:    s_cvt_f16_f32 s3, s3
+; GFX12-NEXT:    s_cvt_f16_f32 s2, s2
+; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
+; GFX12-NEXT:    s_pack_ll_b32_b16 s1, s5, s4
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 0
+; GFX12-NEXT:    v_pk_add_f16 v2, s0, s1
+; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s2, s3
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_pk_add_f16 v2, s0, v2
+; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX12-NEXT:    s_endpgm
   %res1 = call <2 x half> @llvm.fptrunc.round.v2f16.v2f32(<2 x float> %a, metadata !"round.upward")
   %res2 = call <2 x half> @llvm.fptrunc.round.v2f16.v2f32(<2 x float> %b, metadata !"round.upward")
   %res3 = call <2 x half> @llvm.fptrunc.round.v2f16.v2f32(<2 x float> %b, metadata !"round.downward")
