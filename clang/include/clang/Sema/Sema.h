@@ -2913,6 +2913,14 @@ public:
                                     SourceRange Range, StringRef DiagName,
                                     bool OriginatesInAPINotes = false,
                                     bool InInstantiatedTemplate = false);
+
+  struct BoundsAttrFlags {
+    bool CountInBytes = false;
+    bool OrNull = false;
+    bool IsEndedBy = false;
+  };
+  static BoundsAttrFlags getBoundsAttrFlags(AttributeCommonInfo::Kind K);
+
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
 

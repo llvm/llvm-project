@@ -7895,28 +7895,10 @@ void Sema::applyPtrCountedByEndedByAttr(Decl *D, unsigned Level,
     return;
   }
 
-  bool CountInBytes = false;
-  bool IsEndedBy = false;
-  bool OrNull = false;
-  switch (Kind) {
-  case ParsedAttr::AT_SizedBy:
-    CountInBytes = true;
-    break;
-  case ParsedAttr::AT_SizedByOrNull:
-    CountInBytes = true;
-    OrNull = true;
-    break;
-  case ParsedAttr::AT_CountedBy:
-    break;
-  case ParsedAttr::AT_CountedByOrNull:
-    OrNull = true;
-    break;
-  case ParsedAttr::AT_PtrEndedBy:
-    IsEndedBy = true;
-    break;
-  default:
-    llvm_unreachable("Invalid dynamic bound attribute");
-  }
+  auto Flags = getBoundsAttrFlags(Kind);
+  bool CountInBytes = Flags.CountInBytes;
+  bool IsEndedBy = Flags.IsEndedBy;
+  bool OrNull = Flags.OrNull;
 
   if (!IsEndedBy) {
     // Nullability as indicated by _Nonnull or _Nullable. Does not impact

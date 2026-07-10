@@ -30,6 +30,30 @@ getCountAttrKind(bool CountInBytes, bool OrNull) {
                 : CountAttributedType::CountedBy;
 }
 
+Sema::BoundsAttrFlags Sema::getBoundsAttrFlags(AttributeCommonInfo::Kind K) {
+  BoundsAttrFlags Flags;
+  switch (K) {
+  case ParsedAttr::AT_SizedBy:
+    Flags.CountInBytes = true;
+    break;
+  case ParsedAttr::AT_SizedByOrNull:
+    Flags.CountInBytes = true;
+    Flags.OrNull = true;
+    break;
+  case ParsedAttr::AT_CountedBy:
+    break;
+  case ParsedAttr::AT_CountedByOrNull:
+    Flags.OrNull = true;
+    break;
+  case ParsedAttr::AT_PtrEndedBy:
+    Flags.IsEndedBy = true;
+    break;
+  default:
+    llvm_unreachable("unexpected bounds attribute kind");
+  }
+  return Flags;
+}
+
 static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD,
                                                   // TO_UPSTREAM(BoundsSafety)
                                                           Sema &S) {
