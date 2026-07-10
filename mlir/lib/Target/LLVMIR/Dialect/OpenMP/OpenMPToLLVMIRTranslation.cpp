@@ -6403,14 +6403,12 @@ static llvm::Value *getSizeInBytes(DataLayout &dl, const mlir::Type &type,
       // cover are:
       //
       // 1) If an argument has a null base pointer, then the size must be set to
-      // 0
-      //    to avoid the runtime exploding/complaining about an illegal pointer
-      //    map. The size returning non-zero is feasible in certain cases if for
-      //    example someone has specified there own bounds/range.
+      //    0 to avoid the runtime exploding/complaining about an illegal
+      //    pointer map. The size returning non-zero is feasible in certain
+      //    cases if for example someone has specified there own bounds/range.
       // 2) We wish to support a very specific OpenMP Fortran edge-case where a
-      // size
-      //    zero array can be legally presence checked and found to be on device
-      //    when it has been mapped. In these rare occasions the
+      //    size zero array can be legally presence checked and found to be on
+      //    device when it has been mapped. In these rare occasions the
       //    allocatable/pointer will have a size of 1 allocated for the
       //    underlying data, but this wall not be represented within the size of
       //    the descriptor, so we get a non-nullary pointer and a size of 0,
