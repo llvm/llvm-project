@@ -876,7 +876,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
       const auto &Merged =
           MMI->getMergedSyncScopeID(CurSSID, MMO->getSyncScopeID());
       if (!Merged) {
-        reportUnsupported(MI, "unsupported atomic synchronization scope");
+        reportUnsupported(MI, "Unsupported atomic synchronization scope");
         return std::nullopt;
       }
       MergedSSID = *Merged;
@@ -902,7 +902,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   if (Ordering != AtomicOrdering::NotAtomic) {
     auto ScopeOrNone = toSIAtomicScope(SSID, InstrAddrSpace);
     if (!ScopeOrNone) {
-      reportUnsupported(MI, "unsupported atomic synchronization scope");
+      reportUnsupported(MI, "Unsupported atomic synchronization scope");
       return std::nullopt;
     }
     std::tie(Scope, OrderingAddrSpace, IsCrossAddressSpaceOrdering) =
@@ -910,7 +910,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     if ((OrderingAddrSpace == SIAtomicAddrSpace::NONE) ||
         ((OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) != OrderingAddrSpace) ||
         ((InstrAddrSpace & SIAtomicAddrSpace::ATOMIC) == SIAtomicAddrSpace::NONE)) {
-      reportUnsupported(MI, "unsupported atomic address space");
+      reportUnsupported(MI, "Unsupported atomic address space");
       return std::nullopt;
     }
   }
@@ -961,7 +961,7 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
   SyncScope::ID SSID = static_cast<SyncScope::ID>(MI->getOperand(1).getImm());
   auto ScopeOrNone = toSIAtomicScope(SSID, SIAtomicAddrSpace::ATOMIC);
   if (!ScopeOrNone) {
-    reportUnsupported(MI, "unsupported atomic synchronization scope");
+    reportUnsupported(MI, "Unsupported atomic synchronization scope");
     return std::nullopt;
   }
 
@@ -976,7 +976,7 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
     // can refine the AS ordered by the fence.
     // If that changes, we need to review the semantics of that function
     // in case it needs to preserve certain address spaces.
-    reportUnsupported(MI, "unsupported atomic address space");
+    reportUnsupported(MI, "Unsupported atomic address space");
     return std::nullopt;
   }
 
