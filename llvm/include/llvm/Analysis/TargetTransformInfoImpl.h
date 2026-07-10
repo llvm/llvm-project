@@ -782,6 +782,19 @@ public:
     return 1;
   }
 
+  /// Cost of a shufflevector with a non-constant (run-time) mask.
+  /// Conservative stack-expansion estimate: two vector stores plus an
+  /// extract + load per result lane.
+  virtual InstructionCost
+  getVariableShuffleCost(const ShuffleVectorInst *Shuffle,
+                         TTI::TargetCostKind CostKind) const {
+    auto MaskEC = cast<VectorType>(Shuffle->getMaskOperand()->getType())
+                      ->getElementCount();
+    if (MaskEC.isScalable())
+      return InstructionCost::getInvalid();
+    return 2 + 4 * MaskEC.getFixedValue();
+  }
+
   virtual InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst,
                                            Type *Src, TTI::CastContextHint CCH,
                                            TTI::TargetCostKind CostKind,
@@ -1630,16 +1643,8 @@ public:
       if (!Shuffle)
         return TTI::TCC_Basic; // FIXME
 
-      if (!Shuffle->isConstantMask()) {
-        // Conservative stack-expansion estimate: two vector stores plus an
-        // extract + load per result lane. Targets with native variable
-        // shuffles should override. TODO: per-target refinement.
-        auto MaskEC = cast<VectorType>(Shuffle->getMaskOperand()->getType())
-                          ->getElementCount();
-        if (MaskEC.isScalable())
-          return InstructionCost::getInvalid();
-        return 2 + 4 * MaskEC.getFixedValue();
-      }
+      if (!Shuffle->isConstantMask())
+        return TargetTTI->getVariableShuffleCost(Shuffle, CostKind);
 
       auto *VecTy = cast<VectorType>(U->getType());
       auto *VecSrcTy = cast<VectorType>(Operands[0]->getType());

@@ -1224,6 +1224,22 @@ public:
   }
 
   InstructionCost
+  getVariableShuffleCost(const ShuffleVectorInst *Shuffle,
+                         TTI::TargetCostKind CostKind) const override {
+    // If the target lowers VECTOR_SHUFFLE_VAR natively for the legalized
+    // result type, model the shuffle as roughly two instructions (mask
+    // setup + variable permute) per legal vector part. Otherwise fall back
+    // to the generic stack-expansion estimate.
+    std::pair<InstructionCost, MVT> LT =
+        getTypeLegalizationCost(Shuffle->getType());
+    if (LT.second.isVector() &&
+        getTLI()->isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE_VAR, LT.second))
+      return LT.first * 2;
+    return TargetTransformInfoImplBase::getVariableShuffleCost(Shuffle,
+                                                               CostKind);
+  }
+
+  InstructionCost
   getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                    TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
                    const Instruction *I = nullptr) const override {
