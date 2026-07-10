@@ -959,6 +959,13 @@ void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
 
 void AMDGPUToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                                 ArgStringList &CC1Args) const {
+  // In an offloading compilation the device toolchain must pick up the host's
+  // system include paths, even when compiling device code.
+  if (HostTC) {
+    HostTC->AddClangSystemIncludeArgs(DriverArgs, CC1Args);
+    return;
+  }
+
   if (DriverArgs.hasArg(options::OPT_nostdinc) ||
       DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
