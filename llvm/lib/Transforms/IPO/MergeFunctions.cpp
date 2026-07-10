@@ -97,13 +97,11 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
@@ -209,16 +207,13 @@ public:
 /// bitcast of the other.
 class MergeFunctions {
 public:
-  MergeFunctions() : FnTree(FunctionNodeCmp(&GlobalNumbers)) {
-  }
+  explicit MergeFunctions(FunctionAnalysisManager *FAM = nullptr)
+      : FnTree(FunctionNodeCmp(&GlobalNumbers)), FAM(FAM) {}
 
   template <typename FuncContainer> bool run(FuncContainer &Functions);
-  DenseMap<Function *, Function *>
-  runOnFunctions(ArrayRef<Function *> F, FunctionAnalysisManager *AM = nullptr);
+  DenseMap<Function *, Function *> runOnFunctions(ArrayRef<Function *> F);
 
   SmallPtrSet<GlobalValue *, 4> &getUsed();
-
-  void setFunctionAnalysisManager(FunctionAnalysisManager *AM) { FAM = AM; }
 
 private:
   // The function comparison operator is provided here so that FunctionNodes do
@@ -275,9 +270,9 @@ private:
   /// again.
   void mergeTwoFunctions(Function *F, Function *G);
 
-  const BlockFrequencyInfo &getBFI(Function &F);
+  const BlockFrequencyInfo* getBFI(Function &F);
 
-  void mergeProfMetadataInto(Function *F, Function *G);
+  void mergeInstrProfMetadataInto(Function *Dst, Function *Src);
 
   /// Fill PDIUnrelatedWL with instructions from the entry block that are
   /// unrelated to parameter related debug info.
@@ -331,17 +326,6 @@ private:
   DenseMap<Function *, Function *> DelToNewMap;
 
   FunctionAnalysisManager *FAM = nullptr;
-
-  struct CachedProfileAnalyses {
-    DominatorTree DT;
-    LoopInfo LI;
-    BranchProbabilityInfo BPI;
-    BlockFrequencyInfo BFI;
-
-    CachedProfileAnalyses(Function &F)
-        : DT(F), LI(DT), BPI(F, LI, nullptr, &DT), BFI(F, BPI, LI) {}
-  };
-  DenseMap<const Function *, std::unique_ptr<CachedProfileAnalyses>> CachedBFI;
 };
 } // end anonymous namespace
 
@@ -356,9 +340,7 @@ PreservedAnalyses MergeFunctionsPass::run(Module &M,
 SmallPtrSet<GlobalValue *, 4> &MergeFunctions::getUsed() { return Used; }
 
 bool MergeFunctionsPass::runOnModule(Module &M, FunctionAnalysisManager *FAM) {
-  MergeFunctions MF;
-  if (FAM)
-    MF.setFunctionAnalysisManager(FAM);
+  MergeFunctions MF(FAM);
   SmallVector<GlobalValue *, 4> UsedV;
   collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
   collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
@@ -369,8 +351,8 @@ bool MergeFunctionsPass::runOnModule(Module &M, FunctionAnalysisManager *FAM) {
 DenseMap<Function *, Function *>
 MergeFunctionsPass::runOnFunctions(ArrayRef<Function *> F,
                                    FunctionAnalysisManager *FAM) {
-  MergeFunctions MF;
-  return MF.runOnFunctions(F, FAM);
+  MergeFunctions MF(FAM);
+  return MF.runOnFunctions(F);
 }
 
 #ifndef NDEBUG
@@ -534,10 +516,7 @@ template <typename FuncContainer> bool MergeFunctions::run(FuncContainer &M) {
 }
 
 DenseMap<Function *, Function *>
-MergeFunctions::runOnFunctions(ArrayRef<Function *> F,
-                               FunctionAnalysisManager *AM) {
-  if (AM)
-    setFunctionAnalysisManager(AM);
+MergeFunctions::runOnFunctions(ArrayRef<Function *> F) {
   [[maybe_unused]] bool MergeResult = this->run(F);
   assert(MergeResult == !DelToNewMap.empty());
   return this->DelToNewMap;
@@ -778,7 +757,7 @@ static void copyMetadataIfPresent(Function *From, Function *To,
 // For better debugability, under MergeFunctionsPDI, we do not modify G's
 // call sites to point to F even when within the same translation unit.
 void MergeFunctions::writeThunk(Function *F, Function *G) {
-  std::optional<uint64_t> GEC = G->getEntryCount();
+  std::optional<uint64_t> GEntryCount = G->getEntryCount();
   BasicBlock *GEntryBlock = nullptr;
   std::vector<Instruction *> PDIUnrelatedWL;
   std::vector<DbgVariableRecord *> PDVRUnrelatedWL;
@@ -848,8 +827,8 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
                << G->getName() << "()\n");
   } else {
     NewG->copyAttributesFrom(G);
-    if (GEC)
-      NewG->setEntryCount(*GEC);
+    if (GEntryCount)
+      NewG->setEntryCount(*GEntryCount);
     NewG->takeName(G);
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(G, NewG, "type");
@@ -915,7 +894,7 @@ bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G,
     return false;
 
   if (MergeProfile)
-    mergeProfMetadataInto(F, G);
+    mergeInstrProfMetadataInto(F, G);
 
   if (ShouldErase) {
     G->eraseFromParent();
@@ -963,45 +942,52 @@ static uint64_t scaleToBlockCount(uint64_t Weight, uint64_t TotalWeight,
   Num *= APInt(128, Weight);
   APInt Den(128, TotalWeight);
   Num = (Num + Den.lshr(1)).udiv(Den);
+  assert(Num.getActiveBits() <= 64 &&
+         "scaleToBlockCount: result exceeds uint64_t; Weight > TotalWeight?");
   return Num.getLimitedValue();
 }
 
 // Combine the scaled branch_weights of corresponding instructions of F and G.
-static void mergeBranchWeightsOnInstructions(Instruction *FI,
-                                             const Instruction *GI,
-                                             const BlockFrequencyInfo *BfiF,
-                                             const BlockFrequencyInfo *BfiG,
-                                             std::optional<uint64_t> FEC,
-                                             std::optional<uint64_t> GEC) {
-  SmallVector<uint32_t, 8> FWeights, GWeights;
-  bool HasF = extractBranchWeights(*FI, FWeights);
-  bool HasG = extractBranchWeights(*GI, GWeights);
-  if (!HasF && !HasG)
+static void
+mergeBranchWeightsOnInstructions(Instruction *DstI, const Instruction *SrcI,
+                                 const BlockFrequencyInfo *DstBFI,
+                                 const BlockFrequencyInfo *SrcBFI,
+                                 std::optional<uint64_t> DstEntryCount,
+                                 std::optional<uint64_t> SrcEntryCount) {
+  SmallVector<uint32_t, 8> DstWeights, SrcWeights;
+  bool HasDst = extractBranchWeights(*DstI, DstWeights);
+  bool HasSrc = extractBranchWeights(*SrcI, SrcWeights);
+  if (!HasDst && !HasSrc)
     return;
 
-  uint64_t BlockCountF = getBlockCountForMerging(BfiF, FI->getParent(), FEC);
-  uint64_t BlockCountG = getBlockCountForMerging(BfiG, GI->getParent(), GEC);
+  uint64_t DstBlockCount =
+      getBlockCountForMerging(DstBFI, DstI->getParent(), DstEntryCount);
+  uint64_t SrcBlockCount =
+      getBlockCountForMerging(SrcBFI, SrcI->getParent(), SrcEntryCount);
 
-  uint64_t TotalF = 0, TotalG = 0;
-  if (HasF)
-    extractProfTotalWeight(*FI, TotalF);
-  if (HasG)
-    extractProfTotalWeight(*GI, TotalG);
+  uint64_t DstTotal = 0, SrcTotal = 0;
+  if (HasDst)
+    extractProfTotalWeight(*DstI, DstTotal);
+  if (HasSrc)
+    extractProfTotalWeight(*SrcI, SrcTotal);
 
-  size_t NumWeights = std::max(HasF ? FWeights.size() : size_t{0},
-                               HasG ? GWeights.size() : size_t{0});
+  size_t NumWeights = std::max(HasDst ? DstWeights.size() : size_t{0},
+                               HasSrc ? SrcWeights.size() : size_t{0});
   SmallVector<uint64_t, 8> MergedWeights;
   MergedWeights.reserve(NumWeights);
   for (size_t I = 0; I < NumWeights; ++I) {
-    uint64_t FW = (HasF && I < FWeights.size()) ? FWeights[I] : 0;
-    uint64_t GW = (HasG && I < GWeights.size()) ? GWeights[I] : 0;
-    uint64_t AbsF = HasF ? scaleToBlockCount(FW, TotalF, BlockCountF) : 0;
-    uint64_t AbsG = HasG ? scaleToBlockCount(GW, TotalG, BlockCountG) : 0;
-    MergedWeights.push_back(SaturatingAdd(AbsF, AbsG));
+    uint64_t DstW = (HasDst && I < DstWeights.size()) ? DstWeights[I] : 0;
+    uint64_t SrcW = (HasSrc && I < SrcWeights.size()) ? SrcWeights[I] : 0;
+    uint64_t DstAbs =
+        HasDst ? scaleToBlockCount(DstW, DstTotal, DstBlockCount) : 0;
+    uint64_t SrcAbs =
+        HasSrc ? scaleToBlockCount(SrcW, SrcTotal, SrcBlockCount) : 0;
+    MergedWeights.push_back(SaturatingAdd(DstAbs, SrcAbs));
   }
 
-  bool IsExpected = hasBranchWeightOrigin(*FI) || hasBranchWeightOrigin(*GI);
-  setFittedBranchWeights(*FI, MergedWeights, IsExpected);
+  bool IsExpected =
+      hasBranchWeightOrigin(*DstI) && hasBranchWeightOrigin(*SrcI);
+  setFittedBranchWeights(*DstI, MergedWeights, IsExpected);
 }
 
 // Accumulate scaled value profile counts of Instruction I into Merged.
@@ -1019,33 +1005,35 @@ static void addScaledValueProfile(const Instruction &I, InstrProfValueKind Kind,
   }
 }
 
-// Merge (union) scaled value profiles of F and G.
-static void mergeValueProfileOnInstructions(Instruction *FI,
-                                            const Instruction *GI,
-                                            const BlockFrequencyInfo *BfiF,
-                                            const BlockFrequencyInfo *BfiG,
-                                            std::optional<uint64_t> FEC,
-                                            std::optional<uint64_t> GEC) {
-  MDNode *ProfF = FI->getMetadata(LLVMContext::MD_prof);
-  MDNode *ProfG = GI->getMetadata(LLVMContext::MD_prof);
-  bool HasF = ProfF && isValueProfileMD(ProfF);
-  bool HasG = ProfG && isValueProfileMD(ProfG);
-  if (!HasF && !HasG)
+// Merge (union) scaled value profiles of Dst and Src.
+static void
+mergeValueProfileOnInstructions(Instruction *DstI, const Instruction *SrcI,
+                                const BlockFrequencyInfo *DstBFI,
+                                const BlockFrequencyInfo *SrcBFI,
+                                std::optional<uint64_t> DstEntryCount,
+                                std::optional<uint64_t> SrcEntryCount) {
+  MDNode *DstProf = DstI->getMetadata(LLVMContext::MD_prof);
+  MDNode *SrcProf = SrcI->getMetadata(LLVMContext::MD_prof);
+  bool HasDst = DstProf && isValueProfileMD(DstProf);
+  bool HasSrc = SrcProf && isValueProfileMD(SrcProf);
+  if (!HasDst && !HasSrc)
     return;
 
-  auto *KindF =
-      HasF ? mdconst::dyn_extract<ConstantInt>(ProfF->getOperand(1)) : nullptr;
-  auto *KindG =
-      HasG ? mdconst::dyn_extract<ConstantInt>(ProfG->getOperand(1)) : nullptr;
-  if (HasF && HasG && KindF && KindG &&
-      KindF->getZExtValue() != KindG->getZExtValue()) {
-    FI->setMetadata(LLVMContext::MD_prof, nullptr);
+  auto *DstKind =
+      HasDst ? mdconst::dyn_extract<ConstantInt>(DstProf->getOperand(1))
+             : nullptr;
+  auto *SrcKind =
+      HasSrc ? mdconst::dyn_extract<ConstantInt>(SrcProf->getOperand(1))
+             : nullptr;
+  if (HasDst && HasSrc && DstKind && SrcKind &&
+      DstKind->getZExtValue() != SrcKind->getZExtValue()) {
+    DstI->setMetadata(LLVMContext::MD_prof, nullptr);
     return;
   }
 
-  const ConstantInt *KindCI = KindF ? KindF : KindG;
+  const ConstantInt *KindCI = DstKind ? DstKind : SrcKind;
   if (!KindCI) {
-    FI->setMetadata(LLVMContext::MD_prof, nullptr);
+    DstI->setMetadata(LLVMContext::MD_prof, nullptr);
     return;
   }
 
@@ -1053,12 +1041,14 @@ static void mergeValueProfileOnInstructions(Instruction *FI,
       static_cast<InstrProfValueKind>(KindCI->getZExtValue());
 
   DenseMap<uint64_t, uint64_t> Merged;
-  uint64_t BCF = getBlockCountForMerging(BfiF, FI->getParent(), FEC);
-  uint64_t BCG = getBlockCountForMerging(BfiG, GI->getParent(), GEC);
-  if (HasF)
-    addScaledValueProfile(*FI, Kind, BCF, Merged);
-  if (HasG)
-    addScaledValueProfile(*GI, Kind, BCG, Merged);
+  uint64_t DstBlockCount =
+      getBlockCountForMerging(DstBFI, DstI->getParent(), DstEntryCount);
+  uint64_t SrcBlockCount =
+      getBlockCountForMerging(SrcBFI, SrcI->getParent(), SrcEntryCount);
+  if (HasDst)
+    addScaledValueProfile(*DstI, Kind, DstBlockCount, Merged);
+  if (HasSrc)
+    addScaledValueProfile(*SrcI, Kind, SrcBlockCount, Merged);
 
   if (Merged.empty())
     return;
@@ -1073,62 +1063,55 @@ static void mergeValueProfileOnInstructions(Instruction *FI,
   llvm::sort(VDs, [](const InstrProfValueData &A, const InstrProfValueData &B) {
     return A.Count > B.Count;
   });
-  annotateValueSite(*FI->getFunction()->getParent(), *FI, VDs, Sum, Kind,
+  annotateValueSite(*DstI->getFunction()->getParent(), *DstI, VDs, Sum, Kind,
                     VDs.size());
 }
 
-const BlockFrequencyInfo &MergeFunctions::getBFI(Function &F) {
-  if (FAM)
-    return FAM->getResult<BlockFrequencyAnalysis>(F);
-  auto &Entry = CachedBFI[&F];
-  if (!Entry)
-    Entry = std::make_unique<CachedProfileAnalyses>(F);
-  return Entry->BFI;
+const BlockFrequencyInfo *MergeFunctions::getBFI(Function &F) {
+  if (!FAM)
+    return nullptr;
+
+  return &FAM->getResult<BlockFrequencyAnalysis>(F);
 }
 
-void MergeFunctions::mergeProfMetadataInto(Function *F, Function *G) {
-  std::optional<uint64_t> FEC = F->getEntryCount();
-  std::optional<uint64_t> GEC = G->getEntryCount();
-  const BlockFrequencyInfo *BfiF = &getBFI(*F);
-  const BlockFrequencyInfo *BfiG = &getBFI(*G);
+/// Merge \p Src's instruction-level branch weights and value profile
+/// metadata into the corresponding instructions of \p Dst. \p Dst is the
+/// surviving function; \p Src will be erased or rewritten after this call.
+/// Both functions must be structurally identical.
+void MergeFunctions::mergeInstrProfMetadataInto(Function *Dst, Function *Src) {
+  std::optional<uint64_t> DstEntryCount = Dst->getEntryCount();
+  std::optional<uint64_t> SrcEntryCount = Src->getEntryCount();
+  const BlockFrequencyInfo *DstBFI = getBFI(*Dst);
+  const BlockFrequencyInfo *SrcBFI = getBFI(*Src);
 
-  SmallVector<std::pair<BasicBlock *, const BasicBlock *>, 8> BBWorklist;
-  SmallPtrSet<const BasicBlock *, 32> VisitedBBs;
+  // FunctionComparator guarantees identical CFG topology and instruction
+  // ordering, allowing us to walk both functions in lockstep.
+  for (auto [DstBB, SrcBB] : llvm::zip_equal(*Dst, *Src)) {
+    for (auto [DstI, SrcI] : llvm::zip_equal(DstBB, SrcBB)) {
+      MDNode *DstProf = DstI.getMetadata(LLVMContext::MD_prof);
+      MDNode *SrcProf = SrcI.getMetadata(LLVMContext::MD_prof);
+      if ((DstProf && isValueProfileMD(DstProf)) ||
+          (SrcProf && isValueProfileMD(SrcProf)))
+        mergeValueProfileOnInstructions(&DstI, &SrcI, DstBFI, SrcBFI,
+                                        DstEntryCount, SrcEntryCount);
 
-  BBWorklist.emplace_back(&F->getEntryBlock(), &G->getEntryBlock());
-  VisitedBBs.insert(BBWorklist.back().first);
-
-  while (!BBWorklist.empty()) {
-    auto [BBF, BBG] = BBWorklist.pop_back_val();
-
-    for (auto [FI, GI] : llvm::zip(*BBF, *BBG)) {
-      MDNode *ProfF = FI.getMetadata(LLVMContext::MD_prof);
-      MDNode *ProfG = GI.getMetadata(LLVMContext::MD_prof);
-      if ((ProfF && isValueProfileMD(ProfF)) ||
-          (ProfG && isValueProfileMD(ProfG)))
-        mergeValueProfileOnInstructions(&FI, &GI, BfiF, BfiG, FEC, GEC);
-      if (isa<SelectInst>(FI))
-        mergeBranchWeightsOnInstructions(&FI, &GI, BfiF, BfiG, FEC, GEC);
+      // Handle branch weights on SelectInsts here. Terminators are handled
+      // separately below, outside the instruction loop.
+      if (isa<SelectInst>(DstI))
+        mergeBranchWeightsOnInstructions(&DstI, &SrcI, DstBFI, SrcBFI,
+                                         DstEntryCount, SrcEntryCount);
     }
-
-    Instruction *TermF = BBF->getTerminator();
-    const Instruction *TermG = BBG->getTerminator();
-    mergeBranchWeightsOnInstructions(TermF, TermG, BfiF, BfiG, FEC, GEC);
-    for (unsigned I = 0, E = TermF->getNumSuccessors(); I != E; ++I) {
-      if (!VisitedBBs.insert(TermF->getSuccessor(I)).second)
-        continue;
-      BBWorklist.emplace_back(TermF->getSuccessor(I), TermG->getSuccessor(I));
-    }
+    Instruction *DstTerm = DstBB.getTerminator();
+    const Instruction *SrcTerm = SrcBB.getTerminator();
+    mergeBranchWeightsOnInstructions(DstTerm, SrcTerm, DstBFI, SrcBFI,
+                                     DstEntryCount, SrcEntryCount);
   }
 
   if (FAM) {
     PreservedAnalyses PA = PreservedAnalyses::all();
     PA.abandon<BranchProbabilityAnalysis>();
     PA.abandon<BlockFrequencyAnalysis>();
-    FAM->invalidate(*F, PA);
-  } else {
-    CachedBFI.erase(F);
-    CachedBFI.erase(G);
+    FAM->invalidate(*Dst, PA);
   }
 }
 
@@ -1143,8 +1126,8 @@ static void mergeEntryCountsInto(Function *F, std::optional<uint64_t> FC,
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
 
-  std::optional<uint64_t> FEC = F->getEntryCount();
-  std::optional<uint64_t> GEC = G->getEntryCount();
+  std::optional<uint64_t> FEntryCount = F->getEntryCount();
+  std::optional<uint64_t> GEntryCount = G->getEntryCount();
 
   // Create a new thunk that both F and G can call, if F cannot call G directly.
   // That is the case if F is either interposable or if G is either weak_odr or
@@ -1189,8 +1172,8 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
 
     // Merge !prof, while G still has its body.
     writeThunkOrAliasIfNeeded(F, G, /*MergeProfile*/ true);
-    if (FEC)
-      NewF->setEntryCount(*FEC);
+    if (FEntryCount)
+      NewF->setEntryCount(*FEntryCount);
     // NewF becomes thunk/alias to the shared body F, it has no profile to be
     // merged.
     writeThunkOrAliasIfNeeded(F, NewF, /*MergeProfile*/ false);
@@ -1201,8 +1184,9 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
       F->setAlignment(std::nullopt);
     F->setLinkage(GlobalValue::PrivateLinkage);
     // The private shared implementation accumulates both symbols' entries
-    // (FEC + GEC), while each ODR thunk retains its own per-symbol entry count.
-    mergeEntryCountsInto(F, FEC, GEC);
+    // (FEntryCount + GEntryCount), while each ODR thunk retains its own
+    // per-symbol entry count.
+    mergeEntryCountsInto(F, FEntryCount, GEntryCount);
     ++NumDoubleWeak;
     ++NumFunctionsMerged;
   } else {
@@ -1230,15 +1214,15 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     // stop here and delete G. There's no need for a thunk. (See note on
     // MergeFunctionsPDI above).
     if (G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI) {
-      mergeProfMetadataInto(F, G);
-      mergeEntryCountsInto(F, FEC, GEC);
+      mergeInstrProfMetadataInto(F, G);
+      mergeEntryCountsInto(F, FEntryCount, GEntryCount);
       G->eraseFromParent();
       ++NumFunctionsMerged;
       return;
     }
 
     if (writeThunkOrAliasIfNeeded(F, G, /*MergeProfile*/ true)) {
-      mergeEntryCountsInto(F, FEC, GEC);
+      mergeEntryCountsInto(F, FEntryCount, GEntryCount);
       ++NumFunctionsMerged;
     }
   }
