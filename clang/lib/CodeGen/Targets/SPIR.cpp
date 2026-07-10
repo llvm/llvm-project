@@ -890,6 +890,14 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
          "The element type for a SPIR-V resource must be a scalar integer or "
          "floating point type.");
 
+  // SPIR-V has no 64-bit multi-component image format, so pack a 2-component
+  // 64-bit typed buffer into a 4-component 32-bit image. The backend
+  // reinterprets it with OpBitcast on load and store.
+  if (SampledType->isIntegerTy(64) && NumChannels == 2) {
+    SampledType = llvm::Type::getInt32Ty(Ctx);
+    NumChannels = 4;
+  }
+
   // These parameters correspond to the operands to the OpTypeImage SPIR-V
   // instruction. See
   // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpTypeImage.

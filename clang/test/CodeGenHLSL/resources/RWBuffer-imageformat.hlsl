@@ -23,11 +23,11 @@ RWBuffer<uint4> rwb_uint4;
 // 64-bit integers
 // CHECK: %"class.hlsl::RWBuffer.7" = type { target("spirv.SignedImage", i64, 5, 2, 0, 0, 2, 41) }
 RWBuffer<int64_t> rwb_i64;
-// CHECK: %"class.hlsl::RWBuffer.8" = type { target("spirv.SignedImage", i64, 5, 2, 0, 0, 2, 0) }
+// CHECK: %"class.hlsl::RWBuffer.8" = type { target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 21) }
 RWBuffer<int64_t2> rwb_i64_2;
 // CHECK: %"class.hlsl::RWBuffer.9" = type { target("spirv.Image", i64, 5, 2, 0, 0, 2, 40) }
 RWBuffer<uint64_t> rwb_u64;
-// CHECK: %"class.hlsl::RWBuffer.10" = type { target("spirv.Image", i64, 5, 2, 0, 0, 2, 0) }
+// CHECK: %"class.hlsl::RWBuffer.10" = type { target("spirv.Image", i32, 5, 2, 0, 0, 2, 30) }
 RWBuffer<uint64_t2> rwb_u64_2;
 
 // Floats
