@@ -158,8 +158,8 @@ public:
   template <auto _Cw, class _Fn, class _Tp>
     requires __is_invocable_using<const _Fn&, _LIBCPP_FUNCTION_REF_CV _Tp*>
   _LIBCPP_HIDE_FROM_ABI constexpr function_ref(constant_wrapper<_Cw, _Fn> __f,
-                                               _LIBCPP_FUNCTION_REF_CV _Tp* __obj_ptr_) noexcept
-      : __storage_(__obj_ptr_),
+                                               _LIBCPP_FUNCTION_REF_CV _Tp* __obj_ptr) noexcept
+      : __storage_(__obj_ptr),
         __call_([](__storage_t __storage, __arg_t<_ArgTypes>... __args) static noexcept(__is_noexcept) -> _Rp {
           auto* __obj = __storage_t::template __get<_LIBCPP_FUNCTION_REF_CV _Tp>(__storage);
           return std::invoke_r<_Rp>(decltype(__f)::value, __obj, std::forward<__arg_t<_ArgTypes>>(__args)...);
@@ -169,7 +169,7 @@ public:
     }
 
     if constexpr (is_member_pointer_v<_Fn>) {
-      _LIBCPP_ASSERT_NON_NULL(__obj_ptr_ != nullptr, "the object pointer should not be a nullptr");
+      _LIBCPP_ASSERT_NON_NULL(__obj_ptr != nullptr, "the object pointer should not be a nullptr");
     }
   }
 
