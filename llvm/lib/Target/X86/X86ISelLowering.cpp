@@ -8127,6 +8127,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
         if (Partial) {
           unsigned GoodLanes = LanesPerWideLoad;
           while (Pieces.size() > 1 && GoodLanes < TruncDstLanes) {
+            assert((TruncDstLanes % GoodLanes) == 0 && "Illegal VTRUNC packing");
             SmallVector<SDValue, 8> Next;
             SmallVector<int, 16> Mask(TruncDstLanes, -1);
             for (unsigned I = 0; I != GoodLanes; ++I) {
