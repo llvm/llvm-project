@@ -1,6 +1,8 @@
 # The Sandbox Vectorizer
 
-
+```{contents}
+:depth: 4
+```
 
 The Sandbox Vectorizer is a framework for building modular vectorization pipelines on top of [Sandbox IR](#SandboxIR) transactional IR, with a focus on ease of development and testing.
 The default pipeline currently implements a simple SLP-style bottom-up vectorization pipeline.

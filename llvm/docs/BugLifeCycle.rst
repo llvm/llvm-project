@@ -2,6 +2,11 @@
 LLVM Bug Life Cycle
 ===================
 
+.. contents::
+   :local:
+
+
+
 Introduction - Achieving consistency in how we deal with bug reports
 ====================================================================
 

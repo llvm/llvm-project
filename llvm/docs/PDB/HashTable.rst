@@ -1,6 +1,9 @@
 The PDB Serialized Hash Table Format
 ====================================
 
+.. contents::
+   :local:
+
 .. _hash_intro:
 
 Introduction
