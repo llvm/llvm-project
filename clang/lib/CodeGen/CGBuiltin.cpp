@@ -2794,7 +2794,7 @@ static llvm::TargetExtType *getTargetExtType(CodeGenFunction &CGF,
   llvm::Type *Tys[] = {ElTy};
   // Unsigned arguments for TargetExtType
   unsigned Ints[] = {MTy->getScope(), MTy->getNumRows(), MTy->getNumColumns(),
-                      MTy->getUse()};
+                     MTy->getUse()};
   // Create a TargetExtType to represent the coop matrix type
   llvm::TargetExtType *RetType = llvm::TargetExtType::get(
       CGM.getLLVMContext(), "spirv.CooperativeMatrixKHR",
@@ -4665,8 +4665,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                         E->getArg(0)->getExprLoc(), FD, 0);
     const auto *MTy = E->getType()->getAs<CooperativeMatrixType>();
     if (!MTy)
-      CGM.ErrorUnsupported(
-          E, "coop_mat_load without coop_mat output operand");
+      CGM.ErrorUnsupported(E, "coop_mat_load without coop_mat output operand");
 
     auto Ptr = EmitScalarExpr(E->getArg(0));
     auto Layout = EmitScalarExpr(E->getArg(1));
@@ -4680,7 +4679,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // Function name mangling.
     std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel);
 
-    llvm::FunctionCallee LoadFn = CGM.getModule().getOrInsertFunction(Name, FTy);
+    llvm::FunctionCallee LoadFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(LoadFn.getCallee()))
       F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
     auto *NewCall = Builder.CreateCall(LoadFn, {Ptr, Layout, Stride});
@@ -4697,8 +4697,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                         E->getArg(0)->getExprLoc(), FD, 0);
     const auto *MTy = E->getArg(1)->getType()->getAs<CooperativeMatrixType>();
     if (!MTy)
-      CGM.ErrorUnsupported(
-          E, "coop_mat_store without coop_mat input operand");
+      CGM.ErrorUnsupported(E, "coop_mat_store without coop_mat input operand");
 
     auto Ptr = EmitScalarExpr(E->getArg(0));
     auto Arg0 = EmitScalarExpr(E->getArg(1));
@@ -4708,11 +4707,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::TargetExtType *ArgType = getTargetExtType(*this, CGM, MTy);
     // Set function type.
     llvm::FunctionType *FTy = llvm::FunctionType::get(
-        VoidTy, {Ptr->getType(), ArgType, Layout->getType(), Stride->getType()}, false);
+        VoidTy, {Ptr->getType(), ArgType, Layout->getType(), Stride->getType()},
+        false);
     // Function name mangling.
     std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel);
 
-    llvm::FunctionCallee StoreFn = CGM.getModule().getOrInsertFunction(Name, FTy);
+    llvm::FunctionCallee StoreFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(StoreFn.getCallee()))
       F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
     auto *NewCall = Builder.CreateCall(StoreFn, {Ptr, Arg0, Layout, Stride});
@@ -4723,8 +4724,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BIcoop_mat_mulAdd: {
     const auto *MTy = E->getType()->getAs<CooperativeMatrixType>();
     if (!MTy)
-      CGM.ErrorUnsupported(
-          E, "coop_mat_mulAdd without coop_mat output operand");
+      CGM.ErrorUnsupported(E,
+                           "coop_mat_mulAdd without coop_mat output operand");
 
     auto Arg0 = E->getArg(0);
     auto Arg1 = E->getArg(1);
@@ -4748,11 +4749,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto *AType = getTargetExtType(*this, CGM, MATy);
     auto *BType = getTargetExtType(*this, CGM, MBTy);
     auto *CType = getTargetExtType(*this, CGM, MCTy);
-    llvm::FunctionType *FTy = llvm::FunctionType::get(
-        RetType, {AType, BType, CType, Int1Ty}, false);
+    llvm::FunctionType *FTy =
+        llvm::FunctionType::get(RetType, {AType, BType, CType, Int1Ty}, false);
 
     std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel);
-    llvm::FunctionCallee MatMulFn = CGM.getModule().getOrInsertFunction(Name, FTy);
+    llvm::FunctionCallee MatMulFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(MatMulFn.getCallee()))
       F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
     auto *NewCall = Builder.CreateCall(MatMulFn, {MA, MB, MC, isDataSigned});
@@ -4766,7 +4768,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BIcoop_mat_binary_div: {
     auto Arg0 = EmitScalarExpr(E->getArg(0));
     auto Arg1 = EmitScalarExpr(E->getArg(1));
-    
+
     const auto *MTy = E->getType()->getAs<CooperativeMatrixType>();
     const auto *MATy = E->getArg(0)->getType()->getAs<CooperativeMatrixType>();
     const auto *MBTy = E->getArg(1)->getType()->getAs<CooperativeMatrixType>();
@@ -4783,13 +4785,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
     llvm::Value *isDataSigned = llvm::ConstantInt::get(Int1Ty, isSigned);
 
-    llvm::FunctionType *FTy = llvm::FunctionType::get(
-        RetType, {AType, BType, Int1Ty}, false);
-    
-    std::string Name = (ElTy->isIntegerTy())
-                           ? getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel)
-                           : getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel, /*IsFloat*/ true);
-    llvm::FunctionCallee BinaryFn = CGM.getModule().getOrInsertFunction(Name, FTy);
+    llvm::FunctionType *FTy =
+        llvm::FunctionType::get(RetType, {AType, BType, Int1Ty}, false);
+
+    std::string Name =
+        (ElTy->isIntegerTy())
+            ? getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel)
+            : getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel, /*IsFloat*/ true);
+    llvm::FunctionCallee BinaryFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(BinaryFn.getCallee()))
       F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
     auto *NewCall = Builder.CreateCall(BinaryFn, {Arg0, Arg1, isDataSigned});
@@ -4815,10 +4819,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
     llvm::Value *isDataSigned = llvm::ConstantInt::get(Int1Ty, isSigned);
 
-    llvm::FunctionType *FTy = llvm::FunctionType::get(
-        RetType, {AType, BType, Int1Ty}, false);
+    llvm::FunctionType *FTy =
+        llvm::FunctionType::get(RetType, {AType, BType, Int1Ty}, false);
     std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel);
-    llvm::FunctionCallee ScalarMulFn = CGM.getModule().getOrInsertFunction(Name, FTy);
+    llvm::FunctionCallee ScalarMulFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(ScalarMulFn.getCallee()))
       F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
     auto *NewCall = Builder.CreateCall(ScalarMulFn, {Arg0, Arg1, isDataSigned});
@@ -4842,10 +4847,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
     llvm::Value *isDataSigned = llvm::ConstantInt::get(Int1Ty, isSigned);
 
-    llvm::FunctionType *FTy = llvm::FunctionType::get(
-        RetType, {AType, Int1Ty}, false);
+    llvm::FunctionType *FTy =
+        llvm::FunctionType::get(RetType, {AType, Int1Ty}, false);
     std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel);
-    llvm::FunctionCallee ScalarNegFn = CGM.getModule().getOrInsertFunction(Name, FTy);
+    llvm::FunctionCallee ScalarNegFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(ScalarNegFn.getCallee()))
       F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
     auto *NewCall = Builder.CreateCall(ScalarNegFn, {Arg0, isDataSigned});
@@ -4858,10 +4864,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto Init = EmitScalarExpr(E->getArg(0));
     auto *RetType = getTargetExtType(*this, CGM, MTy);
     // Set function type.
-    llvm::FunctionType *FTy = llvm::FunctionType::get(
-        RetType, {Init->getType()}, false);
+    llvm::FunctionType *FTy =
+        llvm::FunctionType::get(RetType, {Init->getType()}, false);
     std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel);
-    llvm::FunctionCallee InitFn = CGM.getModule().getOrInsertFunction(Name, FTy);
+    llvm::FunctionCallee InitFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(InitFn.getCallee()))
       F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
     auto *NewCall = Builder.CreateCall(InitFn, {Init});
@@ -4873,11 +4880,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     const auto *MTy = E->getArg(0)->getType()->getAs<CooperativeMatrixType>();
     auto *AType = getTargetExtType(*this, CGM, MTy);
     auto Arg0 = EmitScalarExpr(E->getArg(0));
-    llvm::FunctionType *FTy = llvm::FunctionType::get(
-        ConvertType(E->getType()), {AType}, false);
-    
+    llvm::FunctionType *FTy =
+        llvm::FunctionType::get(ConvertType(E->getType()), {AType}, false);
+
     std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel);
-    llvm::FunctionCallee LengthFn = CGM.getModule().getOrInsertFunction(Name, FTy);
+    llvm::FunctionCallee LengthFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(LengthFn.getCallee()))
       F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
     auto *NewCall = Builder.CreateCall(LengthFn, {Arg0});

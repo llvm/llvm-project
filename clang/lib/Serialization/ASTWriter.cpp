@@ -454,8 +454,7 @@ void TypeLocWriter::VisitConstantMatrixTypeLoc(ConstantMatrixTypeLoc TL) {
   Record.AddStmt(TL.getAttrColumnOperand());
 }
 
-void TypeLocWriter::VisitCooperativeMatrixTypeLoc(
-    CooperativeMatrixTypeLoc TL) {
+void TypeLocWriter::VisitCooperativeMatrixTypeLoc(CooperativeMatrixTypeLoc TL) {
   addSourceLocation(TL.getAttrNameLoc());
   SourceRange range = TL.getAttrOperandParensRange();
   addSourceLocation(range.getBegin());

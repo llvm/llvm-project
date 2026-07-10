@@ -17318,8 +17318,7 @@ bool Sema::BuiltinNonDeterministicValue(CallExpr *TheCall) {
 }
 
 // Check coop_mat_load/store buffer pointer.
-bool Sema::CheckCoopMatrixLoadStorePtr(CallExpr *TheCall,
-                                       unsigned PtrArgIdx) {
+bool Sema::CheckCoopMatrixLoadStorePtr(CallExpr *TheCall, unsigned PtrArgIdx) {
   bool ArgError = false;
   Expr *PtrExpr = TheCall->getArg(PtrArgIdx);
   ExprResult PtrConv = DefaultFunctionArrayLvalueConversion(PtrExpr);
@@ -17350,8 +17349,8 @@ bool Sema::CheckCoopMatrixLoadStorePtr(CallExpr *TheCall,
 
 // Check coop_mat_load/store matrix element has same type with buffer pointer.
 void Sema::CheckCoopMatrixLoadStoreElementType(QualType MatrixType,
-                                              QualType BufferType,
-                                              SourceLocation MatrixLoc) {
+                                               QualType BufferType,
+                                               SourceLocation MatrixLoc) {
   auto *MTy = MatrixType->getAs<CooperativeMatrixType>();
   if (!MTy) {
     Diag(MatrixLoc, diag::err_coop_matrix_arg);
@@ -17367,8 +17366,8 @@ void Sema::CheckCoopMatrixLoadStoreElementType(QualType MatrixType,
 }
 
 void Sema::CheckCoopMatrixLoadElementType(QualType MatrixType,
-                                         SourceLocation MatrixLoc,
-                                         CallExpr *call) {
+                                          SourceLocation MatrixLoc,
+                                          CallExpr *call) {
 
   FunctionDecl *F = call->getDirectCallee();
   assert(F);
@@ -17377,7 +17376,7 @@ void Sema::CheckCoopMatrixLoadElementType(QualType MatrixType,
   assert(Fname);
   if (Fname->isStr("coop_mat_load"))
     CheckCoopMatrixLoadStoreElementType(MatrixType, call->getArg(0)->getType(),
-                                       MatrixLoc);
+                                        MatrixLoc);
 }
 
 // Check coop_mat_load/store layout argument
@@ -17401,7 +17400,7 @@ bool Sema::CheckCoopMatrixLoadStoreLayout(Expr *LayoutExpr) {
 }
 
 ExprResult Sema::BuiltinCoopMatrixLoad(CallExpr *TheCall,
-                                           ExprResult CallResult) {
+                                       ExprResult CallResult) {
   if (checkArgCount(TheCall, 3))
     return ExprError();
   if (CheckCoopMatrixLoadStorePtr(TheCall, 0))
@@ -17420,7 +17419,7 @@ ExprResult Sema::BuiltinCoopMatrixStore(CallExpr *TheCall,
   if (CheckCoopMatrixLoadStorePtr(TheCall, 00))
     return ExprError();
   CheckCoopMatrixLoadStoreElementType(Arg1->getType(), Arg0->getType(),
-                                     Arg0->getBeginLoc());
+                                      Arg0->getBeginLoc());
   if (CheckCoopMatrixLoadStoreLayout(TheCall->getArg(2)))
     return ExprError();
   return CallResult;
@@ -17459,7 +17458,7 @@ void Sema::CheckCoopMatrixMatMulOutput(CallExpr *TheCall) {
 }
 
 bool Sema::CheckCoopMatrixTypes(QualType ATy, SourceLocation ALoc, QualType BTy,
-                               SourceLocation BLoc) {
+                                SourceLocation BLoc) {
   auto *M0Ty = ATy->getAs<CooperativeMatrixType>();
   auto *M1Ty = BTy->getAs<CooperativeMatrixType>();
   if (!M0Ty)
@@ -17488,7 +17487,7 @@ bool Sema::CheckCoopMatrixTypes(QualType ATy, SourceLocation ALoc, QualType BTy,
 }
 
 ExprResult Sema::BuiltinCoopMatrixBinaryOp(CallExpr *TheCall,
-                                               ExprResult CallResult) {
+                                           ExprResult CallResult) {
   if (checkArgCount(TheCall, 2))
     return ExprError();
 
@@ -17496,7 +17495,7 @@ ExprResult Sema::BuiltinCoopMatrixBinaryOp(CallExpr *TheCall,
   Expr *Arg1 = TheCall->getArg(1);
 
   CheckCoopMatrixTypes(Arg0->getType(), Arg0->getBeginLoc(), Arg1->getType(),
-                      Arg1->getBeginLoc());
+                       Arg1->getBeginLoc());
 
   TheCall->setType(Arg0->getType());
 
@@ -17512,7 +17511,7 @@ static bool isValidMatAMatCElementTypeCombination(QualType ATy, QualType CTy) {
 }
 
 ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
-                                             ExprResult CallResult) {
+                                         ExprResult CallResult) {
   if (checkArgCount(TheCall, 3))
     return ExprError();
 
@@ -17560,7 +17559,7 @@ ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
 }
 
 ExprResult Sema::BuiltinCoopMatrixScalarOp(CallExpr *TheCall,
-                                               ExprResult CallResult) {
+                                           ExprResult CallResult) {
   if (checkArgCount(TheCall, 2))
     return ExprError();
 
@@ -17571,7 +17570,7 @@ ExprResult Sema::BuiltinCoopMatrixScalarOp(CallExpr *TheCall,
 }
 
 ExprResult Sema::BuiltinCoopMatrixScalarUnaryOp(CallExpr *TheCall,
-                                                    ExprResult CallResult) {
+                                                ExprResult CallResult) {
   if (checkArgCount(TheCall, 1))
     return ExprError();
 
@@ -17604,17 +17603,17 @@ ExprResult Sema::BuiltinMatrixTranspose(CallExpr *TheCall,
   // matrix type.
   if (ConstMType) {
     QualType ResultType = Context.getConstantMatrixType(
-      ConstMType->getElementType(), ConstMType->getNumColumns(),
-      ConstMType->getNumRows());
+        ConstMType->getElementType(), ConstMType->getNumColumns(),
+        ConstMType->getNumRows());
 
     // Change the return type to the type of the returned matrix.
     TheCall->setType(ResultType);
   }
   if (CoopMType) {
     QualType ResultType = Context.getCooperativeMatrixType(
-      CoopMType->getElementType(),CoopMType->getScope(),
-      CoopMType->getNumColumns(), CoopMType->getNumRows(),
-      CoopMType->getUse());
+        CoopMType->getElementType(), CoopMType->getScope(),
+        CoopMType->getNumColumns(), CoopMType->getNumRows(),
+        CoopMType->getUse());
 
     // Change the return type to the type of the returned matrix.
     TheCall->setType(ResultType);

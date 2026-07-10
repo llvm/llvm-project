@@ -1052,7 +1052,7 @@ public:
   QualType RebuildCooperativeMatrixType(QualType ElementType, unsigned Scope,
                                         unsigned NumRows, unsigned NumColumns,
                                         unsigned Use);
-                                 
+
   /// Build a new matrix type given the type and dependently-defined
   /// dimensions.
   QualType RebuildDependentSizedMatrixType(QualType ElementType, Expr *RowExpr,

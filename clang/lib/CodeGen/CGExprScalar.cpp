@@ -955,10 +955,9 @@ public:
 #define HANDLEBINOP(OP)                                                        \
   Value *VisitBin##OP(const BinaryOperator *E) {                               \
     if (E->getType()->isCooperativeMatrixType()) {                             \
-      return CGF.EmitCoopMatBinaryOp(E->getOpcode(),                           \
-                                     CGF.EmitScalarExpr(E->getLHS()),          \
-                                     CGF.EmitScalarExpr(E->getRHS()),          \
-                                     E->getType());                            \
+      return CGF.EmitCoopMatBinaryOp(                                          \
+          E->getOpcode(), CGF.EmitScalarExpr(E->getLHS()),                     \
+          CGF.EmitScalarExpr(E->getRHS()), E->getType());                      \
     }                                                                          \
     QualType promotionTy = getPromotionType(E->getType());                     \
     auto result = Emit##OP(EmitBinOps(E, promotionTy));                        \
@@ -3699,11 +3698,12 @@ Value *ScalarExprEmitter::VisitUnaryMinus(const UnaryOperator *E,
                                           QualType PromotionType) {
   if (E->getSubExpr()->getType()->isCooperativeMatrixType()) {
     llvm::Value *Val = CGF.EmitScalarExpr(E->getSubExpr());
-    QualType CompTy = E->getType()->getAs<CooperativeMatrixType>()->getElementType();
+    QualType CompTy =
+        E->getType()->getAs<CooperativeMatrixType>()->getElementType();
     if (CompTy->isFloatingType())
       return Builder.CreateFNeg(Val, "coopmat.fneg");
     else
-      return Builder.CreateNeg(Val,  "coopmat.ineg");
+      return Builder.CreateNeg(Val, "coopmat.ineg");
   }
   QualType promotionTy = PromotionType.isNull()
                              ? getPromotionType(E->getSubExpr()->getType())

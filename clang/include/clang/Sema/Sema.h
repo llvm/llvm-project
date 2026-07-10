@@ -3062,19 +3062,16 @@ private:
 
   // Coop matrix handling.
   void CheckCoopMatrixLoadElementType(QualType MatrixType,
-                                     SourceLocation MatrixLoc, CallExpr *call);
+                                      SourceLocation MatrixLoc, CallExpr *call);
   void CheckCoopMatrixLoadStoreElementType(QualType MatrixType,
-                                          QualType BufferType,
-                                          SourceLocation MatrixLoc);
+                                           QualType BufferType,
+                                           SourceLocation MatrixLoc);
   bool CheckCoopMatrixLoadStorePtr(CallExpr *TheCall, unsigned PtrArgIdx);
   bool CheckCoopMatrixLoadStoreLayout(Expr *LayoutExpr);
-  ExprResult BuiltinCoopMatrixStore(CallExpr *TheCall,
-                                        ExprResult CallResult);
-  ExprResult BuiltinCoopMatrixLoad(CallExpr *TheCall,
-                                       ExprResult CallResult);
+  ExprResult BuiltinCoopMatrixStore(CallExpr *TheCall, ExprResult CallResult);
+  ExprResult BuiltinCoopMatrixLoad(CallExpr *TheCall, ExprResult CallResult);
   void CheckCoopMatrixMatMulOutput(CallExpr *TheCall);
-  ExprResult BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
-                                         ExprResult CallResult);
+  ExprResult BuiltinCoopMatrixMulAdd(CallExpr *TheCall, ExprResult CallResult);
   ExprResult CreateCoopMatBinOp(SourceLocation OpLoc, BinaryOperatorKind Opc,
                                 Expr *LHSExpr, Expr *RHSExpr);
   bool CheckCoopMatrixTypes(QualType ATy, SourceLocation ALoc, QualType BTy,

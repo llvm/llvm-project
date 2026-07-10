@@ -7593,8 +7593,7 @@ void TypeLocReader::VisitConstantMatrixTypeLoc(ConstantMatrixTypeLoc TL) {
   TL.setAttrColumnOperand(Reader.readExpr());
 }
 
-void TypeLocReader::VisitCooperativeMatrixTypeLoc(
-    CooperativeMatrixTypeLoc TL) {
+void TypeLocReader::VisitCooperativeMatrixTypeLoc(CooperativeMatrixTypeLoc TL) {
   TL.setAttrNameLoc(readSourceLocation());
   TL.setAttrOperandParensRange(readSourceRange());
   TL.setAttrScopeOperand(Reader.readExpr());
