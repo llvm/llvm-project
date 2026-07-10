@@ -68,6 +68,7 @@ __attribute__((target("dot8-insts"), const)) static uint amdgcn_sudot8(bool as, 
 }
 
 #define SWDOT __oclc_ISA_version < 9006 || __oclc_ISA_version == 9009 || __oclc_ISA_version == 10100 || __oclc_ISA_version >= 12500
+#define SWFDOT (__oclc_ISA_version >= 10200 && __oclc_ISA_version < 10300) || __oclc_ISA_version >= 12500
 #define SWIDOT2 __oclc_ISA_version < 9006 || __oclc_ISA_version == 9009 || __oclc_ISA_version == 10100 || __oclc_ISA_version >= 11000
 #define SUDOT __oclc_ISA_version >= 11000
 
@@ -85,7 +86,7 @@ fmuladd(float a, float b, float c)
 ATTR float
 __ockl_fdot2(half2 a, half2 b, float c, bool s)
 {
-    if (SWDOT)
+    if (SWFDOT)
         return fmuladd((float)a.s1, (float)b.s1, fmuladd((float)a.s0, (float)b.s0, c));
     else
         return amdgcn_fdot2(a, b, c, true);
