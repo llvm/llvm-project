@@ -386,10 +386,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_tanhf:
   case AMDGPU::BI__builtin_amdgcn_tanhh:
   case AMDGPU::BI__builtin_amdgcn_tanh_bf16: {
-    mlir::Value src = emitScalarExpr(expr->getArg(0));
-    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
-                                       "amdgcn.tanh", src.getType(),
-                                       mlir::ValueRange{src});
+    return emitBuiltinWithOneOverloadedType<4>(expr, "amdgcn.tanh").getValue();
   }
   case AMDGPU::BI__builtin_amdgcn_uicmp:
   case AMDGPU::BI__builtin_amdgcn_uicmpl:
