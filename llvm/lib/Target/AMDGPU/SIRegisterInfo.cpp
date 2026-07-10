@@ -3240,7 +3240,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                                   MI, false, 0, !UseSGPR);
 
       if (!TmpSReg || (!TmpReg && !UseSGPR)) {
-        assert(!FrameReg && "There is a frame register!");
+        assert(!FrameReg && "there is a frame register!");
         int SVOpcode = AMDGPU::getFlatScratchInstSVfromSS(MI->getOpcode());
         if (ST.hasFlatScratchSVSMode() && SVOpcode != -1) {
           Register TmpVGPR = RS->scavengeRegisterBackwards(
