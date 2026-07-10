@@ -132,16 +132,13 @@ EXCLUDE_DEPENDENTS_WINDOWS = {
 
 EXCLUDE_MAC = {
     "bolt",
-    "compiler-rt",
     "cross-project-tests",
     "flang",
     "libc",
-    "lldb",
     "openmp",
     "polly",
     "libcxx",
     "libcxxabi",
-    "libunwind",
     "offload",
 }
 
