@@ -107,6 +107,7 @@ struct GcnBufferFormatInfo {
 struct MAIInstInfo {
   uint32_t Opcode;
   bool is_dgemm;
+  bool is_sgemm;
   bool is_gfx940_xdl;
 };
 
@@ -563,6 +564,10 @@ bool isVOPCAsmOnly(unsigned Opc);
 /// Returns true if MAI operation is a double precision GEMM.
 LLVM_READONLY
 bool getMAIIsDGEMM(unsigned Opc);
+
+/// Returns true if MAI operation is a single precision GEMM.
+LLVM_READONLY
+bool getMAIIsSGEMM(unsigned Opc);
 
 LLVM_READONLY
 bool getMAIIsGFX940XDL(unsigned Opc);

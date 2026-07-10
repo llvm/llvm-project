@@ -1165,6 +1165,7 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = 
   let SubtargetPredicate = HasMAIInsts;
   Instruction Opcode = !cast<Instruction>(NAME);
   bit is_dgemm = 0;
+  bit is_sgemm = 0;
   bit is_gfx940_xdl = 0;
   let isConvergent = 1;
   let PseudoInstr = NAME; // FIXME: Why is this not the default
@@ -1293,11 +1294,13 @@ multiclass MAIInst_SrcFormats_Scaled_mc<string OpName, string UnscaledOpName, SD
   defm _f4_f4 : ScaledMAIInst_mc<OpName, UnscaledOpName, node>;
 }
 
+let is_sgemm = 1 in {
 defm V_MFMA_F32_4X4X1F32    : MAIInst<"v_mfma_f32_4x4x1f32",    "F32_F32_X4",    int_amdgcn_mfma_f32_4x4x1f32>;
 defm V_MFMA_F32_16X16X1F32  : MAIInst<"v_mfma_f32_16x16x1f32",  "F32_F32_X16",   int_amdgcn_mfma_f32_16x16x1f32>;
 defm V_MFMA_F32_16X16X4F32  : MAIInst<"v_mfma_f32_16x16x4f32",  "F32_F32_X4",    int_amdgcn_mfma_f32_16x16x4f32>;
 defm V_MFMA_F32_32X32X1F32  : MAIInst<"v_mfma_f32_32x32x1f32",  "F32_F32_X32",   int_amdgcn_mfma_f32_32x32x1f32>;
 defm V_MFMA_F32_32X32X2F32  : MAIInst<"v_mfma_f32_32x32x2f32",  "F32_F32_X16",   int_amdgcn_mfma_f32_32x32x2f32>;
+}
 
 let is_gfx940_xdl = 1 in {
 defm V_MFMA_F32_4X4X4F16    : MAIInst<"v_mfma_f32_4x4x4f16",    "F32_V4F16_X4",  int_amdgcn_mfma_f32_4x4x4f16>;
@@ -1431,7 +1434,7 @@ def MAIInstInfoTable : GenericTable {
   let FilterClass = "MAIInst";
   let CppTypeName = "MAIInstInfo";
   let Fields = [
-    "Opcode", "is_dgemm", "is_gfx940_xdl"
+    "Opcode", "is_dgemm", "is_sgemm", "is_gfx940_xdl"
   ];
 
   let PrimaryKey = ["Opcode"];
