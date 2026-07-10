@@ -172,8 +172,18 @@ bool PPCMCPlusBuilder::convertJmpToTailCall(MCInst &Inst) {
 
 bool PPCMCPlusBuilder::isCall(const MCInst &I) const {
   switch (I.getOpcode()) {
-  case PPC::BL:  // direct relative call
-  case PPC::BLA: // direct absolute call
+  case PPC::BL:    // direct relative call
+  case PPC::BLA:   // direct absolute call
+  case PPC::BCTRL: // indirect call via CTR
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool PPCMCPlusBuilder::isIndirectCall(const MCInst &I) const {
+  switch (I.getOpcode()) {
+  case PPC::BCTRL: // branch to CTR with link - indirect call
     return true;
   default:
     return false;

@@ -38,6 +38,8 @@ public:
 
   bool isCall(const MCInst &Inst) const override;
 
+  bool isIndirectCall(const MCInst &I) const override;
+
   bool isBranch(const MCInst &Inst) const override;
 
   bool isTailCall(const MCInst &Inst) const;
