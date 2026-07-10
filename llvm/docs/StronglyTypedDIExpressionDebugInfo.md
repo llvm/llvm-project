@@ -112,10 +112,20 @@ The expected general shape of this type is:
 
 ```cpp
 class DIExprRef {
+  friend class DIExpression;
+  friend class DIExprBuf;
+
   iterator_range<DIOp::FromUIntIterator> Ops;
 
+  // Private constructor assumes Ops is syntactically valid, which
+  // is ensured by friends before construction.
+  explicit DIExprRef(iterator_range<DIOp::FromUIntIterator> Ops) : Ops(Ops) {};
 public:
-  // no public constructor
+  DIExprRef(const DIExprRef&) = default;
+  DIExprRef(DIExprRef&&) = default;
+  DIExprRef &operator=(const DIExprRef&) = default;
+  DIExprRef &operator=(DIExprRef&&) = default;
+  ~DIExprRef() = default;
 
   bool isValid() const;
   bool isSingleLocationExpression() const;
@@ -156,7 +166,7 @@ public:
   DIExprBuf() = default;
   explicit DIExprBuf(LLVMContext *Ctx);
   explicit DIExprBuf(const DIExpression *From);
-  explicit DIExprBuf(DIExprRef From);
+  explicit DIExprBuf(DIExprRef From, LLVMContext *Ctx = nullptr);
 
   DIExprRef asRef() const;
 
