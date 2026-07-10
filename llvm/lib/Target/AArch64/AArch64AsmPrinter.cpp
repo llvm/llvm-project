@@ -2377,7 +2377,7 @@ static PtrauthCheckMode getCheckMode(const MachineFunction *MF) {
   return ShouldTrap ? PtrauthCheckMode::Trap : PtrauthCheckMode::Poison;
 }
 
-// We expand AUT* pseudo instructions into a sequence of the form
+// We expand non-signing AUT* pseudo instructions into a sequence of the form
 //
 //      ; 1. Authenticate Pointer
 //
@@ -2442,12 +2442,13 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
       EmitToStreamer(MCInstBuilder(AutOpc));
     }
   } else {
-    // While rather unlikely, it is technically possible to use the Pointer to
-    // compute its own discriminator.
-    // AuthSchema.AddrDisc may be clobbered by emitPtrauthDiscriminator as long
-    // as it is not used past this point neither externally (the register
+    // emitPtrauthDiscriminator is allowed to clobber AuthSchema.AddrDisc as
+    // long as it is not used past this point neither externally (the register
     // operand is "killed"), nor internally (it does not alias anything being
     // used later).
+    //
+    // Note that, while rather unlikely, it is technically possible to use the
+    // Pointer to compute its own discriminator.
     Register AUTDiscReg = emitPtrauthDiscriminator(
         AuthSchema.IntDisc, AuthSchema.AddrDisc, Scratch,
         AuthSchema.addrDiscIsKilledAndNoneOf({Pointer, SignAddrDiscOrNone}));
@@ -2467,9 +2468,10 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     if (Addend.has_value())
       emitPtrauthApplyIndirectAddend(Pointer, Scratch, *Addend);
 
-    Register PACDiscReg = emitPtrauthDiscriminator(
-        SignSchema->IntDisc, SignSchema->AddrDisc, Scratch,
-        SignSchema->addrDiscIsKilledAndNoneOf({Pointer}));
+    assert(Pointer != SignSchema->AddrDisc && "Pointer is early-clobbered");
+    Register PACDiscReg =
+        emitPtrauthDiscriminator(SignSchema->IntDisc, SignSchema->AddrDisc,
+                                 Scratch, SignSchema->AddrDiscIsKilled);
     emitPAC(SignSchema->Key, Pointer, PACDiscReg);
   };
 
