@@ -1083,10 +1083,21 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Crash and bug fixes
 
-- Fixed `security.VAList` checker producing false positives when analyzing
-  C23 code where `va_start` expands to `__builtin_c23_va_start`.
-- Fixed a compiler crash when combining `_Atomic` and `__auto_type`
-  in C, for example `_Atomic __auto_type x = expr`. (#GH118058)
+- Fixed the `security.VAList` checker producing false positives when analyzing C23 code where `va_start` expands to `__builtin_c23_va_start`. (#GH192024)
+- Fixed a crash when copying uninitialized data in a function named `swap`. (#GH178797)
+- Fixed a compiler crash when combining `_Atomic` and `__auto_type` in C, for example `_Atomic __auto_type x = expr`. (#GH118058)
+- Fixed a crash in the `unix.Malloc` checker when a function is annotated with both `ownership_returns` and `ownership_takes` (or `ownership_holds`). (#GH183344)
+- Fixed a crash in the `alpha.unix.cstring` checkers on zero-size element types (for example an empty struct in C). (#GH190457)
+- Fixed a use-after-free in `CheckerContext::getMacroNameOrSpelling`. (#GH194174)
+- Fixed a false positive in the `alpha.unix.cstring` checkers when the buffer argument points into the middle of an array, such as `memcpy(dst, &arr[i], size)`. (#GH198346)
+- Fixed the default binding of union aggregates being overwritten when initializing array elements with union members. (#GH178694)
+- The analyzer no longer rules out the equality of a pointer to the stack and a symbolic pointer in unknown space, because a function may return a pointer to some other stack frame (for example one received as an argument). (#GH187080)
+- Fixed the `getcwd` summary in the `unix.StdCLibraryFunctions` checker. (#GH175136)
+- Fixed invalid HTML nesting for popups at end of line. (#GH46089)
+- Fixed a false-positive in the `unix.BlockInCriticalSection` checker that reported double locking when using `std::lock_guard`/`std::unique_lock`/`std::scoped_lock`. (#GH208729)
+- Fixed a false-negative in the `unix.Malloc` checker due to a typo in the expected arguments of `if_nameindex`. It will now properly match its single expected argument. (#GH207726)
+- Fixed a crash in the Z3-solver-based (unsupported) constraint manager involving unary/binary operators. (#GH205037)
+- Fixed an crash where GNU statement expression syntax (`({ ... })`) caused arguments to disappear from parameter list. (#GH205718)
 
 #### Improvements
 
