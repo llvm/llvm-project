@@ -1,5 +1,3 @@
-#include "../CodeGenCUDA/Inputs/cuda.h"
-
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
 // RUN:            -target-cpu gfx1250 -fcuda-is-device -emit-cir %s -o %t.cir
@@ -16,6 +14,8 @@
 //===----------------------------------------------------------------------===//
 // Test AMDGPU builtins
 //===----------------------------------------------------------------------===//
+
+#define __device__ __attribute__((device))
 
 // CIR-LABEL: @_Z13test_rcp_bf16PDF16bDF16b
 // CIR: cir.call_llvm_intrinsic "amdgcn.rcp" {{.*}} : (!cir.bf16) -> !cir.bf16
