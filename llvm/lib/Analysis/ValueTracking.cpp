@@ -5734,6 +5734,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // override compile-time flag
       if (II->hasNoNaNs())
         Known.KnownFPClasses &= ~fcNan;
+      if (II->hasNoInfs())
+        Known.KnownFPClasses &= ~fcInf;
 
       break;
     }
