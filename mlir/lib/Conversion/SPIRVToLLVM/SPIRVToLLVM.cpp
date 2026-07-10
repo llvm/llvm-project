@@ -90,17 +90,22 @@ static IntegerAttr minusOneIntegerAttribute(Type type, Builder builder) {
   return builder.getIntegerAttr(integerType, -1);
 }
 
+/// Creates `llvm.mlir.constant` with a scalar or vector integer value,
+/// broadcasting `scalarAttr` across the vector if `srcType` is a vector.
+static Value createIntegerConstant(Location loc, Type srcType, Type dstType,
+                                   PatternRewriter &rewriter,
+                                   IntegerAttr scalarAttr) {
+  if (auto vecType = dyn_cast<VectorType>(srcType))
+    return LLVM::ConstantOp::create(
+        rewriter, loc, dstType, SplatElementsAttr::get(vecType, scalarAttr));
+  return LLVM::ConstantOp::create(rewriter, loc, dstType, scalarAttr);
+}
+
 /// Creates `llvm.mlir.constant` with all bits set for the given type.
 static Value createConstantAllBitsSet(Location loc, Type srcType, Type dstType,
                                       PatternRewriter &rewriter) {
-  if (isa<VectorType>(srcType)) {
-    return LLVM::ConstantOp::create(
-        rewriter, loc, dstType,
-        SplatElementsAttr::get(cast<ShapedType>(srcType),
-                               minusOneIntegerAttribute(srcType, rewriter)));
-  }
-  return LLVM::ConstantOp::create(rewriter, loc, dstType,
-                                  minusOneIntegerAttribute(srcType, rewriter));
+  return createIntegerConstant(loc, srcType, dstType, rewriter,
+                               minusOneIntegerAttribute(srcType, rewriter));
 }
 
 /// Creates `llvm.mlir.constant` with a floating-point scalar or vector value.
@@ -929,21 +934,16 @@ public:
   LogicalResult
   matchAndRewrite(spirv::SNegateOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto srcType = op.getType();
-    auto dstType = getTypeConverter()->convertType(srcType);
+    Type srcType = op.getType();
+    Type dstType = getTypeConverter()->convertType(srcType);
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
     Location loc = op.getLoc();
-    auto vecSrcType = dyn_cast<VectorType>(srcType);
     IntegerAttr zeroAttr = rewriter.getIntegerAttr(
         cast<IntegerType>(getElementTypeOrSelf(srcType)), 0);
-    Value zero;
-    if (vecSrcType)
-      zero = LLVM::ConstantOp::create(
-          rewriter, loc, dstType, SplatElementsAttr::get(vecSrcType, zeroAttr));
-    else
-      zero = LLVM::ConstantOp::create(rewriter, loc, dstType, zeroAttr);
+    Value zero =
+        createIntegerConstant(loc, srcType, dstType, rewriter, zeroAttr);
     rewriter.replaceOpWithNewOp<LLVM::SubOp>(op, dstType, zero,
                                              adaptor.getOperand());
     return success();
