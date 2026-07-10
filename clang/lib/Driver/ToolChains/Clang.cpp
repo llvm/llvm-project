@@ -2169,7 +2169,7 @@ void Clang::AddSystemZTargetArgs(const ArgList &Args,
     CmdArgs.push_back("soft");
   }
 
-  if(Triple.isOSzOS())
+  if (Triple.isOSzOS())
     Args.AddLastArg(CmdArgs, options::OPT_mzos_ppa1_name,
                     options::OPT_mno_zos_ppa1_name);
 }
