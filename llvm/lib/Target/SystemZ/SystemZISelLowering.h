@@ -159,7 +159,8 @@ public:
   // This function currently returns cost for srl/ipm/cc sequence for merging.
   CondMergingParams
   getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
-                                const Value *Rhs) const override;
+                                const Value *Rhs,
+                                const Function *F) const override;
 
   // Handle Lowering flag assembly outputs.
   SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Flag,

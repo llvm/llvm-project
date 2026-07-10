@@ -204,7 +204,8 @@ public:
 
   CondMergingParams
   getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *LHS,
-                                const Value *RHS) const override;
+                                const Value *RHS,
+                                const Function *F) const override;
 
   bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                             bool MathUsed) const override {

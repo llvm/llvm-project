@@ -2072,7 +2072,11 @@ EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL,
 TargetLoweringBase::CondMergingParams
 RISCVTargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
                                                    const Value *LHS,
-                                                   const Value *RHS) const {
+                                                   const Value *RHS,
+                                                   const Function *F) const {
+  if (F->hasOptSize())
+    return TargetLowering::getJumpConditionMergingParams(Opc, LHS, RHS, F);
+
   // Merging conditions eliminates a branch, so the budget we are willing to
   // spend eagerly computing the RHS condition should scale with how expensive a
   // mispredicted branch is. A branch only costs the full penalty when actually
